@@ -156,7 +156,7 @@ expression. That is exactly what we want in this case. When we wanted to
 use the current value in the ``if`` statement, we used the ``value``
 function to get it.
 
-The next line adds to the constaint list called ``c`` the requirement
+The next line adds to the constraint list called ``c`` the requirement
 that the expression be greater than or equal to one:
 
 .. literalinclude:: tests/scripting/iterative1_Add_expression_constraint.spy
@@ -207,7 +207,7 @@ idea for users of an ``AbstractModel``:
 #. Create an ``AbstractModel`` (suppose it is called ``model``)
 #. Call ``model.create_instance()`` to create an instance (suppose it is called ``instance``)
 #. Solve ``instance``
-#. Change someting in ``instance``
+#. Change something in ``instance``
 #. Solve ``instance`` again
 
 .. note::
@@ -219,7 +219,7 @@ idea for users of an ``AbstractModel``:
 
 ..
    NOTE: the tests in this file are fragile right now because some
-   code has been brought inline (particularly from spy4cripts.spy)
+   code has been brought inline (particularly from spy4scripts.spy)
    DO NOT redefine instance until you are ready to delete this entire comment.
    (and note that model is redefined all over the place).
    
@@ -259,7 +259,7 @@ indexed), the assignment can be made using
    If the ``Param`` is not declared to be mutable, an error will occur if an assignment to it is attempted.
     
 For more information about access to Pyomo parameters, see the section
-in this document on ``Param`` access :ref:`ParmAccess`. Note that for
+in this document on ``Param`` access :ref:`ParamAccess`. Note that for
 concrete models, the model is the instance.
 
 Fixing Variables and Re-solving
@@ -417,7 +417,7 @@ One Variable from a Python Script
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Assuming the model has been instantiated and solved and the results have
-been loded back into the instance object, then we can make use of the
+been loaded back into the instance object, then we can make use of the
 fact that the variable is a member of the instance object and its value
 can be accessed using its ``value`` member. For example, suppose the
 model contains a variable named ``quant`` that is a singleton (has no
@@ -463,7 +463,7 @@ indexed (i.e., the only index value is ``None``), then the code could
 print the value without the word ``None`` next to it.
 
 Assuming again that the model has been instantiated and solved and the
-results have been loded back into the instance object. Here is a code
+results have been loaded back into the instance object. Here is a code
 snippet for fixing all integers at their current value:
 
     >>> for var in instance.component_data_objects(pyo.Var, active=True):
@@ -479,7 +479,7 @@ blocks) is as follows (this particular snippet assumes that instead of
 .. literalinclude:: tests/scripting/block_iter_example_compprintloop.spy
    :language: python
 
-.. _ParmAccess:
+.. _ParamAccess:
 
 Accessing Parameter Values
 --------------------------

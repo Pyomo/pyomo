@@ -25,8 +25,29 @@ env:
   PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels
   CACHE_VER: v221013.1
   NEOS_EMAIL: tests@pyomo.org
+  SRC_REF: ${{ github.head_ref || github.ref }}
 
 jobs:
+  lint:
+    name: lint/style-and-typos
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Pyomo source
+      uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    - name: Black Formatting Check
+      run: |
+        pip install black
+        black . -S -C --check --diff --exclude examples/pyomobook/python-ch/BadIndent.py
+    - name: Spell Check
+      uses: crate-ci/typos@master
+      with: 
+        config: ./.github/workflows/typos.toml
+
+
   build:
     name: ${{ matrix.TARGET }}/${{ matrix.python }}${{ matrix.other }}
     runs-on: ${{ matrix.os }}
@@ -74,14 +95,6 @@ jobs:
           PACKAGES: mpi4py openmpi
 
         - os: ubuntu-latest
-          python: 3.7
-          other: /slim
-          slim: 1
-          skip_doctest: 1
-          TARGET: linux
-          PYENV: pip
-
-        - os: ubuntu-latest
           python: '3.10'
           other: /cython
           setup_options: --with-cython
@@ -119,18 +132,6 @@ jobs:
         PYTHON_PACKAGES="${{matrix.PACKAGES}}"
         echo "PYTHON_PACKAGES=$PYTHON_PACKAGES" \
             | tr '\n' ' ' | sed 's/ \+/ /g' >> $GITHUB_ENV
-
-    # Ideally we would cache the conda downloads; however, each cache is
-    # over 850MB, and with 5 python versions, that would consume 4.2 of
-    # the 5 GB GitHub allows.
-    #
-    #- name: Conda package cache
-    #  uses: actions/cache@v3
-    #  if: matrix.PYENV == 'conda'
-    #  id: conda-cache
-    #  with:
-    #    path: cache/conda
-    #    key: conda-${{env.CACHE_VER}}.0-${{runner.os}}-${{matrix.python}}
 
     #- name: Pip package cache
     #  uses: actions/cache@v3
@@ -201,7 +202,7 @@ jobs:
 
     - name: Set up Python ${{ matrix.python }}
       if: matrix.PYENV == 'pip'
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python }}
 
@@ -209,10 +210,8 @@ jobs:
       if: matrix.PYENV == 'conda'
       uses: conda-incubator/setup-miniconda@v2
       with:
-        auto-update-conda: true
+        auto-update-conda: false
         python-version: ${{ matrix.python }}
-        channels: conda-forge
-        channel-priority: strict
 
     # GitHub actions is very fragile when it comes to setting up various
     # Python interpreters, expecially the setup-miniconda interface.
@@ -269,10 +268,25 @@ jobs:
     - name: Install Python packages (conda)
       if: matrix.PYENV == 'conda'
       run: |
-        mkdir -p $GITHUB_WORKSPACE/cache/conda
+        # Set up environment
         conda config --set always_yes yes
         conda config --set auto_update_conda false
-        conda config --prepend pkgs_dirs $GITHUB_WORKSPACE/cache/conda
+        conda config --remove channels defaults
+        conda config --append channels nodefaults
+        conda config --append channels conda-forge
+        # Try to install mamba
+        conda install --update-deps -q -y -n base conda-libmamba-solver \
+            || MAMBA_FAILED=1
+        if test -z "$MAMBA_FAILED"; then
+            echo "*** Activating the mamba environment solver ***"
+            conda config --set solver libmamba
+        fi
+        # Add the rest of the channels
+        conda config --append channels gurobi
+        conda config --append channels ibmdecisionoptimization
+        conda config --append channels fico-xpress
+        # Print environment info
+        echo "*** CONDA environment: ***"
         conda info
         conda config --show-sources
         conda config --show channels
@@ -303,17 +317,21 @@ jobs:
                 CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES $PKG"
             fi
         done
-        conda install -q -y -c conda-forge $CONDA_DEPENDENCIES
+        echo "*** Install Pyomo dependencies ***"
+        conda install --update-deps -q -y $CONDA_DEPENDENCIES
         if test -z "${{matrix.slim}}"; then
-            conda install -q -y -c ibmdecisionoptimization \
-                'cplex>=12.10' docplex \
+            echo "*** Install CPLEX ***"
+            conda install -q -y 'cplex>=12.10' docplex \
                 || echo "WARNING: CPLEX Community Edition is not available"
-            conda install -q -y -c gurobi gurobi \
+            echo "*** Install Gurobi ***"
+            conda install -q -y gurobi \
                 || echo "WARNING: Gurobi is not available"
-            conda install -q -y -c fico-xpress xpress \
+            echo "*** Install Xpress ***"
+            conda install -q -y xpress \
                 || echo "WARNING: Xpress Community Edition is not available"
             for PKG in cyipopt pymumps scip; do
-                conda install -q -y -c conda-forge $PKG \
+                echo "*** Install $PKG ***"
+                conda install -q -y $PKG \
                     || echo "WARNING: $PKG is not available"
             done
             # TODO: This is a hack to stop test_qt.py from running until we
@@ -411,6 +429,8 @@ jobs:
         echo "DYLD_LIBRARY_PATH=${env:DYLD_LIBRARY_PATH}:$GAMS_DIR" `
             Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         $INSTALLER = "${env:DOWNLOAD_DIR}/gams_install.exe"
+        # We are pinning to 29.1.0 because a license is required for
+        # versions after this in order to run in demo mode.
         $URL = "https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             $URL = "$URL/windows/windows_x64_64.exe"
@@ -516,7 +536,8 @@ jobs:
       run: |
         echo ""
         echo "Clone Pyomo-model-libraries..."
-        git clone -b main https://github.com/Pyomo/pyomo-model-libraries.git
+        URL=https://github.com/Pyomo/pyomo-model-libraries.git
+        git clone -b ${SRC_REF##*/} $URL || git clone -b main $URL
         echo ""
         echo "Install Pyomo..."
         echo ""
@@ -575,12 +596,8 @@ jobs:
     - name: Run Pyomo tests
       if: matrix.mpi == 0
       run: |
-        CATEGORY=
-        for cat in ${{matrix.category}}; do
-            CATEGORY+=" -m $cat"
-        done
         $PYTHON_EXE -m pytest -v \
-            -W ignore::Warning $CATEGORY \
+            -W ignore::Warning ${{matrix.category}} \
             pyomo `pwd`/pyomo-model-libraries \
             `pwd`/examples/pyomobook --junitxml="TEST-pyomo.xml"
 
@@ -628,7 +645,7 @@ jobs:
       uses: actions/checkout@v3
 
     - name: Set up Python 3.8
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4
       with:
         python-version: 3.8
 
@@ -662,7 +679,7 @@ jobs:
   cover:
     name: process-coverage-${{ matrix.TARGET }}
     needs: build
-    if: always() # run even if a build job fails
+    if: ${{ false }} # turn off for branches
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     strategy:
@@ -696,7 +713,7 @@ jobs:
         path: artifacts
 
     - name: Set up Python 3.8
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4
       with:
         python-version: 3.8
 
@@ -794,6 +811,7 @@ jobs:
       uses: codecov/codecov-action@v3
       with:
         files: coverage.xml
+        token: ${{ secrets.PYOMO_CODECOV_TOKEN }}
         name: ${{ matrix.TARGET }}
         flags: ${{ matrix.TARGET }}
         fail_ci_if_error: true
@@ -805,6 +823,7 @@ jobs:
       uses: codecov/codecov-action@v3
       with:
         files: coverage-other.xml
+        token: ${{ secrets.PYOMO_CODECOV_TOKEN }}
         name: ${{ matrix.TARGET }}/other
         flags: ${{ matrix.TARGET }},other
         fail_ci_if_error: true

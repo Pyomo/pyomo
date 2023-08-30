@@ -9,19 +9,30 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.expr.current import ProductExpression, PowExpression
+from pyomo.core.expr import ProductExpression, PowExpression
+from pyomo.core.expr.numvalue import as_numeric
 from pyomo.core import Binary, value
-from pyomo.core.base import Transformation, TransformationFactory, Var, Constraint, ConstraintList, Block, RangeSet
-from pyomo.core.base.numvalue import as_numeric
+from pyomo.core.base import (
+    Transformation,
+    TransformationFactory,
+    Var,
+    Constraint,
+    ConstraintList,
+    Block,
+    RangeSet,
+)
 from pyomo.core.base.var import _VarData
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 
-@TransformationFactory.register("core.radix_linearization",
-           doc="Linearize bilinear and quadratic terms through "
-           "radix discretization (multiparametric disaggregation)" )
+@TransformationFactory.register(
+    "core.radix_linearization",
+    doc="Linearize bilinear and quadratic terms through "
+    "radix discretization (multiparametric disaggregation)",
+)
 class RadixLinearization(Transformation):
     """
     This plugin generates linear relaxations of bilinear problems using
@@ -35,9 +46,9 @@ class RadixLinearization(Transformation):
     """
 
     def _create_using(self, model, **kwds):
-        precision = kwds.pop('precision',8)
-        user_discretize = kwds.pop('discretize',set())
-        verbose = kwds.pop('verbose',False)
+        precision = kwds.pop('precision', 8)
+        user_discretize = kwds.pop('discretize', set())
+        verbose = kwds.pop('verbose', False)
 
         M = model.clone()
 
@@ -77,13 +88,13 @@ class RadixLinearization(Transformation):
                 _counts[_id] = (q[1], set())
             _counts[_id][1].add(_id)
         for bi in bilinear_terms:
-            for i in (0,1):
-                if not bi[i+1].is_continuous():
+            for i in (0, 1):
+                if not bi[i + 1].is_continuous():
                     continue
-                _id = id(bi[i+1])
+                _id = id(bi[i + 1])
                 if _id not in _counts:
-                    _counts[_id] = (bi[i+1], set())
-                _counts[_id][1].add(id(bi[2-i]))
+                    _counts[_id] = (bi[i + 1], set())
+                _counts[_id][1].add(id(bi[2 - i]))
 
         _tmp_counts = dict(_counts)
         # First, remove the variables that the user wants to have discretized
@@ -94,7 +105,7 @@ class RadixLinearization(Transformation):
                 _tmp_counts[_i][1].remove(_id)
             del _tmp_counts[_id]
         # All quadratic terms must be discretized (?)
-        #for q in quadratic_terms:
+        # for q in quadratic_terms:
         #    _id = id(q[1])
         #    if _id not in _tmp_counts:
         #        continue
@@ -107,7 +118,7 @@ class RadixLinearization(Transformation):
 
         # Now pick a (minimal) subset of the terms in bilinear expressions
         while _tmp_counts:
-            _ct, _id = max( (len(_tmp_counts[i][1]), i) for i in _tmp_counts )
+            _ct, _id = max((len(_tmp_counts[i][1]), i) for i in _tmp_counts)
             if not _ct:
                 break
             _discretize.setdefault(_id, len(_discretize))
@@ -123,53 +134,56 @@ class RadixLinearization(Transformation):
 
         # Define a block (namespace) for holding the disaggregated
         # variables and new constraints
-        if False: # Set to true when the LP writer is fixed
+        if False:  # Set to true when the LP writer is fixed
             M._radix_linearization = Block()
             _block = M._radix_linearization
         else:
             _block = M
         _block.DISCRETIZATION = RangeSet(precision)
-        _block.DISCRETIZED_VARIABLES = RangeSet(0, len(_discretize)-1)
-        _block.z = Var( _block.DISCRETIZED_VARIABLES, _block.DISCRETIZATION,
-                         within=Binary )
-        _block.dv = Var( _block.DISCRETIZED_VARIABLES,
-                         bounds=(0,2**-precision) )
+        _block.DISCRETIZED_VARIABLES = RangeSet(0, len(_discretize) - 1)
+        _block.z = Var(
+            _block.DISCRETIZED_VARIABLES, _block.DISCRETIZATION, within=Binary
+        )
+        _block.dv = Var(_block.DISCRETIZED_VARIABLES, bounds=(0, 2**-precision))
 
         # Actually discretize the terms we have marked for discretization
         for _id, _idx in _discretize.items():
             if verbose:
-                logger.info("Discretizing variable %s as %s" %
-                            (_counts[_id][0].name, _idx))
+                logger.info(
+                    "Discretizing variable %s as %s" % (_counts[_id][0].name, _idx)
+                )
             self._discretize_variable(_block, _counts[_id][0], _idx)
 
         _known_bilinear = {}
         # For each quadratic term, if it hasn't been discretized /
         # generated, do so, and remember the resulting W term for later
         # use...
-        #for _expr, _x1 in quadratic_terms:
+        # for _expr, _x1 in quadratic_terms:
         #    self._discretize_term( _expr, _x1, _x1,
         #                           _block, _discretize, _known_bilinear )
         # For each bilinear term, if it hasn't been discretized /
         # generated, do so, and remember the resulting W term for later
         # use...
         for _expr, _x1, _x2 in bilinear_terms:
-            self._discretize_term( _expr, _x1, _x2,
-                                   _block, _discretize, _known_bilinear )
+            self._discretize_term(_expr, _x1, _x2, _block, _discretize, _known_bilinear)
 
         # Return the discretized instance!
         return M
 
-
     def _discretize_variable(self, b, v, idx):
         _lb, _ub = v.bounds
         if _lb is None or _ub is None:
-            raise RuntimeError("Couldn't discretize variable %s: missing "
-                               "finite lower/upper bounds." % (v.name))
+            raise RuntimeError(
+                "Couldn't discretize variable %s: missing "
+                "finite lower/upper bounds." % (v.name)
+            )
         _c = Constraint(
-            expr= v == _lb + (_ub-_lb) * ( b.dv[idx] +
-                sum(b.z[idx,k] * 2**-k for k in b.DISCRETIZATION) ) )
+            expr=v
+            == _lb
+            + (_ub - _lb)
+            * (b.dv[idx] + sum(b.z[idx, k] * 2**-k for k in b.DISCRETIZATION))
+        )
         b.add_component("c_discr_v%s" % idx, _c)
-
 
     def _discretize_term(self, _expr, _x1, _x2, _block, _discretize, _known_bilinear):
         if id(_x1) in _discretize:
@@ -179,61 +193,72 @@ class RadixLinearization(Transformation):
             _u = _x1
             _v = _x2
         else:
-            raise RuntimeError("Couldn't identify discretized variable "
-                               "for expression '%s'!" % _expr)
+            raise RuntimeError(
+                "Couldn't identify discretized variable for expression '%s'!" % _expr
+            )
         _id = (id(_v), id(_u))
         if _id not in _known_bilinear:
             _known_bilinear[_id] = self._discretize_bilinear(
-                _block, _v, _discretize[id(_v)], _u, len(_known_bilinear))
+                _block, _v, _discretize[id(_v)], _u, len(_known_bilinear)
+            )
         # _expr should be a "simple" product expression; substitute
         # in the bilinear "W" term for the raw bilinear terms
-        _expr._numerator = [ _known_bilinear[_id] ]
-
+        _expr._numerator = [_known_bilinear[_id]]
 
     def _discretize_bilinear(self, b, v, v_idx, u, u_idx):
         _z = b.z
         _dv = b.dv[v_idx]
         _u = Var(b.DISCRETIZATION, within=u.domain, bounds=u.bounds)
-        logger.info("Discretizing (v=%s)*(u=%s) as u%s_v%s"
-                    % (v.name, u.name, u_idx, v_idx ))
-        b.add_component( "u%s_v%s" % (u_idx, v_idx), _u)
+        logger.info(
+            "Discretizing (v=%s)*(u=%s) as u%s_v%s" % (v.name, u.name, u_idx, v_idx)
+        )
+        b.add_component("u%s_v%s" % (u_idx, v_idx), _u)
         _lb, _ub = u.bounds
         if _lb is None or _ub is None:
-             raise RuntimeError("Couldn't relax variable %s: missing "
-                               "finite lower/upper bounds." % (u.name))
+            raise RuntimeError(
+                "Couldn't relax variable %s: missing "
+                "finite lower/upper bounds." % (u.name)
+            )
         _c = ConstraintList()
-        b.add_component( "c_disaggregate_u%s_v%s" % (u_idx, v_idx), _c )
+        b.add_component("c_disaggregate_u%s_v%s" % (u_idx, v_idx), _c)
         for k in b.DISCRETIZATION:
             # _lb * z[v_idx,k] <= _u[k] <= _ub * z[v_idx,k]
-            _c.add(expr= _lb*_z[v_idx,k] <= _u[k] )
-            _c.add(expr= _u[k] <= _ub*_z[v_idx,k] )
+            _c.add(expr=_lb * _z[v_idx, k] <= _u[k])
+            _c.add(expr=_u[k] <= _ub * _z[v_idx, k])
             # _lb * (1-z[v_idx,k]) <= u - _u[k] <= _ub * (1-z[v_idx,k])
-            _c.add(expr= _lb * (1-_z[v_idx,k]) <= u - _u[k] )
-            _c.add(expr= u - _u[k] <= _ub * (1-_z[v_idx,k]))
+            _c.add(expr=_lb * (1 - _z[v_idx, k]) <= u - _u[k])
+            _c.add(expr=u - _u[k] <= _ub * (1 - _z[v_idx, k]))
 
         _v_lb, _v_ub = v.bounds
-        _bnd_rng = (_v_lb*_lb, _v_lb*_ub, _v_ub*_lb, _v_ub*_ub)
+        _bnd_rng = (_v_lb * _lb, _v_lb * _ub, _v_ub * _lb, _v_ub * _ub)
         _w = Var(bounds=(min(_bnd_rng), max(_bnd_rng)))
-        b.add_component( "w%s_v%s" % (u_idx, v_idx), _w)
+        b.add_component("w%s_v%s" % (u_idx, v_idx), _w)
 
         K = max(b.DISCRETIZATION)
 
-        _dw = Var(bounds=( min(0, _lb*2**-K, _ub*2**-K),
-                           max(0, _lb*2**-K, _ub*2**-K) ))
-        b.add_component( "dw%s_v%s" % (u_idx, v_idx), _dw)
+        _dw = Var(
+            bounds=(
+                min(0, _lb * 2**-K, _ub * 2**-K),
+                max(0, _lb * 2**-K, _ub * 2**-K),
+            )
+        )
+        b.add_component("dw%s_v%s" % (u_idx, v_idx), _dw)
 
-        _c = Constraint(expr= _w == _v_lb*u + (_v_ub-_v_lb) * (
-                sum(2**-k * _u[k] for k in b.DISCRETIZATION) + _dw ) )
-        b.add_component( "c_bilinear_u%s_v%s" % (u_idx, v_idx), _c )
+        _c = Constraint(
+            expr=_w
+            == _v_lb * u
+            + (_v_ub - _v_lb) * (sum(2**-k * _u[k] for k in b.DISCRETIZATION) + _dw)
+        )
+        b.add_component("c_bilinear_u%s_v%s" % (u_idx, v_idx), _c)
 
         _c = ConstraintList()
-        b.add_component( "c_mccormick_u%s_v%s" % (u_idx, v_idx), _c )
+        b.add_component("c_mccormick_u%s_v%s" % (u_idx, v_idx), _c)
         # u_lb * dv <= dw <= u_ub * dv
-        _c.add(expr= _lb*_dv <= _dw )
-        _c.add(expr= _dw <= _ub*_dv )
+        _c.add(expr=_lb * _dv <= _dw)
+        _c.add(expr=_dw <= _ub * _dv)
         # (u-u_ub)*2^-K + u_ub*dv <= dw <= (u-u_lb)*2^-K + u_lb*dv
-        _c.add(expr= (u - _ub)*2**-K + _ub*_dv <= _dw )
-        _c.add(expr= _dw <= (u - _lb)*2**-K + _lb*_dv )
+        _c.add(expr=(u - _ub) * 2**-K + _ub * _dv <= _dw)
+        _c.add(expr=_dw <= (u - _lb) * 2**-K + _lb * _dv)
 
         return _w
 
@@ -246,26 +271,26 @@ class RadixLinearization(Transformation):
                     self._collect_bilinear(e, bilin, quad)
                 # No need to check denominator, as this is poly_degree==2
                 return
-            if not isinstance(expr._numerator[0], _VarData) or \
-                    not isinstance(expr._numerator[1], _VarData):
+            if not isinstance(expr._numerator[0], _VarData) or not isinstance(
+                expr._numerator[1], _VarData
+            ):
                 raise RuntimeError("Cannot yet handle complex subexpressions")
             if expr._numerator[0] is expr._numerator[1]:
-                quad.append( (expr, expr._numerator[0]) )
+                quad.append((expr, expr._numerator[0]))
             else:
-                bilin.append( (expr, expr._numerator[0], expr._numerator[1]) )
+                bilin.append((expr, expr._numerator[0], expr._numerator[1]))
             return
         if type(expr) is PowExpression and value(expr._args[1]) == 2:
             # Note: directly testing the value of the exponent above is
             # safe: we have already verified that this expression is
             # polynominal, so the exponent must be constant.
             tmp = ProductExpression()
-            tmp._numerator = [ expr._args[0], expr._args[0] ]
+            tmp._numerator = [expr._args[0], expr._args[0]]
             tmp._denominator = []
-            expr._args = (tmp, as_numeric(1))       # THIS CODE DOES NOT WORK
-            #quad.append( (tmp, tmp._args[0]) )
+            expr._args = (tmp, as_numeric(1))  # THIS CODE DOES NOT WORK
+            # quad.append( (tmp, tmp._args[0]) )
             self._collect_bilinear(tmp, bilin, quad)
             return
         # All other expression types
         for e in expr._args:
             self._collect_bilinear(e, bilin, quad)
-

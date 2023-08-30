@@ -9,7 +9,7 @@ Bibliography
 
 .. [GAMS] http://www.gams.com
 
-.. [GRCSPaper] Isenberg, NM, Akula, P, Eslick, JC, Bhattacharyya, D,
+.. [Isenberg_et_al] Isenberg, NM, Akula, P, Eslick, JC, Bhattacharyya, D,
    Miller, DC, Gounaris, CE. A generalized cutting‐set approach for
    nonlinear robust optimization in process systems
    engineering. AIChE J. 2021; 67:e17175. DOI `10.1002/aic.17175
@@ -33,6 +33,12 @@ Bibliography
                  J. D. Siirola. Pyomo - Optimization Modeling in Python,
                  2nd Edition.  Springer Optimization and Its
                  Applications, Vol 67.  Springer, 2017.
+
+.. [PyomoBookIII] Bynum, Michael L., Gabriel A. Hackebeil,
+                  William E. Hart, Carl D. Laird, Bethany L. Nicholson,
+                  John D. Siirola, Jean-Paul Watson, and David L. Woodruff.
+                  Pyomo - Optimization Modeling in Python, 3rd Edition.
+                  Vol. 67. Springer, 2021.
 
 .. [PyomoJournal] William E. Hart, Jean-Paul Watson, David L. Woodruff.
                   "Pyomo: modeling and solving mathematical programs in

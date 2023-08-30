@@ -22,13 +22,14 @@
 # @import:
 import pyomo.environ as pyo
 import pyomo.dae as dae
+
 # @:import
 
 m = pyo.ConcreteModel()
 
 # @contset:
 m.tf = pyo.Param(initialize=1)
-m.t = dae.ContinuousSet(bounds=(0,m.tf))
+m.t = dae.ContinuousSet(bounds=(0, m.tf))
 # @:contset
 
 # @vardecl:
@@ -42,25 +43,37 @@ m.dx2 = dae.DerivativeVar(m.x2, wrt=m.t)
 m.dx3 = dae.DerivativeVar(m.x3)
 # @:vardecl
 
+
 # @diffeq:
 def _x1dot(m, t):
     return m.dx1[t] == m.x2[t]
+
+
 m.x1dotcon = pyo.Constraint(m.t, rule=_x1dot)
 
+
 def _x2dot(m, t):
-    return m.dx2[t] ==  -m.x2[t] + m.u[t]
+    return m.dx2[t] == -m.x2[t] + m.u[t]
+
+
 m.x2dotcon = pyo.Constraint(m.t, rule=_x2dot)
 
+
 def _x3dot(m, t):
-    return m.dx3[t] == m.x1[t]**2 + m.x2[t]**2 + 0.005*m.u[t]**2
+    return m.dx3[t] == m.x1[t] ** 2 + m.x2[t] ** 2 + 0.005 * m.u[t] ** 2
+
+
 m.x3dotcon = pyo.Constraint(m.t, rule=_x3dot)
 # @:diffeq
 
 # @objpath:
 m.obj = pyo.Objective(expr=m.x3[m.tf])
 
+
 def _con(m, t):
-    return m.x2[t] - 8*(t - 0.5)**2 + 0.5 <= 0
+    return m.x2[t] - 8 * (t - 0.5) ** 2 + 0.5 <= 0
+
+
 m.con = pyo.Constraint(m.t, rule=_con)
 # @:objpath
 

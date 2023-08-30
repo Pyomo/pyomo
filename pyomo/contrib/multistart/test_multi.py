@@ -8,8 +8,15 @@ from pyomo.common.log import LoggingIntercept
 from pyomo.contrib.multistart.high_conf_stop import should_stop
 from pyomo.contrib.multistart.reinit import strategies
 from pyomo.environ import (
-    ConcreteModel, Constraint, NonNegativeReals, Objective, SolverFactory, Var,
-    maximize, sin, value
+    ConcreteModel,
+    Constraint,
+    NonNegativeReals,
+    Objective,
+    SolverFactory,
+    Var,
+    maximize,
+    sin,
+    value,
 )
 
 
@@ -25,16 +32,24 @@ class MultistartTests(unittest.TestCase):
     def test_as_good_as_standard(self):
         standard_model = build_model()
         SolverFactory('ipopt').solve(standard_model)
-        standard_objective_value = value(next(standard_model.component_data_objects(Objective, active=True)))
+        standard_objective_value = value(
+            next(standard_model.component_data_objects(Objective, active=True))
+        )
 
         fresh_model = build_model()
         multistart_iterations = 10
         test_trials = 10
         for strategy, _ in product(strategies.keys(), range(test_trials)):
             m2 = fresh_model.clone()
-            SolverFactory('multistart').solve(m2, iterations=multistart_iterations, strategy=strategy)
-            clone_objective_value = value(next(m2.component_data_objects(Objective, active=True)))
-            self.assertGreaterEqual(clone_objective_value, standard_objective_value)  # assumes maximization
+            SolverFactory('multistart').solve(
+                m2, iterations=multistart_iterations, strategy=strategy
+            )
+            clone_objective_value = value(
+                next(m2.component_data_objects(Objective, active=True))
+            )
+            self.assertGreaterEqual(
+                clone_objective_value, standard_objective_value
+            )  # assumes maximization
 
     def test_as_good_with_HCS_rule(self):
         """test that the high confidence stopping rule with very lenient
@@ -48,13 +63,14 @@ class MultistartTests(unittest.TestCase):
         for i in range(5):
             m2 = build_model()
             SolverFactory('multistart').solve(
-                m2, iterations=-1, stopping_mass=0.99, stopping_delta=0.99)
+                m2, iterations=-1, stopping_mass=0.99, stopping_delta=0.99
+            )
             m_objectives = m.component_data_objects(Objective, active=True)
             m_obj = next(m_objectives, None)
             m2_objectives = m2.component_data_objects(Objective, active=True)
-            m2_obj = next(m2_objectives,None)
+            m2_obj = next(m2_objectives, None)
             # Assert that multistart solver does no worse than standard solver
-            self.assertTrue((value(m2_obj.expr)) >= (value(m_obj.expr) - .001))
+            self.assertTrue((value(m2_obj.expr)) >= (value(m_obj.expr) - 0.001))
             del m2
 
     def test_missing_bounds(self):
@@ -64,9 +80,11 @@ class MultistartTests(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.multistart', logging.WARNING):
             SolverFactory('multistart').solve(m)
-            self.assertIn("Skipping reinitialization of unbounded "
-                          "variable x with bounds (0, None).",
-                          output.getvalue().strip())
+            self.assertIn(
+                "Skipping reinitialization of unbounded "
+                "variable x with bounds (0, None).",
+                output.getvalue().strip(),
+            )
 
     def test_var_value_None(self):
         m = ConcreteModel()
@@ -82,11 +100,12 @@ class MultistartTests(unittest.TestCase):
         SolverFactory('multistart').solve(m, iterations=2)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.multistart', logging.WARNING):
-            SolverFactory('multistart').solve(
-                m, iterations=-1, HCS_max_iterations=3)
-            self.assertIn("High confidence stopping rule was unable to "
-                          "complete after 3 iterations.",
-                          output.getvalue().strip())
+            SolverFactory('multistart').solve(m, iterations=-1, HCS_max_iterations=3)
+            self.assertIn(
+                "High confidence stopping rule was unable to "
+                "complete after 3 iterations.",
+                output.getvalue().strip(),
+            )
 
     def test_should_stop(self):
         soln = [0] * 149
@@ -115,7 +134,7 @@ class MultistartTests(unittest.TestCase):
     def test_const_obj(self):
         m = ConcreteModel()
         m.x = Var()
-        m.o = Objective(expr = 5)
+        m.o = Objective(expr=5)
         with self.assertRaisesRegex(RuntimeError, "constant objective"):
             SolverFactory('multistart').solve(m)
 

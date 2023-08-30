@@ -388,6 +388,7 @@ Suffix component with an IMPORT_EXPORT direction.
 
    ipopt = pyo.SolverFactory('ipopt')
 
+
 The difference in performance can be seen by examining Ipopt's iteration
 log with and without warm starting:
 
@@ -405,13 +406,9 @@ log with and without warm starting:
    iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
       0  1.6109693e+01 1.12e+01 5.28e-01  -1.0 0.00e+00    -  0.00e+00 0.00e+00   0
       1  1.6982239e+01 7.30e-01 1.02e+01  -1.0 6.11e-01    -  7.19e-02 1.00e+00f  1
-      2  1.7318411e+01 3.60e-02 5.05e-01  -1.0 1.61e-01    -  1.00e+00 1.00e+00h  1
-      3  1.6849424e+01 2.78e-01 6.68e-02  -1.7 2.85e-01    -  7.94e-01 1.00e+00h  1
-      4  1.7051199e+01 4.71e-03 2.78e-03  -1.7 6.06e-02    -  1.00e+00 1.00e+00h  1
-      5  1.7011979e+01 7.19e-03 8.50e-03  -3.8 3.66e-02    -  9.45e-01 9.98e-01h  1
-      6  1.7014271e+01 1.74e-05 9.78e-06  -3.8 3.33e-03    -  1.00e+00 1.00e+00h  1
-      7  1.7014021e+01 1.23e-07 1.82e-07  -5.7 2.69e-04    -  1.00e+00 1.00e+00h  1
-      8  1.7014017e+01 1.77e-11 2.52e-11  -8.6 3.32e-06    -  1.00e+00 1.00e+00h  1
+      2  1.7318411e+01 ...
+      ...
+      8  1.7014017e+01 ...
 
    Number of Iterations....: 8
    ...
@@ -441,7 +438,7 @@ log with and without warm starting:
    iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
       0  1.7014032e+01 2.00e-06 4.07e-06  -6.0 0.00e+00    -  0.00e+00 0.00e+00   0
       1  1.7014019e+01 3.65e-12 1.00e-11  -6.0 2.50e-01    -  1.00e+00 1.00e+00h  1
-      2  1.7014017e+01 4.48e-12 6.42e-12  -9.0 1.92e-06    -  1.00e+00 1.00e+00h  1
+      2  1.7014017e+01 ...
 
    Number of Iterations....: 2
    ...

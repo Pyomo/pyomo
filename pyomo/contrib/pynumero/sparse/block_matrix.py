@@ -22,7 +22,6 @@ where m_{i,j} are sparse matrices
 
 """
 
-from scipy.sparse.sputils import get_index_dtype
 from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
 from scipy.sparse import coo_matrix, csr_matrix, csc_matrix
 from scipy.sparse import isspmatrix
@@ -44,12 +43,16 @@ class NotFullyDefinedBlockMatrixError(Exception):
 
 def assert_block_structure(mat):
     if mat.has_undefined_row_sizes():
-        msgr = 'Operation not allowed with None rows. ' \
-               'Specify at least one block in every row'
+        msgr = (
+            'Operation not allowed with None rows. '
+            'Specify at least one block in every row'
+        )
         raise NotFullyDefinedBlockMatrixError(msgr)
     if mat.has_undefined_col_sizes():
-        msgc = 'Operation not allowed with None columns. ' \
-               'Specify at least one block every column'
+        msgc = (
+            'Operation not allowed with None columns. '
+            'Specify at least one block every column'
+        )
         raise NotFullyDefinedBlockMatrixError(msgc)
 
 
@@ -83,10 +86,10 @@ class BlockMatrix(BaseBlockMatrix):
         number of block-columns in the matrix
 
     """
+
     format = 'block_matrix'
 
     def __init__(self, nbrows, nbcols):
-
         shape = (nbrows, nbcols)
 
         self._blocks = np.empty(shape, dtype='object')
@@ -166,7 +169,11 @@ class BlockMatrix(BaseBlockMatrix):
 
         """
         if self.has_undefined_row_sizes():
-            raise NotFullyDefinedBlockMatrixError('Some block row lengths are not defined: {0}'.format(str(self._brow_lengths)))
+            raise NotFullyDefinedBlockMatrixError(
+                'Some block row lengths are not defined: {0}'.format(
+                    str(self._brow_lengths)
+                )
+            )
         if copy:
             return self._brow_lengths.copy()
         else:
@@ -188,7 +195,11 @@ class BlockMatrix(BaseBlockMatrix):
 
         """
         if self.has_undefined_col_sizes():
-            raise NotFullyDefinedBlockMatrixError('Some block column lengths are not defined: {0}'.format(str(self._bcol_lengths)))
+            raise NotFullyDefinedBlockMatrixError(
+                'Some block column lengths are not defined: {0}'.format(
+                    str(self._bcol_lengths)
+                )
+            )
         if copy:
             return self._bcol_lengths.copy()
         else:
@@ -196,12 +207,16 @@ class BlockMatrix(BaseBlockMatrix):
 
     def get_row_size(self, row):
         if row in self._undefined_brows:
-            raise NotFullyDefinedBlockMatrixError('The dimensions of the requested row are not defined.')
+            raise NotFullyDefinedBlockMatrixError(
+                'The dimensions of the requested row are not defined.'
+            )
         return int(self._brow_lengths[row])
 
     def get_col_size(self, col):
         if col in self._undefined_bcols:
-            raise NotFullyDefinedBlockMatrixError('The dimensions of the requested column are not defined.')
+            raise NotFullyDefinedBlockMatrixError(
+                'The dimensions of the requested column are not defined.'
+            )
         return int(self._bcol_lengths[col])
 
     def set_row_size(self, row, size):
@@ -212,11 +227,13 @@ class BlockMatrix(BaseBlockMatrix):
                 self._brow_lengths = np.asarray(self._brow_lengths, dtype=np.int64)
         else:
             if self._brow_lengths[row] != size:
-                raise ValueError('Incompatible row dimensions for '
-                                 'row {row}; got {got}; '
-                                 'expected {exp}'.format(row=row,
-                                                         got=size,
-                                                         exp=self._brow_lengths[row]))
+                raise ValueError(
+                    'Incompatible row dimensions for '
+                    'row {row}; got {got}; '
+                    'expected {exp}'.format(
+                        row=row, got=size, exp=self._brow_lengths[row]
+                    )
+                )
 
     def set_col_size(self, col, size):
         if col in self._undefined_bcols:
@@ -226,11 +243,13 @@ class BlockMatrix(BaseBlockMatrix):
                 self._bcol_lengths = np.asarray(self._bcol_lengths, dtype=np.int64)
         else:
             if self._bcol_lengths[col] != size:
-                raise ValueError('Incompatible column dimensions for '
-                                 'column {col}; got {got}; '
-                                 'expected {exp}'.format(col=col,
-                                                         got=size,
-                                                         exp=self._bcol_lengths[col]))
+                raise ValueError(
+                    'Incompatible column dimensions for '
+                    'column {col}; got {got}; '
+                    'expected {exp}'.format(
+                        col=col, got=size, exp=self._bcol_lengths[col]
+                    )
+                )
 
     def is_row_size_defined(self, row):
         return row not in self._undefined_brows
@@ -373,15 +392,13 @@ class BlockMatrix(BaseBlockMatrix):
 
         # create pointers for COO matrix (row, col, data)
         data = np.empty(nonzeros, dtype=dtype)
-        idx_dtype = get_index_dtype(maxval=max(shape))
-        row = -np.ones(nonzeros, dtype=idx_dtype)
-        col = -np.ones(nonzeros, dtype=idx_dtype)
+        row = -np.ones(nonzeros, dtype=int)
+        col = -np.ones(nonzeros, dtype=int)
 
         # populate COO pointers
         nnz = 0
         ii, jj = np.nonzero(self._block_mask)
         for i, j in zip(ii, jj):
-
             B = self.get_block(i, j).tocoo()
             # get slice that contains all elements in current block
             idx = slice(nnz, nnz + B.nnz)
@@ -476,23 +493,24 @@ class BlockMatrix(BaseBlockMatrix):
             assert other.bshape[0] == self.bshape[1], "Dimension mismatch"
             result = BlockMatrix(self.bshape[0], other.bshape[1])
 
-            # get dimenions from the other matrix
+            # get dimensions from the other matrix
             other_col_sizes = other.col_block_sizes(copy=False)
 
             # compute result
             for i in range(self.bshape[0]):
                 for j in range(other.bshape[1]):
-                    accum = coo_matrix((self._brow_lengths[i],
-                                        other_col_sizes[i]))
+                    accum = coo_matrix((self._brow_lengths[i], other_col_sizes[i]))
                     for k in range(self.bshape[1]):
                         if self._block_mask[i, k] and not other.is_empty_block(k, j):
-                            prod = self._blocks[i,k] * other.get_block(k, j)
+                            prod = self._blocks[i, k] * other.get_block(k, j)
                             accum = accum + prod
                     result.set_block(i, j, accum)
             return result
         elif isspmatrix(other):
-            raise NotImplementedError('BlockMatrix multiply with spmatrix not supported. Multiply a BlockMatrix '
-                                      'with another BlockMatrix of compatible dimensions.')
+            raise NotImplementedError(
+                'BlockMatrix multiply with spmatrix not supported. Multiply a BlockMatrix '
+                'with another BlockMatrix of compatible dimensions.'
+            )
         else:
             raise NotImplementedError('Operation not supported by BlockMatrix')
 
@@ -518,9 +536,13 @@ class BlockMatrix(BaseBlockMatrix):
         It is difficult to support transpose without copying. A "TransposeView" object might be a better approach.
         """
         if axes is not None:
-            raise ValueError(("Sparse matrices do not support "
-                              "an 'axes' parameter because swapping "
-                              "dimensions is the only logical permutation."))
+            raise ValueError(
+                (
+                    "Sparse matrices do not support "
+                    "an 'axes' parameter because swapping "
+                    "dimensions is the only logical permutation."
+                )
+            )
         if not copy:
             raise ValueError('BlockMatrix only supports transpose with copy=True')
 
@@ -594,8 +616,9 @@ class BlockMatrix(BaseBlockMatrix):
         """
         assert_block_structure(self)
         if isinstance(other, BlockMatrix):
-            assert other.bshape == self.bshape, \
-                'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
+            assert other.bshape == self.bshape, 'dimensions mismatch {} != {}'.format(
+                self.bshape, other.bshape
+            )
 
             m, n = self.bshape
             if deep:
@@ -611,8 +634,9 @@ class BlockMatrix(BaseBlockMatrix):
                         self.set_block(i, j, other.get_block(i, j))
 
         elif isspmatrix(other) or isinstance(other, np.ndarray):
-            assert other.shape == self.shape, \
-                'dimensions mismatch {} != {}'.format(self.shape, other.shape)
+            assert other.shape == self.shape, 'dimensions mismatch {} != {}'.format(
+                self.shape, other.shape
+            )
             if isinstance(other, np.ndarray):
                 # cast numpy.array to coo_matrix for ease of manipulation
                 m = csr_matrix(other)
@@ -628,9 +652,9 @@ class BlockMatrix(BaseBlockMatrix):
             # csc column slicing is fast
             # therefore, we do the row slice once for each row, then we convert to csc for the column slicing
             for i in range(self.bshape[0]):
-                mm = m[row_offsets[i]:row_offsets[i+1], :].tocsc()
+                mm = m[row_offsets[i] : row_offsets[i + 1], :].tocsc()
                 for j in range(self.bshape[1]):
-                    mmm = mm[:, col_offsets[j]:col_offsets[j+1]]
+                    mmm = mm[:, col_offsets[j] : col_offsets[j + 1]]
 
                     if self.is_empty_block(i, j) and mmm.nnz == 0:
                         self.set_block(i, j, None)
@@ -638,8 +662,10 @@ class BlockMatrix(BaseBlockMatrix):
                         self.set_block(i, j, mmm)
 
         else:
-            raise NotImplementedError("Format not supported. BlockMatrix can only copy data from another BlockMatrix, "
-                                      "a numpy array, or a scipy sparse matrix.")
+            raise NotImplementedError(
+                "Format not supported. BlockMatrix can only copy data from another BlockMatrix, "
+                "a numpy array, or a scipy sparse matrix."
+            )
 
     def copyto(self, other, deep=True):
         """
@@ -659,8 +685,9 @@ class BlockMatrix(BaseBlockMatrix):
 
         """
         if isinstance(other, BlockMatrix):
-            assert other.bshape == self.bshape, \
-                'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
+            assert other.bshape == self.bshape, 'dimensions mismatch {} != {}'.format(
+                self.bshape, other.bshape
+            )
 
             if deep:
                 m, n = self.bshape
@@ -676,8 +703,9 @@ class BlockMatrix(BaseBlockMatrix):
                     for j in range(n):
                         other.set_block(i, j, self.get_block(i, j))
         elif isspmatrix(other) or isinstance(other, np.ndarray):
-            assert other.shape == self.shape, \
-                'dimensions mismatch {} != {}'.format(self.shape, other.shape)
+            assert other.shape == self.shape, 'dimensions mismatch {} != {}'.format(
+                self.shape, other.shape
+            )
 
             # create temporary matrix to copy
             tmp_matrix = self.tocoo()
@@ -698,11 +726,15 @@ class BlockMatrix(BaseBlockMatrix):
             elif isinstance(other, np.ndarray):
                 np.copyto(other, tmp_matrix.toarray())
             else:
-                raise NotImplementedError("Format not supported. BlockMatrix can only copy data to another BlockMatrix, "
-                                          "a numpy array, or a scipy sparse coo, csr, or csc matrix.")
+                raise NotImplementedError(
+                    "Format not supported. BlockMatrix can only copy data to another BlockMatrix, "
+                    "a numpy array, or a scipy sparse coo, csr, or csc matrix."
+                )
         else:
-            raise NotImplementedError("Format not supported. BlockMatrix can only copy data to another BlockMatrix, "
-                                      "a numpy array, or a scipy sparse coo, csr, or csc matrix.")
+            raise NotImplementedError(
+                "Format not supported. BlockMatrix can only copy data to another BlockMatrix, "
+                "a numpy array, or a scipy sparse coo, csr, or csc matrix."
+            )
 
     def copy(self, deep=True):
         """
@@ -773,10 +805,24 @@ class BlockMatrix(BaseBlockMatrix):
                 else:
                     block = self.get_block(idx, jdx)
                     if isinstance(block, BlockMatrix):
-                        msg += indent + str((idx, jdx)) + ': ' + block.__class__.__name__ + str(block.bshape) + '\n'
-                        msg += block._print(indent=indent+'   ')
+                        msg += (
+                            indent
+                            + str((idx, jdx))
+                            + ': '
+                            + block.__class__.__name__
+                            + str(block.bshape)
+                            + '\n'
+                        )
+                        msg += block._print(indent=indent + '   ')
                     else:
-                        msg += indent + str((idx, jdx)) + ': ' + block.__class__.__name__ + str(block.shape) + '\n'
+                        msg += (
+                            indent
+                            + str((idx, jdx))
+                            + ': '
+                            + block.__class__.__name__
+                            + str(block.shape)
+                            + '\n'
+                        )
         return msg
 
     def __str__(self):
@@ -784,8 +830,7 @@ class BlockMatrix(BaseBlockMatrix):
 
     def get_block(self, row, col):
         assert row >= 0 and col >= 0, 'indices must be positive'
-        assert row < self.bshape[0] and \
-               col < self.bshape[1], 'Indices out of range'
+        assert row < self.bshape[0] and col < self.bshape[1], 'Indices out of range'
         return self._blocks[row, col]
 
     def set_block(self, row, col, value):
@@ -808,7 +853,9 @@ class BlockMatrix(BaseBlockMatrix):
                 warnings.warn(msg)
                 value = coo_matrix(value)
             else:
-                assert isspmatrix(value), 'blocks need to be sparse matrices or BlockMatrices'
+                assert isspmatrix(
+                    value
+                ), 'blocks need to be sparse matrices or BlockMatrices'
 
             nrows, ncols = value.shape
             self.set_row_size(row, nrows)
@@ -817,25 +864,33 @@ class BlockMatrix(BaseBlockMatrix):
             self._block_mask[row, col] = True
 
     def __getitem__(self, item):
-        raise NotImplementedError('BlockMatrix does not support __getitem__. '
-                                  'Use get_block or set_block to access sub-blocks.')
+        raise NotImplementedError(
+            'BlockMatrix does not support __getitem__. '
+            'Use get_block or set_block to access sub-blocks.'
+        )
 
     def __setitem__(self, item, val):
-        raise NotImplementedError('BlockMatrix does not support __setitem__. '
-                                  'Use get_block or set_block to access sub-blocks.')
+        raise NotImplementedError(
+            'BlockMatrix does not support __setitem__. '
+            'Use get_block or set_block to access sub-blocks.'
+        )
 
     def _binary_operation_helper(self, other, operation):
         assert_block_structure(self)
         result = BlockMatrix(self.bshape[0], self.bshape[1])
 
         if isinstance(other, BlockMatrix):
-            assert other.bshape == self.bshape, \
-                'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
-            assert other.shape == self.shape, \
-                'dimensions mismatch {} != {}'.format(self.shape, other.shape)
+            assert other.bshape == self.bshape, 'dimensions mismatch {} != {}'.format(
+                self.bshape, other.bshape
+            )
+            assert other.shape == self.shape, 'dimensions mismatch {} != {}'.format(
+                self.shape, other.shape
+            )
             assert_block_structure(other)
 
-            block_indices = np.bitwise_or(self.get_block_mask(copy=False), other.get_block_mask(copy=False))
+            block_indices = np.bitwise_or(
+                self.get_block_mask(copy=False), other.get_block_mask(copy=False)
+            )
             for i, j in zip(*np.nonzero(block_indices)):
                 mat1 = self.get_block(i, j)
                 mat2 = other.get_block(i, j)
@@ -891,21 +946,20 @@ class BlockMatrix(BaseBlockMatrix):
             for i in range(bm):
                 result.set_block(i, np.zeros(self._brow_lengths[i]))
             for i, j in zip(*np.nonzero(self._block_mask)):
-                    x = other.get_block(j)
-                    A = self._blocks[i, j]
-                    blk = result.get_block(i)
-                    _tmp = A*x
-                    _tmp += blk
-                    result.set_block(i, _tmp)
+                x = other.get_block(j)
+                A = self._blocks[i, j]
+                blk = result.get_block(i)
+                _tmp = A * x
+                _tmp += blk
+                result.set_block(i, _tmp)
             return result
         elif isinstance(other, np.ndarray):
-
             if other.ndim != 1:
                 raise NotImplementedError('Operation not supported by BlockMatrix')
 
-            assert self.shape[1] == other.shape[0], \
-                'Dimension mismatch {}!={}'.format(self.shape[1],
-                                                   other.shape[0])
+            assert self.shape[1] == other.shape[0], 'Dimension mismatch {}!={}'.format(
+                self.shape[1], other.shape[0]
+            )
             assert_block_structure(self)
 
             nblocks = self.bshape[0]
@@ -916,7 +970,7 @@ class BlockMatrix(BaseBlockMatrix):
                 for j in range(bn):
                     if not self.is_empty_block(i, j):
                         A = self._blocks[i, j]
-                        x = other[counter: counter + A.shape[1]]
+                        x = other[counter : counter + A.shape[1]]
                         blk = result.get_block(i)
                         blk += A * x
                     counter += self.get_col_size(j)
@@ -949,7 +1003,9 @@ class BlockMatrix(BaseBlockMatrix):
                 result.set_block(i, j, self._blocks[i, j] * other)
             return result
         elif isspmatrix(other):
-            raise NotImplementedError('sparse matrix times block matrix is not supported.')
+            raise NotImplementedError(
+                'sparse matrix times block matrix is not supported.'
+            )
         else:
             raise NotImplementedError('Operation not supported by BlockMatrix')
 
@@ -964,12 +1020,13 @@ class BlockMatrix(BaseBlockMatrix):
         return res
 
     def __iadd__(self, other):
-
         if isinstance(other, BlockMatrix):
-            assert other.bshape == self.bshape, \
-                'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
-            assert other.shape == self.shape, \
-                'dimensions mismatch {} != {}'.format(self.shape, other.shape)
+            assert other.bshape == self.bshape, 'dimensions mismatch {} != {}'.format(
+                self.bshape, other.bshape
+            )
+            assert other.shape == self.shape, 'dimensions mismatch {} != {}'.format(
+                self.shape, other.shape
+            )
 
             iterator = set(zip(*np.nonzero(self._block_mask)))
             iterator.update(zip(*np.nonzero(other._block_mask)))
@@ -988,12 +1045,13 @@ class BlockMatrix(BaseBlockMatrix):
             raise NotImplementedError('Operation not supported by BlockMatrix')
 
     def __isub__(self, other):
-
         if isinstance(other, BlockMatrix):
-            assert other.bshape == self.bshape, \
-                'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
-            assert other.shape == self.shape, \
-                'dimensions mismatch {} != {}'.format(self.shape, other.shape)
+            assert other.bshape == self.bshape, 'dimensions mismatch {} != {}'.format(
+                self.bshape, other.bshape
+            )
+            assert other.shape == self.shape, 'dimensions mismatch {} != {}'.format(
+                self.shape, other.shape
+            )
 
             iterator = set(zip(*np.nonzero(self._block_mask)))
             iterator.update(zip(*np.nonzero(other._block_mask)))
@@ -1001,7 +1059,9 @@ class BlockMatrix(BaseBlockMatrix):
                 if not self.is_empty_block(i, j) and not other.is_empty_block(i, j):
                     self._blocks[i, j] -= other.get_block(i, j)
                 elif not other.is_empty_block(i, j):
-                    self.set_block(i, j, -other.get_block(i, j))  # the copy happens in __neg__ of other.get_block(i, j)
+                    self.set_block(
+                        i, j, -other.get_block(i, j)
+                    )  # the copy happens in __neg__ of other.get_block(i, j)
             return self
         elif isspmatrix(other):
             # Note: this is not efficient but is just for flexibility.
@@ -1054,7 +1114,9 @@ class BlockMatrix(BaseBlockMatrix):
             for i in range(m):
                 for j in range(n):
                     if not self.is_empty_block(i, j) and not other.is_empty_block(i, j):
-                        result.set_block(i, j, operation(self._blocks[i, j], other.get_block(i, j)))
+                        result.set_block(
+                            i, j, operation(self._blocks[i, j], other.get_block(i, j))
+                        )
                     else:
                         nrows = self._brow_lengths[i]
                         ncols = self._bcol_lengths[j]
@@ -1062,13 +1124,17 @@ class BlockMatrix(BaseBlockMatrix):
                         if not self.is_empty_block(i, j):
                             result.set_block(i, j, operation(self._blocks[i, j], mat))
                         elif not other.is_empty_block(i, j):
-                            result.set_block(i, j, operation(mat, other.get_block(i, j)))
+                            result.set_block(
+                                i, j, operation(mat, other.get_block(i, j))
+                            )
                         else:
                             result.set_block(i, j, operation(mat, mat))
             return result
         elif isinstance(other, BlockMatrix) or isspmatrix(other):
             if isinstance(other, BlockMatrix):
-                raise NotImplementedError('Operation supported with same block structure only')
+                raise NotImplementedError(
+                    'Operation supported with same block structure only'
+                )
             else:
                 raise NotImplementedError('Operation not supported by BlockMatrix')
         elif np.isscalar(other):
@@ -1080,8 +1146,8 @@ class BlockMatrix(BaseBlockMatrix):
                     else:
                         nrows = self._brow_lengths[i]
                         ncols = self._bcol_lengths[j]
-                        matc = coo_matrix((nrows, ncols))
-                        result.set_block(i, j, operation(matc, other))
+                        mat = coo_matrix((nrows, ncols))
+                        result.set_block(i, j, operation(mat, other))
             return result
         else:
             if other.__class__.__name__ == 'MPIBlockMatrix':
@@ -1129,15 +1195,17 @@ class BlockMatrix(BaseBlockMatrix):
         int
 
         """
-        msgc = 'Operation not allowed with None columns. ' \
-               'Specify at least one block in every column'
+        msgc = (
+            'Operation not allowed with None columns. '
+            'Specify at least one block in every column'
+        )
         assert not self.has_undefined_col_sizes(), msgc
 
         bm, bn = self.bshape
-        # get cummulative sum of block sizes
+        # get cumulative sum of block sizes
         cum = self._bcol_lengths.cumsum()
         assert index >= 0, 'index out of bounds'
-        assert index < cum[bn-1], 'index out of bounds'
+        assert index < cum[bn - 1], 'index out of bounds'
 
         # exits if only has one column
         if bn <= 1:
@@ -1165,15 +1233,17 @@ class BlockMatrix(BaseBlockMatrix):
         int
 
         """
-        msgr = 'Operation not allowed with None rows. ' \
-               'Specify at least one block in every row'
+        msgr = (
+            'Operation not allowed with None rows. '
+            'Specify at least one block in every row'
+        )
         assert not self.has_undefined_row_sizes(), msgr
 
         bm, bn = self.bshape
-        # get cummulative sum of block sizes
+        # get cumulative sum of block sizes
         cum = self._brow_lengths.cumsum()
-        assert index >=0, 'index out of bounds'
-        assert index < cum[bm-1], 'index out of bounds'
+        assert index >= 0, 'index out of bounds'
+        assert index < cum[bm - 1], 'index out of bounds'
 
         # exits if only has one column
         if bm <= 1:
@@ -1213,7 +1283,7 @@ class BlockMatrix(BaseBlockMatrix):
         offset = 0
         if bcol > 0:
             cum_sum = self._bcol_lengths.cumsum()
-            offset = cum_sum[bcol-1]
+            offset = cum_sum[bcol - 1]
 
         # build block vector
         result = BlockVector(bm)
@@ -1223,10 +1293,10 @@ class BlockMatrix(BaseBlockMatrix):
                 v = np.zeros(self._brow_lengths[i])
             elif isinstance(mat, BaseBlockMatrix):
                 # this will return a block vector
-                v = mat.getcol(j-offset)
+                v = mat.getcol(j - offset)
             else:
                 # if it is sparse matrix transform array to vector
-                v = mat.getcol(j-offset).toarray().flatten()
+                v = mat.getcol(j - offset).toarray().flatten()
             result.set_block(i, v)
         return result
 
@@ -1256,7 +1326,7 @@ class BlockMatrix(BaseBlockMatrix):
         offset = 0
         if brow > 0:
             cum_sum = self._brow_lengths.cumsum()
-            offset = cum_sum[brow-1]
+            offset = cum_sum[brow - 1]
 
         # build block vector
         result = BlockVector(bn)
@@ -1266,9 +1336,9 @@ class BlockMatrix(BaseBlockMatrix):
                 v = np.zeros(self._bcol_lengths[j])
             elif isinstance(mat, BaseBlockMatrix):
                 # this will return a block vector
-                v = mat.getcol(i-offset)
+                v = mat.getcol(i - offset)
             else:
                 # if it is sparse matrix transform array to vector
-                v = mat.getcol(i-offset).toarray().flatten()
+                v = mat.getcol(i - offset).toarray().flatten()
             result.set_block(j, v)
         return result

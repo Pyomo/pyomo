@@ -14,8 +14,9 @@ import pyomo.environ as pyo
 from pyomo.core.base import ConcreteModel, Var, Constraint, Objective
 from pyomo.common.dependencies import attempt_import
 
-np, numpy_available = attempt_import('numpy', 'Interior point requires numpy',
-        minimum_version='1.13.0')
+np, numpy_available = attempt_import(
+    'numpy', 'Interior point requires numpy', minimum_version='1.13.0'
+)
 scipy, scipy_available = attempt_import('scipy', 'Interior point requires scipy')
 mumps, mumps_available = attempt_import('mumps', 'Interior point requires mumps')
 if not (numpy_available and scipy_available):
@@ -26,31 +27,40 @@ if mumps_available:
     from pyomo.contrib.interior_point.linalg.mumps_interface import MumpsInterface
 
 from pyomo.contrib.pynumero.asl import AmplInterface
+
 asl_available = AmplInterface.available()
 if not asl_available:
     raise unittest.SkipTest('Regularization tests require ASL')
 
-from pyomo.contrib.interior_point.interior_point import InteriorPointSolver, InteriorPointStatus
+from pyomo.contrib.interior_point.interior_point import (
+    InteriorPointSolver,
+    InteriorPointStatus,
+)
 from pyomo.contrib.interior_point.interface import InteriorPointInterface
 
 from pyomo.contrib.pynumero.linalg.ma27 import MA27Interface
+
 ma27_available = MA27Interface.available()
 if ma27_available:
-    from pyomo.contrib.interior_point.linalg.ma27_interface import InteriorPointMA27Interface
+    from pyomo.contrib.interior_point.linalg.ma27_interface import (
+        InteriorPointMA27Interface,
+    )
+
 
 def make_model():
     m = ConcreteModel()
-    m.x = Var([1,2,3], initialize=0)
-    m.f = Var([1,2,3], initialize=0)
+    m.x = Var([1, 2, 3], initialize=0)
+    m.f = Var([1, 2, 3], initialize=0)
     m.F = Var(initialize=0)
     m.f[1].fix(1)
     m.f[2].fix(2)
 
-    m.sum_con = Constraint(expr= 
-            (1 == m.x[1] + m.x[2] + m.x[3]))
+    m.sum_con = Constraint(expr=(1 == m.x[1] + m.x[2] + m.x[3]))
+
     def bilin_rule(m, i):
-        return m.F*m.x[i] == m.f[i]
-    m.bilin_con = Constraint([1,2,3], rule=bilin_rule)
+        return m.F * m.x[i] == m.f[i]
+
+    m.bilin_con = Constraint([1, 2, 3], rule=bilin_rule)
 
     m.obj = Objective(expr=m.F**2)
 
@@ -82,8 +92,10 @@ class TestRegularization(unittest.TestCase):
         # Expected regularization coefficient:
         self.assertAlmostEqual(reg_coef, 1e-4)
 
-        desired_n_neg_evals = (ip_solver.interface.n_eq_constraints() +
-                               ip_solver.interface.n_ineq_constraints())
+        desired_n_neg_evals = (
+            ip_solver.interface.n_eq_constraints()
+            + ip_solver.interface.n_ineq_constraints()
+        )
 
         # Expected inertia:
         n_pos_evals, n_neg_evals, n_null_evals = linear_solver.get_inertia()
@@ -138,4 +150,3 @@ if __name__ == '__main__':
     # test_reg = TestRegularization()
     # test_reg.test_regularize_mumps()
     # test_reg.test_regularize_scipy()
-    

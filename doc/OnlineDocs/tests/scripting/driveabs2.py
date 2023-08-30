@@ -23,14 +23,14 @@ results = opt.solve(instance)
 
 # @Access_all_dual
 # display all duals
-print ("Duals")
+print("Duals")
 for c in instance.component_objects(pyo.Constraint, active=True):
-    print ("   Constraint",c)
+    print("   Constraint", c)
     for index in c:
-        print ("      ", index, instance.dual[c[index]])
+        print("      ", index, instance.dual[c[index]])
 # @Access_all_dual
 
 # @Access_one_dual
 # access one dual
-print ("Dual for Film=", instance.dual[instance.AxbConstraint['Film']])
+print("Dual for Film=", instance.dual[instance.AxbConstraint['Film']])
 # @Access_one_dual

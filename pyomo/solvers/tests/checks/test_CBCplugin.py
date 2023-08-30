@@ -15,12 +15,21 @@ from os.path import dirname, abspath
 
 import pyomo.common.unittest as unittest
 
-from pyomo.environ import (ConcreteModel, Var, Objective, RangeSet,
-                           Constraint, Reals, NonNegativeIntegers,
-                           NonNegativeReals, Integers, Binary,
-                           maximize, minimize)
-from pyomo.opt import (SolverFactory, ProblemSense,
-                       TerminationCondition, SolverStatus)
+from pyomo.environ import (
+    ConcreteModel,
+    Var,
+    Objective,
+    RangeSet,
+    Constraint,
+    Reals,
+    NonNegativeIntegers,
+    NonNegativeReals,
+    Integers,
+    Binary,
+    maximize,
+    minimize,
+)
+from pyomo.opt import SolverFactory, ProblemSense, TerminationCondition, SolverStatus
 from pyomo.solvers.plugins.solvers.CBCplugin import CBCSHELL
 
 cbc_available = SolverFactory('cbc', solver_io='lp').available(exception_flag=False)
@@ -54,21 +63,31 @@ class TestCBC(unittest.TestCase):
         results = self.opt.solve(self.model)
 
         self.assertEqual(ProblemSense.minimize, results.problem.sense)
-        self.assertEqual(TerminationCondition.infeasible, results.solver.termination_condition)
-        self.assertEqual('Model was proven to be infeasible.', results.solver.termination_message)
+        self.assertEqual(
+            TerminationCondition.infeasible, results.solver.termination_condition
+        )
+        self.assertEqual(
+            'Model was proven to be infeasible.', results.solver.termination_message
+        )
         self.assertEqual(SolverStatus.warning, results.solver.status)
 
     @unittest.skipIf(not cbc_available, "The 'cbc' solver is not available")
     def test_unbounded_lp(self):
         self.model.Idx = RangeSet(2)
         self.model.X = Var(self.model.Idx, within=Reals)
-        self.model.Obj = Objective(expr=self.model.X[1] + self.model.X[2], sense=maximize)
+        self.model.Obj = Objective(
+            expr=self.model.X[1] + self.model.X[2], sense=maximize
+        )
 
         results = self.opt.solve(self.model)
 
         self.assertEqual(ProblemSense.maximize, results.problem.sense)
-        self.assertEqual(TerminationCondition.unbounded, results.solver.termination_condition)
-        self.assertEqual('Model was proven to be unbounded.', results.solver.termination_message)
+        self.assertEqual(
+            TerminationCondition.unbounded, results.solver.termination_condition
+        )
+        self.assertEqual(
+            'Model was proven to be unbounded.', results.solver.termination_message
+        )
         self.assertEqual(SolverStatus.warning, results.solver.status)
 
     @unittest.skipIf(not cbc_available, "The 'cbc' solver is not available")
@@ -81,10 +100,13 @@ class TestCBC(unittest.TestCase):
         self.assertEqual(0.0, results.problem.lower_bound)
         self.assertEqual(0.0, results.problem.upper_bound)
         self.assertEqual(ProblemSense.minimize, results.problem.sense)
-        self.assertEqual(TerminationCondition.optimal, results.solver.termination_condition)
+        self.assertEqual(
+            TerminationCondition.optimal, results.solver.termination_condition
+        )
         self.assertEqual(
             'Model was solved to optimality (subject to tolerances), and an optimal solution is available.',
-            results.solver.termination_message)
+            results.solver.termination_message,
+        )
         self.assertEqual(SolverStatus.ok, results.solver.status)
 
     @unittest.skipIf(not cbc_available, "The 'cbc' solver is not available")
@@ -97,8 +119,12 @@ class TestCBC(unittest.TestCase):
         results = self.opt.solve(self.model)
 
         self.assertEqual(ProblemSense.minimize, results.problem.sense)
-        self.assertEqual(TerminationCondition.infeasible, results.solver.termination_condition)
-        self.assertEqual('Model was proven to be infeasible.', results.solver.termination_message)
+        self.assertEqual(
+            TerminationCondition.infeasible, results.solver.termination_condition
+        )
+        self.assertEqual(
+            'Model was proven to be infeasible.', results.solver.termination_message
+        )
         self.assertEqual(SolverStatus.warning, results.solver.status)
 
     @unittest.skipIf(not cbc_available, "The 'cbc' solver is not available")
@@ -109,8 +135,12 @@ class TestCBC(unittest.TestCase):
         results = self.opt.solve(self.model)
 
         self.assertEqual(ProblemSense.minimize, results.problem.sense)
-        self.assertEqual(TerminationCondition.unbounded, results.solver.termination_condition)
-        self.assertEqual('Model was proven to be unbounded.', results.solver.termination_message)
+        self.assertEqual(
+            TerminationCondition.unbounded, results.solver.termination_condition
+        )
+        self.assertEqual(
+            'Model was proven to be unbounded.', results.solver.termination_message
+        )
         self.assertEqual(SolverStatus.warning, results.solver.status)
 
     @unittest.skipIf(not cbc_available, "The 'cbc' solver is not available")
@@ -119,8 +149,9 @@ class TestCBC(unittest.TestCase):
         self.model.X = Var(self.model.Idx, within=NonNegativeIntegers)
         self.model.Y = Var(self.model.Idx, within=Binary)
         self.model.C1 = Constraint(expr=self.model.X[1] == self.model.X[2] + 1)
-        self.model.Obj = Objective(expr=self.model.Y[1] + self.model.Y[2] - self.model.X[1],
-                                   sense=maximize)
+        self.model.Obj = Objective(
+            expr=self.model.Y[1] + self.model.Y[2] - self.model.X[1], sense=maximize
+        )
 
         results = self.opt.solve(self.model)
 
@@ -129,10 +160,13 @@ class TestCBC(unittest.TestCase):
         self.assertEqual(results.problem.number_of_binary_variables, 2)
         self.assertEqual(results.problem.number_of_integer_variables, 4)
         self.assertEqual(ProblemSense.maximize, results.problem.sense)
-        self.assertEqual(TerminationCondition.optimal, results.solver.termination_condition)
+        self.assertEqual(
+            TerminationCondition.optimal, results.solver.termination_condition
+        )
         self.assertEqual(
             'Model was solved to optimality (subject to tolerances), and an optimal solution is available.',
-            results.solver.termination_message)
+            results.solver.termination_message,
+        )
         self.assertEqual(SolverStatus.ok, results.solver.status)
 
 
@@ -212,12 +246,19 @@ class TestCBCUsingMock(unittest.TestCase):
         self.assertEqual(SolverStatus.ok, results.solver.status)
         self.assertEqual(0.34, results.solver.system_time)
         self.assertEqual(0.72, results.solver.wallclock_time)
-        self.assertEqual(TerminationCondition.optimal, results.solver.termination_condition)
+        self.assertEqual(
+            TerminationCondition.optimal, results.solver.termination_condition
+        )
         self.assertEqual(
             'Model was solved to optimality (subject to tolerances), and an optimal solution is available.',
-            results.solver.termination_message)
-        self.assertEqual(results.solver.statistics.branch_and_bound.number_of_bounded_subproblems, 2)
-        self.assertEqual(results.solver.statistics.branch_and_bound.number_of_created_subproblems, 2)
+            results.solver.termination_message,
+        )
+        self.assertEqual(
+            results.solver.statistics.branch_and_bound.number_of_bounded_subproblems, 2
+        )
+        self.assertEqual(
+            results.solver.statistics.branch_and_bound.number_of_created_subproblems, 2
+        )
         self.assertEqual(results.solver.statistics.black_box.number_of_iterations, 625)
 
     def test_max_time_limit_mip(self):
@@ -227,17 +268,26 @@ class TestCBCUsingMock(unittest.TestCase):
         lp_file = 'max_time_limit.out.lp'
         results = self.opt.solve(os.path.join(data_dir, lp_file))
 
-        self.assertEqual(1.1084706, results.problem.lower_bound)  # Note that we ignore the lower bound given at the end
+        self.assertEqual(
+            1.1084706, results.problem.lower_bound
+        )  # Note that we ignore the lower bound given at the end
         self.assertEqual(1.35481947, results.problem.upper_bound)
         self.assertEqual(SolverStatus.aborted, results.solver.status)
         self.assertEqual(0.1, results.solver.system_time)
         self.assertEqual(0.11, results.solver.wallclock_time)
-        self.assertEqual(TerminationCondition.maxTimeLimit, results.solver.termination_condition)
+        self.assertEqual(
+            TerminationCondition.maxTimeLimit, results.solver.termination_condition
+        )
         self.assertEqual(
             'Optimization terminated because the time expended exceeded the value specified in the seconds parameter.',
-            results.solver.termination_message)
-        self.assertEqual(results.solver.statistics.branch_and_bound.number_of_bounded_subproblems, 0)
-        self.assertEqual(results.solver.statistics.branch_and_bound.number_of_created_subproblems, 0)
+            results.solver.termination_message,
+        )
+        self.assertEqual(
+            results.solver.statistics.branch_and_bound.number_of_bounded_subproblems, 0
+        )
+        self.assertEqual(
+            results.solver.statistics.branch_and_bound.number_of_created_subproblems, 0
+        )
         self.assertEqual(results.solver.statistics.black_box.number_of_iterations, 82)
 
     def test_intermediate_non_integer_mip(self):
@@ -251,12 +301,20 @@ class TestCBCUsingMock(unittest.TestCase):
         self.assertEqual(SolverStatus.aborted, results.solver.status)
         self.assertEqual(0.02, results.solver.system_time)
         self.assertEqual(0.02, results.solver.wallclock_time)
-        self.assertEqual(TerminationCondition.intermediateNonInteger, results.solver.termination_condition)
+        self.assertEqual(
+            TerminationCondition.intermediateNonInteger,
+            results.solver.termination_condition,
+        )
         self.assertEqual(
             'Optimization terminated because a limit was hit, however it had not found an integer solution yet.',
-            results.solver.termination_message)
-        self.assertEqual(results.solver.statistics.branch_and_bound.number_of_bounded_subproblems, 0)
-        self.assertEqual(results.solver.statistics.branch_and_bound.number_of_created_subproblems, 0)
+            results.solver.termination_message,
+        )
+        self.assertEqual(
+            results.solver.statistics.branch_and_bound.number_of_bounded_subproblems, 0
+        )
+        self.assertEqual(
+            results.solver.statistics.branch_and_bound.number_of_created_subproblems, 0
+        )
         self.assertEqual(results.solver.statistics.black_box.number_of_iterations, 0)
 
     def test_max_solutions(self):
@@ -271,12 +329,20 @@ class TestCBCUsingMock(unittest.TestCase):
         self.assertEqual(SolverStatus.aborted, results.solver.status)
         self.assertEqual(0.03, results.solver.system_time)
         self.assertEqual(0.03, results.solver.wallclock_time)
-        self.assertEqual(TerminationCondition.other, results.solver.termination_condition)
+        self.assertEqual(
+            TerminationCondition.other, results.solver.termination_condition
+        )
         self.assertEqual(
             'Optimization terminated because the number of solutions found reached the value specified in the '
-            'maxSolutions parameter.', results.solver.termination_message)
-        self.assertEqual(results.solver.statistics.branch_and_bound.number_of_bounded_subproblems, 0)
-        self.assertEqual(results.solver.statistics.branch_and_bound.number_of_created_subproblems, 0)
+            'maxSolutions parameter.',
+            results.solver.termination_message,
+        )
+        self.assertEqual(
+            results.solver.statistics.branch_and_bound.number_of_bounded_subproblems, 0
+        )
+        self.assertEqual(
+            results.solver.statistics.branch_and_bound.number_of_created_subproblems, 0
+        )
         self.assertEqual(results.solver.statistics.black_box.number_of_iterations, 0)
 
     def test_within_gap_tolerance(self):
@@ -291,12 +357,19 @@ class TestCBCUsingMock(unittest.TestCase):
         self.assertEqual(SolverStatus.ok, results.solver.status)
         self.assertEqual(0.07, results.solver.system_time)
         self.assertEqual(0.07, results.solver.wallclock_time)
-        self.assertEqual(TerminationCondition.optimal, results.solver.termination_condition)
+        self.assertEqual(
+            TerminationCondition.optimal, results.solver.termination_condition
+        )
         self.assertEqual(
             'Model was solved to optimality (subject to tolerances), and an optimal solution is available.',
-            results.solver.termination_message)
-        self.assertEqual(results.solver.statistics.branch_and_bound.number_of_bounded_subproblems, 0)
-        self.assertEqual(results.solver.statistics.branch_and_bound.number_of_created_subproblems, 0)
+            results.solver.termination_message,
+        )
+        self.assertEqual(
+            results.solver.statistics.branch_and_bound.number_of_bounded_subproblems, 0
+        )
+        self.assertEqual(
+            results.solver.statistics.branch_and_bound.number_of_created_subproblems, 0
+        )
         self.assertEqual(results.solver.statistics.black_box.number_of_iterations, 0)
 
     def test_max_evaluations(self):
@@ -311,12 +384,20 @@ class TestCBCUsingMock(unittest.TestCase):
         self.assertEqual(SolverStatus.aborted, results.solver.status)
         self.assertEqual(0.16, results.solver.system_time)
         self.assertEqual(0.18, results.solver.wallclock_time)
-        self.assertEqual(TerminationCondition.maxEvaluations, results.solver.termination_condition)
+        self.assertEqual(
+            TerminationCondition.maxEvaluations, results.solver.termination_condition
+        )
         self.assertEqual(
             'Optimization terminated because the total number of branch-and-cut nodes explored exceeded the value '
-            'specified in the maxNodes parameter', results.solver.termination_message)
-        self.assertEqual(results.solver.statistics.branch_and_bound.number_of_bounded_subproblems, 1)
-        self.assertEqual(results.solver.statistics.branch_and_bound.number_of_created_subproblems, 1)
+            'specified in the maxNodes parameter',
+            results.solver.termination_message,
+        )
+        self.assertEqual(
+            results.solver.statistics.branch_and_bound.number_of_bounded_subproblems, 1
+        )
+        self.assertEqual(
+            results.solver.statistics.branch_and_bound.number_of_created_subproblems, 1
+        )
         self.assertEqual(results.solver.statistics.black_box.number_of_iterations, 602)
 
     def test_fix_parsing_bug(self):
@@ -336,12 +417,20 @@ class TestCBCUsingMock(unittest.TestCase):
         self.assertEqual(SolverStatus.aborted, results.solver.status)
         self.assertEqual(0.08, results.solver.system_time)
         self.assertEqual(0.09, results.solver.wallclock_time)
-        self.assertEqual(TerminationCondition.other, results.solver.termination_condition)
+        self.assertEqual(
+            TerminationCondition.other, results.solver.termination_condition
+        )
         self.assertEqual(
             'Optimization terminated because the number of solutions found reached the value specified in the '
-            'maxSolutions parameter.', results.solver.termination_message)
-        self.assertEqual(results.solver.statistics.branch_and_bound.number_of_bounded_subproblems, 0)
-        self.assertEqual(results.solver.statistics.branch_and_bound.number_of_created_subproblems, 0)
+            'maxSolutions parameter.',
+            results.solver.termination_message,
+        )
+        self.assertEqual(
+            results.solver.statistics.branch_and_bound.number_of_bounded_subproblems, 0
+        )
+        self.assertEqual(
+            results.solver.statistics.branch_and_bound.number_of_created_subproblems, 0
+        )
         self.assertEqual(results.solver.statistics.black_box.number_of_iterations, 0)
 
     def test_process_logfile(self):
@@ -349,18 +438,28 @@ class TestCBCUsingMock(unittest.TestCase):
         cbc_shell._log_file = os.path.join(data_dir, 'test5_timeout_cbc.txt')
         results = cbc_shell.process_logfile()
         self.assertEqual(results.solution.gap, 0.01)
-        self.assertEqual(results.solver.statistics.black_box.number_of_iterations, 50364)
+        self.assertEqual(
+            results.solver.statistics.black_box.number_of_iterations, 50364
+        )
         self.assertEqual(results.solver.system_time, 2.01)
-        self.assertEqual(results.solver.statistics.branch_and_bound.number_of_created_subproblems, 34776)
+        self.assertEqual(
+            results.solver.statistics.branch_and_bound.number_of_created_subproblems,
+            34776,
+        )
 
     def test_process_logfile_gap_inf(self):
         cbc_shell = CBCSHELL()
         cbc_shell._log_file = os.path.join(data_dir, 'test5_timeout_cbc_gap.txt')
         results = cbc_shell.process_logfile()
         self.assertEqual(results.solution.gap, float('inf'))
-        self.assertEqual(results.solver.statistics.black_box.number_of_iterations, 50364)
+        self.assertEqual(
+            results.solver.statistics.black_box.number_of_iterations, 50364
+        )
         self.assertEqual(results.solver.system_time, 2.01)
-        self.assertEqual(results.solver.statistics.branch_and_bound.number_of_created_subproblems, 34776)
+        self.assertEqual(
+            results.solver.statistics.branch_and_bound.number_of_created_subproblems,
+            34776,
+        )
 
 
 if __name__ == "__main__":

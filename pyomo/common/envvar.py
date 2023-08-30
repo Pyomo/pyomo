@@ -14,12 +14,14 @@ import platform
 
 if 'PYOMO_CONFIG_DIR' in os.environ:
     PYOMO_CONFIG_DIR = os.path.abspath(os.environ['PYOMO_CONFIG_DIR'])
-elif platform.system().lower().startswith(('windows','cygwin')):
+elif platform.system().lower().startswith(('windows', 'cygwin')):
     PYOMO_CONFIG_DIR = os.path.abspath(
-        os.path.join(os.environ.get('LOCALAPPDATA', ''), 'Pyomo'))
+        os.path.join(os.environ.get('LOCALAPPDATA', ''), 'Pyomo')
+    )
 else:
     PYOMO_CONFIG_DIR = os.path.abspath(
-        os.path.join(os.environ.get('HOME', ''), '.pyomo'))
+        os.path.join(os.environ.get('HOME', ''), '.pyomo')
+    )
 
 # Note that alternative platform-independent implementation of the above
 # could be to use:

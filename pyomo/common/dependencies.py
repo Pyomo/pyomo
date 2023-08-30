@@ -14,21 +14,22 @@ import inspect
 import importlib
 import logging
 import sys
+import warnings
 
-from .deprecation import (
-    deprecated, deprecation_warning, in_testing_environment,
-)
+from .deprecation import deprecated, deprecation_warning, in_testing_environment
+from .errors import DeferredImportError
 from . import numeric_types
 
-class DeferredImportError(ImportError):
-    pass
+
+SUPPRESS_DEPENDENCY_WARNINGS = False
+
 
 class ModuleUnavailable(object):
-    """Mock object that raises a DeferredImportError upon attribute access
+    """Mock object that raises :py:class:`.DeferredImportError` upon attribute access
 
     This object is returned by :py:func:`attempt_import()` in lieu of
     the module in the case that the module import fails.  Any attempts
-    to access attributes on this object will raise a DeferredImportError
+    to access attributes on this object will raise a :py:class:`.DeferredImportError`
     exception.
 
     Parameters
@@ -64,14 +65,13 @@ class ModuleUnavailable(object):
 
     def __init__(self, name, message, version_error, import_error, package):
         self.__name__ = name
-        self._moduleunavailable_info_ = (
-            message, version_error, import_error, package,
-        )
+        self._moduleunavailable_info_ = (message, version_error, import_error, package)
 
     def __getattr__(self, attr):
         if attr in ModuleUnavailable._getattr_raises_attributeerror:
-            raise AttributeError("'%s' object has no attribute '%s'"
-                                 % (type(self).__name__, attr))
+            raise AttributeError(
+                "'%s' object has no attribute '%s'" % (type(self).__name__, attr)
+            )
         raise DeferredImportError(self._moduleunavailable_message())
 
     def __getstate__(self):
@@ -99,12 +99,12 @@ class ModuleUnavailable(object):
                     "failed to import: %s" % (self.__name__, _pkg_str, _imp)
                 )
             else:
-                msg = "%s (import raised %s)" % (msg, _imp,)
+                msg = "%s (import raised %s)" % (msg, _imp)
         if _ver:
             if not msg or not str(msg):
                 msg = "The %s module %s" % (self.__name__, _ver)
             else:
-                msg = "%s (%s)" % (msg, _ver,)
+                msg = "%s (%s)" % (msg, _ver)
         return msg
 
     def log_import_warning(self, logger='pyomo', msg=None):
@@ -131,14 +131,15 @@ class DeferredImportModule(object):
     ``defer_check=True``.  Any attempts to access attributes on this
     object will trigger the actual module import and return either the
     appropriate module attribute or else if the module import fails,
-    raise a DeferredImportError exception.
+    raise a :py:class:`.DeferredImportError` exception.
 
     """
+
     def __init__(self, indicator, deferred_submodules, submodule_name):
         self._indicator_flag = indicator
         self._submodule_name = submodule_name
-        self.__file__ = None # Disable nose's coverage of this module
-        self.__spec__ = None # Indicate that this is not a "real" module
+        self.__file__ = None  # Disable coverage of this module
+        self.__spec__ = None  # Indicate that this is not a "real" module
 
         if not deferred_submodules:
             return
@@ -147,12 +148,16 @@ class DeferredImportModule(object):
         for name in deferred_submodules:
             if not name.startswith(submodule_name + '.'):
                 continue
-            _local_name = name[(1+len(submodule_name)):]
+            _local_name = name[(1 + len(submodule_name)) :]
             if '.' in _local_name:
                 continue
-            setattr(self, _local_name, DeferredImportModule(
-                indicator, deferred_submodules,
-                submodule_name + '.' + _local_name))
+            setattr(
+                self,
+                _local_name,
+                DeferredImportModule(
+                    indicator, deferred_submodules, submodule_name + '.' + _local_name
+                ),
+            )
 
     def __getattr__(self, attr):
         self._indicator_flag.resolve()
@@ -175,6 +180,83 @@ class DeferredImportModule(object):
         return [DeferredImportModule, object]
 
 
+def UnavailableClass(unavailable_module):
+    """Function to generate an "unavailable" base class
+
+    This function returns a custom class that wraps the
+    :py:class:`ModuleUnavailable` instance returned by
+    :py:func:`attempt_import` when the target module is not available.
+    Any attempt to instantiate this class (or a class derived from it)
+    or access a class attribute will raise the
+    :py:class:`.DeferredImportError` from the wrapped
+    :py:class:`ModuleUnavailable` object.
+
+    Parameters
+    ----------
+    unavailable_module: ModuleUnavailable
+        The :py:class:`ModuleUnavailable` instance (from
+        :py:func:`attempt_import`) to use to generate the
+        :py:class:`.DeferredImportError`.
+
+    Example
+    -------
+
+    Declaring a class that inherits from an optional dependency:
+
+    .. doctest::
+
+       >>> from pyomo.common.dependencies import attempt_import, UnavailableClass
+       >>> bogus, bogus_available = attempt_import('bogus_unavailable_class')
+       >>> class MyPlugin(bogus.plugin if bogus_available else UnavailableClass(bogus)):
+       ...     pass
+
+    Attempting to instantiate the derived class generates an exception
+    when the module is unavailable:
+
+    .. doctest::
+
+       >>> MyPlugin()
+       Traceback (most recent call last):
+          ...
+       pyomo.common.dependencies.DeferredImportError: The class 'MyPlugin' cannot be
+       created because a needed optional dependency was not found (import raised
+       ModuleNotFoundError: No module named 'bogus_unavailable_class')
+
+    As does attempting to access class attributes on the derived class:
+
+    .. doctest::
+
+       >>> MyPlugin.create_instance()
+       Traceback (most recent call last):
+          ...
+       pyomo.common.dependencies.DeferredImportError: The class attribute
+       'MyPlugin.create_instance' is not available because a needed optional
+       dependency was not found (import raised ModuleNotFoundError: No module
+       named 'bogus_unavailable_class')
+
+    """
+
+    class UnavailableMeta(type):
+        def __getattr__(cls, name):
+            raise DeferredImportError(
+                unavailable_module._moduleunavailable_message(
+                    f"The class attribute '{cls.__name__}.{name}' is not available "
+                    "because a needed optional dependency was not found"
+                )
+            )
+
+    class UnavailableBase(metaclass=UnavailableMeta):
+        def __new__(cls, *args, **kwargs):
+            raise DeferredImportError(
+                unavailable_module._moduleunavailable_message(
+                    f"The class '{cls.__name__}' cannot be created because a "
+                    "needed optional dependency was not found"
+                )
+            )
+
+    return UnavailableBase
+
+
 class _DeferredImportIndicatorBase(object):
     def __and__(self, other):
         return _DeferredAnd(self, other)
@@ -194,11 +276,11 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
 
     This object serves as a placeholder for the Boolean indicator if a
     deferred module import was successful.  Casting this instance to
-    bool will cause the import to be attempted.  The actual import logic
-    is here and not in the DeferredImportModule to reduce the number of
-    attributes on the DeferredImportModule.
+    `bool` will cause the import to be attempted.  The actual import logic
+    is here and not in the :py:class:`DeferredImportModule` to reduce the number of
+    attributes on the :py:class:`DeferredImportModule`.
 
-    ``DeferredImportIndicator`` supports limited logical expressions
+    :py:class:`DeferredImportIndicator` supports limited logical expressions
     using the ``&`` (and) and ``|`` (or) binary operators.  Creating
     these expressions does not trigger the import of the corresponding
     :py:class:`DeferredImportModule` instances, although casting the
@@ -207,9 +289,17 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
 
     """
 
-    def __init__(self, name, error_message, catch_exceptions,
-                 minimum_version, original_globals, callback, importer,
-                 deferred_submodules):
+    def __init__(
+        self,
+        name,
+        error_message,
+        catch_exceptions,
+        minimum_version,
+        original_globals,
+        callback,
+        importer,
+        deferred_submodules,
+    ):
         self._names = [name]
         for _n in tuple(self._names):
             if '.' in _n:
@@ -256,8 +346,7 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
 
             # If this module was not found, then we need to check for
             # deferred submodules and resolve them as well
-            if self._deferred_submodules and \
-               type(self._module) is ModuleUnavailable:
+            if self._deferred_submodules and type(self._module) is ModuleUnavailable:
                 info = self._module._moduleunavailable_info_
                 for submod in self._deferred_submodules:
                     refmod = self._module
@@ -265,8 +354,11 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
                         try:
                             refmod = getattr(refmod, name)
                         except DeferredImportError:
-                            setattr(refmod, name, ModuleUnavailable(
-                                refmod.__name__+submod, *info))
+                            setattr(
+                                refmod,
+                                name,
+                                ModuleUnavailable(refmod.__name__ + submod, *info),
+                            )
                             refmod = getattr(refmod, name)
 
             # Replace myself in the original globals() where I was
@@ -281,11 +373,10 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
         self.replace_self_in_globals(_frame.f_globals)
 
     def replace_self_in_globals(self, _globals):
-        for k,v in _globals.items():
+        for k, v in _globals.items():
             if v is self:
                 _globals[k] = self._available
-            elif v.__class__ is DeferredImportModule and \
-                 v._indicator_flag is self:
+            elif v.__class__ is DeferredImportModule and v._indicator_flag is self:
                 if v._submodule_name is None:
                     _globals[k] = self._module
                 else:
@@ -325,6 +416,7 @@ def check_min_version(module, min_version):
     if check_min_version._parser is None:
         try:
             from packaging import version as _version
+
             _parser = _version.parse
         except ImportError:
             # pkg_resources is an order of magnitude slower to import than
@@ -338,13 +430,22 @@ def check_min_version(module, min_version):
     version = getattr(module, '__version__', '0.0.0')
     return _parser(min_version) <= _parser(version)
 
+
 check_min_version._parser = None
 
 
-def attempt_import(name, error_message=None, only_catch_importerror=None,
-                   minimum_version=None, alt_names=None, callback=None,
-                   importer=None, defer_check=True, deferred_submodules=None,
-                   catch_exceptions=None):
+def attempt_import(
+    name,
+    error_message=None,
+    only_catch_importerror=None,
+    minimum_version=None,
+    alt_names=None,
+    callback=None,
+    importer=None,
+    defer_check=True,
+    deferred_submodules=None,
+    catch_exceptions=None,
+):
     """Attempt to import the specified module.
 
     This will attempt to import the specified module, returning a
@@ -424,8 +525,8 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
     defer_check: bool, optional
         If True (the default), then the attempted import is deferred
         until the first use of either the module or the availability
-        flag.  The method will return instances of DeferredImportModule
-        and DeferredImportIndicator.
+        flag.  The method will return instances of :py:class:`DeferredImportModule`
+        and :py:class:`DeferredImportIndicator`.
 
     deferred_submodules: Iterable[str], optional
         If provided, an iterable of submodule names within this module
@@ -453,16 +554,22 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
 
     """
     if alt_names is not None:
-        deprecation_warning('alt_names=%s no longer needs to be specified '
-                            'and is ignored' % (alt_names,), version='6.0')
+        deprecation_warning(
+            'alt_names=%s no longer needs to be specified '
+            'and is ignored' % (alt_names,),
+            version='6.0',
+        )
 
     if only_catch_importerror is not None:
         deprecation_warning(
             "only_catch_importerror is deprecated.  Pass exceptions to "
-            "catch using the catch_exceptions argument", version='5.7.3')
+            "catch using the catch_exceptions argument",
+            version='5.7.3',
+        )
         if catch_exceptions is not None:
-            raise ValueError("Cannot specify both only_catch_importerror "
-                             "and catch_exceptions")
+            raise ValueError(
+                "Cannot specify both only_catch_importerror and catch_exceptions"
+            )
         if only_catch_importerror:
             catch_exceptions = (ImportError,)
         else:
@@ -478,7 +585,9 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
                 deprecation_warning(
                     'attempt_import(): deferred_submodules takes an iterable '
                     'and not a mapping (the alt_names supplied by the mapping '
-                    'are no longer needed and are ignored).', version='6.0')
+                    'are no longer needed and are ignored).',
+                    version='6.0',
+                )
                 deferred_submodules = list(deferred_submodules)
 
             # Ensures all names begin with '.'
@@ -508,12 +617,12 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
             original_globals=inspect.currentframe().f_back.f_globals,
             callback=callback,
             importer=importer,
-            deferred_submodules=deferred)
+            deferred_submodules=deferred,
+        )
         return DeferredImportModule(indicator, deferred, None), indicator
 
     if deferred_submodules:
-        raise ValueError(
-            "deferred_submodules is only valid if defer_check==True")
+        raise ValueError("deferred_submodules is only valid if defer_check==True")
 
     return _perform_import(
         name=name,
@@ -526,30 +635,38 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
     )
 
 
-def _perform_import(name, error_message, minimum_version, callback,
-                    importer, catch_exceptions, package):
+def _perform_import(
+    name, error_message, minimum_version, callback, importer, catch_exceptions, package
+):
     import_error = None
     version_error = None
     try:
-        if importer is None:
-            module = importlib.import_module(name)
-        else:
-            module = importer()
-        if ( minimum_version is None
-             or check_min_version(module, minimum_version) ):
+        with warnings.catch_warnings():
+            # Temporarily suppress all warnings: we assume we are
+            # importing a third-party package here and we don't want to
+            # see them?
+            if SUPPRESS_DEPENDENCY_WARNINGS and not name.startswith('pyomo.'):
+                warnings.resetwarnings()
+                warnings.simplefilter("ignore")
+            if importer is None:
+                module = importlib.import_module(name)
+            else:
+                module = importer()
+        if minimum_version is None or check_min_version(module, minimum_version):
             if callback is not None:
                 callback(module, True)
             return module, True
         else:
             version = getattr(module, '__version__', 'UNKNOWN')
-            version_error = (
-                "version %s does not satisfy the minimum version %s"
-                % (version, minimum_version))
+            version_error = "version %s does not satisfy the minimum version %s" % (
+                version,
+                minimum_version,
+            )
     except catch_exceptions as e:
         import_error = "%s: %s" % (type(e).__name__, e)
 
     module = ModuleUnavailable(
-        name, error_message, version_error, import_error, package,
+        name, error_message, version_error, import_error, package
     )
     if callback is not None:
         callback(module, False)
@@ -557,9 +674,9 @@ def _perform_import(name, error_message, minimum_version, callback,
 
 
 def declare_deferred_modules_as_importable(globals_dict):
-    """Make all DeferredImportModules in ``globals_dict`` importable
+    """Make all :py:class:`DeferredImportModules` in ``globals_dict`` importable
 
-    This function will go throught the specified ``globals_dict``
+    This function will go throughout the specified ``globals_dict``
     dictionary and add any instances of :py:class:`DeferredImportModule`
     that it finds (and any of their deferred submodules) to
     ``sys.modules`` so that the modules can be imported through the
@@ -597,15 +714,19 @@ def declare_deferred_modules_as_importable(globals_dict):
 
     """
     _global_name = globals_dict['__name__'] + '.'
-    deferred = list((k, v) for k, v in globals_dict.items()
-                    if type(v) is DeferredImportModule )
+    deferred = list(
+        (k, v) for k, v in globals_dict.items() if type(v) is DeferredImportModule
+    )
     while deferred:
         name, mod = deferred.pop(0)
         mod.__path__ = None
         mod.__spec__ = None
         sys.modules[_global_name + name] = mod
-        deferred.extend((name + '.' + k, v) for k, v in mod.__dict__.items()
-                        if type(v) is DeferredImportModule )
+        deferred.extend(
+            (name + '.' + k, v)
+            for k, v in mod.__dict__.items()
+            if type(v) is DeferredImportModule
+        )
 
 
 #
@@ -613,16 +734,20 @@ def declare_deferred_modules_as_importable(globals_dict):
 #
 
 yaml_load_args = {}
+
+
 def _finalize_yaml(module, available):
     # Recent versions of PyYAML issue warnings if the Loader argument is
     # not set
     if available and hasattr(module, 'SafeLoader'):
         yaml_load_args['Loader'] = module.SafeLoader
 
+
 def _finalize_scipy(module, available):
     if available:
         # Import key subpackages that we will want to assume are present
         import scipy.stats
+
         # As of scipy 1.6.0, importing scipy.stats causes the following
         # to be automatically imported.  However, we will still
         # explicitly import them here to guard against potential future
@@ -631,10 +756,12 @@ def _finalize_scipy(module, available):
         import scipy.sparse
         import scipy.spatial
 
+
 def _finalize_pympler(module, available):
     if available:
         # Import key subpackages that we will want to assume are present
         import pympler.muppy
+
 
 def _finalize_matplotlib(module, available):
     if not available:
@@ -647,33 +774,52 @@ def _finalize_matplotlib(module, available):
         module.use('Agg')
     import matplotlib.pyplot
 
+
 def _finalize_numpy(np, available):
     if not available:
         return
-    numeric_types.RegisterBooleanType(np.bool_)
-    for t in (np.int_, np.intc, np.intp,
-              np.int8, np.int16, np.int32, np.int64,
-              np.uint8, np.uint16, np.uint32, np.uint64):
+    numeric_types.native_types.add(np.ndarray)
+    numeric_types.RegisterLogicalType(np.bool_)
+    for t in (
+        np.int_,
+        np.intc,
+        np.intp,
+        np.int8,
+        np.int16,
+        np.int32,
+        np.int64,
+        np.uint8,
+        np.uint16,
+        np.uint32,
+        np.uint64,
+    ):
         numeric_types.RegisterIntegerType(t)
-        numeric_types.RegisterBooleanType(t)
-    for t in (np.float_, np.float16, np.float32, np.float64, np.ndarray):
+        # We have deprecated RegisterBooleanType, so we will mock up the
+        # registration here (to bypass the deprecation warning) until we
+        # finally remove all support for it
+        numeric_types._native_boolean_types.add(t)
+    for t in (np.float_, np.float16, np.float32, np.float64):
         numeric_types.RegisterNumericType(t)
-        numeric_types.RegisterBooleanType(t)
+        # We have deprecated RegisterBooleanType, so we will mock up the
+        # registration here (to bypass the deprecation warning) until we
+        # finally remove all support for it
+        numeric_types._native_boolean_types.add(t)
 
 
-yaml, yaml_available = attempt_import(
-    'yaml', callback=_finalize_yaml)
-pympler, pympler_available = attempt_import(
-    'pympler', callback=_finalize_pympler)
-numpy, numpy_available = attempt_import(
-    'numpy', callback=_finalize_numpy)
-scipy, scipy_available = attempt_import(
-    'scipy', callback=_finalize_scipy,
-    deferred_submodules=['stats', 'sparse', 'spatial', 'integrate'])
-networkx, networkx_available = attempt_import('networkx')
-pandas, pandas_available = attempt_import('pandas')
 dill, dill_available = attempt_import('dill')
+mpi4py, mpi4py_available = attempt_import('mpi4py')
+networkx, networkx_available = attempt_import('networkx')
+numpy, numpy_available = attempt_import('numpy', callback=_finalize_numpy)
+pandas, pandas_available = attempt_import('pandas')
+plotly, plotly_available = attempt_import('plotly')
+pympler, pympler_available = attempt_import('pympler', callback=_finalize_pympler)
 pyutilib, pyutilib_available = attempt_import('pyutilib')
+scipy, scipy_available = attempt_import(
+    'scipy',
+    callback=_finalize_scipy,
+    deferred_submodules=['stats', 'sparse', 'spatial', 'integrate'],
+)
+yaml, yaml_available = attempt_import('yaml', callback=_finalize_yaml)
 
 # Note that matplotlib.pyplot can generate a runtime error on OSX when
 # not installed as a Framework (as is the case in the CI systems)

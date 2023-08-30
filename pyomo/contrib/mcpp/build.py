@@ -18,6 +18,7 @@ import pyomo.common.envvar as envvar
 from pyomo.common.fileutils import this_file_dir, find_dir
 from pyomo.common.download import FileDownloader
 
+
 def _generate_configuration():
     # defer the import until use (this eventually imports pkg_resources,
     # which is slow to import)
@@ -25,27 +26,23 @@ def _generate_configuration():
 
     # Try and find MC++.  Defer to the MCPP_ROOT if it is set;
     # otherwise, look in common locations for a mcpp directory.
-    pathlist=[
-        os.path.join(envvar.PYOMO_CONFIG_DIR, 'src'),
-        this_file_dir(),
-    ]
+    pathlist = [os.path.join(envvar.PYOMO_CONFIG_DIR, 'src'), this_file_dir()]
     if 'MCPP_ROOT' in os.environ:
         mcpp = os.environ['MCPP_ROOT']
     else:
         mcpp = find_dir('mcpp', cwd=True, pathlist=pathlist)
     if mcpp:
-        print("Found MC++ at %s" % ( mcpp, ))
+        print("Found MC++ at %s" % (mcpp,))
     else:
         raise RuntimeError(
-            "Cannot identify the location of the MCPP source distribution")
+            "Cannot identify the location of the MCPP source distribution"
+        )
 
     #
     # Configuration for this extension
     #
     project_dir = this_file_dir()
-    sources = [
-        os.path.join(project_dir, 'mcppInterface.cpp'),
-    ]
+    sources = [os.path.join(project_dir, 'mcppInterface.cpp')]
     include_dirs = [
         os.path.join(mcpp, 'src', 'mc'),
         os.path.join(mcpp, 'src', '3rdparty', 'fadbad++'),
@@ -60,12 +57,8 @@ def _generate_configuration():
         library_dirs=[],
         libraries=[],
     )
-    
-    package_config = {
-        'name': 'mcpp',
-        'packages': [],
-        'ext_modules': [mcpp_ext],
-    }
+
+    package_config = {'name': 'mcpp', 'packages': [], 'ext_modules': [mcpp_ext]}
 
     return package_config
 
@@ -83,9 +76,12 @@ def build_mcpp():
         # Python 2.7, so we will add an explicit inheritance from object so
         # that super() works.
         def get_ext_filename(self, ext_name):
-            filename = super(_BuildWithoutPlatformInfo, self).get_ext_filename(
-                ext_name).split('.')
-            filename = '.'.join([filename[0],filename[-1]])
+            filename = (
+                super(_BuildWithoutPlatformInfo, self)
+                .get_ext_filename(ext_name)
+                .split('.')
+            )
+            filename = '.'.join([filename[0], filename[-1]])
             return filename
 
     print("\n**** Building MCPP library ****")
@@ -97,13 +93,14 @@ def build_mcpp():
     try:
         basedir = os.path.abspath(os.path.curdir)
         tmpdir = os.path.abspath(tempfile.mkdtemp())
-        print("   tmpdir = %s" % ( tmpdir, ))
+        print("   tmpdir = %s" % (tmpdir,))
         os.chdir(tmpdir)
         dist.run_command('install_lib')
-        print("Installed mcppInterface to %s" % ( install_dir, ))
+        print("Installed mcppInterface to %s" % (install_dir,))
     finally:
         os.chdir(basedir)
         shutil.rmtree(tmpdir)
+
 
 class MCPPBuilder(object):
     def __call__(self, parallel):
@@ -115,4 +112,3 @@ class MCPPBuilder(object):
 
 if __name__ == "__main__":
     build_mcpp()
-

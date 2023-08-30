@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['test_solver_cases', 'available_solvers']
+__all__ = ['test_solver_cases']
 
 import logging
 
@@ -29,7 +29,8 @@ _test_solver_cases = {}
 
 # ----------------------------------------------------------------
 
-licensed_solvers_with_demo_mode = {'baron',}
+licensed_solvers_with_demo_mode = {'baron'}
+
 
 #
 # NOTE: we initialize the test case, since different
@@ -51,8 +52,7 @@ def initialize(**kwds):
         obj.available = False
     elif hasattr(opt, 'executable') and opt.executable() is None:
         obj.available = False
-    elif not opt.license_is_valid() \
-         and obj.name not in licensed_solvers_with_demo_mode:
+    elif not opt.license_is_valid() and obj.name not in licensed_solvers_with_demo_mode:
         obj.available = False
     else:
         obj.available = True
@@ -69,7 +69,9 @@ def initialize(**kwds):
     if not (opt is None or isinstance(opt, UnknownSolver)):
         for _c in obj.capabilities:
             if not _c in opt._capabilities:
-                raise ValueError("Solver %s does not support capability %s!" % (obj.name, _c))
+                raise ValueError(
+                    "Solver %s does not support capability %s!" % (obj.name, _c)
+                )
     #
     # Get version
     #
@@ -85,66 +87,79 @@ def test_solver_cases(*args):
     if len(_test_solver_cases) == 0:
         logging.disable(logging.WARNING)
 
-
         #
         # MOSEK
         #
 
-        _mosek_capabilities = set(['linear',
-                                   'integer',
-                                   'quadratic_objective',
-                                   'quadratic_constraint',
-                                   'conic_constraints'])
-    
+        _mosek_capabilities = set(
+            [
+                'linear',
+                'integer',
+                'quadratic_objective',
+                'quadratic_constraint',
+                'conic_constraints',
+            ]
+        )
+
         _test_solver_cases['mosek', 'python'] = initialize(
             name='mosek',
             io='python',
             capabilities=_mosek_capabilities,
-            import_suffixes=['dual', 'rc', 'slack'])
+            import_suffixes=['dual', 'rc', 'slack'],
+        )
 
         #
         # MOSEK Persistent
         #
-        _test_solver_cases['mosek','persistent'] = initialize(
-                name = 'mosek',
-                io = 'persistent',
-                capabilities=_mosek_capabilities,
-                import_suffixes=['dual','rc','slack'])
+        _test_solver_cases['mosek', 'persistent'] = initialize(
+            name='mosek',
+            io='persistent',
+            capabilities=_mosek_capabilities,
+            import_suffixes=['dual', 'rc', 'slack'],
+        )
 
         #
         # CPLEX
         #
 
-        _cplex_capabilities= set(['linear',
-                                  'integer',
-                                  'quadratic_objective',
-                                  'quadratic_constraint',
-                                  'sos1',
-                                  'sos2'])
+        _cplex_capabilities = set(
+            [
+                'linear',
+                'integer',
+                'quadratic_objective',
+                'quadratic_constraint',
+                'sos1',
+                'sos2',
+            ]
+        )
 
         _test_solver_cases['cplex', 'lp'] = initialize(
             name='cplex',
             io='lp',
             capabilities=_cplex_capabilities,
-            import_suffixes=['slack','dual','rc'])
+            import_suffixes=['slack', 'dual', 'rc'],
+        )
 
         _test_solver_cases['cplex', 'mps'] = initialize(
             name='cplex',
             io='mps',
             capabilities=_cplex_capabilities,
-            import_suffixes=['slack','dual','rc'])
+            import_suffixes=['slack', 'dual', 'rc'],
+        )
 
         _test_solver_cases['cplex', 'nl'] = initialize(
             name='cplex',
             io='nl',
             capabilities=_cplex_capabilities,
-            import_suffixes=['dual'])
+            import_suffixes=['dual'],
+        )
 
         _test_solver_cases['cplex', 'python'] = initialize(
             name='cplex',
             io='python',
             capabilities=_cplex_capabilities,
-            import_suffixes=['slack','dual','rc'])
+            import_suffixes=['slack', 'dual', 'rc'],
+        )
 
         #
         # CPLEX PERSISTENT
@@ -154,28 +169,30 @@ def test_solver_cases(*args):
             name='cplex_persistent',
             io='python',
             capabilities=_cplex_capabilities,
-            import_suffixes=['slack','dual','rc'])
+            import_suffixes=['slack', 'dual', 'rc'],
+        )
 
         #
         # GAMS
         #
 
-        _gams_capabilities= set(['linear',
-                                 'integer',
-                                 'quadratic_objective',
-                                 'quadratic_constraint'])
+        _gams_capabilities = set(
+            ['linear', 'integer', 'quadratic_objective', 'quadratic_constraint']
+        )
 
         _test_solver_cases['gams', 'gms'] = initialize(
             name='gams',
             io='gms',
             capabilities=_gams_capabilities,
-            import_suffixes=['dual','rc'])
+            import_suffixes=['dual', 'rc'],
+        )
 
         _test_solver_cases['gams', 'python'] = initialize(
             name='gams',
             io='python',
             capabilities=_gams_capabilities,
-            import_suffixes=['dual','rc'])
+            import_suffixes=['dual', 'rc'],
+        )
 
         #
         # GUROBI
@@ -183,37 +200,45 @@ def test_solver_cases(*args):
         # **NOTE: Gurobi does not handle quadratic constraints before
         #         Major Version 5
         #
-        _gurobi_capabilities= set(['linear',
-                                   'integer',
-                                   'quadratic_objective',
-                                   'quadratic_constraint',
-                                   'sos1',
-                                   'sos2'])
+        _gurobi_capabilities = set(
+            [
+                'linear',
+                'integer',
+                'quadratic_objective',
+                'quadratic_constraint',
+                'sos1',
+                'sos2',
+            ]
+        )
 
         _test_solver_cases['gurobi', 'lp'] = initialize(
             name='gurobi',
             io='lp',
             capabilities=_gurobi_capabilities,
-            import_suffixes=['slack','dual','rc'])
+            import_suffixes=['slack', 'dual', 'rc'],
+        )
 
         _test_solver_cases['gurobi', 'mps'] = initialize(
             name='gurobi',
             io='mps',
             capabilities=_gurobi_capabilities,
-            import_suffixes=['slack','dual','rc'])
+            import_suffixes=['slack', 'dual', 'rc'],
+        )
 
         _test_solver_cases['gurobi', 'nl'] = initialize(
             name='gurobi',
             io='nl',
             capabilities=_gurobi_capabilities,
-            options={'qcpdual':1,'simplex':1},
-            import_suffixes=['dual'])
+            options={'qcpdual': 1, 'simplex': 1},
+            import_suffixes=['dual'],
+        )
 
         _test_solver_cases['gurobi', 'python'] = initialize(
             name='gurobi',
             io='python',
             capabilities=_gurobi_capabilities,
-            import_suffixes=['slack','dual','rc'])
+            import_suffixes=['slack', 'dual', 'rc'],
+        )
 
         #
         # Gurobi PERSISTENT
@@ -223,37 +248,40 @@ def test_solver_cases(*args):
             name='gurobi_persistent',
             io='python',
             capabilities=_gurobi_capabilities,
-            import_suffixes=['slack', 'dual', 'rc'])
+            import_suffixes=['slack', 'dual', 'rc'],
+        )
 
         #
         # GLPK
         #
-        _glpk_capabilities= set(['linear',
-                                 'integer'])
+        _glpk_capabilities = set(['linear', 'integer'])
 
         if 'GLPKSHELL_old' in str(pyomo.solvers.plugins.solvers.GLPK.GLPK().__class__):
             glpk_import_suffixes = ['dual']
         else:
-            glpk_import_suffixes = ['rc','dual']
+            glpk_import_suffixes = ['rc', 'dual']
 
         _test_solver_cases['glpk', 'lp'] = initialize(
             name='glpk',
             io='lp',
             capabilities=_glpk_capabilities,
-            import_suffixes=glpk_import_suffixes)
+            import_suffixes=glpk_import_suffixes,
+        )
 
         _test_solver_cases['glpk', 'mps'] = initialize(
             name='glpk',
             io='mps',
             capabilities=_glpk_capabilities,
             import_suffixes=glpk_import_suffixes,
-            io_options={"skip_objective_sense": True})
+            io_options={"skip_objective_sense": True},
+        )
 
         _test_solver_cases['glpk', 'python'] = initialize(
             name='glpk',
             io='python',
             capabilities=_glpk_capabilities,
-            import_suffixes=[])
+            import_suffixes=[],
+        )
 
         #
         # CBC
@@ -264,7 +292,8 @@ def test_solver_cases(*args):
             name='cbc',
             io='lp',
             capabilities=_cbc_lp_capabilities,
-            import_suffixes=['dual','rc'])
+            import_suffixes=['dual', 'rc'],
+        )
 
         _cbc_nl_capabilities = set(['linear', 'integer', 'sos1', 'sos2'])
 
@@ -272,35 +301,41 @@ def test_solver_cases(*args):
             name='cbc',
             io='nl',
             capabilities=_cbc_nl_capabilities,
-            import_suffixes=['dual'])
+            import_suffixes=['dual'],
+        )
 
-        #_cbc_mps_capabilities = set(['linear', 'integer', 'sos1', 'sos2'])
+        # _cbc_mps_capabilities = set(['linear', 'integer', 'sos1', 'sos2'])
 
-        #_test_solver_cases['cbc', 'mps'] = initialize(
-            #name='cbc',
-            #io='mps',
-            #capabilities=_cbc_mps_capabilities,
-            #import_suffixes=['dual', 'rc'])
+        # _test_solver_cases['cbc', 'mps'] = initialize(
+        # name='cbc',
+        # io='mps',
+        # capabilities=_cbc_mps_capabilities,
+        # import_suffixes=['dual', 'rc'])
 
         #
         # XPRESS
         #
-        _xpress_capabilities= set(['linear',
-                                   'integer',
-                                   'quadratic_objective',
-                                   'quadratic_constraint',
-                                   'sos1',
-                                   'sos2'])
+        _xpress_capabilities = set(
+            [
+                'linear',
+                'integer',
+                'quadratic_objective',
+                'quadratic_constraint',
+                'sos1',
+                'sos2',
+            ]
+        )
 
         _test_solver_cases['xpress', 'python'] = initialize(
             name='xpress_direct',
             io='python',
             capabilities=_xpress_capabilities,
             import_suffixes=['dual', 'rc', 'slack'],
-            options={'bargapstop':1e-9,})
+            options={'bargapstop': 1e-9},
+        )
 
         #
-        # XPRESS PERSISTENT 
+        # XPRESS PERSISTENT
         #
 
         _test_solver_cases['xpress_persistent', 'python'] = initialize(
@@ -308,80 +343,88 @@ def test_solver_cases(*args):
             io='python',
             capabilities=_xpress_capabilities,
             import_suffixes=['slack', 'dual', 'rc'],
-            options={'bargapstop':1e-9,})
+            options={'bargapstop': 1e-9},
+        )
 
         #
         # IPOPT
         #
-        _ipopt_capabilities= set(['linear',
-                                  'quadratic_objective',
-                                  'quadratic_constraint'])
+        _ipopt_capabilities = set(
+            ['linear', 'quadratic_objective', 'quadratic_constraint']
+        )
 
         _test_solver_cases['ipopt', 'nl'] = initialize(
             name='ipopt',
             io='nl',
             capabilities=_ipopt_capabilities,
-            import_suffixes=['dual'])
+            import_suffixes=['dual'],
+        )
 
         #
         # SCIP
         #
-        _scip_capabilities= set(['linear',
-                                 'integer',
-                                 'quadratic_objective',
-                                 'quadratic_constraint',
-                                 'sos1',
-                                 'sos2'])
+        _scip_capabilities = set(
+            [
+                'linear',
+                'integer',
+                'quadratic_objective',
+                'quadratic_constraint',
+                'sos1',
+                'sos2',
+            ]
+        )
 
         _test_solver_cases['scip', 'nl'] = initialize(
-            name='scip',
-            io='nl',
-            capabilities=_scip_capabilities,
-            import_suffixes=[])
+            name='scip', io='nl', capabilities=_scip_capabilities, import_suffixes=[]
+        )
 
         #
         # CONOPT
         #
-        _conopt_capabilities= set(['linear',
-                                   'integer',
-                                   'quadratic_objective',
-                                   'quadratic_constraint',
-                                   'sos1',
-                                   'sos2'])
+        _conopt_capabilities = set(
+            [
+                'linear',
+                'integer',
+                'quadratic_objective',
+                'quadratic_constraint',
+                'sos1',
+                'sos2',
+            ]
+        )
         _test_solver_cases['conopt', 'nl'] = initialize(
             name='conopt',
             io='nl',
             capabilities=_conopt_capabilities,
-            import_suffixes=[])
+            import_suffixes=[],
+        )
 
         #
         # BARON
         #
-        _baron_capabilities= set(['linear',
-                                  'integer',
-                                  'quadratic_objective',
-                                  'quadratic_constraint'])
+        _baron_capabilities = set(
+            ['linear', 'integer', 'quadratic_objective', 'quadratic_constraint']
+        )
 
         _test_solver_cases['baron', 'bar'] = initialize(
             name='baron',
             io='bar',
             capabilities=_baron_capabilities,
-            import_suffixes=['rc','dual'])
+            import_suffixes=['rc', 'dual'],
+        )
 
         #
         # KNITROAMPL
         #
-        _knitroampl_capabilities= set(['linear',
-                                       'integer',
-                                       'quadratic_objective',
-                                       'quadratic_constraint'])
+        _knitroampl_capabilities = set(
+            ['linear', 'integer', 'quadratic_objective', 'quadratic_constraint']
+        )
 
         _test_solver_cases['knitroampl', 'nl'] = initialize(
             name='knitroampl',
             io='nl',
             capabilities=_knitroampl_capabilities,
-            import_suffixes=['dual'])
-
+            import_suffixes=['dual'],
+        )
 
         logging.disable(logging.NOTSET)
 
@@ -400,8 +443,8 @@ def test_solver_cases(*args):
             if sc.io_options is None:
                 sc.io_options = {}
             assert (sc.io is not None) and (type(sc.io) is str)
-            assert type(sc.export_suffixes) in [list,tuple]
-            assert type(sc.import_suffixes) in [list,tuple]
+            assert type(sc.export_suffixes) in [list, tuple]
+            assert type(sc.import_suffixes) in [list, tuple]
             assert type(sc.options) is dict
             for tag in sc.export_suffixes:
                 assert type(tag) is str
@@ -414,4 +457,3 @@ def test_solver_cases(*args):
     if len(args) == 0:
         return _test_solver_cases.keys()
     return _test_solver_cases[args]
-

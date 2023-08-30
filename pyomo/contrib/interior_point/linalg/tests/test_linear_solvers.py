@@ -1,5 +1,6 @@
 import pyomo.common.unittest as unittest
 from pyomo.common.dependencies import attempt_import
+
 np, np_available = attempt_import('numpy', minimum_version='1.13.0')
 scipy, scipy_available = attempt_import('scipy.sparse')
 mumps, mumps_available = attempt_import('mumps')
@@ -9,14 +10,19 @@ import numpy as np
 from scipy.sparse import coo_matrix, tril
 from pyomo.contrib import interior_point as ip
 from pyomo.contrib.pynumero.linalg.base import LinearSolverStatus
+
 if scipy_available:
     from pyomo.contrib.interior_point.linalg.scipy_interface import ScipyInterface
 if mumps_available:
     from pyomo.contrib.interior_point.linalg.mumps_interface import MumpsInterface
 from pyomo.contrib.pynumero.linalg.ma27 import MA27Interface
+
 ma27_available = MA27Interface.available()
 if ma27_available:
-    from pyomo.contrib.interior_point.linalg.ma27_interface import InteriorPointMA27Interface
+    from pyomo.contrib.interior_point.linalg.ma27_interface import (
+        InteriorPointMA27Interface,
+    )
+
 
 def get_base_matrix(use_tril):
     if use_tril:
@@ -27,7 +33,7 @@ def get_base_matrix(use_tril):
         row = [0, 0, 0, 1, 1, 2, 2]
         col = [0, 1, 2, 0, 1, 0, 2]
         data = [1, 7, 3, 7, 4, 3, 6]
-    mat = coo_matrix((data, (row, col)), shape=(3,3), dtype=np.double)
+    mat = coo_matrix((data, (row, col)), shape=(3, 3), dtype=np.double)
     return mat
 
 
@@ -40,7 +46,7 @@ def get_base_matrix_wrong_order(use_tril):
         row = [1, 0, 0, 0, 1, 2, 2]
         col = [0, 1, 2, 0, 1, 0, 2]
         data = [7, 7, 3, 1, 4, 3, 6]
-    mat = coo_matrix((data, (row, col)), shape=(3,3), dtype=np.double)
+    mat = coo_matrix((data, (row, col)), shape=(3, 3), dtype=np.double)
     return mat
 
 
@@ -50,6 +56,7 @@ class TestTrilBehavior(unittest.TestCase):
     the behavior of tril that is tested in this
     test, namely the tests in TestWrongNonzeroOrdering.
     """
+
     def test_tril_behavior(self):
         mat = get_base_matrix(use_tril=True)
         mat2 = tril(mat)
@@ -84,12 +91,16 @@ class TestLinearSolvers(unittest.TestCase):
         x, res = solver.do_back_solve(rhs)
         self.assertTrue(np.allclose(x, x_true))
 
-    @unittest.skipIf(not scipy_available, 'scipy is needed for interior point scipy tests')
+    @unittest.skipIf(
+        not scipy_available, 'scipy is needed for interior point scipy tests'
+    )
     def test_scipy(self):
         solver = ScipyInterface()
         self._test_linear_solvers(solver)
 
-    @unittest.skipIf(not mumps_available, 'mumps is needed for interior point mumps tests')
+    @unittest.skipIf(
+        not mumps_available, 'mumps is needed for interior point mumps tests'
+    )
     def test_mumps(self):
         solver = MumpsInterface()
         self._test_linear_solvers(solver)
@@ -112,12 +123,16 @@ class TestWrongNonzeroOrdering(unittest.TestCase):
         x, res = solver.do_back_solve(rhs)
         self.assertTrue(np.allclose(x, x_true))
 
-    @unittest.skipIf(not scipy_available, 'scipy is needed for interior point scipy tests')
+    @unittest.skipIf(
+        not scipy_available, 'scipy is needed for interior point scipy tests'
+    )
     def test_scipy(self):
         solver = ScipyInterface()
         self._test_solvers(solver, use_tril=False)
 
-    @unittest.skipIf(not mumps_available, 'mumps is needed for interior point mumps tests')
+    @unittest.skipIf(
+        not mumps_available, 'mumps is needed for interior point mumps tests'
+    )
     def test_mumps(self):
         solver = MumpsInterface()
         self._test_solvers(solver, use_tril=True)

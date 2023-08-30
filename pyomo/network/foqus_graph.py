@@ -82,8 +82,9 @@ logger = logging.getLogger('pyomo.network')
 
 
 class FOQUSGraph(object):
-    def solve_tear_direct(self, G, order, function, tears, outEdges, iterLim,
-            tol, tol_type, report_diffs):
+    def solve_tear_direct(
+        self, G, order, function, tears, outEdges, iterLim, tol, tol_type, report_diffs
+    ):
         """
         Use direct substitution to solve tears. If multiple tears are
         given they are solved simultaneously.
@@ -105,7 +106,7 @@ class FOQUSGraph(object):
                 List of lists of diff history, differences between input and
                 output values at each iteration
         """
-        hist = [] # diff at each iteration in every variable
+        hist = []  # diff at each iteration in every variable
 
         if not len(tears):
             # no need to iterate just run the calculations
@@ -129,8 +130,7 @@ class FOQUSGraph(object):
                 break
 
             if itercount >= iterLim:
-                logger.warning("Direct failed to converge in %s iterations"
-                    % iterLim)
+                logger.warning("Direct failed to converge in %s iterations" % iterLim)
                 return hist
 
             self.pass_tear_direct(G, tears)
@@ -145,8 +145,20 @@ class FOQUSGraph(object):
 
         return hist
 
-    def solve_tear_wegstein(self, G, order, function, tears, outEdges, iterLim,
-        tol, tol_type, report_diffs, accel_min, accel_max):
+    def solve_tear_wegstein(
+        self,
+        G,
+        order,
+        function,
+        tears,
+        outEdges,
+        iterLim,
+        tol,
+        tol_type,
+        report_diffs,
+        accel_min,
+        accel_max,
+    ):
         """
         Use Wegstein to solve tears. If multiple tears are given
         they are solved simultaneously.
@@ -175,7 +187,7 @@ class FOQUSGraph(object):
                 List of lists of diff history, differences between input and
                 output values at each iteration
         """
-        hist = [] # diff at each iteration in every variable
+        hist = []  # diff at each iteration in every variable
 
         if not len(tears):
             # no need to iterate just run the calculations
@@ -225,8 +237,7 @@ class FOQUSGraph(object):
                 break
 
             if itercount > iterLim:
-                logger.warning("Wegstein failed to converge in %s iterations"
-                    % iterLim)
+                logger.warning("Wegstein failed to converge in %s iterations" % iterLim)
                 return hist
 
             denom = x - x_prev
@@ -270,7 +281,8 @@ class FOQUSGraph(object):
             outEdges
                 List of lists of edge indexes leaving the SCC
         """
-        def sc(v, stk, depth, strngComps):
+
+        def sc(v, stk, depth, stringComps):
             # recursive sub-function for backtracking
             ndepth[v] = depth
             back[v] = depth
@@ -278,7 +290,7 @@ class FOQUSGraph(object):
             stk.append(v)
             for w in adj[v]:
                 if ndepth[w] == None:
-                    sc(w, stk, depth, strngComps)
+                    sc(w, stk, depth, stringComps)
                     back[v] = min(back[w], back[v])
                 elif w in stk:
                     back[v] = min(back[w], back[v])
@@ -289,27 +301,27 @@ class FOQUSGraph(object):
                     scomp.append(i2n[w])
                     if w == v:
                         break
-                strngComps.append(scomp)
+                stringComps.append(scomp)
             return depth
 
         i2n, adj, _ = self.adj_lists(G, excludeEdges=excludeEdges)
 
-        stk        = []  # node stack
-        strngComps = []  # list of SCCs
-        ndepth     = [None] * len(i2n)
-        back       = [None] * len(i2n)
+        stk = []  # node stack
+        stringComps = []  # list of SCCs
+        ndepth = [None] * len(i2n)
+        back = [None] * len(i2n)
 
         # find the SCCs
         for v in range(len(i2n)):
             if ndepth[v] == None:
-                sc(v, stk, 0, strngComps)
+                sc(v, stk, 0, stringComps)
 
         # Find the rest of the information about SCCs given the node partition
-        sccNodes = strngComps
+        sccNodes = stringComps
         sccEdges = []
         outEdges = []
         inEdges = []
-        for nset in strngComps:
+        for nset in stringComps:
             e, ie, oe = self.sub_graph_edges(G, nset)
             sccEdges.append(e)
             inEdges.append(ie)
@@ -335,8 +347,8 @@ class FOQUSGraph(object):
                 List of lists of out edge indexes to SCCs
 
         """
-        adj = [] # SCC adjacency list
-        adjR = [] # SCC reverse adjacency list
+        adj = []  # SCC adjacency list
+        adjR = []  # SCC reverse adjacency list
         # populate with empty lists before running the loop below
         for i in range(len(sccNodes)):
             adj.append([])
@@ -404,7 +416,7 @@ class FOQUSGraph(object):
         a tree the results are not valid.
 
         In the returned order, it is sometimes possible for more
-        than one node to be caclulated at once. So a list of lists
+        than one node to be calculated at once. So a list of lists
         is returned by this function. These represent a bredth
         first search order of the tree. Following the order, all
         nodes that lead to a particular node will be visited
@@ -434,7 +446,7 @@ class FOQUSGraph(object):
 
         if roots is None:
             roots = []
-            mark = [True] * len(adj) # mark all nodes if no roots specified
+            mark = [True] * len(adj)  # mark all nodes if no roots specified
             r = [True] * len(adj)
             # no root specified so find roots of tree by marking every
             # successor of every node, since roots have no predecessors
@@ -454,30 +466,29 @@ class FOQUSGraph(object):
                 for i in lst:
                     mark[i] = True
                     lst2 += adj[i]
-                lst = set(lst2) # remove dupes
+                lst = set(lst2)  # remove dupes
 
         # Now we have list of roots, and roots and their desendants are marked
         ndepth = [None] * len(adj)
         lst = copy.deepcopy(roots)
         order = []
-        checknodes = set() # list of candidate nodes for next depth
-        for i in roots: # nodes adjacent to roots are candidates
+        checknodes = set()  # list of candidate nodes for next depth
+        for i in roots:  # nodes adjacent to roots are candidates
             checknodes.update(adj[i])
         depth = 0
 
         while len(lst) > 0:
             order.append(lst)
             depth += 1
-            lst = [] # nodes to add to the next depth in order
-            delSet = set() # nodes to delete from checknodes
-            checkUpdate = set() # nodes to add to checknodes
+            lst = []  # nodes to add to the next depth in order
+            delSet = set()  # nodes to delete from checknodes
+            checkUpdate = set()  # nodes to add to checknodes
             for i in checknodes:
                 if ndepth[i] != None:
                     # This means there is a cycle in the graph
                     # this will lead to nonsense so throw exception
-                    raise RuntimeError(
-                        "Function tree_order does not work with cycles")
-                remSet = set() # to remove from a nodes rev adj list
+                    raise RuntimeError("Function tree_order does not work with cycles")
+                remSet = set()  # to remove from a nodes rev adj list
                 for j in adjR[i]:
                     if j in order[depth - 1]:
                         # ancestor already placed
@@ -517,7 +528,7 @@ class FOQUSGraph(object):
         """
         This finds optimal sets of tear edges based on two criteria.
         The primary objective is to minimize the maximum number of
-        times any cycle is broken. The seconday criteria is to
+        times any cycle is broken. The secondary criteria is to
         minimize the number of tears.
 
         This function uses a branch and bound type approach.
@@ -533,20 +544,20 @@ class FOQUSGraph(object):
             upperbound_total
                 The total number of loops
 
-        Improvemnts for the future
+        Improvements for the future
 
-        I think I can imporve the efficency of this, but it is good
+        I think I can improve the efficiency of this, but it is good
         enough for now. Here are some ideas for improvement:
 
             1. Reduce the number of redundant solutions. It is possible
             to find tears sets [1,2] and [2,1]. I eliminate
-            redundent solutions from the results, but they can
-            occur and it reduces efficency.
+            redundant solutions from the results, but they can
+            occur and it reduces efficiency.
 
             2. Look at strongly connected components instead of whole
             graph. This would cut back on the size of graph we are
             looking at. The flowsheets are rarely one strongly
-            conneted component.
+            connected component.
 
             3. When you add an edge to a tear set you could reduce the
             size of the problem in the branch by only looking at
@@ -554,7 +565,7 @@ class FOQUSGraph(object):
 
             4. This returns all equally good optimal tear sets. That
             may not really be necessary. For very large flowsheets,
-            there could be an extremely large number of optimial tear
+            there could be an extremely large number of optimal tear
             edge sets.
         """
 
@@ -570,7 +581,7 @@ class FOQUSGraph(object):
 
             for i in range(len(cycleEdges[depth])):
                 # Loop through all the edges in cycle with index depth
-                y = list(prevY) # get list of already selected tear stream
+                y = list(prevY)  # get list of already selected tear stream
                 y[cycleEdges[depth][i]] = 1
                 # calculate number of times each cycle is torn
                 Ay = numpy.dot(A, y)
@@ -586,7 +597,7 @@ class FOQUSGraph(object):
                 if min(Ay) > 0:
                     if maxAy < upperBound[0]:
                         upperBound[0] = maxAy  # most important factor
-                        upperBound[1] = sumY   # second most important
+                        upperBound[1] = sumY  # second most important
                     elif sumY < upperBound[1]:
                         upperBound[1] = sumY
                     # record solution
@@ -607,21 +618,21 @@ class FOQUSGraph(object):
 
         if nr == 0:
             # no cycles so we are done
-            return [[[]], 0 , 0]
+            return [[[]], 0, 0]
 
         # Else there are cycles, so find edges to tear
-        y_init = [False] * G.number_of_edges() # whether edge j is in tear set
+        y_init = [False] * G.number_of_edges()  # whether edge j is in tear set
         for j in tearUB:
             # y for initial u.b. solution
             y_init[j] = 1
 
-        Ay_init = numpy.dot(A, y_init) # number of times each loop torn
+        Ay_init = numpy.dot(A, y_init)  # number of times each loop torn
 
         # Set two upper bounds. The fist upper bound is on number of times
         # a loop is broken. Second upper bound is on number of tears.
         upperBound = [max(Ay_init), sum(y_init)]
 
-        y_init = [False] * G.number_of_edges() #clear y vector to start search
+        y_init = [False] * G.number_of_edges()  # clear y vector to start search
         ySet = []  # a list of tear sets
         # Three elements are stored in each tear set:
         # 0 = y vector (tear set), 1 = max(Ay), 2 = sum(y)
@@ -673,8 +684,8 @@ class FOQUSGraph(object):
     def tear_upper_bound(self, G):
         """
         This function quickly finds a sub-optimal set of tear
-        edges. This serves as an inital upperbound when looking
-        for an optimal tear set. Having an inital upper bound
+        edges. This serves as an initial upperbound when looking
+        for an optimal tear set. Having an initial upper bound
         improves efficiency.
 
         This works by constructing a search tree and just makes a
@@ -700,8 +711,8 @@ class FOQUSGraph(object):
         parents = {}
 
         for node in G.nodes:
-            depths[node]  = None
-            parents[node]  = None
+            depths[node] = None
+            parents[node] = None
 
         for node in G.nodes:
             if depths[node] is None:
@@ -725,7 +736,7 @@ class FOQUSGraph(object):
                 List of edge indexes starting inside the subgraph
                 and ending outside
         """
-        e = []   # edges that connect two nodes in the subgraph
+        e = []  # edges that connect two nodes in the subgraph
         ie = []  # in edges
         oe = []  # out edges
         edge_list = self.idx_to_edge(G)
@@ -739,7 +750,7 @@ class FOQUSGraph(object):
                     # it's an out edge of the subgraph
                     oe.append(i)
             elif dest in nodes:
-                #its a in edge of the subgraph
+                # its a in edge of the subgraph
                 ie.append(i)
         return e, ie, oe
 
@@ -748,11 +759,12 @@ class FOQUSGraph(object):
         Return a cycle-edge incidence matrix, a list of list of nodes in
         each cycle, and a list of list of edge indexes in each cycle.
         """
-        cycleNodes, cycleEdges = self.all_cycles(G) # call cycle finding algorithm
+        cycleNodes, cycleEdges = self.all_cycles(G)  # call cycle finding algorithm
 
         # Create empty incidence matrix and then fill it out
-        ceMat = numpy.zeros((len(cycleEdges), G.number_of_edges()),
-                            dtype=numpy.dtype(int))
+        ceMat = numpy.zeros(
+            (len(cycleEdges), G.number_of_edges()), dtype=numpy.dtype(int)
+        )
         for i in range(len(cycleEdges)):
             for e in cycleEdges[i]:
                 ceMat[i, e] = 1
@@ -787,7 +799,7 @@ class FOQUSGraph(object):
                     adj[v].remove((si, key))
                 elif si == ni:
                     f = True
-                    cyc = list(pointStack) # copy
+                    cyc = list(pointStack)  # copy
                     # append the original point again so we get the last edge
                     cyc.append((si, key))
                     cycles.append(cyc)
@@ -806,10 +818,10 @@ class FOQUSGraph(object):
             return f
 
         i2n, adj, _ = self.adj_lists(G, multi=True)
-        pointStack  = [] # stack of (node, key) tuples
-        markStack = [] # nodes that have been marked
-        cycles = [] # list of cycles found
-        mark = [False] * len(i2n) # if a node is marked
+        pointStack = []  # stack of (node, key) tuples
+        markStack = []  # nodes that have been marked
+        cycles = []  # list of cycles found
+        mark = [False] * len(i2n)  # if a node is marked
 
         for ni in range(len(i2n)):
             # iterate over node indexes

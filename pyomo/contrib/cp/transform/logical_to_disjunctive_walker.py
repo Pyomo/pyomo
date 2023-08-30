@@ -17,15 +17,21 @@ from pyomo.core.expr.expr_common import ExpressionType
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.core.expr.numeric_expr import NumericExpression
 from pyomo.core.expr.relational_expr import RelationalExpression
-import pyomo.core.expr.current as EXPR
-import pyomo.core.expr.logical_expr as LE
+import pyomo.core.expr as EXPR
 from pyomo.core.base import (
-    Binary, Constraint, ConstraintList, NonNegativeIntegers, VarList, value)
+    Binary,
+    Constraint,
+    ConstraintList,
+    NonNegativeIntegers,
+    VarList,
+    value,
+)
 import pyomo.core.base.boolean_var as BV
 from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
 from pyomo.core.base.param import ScalarParam, _ParamData
 from pyomo.core.base.var import ScalarVar, _GeneralVarData
 from pyomo.gdp.disjunct import AutoLinkedBooleanVar, Disjunct, Disjunction
+
 
 def _dispatch_boolean_var(visitor, node):
     if node not in visitor.boolean_to_binary_map:
@@ -36,26 +42,40 @@ def _dispatch_boolean_var(visitor, node):
             z = visitor.z_vars.add()
             visitor.boolean_to_binary_map[node] = z
             node.associate_binary_var(z)
+    if node.fixed:
+        visitor.boolean_to_binary_map[node].fixed = True
+        visitor.boolean_to_binary_map[node].set_value(
+            int(node.value) if node.value is not None else None, skip_validation=True
+        )
     return False, visitor.boolean_to_binary_map[node]
+
 
 def _dispatch_var(visitor, node):
     return False, node
+
 
 def _dispatch_param(visitor, node):
     if int(value(node)) == value(node):
         return False, node
     else:
-        raise ValueError("Found non-integer valued Param '%s' in a logical "
-                         "expression. This cannot be written to a disjunctive "
-                         "form." % node.name)
+        raise ValueError(
+            "Found non-integer valued Param '%s' in a logical "
+            "expression. This cannot be written to a disjunctive "
+            "form." % node.name
+        )
+
 
 def _dispatch_expression(visitor, node):
     return False, node.expr
 
+
 def _before_relational_expr(visitor, node):
-    raise MouseTrap("The RelationalExpression '%s' was used as a Boolean term "
-                    "in a logical proposition. This is not yet supported "
-                    "when transforming to disjunctive form." % node)
+    raise MouseTrap(
+        "The RelationalExpression '%s' was used as a Boolean term "
+        "in a logical proposition. This is not yet supported "
+        "when transforming to disjunctive form." % node
+    )
+
 
 def _dispatch_not(visitor, node, a):
     # z == !a
@@ -65,24 +85,30 @@ def _dispatch_not(visitor, node, a):
         visitor.expansions[a] = z
     return visitor.expansions[a]
 
+
 def _dispatch_implication(visitor, node, a, b):
     # z == !a v b
     return _dispatch_or(visitor, node, 1 - a, b)
 
+
 def _dispatch_equivalence(visitor, node, a, b):
     # z == (!a v b) ^ (a v !b)
     return _dispatch_and(
-        visitor, node,
+        visitor,
+        node,
         _dispatch_or(visitor, node, 1 - a, b),
         _dispatch_or(visitor, node, a, 1 - b),
     )
+
 
 def _dispatch_and(visitor, node, *args):
     # z == a ^ b ^ ...
     z = visitor.z_vars.add()
     for arg in args:
         visitor.constraints.add(arg >= z)
+    visitor.constraints.add(len(args) - sum(args) >= 1 - z)
     return z
+
 
 def _dispatch_or(visitor, node, *args):
     # z == a v b v ...
@@ -93,10 +119,12 @@ def _dispatch_or(visitor, node, *args):
         visitor.constraints.add(z + (1 - arg) >= 1)
     return z
 
+
 def _dispatch_xor(visitor, node, a, b):
     # z == a XOR b
     # This is a special case of exactly
     return _dispatch_exactly(visitor, node, 1, a, b)
+
 
 def _get_integer_value(n, node):
     if n.__class__ in EXPR.native_numeric_types and int(n) == n:
@@ -114,14 +142,17 @@ def _get_integer_value(n, node):
                 "The first argument '%s' to '%s' is potentially variable. "
                 "This may be a mathematically coherent expression; However "
                 "it is not yet supported to convert it to a disjunctive "
-                "program." % (n, node))
+                "program." % (n, node)
+            )
         else:
             return n
-    raise ValueError("The first argument to '%s' must be an integer.\n\t"
-                     "Recieved: %s" % (node, n))
+    raise ValueError(
+        "The first argument to '%s' must be an integer.\n\tRecieved: %s" % (node, n)
+    )
+
 
 def _dispatch_exactly(visitor, node, *args):
-    # z = sum(args[1:] == args[0]
+    # z = sum(args[1:]) == args[0]
     # This is currently implemented as:
     # [sum(args[1:] = n] v [[sum(args[1:]) < n] v [sum(args[1:]) > n]]
     M = len(args) - 1
@@ -131,10 +162,11 @@ def _dispatch_exactly(visitor, node, *args):
     equality_disj.constraint = Constraint(expr=sum_expr == n)
     inequality_disj = visitor.disjuncts[len(visitor.disjuncts)]
     inequality_disj.disjunction = Disjunction(
-        expr=[[sum_expr <= n - 1], [sum_expr >= n + 1]])
-    visitor.disjunctions[len(visitor.disjunctions)] = [equality_disj,
-                                                       inequality_disj]
+        expr=[[sum_expr <= n - 1], [sum_expr >= n + 1]]
+    )
+    visitor.disjunctions[len(visitor.disjunctions)] = [equality_disj, inequality_disj]
     return equality_disj.indicator_var.get_associated_binary()
+
 
 def _dispatch_atleast(visitor, node, *args):
     # z = sum[args[1:] >= n
@@ -149,6 +181,7 @@ def _dispatch_atleast(visitor, node, *args):
     visitor.disjunctions[len(visitor.disjunctions)] = [atleast_disj, less_disj]
     return atleast_disj.indicator_var.get_associated_binary()
 
+
 def _dispatch_atmost(visitor, node, *args):
     # z = sum[args[1:] <= n
     # This is implemented as:
@@ -162,16 +195,17 @@ def _dispatch_atmost(visitor, node, *args):
     visitor.disjunctions[len(visitor.disjunctions)] = [atmost_disj, more_disj]
     return atmost_disj.indicator_var.get_associated_binary()
 
+
 _operator_dispatcher = {}
-_operator_dispatcher[LE.ImplicationExpression] = _dispatch_implication
-_operator_dispatcher[LE.EquivalenceExpression] = _dispatch_equivalence
-_operator_dispatcher[LE.NotExpression] = _dispatch_not
-_operator_dispatcher[LE.AndExpression] = _dispatch_and
-_operator_dispatcher[LE.OrExpression] = _dispatch_or
-_operator_dispatcher[LE.XorExpression] = _dispatch_xor
-_operator_dispatcher[LE.ExactlyExpression] = _dispatch_exactly
-_operator_dispatcher[LE.AtLeastExpression] = _dispatch_atleast
-_operator_dispatcher[LE.AtMostExpression] = _dispatch_atmost
+_operator_dispatcher[EXPR.ImplicationExpression] = _dispatch_implication
+_operator_dispatcher[EXPR.EquivalenceExpression] = _dispatch_equivalence
+_operator_dispatcher[EXPR.NotExpression] = _dispatch_not
+_operator_dispatcher[EXPR.AndExpression] = _dispatch_and
+_operator_dispatcher[EXPR.OrExpression] = _dispatch_or
+_operator_dispatcher[EXPR.XorExpression] = _dispatch_xor
+_operator_dispatcher[EXPR.ExactlyExpression] = _dispatch_exactly
+_operator_dispatcher[EXPR.AtLeastExpression] = _dispatch_atleast
+_operator_dispatcher[EXPR.AtMostExpression] = _dispatch_atmost
 
 _before_child_dispatcher = {}
 _before_child_dispatcher[BV.ScalarBooleanVar] = _dispatch_boolean_var
@@ -185,6 +219,7 @@ _before_child_dispatcher[ScalarVar] = _dispatch_var
 _before_child_dispatcher[_GeneralVarData] = _dispatch_var
 _before_child_dispatcher[_GeneralExpressionData] = _dispatch_expression
 _before_child_dispatcher[ScalarExpression] = _dispatch_expression
+
 
 class LogicalToDisjunctiveVisitor(StreamBasedExpressionVisitor):
     """Converts BooleanExpressions to Linear (MIP) representation

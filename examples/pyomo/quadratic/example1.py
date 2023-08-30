@@ -18,8 +18,11 @@ from pyomo.core import *
 
 model = AbstractModel()
 
-model.x = Var(bounds=(-10,10), within=Reals)
+model.x = Var(bounds=(-10, 10), within=Reals)
+
 
 def objective_rule(model):
     return model.x * model.x
+
+
 model.objective = Objective(rule=objective_rule, sense=minimize)

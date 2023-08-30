@@ -11,16 +11,15 @@
 """Various conic constraint implementations."""
 
 from pyomo.core.expr.numvalue import is_numeric_data
-from pyomo.core.expr.current import (value,
-                                     exp)
+from pyomo.core.expr import value, exp
 from pyomo.core.kernel.block import block
-from pyomo.core.kernel.variable import (IVariable,
-                                        variable,
-                                        variable_tuple)
-from pyomo.core.kernel.constraint import (IConstraint,
-                                          linear_constraint,
-                                          constraint,
-                                          constraint_tuple)
+from pyomo.core.kernel.variable import IVariable, variable, variable_tuple
+from pyomo.core.kernel.constraint import (
+    IConstraint,
+    linear_constraint,
+    constraint,
+    constraint_tuple,
+)
 
 
 def _build_linking_constraints(v, v_aux):
@@ -32,18 +31,14 @@ def _build_linking_constraints(v, v_aux):
             continue
         elif is_numeric_data(vi):
             c_aux.append(
-                linear_constraint(variables=(vi_aux,),
-                                  coefficients=(1,),
-                                  rhs=vi))
+                linear_constraint(variables=(vi_aux,), coefficients=(1,), rhs=vi)
+            )
         elif isinstance(vi, IVariable):
             c_aux.append(
-                linear_constraint(variables=(vi_aux, vi),
-                                  coefficients=(1, -1),
-                                  rhs=0))
+                linear_constraint(variables=(vi_aux, vi), coefficients=(1, -1), rhs=0)
+            )
         else:
-            c_aux.append(
-                constraint(body=vi_aux - vi,
-                           rhs=0))
+            c_aux.append(constraint(body=vi_aux - vi, rhs=0))
     return constraint_tuple(c_aux)
 
 
@@ -51,6 +46,7 @@ class _ConicBase(IConstraint):
     """Base class for a few conic constraints that
     implements some shared functionality. Derived classes
     are expected to declare any necessary slots."""
+
     _ctype = IConstraint
     _linear_canonical_form = False
     __slots__ = ()
@@ -96,7 +92,8 @@ class _ConicBase(IConstraint):
         """The body of the constraint"""
         if self._body is None:
             self._body = self._body_function(
-                *self._body_function_variables(values=False))
+                *self._body_function_variables(values=False)
+            )
         return self._body
 
     @property
@@ -124,7 +121,8 @@ class _ConicBase(IConstraint):
         """The right-hand side of the constraint"""
         raise ValueError(
             "The rhs property can not be read because this "
-            "is not an equality constraint")
+            "is not an equality constraint"
+        )
 
     @property
     def equality(self):
@@ -140,12 +138,12 @@ class _ConicBase(IConstraint):
             # we wrap the result with value(...) as the
             # alpha term used by some of the constraints
             # may be a parameter
-            return value(self._body_function(
-                *self._body_function_variables(values=True)))
+            return value(
+                self._body_function(*self._body_function_variables(values=True))
+            )
         except (ValueError, TypeError):
             if exception:
-                raise ValueError("one or more terms "
-                                 "could not be evaluated")
+                raise ValueError("one or more terms could not be evaluated")
             return None
 
 
@@ -163,21 +161,23 @@ class quadratic(_ConicBase):
     x : list[:class:`variable`]
         An iterable of variables.
     """
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_active",
-                 "_body",
-                 "_r",
-                 "_x",
-                 "__weakref__")
+
+    __slots__ = (
+        "_parent",
+        "_storage_key",
+        "_active",
+        "_body",
+        "_r",
+        "_x",
+        "__weakref__",
+    )
 
     def __init__(self, r, x):
         super(quadratic, self).__init__()
         self._r = r
         self._x = tuple(x)
         assert isinstance(self._r, IVariable)
-        assert all(isinstance(xi, IVariable)
-                   for xi in self._x)
+        assert all(isinstance(xi, IVariable) for xi in self._x)
 
     @classmethod
     def as_domain(cls, r, x):
@@ -196,10 +196,8 @@ class quadratic(_ConicBase):
         """
         b = block()
         b.r = variable(lb=0)
-        b.x = variable_tuple(
-            [variable() for i in range(len(x))])
-        b.c = _build_linking_constraints([r] + list(x),
-                                         [b.r] + list(b.x))
+        b.x = variable_tuple([variable() for i in range(len(x))])
+        b.c = _build_linking_constraints([r] + list(x), [b.r] + list(b.x))
         b.q = cls(r=b.r, x=b.x)
         return b
 
@@ -234,10 +232,10 @@ class quadratic(_ConicBase):
         conic constraint are satisfied. If relax is True,
         then variable domains are ignored and it is assumed
         that all variables are continuous."""
-        return (relax or
-                (self.r.is_continuous() and
-                 all(xi.is_continuous() for xi in self.x))) and \
-            (self.r.has_lb() and value(self.r.lb) >= 0)
+        return (
+            relax
+            or (self.r.is_continuous() and all(xi.is_continuous() for xi in self.x))
+        ) and (self.r.has_lb() and value(self.r.lb) >= 0)
 
 
 class rotated_quadratic(_ConicBase):
@@ -256,14 +254,17 @@ class rotated_quadratic(_ConicBase):
     x : list[:class:`variable`]
         An iterable of variables.
     """
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_active",
-                 "_body",
-                 "_r1",
-                 "_r2",
-                 "_x",
-                 "__weakref__")
+
+    __slots__ = (
+        "_parent",
+        "_storage_key",
+        "_active",
+        "_body",
+        "_r1",
+        "_r2",
+        "_x",
+        "__weakref__",
+    )
 
     def __init__(self, r1, r2, x):
         super(rotated_quadratic, self).__init__()
@@ -272,8 +273,7 @@ class rotated_quadratic(_ConicBase):
         self._x = tuple(x)
         assert isinstance(self._r1, IVariable)
         assert isinstance(self._r2, IVariable)
-        assert all(isinstance(xi, IVariable)
-                   for xi in self._x)
+        assert all(isinstance(xi, IVariable) for xi in self._x)
 
     @classmethod
     def as_domain(cls, r1, r2, x):
@@ -294,10 +294,8 @@ class rotated_quadratic(_ConicBase):
         b = block()
         b.r1 = variable(lb=0)
         b.r2 = variable(lb=0)
-        b.x = variable_tuple(
-            [variable() for i in range(len(x))])
-        b.c = _build_linking_constraints([r1, r2] + list(x),
-                                         [b.r1, b.r2] + list(b.x))
+        b.x = variable_tuple([variable() for i in range(len(x))])
+        b.c = _build_linking_constraints([r1, r2] + list(x), [b.r1, b.r2] + list(b.x))
         b.q = cls(r1=b.r1, r2=b.r2, x=b.x)
         return b
 
@@ -319,7 +317,7 @@ class rotated_quadratic(_ConicBase):
 
     def _body_function(self, r1, r2, x):
         """A function that defines the body expression"""
-        return sum(xi**2 for xi in x) - 2*r1*r2
+        return sum(xi**2 for xi in x) - 2 * r1 * r2
 
     def _body_function_variables(self, values=False):
         """Returns variables in the order they should be
@@ -329,20 +327,25 @@ class rotated_quadratic(_ConicBase):
         if not values:
             return self.r1, self.r2, self.x
         else:
-            return self.r1.value, self.r2.value, \
-                tuple(xi.value for xi in self.x)
+            return self.r1.value, self.r2.value, tuple(xi.value for xi in self.x)
 
     def check_convexity_conditions(self, relax=False):
         """Returns True if all convexity conditions for the
         conic constraint are satisfied. If relax is True,
         then variable domains are ignored and it is assumed
         that all variables are continuous."""
-        return (relax or
-                (self.r1.is_continuous() and
-                 self.r2.is_continuous() and
-                 all(xi.is_continuous() for xi in self.x))) and \
-            (self.r1.has_lb() and value(self.r1.lb) >= 0) and \
-            (self.r2.has_lb() and value(self.r2.lb) >= 0)
+        return (
+            (
+                relax
+                or (
+                    self.r1.is_continuous()
+                    and self.r2.is_continuous()
+                    and all(xi.is_continuous() for xi in self.x)
+                )
+            )
+            and (self.r1.has_lb() and value(self.r1.lb) >= 0)
+            and (self.r2.has_lb() and value(self.r2.lb) >= 0)
+        )
 
 
 class primal_exponential(_ConicBase):
@@ -361,14 +364,17 @@ class primal_exponential(_ConicBase):
     x2 : :class:`variable`
         A variable.
     """
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_active",
-                 "_body",
-                 "_r",
-                 "_x1",
-                 "_x2",
-                 "__weakref__")
+
+    __slots__ = (
+        "_parent",
+        "_storage_key",
+        "_active",
+        "_body",
+        "_r",
+        "_x1",
+        "_x2",
+        "__weakref__",
+    )
 
     def __init__(self, r, x1, x2):
         super(primal_exponential, self).__init__()
@@ -399,8 +405,7 @@ class primal_exponential(_ConicBase):
         b.r = variable(lb=0)
         b.x1 = variable(lb=0)
         b.x2 = variable()
-        b.c = _build_linking_constraints([r, x1, x2],
-                                         [b.r, b.x1, b.x2])
+        b.c = _build_linking_constraints([r, x1, x2], [b.r, b.x1, b.x2])
         b.q = cls(r=b.r, x1=b.x1, x2=b.x2)
         return b
 
@@ -422,7 +427,7 @@ class primal_exponential(_ConicBase):
 
     def _body_function(self, r, x1, x2):
         """A function that defines the body expression"""
-        return x1*exp(x2/x1) - r
+        return x1 * exp(x2 / x1) - r
 
     def _body_function_variables(self, values=False):
         """Returns variables in the order they should be
@@ -439,12 +444,18 @@ class primal_exponential(_ConicBase):
         conic constraint are satisfied. If relax is True,
         then variable domains are ignored and it is assumed
         that all variables are continuous."""
-        return (relax or
-                (self.x1.is_continuous() and
-                 self.x2.is_continuous() and
-                 self.r.is_continuous())) and \
-            (self.x1.has_lb() and value(self.x1.lb) >= 0) and \
-            (self.r.has_lb() and value(self.r.lb) >= 0)
+        return (
+            (
+                relax
+                or (
+                    self.x1.is_continuous()
+                    and self.x2.is_continuous()
+                    and self.r.is_continuous()
+                )
+            )
+            and (self.x1.has_lb() and value(self.x1.lb) >= 0)
+            and (self.r.has_lb() and value(self.r.lb) >= 0)
+        )
 
 
 class primal_power(_ConicBase):
@@ -465,15 +476,18 @@ class primal_power(_ConicBase):
     alpha : float, :class:`parameter`, etc.
         A constant term.
     """
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_active",
-                 "_body",
-                 "_r1",
-                 "_r2",
-                 "_x",
-                 "_alpha",
-                 "__weakref__")
+
+    __slots__ = (
+        "_parent",
+        "_storage_key",
+        "_active",
+        "_body",
+        "_r1",
+        "_r2",
+        "_x",
+        "_alpha",
+        "__weakref__",
+    )
 
     def __init__(self, r1, r2, x, alpha):
         super(primal_power, self).__init__()
@@ -483,13 +497,13 @@ class primal_power(_ConicBase):
         self._alpha = alpha
         assert isinstance(self._r1, IVariable)
         assert isinstance(self._r2, IVariable)
-        assert all(isinstance(xi, IVariable)
-                   for xi in self._x)
+        assert all(isinstance(xi, IVariable) for xi in self._x)
         if not is_numeric_data(self._alpha):
             raise TypeError(
                 "The type of the alpha parameter of a conic "
                 "constraint is restricted numeric data or "
-                "objects that store numeric data.")
+                "objects that store numeric data."
+            )
 
     @classmethod
     def as_domain(cls, r1, r2, x, alpha):
@@ -510,10 +524,8 @@ class primal_power(_ConicBase):
         b = block()
         b.r1 = variable(lb=0)
         b.r2 = variable(lb=0)
-        b.x = variable_tuple(
-            [variable() for i in range(len(x))])
-        b.c = _build_linking_constraints([r1, r2] + list(x),
-                                         [b.r1, b.r2] + list(b.x))
+        b.x = variable_tuple([variable() for i in range(len(x))])
+        b.c = _build_linking_constraints([r1, r2] + list(x), [b.r1, b.r2] + list(b.x))
         b.q = cls(r1=b.r1, r2=b.r2, x=b.x, alpha=alpha)
         return b
 
@@ -540,9 +552,7 @@ class primal_power(_ConicBase):
     def _body_function(self, r1, r2, x):
         """A function that defines the body expression"""
         alpha = self.alpha
-        return (sum(xi**2 for xi in x)**0.5) - \
-            (r1**alpha) * \
-            (r2**(1-alpha))
+        return (sum(xi**2 for xi in x) ** 0.5) - (r1**alpha) * (r2 ** (1 - alpha))
 
     def _body_function_variables(self, values=False):
         """Returns variables in the order they should be
@@ -552,8 +562,7 @@ class primal_power(_ConicBase):
         if not values:
             return self.r1, self.r2, self.x
         else:
-            return self.r1.value, self.r2.value, \
-                tuple(xi.value for xi in self.x)
+            return self.r1.value, self.r2.value, tuple(xi.value for xi in self.x)
 
     def check_convexity_conditions(self, relax=False):
         """Returns True if all convexity conditions for the
@@ -561,18 +570,24 @@ class primal_power(_ConicBase):
         then variable domains are ignored and it is assumed
         that all variables are continuous."""
         alpha = value(self.alpha, exception=False)
-        return (relax or
-                (self.r1.is_continuous() and
-                 self.r2.is_continuous() and
-                 all(xi.is_continuous() for xi in self.x))) and \
-            (self.r1.has_lb() and value(self.r1.lb) >= 0) and \
-            (self.r2.has_lb() and value(self.r2.lb) >= 0) and \
-            ((alpha is not None) and (0 < alpha < 1))
+        return (
+            (
+                relax
+                or (
+                    self.r1.is_continuous()
+                    and self.r2.is_continuous()
+                    and all(xi.is_continuous() for xi in self.x)
+                )
+            )
+            and (self.r1.has_lb() and value(self.r1.lb) >= 0)
+            and (self.r2.has_lb() and value(self.r2.lb) >= 0)
+            and ((alpha is not None) and (0 < alpha < 1))
+        )
 
 
 class primal_geomean(_ConicBase):
     """A primal geometric mean conic constraint of the form:
-        (r[0]*...*r[n-2])^(1/(n-1)) >= |x[n-1]| 
+        (r[0]*...*r[n-2])^(1/(n-1)) >= |x[n-1]|
 
     Parameters
     ----------
@@ -582,13 +597,16 @@ class primal_geomean(_ConicBase):
         A scalar variable.
 
     """
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_active",
-                 "_body",
-                 "_r",
-                 "_x",
-                 "__weakref__")
+
+    __slots__ = (
+        "_parent",
+        "_storage_key",
+        "_active",
+        "_body",
+        "_r",
+        "_x",
+        "__weakref__",
+    )
 
     def __init__(self, r, x):
         super(primal_geomean, self).__init__()
@@ -599,9 +617,9 @@ class primal_geomean(_ConicBase):
 
     @classmethod
     def as_domain(cls, r, x):
-        """Builds a conic domain. Input arguments take the 
-        same form as those of the conic constraint, but in 
-        place of each variable, one can optionally supply a 
+        """Builds a conic domain. Input arguments take the
+        same form as those of the conic constraint, but in
+        place of each variable, one can optionally supply a
         constant, linear expression, or None.
 
         Returns
@@ -609,7 +627,7 @@ class primal_geomean(_ConicBase):
         block
             A block object with the core conic constraint
             (block.q) expressed using auxiliary variables
-            (block.r, block.x) linked to the input arguments 
+            (block.r, block.x) linked to the input arguments
             through auxiliary constraints (block.c)."""
         b = block()
         b.r = variable_tuple([variable(lb=0) for i in range(len(r))])
@@ -643,14 +661,17 @@ class dual_exponential(_ConicBase):
     x2 : :class:`variable`
         A variable.
     """
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_active",
-                 "_body",
-                 "_r",
-                 "_x1",
-                 "_x2",
-                 "__weakref__")
+
+    __slots__ = (
+        "_parent",
+        "_storage_key",
+        "_active",
+        "_body",
+        "_r",
+        "_x1",
+        "_x2",
+        "__weakref__",
+    )
 
     def __init__(self, r, x1, x2):
         super(dual_exponential, self).__init__()
@@ -681,8 +702,7 @@ class dual_exponential(_ConicBase):
         b.r = variable(lb=0)
         b.x1 = variable()
         b.x2 = variable(ub=0)
-        b.c = _build_linking_constraints([r, x1, x2],
-                                         [b.r, b.x1, b.x2])
+        b.c = _build_linking_constraints([r, x1, x2], [b.r, b.x1, b.x2])
         b.q = cls(r=b.r, x1=b.x1, x2=b.x2)
         return b
 
@@ -704,7 +724,7 @@ class dual_exponential(_ConicBase):
 
     def _body_function(self, r, x1, x2):
         """A function that defines the body expression"""
-        return -x2*exp((x1/x2) - 1) - r
+        return -x2 * exp((x1 / x2) - 1) - r
 
     def _body_function_variables(self, values=False):
         """Returns variables in the order they should be
@@ -721,19 +741,26 @@ class dual_exponential(_ConicBase):
         conic constraint are satisfied. If relax is True,
         then variable domains are ignored and it is assumed
         that all variables are continuous."""
-        return (relax or
-                (self.x1.is_continuous() and
-                 self.x2.is_continuous() and
-                 self.r.is_continuous())) and \
-            (self.x2.has_ub() and value(self.x2.ub) <= 0) and \
-            (self.r.has_lb() and value(self.r.lb) >= 0)
+        return (
+            (
+                relax
+                or (
+                    self.x1.is_continuous()
+                    and self.x2.is_continuous()
+                    and self.r.is_continuous()
+                )
+            )
+            and (self.x2.has_ub() and value(self.x2.ub) <= 0)
+            and (self.r.has_lb() and value(self.r.lb) >= 0)
+        )
 
 
 class dual_power(_ConicBase):
     """A dual power conic constraint of the form:
 
-        sqrt(x[0]^2 + ... + x[n-1]^2) <= ((r1/alpha)^alpha) * \
-                                         ((r2/(1-alpha))^(1-alpha))
+        sqrt(x[0]^2 + ... + x[n-1]^2)
+        <=
+        ((r1/alpha)^alpha) * ((r2/(1-alpha))^(1-alpha))
 
     which is recognized as convex for r1,r2 >= 0
     and 0 < alpha < 1.
@@ -749,15 +776,18 @@ class dual_power(_ConicBase):
     alpha : float, :class:`parameter`, etc.
         A constant term.
     """
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_active",
-                 "_body",
-                 "_r1",
-                 "_r2",
-                 "_x",
-                 "_alpha",
-                 "__weakref__")
+
+    __slots__ = (
+        "_parent",
+        "_storage_key",
+        "_active",
+        "_body",
+        "_r1",
+        "_r2",
+        "_x",
+        "_alpha",
+        "__weakref__",
+    )
 
     def __init__(self, r1, r2, x, alpha):
         super(dual_power, self).__init__()
@@ -767,13 +797,13 @@ class dual_power(_ConicBase):
         self._alpha = alpha
         assert isinstance(self._r1, IVariable)
         assert isinstance(self._r2, IVariable)
-        assert all(isinstance(xi, IVariable)
-                   for xi in self._x)
+        assert all(isinstance(xi, IVariable) for xi in self._x)
         if not is_numeric_data(self._alpha):
             raise TypeError(
                 "The type of the alpha parameter of a conic "
                 "constraint is restricted numeric data or "
-                "objects that store numeric data.")
+                "objects that store numeric data."
+            )
 
     @classmethod
     def as_domain(cls, r1, r2, x, alpha):
@@ -794,10 +824,8 @@ class dual_power(_ConicBase):
         b = block()
         b.r1 = variable(lb=0)
         b.r2 = variable(lb=0)
-        b.x = variable_tuple(
-            [variable() for i in range(len(x))])
-        b.c = _build_linking_constraints([r1, r2] + list(x),
-                                         [b.r1, b.r2] + list(b.x))
+        b.x = variable_tuple([variable() for i in range(len(x))])
+        b.c = _build_linking_constraints([r1, r2] + list(x), [b.r1, b.r2] + list(b.x))
         b.q = cls(r1=b.r1, r2=b.r2, x=b.x, alpha=alpha)
         return b
 
@@ -824,9 +852,9 @@ class dual_power(_ConicBase):
     def _body_function(self, r1, r2, x):
         """A function that defines the body expression"""
         alpha = self.alpha
-        return (sum(xi**2 for xi in x)**0.5) - \
-            ((r1/alpha)**alpha) * \
-            ((r2/(1-alpha))**(1-alpha))
+        return (sum(xi**2 for xi in x) ** 0.5) - ((r1 / alpha) ** alpha) * (
+            (r2 / (1 - alpha)) ** (1 - alpha)
+        )
 
     def _body_function_variables(self, values=False):
         """Returns variables in the order they should be
@@ -836,8 +864,7 @@ class dual_power(_ConicBase):
         if not values:
             return self.r1, self.r2, self.x
         else:
-            return self.r1.value, self.r2.value, \
-                tuple(xi.value for xi in self.x)
+            return self.r1.value, self.r2.value, tuple(xi.value for xi in self.x)
 
     def check_convexity_conditions(self, relax=False):
         """Returns True if all convexity conditions for the
@@ -845,18 +872,24 @@ class dual_power(_ConicBase):
         then variable domains are ignored and it is assumed
         that all variables are continuous."""
         alpha = value(self.alpha, exception=False)
-        return (relax or
-                (self.r1.is_continuous() and
-                 self.r2.is_continuous() and
-                 all(xi.is_continuous() for xi in self.x))) and \
-            (self.r1.has_lb() and value(self.r1.lb) >= 0) and \
-            (self.r2.has_lb() and value(self.r2.lb) >= 0) and \
-            ((alpha is not None) and (0 < alpha < 1))
+        return (
+            (
+                relax
+                or (
+                    self.r1.is_continuous()
+                    and self.r2.is_continuous()
+                    and all(xi.is_continuous() for xi in self.x)
+                )
+            )
+            and (self.r1.has_lb() and value(self.r1.lb) >= 0)
+            and (self.r2.has_lb() and value(self.r2.lb) >= 0)
+            and ((alpha is not None) and (0 < alpha < 1))
+        )
 
 
 class dual_geomean(_ConicBase):
     """A dual geometric mean conic constraint of the form:
-        (n-1)*(r[0]*...*r[n-2])^(1/(n-1)) >= |x[n-1]| 
+        (n-1)*(r[0]*...*r[n-2])^(1/(n-1)) >= |x[n-1]|
 
     Parameters
     ----------
@@ -866,13 +899,16 @@ class dual_geomean(_ConicBase):
         A scalar variable.
 
     """
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_active",
-                 "_body",
-                 "_r",
-                 "_x",
-                 "__weakref__")
+
+    __slots__ = (
+        "_parent",
+        "_storage_key",
+        "_active",
+        "_body",
+        "_r",
+        "_x",
+        "__weakref__",
+    )
 
     def __init__(self, r, x):
         super(dual_geomean, self).__init__()
@@ -883,9 +919,9 @@ class dual_geomean(_ConicBase):
 
     @classmethod
     def as_domain(cls, r, x):
-        """Builds a conic domain. Input arguments take the 
-        same form as those of the conic constraint, but in 
-        place of each variable, one can optionally supply a 
+        """Builds a conic domain. Input arguments take the
+        same form as those of the conic constraint, but in
+        place of each variable, one can optionally supply a
         constant, linear expression, or None.
 
         Returns
@@ -893,7 +929,7 @@ class dual_geomean(_ConicBase):
         block
             A block object with the core conic constraint
             (block.q) expressed using auxiliary variables
-            (block.r, block.x) linked to the input arguments 
+            (block.r, block.x) linked to the input arguments
             through auxiliary constraints (block.c)."""
         b = block()
         b.r = variable_tuple([variable(lb=0) for i in range(len(r))])
@@ -912,8 +948,8 @@ class dual_geomean(_ConicBase):
 
 
 class svec_psdcone(_ConicBase):
-    """A domain consisting of vectorizations of the lower-triangular 
-    part of a positive semidefinite matrx, with the non-diagonal 
+    """A domain consisting of vectorizations of the lower-triangular
+    part of a positive semidefinite matrx, with the non-diagonal
     elements additionally rescaled. In other words, if a vector 'x'
     of length n = d*(d+1)/2 belongs to this cone, then the matrix:
 
@@ -930,12 +966,8 @@ class svec_psdcone(_ConicBase):
         An iterable of variables with length d*(d+1)/2.
 
     """
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_active",
-                 "_body",
-                 "_x",
-                 "__weakref__")
+
+    __slots__ = ("_parent", "_storage_key", "_active", "_body", "_x", "__weakref__")
 
     def __init__(self, x):
         super(svec_psdcone, self).__init__()
@@ -944,9 +976,9 @@ class svec_psdcone(_ConicBase):
 
     @classmethod
     def as_domain(cls, x):
-        """Builds a conic domain. Input arguments take the 
-        same form as those of the conic constraint, but in 
-        place of each variable, one can optionally supply a 
+        """Builds a conic domain. Input arguments take the
+        same form as those of the conic constraint, but in
+        place of each variable, one can optionally supply a
         constant, linear expression, or None.
 
         Returns
@@ -954,7 +986,7 @@ class svec_psdcone(_ConicBase):
         block
             A block object with the core conic constraint
             (block.q) expressed using auxiliary variables
-            (block.r, block.x) linked to the input arguments 
+            (block.r, block.x) linked to the input arguments
             through auxiliary constraints (block.c)."""
         b = block()
         b.x = variable_tuple([variable() for i in range(len(x))])

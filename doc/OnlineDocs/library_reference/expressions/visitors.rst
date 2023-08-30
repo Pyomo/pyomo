@@ -2,10 +2,10 @@
 Visitor Classes
 ===============
 
-.. autoclass:: pyomo.core.expr.current.SimpleExpressionVisitor
+.. autoclass:: pyomo.core.expr.SimpleExpressionVisitor
     :members:
-.. autoclass:: pyomo.core.expr.current.ExpressionValueVisitor
+.. autoclass:: pyomo.core.expr.ExpressionValueVisitor
     :members:
-.. autoclass:: pyomo.core.expr.current.ExpressionReplacementVisitor
+.. autoclass:: pyomo.core.expr.ExpressionReplacementVisitor
     :members:
 

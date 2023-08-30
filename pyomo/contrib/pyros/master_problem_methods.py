@@ -1,20 +1,30 @@
 """
 Functions for handling the construction and solving of the GRCS master problem via ROSolver
 """
-from pyomo.core.base import (ConcreteModel, Block,
-                             Var,
-                             Objective, Constraint,
-                             ConstraintList, SortComponents)
+from pyomo.core.base import (
+    ConcreteModel,
+    Block,
+    Var,
+    Objective,
+    Constraint,
+    ConstraintList,
+    SortComponents,
+)
 from pyomo.opt import TerminationCondition as tc
+from pyomo.opt import SolverResults
 from pyomo.core.expr import value
 from pyomo.core.base.set_types import NonNegativeIntegers, NonNegativeReals
-from pyomo.contrib.pyros.util import (selective_clone,
-                                      ObjectiveType,
-                                      pyrosTerminationCondition,
-                                      process_termination_condition_master_problem,
-                                      output_logger)
-from pyomo.contrib.pyros.solve_data import (MasterProblemData,
-                                            MasterResult)
+from pyomo.contrib.pyros.util import (
+    selective_clone,
+    ObjectiveType,
+    pyrosTerminationCondition,
+    process_termination_condition_master_problem,
+    adjust_solver_time_settings,
+    revert_solver_max_time_adjustment,
+    get_main_elapsed_time,
+    output_logger,
+)
+from pyomo.contrib.pyros.solve_data import MasterProblemData, MasterResult
 from pyomo.opt.results import check_optimal_termination
 from pyomo.core.expr.visitor import replace_expressions, identify_variables
 from pyomo.common.collections import ComponentMap, ComponentSet
@@ -66,20 +76,9 @@ def get_state_vars(model, iterations):
     """
     iter_state_var_map = dict()
     for itn in iterations:
-        fsv_set = ComponentSet(
-                model.scenarios[itn, 0].util.first_stage_variables)
-        state_vars = list()
-        for blk in model.scenarios[itn, :]:
-            ssv_set = ComponentSet(blk.util.second_stage_variables)
-            state_vars.extend(
-                    v for v in blk.component_data_objects(
-                        Var,
-                        active=True,
-                        descend_into=True,
-                        sort=SortComponents.deterministic,  # guarantee order
-                    )
-                    if v not in fsv_set and v not in ssv_set
-            )
+        state_vars = [
+            var for blk in model.scenarios[itn, :] for var in blk.util.state_vars
+        ]
         iter_state_var_map[itn] = state_vars
 
     return iter_state_var_map
@@ -108,17 +107,16 @@ def construct_master_feasibility_problem(model_data, config):
 
     # obtain mapping from master problem to master feasibility
     # problem variables
-    varmap_name = unique_component_name(
+    varmap_name = unique_component_name(model_data.master_model, 'pyros_var_map')
+    setattr(
         model_data.master_model,
-        'pyros_var_map',
+        varmap_name,
+        list(model_data.master_model.component_data_objects(Var)),
     )
-    setattr(model_data.master_model, varmap_name,
-            list(model_data.master_model.component_data_objects(Var)))
     model = model_data.master_model.clone()
-    model_data.feasibility_problem_varmap = list(zip(
-        getattr(model_data.master_model, varmap_name),
-        getattr(model, varmap_name)
-    ))
+    model_data.feasibility_problem_varmap = list(
+        zip(getattr(model_data.master_model, varmap_name), getattr(model, varmap_name))
+    )
     delattr(model_data.master_model, varmap_name)
     delattr(model, varmap_name)
 
@@ -135,8 +133,7 @@ def construct_master_feasibility_problem(model_data, config):
                 ssv_set = ComponentSet(blk.util.second_stage_variables)
 
                 # get second-stage var in DR eqn. should only be one var
-                ssv_in_dr_eq = [var for var in vars_in_dr_eq
-                                if var in ssv_set][0]
+                ssv_in_dr_eq = [var for var in vars_in_dr_eq if var in ssv_set][0]
 
                 # update var value for initialization
                 # fine since DR eqns are f(d) - z == 0 (not z - f(d) == 0)
@@ -145,8 +142,8 @@ def construct_master_feasibility_problem(model_data, config):
 
     # initialize state vars to previous master solution values
     if iteration != 0:
-        stvar_map = get_state_vars(model, [iteration, iteration-1])
-        for current, prev in zip(stvar_map[iteration], stvar_map[iteration-1]):
+        stvar_map = get_state_vars(model, [iteration, iteration - 1])
+        for current, prev in zip(stvar_map[iteration], stvar_map[iteration - 1]):
             current.set_value(value(prev))
 
     # constraints to which slacks should be added
@@ -158,24 +155,25 @@ def construct_master_feasibility_problem(model_data, config):
         else:
             dr_eqs = list()
 
-        targets.extend([
-            con for con in blk.component_data_objects(
-                Constraint, active=True, descend_into=True)
-            if con not in dr_eqs])
+        targets.extend(
+            [
+                con
+                for con in blk.component_data_objects(
+                    Constraint, active=True, descend_into=True
+                )
+                if con not in dr_eqs
+            ]
+        )
 
     # retain original constraint exprs (for slack initialization and scaling)
-    pre_slack_con_exprs = ComponentMap(
-        (con, con.body - con.upper) for con in targets
-    )
+    pre_slack_con_exprs = ComponentMap((con, con.body - con.upper) for con in targets)
 
     # add slack variables and objective
     # inequalities g(v) <= b become g(v) -- s^-<= b
     # equalities h(v) == b become h(v) -- s^- + s^+ == b
-    TransformationFactory("core.add_slack_variables").apply_to(model,
-                                                               targets=targets)
+    TransformationFactory("core.add_slack_variables").apply_to(model, targets=targets)
     slack_vars = ComponentSet(
-            model._core_add_slack_variables.component_data_objects(
-                Var, descend_into=True)
+        model._core_add_slack_variables.component_data_objects(Var, descend_into=True)
     )
 
     # initialize and scale slack variables
@@ -203,13 +201,15 @@ def construct_master_feasibility_problem(model_data, config):
             slack_var.set_value(con_slack)
 
             # update expression replacement map
-            slack_substitution_map[id(slack_var)] = (scaling_coeff * slack_var)
+            slack_substitution_map[id(slack_var)] = scaling_coeff * slack_var
 
         # finally, scale slack(s)
         con.set_value(
-                (replace_expressions(con.lower, slack_substitution_map),
-                 replace_expressions(con.body, slack_substitution_map),
-                 replace_expressions(con.upper, slack_substitution_map),)
+            (
+                replace_expressions(con.lower, slack_substitution_map),
+                replace_expressions(con.body, slack_substitution_map),
+                replace_expressions(con.upper, slack_substitution_map),
+            )
         )
 
     return model
@@ -241,6 +241,11 @@ def solve_master_feasibility_problem(model_data, config):
     else:
         solver = config.local_solver
 
+    timer = TicTocTimer()
+    orig_setting, custom_setting_present = adjust_solver_time_settings(
+        model_data.timing, solver, config
+    )
+    timer.tic(msg=None)
     try:
         results = solver.solve(model, tee=config.tee, load_solutions=False)
     except ApplicationError:
@@ -253,9 +258,18 @@ def solve_master_feasibility_problem(model_data, config):
             f"{model_data.iteration}"
         )
         raise
+    else:
+        setattr(results.solver, TIC_TOC_SOLVE_TIME_ATTR, timer.toc(msg=None))
+    finally:
+        revert_solver_max_time_adjustment(
+            solver, orig_setting, custom_setting_present, config
+        )
 
     feasible_terminations = {
-        tc.optimal, tc.locallyOptimal, tc.globallyOptimal, tc.feasible
+        tc.optimal,
+        tc.locallyOptimal,
+        tc.globallyOptimal,
+        tc.feasible,
     }
     if results.solver.termination_condition in feasible_terminations:
         model.solutions.load_from(results)
@@ -285,7 +299,7 @@ def minimize_dr_vars(model_data, config):
     results : SolverResults
         Subordinate solver results for the polishing problem.
     """
-    #config.progress_logger.info("Executing decision rule variable polishing solve.")
+    # config.progress_logger.info("Executing decision rule variable polishing solve.")
     model = model_data.master_model
     polishing_model = model.clone()
 
@@ -297,24 +311,31 @@ def minimize_dr_vars(model_data, config):
     polishing_model.tau_vars = []
     # ==========
     for idx in range(len(decision_rule_vars)):
-        polishing_model.scenarios[0,0].add_component(
-                "polishing_var_" + str(idx),
-                Var(index_set, initialize=1e6, domain=NonNegativeReals))
+        polishing_model.scenarios[0, 0].add_component(
+            "polishing_var_" + str(idx),
+            Var(index_set, initialize=1e6, domain=NonNegativeReals),
+        )
         polishing_model.tau_vars.append(
-            getattr(polishing_model.scenarios[0,0], "polishing_var_" + str(idx))
+            getattr(polishing_model.scenarios[0, 0], "polishing_var_" + str(idx))
         )
     # ==========
     this_iter = polishing_model.scenarios[max(polishing_model.scenarios.keys())[0], 0]
     nom_block = polishing_model.scenarios[0, 0]
     if config.objective_focus == ObjectiveType.nominal:
-        obj_val = value(this_iter.second_stage_objective + this_iter.first_stage_objective)
-        polishing_model.scenarios[0,0].polishing_constraint = \
-            Constraint(expr=obj_val >= nom_block.second_stage_objective + nom_block.first_stage_objective)
+        obj_val = value(
+            this_iter.second_stage_objective + this_iter.first_stage_objective
+        )
+        polishing_model.scenarios[0, 0].polishing_constraint = Constraint(
+            expr=obj_val
+            >= nom_block.second_stage_objective + nom_block.first_stage_objective
+        )
     elif config.objective_focus == ObjectiveType.worst_case:
-        polishing_model.zeta.fix() # Searching equivalent optimal solutions given optimal zeta
+        polishing_model.zeta.fix()  # Searching equivalent optimal solutions given optimal zeta
 
     # === Make absolute value constraints on polishing_vars
-    polishing_model.scenarios[0,0].util.absolute_var_constraints = cons = ConstraintList()
+    polishing_model.scenarios[
+        0, 0
+    ].util.absolute_var_constraints = cons = ConstraintList()
     uncertain_params = nom_block.util.uncertain_params
     if config.decision_rule_order == 1:
         for i, tau in enumerate(polishing_model.tau_vars):
@@ -323,8 +344,16 @@ def minimize_dr_vars(model_data, config):
                     cons.add(-tau[j] <= this_iter.util.decision_rule_vars[i][j])
                     cons.add(this_iter.util.decision_rule_vars[i][j] <= tau[j])
                 else:
-                    cons.add(-tau[j] <= this_iter.util.decision_rule_vars[i][j] * uncertain_params[j - 1])
-                    cons.add(this_iter.util.decision_rule_vars[i][j] * uncertain_params[j - 1] <= tau[j])
+                    cons.add(
+                        -tau[j]
+                        <= this_iter.util.decision_rule_vars[i][j]
+                        * uncertain_params[j - 1]
+                    )
+                    cons.add(
+                        this_iter.util.decision_rule_vars[i][j]
+                        * uncertain_params[j - 1]
+                        <= tau[j]
+                    )
     elif config.decision_rule_order == 2:
         l = list(range(len(uncertain_params)))
         index_pairs = list(it.combinations(l, 2))
@@ -338,27 +367,67 @@ def minimize_dr_vars(model_data, config):
                 elif r <= len(uncertain_params) and r > 0:
                     cons.add(-tau[r] <= Z[r] * uncertain_params[r - 1])
                     cons.add(Z[r] * uncertain_params[r - 1] <= tau[r])
-                elif r <= len(indices) - len(uncertain_params) - 1 and r > len(uncertain_params):
-                    cons.add(-tau[r] <= Z[r] * uncertain_params[index_pairs[r - len(uncertain_params) - 1][0]] * uncertain_params[
-                        index_pairs[r - len(uncertain_params) - 1][1]])
-                    cons.add(Z[r] * uncertain_params[index_pairs[r - len(uncertain_params) - 1][0]] *
-                             uncertain_params[index_pairs[r - len(uncertain_params) - 1][1]] <= tau[r])
+                elif r <= len(indices) - len(uncertain_params) - 1 and r > len(
+                    uncertain_params
+                ):
+                    cons.add(
+                        -tau[r]
+                        <= Z[r]
+                        * uncertain_params[
+                            index_pairs[r - len(uncertain_params) - 1][0]
+                        ]
+                        * uncertain_params[
+                            index_pairs[r - len(uncertain_params) - 1][1]
+                        ]
+                    )
+                    cons.add(
+                        Z[r]
+                        * uncertain_params[
+                            index_pairs[r - len(uncertain_params) - 1][0]
+                        ]
+                        * uncertain_params[
+                            index_pairs[r - len(uncertain_params) - 1][1]
+                        ]
+                        <= tau[r]
+                    )
                 elif r > len(indices) - len(uncertain_params) - 1:
-                    cons.add(-tau[r] <= Z[r] * uncertain_params[r - len(index_pairs) - len(uncertain_params) - 1] ** 2)
-                    cons.add(Z[r] * uncertain_params[r - len(index_pairs) - len(uncertain_params) - 1] ** 2 <= tau[r])
+                    cons.add(
+                        -tau[r]
+                        <= Z[r]
+                        * uncertain_params[
+                            r - len(index_pairs) - len(uncertain_params) - 1
+                        ]
+                        ** 2
+                    )
+                    cons.add(
+                        Z[r]
+                        * uncertain_params[
+                            r - len(index_pairs) - len(uncertain_params) - 1
+                        ]
+                        ** 2
+                        <= tau[r]
+                    )
     else:
-        raise NotImplementedError("Decision rule variable polishing has not been generalized to decision_rule_order "
-                                  + str(config.decision_rule_order) + ".")
+        raise NotImplementedError(
+            "Decision rule variable polishing has not been generalized to decision_rule_order "
+            + str(config.decision_rule_order)
+            + "."
+        )
 
-    polishing_model.scenarios[0,0].polishing_obj = \
-        Objective(expr=sum(sum(tau[j] for j in tau.index_set()) for tau in polishing_model.tau_vars))
+    polishing_model.scenarios[0, 0].polishing_obj = Objective(
+        expr=sum(
+            sum(tau[j] for j in tau.index_set()) for tau in polishing_model.tau_vars
+        )
+    )
 
     # === Fix design
     for d in first_stage_variables:
         d.fix()
 
     # === Unfix DR vars
-    num_dr_vars = len(model.scenarios[0, 0].util.decision_rule_vars[0])  # there is at least one dr var
+    num_dr_vars = len(
+        model.scenarios[0, 0].util.decision_rule_vars[0]
+    )  # there is at least one dr var
     num_uncertain_params = len(config.uncertain_params)
 
     if model.const_efficiency_applied:
@@ -400,13 +469,12 @@ def minimize_dr_vars(model_data, config):
 
     # === Solve the polishing model
     timer = TicTocTimer()
+    orig_setting, custom_setting_present = adjust_solver_time_settings(
+        model_data.timing, solver, config
+    )
     timer.tic(msg=None)
     try:
-        results = solver.solve(
-            polishing_model,
-            tee=config.tee,
-            load_solutions=False,
-        )
+        results = solver.solve(polishing_model, tee=config.tee, load_solutions=False)
     except ApplicationError:
         config.progress_logger.error(
             f"Optimizer {repr(solver)} encountered an exception "
@@ -415,16 +483,14 @@ def minimize_dr_vars(model_data, config):
         )
         raise
     else:
-        setattr(
-            results.solver,
-            TIC_TOC_SOLVE_TIME_ATTR,
-            timer.toc(msg=None),
+        setattr(results.solver, TIC_TOC_SOLVE_TIME_ATTR, timer.toc(msg=None))
+    finally:
+        revert_solver_max_time_adjustment(
+            solver, orig_setting, custom_setting_present, config
         )
 
     # === Process solution by termination condition
-    acceptable = {
-        tc.globallyOptimal, tc.optimal, tc.locallyOptimal, tc.feasible,
-    }
+    acceptable = {tc.globallyOptimal, tc.optimal, tc.locallyOptimal, tc.feasible}
     if results.solver.termination_condition not in acceptable:
         # continue with "unpolished" master model solution
         return results
@@ -438,10 +504,8 @@ def minimize_dr_vars(model_data, config):
             polishing_model.scenarios[idx].util.second_stage_variables,
         )
         sv_zip = zip(
-            get_state_vars(model_data.master_model, [idx[0]])[idx[0]],
-            get_state_vars(polishing_model, [idx[0]])[idx[0]],
+            blk.util.state_vars, polishing_model.scenarios[idx].util.state_vars
         )
-
         for master_ssv, polish_ssv in ssv_zip:
             master_ssv.set_value(value(polish_ssv))
         for master_sv, polish_sv in sv_zip:
@@ -468,13 +532,15 @@ def add_p_robust_constraint(model_data, config):
     rho = config.p_robustness['rho']
     model = model_data.master_model
     block_0 = model.scenarios[0, 0]
-    frac_nom_cost = (1 + rho) * (block_0.first_stage_objective +
-                                        block_0.second_stage_objective)
+    frac_nom_cost = (1 + rho) * (
+        block_0.first_stage_objective + block_0.second_stage_objective
+    )
 
     for block_k in model.scenarios[model_data.iteration, :]:
         model.p_robust_constraints.add(
             block_k.first_stage_objective + block_k.second_stage_objective
-            <= frac_nom_cost)
+            <= frac_nom_cost
+        )
     return
 
 
@@ -487,8 +553,10 @@ def add_scenario_to_master(model_data, violations):
     i = max(m.scenarios.keys())[0] + 1
 
     # === Add a block to master for each violation
-    idx = 0 # Only supporting adding single violation back to master in v1
-    new_block = selective_clone(m.scenarios[0, 0], m.scenarios[0, 0].util.first_stage_variables)
+    idx = 0  # Only supporting adding single violation back to master in v1
+    new_block = selective_clone(
+        m.scenarios[0, 0], m.scenarios[0, 0].util.first_stage_variables
+    )
     m.scenarios[i, idx].transfer_attributes_from(new_block)
 
     # === Set uncertain params in new block(s) to correct value(s)
@@ -508,7 +576,9 @@ def higher_order_decision_rule_efficiency(config, model_data):
         #  Ensure all are unfixed unless next conditions are met...
         for dr_var in nlp_model.scenarios[0, 0].util.decision_rule_vars:
             dr_var.unfix()
-        num_dr_vars = len(nlp_model.scenarios[0, 0].util.decision_rule_vars[0])  # there is at least one dr var
+        num_dr_vars = len(
+            nlp_model.scenarios[0, 0].util.decision_rule_vars[0]
+        )  # there is at least one dr var
         num_uncertain_params = len(config.uncertain_params)
         nlp_model.const_efficiency_applied = False
         nlp_model.linear_efficiency_applied = False
@@ -517,7 +587,10 @@ def higher_order_decision_rule_efficiency(config, model_data):
             for dr_var in nlp_model.scenarios[0, 0].util.decision_rule_vars:
                 for i in range(1, num_dr_vars):
                     dr_var[i].fix(0)
-        elif model_data.iteration <= num_uncertain_params and config.decision_rule_order > 1:
+        elif (
+            model_data.iteration <= num_uncertain_params
+            and config.decision_rule_order > 1
+        ):
             # Only applied in DR order > 1 case
             for dr_var in nlp_model.scenarios[0, 0].util.decision_rule_vars:
                 for i in range(num_uncertain_params + 1, num_dr_vars):
@@ -564,6 +637,9 @@ def solver_call_master(model_data, config, solver, solve_data):
 
     timer = TicTocTimer()
     for opt in backup_solvers:
+        orig_setting, custom_setting_present = adjust_solver_time_settings(
+            model_data.timing, opt, config
+        )
         timer.tic(msg=None)
         try:
             results = opt.solve(
@@ -582,10 +658,10 @@ def solver_call_master(model_data, config, solver, solve_data):
             )
             raise
         else:
-            setattr(
-                results.solver,
-                TIC_TOC_SOLVE_TIME_ATTR,
-                timer.toc(msg=None),
+            setattr(results.solver, TIC_TOC_SOLVE_TIME_ATTR, timer.toc(msg=None))
+        finally:
+            revert_solver_max_time_adjustment(
+                solver, orig_setting, custom_setting_present, config
             )
 
         optimal_termination = check_optimal_termination(results)
@@ -601,12 +677,12 @@ def solver_call_master(model_data, config, solver, solve_data):
         solver_term_cond_dict[str(opt)] = str(results.solver.termination_condition)
         master_soln.termination_condition = results.solver.termination_condition
         master_soln.pyros_termination_condition = None
-        try_backup, _ = master_soln.master_subsolver_results = (
-            process_termination_condition_master_problem(
-                config=config,
-                results=results,
-            )
-        )
+        (
+            try_backup,
+            _,
+        ) = (
+            master_soln.master_subsolver_results
+        ) = process_termination_condition_master_problem(config=config, results=results)
 
         master_soln.nominal_block = nlp_model.scenarios[0, 0]
         master_soln.results = results
@@ -616,15 +692,12 @@ def solver_call_master(model_data, config, solver, solve_data):
         # (nominal block DOF variable and objective values)
         if not try_backup and not infeasible:
             master_soln.fsv_vals = list(
-                v.value
-                for v in nlp_model.scenarios[0, 0].util.first_stage_variables
+                v.value for v in nlp_model.scenarios[0, 0].util.first_stage_variables
             )
-
             if config.objective_focus is ObjectiveType.nominal:
                 master_soln.ssv_vals = list(
                     v.value
-                    for v
-                    in nlp_model.scenarios[0, 0].util.second_stage_variables
+                    for v in nlp_model.scenarios[0, 0].util.second_stage_variables
                 )
                 master_soln.second_stage_objective = value(
                     nlp_model.scenarios[0, 0].second_stage_objective
@@ -633,8 +706,7 @@ def solver_call_master(model_data, config, solver, solve_data):
                 idx = max(nlp_model.scenarios.keys())[0]
                 master_soln.ssv_vals = list(
                     v.value
-                    for v
-                    in nlp_model.scenarios[idx, 0].util.second_stage_variables
+                    for v in nlp_model.scenarios[idx, 0].util.second_stage_variables
                 )
                 master_soln.second_stage_objective = value(
                     nlp_model.scenarios[idx, 0].second_stage_objective
@@ -646,6 +718,20 @@ def solver_call_master(model_data, config, solver, solve_data):
             master_soln.nominal_block = nlp_model.scenarios[0, 0]
             master_soln.results = results
             master_soln.master_model = nlp_model
+
+        # if PyROS time limit exceeded, exit loop and return solution
+        elapsed = get_main_elapsed_time(model_data.timing)
+        if config.time_limit:
+            if elapsed >= config.time_limit:
+                try_backup = False
+                master_soln.master_subsolver_results = (
+                    None,
+                    pyrosTerminationCondition.time_out,
+                )
+                master_soln.pyros_termination_condition = (
+                    pyrosTerminationCondition.time_out
+                )
+                output_logger(config=config, time_out=True, elapsed=elapsed)
 
         if not try_backup:
             return master_soln
@@ -666,7 +752,7 @@ def solver_call_master(model_data, config, solver, solve_data):
                 + "_master_"
                 + str(model_data.iteration)
                 + ".bar"
-            )
+            ),
         )
         nlp_model.write(name, io_options={'symbolic_solver_labels': True})
         output_logger(
@@ -691,7 +777,37 @@ def solve_master(model_data, config):
         results = solve_master_feasibility_problem(model_data, config)
         master_soln.feasibility_problem_results = results
 
-    solver = config.global_solver if config.solve_master_globally else config.local_solver
+        # if pyros time limit reached, load time out status
+        # to master results and return to caller
+        elapsed = get_main_elapsed_time(model_data.timing)
+        if config.time_limit:
+            if elapsed >= config.time_limit:
+                # load master model
+                master_soln.master_model = model_data.master_model
+                master_soln.nominal_block = model_data.master_model.scenarios[0, 0]
 
-    return solver_call_master(model_data=model_data, config=config, solver=solver,
-                       solve_data=master_soln)
+                # empty results object, with master solve time of zero
+                master_soln.results = SolverResults()
+                setattr(master_soln.results.solver, TIC_TOC_SOLVE_TIME_ATTR, 0)
+
+                # PyROS time out status
+                master_soln.pyros_termination_condition = (
+                    pyrosTerminationCondition.time_out
+                )
+                master_soln.master_subsolver_results = (
+                    None,
+                    pyrosTerminationCondition.time_out,
+                )
+
+                # log time out message
+                output_logger(config=config, time_out=True, elapsed=elapsed)
+
+                return master_soln
+
+    solver = (
+        config.global_solver if config.solve_master_globally else config.local_solver
+    )
+
+    return solver_call_master(
+        model_data=model_data, config=config, solver=solver, solve_data=master_soln
+    )

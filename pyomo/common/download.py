@@ -15,6 +15,7 @@ import logging
 import os
 import platform
 import re
+import shutil
 import sys
 import subprocess
 
@@ -35,6 +36,7 @@ logger = logging.getLogger('pyomo.common.download')
 
 DownloadFactory = pyomo.common.Factory('library downloaders')
 
+
 class FileDownloader(object):
     _os_version = None
 
@@ -46,9 +48,8 @@ class FileDownloader(object):
         if cacert is not None:
             if not self.cacert or not os.path.isfile(self.cacert):
                 raise RuntimeError(
-                    "cacert='%s' does not refer to a valid file."
-                    % (self.cacert,))
-
+                    "cacert='%s' does not refer to a valid file." % (self.cacert,)
+                )
 
     @classmethod
     def get_sysinfo(cls):
@@ -76,7 +77,7 @@ class FileDownloader(object):
                 line = line.strip()
                 if not line:
                     continue
-                key,val = line.lower().split('=')
+                key, val = line.lower().split('=')
                 if val[0] == val[-1] and val[0] in '"\'':
                     val = val[1:-1]
                 if key == 'id':
@@ -99,10 +100,19 @@ class FileDownloader(object):
 
     @classmethod
     def _get_distver_from_lsb_release(cls):
-        dist = subprocess.run(['lsb_release', '-si'], stdout=subprocess.PIPE,
-                              stderr=subprocess.STDOUT, universal_newlines=True)
-        ver = subprocess.run(['lsb_release', '-sr'], stdout=subprocess.PIPE,
-                             stderr=subprocess.STDOUT, universal_newlines=True)
+        lsb_release = shutil.which('lsb_release')
+        dist = subprocess.run(
+            [lsb_release, '-si'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+        )
+        ver = subprocess.run(
+            [lsb_release, '-sr'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+        )
         return cls._map_linux_dist(dist.stdout), ver.stdout.strip()
 
     @classmethod
@@ -117,7 +127,7 @@ class FileDownloader(object):
         _map = [
             ('redhat', 'rhel'),
             'fedora',
-            'ubuntu', # implicitly maps kubuntu / xubuntu
+            'ubuntu',  # implicitly maps kubuntu / xubuntu
             'debian',
             # Additional RHEL (Fedora) spins
             'centos',
@@ -144,15 +154,14 @@ class FileDownloader(object):
                 dist, ver = cls._get_distver_from_distro()
             elif os.path.exists('/etc/redhat-release'):
                 dist, ver = cls._get_distver_from_redhat_release()
-            elif subprocess.run(['lsb_release'], stdout=subprocess.DEVNULL,
-                              stderr=subprocess.DEVNULL).returncode == 0:
+            elif shutil.which('lsb_release'):
                 dist, ver = cls._get_distver_from_lsb_release()
             elif os.path.exists('/etc/os-release'):
                 # Note that (at least on centos), os_release is an
                 # imprecise version string
                 dist, ver = cls._get_distver_from_os_release()
             else:
-                dist, ver = '',''
+                dist, ver = '', ''
             return dist, ver
         elif _os == 'darwin':
             return 'macos', platform.mac_ver()[0]
@@ -200,16 +209,14 @@ class FileDownloader(object):
         if _os in _map:
             _os = _map[_os]
 
-        if _os in {'ubuntu','macos','win'}:
+        if _os in {'ubuntu', 'macos', 'win'}:
             return _os + ''.join(_ver.split('.')[:2])
         else:
             return _os + _ver.split('.')[0]
 
-    @deprecated("get_url() is deprecated. Use get_platform_url()",
-                version='5.6.9')
+    @deprecated("get_url() is deprecated. Use get_platform_url()", version='5.6.9')
     def get_url(self, urlmap):
         return self.get_platform_url(urlmap)
-
 
     def get_platform_url(self, urlmap):
         """Select the url for this platform
@@ -229,10 +236,9 @@ class FileDownloader(object):
         url = urlmap.get(system, None)
         if url is None:
             raise RuntimeError(
-                "cannot infer the correct url for platform '%s'"
-                % (platform,))
+                "cannot infer the correct url for platform '%s'" % (platform,)
+            )
         return url
-
 
     def create_parser(self, parser=None):
         if parser is None:
@@ -253,7 +259,8 @@ class FileDownloader(object):
             "to verify peers.",
         )
         parser.add_argument(
-            '-v','--verbose',
+            '-v',
+            '--verbose',
             action='store_true',
             dest='verbose',
             default=False,
@@ -267,14 +274,14 @@ class FileDownloader(object):
             'target',
             nargs="?",
             default=None,
-            help="Target destination directory or filename"
+            help="Target destination directory or filename",
         )
         parser.parse_args(argv, self)
         if self.cacert is not None:
             if not self.cacert or not os.path.isfile(self.cacert):
                 raise RuntimeError(
-                    "--cacert='%s' does not refer to a valid file."
-                    % (self.cacert,))
+                    "--cacert='%s' does not refer to a valid file." % (self.cacert,)
+                )
 
     def set_destination_filename(self, default):
         if self.target is not None:
@@ -303,27 +310,25 @@ class FileDownloader(object):
         try:
             fetch = request.urlopen(url, context=ctx)
         except urllib_error.HTTPError as e:
-            if e.code != 403: # Forbidden
+            if e.code != 403:  # Forbidden
                 raise
             fetch = None
         if fetch is None:
             # This is a fix implemented if we get stuck behind server
             # security features (attempting to block "bot" agents).
             # We are setting a known user-agent to get around that.
-            req = request.Request(
-                url=url,
-                headers={'User-Agent': 'Mozilla/5.0'},
-            )
+            req = request.Request(url=url, headers={'User-Agent': 'Mozilla/5.0'})
             fetch = request.urlopen(req, context=ctx)
         ans = fetch.read()
         logger.info("  ...downloaded %s bytes" % (len(ans),))
         return ans
 
-
     def get_file(self, url, binary):
         if self._fname is None:
-            raise DeveloperError("target file name has not been initialized "
-                                 "with set_destination_filename")
+            raise DeveloperError(
+                "target file name has not been initialized "
+                "with set_destination_filename"
+            )
         with open(self._fname, 'wb' if binary else 'wt') as FILE:
             raw_file = self.retrieve_url(url)
             if binary:
@@ -332,64 +337,67 @@ class FileDownloader(object):
                 FILE.write(raw_file.decode())
             logger.info("  ...wrote %s bytes" % (len(raw_file),))
 
-
     def get_binary_file(self, url):
         """Retrieve the specified url and write as a binary file"""
         return self.get_file(url, binary=True)
-
 
     def get_text_file(self, url):
         """Retrieve the specified url and write as a text file"""
         return self.get_file(url, binary=False)
 
-
     def get_binary_file_from_zip_archive(self, url, srcname):
         if self._fname is None:
-            raise DeveloperError("target file name has not been initialized "
-                                 "with set_destination_filename")
+            raise DeveloperError(
+                "target file name has not been initialized "
+                "with set_destination_filename"
+            )
         with open(self._fname, 'wb') as FILE:
             zipped_file = io.BytesIO(self.retrieve_url(url))
             raw_file = zipfile.ZipFile(zipped_file).open(srcname).read()
             FILE.write(raw_file)
             logger.info("  ...wrote %s bytes" % (len(raw_file),))
 
-
     def get_zip_archive(self, url, dirOffset=0):
         if self._fname is None:
-            raise DeveloperError("target file name has not been initialized "
-                                 "with set_destination_filename")
+            raise DeveloperError(
+                "target file name has not been initialized "
+                "with set_destination_filename"
+            )
         if os.path.exists(self._fname) and not os.path.isdir(self._fname):
             raise RuntimeError(
-                "Target directory (%s) exists, but is not a directory"
-                % (self._fname,))
+                "Target directory (%s) exists, but is not a directory" % (self._fname,)
+            )
         zip_file = zipfile.ZipFile(io.BytesIO(self.retrieve_url(url)))
         # Simple sanity checks
         for info in zip_file.infolist():
             f = info.filename
             if f[0] in '\\/' or '..' in f:
-                logger.error("malformed (potentially insecure) filename (%s) "
-                             "found in zip archive.  Skipping file." % (f,))
+                logger.error(
+                    "malformed (potentially insecure) filename (%s) "
+                    "found in zip archive.  Skipping file." % (f,)
+                )
                 continue
             target = self._splitpath(f)
             if len(target) <= dirOffset:
                 if f[-1] != '/':
-                    logger.warning("Skipping file (%s) in zip archive due to "
-                                   "dirOffset" % (f,))
+                    logger.warning(
+                        "Skipping file (%s) in zip archive due to dirOffset" % (f,)
+                    )
                 continue
             info.filename = target[-1] + '/' if f[-1] == '/' else target[-1]
-            zip_file.extract(
-                f, os.path.join(self._fname, *tuple(target[dirOffset:-1])))
+            zip_file.extract(f, os.path.join(self._fname, *tuple(target[dirOffset:-1])))
 
     def get_gzipped_binary_file(self, url):
         if self._fname is None:
-            raise DeveloperError("target file name has not been initialized "
-                                 "with set_destination_filename")
+            raise DeveloperError(
+                "target file name has not been initialized "
+                "with set_destination_filename"
+            )
         with open(self._fname, 'wb') as FILE:
             gzipped_file = io.BytesIO(self.retrieve_url(url))
             raw_file = gzip.GzipFile(fileobj=gzipped_file).read()
             FILE.write(raw_file)
             logger.info("  ...wrote %s bytes" % (len(raw_file),))
-
 
     def _splitpath(self, path):
         components = []

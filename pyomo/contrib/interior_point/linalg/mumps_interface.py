@@ -17,14 +17,17 @@ from typing import Union, Optional, Tuple
 from pyomo.contrib.pynumero.sparse import BlockVector
 import numpy as np
 
-mumps, mumps_available = attempt_import(name='pyomo.contrib.pynumero.linalg.mumps_interface',
-                                        error_message='pymumps is required to use the MumpsInterface')
+mumps, mumps_available = attempt_import(
+    name='pyomo.contrib.pynumero.linalg.mumps_interface',
+    error_message='pymumps is required to use the MumpsInterface',
+)
 
-from pyomo.contrib.pynumero.linalg.mumps_interface import MumpsCentralizedAssembledLinearSolver
+from pyomo.contrib.pynumero.linalg.mumps_interface import (
+    MumpsCentralizedAssembledLinearSolver,
+)
 
 
 class MumpsInterface(MumpsCentralizedAssembledLinearSolver, IPLinearSolverInterface):
-
     @classmethod
     def getLoggerName(cls):
         return 'mumps'
@@ -39,8 +42,13 @@ class MumpsInterface(MumpsCentralizedAssembledLinearSolver, IPLinearSolverInterf
         if 24 not in icntl_options:
             icntl_options[24] = 0
 
-        super(MumpsInterface, self).__init__(sym=2, par=par, comm=comm, cntl_options=cntl_options,
-                                             icntl_options=icntl_options)
+        super(MumpsInterface, self).__init__(
+            sym=2,
+            par=par,
+            comm=comm,
+            cntl_options=cntl_options,
+            icntl_options=icntl_options,
+        )
 
         self.error_level = self.get_icntl(11)
         self.log_error = bool(self.error_level)
@@ -48,17 +56,20 @@ class MumpsInterface(MumpsCentralizedAssembledLinearSolver, IPLinearSolverInterf
         self.log_header(include_error=self.log_error)
 
     def do_back_solve(
-        self, rhs: Union[np.ndarray, BlockVector],
-        raise_on_error: bool = True
+        self, rhs: Union[np.ndarray, BlockVector], raise_on_error: bool = True
     ) -> Tuple[Optional[Union[np.ndarray, BlockVector]], LinearSolverResults]:
-        res, status = super(MumpsInterface, self).do_back_solve(rhs, raise_on_error=raise_on_error)
+        res, status = super(MumpsInterface, self).do_back_solve(
+            rhs, raise_on_error=raise_on_error
+        )
         self.log_info()
         return res, status
 
     def get_inertia(self):
         num_negative_eigenvalues = self.get_infog(12)
         num_zero_eigenvalues = self.get_infog(28)
-        num_positive_eigenvalues = self._dim - num_negative_eigenvalues - num_zero_eigenvalues
+        num_positive_eigenvalues = (
+            self._dim - num_negative_eigenvalues - num_zero_eigenvalues
+        )
         return num_positive_eigenvalues, num_negative_eigenvalues, num_zero_eigenvalues
 
     def get_error_info(self):
@@ -108,8 +119,8 @@ class MumpsInterface(MumpsCentralizedAssembledLinearSolver, IPLinearSolverInterf
         # Which fields to log should be specified at the instance level
         # Any logging that should be done on an iteration-specific case
         # should be handled by the IP solver
-        fields=[]
-        fields.append(self.get_infog(1))   # Status, 0 for success
+        fields = []
+        fields.append(self.get_infog(1))  # Status, 0 for success
         fields.append(self.get_infog(28))  # Number of null pivots
         fields.append(self.get_infog(12))  # Number of negative pivots
 
@@ -125,9 +136,8 @@ class MumpsInterface(MumpsCentralizedAssembledLinearSolver, IPLinearSolverInterf
         log_string += '{1:<10}'
         log_string += '{2:<10}'
 
-        # Allocate 15 spsaces for the rest, which I assume are floats
+        # Allocate 15 spaces for the rest, which I assume are floats
         for i in range(4, len(fields)):
             log_string += '{' + str(i) + ':<15.3e}'
 
         self.logger.info(log_string.format(*fields))
-

@@ -44,12 +44,15 @@
 - start keeping basic changelog
 
 """
-from pyomo.common.config import (
-    add_docstring_list, ConfigDict)
+from pyomo.common.config import document_kwargs_from_configdict, ConfigDict
 from pyomo.contrib.gdpopt import __version__
 from pyomo.contrib.gdpopt.config_options import (
-    _add_common_configs, _supported_algorithms, _get_algorithm_config)
+    _add_common_configs,
+    _supported_algorithms,
+    _get_algorithm_config,
+)
 from pyomo.opt.base import SolverFactory
+
 
 def _handle_strategy_deprecation(config):
     # This method won't be needed when the strategy arg is removed, but for now,
@@ -58,10 +61,12 @@ def _handle_strategy_deprecation(config):
     if config.algorithm is None and config.strategy is not None:
         config.algorithm = config.strategy
 
+
 @SolverFactory.register(
     'gdpopt',
     doc='The GDPopt decomposition-based '
-    'Generalized Disjunctive Programming (GDP) solver')
+    'Generalized Disjunctive Programming (GDP) solver',
+)
 class GDPoptSolver(object):
     """Decomposition solver for Generalized Disjunctive Programming (GDP)
     problems.
@@ -94,9 +99,11 @@ class GDPoptSolver(object):
     - Logic-to-linear transformation: Romeo Valentin
 
     """
+
     CONFIG = ConfigDict("GDPopt")
     _add_common_configs(CONFIG)
 
+    @document_kwargs_from_configdict(CONFIG)
     def solve(self, model, **kwds):
         """Solve the model.
 
@@ -104,7 +111,7 @@ class GDPoptSolver(object):
             model (Block): a Pyomo model or block to be solved
 
         """
-        # The algorithm should have been specifed as an argument to the solve
+        # The algorithm should have been specified as an argument to the solve
         # method. We will instantiate an ephemeral instance of the correct
         # solver and call its solve method.
         options = kwds.pop('options', {})
@@ -122,7 +129,8 @@ class GDPoptSolver(object):
             raise ValueError(
                 "No algorithm was specified to the solve method. "
                 "Please specify an algorithm or use an "
-                "algorithm-specific solver.")
+                "algorithm-specific solver."
+            )
 
         # get rid of 'algorithm' and 'strategy' if they exist so that the solver
         # can validate.
@@ -130,8 +138,7 @@ class GDPoptSolver(object):
         kwds.pop('strategy', None)
 
         # The algorithm has already been validated, so this will work.
-        return SolverFactory(
-            _supported_algorithms[algorithm][0]).solve(model, **kwds)
+        return SolverFactory(_supported_algorithms[algorithm][0]).solve(model, **kwds)
 
     # Support use as a context manager under current solver API
     def __enter__(self):
@@ -154,6 +161,3 @@ class GDPoptSolver(object):
         return __version__
 
     _metasolver = False
-
-GDPoptSolver.solve.__doc__ = add_docstring_list(
-    GDPoptSolver.solve.__doc__, GDPoptSolver.CONFIG, indent_by=8)

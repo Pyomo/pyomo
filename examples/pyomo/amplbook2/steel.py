@@ -22,7 +22,7 @@ model = AbstractModel()
 
 model.PROD = Set()
 
-model.rate = Param(model.PROD,within=PositiveReals)
+model.rate = Param(model.PROD, within=PositiveReals)
 
 model.avail = Param(within=NonNegativeReals)
 
@@ -30,20 +30,30 @@ model.profit = Param(model.PROD)
 
 model.market = Param(model.PROD, within=NonNegativeReals)
 
-def Make_bounds(model,i):
-    return (0,model.market[i])
+
+def Make_bounds(model, i):
+    return (0, model.market[i])
+
+
 model.Make = Var(model.PROD, bounds=Make_bounds)
+
 
 def Objective_rule(model):
     return sum_product(model.profit, model.Make)
+
+
 model.Total_Profit = Objective(rule=Objective_rule, sense=maximize)
+
 
 def Time_rule(model):
     ans = 0
     for p in model.PROD:
-        ans = ans + (1.0/model.rate[p]) * model.Make[p]
+        ans = ans + (1.0 / model.rate[p]) * model.Make[p]
     return ans < model.avail
 
+
 def XTime_rule(model):
-    return sum_product(model.Make, denom=(model.rate,) ) < model.avail
-#model.Time = Constraint(rule=Time_rule)
+    return sum_product(model.Make, denom=(model.rate,)) < model.avail
+
+
+# model.Time = Constraint(rule=Time_rule)

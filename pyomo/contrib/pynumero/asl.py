@@ -11,6 +11,7 @@
 
 from pyomo.common.fileutils import find_library
 from pyomo.common.dependencies import numpy as np
+from pyomo.contrib.pynumero.exceptions import PyNumeroEvaluationError
 import ctypes
 import logging
 import os
@@ -19,17 +20,19 @@ logger = logging.getLogger(__name__)
 
 CURRENT_INTERFACE_VERSION = 3
 
+
 class _NotSet:
     pass
+
 
 def _LoadASLInterface(libname):
     ASLib = ctypes.cdll.LoadLibrary(libname)
 
     # define 1d array
     array_1d_double = np.ctypeslib.ndpointer(
-        dtype=np.double, ndim=1, flags='CONTIGUOUS')
-    array_1d_int = np.ctypeslib.ndpointer(
-        dtype=np.intc, ndim=1, flags='CONTIGUOUS')
+        dtype=np.double, ndim=1, flags='CONTIGUOUS'
+    )
+    array_1d_int = np.ctypeslib.ndpointer(dtype=np.intc, ndim=1, flags='CONTIGUOUS')
 
     # library version
     try:
@@ -49,13 +52,16 @@ def _LoadASLInterface(libname):
     ASLib.EXTERNAL_AmplInterface_new.restype = ctypes.c_void_p
 
     if interface_version >= 2:
-        ASLib.EXTERNAL_AmplInterface_new_file.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+        ASLib.EXTERNAL_AmplInterface_new_file.argtypes = [
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+        ]
     else:
         ASLib.EXTERNAL_AmplInterface_new_file.argtypes = [ctypes.c_char_p]
     ASLib.EXTERNAL_AmplInterface_new_file.restype = ctypes.c_void_p
 
-    #ASLib.EXTERNAL_AmplInterface_new_str.argtypes = [ctypes.c_char_p]
-    #ASLib.EXTERNAL_AmplInterface_new_str.restype = ctypes.c_void_p
+    # ASLib.EXTERNAL_AmplInterface_new_str.argtypes = [ctypes.c_char_p]
+    # ASLib.EXTERNAL_AmplInterface_new_str.restype = ctypes.c_void_p
 
     # number of variables
     ASLib.EXTERNAL_AmplInterface_n_vars.argtypes = [ctypes.c_void_p]
@@ -74,83 +80,107 @@ def _LoadASLInterface(libname):
     ASLib.EXTERNAL_AmplInterface_nnz_hessian_lag.restype = ctypes.c_int
 
     # lower bounds on x
-    ASLib.EXTERNAL_AmplInterface_x_lower_bounds.argtypes = [ctypes.c_void_p,
-                                                                 array_1d_double,
-                                                                 ctypes.c_int]
+    ASLib.EXTERNAL_AmplInterface_x_lower_bounds.argtypes = [
+        ctypes.c_void_p,
+        array_1d_double,
+        ctypes.c_int,
+    ]
     ASLib.EXTERNAL_AmplInterface_x_lower_bounds.restype = None
 
     # upper bounds on x
-    ASLib.EXTERNAL_AmplInterface_x_upper_bounds.argtypes = [ctypes.c_void_p,
-                                                                 array_1d_double,
-                                                                 ctypes.c_int]
+    ASLib.EXTERNAL_AmplInterface_x_upper_bounds.argtypes = [
+        ctypes.c_void_p,
+        array_1d_double,
+        ctypes.c_int,
+    ]
     ASLib.EXTERNAL_AmplInterface_x_upper_bounds.restype = None
 
     # lower bounds on g
-    ASLib.EXTERNAL_AmplInterface_g_lower_bounds.argtypes = [ctypes.c_void_p,
-                                                                 array_1d_double,
-                                                                 ctypes.c_int]
+    ASLib.EXTERNAL_AmplInterface_g_lower_bounds.argtypes = [
+        ctypes.c_void_p,
+        array_1d_double,
+        ctypes.c_int,
+    ]
     ASLib.EXTERNAL_AmplInterface_g_lower_bounds.restype = None
 
     # upper bounds on g
-    ASLib.EXTERNAL_AmplInterface_g_upper_bounds.argtypes = [ctypes.c_void_p,
-                                                                 array_1d_double,
-                                                                 ctypes.c_int]
+    ASLib.EXTERNAL_AmplInterface_g_upper_bounds.argtypes = [
+        ctypes.c_void_p,
+        array_1d_double,
+        ctypes.c_int,
+    ]
     ASLib.EXTERNAL_AmplInterface_g_upper_bounds.restype = None
 
     # initial value x
-    ASLib.EXTERNAL_AmplInterface_get_init_x.argtypes = [ctypes.c_void_p,
-                                                             array_1d_double,
-                                                             ctypes.c_int]
+    ASLib.EXTERNAL_AmplInterface_get_init_x.argtypes = [
+        ctypes.c_void_p,
+        array_1d_double,
+        ctypes.c_int,
+    ]
     ASLib.EXTERNAL_AmplInterface_get_init_x.restype = None
 
     # initial value multipliers
-    ASLib.EXTERNAL_AmplInterface_get_init_multipliers.argtypes = [ctypes.c_void_p,
-                                                                       array_1d_double,
-                                                                       ctypes.c_int]
+    ASLib.EXTERNAL_AmplInterface_get_init_multipliers.argtypes = [
+        ctypes.c_void_p,
+        array_1d_double,
+        ctypes.c_int,
+    ]
     ASLib.EXTERNAL_AmplInterface_get_init_multipliers.restype = None
 
     # evaluate objective
-    ASLib.EXTERNAL_AmplInterface_eval_f.argtypes = [ctypes.c_void_p,
-                                                         array_1d_double,
-                                                         ctypes.c_int,
-                                                         ctypes.POINTER(ctypes.c_double)]
+    ASLib.EXTERNAL_AmplInterface_eval_f.argtypes = [
+        ctypes.c_void_p,
+        array_1d_double,
+        ctypes.c_int,
+        ctypes.POINTER(ctypes.c_double),
+    ]
     ASLib.EXTERNAL_AmplInterface_eval_f.restype = ctypes.c_bool
 
     # gradient objective
-    ASLib.EXTERNAL_AmplInterface_eval_deriv_f.argtypes = [ctypes.c_void_p,
-                                                               array_1d_double,
-                                                               array_1d_double,
-                                                               ctypes.c_int]
+    ASLib.EXTERNAL_AmplInterface_eval_deriv_f.argtypes = [
+        ctypes.c_void_p,
+        array_1d_double,
+        array_1d_double,
+        ctypes.c_int,
+    ]
     ASLib.EXTERNAL_AmplInterface_eval_deriv_f.restype = ctypes.c_bool
 
     # structure jacobian of constraints
-    ASLib.EXTERNAL_AmplInterface_struct_jac_g.argtypes = [ctypes.c_void_p,
-                                                               array_1d_int,
-                                                               array_1d_int,
-                                                               ctypes.c_int]
+    ASLib.EXTERNAL_AmplInterface_struct_jac_g.argtypes = [
+        ctypes.c_void_p,
+        array_1d_int,
+        array_1d_int,
+        ctypes.c_int,
+    ]
     ASLib.EXTERNAL_AmplInterface_struct_jac_g.restype = None
 
     # structure hessian of Lagrangian
-    ASLib.EXTERNAL_AmplInterface_struct_hes_lag.argtypes = [ctypes.c_void_p,
-                                                                 array_1d_int,
-                                                                 array_1d_int,
-                                                                 ctypes.c_int]
+    ASLib.EXTERNAL_AmplInterface_struct_hes_lag.argtypes = [
+        ctypes.c_void_p,
+        array_1d_int,
+        array_1d_int,
+        ctypes.c_int,
+    ]
     ASLib.EXTERNAL_AmplInterface_struct_hes_lag.restype = None
 
     # evaluate constraints
-    ASLib.EXTERNAL_AmplInterface_eval_g.argtypes = [ctypes.c_void_p,
-                                                         array_1d_double,
-                                                         ctypes.c_int,
-                                                         array_1d_double,
-                                                         ctypes.c_int]
+    ASLib.EXTERNAL_AmplInterface_eval_g.argtypes = [
+        ctypes.c_void_p,
+        array_1d_double,
+        ctypes.c_int,
+        array_1d_double,
+        ctypes.c_int,
+    ]
     ASLib.EXTERNAL_AmplInterface_eval_g.restype = ctypes.c_bool
 
     # evaluate jacobian constraints
-    ASLib.EXTERNAL_AmplInterface_eval_jac_g.argtypes = [ctypes.c_void_p,
-                                                             array_1d_double,
-                                                             ctypes.c_int,
-                                                             array_1d_double,
-                                                             ctypes.c_int]
+    ASLib.EXTERNAL_AmplInterface_eval_jac_g.argtypes = [
+        ctypes.c_void_p,
+        array_1d_double,
+        ctypes.c_int,
+        array_1d_double,
+        ctypes.c_int,
+    ]
     ASLib.EXTERNAL_AmplInterface_eval_jac_g.restype = ctypes.c_bool
 
     # temporary try/except block while changes get merged in pynumero_libraries
@@ -158,35 +188,41 @@ def _LoadASLInterface(libname):
         ASLib.EXTERNAL_AmplInterface_dummy.argtypes = [ctypes.c_void_p]
         ASLib.EXTERNAL_AmplInterface_dummy.restype = None
         # evaluate hessian Lagrangian
-        ASLib.EXTERNAL_AmplInterface_eval_hes_lag.argtypes = [ctypes.c_void_p,
-                                                                   array_1d_double,
-                                                                   ctypes.c_int,
-                                                                   array_1d_double,
-                                                                   ctypes.c_int,
-                                                                   array_1d_double,
-                                                                   ctypes.c_int,
-                                                                   ctypes.c_double]
+        ASLib.EXTERNAL_AmplInterface_eval_hes_lag.argtypes = [
+            ctypes.c_void_p,
+            array_1d_double,
+            ctypes.c_int,
+            array_1d_double,
+            ctypes.c_int,
+            array_1d_double,
+            ctypes.c_int,
+            ctypes.c_double,
+        ]
         ASLib.EXTERNAL_AmplInterface_eval_hes_lag.restype = ctypes.c_bool
     except Exception:
         # evaluate hessian Lagrangian
-        ASLib.EXTERNAL_AmplInterface_eval_hes_lag.argtypes = [ctypes.c_void_p,
-                                                                   array_1d_double,
-                                                                   ctypes.c_int,
-                                                                   array_1d_double,
-                                                                   ctypes.c_int,
-                                                                   array_1d_double,
-                                                                   ctypes.c_int]
+        ASLib.EXTERNAL_AmplInterface_eval_hes_lag.argtypes = [
+            ctypes.c_void_p,
+            array_1d_double,
+            ctypes.c_int,
+            array_1d_double,
+            ctypes.c_int,
+            array_1d_double,
+            ctypes.c_int,
+        ]
         ASLib.EXTERNAL_AmplInterface_eval_hes_lag.restype = ctypes.c_bool
         interface_version = 0
 
     # finalize solution
-    ASLib.EXTERNAL_AmplInterface_finalize_solution.argtypes = [ctypes.c_void_p,
-                                                                    ctypes.c_int,
-                                                                    ctypes.c_char_p,
-                                                                    array_1d_double,
-                                                                    ctypes.c_int,
-                                                                    array_1d_double,
-                                                                    ctypes.c_int]
+    ASLib.EXTERNAL_AmplInterface_finalize_solution.argtypes = [
+        ctypes.c_void_p,
+        ctypes.c_int,
+        ctypes.c_char_p,
+        array_1d_double,
+        ctypes.c_int,
+        array_1d_double,
+        ctypes.c_int,
+    ]
     ASLib.EXTERNAL_AmplInterface_finalize_solution.restype = None
 
     # destructor
@@ -197,13 +233,13 @@ def _LoadASLInterface(libname):
         logger.warning(
             'The current pynumero_ASL library is version=%s, but found '
             'version=%s.  Please recompile / update your pynumero_ASL '
-            'library.' % (CURRENT_INTERFACE_VERSION, interface_version))
+            'library.' % (CURRENT_INTERFACE_VERSION, interface_version)
+        )
 
     return ASLib, interface_version
 
 
 class AmplInterface(object):
-
     libname = _NotSet
     ASLib = None
     interface_version = None
@@ -218,13 +254,13 @@ class AmplInterface(object):
         return os.path.exists(cls.libname)
 
     def __init__(self, filename=None, nl_buffer=None):
-
         if not AmplInterface.available():
-            raise RuntimeError(
-                "Cannot load the PyNumero ASL interface (pynumero_ASL)")
+            raise RuntimeError("Cannot load the PyNumero ASL interface (pynumero_ASL)")
 
         if nl_buffer is not None:
-            raise NotImplementedError("AmplInterface only supported form NL-file for now")
+            raise NotImplementedError(
+                "AmplInterface only supported form NL-file for now"
+            )
 
         # Be sure to remove AMPLFUNC from the environment before loading
         # the ASL.  This should prevent it from potentially caching an
@@ -233,11 +269,11 @@ class AmplInterface(object):
         amplfunc = os.environ.pop('AMPLFUNC', '')
 
         if AmplInterface.ASLib is None:
-            AmplInterface.ASLib, AmplInterface.interface_version \
-                = _LoadASLInterface(AmplInterface.libname)
+            AmplInterface.ASLib, AmplInterface.interface_version = _LoadASLInterface(
+                AmplInterface.libname
+            )
             if AmplInterface.interface_version >= 3:
-                AmplInterface.asl_date \
-                    = AmplInterface.ASLib.EXTERNAL_get_asl_date()
+                AmplInterface.asl_date = AmplInterface.ASLib.EXTERNAL_get_asl_date()
             else:
                 AmplInterface.asl_date = 0
 
@@ -296,13 +332,9 @@ class AmplInterface(object):
         ng = len(g_l)
         assert nx == len(x_u), "lower and upper bound x vectors must be the same size"
         assert ng == len(g_u), "lower and upper bound g vectors must be the same size"
-        self.ASLib.EXTERNAL_AmplInterface_get_bounds_info(self._obj,
-                                                          x_l,
-                                                          x_u,
-                                                          nx,
-                                                          g_l,
-                                                          g_u,
-                                                          ng)
+        self.ASLib.EXTERNAL_AmplInterface_get_bounds_info(
+            self._obj, x_l, x_u, nx, g_l, g_u, ng
+        )
 
     def get_x_lower_bounds(self, invec):
         self.ASLib.EXTERNAL_AmplInterface_x_lower_bounds(self._obj, invec, len(invec))
@@ -320,102 +352,117 @@ class AmplInterface(object):
         self.ASLib.EXTERNAL_AmplInterface_get_init_x(self._obj, invec, len(invec))
 
     def get_init_multipliers(self, invec):
-        self.ASLib.EXTERNAL_AmplInterface_get_init_multipliers(self._obj, invec, len(invec))
+        self.ASLib.EXTERNAL_AmplInterface_get_init_multipliers(
+            self._obj, invec, len(invec)
+        )
 
     def eval_f(self, x):
-        assert x.size == self._nx, "Error: Dimension missmatch."
-        assert x.dtype == np.double, "Error: array type. Function eval_deriv_f expects an array of type double"
+        assert x.size == self._nx, "Error: Dimension mismatch."
+        assert (
+            x.dtype == np.double
+        ), "Error: array type. Function eval_deriv_f expects an array of type double"
         sol = ctypes.c_double()
-        res = self.ASLib.EXTERNAL_AmplInterface_eval_f(self._obj, x, self._nx, ctypes.byref(sol))
-        assert res, "Error in AMPL evaluation"
+        res = self.ASLib.EXTERNAL_AmplInterface_eval_f(
+            self._obj, x, self._nx, ctypes.byref(sol)
+        )
+        if not res:
+            raise PyNumeroEvaluationError("Error in AMPL evaluation")
         return sol.value
 
     def eval_deriv_f(self, x, df):
-        assert x.size == self._nx, "Error: Dimension missmatch."
-        assert x.dtype == np.double, "Error: array type. Function eval_deriv_f expects an array of type double"
+        assert x.size == self._nx, "Error: Dimension mismatch."
+        assert (
+            x.dtype == np.double
+        ), "Error: array type. Function eval_deriv_f expects an array of type double"
         res = self.ASLib.EXTERNAL_AmplInterface_eval_deriv_f(self._obj, x, df, len(x))
-        assert res, "Error in AMPL evaluation"
+        if not res:
+            raise PyNumeroEvaluationError("Error in AMPL evaluation")
 
     def struct_jac_g(self, irow, jcol):
         irow_p = irow.astype(np.intc, casting='safe', copy=False)
         jcol_p = jcol.astype(np.intc, casting='safe', copy=False)
-        assert len(irow) == len(jcol), "Error: Dimension missmatch. Arrays irow and jcol must be of the same size"
-        assert len(irow) == self._nnz_jac_g, "Error: Dimension missmatch. Jacobian has {} nnz".format(self._nnz_jac_g)
-        self.ASLib.EXTERNAL_AmplInterface_struct_jac_g(self._obj,
-                                                       irow_p,
-                                                       jcol_p,
-                                                       len(irow))
-
+        assert len(irow) == len(
+            jcol
+        ), "Error: Dimension mismatch. Arrays irow and jcol must be of the same size"
+        assert (
+            len(irow) == self._nnz_jac_g
+        ), "Error: Dimension mismatch. Jacobian has {} nnz".format(self._nnz_jac_g)
+        self.ASLib.EXTERNAL_AmplInterface_struct_jac_g(
+            self._obj, irow_p, jcol_p, len(irow)
+        )
 
     def struct_hes_lag(self, irow, jcol):
         irow_p = irow.astype(np.intc, casting='safe', copy=False)
         jcol_p = jcol.astype(np.intc, casting='safe', copy=False)
-        assert len(irow) == len(jcol), "Error: Dimension missmatch. Arrays irow and jcol must be of the same size"
-        assert len(irow) == self._nnz_hess, "Error: Dimension missmatch. Hessian has {} nnz".format(self._nnz_hess)
-        self.ASLib.EXTERNAL_AmplInterface_struct_hes_lag(self._obj,
-                                                         irow_p,
-                                                         jcol_p,
-                                                         len(irow))
+        assert len(irow) == len(
+            jcol
+        ), "Error: Dimension mismatch. Arrays irow and jcol must be of the same size"
+        assert (
+            len(irow) == self._nnz_hess
+        ), "Error: Dimension mismatch. Hessian has {} nnz".format(self._nnz_hess)
+        self.ASLib.EXTERNAL_AmplInterface_struct_hes_lag(
+            self._obj, irow_p, jcol_p, len(irow)
+        )
 
     def eval_jac_g(self, x, jac_g_values):
-        assert x.size == self._nx, "Error: Dimension missmatch."
-        assert jac_g_values.size == self._nnz_jac_g, "Error: Dimension missmatch."
+        assert x.size == self._nx, "Error: Dimension mismatch."
+        assert jac_g_values.size == self._nnz_jac_g, "Error: Dimension mismatch."
         xeval = x.astype(np.double, casting='safe', copy=False)
         jac_eval = jac_g_values.astype(np.double, casting='safe', copy=False)
-        res = self.ASLib.EXTERNAL_AmplInterface_eval_jac_g(self._obj,
-                                                           xeval,
-                                                           self._nx,
-                                                           jac_eval,
-                                                           self._nnz_jac_g)
-        assert res, "Error in AMPL evaluation"
+        res = self.ASLib.EXTERNAL_AmplInterface_eval_jac_g(
+            self._obj, xeval, self._nx, jac_eval, self._nnz_jac_g
+        )
+        if not res:
+            raise PyNumeroEvaluationError("Error in AMPL evaluation")
 
     def eval_g(self, x, g):
-        assert x.size == self._nx, "Error: Dimension missmatch."
-        assert g.size == self._ny, "Error: Dimension missmatch."
-        assert x.dtype == np.double, "Error: array type. Function eval_g expects an array of type double"
-        assert g.dtype == np.double, "Error: array type. Function eval_g expects an array of type double"
-        res = self.ASLib.EXTERNAL_AmplInterface_eval_g(self._obj,
-                                                       x,
-                                                       self._nx,
-                                                       g,
-                                                       self._ny)
-        assert res, "Error in AMPL evaluation"
+        assert x.size == self._nx, "Error: Dimension mismatch."
+        assert g.size == self._ny, "Error: Dimension mismatch."
+        assert (
+            x.dtype == np.double
+        ), "Error: array type. Function eval_g expects an array of type double"
+        assert (
+            g.dtype == np.double
+        ), "Error: array type. Function eval_g expects an array of type double"
+        res = self.ASLib.EXTERNAL_AmplInterface_eval_g(
+            self._obj, x, self._nx, g, self._ny
+        )
+        if not res:
+            raise PyNumeroEvaluationError("Error in AMPL evaluation")
 
     def eval_hes_lag(self, x, lam, hes_lag, obj_factor=1.0):
-        assert x.size == self._nx, "Error: Dimension missmatch."
-        assert lam.size == self._ny, "Error: Dimension missmatch."
-        assert hes_lag.size == self._nnz_hess, "Error: Dimension missmatch."
-        assert x.dtype == np.double, "Error: array type. Function eval_hes_lag expects an array of type double"
-        assert lam.dtype == np.double, "Error: array type. Function eval_hes_lag expects an array of type double"
-        assert hes_lag.dtype == np.double, "Error: array type. Function eval_hes_lag expects an array of type double"
+        assert x.size == self._nx, "Error: Dimension mismatch."
+        assert lam.size == self._ny, "Error: Dimension mismatch."
+        assert hes_lag.size == self._nnz_hess, "Error: Dimension mismatch."
+        assert (
+            x.dtype == np.double
+        ), "Error: array type. Function eval_hes_lag expects an array of type double"
+        assert (
+            lam.dtype == np.double
+        ), "Error: array type. Function eval_hes_lag expects an array of type double"
+        assert (
+            hes_lag.dtype == np.double
+        ), "Error: array type. Function eval_hes_lag expects an array of type double"
         if self.interface_version >= 1:
-            res = self.ASLib.EXTERNAL_AmplInterface_eval_hes_lag(self._obj,
-                                                                 x,
-                                                                 self._nx,
-                                                                 lam,
-                                                                 self._ny,
-                                                                 hes_lag,
-                                                                 self._nnz_hess,
-                                                                 obj_factor)
+            res = self.ASLib.EXTERNAL_AmplInterface_eval_hes_lag(
+                self._obj,
+                x,
+                self._nx,
+                lam,
+                self._ny,
+                hes_lag,
+                self._nnz_hess,
+                obj_factor,
+            )
         else:
-            res = self.ASLib.EXTERNAL_AmplInterface_eval_hes_lag(self._obj,
-                                                                 x,
-                                                                 self._nx,
-                                                                 lam,
-                                                                 self._ny,
-                                                                 hes_lag,
-                                                                 self._nnz_hess)
-        assert res, "Error in AMPL evaluation"
+            res = self.ASLib.EXTERNAL_AmplInterface_eval_hes_lag(
+                self._obj, x, self._nx, lam, self._ny, hes_lag, self._nnz_hess
+            )
+        if not res:
+            raise PyNumeroEvaluationError("Error in AMPL evaluation")
 
     def finalize_solution(self, ampl_solve_status_num, msg, x, lam):
         b_msg = msg.encode('utf-8')
-        self.ASLib.EXTERNAL_AmplInterface_finalize_solution(self._obj,
-                                                            ampl_solve_status_num,
-                                                            b_msg,
-                                                            x,
-                                                            len(x),
-                                                            lam,
-                                                            len(lam))
-
-
-
+        self.ASLib.EXTERNAL_AmplInterface_finalize_solution(
+            self._obj, ampl_solve_status_num, b_msg, x, len(x), lam, len(lam)
+        )

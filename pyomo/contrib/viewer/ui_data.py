@@ -23,8 +23,6 @@
 """
 UI data objects for sharing data and settings between different parts of the UI.
 """
-from __future__ import division, print_function, absolute_import
-
 __author__ = "John Eslick"
 
 import logging
@@ -34,11 +32,13 @@ import pyomo.environ as pyo
 
 _log = logging.getLogger(__name__)
 
+
 class UIDataNoUi(object):
     """
     This is the UIData object minus the signals.  This is the base class for
     UIData.  The class is split this way for testing when PyQt is not available.
     """
+
     def __init__(self, model=None):
         """
         This class holds the basic UI setup, but doesn't depend on Qt. It
@@ -47,10 +47,11 @@ class UIDataNoUi(object):
         Args:
             model: The Pyomo model to view
         """
-        super(UIDataNoUi, self).__init__()
+        super().__init__()
         self._model = None
         self._begin_update = False
         self.value_cache = ComponentMap()
+        self.value_cache_units = ComponentMap()
         self.begin_update()
         self.model = model
         self.end_update()
@@ -91,6 +92,7 @@ class UIDataNoUi(object):
     def model(self, value):
         self._model = value
         self.value_cache = ComponentMap()
+        self.value_cache_units = ComponentMap()
         self.emit_update()
 
     def calculate_constraints(self):
@@ -107,24 +109,33 @@ class UIDataNoUi(object):
                 self.value_cache[o] = pyo.value(o, exception=False)
             except ZeroDivisionError:
                 self.value_cache[o] = "Divide_by_0"
+            try:
+                self.value_cache_units[o] = str(pyo.units.get_units(o))
+            except:
+                # If units aren't obtainable for whatever reason, let it go.
+                pass
         self.emit_exec_refresh()
 
-if not qt_available:
+
+if not available:
+
     class UIData(UIDataNoUi):
         pass
-else:
-    class UIData(UIDataNoUi, QtCore.QObject):
-        updated = QtCore.pyqtSignal()
-        exec_refresh = QtCore.pyqtSignal()
-        def __init__(self, *args, **kwargs):
 
+else:
+
+    class UIData(UIDataNoUi, QtCore.QObject):
+        updated = Signal()
+        exec_refresh = Signal()
+
+        def __init__(self, *args, **kwargs):
             """
             This class holds the basic UI setup
 
             Args:
                 model: The Pyomo model to view
             """
-            super(UIData, self).__init__(*args, **kwargs)
+            super().__init__(*args, **kwargs)
 
         def end_update(self, emit=True):
             """
@@ -132,7 +143,7 @@ else:
             are changed and emit update for changes made between begin_update
             and end_update
             """
-            super(UIData, self).end_update(emit=emit)
+            super().end_update(emit=emit)
             if emit:
                 self.emit_update()
 

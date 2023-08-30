@@ -3,7 +3,7 @@ import pyomo.environ as pe
 from pyomo.contrib.appsi.utils import collect_vars_and_named_exprs
 from pyomo.contrib.appsi.cmodel import cmodel, cmodel_available
 from typing import Callable
-from pyomo.common.getGSL import find_GSL
+from pyomo.common.gsl import find_GSL
 
 
 class TestCollectVarsAndNamedExpressions(unittest.TestCase):
@@ -12,9 +12,9 @@ class TestCollectVarsAndNamedExpressions(unittest.TestCase):
         m.x = pe.Var()
         m.y = pe.Var()
         m.z = pe.Var()
-        m.E = pe.Expression(expr=2*m.z + 1)
+        m.E = pe.Expression(expr=2 * m.z + 1)
         m.y.fix(3)
-        e = m.x*m.y + m.x*m.E
+        e = m.x * m.y + m.x * m.E
         named_exprs, var_list, fixed_vars, external_funcs = collector(e, *args)
         self.assertEqual([m.E], named_exprs)
         self.assertEqual([m.x, m.y, m.z], var_list)
@@ -38,10 +38,10 @@ class TestCollectVarsAndNamedExpressions(unittest.TestCase):
         m.y = pe.Var()
         m.z = pe.Var()
         m.hypot = pe.ExternalFunction(library=DLL, function='gsl_hypot')
-        func = m.hypot(m.x, m.x*m.y)
-        m.E = pe.Expression(expr=2*func)
+        func = m.hypot(m.x, m.x * m.y)
+        m.E = pe.Expression(expr=2 * func)
         m.y.fix(3)
-        e = m.z + m.x*m.E
+        e = m.z + m.x * m.E
         named_exprs, var_list, fixed_vars, external_funcs = collector(e, *args)
         self.assertEqual([m.E], named_exprs)
         self.assertEqual([m.z, m.x, m.y], var_list)

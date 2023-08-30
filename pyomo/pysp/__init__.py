@@ -11,21 +11,21 @@
 
 import logging
 import sys
-from pyomo.common.deprecation import (
-    deprecation_warning, in_testing_environment,
-)
+from pyomo.common.deprecation import deprecation_warning, in_testing_environment
 
 try:
     # Warn the user
     deprecation_warning(
         "PySP has been removed from the pyomo.pysp namespace.  "
         "Please import PySP directly from the pysp namespace.",
-        version='6.0')
+        version='6.0',
+    )
     from pysp import *
+
     # Redirect all (imported) pysp modules into the pyomo.pysp namespace
     for mod in list(sys.modules):
         if mod.startswith('pysp.'):
-            sys.modules['pyomo.'+mod] = sys.modules[mod]
+            sys.modules['pyomo.' + mod] = sys.modules[mod]
 except ImportError:
     # Only raise the exception if nose/pytest/sphinx are NOT running
     # (otherwise test discovery can result in exceptions)
@@ -34,5 +34,5 @@ except ImportError:
             "No module named 'pyomo.pysp'.  "
             "Beginning in Pyomo 6.0, PySP is distributed as a separate "
             "package.  Please see https://github.com/Pyomo/pysp for "
-            "information on downloading and installing PySP")
-
+            "information on downloading and installing PySP"
+        )

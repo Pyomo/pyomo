@@ -14,7 +14,7 @@ from collections import namedtuple
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.core.expr.numvalue import ZeroConstant, native_numeric_types, as_numeric
 from pyomo.core import Constraint, Var, Block, Set
 from pyomo.core.base.component import ModelComponentFactory
@@ -22,10 +22,13 @@ from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.disable_methods import disable_methods
 from pyomo.core.base.initializer import (
-    Initializer, IndexedCallInitializer, CountedCallInitializer,
+    Initializer,
+    IndexedCallInitializer,
+    CountedCallInitializer,
 )
 
 import logging
+
 logger = logging.getLogger('pyomo.core')
 
 
@@ -36,12 +39,11 @@ ComplementarityTuple = namedtuple('ComplementarityTuple', ('arg0', 'arg1'))
 
 
 def complements(a, b):
-    """ Return a named 2-tuple """
-    return ComplementarityTuple(a,b)
+    """Return a named 2-tuple"""
+    return ComplementarityTuple(a, b)
 
 
 class _ComplementarityData(_BlockData):
-
     def _canonical_expression(self, e):
         # Note: as the complimentarity component maintains references to
         # the original expression (e), it is NOT safe or valid to bypass
@@ -56,31 +58,32 @@ class _ComplementarityData(_BlockData):
             # The first argument of an equality is never fixed
             #
             else:
-                _e = ( ZeroConstant, e.arg(0) - e.arg(1))
+                _e = (ZeroConstant, e.arg(0) - e.arg(1))
         elif e.__class__ is EXPR.InequalityExpression:
             if e.arg(1).__class__ in native_numeric_types or e.arg(1).is_fixed():
                 _e = (None, e.arg(0), e.arg(1))
             elif e.arg(0).__class__ in native_numeric_types or e.arg(0).is_fixed():
                 _e = (e.arg(0), e.arg(1), None)
             else:
-                _e = ( ZeroConstant, e.arg(1) - e.arg(0), None )
+                _e = (ZeroConstant, e.arg(1) - e.arg(0), None)
         elif e.__class__ is EXPR.RangedExpression:
-                _e = (e.arg(0), e.arg(1), e.arg(2))
+            _e = (e.arg(0), e.arg(1), e.arg(2))
         else:
             _e = (None, e, None)
         return _e
 
     def to_standard_form(self):
         #
-        # Add auxilliary variables and constraints that ensure
+        # Add auxiliary variables and constraints that ensure
         # a monotone transformation of general complementary constraints to
         # the form:
         #       l1 <= v1 <= u1   OR   l2 <= v2 <= u2
         #
-        # Note that this transformation creates more variables and constraints
-        # than are strictly necessary.  However, we don't have a complete list of
-        # the variables used in a model's complementarity conditions when adding
-        # a single condition, so we add additional variables.
+        # Note that this transformation creates more variables and
+        # constraints than are strictly necessary.  However, we don't
+        # have a complete list of the variables used in a model's
+        # complementarity conditions when adding a single condition, so
+        # we add additional variables.
         #
         # This has the form:
         #
@@ -103,8 +106,13 @@ class _ComplementarityData(_BlockData):
             self.c = Constraint(expr=_e2)
             return
         #
-        if (_e1[0] is None) + (_e1[2] is None) + (_e2[0] is None) + (_e2[2] is None) != 2:
-            raise RuntimeError("Complementarity condition %s must have exactly two finite bounds" % self.name)
+        if (_e1[0] is None) + (_e1[2] is None) + (_e2[0] is None) + (
+            _e2[2] is None
+        ) != 2:
+            raise RuntimeError(
+                "Complementarity condition %s must have exactly two finite bounds"
+                % self.name
+            )
         #
         if _e1[0] is None and _e1[2] is None:
             # Only e2 will be an unconstrained expression
@@ -117,14 +125,18 @@ class _ComplementarityData(_BlockData):
             self.c = Constraint(expr=_e2[0] <= _e2[1])
             self.c._complementarity_type = 1
         elif _e2[0] is None:
-            self.c = Constraint(expr=- _e2[2] <= - _e2[1])
+            self.c = Constraint(expr=-_e2[2] <= -_e2[1])
             self.c._complementarity_type = 1
         #
         if not _e1[0] is None and not _e1[2] is None:
             if not (_e1[0].__class__ in native_numeric_types or _e1[0].is_constant()):
-                raise RuntimeError("Cannot express a complementarity problem of the form L < v < U _|_ g(x) where L is not a constant value")
+                raise RuntimeError(
+                    "Cannot express a complementarity problem of the form L < v < U _|_ g(x) where L is not a constant value"
+                )
             if not (_e1[2].__class__ in native_numeric_types or _e1[2].is_constant()):
-                raise RuntimeError("Cannot express a complementarity problem of the form L < v < U _|_ g(x) where U is not a constant value")
+                raise RuntimeError(
+                    "Cannot express a complementarity problem of the form L < v < U _|_ g(x) where U is not a constant value"
+                )
             self.v = Var(bounds=(_e1[0], _e1[2]))
             self.ve = Constraint(expr=self.v == _e1[1])
         elif _e1[2] is None:
@@ -144,14 +156,15 @@ class _ComplementarityData(_BlockData):
             # The ComplementarityTuple has a fixed length, so we initialize
             # the _args component and return
             #
-            self._args = ( as_numeric(cc.arg0), as_numeric(cc.arg1) )
+            self._args = (cc.arg0, cc.arg1)
         #
         elif cc.__class__ is tuple:
             if len(cc) != 2:
                 raise ValueError(
                     "Invalid tuple for Complementarity %s (expected 2-tuple):"
-                    "\n\t%s" % (self.name, cc) )
-            self._args = tuple( as_numeric(x) for x in cc )
+                    "\n\t%s" % (self.name, cc)
+                )
+            self._args = cc
         elif cc is Complementarity.Skip:
             del self.parent_component()[self.index()]
         elif cc.__class__ is list:
@@ -162,13 +175,12 @@ class _ComplementarityData(_BlockData):
             return self.set_value(tuple(cc))
         else:
             raise ValueError(
-                "Unexpected value for Complementarity %s:\n\t%s"
-                % (self.name, cc) )
+                "Unexpected value for Complementarity %s:\n\t%s" % (self.name, cc)
+            )
 
 
 @ModelComponentFactory.register("Complementarity conditions.")
 class Complementarity(Block):
-
     _ComponentDataClass = _ComplementarityData
 
     def __new__(cls, *args, **kwds):
@@ -186,25 +198,34 @@ class Complementarity(Block):
             return
         cc = _rule(b.parent_block(), idx)
         if cc is None:
-            raise ValueError("""
+            raise ValueError(
+                """
 Invalid complementarity condition.  The complementarity condition
 is None instead of a 2-tuple.  Please modify your rule to return
 Complementarity.Skip instead of None.
 
-Error thrown for Complementarity "%s".""" % ( b.name, ) )
+Error thrown for Complementarity "%s"."""
+                % (b.name,)
+            )
         b.set_value(cc)
 
     def __init__(self, *args, **kwargs):
         kwargs.setdefault('ctype', Complementarity)
         kwargs.setdefault('dense', False)
-        _init = tuple( _arg for _arg in (
-            kwargs.pop('initialize', None),
-            kwargs.pop('rule', None),
-            kwargs.pop('expr', None) ) if _arg is not None )
+        _init = tuple(
+            _arg
+            for _arg in (
+                kwargs.pop('initialize', None),
+                kwargs.pop('rule', None),
+                kwargs.pop('expr', None),
+            )
+            if _arg is not None
+        )
         if len(_init) > 1:
             raise ValueError(
                 "Duplicate initialization: Complementarity() only accepts "
-                "one of 'initialize=', 'rule=', and 'expr='")
+                "one of 'initialize=', 'rule=', and 'expr='"
+            )
         elif _init:
             _init = _init[0]
         else:
@@ -221,10 +242,11 @@ Error thrown for Complementarity "%s".""" % ( b.name, ) )
         # HACK to make the "counted call" syntax work.  We wait until
         # after the base class is set up so that is_indexed() is
         # reliable.
-        if self._init_rule is not None \
-           and self._init_rule.__class__ is IndexedCallInitializer:
+        if (
+            self._init_rule is not None
+            and self._init_rule.__class__ is IndexedCallInitializer
+        ):
             self._init_rule = CountedCallInitializer(self, self._init_rule)
-
 
     def add(self, index, cc):
         """
@@ -240,9 +262,7 @@ Error thrown for Complementarity "%s".""" % ( b.name, ) )
         """
         Return data that will be printed for this component.
         """
-        _table_data = lambda k, v: [
-            v._args[0], v._args[1], v.active,
-        ]
+        _table_data = lambda k, v: [v._args[0], v._args[1], v.active]
 
         # This is a bit weird, but is being implemented to preserve
         # backwards compatibility.  The Complementarity transformation
@@ -261,23 +281,24 @@ Error thrown for Complementarity "%s".""" % ( b.name, ) )
         # updates and a check that we do not break anything in the
         # Book).
         _transformed = not issubclass(self.ctype, Complementarity)
+
         def _conditional_block_printer(ostream, idx, data):
             if _transformed or len(data.component_map()):
                 self._pprint_callback(ostream, idx, data)
 
         return (
-            [("Size", len(self)),
-             ("Index", self._index_set if self.is_indexed() else None),
-             ("Active", self.active),
-             ],
+            [
+                ("Size", len(self)),
+                ("Index", self._index_set if self.is_indexed() else None),
+                ("Active", self.active),
+            ],
             self._data.items(),
-            ( "Arg0","Arg1","Active" ),
+            ("Arg0", "Arg1", "Active"),
             (_table_data, _conditional_block_printer),
-            )
+        )
 
 
 class ScalarComplementarity(_ComplementarityData, Complementarity):
-
     def __init__(self, *args, **kwds):
         _ComplementarityData.__init__(self, self)
         Complementarity.__init__(self, *args, **kwds)
@@ -312,7 +333,7 @@ class ComplementarityList(IndexedComplementarity):
     an index value is not specified.
     """
 
-    End             = (1003,)
+    End = (1003,)
 
     def __init__(self, **kwargs):
         """Constructor"""
@@ -341,7 +362,7 @@ class ComplementarityList(IndexedComplementarity):
         if self._constructed:
             return
         timer = ConstructionTimer(self)
-        self._constructed=True
+        self._constructed = True
 
         if self._init_rule is not None:
             _init = self._init_rule(self.parent_block(), ())
@@ -353,4 +374,3 @@ class ComplementarityList(IndexedComplementarity):
                 self.add(cc)
 
         timer.report()
-

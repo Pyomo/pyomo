@@ -11,10 +11,14 @@
 
 import pyomo.common.unittest as unittest
 from pyomo.contrib.cp.interval_var import (
-    IntervalVar, IntervalVarTimePoint, IntervalVarLength, IntervalVarPresence)
-from pyomo.core.expr.current import GetItemExpression
-from pyomo.core.expr.template_expr import GetAttrExpression
+    IntervalVar,
+    IntervalVarTimePoint,
+    IntervalVarLength,
+    IntervalVarPresence,
+)
+from pyomo.core.expr import GetItemExpression, GetAttrExpression
 from pyomo.environ import ConcreteModel, Integers, Set, value, Var
+
 
 class TestScalarIntervalVar(unittest.TestCase):
     def test_initialize_with_no_data(self):
@@ -43,9 +47,10 @@ class TestScalarIntervalVar(unittest.TestCase):
         m.i = IntervalVar()
 
         with self.assertRaisesRegex(
-                ValueError,
-                "Attempting to declare a block component using the name of a "
-                "reserved attribute:\n\tnew_thing"):
+            ValueError,
+            "Attempting to declare a block component using the name of a "
+            "reserved attribute:\n\tnew_thing",
+        ):
             m.i.new_thing = IntervalVar()
 
     def test_start_and_end_bounds(self):
@@ -104,6 +109,7 @@ class TestScalarIntervalVar(unittest.TestCase):
         m.i.is_present.fix(False)
         self.assertTrue(m.i.optional)
 
+
 class TestIndexedIntervalVar(unittest.TestCase):
     def test_initialize_with_no_data(self):
         m = ConcreteModel()
@@ -138,8 +144,10 @@ class TestIndexedIntervalVar(unittest.TestCase):
 
     def test_rule_based_start(self):
         m = ConcreteModel()
+
         def start_rule(m, i):
             return (1 - i, 13 + i)
+
         m.act = IntervalVar([1, 2, 3], start=start_rule, length=4)
 
         for i in [1, 2, 3]:
@@ -165,9 +173,9 @@ class TestIndexedIntervalVar(unittest.TestCase):
             self.assertEqual(m.act[i].end_time.upper, 10)
 
         # None doesn't make sense for this:
-        with self.assertRaisesRegex(ValueError,
-                                    "Cannot set 'optional' to None: Must be "
-                                    "True or False."):
+        with self.assertRaisesRegex(
+            ValueError, "Cannot set 'optional' to None: Must be True or False."
+        ):
             m.act[1].optional = None
 
         # We can change it, and that has the correct effect on is_present
@@ -182,8 +190,10 @@ class TestIndexedIntervalVar(unittest.TestCase):
     def test_optional_rule(self):
         m = ConcreteModel()
         m.idx = Set(initialize=[(4, 2), (5, 2)], dimen=2)
+
         def optional_rule(m, i, j):
             return i % j == 0
+
         m.act = IntervalVar(m.idx, optional=optional_rule)
         self.assertTrue(m.act[4, 2].optional)
         self.assertFalse(m.act[5, 2].optional)

@@ -10,5 +10,5 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.deprecation import relocated_module
-relocated_module('pyomo.contrib.parmest.utils.ipopt_solver_wrapper',
-                 version='6.4.2')
+
+relocated_module('pyomo.contrib.parmest.utils.ipopt_solver_wrapper', version='6.4.2')

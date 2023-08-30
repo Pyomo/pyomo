@@ -1,7 +1,14 @@
 # -*- coding: UTF-8 -*-
 """Tests disjunct reclassifier transformation."""
 import pyomo.common.unittest as unittest
-from pyomo.core import (Block, ConcreteModel, TransformationFactory, RangeSet, Constraint, Var)
+from pyomo.core import (
+    Block,
+    ConcreteModel,
+    TransformationFactory,
+    RangeSet,
+    Constraint,
+    Var,
+)
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 
 
@@ -77,7 +84,8 @@ class TestDisjunctReclassify(unittest.TestCase):
         #     print(disj.name)
         # There should be no active Disjunction objects.
         self.assertIsNone(
-            next(m.component_data_objects(Disjunction, active=True), None))
+            next(m.component_data_objects(Disjunction, active=True), None)
+        )
 
     def test_do_not_reactivate_disjuncts_with_abandon(self):
         m = ConcreteModel()

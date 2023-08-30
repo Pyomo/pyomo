@@ -54,8 +54,11 @@ model.inv0 = Param(model.PROD, within=NonNegativeReals)
 # projected revenue/ton, per scenario.
 model.revenue = Param(model.PROD, model.WEEKS, model.SCEN, within=NonNegativeReals)
 
+
 def prob_validator(model, value, s):
     return (value >= 0) and (value <= 1.0)
+
+
 model.prob = Param(model.SCEN, validate=prob_validator)
 
 ##############################################################################
@@ -64,8 +67,11 @@ model.Make1 = Var(model.PROD, within=NonNegativeReals)
 
 model.Inv1 = Var(model.PROD, within=NonNegativeReals)
 
+
 def sell_bounds(model, p):
     return (0, model.market[p, 1])
+
+
 model.Sell1 = Var(model.PROD, within=NonNegativeReals, bounds=sell_bounds)
 
 model.Min_Stage2_Profit = Var(within=NonNegativeReals)
@@ -74,32 +80,52 @@ model.Min_Stage2_Profit = Var(within=NonNegativeReals)
 
 model.CUTS = Set(within=PositiveIntegers, ordered=True)
 
-model.time_price = Param(model.TWOPLUSWEEKS, model.SCEN, \
-                         model.CUTS, default=0.0, mutable=True)
+model.time_price = Param(
+    model.TWOPLUSWEEKS, model.SCEN, model.CUTS, default=0.0, mutable=True
+)
 
-model.bal2_price = Param(model.PROD, model.SCEN, model.CUTS, \
-                         default=0.0, mutable=True)
+model.bal2_price = Param(model.PROD, model.SCEN, model.CUTS, default=0.0, mutable=True)
 
-model.sell_lim_price = Param(model.PROD, model.TWOPLUSWEEKS, \
-                             model.SCEN, model.CUTS, \
-                             default=0.0, mutable=True)
+model.sell_lim_price = Param(
+    model.PROD, model.TWOPLUSWEEKS, model.SCEN, model.CUTS, default=0.0, mutable=True
+)
+
 
 def time1_rule(model):
-    return (None, sum([1.0 / model.rate[p] * model.Make1[p] for p in model.PROD]) - model.avail[1], 0.0)
+    return (
+        None,
+        sum([1.0 / model.rate[p] * model.Make1[p] for p in model.PROD])
+        - model.avail[1],
+        0.0,
+    )
+
+
 model.Time1 = Constraint(rule=time1_rule)
 
+
 def balance1_rule(model, p):
-    return  model.Make1[p] + model.inv0[p] - (model.Sell1[p] + model.Inv1[p]) == 0.0
+    return model.Make1[p] + model.inv0[p] - (model.Sell1[p] + model.Inv1[p]) == 0.0
+
+
 model.Balance1 = Constraint(model.PROD, rule=balance1_rule)
 
 # cuts are generated on-the-fly, so no rules are necessary.
 model.Cut_Defn = ConstraintList()
 
+
 def expected_profit_rule(model):
-    return sum([model.prob[s] * model.revenue[p, 1, s] * model.Sell1[p] - \
-                model.prob[s] * model.prodcost[p] * model.Make1[p] - \
-                model.prob[s] * model.invcost[p] * model.Inv1[p] \
-                for p in model.PROD for s in model.SCEN]) + \
-           model.Min_Stage2_Profit
+    return (
+        sum(
+            [
+                model.prob[s] * model.revenue[p, 1, s] * model.Sell1[p]
+                - model.prob[s] * model.prodcost[p] * model.Make1[p]
+                - model.prob[s] * model.invcost[p] * model.Inv1[p]
+                for p in model.PROD
+                for s in model.SCEN
+            ]
+        )
+        + model.Min_Stage2_Profit
+    )
+
 
 model.Expected_Profit = Objective(rule=expected_profit_rule, sense=maximize)

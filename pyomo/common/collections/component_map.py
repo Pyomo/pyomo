@@ -13,13 +13,15 @@ from collections.abc import MutableMapping as collections_MutableMapping
 from collections.abc import Mapping as collections_Mapping
 from pyomo.common.autoslots import AutoSlots
 
+
 def _rebuild_ids(encode, val):
     if encode:
         return val
     else:
         # object id() may have changed after unpickling,
         # so we rebuild the dictionary keys
-        return {id(obj):(obj,v) for obj, v in val.values()}
+        return {id(obj): (obj, v) for obj, v in val.values()}
+
 
 class ComponentMap(AutoSlots.Mixin, collections_MutableMapping):
     """
@@ -45,6 +47,7 @@ class ComponentMap(AutoSlots.Mixin, collections_MutableMapping):
     components for which it contains map entries (e.g., as
     part of a block). ***
     """
+
     __slots__ = ("_dict",)
     __autoslot_mappers__ = {'_dict': _rebuild_ids}
 
@@ -56,8 +59,8 @@ class ComponentMap(AutoSlots.Mixin, collections_MutableMapping):
 
     def __str__(self):
         """String representation of the mapping."""
-        tmp = {str(c)+" (id="+str(id(c))+")":v for c,v in self.items()}
-        return "ComponentMap("+str(tmp)+")"
+        tmp = {str(c) + " (id=" + str(id(c)) + ")": v for c, v in self.items()}
+        return "ComponentMap(" + str(tmp) + ")"
 
     #
     # Implement MutableMapping abstract methods
@@ -67,23 +70,19 @@ class ComponentMap(AutoSlots.Mixin, collections_MutableMapping):
         try:
             return self._dict[id(obj)][1]
         except KeyError:
-            raise KeyError("Component with id '%s': %s"
-                           % (id(obj), str(obj)))
+            raise KeyError("Component with id '%s': %s" % (id(obj), str(obj)))
 
     def __setitem__(self, obj, val):
-        self._dict[id(obj)] = (obj,val)
+        self._dict[id(obj)] = (obj, val)
 
     def __delitem__(self, obj):
         try:
             del self._dict[id(obj)]
         except KeyError:
-            raise KeyError("Component with id '%s': %s"
-                           % (id(obj), str(obj)))
+            raise KeyError("Component with id '%s': %s" % (id(obj), str(obj)))
 
     def __iter__(self):
-        return (obj \
-                for obj, val in \
-                self._dict.values())
+        return (obj for obj, val in self._dict.values())
 
     def __len__(self):
         return self._dict.__len__()
@@ -99,10 +98,9 @@ class ComponentMap(AutoSlots.Mixin, collections_MutableMapping):
     def __eq__(self, other):
         if not isinstance(other, collections_Mapping):
             return False
-        return {(type(key), id(key)):val
-                    for key, val in self.items()} == \
-               {(type(key), id(key)):val
-                    for key, val in other.items()}
+        return {(type(key), id(key)): val for key, val in self.items()} == {
+            (type(key), id(key)): val for key, val in other.items()
+        }
 
     def __ne__(self, other):
         return not (self == other)
@@ -135,5 +133,3 @@ class ComponentMap(AutoSlots.Mixin, collections_MutableMapping):
         else:
             self[key] = default
         return default
-
-

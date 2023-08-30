@@ -1,5 +1,10 @@
 from pyomo.contrib.appsi.base import PersistentBase
-from pyomo.common.config import ConfigDict, ConfigValue, NonNegativeFloat, NonNegativeInt
+from pyomo.common.config import (
+    ConfigDict,
+    ConfigValue,
+    NonNegativeFloat,
+    NonNegativeInt,
+)
 from .cmodel import cmodel, cmodel_available
 from typing import List, Optional
 from pyomo.core.base.var import _GeneralVarData
@@ -21,28 +26,38 @@ class IntervalConfig(ConfigDict):
     improvement_tol: float
     max_iter: int
     """
-    def __init__(self,
-                 description=None,
-                 doc=None,
-                 implicit=False,
-                 implicit_domain=None,
-                 visibility=0):
-        super(IntervalConfig, self).__init__(description=description,
-                                           doc=doc,
-                                           implicit=implicit,
-                                           implicit_domain=implicit_domain,
-                                           visibility=visibility)
 
-        self.feasibility_tol: float = self.declare('feasibility_tol',
-                                                   ConfigValue(domain=NonNegativeFloat, default=1e-8))
-        self.integer_tol: float = self.declare('integer_tol',
-                                               ConfigValue(domain=NonNegativeFloat, default=1e-5))
-        self.improvement_tol: float = self.declare('improvement_tol',
-                                                   ConfigValue(domain=NonNegativeFloat, default=1e-4))
-        self.max_iter: int = self.declare('max_iter',
-                                          ConfigValue(domain=NonNegativeInt, default=10))
-        self.deactivate_satisfied_constraints: bool = self.declare('deactivate_satisfied_constraints',
-                                                                   ConfigValue(domain=bool, default=False))
+    def __init__(
+        self,
+        description=None,
+        doc=None,
+        implicit=False,
+        implicit_domain=None,
+        visibility=0,
+    ):
+        super(IntervalConfig, self).__init__(
+            description=description,
+            doc=doc,
+            implicit=implicit,
+            implicit_domain=implicit_domain,
+            visibility=visibility,
+        )
+
+        self.feasibility_tol: float = self.declare(
+            'feasibility_tol', ConfigValue(domain=NonNegativeFloat, default=1e-8)
+        )
+        self.integer_tol: float = self.declare(
+            'integer_tol', ConfigValue(domain=NonNegativeFloat, default=1e-5)
+        )
+        self.improvement_tol: float = self.declare(
+            'improvement_tol', ConfigValue(domain=NonNegativeFloat, default=1e-4)
+        )
+        self.max_iter: int = self.declare(
+            'max_iter', ConfigValue(domain=NonNegativeInt, default=10)
+        )
+        self.deactivate_satisfied_constraints: bool = self.declare(
+            'deactivate_satisfied_constraints', ConfigValue(domain=bool, default=False)
+        )
 
 
 class IntervalTightener(PersistentBase):
@@ -104,8 +119,18 @@ class IntervalTightener(PersistentBase):
             set_name = False
             symbol_map = None
             labeler = None
-        cmodel.process_pyomo_vars(self._pyomo_expr_types, variables, self._var_map, self._param_map,
-                                  self._vars, self._rvar_map, set_name, symbol_map, labeler, False)
+        cmodel.process_pyomo_vars(
+            self._pyomo_expr_types,
+            variables,
+            self._var_map,
+            self._param_map,
+            self._vars,
+            self._rvar_map,
+            set_name,
+            symbol_map,
+            labeler,
+            False,
+        )
 
     def _add_params(self, params: List[_ParamData]):
         cparams = cmodel.create_params(len(params))
@@ -119,15 +144,25 @@ class IntervalTightener(PersistentBase):
                 cp.name = self._symbol_map.getSymbol(p, self._param_labeler)
 
     def _add_constraints(self, cons: List[_GeneralConstraintData]):
-        cmodel.process_fbbt_constraints(self._cmodel, self._pyomo_expr_types, cons, self._var_map, self._param_map,
-                                        self._active_constraints, self._con_map, self._rcon_map)
+        cmodel.process_fbbt_constraints(
+            self._cmodel,
+            self._pyomo_expr_types,
+            cons,
+            self._var_map,
+            self._param_map,
+            self._active_constraints,
+            self._con_map,
+            self._rcon_map,
+        )
         if self._symbolic_solver_labels:
             for c, cc in self._con_map.items():
                 cc.name = self._symbol_map.getSymbol(c, self._con_labeler)
 
     def _add_sos_constraints(self, cons: List[_SOSConstraintData]):
         if len(cons) != 0:
-            raise NotImplementedError('IntervalTightener does not support SOS constraints')
+            raise NotImplementedError(
+                'IntervalTightener does not support SOS constraints'
+            )
 
     def _remove_constraints(self, cons: List[_GeneralConstraintData]):
         if self._symbolic_solver_labels:
@@ -140,7 +175,9 @@ class IntervalTightener(PersistentBase):
 
     def _remove_sos_constraints(self, cons: List[_SOSConstraintData]):
         if len(cons) != 0:
-            raise NotImplementedError('IntervalTightener does not support SOS constraints')
+            raise NotImplementedError(
+                'IntervalTightener does not support SOS constraints'
+            )
 
     def _remove_variables(self, variables: List[_GeneralVarData]):
         if self._symbolic_solver_labels:
@@ -158,8 +195,18 @@ class IntervalTightener(PersistentBase):
             del self._param_map[id(p)]
 
     def _update_variables(self, variables: List[_GeneralVarData]):
-        cmodel.process_pyomo_vars(self._pyomo_expr_types, variables, self._var_map, self._param_map,
-                                  self._vars, self._rvar_map, False, None, None, True)
+        cmodel.process_pyomo_vars(
+            self._pyomo_expr_types,
+            variables,
+            self._var_map,
+            self._param_map,
+            self._vars,
+            self._rvar_map,
+            False,
+            None,
+            None,
+            True,
+        )
 
     def update_params(self):
         for p_id, p in self._params.items():
@@ -177,7 +224,9 @@ class IntervalTightener(PersistentBase):
             ce = cmodel.Constant(0)
             sense = 0
         else:
-            ce = cmodel.appsi_expr_from_pyomo_expr(obj.expr, self._var_map, self._param_map, self._pyomo_expr_types)
+            ce = cmodel.appsi_expr_from_pyomo_expr(
+                obj.expr, self._var_map, self._param_map, self._pyomo_expr_types
+            )
             if obj.sense is minimize:
                 sense = 0
             else:
@@ -214,18 +263,29 @@ class IntervalTightener(PersistentBase):
         for c in cons_to_deactivate:
             c.deactivate()
 
-    def perform_fbbt(self, model: _BlockData, symbolic_solver_labels: Optional[bool] = None):
+    def perform_fbbt(
+        self, model: _BlockData, symbolic_solver_labels: Optional[bool] = None
+    ):
         if model is not self._model:
             self.set_instance(model, symbolic_solver_labels=symbolic_solver_labels)
         else:
-            if symbolic_solver_labels is not None and symbolic_solver_labels != self._symbolic_solver_labels:
-                raise RuntimeError('symbolic_solver_labels can only be changed through the set_instance method. '
-                                   'Please either use set_instance or create a new instance of IntervalTightener.')
+            if (
+                symbolic_solver_labels is not None
+                and symbolic_solver_labels != self._symbolic_solver_labels
+            ):
+                raise RuntimeError(
+                    'symbolic_solver_labels can only be changed through the set_instance method. '
+                    'Please either use set_instance or create a new instance of IntervalTightener.'
+                )
             self.update()
         try:
-            n_iter = self._cmodel.perform_fbbt(self.config.feasibility_tol, self.config.integer_tol,
-                                               self.config.improvement_tol, self.config.max_iter,
-                                               self.config.deactivate_satisfied_constraints)
+            n_iter = self._cmodel.perform_fbbt(
+                self.config.feasibility_tol,
+                self.config.integer_tol,
+                self.config.improvement_tol,
+                self.config.max_iter,
+                self.config.deactivate_satisfied_constraints,
+            )
         finally:
             # we want to make sure the pyomo model and cmodel stay in sync
             # even if an exception is raised and caught
@@ -239,10 +299,14 @@ class IntervalTightener(PersistentBase):
         else:
             self.update()
         try:
-            n_iter = self._cmodel.perform_fbbt_with_seed(self._var_map[id(seed_var)], self.config.feasibility_tol,
-                                                         self.config.integer_tol, self.config.improvement_tol,
-                                                         self.config.max_iter,
-                                                         self.config.deactivate_satisfied_constraints)
+            n_iter = self._cmodel.perform_fbbt_with_seed(
+                self._var_map[id(seed_var)],
+                self.config.feasibility_tol,
+                self.config.integer_tol,
+                self.config.improvement_tol,
+                self.config.max_iter,
+                self.config.deactivate_satisfied_constraints,
+            )
         finally:
             # we want to make sure the pyomo model and cmodel stay in sync
             # even if an exception is raised and caught

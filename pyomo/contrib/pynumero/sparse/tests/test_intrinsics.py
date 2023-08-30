@@ -12,30 +12,32 @@
 import pyomo.common.unittest as unittest
 
 from pyomo.contrib.pynumero.dependencies import (
-    numpy as np, numpy_available, scipy_available
+    numpy as np,
+    numpy_available,
+    scipy_available,
 )
+
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest(
-        "Pynumero needs scipy and numpy to run Sparse intrinsict tests")
+        "Pynumero needs scipy and numpy to run Sparse intrinsic tests"
+    )
 
 from pyomo.contrib.pynumero.sparse import BlockVector
 import pyomo.contrib.pynumero as pn
 
 
 class TestSparseIntrinsics(unittest.TestCase):
-
     def setUp(self):
         self.v1 = np.array([1.1, 2.2, 3.3])
         self.v2 = np.array([4.4, 5.5, 6.6, 7.7])
-        self.v3 = np.array([1.1, 2.2, 3.3])*2
-        self.v4 = np.array([4.4, 5.5, 6.6, 7.7])*2
+        self.v3 = np.array([1.1, 2.2, 3.3]) * 2
+        self.v4 = np.array([4.4, 5.5, 6.6, 7.7]) * 2
         self.bv = BlockVector(2)
         self.bv2 = BlockVector(2)
         self.bv.set_blocks([self.v1, self.v2])
         self.bv2.set_blocks([self.v3, self.v4])
 
     def test_where(self):
-
         bv = self.bv
         condition = bv >= 4.5
         res = pn.where(condition)[0]
@@ -79,7 +81,6 @@ class TestSparseIntrinsics(unittest.TestCase):
         self.assertTrue(np.allclose(res.flatten(), res_flat))
 
     def test_isin(self):
-
         bv = self.bv
         test_bv = BlockVector(2)
         a = np.array([1.1, 3.3])
@@ -116,7 +117,6 @@ class TestSparseIntrinsics(unittest.TestCase):
     # ToDo: try np.copy on a blockvector
 
     def test_intersect1d(self):
-
         vv1 = np.array([1.1, 3.3])
         vv2 = np.array([4.4, 7.7])
         bvv = BlockVector(2)
@@ -136,7 +136,6 @@ class TestSparseIntrinsics(unittest.TestCase):
         self.assertTrue(np.allclose(res.get_block(1), np.array([7.7])))
 
     def test_setdiff1d(self):
-
         vv1 = np.array([1.1, 3.3])
         vv2 = np.array([4.4, 7.7])
         bvv = BlockVector(2)

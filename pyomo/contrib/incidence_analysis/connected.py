@@ -13,7 +13,23 @@ from pyomo.common.dependencies import networkx as nx
 
 
 def get_independent_submatrices(matrix):
-    """
+    """Partition a matrix into irreducible block diagonal form
+
+    This is equivalent to identifying the connected components of the bipartite
+    incidence graph of rows and columns.
+
+    Parameters
+    ----------
+    matrix: ``scipy.sparse.coo_matrix``
+        Matrix to partition into block diagonal form
+
+    Returns
+    -------
+    row_blocks: list of lists
+        Partition of row coordinates into diagonal blocks
+    col_blocks: list of lists
+        Partition of column coordinates into diagonal blocks
+
     """
     nxc = nx.algorithms.components
     nxb = nx.algorithms.bipartite
@@ -27,11 +43,10 @@ def get_independent_submatrices(matrix):
     # nodes have values in [N, N+M-1].
     # We could also check the "bipartite" attribute of each node...
     row_blocks = [
-        sorted([node for node in comp if node < N])
-        for comp in connected_components
+        sorted([node for node in comp if node < N]) for comp in connected_components
     ]
     col_blocks = [
-        sorted([node-N for node in comp if node >= N])
+        sorted([node - N for node in comp if node >= N])
         for comp in connected_components
     ]
     return row_blocks, col_blocks

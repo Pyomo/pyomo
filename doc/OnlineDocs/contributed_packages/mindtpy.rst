@@ -3,7 +3,7 @@ MindtPy Solver
 
 The Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo (MindtPy) solver
 allows users to solve Mixed-Integer Nonlinear Programs (MINLP) using decomposition algorithms.
-These decomposition algorithms usually rely on the solution of Mixed-Intger Linear Programs
+These decomposition algorithms usually rely on the solution of Mixed-Integer Linear Programs
 (MILP) and Nonlinear Programs (NLP).
 
 The following algorithms are currently available in MindtPy:
@@ -18,6 +18,10 @@ The following algorithms are currently available in MindtPy:
 Usage and early implementation details for MindtPy can be found in the PSE 2018 paper Bernal et al.,
 (`ref <https://doi.org/10.1016/B978-0-444-64241-7.50144-0>`_,
 `preprint <http://egon.cheme.cmu.edu/Papers/Bernal_Chen_MindtPy_PSE2018Paper.pdf>`_).
+This solver implementation has been developed by `David Bernal <https://github.com/bernalde>`_
+and `Zedong Peng <https://github.com/ZedongPeng>`_ as part of research efforts at the `Bernal Research Group 
+<https://bernalde.github.io/>`_ and the `Grossmann Research Group <http://egon.cheme.cmu.edu/>`_
+at Purdue University and Carnegie Mellon University.
 
 .. _Duran & Grossmann, 1986: https://dx.doi.org/10.1007/BF02592064
 .. _Westerlund & Petterson, 1995: http://dx.doi.org/10.1016/0098-1354(95)87027-X
@@ -120,7 +124,7 @@ LP/NLP Based Branch-and-Bound
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 MindtPy also supports single-tree implementation of Outer-Approximation (OA) algorithm, which is known as LP/NLP based branch-and-bound algorithm originally described in [`Quesada & Grossmann, 1992`_].
-The LP/NLP based branch-and-bound algorithm in MindtPy is implemeted based on the LazyConstraintCallback function in commercial solvers.
+The LP/NLP based branch-and-bound algorithm in MindtPy is implemented based on the LazyConstraintCallback function in commercial solvers.
 
 .. _Quesada & Grossmann, 1992: https://www.sciencedirect.com/science/article/abs/pii/0098135492800288
 
@@ -181,7 +185,7 @@ A usage example for OA with solution pool is as follows:
 
   >>> pyo.SolverFactory('mindtpy').solve(model,
   ...                                    strategy='OA',
-  ...                                    mip_solver='cplex_peristent',
+  ...                                    mip_solver='cplex_persistent',
   ...                                    nlp_solver='ipopt',
   ...                                    solution_pool=True,
   ...                                    num_solution_iteration=10, # default=5
@@ -310,6 +314,6 @@ Report a Bug
 If you find a bug in MindtPy, we will be grateful if you could
 
 - submit an `issue`_ in Pyomo repository  
-- directly contact David Bernal <bernalde@cmu.edu> and Zedong Peng <peng_zedong@126.com>.
+- directly contact David Bernal <dbernaln@purdue.edu> and Zedong Peng <zdpeng95@gmail.com>.
 
 .. _issue: https://github.com/Pyomo/pyomo/issues

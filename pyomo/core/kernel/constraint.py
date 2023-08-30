@@ -9,27 +9,30 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.expr.numvalue import (ZeroConstant,
-                                      as_numeric,
-                                      is_potentially_variable,
-                                      is_numeric_data,
-                                      value)
+from pyomo.core.expr.numvalue import (
+    ZeroConstant,
+    as_numeric,
+    is_potentially_variable,
+    is_numeric_data,
+    value,
+)
 from pyomo.core.expr.expr_common import ExpressionType
 from pyomo.core.expr.relational_expr import (
-    EqualityExpression, RangedExpression, InequalityExpression
+    EqualityExpression,
+    RangedExpression,
+    InequalityExpression,
 )
-from pyomo.core.kernel.base import \
-    (ICategorizedObject,
-     _abstract_readonly_property)
-from pyomo.core.kernel.container_utils import \
-    define_simple_containers
+from pyomo.core.kernel.base import ICategorizedObject, _abstract_readonly_property
+from pyomo.core.kernel.container_utils import define_simple_containers
 
 _pos_inf = float('inf')
 _neg_inf = float('-inf')
 _RELATIONAL = ExpressionType.RELATIONAL
 
+
 class IConstraint(ICategorizedObject):
     """The interface for constraints"""
+
     __slots__ = ()
 
     #
@@ -39,26 +42,33 @@ class IConstraint(ICategorizedObject):
     #
 
     body = _abstract_readonly_property(
-        doc="The expression for the body of the constraint")
+        doc="The expression for the body of the constraint"
+    )
     lower = _abstract_readonly_property(
-        doc="The expression for the lower bound of the constraint")
+        doc="The expression for the lower bound of the constraint"
+    )
     upper = _abstract_readonly_property(
-        doc="The expression for the upper bound of the constraint")
+        doc="The expression for the upper bound of the constraint"
+    )
     lb = _abstract_readonly_property(
-        doc="The value of the lower bound of the constraint")
+        doc="The value of the lower bound of the constraint"
+    )
     ub = _abstract_readonly_property(
-        doc="The value of the upper bound of the constraint")
-    rhs = _abstract_readonly_property(
-        doc="The right-hand side of the constraint")
+        doc="The value of the upper bound of the constraint"
+    )
+    rhs = _abstract_readonly_property(doc="The right-hand side of the constraint")
     equality = _abstract_readonly_property(
-        doc=("A boolean indicating whether this "
-             "is an equality constraint"))
+        doc=("A boolean indicating whether this is an equality constraint")
+    )
 
     _linear_canonical_form = _abstract_readonly_property(
-        doc=("Indicates whether or not the class or "
-             "instance provides the properties that "
-             "define the linear canonical form of a "
-             "constraint"))
+        doc=(
+            "Indicates whether or not the class or "
+            "instance provides the properties that "
+            "define the linear canonical form of a "
+            "constraint"
+        )
+    )
 
     #
     # Interface
@@ -142,15 +152,14 @@ class IConstraint(ICategorizedObject):
         """Returns :const:`False` when the lower bound is
         :const:`None` or negative infinity"""
         lb = self.lb
-        return (lb is not None) and \
-            (value(lb) != float('-inf'))
+        return (lb is not None) and (value(lb) != float('-inf'))
 
     def has_ub(self):
         """Returns :const:`False` when the upper bound is
         :const:`None` or positive infinity"""
         ub = self.ub
-        return (ub is not None) and \
-            (value(ub) != float('inf'))
+        return (ub is not None) and (value(ub) != float('inf'))
+
 
 class _MutableBoundsConstraintMixin(object):
     """
@@ -161,6 +170,7 @@ class _MutableBoundsConstraintMixin(object):
     Assumes the derived class has _lb, _ub, and _equality
     attributes that can be modified.
     """
+
     __slots__ = ()
 
     #
@@ -171,40 +181,48 @@ class _MutableBoundsConstraintMixin(object):
     def lower(self):
         """The expression for the lower bound of the constraint"""
         return self._lb
+
     @lower.setter
     def lower(self, lb):
         if self.equality:
             raise ValueError(
                 "The lower property can not be set "
-                "when the equality property is True.")
-        if (lb is not None) and \
-           (not is_numeric_data(lb)):
+                "when the equality property is True."
+            )
+        if (lb is not None) and (not is_numeric_data(lb)):
             raise TypeError(
-                    "Constraint lower bounds must be "
-                    "expressions restricted to numeric data.")
+                "Constraint lower bounds must be "
+                "expressions restricted to numeric data."
+            )
         self._lb = lb
 
     @property
     def upper(self):
         """The expression for the upper bound of the constraint"""
         return self._ub
+
     @upper.setter
     def upper(self, ub):
         if self.equality:
             raise ValueError(
                 "The upper property can not be set "
-                "when the equality property is True.")
-        if (ub is not None) and \
-           (not is_numeric_data(ub)):
+                "when the equality property is True."
+            )
+        if (ub is not None) and (not is_numeric_data(ub)):
             raise TypeError(
-                    "Constraint upper bounds must be "
-                    "expressions restricted to numeric data.")
+                "Constraint upper bounds must be "
+                "expressions restricted to numeric data."
+            )
         self._ub = ub
 
     @property
     def lb(self):
         """The value of the lower bound of the constraint"""
-        return value(self._lb)
+        lb = value(self.lower)
+        if lb == _neg_inf:
+            return None
+        return lb
+
     @lb.setter
     def lb(self, lb):
         self.lower = lb
@@ -212,7 +230,11 @@ class _MutableBoundsConstraintMixin(object):
     @property
     def ub(self):
         """The value of the upper bound of the constraint"""
-        return value(self._ub)
+        ub = value(self.upper)
+        if ub == _pos_inf:
+            return None
+        return ub
+
     @ub.setter
     def ub(self, ub):
         self.upper = ub
@@ -223,8 +245,10 @@ class _MutableBoundsConstraintMixin(object):
         if not self.equality:
             raise ValueError(
                 "The rhs property can not be read "
-                "when the equality property is False.")
+                "when the equality property is False."
+            )
         return self._lb
+
     @rhs.setter
     def rhs(self, rhs):
         if rhs is None:
@@ -232,12 +256,13 @@ class _MutableBoundsConstraintMixin(object):
             # context (lb or ub), so there is no way to
             # interpret this
             raise ValueError(
-                "Constraint right-hand side can not "
-                "be assigned a value of None.")
+                "Constraint right-hand side can not be assigned a value of None."
+            )
         elif not is_numeric_data(rhs):
             raise TypeError(
-                    "Constraint right-hand side must be numbers "
-                    "or expressions restricted to data.")
+                "Constraint right-hand side must be numbers "
+                "or expressions restricted to data."
+            )
         self._lb = rhs
         self._ub = rhs
         self._equality = True
@@ -246,6 +271,7 @@ class _MutableBoundsConstraintMixin(object):
     def bounds(self):
         """The bounds of the constraint as a tuple (lb, ub)"""
         return super(_MutableBoundsConstraintMixin, self).bounds
+
     @bounds.setter
     def bounds(self, bounds_tuple):
         self.lb, self.ub = bounds_tuple
@@ -259,6 +285,7 @@ class _MutableBoundsConstraintMixin(object):
         :const:`False`. Equality can only be activated by
         assigning a value to the .rhs property."""
         return self._equality
+
     @equality.setter
     def equality(self, equality):
         if equality:
@@ -266,12 +293,13 @@ class _MutableBoundsConstraintMixin(object):
                 "The constraint equality flag can "
                 "only be set to True by assigning "
                 "a value to the rhs property "
-                "(e.g., con.rhs = con.lb).")
+                "(e.g., con.rhs = con.lb)."
+            )
         assert not equality
         self._equality = False
 
-class constraint(_MutableBoundsConstraintMixin,
-                 IConstraint):
+
+class constraint(_MutableBoundsConstraintMixin, IConstraint):
     """A general algebraic constraint
 
     Algebraic constraints store relational expressions
@@ -328,23 +356,21 @@ class constraint(_MutableBoundsConstraintMixin,
         >>> # (equivalent form)
         >>> c = pmo.constraint(body=x**2, rhs=1)
     """
+
     _ctype = IConstraint
     _linear_canonical_form = False
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_active",
-                 "_body",
-                 "_lb",
-                 "_ub",
-                 "_equality",
-                 "__weakref__")
+    __slots__ = (
+        "_parent",
+        "_storage_key",
+        "_active",
+        "_body",
+        "_lb",
+        "_ub",
+        "_equality",
+        "__weakref__",
+    )
 
-    def __init__(self,
-                 expr=None,
-                 body=None,
-                 lb=None,
-                 ub=None,
-                 rhs=None):
+    def __init__(self, expr=None, body=None, lb=None, ub=None, rhs=None):
         self._parent = None
         self._storage_key = None
         self._active = True
@@ -355,21 +381,29 @@ class constraint(_MutableBoundsConstraintMixin,
 
         if expr is not None:
             if body is not None:
-                raise ValueError("Both the 'expr' and 'body' "
-                                 "keywords can not be used to "
-                                 "initialize a constraint.")
+                raise ValueError(
+                    "Both the 'expr' and 'body' "
+                    "keywords can not be used to "
+                    "initialize a constraint."
+                )
             if lb is not None:
-                raise ValueError("Both the 'expr' and 'lb' "
-                                 "keywords can not be used to "
-                                 "initialize a constraint.")
+                raise ValueError(
+                    "Both the 'expr' and 'lb' "
+                    "keywords can not be used to "
+                    "initialize a constraint."
+                )
             if ub is not None:
-                raise ValueError("Both the 'expr' and 'ub' "
-                                 "keywords can not be used to "
-                                 "initialize a constraint.")
+                raise ValueError(
+                    "Both the 'expr' and 'ub' "
+                    "keywords can not be used to "
+                    "initialize a constraint."
+                )
             if rhs is not None:
-                raise ValueError("Both the 'expr' and 'rhs' "
-                                 "keywords can not be used to "
-                                 "initialize a constraint.")
+                raise ValueError(
+                    "Both the 'expr' and 'rhs' "
+                    "keywords can not be used to "
+                    "initialize a constraint."
+                )
             # call the setter
             self.expr = expr
         else:
@@ -378,12 +412,13 @@ class constraint(_MutableBoundsConstraintMixin,
                 self.lb = lb
                 self.ub = ub
             else:
-                if ((lb is not None) or \
-                    (ub is not None)):
-                    raise ValueError("The 'rhs' keyword can not "
-                                     "be used with the 'lb' or "
-                                     "'ub' keywords to initialize"
-                                     " a constraint.")
+                if (lb is not None) or (ub is not None):
+                    raise ValueError(
+                        "The 'rhs' keyword can not "
+                        "be used with the 'lb' or "
+                        "'ub' keywords to initialize"
+                        " a constraint."
+                    )
                 self.rhs = rhs
 
     #
@@ -394,6 +429,7 @@ class constraint(_MutableBoundsConstraintMixin,
     def body(self):
         """The body of the constraint"""
         return self._body
+
     @body.setter
     def body(self, body):
         if body is not None:
@@ -409,10 +445,10 @@ class constraint(_MutableBoundsConstraintMixin,
     @property
     def expr(self):
         """Get or set the expression on this constraint."""
-        return super(constraint,self).expr
+        return super(constraint, self).expr
+
     @expr.setter
     def expr(self, expr):
-
         self._equality = False
         if expr is None:
             self.body = None
@@ -453,8 +489,8 @@ class constraint(_MutableBoundsConstraintMixin,
                             " expression, upper) but the lower "
                             "value was not numeric data or an "
                             "expression restricted to storage of "
-                            "numeric data."
-                            % (self.name))
+                            "numeric data." % (self.name)
+                        )
 
                 arg1 = expr[1]
                 if arg1 is not None:
@@ -468,8 +504,8 @@ class constraint(_MutableBoundsConstraintMixin,
                             " expression, upper) but the upper "
                             "value was not numeric data or an "
                             "expression restricted to storage of "
-                            "numeric data."
-                            % (self.name))
+                            "numeric data." % (self.name)
+                        )
                 elif arg1 is not None and is_numeric_data(arg1):
                     # Special case (reflect behavior of AML): if the
                     # upper bound is None and the "body" is only data,
@@ -478,7 +514,7 @@ class constraint(_MutableBoundsConstraintMixin,
                     arg0, arg1, arg2 = arg2, arg0, arg1
 
                 self.lb = arg0
-                self.body  = arg1
+                self.body = arg1
                 self.ub = arg2
             else:
                 raise ValueError(
@@ -486,8 +522,8 @@ class constraint(_MutableBoundsConstraintMixin,
                     "of length %d. Expecting a tuple of "
                     "length 2 or 3:\n"
                     "Equality:   (body, rhs)\n"
-                    "Inequality: (lb, body, ub)"
-                    % (self.name, len(expr)))
+                    "Inequality: (lb, body, ub)" % (self.name, len(expr))
+                )
 
             relational_expr = False
         else:
@@ -499,23 +535,26 @@ class constraint(_MutableBoundsConstraintMixin,
                         "value. Found '%s'\nExpecting a tuple or "
                         "equation. Examples:"
                         "\n   sum_product(model.costs) == model.income"
-                        "\n   (0, model.price[item], 50)"
-                        % (self.name, str(expr)))
+                        "\n   (0, model.price[item], 50)" % (self.name, str(expr))
+                    )
             except AttributeError:
-                msg = ("Constraint '%s' does not have a proper "
-                       "value. Found '%s'\nExpecting a tuple or "
-                       "equation. Examples:"
-                       "\n   sum_product(model.costs) == model.income"
-                       "\n   (0, model.price[item], 50)"
-                       % (self.name, str(expr)))
+                msg = (
+                    "Constraint '%s' does not have a proper "
+                    "value. Found '%s'\nExpecting a tuple or "
+                    "equation. Examples:"
+                    "\n   sum_product(model.costs) == model.income"
+                    "\n   (0, model.price[item], 50)" % (self.name, str(expr))
+                )
                 if type(expr) is bool:
-                    msg += ("\nNote: constant Boolean expressions "
-                            "are not valid constraint expressions. "
-                            "Some apparently non-constant compound "
-                            "inequalities (e.g. 'expr >= 0 <= 1') "
-                            "can return boolean values; the proper "
-                            "form for compound inequalities is "
-                            "always 'lb <= expr <= ub'.")
+                    msg += (
+                        "\nNote: constant Boolean expressions "
+                        "are not valid constraint expressions. "
+                        "Some apparently non-constant compound "
+                        "inequalities (e.g. 'expr >= 0 <= 1') "
+                        "can return boolean values; the proper "
+                        "form for compound inequalities is "
+                        "always 'lb <= expr <= ub'."
+                    )
                 raise ValueError(msg)
 
         #
@@ -543,8 +582,8 @@ class constraint(_MutableBoundsConstraintMixin,
                         "Constraint '%s' encountered a strict "
                         "inequality expression ('>' or '<'). All"
                         " constraints must be formulated using "
-                        "using '<=', '>=', or '=='."
-                        % (self.name))
+                        "using '<=', '>=', or '=='." % (self.name)
+                    )
                 if not is_potentially_variable(expr.arg(1)):
                     self.lb = None
                     self.body = expr.arg(0)
@@ -555,18 +594,18 @@ class constraint(_MutableBoundsConstraintMixin,
                     self.ub = None
                 else:
                     self.lb = None
-                    self.body  = expr.arg(0)
+                    self.body = expr.arg(0)
                     self.body -= expr.arg(1)
                     self.ub = ZeroConstant
 
-            else:   # RangedExpression
+            else:  # RangedExpression
                 if any(expr._strict):
                     raise ValueError(
                         "Constraint '%s' encountered a strict "
                         "inequality expression ('>' or '<'). All"
                         " constraints must be formulated using "
-                        "using '<=', '>=', or '=='."
-                        % (self.name))
+                        "using '<=', '>=', or '=='." % (self.name)
+                    )
 
                 if not is_numeric_data(expr.arg(0)):
                     raise ValueError(
@@ -575,20 +614,20 @@ class constraint(_MutableBoundsConstraintMixin,
                         "expression <= upper) but the lower "
                         "bound was not numeric data or an "
                         "expression restricted to storage of "
-                        "numeric data."
-                        % (self.name))
+                        "numeric data." % (self.name)
+                    )
                 if not is_numeric_data(expr.arg(2)):
                     raise ValueError(
-                        "Constraint '%s' found a double-sided "\
+                        "Constraint '%s' found a double-sided "
                         "inequality expression (lower <= "
                         "expression <= upper) but the upper "
                         "bound was not numeric data or an "
                         "expression restricted to storage of "
-                        "numeric data."
-                        % (self.name))
+                        "numeric data." % (self.name)
+                    )
 
                 self.lb = expr.arg(0)
-                self.body  = expr.arg(1)
+                self.body = expr.arg(1)
                 self.ub = expr.arg(2)
 
         #
@@ -598,12 +637,12 @@ class constraint(_MutableBoundsConstraintMixin,
         assert not (self.equality and (self.lower is None))
         assert (not self.equality) or (self.lower is self.upper)
 
+
 #
 # Note: This class is experimental. The implementation may
 #       change or it may go away.
 #
-class linear_constraint(_MutableBoundsConstraintMixin,
-                        IConstraint):
+class linear_constraint(_MutableBoundsConstraintMixin, IConstraint):
     """A linear constraint
 
     A linear constraint stores a linear relational
@@ -662,25 +701,24 @@ class linear_constraint(_MutableBoundsConstraintMixin,
         >>> # (equivalent form using a general constraint)
         >>> c = pmo.constraint(x + 2*y <= 1)
     """
+
     _ctype = IConstraint
     _linear_canonical_form = True
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_active",
-                 "_variables",
-                 "_coefficients",
-                 "_lb",
-                 "_ub",
-                 "_equality",
-                 "__weakref__")
+    __slots__ = (
+        "_parent",
+        "_storage_key",
+        "_active",
+        "_variables",
+        "_coefficients",
+        "_lb",
+        "_ub",
+        "_equality",
+        "__weakref__",
+    )
 
-    def __init__(self,
-                 variables=None,
-                 coefficients=None,
-                 terms=None,
-                 lb=None,
-                 ub=None,
-                 rhs=None):
+    def __init__(
+        self, variables=None, coefficients=None, terms=None, lb=None, ub=None, rhs=None
+    ):
         self._parent = None
         self._storage_key = None
         self._active = True
@@ -691,20 +729,21 @@ class linear_constraint(_MutableBoundsConstraintMixin,
         self._equality = False
 
         if terms is not None:
-            if (variables is not None) or \
-               (coefficients is not None):
-                raise ValueError("Both the 'variables' and 'coefficients' "
-                                 "keywords must be None when the 'terms' "
-                                 "keyword is not None")
+            if (variables is not None) or (coefficients is not None):
+                raise ValueError(
+                    "Both the 'variables' and 'coefficients' "
+                    "keywords must be None when the 'terms' "
+                    "keyword is not None"
+                )
             # use the setter method
             self.terms = terms
-        elif (variables is not None) or \
-             (coefficients is not None):
-            if (variables is None) or \
-               (coefficients is None):
-                raise ValueError("Both the 'variables' and 'coefficients' "
-                                 "keywords must be set when the 'terms' "
-                                 "keyword is None")
+        elif (variables is not None) or (coefficients is not None):
+            if (variables is None) or (coefficients is None):
+                raise ValueError(
+                    "Both the 'variables' and 'coefficients' "
+                    "keywords must be set when the 'terms' "
+                    "keyword is None"
+                )
             self._variables = tuple(variables)
             self._coefficients = tuple(coefficients)
         else:
@@ -716,12 +755,13 @@ class linear_constraint(_MutableBoundsConstraintMixin,
             self.lb = lb
             self.ub = ub
         else:
-            if ((lb is not None) or \
-                (ub is not None)):
-                raise ValueError("The 'rhs' keyword can not "
-                                 "be used with the 'lb' or "
-                                 "'ub' keywords to initialize"
-                                 " a constraint.")
+            if (lb is not None) or (ub is not None):
+                raise ValueError(
+                    "The 'rhs' keyword can not "
+                    "be used with the 'lb' or "
+                    "'ub' keywords to initialize"
+                    " a constraint."
+                )
             self.rhs = rhs
 
     @property
@@ -729,6 +769,7 @@ class linear_constraint(_MutableBoundsConstraintMixin,
         """An iterator over the terms in the body of this
         constraint as (variable, coefficient) tuples"""
         return zip(self._variables, self._coefficients)
+
     @terms.setter
     def terms(self, terms):
         """Set the terms in the body of this constraint
@@ -748,12 +789,13 @@ class linear_constraint(_MutableBoundsConstraintMixin,
 
     def __call__(self, exception=True):
         try:
-            return sum(value(c, exception=exception) * \
-                       v(exception=exception) for v,c in self.terms)
+            return sum(
+                value(c, exception=exception) * v(exception=exception)
+                for v, c in self.terms
+            )
         except (ValueError, TypeError):
             if exception:
-                raise ValueError("one or more terms "
-                                 "could not be evaluated")
+                raise ValueError("one or more terms could not be evaluated")
             return None
 
     #
@@ -773,8 +815,8 @@ class linear_constraint(_MutableBoundsConstraintMixin,
     def canonical_form(self, compute_values=True):
         """Build a canonical representation of the body of
         this constraints"""
-        from pyomo.repn.standard_repn import \
-            StandardRepn
+        from pyomo.repn.standard_repn import StandardRepn
+
         variables = []
         coefficients = []
         constant = 0
@@ -798,8 +840,7 @@ class linear_constraint(_MutableBoundsConstraintMixin,
         repn.constant = constant
         return repn
 
+
 # inserts class definitions for simple _tuple, _list, and
 # _dict containers into this module
-define_simple_containers(globals(),
-                         "constraint",
-                         IConstraint)
+define_simple_containers(globals(), "constraint", IConstraint)

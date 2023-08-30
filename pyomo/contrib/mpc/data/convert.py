@@ -10,16 +10,11 @@
 #  ___________________________________________________________________________
 
 from collections.abc import MutableMapping
-from pyomo.contrib.mpc.data.dynamic_data_base import (
-    _is_iterable,
-    _DynamicDataBase,
-) 
+from pyomo.contrib.mpc.data.dynamic_data_base import _is_iterable, _DynamicDataBase
 from pyomo.contrib.mpc.data.scalar_data import ScalarData
 from pyomo.contrib.mpc.data.series_data import TimeSeriesData
 from pyomo.contrib.mpc.data.interval_data import IntervalData
-from pyomo.contrib.mpc.data.find_nearest_index import (
-    find_nearest_interval_index,
-)
+from pyomo.contrib.mpc.data.find_nearest_index import find_nearest_interval_index
 
 
 def _process_to_dynamic_data(data, time_set=None):
@@ -74,11 +69,7 @@ def _process_to_dynamic_data(data, time_set=None):
 
 
 def interval_to_series(
-    data,
-    time_points=None,
-    tolerance=0.0,
-    use_left_endpoints=False,
-    prefer_left=True,
+    data, time_points=None, tolerance=0.0, use_left_endpoints=False, prefer_left=True
 ):
     """
     Arguments
@@ -118,9 +109,7 @@ def interval_to_series(
         # TODO: Should TimeSeriesData be constructed with the original time set?
         return TimeSeriesData(series_data, time_points)
     if use_left_endpoints:
-        raise RuntimeError(
-            "Cannot provide time_points with use_left_endpoints=True"
-        )
+        raise RuntimeError("Cannot provide time_points with use_left_endpoints=True")
 
     intervals = data.get_intervals()
     data_dict = data.get_data()
@@ -130,7 +119,8 @@ def interval_to_series(
     idx_list = [
         find_nearest_interval_index(
             intervals, t, tolerance=tolerance, prefer_left=prefer_left
-        ) for t in time_points
+        )
+        for t in time_points
     ]
     for i, t in enumerate(time_points):
         if idx_list[i] is None:
@@ -138,17 +128,12 @@ def interval_to_series(
                 "Time point %s cannot be found in intervals within"
                 " tolerance %s." % (t, tolerance)
             )
-    new_data = {
-        key: [vals[i] for i in idx_list] for key, vals in data_dict.items()
-    }
+    new_data = {key: [vals[i] for i in idx_list] for key, vals in data_dict.items()}
     # TODO: Should TimeSeriesData be constructed with the original time set?
     return TimeSeriesData(new_data, time_points)
 
 
-def series_to_interval(
-    data,
-    use_left_endpoints=False,
-):
+def series_to_interval(data, use_left_endpoints=False):
     """
     Arguments
     ---------
@@ -175,10 +160,10 @@ def series_to_interval(
     else:
         # This covers the case of n_t > 1 and n_t == 0
         new_data = {}
-        intervals = [(time[i-1], time[i]) for i in range(1, n_t)]
+        intervals = [(time[i - 1], time[i]) for i in range(1, n_t)]
         for key, values in data_dict.items():
             interval_values = [
-                values[i-1] if use_left_endpoints else values[i]
+                values[i - 1] if use_left_endpoints else values[i]
                 for i in range(1, n_t)
             ]
             new_data[key] = interval_values

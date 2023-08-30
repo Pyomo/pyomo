@@ -23,6 +23,7 @@ from pyomo.common.dependencies import pympler, pympler_available
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.log import is_debug_set
+from pyomo.common.numeric_types import value
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.symbol_map import SymbolMap
 from pyomo.core.base.component import ModelComponentFactory
@@ -30,7 +31,6 @@ from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.objective import Objective
 from pyomo.core.base.suffix import active_import_suffix_generator
-from pyomo.core.base.numvalue import value
 from pyomo.core.base.block import ScalarBlock
 from pyomo.core.base.set import Set
 from pyomo.core.base.componentuid import ComponentUID
@@ -57,8 +57,10 @@ def global_option(function, name, value):
         ...
     """
     PyomoConfig._option[tuple(name.split('.'))] = value
+
     def wrapper_function(*args, **kwargs):
         return function(*args, **kwargs)
+
     return wrapper_function
 
 
@@ -86,7 +88,6 @@ class PyomoConfig(Bunch):
 
 
 class ModelSolution(object):
-
     def __init__(self):
         self._metadata = {}
         self._metadata['status'] = None
@@ -94,7 +95,7 @@ class ModelSolution(object):
         self._metadata['gap'] = None
         self._entry = {}
         #
-        # entry[name]: id -> (object weakref, entry)
+        # entry[name]: id -> (object, entry)
         #
         for name in ['objective', 'variable', 'constraint', 'problem']:
             self._entry[name] = {}
@@ -104,8 +105,10 @@ class ModelSolution(object):
             if name in self.__dict__:
                 return self.__dict__[name]
             else:
-                raise AttributeError( "'%s' object has no attribute '%s'"
-                                      % (self.__class__.__name__, name) )
+                raise AttributeError(
+                    "'%s' object has no attribute '%s'"
+                    % (self.__class__.__name__, name)
+                )
         return self.__dict__['_metadata'][name]
 
     def __setattr__(self, name, val):
@@ -115,11 +118,8 @@ class ModelSolution(object):
         self.__dict__['_metadata'][name] = val
 
     def __getstate__(self):
-        state = {
-            '_metadata': self._metadata,
-            '_entry': {}
-        }
-        for (name, data) in self._entry.items():
+        state = {'_metadata': self._metadata, '_entry': {}}
+        for name, data in self._entry.items():
             tmp = state['_entry'][name] = []
             # Note: We must convert all weakrefs to hard refs and
             # not indirect references like ComponentUIDs because
@@ -128,12 +128,13 @@ class ModelSolution(object):
             # so things like CUID.find_component will fail (return
             # None).
             for obj, entry in data.values():
-                if obj is None or obj() is None:
+                if obj is None or obj is None:
                     logger.warning(
                         "Solution component in '%s' no longer "
-                        "accessible: %s!" % ( name, entry ))
+                        "accessible: %s!" % (name, entry)
+                    )
                 else:
-                    tmp.append( ( obj(), entry ) )
+                    tmp.append((obj, entry))
         return state
 
     def __setstate__(self, state):
@@ -142,11 +143,10 @@ class ModelSolution(object):
         for name, data in state['_entry'].items():
             tmp = self._entry[name] = {}
             for obj, entry in data:
-                tmp[ id(obj) ] = ( weakref_ref(obj), entry )
+                tmp[id(obj)] = (obj, entry)
 
 
 class ModelSolutions(object):
-
     def __init__(self, instance):
         self._instance = weakref_ref(instance)
         self.clear()
@@ -185,17 +185,19 @@ class ModelSolutions(object):
         if not smap_id is None:
             del self.symbol_map[smap_id]
 
-    def load_from(self,
-                  results,
-                  allow_consistent_values_for_fixed_vars=False,
-                  comparison_tolerance_for_fixed_vars=1e-5,
-                  ignore_invalid_labels=False,
-                  id=None,
-                  delete_symbol_map=True,
-                  clear=True,
-                  default_variable_value=None,
-                  select=0,
-                  ignore_fixed_vars=True):
+    def load_from(
+        self,
+        results,
+        allow_consistent_values_for_fixed_vars=False,
+        comparison_tolerance_for_fixed_vars=1e-5,
+        ignore_invalid_labels=False,
+        id=None,
+        delete_symbol_map=True,
+        clear=True,
+        default_variable_value=None,
+        select=0,
+        ignore_fixed_vars=True,
+    ):
         """
         Load solver results
         """
@@ -203,29 +205,32 @@ class ModelSolutions(object):
         #
         # If there is a warning, then print a warning message.
         #
-        if (results.solver.status == SolverStatus.warning):
+        if results.solver.status == SolverStatus.warning:
             tc = getattr(results.solver, 'termination_condition', None)
             msg = getattr(results.solver, 'message', None)
             logger.warning(
                 'Loading a SolverResults object with a '
                 'warning status into model.name="%s";\n'
                 '  - termination condition: %s\n'
-                '  - message from solver: %s'
-                % (instance.name, tc, msg))
+                '  - message from solver: %s' % (instance.name, tc, msg)
+            )
         #
         # If the solver status not one of either OK or Warning, then
         # generate an error.
         #
         elif results.solver.status != SolverStatus.ok:
-            if (results.solver.status == SolverStatus.aborted) and \
-               (len(results.solution) > 0):
+            if (results.solver.status == SolverStatus.aborted) and (
+                len(results.solution) > 0
+            ):
                 logger.warning(
                     "Loading a SolverResults object with "
-                    "an 'aborted' status, but containing a solution")
+                    "an 'aborted' status, but containing a solution"
+                )
             else:
-                raise ValueError("Cannot load a SolverResults object "
-                                 "with bad status: %s"
-                                 % str(results.solver.status))
+                raise ValueError(
+                    "Cannot load a SolverResults object "
+                    "with bad status: %s" % str(results.solver.status)
+                )
         if clear:
             #
             # Clear the solutions, but not the symbol map
@@ -245,20 +250,24 @@ class ModelSolutions(object):
             smap_id = results.__dict__.get('_smap_id')
         cache = {}
         if not id is None:
-            self.add_solution(results.solution(id),
-                              smap_id,
-                              delete_symbol_map=False,
-                              cache=cache,
-                              ignore_invalid_labels=ignore_invalid_labels,
-                              default_variable_value=default_variable_value)
+            self.add_solution(
+                results.solution(id),
+                smap_id,
+                delete_symbol_map=False,
+                cache=cache,
+                ignore_invalid_labels=ignore_invalid_labels,
+                default_variable_value=default_variable_value,
+            )
         else:
             for i in range(len(results.solution)):
-                self.add_solution(results.solution(i),
-                                  smap_id,
-                                  delete_symbol_map=False,
-                                  cache=cache,
-                                  ignore_invalid_labels=ignore_invalid_labels,
-                                  default_variable_value=default_variable_value)
+                self.add_solution(
+                    results.solution(i),
+                    smap_id,
+                    delete_symbol_map=False,
+                    cache=cache,
+                    ignore_invalid_labels=ignore_invalid_labels,
+                    default_variable_value=default_variable_value,
+                )
 
         if delete_symbol_map:
             self.delete_symbol_map(smap_id)
@@ -271,7 +280,8 @@ class ModelSolutions(object):
                 allow_consistent_values_for_fixed_vars=allow_consistent_values_for_fixed_vars,
                 comparison_tolerance_for_fixed_vars=comparison_tolerance_for_fixed_vars,
                 ignore_invalid_labels=ignore_invalid_labels,
-                ignore_fixed_vars=ignore_fixed_vars)
+                ignore_fixed_vars=ignore_fixed_vars,
+            )
 
     def store_to(self, results, cuid=False, skip_stale_vars=False):
         """
@@ -301,7 +311,7 @@ class ModelSolutions(object):
                 else:
                     vals = vals[1]
                 vals['Value'] = value(obj)
-                soln.objective[ sm.getSymbol(obj, labeler) ] = vals
+                soln.objective[sm.getSymbol(obj, labeler)] = vals
             entry = soln_._entry['variable']
             for obj in instance.component_data_objects(Var, active=True):
                 if obj.stale and skip_stale_vars:
@@ -312,7 +322,7 @@ class ModelSolutions(object):
                 else:
                     vals = vals[1]
                 vals['Value'] = value(obj)
-                soln.variable[ sm.getSymbol(obj, labeler) ] = vals
+                soln.variable[sm.getSymbol(obj, labeler)] = vals
             entry = soln_._entry['constraint']
             for obj in instance.component_data_objects(Constraint, active=True):
                 vals = entry.get(id(obj), None)
@@ -320,18 +330,19 @@ class ModelSolutions(object):
                     continue
                 else:
                     vals = vals[1]
-                soln.constraint[ sm.getSymbol(obj, labeler) ] = vals
-            results.solution.insert( soln )
+                soln.constraint[sm.getSymbol(obj, labeler)] = vals
+            results.solution.insert(soln)
 
-    def add_solution(self,
-                     solution,
-                     smap_id,
-                     delete_symbol_map=True,
-                     cache=None,
-                     ignore_invalid_labels=False,
-                     ignore_missing_symbols=True,
-                     default_variable_value=None):
-
+    def add_solution(
+        self,
+        solution,
+        smap_id,
+        delete_symbol_map=True,
+        cache=None,
+        ignore_invalid_labels=False,
+        ignore_missing_symbols=True,
+        default_variable_value=None,
+    ):
         instance = self._instance()
 
         soln = ModelSolution()
@@ -367,9 +378,11 @@ class ModelSolutions(object):
                         if obj is None:
                             if ignore_invalid_labels:
                                 continue
-                            raise RuntimeError("CUID %s is missing from model %s"
-                                               % (str(cuid), instance.name))
-                        tmp[id(obj)] = (weakref_ref(obj), val)
+                            raise RuntimeError(
+                                "CUID %s is missing from model %s"
+                                % (str(cuid), instance.name)
+                            )
+                        tmp[id(obj)] = (obj, val)
             else:
                 #
                 # Loading a solution with string keys
@@ -389,9 +402,11 @@ class ModelSolutions(object):
                         if obj is None:
                             if ignore_invalid_labels:
                                 continue
-                            raise RuntimeError("Symbol %s is missing from model %s"
-                                               % (symb, instance.name))
-                        tmp[id(obj)] = (weakref_ref(obj), val)
+                            raise RuntimeError(
+                                "Symbol %s is missing from model %s"
+                                % (symb, instance.name)
+                            )
+                        tmp[id(obj)] = (obj, val)
         else:
             #
             # Map solution
@@ -406,16 +421,17 @@ class ModelSolutions(object):
                         obj = smap.aliases[symb]
                     elif ignore_missing_symbols:
                         continue
-                    else:                                   #pragma:nocover
+                    else:  # pragma:nocover
                         #
                         # This should never happen ...
                         #
                         raise RuntimeError(
                             "ERROR: Symbol %s is missing from "
                             "model %s when loading with a symbol map!"
-                            % (symb, instance.name))
+                            % (symb, instance.name)
+                        )
 
-                    tmp[id(obj())] = (obj, val)
+                    tmp[id(obj)] = (obj, val)
             #
             # Wrap up
             #
@@ -429,22 +445,26 @@ class ModelSolutions(object):
         for vdata in instance.component_data_objects(Var):
             id_ = id(vdata)
             if vdata.fixed:
-                tmp[id_] = (weakref_ref(vdata), {'Value': vdata.value})
-            elif (default_variable_value is not None) and \
-                 (smap_id is not None) and \
-                 (id_ in smap.byObject) and \
-                 (id_ not in tmp):
-                tmp[id_] = (weakref_ref(vdata), {'Value':default_variable_value})
+                tmp[id_] = (vdata, {'Value': vdata.value})
+            elif (
+                (default_variable_value is not None)
+                and (smap_id is not None)
+                and (id_ in smap.byObject)
+                and (id_ not in tmp)
+            ):
+                tmp[id_] = (vdata, {'Value': default_variable_value})
 
         self.solutions.append(soln)
-        return len(self.solutions)-1
+        return len(self.solutions) - 1
 
-    def select(self,
-               index=0,
-               allow_consistent_values_for_fixed_vars=False,
-               comparison_tolerance_for_fixed_vars=1e-5,
-               ignore_invalid_labels=False,
-               ignore_fixed_vars=True):
+    def select(
+        self,
+        index=0,
+        allow_consistent_values_for_fixed_vars=False,
+        comparison_tolerance_for_fixed_vars=1e-5,
+        ignore_invalid_labels=False,
+        ignore_fixed_vars=True,
+    ):
         """
         Select a solution from the model's solutions.
 
@@ -486,7 +506,7 @@ class ModelSolutions(object):
         # Load problem (model) level suffixes. These would only come from ampl
         # interfaced solution suffixes at this point in time.
         #
-        for id_, (pobj,entry) in soln._entry['problem'].items():
+        for id_, (pobj, entry) in soln._entry['problem'].items():
             for _attr_key, attr_value in entry.items():
                 attr_key = _attr_key[0].lower() + _attr_key[1:]
                 if attr_key in valid_import_suffixes:
@@ -495,7 +515,6 @@ class ModelSolutions(object):
         # Load objective data (suffixes)
         #
         for id_, (odata, entry) in soln._entry['objective'].items():
-            odata = odata()
             for _attr_key, attr_value in entry.items():
                 attr_key = _attr_key[0].lower() + _attr_key[1:]
                 if attr_key in valid_import_suffixes:
@@ -504,25 +523,30 @@ class ModelSolutions(object):
         # Load variable data (suffixes and values)
         #
         for id_, (vdata, entry) in soln._entry['variable'].items():
-            vdata = vdata()
             val = entry['Value']
             if vdata.fixed is True:
                 if ignore_fixed_vars:
                     continue
                 if not allow_consistent_values_for_fixed_vars:
-                    msg = "Variable '%s' in model '%s' is currently fixed - new" \
-                          ' value is not expected in solution'
+                    msg = (
+                        "Variable '%s' in model '%s' is currently fixed - new"
+                        ' value is not expected in solution'
+                    )
                     raise TypeError(msg % (vdata.name, instance.name))
                 if math.fabs(val - vdata.value) > comparison_tolerance_for_fixed_vars:
-                    raise TypeError("Variable '%s' in model '%s' is currently "
-                                    "fixed - a value of '%s' in solution is "
-                                    "not within tolerance=%s of the current "
-                                    "value of '%s'"
-                                    % (vdata.name,
-                                       instance.name,
-                                       str(val),
-                                       str(comparison_tolerance_for_fixed_vars),
-                                       str(vdata.value)))
+                    raise TypeError(
+                        "Variable '%s' in model '%s' is currently "
+                        "fixed - a value of '%s' in solution is "
+                        "not within tolerance=%s of the current "
+                        "value of '%s'"
+                        % (
+                            vdata.name,
+                            instance.name,
+                            str(val),
+                            str(comparison_tolerance_for_fixed_vars),
+                            str(vdata.value),
+                        )
+                    )
 
             vdata.set_value(val, skip_validation=True)
 
@@ -536,7 +560,6 @@ class ModelSolutions(object):
         # Load constraint data (suffixes)
         #
         for id_, (cdata, entry) in soln._entry['constraint'].items():
-            cdata = cdata()
             for _attr_key, attr_value in entry.items():
                 attr_key = _attr_key[0].lower() + _attr_key[1:]
                 if attr_key in valid_import_suffixes:
@@ -547,7 +570,10 @@ class ModelSolutions(object):
         # variables to be marked as stale).
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
-@ModelComponentFactory.register('Model objects can be used as a component of other models.')
+
+@ModelComponentFactory.register(
+    'Model objects can be used as a component of other models.'
+)
 class Model(ScalarBlock):
     """
     An optimization model.  By default, this defers construction of components
@@ -562,7 +588,8 @@ class Model(ScalarBlock):
 
         raise TypeError(
             "Directly creating the 'Model' class is not allowed.  Please use the "
-            "AbstractModel or ConcreteModel class instead.")
+            "AbstractModel or ConcreteModel class instead."
+        )
 
     def __init__(self, name='unknown', **kwargs):
         """Constructor"""
@@ -606,31 +633,38 @@ class Model(ScalarBlock):
         self.compute_statistics()
         return self.statistics.number_of_objectives
 
-    def create_instance( self, filename=None, data=None, name=None,
-                         namespace=None, namespaces=None,
-                         profile_memory=0, report_timing=False,
-                         **kwds ):
+    def create_instance(
+        self,
+        filename=None,
+        data=None,
+        name=None,
+        namespace=None,
+        namespaces=None,
+        profile_memory=0,
+        report_timing=False,
+        **kwds
+    ):
         """
         Create a concrete instance of an abstract model, possibly using data
         read in from a file.
 
         Parameters
         ----------
-        filename: `str`, optional           
-            The name of a Pyomo Data File that will be used to load data into 
+        filename: `str`, optional
+            The name of a Pyomo Data File that will be used to load data into
             the model.
         data: `dict`, optional
-            A dictionary containing initialization data for the model to be 
+            A dictionary containing initialization data for the model to be
             used if there is no filename
         name: `str`, optional
             The name given to the model.
-        namespace: `str`, optional          
+        namespace: `str`, optional
             A namespace used to select data.
-        namespaces: `list`, optional   
+        namespaces: `list`, optional
             A list of namespaces used to select data.
-        profile_memory: `int`, optional    
+        profile_memory: `int`, optional
             A number that indicates the profiling level.
-        report_timing: `bool`, optional     
+        report_timing: `bool`, optional
             Report timing statistics during construction.
 
         """
@@ -640,14 +674,15 @@ class Model(ScalarBlock):
         # constructed, so passing in a data file is a waste of time.
         #
         if self.is_constructed() and isinstance(filename, str):
-            msg = "The filename=%s will not be loaded - supplied as an " \
-                  "argument to the create_instance() method of a "\
-                  "concrete instance with name=%s." % (filename, name)
+            msg = (
+                "The filename=%s will not be loaded - supplied as an "
+                "argument to the create_instance() method of a "
+                "concrete instance with name=%s." % (filename, name)
+            )
             logger.warning(msg)
 
         if kwds:
-            msg = \
-"""Model.create_instance() passed the following unrecognized keyword
+            msg = """Model.create_instance() passed the following unrecognized keyword
 arguments (which have been ignored):"""
             for k in kwds:
                 msg = msg + "\n    '%s'" % (k,)
@@ -665,9 +700,11 @@ arguments (which have been ignored):"""
             name = self.local_name
         if filename is not None:
             if data is not None:
-                logger.warning("Model.create_instance() passed both 'filename' "
-                               "and 'data' keyword arguments.  Ignoring the "
-                               "'data' argument")
+                logger.warning(
+                    "Model.create_instance() passed both 'filename' "
+                    "and 'data' keyword arguments.  Ignoring the "
+                    "'data' argument"
+                )
             data = filename
         if data is None:
             data = {}
@@ -694,9 +731,7 @@ arguments (which have been ignored):"""
         if None not in _namespaces:
             _namespaces.append(None)
 
-        instance.load( data,
-                       namespaces=_namespaces,
-                       profile_memory=profile_memory )
+        instance.load(data, namespaces=_namespaces, profile_memory=profile_memory)
 
         #
         # Indicate that the model is concrete/constructed
@@ -712,9 +747,11 @@ arguments (which have been ignored):"""
         instance.__class__ = ConcreteModel
         return instance
 
-
-    @deprecated("The Model.preprocess() method is deprecated and no "
-                "longer performs any actions", version='6.0')
+    @deprecated(
+        "The Model.preprocess() method is deprecated and no "
+        "longer performs any actions",
+        version='6.0',
+    )
     def preprocess(self, preprocessor=None):
         return
 
@@ -730,11 +767,8 @@ arguments (which have been ignored):"""
             dp = DataPortal(data_dict=arg, model=self)
         else:
             msg = "Cannot load model model data from with object of type '%s'"
-            raise ValueError(msg % str( type(arg) ))
-        self._load_model_data(dp,
-                              namespaces,
-                              profile_memory=profile_memory)
-
+            raise ValueError(msg % str(type(arg)))
+        self._load_model_data(dp, namespaces, profile_memory=profile_memory)
 
     def _load_model_data(self, modeldata, namespaces, **kwds):
         """
@@ -747,7 +781,6 @@ arguments (which have been ignored):"""
         # sufficient to keep memory use under control.
         #
         with PauseGC() as pgc:
-
             #
             # Unlike the standard method in the pympler summary
             # module, the tracker doesn't print 0-byte entries to pad
@@ -758,14 +791,18 @@ arguments (which have been ignored):"""
             if profile_memory >= 2 and pympler_available:
                 mem_used = pympler.muppy.get_size(muppy.get_objects())
                 print("")
-                print("      Total memory = %d bytes prior to model "
-                      "construction" % mem_used)
+                print(
+                    "      Total memory = %d bytes prior to model "
+                    "construction" % mem_used
+                )
 
                 if profile_memory >= 3:
                     gc.collect()
                     mem_used = pympler.muppy.get_size(muppy.get_objects())
-                    print("      Total memory = %d bytes prior to model "
-                          "construction (after garbage collection)" % mem_used)
+                    print(
+                        "      Total memory = %d bytes prior to model "
+                        "construction (after garbage collection)" % mem_used
+                    )
 
             #
             # Do some error checking
@@ -780,27 +817,31 @@ arguments (which have been ignored):"""
             #
 
             for component_name, component in self.component_map().items():
-
                 if component.ctype is Model:
                     continue
 
-                self._initialize_component(modeldata, namespaces, component_name, profile_memory)
+                self._initialize_component(
+                    modeldata, namespaces, component_name, profile_memory
+                )
 
             # Note: As is, connectors are expanded when using command-line pyomo but not calling model.create(...) in a Python script.
             # John says this has to do with extension points which are called from commandline but not when writing scripts.
             # Uncommenting the next two lines switches this (command-line fails because it tries to expand connectors twice)
-            #connector_expander = ConnectorExpander()
-            #connector_expander.apply(instance=self)
+            # connector_expander = ConnectorExpander()
+            # connector_expander.apply(instance=self)
 
             if profile_memory >= 2 and pympler_available:
                 print("")
                 print("      Summary of objects following instance construction")
                 post_construction_summary = pympler.summary.summarize(
-                    pympler.muppy.get_objects())
+                    pympler.muppy.get_objects()
+                )
                 pympler.summary.print_(post_construction_summary, limit=100)
                 print("")
 
-    def _initialize_component(self, modeldata, namespaces, component_name, profile_memory):
+    def _initialize_component(
+        self, modeldata, namespaces, component_name, profile_memory
+    ):
         declaration = self.component(component_name)
 
         if component_name in modeldata._default:
@@ -809,45 +850,63 @@ arguments (which have been ignored):"""
         data = None
 
         for namespace in namespaces:
-            if component_name in modeldata._data.get(namespace,{}):
+            if component_name in modeldata._data.get(namespace, {}):
                 data = modeldata._data[namespace][component_name]
             if data is not None:
                 break
 
         generate_debug_messages = is_debug_set(logger)
         if generate_debug_messages:
-            _blockName = "Model" if self.parent_block() is None \
-                else "Block '%s'" % self.name
-            logger.debug( "Constructing %s '%s' on %s from data=%s",
-                          declaration.__class__.__name__,
-                          declaration.name, _blockName, str(data) )
+            _blockName = (
+                "Model" if self.parent_block() is None else "Block '%s'" % self.name
+            )
+            logger.debug(
+                "Constructing %s '%s' on %s from data=%s",
+                declaration.__class__.__name__,
+                declaration.name,
+                _blockName,
+                str(data),
+            )
         try:
             declaration.construct(data)
         except:
             err = sys.exc_info()[1]
             logger.error(
                 "Constructing component '%s' from data=%s failed:\n    %s: %s",
-                str(declaration.name), str(data).strip(),
-                type(err).__name__, err )
+                str(declaration.name),
+                str(data).strip(),
+                type(err).__name__,
+                err,
+            )
             raise
 
         if generate_debug_messages:
             _out = StringIO()
             declaration.pprint(ostream=_out)
-            logger.debug("Constructed component '%s':\n    %s"
-                         % ( declaration.name, _out.getvalue()))
+            logger.debug(
+                "Constructed component '%s':\n    %s"
+                % (declaration.name, _out.getvalue())
+            )
 
         if profile_memory >= 2 and pympler_available:
             mem_used = pympler.muppy.get_size(pympler.muppy.get_objects())
-            print("      Total memory = %d bytes following construction of component=%s" % (mem_used, component_name))
+            print(
+                "      Total memory = %d bytes following construction of component=%s"
+                % (mem_used, component_name)
+            )
 
             if profile_memory >= 3:
                 gc.collect()
                 mem_used = pympler.muppy.get_size(pympler.muppy.get_objects())
-                print("      Total memory = %d bytes following construction of component=%s (after garbage collection)" % (mem_used, component_name))
+                print(
+                    "      Total memory = %d bytes following construction of component=%s (after garbage collection)"
+                    % (mem_used, component_name)
+                )
 
 
-@ModelComponentFactory.register('A concrete optimization model that does not defer construction of components.')
+@ModelComponentFactory.register(
+    'A concrete optimization model that does not defer construction of components.'
+)
 class ConcreteModel(Model):
     """
     A concrete optimization model that does not defer construction of
@@ -859,7 +918,9 @@ class ConcreteModel(Model):
         Model.__init__(self, *args, **kwds)
 
 
-@ModelComponentFactory.register('An abstract optimization model that defers construction of components.')
+@ModelComponentFactory.register(
+    'An abstract optimization model that defers construction of components.'
+)
 class AbstractModel(Model):
     """
     An abstract optimization model that defers construction of
@@ -879,4 +940,3 @@ class AbstractModel(Model):
 # reserved names.
 #
 Model._Block_reserved_words = set(dir(ConcreteModel()))
-

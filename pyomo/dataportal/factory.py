@@ -9,20 +9,16 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = [
-        'DataManagerFactory',
-        'UnknownDataManager'
-        ]
+__all__ = ['DataManagerFactory', 'UnknownDataManager']
 
 import logging
 from pyomo.common import Factory
-from pyomo.common.plugin import PluginError
+from pyomo.common.plugin_base import PluginError
 
 logger = logging.getLogger('pyomo.core')
 
 
 class UnknownDataManager(object):
-
     def __init__(self, *args, **kwds):
         #
         # The 'type' is the class type of the solver instance
@@ -34,21 +30,23 @@ class UnknownDataManager(object):
 
 
 class DataManagerFactoryClass(Factory):
-
     #
     # This is the custom __call__ method
     #
     def __call__(self, _name=None, args=[], **kwds):
         if _name is None:
             return self
-        _name=str(_name)
+        _name = str(_name)
         if _name in self._cls:
             dm = self._cls[_name](**kwds)
             if not dm.available():
-                raise PluginError("Cannot process data in %s files.  The following python packages need to be installed: %s" % (_name, dm.requirements()))
+                raise PluginError(
+                    "Cannot process data in %s files.  The following python packages need to be installed: %s"
+                    % (_name, dm.requirements())
+                )
         else:
             dm = UnknownDataManager(type=_name)
         return dm
 
-DataManagerFactory = DataManagerFactoryClass('data file')
 
+DataManagerFactory = DataManagerFactoryClass('data file')

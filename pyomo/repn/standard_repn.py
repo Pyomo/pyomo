@@ -18,22 +18,16 @@ import sys
 import logging
 import itertools
 
-from pyomo.core.base import (Constraint,
-                             Objective,
-                             ComponentMap)
+from pyomo.common.numeric_types import native_types, native_numeric_types
+from pyomo.core.base import Constraint, Objective, ComponentMap
 
-from pyomo.core.expr import current as EXPR
-from pyomo.core.base.objective import (_GeneralObjectiveData,
-                                       ScalarObjective)
+import pyomo.core.expr as EXPR
+from pyomo.core.expr.numvalue import NumericConstant
+from pyomo.core.base.objective import _GeneralObjectiveData, ScalarObjective
 from pyomo.core.base import _ExpressionData, Expression
 from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
-from pyomo.core.base.var import (ScalarVar,
-                                 Var,
-                                 _GeneralVarData,
-                                 value)
+from pyomo.core.base.var import ScalarVar, Var, _GeneralVarData, value
 from pyomo.core.base.param import ScalarParam, _ParamData
-from pyomo.core.base.numvalue import (NumericConstant,
-                                      native_numeric_types)
 from pyomo.core.kernel.expression import expression, noclone
 from pyomo.core.kernel.variable import IVariable, variable
 from pyomo.core.kernel.objective import objective
@@ -54,7 +48,7 @@ def isclose_const(a, b, rel_tol=1e-9, abs_tol=0.0):
             a = value(a)
         else:
             return False
-    return abs(a-b) <= max( rel_tol * max(abs(a), abs(b)), abs_tol )
+    return abs(a - b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
 
 
 class StandardRepn(object):
@@ -65,13 +59,15 @@ class StandardRepn(object):
     TODO: define what "efficient" means to us.
     """
 
-    __slots__ = ('constant',          # The constant term
-                 'linear_coefs',      # Linear coefficients
-                 'linear_vars',       # Linear variables
-                 'quadratic_coefs',   # Quadratic coefficients
-                 'quadratic_vars',    # Quadratic variables
-                 'nonlinear_expr',    # Nonlinear expression
-                 'nonlinear_vars')    # Variables that appear in the nonlinear expression
+    __slots__ = (
+        'constant',  # The constant term
+        'linear_coefs',  # Linear coefficients
+        'linear_vars',  # Linear variables
+        'quadratic_coefs',  # Quadratic coefficients
+        'quadratic_vars',  # Quadratic variables
+        'nonlinear_expr',  # Nonlinear expression
+        'nonlinear_vars',
+    )  # Variables that appear in the nonlinear expression
 
     def __init__(self):
         self.constant = 0
@@ -86,39 +82,55 @@ class StandardRepn(object):
         """
         This method is required because this class uses slots.
         """
-        return  (self.constant,
-                 self.linear_coefs,
-                 self.linear_vars,
-                 self.quadratic_coefs,
-                 self.quadratic_vars,
-                 self.nonlinear_expr,
-                 self.nonlinear_vars)
+        return (
+            self.constant,
+            self.linear_coefs,
+            self.linear_vars,
+            self.quadratic_coefs,
+            self.quadratic_vars,
+            self.nonlinear_expr,
+            self.nonlinear_vars,
+        )
 
     def __setstate__(self, state):
         """
         This method is required because this class uses slots.
         """
-        self.constant, \
-        self.linear_coefs, \
-        self.linear_vars, \
-        self.quadratic_coefs, \
-        self.quadratic_vars, \
-        self.nonlinear_expr, \
-        self.nonlinear_vars = state
+        (
+            self.constant,
+            self.linear_coefs,
+            self.linear_vars,
+            self.quadratic_coefs,
+            self.quadratic_vars,
+            self.nonlinear_expr,
+            self.nonlinear_vars,
+        ) = state
 
     #
     # Generate a string representation of the expression
     #
-    def __str__(self):          #pragma: nocover
+    def __str__(self):  # pragma: nocover
         output = StringIO()
         output.write("\n")
-        output.write("constant:       "+str(self.constant)+"\n")
-        output.write("linear vars:    "+str([v_.name for v_ in self.linear_vars])+"\n")
-        output.write("linear var ids: "+str([id(v_) for v_ in self.linear_vars])+"\n")
-        output.write("linear coef:    "+str(list(self.linear_coefs))+"\n")
-        output.write("quadratic vars:    "+str([(v_[0].name,v_[1].name) for v_ in self.quadratic_vars])+"\n")
-        output.write("quadratic var ids: "+str([(id(v_[0]), id(v_[1])) for v_ in self.quadratic_vars])+"\n")
-        output.write("quadratic coef:    "+str(list(self.quadratic_coefs))+"\n")
+        output.write("constant:       " + str(self.constant) + "\n")
+        output.write(
+            "linear vars:    " + str([v_.name for v_ in self.linear_vars]) + "\n"
+        )
+        output.write(
+            "linear var ids: " + str([id(v_) for v_ in self.linear_vars]) + "\n"
+        )
+        output.write("linear coef:    " + str(list(self.linear_coefs)) + "\n")
+        output.write(
+            "quadratic vars:    "
+            + str([(v_[0].name, v_[1].name) for v_ in self.quadratic_vars])
+            + "\n"
+        )
+        output.write(
+            "quadratic var ids: "
+            + str([(id(v_[0]), id(v_[1])) for v_ in self.quadratic_vars])
+            + "\n"
+        )
+        output.write("quadratic coef:    " + str(list(self.quadratic_coefs)) + "\n")
         if self.nonlinear_expr is None:
             output.write("nonlinear expr: None\n")
         else:
@@ -129,7 +141,9 @@ class StandardRepn(object):
             except AttributeError:
                 output.write(str(self.nonlinear_expr))
                 output.write("\n")
-        output.write("nonlinear vars: "+str([v_.name for v_ in self.nonlinear_vars])+"\n")
+        output.write(
+            "nonlinear vars: " + str([v_.name for v_ in self.nonlinear_vars]) + "\n"
+        )
         output.write("\n")
 
         ret_str = output.getvalue()
@@ -137,7 +151,11 @@ class StandardRepn(object):
         return ret_str
 
     def is_fixed(self):
-        if len(self.linear_vars) == 0 and len(self.nonlinear_vars) == 0 and len(self.quadratic_vars) == 0:
+        if (
+            len(self.linear_vars) == 0
+            and len(self.nonlinear_vars) == 0
+            and len(self.quadratic_vars) == 0
+        ):
             return True
         return False
 
@@ -151,7 +169,11 @@ class StandardRepn(object):
         return 0
 
     def is_constant(self):
-        return self.nonlinear_expr is None and len(self.quadratic_coefs) == 0 and len(self.linear_coefs) == 0
+        return (
+            self.nonlinear_expr is None
+            and len(self.quadratic_coefs) == 0
+            and len(self.linear_coefs) == 0
+        )
 
     def is_linear(self):
         return self.nonlinear_expr is None and len(self.quadratic_coefs) == 0
@@ -173,31 +195,33 @@ class StandardRepn(object):
         #
         expr = self.constant
 
-        lvars = [(i,v) for i,v in enumerate(self.linear_vars)]
+        lvars = [(i, v) for i, v in enumerate(self.linear_vars)]
         if sort:
             lvars = sorted(lvars, key=lambda x: str(x[1]))
-        for i,v in lvars:
+        for i, v in lvars:
             c = self.linear_coefs[i]
             if c.__class__ in native_numeric_types:
+                if not c:
+                    pass
                 if isclose_const(c, 1.0):
                     expr += v
                 elif isclose_const(c, -1.0):
                     expr -= v
                 elif c < 0.0:
-                    expr -= - c*v
+                    expr -= -c * v
                 else:
-                    expr += c*v
+                    expr += c * v
             else:
-                expr += c*v
+                expr += c * v
 
-        qvars = [(i,v) for i,v in enumerate(self.quadratic_vars)]
+        qvars = [(i, v) for i, v in enumerate(self.quadratic_vars)]
         if sort:
             qvars = sorted(qvars, key=lambda x: (str(x[1][0]), str(x[1][1])))
-        for i,v in qvars:
+        for i, v in qvars:
             if id(v[0]) == id(v[1]):
-                term = v[0]**2
+                term = v[0] ** 2
             else:
-                term = v[0]*v[1]
+                term = v[0] * v[1]
             c = self.quadratic_coefs[i]
             if c.__class__ in native_numeric_types:
                 if isclose_const(c, 1.0):
@@ -205,9 +229,9 @@ class StandardRepn(object):
                 elif isclose_const(c, -1.0):
                     expr -= term
                 else:
-                    expr += c*term
+                    expr += c * term
             else:
-                expr += c*term
+                expr += c * term
 
         if self.nonlinear_expr is not None:
             if expr.__class__ in native_numeric_types and expr == 0:
@@ -230,8 +254,12 @@ representations be temporary.  They should be used to interface
 to a solver and then be deleted.
 
 """
-#@profile
-def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False, quadratic=True, repn=None):
+
+
+# @profile
+def generate_standard_repn(
+    expr, idMap=None, compute_values=True, verbose=False, quadratic=True, repn=None
+):
     #
     # Use a custom Results object
     #
@@ -277,64 +305,68 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         # The expression is linear
         #
         elif expr.__class__ is EXPR.LinearExpression:
+            linear_coefs = {}
+            linear_vars = {}
+            C_ = 0
             if compute_values:
-                C_ = EXPR.evaluate_expression(expr.constant)
-            else:
-                C_ = expr.constant
-            if compute_values:
-                linear_coefs = {}
-                for c,v in zip(expr.linear_coefs, expr.linear_vars):
-                    if c.__class__ in native_numeric_types:
-                        cval = c
-                    elif c.is_expression_type():
-                        cval = EXPR.evaluate_expression(c)
-                    else:
-                        cval = value(c)
-                    if v.fixed:
-                        C_ += cval * v.value
-                    else:
+                for arg in expr.args:
+                    if arg.__class__ is EXPR.MonomialTermExpression:
+                        c, v = arg.args
+                        if c.__class__ not in native_numeric_types:
+                            c = EXPR.evaluate_expression(c)
+                        if v.fixed:
+                            C_ += c * v.value
+                            continue
                         id_ = id(v)
-                        if not id_ in idMap[None]:
-                            key = len(idMap) - 1
-                            idMap[None][id_] = key
-                            idMap[key] = v
+                        if id_ in linear_coefs:
+                            linear_coefs[id_] += c
                         else:
-                            key = idMap[None][id_]
-                        if key in linear_coefs:
-                            linear_coefs[key] += cval
-                        else:
-                            linear_coefs[key] = cval
-                keys = list(linear_coefs.keys())
-                repn.linear_vars = tuple(idMap[key] for key in keys)
-                repn.linear_coefs = tuple(linear_coefs[key] for key in keys)
-            else:
-                linear_coefs = {}
-                for c,v in zip(expr.linear_coefs, expr.linear_vars):
-                    if v.fixed:
-                        C_ += c*v
+                            linear_coefs[id_] = c
+                            linear_vars[id_] = v
+                    elif arg.__class__ in native_numeric_types:
+                        C_ += arg
                     else:
+                        C_ += EXPR.evaluate_expression(arg)
+            else:  # compute_values == False
+                for arg in expr.args:
+                    if arg.__class__ is EXPR.MonomialTermExpression:
+                        c, v = arg.args
+                        if v.fixed:
+                            C_ += c * v
+                            continue
                         id_ = id(v)
-                        if not id_ in idMap[None]:
-                            key = len(idMap) - 1
-                            idMap[None][id_] = key
-                            idMap[key] = v
+                        if id_ in linear_coefs:
+                            linear_coefs[id_] += c
                         else:
-                            key = idMap[None][id_]
-                        if key in linear_coefs:
-                            linear_coefs[key] += c
-                        else:
-                            linear_coefs[key] = c
-                keys = list(linear_coefs.keys())
-                repn.linear_vars = tuple(idMap[key] for key in keys)
-                repn.linear_coefs = tuple(linear_coefs[key] for key in keys)
+                            linear_coefs[id_] = c
+                            linear_vars[id_] = v
+                    else:
+                        C_ += arg
+
+            vars_ = []
+            coef_ = []
+            for id_, coef in linear_coefs.items():
+                if coef.__class__ in native_numeric_types and not coef:
+                    continue
+                if id_ not in idMap[None]:
+                    key = len(idMap) - 1
+                    idMap[None][id_] = key
+                    idMap[key] = linear_vars[id_]
+                else:
+                    key = idMap[None][id_]
+                vars_.append(idMap[key])
+                coef_.append(coef)
+
+            repn.linear_vars = tuple(vars_)
+            repn.linear_coefs = tuple(coef_)
             repn.constant = C_
             return repn
 
         #
         # Unknown expression object
         #
-        elif not expr.is_expression_type():         #pragma: nocover
-            raise ValueError("Unexpected expression type: "+str(expr))
+        elif not expr.is_expression_type():  # pragma: nocover
+            raise ValueError("Unexpected expression type: " + str(expr))
 
         #
         # WEH - Checking the polynomial degree didn't
@@ -342,26 +374,30 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         #       in as a comment for now, since we're not
         #       done tuning this code.
         #
-        #degree = expr.polynomial_degree()
-        #if degree == 1:
+        # degree = expr.polynomial_degree()
+        # if degree == 1:
         #    return _generate_linear_standard_repn(expr,
         #                        idMap=idMap,
         #                        compute_values=compute_values,
         #                        verbose=verbose,
         #                        repn=repn)
-        #else:
-        return _generate_standard_repn(expr,
-                                idMap=idMap,
-                                compute_values=compute_values,
-                                verbose=verbose,
-                                quadratic=quadratic,
-                                repn=repn)
+        # else:
+        return _generate_standard_repn(
+            expr,
+            idMap=idMap,
+            compute_values=compute_values,
+            verbose=verbose,
+            quadratic=quadratic,
+            repn=repn,
+        )
+
 
 ##-----------------------------------------------------------------------
 ##
 ## Logic for _generate_standard_repn
 ##
 ##-----------------------------------------------------------------------
+
 
 class ResultsWithQuadratics(object):
     __slot__ = ('const', 'nonl', 'linear', 'quadratic')
@@ -370,18 +406,24 @@ class ResultsWithQuadratics(object):
         self.constant = constant
         self.nonl = nonl
         self.linear = {}
-        #if linear is None:
+        # if linear is None:
         #    self.linear = {}
-        #else:
+        # else:
         #    self.linear = linear
         self.quadratic = {}
-        #if quadratic is None:
+        # if quadratic is None:
         #    self.quadratic = {}
-        #else:
+        # else:
         #    self.quadratic = quadratic
 
-    def __str__(self):          #pragma: nocover
-        return "Const:\t%s\nLinear:\t%s\nQuadratic:\t%s\nNonlinear:\t%s" % (str(self.constant), str(self.linear), str(self.quadratic), str(self.nonl))
+    def __str__(self):  # pragma: nocover
+        return "Const:\t%s\nLinear:\t%s\nQuadratic:\t%s\nNonlinear:\t%s" % (
+            str(self.constant),
+            str(self.linear),
+            str(self.quadratic),
+            str(self.nonl),
+        )
+
 
 class ResultsWithoutQuadratics(object):
     __slot__ = ('const', 'nonl', 'linear')
@@ -390,18 +432,23 @@ class ResultsWithoutQuadratics(object):
         self.constant = constant
         self.nonl = nonl
         self.linear = {}
-        #if linear is None:
+        # if linear is None:
         #    self.linear = {}
-        #else:
+        # else:
         #    self.linear = linear
 
-    def __str__(self):          #pragma: nocover
-        return "Const:\t%s\nLinear:\t%s\nNonlinear:\t%s" % (str(self.constant), str(self.linear), str(self.nonl))
+    def __str__(self):  # pragma: nocover
+        return "Const:\t%s\nLinear:\t%s\nNonlinear:\t%s" % (
+            str(self.constant),
+            str(self.linear),
+            str(self.nonl),
+        )
+
 
 Results = ResultsWithQuadratics
 
 
-#@profile
+# @profile
 def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
     ans = Results()
     nonl = []
@@ -409,14 +456,19 @@ def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
 
     for e_ in itertools.islice(exp._args_, exp.nargs()):
         if e_.__class__ is EXPR.MonomialTermExpression:
-            lhs, v = e_._args_
-            if compute_values and not lhs.__class__ in native_numeric_types:
+            lhs, v = e_.args
+            if lhs.__class__ in native_numeric_types:
+                if not lhs:
+                    continue
+            elif compute_values:
                 lhs = value(lhs)
+                if not lhs:
+                    continue
             if v.fixed:
                 if compute_values:
-                    ans.constant += multiplier*lhs*value(v)
+                    ans.constant += multiplier * lhs * value(v)
                 else:
-                    ans.constant += multiplier*lhs*v
+                    ans.constant += multiplier * lhs * v
             else:
                 id_ = id(v)
                 if id_ in varkeys:
@@ -426,17 +478,17 @@ def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
                     varkeys[id_] = key
                     idMap[key] = v
                 if key in ans.linear:
-                    ans.linear[key] += multiplier*lhs
+                    ans.linear[key] += multiplier * lhs
                 else:
-                    ans.linear[key] = multiplier*lhs
+                    ans.linear[key] = multiplier * lhs
         elif e_.__class__ in native_numeric_types:
-            ans.constant += multiplier*e_
+            ans.constant += multiplier * e_
         elif e_.is_variable_type():
             if e_.fixed:
                 if compute_values:
-                    ans.constant += multiplier*e_.value
+                    ans.constant += multiplier * e_.value
                 else:
-                    ans.constant += multiplier*e_
+                    ans.constant += multiplier * e_
             else:
                 id_ = id(e_)
                 if id_ in varkeys:
@@ -455,16 +507,17 @@ def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
             else:
                 ans.constant += multiplier * e_
         else:
-            res_ = _collect_standard_repn(e_, multiplier, idMap,
-                                      compute_values, verbose, quadratic)
+            res_ = _collect_standard_repn(
+                e_, multiplier, idMap, compute_values, verbose, quadratic
+            )
             #
             # Add returned from recursion
             #
             ans.constant += res_.constant
             if not (res_.nonl.__class__ in native_numeric_types and res_.nonl == 0):
                 nonl.append(res_.nonl)
-            for i in res_.linear:
-                ans.linear[i] = ans.linear.get(i,0) + res_.linear[i]
+            for i, v in res_.linear.items():
+                ans.linear[i] = ans.linear.get(i, 0) + v
             if quadratic:
                 for i in res_.quadratic:
                     ans.quadratic[i] = ans.quadratic.get(i, 0) + res_.quadratic[i]
@@ -474,18 +527,32 @@ def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
             ans.nonl = nonl[0]
         else:
             ans.nonl = EXPR.SumExpression(nonl)
+    zero_coef = [
+        k
+        for k, coef in ans.linear.items()
+        if coef.__class__ in native_numeric_types and not coef
+    ]
+    for k in zero_coef:
+        ans.linear.pop(k)
     return ans
 
-#@profile
+
+# @profile
 def _collect_term(exp, multiplier, idMap, compute_values, verbose, quadratic):
     #
     # LHS is a numeric value
     #
     if exp._args_[0].__class__ in native_numeric_types:
-        if exp._args_[0] == 0:                          # TODO: coverage?
+        if exp._args_[0] == 0:  # TODO: coverage?
             return Results()
-        return _collect_standard_repn(exp._args_[1], multiplier * exp._args_[0], idMap,
-                                  compute_values, verbose, quadratic)
+        return _collect_standard_repn(
+            exp._args_[1],
+            multiplier * exp._args_[0],
+            idMap,
+            compute_values,
+            verbose,
+            quadratic,
+        )
     #
     # LHS is a non-variable expression
     #
@@ -494,29 +561,54 @@ def _collect_term(exp, multiplier, idMap, compute_values, verbose, quadratic):
             val = value(exp._args_[0])
             if val == 0:
                 return Results()
-            return _collect_standard_repn(exp._args_[1], multiplier * val, idMap,
-                                  compute_values, verbose, quadratic)
+            return _collect_standard_repn(
+                exp._args_[1],
+                multiplier * val,
+                idMap,
+                compute_values,
+                verbose,
+                quadratic,
+            )
         else:
-            return _collect_standard_repn(exp._args_[1], multiplier*exp._args_[0], idMap,
-                                  compute_values, verbose, quadratic)
+            return _collect_standard_repn(
+                exp._args_[1],
+                multiplier * exp._args_[0],
+                idMap,
+                compute_values,
+                verbose,
+                quadratic,
+            )
+
 
 def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
     #
     # LHS is a numeric value
     #
     if exp._args_[0].__class__ in native_numeric_types:
-        if exp._args_[0] == 0:                          # TODO: coverage?
+        if exp._args_[0] == 0:  # TODO: coverage?
             return Results()
-        return _collect_standard_repn(exp._args_[1], multiplier * exp._args_[0], idMap,
-                                  compute_values, verbose, quadratic)
+        return _collect_standard_repn(
+            exp._args_[1],
+            multiplier * exp._args_[0],
+            idMap,
+            compute_values,
+            verbose,
+            quadratic,
+        )
     #
     # RHS is a numeric value
     #
     if exp._args_[1].__class__ in native_numeric_types:
-        if exp._args_[1] == 0:                          # TODO: coverage?
+        if exp._args_[1] == 0:  # TODO: coverage?
             return Results()
-        return _collect_standard_repn(exp._args_[0], multiplier * exp._args_[1], idMap,
-                                  compute_values, verbose, quadratic)
+        return _collect_standard_repn(
+            exp._args_[0],
+            multiplier * exp._args_[1],
+            idMap,
+            compute_values,
+            verbose,
+            quadratic,
+        )
     #
     # LHS is a non-variable expression
     #
@@ -525,11 +617,23 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
             val = value(exp._args_[0])
             if val == 0:
                 return Results()
-            return _collect_standard_repn(exp._args_[1], multiplier * val, idMap,
-                                  compute_values, verbose, quadratic)
+            return _collect_standard_repn(
+                exp._args_[1],
+                multiplier * val,
+                idMap,
+                compute_values,
+                verbose,
+                quadratic,
+            )
         else:
-            return _collect_standard_repn(exp._args_[1], multiplier*exp._args_[0], idMap,
-                                  compute_values, verbose, quadratic)
+            return _collect_standard_repn(
+                exp._args_[1],
+                multiplier * exp._args_[0],
+                idMap,
+                compute_values,
+                verbose,
+                quadratic,
+            )
     #
     # RHS is a non-variable expression
     #
@@ -538,108 +642,168 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
             val = value(exp._args_[1])
             if val == 0:
                 return Results()
-            return _collect_standard_repn(exp._args_[0], multiplier * val, idMap,
-                                  compute_values, verbose, quadratic)
+            return _collect_standard_repn(
+                exp._args_[0],
+                multiplier * val,
+                idMap,
+                compute_values,
+                verbose,
+                quadratic,
+            )
         else:
-            return _collect_standard_repn(exp._args_[0], multiplier*exp._args_[1], idMap,
-                                  compute_values, verbose, quadratic)
+            return _collect_standard_repn(
+                exp._args_[0],
+                multiplier * exp._args_[1],
+                idMap,
+                compute_values,
+                verbose,
+                quadratic,
+            )
     #
     # Both the LHS and RHS are potentially variable ...
     #
     # Collect LHS
     #
-    lhs = _collect_standard_repn(exp._args_[0], 1, idMap,
-                                  compute_values, verbose, quadratic)
-    lhs_nonl_None = lhs.nonl.__class__ in native_numeric_types and lhs.nonl == 0
+    lhs = _collect_standard_repn(
+        exp._args_[0], 1, idMap, compute_values, verbose, quadratic
+    )
+    lhs_nonl_None = lhs.nonl.__class__ in native_numeric_types and not lhs.nonl
     #
     # LHS is potentially variable, but it turns out to be a constant
     # because the variables were fixed.
     #
-    if lhs_nonl_None and len(lhs.linear) == 0 and (not quadratic or len(lhs.quadratic) == 0):
+    if (
+        lhs_nonl_None
+        and len(lhs.linear) == 0
+        and (not quadratic or len(lhs.quadratic) == 0)
+    ):
         if lhs.constant.__class__ in native_numeric_types and lhs.constant == 0:
             return Results()
         if compute_values:
             val = value(lhs.constant)
-            if val == 0:                            # TODO: coverage?
+            if val == 0:  # TODO: coverage?
                 return Results()
-            return _collect_standard_repn(exp._args_[1], multiplier*val, idMap,
-                                  compute_values, verbose, quadratic)
+            return _collect_standard_repn(
+                exp._args_[1],
+                multiplier * val,
+                idMap,
+                compute_values,
+                verbose,
+                quadratic,
+            )
         else:
-            return _collect_standard_repn(exp._args_[1], multiplier*lhs.constant, idMap,
-                                  compute_values, verbose, quadratic)
+            return _collect_standard_repn(
+                exp._args_[1],
+                multiplier * lhs.constant,
+                idMap,
+                compute_values,
+                verbose,
+                quadratic,
+            )
     #
     # Collect RHS
     #
-    rhs = _collect_standard_repn(exp._args_[1], 1, idMap,
-                                  compute_values, verbose, quadratic)
-    rhs_nonl_None = rhs.nonl.__class__ in native_numeric_types and rhs.nonl == 0
+    rhs = _collect_standard_repn(
+        exp._args_[1], 1, idMap, compute_values, verbose, quadratic
+    )
+    rhs_nonl_None = rhs.nonl.__class__ in native_numeric_types and not rhs.nonl
     #
     # If RHS is zero, then return an empty results
     #
-    if rhs_nonl_None and len(rhs.linear) == 0 and (not quadratic or len(rhs.quadratic) == 0) and rhs.constant.__class__ in native_numeric_types and rhs.constant == 0:
+    if (
+        rhs_nonl_None
+        and len(rhs.linear) == 0
+        and (not quadratic or len(rhs.quadratic) == 0)
+        and rhs.constant.__class__ in native_numeric_types
+        and rhs.constant == 0
+    ):
         return Results()
     #
     # If either the LHS or RHS are nonlinear, then simply return the nonlinear expression
     #
     if not lhs_nonl_None or not rhs_nonl_None:
-        return Results(nonl=multiplier*exp)
+        return Results(nonl=multiplier * exp)
 
     # If the resulting expression has a polynomial degree greater than 2
     # (1 if quadratic is False), then simply return this as a general
     # nonlinear expression
     #
-    if ( max(1 if lhs.linear else 0, 2 if quadratic and lhs.quadratic else 0) +
-         max(1 if rhs.linear else 0, 2 if quadratic and rhs.quadratic else 0)
-         > (2 if quadratic else 1) ):
-        return Results(nonl=multiplier*exp)
+    if max(1 if lhs.linear else 0, 2 if quadratic and lhs.quadratic else 0) + max(
+        1 if rhs.linear else 0, 2 if quadratic and rhs.quadratic else 0
+    ) > (2 if quadratic else 1):
+        return Results(nonl=multiplier * exp)
 
     ans = Results()
-    ans.constant = multiplier*lhs.constant * rhs.constant
+    ans.constant = multiplier * lhs.constant * rhs.constant
     if not (lhs.constant.__class__ in native_numeric_types and lhs.constant == 0):
         for key, coef in rhs.linear.items():
-            ans.linear[key] = multiplier*coef*lhs.constant
+            ans.linear[key] = multiplier * coef * lhs.constant
     if not (rhs.constant.__class__ in native_numeric_types and rhs.constant == 0):
         for key, coef in lhs.linear.items():
             if key in ans.linear:
-                ans.linear[key] += multiplier*coef*rhs.constant
+                ans.linear[key] += multiplier * coef * rhs.constant
             else:
-                ans.linear[key] = multiplier*coef*rhs.constant
+                ans.linear[key] = multiplier * coef * rhs.constant
 
     if quadratic:
         if not (lhs.constant.__class__ in native_numeric_types and lhs.constant == 0):
             for key, coef in rhs.quadratic.items():
-                ans.quadratic[key] = multiplier*coef*lhs.constant
+                ans.quadratic[key] = multiplier * coef * lhs.constant
         if not (rhs.constant.__class__ in native_numeric_types and rhs.constant == 0):
             for key, coef in lhs.quadratic.items():
                 if key in ans.quadratic:
-                    ans.quadratic[key] += multiplier*coef*rhs.constant
+                    ans.quadratic[key] += multiplier * coef * rhs.constant
                 else:
-                    ans.quadratic[key] = multiplier*coef*rhs.constant
+                    ans.quadratic[key] = multiplier * coef * rhs.constant
         for lkey, lcoef in lhs.linear.items():
             for rkey, rcoef in rhs.linear.items():
                 ndx = (lkey, rkey) if lkey <= rkey else (rkey, lkey)
                 if ndx in ans.quadratic:
-                    ans.quadratic[ndx] += multiplier*lcoef*rcoef
+                    ans.quadratic[ndx] += multiplier * lcoef * rcoef
                 else:
-                    ans.quadratic[ndx] = multiplier*lcoef*rcoef
+                    ans.quadratic[ndx] = multiplier * lcoef * rcoef
         # TODO - Use quicksum here?
-        el_linear = multiplier*sum(coef*idMap[key] for key, coef in lhs.linear.items())
-        er_linear = multiplier*sum(coef*idMap[key] for key, coef in rhs.linear.items())
-        el_quadratic = multiplier*sum(coef*idMap[key[0]]*idMap[key[1]] for key, coef in lhs.quadratic.items())
-        er_quadratic = multiplier*sum(coef*idMap[key[0]]*idMap[key[1]] for key, coef in rhs.quadratic.items())
-        ans.nonl += el_linear*er_quadratic + el_quadratic*er_linear
+        el_linear = multiplier * sum(
+            coef * idMap[key]
+            for key, coef in lhs.linear.items()
+            if coef.__class__ not in native_numeric_types or coef
+        )
+        er_linear = multiplier * sum(
+            coef * idMap[key]
+            for key, coef in rhs.linear.items()
+            if coef.__class__ not in native_numeric_types or coef
+        )
+        el_quadratic = multiplier * sum(
+            coef * idMap[key[0]] * idMap[key[1]]
+            for key, coef in lhs.quadratic.items()
+            if coef.__class__ not in native_numeric_types or coef
+        )
+        er_quadratic = multiplier * sum(
+            coef * idMap[key[0]] * idMap[key[1]]
+            for key, coef in rhs.quadratic.items()
+            if coef.__class__ not in native_numeric_types or coef
+        )
+        if (el_linear.__class__ not in native_numeric_types or el_linear) and (
+            er_quadratic.__class__ not in native_numeric_types or er_quadratic
+        ):
+            ans.nonl += el_linear * er_quadratic
+        if (er_linear.__class__ not in native_numeric_types or er_linear) and (
+            el_quadratic.__class__ not in native_numeric_types or el_quadratic
+        ):
+            ans.nonl += er_linear * el_quadratic
 
     return ans
 
-#@profile
+
+# @profile
 def _collect_var(exp, multiplier, idMap, compute_values, verbose, quadratic):
     ans = Results()
 
     if exp.fixed:
         if compute_values:
-            ans.constant += multiplier*value(exp)
+            ans.constant += multiplier * value(exp)
         else:
-            ans.constant += multiplier*exp
+            ans.constant += multiplier * exp
     else:
         id_ = id(exp)
         if id_ in idMap[None]:
@@ -651,6 +815,7 @@ def _collect_var(exp, multiplier, idMap, compute_values, verbose, quadratic):
         ans.linear[key] = multiplier
 
     return ans
+
 
 def _collect_pow(exp, multiplier, idMap, compute_values, verbose, quadratic):
     #
@@ -672,12 +837,18 @@ def _collect_pow(exp, multiplier, idMap, compute_values, verbose, quadratic):
     # Otherwise collect a standard repn
     #
     else:
-        res = _collect_standard_repn(exp._args_[1], 1, idMap, compute_values, verbose, quadratic)
+        res = _collect_standard_repn(
+            exp._args_[1], 1, idMap, compute_values, verbose, quadratic
+        )
         #
         # If the expression is variable, then return a nonlinear expression
         #
-        if not (res.nonl.__class__ in native_numeric_types and res.nonl == 0) or len(res.linear) > 0 or (quadratic and len(res.quadratic) > 0):
-            return Results(nonl=multiplier*exp)
+        if (
+            not (res.nonl.__class__ in native_numeric_types and res.nonl == 0)
+            or len(res.linear) > 0
+            or (quadratic and len(res.quadratic) > 0)
+        ):
+            return Results(nonl=multiplier * exp)
         exponent = res.constant
 
     if exponent.__class__ in native_numeric_types:
@@ -692,32 +863,40 @@ def _collect_pow(exp, multiplier, idMap, compute_values, verbose, quadratic):
         # Return the standard repn for arg(0)
         #
         elif exponent == 1:
-            return _collect_standard_repn(exp._args_[0], multiplier, idMap, compute_values, verbose, quadratic)
+            return _collect_standard_repn(
+                exp._args_[0], multiplier, idMap, compute_values, verbose, quadratic
+            )
         #
         # Ignore #**2 unless quadratic==True
         #
         elif exponent == 2 and quadratic:
-            res =_collect_standard_repn(exp._args_[0], 1, idMap, compute_values, verbose, quadratic)
+            res = _collect_standard_repn(
+                exp._args_[0], 1, idMap, compute_values, verbose, quadratic
+            )
             #
             # If arg(0) is nonlinear, then this is a nonlinear repn
             #
-            if not (res.nonl.__class__ in native_numeric_types and res.nonl == 0) or len(res.quadratic) > 0:
-                return Results(nonl=multiplier*exp)
+            if (
+                not (res.nonl.__class__ in native_numeric_types and res.nonl == 0)
+                or len(res.quadratic) > 0
+            ):
+                return Results(nonl=multiplier * exp)
             #
             # If computing values and no linear terms, then the return a constant repn
             #
             elif compute_values and len(res.linear) == 0:
-                return Results(constant=multiplier*res.constant**exponent)
+                return Results(constant=multiplier * res.constant**exponent)
             #
             # If the base is linear, then we compute the quadratic expression for it.
             #
             else:
                 ans = Results()
-                has_constant = (res.constant.__class__
-                                not in native_numeric_types
-                                or res.constant != 0)
+                has_constant = (
+                    res.constant.__class__ not in native_numeric_types
+                    or res.constant != 0
+                )
                 if has_constant:
-                    ans.constant = multiplier*res.constant*res.constant
+                    ans.constant = multiplier * res.constant * res.constant
 
                 # this is reversed since we want to pop off the end for efficiency
                 # and the quadratic terms have a convention that the indexing tuple
@@ -727,11 +906,11 @@ def _collect_pow(exp, multiplier, idMap, compute_values, verbose, quadratic):
                     key1 = keys.pop()
                     coef1 = res.linear[key1]
                     if has_constant:
-                        ans.linear[key1] = 2*multiplier*coef1*res.constant
-                    ans.quadratic[key1,key1] = multiplier*coef1*coef1
+                        ans.linear[key1] = 2 * multiplier * coef1 * res.constant
+                    ans.quadratic[key1, key1] = multiplier * coef1 * coef1
                     for key2 in keys:
                         coef2 = res.linear[key2]
-                        ans.quadratic[key1,key2] = 2*multiplier*coef1*coef2
+                        ans.quadratic[key1, key2] = 2 * multiplier * coef1 * coef2
                 return ans
 
     #
@@ -739,128 +918,177 @@ def _collect_pow(exp, multiplier, idMap, compute_values, verbose, quadratic):
     #
     if exp._args_[0].__class__ in native_numeric_types or exp._args_[0].is_fixed():
         if compute_values:
-            return Results(constant=multiplier*value(exp._args_[0])**exponent)
+            return Results(constant=multiplier * value(exp._args_[0]) ** exponent)
         else:
-            return Results(constant=multiplier*exp)
+            return Results(constant=multiplier * exp)
     #
     # Return a nonlinear expression here
     #
-    return Results(nonl=multiplier*exp)
+    return Results(nonl=multiplier * exp)
+
 
 def _collect_division(exp, multiplier, idMap, compute_values, verbose, quadratic):
-    if exp._args_[1].__class__ in native_numeric_types or not exp._args_[1].is_potentially_variable():  # TODO: coverage?
+    if (
+        exp._args_[1].__class__ in native_numeric_types
+        or not exp._args_[1].is_potentially_variable()
+    ):  # TODO: coverage?
         # Denominator is trivially constant
         if compute_values:
             denom = 1.0 * value(exp._args_[1])
         else:
             denom = 1.0 * exp._args_[1]
     else:
-        res =_collect_standard_repn(exp._args_[1], 1, idMap, compute_values, verbose, quadratic)
-        if not (res.nonl.__class__ in native_numeric_types and res.nonl == 0) or len(res.linear) > 0 or (quadratic and len(res.quadratic) > 0):
+        res = _collect_standard_repn(
+            exp._args_[1], 1, idMap, compute_values, verbose, quadratic
+        )
+        if (
+            not (res.nonl.__class__ in native_numeric_types and res.nonl == 0)
+            or len(res.linear) > 0
+            or (quadratic and len(res.quadratic) > 0)
+        ):
             # Denominator is variable, give up: this is nonlinear
-            return Results(nonl=multiplier*exp)
+            return Results(nonl=multiplier * exp)
         else:
             # Denominaor ended up evaluating to a constant
-            denom = 1.0*res.constant
+            denom = 1.0 * res.constant
     if denom.__class__ in native_numeric_types and denom == 0:
         raise ZeroDivisionError
 
-    if exp._args_[0].__class__ in native_numeric_types or not exp._args_[0].is_potentially_variable():
+    if (
+        exp._args_[0].__class__ in native_numeric_types
+        or not exp._args_[0].is_potentially_variable()
+    ):
         num = exp._args_[0]
         if compute_values:
             num = value(num)
-        return Results(constant=multiplier*num/denom)
+        return Results(constant=multiplier * num / denom)
 
-    return _collect_standard_repn(exp._args_[0], multiplier/denom, idMap, compute_values, verbose, quadratic)
+    return _collect_standard_repn(
+        exp._args_[0], multiplier / denom, idMap, compute_values, verbose, quadratic
+    )
+
 
 def _collect_branching_expr(exp, multiplier, idMap, compute_values, verbose, quadratic):
-    if exp._if.__class__ in native_numeric_types:           # TODO: coverage?
-        if_val = exp._if
-    elif not exp._if.is_potentially_variable():
+    _if, _then, _else = exp.args
+    if _if.__class__ in native_types:
+        if_val = _if
+    elif not _if.is_potentially_variable():
         if compute_values:
-            if_val = value(exp._if)
+            if_val = value(_if)
         else:
-            return Results(nonl=multiplier*exp)
+            return Results(nonl=multiplier * exp)
     else:
-        res = _collect_standard_repn(exp._if, 1, idMap, compute_values, verbose, quadratic)
-        if not (res.nonl.__class__ in native_numeric_types and res.nonl == 0) or len(res.linear) > 0 or (quadratic and len(res.quadratic) > 0):
-            return Results(nonl=multiplier*exp)
+        res = _collect_standard_repn(_if, 1, idMap, compute_values, verbose, quadratic)
+        if (
+            not (res.nonl.__class__ in native_numeric_types and res.nonl == 0)
+            or len(res.linear) > 0
+            or (quadratic and len(res.quadratic) > 0)
+        ):
+            return Results(nonl=multiplier * exp)
         elif res.constant.__class__ in native_numeric_types:
             if_val = res.constant
         else:
-            return Results(constant=multiplier*exp)
+            return Results(constant=multiplier * exp)
     if if_val:
-        if exp._then.__class__ in native_numeric_types:
-            return Results(constant=multiplier*exp._then)
-        return _collect_standard_repn(exp._then, multiplier, idMap, compute_values, verbose, quadratic)
+        if _then.__class__ in native_numeric_types:
+            return Results(constant=multiplier * _then)
+        return _collect_standard_repn(
+            _then, multiplier, idMap, compute_values, verbose, quadratic
+        )
     else:
-        if exp._else.__class__ in native_numeric_types:
-            return Results(constant=multiplier*exp._else)
-        return _collect_standard_repn(exp._else, multiplier, idMap, compute_values, verbose, quadratic)
+        if _else.__class__ in native_numeric_types:
+            return Results(constant=multiplier * _else)
+        return _collect_standard_repn(
+            _else, multiplier, idMap, compute_values, verbose, quadratic
+        )
+
 
 def _collect_nonl(exp, multiplier, idMap, compute_values, verbose, quadratic):
-    res = _collect_standard_repn(exp._args_[0], 1, idMap, compute_values, verbose, quadratic)
-    if not (res.nonl.__class__ in native_numeric_types and res.nonl == 0) or len(res.linear) > 0 or (quadratic and len(res.quadratic) > 0):
-        return Results(nonl=multiplier*exp)
+    res = _collect_standard_repn(
+        exp._args_[0], 1, idMap, compute_values, verbose, quadratic
+    )
+    if (
+        not (res.nonl.__class__ in native_numeric_types and res.nonl == 0)
+        or len(res.linear) > 0
+        or (quadratic and len(res.quadratic) > 0)
+    ):
+        return Results(nonl=multiplier * exp)
     if compute_values:
-        return Results(constant=multiplier*exp._apply_operation([res.constant]))
+        return Results(constant=multiplier * exp._apply_operation([res.constant]))
     else:
-        return Results(constant=multiplier*exp)
+        return Results(constant=multiplier * exp)
+
 
 def _collect_negation(exp, multiplier, idMap, compute_values, verbose, quadratic):
-    return _collect_standard_repn(exp._args_[0], -1*multiplier, idMap, compute_values, verbose, quadratic)
+    return _collect_standard_repn(
+        exp._args_[0], -1 * multiplier, idMap, compute_values, verbose, quadratic
+    )
+
 
 #
 # TODO - Verify if code is used
 #
 def _collect_const(exp, multiplier, idMap, compute_values, verbose, quadratic):
     if compute_values:
-        return Results(constant=multiplier*value(exp))
+        return Results(constant=multiplier * value(exp))
     else:
-        return Results(constant=multiplier*exp)
+        return Results(constant=multiplier * exp)
+
 
 def _collect_identity(exp, multiplier, idMap, compute_values, verbose, quadratic):
     if exp._args_[0].__class__ in native_numeric_types:
-        return Results(constant=multiplier*exp._args_[0])
+        return Results(constant=multiplier * exp._args_[0])
     if not exp._args_[0].is_potentially_variable():
         if compute_values:
-            return Results(constant=multiplier*value(exp._args_[0]))
+            return Results(constant=multiplier * value(exp._args_[0]))
         else:
-            return Results(constant=multiplier*exp._args_[0])
-    return _collect_standard_repn(exp.expr, multiplier, idMap, compute_values, verbose, quadratic)
+            return Results(constant=multiplier * exp._args_[0])
+    return _collect_standard_repn(
+        exp.expr, multiplier, idMap, compute_values, verbose, quadratic
+    )
+
 
 def _collect_linear(exp, multiplier, idMap, compute_values, verbose, quadratic):
     ans = Results()
     if compute_values:
-        ans.constant = multiplier*value(exp.constant)
+        ans.constant = multiplier * value(exp.constant)
     else:
-        ans.constant = multiplier*exp.constant
+        ans.constant = multiplier * exp.constant
 
-    for c,v in zip(exp.linear_coefs, exp.linear_vars):
+    linear = {}
+    linear_vars = {}
+    for c, v in zip(exp.linear_coefs, exp.linear_vars):
         if v.fixed:
             if compute_values:
                 ans.constant += multiplier * value(c) * value(v)
             else:
                 ans.constant += multiplier * c * v
         else:
-            id_ = id(v)
-            if id_ in idMap[None]:
-                key = idMap[None][id_]
-            else:
-                key = len(idMap) - 1
-                idMap[None][id_] = key
-                idMap[key] = v
+            key = id(v)
             if compute_values:
-                if key in ans.linear:
-                    ans.linear[key] += multiplier*value(c)
+                if key in linear:
+                    linear[key] += multiplier * value(c)
                 else:
-                    ans.linear[key] = multiplier*value(c)
+                    linear[key] = multiplier * value(c)
+                    linear_vars[key] = v
             else:
-                if key in ans.linear:
-                    ans.linear[key] += multiplier*c
+                if key in linear:
+                    linear[key] += multiplier * c
                 else:
-                    ans.linear[key] = multiplier*c
+                    linear[key] = multiplier * c
+                    linear_vars[key] = v
+    for id_, coef in linear.items():
+        if coef.__class__ in native_numeric_types and not coef:
+            continue
+        if id_ in idMap[None]:
+            key = idMap[None][id_]
+        else:
+            key = len(idMap) - 1
+            idMap[None][id_] = key
+            idMap[key] = linear_vars[id_]
+        ans.linear[key] = coef
     return ans
+
 
 def _collect_comparison(exp, multiplier, idMap, compute_values, verbose, quadratic):
     if multiplier != 1:
@@ -868,53 +1096,53 @@ def _collect_comparison(exp, multiplier, idMap, compute_values, verbose, quadrat
         exp = multiplier * exp
     return Results(nonl=exp)
 
+
 def _collect_external_fn(exp, multiplier, idMap, compute_values, verbose, quadratic):
     if compute_values and exp.is_fixed():
-        return Results(constant=multiplier*value(exp))
-    return Results(nonl=multiplier*exp)
+        return Results(constant=multiplier * value(exp))
+    return Results(nonl=multiplier * exp)
 
 
 _repn_collectors = {
-    EXPR.SumExpression                          : _collect_sum,
-    EXPR.ProductExpression                      : _collect_prod,
-    EXPR.MonomialTermExpression                 : _collect_term,
-    EXPR.PowExpression                          : _collect_pow,
-    EXPR.DivisionExpression                     : _collect_division,
-    EXPR.Expr_ifExpression                      : _collect_branching_expr,
-    EXPR.UnaryFunctionExpression                : _collect_nonl,
-    EXPR.AbsExpression                          : _collect_nonl,
-    EXPR.NegationExpression                     : _collect_negation,
-    EXPR.LinearExpression                       : _collect_linear,
-    EXPR.InequalityExpression                   : _collect_comparison,
-    EXPR.RangedExpression                       : _collect_comparison,
-    EXPR.EqualityExpression                     : _collect_comparison,
-    EXPR.ExternalFunctionExpression             : _collect_external_fn,
-    #_ConnectorData          : _collect_linear_connector,
-    #ScalarConnector         : _collect_linear_connector,
-    _ParamData        : _collect_const,
-    ScalarParam       : _collect_const,
-    #param.Param             : _collect_linear_const,
-    #parameter               : _collect_linear_const,
-    NumericConstant                             : _collect_const,
-    _GeneralVarData                             : _collect_var,
-    ScalarVar                                   : _collect_var,
-    Var                                         : _collect_var,
-    variable                                    : _collect_var,
-    IVariable                                   : _collect_var,
-    _GeneralExpressionData                      : _collect_identity,
-    ScalarExpression                            : _collect_identity,
-    expression                                  : _collect_identity,
-    noclone                                     : _collect_identity,
-    _ExpressionData                             : _collect_identity,
-    Expression                                  : _collect_identity,
-    _GeneralObjectiveData                       : _collect_identity,
-    ScalarObjective                             : _collect_identity,
-    objective                                   : _collect_identity,
-    }
+    EXPR.SumExpression: _collect_sum,
+    EXPR.ProductExpression: _collect_prod,
+    EXPR.MonomialTermExpression: _collect_term,
+    EXPR.PowExpression: _collect_pow,
+    EXPR.DivisionExpression: _collect_division,
+    EXPR.Expr_ifExpression: _collect_branching_expr,
+    EXPR.UnaryFunctionExpression: _collect_nonl,
+    EXPR.AbsExpression: _collect_nonl,
+    EXPR.NegationExpression: _collect_negation,
+    EXPR.LinearExpression: _collect_linear,
+    EXPR.InequalityExpression: _collect_comparison,
+    EXPR.RangedExpression: _collect_comparison,
+    EXPR.EqualityExpression: _collect_comparison,
+    EXPR.ExternalFunctionExpression: _collect_external_fn,
+    # _ConnectorData          : _collect_linear_connector,
+    # ScalarConnector         : _collect_linear_connector,
+    _ParamData: _collect_const,
+    ScalarParam: _collect_const,
+    # param.Param             : _collect_linear_const,
+    # parameter               : _collect_linear_const,
+    NumericConstant: _collect_const,
+    _GeneralVarData: _collect_var,
+    ScalarVar: _collect_var,
+    Var: _collect_var,
+    variable: _collect_var,
+    IVariable: _collect_var,
+    _GeneralExpressionData: _collect_identity,
+    ScalarExpression: _collect_identity,
+    expression: _collect_identity,
+    noclone: _collect_identity,
+    _ExpressionData: _collect_identity,
+    Expression: _collect_identity,
+    _GeneralObjectiveData: _collect_identity,
+    ScalarObjective: _collect_identity,
+    objective: _collect_identity,
+}
 
 
-def _collect_standard_repn(exp, multiplier, idMap,
-                                      compute_values, verbose, quadratic):
+def _collect_standard_repn(exp, multiplier, idMap, compute_values, verbose, quadratic):
     fn = _repn_collectors.get(exp.__class__, None)
     if fn is not None:
         return fn(exp, multiplier, idMap, compute_values, verbose, quadratic)
@@ -922,8 +1150,9 @@ def _collect_standard_repn(exp, multiplier, idMap,
     # Catch any known numeric constants
     #
     if exp.__class__ in native_numeric_types or not exp.is_potentially_variable():
-        return _collect_const(exp, multiplier, idMap, compute_values,
-                              verbose, quadratic)
+        return _collect_const(
+            exp, multiplier, idMap, compute_values, verbose, quadratic
+        )
     #
     # These are types that might be extended using duck typing.
     #
@@ -932,15 +1161,19 @@ def _collect_standard_repn(exp, multiplier, idMap,
             fn = _collect_var
         if exp.is_named_expression_type():
             fn = _collect_identity
-    except AttributeError:                                                          # TODO: coverage?
+    except AttributeError:  # TODO: coverage?
         pass
     if fn is not None:
         _repn_collectors[exp.__class__] = fn
         return fn(exp, multiplier, idMap, compute_values, verbose, quadratic)
-    raise ValueError( "Unexpected expression (type %s)" % type(exp).__name__)       # TODO: coverage?
+    raise ValueError(
+        "Unexpected expression (type %s)" % type(exp).__name__
+    )  # TODO: coverage?
 
 
-def _generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False, quadratic=True, repn=None):
+def _generate_standard_repn(
+    expr, idMap=None, compute_values=True, verbose=False, quadratic=True, repn=None
+):
     if expr.__class__ is EXPR.SumExpression:
         #
         # This is the common case, so start collecting the sum
@@ -960,16 +1193,15 @@ def _generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False
     #
     v = []
     c = []
-    for key in ans.linear:
-        val = ans.linear[key]
+    for key, val in ans.linear.items():
         if val.__class__ in native_numeric_types:
-            if val == 0:
+            if not val:
                 continue
-        elif val.is_constant():         # TODO: coverage?
+        elif val.is_constant():  # TODO: coverage?
             if value(val) == 0:
                 continue
         v.append(idMap[key])
-        c.append(ans.linear[key])
+        c.append(val)
     repn.linear_vars = tuple(v)
     repn.linear_coefs = tuple(c)
 
@@ -979,13 +1211,13 @@ def _generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False
         for key in ans.quadratic:
             val = ans.quadratic[key]
             if val.__class__ in native_numeric_types:
-                if val == 0:            # TODO: coverage?
+                if val == 0:  # TODO: coverage?
                     continue
-            elif val.is_constant():     # TODO: coverage?
+            elif val.is_constant():  # TODO: coverage?
                 if value(val) == 0:
                     continue
-            repn.quadratic_vars.append( (idMap[key[0]],idMap[key[1]]) )
-            repn.quadratic_coefs.append( val )
+            repn.quadratic_vars.append((idMap[key[0]], idMap[key[1]]))
+            repn.quadratic_coefs.append(val)
         repn.quadratic_vars = tuple(repn.quadratic_vars)
         repn.quadratic_coefs = tuple(repn.quadratic_coefs)
         v = []
@@ -996,7 +1228,7 @@ def _generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False
         repn.quadratic_vars = tuple(v)
         repn.quadratic_coefs = tuple(c)
 
-    if ans.nonl is not None and not isclose_const(ans.nonl,0):
+    if ans.nonl is not None and not isclose_const(ans.nonl, 0):
         repn.nonlinear_expr = ans.nonl
         repn.nonlinear_vars = []
         for v_ in EXPR.identify_variables(repn.nonlinear_expr, include_fixed=False):
@@ -1363,108 +1595,99 @@ def _generate_linear_standard_repn(expr, idMap=None, compute_values=True, verbos
 
 
 def preprocess_block_objectives(block, idMap=None):
-
     # Get/Create the ComponentMap for the repn
-    if not hasattr(block,'_repn'):
+    if not hasattr(block, '_repn'):
         block._repn = ComponentMap()
     block_repn = block._repn
 
-    for objective_data in block.component_data_objects(Objective,
-                                                       active=True,
-                                                       descend_into=False):
-
+    for objective_data in block.component_data_objects(
+        Objective, active=True, descend_into=False
+    ):
         if objective_data.expr is None:
-            raise ValueError("No expression has been defined for objective %s"
-                             % (objective_data.name))
+            raise ValueError(
+                "No expression has been defined for objective %s"
+                % (objective_data.name)
+            )
 
         try:
             repn = generate_standard_repn(objective_data.expr, idMap=idMap)
         except Exception:
             err = sys.exc_info()[1]
-            logging.getLogger('pyomo.core').error\
-                ( "exception generating a standard representation for objective %s: %s" \
-                      % (objective_data.name, str(err)) )
+            logging.getLogger('pyomo.core').error(
+                "exception generating a standard representation for objective %s: %s"
+                % (objective_data.name, str(err))
+            )
             raise
 
         block_repn[objective_data] = repn
 
-def preprocess_block_constraints(block, idMap=None):
 
+def preprocess_block_constraints(block, idMap=None):
     # Get/Create the ComponentMap for the repn
-    if not hasattr(block,'_repn'):
+    if not hasattr(block, '_repn'):
         block._repn = ComponentMap()
     block_repn = block._repn
 
-    for constraint in block.component_objects(Constraint,
-                                              active=True,
-                                              descend_into=False):
+    for constraint in block.component_objects(
+        Constraint, active=True, descend_into=False
+    ):
+        preprocess_constraint(block, constraint, idMap=idMap, block_repn=block_repn)
 
-        preprocess_constraint(block,
-                              constraint,
-                              idMap=idMap,
-                              block_repn=block_repn)
 
-def preprocess_constraint(block,
-                      constraint,
-                      idMap=None,
-                      block_repn=None):
-
+def preprocess_constraint(block, constraint, idMap=None, block_repn=None):
     from pyomo.repn.beta.matrix import MatrixConstraint
+
     if isinstance(constraint, MatrixConstraint):
         return
 
     # Get/Create the ComponentMap for the repn
-    if not hasattr(block,'_repn'):
+    if not hasattr(block, '_repn'):
         block._repn = ComponentMap()
     block_repn = block._repn
 
     for index, constraint_data in constraint.items():
-
         if not constraint_data.active:
             continue
 
         if constraint_data.body is None:
             raise ValueError(
                 "No expression has been defined for the body "
-                "of constraint %s" % (constraint_data.name))
+                "of constraint %s" % (constraint_data.name)
+            )
 
         try:
-            repn = generate_standard_repn(constraint_data.body,
-                                           idMap=idMap)
+            repn = generate_standard_repn(constraint_data.body, idMap=idMap)
         except Exception:
             err = sys.exc_info()[1]
             logging.getLogger('pyomo.core').error(
                 "exception generating a standard representation for "
-                "constraint %s: %s"
-                % (constraint_data.name, str(err)))
+                "constraint %s: %s" % (constraint_data.name, str(err))
+            )
             raise
 
         block_repn[constraint_data] = repn
 
-def preprocess_constraint_data(block,
-                           constraint_data,
-                           idMap=None,
-                           block_repn=None):
 
+def preprocess_constraint_data(block, constraint_data, idMap=None, block_repn=None):
     # Get/Create the ComponentMap for the repn
-    if not hasattr(block,'_repn'):
+    if not hasattr(block, '_repn'):
         block._repn = ComponentMap()
     block_repn = block._repn
 
     if constraint_data.body is None:
         raise ValueError(
             "No expression has been defined for the body "
-            "of constraint %s" % (constraint_data.name))
+            "of constraint %s" % (constraint_data.name)
+        )
 
     try:
-        repn = generate_standard_repn(constraint_data.body,
-                                       idMap=idMap)
+        repn = generate_standard_repn(constraint_data.body, idMap=idMap)
     except Exception:
         err = sys.exc_info()[1]
         logging.getLogger('pyomo.core').error(
             "exception generating a standard representation for "
-            "constraint %s: %s"
-            % (constraint_data.name, str(err)))
+            "constraint %s: %s" % (constraint_data.name, str(err))
+        )
         raise
 
     block_repn[constraint_data] = repn

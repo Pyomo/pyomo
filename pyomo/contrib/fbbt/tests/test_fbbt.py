@@ -16,9 +16,11 @@ from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.fileutils import find_library
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.errors import InfeasibleConstraintException
-from pyomo.core.expr.numeric_expr import (ProductExpression,
-                                          UnaryFunctionExpression,
-                                          LinearExpression)
+from pyomo.core.expr.numeric_expr import (
+    ProductExpression,
+    UnaryFunctionExpression,
+    LinearExpression,
+)
 import math
 import platform
 from io import StringIO
@@ -46,8 +48,28 @@ class FbbtTestBase(object):
     def test_add(self):
         if not numpy_available:
             raise unittest.SkipTest('Numpy is not available')
-        x_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
-        c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
+        x_bounds = [
+            (-2.5, 2.8),
+            (-2.5, -0.5),
+            (0.5, 2.8),
+            (-2.5, 0),
+            (0, 2.8),
+            (-2.5, -1),
+            (1, 2.8),
+            (-1, -0.5),
+            (0.5, 1),
+        ]
+        c_bounds = [
+            (-2.5, 2.8),
+            (-2.5, -0.5),
+            (0.5, 2.8),
+            (-2.5, 0),
+            (0, 2.8),
+            (-2.5, -1),
+            (1, 2.8),
+            (-1, -0.5),
+            (0.5, 1),
+        ]
         for xl, xu in x_bounds:
             for cl, cu in c_bounds:
                 m = pyo.Block(concrete=True)
@@ -55,7 +77,9 @@ class FbbtTestBase(object):
                 m.y = pyo.Var()
                 m.p = pyo.Param(mutable=True)
                 m.p.value = 1
-                m.c = pyo.Constraint(expr=pyo.inequality(body=m.x+m.y+(m.p+1), lower=cl, upper=cu))
+                m.c = pyo.Constraint(
+                    expr=pyo.inequality(body=m.x + m.y + (m.p + 1), lower=cl, upper=cu)
+                )
                 self.tightener(m)
                 x = np.linspace(pyo.value(m.x.lb), pyo.value(m.x.ub), 100)
                 z = np.linspace(pyo.value(m.c.lower), pyo.value(m.c.upper), 100)
@@ -75,14 +99,36 @@ class FbbtTestBase(object):
     def test_sub1(self):
         if not numpy_available:
             raise unittest.SkipTest('Numpy is not available')
-        x_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
-        c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
+        x_bounds = [
+            (-2.5, 2.8),
+            (-2.5, -0.5),
+            (0.5, 2.8),
+            (-2.5, 0),
+            (0, 2.8),
+            (-2.5, -1),
+            (1, 2.8),
+            (-1, -0.5),
+            (0.5, 1),
+        ]
+        c_bounds = [
+            (-2.5, 2.8),
+            (-2.5, -0.5),
+            (0.5, 2.8),
+            (-2.5, 0),
+            (0, 2.8),
+            (-2.5, -1),
+            (1, 2.8),
+            (-1, -0.5),
+            (0.5, 1),
+        ]
         for xl, xu in x_bounds:
             for cl, cu in c_bounds:
                 m = pyo.Block(concrete=True)
                 m.x = pyo.Var(bounds=(xl, xu))
                 m.y = pyo.Var()
-                m.c = pyo.Constraint(expr=pyo.inequality(body=m.x-m.y, lower=cl, upper=cu))
+                m.c = pyo.Constraint(
+                    expr=pyo.inequality(body=m.x - m.y, lower=cl, upper=cu)
+                )
                 self.tightener(m)
                 x = np.linspace(pyo.value(m.x.lb), pyo.value(m.x.ub), 100)
                 z = np.linspace(pyo.value(m.c.lower), pyo.value(m.c.upper), 100)
@@ -102,14 +148,36 @@ class FbbtTestBase(object):
     def test_sub2(self):
         if not numpy_available:
             raise unittest.SkipTest('Numpy is not available')
-        x_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
-        c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
+        x_bounds = [
+            (-2.5, 2.8),
+            (-2.5, -0.5),
+            (0.5, 2.8),
+            (-2.5, 0),
+            (0, 2.8),
+            (-2.5, -1),
+            (1, 2.8),
+            (-1, -0.5),
+            (0.5, 1),
+        ]
+        c_bounds = [
+            (-2.5, 2.8),
+            (-2.5, -0.5),
+            (0.5, 2.8),
+            (-2.5, 0),
+            (0, 2.8),
+            (-2.5, -1),
+            (1, 2.8),
+            (-1, -0.5),
+            (0.5, 1),
+        ]
         for xl, xu in x_bounds:
             for cl, cu in c_bounds:
                 m = pyo.Block(concrete=True)
                 m.x = pyo.Var(bounds=(xl, xu))
                 m.y = pyo.Var()
-                m.c = pyo.Constraint(expr=pyo.inequality(body=m.y-m.x, lower=cl, upper=cu))
+                m.c = pyo.Constraint(
+                    expr=pyo.inequality(body=m.y - m.x, lower=cl, upper=cu)
+                )
                 self.tightener(m)
                 x = np.linspace(pyo.value(m.x.lb), pyo.value(m.x.ub), 100)
                 z = np.linspace(pyo.value(m.c.lower), pyo.value(m.c.upper), 100)
@@ -129,16 +197,40 @@ class FbbtTestBase(object):
     def test_mul(self):
         if not numpy_available:
             raise unittest.SkipTest('Numpy is not available')
-        x_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
-        c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
+        x_bounds = [
+            (-2.5, 2.8),
+            (-2.5, -0.5),
+            (0.5, 2.8),
+            (-2.5, 0),
+            (0, 2.8),
+            (-2.5, -1),
+            (1, 2.8),
+            (-1, -0.5),
+            (0.5, 1),
+        ]
+        c_bounds = [
+            (-2.5, 2.8),
+            (-2.5, -0.5),
+            (0.5, 2.8),
+            (-2.5, 0),
+            (0, 2.8),
+            (-2.5, -1),
+            (1, 2.8),
+            (-1, -0.5),
+            (0.5, 1),
+        ]
         for xl, xu in x_bounds:
             for cl, cu in c_bounds:
                 m = pyo.Block(concrete=True)
                 m.x = pyo.Var(bounds=(xl, xu))
                 m.y = pyo.Var()
-                m.c = pyo.Constraint(expr=pyo.inequality(body=m.x*m.y, lower=cl, upper=cu))
+                m.c = pyo.Constraint(
+                    expr=pyo.inequality(body=m.x * m.y, lower=cl, upper=cu)
+                )
                 self.tightener(m)
-                x = np.linspace(pyo.value(m.x.lb) + 1e-6, pyo.value(m.x.ub), 100, endpoint=False)
+                x = np.linspace(
+                    pyo.value(m.x.lb) + 1e-6, pyo.value(m.x.ub), 100, endpoint=False
+                )
                 z = np.linspace(pyo.value(m.c.lower), pyo.value(m.c.upper), 100)
                 if m.y.lb is None:
                     yl = -np.inf
@@ -156,17 +248,44 @@ class FbbtTestBase(object):
     def test_div1(self):
         if not numpy_available:
             raise unittest.SkipTest('Numpy is not available')
-        x_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
-        c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
+        x_bounds = [
+            (-2.5, 2.8),
+            (-2.5, -0.5),
+            (0.5, 2.8),
+            (-2.5, 0),
+            (0, 2.8),
+            (-2.5, -1),
+            (1, 2.8),
+            (-1, -0.5),
+            (0.5, 1),
+        ]
+        c_bounds = [
+            (-2.5, 2.8),
+            (-2.5, -0.5),
+            (0.5, 2.8),
+            (-2.5, 0),
+            (0, 2.8),
+            (-2.5, -1),
+            (1, 2.8),
+            (-1, -0.5),
+            (0.5, 1),
+        ]
         for xl, xu in x_bounds:
             for cl, cu in c_bounds:
                 m = pyo.Block(concrete=True)
                 m.x = pyo.Var(bounds=(xl, xu))
                 m.y = pyo.Var()
-                m.c = pyo.Constraint(expr=pyo.inequality(body=m.x/m.y, lower=cl, upper=cu))
+                m.c = pyo.Constraint(
+                    expr=pyo.inequality(body=m.x / m.y, lower=cl, upper=cu)
+                )
                 self.tightener(m)
                 x = np.linspace(pyo.value(m.x.lb), pyo.value(m.x.ub), 100)
-                z = np.linspace(pyo.value(m.c.lower) + 1e-6, pyo.value(m.c.upper), 100, endpoint=False)
+                z = np.linspace(
+                    pyo.value(m.c.lower) + 1e-6,
+                    pyo.value(m.c.upper),
+                    100,
+                    endpoint=False,
+                )
                 if m.y.lb is None:
                     yl = -np.inf
                 else:
@@ -183,14 +302,36 @@ class FbbtTestBase(object):
     def test_div2(self):
         if not numpy_available:
             raise unittest.SkipTest('Numpy is not available')
-        x_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
-        c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
+        x_bounds = [
+            (-2.5, 2.8),
+            (-2.5, -0.5),
+            (0.5, 2.8),
+            (-2.5, 0),
+            (0, 2.8),
+            (-2.5, -1),
+            (1, 2.8),
+            (-1, -0.5),
+            (0.5, 1),
+        ]
+        c_bounds = [
+            (-2.5, 2.8),
+            (-2.5, -0.5),
+            (0.5, 2.8),
+            (-2.5, 0),
+            (0, 2.8),
+            (-2.5, -1),
+            (1, 2.8),
+            (-1, -0.5),
+            (0.5, 1),
+        ]
         for xl, xu in x_bounds:
             for cl, cu in c_bounds:
                 m = pyo.Block(concrete=True)
                 m.x = pyo.Var(bounds=(xl, xu))
                 m.y = pyo.Var()
-                m.c = pyo.Constraint(expr=pyo.inequality(body=m.y/m.x, lower=cl, upper=cu))
+                m.c = pyo.Constraint(
+                    expr=pyo.inequality(body=m.y / m.x, lower=cl, upper=cu)
+                )
                 self.tightener(m)
                 x = np.linspace(pyo.value(m.x.lb), pyo.value(m.x.ub), 100)
                 z = np.linspace(pyo.value(m.c.lower), pyo.value(m.c.upper), 100)
@@ -217,14 +358,23 @@ class FbbtTestBase(object):
                 m = pyo.Block(concrete=True)
                 m.x = pyo.Var(bounds=(xl, xu))
                 m.y = pyo.Var()
-                m.c = pyo.Constraint(expr=pyo.inequality(body=m.x**m.y, lower=cl, upper=cu))
+                m.c = pyo.Constraint(
+                    expr=pyo.inequality(body=m.x**m.y, lower=cl, upper=cu)
+                )
                 if xl > 0 and cu <= 0:
                     with self.assertRaises(InfeasibleConstraintException):
                         self.tightener(m)
                 else:
                     self.tightener(m)
-                    x = np.linspace(pyo.value(m.x.lb) + 1e-6, pyo.value(m.x.ub), 100, endpoint=False)
-                    z = np.linspace(pyo.value(m.c.lower) + 1e-6, pyo.value(m.c.upper), 100, endpoint=False)
+                    x = np.linspace(
+                        pyo.value(m.x.lb) + 1e-6, pyo.value(m.x.ub), 100, endpoint=False
+                    )
+                    z = np.linspace(
+                        pyo.value(m.c.lower) + 1e-6,
+                        pyo.value(m.c.upper),
+                        100,
+                        endpoint=False,
+                    )
                     if m.y.lb is None:
                         yl = -np.inf
                     else:
@@ -241,17 +391,36 @@ class FbbtTestBase(object):
     def test_pow2(self):
         if not numpy_available:
             raise unittest.SkipTest('Numpy is not available')
-        x_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
+        x_bounds = [
+            (-2.5, 2.8),
+            (-2.5, -0.5),
+            (0.5, 2.8),
+            (-2.5, 0),
+            (0, 2.8),
+            (-2.5, -1),
+            (1, 2.8),
+            (-1, -0.5),
+            (0.5, 1),
+        ]
         c_bounds = [(-2.5, 2.8), (0.5, 2.8), (0, 2.8), (1, 2.8), (0.5, 1)]
         for xl, xu in x_bounds:
             for cl, cu in c_bounds:
                 m = pyo.Block(concrete=True)
                 m.x = pyo.Var(bounds=(xl, xu))
                 m.y = pyo.Var()
-                m.c = pyo.Constraint(expr=pyo.inequality(body=m.y**m.x, lower=cl, upper=cu))
+                m.c = pyo.Constraint(
+                    expr=pyo.inequality(body=m.y**m.x, lower=cl, upper=cu)
+                )
                 self.tightener(m)
-                x = np.linspace(pyo.value(m.x.lb) + 1e-6, pyo.value(m.x.ub), 100, endpoint=False)
-                z = np.linspace(pyo.value(m.c.lower) + 1e-6, pyo.value(m.c.upper), 100, endpoint=False)
+                x = np.linspace(
+                    pyo.value(m.x.lb) + 1e-6, pyo.value(m.x.ub), 100, endpoint=False
+                )
+                z = np.linspace(
+                    pyo.value(m.c.lower) + 1e-6,
+                    pyo.value(m.c.upper),
+                    100,
+                    endpoint=False,
+                )
                 if m.y.lb is None:
                     yl = -np.inf
                 else:
@@ -331,7 +500,7 @@ class FbbtTestBase(object):
         m = pyo.ConcreteModel()
         m.x = pyo.Var()
         m.y = pyo.Var()
-        m.c = pyo.Constraint(expr=m.x**(-2) == m.y)
+        m.c = pyo.Constraint(expr=m.x ** (-2) == m.y)
 
         self.tightener(m)
         self.assertEqual(m.x.lb, None)
@@ -402,7 +571,7 @@ class FbbtTestBase(object):
         m.y.setlb(-5)
         m.y.setub(8)
         self.tightener(m)
-        self.assertAlmostEqual(m.x.lb, -5.0**(1.0/3.0))
+        self.assertAlmostEqual(m.x.lb, -(5.0 ** (1.0 / 3.0)))
         self.assertAlmostEqual(m.x.ub, 2)
 
         m.x.setlb(None)
@@ -417,7 +586,7 @@ class FbbtTestBase(object):
         m = pyo.ConcreteModel()
         m.x = pyo.Var()
         m.y = pyo.Var()
-        m.c = pyo.Constraint(expr=m.x**(-3) == m.y)
+        m.c = pyo.Constraint(expr=m.x ** (-3) == m.y)
 
         self.tightener(m)
         self.assertEqual(m.x.lb, None)
@@ -464,7 +633,9 @@ class FbbtTestBase(object):
                 m.y = pyo.Var(bounds=(yl, yu))
                 m.c = pyo.Constraint(expr=m.x**_exp_val == m.y)
                 self.tightener(m)
-                y = np.linspace(pyo.value(m.y.lb) + 1e-6, pyo.value(m.y.ub), 100, endpoint=True)
+                y = np.linspace(
+                    pyo.value(m.y.lb) + 1e-6, pyo.value(m.y.ub), 100, endpoint=True
+                )
                 if m.x.lb is None:
                     xl = -np.inf
                 else:
@@ -527,7 +698,9 @@ class FbbtTestBase(object):
         for cl, cu in c_bounds:
             m = pyo.Block(concrete=True)
             m.x = pyo.Var()
-            m.c = pyo.Constraint(expr=pyo.inequality(body=pyo.exp(m.x), lower=cl, upper=cu))
+            m.c = pyo.Constraint(
+                expr=pyo.inequality(body=pyo.exp(m.x), lower=cl, upper=cu)
+            )
             self.tightener(m)
             if pyo.value(m.c.lower) <= 0:
                 _cl = 1e-6
@@ -625,15 +798,26 @@ class FbbtTestBase(object):
         self.assertAlmostEqual(m.y.lb, 2)
         self.assertAlmostEqual(m.y.ub, 5)
 
-
     def test_log(self):
         if not numpy_available:
             raise unittest.SkipTest('Numpy is not available')
-        c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
+        c_bounds = [
+            (-2.5, 2.8),
+            (-2.5, -0.5),
+            (0.5, 2.8),
+            (-2.5, 0),
+            (0, 2.8),
+            (-2.5, -1),
+            (1, 2.8),
+            (-1, -0.5),
+            (0.5, 1),
+        ]
         for cl, cu in c_bounds:
             m = pyo.Block(concrete=True)
             m.x = pyo.Var()
-            m.c = pyo.Constraint(expr=pyo.inequality(body=pyo.log(m.x), lower=cl, upper=cu))
+            m.c = pyo.Constraint(
+                expr=pyo.inequality(body=pyo.log(m.x), lower=cl, upper=cu)
+            )
             self.tightener(m)
             z = np.linspace(pyo.value(m.c.lower), pyo.value(m.c.upper), 100)
             if m.x.lb is None:
@@ -651,11 +835,23 @@ class FbbtTestBase(object):
     def test_log10(self):
         if not numpy_available:
             raise unittest.SkipTest('Numpy is not available')
-        c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
+        c_bounds = [
+            (-2.5, 2.8),
+            (-2.5, -0.5),
+            (0.5, 2.8),
+            (-2.5, 0),
+            (0, 2.8),
+            (-2.5, -1),
+            (1, 2.8),
+            (-1, -0.5),
+            (0.5, 1),
+        ]
         for cl, cu in c_bounds:
             m = pyo.Block(concrete=True)
             m.x = pyo.Var()
-            m.c = pyo.Constraint(expr=pyo.inequality(body=pyo.log10(m.x), lower=cl, upper=cu))
+            m.c = pyo.Constraint(
+                expr=pyo.inequality(body=pyo.log10(m.x), lower=cl, upper=cu)
+            )
             self.tightener(m)
             z = np.linspace(pyo.value(m.c.lower), pyo.value(m.c.upper), 100)
             if m.x.lb is None:
@@ -674,15 +870,19 @@ class FbbtTestBase(object):
 
     def test_sin(self):
         m = pyo.Block(concrete=True)
-        m.x = pyo.Var(bounds=(-math.pi/2, math.pi/2))
-        m.c = pyo.Constraint(expr=pyo.inequality(body=pyo.sin(m.x), lower=-0.5, upper=0.5))
+        m.x = pyo.Var(bounds=(-math.pi / 2, math.pi / 2))
+        m.c = pyo.Constraint(
+            expr=pyo.inequality(body=pyo.sin(m.x), lower=-0.5, upper=0.5)
+        )
         self.tightener(m)
         self.assertAlmostEqual(pyo.value(m.x.lb), math.asin(-0.5))
         self.assertAlmostEqual(pyo.value(m.x.ub), math.asin(0.5))
 
         m = pyo.Block(concrete=True)
         m.x = pyo.Var()
-        m.c = pyo.Constraint(expr=pyo.inequality(body=pyo.sin(m.x), lower=-0.5, upper=0.5))
+        m.c = pyo.Constraint(
+            expr=pyo.inequality(body=pyo.sin(m.x), lower=-0.5, upper=0.5)
+        )
         self.tightener(m)
         self.assertEqual(m.x.lb, None)
         self.assertEqual(m.x.ub, None)
@@ -690,29 +890,37 @@ class FbbtTestBase(object):
     def test_cos(self):
         m = pyo.Block(concrete=True)
         m.x = pyo.Var(bounds=(0, math.pi))
-        m.c = pyo.Constraint(expr=pyo.inequality(body=pyo.cos(m.x), lower=-0.5, upper=0.5))
+        m.c = pyo.Constraint(
+            expr=pyo.inequality(body=pyo.cos(m.x), lower=-0.5, upper=0.5)
+        )
         self.tightener(m)
         self.assertAlmostEqual(pyo.value(m.x.lb), math.acos(0.5))
         self.assertAlmostEqual(pyo.value(m.x.ub), math.acos(-0.5))
 
         m = pyo.Block(concrete=True)
         m.x = pyo.Var()
-        m.c = pyo.Constraint(expr=pyo.inequality(body=pyo.cos(m.x), lower=-0.5, upper=0.5))
+        m.c = pyo.Constraint(
+            expr=pyo.inequality(body=pyo.cos(m.x), lower=-0.5, upper=0.5)
+        )
         self.tightener(m)
         self.assertEqual(m.x.lb, None)
         self.assertEqual(m.x.ub, None)
 
     def test_tan(self):
         m = pyo.Block(concrete=True)
-        m.x = pyo.Var(bounds=(-math.pi/2, math.pi/2))
-        m.c = pyo.Constraint(expr=pyo.inequality(body=pyo.tan(m.x), lower=-0.5, upper=0.5))
+        m.x = pyo.Var(bounds=(-math.pi / 2, math.pi / 2))
+        m.c = pyo.Constraint(
+            expr=pyo.inequality(body=pyo.tan(m.x), lower=-0.5, upper=0.5)
+        )
         self.tightener(m)
         self.assertAlmostEqual(pyo.value(m.x.lb), math.atan(-0.5))
         self.assertAlmostEqual(pyo.value(m.x.ub), math.atan(0.5))
 
         m = pyo.Block(concrete=True)
         m.x = pyo.Var()
-        m.c = pyo.Constraint(expr=pyo.inequality(body=pyo.tan(m.x), lower=-0.5, upper=0.5))
+        m.c = pyo.Constraint(
+            expr=pyo.inequality(body=pyo.tan(m.x), lower=-0.5, upper=0.5)
+        )
         self.tightener(m)
         self.assertEqual(m.x.lb, None)
         self.assertEqual(m.x.ub, None)
@@ -720,7 +928,9 @@ class FbbtTestBase(object):
     def test_asin(self):
         m = pyo.Block(concrete=True)
         m.x = pyo.Var()
-        m.c = pyo.Constraint(expr=pyo.inequality(body=pyo.asin(m.x), lower=-0.5, upper=0.5))
+        m.c = pyo.Constraint(
+            expr=pyo.inequality(body=pyo.asin(m.x), lower=-0.5, upper=0.5)
+        )
         self.tightener(m)
         self.assertAlmostEqual(pyo.value(m.x.lb), math.sin(-0.5))
         self.assertAlmostEqual(pyo.value(m.x.ub), math.sin(0.5))
@@ -736,7 +946,9 @@ class FbbtTestBase(object):
     def test_atan(self):
         m = pyo.Block(concrete=True)
         m.x = pyo.Var()
-        m.c = pyo.Constraint(expr=pyo.inequality(body=pyo.atan(m.x), lower=-0.5, upper=0.5))
+        m.c = pyo.Constraint(
+            expr=pyo.inequality(body=pyo.atan(m.x), lower=-0.5, upper=0.5)
+        )
         self.tightener(m)
         self.assertAlmostEqual(pyo.value(m.x.lb), math.tan(-0.5))
         self.assertAlmostEqual(pyo.value(m.x.ub), math.tan(0.5))
@@ -749,8 +961,8 @@ class FbbtTestBase(object):
         m.c = pyo.ConstraintList()
         m.c.add(m.x + m.y >= -1)
         m.c.add(m.x + m.y <= -1)
-        m.c.add(m.y - m.x*m.z <= 2)
-        m.c.add(m.y - m.x*m.z >= -2)
+        m.c.add(m.y - m.x * m.z <= 2)
+        m.c.add(m.y - m.x * m.z >= -2)
         m.c.add(m.x + m.z == 1)
         self.tightener(m)
         self.assertAlmostEqual(pyo.value(m.x.lb), -1, 8)
@@ -768,8 +980,8 @@ class FbbtTestBase(object):
         m.c = pyo.ConstraintList()
         m.c.add(-m.x - m.y >= -1)
         m.c.add(-m.x - m.y <= -1)
-        m.c.add(-m.y - m.x*m.z >= -2)
-        m.c.add(-m.y - m.x*m.z <= 2)
+        m.c.add(-m.y - m.x * m.z >= -2)
+        m.c.add(-m.y - m.x * m.z <= 2)
         m.c.add(-m.x - m.z == 1)
         self.tightener(m)
         self.assertAlmostEqual(pyo.value(m.x.lb), 1, 8)
@@ -802,8 +1014,8 @@ class FbbtTestBase(object):
 
     def test_always_feasible(self):
         m = pyo.ConcreteModel()
-        m.x = pyo.Var(bounds=(1,2))
-        m.y = pyo.Var(bounds=(1,2))
+        m.x = pyo.Var(bounds=(1, 2))
+        m.y = pyo.Var(bounds=(1, 2))
         m.c = pyo.Constraint(expr=m.x + m.y >= 0)
         self.tightener(m)
         self.assertTrue(m.c.active)
@@ -848,10 +1060,12 @@ class FbbtTestBase(object):
 
     def test_skip_unknown_expression1(self):
         if self.tightener is not fbbt:
-            raise unittest.SkipTest('Appsi FBBT does not support unkown expressions yet')
+            raise unittest.SkipTest(
+                'Appsi FBBT does not support unknown expressions yet'
+            )
 
         m = pyo.ConcreteModel()
-        m.x = pyo.Var(bounds=(1,1))
+        m.x = pyo.Var(bounds=(1, 1))
         m.y = pyo.Var()
         expr = DummyExpr([m.x, m.y])
         m.c = pyo.Constraint(expr=expr == 1)
@@ -868,14 +1082,18 @@ class FbbtTestBase(object):
 
     def test_skip_unknown_expression2(self):
         if self.tightener is not fbbt:
-            raise unittest.SkipTest('Appsi FBBT does not support unkown expressions yet')
+            raise unittest.SkipTest(
+                'Appsi FBBT does not support unknown expressions yet'
+            )
 
         def dummy_unary_expr(x):
-            return 0.5*x
+            return 0.5 * x
 
         m = pyo.ConcreteModel()
-        m.x = pyo.Var(bounds=(0,4))
-        expr = UnaryFunctionExpression((m.x,), name='dummy_unary_expr', fcn=dummy_unary_expr)
+        m.x = pyo.Var(bounds=(0, 4))
+        expr = UnaryFunctionExpression(
+            (m.x,), name='dummy_unary_expr', fcn=dummy_unary_expr
+        )
         m.c = pyo.Constraint(expr=expr == 1)
 
         OUT = StringIO()
@@ -888,8 +1106,8 @@ class FbbtTestBase(object):
 
     def test_compute_expr_bounds(self):
         m = pyo.ConcreteModel()
-        m.x = pyo.Var(bounds=(-1,1))
-        m.y = pyo.Var(bounds=(-1,1))
+        m.x = pyo.Var(bounds=(-1, 1))
+        m.y = pyo.Var(bounds=(-1, 1))
         e = m.x + m.y
         lb, ub = compute_bounds_on_expr(e)
         self.assertAlmostEqual(lb, -2, 14)
@@ -941,7 +1159,7 @@ class FbbtTestBase(object):
         m.x = pyo.Var()
         m.y = pyo.Var()
         m.z = pyo.Var()
-        m.c = pyo.Constraint(expr=(m.x**2 + m.y**2)**(-0.5) == m.z)
+        m.c = pyo.Constraint(expr=(m.x**2 + m.y**2) ** (-0.5) == m.z)
         self.tightener(m)
         self.assertAlmostEqual(m.z.lb, 0)
         self.assertIsNone(m.z.ub)
@@ -951,7 +1169,9 @@ class FbbtTestBase(object):
         m.x = pyo.Var(bounds=(1, 2))
         m.y = pyo.Var()
         m.p = pyo.Param(initialize=3, mutable=True)
-        e = LinearExpression(constant=1, linear_coefs=[1, m.p - 1], linear_vars=[m.x, m.y])
+        e = LinearExpression(
+            constant=1, linear_coefs=[1, m.p - 1], linear_vars=[m.x, m.y]
+        )
         m.c = pyo.Constraint(expr=e == 0)
         self.tightener(m)
         self.assertAlmostEqual(m.y.lb, -1.5)
@@ -961,12 +1181,12 @@ class FbbtTestBase(object):
         m1 = pyo.ConcreteModel()
         m1.x = pyo.Var([1, 2], bounds=(-2, 6))
         m1.y = pyo.Var()
-        m1.c = pyo.Constraint(expr=m1.x[1]*m1.x[1] + m1.x[2]*m1.x[2] == m1.y)
+        m1.c = pyo.Constraint(expr=m1.x[1] * m1.x[1] + m1.x[2] * m1.x[2] == m1.y)
 
         m2 = pyo.ConcreteModel()
         m2.x = pyo.Var([1, 2], bounds=(-2, 6))
         m2.y = pyo.Var()
-        m2.c = pyo.Constraint(expr=m2.x[1]**2 + m2.x[2]**2 == m2.y)
+        m2.c = pyo.Constraint(expr=m2.x[1] ** 2 + m2.x[2] ** 2 == m2.y)
 
         self.tightener(m1)
         self.tightener(m2)
@@ -977,7 +1197,7 @@ class FbbtTestBase(object):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2], bounds=(-2, 6))
         m.y = pyo.Var()
-        m.c = pyo.Constraint(expr=m.x[1]*m.x[1] + m.x[2]*m.x[2] == 0)
+        m.c = pyo.Constraint(expr=m.x[1] * m.x[1] + m.x[2] * m.x[2] == 0)
         self.tightener(m)
         self.assertAlmostEqual(m.x[1].lb, 0)
         self.assertAlmostEqual(m.x[1].ub, 0)
@@ -1010,7 +1230,12 @@ class FbbtTestBase(object):
             m.a = pyo.Set(initialize=list(range(N)))
             m.x = pyo.Var(m.a, bounds=(0, 1))
             m.x[n].setub(None)
-            m.c = pyo.Constraint(expr=LinearExpression(constant=0, linear_coefs=[1]*N, linear_vars=list(m.x.values())) == 1)
+            m.c = pyo.Constraint(
+                expr=LinearExpression(
+                    constant=0, linear_coefs=[1] * N, linear_vars=list(m.x.values())
+                )
+                == 1
+            )
             self.tightener(m)
             self.assertAlmostEqual(m.x[n].ub, 1)
 
@@ -1018,7 +1243,12 @@ class FbbtTestBase(object):
             m.a = pyo.Set(initialize=list(range(N)))
             m.x = pyo.Var(m.a, bounds=(0, 1))
             m.x[n].setlb(None)
-            m.c = pyo.Constraint(expr=LinearExpression(constant=0, linear_coefs=[1]*N, linear_vars=list(m.x.values())) == 1)
+            m.c = pyo.Constraint(
+                expr=LinearExpression(
+                    constant=0, linear_coefs=[1] * N, linear_vars=list(m.x.values())
+                )
+                == 1
+            )
             self.tightener(m)
             self.assertAlmostEqual(m.x[n].lb, -28)
 
@@ -1030,7 +1260,12 @@ class FbbtTestBase(object):
             m.x = pyo.Var(m.a, bounds=(0, 1))
             m.x[n].setlb(None)
             m.x[n].setub(None)
-            m.c = pyo.Constraint(expr=LinearExpression(constant=1, linear_coefs=[1]*N, linear_vars=list(m.x.values())) == 1)
+            m.c = pyo.Constraint(
+                expr=LinearExpression(
+                    constant=1, linear_coefs=[1] * N, linear_vars=list(m.x.values())
+                )
+                == 1
+            )
             self.tightener(m)
             self.assertAlmostEqual(m.x[n].lb, -29)
             self.assertAlmostEqual(m.x[n].ub, 0)
@@ -1050,16 +1285,17 @@ class FbbtTestBase(object):
         self.assertAlmostEqual(m.y.lb, 1)
         self.assertAlmostEqual(m.y.ub, 2)
 
-    @unittest.skipUnless(
-        flib, 'Could not find the "asl_external_demo.so" library')
+    @unittest.skipUnless(flib, 'Could not find the "asl_external_demo.so" library')
     @unittest.skipIf(is_pypy, 'Cannot evaluate external functions under pypy')
     def test_external_function(self):
         if self.tightener is not fbbt:
-            raise unittest.SkipTest('Appsi FBBT does not support unkown expressions yet')
+            raise unittest.SkipTest(
+                'Appsi FBBT does not support unknown expressions yet'
+            )
 
         m = pyo.ConcreteModel()
-        m.x = pyo.Var(bounds=(0,1))
-        m.y = pyo.Var(bounds=(0,5))
+        m.x = pyo.Var(bounds=(0, 1))
+        m.y = pyo.Var(bounds=(0, 5))
         m.p = pyo.Param(initialize=1)
         m.q = pyo.Param(initialize=3)
         m.ef = pyo.ExternalFunction(library=flib, function="demo_function")
@@ -1080,6 +1316,20 @@ class FbbtTestBase(object):
         self.assertAlmostEqual(m.x.ub, 1)
         self.assertAlmostEqual(m.y.lb, 0)
         self.assertAlmostEqual(m.y.ub, 3)
+
+    def test_named_expr(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(0, None))
+        m.y = pyo.Var(bounds=(1, 6))
+        m.e_const = pyo.Expression(expr=3)
+        m.e_var = pyo.Expression(expr=m.y + m.e_const)
+
+        m.c = pyo.Constraint(expr=m.x**2 == m.e_var)
+
+        self.tightener(m)
+        self.tightener(m)
+        self.assertAlmostEqual(m.x.lb, 2)
+        self.assertAlmostEqual(m.x.ub, 3)
 
 
 class TestFBBT(FbbtTestBase, unittest.TestCase):

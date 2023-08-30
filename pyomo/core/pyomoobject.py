@@ -11,6 +11,7 @@
 
 from pyomo.common.autoslots import AutoSlots
 
+
 # Note: in an ideal world, PyomoObject would use the AutoSlots
 # metaclass.  However, declaring a custom (non-type) metaclass has
 # measurable performance implications.  It is faster to just look for
@@ -44,7 +45,10 @@ class PyomoObject(AutoSlots.Mixin):
         return False
 
     def is_logical_type(self):
-        """Return True if this class is a Pyomo Boolean value, variable, or expression."""
+        """Return True if this class is a Pyomo Boolean object.
+
+        Boolean objects include constants, variables, or logical expressions.
+        """
         return False
 
     def is_reference(self):

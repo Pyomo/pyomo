@@ -11,4 +11,4 @@
 
 from . import pmedian
 
-MODEL=pmedian.model
+MODEL = pmedian.model

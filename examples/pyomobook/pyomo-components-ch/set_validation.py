@@ -7,9 +7,12 @@ model.A = pyo.Set()
 model.B = pyo.Set(within=model.A)
 # @:decl1
 
+
 # @decl2:
 def C_validate(model, value):
     return value in model.A
+
+
 model.C = pyo.Set(validate=C_validate)
 # @:decl2
 

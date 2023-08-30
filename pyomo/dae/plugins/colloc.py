@@ -44,14 +44,18 @@ def _lagrange_radau_transform(v, s):
 
     def _fun(i):
         tmp = list(s)
-        idx = s.ord(i)-1
+        idx = s.ord(i) - 1
         if idx == 0:  # Don't apply this equation at initial point
             raise IndexError("list index out of range")
         low = s.get_lower_element_boundary(i)
-        lowidx = s.ord(low)-1
-        return sum(v(tmp[lowidx + j]) * adot[j][idx - lowidx] *
-                   (1.0 / (tmp[lowidx + ncp] - tmp[lowidx]))
-                   for j in range(ncp + 1))
+        lowidx = s.ord(low) - 1
+        return sum(
+            v(tmp[lowidx + j])
+            * adot[j][idx - lowidx]
+            * (1.0 / (tmp[lowidx + ncp] - tmp[lowidx]))
+            for j in range(ncp + 1)
+        )
+
     return _fun
 
 
@@ -61,14 +65,19 @@ def _lagrange_radau_transform_order2(v, s):
 
     def _fun(i):
         tmp = list(s)
-        idx = s.ord(i)-1
-        if idx == 0:  # Don't apply this equation at initial point
+        idx = s.ord(i) - 1
+        if idx == 0:
+            # Don't apply this equation at initial point
             raise IndexError("list index out of range")
         low = s.get_lower_element_boundary(i)
-        lowidx = s.ord(low)-1
-        return sum(v(tmp[lowidx + j]) * adotdot[j][idx - lowidx] *
-                   (1.0 / (tmp[lowidx + ncp] - tmp[lowidx]) ** 2)
-                   for j in range(ncp + 1))
+        lowidx = s.ord(low) - 1
+        return sum(
+            v(tmp[lowidx + j])
+            * adotdot[j][idx - lowidx]
+            * (1.0 / (tmp[lowidx + ncp] - tmp[lowidx]) ** 2)
+            for j in range(ncp + 1)
+        )
+
     return _fun
 
 
@@ -78,18 +87,23 @@ def _lagrange_legendre_transform(v, s):
 
     def _fun(i):
         tmp = list(s)
-        idx = s.ord(i)-1
-        if idx == 0:  # Don't apply this equation at initial point
+        idx = s.ord(i) - 1
+        if idx == 0:
+            # Don't apply this equation at initial point
             raise IndexError("list index out of range")
-        elif i in s.get_finite_elements():  # Don't apply at finite element
-                                            # points continuity equations
-                                            # added later
+        elif i in s.get_finite_elements():
+            # Don't apply at finite element points continuity equations
+            # added later
             raise IndexError("list index out of range")
         low = s.get_lower_element_boundary(i)
-        lowidx = s.ord(low)-1
-        return sum(v(tmp[lowidx + j]) * adot[j][idx - lowidx] *
-                   (1.0 / (tmp[lowidx + ncp + 1] - tmp[lowidx]))
-                   for j in range(ncp + 1))
+        lowidx = s.ord(low) - 1
+        return sum(
+            v(tmp[lowidx + j])
+            * adot[j][idx - lowidx]
+            * (1.0 / (tmp[lowidx + ncp + 1] - tmp[lowidx]))
+            for j in range(ncp + 1)
+        )
+
     return _fun
 
 
@@ -99,18 +113,23 @@ def _lagrange_legendre_transform_order2(v, s):
 
     def _fun(i):
         tmp = list(s)
-        idx = s.ord(i)-1
-        if idx == 0:  # Don't apply this equation at initial point
+        idx = s.ord(i) - 1
+        if idx == 0:
+            # Don't apply this equation at initial point
             raise IndexError("list index out of range")
-        elif i in s.get_finite_elements():  # Don't apply at finite element
-                                            # points continuity equations
-                                            # added later
+        elif i in s.get_finite_elements():
+            # Don't apply at finite element points continuity equations
+            # added later
             raise IndexError("list index out of range")
         low = s.get_lower_element_boundary(i)
-        lowidx = s.ord(low)-1
-        return sum(v(tmp[lowidx + j]) * adotdot[j][idx - lowidx] *
-                   (1.0 / (tmp[lowidx + ncp + 1] - tmp[lowidx]) ** 2) \
-                   for j in range(ncp + 1))
+        lowidx = s.ord(low) - 1
+        return sum(
+            v(tmp[lowidx + j])
+            * adotdot[j][idx - lowidx]
+            * (1.0 / (tmp[lowidx + ncp + 1] - tmp[lowidx]) ** 2)
+            for j in range(ncp + 1)
+        )
+
     return _fun
 
 
@@ -138,7 +157,7 @@ def conv(a, b):
 def calc_cp(alpha, beta, k):
     gamma = []
     factorial = numpy.math.factorial
-    
+
     for i in range(k + 1):
         num = factorial(alpha + k) * factorial(alpha + beta + k + i)
         denom = factorial(alpha + i) * factorial(k - i) * factorial(i)
@@ -162,10 +181,11 @@ def calc_cp(alpha, beta, k):
     cp = numpy.roots(poly)
     return numpy.sort(cp).tolist()
 
+
 # BLN: This is a legacy function that was used to calculate the collocation
 # constants for an alternative form of the collocation equations described
-# in Biegler's nonlinear programming book. The difference being whether the 
-# state or the derivative is approximated using lagrange polynomials. With 
+# in Biegler's nonlinear programming book. The difference being whether the
+# state or the derivative is approximated using lagrange polynomials. With
 # the addition of PDE support and chained discretizations in Pyomo.DAE 2.0
 # this function is no longer used but kept here for future reference.
 #
@@ -234,38 +254,51 @@ def calc_afinal(cp):
     return afinal
 
 
-@TransformationFactory.register('dae.collocation',
-                doc="Discretizes a DAE model using orthogonal collocation over"
-                " finite elements transforming the model into an NLP.")
+@TransformationFactory.register(
+    'dae.collocation',
+    doc="Discretizes a DAE model using orthogonal collocation over"
+    " finite elements transforming the model into an NLP.",
+)
 class Collocation_Discretization_Transformation(Transformation):
-
     CONFIG = ConfigBlock("dae.collocation")
-    CONFIG.declare('nfe', ConfigValue(
-        default=10,
-        domain=PositiveInt,
-        description="The desired number of finite element points to be "
-                    "included in the discretization"
-    ))
-    CONFIG.declare('ncp', ConfigValue(
-        default=3,
-        domain=PositiveInt,
-        description="The desired number of collocation points over each "
-                    "finite element"
-    ))
-    CONFIG.declare('wrt', ConfigValue(
-        default=None,
-        description="The ContinuousSet to be discretized",
-        doc="Indicates which ContinuousSet the transformation should be "
+    CONFIG.declare(
+        'nfe',
+        ConfigValue(
+            default=10,
+            domain=PositiveInt,
+            description="The desired number of finite element points to be "
+            "included in the discretization",
+        ),
+    )
+    CONFIG.declare(
+        'ncp',
+        ConfigValue(
+            default=3,
+            domain=PositiveInt,
+            description="The desired number of collocation points over each "
+            "finite element",
+        ),
+    )
+    CONFIG.declare(
+        'wrt',
+        ConfigValue(
+            default=None,
+            description="The ContinuousSet to be discretized",
+            doc="Indicates which ContinuousSet the transformation should be "
             "applied to. If this keyword argument is not specified then the "
-            "same scheme will be applied to all ContinuousSets."
-    ))
-    CONFIG.declare('scheme', ConfigValue(
-        default='LAGRANGE-RADAU',
-        domain=In(['LAGRANGE-RADAU', 'LAGRANGE-LEGENDRE']),
-        description="Indicates which collocation scheme to apply",
-        doc="Options are 'LAGRANGE-RADAU' and 'LAGRANGE-LEGENDRE'. "
-            "The default scheme is Lagrange polynomials with Radau roots"
-    ))
+            "same scheme will be applied to all ContinuousSets.",
+        ),
+    )
+    CONFIG.declare(
+        'scheme',
+        ConfigValue(
+            default='LAGRANGE-RADAU',
+            domain=In(['LAGRANGE-RADAU', 'LAGRANGE-LEGENDRE']),
+            description="Indicates which collocation scheme to apply",
+            doc="Options are 'LAGRANGE-RADAU' and 'LAGRANGE-LEGENDRE'. "
+            "The default scheme is Lagrange polynomials with Radau roots",
+        ),
+    )
 
     def __init__(self):
         super(Collocation_Discretization_Transformation, self).__init__()
@@ -277,10 +310,15 @@ class Collocation_Discretization_Transformation(Transformation):
         self._tau = {}
         self._reduced_cp = {}
         self.all_schemes = {
-            'LAGRANGE-RADAU': (_lagrange_radau_transform,
-                               _lagrange_radau_transform_order2),
-            'LAGRANGE-LEGENDRE': (_lagrange_legendre_transform,
-                                  _lagrange_legendre_transform_order2)}
+            'LAGRANGE-RADAU': (
+                _lagrange_radau_transform,
+                _lagrange_radau_transform_order2,
+            ),
+            'LAGRANGE-LEGENDRE': (
+                _lagrange_legendre_transform,
+                _lagrange_legendre_transform_order2,
+            ),
+        }
 
     def _get_radau_constants(self, currentds):
         """
@@ -290,10 +328,16 @@ class Collocation_Discretization_Transformation(Transformation):
         """
         if not numpy_available:
             if self._ncp[currentds] > 10:
-                raise ValueError("Numpy was not found so the maximum number "
-                                 "of collocation points is 10")
-            from pyomo.dae.utilities import (radau_tau_dict, radau_adot_dict,
-                                             radau_adotdot_dict)
+                raise ValueError(
+                    "Numpy was not found so the maximum number "
+                    "of collocation points is 10"
+                )
+            from pyomo.dae.utilities import (
+                radau_tau_dict,
+                radau_adot_dict,
+                radau_adotdot_dict,
+            )
+
             self._tau[currentds] = radau_tau_dict[self._ncp[currentds]]
             self._adot[currentds] = radau_adot_dict[self._ncp[currentds]]
             self._adotdot[currentds] = radau_adotdot_dict[self._ncp[currentds]]
@@ -321,18 +365,21 @@ class Collocation_Discretization_Transformation(Transformation):
         """
         if not numpy_available:
             if self._ncp[currentds] > 10:
-                raise ValueError("Numpy was not found so the maximum number "
-                                 "of collocation points is 10")
-            from pyomo.dae.utilities import (legendre_tau_dict,
-                                             legendre_adot_dict,
-                                             legendre_adotdot_dict,
-                                             legendre_afinal_dict)
+                raise ValueError(
+                    "Numpy was not found so the maximum number "
+                    "of collocation points is 10"
+                )
+            from pyomo.dae.utilities import (
+                legendre_tau_dict,
+                legendre_adot_dict,
+                legendre_adotdot_dict,
+                legendre_afinal_dict,
+            )
+
             self._tau[currentds] = legendre_tau_dict[self._ncp[currentds]]
             self._adot[currentds] = legendre_adot_dict[self._ncp[currentds]]
-            self._adotdot[currentds] = \
-                legendre_adotdot_dict[self._ncp[currentds]]
-            self._afinal[currentds] = \
-                legendre_afinal_dict[self._ncp[currentds]]
+            self._adotdot[currentds] = legendre_adotdot_dict[self._ncp[currentds]]
+            self._afinal[currentds] = legendre_afinal_dict[self._ncp[currentds]]
         else:
             alpha = 0
             beta = 0
@@ -362,7 +409,7 @@ class Collocation_Discretization_Transformation(Transformation):
                       specified then the same scheme will be applied to all
                       ContinuousSets.
         scheme        Indicates which collocation scheme to apply.
-                      Options are 'LAGRANGE-RADAU' and 'LAGRANGE-LEGENDRE'. 
+                      Options are 'LAGRANGE-RADAU' and 'LAGRANGE-LEGENDRE'.
                       The default scheme is Lagrange polynomials with Radau
                       roots.
         """
@@ -375,13 +422,16 @@ class Collocation_Discretization_Transformation(Transformation):
 
         if tmpds is not None:
             if tmpds.ctype is not ContinuousSet:
-                raise TypeError("The component specified using the 'wrt' "
-                                "keyword must be a continuous set")
+                raise TypeError(
+                    "The component specified using the 'wrt' "
+                    "keyword must be a continuous set"
+                )
             elif 'scheme' in tmpds.get_discretization_info():
-                raise ValueError("The discretization scheme '%s' has already "
-                                 "been applied to the ContinuousSet '%s'"
-                                 % (tmpds.get_discretization_info()['scheme'],
-                                    tmpds.name))
+                raise ValueError(
+                    "The discretization scheme '%s' has already "
+                    "been applied to the ContinuousSet '%s'"
+                    % (tmpds.get_discretization_info()['scheme'], tmpds.name)
+                )
 
         if None in self._nfe:
             raise ValueError(
@@ -389,7 +439,8 @@ class Collocation_Discretization_Transformation(Transformation):
                 "to every ContinuousSet in the model. If you would like to "
                 "specify a specific discretization scheme for one of the "
                 "ContinuousSets you must discretize each ContinuousSet "
-                "separately.")
+                "separately."
+            )
 
         if len(self._nfe) == 0 and tmpds is None:
             # Same discretization on all ContinuousSets
@@ -411,25 +462,25 @@ class Collocation_Discretization_Transformation(Transformation):
 
         self._transformBlock(instance, currentds)
 
-        return instance
-
     def _transformBlock(self, block, currentds):
-
         self._fe = {}
         for ds in block.component_objects(ContinuousSet, descend_into=True):
             if currentds is None or currentds == ds.name:
                 if 'scheme' in ds.get_discretization_info():
-                    raise DAE_Error("Attempting to discretize ContinuousSet "
-                                    "'%s' after it has already been discretized. "
-                                    % ds.name)
+                    raise DAE_Error(
+                        "Attempting to discretize ContinuousSet "
+                        "'%s' after it has already been discretized. " % ds.name
+                    )
                 generate_finite_elements(ds, self._nfe[currentds])
                 if not ds.get_changed():
                     if len(ds) - 1 > self._nfe[currentds]:
-                        logger.warning("More finite elements were found in "
-                                    "ContinuousSet '%s' than the number of "
-                                    "finite elements specified in apply. The "
-                                    "larger number of finite elements will be "
-                                    "used." % ds.name)
+                        logger.warning(
+                            "More finite elements were found in "
+                            "ContinuousSet '%s' than the number of "
+                            "finite elements specified in apply. The "
+                            "larger number of finite elements will be "
+                            "used." % ds.name
+                        )
 
                 self._nfe[ds.name] = len(ds) - 1
                 self._fe[ds.name] = list(ds)
@@ -460,11 +511,11 @@ class Collocation_Discretization_Transformation(Transformation):
                             "Error discretizing '%s' with respect to '%s'. "
                             "Current implementation only allows for taking the"
                             " first or second derivative with respect to a "
-                            "particular ContinuousSet" % (d.name, i.name))
+                            "particular ContinuousSet" % (d.name, i.name)
+                        )
                     scheme = self._scheme[count - 1]
 
-                    newexpr = create_partial_expression(scheme, oldexpr, i,
-                                                        loc)
+                    newexpr = create_partial_expression(scheme, oldexpr, i, loc)
                     d.set_derivative_expression(newexpr)
                     if self._scheme_name == 'LAGRANGE-LEGENDRE':
                         # Add continuity equations to DerivativeVar's parent
@@ -485,19 +536,17 @@ class Collocation_Discretization_Transformation(Transformation):
                 # a Block to add things to the model and store discretization
                 # information. Using a list for now because the simulator
                 # does not yet support models containing active Blocks
-                reclassified_list = getattr(block,
-                                            '_pyomo_dae_reclassified_derivativevars',
-                                            None)
+                reclassified_list = getattr(
+                    block, '_pyomo_dae_reclassified_derivativevars', None
+                )
                 if reclassified_list is None:
                     block._pyomo_dae_reclassified_derivativevars = list()
-                    reclassified_list = \
-                        block._pyomo_dae_reclassified_derivativevars
+                    reclassified_list = block._pyomo_dae_reclassified_derivativevars
 
                 reclassified_list.append(d)
 
         # Reclassify Integrals if all ContinuousSets have been discretized
         if block_fully_discretized(block):
-
             if block.contains_component(Integral):
                 for i in block.component_objects(Integral, descend_into=True):
                     i.parent_block().reclassify_component_type(i, Expression)
@@ -521,8 +570,7 @@ class Collocation_Discretization_Transformation(Transformation):
                     k._constructed = False
                     k.construct()
 
-    def reduce_collocation_points(self, instance, var=None, ncp=None,
-                                  contset=None):
+    def reduce_collocation_points(self, instance, var=None, ncp=None, contset=None):
         """
         This method will add additional constraints to a model to reduce the
         number of free collocation points (degrees of freedom) for a particular
@@ -548,66 +596,82 @@ class Collocation_Discretization_Transformation(Transformation):
 
         """
         if contset is None:
-            raise TypeError("A continuous set must be specified using the "
-                            "keyword 'contset'")
+            raise TypeError(
+                "A continuous set must be specified using the keyword 'contset'"
+            )
         if contset.ctype is not ContinuousSet:
-            raise TypeError("The component specified using the 'contset' "
-                            "keyword must be a ContinuousSet")
+            raise TypeError(
+                "The component specified using the 'contset' "
+                "keyword must be a ContinuousSet"
+            )
         ds = contset
 
         if len(self._ncp) == 0:
-            raise RuntimeError("This method should only be called after using "
-                               "the apply() method to discretize the model")
+            raise RuntimeError(
+                "This method should only be called after using "
+                "the apply() method to discretize the model"
+            )
         elif None in self._ncp:
             tot_ncp = self._ncp[None]
         elif ds.name in self._ncp:
             tot_ncp = self._ncp[ds.name]
         else:
-            raise ValueError("ContinuousSet '%s' has not been discretized, "
-                             "please call the apply_to() method with this "
-                             "ContinuousSet to discretize it before calling "
-                             "this method" % ds.name)
+            raise ValueError(
+                "ContinuousSet '%s' has not been discretized, "
+                "please call the apply_to() method with this "
+                "ContinuousSet to discretize it before calling "
+                "this method" % ds.name
+            )
 
         if var is None:
             raise TypeError("A variable must be specified")
         if var.ctype is not Var:
-            raise TypeError("The component specified using the 'var' keyword "
-                            "must be a variable")
+            raise TypeError(
+                "The component specified using the 'var' keyword must be a variable"
+            )
 
         if ncp is None:
-            raise TypeError(
-                "The number of collocation points must be specified")
+            raise TypeError("The number of collocation points must be specified")
         if ncp <= 0:
-            raise ValueError(
-                "The number of collocation points must be at least 1")
+            raise ValueError("The number of collocation points must be at least 1")
         if ncp > tot_ncp:
-            raise ValueError("The number of collocation points used to "
-                             "interpolate an individual variable must be less "
-                             "than the number used to discretize the original "
-                             "model")
+            raise ValueError(
+                "The number of collocation points used to "
+                "interpolate an individual variable must be less "
+                "than the number used to discretize the original "
+                "model"
+            )
         if ncp == tot_ncp:
             # Nothing to be done
             return instance
 
         # Check to see if the continuousset is an indexing set of the variable
         if var.dim() == 0:
-            raise IndexError("ContinuousSet '%s' is not an indexing set of"
-                             " the variable '%s'" % (ds.name, var.name))
+            raise IndexError(
+                "ContinuousSet '%s' is not an indexing set of"
+                " the variable '%s'" % (ds.name, var.name)
+            )
         varidx = var.index_set()
         if not varidx.subsets():
             if ds is not varidx:
-                raise IndexError("ContinuousSet '%s' is not an indexing set of"
-                                 " the variable '%s'" % (ds.name, var.name))
+                raise IndexError(
+                    "ContinuousSet '%s' is not an indexing set of"
+                    " the variable '%s'" % (ds.name, var.name)
+                )
         elif ds not in varidx.subsets():
-            raise IndexError("ContinuousSet '%s' is not an indexing set of the"
-                             " variable '%s'" % (ds.name, var.name))
+            raise IndexError(
+                "ContinuousSet '%s' is not an indexing set of the"
+                " variable '%s'" % (ds.name, var.name)
+            )
 
         if var.name in self._reduced_cp:
             temp = self._reduced_cp[var.name]
             if ds.name in temp:
-                raise RuntimeError("Variable '%s' has already been constrained"
-                                   " to a reduced number of collocation points"
-                                   " over ContinuousSet '%s'.")
+                raise RuntimeError(
+                    "Variable '%s' has already been constrained"
+                    " to a reduced number of collocation points"
+                    " over ContinuousSet '%s'."
+                )
             else:
                 temp[ds.name] = ncp
         else:
@@ -633,23 +697,24 @@ class Collocation_Discretization_Transformation(Transformation):
                 for k in range(1, tot_ncp - ncp + 1):
                     if ncp == 1:
                         # Constant over each finite element
-                        conlist.add(var[idx(n, i, k)] ==
-                                    var[idx(n, i, tot_ncp)])
+                        conlist.add(var[idx(n, i, k)] == var[idx(n, i, tot_ncp)])
                     else:
-                        tmp = ds.ord(fe[i])-1
-                        tmp2 = ds.ord(fe[i + 1])-1
+                        tmp = ds.ord(fe[i]) - 1
+                        tmp2 = ds.ord(fe[i + 1]) - 1
                         ti = t[tmp + k]
-                        tfit = t[tmp2 - ncp + 1:tmp2 + 1]
+                        tfit = t[tmp2 - ncp + 1 : tmp2 + 1]
                         coeff = self._interpolation_coeffs(ti, tfit)
-                        conlist.add(var[idx(n, i, k)] ==
-                                    sum(var[idx(n, i, j)] * next(coeff)
-                                        for j in range(tot_ncp - ncp + 1,
-                                                        tot_ncp + 1)))
+                        conlist.add(
+                            var[idx(n, i, k)]
+                            == sum(
+                                var[idx(n, i, j)] * next(coeff)
+                                for j in range(tot_ncp - ncp + 1, tot_ncp + 1)
+                            )
+                        )
 
         return instance
 
     def _interpolation_coeffs(self, ti, tfit):
-
         for i in tfit:
             l = 1
             for j in tfit:

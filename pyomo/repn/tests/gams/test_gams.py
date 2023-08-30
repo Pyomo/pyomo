@@ -19,21 +19,38 @@ from io import StringIO
 from filecmp import cmp
 import pyomo.common.unittest as unittest
 from pyomo.core.base import NumericLabeler, SymbolMap
-from pyomo.environ import (Block, ConcreteModel, Constraint,
-                           Objective, TransformationFactory, Var, exp, log,
-                           ceil, floor, asin, acos, atan, asinh, acosh, atanh,
-                           Binary, quicksum)
+from pyomo.environ import (
+    Block,
+    ConcreteModel,
+    Constraint,
+    Objective,
+    TransformationFactory,
+    Var,
+    exp,
+    log,
+    ceil,
+    floor,
+    asin,
+    acos,
+    atan,
+    asinh,
+    acosh,
+    atanh,
+    Binary,
+    quicksum,
+)
 from pyomo.gdp import Disjunction
 from pyomo.network import Port, Arc
-from pyomo.repn.plugins.gams_writer import (StorageTreeChecker,
-                                            expression_to_string,
-                                            split_long_line)
+from pyomo.repn.plugins.gams_writer import (
+    StorageTreeChecker,
+    expression_to_string,
+    split_long_line,
+)
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
 
 
 class Test(unittest.TestCase):
-
     def _cleanup(self, fname):
         try:
             os.remove(fname)
@@ -48,14 +65,9 @@ class Test(unittest.TestCase):
     def _check_baseline(self, model, **kwds):
         baseline_fname, test_fname = self._get_fnames()
         self._cleanup(test_fname)
-        io_options = {
-            "symbolic_solver_labels": True,
-            "output_fixed_variables": True,
-        }
+        io_options = {"symbolic_solver_labels": True, "output_fixed_variables": True}
         io_options.update(kwds)
-        model.write(test_fname,
-                    format="gams",
-                    io_options=io_options)
+        model.write(test_fname, format="gams", io_options=io_options)
         try:
             self.assertTrue(cmp(test_fname, baseline_fname))
         except:
@@ -63,9 +75,9 @@ class Test(unittest.TestCase):
                 f1_contents = list(filter(None, f1.read().split()))
                 f2_contents = list(filter(None, f2.read().split()))
                 self.assertEqual(
-                    f1_contents, f2_contents,
-                    "\n\nbaseline: %s\ntestFile: %s\n" % (
-                        baseline_fname, test_fname)
+                    f1_contents,
+                    f2_contents,
+                    "\n\nbaseline: %s\ntestFile: %s\n" % (baseline_fname, test_fname),
                 )
         self._cleanup(test_fname)
 
@@ -89,9 +101,17 @@ class Test(unittest.TestCase):
         model.b = Var()
         model.c = Var()
 
-        terms = [model.a, model.b, model.c,
-                 (model.a, model.a), (model.b, model.b), (model.c, model.c),
-                 (model.a, model.b), (model.a, model.c), (model.b, model.c)]
+        terms = [
+            model.a,
+            model.b,
+            model.c,
+            (model.a, model.a),
+            (model.b, model.b),
+            (model.c, model.c),
+            (model.a, model.b),
+            (model.a, model.c),
+            (model.b, model.c),
+        ]
         model.obj = Objective(expr=self._gen_expression(terms))
         model.con = Constraint(expr=self._gen_expression(terms) <= 1)
         self._check_baseline(model)
@@ -140,7 +160,7 @@ class Test(unittest.TestCase):
         m = ConcreteModel()
         m.y = Var(within=Binary)
         m.y.fix(0)
-        m.x = Var(bounds=(0,None))
+        m.x = Var(bounds=(0, None))
         m.c1 = Constraint(expr=quicksum([m.y, m.y], linear=True) >= 0)
         m.c2 = Constraint(expr=quicksum([m.x, m.y], linear=True) == 1)
         m.obj = Objective(expr=m.x)
@@ -160,7 +180,7 @@ class Test(unittest.TestCase):
 
         m.choice = Disjunction(expr=[m.disj[0], m.disj[1]])
 
-        m.c = Constraint(expr=m.x ** 2 + m.disj[1].nested['A'].indicator_var >= 1)
+        m.c = Constraint(expr=m.x**2 + m.disj[1].nested['A'].indicator_var >= 1)
 
         m.disj[0].indicator_var.fix(1)
         m.disj[1].deactivate()
@@ -183,26 +203,34 @@ class Test(unittest.TestCase):
         lbl = NumericLabeler('x')
         smap = SymbolMap(lbl)
         tc = StorageTreeChecker(m)
-        self.assertEqual(("x1 + x1", False), expression_to_string(m.c.body, tc, smap=smap))
+        self.assertEqual(
+            ("x1 + x1", False), expression_to_string(m.c.body, tc, smap=smap)
+        )
         m.x = Var()
         m.c2 = Constraint(expr=quicksum([m.x, m.y], linear=True) == 1)
-        self.assertEqual(("x2 + x1", False), expression_to_string(m.c2.body, tc, smap=smap))
+        self.assertEqual(
+            ("x2 + x1", False), expression_to_string(m.c2.body, tc, smap=smap)
+        )
 
         m.y.fix(1)
         lbl = NumericLabeler('x')
         smap = SymbolMap(lbl)
         tc = StorageTreeChecker(m)
-        self.assertEqual(("1 + 1", False), expression_to_string(m.c.body, tc, smap=smap))
+        self.assertEqual(
+            ("1 + 1", False), expression_to_string(m.c.body, tc, smap=smap)
+        )
         m.x = Var()
         m.c2 = Constraint(expr=quicksum([m.x, m.y], linear=True) == 1)
-        self.assertEqual(("x1 + 1", False), expression_to_string(m.c2.body, tc, smap=smap))
+        self.assertEqual(
+            ("x1 + 1", False), expression_to_string(m.c2.body, tc, smap=smap)
+        )
 
     def test_quicksum_integer_var_fixed(self):
         m = ConcreteModel()
         m.x = Var()
         m.y = Var(domain=Binary)
         m.c = Constraint(expr=quicksum([m.y, m.y], linear=True) == 1)
-        m.o = Objective(expr=m.x ** 2)
+        m.o = Objective(expr=m.x**2)
         m.y.fix(1)
         outs = StringIO()
         m.write(outs, format='gams')
@@ -210,8 +238,11 @@ class Test(unittest.TestCase):
 
     def test_expr_xfrm(self):
         from pyomo.repn.plugins.gams_writer import (
-            expression_to_string, StorageTreeChecker)
+            expression_to_string,
+            StorageTreeChecker,
+        )
         from pyomo.core.expr.symbol_map import SymbolMap
+
         M = ConcreteModel()
         M.abc = Var()
 
@@ -220,33 +251,41 @@ class Test(unittest.TestCase):
 
         expr = M.abc**2.0
         self.assertEqual(str(expr), "abc**2.0")
-        self.assertEqual(expression_to_string(
-            expr, tc, smap=smap), ("power(abc, 2)", False))
+        self.assertEqual(
+            expression_to_string(expr, tc, smap=smap), ("power(abc, 2)", False)
+        )
 
         expr = log(M.abc**2.0)
         self.assertEqual(str(expr), "log(abc**2.0)")
-        self.assertEqual(expression_to_string(
-            expr, tc, smap=smap), ("log(power(abc, 2))", False))
+        self.assertEqual(
+            expression_to_string(expr, tc, smap=smap), ("log(power(abc, 2))", False)
+        )
 
         expr = log(M.abc**2.0) + 5
         self.assertEqual(str(expr), "log(abc**2.0) + 5")
-        self.assertEqual(expression_to_string(
-            expr, tc, smap=smap), ("log(power(abc, 2)) + 5", False))
+        self.assertEqual(
+            expression_to_string(expr, tc, smap=smap), ("log(power(abc, 2)) + 5", False)
+        )
 
         expr = exp(M.abc**2.0) + 5
         self.assertEqual(str(expr), "exp(abc**2.0) + 5")
-        self.assertEqual(expression_to_string(
-            expr, tc, smap=smap), ("exp(power(abc, 2)) + 5", False))
+        self.assertEqual(
+            expression_to_string(expr, tc, smap=smap), ("exp(power(abc, 2)) + 5", False)
+        )
 
-        expr = log(M.abc**2.0)**4
+        expr = log(M.abc**2.0) ** 4
         self.assertEqual(str(expr), "log(abc**2.0)**4")
-        self.assertEqual(expression_to_string(
-            expr, tc, smap=smap), ("power(log(power(abc, 2)), 4)", False))
+        self.assertEqual(
+            expression_to_string(expr, tc, smap=smap),
+            ("power(log(power(abc, 2)), 4)", False),
+        )
 
-        expr = log(M.abc**2.0)**4.5
+        expr = log(M.abc**2.0) ** 4.5
         self.assertEqual(str(expr), "log(abc**2.0)**4.5")
-        self.assertEqual(expression_to_string(
-            expr, tc, smap=smap), ("log(power(abc, 2)) ** 4.5", False))
+        self.assertEqual(
+            expression_to_string(expr, tc, smap=smap),
+            ("log(power(abc, 2)) ** 4.5", False),
+        )
 
     def test_power_function_to_string(self):
         m = ConcreteModel()
@@ -254,12 +293,15 @@ class Test(unittest.TestCase):
         lbl = NumericLabeler('x')
         smap = SymbolMap(lbl)
         tc = StorageTreeChecker(m)
-        self.assertEqual(expression_to_string(
-            m.x ** -3, tc, smap=smap), ("power(x1, (-3))", False))
-        self.assertEqual(expression_to_string(
-            m.x ** 0.33, tc, smap=smap), ("x1 ** 0.33", False))
-        self.assertEqual(expression_to_string(
-            pow(m.x, 2), tc, smap=smap), ("power(x1, 2)", False))
+        self.assertEqual(
+            expression_to_string(m.x**-3, tc, smap=smap), ("power(x1, (-3))", False)
+        )
+        self.assertEqual(
+            expression_to_string(m.x**0.33, tc, smap=smap), ("x1 ** 0.33", False)
+        )
+        self.assertEqual(
+            expression_to_string(pow(m.x, 2), tc, smap=smap), ("power(x1, 2)", False)
+        )
 
     def test_fixed_var_to_string(self):
         m = ConcreteModel()
@@ -270,17 +312,24 @@ class Test(unittest.TestCase):
         lbl = NumericLabeler('x')
         smap = SymbolMap(lbl)
         tc = StorageTreeChecker(m)
-        self.assertEqual(expression_to_string(
-            m.x + m.y - m.z, tc, smap=smap), ("x1 + x2 + 3", False))
+        self.assertEqual(
+            expression_to_string(m.x + m.y - m.z, tc, smap=smap), ("x1 + x2 + 3", False)
+        )
         m.z.fix(-400)
-        self.assertEqual(expression_to_string(
-            m.z + m.y - m.z, tc, smap=smap), ("(-400) + x2 + 400", False))
+        self.assertEqual(
+            expression_to_string(m.z + m.y - m.z, tc, smap=smap),
+            ("(-400) + x2 + 400", False),
+        )
         m.z.fix(8.8)
-        self.assertEqual(expression_to_string(
-            m.x + m.z - m.y, tc, smap=smap), ("x1 + 8.8 - x2", False))
+        self.assertEqual(
+            expression_to_string(m.x + m.z - m.y, tc, smap=smap),
+            ("x1 + 8.8 - x2", False),
+        )
         m.z.fix(-8.8)
-        self.assertEqual(expression_to_string(
-            m.x * m.z - m.y, tc, smap=smap), ("x1*(-8.8) - x2", False))
+        self.assertEqual(
+            expression_to_string(m.x * m.z - m.y, tc, smap=smap),
+            ("x1*(-8.8) - x2", False),
+        )
 
     def test_dnlp_to_string(self):
         m = ConcreteModel()
@@ -290,12 +339,15 @@ class Test(unittest.TestCase):
         lbl = NumericLabeler('x')
         smap = SymbolMap(lbl)
         tc = StorageTreeChecker(m)
-        self.assertEqual(expression_to_string(
-            ceil(m.x), tc, smap=smap), ("ceil(x1)", True))
-        self.assertEqual(expression_to_string(
-            floor(m.x), tc, smap=smap), ("floor(x1)", True))
-        self.assertEqual(expression_to_string(
-            abs(m.x), tc, smap=smap), ("abs(x1)", True))
+        self.assertEqual(
+            expression_to_string(ceil(m.x), tc, smap=smap), ("ceil(x1)", True)
+        )
+        self.assertEqual(
+            expression_to_string(floor(m.x), tc, smap=smap), ("floor(x1)", True)
+        )
+        self.assertEqual(
+            expression_to_string(abs(m.x), tc, smap=smap), ("abs(x1)", True)
+        )
 
     def test_arcfcn_to_string(self):
         m = ConcreteModel()
@@ -303,23 +355,26 @@ class Test(unittest.TestCase):
         lbl = NumericLabeler('x')
         smap = SymbolMap(lbl)
         tc = StorageTreeChecker(m)
-        self.assertEqual(expression_to_string(
-            asin(m.x), tc, smap=smap), ("arcsin(x1)", False))
-        self.assertEqual(expression_to_string(
-            acos(m.x), tc, smap=smap), ("arccos(x1)", False))
-        self.assertEqual(expression_to_string(
-            atan(m.x), tc, smap=smap), ("arctan(x1)", False))
+        self.assertEqual(
+            expression_to_string(asin(m.x), tc, smap=smap), ("arcsin(x1)", False)
+        )
+        self.assertEqual(
+            expression_to_string(acos(m.x), tc, smap=smap), ("arccos(x1)", False)
+        )
+        self.assertEqual(
+            expression_to_string(atan(m.x), tc, smap=smap), ("arctan(x1)", False)
+        )
         with self.assertRaisesRegex(
-                RuntimeError,
-                "GAMS files cannot represent the unary function asinh"):
+            RuntimeError, "GAMS files cannot represent the unary function asinh"
+        ):
             expression_to_string(asinh(m.x), tc, smap=smap)
         with self.assertRaisesRegex(
-                RuntimeError,
-                "GAMS files cannot represent the unary function acosh"):
+            RuntimeError, "GAMS files cannot represent the unary function acosh"
+        ):
             expression_to_string(acosh(m.x), tc, smap=smap)
         with self.assertRaisesRegex(
-                RuntimeError,
-                "GAMS files cannot represent the unary function atanh"):
+            RuntimeError, "GAMS files cannot represent the unary function atanh"
+        ):
             expression_to_string(atanh(m.x), tc, smap=smap)
 
     def test_gams_arc_in_active_constraint(self):
@@ -358,16 +413,20 @@ class Test(unittest.TestCase):
     def test_split_long_line(self):
         pat = "var1 + log(var2 / 9) - "
         line = (pat * 10000) + "x"
-        self.assertEqual(split_long_line(line),
-                         pat * 3478 + "var1 +\n log(var2 / 9) - " +
-                         pat * 3477 + "var1 +\n log(var2 / 9) - " +
-                         pat * 3043 + "x")
+        self.assertEqual(
+            split_long_line(line),
+            pat * 3478
+            + "var1 +\n log(var2 / 9) - "
+            + pat * 3477
+            + "var1 +\n log(var2 / 9) - "
+            + pat * 3043
+            + "x",
+        )
 
     def test_split_long_line_no_comment(self):
         pat = "1000 * 2000 * "
         line = pat * 5715 + "x"
-        self.assertEqual(split_long_line(line),
-            pat * 5714 + "1000\n * 2000 * x")
+        self.assertEqual(split_long_line(line), pat * 5714 + "1000\n * 2000 * x")
 
     def test_solver_arg(self):
         m = ConcreteModel()
@@ -384,21 +443,37 @@ class Test(unittest.TestCase):
         m.y = Var()
         m.z = Var(bounds=(0, 6))
         m.c = Constraint(expr=(m.x * m.y * -2) == 0)
-        m.c2 = Constraint(expr=m.z ** -1.5 == 0)
+        m.c2 = Constraint(expr=m.z**-1.5 == 0)
         m.o = Objective(expr=m.z)
         m.y.fix(-7)
         m.x.fix(4)
         lbl = NumericLabeler('x')
         smap = SymbolMap(lbl)
         tc = StorageTreeChecker(m)
-        self.assertEqual(expression_to_string(
-            m.c.body, tc, smap=smap), ("4*(-7)*(-2)", False))
-        self.assertEqual(expression_to_string(
-            m.c2.body, tc, smap=smap), ("x1 ** (-1.5)", False))
+        self.assertEqual(
+            expression_to_string(m.c.body, tc, smap=smap), ("4*(-7)*(-2)", False)
+        )
+        self.assertEqual(
+            expression_to_string(m.c2.body, tc, smap=smap), ("x1 ** (-1.5)", False)
+        )
+
+    def test_issue_2819(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.z = Var()
+        t = 0.55
+        m.x.fix(3.5)
+        e = (m.x - 4) ** 2 + (m.z - 1) ** 2 - t
+
+        tc = StorageTreeChecker(m)
+        smap = SymbolMap()
+        test = expression_to_string(e, tc, smap=smap)
+        self.assertEqual(
+            test, ('power((3.5 + (-4)), 2) + power((z + (-1)), 2) + (-0.55)', False)
+        )
 
 
 class TestGams_writer(unittest.TestCase):
-
     def _cleanup(self, fname):
         try:
             os.remove(fname)
@@ -421,9 +496,7 @@ class TestGams_writer(unittest.TestCase):
 
         baseline_fname, test_fname = self._get_fnames()
         self._cleanup(test_fname)
-        self.assertRaises(
-            RuntimeError,
-            model.write, test_fname, format='gams')
+        self.assertRaises(RuntimeError, model.write, test_fname, format='gams')
         self._cleanup(test_fname)
 
     def test_var_on_nonblock(self):
@@ -441,9 +514,7 @@ class TestGams_writer(unittest.TestCase):
 
         baseline_fname, test_fname = self._get_fnames()
         self._cleanup(test_fname)
-        self.assertRaises(
-            RuntimeError,
-            model.write, test_fname, format='gams')
+        self.assertRaises(RuntimeError, model.write, test_fname, format='gams')
         self._cleanup(test_fname)
 
 

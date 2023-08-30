@@ -1,22 +1,38 @@
-from pyomo.core import (Block, ConcreteModel, Constraint, Objective, Param, Set,
-                        Var, inequality, RangeSet, Any, Expression, maximize,
-                        TransformationFactory, BooleanVar, LogicalConstraint,
-                        exactly)
-from pyomo.core.expr.current import sqrt
+from pyomo.core import (
+    Block,
+    ConcreteModel,
+    Constraint,
+    Objective,
+    Param,
+    Set,
+    Var,
+    inequality,
+    RangeSet,
+    Any,
+    Expression,
+    maximize,
+    TransformationFactory,
+    BooleanVar,
+    LogicalConstraint,
+    exactly,
+)
+from pyomo.core.expr import sqrt
 from pyomo.gdp import Disjunct, Disjunction
 
 import pyomo.network as ntwk
+
 
 def oneVarDisj_2pts():
     m = ConcreteModel()
     m.x = Var(bounds=(0, 10))
     m.disj1 = Disjunct()
-    m.disj1.xTrue = Constraint(expr=m.x==1)
+    m.disj1.xTrue = Constraint(expr=m.x == 1)
     m.disj2 = Disjunct()
-    m.disj2.xFalse = Constraint(expr=m.x==0)
+    m.disj2.xFalse = Constraint(expr=m.x == 0)
     m.disjunction = Disjunction(expr=[m.disj1, m.disj2])
     m.obj = Objective(expr=m.x)
     return m
+
 
 def twoSegments_SawayaGrossmann():
     m = ConcreteModel()
@@ -33,9 +49,9 @@ def twoSegments_SawayaGrossmann():
 
     return m
 
+
 def makeTwoTermDisj():
-    """Single two-term disjunction which has all of ==, <=, and >= constraints
-    """
+    """Single two-term disjunction which has all of ==, <=, and >= constraints"""
     m = ConcreteModel()
     m.a = Var(bounds=(2, 7))
     m.x = Var(bounds=(4, 9))
@@ -47,13 +63,14 @@ def makeTwoTermDisj():
             disjunct.c2 = Constraint(expr=m.x <= 7)
         else:
             disjunct.c = Constraint(expr=m.a >= 5)
+
     m.d = Disjunct([0, 1], rule=d_rule)
     m.disjunction = Disjunction(expr=[m.d[0], m.d[1]])
     return m
 
 
 def makeTwoTermDisj_Nonlinear():
-    """Single two-term disjunction which has all of ==, <=, and >= and 
+    """Single two-term disjunction which has all of ==, <=, and >= and
     one nonlinear constraint.
     """
     m = ConcreteModel()
@@ -69,14 +86,15 @@ def makeTwoTermDisj_Nonlinear():
             disjunct.c3 = Constraint(expr=(1, m.x, 3))
         else:
             disjunct.c = Constraint(expr=m.x + m.y**2 <= 14)
+
     m.d = Disjunct([0, 1], rule=d_rule)
     m.disjunction = Disjunction(expr=[m.d[0], m.d[1]])
     return m
 
 
 def makeTwoTermDisj_IndexedConstraints():
-    """Single two-term disjunction with IndexedConstraints on both disjuncts.  
-    Does not bound the variables, so cannot be transformed by hull at all and 
+    """Single two-term disjunction with IndexedConstraints on both disjuncts.
+    Does not bound the variables, so cannot be transformed by hull at all and
     requires specifying m values in bigm.
     """
     m = ConcreteModel()
@@ -89,7 +107,9 @@ def makeTwoTermDisj_IndexedConstraints():
 
         def c_rule(d, s):
             return m.a[s] == 0
+
         disjunct.c = Constraint(m.s, rule=c_rule)
+
     m.b.simpledisj1 = Disjunct(rule=disj1_rule)
 
     def disj2_rule(disjunct):
@@ -97,15 +117,16 @@ def makeTwoTermDisj_IndexedConstraints():
 
         def c_rule(d, s):
             return m.a[s] <= 3
+
         disjunct.c = Constraint(m.s, rule=c_rule)
+
     m.b.simpledisj2 = Disjunct(rule=disj2_rule)
     m.b.disjunction = Disjunction(expr=[m.b.simpledisj1, m.b.simpledisj2])
     return m
 
 
 def makeTwoTermDisj_IndexedConstraints_BoundedVars():
-    """Single two-term disjunction with IndexedConstraints on both disjuncts. 
-    """
+    """Single two-term disjunction with IndexedConstraints on both disjuncts."""
     m = ConcreteModel()
     m.s = Set(initialize=[1, 2])
     m.lbs = Param(m.s, initialize={1: 2, 2: 4})
@@ -113,6 +134,7 @@ def makeTwoTermDisj_IndexedConstraints_BoundedVars():
 
     def bounds_rule(m, s):
         return (m.lbs[s], m.ubs[s])
+
     m.a = Var(m.s, bounds=bounds_rule)
 
     def d_rule(disjunct, flag):
@@ -123,13 +145,16 @@ def makeTwoTermDisj_IndexedConstraints_BoundedVars():
 
         def false_rule(d, s):
             return m.a[s] >= 5
+
         if flag:
             disjunct.c = Constraint(m.s, rule=true_rule)
         else:
             disjunct.c = Constraint(m.s, rule=false_rule)
+
     m.disjunct = Disjunct([0, 1], rule=d_rule)
     m.disjunction = Disjunction(expr=[m.disjunct[0], m.disjunct[1]])
     return m
+
 
 def localVar():
     """Two-term disjunction which declares a local variable y on one of the
@@ -140,13 +165,13 @@ def localVar():
     """
     # y appears in a global constraint and a single disjunct.
     m = ConcreteModel()
-    m.x = Var(bounds=(0,3))
+    m.x = Var(bounds=(0, 3))
 
     m.disj1 = Disjunct()
     m.disj1.cons = Constraint(expr=m.x >= 1)
 
     m.disj2 = Disjunct()
-    m.disj2.y = Var(bounds=(1,3))
+    m.disj2.y = Var(bounds=(1, 3))
     m.disj2.cons = Constraint(expr=m.x + m.disj2.y == 3)
 
     m.disjunction = Disjunction(expr=[m.disj1, m.disj2])
@@ -159,9 +184,7 @@ def localVar():
 def make_infeasible_gdp_model():
     m = ConcreteModel()
     m.x = Var(bounds=(0, 2))
-    m.d = Disjunction(expr=[
-        [m.x ** 2 >= 3, m.x >= 3],
-        [m.x ** 2 <= -1, m.x <= -1]])
+    m.d = Disjunction(expr=[[m.x**2 >= 3, m.x >= 3], [m.x**2 <= -1, m.x <= -1]])
     m.o = Objective(expr=m.x)
 
     return m
@@ -181,18 +204,21 @@ def makeThreeTermIndexedDisj():
             disjunct.c = Constraint(expr=m.a[s] >= 5)
         else:
             disjunct.c = Constraint(expr=inequality(2, m.a[s], 4))
+
     m.disjunct = Disjunct([0, 1, 2], m.s, rule=d_rule)
 
     def disj_rule(m, s):
         return [m.disjunct[0, s], m.disjunct[1, s], m.disjunct[2, s]]
+
     m.disjunction = Disjunction(m.s, rule=disj_rule)
     return m
 
 
 def makeTwoTermDisj_boxes():
     m = ConcreteModel()
-    m.x = Var(bounds=(0,5))
-    m.y = Var(bounds=(0,5))
+    m.x = Var(bounds=(0, 5))
+    m.y = Var(bounds=(0, 5))
+
     def d_rule(disjunct, flag):
         m = disjunct.model()
         if flag:
@@ -201,11 +227,14 @@ def makeTwoTermDisj_boxes():
         else:
             disjunct.c1 = Constraint(expr=inequality(3, m.x, 4))
             disjunct.c2 = Constraint(expr=inequality(1, m.y, 2))
-    m.d = Disjunct([0,1], rule=d_rule)
+
+    m.d = Disjunct([0, 1], rule=d_rule)
+
     def disj_rule(m):
         return [m.d[0], m.d[1]]
+
     m.disjunction = Disjunction(rule=disj_rule)
-    m.obj = Objective(expr=m.x + 2*m.y)
+    m.obj = Objective(expr=m.x + 2 * m.y)
     return m
 
 
@@ -222,6 +251,7 @@ def makeThreeTermDisj_IndexedConstraints():
     def d_rule(d, j):
         m = d.model()
         d.c = Constraint(m.I[:j], rule=c_rule)
+
     m.d = Disjunct(m.I, rule=d_rule)
     m.disjunction = Disjunction(expr=[m.d[i] for i in m.I])
     return m
@@ -240,10 +270,12 @@ def makeTwoTermIndexedDisjunction():
             d.cons_a = Constraint(expr=m.x[i] >= 5)
         if k == 'b':
             d.cons_b = Constraint(expr=m.x[i] <= 0)
+
     m.disjunct = Disjunct(m.A, m.B, rule=disjunct_rule)
 
     def disj_rule(m, i):
         return [m.disjunct[i, k] for k in m.B]
+
     m.disjunction = Disjunction(m.A, rule=disj_rule)
     return m
 
@@ -261,10 +293,12 @@ def makeTwoTermIndexedDisjunction_BoundedVars():
             d.c = Constraint(expr=m.a[s] >= 6)
         else:
             d.c = Constraint(expr=m.a[s] <= 3)
+
     m.disjunct = Disjunct(m.s, [0, 1], rule=disjunct_rule)
 
     def disjunction_rule(m, s):
         return [m.disjunct[s, flag] for flag in [0, 1]]
+
     m.disjunction = Disjunction(m.s, rule=disjunction_rule)
     return m
 
@@ -273,18 +307,20 @@ def makeIndexedDisjunction_SkipIndex():
     """Two-term indexed disjunction where one of the two indices is skipped"""
     m = ConcreteModel()
     m.x = Var(bounds=(0, 10))
-    @m.Disjunct([0,1])
+
+    @m.Disjunct([0, 1])
     def disjuncts(d, i):
         m = d.model()
         d.cons = Constraint(expr=m.x == i)
 
-    @m.Disjunction([0,1])
+    @m.Disjunction([0, 1])
     def disjunctions(m, i):
         if i == 0:
             return Disjunction.Skip
         return [m.disjuncts[i], m.disjuncts[0]]
 
     return m
+
 
 def makeTwoTermMultiIndexedDisjunction():
     """Two-term indexed disjunction with tuple indices"""
@@ -299,10 +335,12 @@ def makeTwoTermMultiIndexedDisjunction():
             disjunct.c = Constraint(expr=m.a[s, t] == 0)
         else:
             disjunct.c = Constraint(expr=m.a[s, t] >= 5)
+
     m.disjunct = Disjunct([0, 1], m.s, m.t, rule=d_rule)
 
     def disj_rule(m, s, t):
         return [m.disjunct[0, s, t], m.disjunct[1, s, t]]
+
     m.disjunction = Disjunction(m.s, m.t, rule=disj_rule)
     return m
 
@@ -327,17 +365,22 @@ def makeTwoTermDisjOnBlock():
 
     return m
 
+
 def add_disj_not_on_block(m):
     def simpdisj_rule(disjunct):
         m = disjunct.model()
         disjunct.c = Constraint(expr=m.a >= 3)
+
     m.simpledisj = Disjunct(rule=simpdisj_rule)
+
     def simpledisj2_rule(disjunct):
         m = disjunct.model()
         disjunct.c = Constraint(expr=m.a <= 3.5)
+
     m.simpledisj2 = Disjunct(rule=simpledisj2_rule)
     m.disjunction2 = Disjunction(expr=[m.simpledisj, m.simpledisj2])
     return m
+
 
 def makeDisjunctionsOnIndexedBlock():
     """Two disjunctions (one indexed and one not), each on a separate
@@ -357,6 +400,7 @@ def makeDisjunctionsOnIndexedBlock():
 
     def disjunction1_rule(m, s):
         return [m.disjunct1[s, flag] for flag in [0, 1]]
+
     m.disjunction1 = Disjunction(m.s, rule=disjunction1_rule)
 
     m.b = Block([0, 1])
@@ -367,10 +411,12 @@ def makeDisjunctionsOnIndexedBlock():
             disjunct.c = Constraint(expr=m.b[0].x <= 0)
         else:
             disjunct.c = Constraint(expr=m.b[0].x >= 0)
+
     m.b[0].disjunct = Disjunct([0, 1], rule=disjunct2_rule)
 
     def disjunction(b, i):
         return [b.disjunct[0], b.disjunct[1]]
+
     m.b[0].disjunction = Disjunction([0], rule=disjunction)
 
     m.b[1].y = Var(bounds=(-3, 3))
@@ -378,8 +424,7 @@ def makeDisjunctionsOnIndexedBlock():
     m.b[1].disjunct0.c = Constraint(expr=m.b[1].y <= 0)
     m.b[1].disjunct1 = Disjunct()
     m.b[1].disjunct1.c = Constraint(expr=m.b[1].y >= 0)
-    m.b[1].disjunction = Disjunction(
-        expr=[m.b[1].disjunct0, m.b[1].disjunct1])
+    m.b[1].disjunction = Disjunction(expr=[m.b[1].disjunct0, m.b[1].disjunct1])
     return m
 
 
@@ -402,6 +447,7 @@ def makeTwoTermDisj_BlockOnDisj():
             d.bb[1].c = Constraint(expr=m.x == 0)
         else:
             d.c = Constraint(expr=m.x >= 80)
+
     m.evil = Disjunct([0, 1], rule=disj_rule)
     m.disjunction = Disjunction(expr=[m.evil[0], m.evil[1]])
     return m
@@ -425,20 +471,24 @@ def makeNestedDisjunctions():
     def disjunct_rule(disjunct, flag):
         m = disjunct.model()
         if flag:
+
             def innerdisj_rule(disjunct, flag):
                 m = disjunct.model()
                 if flag:
                     disjunct.c = Constraint(expr=m.z >= 5)
                 else:
                     disjunct.c = Constraint(expr=m.z == 0)
+
             disjunct.innerdisjunct = Disjunct([0, 1], rule=innerdisj_rule)
 
             @disjunct.Disjunction([0])
             def innerdisjunction(b, i):
                 return [b.innerdisjunct[0], b.innerdisjunct[1]]
+
             disjunct.c = Constraint(expr=m.a <= 2)
         else:
             disjunct.c = Constraint(expr=m.x == 2)
+
     m.disjunct = Disjunct([0, 1], rule=disjunct_rule)
     # I want a SimpleDisjunct with a disjunction in it too
 
@@ -454,10 +504,11 @@ def makeNestedDisjunctions():
             disjunct.c = Constraint(expr=m.x >= 4)
 
         disjunct.innerdisjunction = Disjunction(
-            expr=[disjunct.innerdisjunct0, disjunct.innerdisjunct1])
+            expr=[disjunct.innerdisjunct0, disjunct.innerdisjunct1]
+        )
+
     m.simpledisjunct = Disjunct(rule=simpledisj_rule)
-    m.disjunction = Disjunction(
-        expr=[m.simpledisjunct, m.disjunct[0], m.disjunct[1]])
+    m.disjunction = Disjunction(expr=[m.simpledisjunct, m.disjunct[0], m.disjunct[1]])
     return m
 
 
@@ -510,6 +561,7 @@ def makeTwoSimpleDisjunctions():
             disjunct.c = Constraint(expr=m.a == 0)
         else:
             disjunct.c = Constraint(expr=m.a >= 5)
+
     m.disjunct1 = Disjunct([0, 1], rule=d1_rule)
 
     def d2_rule(disjunct, flag):
@@ -517,6 +569,7 @@ def makeTwoSimpleDisjunctions():
             disjunct.c = Constraint(expr=m.a >= 30)
         else:
             disjunct.c = Constraint(expr=m.a == 100)
+
     m.disjunct2 = Disjunct([0, 1], rule=d2_rule)
 
     m.disjunction1 = Disjunction(expr=[m.disjunct1[0], m.disjunct1[1]])
@@ -537,6 +590,7 @@ def makeDisjunctInMultipleDisjunctions():
             disjunct.c = Constraint(expr=m.a == 0)
         else:
             disjunct.c = Constraint(expr=m.a >= 5)
+
     m.disjunct1 = Disjunct([0, 1], rule=d1_rule)
 
     def d2_rule(disjunct, flag):
@@ -544,6 +598,7 @@ def makeDisjunctInMultipleDisjunctions():
             disjunct.c = Constraint(expr=m.a >= 30)
         else:
             disjunct.c = Constraint(expr=m.a == 100)
+
     m.disjunct2 = Disjunct([0, 1], rule=d2_rule)
 
     m.disjunction1 = Disjunction(expr=[m.disjunct1[0], m.disjunct1[1]])
@@ -564,23 +619,28 @@ def makeDuplicatedNestedDisjunction():
     def outerdisj_rule(d, flag):
         m = d.model()
         if flag:
+
             def innerdisj_rule(d, flag):
                 m = d.model()
                 if flag:
                     d.c = Constraint(expr=m.x >= 2)
                 else:
                     d.c = Constraint(expr=m.x == 0)
+
             d.innerdisjunct = Disjunct([0, 1], rule=innerdisj_rule)
-            d.innerdisjunction = Disjunction(expr=[d.innerdisjunct[0],
-                                                   d.innerdisjunct[1]])
-            d.duplicateddisjunction = Disjunction(expr=[d.innerdisjunct[0],
-                                                        d.innerdisjunct[1]])
+            d.innerdisjunction = Disjunction(
+                expr=[d.innerdisjunct[0], d.innerdisjunct[1]]
+            )
+            d.duplicateddisjunction = Disjunction(
+                expr=[d.innerdisjunct[0], d.innerdisjunct[1]]
+            )
         else:
             d.c = Constraint(expr=m.x == 8)
+
     m.outerdisjunct = Disjunct([0, 1], rule=outerdisj_rule)
-    m.disjunction = Disjunction(expr=[m.outerdisjunct[0],
-                                      m.outerdisjunct[1]])
+    m.disjunction = Disjunction(expr=[m.outerdisjunct[0], m.outerdisjunct[1]])
     return m
+
 
 def makeDisjunctWithRangeSet():
     """Two-term SimpleDisjunction where one of the disjuncts contains a
@@ -594,13 +654,15 @@ def makeDisjunctWithRangeSet():
     m.disj = Disjunction(expr=[m.d1, m.d2])
     return m
 
+
 ##########################
 # Grossmann lecture models
 ##########################
 
+
 def grossmann_oneDisj():
     m = ConcreteModel()
-    m.x = Var(bounds=(0,20))
+    m.x = Var(bounds=(0, 20))
     m.y = Var(bounds=(0, 20))
     m.disjunct1 = Disjunct()
     m.disjunct1.constraintx = Constraint(expr=inequality(0, m.x, 2))
@@ -612,9 +674,10 @@ def grossmann_oneDisj():
 
     m.disjunction = Disjunction(expr=[m.disjunct1, m.disjunct2])
 
-    m.objective = Objective(expr=m.x + 2*m.y, sense=maximize)
+    m.objective = Objective(expr=m.x + 2 * m.y, sense=maximize)
 
     return m
+
 
 def to_break_constraint_tolerances():
     m = ConcreteModel()
@@ -630,9 +693,10 @@ def to_break_constraint_tolerances():
 
     m.disjunction = Disjunction(expr=[m.disjunct1, m.disjunct2])
 
-    m.objective = Objective(expr=m.x + 2*m.y, sense=maximize)
+    m.objective = Objective(expr=m.x + 2 * m.y, sense=maximize)
 
     return m
+
 
 def grossmann_twoDisj():
     m = grossmann_oneDisj()
@@ -649,20 +713,22 @@ def grossmann_twoDisj():
 
     return m
 
+
 def twoDisj_twoCircles_easy():
     m = ConcreteModel()
-    m.x = Var(bounds=(0,8))
-    m.y = Var(bounds=(0,10))
+    m.x = Var(bounds=(0, 8))
+    m.y = Var(bounds=(0, 10))
 
     m.upper_circle = Disjunct()
-    m.upper_circle.cons = Constraint(expr=(m.x - 1)**2 + (m.y - 6)**2 <= 2)
+    m.upper_circle.cons = Constraint(expr=(m.x - 1) ** 2 + (m.y - 6) ** 2 <= 2)
     m.lower_circle = Disjunct()
-    m.lower_circle.cons = Constraint(expr=(m.x - 4)**2 + (m.y - 2)**2 <= 2)
+    m.lower_circle.cons = Constraint(expr=(m.x - 4) ** 2 + (m.y - 2) ** 2 <= 2)
 
     m.disjunction = Disjunction(expr=[m.upper_circle, m.lower_circle])
 
     m.obj = Objective(expr=m.x + m.y, sense=maximize)
     return m
+
 
 def fourCircles():
     m = twoDisj_twoCircles_easy()
@@ -670,14 +736,15 @@ def fourCircles():
     # and add two more overlapping circles, a la the Grossmann test case with
     # the rectangles. (but not change my nice integral optimal solution...)
     m.upper_circle2 = Disjunct()
-    m.upper_circle2.cons = Constraint(expr=(m.x - 2)**2 + (m.y - 7)**2 <= 1)
+    m.upper_circle2.cons = Constraint(expr=(m.x - 2) ** 2 + (m.y - 7) ** 2 <= 1)
 
     m.lower_circle2 = Disjunct()
-    m.lower_circle2.cons = Constraint(expr=(m.x - 5)**2 + (m.y - 3)**2 <= 2)
+    m.lower_circle2.cons = Constraint(expr=(m.x - 5) ** 2 + (m.y - 3) ** 2 <= 2)
 
     m.disjunction2 = Disjunction(expr=[m.upper_circle2, m.lower_circle2])
 
     return m
+
 
 def makeDisjunctWithExpression():
     """Two-term SimpleDisjunction where one of the disjuncts contains an
@@ -692,6 +759,7 @@ def makeDisjunctWithExpression():
     m.disj = Disjunction(expr=[m.d1, m.d2])
     return m
 
+
 def makeDisjunctionOfDisjunctDatas():
     """Two SimpleDisjunctions, where each are disjunctions of DisjunctDatas.
     This adds nothing to makeTwoSimpleDisjunctions but exists for convenience
@@ -703,7 +771,7 @@ def makeDisjunctionOfDisjunctDatas():
 
     m.obj = Objective(expr=m.x)
 
-    m.idx = Set(initialize=[1,2])
+    m.idx = Set(initialize=[1, 2])
     m.firstTerm = Disjunct(m.idx)
     m.firstTerm[1].cons = Constraint(expr=m.x == 0)
     m.firstTerm[2].cons = Constraint(expr=m.x == 2)
@@ -714,6 +782,7 @@ def makeDisjunctionOfDisjunctDatas():
     m.disjunction = Disjunction(expr=[m.firstTerm[1], m.secondTerm[1]])
     m.disjunction2 = Disjunction(expr=[m.firstTerm[2], m.secondTerm[2]])
     return m
+
 
 def makeAnyIndexedDisjunctionOfDisjunctDatas():
     """An IndexedDisjunction indexed by Any, with two two-term DisjunctionDatas
@@ -728,7 +797,7 @@ def makeAnyIndexedDisjunctionOfDisjunctDatas():
 
     m.obj = Objective(expr=m.x)
 
-    m.idx = Set(initialize=[1,2])
+    m.idx = Set(initialize=[1, 2])
     m.firstTerm = Disjunct(m.idx)
     m.firstTerm[1].cons = Constraint(expr=m.x == 0)
     m.firstTerm[2].cons = Constraint(expr=m.x == 2)
@@ -741,8 +810,9 @@ def makeAnyIndexedDisjunctionOfDisjunctDatas():
     m.disjunction[2] = [m.firstTerm[2], m.secondTerm[2]]
     return m
 
+
 def makeNetworkDisjunction(minimize=True):
-    """ creates a GDP model with pyomo.network components """
+    """creates a GDP model with pyomo.network components"""
     m = ConcreteModel()
 
     m.feed = feed = Block()
@@ -752,33 +822,31 @@ def makeNetworkDisjunction(minimize=True):
     m.orange = orange = Disjunct()
     m.blue = blue = Disjunct()
 
-    m.orange_or_blue = Disjunction(expr=[orange,blue])
+    m.orange_or_blue = Disjunction(expr=[orange, blue])
 
     blue.blue_box = blue_box = Block()
 
-    feed.x = Var(bounds=(0,1))
-    wkbx.x = Var(bounds=(0,1))
-    dest.x = Var(bounds=(0,1))
+    feed.x = Var(bounds=(0, 1))
+    wkbx.x = Var(bounds=(0, 1))
+    dest.x = Var(bounds=(0, 1))
 
-    wkbx.inlet = ntwk.Port(initialize={"x":wkbx.x})
-    wkbx.outlet = ntwk.Port(initialize={"x":wkbx.x})
+    wkbx.inlet = ntwk.Port(initialize={"x": wkbx.x})
+    wkbx.outlet = ntwk.Port(initialize={"x": wkbx.x})
 
-    feed.outlet = ntwk.Port(initialize={"x":feed.x})
-    dest.inlet = ntwk.Port(initialize={"x":dest.x})
+    feed.outlet = ntwk.Port(initialize={"x": feed.x})
+    dest.inlet = ntwk.Port(initialize={"x": dest.x})
 
-    blue_box.x = Var(bounds=(0,1))
-    blue_box.x_wkbx = Var(bounds=(0,1))
-    blue_box.x_dest = Var(bounds=(0,1))
+    blue_box.x = Var(bounds=(0, 1))
+    blue_box.x_wkbx = Var(bounds=(0, 1))
+    blue_box.x_dest = Var(bounds=(0, 1))
 
+    blue_box.inlet_feed = ntwk.Port(initialize={"x": blue_box.x})
+    blue_box.outlet_wkbx = ntwk.Port(initialize={"x": blue_box.x})
 
-    blue_box.inlet_feed = ntwk.Port(initialize={"x":blue_box.x})
-    blue_box.outlet_wkbx = ntwk.Port(initialize={"x":blue_box.x})
+    blue_box.inlet_wkbx = ntwk.Port(initialize={"x": blue_box.x_wkbx})
+    blue_box.outlet_dest = ntwk.Port(initialize={"x": blue_box.x_dest})
 
-    blue_box.inlet_wkbx = ntwk.Port(initialize={"x":blue_box.x_wkbx})
-    blue_box.outlet_dest = ntwk.Port(initialize={"x":blue_box.x_dest})
-
-    blue_box.multiplier_constr = Constraint(expr=blue_box.x_dest == \
-                                            2*blue_box.x_wkbx)
+    blue_box.multiplier_constr = Constraint(expr=blue_box.x_dest == 2 * blue_box.x_wkbx)
 
     # orange arcs
     orange.a1 = ntwk.Arc(source=feed.outlet, destination=wkbx.inlet)
@@ -801,10 +869,12 @@ def makeNetworkDisjunction(minimize=True):
 
     return m
 
+
 def makeExpandedNetworkDisjunction(minimize=True):
     m = makeNetworkDisjunction(minimize)
     TransformationFactory('network.expand_arcs').apply_to(m)
     return m
+
 
 def makeThreeTermDisjunctionWithOneVarInOneDisjunct():
     """This is to make sure hull doesn't create more disaggregated variables
@@ -813,8 +883,8 @@ def makeThreeTermDisjunctionWithOneVarInOneDisjunct():
     free if either of the second two Disjuncts is active and 0 otherwise.
     """
     m = ConcreteModel()
-    m.x = Var(bounds=(-2,8))
-    m.y = Var(bounds=(3,4))
+    m.x = Var(bounds=(-2, 8))
+    m.y = Var(bounds=(3, 4))
     m.d1 = Disjunct()
     m.d1.c1 = Constraint(expr=m.x <= 3)
     m.d1.c2 = Constraint(expr=m.y >= 3.5)
@@ -827,6 +897,7 @@ def makeThreeTermDisjunctionWithOneVarInOneDisjunct():
 
     return m
 
+
 def makeNestedNonlinearModel():
     """This is actually a disjunction between two points, but it's written
     as a nested disjunction over four circles!"""
@@ -835,129 +906,156 @@ def makeNestedNonlinearModel():
     m.y = Var(bounds=(-10, 10))
     m.d1 = Disjunct()
     m.d1.lower_circle = Constraint(expr=m.x**2 + m.y**2 <= 1)
-    m.disj = Disjunction(expr=[[m.x == 10], [(sqrt(2) - m.x)**2 + (sqrt(2) -
-                                                                   m.y)**2 <=
-                                             1]])
+    m.disj = Disjunction(
+        expr=[[m.x == 10], [(sqrt(2) - m.x) ** 2 + (sqrt(2) - m.y) ** 2 <= 1]]
+    )
     m.d2 = Disjunct()
-    m.d2.upper_circle = Constraint(expr=(3 - m.x)**2 + (3 - m.y)**2 <= 1)
-    m.d2.inner = Disjunction(expr=[[m.y == 10], [(sqrt(2) - m.x)**2 + (sqrt(2) -
-                                                                       m.y)**2
-                                                 <= 1]])
+    m.d2.upper_circle = Constraint(expr=(3 - m.x) ** 2 + (3 - m.y) ** 2 <= 1)
+    m.d2.inner = Disjunction(
+        expr=[[m.y == 10], [(sqrt(2) - m.x) ** 2 + (sqrt(2) - m.y) ** 2 <= 1]]
+    )
     m.outer = Disjunction(expr=[m.d1, m.d2])
     m.obj = Objective(expr=m.x + m.y)
 
     return m
 
+
 ##
 # Variations on the example from the Kronqvist et al. Between Steps paper
 ##
 
+
 def makeBetweenStepsPaperExample():
     """Original example model, implicit disjunction"""
     m = ConcreteModel()
-    m.I = RangeSet(1,4)
-    m.x = Var(m.I, bounds=(-2,6))
+    m.I = RangeSet(1, 4)
+    m.x = Var(m.I, bounds=(-2, 6))
 
-    m.disjunction = Disjunction(expr=[[sum(m.x[i]**2 for i in m.I) <= 1],
-                                      [sum((3 - m.x[i])**2 for i in m.I) <=
-                                       1]])
+    m.disjunction = Disjunction(
+        expr=[
+            [sum(m.x[i] ** 2 for i in m.I) <= 1],
+            [sum((3 - m.x[i]) ** 2 for i in m.I) <= 1],
+        ]
+    )
 
     m.obj = Objective(expr=m.x[2] - m.x[1], sense=maximize)
 
     return m
+
 
 def makeBetweenStepsPaperExample_DeclareVarOnDisjunct():
     """Exactly the same model as above, but declaring the Disjuncts explicitly
     and declaring the variables on one of them.
     """
     m = ConcreteModel()
-    m.I = RangeSet(1,4)
+    m.I = RangeSet(1, 4)
     m.disj1 = Disjunct()
-    m.disj1.x = Var(m.I, bounds=(-2,6))
-    m.disj1.c = Constraint(expr=sum(m.disj1.x[i]**2 for i in m.I) <= 1)
+    m.disj1.x = Var(m.I, bounds=(-2, 6))
+    m.disj1.c = Constraint(expr=sum(m.disj1.x[i] ** 2 for i in m.I) <= 1)
     m.disj2 = Disjunct()
-    m.disj2.c = Constraint(expr=sum((3 - m.disj1.x[i])**2 for i in m.I) <=
-                           1)
+    m.disj2.c = Constraint(expr=sum((3 - m.disj1.x[i]) ** 2 for i in m.I) <= 1)
     m.disjunction = Disjunction(expr=[m.disj1, m.disj2])
 
     m.obj = Objective(expr=m.disj1.x[2] - m.disj1.x[1], sense=maximize)
 
     return m
 
+
 def makeBetweenStepsPaperExample_Nested():
     """Mathematically, this is really dumb, but I am nesting this model on
     itself because it makes writing tests simpler (I can recycle.)"""
     m = makeBetweenStepsPaperExample_DeclareVarOnDisjunct()
     m.disj2.disjunction = Disjunction(
-        expr=[[sum(m.disj1.x[i]**2 for i in m.I) <= 1],
-              [sum((3 - m.disj1.x[i])**2 for i in m.I) <= 1]])
+        expr=[
+            [sum(m.disj1.x[i] ** 2 for i in m.I) <= 1],
+            [sum((3 - m.disj1.x[i]) ** 2 for i in m.I) <= 1],
+        ]
+    )
 
     return m
+
 
 def instantiate_hierarchical_nested_model(m):
     """helper function to instantiate a nested version of the model with
     the Disjuncts and Disjunctions on blocks"""
     m.disj1 = Disjunct()
     m.disjunct_block.disj2 = Disjunct()
-    m.disj1.c = Constraint(expr=sum(m.x[i]**2 for i in m.I) <= 1)
-    m.disjunct_block.disj2.c = Constraint(expr=sum((3 - m.x[i])**2 for i in
-                                                   m.I) <= 1)
+    m.disj1.c = Constraint(expr=sum(m.x[i] ** 2 for i in m.I) <= 1)
+    m.disjunct_block.disj2.c = Constraint(expr=sum((3 - m.x[i]) ** 2 for i in m.I) <= 1)
     m.disjunct_block.disj2.disjunction = Disjunction(
-        expr=[[sum(m.x[i]**2 for i in m.I) <= 1],
-              [sum((3 - m.x[i])**2 for i in m.I) <= 1]])
+        expr=[
+            [sum(m.x[i] ** 2 for i in m.I) <= 1],
+            [sum((3 - m.x[i]) ** 2 for i in m.I) <= 1],
+        ]
+    )
     m.disjunction_block.disjunction = Disjunction(
-        expr=[m.disj1, m.disjunct_block.disj2])
+        expr=[m.disj1, m.disjunct_block.disj2]
+    )
 
-def makeHierarchicalNested_DeclOrderMatchesInstantationOrder():
+
+def makeHierarchicalNested_DeclOrderMatchesInstantiationOrder():
     """Here, we put the disjunctive components on Blocks, but we do it in the
     same order that we declared the blocks, that is, on each block, decl order
     matches instantiation order."""
     m = ConcreteModel()
-    m.I = RangeSet(1,4)
-    m.x = Var(m.I, bounds=(-2,6))
+    m.I = RangeSet(1, 4)
+    m.x = Var(m.I, bounds=(-2, 6))
     m.disjunct_block = Block()
     m.disjunction_block = Block()
     instantiate_hierarchical_nested_model(m)
 
     return m
 
-def makeHierarchicalNested_DeclOrderOppositeInstantationOrder():
+
+def makeHierarchicalNested_DeclOrderOppositeInstantiationOrder():
     """Here, we declare the Blocks in the opposite order. This means that
     decl order will be *opposite* instantiation order, which means that we
     can break our targets preprocessing without even using targets if we
     are not correctly identifying what is nested in what!"""
     m = ConcreteModel()
-    m.I = RangeSet(1,4)
-    m.x = Var(m.I, bounds=(-2,6))
+    m.I = RangeSet(1, 4)
+    m.x = Var(m.I, bounds=(-2, 6))
     m.disjunction_block = Block()
     m.disjunct_block = Block()
     instantiate_hierarchical_nested_model(m)
 
     return m
 
+
 def makeNonQuadraticNonlinearGDP():
     """We use this in testing between steps--Needed non-quadratic and not
     additively separable constraint expressions on a Disjunct."""
     m = ConcreteModel()
-    m.I = RangeSet(1,4)
-    m.I1 = RangeSet(1,2)
-    m.I2 = RangeSet(3,4)
-    m.x = Var(m.I, bounds=(-2,6))
+    m.I = RangeSet(1, 4)
+    m.I1 = RangeSet(1, 2)
+    m.I2 = RangeSet(3, 4)
+    m.x = Var(m.I, bounds=(-2, 6))
 
     # sum of 4-norms...
     m.disjunction = Disjunction(
-        expr=[[sum(m.x[i]**4 for i in m.I1)**(1/4) + \
-               sum(m.x[i]**4 for i in m.I2)**(1/4) <= 1],
-              [sum((3 - m.x[i])**4 for i in m.I1)**(1/4) +
-               sum((3 - m.x[i])**4 for i in m.I2)**(1/4) <= 1]])
+        expr=[
+            [
+                sum(m.x[i] ** 4 for i in m.I1) ** (1 / 4)
+                + sum(m.x[i] ** 4 for i in m.I2) ** (1 / 4)
+                <= 1
+            ],
+            [
+                sum((3 - m.x[i]) ** 4 for i in m.I1) ** (1 / 4)
+                + sum((3 - m.x[i]) ** 4 for i in m.I2) ** (1 / 4)
+                <= 1
+            ],
+        ]
+    )
 
     m.obj = Objective(expr=m.x[2] - m.x[1], sense=maximize)
 
     return m
 
+
 #
 # Logical Constraints on Disjuncts
 #
+
 
 def makeLogicalConstraintsOnDisjuncts():
     m = ConcreteModel()
@@ -978,12 +1076,12 @@ def makeLogicalConstraintsOnDisjuncts():
     m.o = Objective(expr=m.x)
 
     # Add the logical proposition
-    m.p = LogicalConstraint(
-        expr=m.d[1].indicator_var.implies(m.d[4].indicator_var))
+    m.p = LogicalConstraint(expr=m.d[1].indicator_var.implies(m.d[4].indicator_var))
     # Use the logical stuff to make choosing d1 and d4 infeasible:
     m.bwahaha = LogicalConstraint(expr=m.Y[1].xor(m.Y[2]))
 
     return m
+
 
 def makeLogicalConstraintsOnDisjuncts_NonlinearConvex():
     # same game as the previous model, but include some nonlinear
@@ -1012,6 +1110,7 @@ def makeLogicalConstraintsOnDisjuncts_NonlinearConvex():
 
     return m
 
+
 def makeBooleanVarsOnDisjuncts():
     # same as linear model above, but declare the BooleanVar on one of the
     # Disjuncts, just to make sure we make references and stuff correctly.
@@ -1028,14 +1127,12 @@ def makeBooleanVarsOnDisjuncts():
     m.d[1].logical = LogicalConstraint(expr=~m.d[1].Y[1])
     m.d[2].c = Constraint(expr=m.x >= 3)
     m.d[3].c = Constraint(expr=m.x >= 8)
-    m.d[4].logical = LogicalConstraint(
-        expr=m.d[1].Y[1].equivalent_to(m.d[1].Y[2]))
+    m.d[4].logical = LogicalConstraint(expr=m.d[1].Y[1].equivalent_to(m.d[1].Y[2]))
     m.d[4].c = Constraint(expr=m.x == 2.5)
     m.o = Objective(expr=m.x)
 
     # Add the logical proposition
-    m.p = LogicalConstraint(
-        expr=m.d[1].indicator_var.implies(m.d[4].indicator_var))
+    m.p = LogicalConstraint(expr=m.d[1].indicator_var.implies(m.d[4].indicator_var))
     # Use the logical stuff to make choosing d1 and d4 infeasible:
     m.bwahaha = LogicalConstraint(expr=m.d[1].Y[1].xor(m.d[1].Y[2]))
 

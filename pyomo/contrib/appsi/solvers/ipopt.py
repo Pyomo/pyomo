@@ -1,6 +1,12 @@
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.fileutils import Executable
-from pyomo.contrib.appsi.base import PersistentSolver, Results, TerminationCondition, SolverConfig, PersistentSolutionLoader
+from pyomo.contrib.appsi.base import (
+    PersistentSolver,
+    Results,
+    TerminationCondition,
+    SolverConfig,
+    PersistentSolutionLoader,
+)
 from pyomo.contrib.appsi.writers import NLWriter
 from pyomo.common.log import LogStream
 import logging
@@ -31,17 +37,21 @@ logger = logging.getLogger(__name__)
 
 
 class IpoptConfig(SolverConfig):
-    def __init__(self,
-                 description=None,
-                 doc=None,
-                 implicit=False,
-                 implicit_domain=None,
-                 visibility=0):
-        super(IpoptConfig, self).__init__(description=description,
-                                          doc=doc,
-                                          implicit=implicit,
-                                          implicit_domain=implicit_domain,
-                                          visibility=visibility)
+    def __init__(
+        self,
+        description=None,
+        doc=None,
+        implicit=False,
+        implicit_domain=None,
+        visibility=0,
+    ):
+        super(IpoptConfig, self).__init__(
+            description=description,
+            doc=doc,
+            implicit=implicit,
+            implicit_domain=implicit_domain,
+            visibility=visibility,
+        )
 
         self.declare('executable', ConfigValue())
         self.declare('filename', ConfigValue(domain=str))
@@ -56,66 +66,68 @@ class IpoptConfig(SolverConfig):
         self.log_level = logging.INFO
 
 
-ipopt_command_line_options = {'acceptable_compl_inf_tol',
-                              'acceptable_constr_viol_tol',
-                              'acceptable_dual_inf_tol',
-                              'acceptable_tol',
-                              'alpha_for_y',
-                              'bound_frac',
-                              'bound_mult_init_val',
-                              'bound_push',
-                              'bound_relax_factor',
-                              'compl_inf_tol',
-                              'constr_mult_init_max',
-                              'constr_viol_tol',
-                              'diverging_iterates_tol',
-                              'dual_inf_tol',
-                              'expect_infeasible_problem',
-                              'file_print_level',
-                              'halt_on_ampl_error',
-                              'hessian_approximation',
-                              'honor_original_bounds',
-                              'linear_scaling_on_demand',
-                              'linear_solver',
-                              'linear_system_scaling',
-                              'ma27_pivtol',
-                              'ma27_pivtolmax',
-                              'ma57_pivot_order',
-                              'ma57_pivtol',
-                              'ma57_pivtolmax',
-                              'max_cpu_time',
-                              'max_iter',
-                              'max_refinement_steps',
-                              'max_soc',
-                              'maxit',
-                              'min_refinement_steps',
-                              'mu_init',
-                              'mu_max',
-                              'mu_oracle',
-                              'mu_strategy',
-                              'nlp_scaling_max_gradient',
-                              'nlp_scaling_method',
-                              'obj_scaling_factor',
-                              'option_file_name',
-                              'outlev',
-                              'output_file',
-                              'pardiso_matching_strategy',
-                              'print_level',
-                              'print_options_documentation',
-                              'print_user_options',
-                              'required_infeasibility_reduction',
-                              'slack_bound_frac',
-                              'slack_bound_push',
-                              'tol',
-                              'wantsol',
-                              'warm_start_bound_push',
-                              'warm_start_init_point',
-                              'warm_start_mult_bound_push',
-                              'watchdog_shortened_iter_trigger'}
+ipopt_command_line_options = {
+    'acceptable_compl_inf_tol',
+    'acceptable_constr_viol_tol',
+    'acceptable_dual_inf_tol',
+    'acceptable_tol',
+    'alpha_for_y',
+    'bound_frac',
+    'bound_mult_init_val',
+    'bound_push',
+    'bound_relax_factor',
+    'compl_inf_tol',
+    'constr_mult_init_max',
+    'constr_viol_tol',
+    'diverging_iterates_tol',
+    'dual_inf_tol',
+    'expect_infeasible_problem',
+    'file_print_level',
+    'halt_on_ampl_error',
+    'hessian_approximation',
+    'honor_original_bounds',
+    'linear_scaling_on_demand',
+    'linear_solver',
+    'linear_system_scaling',
+    'ma27_pivtol',
+    'ma27_pivtolmax',
+    'ma57_pivot_order',
+    'ma57_pivtol',
+    'ma57_pivtolmax',
+    'max_cpu_time',
+    'max_iter',
+    'max_refinement_steps',
+    'max_soc',
+    'maxit',
+    'min_refinement_steps',
+    'mu_init',
+    'mu_max',
+    'mu_oracle',
+    'mu_strategy',
+    'nlp_scaling_max_gradient',
+    'nlp_scaling_method',
+    'obj_scaling_factor',
+    'option_file_name',
+    'outlev',
+    'output_file',
+    'pardiso_matching_strategy',
+    'print_level',
+    'print_options_documentation',
+    'print_user_options',
+    'required_infeasibility_reduction',
+    'slack_bound_frac',
+    'slack_bound_push',
+    'tol',
+    'wantsol',
+    'warm_start_bound_push',
+    'warm_start_init_point',
+    'warm_start_mult_bound_push',
+    'watchdog_shortened_iter_trigger',
+}
 
 
 class Ipopt(PersistentSolver):
-    def __init__(self, only_child_vars=True):
+    def __init__(self, only_child_vars=False):
         self._config = IpoptConfig()
         self._solver_options = dict()
         self._writer = NLWriter(only_child_vars=only_child_vars)
@@ -133,11 +145,13 @@ class Ipopt(PersistentSolver):
         return self.Availability.FullLicense
 
     def version(self):
-        results = subprocess.run([str(self.config.executable), '--version'],
-                                 timeout=1,
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.STDOUT,
-                                 universal_newlines=True)
+        results = subprocess.run(
+            [str(self.config.executable), '--version'],
+            timeout=1,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+        )
         version = results.stdout.splitlines()[0]
         version = version.split(' ')[1]
         version = version.strip()
@@ -263,7 +277,7 @@ class Ipopt(PersistentSolver):
             TempfileManager.add_tempfile(self._filename + '.opt', exists=False)
             self._write_options_file()
             timer.start('write nl file')
-            self._writer.write(model, self._filename+'.nl', timer=timer)
+            self._writer.write(model, self._filename + '.nl', timer=timer)
             timer.stop('write nl file')
             res = self._apply_solver(timer)
             self._last_results_object = res
@@ -303,20 +317,35 @@ class Ipopt(PersistentSolver):
 
         n_cons = len(solve_cons)
         n_vars = len(solve_vars)
-        dual_lines = all_lines[12:12+n_cons]
-        primal_lines = all_lines[12+n_cons:12+n_cons+n_vars]
+        dual_lines = all_lines[12 : 12 + n_cons]
+        primal_lines = all_lines[12 + n_cons : 12 + n_cons + n_vars]
 
-        rc_upper_info_line = all_lines[12+n_cons+n_vars+1]
+        rc_upper_info_line = all_lines[12 + n_cons + n_vars + 1]
         assert rc_upper_info_line.startswith('suffix')
         n_rc_upper = int(rc_upper_info_line.split()[2])
-        assert 'ipopt_zU_out' in all_lines[12+n_cons+n_vars+2]
-        upper_rc_lines = all_lines[12+n_cons+n_vars+3:12+n_cons+n_vars+3+n_rc_upper]
+        assert 'ipopt_zU_out' in all_lines[12 + n_cons + n_vars + 2]
+        upper_rc_lines = all_lines[
+            12 + n_cons + n_vars + 3 : 12 + n_cons + n_vars + 3 + n_rc_upper
+        ]
 
-        rc_lower_info_line = all_lines[12+n_cons+n_vars+3+n_rc_upper]
+        rc_lower_info_line = all_lines[12 + n_cons + n_vars + 3 + n_rc_upper]
         assert rc_lower_info_line.startswith('suffix')
         n_rc_lower = int(rc_lower_info_line.split()[2])
-        assert 'ipopt_zL_out' in all_lines[12+n_cons+n_vars+3+n_rc_upper+1]
-        lower_rc_lines = all_lines[12+n_cons+n_vars+3+n_rc_upper+2:12+n_cons+n_vars+3+n_rc_upper+2+n_rc_lower]
+        assert 'ipopt_zL_out' in all_lines[12 + n_cons + n_vars + 3 + n_rc_upper + 1]
+        lower_rc_lines = all_lines[
+            12
+            + n_cons
+            + n_vars
+            + 3
+            + n_rc_upper
+            + 2 : 12
+            + n_cons
+            + n_vars
+            + 3
+            + n_rc_upper
+            + 2
+            + n_rc_lower
+        ]
 
         self._dual_sol = dict()
         self._primal_sol = ComponentMap()
@@ -354,27 +383,38 @@ class Ipopt(PersistentSolver):
             if var not in self._reduced_costs:
                 self._reduced_costs[var] = 0
 
-        if results.termination_condition == TerminationCondition.optimal and self.config.load_solution:
+        if (
+            results.termination_condition == TerminationCondition.optimal
+            and self.config.load_solution
+        ):
             for v, val in self._primal_sol.items():
                 v.set_value(val, skip_validation=True)
             if self._writer.get_active_objective() is None:
                 results.best_feasible_objective = None
             else:
-                results.best_feasible_objective = value(self._writer.get_active_objective().expr)
+                results.best_feasible_objective = value(
+                    self._writer.get_active_objective().expr
+                )
         elif results.termination_condition == TerminationCondition.optimal:
             if self._writer.get_active_objective() is None:
                 results.best_feasible_objective = None
             else:
-                obj_expr_evaluated = replace_expressions(self._writer.get_active_objective().expr,
-                                                         substitution_map={id(v): val for v, val in self._primal_sol.items()},
-                                                         descend_into_named_expressions=True,
-                                                         remove_named_expressions=True)
+                obj_expr_evaluated = replace_expressions(
+                    self._writer.get_active_objective().expr,
+                    substitution_map={
+                        id(v): val for v, val in self._primal_sol.items()
+                    },
+                    descend_into_named_expressions=True,
+                    remove_named_expressions=True,
+                )
                 results.best_feasible_objective = value(obj_expr_evaluated)
         elif self.config.load_solution:
-            raise RuntimeError('A feasible solution was not found, so no solution can be loaded.'
-                               'Please set opt.config.load_solution=False and check '
-                               'results.termination_condition and '
-                               'resutls.best_feasible_objective before loading a solution.')
+            raise RuntimeError(
+                'A feasible solution was not found, so no solution can be loaded.'
+                'Please set opt.config.load_solution=False and check '
+                'results.termination_condition and '
+                'results.best_feasible_objective before loading a solution.'
+            )
 
         return results
 
@@ -386,17 +426,25 @@ class Ipopt(PersistentSolver):
         else:
             timeout = None
 
-        ostreams = [LogStream(level=self.config.log_level, logger=self.config.solver_output_logger)]
+        ostreams = [
+            LogStream(
+                level=self.config.log_level, logger=self.config.solver_output_logger
+            )
+        ]
         if self.config.stream_solver:
             ostreams.append(sys.stdout)
 
-        cmd = [str(config.executable),
-               self._filename + '.nl',
-               '-AMPL',
-               'option_file_name=' + self._filename + '.opt']
+        cmd = [
+            str(config.executable),
+            self._filename + '.nl',
+            '-AMPL',
+            'option_file_name=' + self._filename + '.opt',
+        ]
         if 'option_file_name' in self.ipopt_options:
-            raise ValueError('Use Ipopt.config.filename to specify the name of the options file. '
-                             'Do not use Ipopt.ipopt_options["option_file_name"].')
+            raise ValueError(
+                'Use Ipopt.config.filename to specify the name of the options file. '
+                'Do not use Ipopt.ipopt_options["option_file_name"].'
+            )
         ipopt_options = dict(self.ipopt_options)
         if config.time_limit is not None:
             ipopt_options['max_cpu_time'] = config.time_limit
@@ -405,24 +453,32 @@ class Ipopt(PersistentSolver):
 
         env = os.environ.copy()
         if 'PYOMO_AMPLFUNC' in env:
-            env['AMPLFUNC'] = "\n".join(filter(None, (env.get('AMPLFUNC', None), env.get('PYOMO_AMPLFUNC', None))))
+            env['AMPLFUNC'] = "\n".join(
+                filter(
+                    None, (env.get('AMPLFUNC', None), env.get('PYOMO_AMPLFUNC', None))
+                )
+            )
 
         with TeeStream(*ostreams) as t:
             timer.start('subprocess')
-            cp = subprocess.run(cmd,
-                                timeout=timeout,
-                                stdout=t.STDOUT,
-                                stderr=t.STDERR,
-                                env=env,
-                                universal_newlines=True)
+            cp = subprocess.run(
+                cmd,
+                timeout=timeout,
+                stdout=t.STDOUT,
+                stderr=t.STDERR,
+                env=env,
+                universal_newlines=True,
+            )
             timer.stop('subprocess')
 
         if cp.returncode != 0:
             if self.config.load_solution:
-                raise RuntimeError('A feasible solution was not found, so no solution can be loaded.'
-                                   'Please set opt.config.load_solution=False and check '
-                                   'results.termination_condition and '
-                                   'results.best_feasible_objective before loading a solution.')
+                raise RuntimeError(
+                    'A feasible solution was not found, so no solution can be loaded.'
+                    'Please set opt.config.load_solution=False and check '
+                    'results.termination_condition and '
+                    'results.best_feasible_objective before loading a solution.'
+                )
             results = Results()
             results.termination_condition = TerminationCondition.error
             results.best_feasible_objective = None
@@ -443,8 +499,13 @@ class Ipopt(PersistentSolver):
 
         return results
 
-    def get_primals(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> Mapping[_GeneralVarData, float]:
-        if self._last_results_object is None or self._last_results_object.best_feasible_objective is None:
+    def get_primals(
+        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
+    ) -> Mapping[_GeneralVarData, float]:
+        if (
+            self._last_results_object is None
+            or self._last_results_object.best_feasible_objective is None
+        ):
             raise RuntimeError(
                 'Solver does not currently have a valid solution. Please '
                 'check the termination condition.'
@@ -459,8 +520,14 @@ class Ipopt(PersistentSolver):
                 res[v] = self._primal_sol[v]
         return res
 
-    def get_duals(self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None):
-        if self._last_results_object is None or self._last_results_object.termination_condition != TerminationCondition.optimal:
+    def get_duals(
+        self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None
+    ):
+        if (
+            self._last_results_object is None
+            or self._last_results_object.termination_condition
+            != TerminationCondition.optimal
+        ):
             raise RuntimeError(
                 'Solver does not currently have valid duals. Please '
                 'check the termination condition.'
@@ -471,8 +538,14 @@ class Ipopt(PersistentSolver):
         else:
             return {c: self._dual_sol[c] for c in cons_to_load}
 
-    def get_reduced_costs(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> Mapping[_GeneralVarData, float]:
-        if self._last_results_object is None or self._last_results_object.termination_condition != TerminationCondition.optimal:
+    def get_reduced_costs(
+        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
+    ) -> Mapping[_GeneralVarData, float]:
+        if (
+            self._last_results_object is None
+            or self._last_results_object.termination_condition
+            != TerminationCondition.optimal
+        ):
             raise RuntimeError(
                 'Solver does not currently have valid reduced costs. Please '
                 'check the termination condition.'

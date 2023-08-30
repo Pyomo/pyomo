@@ -1,6 +1,215 @@
 Pyomo CHANGELOG
 ===============
 
+
+-------------------------------------------------------------------------------
+Pyomo 6.6.2   (23 Aug 2023)
+-------------------------------------------------------------------------------
+
+ADVANCE CHANGE NOTICE
+  - This will be the last release to support Python 3.7.
+
+- General
+  - Fall back on `multiprocessing.dummy` when `multiprocessing.Pool` is not
+    available (#2890)
+  - Clean up implicit function imports (#2892)
+  - Ensure all pyomo modules import without warnings (#2897)
+  - Resolve `FileDownloader.get_os_version` exception for missing
+    `lsb_release` (#2911)
+  - Improve `calculate_variable_from_constraint` error messages (#2914)
+  - Add function for collecting expressions with unit inconsistencies (#2904)
+  - Fix loading Scalar Param from `.dat` file (#2923)
+- Core
+  - Resolve kernel pickle/clone errors (#2916)
+  - Reorganize numeric expression modules (#2909)
+  - Resolve error categorizing some Var discrete domains as "integer" (#2954)
+  - Named expressions: `expr` should always return `NumericValue` (#2948)
+  - Support kwargs in partial objects passed to Initializer() (#2960)
+  - Remove `expr.current` (#2910)
+- Documentation
+  - Fixing a 'that' vs. 'which' mistake in error about bounds crossing (#2950)
+  - Add Explicit Linting Instructions to PR Template (#2947)
+  - Update `pyomo.common` documentation (#2912)
+  - Remove HTML4 Forcing in Online Docs (#2949)
+  - Improved documentation for SOS (#2875)
+  - Silence deprecation warnings (#2854)
+- Solvers Interfaces
+  - Resolve handling of `{}**0` in Linear/QuadraticRepn (#2857)
+  - Fix Linear/QuadraticRepnVisitor handling of `{}**{float}` (#2863, #2865)
+  - GAMS: fix pickling models, update tests (#2913)
+  - Xpress: fix NLP results processing for Xpress 9.2.0 (#2921)
+  - Improve NaN handling in LP, NL writers (#2930)
+  - Ensure constants written correctly to LP/NL files (#2953)
+- Testing
+  - Remove the 'singletest' job from "branches" builds (#2917)
+  - Reactivate NEOS-MOSEK Tests (#2870)
+  - New version of `crate-ci/typos` GitHub Actions (#2869, #2931)
+- DAE
+  - Improve error message when attempting to discretize models with circular
+    references (#2943)
+- GDP
+  - Fixing a typo in gdp.hull transformation (#2915)
+  - Add some more instances to the GDP constrained layout example (#2838)
+  - Adding (reversible) `gdp.transform_current_disjunctive_logic`
+    transformation (#2809)
+- Contributed Packages
+  - APPSI: change default behavior to not care where variables live (#2903)
+  - APPSI: Correctly Process Objective Bounds from Gurobi for Nonconvex QCPs
+    (#2898)
+  - community_detection: fix networkx dependency in doctests (#2885)
+  - cp: Fix bug with `land` in `contrib.logical_to_disjunctive` transformation
+    (#2879)
+  - DoE: Update tutorial notebook (#2889)
+  - incidence_analysis: Filter variables with non-constant, fixed expressions
+    that resolve to zero in `get_incident_variables` (#2882)
+  - incidence_analysis: Correct behavior of `linear_only` argument in
+    `get_incident_variables` (#2883)
+  - MindtPy: Refactor to improve extensibility and maintainability (#2887)
+  - PyNumero: Add `PyNumeroEvaluationError` (#2901)
+  - PyNumero: Make min and max work with MPIBlockVector when some blocks have
+    size 0 (#2896)
+  - PyNumero: Remove old, unused PyNumero code (#2895)
+  - PyNumero: Fix typo in docstring (#2873)
+  - sensitivity_toolbox: Send lists to `numpy.vstack` rather than iterators
+    (#2881)
+  - viewer: Fix model viewer (#2924)
+
+-------------------------------------------------------------------------------
+Pyomo 6.6.1    (30 May 2023)
+-------------------------------------------------------------------------------
+
+- General
+  - Update cmake builder for recent setuptools (#2847)
+  - Fixing minor formatting for 6.6.0 release changes (#2842)
+  - Silence deprecation warnings (#2854)
+- Core
+  - Update indentation handling in `config.StringFormatter` (#2853)
+  - Restore slice API broken by #2829 (#2849)
+  - Resolve handling of {}**0 in `LinearRepn`/`QuadraticRepn` (#2857)
+- Solver Interfaces
+  - NL writer: resolve error identifying vars in indexed SOS (#2852)
+  - Manage Gurobi environments in GurobiDirect (#2680)
+- Contributed Packages
+  - cp: fix handling fixed BooleanVars in logical-to-disjunctive walker (#2850)
+  - FBBT: Fix typo when handling GeneralExpression objects (#2848)
+  - MindtPy: add support for cyipopt (#2830)
+
+-------------------------------------------------------------------------------
+Pyomo 6.6.0    (24 May 2023)
+-------------------------------------------------------------------------------
+
+- General
+  - Remove `pyomo check`/`pyomo.checker` module (#2753)
+  - Improve formatting of docstrings generated from `ConfigDict` (#2754)
+  - Deprecate `add_docstring_list` (#2755)
+  - Reapply `black` to previously completed directories (#2775)
+  - Improve formatting for `DeveloperError`, `MouseTrap` messages (#2805)
+- Core
+  - Bugfix: component indexes specified as lists (#2765)
+  - Remove the use of weakrefs in `SymbolMap` (#2791)
+  - Improve conversions between Pyomo and Sympy expressions (#2806)
+  - Rework expression generation to leverage multiple dispatch (#2722)
+  - Improve robustness of `calculate_variable_from_constraint()` (#2812)
+  - Add support for infix Boolean logical operators (#2835)
+  - Improvements to Pyomo component iteration (#2829)
+- Documentation
+  - Copyright and Book Updates (#2750)
+  - Link documentation in incidence_analysis README (#2759)
+  - Update ReadtheDocs Configuration (#2780)
+  - Correct import in community.rst (#2792)
+  - Remove instructions for python <= 3.0 (#2822)
+- Solvers Interfaces
+  - NEOS: fix typo in `kestrelAMPL.kill()` argument (#2758)
+  - Better handling of mutable parameters in HiGHS interface (#2763)
+  - Improve linear data structure in NL writer (#2769)
+  - Bugfix for shared named expressions in NL writer (#2790)
+  - Resolve NPV constants in `LinearExpressions` in NL writer (#2811)
+  - GAMS/Baron: ensure negative numbers are parenthesized (#2833)
+  - Release LP version 2 (LPv2) writer (#2823, #2840)
+- Testing
+  - Rework Upload of Coverage Reports (#2761)
+  - Update constant for visitor tests for python 3.11.2 (#2799)
+  - Auto-Linting: Spelling Black Style Checker (#2800, #2818)
+  - Skip MOSEK tests on NEOS (due to unknown NEOS error) (#2839)
+- GDP
+  - Add `gdp.bound_pretransformation` (#2824)
+- Contributed Packages
+  - APPSI: Improve logging consistency across solvers (#2787)
+  - APPSI: Update `available` method in APPSI-Gurobi interface (#2828)
+  - DoE: Release version 2 (#2794)
+  - incidence_analysis: Remove strict usage of PyomoNLP (#2752)
+  - incidence_analysis: Test `IndexedBlock` (#2789)
+  - incidence_analysis: Use standard repn for incidence graph generation (#2834)
+  - Parmest: Update for pandas 2.0.0 release (#2795)
+  - piecewise: Add contrib.piecewise package (#2708, #2768, #2766, #2797, #2798,
+    #2826)
+  - PyNumero: Refactor CyIpopt interface to subclass `cyipopt.Problem` (#2760)
+  - PyNumero: Fix CyIpopt interface when `load_solutions=False` (#2820)
+  - PyROS: Fixes to PyROS Separation Routine (#2815)
+  - PyROS: Fixes to Coefficient Matching and Timing Functionalities (#2837)
+
+-------------------------------------------------------------------------------
+Pyomo 6.5.0    (16 Feb 2023)
+-------------------------------------------------------------------------------
+
+- General
+  - Apply `black` to enforce PEP8 standards in certain modules (#2737, #2738,
+    #2733, #2732, #2731, #2728, #2730, #2729, #2720, #2721, #2719, #2718)
+  - Add Developers' call information to README (#2665)
+  - Deprecate `pyomo.checker` module (#2734)
+  - Warn when infeasibility tools will not log output (#2666)
+  - Separate identification from logging in `pyomo.util.infeasible.log_*` (#2669)
+  - Convert subprocess timeout parameters to module attributes (#2672)
+  - Resolve consistency issues in the Bunch class (#2685)
+  - Remove GSL downloader from `download-extensions` (#2725)
+  - Update enhancement GitHub issue template to link to wiki (#2739)
+  - Add deprecation warning to `pyomo` command (#2740)
+  - Require `version=` for all deprecation utilities (#2744)
+  - Fix `pyomo --version` version string (#2743)
+- Core
+  - Fix minor typo in set.py (#2679)
+  - Fix bugs in scaling transformation (#2678)
+  - Rework handling of 'dimensionless' units in Pyomo (#2691)
+- Solver Interfaces
+  - Switch default NL writer to nlv2 and bug fixes (#2676, #2710, #2726)
+  - Enable MOSEK10 warm-start flag and relocate var initialization (#2647)
+  - Fix handling of POW in Baron writer (#2693)
+  - Update GAMS license check to avoid exception when not available (#2697)
+- Documentation
+  - Fix incorrect documentation for sending options to solvers (#2688)
+  - Fix Sphinx warnings (#2712)
+  - Document Python Version Support policy (#2735)
+  - Document deprecation and removal of functionality (#2741)
+  - Document docstring formatting requirements (#2742)
+- Testing
+  - Skip failing Baron tests (#2694)
+  - Remove residual `nose` references (#2736)
+  - Update GHA setup-python version (#2705)
+  - Improve GHA conda setup performance (#2701)
+  - Add unit test for QCQO problems with MOSEK (#2682)
+- DAE
+  - Fix typo in `__init__.py` (#2683)
+  - Add `active` filter to flattener (#2643)
+- GDP
+  - Add GDP-to-MIP transformation base class (#2687)
+- Contributed Packages
+  - DoE: New module for model-based design of experiments (#2294, #2711, #2527)
+  - FBBT: Add tolerances to tests (#2675)
+  - GDPopt: Switch a LBB test to use Gurobi as MINLP solver (#2686)
+  - incidence_analysis: Add `plot` method to `IncidenceGraphInterface` (#2716)
+  - incidence_analysis: Refactor to cache a graph instead of a matrix (#2715)
+  - incidence_analysis: Add documentation and update API (#2727, #2745)
+  - incidence_analysis: Add logging solve_strongly_connected_components (#2723)
+  - MindtPy: Refactor to improve extensibility and maintainability (#2654)
+  - Parmest: Suppress mpi-sppy output in import (#2692)
+  - PyNumero: Add tee argument to Pyomo-SciPy square solvers (#2668)
+  - PyNumero: Support implicit function solvers in ExternalPyomoModel (#2652)
+  - PyROS: Fix user_time and wallclock_time bug (#2670)
+  - PyROS: More judicious enforcement of PyROS Solver time limit (#2660, #2706)
+  - PyROS: Update documentation (#2698, #2707)
+  - PyROS: Adjust routine for loading DR polishing model solutions (#2700)
+  - Viewer: Update to support PySide6 and display units and domain (#2689)
+
 -------------------------------------------------------------------------------
 Pyomo 6.4.4    (9 Dec 2022)
 -------------------------------------------------------------------------------
@@ -241,7 +450,7 @@ Pyomo 6.4.0    (16 Mar 2022)
     constant expressions (#2324)
   - PyNumero: Improve coverage of mpi block matrix tests (#2318)
   - PyNumero: Skip bound/domain validation in ExternalPyomoModel (#2323)
-  - PyNumero: Remove deprecated useage of numpy.bool (#2339)
+  - PyNumero: Remove deprecated usage of numpy.bool (#2339)
   - PyROS: Fix variable default initialization (#2331)
 
 -------------------------------------------------------------------------------
@@ -916,7 +1125,7 @@ Pyomo 5.6.9   (18 Mar 2020)
 - General
   - Fix bug and improve output formatting in pyomo.util.infeasible (#1226, #1234)
   - Add 'version' and 'remove_in' arguments to deprecation_warning (#1231)
-  - Change NoArgumentGiven to a class and standardize useage (#1236)
+  - Change NoArgumentGiven to a class and standardize usage (#1236)
   - Update GSL URL to track change in AMPL SSL certificate (#1245)
   - Clean up setup.py (#1227)
   - Remove legacy build/test/distribution scripts (#1263)
@@ -936,7 +1145,7 @@ Pyomo 5.6.9   (18 Mar 2020)
   - Raise error on failed Param validation (#1272)
   - Fix return value for component decorator (#1296)
   - Change mult. order in taylor_series_expansion for numpy compatibility (#1329)
-  - Deprecate 'Any' being the defalt Param domain (#1266)
+  - Deprecate 'Any' being the default Param domain (#1266)
 - Solver Interfaces
   - Update CPLEX direct interface to support CPLEX 12.10 (#1276)
   - Shorten GAMS ShortNameLabeler symbols (#1338)
@@ -1179,7 +1388,7 @@ Pyomo 5.6.2   (1 May 2019)
 - Network updates
   - Fix sequential decomposition when ports contain References (#975)
 - Contributed Packages
-  - ParmEst updates to make API more flexible, updated examples, documentation
+  - Parmest updates to make API more flexible, updated examples, documentation
     and tests (#814)
   - GDPopt algorithm enhancements, cut generation bug fix, add example
     to tests, time limit option support (#805, #826, #852, #970)
@@ -1306,7 +1515,7 @@ Pyomo 5.6     (19 Dec 2018)
 - PySP updates
   - Python 3.7 support (#463)
   - Fix bugs in finance example (#564, #578)
-  - Added a wrapper for PySP to create a scripting interace (#689, #727, #737)
+  - Added a wrapper for PySP to create a scripting interface (#689, #727, #737)
   - Bug fixes (#736, #788)
 - New packages:
   - DataPortal:
@@ -1323,7 +1532,7 @@ Pyomo 5.6     (19 Dec 2018)
   - New packages:
     - Preprocessing transformation for variable aggregation (#533, #617)
     - Compute disjunctive variable bounds (#481)
-    - ParmEst package for parameter estimation (#706, #733, #769, #781)
+    - Parmest package for parameter estimation (#706, #733, #769, #781)
     - PyNumero package for numerical optimization (#725, #775)
     - sensitivity_toolbox for interfacing with sIPOPT (#766)
     - PETSc AMPL wrapper (#774)
@@ -2224,7 +2433,7 @@ Pyomo 2.4.3199
   - ASL solver interface can now be specified with the form
         --solver=asl:PICO
 
-- Usability enchancements
+- Usability enhancements
   - Numerous bug fixes.
   - Updated messages to provide clearer indication of modeling errors
 
@@ -2447,7 +2656,7 @@ Pyomo 1.1
     indexed by one or more sets.
 
   - A revision to Pyomo semantics. Now, expressions are not evaluated
-    when performing arithemetic operations (plus, times, etc).
+    when performing arithmetic operations (plus, times, etc).
 
   - A major rework of how component attributes are managed for
     NumericValue  objects and subclasses of this class. This was driven
@@ -2507,11 +2716,11 @@ Pyomo 1.1
     the validation function: we want to allow the validation function to
     refer to the value as if it were set.
 
-  - Depricating the use of the expression factory for algebraic expression
+  - Deprecating the use of the expression factory for algebraic expression
     types. These are now launched directly from the generate_expression()
     function.
 
-  - Adding support for specifing options when launching solvers. For example:
+  - Adding support for specifying options when launching solvers. For example:
 
     results = self.pico.solve(currdir+"bell3a.mps", options="maxCPUMinutes=0.1")
 

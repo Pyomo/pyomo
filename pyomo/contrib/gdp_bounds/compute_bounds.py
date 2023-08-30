@@ -24,9 +24,8 @@ from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt, BoundsManager
 from pyomo.core.base.block import Block, TraversalStrategy
-from pyomo.core.expr.current import identify_variables
-from pyomo.core import (Constraint, Objective,
-                        TransformationFactory, minimize, value)
+from pyomo.core.expr import identify_variables
+from pyomo.core import Constraint, Objective, TransformationFactory, minimize, value
 from pyomo.opt import SolverFactory
 from pyomo.gdp.disjunct import Disjunct
 from pyomo.core.plugins.transform.hierarchy import Transformation
@@ -35,17 +34,24 @@ from pyomo.opt import TerminationCondition as tc
 linear_degrees = {0, 1}
 inf = float('inf')
 
+
 def disjunctive_obbt(model, solver):
     """Provides Optimality-based bounds tightening to a model using a solver."""
-    model._disjuncts_to_process = list(model.component_data_objects(
-        ctype=Disjunct, active=True, descend_into=(Block, Disjunct),
-        descent_order=TraversalStrategy.BreadthFirstSearch))
+    model._disjuncts_to_process = list(
+        model.component_data_objects(
+            ctype=Disjunct,
+            active=True,
+            descend_into=(Block, Disjunct),
+            descent_order=TraversalStrategy.BreadthFirstSearch,
+        )
+    )
     if model.ctype == Disjunct:
         model._disjuncts_to_process.insert(0, model)
 
     linear_var_set = ComponentSet()
     for constr in model.component_data_objects(
-            Constraint, active=True, descend_into=(Block, Disjunct)):
+        Constraint, active=True, descend_into=(Block, Disjunct)
+    ):
         if constr.body.polynomial_degree() in linear_degrees:
             linear_var_set.update(identify_variables(constr.body, include_fixed=False))
     model._disj_bnds_linear_vars = list(linear_var_set)
@@ -62,7 +68,10 @@ def disjunctive_obbt(model, solver):
                 for var, new_bnds in var_bnds.items():
                     old_lb, old_ub = disjunct._disj_var_bounds.get(var, (-inf, inf))
                     new_lb, new_ub = new_bnds
-                    disjunct._disj_var_bounds[var] = (max(old_lb, new_lb), min(old_ub, new_ub))
+                    disjunct._disj_var_bounds[var] = (
+                        max(old_lb, new_lb),
+                        min(old_ub, new_ub),
+                    )
         else:
             disjunct.deactivate()  # prune disjunct
 
@@ -79,7 +88,8 @@ def obbt_disjunct(orig_model, idx, solver):
 
     # Deactivate nonlinear constraints
     for constr in model.component_data_objects(
-            Constraint, active=True, descend_into=(Block, Disjunct)):
+        Constraint, active=True, descend_into=(Block, Disjunct)
+    ):
         if constr.body.polynomial_degree() not in linear_degrees:
             constr.deactivate()
 
@@ -109,12 +119,19 @@ def obbt_disjunct(orig_model, idx, solver):
 
     # Maps original variable --> (new computed LB, new computed UB)
     var_bnds = ComponentMap(
-        ((orig_var, (
-            clone_var.lb if clone_var.has_lb() else -inf,
-            clone_var.ub if clone_var.has_ub() else inf))
-         for orig_var, clone_var in zip(
-            orig_model._disj_bnds_linear_vars, model._disj_bnds_linear_vars)
-         if clone_var in relevant_var_set)
+        (
+            (
+                orig_var,
+                (
+                    clone_var.lb if clone_var.has_lb() else -inf,
+                    clone_var.ub if clone_var.has_ub() else inf,
+                ),
+            )
+            for orig_var, clone_var in zip(
+                orig_model._disj_bnds_linear_vars, model._disj_bnds_linear_vars
+            )
+            if clone_var in relevant_var_set
+        )
     )
     return var_bnds
 
@@ -129,8 +146,8 @@ def solve_bounding_problem(model, solver):
         return -inf
     else:
         raise NotImplementedError(
-            "Unhandled termination condition: %s"
-            % results.solver.termination_condition)
+            "Unhandled termination condition: %s" % results.solver.termination_condition
+        )
 
 
 def disjunctive_fbbt(model):
@@ -165,8 +182,10 @@ def fbbt_disjunct(disj, parent_bounds):
         fbbt_disjunct(disj, new_bnds)
 
 
-@TransformationFactory.register('contrib.compute_disj_var_bounds',
-          doc="Compute disjunctive bounds in a given model.")
+@TransformationFactory.register(
+    'contrib.compute_disj_var_bounds',
+    doc="Compute disjunctive bounds in a given model.",
+)
 class ComputeDisjunctiveVarBounds(Transformation):
     """Compute disjunctive bounds in a given model.
 

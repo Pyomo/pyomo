@@ -50,7 +50,7 @@ For example, consider the following quadratic polynomial:
 .. literalinclude:: ../../tests/expr/performance_loop3.spy
 
 This quadratic polynomial is treated as a nonlinear expression
-unless the expression is explicilty processed to identify quadratic
+unless the expression is explicitly processed to identify quadratic
 terms.  This *lazy* identification of of quadratic terms allows
 Pyomo to tailor the search for quadratic terms only when they are
 explicitly needed.
@@ -124,7 +124,7 @@ If :attr:`start` is not a numeric value, then the :func:`quicksum
 <pyomo.core.util.quicksum>` sets the initial value to :attr:`start`
 and executes a simple loop to sum the terms.  This allows the sum
 to be stored in an object that is passed into the function (e.g. the linear context manager 
-:data:`linear_expression <pyomo.core.expr.current.linear_expression>`).
+:data:`linear_expression <pyomo.core.expr.linear_expression>`).
 
 .. Warning::
 

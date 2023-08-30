@@ -25,12 +25,19 @@ Ref:
                      7  constraints
 
 """
-from __future__ import division
 
-from pyomo.environ import (Binary, ConcreteModel, Constraint,
-                           NonNegativeReals, Objective,
-                           RangeSet, Var, minimize)
+from pyomo.environ import (
+    Binary,
+    ConcreteModel,
+    Constraint,
+    NonNegativeReals,
+    Objective,
+    RangeSet,
+    Var,
+    minimize,
+)
 from pyomo.common.collections import ComponentMap
+
 
 class SimpleMINLP(ConcreteModel):
     """Convex MINLP problem Assignment 6 APSE."""
@@ -51,7 +58,7 @@ class SimpleMINLP(ConcreteModel):
             'sub2': {1: 0, 2: 1, 3: 1},
             'sub3': {1: 1, 2: 0, 3: 1},
             'sub4': {1: 1, 2: 1, 3: 0},
-            'sub5': {1: 0, 2: 0, 3: 0}
+            'sub5': {1: 0, 2: 0, 3: 0},
         }
         # initial point information for continuous variables
         initX = {1: 0, 2: 0}
@@ -73,14 +80,15 @@ class SimpleMINLP(ConcreteModel):
         m.const7 = Constraint(expr=m.Y[1] + m.Y[2] + m.Y[3] >= 1)
 
         """Cost (objective) function definition"""
-        m.objective = Objective(expr=Y[1] + 1.5 * Y[2] + 0.5 * Y[3] + X[1] ** 2 + X[2] ** 2,
-                                sense=minimize)
+        m.objective = Objective(
+            expr=Y[1] + 1.5 * Y[2] + 0.5 * Y[3] + X[1] ** 2 + X[2] ** 2, sense=minimize
+        )
         """Bound definitions"""
         # x (continuous) upper bounds
         x_ubs = {1: 4, 2: 4}
         for i, x_ub in x_ubs.items():
             X[i].setub(x_ub)
-        
+
         m.optimal_value = 3.5
         m.optimal_solution = ComponentMap()
         m.optimal_solution[m.X[1]] = 1.0

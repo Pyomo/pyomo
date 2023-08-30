@@ -1,48 +1,54 @@
 # -*- coding: utf-8 -*-
 """Tests for the MindtPy solver."""
 import pyomo.common.unittest as unittest
-from pyomo.contrib.mindtpy.tests.eight_process_problem import \
-    EightProcessFlowsheet
+from pyomo.contrib.mindtpy.tests.eight_process_problem import EightProcessFlowsheet
 from pyomo.contrib.mindtpy.tests.MINLP_simple import SimpleMINLP as SimpleMINLP
 from pyomo.contrib.mindtpy.tests.MINLP2_simple import SimpleMINLP as SimpleMINLP2
 from pyomo.contrib.mindtpy.tests.MINLP3_simple import SimpleMINLP as SimpleMINLP3
 from pyomo.contrib.mindtpy.tests.from_proposal import ProposalModel
-from pyomo.contrib.mindtpy.tests.constraint_qualification_example import ConstraintQualificationExample
+from pyomo.contrib.mindtpy.tests.constraint_qualification_example import (
+    ConstraintQualificationExample,
+)
 from pyomo.contrib.mindtpy.tests.online_doc_example import OnlineDocExample
 from pyomo.environ import SolverFactory, value
 from pyomo.opt import TerminationCondition
 from pyomo.contrib.gdpopt.util import is_feasible
 from pyomo.util.infeasible import log_infeasible_constraints
-from pyomo.contrib.mindtpy.tests.feasibility_pump1 import Feasibility_Pump1
-from pyomo.contrib.mindtpy.tests.feasibility_pump2 import Feasibility_Pump2
+from pyomo.contrib.mindtpy.tests.feasibility_pump1 import FeasPump1
+from pyomo.contrib.mindtpy.tests.feasibility_pump2 import FeasPump2
 
-required_solvers = ('ipopt', 'glpk', 'cplex')
-if all(SolverFactory(s).available() for s in required_solvers):
+required_solvers = ('ipopt', 'cplex')
+# TODO: 'appsi_highs' will fail here.
+if all(SolverFactory(s).available(exception_flag=False) for s in required_solvers):
     subsolvers_available = True
 else:
     subsolvers_available = False
 
-model_list = [EightProcessFlowsheet(convex=True),
-              ConstraintQualificationExample(),
-              Feasibility_Pump1(),
-              Feasibility_Pump2(),
-              SimpleMINLP(),
-              SimpleMINLP2(),
-              SimpleMINLP3(),
-              ProposalModel(),
-              OnlineDocExample()
-              ]
+model_list = [
+    EightProcessFlowsheet(convex=True),
+    ConstraintQualificationExample(),
+    FeasPump1(),
+    FeasPump2(),
+    SimpleMINLP(),
+    SimpleMINLP2(),
+    SimpleMINLP3(),
+    ProposalModel(),
+    OnlineDocExample(),
+]
 
 
-@unittest.skipIf(not subsolvers_available,
-                 'Required subsolvers %s are not available'
-                 % (required_solvers,))
+@unittest.skipIf(
+    not subsolvers_available,
+    'Required subsolvers %s are not available' % (required_solvers,),
+)
 class TestMindtPy(unittest.TestCase):
     """Tests for the MindtPy solver."""
 
     def check_optimal_solution(self, model, places=1):
         for var in model.optimal_solution:
-            self.assertAlmostEqual(var.value, model.optimal_solution[var], places=places)
+            self.assertAlmostEqual(
+                var.value, model.optimal_solution[var], places=places
+            )
 
     def get_config(self, solver):
         config = solver.CONFIG
@@ -52,10 +58,14 @@ class TestMindtPy(unittest.TestCase):
         """Test the feasibility pump algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                results = opt.solve(model, strategy='FP',
-                                    mip_solver=required_solvers[1],
-                                    nlp_solver=required_solvers[0],
-                                    absolute_bound_tolerance=1E-5)
+                model = model.clone()
+                results = opt.solve(
+                    model,
+                    strategy='FP',
+                    mip_solver=required_solvers[1],
+                    nlp_solver=required_solvers[0],
+                    absolute_bound_tolerance=1e-5,
+                )
                 log_infeasible_constraints(model)
                 self.assertTrue(is_feasible(model, self.get_config(opt)))
 
@@ -63,16 +73,22 @@ class TestMindtPy(unittest.TestCase):
         """Test the FP-OA algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                results = opt.solve(model, strategy='OA',
-                                    init_strategy='FP',
-                                    mip_solver=required_solvers[1],
-                                    nlp_solver=required_solvers[0],
-                                    # absolute_bound_tolerance=1E-5
-                                    )
-                self.assertIn(results.solver.termination_condition,
-                              [TerminationCondition.optimal, TerminationCondition.feasible])
+                model = model.clone()
+                results = opt.solve(
+                    model,
+                    strategy='OA',
+                    init_strategy='FP',
+                    mip_solver=required_solvers[1],
+                    nlp_solver=required_solvers[0],
+                    # absolute_bound_tolerance=1E-5
+                )
+                self.assertIn(
+                    results.solver.termination_condition,
+                    [TerminationCondition.optimal, TerminationCondition.feasible],
+                )
                 self.assertAlmostEqual(
-                    value(model.objective.expr), model.optimal_value, places=1)
+                    value(model.objective.expr), model.optimal_value, places=1
+                )
                 self.check_optimal_solution(model)
 
 

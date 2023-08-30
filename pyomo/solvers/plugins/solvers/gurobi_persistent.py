@@ -18,7 +18,9 @@ from pyomo.core.expr.numvalue import value, is_fixed
 from pyomo.opt.base import SolverFactory
 
 
-@SolverFactory.register('gurobi_persistent', doc='Persistent python interface to Gurobi')
+@SolverFactory.register(
+    'gurobi_persistent', doc='Persistent python interface to Gurobi'
+)
 class GurobiPersistent(PersistentSolver, GurobiDirect):
     """
     A class that provides a persistent interface to Gurobi. Direct solver interfaces do not use any file io.
@@ -30,7 +32,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
     Keyword Arguments
     -----------------
     model: ConcreteModel
-        Passing a model to the constructor is equivalent to calling the set_instance mehtod.
+        Passing a model to the constructor is equivalent to calling the set_instance method.
     type: str
         String indicating the class type of the solver instance.
     name: str
@@ -54,7 +56,9 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             if self._solver_model.getAttr('NumConstrs') == 0:
                 self._update()
             else:
-                name = self._symbol_map.getSymbol(self._solver_con_to_pyomo_con_map[solver_con])
+                name = self._symbol_map.getSymbol(
+                    self._solver_con_to_pyomo_con_map[solver_con]
+                )
                 if self._solver_model.getConstrByName(name) is None:
                     self._update()
         elif isinstance(solver_con, gurobipy.QConstr):
@@ -74,7 +78,9 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
                 except gurobipy.GurobiError:
                     self._update()
         else:
-            raise ValueError('Unrecognized type for gurobi constraint: {0}'.format(type(solver_con)))
+            raise ValueError(
+                'Unrecognized type for gurobi constraint: {0}'.format(type(solver_con))
+            )
         self._solver_model.remove(solver_con)
         self._needs_updated = True
 
@@ -86,7 +92,9 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         if self._solver_model.getAttr('NumVars') == 0:
             self._update()
         else:
-            name = self._symbol_map.getSymbol(self._solver_var_to_pyomo_var_map[solver_var])
+            name = self._symbol_map.getSymbol(
+                self._solver_var_to_pyomo_var_map[solver_var]
+            )
             if self._solver_model.getVarByName(name) is None:
                 self._update()
         self._solver_model.remove(solver_var)
@@ -109,12 +117,16 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         # see PR #366 for discussion about handling indexed
         # objects and keeping compatibility with the
         # pyomo.kernel objects
-        #if var.is_indexed():
+        # if var.is_indexed():
         #    for child_var in var.values():
         #        self.update_var(child_var)
         #    return
         if var not in self._pyomo_var_to_solver_var_map:
-            raise ValueError('The Var provided to update_var needs to be added first: {0}'.format(var))
+            raise ValueError(
+                'The Var provided to update_var needs to be added first: {0}'.format(
+                    var
+                )
+            )
         gurobipy_var = self._pyomo_var_to_solver_var_map[var]
         vtype = self._gurobi_vtype_from_var(var)
         lb, ub = self._gurobi_lb_ub_from_var(var)
@@ -159,12 +171,17 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             See gurobi documentation for acceptable values.
         """
         if attr in {'Sense', 'RHS', 'ConstrName'}:
-            raise ValueError('Linear constraint attr {0} cannot be set with' +
-                             ' the set_linear_constraint_attr method. Please use' +
-                             ' the remove_constraint and add_constraint methods.'.format(attr))
+            raise ValueError(
+                'Linear constraint attr {0} cannot be set with'
+                + ' the set_linear_constraint_attr method. Please use'
+                + ' the remove_constraint and add_constraint methods.'.format(attr)
+            )
         if self._version_major < 7:
-            if (self._solver_model.getAttr('NumConstrs') == 0 or
-                    self._solver_model.getConstrByName(self._symbol_map.getSymbol(con)) is None):
+            if (
+                self._solver_model.getAttr('NumConstrs') == 0
+                or self._solver_model.getConstrByName(self._symbol_map.getSymbol(con))
+                is None
+            ):
                 self._solver_model.update()
         self._pyomo_con_to_solver_con_map[con].setAttr(attr, val)
         self._needs_updated = True
@@ -192,16 +209,23 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             See gurobi documentation for acceptable values.
         """
         if attr in {'LB', 'UB', 'VType', 'VarName'}:
-            raise ValueError('Var attr {0} cannot be set with' +
-                             ' the set_var_attr method. Please use' +
-                             ' the update_var method.'.format(attr))
+            raise ValueError(
+                'Var attr {0} cannot be set with'
+                + ' the set_var_attr method. Please use'
+                + ' the update_var method.'.format(attr)
+            )
         if attr == 'Obj':
-            raise ValueError('Var attr Obj cannot be set with' +
-                             ' the set_var_attr method. Please use' +
-                             ' the set_objective method.')
+            raise ValueError(
+                'Var attr Obj cannot be set with'
+                + ' the set_var_attr method. Please use'
+                + ' the set_objective method.'
+            )
         if self._version_major < 7:
-            if (self._solver_model.getAttr('NumVars') == 0 or
-                    self._solver_model.getVarByName(self._symbol_map.getSymbol(var)) is None):
+            if (
+                self._solver_model.getAttr('NumVars') == 0
+                or self._solver_model.getVarByName(self._symbol_map.getSymbol(var))
+                is None
+            ):
                 self._solver_model.update()
         self._pyomo_var_to_solver_var_map[var].setAttr(attr, val)
         self._needs_updated = True
@@ -445,7 +469,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         Parameters
         ----------
         param: str
-            The gurobi parameter to get info for. See Gurobi documenation for possible options.
+            The gurobi parameter to get info for. See Gurobi documentation for possible options.
 
         Returns
         -------
@@ -456,6 +480,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
     def _intermediate_callback(self):
         def f(gurobi_model, where):
             self._callback_func(self._pyomo_model, self, where)
+
         return f
 
     def set_callback(self, func=None):
@@ -483,7 +508,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
                              & y \in \mathbb{Z}
                \end{array}
 
-            as an MILP using exteneded cutting planes in callbacks.
+            as an MILP using extended cutting planes in callbacks.
 
             .. testcode::
                :skipif: not gurobipy_available
@@ -551,30 +576,41 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             raise ValueError('cbCut expected an active constraint.')
 
         if is_fixed(con.body):
-            raise ValueError('cbCut expected a non-trival constraint')
+            raise ValueError('cbCut expected a non-trivial constraint')
 
-        gurobi_expr, referenced_vars = self._get_expr_from_pyomo_expr(con.body, self._max_constraint_degree)
+        gurobi_expr, referenced_vars = self._get_expr_from_pyomo_expr(
+            con.body, self._max_constraint_degree
+        )
 
         if con.has_lb():
             if con.has_ub():
                 raise ValueError('Range constraints are not supported in cbCut.')
             if not is_fixed(con.lower):
-                raise ValueError('Lower bound of constraint {0} is not constant.'.format(con))
+                raise ValueError(
+                    'Lower bound of constraint {0} is not constant.'.format(con)
+                )
         if con.has_ub():
             if not is_fixed(con.upper):
-                raise ValueError('Upper bound of constraint {0} is not constant.'.format(con))
+                raise ValueError(
+                    'Upper bound of constraint {0} is not constant.'.format(con)
+                )
 
         if con.equality:
-            self._solver_model.cbCut(lhs=gurobi_expr, sense=gurobipy.GRB.EQUAL,
-                                     rhs=value(con.lower))
+            self._solver_model.cbCut(
+                lhs=gurobi_expr, sense=gurobipy.GRB.EQUAL, rhs=value(con.lower)
+            )
         elif con.has_lb() and (value(con.lower) > -float('inf')):
-            self._solver_model.cbCut(lhs=gurobi_expr, sense=gurobipy.GRB.GREATER_EQUAL,
-                                     rhs=value(con.lower))
+            self._solver_model.cbCut(
+                lhs=gurobi_expr, sense=gurobipy.GRB.GREATER_EQUAL, rhs=value(con.lower)
+            )
         elif con.has_ub() and (value(con.upper) < float('inf')):
-            self._solver_model.cbCut(lhs=gurobi_expr, sense=gurobipy.GRB.LESS_EQUAL,
-                                     rhs=value(con.upper))
+            self._solver_model.cbCut(
+                lhs=gurobi_expr, sense=gurobipy.GRB.LESS_EQUAL, rhs=value(con.upper)
+            )
         else:
-            raise ValueError('Constraint does not have a lower or an upper bound {0} \n'.format(con))
+            raise ValueError(
+                'Constraint does not have a lower or an upper bound {0} \n'.format(con)
+            )
 
     def cbGet(self, what):
         return self._solver_model.cbGet(what)
@@ -618,30 +654,41 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             raise ValueError('cbLazy expected an active constraint.')
 
         if is_fixed(con.body):
-            raise ValueError('cbLazy expected a non-trival constraint')
+            raise ValueError('cbLazy expected a non-trivial constraint')
 
-        gurobi_expr, referenced_vars = self._get_expr_from_pyomo_expr(con.body, self._max_constraint_degree)
+        gurobi_expr, referenced_vars = self._get_expr_from_pyomo_expr(
+            con.body, self._max_constraint_degree
+        )
 
         if con.has_lb():
             if con.has_ub():
                 raise ValueError('Range constraints are not supported in cbLazy.')
             if not is_fixed(con.lower):
-                raise ValueError('Lower bound of constraint {0} is not constant.'.format(con))
+                raise ValueError(
+                    'Lower bound of constraint {0} is not constant.'.format(con)
+                )
         if con.has_ub():
             if not is_fixed(con.upper):
-                raise ValueError('Upper bound of constraint {0} is not constant.'.format(con))
+                raise ValueError(
+                    'Upper bound of constraint {0} is not constant.'.format(con)
+                )
 
         if con.equality:
-            self._solver_model.cbLazy(lhs=gurobi_expr, sense=gurobipy.GRB.EQUAL,
-                                      rhs=value(con.lower))
+            self._solver_model.cbLazy(
+                lhs=gurobi_expr, sense=gurobipy.GRB.EQUAL, rhs=value(con.lower)
+            )
         elif con.has_lb() and (value(con.lower) > -float('inf')):
-            self._solver_model.cbLazy(lhs=gurobi_expr, sense=gurobipy.GRB.GREATER_EQUAL,
-                                      rhs=value(con.lower))
+            self._solver_model.cbLazy(
+                lhs=gurobi_expr, sense=gurobipy.GRB.GREATER_EQUAL, rhs=value(con.lower)
+            )
         elif con.has_ub() and (value(con.upper) < float('inf')):
-            self._solver_model.cbLazy(lhs=gurobi_expr, sense=gurobipy.GRB.LESS_EQUAL,
-                                      rhs=value(con.upper))
+            self._solver_model.cbLazy(
+                lhs=gurobi_expr, sense=gurobipy.GRB.LESS_EQUAL, rhs=value(con.upper)
+            )
         else:
-            raise ValueError('Constraint does not have a lower or an upper bound {0} \n'.format(con))
+            raise ValueError(
+                'Constraint does not have a lower or an upper bound {0} \n'.format(con)
+            )
 
     def cbSetSolution(self, vars, solution):
         if not isinstance(vars, Iterable):
@@ -656,9 +703,9 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         """Add a column to the solver's model
 
         This will add the Pyomo variable var to the solver's
-        model, and put the coefficients on the associated 
+        model, and put the coefficients on the associated
         constraints in the solver model. If the obj_coef is
-        not zero, it will add obj_coef*var to the objective 
+        not zero, it will add obj_coef*var to the objective
         of the solver's model.
 
         Parameters
@@ -674,10 +721,16 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         vtype = self._gurobi_vtype_from_var(var)
         lb, ub = self._gurobi_lb_ub_from_var(var)
 
-        gurobipy_var = self._solver_model.addVar(obj=obj_coef, lb=lb, ub=ub, vtype=vtype, name=varname, 
-                            column=gurobipy.Column(coeffs=coefficients, constrs=constraints) )
+        gurobipy_var = self._solver_model.addVar(
+            obj=obj_coef,
+            lb=lb,
+            ub=ub,
+            vtype=vtype,
+            name=varname,
+            column=gurobipy.Column(coeffs=coefficients, constrs=constraints),
+        )
 
-        self._pyomo_var_to_solver_var_map[var] = gurobipy_var 
+        self._pyomo_var_to_solver_var_map[var] = gurobipy_var
         self._solver_var_to_pyomo_var_map[gurobipy_var] = var
         self._referenced_variables[var] = len(coefficients)
 

@@ -9,6 +9,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import logging
+import sys
+
+from pyomo.common.deprecation import deprecated, relocated_module_attribute
+from pyomo.common.errors import TemplateExpressionError
+
+logger = logging.getLogger(__name__)
 
 #: Python set used to identify numeric constants, boolean values, strings
 #: and instances of
@@ -16,7 +23,7 @@
 #: which is commonly used in code that walks Pyomo expression trees.
 #:
 #: :data:`nonpyomo_leaf_types` = :data:`native_types <pyomo.core.expr.numvalue.native_types>` + { :data:`NonNumericValue <pyomo.core.expr.numvalue.NonNumericValue>` }
-nonpyomo_leaf_types = set([])
+nonpyomo_leaf_types = set()
 
 # It is *significantly* faster to build the list of types we want to
 # test against as a "static" set, and not to regenerate it locally for
@@ -34,11 +41,22 @@ nonpyomo_leaf_types = set([])
 #: Python set used to identify numeric constants.  This set includes
 #: native Python types as well as numeric types from Python packages
 #: like numpy, which may be registered by users.
-native_numeric_types = set([ int, float, bool, complex ])
-native_integer_types = set([ int, bool ])
-native_boolean_types = set([ int, bool, str, bytes ])
-native_logical_types = {bool, }
+native_numeric_types = {int, float, complex}
+native_integer_types = {int}
+native_logical_types = {bool}
 pyomo_constant_types = set()  # includes NumericConstant
+
+_native_boolean_types = {int, bool, str, bytes}
+relocated_module_attribute(
+    'native_boolean_types',
+    'pyomo.common.numeric_types._native_boolean_types',
+    version='6.6.0',
+    msg="The native_boolean_types set will be removed in the future: the set "
+    "contains types that were convertible to bool, and not types that should "
+    "be treated as if they were bool (as was the case for the other "
+    "native_*_types sets).  Users likely should use native_logical_types.",
+)
+
 
 #: Python set used to identify numeric constants and related native
 #: types.  This set includes
@@ -46,12 +64,14 @@ pyomo_constant_types = set()  # includes NumericConstant
 #: like numpy.
 #:
 #: :data:`native_types` = :data:`native_numeric_types <pyomo.core.expr.numvalue.native_numeric_types>` + { str }
-native_types = set([ bool, str, type(None), slice, bytes])
-native_types.update( native_numeric_types )
-native_types.update( native_integer_types )
-native_types.update( native_boolean_types )
+native_types = set([bool, str, type(None), slice, bytes])
+native_types.update(native_numeric_types)
+native_types.update(native_integer_types)
+native_types.update(_native_boolean_types)
+native_types.update(native_logical_types)
 
-nonpyomo_leaf_types.update( native_types )
+nonpyomo_leaf_types.update(native_types)
+
 
 def RegisterNumericType(new_type):
     """
@@ -63,6 +83,7 @@ def RegisterNumericType(new_type):
     native_numeric_types.add(new_type)
     native_types.add(new_type)
     nonpyomo_leaf_types.add(new_type)
+
 
 def RegisterIntegerType(new_type):
     """
@@ -77,6 +98,12 @@ def RegisterIntegerType(new_type):
     native_types.add(new_type)
     nonpyomo_leaf_types.add(new_type)
 
+
+@deprecated(
+    "The native_boolean_types set (and hence RegisterBooleanType) "
+    "is deprecated.  Users likely should use RegisterLogicalType.",
+    version='6.6.0',
+)
 def RegisterBooleanType(new_type):
     """
     A utility function for updating the set of types that are
@@ -85,6 +112,155 @@ def RegisterBooleanType(new_type):
 
     The argument should be a class (e.g., numpy.bool_).
     """
-    native_boolean_types.add(new_type)
+    _native_boolean_types.add(new_type)
     native_types.add(new_type)
     nonpyomo_leaf_types.add(new_type)
+
+
+def RegisterLogicalType(new_type):
+    """
+    A utility function for updating the set of types that are
+    recognized as handling boolean values. This function does not
+    register the type of integer or numeric.
+
+    The argument should be a class (e.g., numpy.bool_).
+    """
+    _native_boolean_types.add(new_type)
+    native_logical_types.add(new_type)
+    native_types.add(new_type)
+    nonpyomo_leaf_types.add(new_type)
+
+
+def check_if_numeric_type(obj):
+    """Test if the argument behaves like a numeric type.
+
+    We check for "numeric types" by checking if we can add zero to it
+    without changing the object's type.  If that works, then we register
+    the type in native_numeric_types.
+
+    """
+    obj_class = obj.__class__
+    # Do not re-evaluate known native types
+    if obj_class in native_types:
+        return obj_class in native_numeric_types
+
+    try:
+        obj_plus_0 = obj + 0
+        obj_p0_class = obj_plus_0.__class__
+        # ensure that the object is comparable to 0 in a meaningful way
+        # (among other things, this prevents numpy.ndarray objects from
+        # being added to native_numeric_types)
+        if not ((obj < 0) ^ (obj >= 0)):
+            return False
+        # Native types *must* be hashable
+        hash(obj)
+    except:
+        return False
+    if obj_p0_class is obj_class or obj_p0_class in native_numeric_types:
+        #
+        # If we get here, this is a reasonably well-behaving
+        # numeric type: add it to the native numeric types
+        # so that future lookups will be faster.
+        #
+        RegisterNumericType(obj_class)
+        #
+        # Generate a warning, since Pyomo's management of third-party
+        # numeric types is more robust when registering explicitly.
+        #
+        logger.warning(
+            f"""Dynamically registering the following numeric type:
+    {obj_class.__module__}.{obj_class.__name__}
+Dynamic registration is supported for convenience, but there are known
+limitations to this approach.  We recommend explicitly registering
+numeric types using RegisterNumericType() or RegisterIntegerType()."""
+        )
+        return True
+    else:
+        return False
+
+
+def value(obj, exception=True):
+    """
+        A utility function that returns the value of a Pyomo object or
+        expression.
+
+        Args:
+            obj: The argument to evaluate. If it is None, a
+                string, or any other primitive numeric type,
+                then this function simply returns the argument.
+                Otherwise, if the argument is a NumericValue
+                then the __call__ method is executed.
+            exception (bool): If :const:`True`, then an exception should
+                be raised when instances of NumericValue fail to
+    s            evaluate due to one or more objects not being
+                initialized to a numeric value (e.g, one or more
+                variables in an algebraic expression having the
+                value None). If :const:`False`, then the function
+                returns :const:`None` when an exception occurs.
+                Default is True.
+
+        Returns: A numeric value or None.
+    """
+    if obj.__class__ in native_types:
+        return obj
+    if obj.__class__ in pyomo_constant_types:
+        #
+        # I'm commenting this out for now, but I think we should never expect
+        # to see a numeric constant with value None.
+        #
+        # if exception and obj.value is None:
+        #    raise ValueError(
+        #        "No value for uninitialized NumericConstant object %s"
+        #        % (obj.name,))
+        return obj.value
+    #
+    # Test if we have a duck typed Pyomo expression
+    #
+    try:
+        obj.is_numeric_type()
+    except AttributeError:
+        #
+        # TODO: Historically we checked for new *numeric* types and
+        # raised exceptions for anything else.  That is inconsistent
+        # with allowing native_types like None/str/bool to be returned
+        # from value().  We should revisit if that is worthwhile to do
+        # here.
+        #
+        if check_if_numeric_type(obj):
+            return obj
+        else:
+            if not exception:
+                return None
+            raise TypeError(
+                "Cannot evaluate object with unknown type: %s" % obj.__class__.__name__
+            ) from None
+    #
+    # Evaluate the expression object
+    #
+    if exception:
+        #
+        # Here, we try to catch the exception
+        #
+        try:
+            tmp = obj(exception=True)
+            if tmp is None:
+                raise ValueError(
+                    "No value for uninitialized NumericValue object %s" % (obj.name,)
+                )
+            return tmp
+        except TemplateExpressionError:
+            # Template expressions work by catching this error type. So
+            # we should defer this error handling and not log an error
+            # message.
+            raise
+        except:
+            logger.error(
+                "evaluating object as numeric value: %s\n    (object: %s)\n%s"
+                % (obj, type(obj), sys.exc_info()[1])
+            )
+            raise
+    else:
+        #
+        # Here, we do not try to catch the exception
+        #
+        return obj(exception=False)

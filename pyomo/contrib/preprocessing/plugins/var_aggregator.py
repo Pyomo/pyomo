@@ -14,10 +14,8 @@
 from __future__ import division
 
 from pyomo.common.collections import ComponentMap, ComponentSet
-from pyomo.core.base import (
-    Block, Constraint, VarList, Objective, TransformationFactory,
-)
-from pyomo.core.expr.current import ExpressionReplacementVisitor
+from pyomo.core.base import Block, Constraint, VarList, Objective, TransformationFactory
+from pyomo.core.expr import ExpressionReplacementVisitor
 from pyomo.core.expr.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn import generate_standard_repn
@@ -41,22 +39,25 @@ def _get_equality_linked_variables(constraint):
 
     # Generate the standard linear representation
     repn = generate_standard_repn(constraint.body)
-    nonzero_coef_vars = tuple(v for i, v in enumerate(repn.linear_vars)
-                              # if coefficient on variable is nonzero
-                              if repn.linear_coefs[i] != 0)
+    nonzero_coef_vars = tuple(
+        v
+        for i, v in enumerate(repn.linear_vars)
+        # if coefficient on variable is nonzero
+        if repn.linear_coefs[i] != 0
+    )
     if len(nonzero_coef_vars) != 2:
-        # Expect two variables with nonzero cofficient in constraint;
+        # Expect two variables with nonzero coefficient in constraint;
         # otherwise, return empty tuple.
         return ()
     if sorted(coef for coef in repn.linear_coefs if coef != 0) != [-1, 1]:
         # Expect a constraint of form x == y --> 0 == -1 * x + 1 * y;
         # otherwise, return empty tuple.
         return ()
-    # Above checks are satisifed. Return the variables.
+    # Above checks are satisfied. Return the variables.
     return nonzero_coef_vars
 
 
-def _fix_equality_fixed_variables(model, scaling_tolerance=1E-10):
+def _fix_equality_fixed_variables(model, scaling_tolerance=1e-10):
     """Detects variables fixed by a constraint: ax=b.
 
     Fixes the variable to the constant value (b/a) and deactivates the relevant
@@ -87,11 +88,12 @@ def _fix_equality_fixed_variables(model, scaling_tolerance=1E-10):
             (repn.linear_coefs[i], v)
             for i, v in enumerate(repn.linear_vars)
             # if coefficient on variable is nonzero
-            if repn.linear_coefs[i] != 0)
+            if repn.linear_coefs[i] != 0
+        )
         # get the coefficient and variable object
         coef, var = next(nonzero_coef_vars)
         if next(nonzero_coef_vars, None) is not None:
-            # Expect one variable with nonzero cofficient in constraint;
+            # Expect one variable with nonzero coefficient in constraint;
             # otherwise, skip.
             continue
         # Constant term on the constraint body
@@ -101,9 +103,17 @@ def _fix_equality_fixed_variables(model, scaling_tolerance=1E-10):
             logger.warning(
                 "Skipping fixed variable processing for constraint %s: "
                 "%s * %s + %s = %s because coefficient %s is below "
-                "tolerance of %s. Check your problem scaling." %
-                (constraint.name, coef, var.name, const,
-                 value(constraint.lower), coef, scaling_tolerance))
+                "tolerance of %s. Check your problem scaling."
+                % (
+                    constraint.name,
+                    coef,
+                    var.name,
+                    const,
+                    value(constraint.lower),
+                    coef,
+                    scaling_tolerance,
+                )
+            )
             continue
 
         # Constraint has form lower <= coef * var + const <= upper. We know that
@@ -128,7 +138,8 @@ def _build_equality_set(model):
 
     # Loop through all the active constraints in the model
     for constraint in model.component_data_objects(
-            ctype=Constraint, active=True, descend_into=True):
+        ctype=Constraint, active=True, descend_into=True
+    ):
         eq_linked_vars = _get_equality_linked_variables(constraint)
         if not eq_linked_vars:
             continue  # if we get an empty tuple, skip to next constraint.
@@ -171,8 +182,10 @@ def max_if_not_None(iterable):
     return max(non_nones or [None])  # min( [] or [None] ) -> None
 
 
-@TransformationFactory.register('contrib.aggregate_vars',
-          doc="Aggregate model variables that are linked by equality constraints.")
+@TransformationFactory.register(
+    'contrib.aggregate_vars',
+    doc="Aggregate model variables that are linked by equality constraints.",
+)
 class VariableAggregator(IsomorphicTransformation):
     """Aggregate model variables that are linked by equality constraints.
 
@@ -208,7 +221,8 @@ class VariableAggregator(IsomorphicTransformation):
         # Generate aggregation infrastructure
         model._var_aggregator_info = Block(
             doc="Holds information for the variable aggregation "
-            "transformation system.")
+            "transformation system."
+        )
         z = model._var_aggregator_info.z = VarList(doc="Aggregated variables.")
         # Map of the aggregate var to the equalty set (ComponentSet)
         z_to_vars = model._var_aggregator_info.z_to_vars = ComponentMap()
@@ -219,8 +233,7 @@ class VariableAggregator(IsomorphicTransformation):
         # TODO This iteritems is sorted by the variable name of the key in
         # order to preserve determinism. Unfortunately, var.name() is an
         # expensive operation right now.
-        for var, eq_set in sorted(eq_var_map.items(),
-                                  key=lambda tup: tup[0].name):
+        for var, eq_set in sorted(eq_var_map.items(), key=lambda tup: tup[0].name):
             if var in processed_vars:
                 continue  # Skip already-process variables
 
@@ -241,61 +254,60 @@ class VariableAggregator(IsomorphicTransformation):
             fixed_vars = [v for v in eq_set if v.fixed]
             if fixed_vars:
                 # Check to make sure all the fixed values are the same.
-                if any(var.value != fixed_vars[0].value
-                       for var in fixed_vars[1:]):
+                if any(var.value != fixed_vars[0].value for var in fixed_vars[1:]):
                     raise ValueError(
                         "Aggregate variable for equality set is fixed to "
-                        "multiple different values: %s" % (fixed_vars,))
+                        "multiple different values: %s" % (fixed_vars,)
+                    )
                 z_agg.fix(fixed_vars[0].value)
 
                 # Check that the fixed value lies within bounds.
                 if z_agg.has_lb() and z_agg.value < value(z_agg.lb):
                     raise ValueError(
                         "Aggregate variable for equality set is fixed to "
-                        "a value less than its lower bound: %s < LB %s" %
-                        (z_agg.value, value(z_agg.lb))
+                        "a value less than its lower bound: %s < LB %s"
+                        % (z_agg.value, value(z_agg.lb))
                     )
                 if z_agg.has_ub() and z_agg.value > value(z_agg.ub):
                     raise ValueError(
                         "Aggregate variable for equality set is fixed to "
-                        "a value greater than its upper bound: %s > UB %s" %
-                        (z_agg.value, value(z_agg.ub))
+                        "a value greater than its upper bound: %s > UB %s"
+                        % (z_agg.value, value(z_agg.ub))
                     )
             else:
                 # Set the value to be the average of the values within the
                 # bounds only if the value is not already fixed.
                 values_within_bounds = [
-                    v.value for v in eq_set if (
+                    v.value
+                    for v in eq_set
+                    if (
                         v.value is not None
                         and (not z_agg.has_lb() or v.value >= value(z_agg.lb))
                         and (not z_agg.has_ub() or v.value <= value(z_agg.ub))
-                    )]
+                    )
+                ]
                 if values_within_bounds:
-                    z_agg.set_value(sum(values_within_bounds) /
-                                    len(values_within_bounds),
-                                    skip_validation=True)
+                    z_agg.set_value(
+                        sum(values_within_bounds) / len(values_within_bounds),
+                        skip_validation=True,
+                    )
 
             processed_vars.update(eq_set)
 
         # Do the substitution
-        substitution_map = {id(var): z_var
-                            for var, z_var in var_to_z.items()}
+        substitution_map = {id(var): z_var for var, z_var in var_to_z.items()}
         visitor = ExpressionReplacementVisitor(
             substitute=substitution_map,
             descend_into_named_expressions=True,
             remove_named_expressions=False,
         )
-        for constr in model.component_data_objects(
-            ctype=Constraint, active=True
-        ):
+        for constr in model.component_data_objects(ctype=Constraint, active=True):
             orig_body = constr.body
             new_body = visitor.walk_expression(constr.body)
             if orig_body is not new_body:
                 constr.set_value((constr.lower, new_body, constr.upper))
 
-        for objective in model.component_data_objects(
-            ctype=Objective, active=True
-        ):
+        for objective in model.component_data_objects(ctype=Objective, active=True):
             orig_expr = objective.expr
             new_expr = visitor.walk_expression(objective.expr)
             if orig_expr is not new_expr:

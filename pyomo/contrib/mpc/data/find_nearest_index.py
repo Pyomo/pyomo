@@ -11,13 +11,14 @@
 
 import bisect
 
+
 def find_nearest_index(array, target, tolerance=None):
     # array needs to be sorted and we assume it is zero-indexed
     lo = 0
     hi = len(array)
     i = bisect.bisect_right(array, target, lo=lo, hi=hi)
     # i is the index at which target should be inserted if it is to be
-    # right of any equal components. 
+    # right of any equal components.
 
     if i == lo:
         # target is less than every entry of the set
@@ -33,9 +34,7 @@ def find_nearest_index(array, target, tolerance=None):
         # delta_right = p_g - target
         # delta = min(delta_left, delta_right)
         # Tie goes to the index on the left.
-        delta, nearest_index = min(
-            (abs(target - array[j]), j) for j in [i-1, i]
-        )
+        delta, nearest_index = min((abs(target - array[j]), j) for j in [i - 1, i])
 
     if tolerance is not None:
         if delta > tolerance:
@@ -56,7 +55,7 @@ def _distance_from_interval(point, interval, tolerance=None):
 
 
 def find_nearest_interval_index(
-    interval_array, target, tolerance=None, prefer_left=True,
+    interval_array, target, tolerance=None, prefer_left=True
 ):
     # NOTE: This function quickly begins to behave badly if tolerance
     # gets too large, e.g. greater than the width of the smallest
@@ -65,9 +64,7 @@ def find_nearest_interval_index(
     array_lo = 0
     array_hi = len(interval_array)
     target_tuple = (target,)
-    i = bisect.bisect_right(
-        interval_array, target_tuple, lo=array_lo, hi=array_hi
-    )
+    i = bisect.bisect_right(interval_array, target_tuple, lo=array_lo, hi=array_hi)
     distance_tol = 0.0 if tolerance is None else tolerance
     if i == array_lo:
         # We are at or to the left of the left endpoint of the
@@ -80,7 +77,7 @@ def find_nearest_interval_index(
         # We are within or to the right of the last interval.
         nearest_index = i - 1
         delta = _distance_from_interval(
-            target, interval_array[i-1], tolerance=distance_tol
+            target, interval_array[i - 1], tolerance=distance_tol
         )
     else:
         # Find closest interval
@@ -94,7 +91,7 @@ def find_nearest_interval_index(
                     ),
                     j,
                 )
-                for j in [i-1, i]
+                for j in [i - 1, i]
             )
         else:
             # If prefer_left=False, we return the right interval.
@@ -105,7 +102,7 @@ def find_nearest_interval_index(
                     ),
                     -j,
                 )
-                for j in [i-1, i]
+                for j in [i - 1, i]
             )
             nearest_index = -neg_nearest_index
 
@@ -115,14 +112,14 @@ def find_nearest_interval_index(
     # interval.
     if prefer_left and nearest_index >= array_lo + 1:
         delta_left = _distance_from_interval(
-            target, interval_array[nearest_index-1], tolerance=distance_tol
+            target, interval_array[nearest_index - 1], tolerance=distance_tol
         )
         if delta_left <= delta:
             nearest_index = nearest_index - 1
             delta = delta_left
     elif not prefer_left and nearest_index < array_hi - 1:
         delta_right = _distance_from_interval(
-            target, interval_array[nearest_index+1], tolerance=distance_tol
+            target, interval_array[nearest_index + 1], tolerance=distance_tol
         )
         if delta_right <= delta:
             nearest_index = nearest_index + 1
