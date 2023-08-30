@@ -343,8 +343,6 @@ class Highs(PersistentBase, PersistentSolver):
             )
         self._reinit()
         self._model = model
-        if self.use_extensions and cmodel_available:
-            self._expr_types = cmodel.PyomoExprTypes()
 
         self._solver_model = highspy.Highs()
         self.add_block(model)

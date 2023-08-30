@@ -1182,13 +1182,6 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.x.value, 0)
         self.assertAlmostEqual(m.y.value, 1)
 
-        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
-        opt.use_extensions = True
-        res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 1)
-        self.assertAlmostEqual(m.x.value, 0)
-        self.assertAlmostEqual(m.y.value, 1)
-
     @parameterized.expand(input=all_solvers)
     def test_variables_elsewhere(self, name: str, opt_class: Type[PersistentSolver]):
         opt: PersistentSolver = opt_class(only_child_vars=False)
