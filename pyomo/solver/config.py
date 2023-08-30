@@ -56,19 +56,15 @@ class InterfaceConfig(ConfigDict):
             visibility=visibility,
         )
 
-        self.declare('tee', ConfigValue(domain=bool))
-        self.declare('load_solution', ConfigValue(domain=bool))
-        self.declare('symbolic_solver_labels', ConfigValue(domain=bool))
-        self.declare('report_timing', ConfigValue(domain=bool))
+        self.declare('tee', ConfigValue(domain=bool, default=False))
+        self.declare('load_solution', ConfigValue(domain=bool, default=True))
+        self.declare('symbolic_solver_labels', ConfigValue(domain=bool, default=False))
+        self.declare('report_timing', ConfigValue(domain=bool, default=False))
         self.declare('threads', ConfigValue(domain=NonNegativeInt, default=None))
 
         self.time_limit: Optional[float] = self.declare(
             'time_limit', ConfigValue(domain=NonNegativeFloat)
         )
-        self.tee: bool = False
-        self.load_solution: bool = True
-        self.symbolic_solver_labels: bool = False
-        self.report_timing: bool = False
 
 
 class MIPInterfaceConfig(InterfaceConfig):

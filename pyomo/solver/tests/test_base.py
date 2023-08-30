@@ -139,8 +139,8 @@ class TestPersistentSolverBase(unittest.TestCase):
 class TestResults(unittest.TestCase):
     def test_uninitialized(self):
         res = base.Results()
-        self.assertIsNone(res.best_feasible_objective)
-        self.assertIsNone(res.best_objective_bound)
+        self.assertIsNone(res.incumbent_objective)
+        self.assertIsNone(res.objective_bound)
         self.assertEqual(res.termination_condition, base.TerminationCondition.unknown)
 
         with self.assertRaisesRegex(

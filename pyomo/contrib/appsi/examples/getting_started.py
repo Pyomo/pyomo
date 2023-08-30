@@ -36,7 +36,7 @@ def main(plot=True, n_points=200):
             res.termination_condition
             == solver_base.TerminationCondition.convergenceCriteriaSatisfied
         )
-        obj_values.append(res.best_feasible_objective)
+        obj_values.append(res.incumbent_objective)
         opt.load_vars([m.x])
         x_values.append(m.x.value)
     timer.stop('p loop')

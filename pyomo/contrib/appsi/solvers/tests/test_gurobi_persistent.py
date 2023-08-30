@@ -155,12 +155,12 @@ class TestGurobiPersistentSimpleLPUpdates(unittest.TestCase):
         x, y = self.get_solution()
         opt = Gurobi()
         res = opt.solve(self.m)
-        self.assertAlmostEqual(x + y, res.best_feasible_objective)
-        self.assertAlmostEqual(x + y, res.best_objective_bound)
+        self.assertAlmostEqual(x + y, res.incumbent_objective)
+        self.assertAlmostEqual(x + y, res.objective_bound)
         self.assertEqual(
             res.termination_condition, TerminationCondition.convergenceCriteriaSatisfied
         )
-        self.assertTrue(res.best_feasible_objective is not None)
+        self.assertTrue(res.incumbent_objective is not None)
         self.assertAlmostEqual(x, self.m.x.value)
         self.assertAlmostEqual(y, self.m.y.value)
 
@@ -196,11 +196,11 @@ class TestGurobiPersistent(unittest.TestCase):
         opt.gurobi_options['BestBdStop'] = -8
         opt.config.load_solution = False
         res = opt.solve(m)
-        self.assertEqual(res.best_feasible_objective, None)
-        self.assertAlmostEqual(res.best_objective_bound, -8)
+        self.assertEqual(res.incumbent_objective, None)
+        self.assertAlmostEqual(res.objective_bound, -8)
 
     def test_nonconvex_qcp_objective_bound_2(self):
-        # the goal of this test is to ensure we can best_objective_bound properly
+        # the goal of this test is to ensure we can objective_bound properly
         # for nonconvex but continuous problems when the solver terminates with a nonzero gap
         #
         # This is a fragile test because it could fail if Gurobi's algorithms change
@@ -214,8 +214,8 @@ class TestGurobiPersistent(unittest.TestCase):
         opt.gurobi_options['nonconvex'] = 2
         opt.gurobi_options['MIPGap'] = 0.5
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, -4)
-        self.assertAlmostEqual(res.best_objective_bound, -6)
+        self.assertAlmostEqual(res.incumbent_objective, -4)
+        self.assertAlmostEqual(res.objective_bound, -6)
 
     def test_range_constraints(self):
         m = pe.ConcreteModel()
@@ -282,7 +282,7 @@ class TestGurobiPersistent(unittest.TestCase):
         res = opt.solve(m)
         self.assertAlmostEqual(m.x.value, -m.b.value / (2 * m.a.value))
         self.assertAlmostEqual(
-            res.best_feasible_objective,
+            res.incumbent_objective,
             m.a.value * m.x.value**2 + m.b.value * m.x.value + m.c.value,
         )
 
@@ -292,7 +292,7 @@ class TestGurobiPersistent(unittest.TestCase):
         res = opt.solve(m)
         self.assertAlmostEqual(m.x.value, -m.b.value / (2 * m.a.value))
         self.assertAlmostEqual(
-            res.best_feasible_objective,
+            res.incumbent_objective,
             m.a.value * m.x.value**2 + m.b.value * m.x.value + m.c.value,
         )
 
@@ -467,7 +467,7 @@ class TestGurobiPersistent(unittest.TestCase):
         # what we are trying to test. Unfortunately, I'm
         # not sure of a good way to guarantee that
         if num_solutions == 0:
-            self.assertIsNone(res.best_feasible_objective)
+            self.assertIsNone(res.incumbent_objective)
 
 
 class TestManualModel(unittest.TestCase):

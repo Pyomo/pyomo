@@ -11,12 +11,14 @@
 
 import abc
 import enum
+from datetime import datetime
 from typing import Sequence, Dict, Optional, Mapping, NoReturn, List, Tuple
 from pyomo.core.base.constraint import _GeneralConstraintData
 from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.objective import _GeneralObjectiveData
+from pyomo.common.config import ConfigDict, ConfigValue, NonNegativeInt, In, NonNegativeFloat
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.errors import ApplicationError
 from pyomo.opt.base import SolverFactory as LegacySolverFactory
@@ -106,37 +108,62 @@ class SolutionStatus(enum.IntEnum):
     optimal = 30
 
 
-class Results:
+class Results(ConfigDict):
     """
     Attributes
     ----------
     termination_condition: TerminationCondition
         The reason the solver exited. This is a member of the
         TerminationCondition enum.
-    best_feasible_objective: float
+    incumbent_objective: float
         If a feasible solution was found, this is the objective value of
         the best solution found. If no feasible solution was found, this is
         None.
-    best_objective_bound: float
+    objective_bound: float
         The best objective bound found. For minimization problems, this is
         the lower bound. For maximization problems, this is the upper bound.
         For solvers that do not provide an objective bound, this should be -inf
         (minimization) or inf (maximization)
     """
 
-    def __init__(self):
-        self.solution_loader: SolutionLoaderBase = SolutionLoader(
-            None, None, None, None
+    def __init__(
+        self,
+        description=None,
+        doc=None,
+        implicit=False,
+        implicit_domain=None,
+        visibility=0,
+    ):
+        super().__init__(
+            description=description,
+            doc=doc,
+            implicit=implicit,
+            implicit_domain=implicit_domain,
+            visibility=visibility,
         )
-        self.termination_condition: TerminationCondition = TerminationCondition.unknown
-        self.best_feasible_objective: Optional[float] = None
-        self.best_objective_bound: Optional[float] = None
+
+        self.declare('solution_loader', ConfigValue(domain=In(SolutionLoaderBase), default=SolutionLoader(
+            None, None, None, None
+        )))
+        self.declare('termination_condition', ConfigValue(domain=In(TerminationCondition), default=TerminationCondition.unknown))
+        self.declare('solution_status', ConfigValue(domain=In(SolutionStatus), default=SolutionStatus.noSolution))
+        self.incumbent_objective: Optional[float] = self.declare('incumbent_objective', ConfigValue(domain=float))
+        self.objective_bound: Optional[float] = self.declare('objective_bound', ConfigValue(domain=float))
+        self.declare('solver_name', ConfigValue(domain=str))
+        self.declare('solver_version', ConfigValue(domain=tuple))
+        self.declare('termination_message', ConfigValue(domain=str))
+        self.declare('iteration_count', ConfigValue(domain=NonNegativeInt))
+        self.declare('timing_info', ConfigDict())
+        self.timing_info.declare('start', ConfigValue=In(datetime))
+        self.timing_info.declare('wall_time', ConfigValue(domain=NonNegativeFloat))
+        self.timing_info.declare('solver_wall_time', ConfigValue(domain=NonNegativeFloat))
+        self.declare('extra_info', ConfigDict(implicit=True))
 
     def __str__(self):
         s = ''
         s += 'termination_condition: ' + str(self.termination_condition) + '\n'
-        s += 'best_feasible_objective: ' + str(self.best_feasible_objective) + '\n'
-        s += 'best_objective_bound: ' + str(self.best_objective_bound)
+        s += 'incumbent_objective: ' + str(self.incumbent_objective) + '\n'
+        s += 'objective_bound: ' + str(self.objective_bound)
         return s
 
 
@@ -496,17 +523,17 @@ class LegacySolverInterface:
         legacy_results.problem.sense = obj.sense
 
         if obj.sense == minimize:
-            legacy_results.problem.lower_bound = results.best_objective_bound
-            legacy_results.problem.upper_bound = results.best_feasible_objective
+            legacy_results.problem.lower_bound = results.objective_bound
+            legacy_results.problem.upper_bound = results.incumbent_objective
         else:
-            legacy_results.problem.upper_bound = results.best_objective_bound
-            legacy_results.problem.lower_bound = results.best_feasible_objective
+            legacy_results.problem.upper_bound = results.objective_bound
+            legacy_results.problem.lower_bound = results.incumbent_objective
         if (
-            results.best_feasible_objective is not None
-            and results.best_objective_bound is not None
+            results.incumbent_objective is not None
+            and results.objective_bound is not None
         ):
             legacy_soln.gap = abs(
-                results.best_feasible_objective - results.best_objective_bound
+                results.incumbent_objective - results.objective_bound
             )
         else:
             legacy_soln.gap = None
@@ -530,7 +557,7 @@ class LegacySolverInterface:
             if hasattr(model, 'rc') and model.rc.import_enabled():
                 for v, val in results.solution_loader.get_reduced_costs().items():
                     model.rc[v] = val
-        elif results.best_feasible_objective is not None:
+        elif results.incumbent_objective is not None:
             delete_legacy_soln = False
             for v, val in results.solution_loader.get_primals().items():
                 legacy_soln.variable[symbol_map.getSymbol(v)] = {'Value': val}

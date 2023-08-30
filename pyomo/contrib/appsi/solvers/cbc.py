@@ -313,23 +313,23 @@ class Cbc(PersistentSolverBase):
             for v_id, (v, val) in self._primal_sol.items():
                 v.set_value(val, skip_validation=True)
             if self._writer.get_active_objective() is None:
-                results.best_feasible_objective = None
+                results.incumbent_objective = None
             else:
-                results.best_feasible_objective = obj_val
+                results.incumbent_objective = obj_val
         elif (
             results.termination_condition
             == TerminationCondition.convergenceCriteriaSatisfied
         ):
             if self._writer.get_active_objective() is None:
-                results.best_feasible_objective = None
+                results.incumbent_objective = None
             else:
-                results.best_feasible_objective = obj_val
+                results.incumbent_objective = obj_val
         elif self.config.load_solution:
             raise RuntimeError(
                 'A feasible solution was not found, so no solution can be loaded.'
                 'Please set opt.config.load_solution=False and check '
                 'results.termination_condition and '
-                'results.best_feasible_objective before loading a solution.'
+                'results.incumbent_objective before loading a solution.'
             )
 
         return results
@@ -406,24 +406,24 @@ class Cbc(PersistentSolverBase):
                     'A feasible solution was not found, so no solution can be loaded.'
                     'Please set opt.config.load_solution=False and check '
                     'results.termination_condition and '
-                    'results.best_feasible_objective before loading a solution.'
+                    'results.incumbent_objective before loading a solution.'
                 )
             results = Results()
             results.termination_condition = TerminationCondition.error
-            results.best_feasible_objective = None
+            results.incumbent_objective = None
         else:
             timer.start('parse solution')
             results = self._parse_soln()
             timer.stop('parse solution')
 
         if self._writer.get_active_objective() is None:
-            results.best_feasible_objective = None
-            results.best_objective_bound = None
+            results.incumbent_objective = None
+            results.objective_bound = None
         else:
             if self._writer.get_active_objective().sense == minimize:
-                results.best_objective_bound = -math.inf
+                results.objective_bound = -math.inf
             else:
-                results.best_objective_bound = math.inf
+                results.objective_bound = math.inf
 
         results.solution_loader = PersistentSolutionLoader(solver=self)
 
@@ -434,7 +434,7 @@ class Cbc(PersistentSolverBase):
     ) -> Mapping[_GeneralVarData, float]:
         if (
             self._last_results_object is None
-            or self._last_results_object.best_feasible_objective is None
+            or self._last_results_object.incumbent_objective is None
         ):
             raise RuntimeError(
                 'Solver does not currently have a valid solution. Please '

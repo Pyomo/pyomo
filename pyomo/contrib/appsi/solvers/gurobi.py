@@ -899,25 +899,25 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         else:
             results.termination_condition = TerminationCondition.unknown
 
-        results.best_feasible_objective = None
-        results.best_objective_bound = None
+        results.incumbent_objective = None
+        results.objective_bound = None
         if self._objective is not None:
             try:
-                results.best_feasible_objective = gprob.ObjVal
+                results.incumbent_objective = gprob.ObjVal
             except (gurobipy.GurobiError, AttributeError):
-                results.best_feasible_objective = None
+                results.incumbent_objective = None
             try:
-                results.best_objective_bound = gprob.ObjBound
+                results.objective_bound = gprob.ObjBound
             except (gurobipy.GurobiError, AttributeError):
                 if self._objective.sense == minimize:
-                    results.best_objective_bound = -math.inf
+                    results.objective_bound = -math.inf
                 else:
-                    results.best_objective_bound = math.inf
+                    results.objective_bound = math.inf
 
-            if results.best_feasible_objective is not None and not math.isfinite(
-                results.best_feasible_objective
+            if results.incumbent_objective is not None and not math.isfinite(
+                results.incumbent_objective
             ):
-                results.best_feasible_objective = None
+                results.incumbent_objective = None
 
         timer.start('load solution')
         if config.load_solution:
@@ -938,7 +938,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
                     'A feasible solution was not found, so no solution can be loaded.'
                     'Please set opt.config.load_solution=False and check '
                     'results.termination_condition and '
-                    'results.best_feasible_objective before loading a solution.'
+                    'results.incumbent_objective before loading a solution.'
                 )
         timer.stop('load solution')
 

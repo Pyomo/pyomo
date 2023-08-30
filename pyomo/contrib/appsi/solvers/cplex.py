@@ -299,33 +299,33 @@ class Cplex(PersistentSolverBase):
             results.termination_condition = TerminationCondition.unknown
 
         if self._writer.get_active_objective() is None:
-            results.best_feasible_objective = None
-            results.best_objective_bound = None
+            results.incumbent_objective = None
+            results.objective_bound = None
         else:
             if cpxprob.solution.get_solution_type() != cpxprob.solution.type.none:
                 if (
                     cpxprob.variables.get_num_binary()
                     + cpxprob.variables.get_num_integer()
                 ) == 0:
-                    results.best_feasible_objective = (
+                    results.incumbent_objective = (
                         cpxprob.solution.get_objective_value()
                     )
-                    results.best_objective_bound = (
+                    results.objective_bound = (
                         cpxprob.solution.get_objective_value()
                     )
                 else:
-                    results.best_feasible_objective = (
+                    results.incumbent_objective = (
                         cpxprob.solution.get_objective_value()
                     )
-                    results.best_objective_bound = (
+                    results.objective_bound = (
                         cpxprob.solution.MIP.get_best_objective()
                     )
             else:
-                results.best_feasible_objective = None
+                results.incumbent_objective = None
                 if cpxprob.objective.get_sense() == cpxprob.objective.sense.minimize:
-                    results.best_objective_bound = -math.inf
+                    results.objective_bound = -math.inf
                 else:
-                    results.best_objective_bound = math.inf
+                    results.objective_bound = math.inf
 
         if config.load_solution:
             if cpxprob.solution.get_solution_type() == cpxprob.solution.type.none:
@@ -333,7 +333,7 @@ class Cplex(PersistentSolverBase):
                     'A feasible solution was not found, so no solution can be loades. '
                     'Please set opt.config.load_solution=False and check '
                     'results.termination_condition and '
-                    'results.best_feasible_objective before loading a solution.'
+                    'results.incumbent_objective before loading a solution.'
                 )
             else:
                 if (

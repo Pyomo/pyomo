@@ -660,23 +660,23 @@ class Highs(PersistentSolverUtils, PersistentSolverBase):
                     'A feasible solution was not found, so no solution can be loaded.'
                     'Please set opt.config.load_solution=False and check '
                     'results.termination_condition and '
-                    'results.best_feasible_objective before loading a solution.'
+                    'results.incumbent_objective before loading a solution.'
                 )
         timer.stop('load solution')
 
         info = highs.getInfo()
-        results.best_objective_bound = None
-        results.best_feasible_objective = None
+        results.objective_bound = None
+        results.incumbent_objective = None
         if self._objective is not None:
             if has_feasible_solution:
-                results.best_feasible_objective = info.objective_function_value
+                results.incumbent_objective = info.objective_function_value
             if info.mip_node_count == -1:
                 if has_feasible_solution:
-                    results.best_objective_bound = info.objective_function_value
+                    results.objective_bound = info.objective_function_value
                 else:
-                    results.best_objective_bound = None
+                    results.objective_bound = None
             else:
-                results.best_objective_bound = info.mip_dual_bound
+                results.objective_bound = info.mip_dual_bound
 
         return results
 

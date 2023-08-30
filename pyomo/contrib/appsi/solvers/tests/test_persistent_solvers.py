@@ -249,8 +249,8 @@ class TestSolvers(unittest.TestCase):
             )
             self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
             self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
-            self.assertAlmostEqual(res.best_feasible_objective, m.y.value)
-            self.assertTrue(res.best_objective_bound <= m.y.value)
+            self.assertAlmostEqual(res.incumbent_objective, m.y.value)
+            self.assertTrue(res.objective_bound <= m.y.value)
             duals = opt.get_duals()
             self.assertAlmostEqual(duals[m.c1], (1 + a1 / (a2 - a1)))
             self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
@@ -290,8 +290,8 @@ class TestSolvers(unittest.TestCase):
             )
             self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
             self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
-            self.assertAlmostEqual(res.best_feasible_objective, m.y.value)
-            self.assertTrue(res.best_objective_bound <= m.y.value)
+            self.assertAlmostEqual(res.incumbent_objective, m.y.value)
+            self.assertTrue(res.objective_bound <= m.y.value)
             duals = opt.get_duals()
             self.assertAlmostEqual(duals[m.c1], (1 + a1 / (a2 - a1)))
             self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
@@ -327,8 +327,8 @@ class TestSolvers(unittest.TestCase):
             )
             self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
             self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
-            self.assertAlmostEqual(res.best_feasible_objective, m.y.value)
-            self.assertTrue(res.best_objective_bound <= m.y.value)
+            self.assertAlmostEqual(res.incumbent_objective, m.y.value)
+            self.assertTrue(res.objective_bound <= m.y.value)
             duals = opt.get_duals()
             self.assertAlmostEqual(duals[m.c1], (1 + a1 / (a2 - a1)))
             self.assertAlmostEqual(duals[m.c2], -a1 / (a2 - a1))
@@ -369,8 +369,8 @@ class TestSolvers(unittest.TestCase):
                 TerminationCondition.convergenceCriteriaSatisfied,
             )
             self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
-            self.assertAlmostEqual(res.best_feasible_objective, m.y.value)
-            self.assertTrue(res.best_objective_bound <= m.y.value)
+            self.assertAlmostEqual(res.incumbent_objective, m.y.value)
+            self.assertTrue(res.objective_bound <= m.y.value)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_no_objective(
@@ -403,8 +403,8 @@ class TestSolvers(unittest.TestCase):
             )
             self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
             self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
-            self.assertEqual(res.best_feasible_objective, None)
-            self.assertEqual(res.best_objective_bound, None)
+            self.assertEqual(res.incumbent_objective, None)
+            self.assertEqual(res.objective_bound, None)
             duals = opt.get_duals()
             self.assertAlmostEqual(duals[m.c1], 0)
             self.assertAlmostEqual(duals[m.c2], 0)
@@ -434,8 +434,8 @@ class TestSolvers(unittest.TestCase):
         )
         self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
         self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
-        self.assertAlmostEqual(res.best_feasible_objective, m.y.value)
-        self.assertTrue(res.best_objective_bound <= m.y.value)
+        self.assertAlmostEqual(res.incumbent_objective, m.y.value)
+        self.assertTrue(res.objective_bound <= m.y.value)
         duals = opt.get_duals()
         self.assertAlmostEqual(duals[m.c1], -(1 + a1 / (a2 - a1)))
         self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
@@ -447,8 +447,8 @@ class TestSolvers(unittest.TestCase):
         )
         self.assertAlmostEqual(m.x.value, (b3 - b1) / (a1 - a3))
         self.assertAlmostEqual(m.y.value, a1 * (b3 - b1) / (a1 - a3) + b1)
-        self.assertAlmostEqual(res.best_feasible_objective, m.y.value)
-        self.assertTrue(res.best_objective_bound <= m.y.value)
+        self.assertAlmostEqual(res.incumbent_objective, m.y.value)
+        self.assertTrue(res.objective_bound <= m.y.value)
         duals = opt.get_duals()
         self.assertAlmostEqual(duals[m.c1], -(1 + a1 / (a3 - a1)))
         self.assertAlmostEqual(duals[m.c2], 0)
@@ -461,8 +461,8 @@ class TestSolvers(unittest.TestCase):
         )
         self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
         self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
-        self.assertAlmostEqual(res.best_feasible_objective, m.y.value)
-        self.assertTrue(res.best_objective_bound <= m.y.value)
+        self.assertAlmostEqual(res.incumbent_objective, m.y.value)
+        self.assertTrue(res.objective_bound <= m.y.value)
         duals = opt.get_duals()
         self.assertAlmostEqual(duals[m.c1], -(1 + a1 / (a2 - a1)))
         self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
@@ -502,7 +502,7 @@ class TestSolvers(unittest.TestCase):
         self.assertIn(res.termination_condition, acceptable_termination_conditions)
         self.assertAlmostEqual(m.x.value, None)
         self.assertAlmostEqual(m.y.value, None)
-        self.assertTrue(res.best_feasible_objective is None)
+        self.assertTrue(res.incumbent_objective is None)
 
         with self.assertRaisesRegex(
             RuntimeError, '.*does not currently have a valid solution.*'
@@ -789,16 +789,16 @@ class TestSolvers(unittest.TestCase):
             if sense is pe.minimize:
                 self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2), 6)
                 self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1, 6)
-                self.assertAlmostEqual(res.best_feasible_objective, m.y.value, 6)
-                self.assertTrue(res.best_objective_bound <= m.y.value + 1e-12)
+                self.assertAlmostEqual(res.incumbent_objective, m.y.value, 6)
+                self.assertTrue(res.objective_bound <= m.y.value + 1e-12)
                 duals = opt.get_duals()
                 self.assertAlmostEqual(duals[m.con1], (1 + a1 / (a2 - a1)), 6)
                 self.assertAlmostEqual(duals[m.con2], -a1 / (a2 - a1), 6)
             else:
                 self.assertAlmostEqual(m.x.value, (c2 - c1) / (a1 - a2), 6)
                 self.assertAlmostEqual(m.y.value, a1 * (c2 - c1) / (a1 - a2) + c1, 6)
-                self.assertAlmostEqual(res.best_feasible_objective, m.y.value, 6)
-                self.assertTrue(res.best_objective_bound >= m.y.value - 1e-12)
+                self.assertAlmostEqual(res.incumbent_objective, m.y.value, 6)
+                self.assertTrue(res.objective_bound >= m.y.value - 1e-12)
                 duals = opt.get_duals()
                 self.assertAlmostEqual(duals[m.con1], (1 + a1 / (a2 - a1)), 6)
                 self.assertAlmostEqual(duals[m.con2], -a1 / (a2 - a1), 6)
@@ -1077,13 +1077,13 @@ class TestSolvers(unittest.TestCase):
         m.c2 = pe.Constraint(expr=m.y >= -m.x + 1)
         m.obj = pe.Objective(expr=m.y)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 1)
+        self.assertAlmostEqual(res.incumbent_objective, 1)
         m.obj = pe.Objective(expr=2 * m.y)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 2)
+        self.assertAlmostEqual(res.incumbent_objective, 2)
         m.obj.expr = 3 * m.y
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 3)
+        self.assertAlmostEqual(res.incumbent_objective, 3)
         m.obj.sense = pe.maximize
         opt.config.load_solution = False
         res = opt.solve(m)
@@ -1099,30 +1099,30 @@ class TestSolvers(unittest.TestCase):
         m.obj = pe.Objective(expr=m.x * m.y)
         m.x.fix(2)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 6, 6)
+        self.assertAlmostEqual(res.incumbent_objective, 6, 6)
         m.x.fix(3)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 12, 6)
+        self.assertAlmostEqual(res.incumbent_objective, 12, 6)
         m.x.unfix()
         m.y.fix(2)
         m.x.setlb(-3)
         m.x.setub(5)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, -2, 6)
+        self.assertAlmostEqual(res.incumbent_objective, -2, 6)
         m.y.unfix()
         m.x.setlb(None)
         m.x.setub(None)
         m.e = pe.Expression(expr=2)
         m.obj = pe.Objective(expr=m.e * m.y)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 2)
+        self.assertAlmostEqual(res.incumbent_objective, 2)
         m.e.expr = 3
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 3)
+        self.assertAlmostEqual(res.incumbent_objective, 3)
         opt.update_config.check_for_new_objective = False
         m.e.expr = 4
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 4)
+        self.assertAlmostEqual(res.incumbent_objective, 4)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_domain(
@@ -1135,20 +1135,20 @@ class TestSolvers(unittest.TestCase):
         m.x = pe.Var(bounds=(1, None), domain=pe.NonNegativeReals)
         m.obj = pe.Objective(expr=m.x)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 1)
+        self.assertAlmostEqual(res.incumbent_objective, 1)
         m.x.setlb(-1)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 0)
+        self.assertAlmostEqual(res.incumbent_objective, 0)
         m.x.setlb(1)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 1)
+        self.assertAlmostEqual(res.incumbent_objective, 1)
         m.x.setlb(-1)
         m.x.domain = pe.Reals
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, -1)
+        self.assertAlmostEqual(res.incumbent_objective, -1)
         m.x.domain = pe.NonNegativeReals
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 0)
+        self.assertAlmostEqual(res.incumbent_objective, 0)
 
     @parameterized.expand(input=_load_tests(mip_solvers, only_child_vars_options))
     def test_domain_with_integers(
@@ -1161,20 +1161,20 @@ class TestSolvers(unittest.TestCase):
         m.x = pe.Var(bounds=(-1, None), domain=pe.NonNegativeIntegers)
         m.obj = pe.Objective(expr=m.x)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 0)
+        self.assertAlmostEqual(res.incumbent_objective, 0)
         m.x.setlb(0.5)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 1)
+        self.assertAlmostEqual(res.incumbent_objective, 1)
         m.x.setlb(-5.5)
         m.x.domain = pe.Integers
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, -5)
+        self.assertAlmostEqual(res.incumbent_objective, -5)
         m.x.domain = pe.Binary
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 0)
+        self.assertAlmostEqual(res.incumbent_objective, 0)
         m.x.setlb(0.5)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 1)
+        self.assertAlmostEqual(res.incumbent_objective, 1)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_fixed_binaries(
@@ -1190,19 +1190,19 @@ class TestSolvers(unittest.TestCase):
         m.c = pe.Constraint(expr=m.y >= m.x)
         m.x.fix(0)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 0)
+        self.assertAlmostEqual(res.incumbent_objective, 0)
         m.x.fix(1)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 1)
+        self.assertAlmostEqual(res.incumbent_objective, 1)
 
         opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
         opt.update_config.treat_fixed_vars_as_params = False
         m.x.fix(0)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 0)
+        self.assertAlmostEqual(res.incumbent_objective, 0)
         m.x.fix(1)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 1)
+        self.assertAlmostEqual(res.incumbent_objective, 1)
 
     @parameterized.expand(input=_load_tests(mip_solvers, only_child_vars_options))
     def test_with_gdp(
@@ -1226,7 +1226,7 @@ class TestSolvers(unittest.TestCase):
         pe.TransformationFactory("gdp.bigm").apply_to(m)
 
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 1)
+        self.assertAlmostEqual(res.incumbent_objective, 1)
         self.assertAlmostEqual(m.x.value, 0)
         self.assertAlmostEqual(m.y.value, 1)
 
@@ -1250,7 +1250,7 @@ class TestSolvers(unittest.TestCase):
         self.assertEqual(
             res.termination_condition, TerminationCondition.convergenceCriteriaSatisfied
         )
-        self.assertAlmostEqual(res.best_feasible_objective, 1)
+        self.assertAlmostEqual(res.incumbent_objective, 1)
         self.assertAlmostEqual(m.x.value, -1)
         self.assertAlmostEqual(m.y.value, 1)
 
@@ -1259,7 +1259,7 @@ class TestSolvers(unittest.TestCase):
         self.assertEqual(
             res.termination_condition, TerminationCondition.convergenceCriteriaSatisfied
         )
-        self.assertAlmostEqual(res.best_feasible_objective, 2)
+        self.assertAlmostEqual(res.incumbent_objective, 2)
         self.assertAlmostEqual(m.x.value, 0)
         self.assertAlmostEqual(m.y.value, 2)
 
@@ -1286,7 +1286,7 @@ class TestSolvers(unittest.TestCase):
         self.assertEqual(
             res.termination_condition, TerminationCondition.convergenceCriteriaSatisfied
         )
-        self.assertAlmostEqual(res.best_feasible_objective, 1)
+        self.assertAlmostEqual(res.incumbent_objective, 1)
         sol = res.solution_loader.get_primals()
         self.assertIn(m.x, sol)
         self.assertIn(m.y, sol)
@@ -1298,7 +1298,7 @@ class TestSolvers(unittest.TestCase):
         self.assertEqual(
             res.termination_condition, TerminationCondition.convergenceCriteriaSatisfied
         )
-        self.assertAlmostEqual(res.best_feasible_objective, 0)
+        self.assertAlmostEqual(res.incumbent_objective, 0)
         sol = res.solution_loader.get_primals()
         self.assertIn(m.x, sol)
         self.assertIn(m.y, sol)
@@ -1324,14 +1324,14 @@ class TestSolvers(unittest.TestCase):
         self.assertEqual(
             res.termination_condition, TerminationCondition.convergenceCriteriaSatisfied
         )
-        self.assertAlmostEqual(res.best_feasible_objective, 0)
+        self.assertAlmostEqual(res.incumbent_objective, 0)
 
         m.p.value = 1
         res = opt.solve(m)
         self.assertEqual(
             res.termination_condition, TerminationCondition.convergenceCriteriaSatisfied
         )
-        self.assertAlmostEqual(res.best_feasible_objective, 3)
+        self.assertAlmostEqual(res.incumbent_objective, 3)
 
 
 @unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
