@@ -8,3 +8,23 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+
+from pyomo.common import unittest
+from pyomo.solver import solution
+
+class TestPersistentSolverBase(unittest.TestCase):
+    def test_abstract_member_list(self):
+        expected_list = ['get_primals']
+        member_list = list(solution.SolutionLoaderBase.__abstractmethods__)
+        self.assertEqual(sorted(expected_list), sorted(member_list))
+
+    @unittest.mock.patch.multiple(solution.SolutionLoaderBase, __abstractmethods__=set())
+    def test_solution_loader_base(self):
+        self.instance = solution.SolutionLoaderBase()
+        self.assertEqual(self.instance.get_primals(), None)
+        with self.assertRaises(NotImplementedError):
+            self.instance.get_duals()
+        with self.assertRaises(NotImplementedError):
+            self.instance.get_slacks()
+        with self.assertRaises(NotImplementedError):
+            self.instance.get_reduced_costs()
