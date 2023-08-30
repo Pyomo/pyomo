@@ -1,6 +1,7 @@
 import pyomo.environ as pe
 from pyomo.contrib import appsi
 from pyomo.common.timing import HierarchicalTimer
+from pyomo.solver import base as solver_base
 
 
 def main(plot=True, n_points=200):
@@ -31,7 +32,7 @@ def main(plot=True, n_points=200):
     for p_val in p_values:
         m.p.value = p_val
         res = opt.solve(m, timer=timer)
-        assert res.termination_condition == appsi.base.TerminationCondition.convergenceCriteriaSatisfied
+        assert res.termination_condition == solver_base.TerminationCondition.convergenceCriteriaSatisfied
         obj_values.append(res.best_feasible_objective)
         opt.load_vars([m.x])
         x_values.append(m.x.value)

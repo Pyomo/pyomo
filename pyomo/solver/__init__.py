@@ -9,6 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from . import util
 from . import base
+from . import config
 from . import solution
+from . import util
+

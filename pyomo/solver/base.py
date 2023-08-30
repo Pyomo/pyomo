@@ -45,7 +45,6 @@ from pyomo.opt.results.solver import (
 )
 from pyomo.core.kernel.objective import minimize
 from pyomo.core.base import SymbolMap
-from .cmodel import cmodel, cmodel_available
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.numvalue import NumericConstant
 from pyomo.solver import (
@@ -138,29 +137,6 @@ class Results:
         the lower bound. For maximization problems, this is the upper bound.
         For solvers that do not provide an objective bound, this should be -inf
         (minimization) or inf (maximization)
-
-    Here is an example workflow:
-
-        >>> import pyomo.environ as pe
-        >>> from pyomo.contrib import appsi
-        >>> m = pe.ConcreteModel()
-        >>> m.x = pe.Var()
-        >>> m.obj = pe.Objective(expr=m.x**2)
-        >>> opt = appsi.solvers.Ipopt()
-        >>> opt.config.load_solution = False
-        >>> results = opt.solve(m) #doctest:+SKIP
-        >>> if results.termination_condition == appsi.base.TerminationCondition.convergenceCriteriaSatisfied: #doctest:+SKIP
-        ...     print('optimal solution found: ', results.best_feasible_objective) #doctest:+SKIP
-        ...     results.solution_loader.load_vars() #doctest:+SKIP
-        ...     print('the optimal value of x is ', m.x.value) #doctest:+SKIP
-        ... elif results.best_feasible_objective is not None: #doctest:+SKIP
-        ...     print('sub-optimal but feasible solution found: ', results.best_feasible_objective) #doctest:+SKIP
-        ...     results.solution_loader.load_vars(vars_to_load=[m.x]) #doctest:+SKIP
-        ...     print('The value of x in the feasible solution is ', m.x.value) #doctest:+SKIP
-        ... elif results.termination_condition in {appsi.base.TerminationCondition.iterationLimit, appsi.base.TerminationCondition.maxTimeLimit}: #doctest:+SKIP
-        ...     print('No feasible solution was found. The best lower bound found was ', results.best_objective_bound) #doctest:+SKIP
-        ... else: #doctest:+SKIP
-        ...     print('The following termination condition was encountered: ', results.termination_condition) #doctest:+SKIP
     """
 
     def __init__(self):
@@ -426,39 +402,6 @@ class PersistentSolver(SolverBase):
         pass
 
 
-
-"""
-What can change in a pyomo model?
-- variables added or removed
-- constraints added or removed
-- objective changed
-- objective expr changed
-- params added or removed
-- variable modified
-  - lb
-  - ub
-  - fixed or unfixed
-  - domain
-  - value
-- constraint modified
-  - lower
-  - upper
-  - body
-  - active or not
-- named expressions modified
-  - expr
-- param modified
-  - value
-
-Ideas:
-- Consider explicitly handling deactivated constraints; favor deactivation over removal
-  and activation over addition
-  
-Notes:
-- variable bounds cannot be updated with mutable params; you must call update_variables
-"""
-
-
 class PersistentBase(abc.ABC):
     def __init__(self, only_child_vars=False):
         self._model = None
@@ -480,7 +423,6 @@ class PersistentBase(abc.ABC):
         self._vars_referenced_by_con = {}
         self._vars_referenced_by_obj = []
         self._expr_types = None
-        self.use_extensions = False
         self._only_child_vars = only_child_vars
 
     @property
@@ -496,8 +438,6 @@ class PersistentBase(abc.ABC):
         self.__init__()
         self.update_config = saved_update_config
         self._model = model
-        if self.use_extensions and cmodel_available:
-            self._expr_types = cmodel.PyomoExprTypes()
         self.add_block(model)
         if self._objective is None:
             self.set_objective(None)
@@ -561,10 +501,7 @@ class PersistentBase(abc.ABC):
                     'constraint {name} has already been added'.format(name=con.name)
                 )
             self._active_constraints[con] = (con.lower, con.body, con.upper)
-            if self.use_extensions and cmodel_available:
-                tmp = cmodel.prep_for_repn(con.body, self._expr_types)
-            else:
-                tmp = collect_vars_and_named_exprs(con.body)
+            tmp = collect_vars_and_named_exprs(con.body)
             named_exprs, variables, fixed_vars, external_functions = tmp
             if not self._only_child_vars:
                 self._check_for_new_vars(variables)
@@ -617,10 +554,7 @@ class PersistentBase(abc.ABC):
             self._objective = obj
             self._objective_expr = obj.expr
             self._objective_sense = obj.sense
-            if self.use_extensions and cmodel_available:
-                tmp = cmodel.prep_for_repn(obj.expr, self._expr_types)
-            else:
-                tmp = collect_vars_and_named_exprs(obj.expr)
+            tmp = collect_vars_and_named_exprs(obj.expr)
             named_exprs, variables, fixed_vars, external_functions = tmp
             if not self._only_child_vars:
                 self._check_for_new_vars(variables)

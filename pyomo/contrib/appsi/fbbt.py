@@ -1,4 +1,4 @@
-from pyomo.contrib.appsi.base import PersistentBase
+from pyomo.solver.base import PersistentBase
 from pyomo.common.config import (
     ConfigDict,
     ConfigValue,
@@ -11,10 +11,9 @@ from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.constraint import _GeneralConstraintData
 from pyomo.core.base.sos import _SOSConstraintData
-from pyomo.core.base.objective import _GeneralObjectiveData, minimize, maximize
+from pyomo.core.base.objective import _GeneralObjectiveData, minimize
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base import SymbolMap, TextLabeler
-from pyomo.common.errors import InfeasibleConstraintException
 
 
 class IntervalConfig(ConfigDict):

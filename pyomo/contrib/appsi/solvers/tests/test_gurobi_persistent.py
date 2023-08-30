@@ -1,11 +1,8 @@
-from pyomo.common.errors import PyomoException
 from pyomo.common import unittest
 import pyomo.environ as pe
 from pyomo.contrib.appsi.solvers.gurobi import Gurobi
-from pyomo.contrib.appsi.base import TerminationCondition
-from pyomo.core.expr.numeric_expr import LinearExpression
+from pyomo.solver.base import TerminationCondition
 from pyomo.core.expr.taylor_series import taylor_series_expansion
-from pyomo.contrib.appsi.cmodel import cmodel_available
 
 
 opt = Gurobi()

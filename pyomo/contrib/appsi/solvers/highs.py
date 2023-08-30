@@ -1,5 +1,7 @@
 import logging
+import sys
 from typing import List, Dict, Optional
+
 from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import PyomoException
@@ -16,18 +18,12 @@ from pyomo.core.base.param import _ParamData
 from pyomo.core.expr.numvalue import value, is_constant
 from pyomo.repn import generate_standard_repn
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
-from pyomo.contrib.appsi.base import (
-    PersistentSolver,
-    Results,
-    TerminationCondition,
-    MIPInterfaceConfig,
-    PersistentBase,
-    PersistentSolutionLoader,
-)
 from pyomo.contrib.appsi.cmodel import cmodel, cmodel_available
 from pyomo.common.dependencies import numpy as np
 from pyomo.core.staleflag import StaleFlagManager
-import sys
+from pyomo.solver.base import TerminationCondition, Results, PersistentSolver, PersistentBase
+from pyomo.solver.config import MIPInterfaceConfig
+from pyomo.solver.solution import PersistentSolutionLoader
 
 logger = logging.getLogger(__name__)
 

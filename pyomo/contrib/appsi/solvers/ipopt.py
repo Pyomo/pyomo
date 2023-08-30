@@ -1,18 +1,16 @@
-from pyomo.common.tempfiles import TempfileManager
-from pyomo.common.fileutils import Executable
-from pyomo.contrib.appsi.base import (
-    PersistentSolver,
-    Results,
-    TerminationCondition,
-    InterfaceConfig,
-    PersistentSolutionLoader,
-)
-from pyomo.contrib.appsi.writers import NLWriter
-from pyomo.common.log import LogStream
+import math
+import os
+import sys
+from typing import Dict
 import logging
 import subprocess
+
+
+from pyomo.common.tempfiles import TempfileManager
+from pyomo.common.fileutils import Executable
+from pyomo.contrib.appsi.writers import NLWriter
+from pyomo.common.log import LogStream
 from pyomo.core.kernel.objective import minimize
-import math
 from pyomo.common.collections import ComponentMap
 from pyomo.core.expr.numvalue import value
 from pyomo.core.expr.visitor import replace_expressions
@@ -24,13 +22,13 @@ from pyomo.core.base.param import _ParamData
 from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.tee import TeeStream
-import sys
-from typing import Dict
 from pyomo.common.config import ConfigValue, NonNegativeInt
 from pyomo.common.errors import PyomoException
-import os
 from pyomo.contrib.appsi.cmodel import cmodel_available
 from pyomo.core.staleflag import StaleFlagManager
+from pyomo.solver.base import TerminationCondition, Results, PersistentSolver
+from pyomo.solver.config import InterfaceConfig
+from pyomo.solver.solution import PersistentSolutionLoader
 
 
 logger = logging.getLogger(__name__)
