@@ -1,5 +1,4 @@
 from pyomo.common.extensions import ExtensionBuilderFactory
-from .base import SolverFactory
 from .solvers import Gurobi, Ipopt, Cbc, Cplex, Highs
 from .build import AppsiBuilder
 
