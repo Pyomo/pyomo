@@ -225,15 +225,16 @@ class ScaleModel(Transformation):
                 ]
             )
 
-        # scale the variable bounds and values and build the variable substitution map
-        # for scaling vars in constraints
+        # scale the variable bounds and values and build the variable
+        # substitution map for scaling vars in constraints
         variable_substitution_map = ComponentMap()
         already_scaled = set()
         for variable in [
             var for var in model.component_objects(ctype=Var, descend_into=True)
         ]:
             if variable.is_reference():
-                # Skip any references - these should get picked up when handling the actual variable
+                # Skip any references - these should get picked up when
+                # handling the actual variable
                 continue
 
             # set the bounds/value for the scaled variable
@@ -277,7 +278,8 @@ class ScaleModel(Transformation):
             ctype=(Constraint, Objective), descend_into=True
         ):
             if component.is_reference():
-                # Skip any references - these should get picked up when handling the actual component
+                # Skip any references - these should get picked up when
+                # handling the actual component
                 continue
 
             for k in component:
@@ -325,7 +327,8 @@ class ScaleModel(Transformation):
                     )
                 else:
                     raise NotImplementedError(
-                        'Unknown object type found when applying scaling factors in ScaleModel transformation - Internal Error'
+                        'Unknown object type found when applying scaling factors '
+                        'in ScaleModel transformation - Internal Error'
                     )
 
         model.component_scaling_factor_map = component_scaling_factor_map
@@ -336,12 +339,14 @@ class ScaleModel(Transformation):
         return model
 
     def propagate_solution(self, scaled_model, original_model):
-        """
-        This method takes the solution in scaled_model and maps it back to the original model.
+        """This method takes the solution in scaled_model and maps it back to
+        the original model.
 
-        It will also transform duals and reduced costs if the suffixes 'dual' and/or 'rc' are present.
-        The :code:`scaled_model` argument must be a model that was already scaled using this transformation
-        as it expects data from the transformation to perform the back mapping.
+        It will also transform duals and reduced costs if the suffixes
+        'dual' and/or 'rc' are present.  The :code:`scaled_model`
+        argument must be a model that was already scaled using this
+        transformation as it expects data from the transformation to
+        perform the back mapping.
 
         Parameters
         ----------
@@ -353,15 +358,17 @@ class ScaleModel(Transformation):
         """
         if not hasattr(scaled_model, 'component_scaling_factor_map'):
             raise AttributeError(
-                'ScaleModel:propagate_solution called with scaled_model that does not '
-                'have a component_scaling_factor_map. It is possible this method was called '
-                'using a model that was not scaled with the ScaleModel transformation'
+                'ScaleModel:propagate_solution called with scaled_model that does '
+                'not have a component_scaling_factor_map. It is possible this '
+                'method was called using a model that was not scaled with the '
+                'ScaleModel transformation'
             )
         if not hasattr(scaled_model, 'scaled_component_to_original_name_map'):
             raise AttributeError(
-                'ScaleModel:propagate_solution called with scaled_model that does not '
-                'have a scaled_component_to_original_name_map. It is possible this method was called '
-                'using a model that was not scaled with the ScaleModel transformation'
+                'ScaleModel:propagate_solution called with scaled_model that does '
+                'not have a scaled_component_to_original_name_map. It is possible '
+                'this method was called using a model that was not scaled with '
+                'the ScaleModel transformation'
             )
 
         component_scaling_factor_map = scaled_model.component_scaling_factor_map
@@ -385,7 +392,8 @@ class ScaleModel(Transformation):
             )
             if len(scaled_objectives) != 1:
                 raise NotImplementedError(
-                    'ScaleModel.propagate_solution requires a single active objective function, but %d objectives found.'
+                    'ScaleModel.propagate_solution requires a single active '
+                    'objective function, but %d objectives found.'
                     % (len(scaled_objectives))
                 )
             else:
