@@ -27,8 +27,7 @@ from pyomo.core.base.param import _ParamData, Param
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.common.collections import ComponentMap
-from .utils.get_objective import get_objective
-from .utils.collect_vars_and_named_exprs import collect_vars_and_named_exprs
+
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.errors import ApplicationError
 from pyomo.opt.base import SolverFactory as LegacySolverFactory
@@ -47,11 +46,11 @@ from pyomo.core.kernel.objective import minimize
 from pyomo.core.base import SymbolMap
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.numvalue import NumericConstant
-from pyomo.solver import (
-    SolutionLoader,
-    SolutionLoaderBase,
-    UpdateConfig
-)
+
+from pyomo.solver.config import UpdateConfig
+from pyomo.solver.solution import SolutionLoader, SolutionLoaderBase
+from pyomo.solver.util import get_objective, collect_vars_and_named_exprs
+
 
 
 class TerminationCondition(enum.Enum):
