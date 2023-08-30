@@ -626,6 +626,17 @@ def _before_monomial(visitor, child):
         except (ValueError, ArithmeticError):
             return True, None
 
+    # We want to check / update the var_map before processing "0"
+    # coefficients to that we are consistent with what gets added to the
+    # var_map (e.g., 0*x*y: y is processed by _before_var and will
+    # always be added, but x is processed here)
+    _id = id(arg2)
+    if _id not in visitor.var_map:
+        if arg2.fixed:
+            return False, (_CONSTANT, arg1 * visitor._eval_fixed(arg2))
+        visitor.var_map[_id] = arg2
+        visitor.var_order[_id] = len(visitor.var_order)
+
     # Trap multiplication by 0 and nan.
     if not arg1:
         if arg2.fixed:
@@ -640,12 +651,6 @@ def _before_monomial(visitor, child):
                 )
         return False, (_CONSTANT, arg1)
 
-    _id = id(arg2)
-    if _id not in visitor.var_map:
-        if arg2.fixed:
-            return False, (_CONSTANT, arg1 * visitor._eval_fixed(arg2))
-        visitor.var_map[_id] = arg2
-        visitor.var_order[_id] = len(visitor.var_order)
     ans = visitor.Result()
     ans.linear[_id] = arg1
     return False, (_LINEAR, ans)
