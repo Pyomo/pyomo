@@ -158,6 +158,10 @@ class LinearRepn(object):
             return
 
         mult = other.multiplier
+        if not mult:
+            # 0 * other, so there is nothing to add/change about
+            # self.  We can just exit now.
+            return
         if other.constant:
             self.constant += mult * other.constant
         if other.linear:
