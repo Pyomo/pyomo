@@ -87,6 +87,55 @@ class TestSolverBase(unittest.TestCase):
         )
 
 
+class TestPersistentSolverBase(unittest.TestCase):
+    def test_abstract_member_list(self):
+        expected_list = ['remove_params',
+                         'version',
+                         'config',
+                         'update_variables',
+                         'remove_variables',
+                         'add_constraints',
+                         'get_primals',
+                         'set_instance',
+                         'set_objective',
+                         'update_params',
+                         'remove_block',
+                         'add_block',
+                         'available',
+                         'update_config',
+                         'add_params',
+                         'remove_constraints',
+                         'add_variables',
+                         'solve']
+        member_list = list(base.PersistentSolverBase.__abstractmethods__)
+        self.assertEqual(sorted(expected_list), sorted(member_list))
+
+    @unittest.mock.patch.multiple(base.PersistentSolverBase, __abstractmethods__=set())
+    def test_persistent_solver_base(self):
+        self.instance = base.PersistentSolverBase()
+        self.assertTrue(self.instance.is_persistent())
+        self.assertEqual(self.instance.get_primals(), None)
+        self.assertEqual(self.instance.update_config, None)
+        self.assertEqual(self.instance.set_instance(None), None)
+        self.assertEqual(self.instance.add_variables(None), None)
+        self.assertEqual(self.instance.add_params(None), None)
+        self.assertEqual(self.instance.add_constraints(None), None)
+        self.assertEqual(self.instance.add_block(None), None)
+        self.assertEqual(self.instance.remove_variables(None), None)
+        self.assertEqual(self.instance.remove_params(None), None)
+        self.assertEqual(self.instance.remove_constraints(None), None)
+        self.assertEqual(self.instance.remove_block(None), None)
+        self.assertEqual(self.instance.set_objective(None), None)
+        self.assertEqual(self.instance.update_variables(None), None)
+        self.assertEqual(self.instance.update_params(), None)
+        with self.assertRaises(NotImplementedError):
+            self.instance.get_duals()
+        with self.assertRaises(NotImplementedError):
+            self.instance.get_slacks()
+        with self.assertRaises(NotImplementedError):
+            self.instance.get_reduced_costs()
+
+
 class TestResults(unittest.TestCase):
     def test_uninitialized(self):
         res = base.Results()
