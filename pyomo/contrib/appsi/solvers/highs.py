@@ -18,12 +18,12 @@ from pyomo.core.base.param import _ParamData
 from pyomo.core.expr.numvalue import value, is_constant
 from pyomo.repn import generate_standard_repn
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
-from pyomo.contrib.appsi.cmodel import cmodel, cmodel_available
 from pyomo.common.dependencies import numpy as np
 from pyomo.core.staleflag import StaleFlagManager
-from pyomo.solver.base import TerminationCondition, Results, PersistentSolver, PersistentBase
+from pyomo.solver.base import TerminationCondition, Results, PersistentSolverBase
 from pyomo.solver.config import MIPInterfaceConfig
 from pyomo.solver.solution import PersistentSolutionLoader
+from pyomo.solver.util import PersistentSolverUtils
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +133,7 @@ class _MutableConstraintBounds():
         self.highs.changeRowBounds(row_ndx, lb, ub)
 
 
-class Highs(PersistentBase, PersistentSolver):
+class Highs(PersistentSolverUtils, PersistentSolverBase):
     """
     Interface to HiGHS
     """

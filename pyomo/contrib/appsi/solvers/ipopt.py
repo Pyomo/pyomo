@@ -26,7 +26,7 @@ from pyomo.common.config import ConfigValue, NonNegativeInt
 from pyomo.common.errors import PyomoException
 from pyomo.contrib.appsi.cmodel import cmodel_available
 from pyomo.core.staleflag import StaleFlagManager
-from pyomo.solver.base import TerminationCondition, Results, PersistentSolver
+from pyomo.solver.base import TerminationCondition, Results, PersistentSolverBase
 from pyomo.solver.config import InterfaceConfig
 from pyomo.solver.solution import PersistentSolutionLoader
 
@@ -124,7 +124,7 @@ ipopt_command_line_options = {
 }
 
 
-class Ipopt(PersistentSolver):
+class Ipopt(PersistentSolverBase):
     def __init__(self, only_child_vars=False):
         self._config = IpoptConfig()
         self._solver_options = {}

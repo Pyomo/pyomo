@@ -1,4 +1,4 @@
-from pyomo.solver.base import PersistentBase
+from pyomo.solver.util import PersistentSolverUtils
 from pyomo.common.config import (
     ConfigDict,
     ConfigValue,
@@ -59,7 +59,7 @@ class IntervalConfig(ConfigDict):
         )
 
 
-class IntervalTightener(PersistentBase):
+class IntervalTightener(PersistentSolverUtils):
     def __init__(self):
         super().__init__()
         self._config = IntervalConfig()

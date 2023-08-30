@@ -22,7 +22,7 @@ from pyomo.common.config import ConfigValue, NonNegativeInt
 from pyomo.common.errors import PyomoException
 from pyomo.contrib.appsi.cmodel import cmodel_available
 from pyomo.core.staleflag import StaleFlagManager
-from pyomo.solver.base import TerminationCondition, Results, PersistentSolver
+from pyomo.solver.base import TerminationCondition, Results, PersistentSolverBase
 from pyomo.solver.config import InterfaceConfig
 from pyomo.solver.solution import PersistentSolutionLoader
 
@@ -60,7 +60,7 @@ class CbcConfig(InterfaceConfig):
         self.log_level = logging.INFO
 
 
-class Cbc(PersistentSolver):
+class Cbc(PersistentSolverBase):
     def __init__(self, only_child_vars=False):
         self._config = CbcConfig()
         self._solver_options = {}

@@ -8,12 +8,12 @@ from pyomo.core.base.block import _BlockData
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.kernel.objective import minimize
-from pyomo.solver.base import PersistentBase
+from pyomo.solver.util import PersistentSolverUtils
 from .config import WriterConfig
 from ..cmodel import cmodel, cmodel_available
 
 
-class LPWriter(PersistentBase):
+class LPWriter(PersistentSolverUtils):
     def __init__(self, only_child_vars=False):
         super().__init__(only_child_vars=only_child_vars)
         self._config = WriterConfig()

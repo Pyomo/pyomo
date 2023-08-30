@@ -13,12 +13,12 @@ from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.kernel.objective import minimize
 from pyomo.common.collections import OrderedSet
 from pyomo.repn.plugins.ampl.ampl_ import set_pyomo_amplfunc_env
-from pyomo.solver.base import PersistentBase
+from pyomo.solver.base import PersistentSolverUtils
 
 from .config import WriterConfig
 from ..cmodel import cmodel, cmodel_available
 
-class NLWriter(PersistentBase):
+class NLWriter(PersistentSolverUtils):
     def __init__(self, only_child_vars=False):
         super().__init__(only_child_vars=only_child_vars)
         self._config = WriterConfig()

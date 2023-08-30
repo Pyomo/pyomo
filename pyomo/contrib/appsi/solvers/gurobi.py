@@ -21,11 +21,11 @@ from pyomo.core.base.param import _ParamData
 from pyomo.core.expr.numvalue import value, is_constant, is_fixed, native_numeric_types
 from pyomo.repn import generate_standard_repn
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
-from pyomo.contrib.appsi.cmodel import cmodel, cmodel_available
 from pyomo.core.staleflag import StaleFlagManager
-from pyomo.solver.base import TerminationCondition, Results, PersistentSolver, PersistentBase
+from pyomo.solver.base import TerminationCondition, Results, PersistentSolverBase
 from pyomo.solver.config import MIPInterfaceConfig
 from pyomo.solver.solution import PersistentSolutionLoader
+from pyomo.solver.util import PersistentSolverUtils
 
 
 logger = logging.getLogger(__name__)
@@ -221,7 +221,7 @@ class _MutableQuadraticCoefficient():
         self.var2 = None
 
 
-class Gurobi(PersistentBase, PersistentSolver):
+class Gurobi(PersistentSolverUtils, PersistentSolverBase):
     """
     Interface to Gurobi
     """
