@@ -142,7 +142,7 @@ class Results(ConfigDict):
             visibility=visibility,
         )
 
-        self.declare('solution_loader', ConfigValue(domain=In(SolutionLoaderBase), default=SolutionLoader(
+        self.declare('solution_loader', ConfigValue(default=SolutionLoader(
             None, None, None, None
         )))
         self.declare('termination_condition', ConfigValue(domain=In(TerminationCondition), default=TerminationCondition.unknown))
