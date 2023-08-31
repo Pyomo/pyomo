@@ -111,20 +111,20 @@ class Test_suffix(unittest.TestCase):
         s = suffix()
         s.direction = suffix.LOCAL
         self.assertEqual(s.direction, suffix.LOCAL)
-        self.assertEqual(s.export_enabled, False)
-        self.assertEqual(s.import_enabled, False)
+        self.assertEqual(s.export_enabled(), False)
+        self.assertEqual(s.import_enabled(), False)
         s.direction = suffix.IMPORT
         self.assertEqual(s.direction, suffix.IMPORT)
-        self.assertEqual(s.export_enabled, False)
-        self.assertEqual(s.import_enabled, True)
+        self.assertEqual(s.export_enabled(), False)
+        self.assertEqual(s.import_enabled(), True)
         s.direction = suffix.EXPORT
         self.assertEqual(s.direction, suffix.EXPORT)
-        self.assertEqual(s.export_enabled, True)
-        self.assertEqual(s.import_enabled, False)
+        self.assertEqual(s.export_enabled(), True)
+        self.assertEqual(s.import_enabled(), False)
         s.direction = suffix.IMPORT_EXPORT
         self.assertEqual(s.direction, suffix.IMPORT_EXPORT)
-        self.assertEqual(s.export_enabled, True)
-        self.assertEqual(s.import_enabled, True)
+        self.assertEqual(s.export_enabled(), True)
+        self.assertEqual(s.import_enabled(), True)
         with self.assertRaises(ValueError):
             s.direction = 'export'
 
