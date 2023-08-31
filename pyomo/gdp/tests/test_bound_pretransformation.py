@@ -68,15 +68,15 @@ class TestBoundPretransformation(unittest.TestCase):
         assertExpressionsEqual(
             self,
             lb.expr,
-            -10.0 * m.outer_d1.binary_indicator_var +
-            0.0 * m.outer_d2.binary_indicator_var
+            -10.0 * m.outer_d1.binary_indicator_var
+            + 0.0 * m.outer_d2.binary_indicator_var
             <= m.x,
         )
         assertExpressionsEqual(
             self,
             ub.expr,
-            11.0 * m.outer_d1.binary_indicator_var +
-            0.0 * m.outer_d2.binary_indicator_var
+            11.0 * m.outer_d1.binary_indicator_var
+            + 0.0 * m.outer_d2.binary_indicator_var
             >= m.x,
         )
 
@@ -88,14 +88,14 @@ class TestBoundPretransformation(unittest.TestCase):
             self,
             lb.expr,
             -10.0 * m.outer_d1.inner_d1.binary_indicator_var
-            -7.0 * m.outer_d1.inner_d2.binary_indicator_var
+            - 7.0 * m.outer_d1.inner_d2.binary_indicator_var
             <= m.x,
         )
         assertExpressionsEqual(
             self,
             ub.expr,
-            3.0 * m.outer_d1.inner_d1.binary_indicator_var +
-            11.0 * m.outer_d1.inner_d2.binary_indicator_var
+            3.0 * m.outer_d1.inner_d1.binary_indicator_var
+            + 11.0 * m.outer_d1.inner_d2.binary_indicator_var
             >= m.x,
         )
 
@@ -243,8 +243,7 @@ class TestBoundPretransformation(unittest.TestCase):
         assertExpressionsEqual(
             self,
             lb.expr,
-            5.0 * m.outer_d1.binary_indicator_var
-            + 4 * m.outer_d2.binary_indicator_var
+            5.0 * m.outer_d1.binary_indicator_var + 4 * m.outer_d2.binary_indicator_var
             <= m.y,
         )
         ub = cons[1]
@@ -264,7 +263,7 @@ class TestBoundPretransformation(unittest.TestCase):
             lb.expr,
             4.0 * m.outer_d1.inner_d1.binary_indicator_var
             + 17.0 * m.outer_d1.inner_d2.binary_indicator_var
-            <= m.x
+            <= m.x,
         )
         self.assertIs(_parent_disjunct(cons[0]), m.outer_d1)
 
@@ -580,17 +579,13 @@ class TestBoundPretransformation(unittest.TestCase):
         assertExpressionsEqual(
             self,
             x_lb.expr,
-            2.0 * m.Y[1].binary_indicator_var
-            + 0 * m.Y[2].binary_indicator_var
-            <= m.x,
+            2.0 * m.Y[1].binary_indicator_var + 0 * m.Y[2].binary_indicator_var <= m.x,
         )
         x_ub = cons[1]
         assertExpressionsEqual(
             self,
             x_ub.expr,
-            10 * m.Y[1].binary_indicator_var
-            + 0.0 * m.Y[2].binary_indicator_var
-            >= m.x,
+            10 * m.Y[1].binary_indicator_var + 0.0 * m.Y[2].binary_indicator_var >= m.x,
         )
         self.assertIsNone(_parent_disjunct(x_lb))
         self.assertIsNone(_parent_disjunct(x_ub))
@@ -631,17 +626,15 @@ class TestBoundPretransformation(unittest.TestCase):
         assertExpressionsEqual(
             self,
             x_lb.expr,
-            2.0 * m.W[1].binary_indicator_var
-            + 2.0 * m.W[2].binary_indicator_var
-            <= m.x
+            2.0 * m.W[1].binary_indicator_var + 2.0 * m.W[2].binary_indicator_var
+            <= m.x,
         )
         x_ub = cons[1]
         assertExpressionsEqual(
             self,
             x_ub.expr,
-            7.0 * m.W[1].binary_indicator_var
-            + 9.0 * m.W[2].binary_indicator_var
-            >= m.x
+            7.0 * m.W[1].binary_indicator_var + 9.0 * m.W[2].binary_indicator_var
+            >= m.x,
         )
 
         self.assertFalse(m.W[1].c.active)
@@ -727,8 +720,7 @@ class TestBoundPretransformation(unittest.TestCase):
         assertExpressionsEqual(
             self,
             lb.expr,
-            60.0 * m.d[1].binary_indicator_var
-            + 60.0 * m.d[2].binary_indicator_var
+            60.0 * m.d[1].binary_indicator_var + 60.0 * m.d[2].binary_indicator_var
             <= m.x,
         )
         self.assertIsNone(_parent_disjunct(lb))
@@ -755,7 +747,7 @@ class TestBoundPretransformation(unittest.TestCase):
             + 66.0 * m.inner2[2].binary_indicator_var
             <= m.x,
         )
-        self.assertIs(_parent_disjunct(lb), m.inner1[1])        
+        self.assertIs(_parent_disjunct(lb), m.inner1[1])
 
         # We shouldn't deactivate global constraints. Reason 1 being that we
         # don't deactivate bounds and Reason 2 being that generally the global
@@ -1115,17 +1107,17 @@ class TestBoundPretransformation(unittest.TestCase):
 
         m.d1 = Disjunct()
         m.d1.cons = Constraint(expr=m.c == 4)
-        m.d1.disjunction = Disjunction(expr=[[m.x + m.y >= 8],
-                                             [m.x + m.y <= 3]])
-        m.d1.disjunction2 = Disjunction(expr=[[m.x + 2*m.y <= 4],
-                                              [m.y + 2*m.x >= 7]])
+        m.d1.disjunction = Disjunction(expr=[[m.x + m.y >= 8], [m.x + m.y <= 3]])
+        m.d1.disjunction2 = Disjunction(
+            expr=[[m.x + 2 * m.y <= 4], [m.y + 2 * m.x >= 7]]
+        )
 
         m.d2 = Disjunct()
         m.d2.cons = Constraint(expr=m.c == 5)
-        m.d2.disjunction = Disjunction(expr=[[m.x + m.y >= 10],
-                                             [m.x + m.y <= 0]])
-        m.d2.disjunction2 = Disjunction(expr=[[m.x + 3*m.y <= 2],
-                                              [m.y + 2*m.x >= 9]])
+        m.d2.disjunction = Disjunction(expr=[[m.x + m.y >= 10], [m.x + m.y <= 0]])
+        m.d2.disjunction2 = Disjunction(
+            expr=[[m.x + 3 * m.y <= 2], [m.y + 2 * m.x >= 9]]
+        )
         m.disjunction = Disjunction(expr=[m.d1, m.d2])
 
         m.obj = Objective(expr=m.c)
@@ -1133,5 +1125,6 @@ class TestBoundPretransformation(unittest.TestCase):
         TransformationFactory('gdp.bound_pretransformation').apply_to(m)
         TransformationFactory('gdp.bigm').apply_to(m)
         from pyomo.environ import SolverFactory, value
+
         SolverFactory('gurobi').solve(m, tee=True)
         self.assertAlmostEqual(value(m.obj), 4)

@@ -103,9 +103,9 @@ class BoundPretransformation(Transformation):
 
         transformation_blocks = {}
         bound_dict = ComponentMap()
-        self._update_bounds_from_constraints(instance, bound_dict, None,
-                                             global_bounds=True)
-        #self._update_bounds_from_constraints(instance, bound_dict, None)
+        self._update_bounds_from_constraints(
+            instance, bound_dict, None, global_bounds=True
+        )
         # [ESJ 05/04/23]: In the future, I should think about getting my little
         # trees from this tree, or asking for leaves rooted somewhere specific
         # or something. Because this transformation currently does the work of
@@ -138,8 +138,10 @@ class BoundPretransformation(Transformation):
     def _get_bound_dict_for_var(self, bound_dict, v):
         v_bounds = bound_dict.get(v)
         if v_bounds is None:
-            v_bounds = bound_dict[v] = {None: (v.lb, v.ub),
-                                        'to_deactivate': ComponentMap()}
+            v_bounds = bound_dict[v] = {
+                None: (v.lb, v.ub),
+                'to_deactivate': ComponentMap(),
+            }
         return v_bounds
 
     def _update_bounds_from_constraints(
@@ -187,8 +189,13 @@ class BoundPretransformation(Transformation):
                     # we divided by a negative coef above, so flip the constraint
                     (lower, upper) = (upper, lower)
                 v_bounds = self._get_bound_dict_for_var(bound_dict, v)
-                self._update_bounds_dict(v_bounds, lower, upper, disjunct if not
-                                         global_bounds else None, gdp_forest)
+                self._update_bounds_dict(
+                    v_bounds,
+                    lower,
+                    upper,
+                    disjunct if not global_bounds else None,
+                    gdp_forest,
+                )
                 if not global_bounds:
                     if disjunct in v_bounds['to_deactivate']:
                         v_bounds['to_deactivate'][disjunct].add(constraint)
@@ -212,8 +219,7 @@ class BoundPretransformation(Transformation):
         return lb, ub
 
     def _update_bounds_dict(self, v_bounds, lower, upper, disjunct, gdp_forest):
-        (lb, ub) = self._get_tightest_ancestral_bounds(v_bounds, disjunct,
-                                                       gdp_forest)
+        (lb, ub) = self._get_tightest_ancestral_bounds(v_bounds, disjunct, gdp_forest)
         if lower is not None:
             if lb is None or lower > lb:
                 # This GDP is more constrained here than it was in the parent
@@ -236,16 +242,18 @@ class BoundPretransformation(Transformation):
         while to_transform:
             disjunction = to_transform.pop()
 
-            trans_block = self._add_transformation_block(disjunction,
-                                                         transformation_blocks)
+            trans_block = self._add_transformation_block(
+                disjunction, transformation_blocks
+            )
             if self.transformation_name not in disjunction._transformation_map:
                 disjunction._transformation_map[
-                    self.transformation_name] = ComponentMap()
+                    self.transformation_name
+                ] = ComponentMap()
             trans_map = disjunction._transformation_map[self.transformation_name]
 
             for disj in disjunction.disjuncts:
                 to_transform.update(gdp_forest.children(disj))
-                
+
             for v, v_bounds in bound_dict.items():
                 unique_id = len(trans_block.transformed_bound_constraints)
                 if not any(disj in v_bounds for disj in disjunction.disjuncts):
@@ -257,14 +265,15 @@ class BoundPretransformation(Transformation):
                 deactivate_lower = set()
                 deactivate_upper = set()
                 for disj in disjunction.disjuncts:
-                    (lb, ub) = self._get_tightest_ancestral_bounds(v_bounds, disj,
-                                                                   gdp_forest)
+                    (lb, ub) = self._get_tightest_ancestral_bounds(
+                        v_bounds, disj, gdp_forest
+                    )
                     if lb is None:
                         all_lbs = False
                     if ub is None:
                         all_ubs = False
                     if all_lbs:
-                        lb_expr += lb*disj.binary_indicator_var
+                        lb_expr += lb * disj.binary_indicator_var
                         # If these bounds came from above here in the GDP
                         # hierarchy, this disjunct might not actually have
                         # constraints to deactivate. If it does, we add them to
@@ -273,7 +282,7 @@ class BoundPretransformation(Transformation):
                         if disj in v_bounds['to_deactivate']:
                             deactivate_lower.update(v_bounds['to_deactivate'][disj])
                     if all_ubs:
-                        ub_expr += ub*disj.binary_indicator_var
+                        ub_expr += ub * disj.binary_indicator_var
                         if disj in v_bounds['to_deactivate']:
                             deactivate_upper.update(v_bounds['to_deactivate'][disj])
 
@@ -291,8 +300,9 @@ class BoundPretransformation(Transformation):
                         else:
                             c.deactivate()
                             c.parent_block().add_component(
-                                unique_component_name(c.parent_block(),
-                                                      c.local_name + '_ub'),
+                                unique_component_name(
+                                    c.parent_block(), c.local_name + '_ub'
+                                ),
                                 Constraint(expr=v <= c.upper),
                             )
                 if all_ubs:
@@ -300,7 +310,8 @@ class BoundPretransformation(Transformation):
                     trans_block.transformed_bound_constraints[idx] = ub_expr >= v
                     if v in trans_map:
                         trans_map[v].append(
-                            trans_block.transformed_bound_constraints[idx])
+                            trans_block.transformed_bound_constraints[idx]
+                        )
                     else:
                         trans_map[v] = [trans_block.transformed_bound_constraints[idx]]
                     for c in deactivate_upper:
@@ -312,8 +323,9 @@ class BoundPretransformation(Transformation):
                         else:
                             c.deactivate()
                             c.parent_block().add_component(
-                                unique_component_name(c.parent_block(),
-                                                      c.local_name + '_lb'),
+                                unique_component_name(
+                                    c.parent_block(), c.local_name + '_lb'
+                                ),
                                 Constraint(expr=v >= c.lower),
                             )
 
