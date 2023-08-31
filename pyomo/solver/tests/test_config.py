@@ -42,7 +42,8 @@ class TestBranchAndBoundConfig(unittest.TestCase):
         self.assertTrue(config.load_solution)
         self.assertFalse(config.symbolic_solver_labels)
         self.assertFalse(config.report_timing)
-        self.assertEqual(config.mip_gap, None)
+        self.assertEqual(config.rel_gap, None)
+        self.assertEqual(config.abs_gap, None)
         self.assertFalse(config.relax_integrality)
 
     def test_interface_custom_instantiation(self):

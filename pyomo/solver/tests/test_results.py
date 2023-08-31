@@ -12,6 +12,7 @@
 from pyomo.common import unittest
 from pyomo.common.config import ConfigDict
 from pyomo.solver import results
+from pyomo.solver import solution
 import pyomo.environ as pyo
 from pyomo.core.base.var import ScalarVar
 
@@ -80,7 +81,6 @@ class TestResults(unittest.TestCase):
             'solver_name',
             'solver_version',
             'termination_condition',
-            'termination_message',
             'timing_info',
         }
         actual_declared = res._declared
@@ -96,7 +96,6 @@ class TestResults(unittest.TestCase):
         self.assertEqual(res.solution_status, results.SolutionStatus.noSolution)
         self.assertIsNone(res.solver_name)
         self.assertIsNone(res.solver_version)
-        self.assertIsNone(res.termination_message)
         self.assertIsNone(res.iteration_count)
         self.assertIsInstance(res.timing_info, ConfigDict)
         self.assertIsInstance(res.extra_info, ConfigDict)
@@ -142,7 +141,7 @@ class TestResults(unittest.TestCase):
         slacks[m.c2] = 8
 
         res = results.Results()
-        res.solution_loader = results.SolutionLoader(
+        res.solution_loader = solution.SolutionLoader(
             primals=primals, duals=duals, slacks=slacks, reduced_costs=rc
         )
 
