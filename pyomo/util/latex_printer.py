@@ -31,6 +31,7 @@ from pyomo.core.expr.template_expr import Numeric_GetItemExpression
 from pyomo.core.expr.template_expr import templatize_constraint, resolve_template
 from pyomo.core.base.var import ScalarVar, _GeneralVarData, IndexedVar
 from pyomo.core.base.constraint import ScalarConstraint, IndexedConstraint
+from pyomo.core.expr.template_expr import templatize_rule
 
 from pyomo.core.base.external import _PythonCallbackFunctionID
 
@@ -351,8 +352,11 @@ def latex_printer(
 
         pstr += ' ' * tbSpc + '& & %s ' % (visitor.walk_expression(obj_template))
         if useAlignEnvironment:
-            pstr += '\\label{obj:' + m.name + '_' + obj.name + '} '
-        pstr += '\\\\ \n'
+            pstr += '\\label{obj:' + pyomoElement.name + '_' + obj.name + '} '
+        if not isSingle:
+            pstr += '\\\\ \n'
+        else:
+            pstr += '\n'
 
     # Iterate over the constraints
     if len(constraints) > 0:
@@ -394,7 +398,7 @@ def latex_printer(
 
             # Add labels as needed
             if useAlignEnvironment:
-                pstr += '\\label{con:' + m.name + '_' + con.name + '} '
+                pstr += '\\label{con:' + pyomoElement.name + '_' + con.name + '} '
 
             # prevents an emptly blank line from being at the end of the latex output
             if i <= len(constraints) - 2:
@@ -408,7 +412,7 @@ def latex_printer(
     else:
         if not isSingle:
             pstr += '    \\end{aligned} \n'
-            pstr += '    \\label{%s} \n ' % (m.name)
+            pstr += '    \\label{%s} \n' % (pyomoElement.name)
         pstr += '\end{equation} \n'
 
     # Handling the iterator indices
@@ -453,15 +457,16 @@ def latex_printer(
             continuousSets = dict(
                 zip(uniqueSets, [False for i in range(0, len(uniqueSets))])
             )
-            for i in range(0, len(uniqueSets)):
-                st = getattr(m, uniqueSets[i])
-                stData = st.data()
-                stCont = True
-                for ii in range(0, len(stData)):
-                    if ii + stData[0] != stData[ii]:
-                        stCont = False
-                        break
-                continuousSets[uniqueSets[i]] = stCont
+            if splitContinuousSets:
+                for i in range(0, len(uniqueSets)):
+                    st = getattr(pyomoElement, uniqueSets[i])
+                    stData = st.data()
+                    stCont = True
+                    for ii in range(0, len(stData)):
+                        if ii + stData[0] != stData[ii]:
+                            stCont = False
+                            break
+                    continuousSets[uniqueSets[i]] = stCont
 
             # Add the continuous set data to the groupMap
             for ky, vl in groupMap.items():
@@ -507,7 +512,7 @@ def latex_printer(
             for ky, vl in setStrings.items():
                 # if the set is continuous and the flag has been set
                 if splitContinuousSets and vl[1]:
-                    st = getattr(m, vl[2])
+                    st = getattr(pyomoElement, vl[2])
                     stData = st.data()
                     bgn = stData[0]
                     ed = stData[-1]
@@ -518,10 +523,6 @@ def latex_printer(
                     ln = ln.replace(ky, vl[2])
                 else:
                     # if the set is not continuous or the flag has not been set
-                    st = getattr(m, vl[2])
-                    stData = st.data()
-                    bgn = stData[0]
-                    ed = stData[-1]
                     ln = ln.replace(
                         '\\sum_{%s}' % (ky),
                         '\\sum_{%s \\in %s}' % (vl[0].lower(), vl[0]),
