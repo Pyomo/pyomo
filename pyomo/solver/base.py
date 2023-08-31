@@ -43,7 +43,7 @@ from pyomo.core.kernel.objective import minimize
 from pyomo.core.base import SymbolMap
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.solver.config import UpdateConfig
-from pyomo.solver.solution import SolutionLoader, SolutionLoaderBase
+from pyomo.solver.solution import SolutionLoader
 from pyomo.solver.util import get_objective
 
 
@@ -173,6 +173,7 @@ class Results(ConfigDict):
         self.declare('termination_message', ConfigValue(domain=str))
         self.declare('iteration_count', ConfigValue(domain=NonNegativeInt))
         self.declare('timing_info', ConfigDict())
+        # TODO: Set up type checking for start_time
         self.timing_info.declare('start_time', ConfigValue())
         self.timing_info.declare('wall_time', ConfigValue(domain=NonNegativeFloat))
         self.timing_info.declare(
@@ -183,6 +184,7 @@ class Results(ConfigDict):
     def __str__(self):
         s = ''
         s += 'termination_condition: ' + str(self.termination_condition) + '\n'
+        s += 'solution_status: ' + str(self.solution_status) + '\n'
         s += 'incumbent_objective: ' + str(self.incumbent_objective) + '\n'
         s += 'objective_bound: ' + str(self.objective_bound)
         return s
@@ -472,19 +474,18 @@ legacy_solver_status_map = {
 
 
 legacy_solution_status_map = {
-    TerminationCondition.unknown: LegacySolutionStatus.unknown,
-    TerminationCondition.maxTimeLimit: LegacySolutionStatus.stoppedByLimit,
-    TerminationCondition.iterationLimit: LegacySolutionStatus.stoppedByLimit,
-    TerminationCondition.objectiveLimit: LegacySolutionStatus.stoppedByLimit,
-    TerminationCondition.minStepLength: LegacySolutionStatus.error,
-    TerminationCondition.convergenceCriteriaSatisfied: LegacySolutionStatus.optimal,
-    TerminationCondition.unbounded: LegacySolutionStatus.unbounded,
-    TerminationCondition.provenInfeasible: LegacySolutionStatus.infeasible,
-    TerminationCondition.locallyInfeasible: LegacySolutionStatus.infeasible,
-    TerminationCondition.infeasibleOrUnbounded: LegacySolutionStatus.unsure,
-    TerminationCondition.error: LegacySolutionStatus.error,
-    TerminationCondition.interrupted: LegacySolutionStatus.error,
-    TerminationCondition.licensingProblems: LegacySolutionStatus.error,
+    SolutionStatus.noSolution: LegacySolutionStatus.unknown,
+    SolutionStatus.noSolution: LegacySolutionStatus.stoppedByLimit,
+    SolutionStatus.noSolution: LegacySolutionStatus.error,
+    SolutionStatus.noSolution: LegacySolutionStatus.other,
+    SolutionStatus.noSolution: LegacySolutionStatus.unsure,
+    SolutionStatus.noSolution: LegacySolutionStatus.unbounded,
+    SolutionStatus.optimal: LegacySolutionStatus.locallyOptimal,
+    SolutionStatus.optimal: LegacySolutionStatus.globallyOptimal,
+    SolutionStatus.optimal: LegacySolutionStatus.optimal,
+    SolutionStatus.infeasible: LegacySolutionStatus.infeasible,
+    SolutionStatus.feasible: LegacySolutionStatus.feasible,
+    SolutionStatus.feasible: LegacySolutionStatus.bestSoFar,
 }
 
 
