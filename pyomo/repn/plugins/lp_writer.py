@@ -336,10 +336,12 @@ class _LPWriter_impl(object):
                     else:
                         suffixesByName[name] = [suffix]
             for name, suffixes in suffixesByName.items():
+                n = len(suffixes)
+                plural = 's' if n > 1 else ''
                 logger.warning(
-                    f"EXPORT Suffix {name} found on {len(suffixes)} blocks:\n\t"
-                    + "\n\t".join(s.name for s in suffixes)
-                    + "LP writer cannot export suffixes to LP file.  Skipping."
+                    f"EXPORT Suffix '{name}' found on {n} block{plural}:\n    "
+                    + "\n    ".join(s.name for s in suffixes)
+                    + "\nLP writer cannot export suffixes to LP files.  Skipping."
                 )
 
         ostream.write(f"\\* Source Pyomo model name={model.name} *\\\n\n")
