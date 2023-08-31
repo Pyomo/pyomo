@@ -90,7 +90,9 @@ class TestResults(unittest.TestCase):
         res = results.Results()
         self.assertIsNone(res.incumbent_objective)
         self.assertIsNone(res.objective_bound)
-        self.assertEqual(res.termination_condition, results.TerminationCondition.unknown)
+        self.assertEqual(
+            res.termination_condition, results.TerminationCondition.unknown
+        )
         self.assertEqual(res.solution_status, results.SolutionStatus.noSolution)
         self.assertIsNone(res.solver_name)
         self.assertIsNone(res.solver_version)

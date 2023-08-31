@@ -19,9 +19,7 @@ from pyomo.common.config import (
     NonNegativeFloat,
 )
 from pyomo.solver.solution import SolutionLoader
-from pyomo.opt.results.solution import (
-    SolutionStatus as LegacySolutionStatus,
-)
+from pyomo.opt.results.solution import SolutionStatus as LegacySolutionStatus
 from pyomo.opt.results.solver import (
     TerminationCondition as LegacyTerminationCondition,
     SolverStatus as LegacySolverStatus,
@@ -221,5 +219,3 @@ legacy_solution_status_map = {
     SolutionStatus.feasible: LegacySolutionStatus.feasible,
     SolutionStatus.feasible: LegacySolutionStatus.bestSoFar,
 }
-
-

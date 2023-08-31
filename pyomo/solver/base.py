@@ -29,7 +29,12 @@ from pyomo.core.base import SymbolMap
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.solver.config import UpdateConfig
 from pyomo.solver.util import get_objective
-from pyomo.solver.results import Results, legacy_solver_status_map, legacy_termination_condition_map, legacy_solution_status_map
+from pyomo.solver.results import (
+    Results,
+    legacy_solver_status_map,
+    legacy_termination_condition_map,
+    legacy_solution_status_map,
+)
 
 
 class SolverBase(abc.ABC):
@@ -277,9 +282,6 @@ class PersistentSolverBase(SolverBase):
     @abc.abstractmethod
     def update_params(self):
         pass
-
-
-
 
 
 class LegacySolverInterface:
