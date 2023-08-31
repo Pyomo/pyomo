@@ -25,6 +25,7 @@ from pyomo.environ import (
     Var,
 )
 from pyomo.gdp import Disjunct, Disjunction
+from pyomo.gdp.util import _parent_disjunct
 from pyomo.common.log import LoggingIntercept
 
 
@@ -46,7 +47,7 @@ class TestBoundPretransformation(unittest.TestCase):
     def create_nested_model(self):
         """
         -100 <= x <= 102
-        [-10 <= x <= 11, [x <= 3] v [x >= -17]] v [x == 0]
+        [-10 <= x <= 11, [x <= 3] v [x >= -7]] v [x == 0]
         """
         m = self.create_nested_structure()
         m.x = Var(bounds=(-100, 102))
@@ -67,17 +68,34 @@ class TestBoundPretransformation(unittest.TestCase):
         assertExpressionsEqual(
             self,
             lb.expr,
-            -10.0 * m.outer_d1.inner_d1.binary_indicator_var
-            - 7.0 * m.outer_d1.inner_d2.binary_indicator_var
-            + 0.0 * m.outer_d2.binary_indicator_var
+            -10.0 * m.outer_d1.binary_indicator_var +
+            0.0 * m.outer_d2.binary_indicator_var
             <= m.x,
         )
         assertExpressionsEqual(
             self,
             ub.expr,
-            3.0 * m.outer_d1.inner_d1.binary_indicator_var
-            + 11.0 * m.outer_d1.inner_d2.binary_indicator_var
-            + 0.0 * m.outer_d2.binary_indicator_var
+            11.0 * m.outer_d1.binary_indicator_var +
+            0.0 * m.outer_d2.binary_indicator_var
+            >= m.x,
+        )
+
+        cons = bt.get_transformed_constraints(m.x, m.outer_d1.inner)
+        self.assertEqual(len(cons), 2)
+        lb = cons[0]
+        ub = cons[1]
+        assertExpressionsEqual(
+            self,
+            lb.expr,
+            -10.0 * m.outer_d1.inner_d1.binary_indicator_var
+            -7.0 * m.outer_d1.inner_d2.binary_indicator_var
+            <= m.x,
+        )
+        assertExpressionsEqual(
+            self,
+            ub.expr,
+            3.0 * m.outer_d1.inner_d1.binary_indicator_var +
+            11.0 * m.outer_d1.inner_d2.binary_indicator_var
             >= m.x,
         )
 
@@ -104,7 +122,7 @@ class TestBoundPretransformation(unittest.TestCase):
                     )
                 )
             ),
-            2,
+            4,
         )
 
     def test_transform_nested_model_no_0_terms(self):
@@ -124,9 +142,27 @@ class TestBoundPretransformation(unittest.TestCase):
         assertExpressionsEqual(
             self,
             lb.expr,
+            -10.0 * m.outer_d1.binary_indicator_var
+            + 101.0 * m.outer_d2.binary_indicator_var
+            <= m.x,
+        )
+        assertExpressionsEqual(
+            self,
+            ub.expr,
+            11.0 * m.outer_d1.binary_indicator_var
+            + 101.0 * m.outer_d2.binary_indicator_var
+            >= m.x,
+        )
+
+        cons = bt.get_transformed_constraints(m.x, m.outer_d1.inner)
+        self.assertEqual(len(cons), 2)
+        lb = cons[0]
+        ub = cons[1]
+        assertExpressionsEqual(
+            self,
+            lb.expr,
             -10.0 * m.outer_d1.inner_d1.binary_indicator_var
             - 7.0 * m.outer_d1.inner_d2.binary_indicator_var
-            + 101.0 * m.outer_d2.binary_indicator_var
             <= m.x,
         )
         assertExpressionsEqual(
@@ -134,9 +170,10 @@ class TestBoundPretransformation(unittest.TestCase):
             ub.expr,
             3.0 * m.outer_d1.inner_d1.binary_indicator_var
             + 11.0 * m.outer_d1.inner_d2.binary_indicator_var
-            + 101.0 * m.outer_d2.binary_indicator_var
             >= m.x,
         )
+        self.assertIs(_parent_disjunct(lb), m.outer_d1)
+        self.assertIs(_parent_disjunct(ub), m.outer_d1)
 
         # All the disjunctive constraints were transformed
         self.assertFalse(m.outer_d1.c.active)
@@ -154,7 +191,7 @@ class TestBoundPretransformation(unittest.TestCase):
                     )
                 )
             ),
-            2,
+            4,
         )
 
     def test_transformation_gives_up_without_enough_bound_info(self):
@@ -184,8 +221,10 @@ class TestBoundPretransformation(unittest.TestCase):
         bt = TransformationFactory('gdp.bound_pretransformation')
         bt.apply_to(m)
 
-        # We expect: 4w_1 + 17w_2 + 2y_2 <= x
-        #            5w_1 + 5w_2 + 4y_2 <= y <= 67w_1 + 67w_2 + 66y_2
+        # We expect: 3d_1 + 2d_2 <= x
+        #            5d_1 + 4d_2 <= y <= 67d_1 + 66d_2
+        # in the global scope, and
+        # x >= 4a_1 + 17a_2 on outer_d1
 
         cons = bt.get_transformed_constraints(m.x, m.outer)
         self.assertEqual(len(cons), 1)
@@ -193,8 +232,7 @@ class TestBoundPretransformation(unittest.TestCase):
         assertExpressionsEqual(
             self,
             lb.expr,
-            4.0 * m.outer_d1.inner_d1.binary_indicator_var
-            + 17.0 * m.outer_d1.inner_d2.binary_indicator_var
+            3.0 * m.outer_d1.binary_indicator_var
             + 2.0 * m.outer_d2.binary_indicator_var
             <= m.x,
         )
@@ -205,8 +243,7 @@ class TestBoundPretransformation(unittest.TestCase):
         assertExpressionsEqual(
             self,
             lb.expr,
-            5.0 * m.outer_d1.inner_d1.binary_indicator_var
-            + 5.0 * m.outer_d1.inner_d2.binary_indicator_var
+            5.0 * m.outer_d1.binary_indicator_var
             + 4 * m.outer_d2.binary_indicator_var
             <= m.y,
         )
@@ -214,11 +251,22 @@ class TestBoundPretransformation(unittest.TestCase):
         assertExpressionsEqual(
             self,
             ub.expr,
-            67 * m.outer_d1.inner_d1.binary_indicator_var
-            + 67 * m.outer_d1.inner_d2.binary_indicator_var
+            67 * m.outer_d1.binary_indicator_var
             + 66.0 * m.outer_d2.binary_indicator_var
             >= m.y,
         )
+
+        cons = bt.get_transformed_constraints(m.x, m.outer_d1.inner)
+        self.assertEqual(len(cons), 1)
+        lb = cons[0]
+        assertExpressionsEqual(
+            self,
+            lb.expr,
+            4.0 * m.outer_d1.inner_d1.binary_indicator_var
+            + 17.0 * m.outer_d1.inner_d2.binary_indicator_var
+            <= m.x
+        )
+        self.assertIs(_parent_disjunct(cons[0]), m.outer_d1)
 
         # check that all the y constraints are deactivated, and that the
         # lower bound ones for x are, but not the upper bound ones
@@ -240,7 +288,7 @@ class TestBoundPretransformation(unittest.TestCase):
                     )
                 )
             ),
-            4,
+            5,
         )
 
     def test_partially_deactivating_constraint_lb_transformed_but_ub_not(self):
@@ -410,7 +458,7 @@ class TestBoundPretransformation(unittest.TestCase):
                     )
                 )
             ),
-            7,
+            9,
         )
 
     def test_disjunction_target(self):
@@ -435,7 +483,7 @@ class TestBoundPretransformation(unittest.TestCase):
                     )
                 )
             ),
-            7,
+            9,
         )
 
     def test_get_transformed_constraint_errors(self):
@@ -501,7 +549,7 @@ class TestBoundPretransformation(unittest.TestCase):
                     )
                 )
             ),
-            2,
+            4,
         )
 
     def test_bound_constraints_skip_levels_in_hierarchy(self):
@@ -532,10 +580,7 @@ class TestBoundPretransformation(unittest.TestCase):
         assertExpressionsEqual(
             self,
             x_lb.expr,
-            2.0 * m.Z[2].binary_indicator_var
-            + 2.0 * m.Z[3].binary_indicator_var
-            + 2.0 * m.W[1].binary_indicator_var
-            + 2.0 * m.W[2].binary_indicator_var
+            2.0 * m.Y[1].binary_indicator_var
             + 0 * m.Y[2].binary_indicator_var
             <= m.x,
         )
@@ -543,36 +588,60 @@ class TestBoundPretransformation(unittest.TestCase):
         assertExpressionsEqual(
             self,
             x_ub.expr,
-            10 * m.Z[2].binary_indicator_var
-            + 10 * m.Z[3].binary_indicator_var
-            + 7.0 * m.W[1].binary_indicator_var
-            + 9.0 * m.W[2].binary_indicator_var
+            10 * m.Y[1].binary_indicator_var
             + 0.0 * m.Y[2].binary_indicator_var
             >= m.x,
         )
+        self.assertIsNone(_parent_disjunct(x_lb))
+        self.assertIsNone(_parent_disjunct(x_ub))
 
         cons = bt.get_transformed_constraints(m.y, m.y_disj)
+        self.assertEqual(len(cons), 0)
+
+        cons = bt.get_transformed_constraints(m.y, m.Y[1].z_disj)
+        self.assertEqual(len(cons), 2)
         y_lb = cons[0]
         assertExpressionsEqual(
             self,
             y_lb.expr,
-            1.0 * m.Z[2].binary_indicator_var
+            0.0 * m.Z[1].binary_indicator_var
+            + 1.0 * m.Z[2].binary_indicator_var
             + 2.0 * m.Z[3].binary_indicator_var
-            + 0.0 * m.W[1].binary_indicator_var
-            + 0.0 * m.W[2].binary_indicator_var
-            + 3.0 * m.Y[2].binary_indicator_var
             <= m.y,
         )
         y_ub = cons[1]
         assertExpressionsEqual(
             self,
             y_ub.expr,
-            1.0 * m.Z[2].binary_indicator_var
+            0.0 * m.Z[1].binary_indicator_var
+            + 1.0 * m.Z[2].binary_indicator_var
             + 2.0 * m.Z[3].binary_indicator_var
-            + 0.0 * m.W[1].binary_indicator_var
-            + 0.0 * m.W[2].binary_indicator_var
-            + 17.0 * m.Y[2].binary_indicator_var
             >= m.y,
+        )
+
+        cons = bt.get_transformed_constraints(m.x, m.Y[1].z_disj)
+        self.assertEqual(len(cons), 0)
+
+        cons = bt.get_transformed_constraints(m.y, m.Z[1].w_disj)
+        self.assertEqual(len(cons), 0)
+
+        cons = bt.get_transformed_constraints(m.x, m.Z[1].w_disj)
+        self.assertEqual(len(cons), 2)
+        x_lb = cons[0]
+        assertExpressionsEqual(
+            self,
+            x_lb.expr,
+            2.0 * m.W[1].binary_indicator_var
+            + 2.0 * m.W[2].binary_indicator_var
+            <= m.x
+        )
+        x_ub = cons[1]
+        assertExpressionsEqual(
+            self,
+            x_ub.expr,
+            7.0 * m.W[1].binary_indicator_var
+            + 9.0 * m.W[2].binary_indicator_var
+            >= m.x
         )
 
         self.assertFalse(m.W[1].c.active)
@@ -582,7 +651,7 @@ class TestBoundPretransformation(unittest.TestCase):
         self.assertFalse(m.Z[3].c.active)
         self.assertFalse(m.Y[1].c.active)
         self.assertFalse(m.Y[2].c1.active)
-        self.assertFalse(m.Y[2].c2.active)
+        self.assertTrue(m.Y[2].c2.active)
 
         self.assertEqual(
             len(
@@ -592,7 +661,7 @@ class TestBoundPretransformation(unittest.TestCase):
                     )
                 )
             ),
-            4,
+            7,
         )
 
     def test_skip_nonlinear_and_multivariate_constraints(self):
@@ -625,13 +694,13 @@ class TestBoundPretransformation(unittest.TestCase):
                     )
                 )
             ),
-            5,
+            7,
         )
 
     def test_tightest_bound_is_at_root(self):
         """
         x >= 60
-        [[x >= 55, [ ] v [x >= 66]] v [ ]] v [x >= 5]
+        [ [x >= 55, [ ] v [x >= 66] ] ] v [x >= 5]
         """
         m = ConcreteModel()
         m.x = Var()
@@ -654,15 +723,39 @@ class TestBoundPretransformation(unittest.TestCase):
         cons = bt.get_transformed_constraints(m.x, m.disjunction)
         self.assertEqual(len(cons), 1)
         lb = cons[0]
+        print(lb.expr)
         assertExpressionsEqual(
             self,
             lb.expr,
-            60.0 * m.inner1[2].binary_indicator_var
-            + 60.0 * m.inner2[1].binary_indicator_var
-            + 66.0 * m.inner2[2].binary_indicator_var
+            60.0 * m.d[1].binary_indicator_var
             + 60.0 * m.d[2].binary_indicator_var
             <= m.x,
         )
+        self.assertIsNone(_parent_disjunct(lb))
+
+        cons = bt.get_transformed_constraints(m.x, m.d[1].disjunction)
+        self.assertEqual(len(cons), 1)
+        lb = cons[0]
+        assertExpressionsEqual(
+            self,
+            lb.expr,
+            60.0 * m.inner1[1].binary_indicator_var
+            + 60.0 * m.inner1[2].binary_indicator_var
+            <= m.x,
+        )
+        self.assertIs(_parent_disjunct(lb), m.d[1])
+
+        cons = bt.get_transformed_constraints(m.x, m.inner1[1].disjunction)
+        self.assertEqual(len(cons), 1)
+        lb = cons[0]
+        assertExpressionsEqual(
+            self,
+            lb.expr,
+            60.0 * m.inner2[1].binary_indicator_var
+            + 66.0 * m.inner2[2].binary_indicator_var
+            <= m.x,
+        )
+        self.assertIs(_parent_disjunct(lb), m.inner1[1])        
 
         # We shouldn't deactivate global constraints. Reason 1 being that we
         # don't deactivate bounds and Reason 2 being that generally the global
@@ -675,7 +768,7 @@ class TestBoundPretransformation(unittest.TestCase):
                     )
                 )
             ),
-            2,
+            4,
         )
 
     def test_bounds_on_disjuncts_with_block_hierarchies(self):
@@ -828,7 +921,7 @@ class TestBoundPretransformation(unittest.TestCase):
                     )
                 )
             ),
-            2,
+            4,
         )
 
     def test_variables_not_in_any_leaves(self):
@@ -857,8 +950,7 @@ class TestBoundPretransformation(unittest.TestCase):
         assertExpressionsEqual(
             self,
             ub.expr,
-            9.7 * m.disjunct1.disjunct1.binary_indicator_var
-            + 9.7 * m.disjunct1.disjunct2.binary_indicator_var
+            9.7 * m.disjunct1.binary_indicator_var
             + 9.0 * m.disjunct2.binary_indicator_var
             >= m.x,
         )
