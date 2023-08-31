@@ -330,10 +330,11 @@ class _LPWriter_impl(object):
                 ):
                     if not suffix.export_enabled() or not suffix:
                         continue
-                    if suffix.name in suffixesByName:
-                        suffixesByName[suffix.name].append(suffix)
+                    name = suffix.local_name
+                    if name in suffixesByName:
+                        suffixesByName[name].append(suffix)
                     else:
-                        suffixesByName[suffix.name] = [suffix]
+                        suffixesByName[name] = [suffix]
             for name, suffixes in suffixesByName.items():
                 logger.warning(
                     f"EXPORT Suffix {name} found on {len(suffixes)} blocks:\n\t"
