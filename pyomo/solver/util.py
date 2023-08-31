@@ -20,9 +20,18 @@ from pyomo.core.base.var import _GeneralVarData, Var
 from pyomo.core.base.param import _ParamData, Param
 from pyomo.core.base.objective import Objective, _GeneralObjectiveData
 from pyomo.common.collections import ComponentMap
+from pyomo.common.errors import PyomoException
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.expr.numvalue import NumericConstant
 from pyomo.solver.config import UpdateConfig
+
+
+class SolverSystemError(PyomoException):
+    """
+    General exception to catch solver system errors
+    """
+
+    pass
 
 
 def get_objective(block):

@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 
-from .base import SolverFactory
+from .factory import SolverFactory
 
 
 def load():

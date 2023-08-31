@@ -11,6 +11,7 @@
 
 from . import base
 from . import config
+from . import factory
 from . import results
 from . import solution
 from . import util

@@ -73,6 +73,9 @@ class SolverConfig(ConfigDict):
         self.time_limit: Optional[float] = self.declare(
             'time_limit', ConfigValue(domain=NonNegativeFloat)
         )
+        self.solver_options: ConfigDict = self.declare(
+            'solver_options', ConfigDict(implicit=True)
+        )
 
 
 class BranchAndBoundConfig(SolverConfig):

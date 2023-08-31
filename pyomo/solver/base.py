@@ -21,8 +21,7 @@ from pyomo.core.base.block import _BlockData
 from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.errors import ApplicationError
-from pyomo.opt.base import SolverFactory as LegacySolverFactory
-from pyomo.common.factory import Factory
+
 from pyomo.opt.results.results_ import SolverResults as LegacySolverResults
 from pyomo.opt.results.solution import Solution as LegacySolution
 from pyomo.core.kernel.objective import minimize
@@ -442,22 +441,3 @@ class LegacySolverInterface:
 
     def __exit__(self, t, v, traceback):
         pass
-
-
-class SolverFactoryClass(Factory):
-    def register(self, name, doc=None):
-        def decorator(cls):
-            self._cls[name] = cls
-            self._doc[name] = doc
-
-            class LegacySolver(LegacySolverInterface, cls):
-                pass
-
-            LegacySolverFactory.register(name, doc)(LegacySolver)
-
-            return cls
-
-        return decorator
-
-
-SolverFactory = SolverFactoryClass()
