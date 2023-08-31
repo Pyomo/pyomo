@@ -89,24 +89,26 @@ class TestSolverBase(unittest.TestCase):
 
 class TestPersistentSolverBase(unittest.TestCase):
     def test_abstract_member_list(self):
-        expected_list = ['remove_params',
-                         'version',
-                         'config',
-                         'update_variables',
-                         'remove_variables',
-                         'add_constraints',
-                         'get_primals',
-                         'set_instance',
-                         'set_objective',
-                         'update_params',
-                         'remove_block',
-                         'add_block',
-                         'available',
-                         'update_config',
-                         'add_params',
-                         'remove_constraints',
-                         'add_variables',
-                         'solve']
+        expected_list = [
+            'remove_params',
+            'version',
+            'config',
+            'update_variables',
+            'remove_variables',
+            'add_constraints',
+            'get_primals',
+            'set_instance',
+            'set_objective',
+            'update_params',
+            'remove_block',
+            'add_block',
+            'available',
+            'update_config',
+            'add_params',
+            'remove_constraints',
+            'add_variables',
+            'solve',
+        ]
         member_list = list(base.PersistentSolverBase.__abstractmethods__)
         self.assertEqual(sorted(expected_list), sorted(member_list))
 

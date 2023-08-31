@@ -307,19 +307,11 @@ class Cplex(PersistentSolverBase):
                     cpxprob.variables.get_num_binary()
                     + cpxprob.variables.get_num_integer()
                 ) == 0:
-                    results.incumbent_objective = (
-                        cpxprob.solution.get_objective_value()
-                    )
-                    results.objective_bound = (
-                        cpxprob.solution.get_objective_value()
-                    )
+                    results.incumbent_objective = cpxprob.solution.get_objective_value()
+                    results.objective_bound = cpxprob.solution.get_objective_value()
                 else:
-                    results.incumbent_objective = (
-                        cpxprob.solution.get_objective_value()
-                    )
-                    results.objective_bound = (
-                        cpxprob.solution.MIP.get_best_objective()
-                    )
+                    results.incumbent_objective = cpxprob.solution.get_objective_value()
+                    results.objective_bound = cpxprob.solution.MIP.get_best_objective()
             else:
                 results.incumbent_objective = None
                 if cpxprob.objective.get_sense() == cpxprob.objective.sense.minimize:

@@ -18,7 +18,13 @@ from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.objective import _GeneralObjectiveData
-from pyomo.common.config import ConfigDict, ConfigValue, NonNegativeInt, In, NonNegativeFloat
+from pyomo.common.config import (
+    ConfigDict,
+    ConfigValue,
+    NonNegativeInt,
+    In,
+    NonNegativeFloat,
+)
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.errors import ApplicationError
 from pyomo.opt.base import SolverFactory as LegacySolverFactory
@@ -142,21 +148,36 @@ class Results(ConfigDict):
             visibility=visibility,
         )
 
-        self.declare('solution_loader', ConfigValue(default=SolutionLoader(
-            None, None, None, None
-        )))
-        self.declare('termination_condition', ConfigValue(domain=In(TerminationCondition), default=TerminationCondition.unknown))
-        self.declare('solution_status', ConfigValue(domain=In(SolutionStatus), default=SolutionStatus.noSolution))
-        self.incumbent_objective: Optional[float] = self.declare('incumbent_objective', ConfigValue(domain=float))
-        self.objective_bound: Optional[float] = self.declare('objective_bound', ConfigValue(domain=float))
+        self.declare(
+            'solution_loader',
+            ConfigValue(default=SolutionLoader(None, None, None, None)),
+        )
+        self.declare(
+            'termination_condition',
+            ConfigValue(
+                domain=In(TerminationCondition), default=TerminationCondition.unknown
+            ),
+        )
+        self.declare(
+            'solution_status',
+            ConfigValue(domain=In(SolutionStatus), default=SolutionStatus.noSolution),
+        )
+        self.incumbent_objective: Optional[float] = self.declare(
+            'incumbent_objective', ConfigValue(domain=float)
+        )
+        self.objective_bound: Optional[float] = self.declare(
+            'objective_bound', ConfigValue(domain=float)
+        )
         self.declare('solver_name', ConfigValue(domain=str))
         self.declare('solver_version', ConfigValue(domain=tuple))
         self.declare('termination_message', ConfigValue(domain=str))
         self.declare('iteration_count', ConfigValue(domain=NonNegativeInt))
         self.declare('timing_info', ConfigDict())
-        self.timing_info.declare('start_time')
+        self.timing_info.declare('start_time', ConfigValue())
         self.timing_info.declare('wall_time', ConfigValue(domain=NonNegativeFloat))
-        self.timing_info.declare('solver_wall_time', ConfigValue(domain=NonNegativeFloat))
+        self.timing_info.declare(
+            'solver_wall_time', ConfigValue(domain=NonNegativeFloat)
+        )
         self.declare('extra_info', ConfigDict(implicit=True))
 
     def __str__(self):
@@ -532,9 +553,7 @@ class LegacySolverInterface:
             results.incumbent_objective is not None
             and results.objective_bound is not None
         ):
-            legacy_soln.gap = abs(
-                results.incumbent_objective - results.objective_bound
-            )
+            legacy_soln.gap = abs(results.incumbent_objective - results.objective_bound)
         else:
             legacy_soln.gap = None
 

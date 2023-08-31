@@ -12,8 +12,8 @@
 from pyomo.common import unittest
 from pyomo.solver.config import InterfaceConfig, MIPInterfaceConfig
 
-class TestInterfaceConfig(unittest.TestCase):
 
+class TestInterfaceConfig(unittest.TestCase):
     def test_interface_default_instantiation(self):
         config = InterfaceConfig()
         self.assertEqual(config._description, None)
