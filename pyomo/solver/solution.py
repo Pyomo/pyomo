@@ -117,6 +117,8 @@ class SolutionLoaderBase(abc.ABC):
         )
 
 
+# TODO: This is for development uses only; not to be released to the wild
+# May turn into documentation someday
 class SolutionLoader(SolutionLoaderBase):
     def __init__(
         self,

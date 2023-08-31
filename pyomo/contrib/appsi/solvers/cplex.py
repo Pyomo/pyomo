@@ -20,7 +20,7 @@ from pyomo.common.errors import PyomoException
 from pyomo.contrib.appsi.cmodel import cmodel_available
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.solver.base import PersistentSolverBase
-from pyomo.solver.config import MIPInterfaceConfig
+from pyomo.solver.config import BranchAndBoundConfig
 from pyomo.solver.results import TerminationCondition, Results
 from pyomo.solver.solution import PersistentSolutionLoader
 
@@ -28,7 +28,7 @@ from pyomo.solver.solution import PersistentSolutionLoader
 logger = logging.getLogger(__name__)
 
 
-class CplexConfig(MIPInterfaceConfig):
+class CplexConfig(BranchAndBoundConfig):
     def __init__(
         self,
         description=None,
@@ -263,8 +263,8 @@ class Cplex(PersistentSolverBase):
 
         if config.time_limit is not None:
             cplex_model.parameters.timelimit.set(config.time_limit)
-        if config.mip_gap is not None:
-            cplex_model.parameters.mip.tolerances.mipgap.set(config.mip_gap)
+        if config.rel_gap is not None:
+            cplex_model.parameters.mip.tolerances.mipgap.set(config.rel_gap)
 
         timer.start('cplex solve')
         t0 = time.time()

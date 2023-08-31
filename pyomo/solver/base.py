@@ -130,7 +130,7 @@ class SolverBase(abc.ABC):
 
         Returns
         -------
-        InterfaceConfig
+        SolverConfig
             An object for configuring pyomo solve options such as the time limit.
             These options are mostly independent of the solver.
         """

@@ -21,7 +21,7 @@ from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.common.dependencies import numpy as np
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.solver.base import PersistentSolverBase
-from pyomo.solver.config import MIPInterfaceConfig
+from pyomo.solver.config import BranchAndBoundConfig
 from pyomo.solver.results import TerminationCondition, Results
 from pyomo.solver.solution import PersistentSolutionLoader
 from pyomo.solver.util import PersistentSolverUtils
@@ -35,7 +35,7 @@ class DegreeError(PyomoException):
     pass
 
 
-class HighsConfig(MIPInterfaceConfig):
+class HighsConfig(BranchAndBoundConfig):
     def __init__(
         self,
         description=None,
@@ -219,8 +219,8 @@ class Highs(PersistentSolverUtils, PersistentSolverBase):
 
                 if config.time_limit is not None:
                     self._solver_model.setOptionValue('time_limit', config.time_limit)
-                if config.mip_gap is not None:
-                    self._solver_model.setOptionValue('mip_rel_gap', config.mip_gap)
+                if config.rel_gap is not None:
+                    self._solver_model.setOptionValue('mip_rel_gap', config.rel_gap)
 
                 for key, option in options.items():
                     self._solver_model.setOptionValue(key, option)

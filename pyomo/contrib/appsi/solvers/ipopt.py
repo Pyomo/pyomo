@@ -27,7 +27,7 @@ from pyomo.common.errors import PyomoException
 from pyomo.contrib.appsi.cmodel import cmodel_available
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.solver.base import PersistentSolverBase
-from pyomo.solver.config import InterfaceConfig
+from pyomo.solver.config import SolverConfig
 from pyomo.solver.results import TerminationCondition, Results
 from pyomo.solver.solution import PersistentSolutionLoader
 
@@ -35,7 +35,7 @@ from pyomo.solver.solution import PersistentSolutionLoader
 logger = logging.getLogger(__name__)
 
 
-class IpoptConfig(InterfaceConfig):
+class IpoptConfig(SolverConfig):
     def __init__(
         self,
         description=None,

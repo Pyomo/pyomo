@@ -23,7 +23,7 @@ from pyomo.repn import generate_standard_repn
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.solver.base import PersistentSolverBase
-from pyomo.solver.config import MIPInterfaceConfig
+from pyomo.solver.config import BranchAndBoundConfig
 from pyomo.solver.results import TerminationCondition, Results
 from pyomo.solver.solution import PersistentSolutionLoader
 from pyomo.solver.util import PersistentSolverUtils
@@ -51,7 +51,7 @@ class DegreeError(PyomoException):
     pass
 
 
-class GurobiConfig(MIPInterfaceConfig):
+class GurobiConfig(BranchAndBoundConfig):
     def __init__(
         self,
         description=None,
@@ -364,8 +364,8 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
 
                 if config.time_limit is not None:
                     self._solver_model.setParam('TimeLimit', config.time_limit)
-                if config.mip_gap is not None:
-                    self._solver_model.setParam('MIPGap', config.mip_gap)
+                if config.rel_gap is not None:
+                    self._solver_model.setParam('MIPGap', config.rel_gap)
 
                 for key, option in options.items():
                     self._solver_model.setParam(key, option)

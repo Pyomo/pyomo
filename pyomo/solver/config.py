@@ -9,8 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from typing import Optional
-
 from pyomo.common.config import (
     ConfigDict,
     ConfigValue,
@@ -19,7 +17,7 @@ from pyomo.common.config import (
 )
 
 
-class InterfaceConfig(ConfigDict):
+class SolverConfig(ConfigDict):
     """
     Attributes
     ----------
@@ -57,18 +55,24 @@ class InterfaceConfig(ConfigDict):
             visibility=visibility,
         )
 
-        self.declare('tee', ConfigValue(domain=bool, default=False))
-        self.declare('load_solution', ConfigValue(domain=bool, default=True))
-        self.declare('symbolic_solver_labels', ConfigValue(domain=bool, default=False))
-        self.declare('report_timing', ConfigValue(domain=bool, default=False))
-        self.declare('threads', ConfigValue(domain=NonNegativeInt))
-
-        self.time_limit: Optional[float] = self.declare(
+        # TODO: Add in type-hinting everywhere
+        self.tee: bool = self.declare('tee', ConfigValue(domain=bool, default=False))
+        self.load_solution: bool = self.declare(
+            'load_solution', ConfigValue(domain=bool, default=True)
+        )
+        self.symbolic_solver_labels: bool = self.declare(
+            'symbolic_solver_labels', ConfigValue(domain=bool, default=False)
+        )
+        self.report_timing: bool = self.declare(
+            'report_timing', ConfigValue(domain=bool, default=False)
+        )
+        self.threads = self.declare('threads', ConfigValue(domain=NonNegativeInt))
+        self.time_limit: NonNegativeFloat = self.declare(
             'time_limit', ConfigValue(domain=NonNegativeFloat)
         )
 
 
-class MIPInterfaceConfig(InterfaceConfig):
+class BranchAndBoundConfig(SolverConfig):
     """
     Attributes
     ----------
@@ -95,11 +99,15 @@ class MIPInterfaceConfig(InterfaceConfig):
             visibility=visibility,
         )
 
-        self.declare('mip_gap', ConfigValue(domain=NonNegativeFloat))
-        self.declare('relax_integrality', ConfigValue(domain=bool))
-
-        self.mip_gap: Optional[float] = None
-        self.relax_integrality: bool = False
+        self.rel_gap: NonNegativeFloat = self.declare(
+            'rel_gap', ConfigValue(domain=NonNegativeFloat)
+        )
+        self.abs_gap: NonNegativeFloat = self.declare(
+            'abs_gap', ConfigValue(domain=NonNegativeFloat)
+        )
+        self.relax_integrality: bool = self.declare(
+            'relax_integrality', ConfigValue(domain=bool, default=False)
+        )
 
 
 class UpdateConfig(ConfigDict):

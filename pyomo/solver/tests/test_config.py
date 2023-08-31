@@ -10,12 +10,12 @@
 #  ___________________________________________________________________________
 
 from pyomo.common import unittest
-from pyomo.solver.config import InterfaceConfig, MIPInterfaceConfig
+from pyomo.solver.config import SolverConfig, BranchAndBoundConfig
 
 
-class TestInterfaceConfig(unittest.TestCase):
+class TestSolverConfig(unittest.TestCase):
     def test_interface_default_instantiation(self):
-        config = InterfaceConfig()
+        config = SolverConfig()
         self.assertEqual(config._description, None)
         self.assertEqual(config._visibility, 0)
         self.assertFalse(config.tee)
@@ -24,7 +24,7 @@ class TestInterfaceConfig(unittest.TestCase):
         self.assertFalse(config.report_timing)
 
     def test_interface_custom_instantiation(self):
-        config = InterfaceConfig(description="A description")
+        config = SolverConfig(description="A description")
         config.tee = True
         self.assertTrue(config.tee)
         self.assertEqual(config._description, "A description")
@@ -33,9 +33,9 @@ class TestInterfaceConfig(unittest.TestCase):
         self.assertEqual(config.time_limit, 1.0)
 
 
-class TestMIPInterfaceConfig(unittest.TestCase):
+class TestBranchAndBoundConfig(unittest.TestCase):
     def test_interface_default_instantiation(self):
-        config = MIPInterfaceConfig()
+        config = BranchAndBoundConfig()
         self.assertEqual(config._description, None)
         self.assertEqual(config._visibility, 0)
         self.assertFalse(config.tee)
@@ -46,12 +46,12 @@ class TestMIPInterfaceConfig(unittest.TestCase):
         self.assertFalse(config.relax_integrality)
 
     def test_interface_custom_instantiation(self):
-        config = MIPInterfaceConfig(description="A description")
+        config = BranchAndBoundConfig(description="A description")
         config.tee = True
         self.assertTrue(config.tee)
         self.assertEqual(config._description, "A description")
         self.assertFalse(config.time_limit)
         config.time_limit = 1.0
         self.assertEqual(config.time_limit, 1.0)
-        config.mip_gap = 2.5
-        self.assertEqual(config.mip_gap, 2.5)
+        config.rel_gap = 2.5
+        self.assertEqual(config.rel_gap, 2.5)
