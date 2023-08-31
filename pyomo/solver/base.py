@@ -331,7 +331,7 @@ class LegacySolverInterface:
         legacy_results.solver.termination_condition = legacy_termination_condition_map[
             results.termination_condition
         ]
-        legacy_soln.status = legacy_solution_status_map[results.termination_condition]
+        legacy_soln.status = legacy_solution_status_map[results.solution_status]
         legacy_results.solver.termination_message = str(results.termination_condition)
 
         obj = get_objective(model)
