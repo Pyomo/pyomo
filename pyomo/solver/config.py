@@ -61,7 +61,7 @@ class InterfaceConfig(ConfigDict):
         self.declare('load_solution', ConfigValue(domain=bool, default=True))
         self.declare('symbolic_solver_labels', ConfigValue(domain=bool, default=False))
         self.declare('report_timing', ConfigValue(domain=bool, default=False))
-        self.declare('threads', ConfigValue(domain=NonNegativeInt, default=None))
+        self.declare('threads', ConfigValue(domain=NonNegativeInt))
 
         self.time_limit: Optional[float] = self.declare(
             'time_limit', ConfigValue(domain=NonNegativeFloat)
