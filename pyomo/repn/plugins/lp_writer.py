@@ -328,7 +328,7 @@ class _LPWriter_impl(object):
                 for suffix in block.component_objects(
                     Suffix, active=True, descend_into=False, sort=sorter
                 ):
-                    if not (suffix.direction & Suffix.EXPORT):
+                    if not suffix.export_enabled() or not suffix:
                         continue
                     if suffix.name in suffixesByName:
                         suffixesByName[suffix.name].append(suffix)
