@@ -103,9 +103,7 @@ class BoundPretransformation(Transformation):
 
         transformation_blocks = {}
         bound_dict = ComponentMap()
-        self._update_bounds_from_constraints(
-            instance, bound_dict, None, global_bounds=True
-        )
+        self._update_bounds_from_constraints(instance, bound_dict, None, is_root=True)
         # [ESJ 05/04/23]: In the future, I should think about getting my little
         # trees from this tree, or asking for leaves rooted somewhere specific
         # or something. Because this transformation currently does the work of
@@ -145,7 +143,7 @@ class BoundPretransformation(Transformation):
         return v_bounds
 
     def _update_bounds_from_constraints(
-        self, disjunct, bound_dict, gdp_forest, global_bounds=False
+        self, disjunct, bound_dict, gdp_forest, is_root=False
     ):
         for constraint in disjunct.component_data_objects(
             Constraint,
@@ -193,10 +191,10 @@ class BoundPretransformation(Transformation):
                     v_bounds,
                     lower,
                     upper,
-                    disjunct if not global_bounds else None,
+                    disjunct if not is_root else None,
                     gdp_forest,
                 )
-                if not global_bounds:
+                if not is_root:
                     if disjunct in v_bounds['to_deactivate']:
                         v_bounds['to_deactivate'][disjunct].add(constraint)
                     else:
