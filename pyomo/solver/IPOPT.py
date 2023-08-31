@@ -101,6 +101,14 @@ class IPOPT(SolverBase):
         # Update configuration options, based on keywords passed to solve
         config = self.config(kwds.pop('options', {}))
         config.set_value(kwds)
+        # Get a copy of the environment to pass to the subprocess
+        env = os.environ.copy()
+        if 'PYOMO_AMPLFUNC' in env:
+            env['AMPLFUNC'] = "\n".join(
+                filter(
+                    None, (env.get('AMPLFUNC', None), env.get('PYOMO_AMPLFUNC', None))
+                )
+            )
         # Write the model to an nl file
         nl_writer = WriterFactory('nl')
         # Need to add check for symbolic_solver_labels; may need to generate up
@@ -112,7 +120,7 @@ class IPOPT(SolverBase):
             with open(os.path.join(dname, model.name + '.nl')) as nl_file, open(
                 os.path.join(dname, model.name + '.row')
             ) as row_file, open(os.path.join(dname, model.name + '.col')) as col_file:
-                info = nl_writer.write(
+                self.info = nl_writer.write(
                     model,
                     nl_file,
                     row_file,
@@ -120,4 +128,29 @@ class IPOPT(SolverBase):
                     symbolic_solver_labels=config.symbolic_solver_labels,
                 )
             # Call IPOPT - passing the files via the subprocess
-            subprocess.run()
+            cmd = [str(config.executable), nl_file, '-AMPL']
+            if config.time_limit is not None:
+                config.solver_options['max_cpu_time'] = config.time_limit
+            for key, val in config.solver_options.items():
+                cmd.append(key + '=' + val)
+            process = subprocess.run(cmd, timeout=config.time_limit,
+                                     env=env,
+                                     universal_newlines=True)
+
+            if process.returncode != 0:
+                if self.config.load_solution:
+                    raise RuntimeError(
+                        'A feasible solution was not found, so no solution can be loaded.'
+                        'Please set config.load_solution=False and check '
+                        'results.termination_condition and '
+                        'results.incumbent_objective before loading a solution.'
+                    )
+                results = Results()
+                results.termination_condition = TerminationCondition.error
+            else:
+                results = self._parse_solution()
+
+    def _parse_solution(self):
+        # STOPPING POINT: The suggestion here is to look at the original
+        # parser, which hasn't failed yet, and rework it to be ... better?
+        pass
