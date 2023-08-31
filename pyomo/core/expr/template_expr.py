@@ -25,6 +25,7 @@ from pyomo.core.expr.numeric_expr import (
     Numeric_NPV_Mixin,
     register_arg_type,
     ARG_TYPE,
+    _balanced_parens,
 )
 from pyomo.core.expr.numvalue import (
     NumericValue,
