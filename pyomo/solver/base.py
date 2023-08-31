@@ -12,6 +12,8 @@
 import abc
 import enum
 from typing import Sequence, Dict, Optional, Mapping, NoReturn, List, Tuple
+import os
+
 from pyomo.core.base.constraint import _GeneralConstraintData
 from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.base.param import _ParamData
@@ -21,7 +23,6 @@ from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.errors import ApplicationError
 from pyomo.opt.base import SolverFactory as LegacySolverFactory
 from pyomo.common.factory import Factory
-import os
 from pyomo.opt.results.results_ import SolverResults as LegacySolverResults
 from pyomo.opt.results.solution import Solution as LegacySolution
 from pyomo.core.kernel.objective import minimize
