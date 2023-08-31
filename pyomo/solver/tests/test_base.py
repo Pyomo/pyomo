@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.common import unittest
+from pyomo.common.config import ConfigDict
 from pyomo.solver import base
 import pyomo.environ as pe
 from pyomo.core.base.var import ScalarVar
@@ -130,20 +131,51 @@ class TestPersistentSolverBase(unittest.TestCase):
         self.assertEqual(self.instance.set_objective(None), None)
         self.assertEqual(self.instance.update_variables(None), None)
         self.assertEqual(self.instance.update_params(), None)
+
         with self.assertRaises(NotImplementedError):
             self.instance.get_duals()
+
         with self.assertRaises(NotImplementedError):
             self.instance.get_slacks()
+
         with self.assertRaises(NotImplementedError):
             self.instance.get_reduced_costs()
 
 
 class TestResults(unittest.TestCase):
+    def test_declared_items(self):
+        res = base.Results()
+        expected_declared = {
+            'extra_info',
+            'incumbent_objective',
+            'iteration_count',
+            'objective_bound',
+            'solution_loader',
+            'solution_status',
+            'solver_name',
+            'solver_version',
+            'termination_condition',
+            'termination_message',
+            'timing_info',
+        }
+        actual_declared = res._declared
+        self.assertEqual(expected_declared, actual_declared)
+
     def test_uninitialized(self):
         res = base.Results()
         self.assertIsNone(res.incumbent_objective)
         self.assertIsNone(res.objective_bound)
         self.assertEqual(res.termination_condition, base.TerminationCondition.unknown)
+        self.assertEqual(res.solution_status, base.SolutionStatus.noSolution)
+        self.assertIsNone(res.solver_name)
+        self.assertIsNone(res.solver_version)
+        self.assertIsNone(res.termination_message)
+        self.assertIsNone(res.iteration_count)
+        self.assertIsInstance(res.timing_info, ConfigDict)
+        self.assertIsInstance(res.extra_info, ConfigDict)
+        self.assertIsNone(res.timing_info.start_time)
+        self.assertIsNone(res.timing_info.wall_time)
+        self.assertIsNone(res.timing_info.solver_wall_time)
 
         with self.assertRaisesRegex(
             RuntimeError, '.*does not currently have a valid solution.*'
