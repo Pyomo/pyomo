@@ -18,18 +18,19 @@ from pyomo.environ import ConcreteModel, Block, Constraint, Var, Objective, Suff
 
 from pyomo.repn.plugins.lp_writer import LPWriter
 
+
 class TestLPv2(unittest.TestCase):
     def test_warn_export_suffixes(self):
         m = ConcreteModel()
         m.x = Var()
         m.obj = Objective(expr=m.x)
-        m.con = Constraint(expr=m.x>=2)
+        m.con = Constraint(expr=m.x >= 2)
         m.b = Block()
         m.ignored = Suffix(direction=Suffix.IMPORT)
         m.duals = Suffix(direction=Suffix.IMPORT_EXPORT)
         m.b.duals = Suffix(direction=Suffix.IMPORT_EXPORT)
         m.b.scaling = Suffix(direction=Suffix.EXPORT)
-        
+
         # Empty suffixes are ignored
         writer = LPWriter()
         with LoggingIntercept() as LOG:
@@ -44,13 +45,16 @@ class TestLPv2(unittest.TestCase):
         writer = LPWriter()
         with LoggingIntercept() as LOG:
             writer.write(m, StringIO())
-        self.assertEqual(LOG.getvalue(), """EXPORT Suffix 'duals' found on 1 block:
+        self.assertEqual(
+            LOG.getvalue(),
+            """EXPORT Suffix 'duals' found on 1 block:
     duals
 LP writer cannot export suffixes to LP files.  Skipping.
 EXPORT Suffix 'scaling' found on 1 block:
     b.scaling
 LP writer cannot export suffixes to LP files.  Skipping.
-""")
+""",
+        )
 
         # Counting works correctly
         m.b.duals[m.x] = 7
@@ -58,11 +62,14 @@ LP writer cannot export suffixes to LP files.  Skipping.
         writer = LPWriter()
         with LoggingIntercept() as LOG:
             writer.write(m, StringIO())
-        self.assertEqual(LOG.getvalue(), """EXPORT Suffix 'duals' found on 2 blocks:
+        self.assertEqual(
+            LOG.getvalue(),
+            """EXPORT Suffix 'duals' found on 2 blocks:
     duals
     b.duals
 LP writer cannot export suffixes to LP files.  Skipping.
 EXPORT Suffix 'scaling' found on 1 block:
     b.scaling
 LP writer cannot export suffixes to LP files.  Skipping.
-""")
+""",
+        )
