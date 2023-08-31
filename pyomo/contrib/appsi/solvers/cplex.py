@@ -58,7 +58,7 @@ class CplexConfig(MIPInterfaceConfig):
 class CplexResults(Results):
     def __init__(self, solver):
         super().__init__()
-        self.wallclock_time = None
+        self.timing_info.wall_time = None
         self.solution_loader = PersistentSolutionLoader(solver=solver)
 
 
@@ -278,7 +278,7 @@ class Cplex(PersistentSolverBase):
         cpxprob = self._cplex_model
 
         results = CplexResults(solver=self)
-        results.wallclock_time = solve_time
+        results.timing_info.wall_time = solve_time
         status = cpxprob.solution.get_status()
 
         if status in [1, 101, 102]:

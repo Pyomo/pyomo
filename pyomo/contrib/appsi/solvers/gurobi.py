@@ -93,7 +93,7 @@ class GurobiSolutionLoader(PersistentSolutionLoader):
 class GurobiResults(Results):
     def __init__(self, solver):
         super().__init__()
-        self.wallclock_time = None
+        self.timing_info.wall_time = None
         self.solution_loader = GurobiSolutionLoader(solver=solver)
 
 
@@ -864,7 +864,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         status = gprob.Status
 
         results = GurobiResults(self)
-        results.wallclock_time = gprob.Runtime
+        results.timing_info.wall_time = gprob.Runtime
 
         if status == grb.LOADED:  # problem is loaded, but no solution
             results.termination_condition = TerminationCondition.unknown

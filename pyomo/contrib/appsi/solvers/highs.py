@@ -587,7 +587,7 @@ class Highs(PersistentSolverUtils, PersistentSolverBase):
         status = highs.getModelStatus()
 
         results = HighsResults(self)
-        results.wallclock_time = highs.getRunTime()
+        results.timing_info.wall_time = highs.getRunTime()
 
         if status == highspy.HighsModelStatus.kNotset:
             results.termination_condition = TerminationCondition.unknown
