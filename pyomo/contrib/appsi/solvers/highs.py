@@ -63,7 +63,7 @@ class HighsConfig(MIPInterfaceConfig):
 class HighsResults(Results):
     def __init__(self, solver):
         super().__init__()
-        self.wallclock_time = None
+        self.timing_info.wall_time = None
         self.solution_loader = PersistentSolutionLoader(solver=solver)
 
 
