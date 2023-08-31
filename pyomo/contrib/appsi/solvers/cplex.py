@@ -19,8 +19,9 @@ from pyomo.common.config import ConfigValue, NonNegativeInt
 from pyomo.common.errors import PyomoException
 from pyomo.contrib.appsi.cmodel import cmodel_available
 from pyomo.core.staleflag import StaleFlagManager
-from pyomo.solver.base import TerminationCondition, Results, PersistentSolverBase
+from pyomo.solver.base import PersistentSolverBase
 from pyomo.solver.config import MIPInterfaceConfig
+from pyomo.solver.results import TerminationCondition, Results
 from pyomo.solver.solution import PersistentSolutionLoader
 
 
