@@ -20,10 +20,10 @@ class SolverFactoryClass(Factory):
             self._cls[name] = cls
             self._doc[name] = doc
 
-            class LegacySolver(LegacySolverInterface, cls):
-                pass
+            # class LegacySolver(LegacySolverInterface, cls):
+            #     pass
 
-            LegacySolverFactory.register(name, doc)(LegacySolver)
+            # LegacySolverFactory.register(name, doc)(LegacySolver)
 
             return cls
 
