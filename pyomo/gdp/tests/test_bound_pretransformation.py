@@ -1120,11 +1120,41 @@ class TestBoundPretransformation(unittest.TestCase):
         )
         m.disjunction = Disjunction(expr=[m.d1, m.d2])
 
+        # will be 4 if you solve
         m.obj = Objective(expr=m.c)
 
-        TransformationFactory('gdp.bound_pretransformation').apply_to(m)
-        TransformationFactory('gdp.bigm').apply_to(m)
-        from pyomo.environ import SolverFactory, value
+        bt = TransformationFactory('gdp.bound_pretransformation')
+        bt.apply_to(m)
 
-        SolverFactory('gurobi').solve(m, tee=True)
-        self.assertAlmostEqual(value(m.obj), 4)
+        cons = bt.get_transformed_constraints(m.x, m.disjunction)
+        self.assertEqual(len(cons), 0)
+        cons = bt.get_transformed_constraints(m.y, m.disjunction)
+        self.assertEqual(len(cons), 0)
+        cons = bt.get_transformed_constraints(m.c, m.disjunction)
+        self.assertEqual(len(cons), 2)
+        lb = cons[0]
+        assertExpressionsEqual(
+            self,
+            lb.expr,
+            4.0 * m.d1.binary_indicator_var + 5.0 * m.d2.binary_indicator_var <= m.c,
+        )
+        ub = cons[1]
+        assertExpressionsEqual(
+            self,
+            ub.expr,
+            4.0 * m.d1.binary_indicator_var + 5.0 * m.d2.binary_indicator_var >= m.c,
+        )
+
+        cons = bt.get_transformed_constraints(m.x, m.d1.disjunction)
+        self.assertEqual(len(cons), 0)
+        cons = bt.get_transformed_constraints(m.y, m.d1.disjunction)
+        self.assertEqual(len(cons), 0)
+        cons = bt.get_transformed_constraints(m.c, m.d1.disjunction)
+        self.assertEqual(len(cons), 0)
+
+        cons = bt.get_transformed_constraints(m.x, m.d1.disjunction2)
+        self.assertEqual(len(cons), 0)
+        cons = bt.get_transformed_constraints(m.y, m.d1.disjunction2)
+        self.assertEqual(len(cons), 0)
+        cons = bt.get_transformed_constraints(m.c, m.d1.disjunction2)
+        self.assertEqual(len(cons), 0)
