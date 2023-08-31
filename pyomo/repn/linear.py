@@ -629,7 +629,7 @@ def _before_monomial(visitor, child):
             return True, None
 
     # We want to check / update the var_map before processing "0"
-    # coefficients to that we are consistent with what gets added to the
+    # coefficients so that we are consistent with what gets added to the
     # var_map (e.g., 0*x*y: y is processed by _before_var and will
     # always be added, but x is processed here)
     _id = id(arg2)
