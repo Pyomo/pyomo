@@ -10,7 +10,8 @@
 #  ___________________________________________________________________________
 
 import enum
-from typing import Optional
+from typing import Optional, Tuple
+from datetime import datetime
 
 from pyomo.common.config import (
     ConfigDict,
@@ -24,6 +25,7 @@ from pyomo.opt.results.solver import (
     TerminationCondition as LegacyTerminationCondition,
     SolverStatus as LegacySolverStatus,
 )
+from pyomo.solver.solution import SolutionLoaderBase
 
 
 class TerminationCondition(enum.Enum):
@@ -127,14 +129,16 @@ class Results(ConfigDict):
             visibility=visibility,
         )
 
-        self.solution_loader = self.declare('solution_loader', ConfigValue())
-        self.termination_condition: In(TerminationCondition) = self.declare(
+        self.solution_loader: SolutionLoaderBase = self.declare(
+            'solution_loader', ConfigValue()
+        )
+        self.termination_condition: TerminationCondition = self.declare(
             'termination_condition',
             ConfigValue(
                 domain=In(TerminationCondition), default=TerminationCondition.unknown
             ),
         )
-        self.solution_status: In(SolutionStatus) = self.declare(
+        self.solution_status: SolutionStatus = self.declare(
             'solution_status',
             ConfigValue(domain=In(SolutionStatus), default=SolutionStatus.noSolution),
         )
@@ -147,20 +151,21 @@ class Results(ConfigDict):
         self.solver_name: Optional[str] = self.declare(
             'solver_name', ConfigValue(domain=str)
         )
-        self.solver_version: Optional[tuple] = self.declare(
+        self.solver_version: Optional[Tuple[int, ...]] = self.declare(
             'solver_version', ConfigValue(domain=tuple)
         )
-        self.iteration_count: NonNegativeInt = self.declare(
+        self.iteration_count: Optional[int] = self.declare(
             'iteration_count', ConfigValue(domain=NonNegativeInt)
         )
         self.timing_info: ConfigDict = self.declare('timing_info', ConfigDict())
-        self.timing_info.start_time = self.timing_info.declare(
+        # TODO: Implement type checking for datetime
+        self.timing_info.start_time: datetime = self.timing_info.declare(
             'start_time', ConfigValue()
         )
-        self.timing_info.wall_time: NonNegativeFloat = self.timing_info.declare(
+        self.timing_info.wall_time: Optional[float] = self.timing_info.declare(
             'wall_time', ConfigValue(domain=NonNegativeFloat)
         )
-        self.timing_info.solver_wall_time: NonNegativeFloat = self.timing_info.declare(
+        self.timing_info.solver_wall_time: Optional[float] = self.timing_info.declare(
             'solver_wall_time', ConfigValue(domain=NonNegativeFloat)
         )
         self.extra_info: ConfigDict = self.declare(

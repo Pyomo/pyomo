@@ -9,6 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from typing import Optional
+
 from pyomo.common.config import (
     ConfigDict,
     ConfigValue,
@@ -55,7 +57,6 @@ class SolverConfig(ConfigDict):
             visibility=visibility,
         )
 
-        # TODO: Add in type-hinting everywhere
         self.tee: bool = self.declare('tee', ConfigValue(domain=bool, default=False))
         self.load_solution: bool = self.declare(
             'load_solution', ConfigValue(domain=bool, default=True)
@@ -66,8 +67,10 @@ class SolverConfig(ConfigDict):
         self.report_timing: bool = self.declare(
             'report_timing', ConfigValue(domain=bool, default=False)
         )
-        self.threads = self.declare('threads', ConfigValue(domain=NonNegativeInt))
-        self.time_limit: NonNegativeFloat = self.declare(
+        self.threads: Optional[int] = self.declare(
+            'threads', ConfigValue(domain=NonNegativeInt)
+        )
+        self.time_limit: Optional[float] = self.declare(
             'time_limit', ConfigValue(domain=NonNegativeFloat)
         )
 
@@ -99,10 +102,10 @@ class BranchAndBoundConfig(SolverConfig):
             visibility=visibility,
         )
 
-        self.rel_gap: NonNegativeFloat = self.declare(
+        self.rel_gap: Optional[float] = self.declare(
             'rel_gap', ConfigValue(domain=NonNegativeFloat)
         )
-        self.abs_gap: NonNegativeFloat = self.declare(
+        self.abs_gap: Optional[float] = self.declare(
             'abs_gap', ConfigValue(domain=NonNegativeFloat)
         )
         self.relax_integrality: bool = self.declare(
@@ -143,7 +146,7 @@ class UpdateConfig(ConfigDict):
             visibility=visibility,
         )
 
-        self.declare(
+        self.check_for_new_or_removed_constraints: bool = self.declare(
             'check_for_new_or_removed_constraints',
             ConfigValue(
                 domain=bool,
@@ -155,7 +158,7 @@ class UpdateConfig(ConfigDict):
                 added to/removed from the model.""",
             ),
         )
-        self.declare(
+        self.check_for_new_or_removed_vars: bool = self.declare(
             'check_for_new_or_removed_vars',
             ConfigValue(
                 domain=bool,
@@ -167,7 +170,7 @@ class UpdateConfig(ConfigDict):
                 removed from the model.""",
             ),
         )
-        self.declare(
+        self.check_for_new_or_removed_params: bool = self.declare(
             'check_for_new_or_removed_params',
             ConfigValue(
                 domain=bool,
@@ -179,7 +182,7 @@ class UpdateConfig(ConfigDict):
                 removed from the model.""",
             ),
         )
-        self.declare(
+        self.check_for_new_objective: bool = self.declare(
             'check_for_new_objective',
             ConfigValue(
                 domain=bool,
@@ -190,7 +193,7 @@ class UpdateConfig(ConfigDict):
                 when you are certain objectives are not being added to / removed from the model.""",
             ),
         )
-        self.declare(
+        self.update_constraints: bool = self.declare(
             'update_constraints',
             ConfigValue(
                 domain=bool,
@@ -203,7 +206,7 @@ class UpdateConfig(ConfigDict):
                 are not being modified.""",
             ),
         )
-        self.declare(
+        self.update_vars: bool = self.declare(
             'update_vars',
             ConfigValue(
                 domain=bool,
@@ -215,7 +218,7 @@ class UpdateConfig(ConfigDict):
                 opt.update_variables() or when you are certain variables are not being modified.""",
             ),
         )
-        self.declare(
+        self.update_params: bool = self.declare(
             'update_params',
             ConfigValue(
                 domain=bool,
@@ -226,7 +229,7 @@ class UpdateConfig(ConfigDict):
                 opt.update_params() or when you are certain parameters are not being modified.""",
             ),
         )
-        self.declare(
+        self.update_named_expressions: bool = self.declare(
             'update_named_expressions',
             ConfigValue(
                 domain=bool,
@@ -238,7 +241,7 @@ class UpdateConfig(ConfigDict):
                 Expressions are not being modified.""",
             ),
         )
-        self.declare(
+        self.update_objective: bool = self.declare(
             'update_objective',
             ConfigValue(
                 domain=bool,
@@ -250,7 +253,7 @@ class UpdateConfig(ConfigDict):
                 certain objectives are not being modified.""",
             ),
         )
-        self.declare(
+        self.treat_fixed_vars_as_params: bool = self.declare(
             'treat_fixed_vars_as_params',
             ConfigValue(
                 domain=bool,
@@ -267,14 +270,3 @@ class UpdateConfig(ConfigDict):
                 updating the values of fixed variables is much faster this way.""",
             ),
         )
-
-        self.check_for_new_or_removed_constraints: bool = True
-        self.check_for_new_or_removed_vars: bool = True
-        self.check_for_new_or_removed_params: bool = True
-        self.check_for_new_objective: bool = True
-        self.update_constraints: bool = True
-        self.update_vars: bool = True
-        self.update_params: bool = True
-        self.update_named_expressions: bool = True
-        self.update_objective: bool = True
-        self.treat_fixed_vars_as_params: bool = True
