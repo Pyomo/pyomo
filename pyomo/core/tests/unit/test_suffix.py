@@ -29,6 +29,7 @@ from pyomo.core.base.suffix import (
     local_suffix_generator,
     active_suffix_generator,
     suffix_generator,
+    SuffixFinder,
 )
 from pyomo.environ import (
     ConcreteModel,
@@ -1565,6 +1566,61 @@ class TestSuffixPickleUsage(unittest.TestCase):
         inst = pickle.loads(pickle.dumps(model))
         self.assertEqual(inst.junk.get(model), None)
         self.assertEqual(inst.junk.get(inst), 1.0)
+
+
+class TestSuffixFinder(unittest.TestCase):
+    def test_suffix_finder(self):
+        # Build a dummy model
+        m = ConcreteModel()
+        m.v1 = Var()
+
+        m.b1 = Block()
+        m.b1.v2 = Var()
+
+        m.b1.b2 = Block()
+        m.b1.b2.v3 = Var([0])
+
+        _suffix_finder = SuffixFinder('suffix')
+
+        # Add Suffixes
+        m.suffix = Suffix(direction=Suffix.EXPORT)
+        # No suffix on b1 - make sure we can handle missing suffixes
+        m.b1.b2.suffix = Suffix(direction=Suffix.EXPORT)
+
+        # Check for no suffix value
+        assert _suffix_finder.find(m.b1.b2.v3[0]) == None
+
+        # Check finding default values
+        # Add a default at the top level
+        m.suffix[None] = 1
+        assert _suffix_finder.find(m.b1.b2.v3[0]) == 1
+
+        # Add a default suffix at a lower level
+        m.b1.b2.suffix[None] = 2
+        assert _suffix_finder.find(m.b1.b2.v3[0]) == 2
+
+        # Check for container at lowest level
+        m.b1.b2.suffix[m.b1.b2.v3] = 3
+        assert _suffix_finder.find(m.b1.b2.v3[0]) == 3
+
+        # Check for container at top level
+        m.suffix[m.b1.b2.v3] = 4
+        assert _suffix_finder.find(m.b1.b2.v3[0]) == 4
+
+        # Check for specific values at lowest level
+        m.b1.b2.suffix[m.b1.b2.v3[0]] = 5
+        assert _suffix_finder.find(m.b1.b2.v3[0]) == 5
+
+        # Check for specific values at top level
+        m.suffix[m.b1.b2.v3[0]] = 6
+        assert _suffix_finder.find(m.b1.b2.v3[0]) == 6
+
+        # Make sure we don't find default suffixes at lower levels
+        assert _suffix_finder.find(m.b1.v2) == 1
+
+        # Make sure we don't find specific suffixes at lower levels
+        m.b1.b2.suffix[m.v1] = 5
+        assert _suffix_finder.find(m.v1) == 1
 
 
 if __name__ == "__main__":
