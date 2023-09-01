@@ -101,18 +101,25 @@ def generate_simple_model():
 
 def generate_simple_model_2():
     import pyomo.environ as pe
-    
-    m = pe.ConcreteModel(name = 'basicFormulation')
+
+    m = pe.ConcreteModel(name='basicFormulation')
     m.x_dot = pe.Var()
     m.x_bar = pe.Var()
     m.x_star = pe.Var()
     m.x_hat = pe.Var()
     m.x_hat_1 = pe.Var()
     m.y_sub1_sub2_sub3 = pe.Var()
-    m.objective_1  = pe.Objective( expr = m.y_sub1_sub2_sub3  )
-    m.constraint_1 = pe.Constraint(expr = (m.x_dot + m.x_bar + m.x_star + m.x_hat + m.x_hat_1)**2 <= m.y_sub1_sub2_sub3 )
-    m.constraint_2 = pe.Constraint(expr = (m.x_dot + m.x_bar)**-(m.x_star + m.x_hat) <= m.y_sub1_sub2_sub3 )
-    m.constraint_3 = pe.Constraint(expr = -(m.x_dot + m.x_bar)+ -(m.x_star + m.x_hat) <= m.y_sub1_sub2_sub3 )
+    m.objective_1 = pe.Objective(expr=m.y_sub1_sub2_sub3)
+    m.constraint_1 = pe.Constraint(
+        expr=(m.x_dot + m.x_bar + m.x_star + m.x_hat + m.x_hat_1) ** 2
+        <= m.y_sub1_sub2_sub3
+    )
+    m.constraint_2 = pe.Constraint(
+        expr=(m.x_dot + m.x_bar) ** -(m.x_star + m.x_hat) <= m.y_sub1_sub2_sub3
+    )
+    m.constraint_3 = pe.Constraint(
+        expr=-(m.x_dot + m.x_bar) + -(m.x_star + m.x_hat) <= m.y_sub1_sub2_sub3
+    )
 
     return m
 
@@ -336,7 +343,6 @@ class TestLatexPrinter(unittest.TestCase):
         bstr += '    \label{basicFormulation} \n'
         bstr += '\\end{equation} \n'
         self.assertEqual(pstr, bstr)
-
 
 
 if __name__ == '__main__':

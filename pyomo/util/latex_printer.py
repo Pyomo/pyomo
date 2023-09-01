@@ -74,8 +74,9 @@ def handle_negation_node(node, arg1):
 
     if childPrecedence[0] > precedence:
         arg1 = ' \\left( ' + arg1 + ' \\right) '
-    
+
     return '-' + arg1
+
 
 def handle_product_node(node, arg1, arg2):
     childPrecedence = []
@@ -129,8 +130,8 @@ def handle_pow_node(node, arg1, arg2):
         arg1 = ' \\left( ' + arg1 + ' \\right) '
 
     if childPrecedence[1] > precedence:
-        arg2 = ' \\left( ' + arg2 + ' \\right) '    
-    
+        arg2 = ' \\left( ' + arg2 + ' \\right) '
+
     return "%s^{%s}" % (arg1, arg2)
 
 
@@ -166,7 +167,7 @@ def handle_var_node(node):
 
     prfx = ''
     psfx = ''
-    for i in range(0,len(splitName)):
+    for i in range(0, len(splitName)):
         se = splitName[i]
         if se != 0:
             if se == 'dot':
@@ -183,12 +184,11 @@ def handle_var_node(node):
         else:
             filteredName.append(se)
 
-
-    joinedName = prfx + filteredName[0] + psfx 
-    for i in range(1,len(filteredName)):
+    joinedName = prfx + filteredName[0] + psfx
+    for i in range(1, len(filteredName)):
         joinedName += '_{' + filteredName[i]
 
-    joinedName += '}'*(len(filteredName)-1)
+    joinedName += '}' * (len(filteredName) - 1)
 
     return joinedName
 
