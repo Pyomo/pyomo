@@ -29,6 +29,13 @@ Pyomo models can be printed to a LaTeX compatible format using the ``pyomo.util.
 
     ``display(Math(latex_printer(m))``
 
+The LaTeX printer will auto detect the following structures in variable names:
+
+    * ``_``: underscores will get rendered as subscripts, ie ``x_var`` is rendered as ``x_{var}``
+    * ``_dot``: will format as a ``\dot{}`` and remove from the underscore formatting.  Ex: ``x_dot_1`` becomes ``\dot{x}_1``
+    * ``_hat``: will format as a ``\hat{}`` and remove from the underscore formatting.  Ex: ``x_hat_1`` becomes ``\hat{x}_1``
+    * ``_bar``: will format as a ``\bar{}`` and remove from the underscore formatting.  Ex: ``x_bar_1`` becomes ``\bar{x}_1``
+
 
 Examples
 --------

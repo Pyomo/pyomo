@@ -178,9 +178,6 @@ def handle_var_node(node):
             elif se == 'bar':
                 prfx = '\\bar{'
                 psfx = '}'
-            elif se == 'star':
-                prfx = ''
-                psfx = '^{*}'
             else:
                 filteredName.append(se)
         else:
