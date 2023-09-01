@@ -1311,6 +1311,20 @@ class _MindtPyAlgorithm(object):
         update_solver_timelimit(
             self.feasibility_nlp_opt, config.nlp_solver, self.timing, config
         )
+        try:
+            TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(
+                self.fixed_nlp,
+                tmp=True,
+                ignore_infeasible=False,
+                tolerance=config.constraint_tolerance,
+            )
+        except InfeasibleConstraintException as e:
+            config.logger.error(
+                str(e) + '\nInfeasibility detected in deactivate_trivial_constraints.'
+            )
+            results = SolverResults()
+            results.solver.termination_condition = tc.infeasible
+            return self.fixed_nlp, results
         with SuppressInfeasibleWarning():
             try:
                 with time_code(self.timing, 'feasibility subproblem'):
@@ -1340,6 +1354,9 @@ class _MindtPyAlgorithm(object):
                         feas_soln.solutions.load_from(feas_soln)
         self.handle_feasibility_subproblem_tc(
             feas_soln.solver.termination_condition, MindtPy
+        )
+        TransformationFactory('contrib.deactivate_trivial_constraints').revert(
+            self.fixed_nlp
         )
         MindtPy.feas_opt.deactivate()
         for constr in MindtPy.nonlinear_constraint_list:
