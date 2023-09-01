@@ -99,6 +99,24 @@ def generate_simple_model():
     return m
 
 
+def generate_simple_model_2():
+    import pyomo.environ as pe
+    
+    m = pe.ConcreteModel(name = 'basicFormulation')
+    m.x_dot = pe.Var()
+    m.x_bar = pe.Var()
+    m.x_star = pe.Var()
+    m.x_hat = pe.Var()
+    m.x_hat_1 = pe.Var()
+    m.y_sub1_sub2_sub3 = pe.Var()
+    m.objective_1  = pe.Objective( expr = m.y_sub1_sub2_sub3  )
+    m.constraint_1 = pe.Constraint(expr = (m.x_dot + m.x_bar + m.x_star + m.x_hat + m.x_hat_1)**2 <= m.y_sub1_sub2_sub3 )
+    m.constraint_2 = pe.Constraint(expr = (m.x_dot + m.x_bar)**-(m.x_star + m.x_hat) <= m.y_sub1_sub2_sub3 )
+    m.constraint_3 = pe.Constraint(expr = -(m.x_dot + m.x_bar)+ -(m.x_star + m.x_hat) <= m.y_sub1_sub2_sub3 )
+
+    return m
+
+
 class TestLatexPrinter(unittest.TestCase):
     def test_latexPrinter_objective(self):
         m = generate_model()
@@ -300,6 +318,25 @@ class TestLatexPrinter(unittest.TestCase):
         bstr += '    &&& \sum_{k \in K} p_{k} = 1 \label{con:basicFormulation_constraint_8} \n'
         bstr += '\end{align} \n'
         self.assertEqual(pstr, bstr)
+
+    def test_latexPrinter_advancedVariables(self):
+        m = generate_simple_model_2()
+
+        pstr = latex_printer(m)
+        bstr = ''
+        bstr += '\\begin{equation} \n'
+        bstr += '    \\begin{aligned} \n'
+        bstr += '        & \\text{minimize} \n'
+        bstr += '        & & y_{sub1_{sub2_{sub3}}} \\\\ \n'
+        bstr += '        & \\text{subject to} \n'
+        bstr += '        & &  \left( \dot{x} + \\bar{x} + x^{*} + \hat{x} + \hat{x}_{1} \\right) ^{2} \leq y_{sub1_{sub2_{sub3}}} \\\\ \n'
+        bstr += '        &&&  \left( \dot{x} + \\bar{x} \\right) ^{ \left( - \left( x^{*} + \hat{x} \\right)  \\right) } \leq y_{sub1_{sub2_{sub3}}} \\\\ \n'
+        bstr += '        &&& - \left( \dot{x} + \\bar{x} \\right)  -  \left( x^{*} + \hat{x} \\right)  \leq y_{sub1_{sub2_{sub3}}} \n'
+        bstr += '    \\end{aligned} \n'
+        bstr += '    \label{basicFormulation} \n'
+        bstr += '\\end{equation} \n'
+        self.assertEqual(pstr, bstr)
+
 
 
 if __name__ == '__main__':

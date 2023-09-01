@@ -56,8 +56,26 @@ def templatize_passthrough(con):
 
 
 def handle_negation_node(node, arg1):
-    return '-' + arg1
+    childPrecedence = []
+    for a in node.args:
+        if hasattr(a, 'PRECEDENCE'):
+            if a.PRECEDENCE is None:
+                childPrecedence.append(-1)
+            else:
+                childPrecedence.append(a.PRECEDENCE)
+        else:
+            childPrecedence.append(-1)
 
+    if hasattr(node, 'PRECEDENCE'):
+        precedence = node.PRECEDENCE
+    else:
+        # Should never hit this
+        precedence = -1
+
+    if childPrecedence[0] > precedence:
+        arg1 = ' \\left( ' + arg1 + ' \\right) '
+    
+    return '-' + arg1
 
 def handle_product_node(node, arg1, arg2):
     childPrecedence = []
@@ -91,6 +109,28 @@ def handle_division_node(node, arg1, arg2):
 
 
 def handle_pow_node(node, arg1, arg2):
+    childPrecedence = []
+    for a in node.args:
+        if hasattr(a, 'PRECEDENCE'):
+            if a.PRECEDENCE is None:
+                childPrecedence.append(-1)
+            else:
+                childPrecedence.append(a.PRECEDENCE)
+        else:
+            childPrecedence.append(-1)
+
+    if hasattr(node, 'PRECEDENCE'):
+        precedence = node.PRECEDENCE
+    else:
+        # Should never hit this
+        precedence = -1
+
+    if childPrecedence[0] > precedence:
+        arg1 = ' \\left( ' + arg1 + ' \\right) '
+
+    if childPrecedence[1] > precedence:
+        arg2 = ' \\left( ' + arg2 + ' \\right) '    
+    
     return "%s^{%s}" % (arg1, arg2)
 
 
@@ -117,8 +157,43 @@ def handle_inequality_node(node, arg1, arg2):
     return arg1 + ' \leq ' + arg2
 
 
-def handle_scalarVar_node(node):
-    return node.name
+def handle_var_node(node):
+    name = node.name
+
+    splitName = name.split('_')
+
+    filteredName = []
+
+    prfx = ''
+    psfx = ''
+    for i in range(0,len(splitName)):
+        se = splitName[i]
+        if se != 0:
+            if se == 'dot':
+                prfx = '\dot{'
+                psfx = '}'
+            elif se == 'hat':
+                prfx = '\hat{'
+                psfx = '}'
+            elif se == 'bar':
+                prfx = '\\bar{'
+                psfx = '}'
+            elif se == 'star':
+                prfx = ''
+                psfx = '^{*}'
+            else:
+                filteredName.append(se)
+        else:
+            filteredName.append(se)
+
+
+    joinedName = prfx + filteredName[0] + psfx 
+    for i in range(1,len(filteredName)):
+        joinedName += '_{' + filteredName[i]
+
+    joinedName += '}'*(len(filteredName)-1)
+
+    return joinedName
 
 
 def handle_num_node(node):
@@ -187,10 +262,6 @@ def handle_functionID_node(node, *args):
     return ''
 
 
-def handle_indexedVar_node(node, *args):
-    return node.name
-
-
 def handle_indexTemplate_node(node, *args):
     return '__INDEX_PLACEHOLDER_8675309_GROUP_%s_%s__' % (node._group, node._set)
 
@@ -222,7 +293,7 @@ class _LatexVisitor(StreamBasedExpressionVisitor):
         super().__init__()
 
         self._operator_handles = {
-            ScalarVar: handle_scalarVar_node,
+            ScalarVar: handle_var_node,
             int: handle_num_node,
             float: handle_num_node,
             NegationExpression: handle_negation_node,
@@ -240,7 +311,7 @@ class _LatexVisitor(StreamBasedExpressionVisitor):
             kernel.expression.expression: handle_named_expression_node,
             kernel.expression.noclone: handle_named_expression_node,
             _GeneralObjectiveData: handle_named_expression_node,
-            _GeneralVarData: handle_scalarVar_node,
+            _GeneralVarData: handle_var_node,
             ScalarObjective: handle_named_expression_node,
             kernel.objective.objective: handle_named_expression_node,
             ExternalFunctionExpression: handle_external_function_node,
@@ -248,7 +319,7 @@ class _LatexVisitor(StreamBasedExpressionVisitor):
             LinearExpression: handle_sum_expression,
             SumExpression: handle_sum_expression,
             MonomialTermExpression: handle_monomialTermExpression_node,
-            IndexedVar: handle_indexedVar_node,
+            IndexedVar: handle_var_node,
             IndexTemplate: handle_indexTemplate_node,
             Numeric_GetItemExpression: handle_numericGIE_node,
             TemplateSumExpression: handle_templateSumExpression_node,

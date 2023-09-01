@@ -56,8 +56,7 @@ A Model
     >>> m.constraint_4 = pe.Constraint(expr = (1,m.x,2))
     >>> m.constraint_5 = pe.Constraint(expr = Expr_if(m.x<=1.0, m.z, m.y) <= 1.0)
 
-    >>> def blackbox(a, b):
-    >>>     return sin(a - b)
+    >>> def blackbox(a, b): return sin(a - b)
     >>> m.bb = ExternalFunction(blackbox)
     >>> m.constraint_6 = pe.Constraint(expr= m.x + m.bb(m.x,m.y) == 2 )
 
@@ -67,12 +66,10 @@ A Model
     >>> m.v = pe.Var(m.I)
     >>> m.w = pe.Var(m.J)
 
-    >>> def ruleMaker(m,j):
-    >>>     return (m.x + m.y) * sum( m.v[i] + m.u[i,j]**2 for i in m.I ) <= 0
+    >>> def ruleMaker(m,j): return (m.x + m.y) * sum( m.v[i] + m.u[i,j]**2 for i in m.I ) <= 0
     >>> m.constraint_7 = pe.Constraint(m.I, rule = ruleMaker)
 
-    >>> def ruleMaker(m):
-    >>>     return (m.x + m.y) * sum( m.w[j] for j in m.J )
+    >>> def ruleMaker(m): return (m.x + m.y) * sum( m.w[j] for j in m.J )
     >>> m.objective_2  = pe.Objective(rule = ruleMaker)
 
     >>> pstr = latex_printer(m)
