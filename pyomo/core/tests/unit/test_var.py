@@ -139,6 +139,77 @@ class TestVarData(unittest.TestCase):
         m.y[1].setub(3)
         self.assertEqual(m.y[1].ub, 3)
 
+    def test_lb(self):
+        m = ConcreteModel()
+        m.x = Var()
+        self.assertEqual(m.x.lb, None)
+        m.x.domain = NonNegativeReals
+        self.assertEqual(m.x.lb, 0)
+        m.x.lb = float('inf')
+        with self.assertRaisesRegex(
+            ValueError, r'invalid non-finite lower bound \(inf\)'
+        ):
+            m.x.lb
+        m.x.lb = float('nan')
+        with self.assertRaisesRegex(
+            ValueError, r'invalid non-finite lower bound \(nan\)'
+        ):
+            m.x.lb
+
+    def test_ub(self):
+        m = ConcreteModel()
+        m.x = Var()
+        self.assertEqual(m.x.ub, None)
+        m.x.domain = NonPositiveReals
+        self.assertEqual(m.x.ub, 0)
+        m.x.ub = float('-inf')
+        with self.assertRaisesRegex(
+            ValueError, r'invalid non-finite upper bound \(-inf\)'
+        ):
+            m.x.ub
+        m.x.ub = float('nan')
+        with self.assertRaisesRegex(
+            ValueError, r'invalid non-finite upper bound \(nan\)'
+        ):
+            m.x.ub
+
+    def test_bounds(self):
+        m = ConcreteModel()
+        m.x = Var()
+        lb, ub = m.x.bounds
+        self.assertEqual(lb, None)
+        self.assertEqual(ub, None)
+        m.x.domain = NonNegativeReals
+        lb, ub = m.x.bounds
+        self.assertEqual(lb, 0)
+        self.assertEqual(ub, None)
+        m.x.lb = float('inf')
+        with self.assertRaisesRegex(
+            ValueError, r'invalid non-finite lower bound \(inf\)'
+        ):
+            lb, ub = m.x.bounds
+        m.x.lb = float('nan')
+        with self.assertRaisesRegex(
+            ValueError, r'invalid non-finite lower bound \(nan\)'
+        ):
+            lb, ub = m.x.bounds
+
+        m.x.lb = None
+        m.x.domain = NonPositiveReals
+        lb, ub = m.x.bounds
+        self.assertEqual(lb, None)
+        self.assertEqual(ub, 0)
+        m.x.ub = float('-inf')
+        with self.assertRaisesRegex(
+            ValueError, r'invalid non-finite upper bound \(-inf\)'
+        ):
+            lb, ub = m.x.bounds
+        m.x.ub = float('nan')
+        with self.assertRaisesRegex(
+            ValueError, r'invalid non-finite upper bound \(nan\)'
+        ):
+            lb, ub = m.x.bounds
+
 
 class PyomoModel(unittest.TestCase):
     def setUp(self):

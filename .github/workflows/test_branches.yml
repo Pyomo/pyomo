@@ -133,18 +133,6 @@ jobs:
         echo "PYTHON_PACKAGES=$PYTHON_PACKAGES" \
             | tr '\n' ' ' | sed 's/ \+/ /g' >> $GITHUB_ENV
 
-    # Ideally we would cache the conda downloads; however, each cache is
-    # over 850MB, and with 5 python versions, that would consume 4.2 of
-    # the 5 GB GitHub allows.
-    #
-    #- name: Conda package cache
-    #  uses: actions/cache@v3
-    #  if: matrix.PYENV == 'conda'
-    #  id: conda-cache
-    #  with:
-    #    path: cache/conda
-    #    key: conda-${{env.CACHE_VER}}.0-${{runner.os}}-${{matrix.python}}
-
     #- name: Pip package cache
     #  uses: actions/cache@v3
     #  if: matrix.PYENV == 'pip'
@@ -222,10 +210,8 @@ jobs:
       if: matrix.PYENV == 'conda'
       uses: conda-incubator/setup-miniconda@v2
       with:
-        auto-update-conda: true
+        auto-update-conda: false
         python-version: ${{ matrix.python }}
-        channels: conda-forge,gurobi,ibmdecisionoptimization,fico-xpress
-        channel-priority: strict
 
     # GitHub actions is very fragile when it comes to setting up various
     # Python interpreters, expecially the setup-miniconda interface.
@@ -285,16 +271,22 @@ jobs:
       if: matrix.PYENV == 'conda'
       run: |
         # Set up environment
-        mkdir -p $GITHUB_WORKSPACE/cache/conda
         conda config --set always_yes yes
         conda config --set auto_update_conda false
-        conda config --prepend pkgs_dirs $GITHUB_WORKSPACE/cache/conda
+        conda config --remove channels defaults
+        conda config --append channels nodefaults
+        conda config --append channels conda-forge
         # Try to install mamba
-        conda install -q -y -n base conda-libmamba-solver || MAMBA_FAILED=1
+        conda install --update-deps -q -y -n base conda-libmamba-solver \
+            || MAMBA_FAILED=1
         if test -z "$MAMBA_FAILED"; then
             echo "*** Activating the mamba environment solver ***"
             conda config --set solver libmamba
         fi
+        # Add the rest of the channels
+        conda config --append channels gurobi
+        conda config --append channels ibmdecisionoptimization
+        conda config --append channels fico-xpress
         # Print environment info
         echo "*** CONDA environment: ***"
         conda info
@@ -328,7 +320,7 @@ jobs:
             fi
         done
         echo "*** Install Pyomo dependencies ***"
-        conda install -q -y $CONDA_DEPENDENCIES
+        conda install --update-deps -q -y $CONDA_DEPENDENCIES
         if test -z "${{matrix.slim}}"; then
             echo "*** Install CPLEX ***"
             conda install -q -y 'cplex>=12.10' docplex \

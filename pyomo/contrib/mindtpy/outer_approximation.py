@@ -54,9 +54,6 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
                 config.logger.info('Set regularization_mip_threads equal to threads')
             if config.single_tree:
                 config.add_cuts_at_incumbent = True
-                # if no method is activated by users, we will use use_bb_tree_incumbent by default
-                if not (config.reduce_level_coef or config.use_bb_tree_incumbent):
-                    config.use_bb_tree_incumbent = True
             if config.mip_regularization_solver is None:
                 config.mip_regularization_solver = config.mip_solver
         if config.single_tree:
@@ -138,18 +135,9 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
         # In ROA and RLP/NLP, since the distance calculation does not include these epigraph slack variables, they should not be added to the variable list. (update_var_con_list = False)
         # In the process_objective function, once the objective function has been reformulated as epigraph constraint, the variable/constraint/objective lists will not be updated only if the MINLP has a linear objective function and regularization is activated at the same time.
         # This is because the epigraph constraint is very "flat" for branching rules. The original objective function will be used for the main problem and epigraph reformulation will be used for the projection problem.
-        # TODO: The logic here is too complicated, can we simplify it?
         MindtPy = self.working_model.MindtPy_utils
         config = self.config
-        self.process_objective(
-            self.config,
-            move_objective=config.move_objective,
-            use_mcpp=config.use_mcpp,
-            update_var_con_list=config.add_regularization is None,
-            partition_nonlinear_terms=config.partition_obj_nonlinear_terms,
-            obj_handleable_polynomial_degree=self.mip_objective_polynomial_degree,
-            constr_handleable_polynomial_degree=self.mip_constraint_polynomial_degree,
-        )
+        self.process_objective(update_var_con_list=config.add_regularization is None)
         # The epigraph constraint is very "flat" for branching rules.
         # If ROA/RLP-NLP is activated and the original objective function is linear, we will use the original objective for the main mip.
         if (

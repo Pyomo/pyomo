@@ -14,12 +14,8 @@ from pyomo.environ import (
     Binary,
     ConcreteModel,
     Constraint,
-    Reals,
     Objective,
-    Param,
-    RangeSet,
     Var,
-    exp,
     minimize,
     log,
 )
@@ -33,7 +29,7 @@ class ConstraintQualificationExample(ConcreteModel):
         super(ConstraintQualificationExample, self).__init__(*args, **kwargs)
         m = self
         m.x = Var(bounds=(1.0, 10.0), initialize=5.0)
-        m.y = Var(within=Binary)
+        m.y = Var(within=Binary, initialize=1.0)
         m.c1 = Constraint(expr=(m.x - 3.0) ** 2 <= 50.0 * (1 - m.y))
         m.c2 = Constraint(expr=m.x * log(m.x) + 5.0 <= 50.0 * (m.y))
         m.objective = Objective(expr=m.x, sense=minimize)
