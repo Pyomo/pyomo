@@ -17,8 +17,7 @@ import pyomo.contrib.alternative_solutions.aos_utils as aos_utils
 import pyomo.contrib.alternative_solutions.var_utils as var_utils
 
 def obbt_analysis(model, variables='all', rel_opt_gap=None, abs_gap=None, 
-                  refine_bounds=False, warmstart=False, already_solved=False, 
-                  solver='gurobi', solver_options={}, 
+                  refine_bounds=True, solver='gurobi', solver_options={}, 
                   use_persistent_solver=False, tee=False):
     '''
     Calculates the bounds on each variable by solving a series of min and max 
@@ -45,20 +44,14 @@ def obbt_analysis(model, variables='all', rel_opt_gap=None, abs_gap=None,
         refine_bounds : boolean
             Boolean indicating that new constraints should be added to the 
             model at each iteration to tighten the bounds for varaibles.
-        warmstart : boolean
-            Boolean indicating that previous solutions should be passed to the
-            solver as warmstart solutions.
-        already_solved : boolean
-            Indicates that the model has already been solved and that the 
-            variable bound search can start from the current solution.
         solver : string
             The solver to be used.
         solver_options : dict
             Solver option-value pairs to be passed to the solver.
         use_persistent_solver : boolean
             Boolean indicating if the the APPSI persistent solver interface
-            should be used. Currently, only supported Gurobi is supported for
-            variable bound analysis with the persistent solver.
+            should be used. Currently, only  Gurobi is supported for variable
+            bound analysis with the persistent solver.
         tee : boolean
             Boolean indicating that the solver output should be displayed.
             
@@ -69,10 +62,7 @@ def obbt_analysis(model, variables='all', rel_opt_gap=None, abs_gap=None,
             {variable: (lower_bound, upper_bound)}
     '''
 
-    aos_utils._check_concrete_model(model)
     assert isinstance(refine_bounds, bool), 'refine_bounds must be a Boolean'
-    assert isinstance(warmstart, bool), 'warmstart must be a Boolean'
-    assert isinstance(already_solved, bool), 'already_solved must be a Boolean'
     assert isinstance(use_persistent_solver, bool), \
         'use_persistent_solver must be a Boolean'
     assert isinstance(tee, bool), 'tee must be a Boolean'
@@ -85,20 +75,18 @@ def obbt_analysis(model, variables='all', rel_opt_gap=None, abs_gap=None,
                                                   include_fixed=False)
     
     orig_objective = aos_utils._get_active_objective(model)
-    aos_block = aos_utils._add_aos_block(model)
-    new_constraint = False
+    aos_block = aos_utils._add_aos_block(model, name='_obbt_block')
 
     opt = aos_utils._get_solver(solver, solver_options, use_persistent_solver)
 
-    if not already_solved:
-        results = opt.solve(model, tee=tee)
-        status = results.solver.status
-        condition = results.solver.termination_condition
-        assert (status == SolverStatus.ok and 
-            condition == TerminationCondition.optimal), \
-            ('Model cannot be solved, SolverStatus = {}, '
-             'TerminationCondition = {}').format(status.value, 
-                                                 condition.value)
+    results = opt.solve(model, tee=tee)
+    status = results.solver.status
+    condition = results.solver.termination_condition
+    assert (status == SolverStatus.ok and 
+        condition == TerminationCondition.optimal), \
+        ('Model cannot be solved, SolverStatus = {}, '
+         'TerminationCondition = {}').format(status.value, 
+                                             condition.value)
         
     orig_objective_value = pe.value(orig_objective)
     aos_utils._add_objective_constraint(aos_block, orig_objective, 

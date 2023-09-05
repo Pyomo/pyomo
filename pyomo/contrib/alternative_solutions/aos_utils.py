@@ -39,7 +39,7 @@ def _get_active_objective(model):
     Finds and returns the active objective function for a model. Currently 
     assume that there is exactly one active objective.
     '''
-    active_objs = [o for o in model.component_data_objects(pe.Objective, 
+    active_objs = [o for o in model.component_data_objects(cytpe=pe.Objective, 
                                                            active=True)]
     assert len(active_objs) == 1, \
         "Model has {} active objective functions, exactly one is required.".\
