@@ -361,7 +361,7 @@ class OptSolver(object):
         # multiple methods.
         self._smap_id = None
 
-        # These are ephimeral options that can be set by the user during
+        # These are ephemeral options that can be set by the user during
         # the call to solve, but will be reset to defaults if not given
         self._load_solutions = True
         self._select_index = 0
