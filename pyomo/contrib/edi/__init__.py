@@ -41,4 +41,3 @@ try:
 except:
     pass
     # in this case, the dependencies are not installed, nothing will work
-
