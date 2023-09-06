@@ -1,4 +1,16 @@
-import pyomo.environ as pe
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2023
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
+import math
+import pyomo.environ as pyo
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.core.expr import (
     NegationExpression,
@@ -26,12 +38,13 @@ from pyomo.core.expr.template_expr import (
     GetAttrExpression,
     TemplateSumExpression,
     IndexTemplate,
+    Numeric_GetItemExpression,
+    templatize_constraint,
+    resolve_template,
+    templatize_rule,
 )
-from pyomo.core.expr.template_expr import Numeric_GetItemExpression
-from pyomo.core.expr.template_expr import templatize_constraint, resolve_template
 from pyomo.core.base.var import ScalarVar, _GeneralVarData, IndexedVar
 from pyomo.core.base.constraint import ScalarConstraint, IndexedConstraint
-from pyomo.core.expr.template_expr import templatize_rule
 
 from pyomo.core.base.external import _PythonCallbackFunctionID
 
@@ -43,7 +56,83 @@ _CONSTANT = ExprType.CONSTANT
 _MONOMIAL = ExprType.MONOMIAL
 _GENERAL = ExprType.GENERAL
 
-# see:  https://github.com/Pyomo/pyomo/blob/main/pyomo/repn/plugins/nl_writer.py
+
+def decoder(num, base):
+    if isinstance(base, float):
+        if not base.is_integer():
+            raise ValueError('Invalid base')
+        else:
+            base = int(base)
+
+    if base <= 1:
+        raise ValueError('Invalid base')
+
+    if num == 0:
+        numDigs = 1
+    else:
+        numDigs = math.ceil(math.log(num, base))
+        if math.log(num, base).is_integer():
+            numDigs += 1
+    digs = [0.0 for i in range(0, numDigs)]
+    rem = num
+    for i in range(0, numDigs):
+        ix = numDigs - i - 1
+        dg = math.floor(rem / base**ix)
+        rem = rem % base**ix
+        digs[i] = dg
+    return digs
+
+
+def indexCorrector(ixs, base):
+    for i in range(0, len(ixs)):
+        ix = ixs[i]
+        if i + 1 < len(ixs):
+            if ixs[i + 1] == 0:
+                ixs[i] -= 1
+                ixs[i + 1] = base
+                if ixs[i] == 0:
+                    ixs = indexCorrector(ixs, base)
+    return ixs
+
+
+def alphabetStringGenerator(num):
+    alphabet = [
+        '.',
+        'a',
+        'b',
+        'c',
+        'd',
+        'e',
+        'f',
+        'g',
+        'h',
+        'i',
+        'j',
+        'k',
+        'l',
+        'm',
+        'n',
+        'o',
+        'p',
+        'q',
+        'r',
+        's',
+        't',
+        'u',
+        'v',
+        'w',
+        'x',
+        'y',
+        'z',
+    ]
+    ixs = decoder(num + 1, 26)
+    pstr = ''
+    ixs = indexCorrector(ixs, 26)
+    for i in range(0, len(ixs)):
+        ix = ixs[i]
+        pstr += alphabet[ix]
+        pstr = pstr.replace('.', '')
+    return pstr
 
 
 def templatize_expression(expr):
@@ -55,7 +144,7 @@ def templatize_passthrough(con):
     return (con, [])
 
 
-def handle_negation_node(node, arg1):
+def precedenceChecker(node, arg1, arg2=None):
     childPrecedence = []
     for a in node.args:
         if hasattr(a, 'PRECEDENCE'):
@@ -70,76 +159,44 @@ def handle_negation_node(node, arg1):
         precedence = node.PRECEDENCE
     else:
         # Should never hit this
-        precedence = -1
+        raise RuntimeError(
+            'This error should never be thrown, node does not have a precedence.  Report to developers'
+        )
 
     if childPrecedence[0] > precedence:
         arg1 = ' \\left( ' + arg1 + ' \\right) '
 
+    if arg2 is not None:
+        if childPrecedence[1] > precedence:
+            arg2 = ' \\left( ' + arg2 + ' \\right) '
+
+    return arg1, arg2
+
+
+def handle_negation_node(visitor, node, arg1):
+    arg1, tsh = precedenceChecker(node, arg1)
     return '-' + arg1
 
 
-def handle_product_node(node, arg1, arg2):
-    childPrecedence = []
-    for a in node.args:
-        if hasattr(a, 'PRECEDENCE'):
-            if a.PRECEDENCE is None:
-                childPrecedence.append(-1)
-            else:
-                childPrecedence.append(a.PRECEDENCE)
-        else:
-            childPrecedence.append(-1)
-
-    if hasattr(node, 'PRECEDENCE'):
-        precedence = node.PRECEDENCE
-    else:
-        # Should never hit this
-        precedence = -1
-
-    if childPrecedence[0] > precedence:
-        arg1 = ' \\left( ' + arg1 + ' \\right) '
-
-    if childPrecedence[1] > precedence:
-        arg2 = ' \\left( ' + arg2 + ' \\right) '
-
-    return ''.join([arg1, arg2])
+def handle_product_node(visitor, node, arg1, arg2):
+    arg1, arg2 = precedenceChecker(node, arg1, arg2)
+    return ' '.join([arg1, arg2])
 
 
-def handle_division_node(node, arg1, arg2):
-    # return '/'.join([arg1,arg2])
-    return '\\frac{%s}{%s}' % (arg1, arg2)
-
-
-def handle_pow_node(node, arg1, arg2):
-    childPrecedence = []
-    for a in node.args:
-        if hasattr(a, 'PRECEDENCE'):
-            if a.PRECEDENCE is None:
-                childPrecedence.append(-1)
-            else:
-                childPrecedence.append(a.PRECEDENCE)
-        else:
-            childPrecedence.append(-1)
-
-    if hasattr(node, 'PRECEDENCE'):
-        precedence = node.PRECEDENCE
-    else:
-        # Should never hit this
-        precedence = -1
-
-    if childPrecedence[0] > precedence:
-        arg1 = ' \\left( ' + arg1 + ' \\right) '
-
-    if childPrecedence[1] > precedence:
-        arg2 = ' \\left( ' + arg2 + ' \\right) '
-
+def handle_pow_node(visitor, node, arg1, arg2):
+    arg1, arg2 = precedenceChecker(node, arg1, arg2)
     return "%s^{%s}" % (arg1, arg2)
 
 
-def handle_abs_node(node, arg1):
+def handle_division_node(visitor, node, arg1, arg2):
+    return '\\frac{%s}{%s}' % (arg1, arg2)
+
+
+def handle_abs_node(visitor, node, arg1):
     return ' \\left| ' + arg1 + ' \\right| '
 
 
-def handle_unary_node(node, arg1):
+def handle_unary_node(visitor, node, arg1):
     fcn_handle = node.getname()
     if fcn_handle == 'log10':
         fcn_handle = 'log_{10}'
@@ -150,57 +207,87 @@ def handle_unary_node(node, arg1):
         return '\\' + fcn_handle + ' \\left( ' + arg1 + ' \\right) '
 
 
-def handle_equality_node(node, arg1, arg2):
+def handle_equality_node(visitor, node, arg1, arg2):
     return arg1 + ' = ' + arg2
 
 
-def handle_inequality_node(node, arg1, arg2):
+def handle_inequality_node(visitor, node, arg1, arg2):
     return arg1 + ' \leq ' + arg2
 
 
-def handle_var_node(node):
+def handle_var_node(visitor, node):
+    # if self.disableSmartVariables:
+    # if self.xOnlyMode:
+    overwriteDict = visitor.overwriteDict
+    # varList = visitor.variableList
+
     name = node.name
 
-    splitName = name.split('_')
+    declaredIndex = None
+    if '[' in name:
+        openBracketIndex = name.index('[')
+        closeBracketIndex = name.index(']')
+        if closeBracketIndex != len(name) - 1:
+            # I dont think this can happen, but possibly through a raw string and a user
+            # who is really hacking the variable name setter
+            raise ValueError(
+                'Variable %s has a close brace not at the end of the string' % (name)
+            )
+        declaredIndex = name[openBracketIndex + 1 : closeBracketIndex]
+        name = name[0:openBracketIndex]
 
-    filteredName = []
+    if name in overwriteDict.keys():
+        name = overwriteDict[name]
 
-    prfx = ''
-    psfx = ''
-    for i in range(0, len(splitName)):
-        se = splitName[i]
-        if se != 0:
-            if se == 'dot':
-                prfx = '\dot{'
-                psfx = '}'
-            elif se == 'hat':
-                prfx = '\hat{'
-                psfx = '}'
-            elif se == 'bar':
-                prfx = '\\bar{'
-                psfx = '}'
+    if not visitor.disableSmartVariables:
+        splitName = name.split('_')
+        if declaredIndex is not None:
+            splitName.append(declaredIndex)
+
+        filteredName = []
+
+        prfx = ''
+        psfx = ''
+        for i in range(0, len(splitName)):
+            se = splitName[i]
+            if se != 0:
+                if se == 'dot':
+                    prfx = '\dot{'
+                    psfx = '}'
+                elif se == 'hat':
+                    prfx = '\hat{'
+                    psfx = '}'
+                elif se == 'bar':
+                    prfx = '\\bar{'
+                    psfx = '}'
+                else:
+                    filteredName.append(se)
             else:
                 filteredName.append(se)
+
+        joinedName = prfx + filteredName[0] + psfx
+        for i in range(1, len(filteredName)):
+            joinedName += '_{' + filteredName[i]
+
+        joinedName += '}' * (len(filteredName) - 1)
+
+    else:
+        if declaredIndex is not None:
+            joinedName = name + '[' + declaredIndex + ']'
         else:
-            filteredName.append(se)
-
-    joinedName = prfx + filteredName[0] + psfx
-    for i in range(1, len(filteredName)):
-        joinedName += '_{' + filteredName[i]
-
-    joinedName += '}' * (len(filteredName) - 1)
+            joinedName = name
 
     return joinedName
 
 
-def handle_num_node(node):
+def handle_num_node(visitor, node):
     if isinstance(node, float):
         if node.is_integer():
             node = int(node)
     return str(node)
 
 
-def handle_sum_expression(node, *args):
+def handle_sumExpression_node(visitor, node, *args):
     rstr = args[0]
     for i in range(1, len(args)):
         if args[i][0] == '-':
@@ -210,24 +297,26 @@ def handle_sum_expression(node, *args):
     return rstr
 
 
-def handle_monomialTermExpression_node(node, arg1, arg2):
+def handle_monomialTermExpression_node(visitor, node, arg1, arg2):
     if arg1 == '1':
         return arg2
     elif arg1 == '-1':
         return '-' + arg2
     else:
-        return arg1 + arg2
+        return arg1 + ' ' + arg2
 
 
-def handle_named_expression_node(node, arg1):
+def handle_named_expression_node(visitor, node, arg1):
+    # needed to preserve consistencency with the exitNode function call
+    # prevents the need to type check in the exitNode function
     return arg1
 
 
-def handle_ranged_inequality_node(node, arg1, arg2, arg3):
+def handle_ranged_inequality_node(visitor, node, arg1, arg2, arg3):
     return arg1 + ' \\leq ' + arg2 + ' \\leq ' + arg3
 
 
-def handle_exprif_node(node, arg1, arg2, arg3):
+def handle_exprif_node(visitor, node, arg1, arg2, arg3):
     return 'f_{\\text{exprIf}}(' + arg1 + ',' + arg2 + ',' + arg3 + ')'
 
     ## Raises not implemented error
@@ -242,7 +331,7 @@ def handle_exprif_node(node, arg1, arg2, arg3):
     # return pstr
 
 
-def handle_external_function_node(node, *args):
+def handle_external_function_node(visitor, node, *args):
     pstr = ''
     pstr += 'f('
     for i in range(0, len(args) - 1):
@@ -254,28 +343,41 @@ def handle_external_function_node(node, *args):
     return pstr
 
 
-def handle_functionID_node(node, *args):
+def handle_functionID_node(visitor, node, *args):
     # seems to just be a placeholder empty wrapper object
     return ''
 
 
-def handle_indexTemplate_node(node, *args):
+def handle_indexTemplate_node(visitor, node, *args):
     return '__INDEX_PLACEHOLDER_8675309_GROUP_%s_%s__' % (node._group, node._set)
 
 
-def handle_numericGIE_node(node, *args):
+def handle_numericGIE_node(visitor, node, *args):
+    addFinalBrace = False
+    if '_' in args[0]:
+        splitName = args[0].split('_')
+        joinedName = splitName[0]
+        for i in range(1, len(splitName)):
+            joinedName += '_{' + splitName[i]
+        joinedName += '}' * (len(splitName) - 2)
+        addFinalBrace = True
+    else:
+        joinedName = args[0]
+
     pstr = ''
-    pstr += args[0] + '_{'
+    pstr += joinedName + '_{'
     for i in range(1, len(args)):
         pstr += args[i]
         if i <= len(args) - 2:
             pstr += ','
         else:
             pstr += '}'
+    if addFinalBrace:
+        pstr += '}'
     return pstr
 
 
-def handle_templateSumExpression_node(node, *args):
+def handle_templateSumExpression_node(visitor, node, *args):
     pstr = ''
     pstr += '\\sum_{%s} %s' % (
         '__SET_PLACEHOLDER_8675309_GROUP_%s_%s__'
@@ -288,6 +390,9 @@ def handle_templateSumExpression_node(node, *args):
 class _LatexVisitor(StreamBasedExpressionVisitor):
     def __init__(self):
         super().__init__()
+        self.disableSmartVariables = False
+        self.xOnlyMode = False
+        self.overwriteDict = {}
 
         self._operator_handles = {
             ScalarVar: handle_var_node,
@@ -313,8 +418,8 @@ class _LatexVisitor(StreamBasedExpressionVisitor):
             kernel.objective.objective: handle_named_expression_node,
             ExternalFunctionExpression: handle_external_function_node,
             _PythonCallbackFunctionID: handle_functionID_node,
-            LinearExpression: handle_sum_expression,
-            SumExpression: handle_sum_expression,
+            LinearExpression: handle_sumExpression_node,
+            SumExpression: handle_sumExpression_node,
             MonomialTermExpression: handle_monomialTermExpression_node,
             IndexedVar: handle_var_node,
             IndexTemplate: handle_indexTemplate_node,
@@ -323,79 +428,208 @@ class _LatexVisitor(StreamBasedExpressionVisitor):
         }
 
     def exitNode(self, node, data):
-        return self._operator_handles[node.__class__](node, *data)
+        return self._operator_handles[node.__class__](self, node, *data)
+
+
+def number_to_letterStack(num):
+    alphabet = [
+        'a',
+        'b',
+        'c',
+        'd',
+        'e',
+        'f',
+        'g',
+        'h',
+        'i',
+        'j',
+        'k',
+        'l',
+        'm',
+        'n',
+        'o',
+        'p',
+        'q',
+        'r',
+        's',
+        't',
+        'u',
+        'v',
+        'w',
+        'x',
+        'y',
+        'z',
+    ]
 
 
 def latex_printer(
-    pyomoElement, filename=None, useAlignEnvironment=False, splitContinuousSets=False
+    pyomoElement,
+    filename=None,
+    useAlignEnvironment=False,
+    splitContinuousSets=False,
+    disableSmartVariables=False,
+    xOnlyMode=0,
+    overwriteDict={},
 ):
-    '''
-    This function produces a string that can be rendered as LaTeX
+    """This function produces a string that can be rendered as LaTeX
 
-    pyomoElement: The thing to be printed to LaTeX.  Accepts Blocks (including models), Constraints, and Expressions
+    As described, this function produces a string that can be rendered as LaTeX
 
-    filename: An optional file to write the LaTeX to.  Default of None produces no file
+    Parameters
+    ----------
+    pyomoElement: _BlockData or Model or Constraint or Expression or Objective
+        The thing to be printed to LaTeX.  Accepts Blocks (including models), Constraints, and Expressions
 
-    useAlignEnvironment: Default behavior uses equation/aligned and produces a single LaTeX Equation (ie, ==False).
+    filename: str
+        An optional file to write the LaTeX to.  Default of None produces no file
+
+    useAlignEnvironment: bool
+        Default behavior uses equation/aligned and produces a single LaTeX Equation (ie, ==False).
         Setting this input to True will instead use the align environment, and produce equation numbers for each
         objective and constraint.  Each objective and constraint will be labeled with its name in the pyomo model.
         This flag is only relevant for Models and Blocks.
 
-    splitContinuous: Default behavior has all sum indices be over "i \in I" or similar.  Setting this flag to
+    splitContinuous: bool
+        Default behavior has all sum indices be over "i \in I" or similar.  Setting this flag to
         True makes the sums go from: \sum_{i=1}^{5} if the set I is continuous and has 5 elements
 
-    '''
+    Returns
+    -------
+    str
+        A LaTeX string of the pyomoElement
+
+    """
 
     # Various setup things
+
+    # is Single implies Objective, constraint, or expression
+    # these objects require a slight modification of behavior
+    # isSingle==False means a model or block
     isSingle = False
-    if not isinstance(pyomoElement, _BlockData):
-        if isinstance(pyomoElement, pe.Objective):
-            objectives = [pyomoElement]
-            constraints = []
-            expressions = []
-            templatize_fcn = templatize_constraint
 
-        if isinstance(pyomoElement, pe.Constraint):
-            objectives = []
-            constraints = [pyomoElement]
-            expressions = []
-            templatize_fcn = templatize_constraint
-
-        if isinstance(pyomoElement, pe.Expression):
-            objectives = []
-            constraints = []
-            expressions = [pyomoElement]
-            templatize_fcn = templatize_expression
-
-        if isinstance(pyomoElement, ExpressionBase):
-            objectives = []
-            constraints = []
-            expressions = [pyomoElement]
-            templatize_fcn = templatize_passthrough
-
+    if isinstance(pyomoElement, pyo.Objective):
+        objectives = [pyomoElement]
+        constraints = []
+        expressions = []
+        templatize_fcn = templatize_constraint
         useAlignEnvironment = False
         isSingle = True
-    else:
+
+    elif isinstance(pyomoElement, pyo.Constraint):
+        objectives = []
+        constraints = [pyomoElement]
+        expressions = []
+        templatize_fcn = templatize_constraint
+        useAlignEnvironment = False
+        isSingle = True
+
+    elif isinstance(pyomoElement, pyo.Expression):
+        objectives = []
+        constraints = []
+        expressions = [pyomoElement]
+        templatize_fcn = templatize_expression
+        useAlignEnvironment = False
+        isSingle = True
+
+    elif isinstance(pyomoElement, ExpressionBase):
+        objectives = []
+        constraints = []
+        expressions = [pyomoElement]
+        templatize_fcn = templatize_passthrough
+        useAlignEnvironment = False
+        isSingle = True
+
+    elif isinstance(pyomoElement, _BlockData):
         objectives = [
             obj
             for obj in pyomoElement.component_data_objects(
-                pe.Objective, descend_into=True, active=True
+                pyo.Objective, descend_into=True, active=True
             )
         ]
         constraints = [
             con
             for con in pyomoElement.component_objects(
-                pe.Constraint, descend_into=True, active=True
+                pyo.Constraint, descend_into=True, active=True
             )
         ]
         expressions = []
         templatize_fcn = templatize_constraint
+
+    else:
+        raise ValueError(
+            "Invalid type %s passed into the latex printer" % (str(type(pyomoElement)))
+        )
 
     # In the case where just a single expression is passed, add this to the constraint list for printing
     constraints = constraints + expressions
 
     # Declare a visitor/walker
     visitor = _LatexVisitor()
+    visitor.disableSmartVariables = disableSmartVariables
+    # visitor.xOnlyMode = xOnlyMode
+
+    # # Only x modes
+    # # Mode 0 : dont use
+    # # Mode 1 : indexed variables become x_{_{ix}}
+    # # Mode 2 : uses standard alphabet [a,...,z,aa,...,az,...,aaa,...] with subscripts for indices, ex: abcd_{ix}
+    # # Mode 3 : unwrap everything into an x_{} list, WILL NOT WORK ON TEMPLATED CONSTRAINTS
+
+    nameReplacementDict = {}
+    if not isSingle:
+        # only works if you can get the variables from a block
+        variableList = [
+            vr
+            for vr in pyomoElement.component_objects(
+                pyo.Var, descend_into=True, active=True
+            )
+        ]
+        if xOnlyMode == 1:
+            newVariableList = ['x' for i in range(0, len(variableList))]
+            for i in range(0, len(variableList)):
+                newVariableList[i] += '_' + str(i + 1)
+            overwriteDict = dict(zip([v.name for v in variableList], newVariableList))
+        elif xOnlyMode == 2:
+            newVariableList = [
+                alphabetStringGenerator(i) for i in range(0, len(variableList))
+            ]
+            overwriteDict = dict(zip([v.name for v in variableList], newVariableList))
+        elif xOnlyMode == 3:
+            newVariableList = ['x' for i in range(0, len(variableList))]
+            for i in range(0, len(variableList)):
+                newVariableList[i] += '_' + str(i + 1)
+            overwriteDict = dict(zip([v.name for v in variableList], newVariableList))
+
+            unwrappedVarCounter = 0
+            wrappedVarCounter = 0
+            for v in variableList:
+                setData = v.index_set().data()
+                if setData[0] is None:
+                    unwrappedVarCounter += 1
+                    wrappedVarCounter += 1
+                    nameReplacementDict['x_{' + str(wrappedVarCounter) + '}'] = (
+                        'x_{' + str(unwrappedVarCounter) + '}'
+                    )
+                else:
+                    wrappedVarCounter += 1
+                    for dta in setData:
+                        dta_str = str(dta)
+                        if '(' not in dta_str:
+                            dta_str = '(' + dta_str + ')'
+                        subsetString = dta_str.replace('(', '{')
+                        subsetString = subsetString.replace(')', '}')
+                        subsetString = subsetString.replace(' ', '')
+                        unwrappedVarCounter += 1
+                        nameReplacementDict[
+                            'x_{' + str(wrappedVarCounter) + '_' + subsetString + '}'
+                        ] = ('x_{' + str(unwrappedVarCounter) + '}')
+            # for ky, vl in nameReplacementDict.items():
+            #     print(ky,vl)
+            # print(nameReplacementDict)
+        else:
+            # default to the standard mode where pyomo names are used
+            overwriteDict = {}
+
+    visitor.overwriteDict = overwriteDict
 
     # starts building the output string
     pstr = ''
@@ -432,7 +666,14 @@ def latex_printer(
         if not isSingle:
             pstr += ' ' * tbSpc + '& \\text{subject to} \n'
 
-        # first constraint needs different alignment because of the 'subject to'
+        # first constraint needs different alignment because of the 'subject to':
+        # & minimize   & & [Objective]
+        # & subject to & & [Constraint 1]
+        # &            & & [Constraint 2]
+        # &            & & [Constraint N]
+
+        # The double '& &' renders better for some reason
+
         for i in range(0, len(constraints)):
             if not isSingle:
                 if i == 0:
@@ -455,13 +696,16 @@ def latex_printer(
 
             # Multiple constraints are generated using a set
             if len(indices) > 0:
-                nm = indices[0]._set
-                gp = indices[0]._group
+                idxTag = '__INDEX_PLACEHOLDER_8675309_GROUP_%s_%s__' % (
+                    indices[0]._group,
+                    indices[0]._set,
+                )
+                setTag = '__SET_PLACEHOLDER_8675309_GROUP_%s_%s__' % (
+                    indices[0]._group,
+                    indices[0]._set,
+                )
 
-                ixTag = '__INDEX_PLACEHOLDER_8675309_GROUP_%s_%s__' % (gp, nm)
-                stTag = '__SET_PLACEHOLDER_8675309_GROUP_%s_%s__' % (gp, nm)
-
-                conLine += ', \\quad %s \\in %s ' % (ixTag, stTag)
+                conLine += ', \\quad %s \\in %s ' % (idxTag, setTag)
             pstr += conLine
 
             # Add labels as needed
@@ -614,6 +858,10 @@ def latex_printer(
         f = open(filename, 'w')
         f.write(fstr)
         f.close()
+
+    # Catch up on only x mode 3 and replace
+    for ky, vl in nameReplacementDict.items():
+        pstr = pstr.replace(ky, vl)
 
     # return the latex string
     return pstr
