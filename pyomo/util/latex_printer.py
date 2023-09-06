@@ -754,6 +754,10 @@ def latex_printer(
         ln = latexLines[jj]
         # only modify if there is a placeholder in the line
         if "PLACEHOLDER_8675309_GROUP_" in ln:
+            if xOnlyMode == 2:
+                raise RuntimeError(
+                    'Unwrapping indexed variables when an indexed constraint is present yields incorrect results'
+                )
             splitLatex = ln.split('__')
             # Find the unique combinations of group numbers and set names
             for word in splitLatex:
