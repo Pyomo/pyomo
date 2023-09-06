@@ -216,8 +216,6 @@ def handle_inequality_node(visitor, node, arg1, arg2):
 
 
 def handle_var_node(visitor, node):
-    # if self.disableSmartVariables:
-    # if self.xOnlyMode:
     overwriteDict = visitor.overwriteDict
     # varList = visitor.variableList
 
@@ -239,7 +237,7 @@ def handle_var_node(visitor, node):
     if name in overwriteDict.keys():
         name = overwriteDict[name]
 
-    if not visitor.disableSmartVariables:
+    if visitor.useSmartVariables:
         splitName = name.split('_')
         if declaredIndex is not None:
             splitName.append(declaredIndex)
@@ -390,7 +388,7 @@ def handle_templateSumExpression_node(visitor, node, *args):
 class _LatexVisitor(StreamBasedExpressionVisitor):
     def __init__(self):
         super().__init__()
-        self.disableSmartVariables = False
+        self.useSmartVariables = False
         self.xOnlyMode = False
         self.overwriteDict = {}
 
@@ -467,7 +465,7 @@ def latex_printer(
     filename=None,
     useAlignEnvironment=False,
     splitContinuousSets=False,
-    disableSmartVariables=False,
+    useSmartVariables=False,
     xOnlyMode=0,
     overwriteDict={},
 ):
@@ -565,7 +563,7 @@ def latex_printer(
 
     # Declare a visitor/walker
     visitor = _LatexVisitor()
-    visitor.disableSmartVariables = disableSmartVariables
+    visitor.useSmartVariables = useSmartVariables
     # visitor.xOnlyMode = xOnlyMode
 
     # # Only x modes
