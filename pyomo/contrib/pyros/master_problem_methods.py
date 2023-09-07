@@ -631,15 +631,20 @@ def solver_call_master(model_data, config, solver, solve_data):
     solver_term_cond_dict = {}
 
     if config.solve_master_globally:
-        backup_solvers = deepcopy(config.backup_global_solvers)
+        solvers = [solver] + config.backup_global_solvers
     else:
-        backup_solvers = deepcopy(config.backup_local_solvers)
-    backup_solvers.insert(0, solver)
+        solvers = [solver] + config.backup_local_solvers
 
     higher_order_decision_rule_efficiency(config, model_data)
 
     timer = TicTocTimer()
-    for opt in backup_solvers:
+    for idx, opt in enumerate(solvers):
+        if idx > 0:
+            config.progress_logger.warning(
+                f"Invoking backup solver {opt!r} "
+                f"(solver {idx + 1} of {len(solvers)}) for "
+                f"master problem of iteration {model_data.iteration}."
+            )
         orig_setting, custom_setting_present = adjust_solver_time_settings(
             model_data.timing, opt, config
         )

@@ -962,7 +962,14 @@ def solver_call_separation(
         subsolver_error=False,
     )
     timer = TicTocTimer()
-    for opt in solvers:
+    for idx, opt in enumerate(solvers):
+        if idx > 0:
+            config.progress_logger.warning(
+                f"Invoking backup solver {opt!r} "
+                f"(solver {idx + 1} of {len(solvers)}) for {solve_mode} "
+                f"separation of performance constraint {con_name_repr} "
+                f"in iteration {model_data.iteration}."
+            )
         orig_setting, custom_setting_present = adjust_solver_time_settings(
             model_data.timing, opt, config
         )
