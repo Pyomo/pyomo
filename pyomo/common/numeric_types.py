@@ -80,11 +80,11 @@ nonpyomo_leaf_types.update(native_types)
 
 
 def RegisterNumericType(new_type):
-    """
-    A utility function for updating the set of types that are
-    recognized to handle numeric values.
+    """A utility function for updating the set of types that are recognized
+    to handle numeric values.
 
     The argument should be a class (e.g, numpy.float64).
+
     """
     native_numeric_types.add(new_type)
     native_types.add(new_type)
@@ -92,12 +92,12 @@ def RegisterNumericType(new_type):
 
 
 def RegisterIntegerType(new_type):
-    """
-    A utility function for updating the set of types that are
-    recognized to handle integer values. This also registers the type
-    as numeric but does not register it as boolean.
+    """A utility function for updating the set of types that are recognized
+    to handle integer values.  This also adds the type to the numeric
+    and native type sets (but not the Boolean / logical sets).
 
     The argument should be a class (e.g., numpy.int64).
+
     """
     native_numeric_types.add(new_type)
     native_integer_types.add(new_type)
@@ -111,12 +111,12 @@ def RegisterIntegerType(new_type):
     version='6.6.0',
 )
 def RegisterBooleanType(new_type):
-    """
-    A utility function for updating the set of types that are
-    recognized as handling boolean values. This function does not
-    register the type of integer or numeric.
+    """A utility function for updating the set of types that are recognized
+    as handling boolean values.  This function does not add the type
+    with the integer or numeric sets.
 
     The argument should be a class (e.g., numpy.bool_).
+
     """
     _native_boolean_types.add(new_type)
     native_types.add(new_type)
@@ -143,6 +143,7 @@ def RegisterLogicalType(new_type):
     with the integer or numeric sets.
 
     The argument should be a class (e.g., numpy.bool_).
+
     """
     _native_boolean_types.add(new_type)
     native_logical_types.add(new_type)
