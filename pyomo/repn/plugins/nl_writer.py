@@ -591,7 +591,6 @@ class _NLWriter_impl(object):
                 n_ranges += 1
             elif _type == 3:  # and self.config.skip_trivial_constraints:
                 continue
-                pass
             # FIXME: this is a HACK to be compatible with the NLv1
             # writer.  In the future, this writer should be expanded to
             # look for and process Complementarity components (assuming
@@ -613,7 +612,8 @@ class _NLWriter_impl(object):
                 linear_cons.append((con, expr, _type, lb, ub))
             elif not self.config.skip_trivial_constraints:
                 linear_cons.append((con, expr, _type, lb, ub))
-            else:  # constant constraint and skip_trivial_constraints
+            else:
+                # constant constraint and skip_trivial_constraints
                 #
                 # TODO: skip_trivial_constraints should be an
                 # enum that also accepts "Exception" so that
@@ -1323,7 +1323,7 @@ class _NLWriter_impl(object):
         for row_idx, info in enumerate(constraints):
             linear = info[1].linear
             # ASL will fail on "J<N> 0", so if there are no coefficients
-            # (i.e., a constant objective), then skip this entry
+            # (e.g., a nonlinear-only constraint), then skip this entry
             if not linear:
                 continue
             ostream.write(f'J{row_idx} {len(linear)}{row_comments[row_idx]}\n')
@@ -1339,7 +1339,7 @@ class _NLWriter_impl(object):
         for obj_idx, info in enumerate(objectives):
             linear = info[1].linear
             # ASL will fail on "G<N> 0", so if there are no coefficients
-            # (i.e., a constant objective), then skip this entry
+            # (e.g., a constant objective), then skip this entry
             if not linear:
                 continue
             ostream.write(f'G{obj_idx} {len(linear)}{row_comments[obj_idx + n_cons]}\n')
@@ -2544,7 +2544,6 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
                 # variables are not accidentally re-characterized as
                 # nonlinear.
                 pass
-                # ans.nonlinear = orig.nonlinear
             ans.nl = None
 
         if ans.nonlinear.__class__ is list:
@@ -2552,8 +2551,8 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
 
         if not ans.linear:
             ans.linear = {}
-        linear = ans.linear
         if ans.mult != 1:
+            linear = ans.linear
             mult, ans.mult = ans.mult, 1
             ans.const *= mult
             if linear:
