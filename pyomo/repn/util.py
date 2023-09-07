@@ -236,11 +236,27 @@ _CONSTANT = ExprType.CONSTANT
 
 
 class BeforeChildDispatcher(collections.defaultdict):
-    def __missing__(self, key):
-        return self.register_child_dispatcher
+    """Dispatcher for handling the :py:class:`StreamBasedExpressionVisitor`
+    `beforeChild` callback
 
-    def register_child_dispatcher(self, visitor, child):
-        child_type = child.__class__
+    This dispatcher implements a specialization of :py:`defaultdict`
+    that supports automatic type registration.  Any missing types will
+    return the :py:meth:`register_dispatcher` method, which (when called
+    as a callback) will interrogate the type, identify the appropriate
+    callback, add the callback to the dict, and return the result of
+    calling the callback.  As the callback is added to the dict, no type
+    will incur the overhead of `register_dispatcher` more than once.
+
+    Note that all dispatchers are implemented as `staticmethod`
+    functions to avoid the (unnecessary) overhead of binding to the
+    dispatcher object.
+
+    """
+    def __missing__(self, key):
+        return self.register_dispatcher
+
+    def register_dispatcher(self, visitor, child):
+        child_type = type(child)
         if issubclass(child_type, complex):
             self[child_type] = self._before_complex
         elif child_type in native_numeric_types:
@@ -315,7 +331,10 @@ class BeforeChildDispatcher(collections.defaultdict):
         return False, (_CONSTANT, visitor._eval_fixed(child))
 
     #
-    # The following methods must be defined by derivative classes
+    # The following methods must be defined by derivative classes (along
+    # with any other special-case handling they want to implement;
+    # usually including handling for Monomial, Linear, and
+    # ExternalFunction
     #
 
     # @staticmethod
@@ -328,11 +347,24 @@ class BeforeChildDispatcher(collections.defaultdict):
 
 
 class ExitNodeDispatcher(collections.defaultdict):
-    _named_subexpression_types = (
-        _GeneralExpressionData,
-        kernel.expression.expression,
-        kernel.objective.objective,
-    )
+    """Dispatcher for handling the :py:class:`StreamBasedExpressionVisitor`
+    `exitNode` callback
+
+    This dispatcher implements a specialization of :py:`defaultdict`
+    that supports automatic type registration.  Any missing types will
+    return the :py:meth:`register_dispatcher` method, which (when called
+    as a callback) will interrogate the type, identify the appropriate
+    callback, add the callback to the dict, and return the result of
+    calling the callback.  As the callback is added to the dict, no type
+    will incur the overhead of `register_dispatcher` more than once.
+
+    Note that in this case, the client is expected to register all
+    non-NPV expression types.  The auto-registration is designed to only
+    handle two cases:
+    - Auto-detection of user-defined Named Expression types
+    - Automatic mappimg of NPV expressions to their equivalent non-NPV handlers
+
+    """
 
     def __init__(self, *args, **kwargs):
         super().__init__(None, *args, **kwargs)
