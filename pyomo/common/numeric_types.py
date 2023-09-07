@@ -41,9 +41,14 @@ nonpyomo_leaf_types = set()
 #: Python set used to identify numeric constants.  This set includes
 #: native Python types as well as numeric types from Python packages
 #: like numpy, which may be registered by users.
-native_numeric_types = {int, float, complex}
+#:
+#: Note that :data:`native_numeric_types` does NOT include
+#: :py:`complex`, as that is not a valid constant in Pyomo numeric
+#: expressions.
+native_numeric_types = {int, float}
 native_integer_types = {int}
 native_logical_types = {bool}
+native_complex_types = {complex}
 pyomo_constant_types = set()  # includes NumericConstant
 
 _native_boolean_types = {int, bool, str, bytes}
@@ -64,11 +69,12 @@ relocated_module_attribute(
 #: like numpy.
 #:
 #: :data:`native_types` = :data:`native_numeric_types <pyomo.core.expr.numvalue.native_numeric_types>` + { str }
-native_types = set([bool, str, type(None), slice, bytes])
+native_types = {bool, str, type(None), slice, bytes}
 native_types.update(native_numeric_types)
 native_types.update(native_integer_types)
-native_types.update(_native_boolean_types)
+native_types.update(native_complex_types)
 native_types.update(native_logical_types)
+native_types.update(_native_boolean_types)
 
 nonpyomo_leaf_types.update(native_types)
 
@@ -117,11 +123,24 @@ def RegisterBooleanType(new_type):
     nonpyomo_leaf_types.add(new_type)
 
 
-def RegisterLogicalType(new_type):
+def RegisterComplexType(new_type):
+    """A utility function for updating the set of types that are recognized
+    as handling complex values.  This function does not add the type
+    with the integer or numeric sets.
+
+
+    The argument should be a class (e.g., numpy.complex_).
+
     """
-    A utility function for updating the set of types that are
-    recognized as handling boolean values. This function does not
-    register the type of integer or numeric.
+    native_types.add(new_type)
+    native_complex_types.add(new_type)
+    nonpyomo_leaf_types.add(new_type)
+
+
+def RegisterLogicalType(new_type):
+    """A utility function for updating the set of types that are recognized
+    as handling boolean values.  This function does not add the type
+    with the integer or numeric sets.
 
     The argument should be a class (e.g., numpy.bool_).
     """

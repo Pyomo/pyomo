@@ -15,7 +15,7 @@ from operator import itemgetter
 from itertools import filterfalse
 
 from pyomo.common.deprecation import deprecation_warning
-from pyomo.common.numeric_types import native_types, native_numeric_types
+from pyomo.common.numeric_types import native_types, native_numeric_types, native_complex_types
 from pyomo.core.expr.numeric_expr import (
     NegationExpression,
     ProductExpression,
@@ -332,7 +332,7 @@ _exit_node_handlers[DivisionExpression] = {
 def _handle_pow_constant_constant(visitor, node, *args):
     arg1, arg2 = args
     ans = apply_node_operation(node, (arg1[1], arg2[1]))
-    if ans.__class__ in _complex_types:
+    if ans.__class__ in native_complex_types:
         ans = complex_number_error(ans, visitor, node)
     return _CONSTANT, ans
 
@@ -381,7 +381,7 @@ _exit_node_handlers[PowExpression] = {
 def _handle_unary_constant(visitor, node, arg):
     ans = apply_node_operation(node, (arg[1],))
     # Unary includes sqrt() which can return complex numbers
-    if ans.__class__ in _complex_types:
+    if ans.__class__ in native_complex_types:
         ans = complex_number_error(ans, visitor, node)
     return _CONSTANT, ans
 
@@ -754,6 +754,8 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
                 )
             if ans.__class__ is InvalidNumber:
                 return ans
+            elif ans.__class__ in native_complex_types:
+                return complex_number_error(ans, self, obj)
             else:
                 # It is possible to get other non-numeric types.  Most
                 # common are bool and 1-element numpy.array().  We will

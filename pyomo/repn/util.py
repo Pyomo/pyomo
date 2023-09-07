@@ -20,7 +20,7 @@ import sys
 from pyomo.common.collections import Sequence, ComponentMap
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.errors import DeveloperError, InvalidValueError
-from pyomo.common.numeric_types import native_types, native_numeric_types
+from pyomo.common.numeric_types import native_types, native_numeric_types, native_complex_types
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.base import (
     Var,
@@ -257,14 +257,15 @@ class BeforeChildDispatcher(collections.defaultdict):
 
     def register_dispatcher(self, visitor, child):
         child_type = type(child)
-        if issubclass(child_type, complex):
-            self[child_type] = self._before_complex
-        elif child_type in native_numeric_types:
+        if child_type in native_numeric_types:
             self[child_type] = self._before_native
         elif issubclass(child_type, str):
             self[child_type] = self._before_string
         elif child_type in native_types:
-            self[child_type] = self._before_invalid
+            if issubclass(child_type, tuple(native_complex_types)):
+                self[child_type] = self._before_complex
+            else:
+                self[child_type] = self._before_invalid
         elif not hasattr(child, 'is_expression_type'):
             if check_if_numeric_type(child):
                 self[child_type] = self._before_native

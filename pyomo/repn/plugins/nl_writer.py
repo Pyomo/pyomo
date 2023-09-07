@@ -24,6 +24,12 @@ from pyomo.common.config import (
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.errors import DeveloperError
 from pyomo.common.gc_manager import PauseGC
+from pyomo.common.numeric_types import (
+    native_complex_types,
+    native_numeric_types,
+    native_types,
+    value,
+)
 from pyomo.common.timing import TicTocTimer
 
 from pyomo.core.expr import (
@@ -41,9 +47,6 @@ from pyomo.core.expr import (
     RangedExpression,
     Expr_ifExpression,
     ExternalFunctionExpression,
-    native_types,
-    native_numeric_types,
-    value,
 )
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor, _EvaluationVisitor
 from pyomo.core.base import (
@@ -1985,7 +1988,7 @@ def handle_pow_node(visitor, node, arg1, arg2):
     if arg2[0] is _CONSTANT:
         if arg1[0] is _CONSTANT:
             ans = apply_node_operation(node, (arg1[1], arg2[1]))
-            if ans.__class__ in _complex_types:
+            if ans.__class__ in native_complex_types:
                 ans = complex_number_error(ans, visitor, node)
             return _CONSTANT, ans
         elif not arg2[1]:
@@ -2425,6 +2428,8 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
                 )
             if ans.__class__ is InvalidNumber:
                 return ans
+            elif ans.__class__ in native_complex_types:
+                return complex_number_error(ans, self, obj)
             else:
                 # It is possible to get other non-numeric types.  Most
                 # common are bool and 1-element numpy.array().  We will

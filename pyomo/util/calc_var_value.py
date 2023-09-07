@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.errors import IterationLimitError
-from pyomo.core.expr.numvalue import native_numeric_types, value, is_fixed
+from pyomo.common.numeric_types import native_numeric_types, native_complex_types, value, is_fixed
 from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.core.base.constraint import Constraint, _ConstraintData
 
@@ -92,6 +92,9 @@ def calculate_variable_from_constraint(
     if lower != upper:
         raise ValueError(f"Constraint '{constraint}' must be an equality constraint")
 
+    _invalid_types = set(native_complex_types)
+    _invalid_types.add(type(None))
+
     if variable.value is None:
         # Note that we use "skip_validation=True" here as well, as the
         # variable domain may not admit the calculated initial guesses,
@@ -151,7 +154,7 @@ def calculate_variable_from_constraint(
         # to using Newton's method.
         residual_2 = None
 
-    if residual_2 is not None and type(residual_2) is not complex:
+    if residual_2.__class__ not in _invalid_types:
         # if the variable appears linearly with a coefficient of 1, then we
         # are done
         if abs(residual_2 - upper) < eps:
@@ -168,8 +171,7 @@ def calculate_variable_from_constraint(
             variable.set_value(-intercept / slope, skip_validation=True)
             body_val = value(body, exception=False)
             if (
-                body_val is not None
-                and body_val.__class__ is not complex
+                body_val.__class__ not in _invalid_types
                 and abs(body_val - upper) < eps
             ):
                 # Re-set the variable value to trigger any warnings WRT
@@ -234,7 +236,7 @@ def calculate_variable_from_constraint(
         xk = value(variable)
         try:
             fk = value(expr)
-            if type(fk) is complex:
+            if fk.__class__ in _invalid_types and fk is not None:
                 raise ValueError("Complex numbers are not allowed in Newton's method.")
         except:
             # We hit numerical problems with the last step (possible if
@@ -275,7 +277,7 @@ def calculate_variable_from_constraint(
                 # HACK for Python3 support, pending resolution of #879
                 # Issue #879 also pertains to other checks for "complex"
                 # in this method.
-                if type(fkp1) is complex:
+                if fkp1.__class__ in _invalid_types:
                     # We cannot perform computations on complex numbers
                     fkp1 = None
                 if fkp1 is not None and fkp1**2 < c1 * fk**2:
@@ -289,7 +291,7 @@ def calculate_variable_from_constraint(
 
             if alpha <= alpha_min:
                 residual = value(expr, exception=False)
-                if residual is None or type(residual) is complex:
+                if residual.__class__ in _invalid_types:
                     residual = "{function evaluation error}"
                 raise IterationLimitError(
                     f"Linesearch iteration limit reached solving for "
