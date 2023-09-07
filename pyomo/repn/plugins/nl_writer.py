@@ -9,12 +9,14 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import itertools
 import logging
 import os
 from collections import deque, defaultdict
 from operator import itemgetter, attrgetter, setitem
 
 from pyomo.common.backports import nullcontext
+from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.config import (
     ConfigBlock,
     ConfigValue,
@@ -64,6 +66,7 @@ from pyomo.core.base import (
 from pyomo.core.base.component import ActiveComponent
 from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
 from pyomo.core.base.objective import ScalarObjective, _GeneralObjectiveData
+from pyomo.core.base.suffix import SuffixFinder
 import pyomo.core.kernel as kernel
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.opt import WriterFactory
@@ -342,97 +345,72 @@ def _RANGE_TYPE(lb, ub):
 
 
 class _SuffixData(object):
-    def __init__(self, name, column_order, row_order, obj_order, model_id):
-        self._name = name
-        self._column_order = column_order
-        self._row_order = row_order
-        self._obj_order = obj_order
-        self._model_id = model_id
+    def __init__(self, name):
+        self.name = name
         self.obj = {}
         self.con = {}
         self.var = {}
         self.prob = {}
         self.datatype = set()
+        self.values = ComponentMap()
 
     def update(self, suffix):
-        missing_component = missing_other = 0
         self.datatype.add(suffix.datatype)
-        for obj, val in suffix.items():
-            missing = self._store(obj, val)
-            if missing:
-                if missing > 0:
-                    missing_component += missing
+        self.values.update(suffix)
+
+    def store(self, obj, val):
+        self.values[obj] = val
+
+    def compile(self, column_order, row_order, obj_order, model_id):
+        missing_component_data = ComponentSet()
+        unknown_data = ComponentSet()
+        queue = [self.values.items()]
+        while queue:
+            for obj, val in queue.pop(0):
+                if val.__class__ not in int_float:
+                    val = float(val)
+                _id = id(obj)
+                if _id in column_order:
+                    self.var[column_order[_id]] = val
+                elif _id in row_order:
+                    self.con[row_order[_id]] = val
+                elif _id in obj_order:
+                    self.obj[obj_order[_id]] = val
+                elif _id == model_id:
+                    self.prob[0] = val
+                elif isinstance(obj, (_VarData, _ConstraintData, _ObjectiveData)):
+                    missing_component_data.add(obj)
+                elif isinstance(obj, (Var, Constraint, Objective)):
+                    # Expand this indexed component to store the
+                    # individual ComponentDatas, but ONLY if the
+                    # component data is not in the original dictionary
+                    # of values that we extracted from the Suffixes
+                    queue.append(
+                        itertools.product(
+                            itertools.filterfalse(
+                                self.values.__contains__, obj.values()
+                            ),
+                            (val,),
+                        )
+                    )
                 else:
-                    missing_other -= missing
-        if missing_component:
+                    unknown_data.add(obj)
+        if missing_component_data:
             logger.warning(
-                f"model contains export suffix '{suffix.name}' that "
-                f"contains {missing_component} component keys that are "
+                f"model contains export suffix '{self.name}' that "
+                f"contains {len(missing_component_data)} component keys that are "
                 "not exported as part of the NL file.  "
                 "Skipping."
             )
-        if missing_other:
+        if unknown_data:
             logger.warning(
-                f"model contains export suffix '{suffix.name}' that "
-                f"contains {missing_other} keys that are not "
+                f"model contains export suffix '{self.name}' that "
+                f"contains {len(unknown_data)} keys that are not "
                 "Var, Constraint, Objective, or the model.  Skipping."
             )
 
-    def store(self, obj, val):
-        missing = self._store(obj, val)
-        if not missing:
-            return
-        if missing == 1:
-            logger.warning(
-                f"model contains export suffix '{self._name}' with "
-                f"{obj.ctype.__name__} key '{obj.name}', but that "
-                "object is not exported as part of the NL file.  "
-                "Skipping."
-            )
-        elif missing > 1:
-            logger.warning(
-                f"model contains export suffix '{self._name}' with "
-                f"{obj.ctype.__name__} key '{obj.name}', but that "
-                "object contained {missing} data objects that are "
-                "not exported as part of the NL file.  "
-                "Skipping."
-            )
-        else:
-            logger.warning(
-                f"model contains export suffix '{self._name}' with "
-                f"{obj.__class__.__name__} key '{obj}' that is not "
-                "a Var, Constraint, Objective, or the model.  Skipping."
-            )
 
-    def _store(self, obj, val):
         _id = id(obj)
-        if _id in self._column_order:
-            obj = self.var
-            key = self._column_order[_id]
-        elif _id in self._row_order:
-            obj = self.con
-            key = self._row_order[_id]
-        elif _id in self._obj_order:
-            obj = self.obj
-            key = self._obj_order[_id]
-        elif _id == self._model_id:
-            obj = self.prob
-            key = 0
-        else:
-            missing_ct = 0
-            if isinstance(obj, PyomoObject):
-                if obj.is_indexed():
-                    for o in obj.values():
-                        missing_ct += self._store(o, val)
-                else:
-                    missing_ct = 1
-            else:
-                missing_ct = -1
-            return missing_ct
-        if val.__class__ not in int_float:
-            val = float(val)
-        obj[key] = val
-        return 0
 
 
 class _NLWriter_impl(object):
@@ -525,6 +503,23 @@ class _NLWriter_impl(object):
         var_map = self.var_map
         initialize_var_map_from_column_order(model, self.config, var_map)
         timer.toc('Initialized column order', level=logging.DEBUG)
+
+        # Collect all defined EXPORT suffixes on the model
+        suffix_data = {}
+        if component_map[Suffix]:
+            # Note: reverse the block list so that higher-level Suffix
+            # components override lower level ones.
+            for block in reversed(component_map[Suffix]):
+                for suffix in block.component_objects(
+                    Suffix, active=True, descend_into=False, sort=sorter
+                ):
+                    if not suffix.export_enabled() or not suffix:
+                        continue
+                    name = suffix.local_name
+                    if name not in suffix_data:
+                        suffix_data[name] = _SuffixData(name)
+                    suffix_data[name].update(suffix)
+            timer.toc("Collected suffixes", level=logging.DEBUG)
 
         #
         # Tabulate the model expressions
@@ -829,36 +824,8 @@ class _NLWriter_impl(object):
             variables[idx] = (v, _id, _RANGE_TYPE(lb, ub), lb, ub)
         timer.toc("Computed variable bounds", level=logging.DEBUG)
 
-        # Collect all defined EXPORT suffixes on the model
-        suffix_data = {}
-        if component_map[Suffix]:
-            if not row_order:
-                row_order = {id(con[0]): i for i, con in enumerate(constraints)}
-            obj_order = {id(obj[0]): i for i, obj in enumerate(objectives)}
-            model_id = id(model)
-            # Note: reverse the block list so that higher-level Suffix
-            # components override lower level ones.
-            for block in reversed(component_map[Suffix]):
-                for suffix in block.component_objects(
-                    Suffix, active=True, descend_into=False, sort=sorter
-                ):
-                    if not (suffix.direction & Suffix.EXPORT):
-                        continue
-                    name = suffix.local_name
-                    if name not in suffix_data:
-                        suffix_data[name] = _SuffixData(
-                            name, column_order, row_order, obj_order, model_id
-                        )
-                    suffix_data[name].update(suffix)
-            timer.toc("Collected suffixes", level=logging.DEBUG)
-
         # Collect all defined SOSConstraints on the model
         if component_map[SOSConstraint]:
-            if not row_order:
-                row_order = {id(con[0]): i for i, con in enumerate(constraints)}
-            if not component_map[Suffix]:
-                obj_order = {id(obj[0]): i for i, obj in enumerate(objectives)}
-                model_id = id(model)
             for name in ('sosno', 'ref'):
                 # I am choosing not to allow a user to mix the use of the Pyomo
                 # SOSConstraint component and manual sosno declarations within
@@ -879,9 +846,7 @@ class _NLWriter_impl(object):
                         "model. To avoid this error please use only one of "
                         "these methods to define special ordered sets."
                     )
-                suffix_data[name] = _SuffixData(
-                    name, column_order, row_order, obj_order, model_id
-                )
+                suffix_data[name] = _SuffixData(name)
                 suffix_data[name].datatype.add(Suffix.INT)
             sos_id = 0
             sosno = suffix_data['sosno']
@@ -909,6 +874,11 @@ class _NLWriter_impl(object):
                     for v, r in _items:
                         sosno.store(v, tag)
                         ref.store(v, r)
+
+        if suffix_data:
+            row_order = {id(con[0]): i for i, con in enumerate(constraints)}
+            obj_order = {id(obj[0]): i for i, obj in enumerate(objectives)}
+            model_id = id(model)
 
         if symbolic_solver_labels:
             labeler = NameLabeler()
@@ -1106,6 +1076,7 @@ class _NLWriter_impl(object):
         for name, data in suffix_data.items():
             if name == 'dual':
                 continue
+            data.compile(column_order, row_order, obj_order, model_id)
             if len(data.datatype) > 1:
                 raise ValueError(
                     "The NL file writer found multiple active export "
@@ -1129,7 +1100,7 @@ class _NLWriter_impl(object):
                 if not _vals:
                     continue
                 ostream.write(f"S{_field|_float} {len(_vals)} {name}\n")
-                # Note: _SuffixData store/update guarantee the value is int/float
+                # Note: _SuffixData.compile() guarantees the value is int/float
                 ostream.write(
                     ''.join(f"{_id} {_vals[_id]!r}\n" for _id in sorted(_vals))
                 )
@@ -1210,18 +1181,19 @@ class _NLWriter_impl(object):
         # "d" lines (dual initialization)
         #
         if 'dual' in suffix_data:
-            _data = suffix_data['dual']
-            if _data.var:
+            data = suffix_data['dual']
+            data.compile(column_order, row_order, obj_order, model_id)
+            if data.var:
                 logger.warning("ignoring 'dual' suffix for Var types")
-            if _data.obj:
+            if data.obj:
                 logger.warning("ignoring 'dual' suffix for Objective types")
-            if _data.prob:
+            if data.prob:
                 logger.warning("ignoring 'dual' suffix for Model")
-            if _data.con:
+            if data.con:
                 ostream.write(f"d{len(_data.con)}\n")
-                # Note: _SuffixData store/update guarantee the value is int/float
+                # Note: _SuffixData.compile() guarantees the value is int/float
                 ostream.write(
-                    ''.join(f"{_id} {_data.con[_id]!r}\n" for _id in sorted(_data.con))
+                    ''.join(f"{_id} {_data.con[_id]!r}\n" for _id in sorted(data.con))
                 )
 
         #
