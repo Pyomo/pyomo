@@ -41,6 +41,7 @@ from contextlib import contextmanager
 import logging
 from pprint import pprint
 import math
+from pyomo.common.timing import TicTocTimer
 
 
 # Tolerances used in the code
@@ -63,6 +64,10 @@ def time_code(timing_data_obj, code_block_name, is_main_timer=False):
     allowing calculation of total elapsed time 'on the fly' (e.g. to enforce
     a time limit) using `get_main_elapsed_time(timing_data_obj)`.
     """
+    # initialize tic toc timer
+    timing_data_obj.tic_toc_timer = TicTocTimer()
+    timing_data_obj.tic_toc_timer.tic(msg=None)
+
     start_time = timeit.default_timer()
     if is_main_timer:
         timing_data_obj.main_timer_start_time = start_time
@@ -1381,6 +1386,149 @@ def process_termination_condition_master_problem(config, results):
                 "This solver return termination condition (%s) "
                 "is currently not supported by PyROS." % termination_condition
             )
+
+
+class IterationLogRecord:
+    """
+    PyROS solver iteration log record.
+
+    Attributes
+    ----------
+    iteration : int or None
+        Iteration number.
+    objective : int or None
+        Master problem objective value.
+        Note: if the sense of the original model is maximization,
+        then this is the negative of the objective value.
+    first_stage_var_shift : float or None
+        Infinity norm of the difference between first-stage
+        variable vectors for the current and previous iterations.
+    dr_var_shift : float or None
+        Infinity norm of the difference between decision rule
+        variable vectors for the current and previous iterations.
+    num_violated_cons : int or None
+        Number of performance constraints found to be violated
+        during separation step.
+    max_violation : int or None
+        Maximum scaled violation of any performance constraint
+        found during separation step.
+    """
+
+    _LINE_LENGTH = 78
+    _ATTR_FORMAT_LENGTHS = {
+        "iteration": 5,
+        "objective": 13,
+        "first_stage_var_shift": 13,
+        "dr_var_shift": 13,
+        "num_violated_cons": 8,
+        "max_violation": 12,
+        "elapsed_time": 14,
+    }
+    _ATTR_HEADER_NAMES = {
+        "iteration": "Itn",
+        "objective": "Objective",
+        "first_stage_var_shift": "1-Stg Shift",
+        "dr_var_shift": "DR Shift",
+        "num_violated_cons": "#CViol",
+        "max_violation": "Max Viol",
+        "elapsed_time": "Wall Time (s)",
+    }
+
+    def __init__(
+            self,
+            iteration,
+            objective,
+            first_stage_var_shift,
+            dr_var_shift,
+            dr_polishing_failed,
+            num_violated_cons,
+            all_sep_problems_solved,
+            max_violation,
+            elapsed_time,
+            ):
+        """Initialize self (see class docstring)."""
+        self.iteration = iteration
+        self.objective = objective
+        self.first_stage_var_shift = first_stage_var_shift
+        self.dr_var_shift = dr_var_shift
+        self.dr_polishing_failed = dr_polishing_failed
+        self.num_violated_cons = num_violated_cons
+        self.all_sep_problems_solved = all_sep_problems_solved
+        self.max_violation = max_violation
+        self.elapsed_time = elapsed_time
+
+    def get_log_str(self):
+        """Get iteration log string."""
+        attrs = [
+            "iteration",
+            "objective",
+            "first_stage_var_shift",
+            "dr_var_shift",
+            "num_violated_cons",
+            "max_violation",
+            "elapsed_time",
+        ]
+        return "".join(self._format_record_attr(attr) for attr in attrs)
+
+    def _format_record_attr(self, attr_name):
+        """Format attribute record for logging."""
+        attr_val = getattr(self, attr_name)
+        if attr_val is None:
+            fmt_str = f"<{self._ATTR_FORMAT_LENGTHS[attr_name]}s"
+            return f"{'-':{fmt_str}}"
+        else:
+            attr_val_fstrs = {
+                "iteration": "f'{attr_val:d}'",
+                "objective": "f'{attr_val: .4e}'",
+                "first_stage_var_shift": "f'{attr_val:.4e}'",
+                "dr_var_shift": "f'{attr_val:.4e}'",
+                "num_violated_cons": "f'{attr_val:d}'",
+                "max_violation": "f'{attr_val:.4e}'",
+                "elapsed_time": "f'{attr_val:.2f}'",
+            }
+
+            # qualifier for DR polishing and separation columns
+            if attr_name == "dr_var_shift":
+                qual = "*" if self.dr_polishing_failed else ""
+            elif attr_name == "num_violated_cons":
+                qual = "+" if not self.all_sep_problems_solved else ""
+            else:
+                qual = ""
+
+            attr_val_str = f"{eval(attr_val_fstrs[attr_name])}{qual}"
+
+            return (
+                f"{attr_val_str:{f'<{self._ATTR_FORMAT_LENGTHS[attr_name]}'}}"
+            )
+
+    def log(self, log_func, **log_func_kwargs):
+        """Log self."""
+        log_str = self.get_log_str()
+        log_func(log_str, **log_func_kwargs)
+
+    @staticmethod
+    def get_log_header_str():
+        """Get string for iteration log header."""
+        fmt_lengths_dict = IterationLogRecord._ATTR_FORMAT_LENGTHS
+        header_names_dict = IterationLogRecord._ATTR_HEADER_NAMES
+        return "".join(
+            f"{header_names_dict[attr]:<{fmt_lengths_dict[attr]}s}"
+            for attr in fmt_lengths_dict
+        )
+
+    @staticmethod
+    def log_header(log_func, with_rules=True, **log_func_kwargs):
+        """Log header."""
+        if with_rules:
+            IterationLogRecord.log_header_rule(log_func, **log_func_kwargs)
+        log_func(IterationLogRecord.get_log_header_str(), **log_func_kwargs)
+        if with_rules:
+            IterationLogRecord.log_header_rule(log_func, **log_func_kwargs)
+
+    @staticmethod
+    def log_header_rule(log_func, fillchar="-", **log_func_kwargs):
+        """Log header rule."""
+        log_func(fillchar * IterationLogRecord._LINE_LENGTH, **log_func_kwargs)
 
 
 def output_logger(config, **kwargs):

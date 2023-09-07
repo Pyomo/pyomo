@@ -37,15 +37,50 @@ from pyomo.contrib.pyros.util import (
     transform_to_standard_form,
     turn_bounds_to_constraints,
     replace_uncertain_bounds_with_constraints,
-    output_logger,
 )
 from pyomo.contrib.pyros.solve_data import ROSolveResults
 from pyomo.contrib.pyros.pyros_algorithm_methods import ROSolver_iterative_solve
 from pyomo.contrib.pyros.uncertainty_sets import uncertainty_sets
 from pyomo.core.base import Constraint
+from pyomo.common.timing import TicTocTimer
+from pyomo.contrib.pyros.util import IterationLogRecord
+
+from datetime import datetime
+import logging
 
 
 __version__ = "1.2.7"
+
+
+def _get_pyomo_git_info():
+    """
+    Get Pyomo git commit hash.
+    """
+    import os
+    import subprocess
+
+    pyros_dir = os.path.join(*os.path.split(__file__)[:-1])
+
+    git_info_dict = {}
+    commands_dict = {
+        "branch": [
+            "git", "-C", f"{pyros_dir}", "rev-parse", "--abbrev-ref", "HEAD"
+        ],
+        "commit hash": [
+            "git", "-C", f"{pyros_dir}", "rev-parse", "--short", "HEAD"
+        ],
+    }
+    for field, command in commands_dict.items():
+        try:
+            field_val = (
+                subprocess.check_output(command).decode("ascii").strip()
+            )
+        except subprocess.CalledProcessError:
+            field_val = "unknown"
+
+        git_info_dict[field] = field_val
+
+    return git_info_dict
 
 
 def NonNegIntOrMinusOne(obj):
@@ -642,6 +677,7 @@ class PyROS(object):
     '''
 
     CONFIG = pyros_config()
+    _LOG_LINE_LENGTH = 78
 
     def available(self, exception_flag=True):
         """Check if solver is available."""
@@ -662,6 +698,113 @@ class PyROS(object):
 
     def __exit__(self, et, ev, tb):
         pass
+
+    def _log_intro(self, logger, **log_kwargs):
+        """
+        Log PyROS solver introductory messages.
+
+        Parameters
+        ----------
+        logger : logging.Logger
+            Logger through which to emit messages.
+        **log_kwargs : dict, optional
+            Keyword arguments to ``logger.log()`` callable.
+            Should not include `msg`.
+        """
+        logger.log(msg="=" * self._LOG_LINE_LENGTH, **log_kwargs)
+        logger.log(
+            msg="PyROS: The Pyomo Robust Optimization Solver.",
+            **log_kwargs,
+        )
+
+        git_info_str = ", ".join(
+            f"{field}: {val}" for field, val in _get_pyomo_git_info().items()
+        )
+        logger.log(
+            msg=(
+                f"{' ' * len('PyROS:')} Version {self.version()} | "
+                f"Git {git_info_str}"
+            ),
+            **log_kwargs,
+        )
+        logger.log(
+            msg=(
+                f"{' ' * len('PyROS:')} "
+                f"Invoked at UTC {datetime.utcnow().isoformat()}"
+            ),
+            **log_kwargs,
+        )
+        logger.log(msg="", **log_kwargs)
+        logger.log(
+            msg=("Developed by: Natalie M. Isenberg (1), Jason A. F. Sherman (1),"),
+            **log_kwargs,
+        )
+        logger.log(
+            msg=(
+                f"{' ' * len('Developed by:')} "
+                "John D. Siirola (2), Chrysanthos E. Gounaris (1)"
+            ),
+            **log_kwargs,
+        )
+        logger.log(
+            msg=(
+                "(1) Carnegie Mellon University, "
+                "Department of Chemical Engineering"
+            ),
+            **log_kwargs,
+        )
+        logger.log(
+            msg="(2) Sandia National Laboratories, Center for Computing Research",
+            **log_kwargs,
+        )
+        logger.log(msg="", **log_kwargs)
+        logger.log(
+            msg=(
+                "The developers gratefully acknowledge support "
+                "from the U.S. Department"
+            ),
+            **log_kwargs,
+        )
+        logger.log(
+            msg=(
+                "of Energy's "
+                "Institute for the Design of Advanced Energy Systems (IDAES)."
+            ),
+            **log_kwargs,
+        )
+        logger.log(msg="=" * self._LOG_LINE_LENGTH, **log_kwargs)
+
+    def _log_disclaimer(self, logger, **log_kwargs):
+        """
+        Log PyROS solver disclaimer messages.
+
+        Parameters
+        ----------
+        logger : logging.Logger
+            Logger through which to emit messages.
+        **log_kwargs : dict, optional
+            Keyword arguments to ``logger.log()`` callable.
+            Should not include `msg`.
+        """
+        disclaimer_header = " DISCLAIMER ".center(self._LOG_LINE_LENGTH, "=")
+
+        logger.log(msg=disclaimer_header, **log_kwargs)
+        logger.log(
+            msg="PyROS is still under development. ",
+            **log_kwargs,
+        )
+        logger.log(
+            msg=(
+                "Please provide feedback and/or report any issues by creating "
+                "a ticket at"
+            ),
+            **log_kwargs,
+        )
+        logger.log(
+            msg="https://github.com/Pyomo/pyomo/issues/new/choose",
+            **log_kwargs,
+        )
+        logger.log(msg="=" * self._LOG_LINE_LENGTH, **log_kwargs)
 
     def solve(
         self,
@@ -742,15 +885,42 @@ class PyROS(object):
         model_data = ROSolveResults()
         model_data.timing = Bunch()
 
-        # === Set up logger for logging results
-        with time_code(model_data.timing, 'total', is_main_timer=True):
-            config.progress_logger.setLevel(logging.INFO)
+        # === Start timer, run the algorithm
+        model_data.timing = Bunch()
+        with time_code(
+                timing_data_obj=model_data.timing,
+                code_block_name='total',
+                is_main_timer=True,
+                ):
+            tt_timer = model_data.timing.tic_toc_timer
+            # output intro and disclaimer
+            self._log_intro(
+                config.progress_logger,
+                level=logging.INFO,
+            )
+            self._log_disclaimer(
+                config.progress_logger,
+                level=logging.INFO,
+            )
 
-            # === PREAMBLE
-            output_logger(config=config, preamble=True, version=str(self.version()))
+            # log solver options
+            excl_from_config_display = [
+                "first_stage_variables",
+                "second_stage_variables",
+                "uncertain_params",
+                "uncertainty_set",
+                "local_solver",
+                "global_solver",
+            ]
+            config.progress_logger.info("Solver options:")
+            for key, val in config.items():
+                if key not in excl_from_config_display:
+                    config.progress_logger.info(f" {key}={val!r}")
+            config.progress_logger.info("-" * self._LOG_LINE_LENGTH)
 
-            # === DISCLAIMER
-            output_logger(config=config, disclaimer=True)
+            # begin preprocessing
+            config.progress_logger.info("Preprocessing...")
+            tt_timer.toc(msg=None)
 
             # === A block to hold list-type data to make cloning easy
             util = Block(concrete=True)
@@ -831,10 +1001,16 @@ class PyROS(object):
                 if "bound_con" in c.name:
                     wm_util.ssv_bounds.append(c)
 
+            config.progress_logger.info(
+                f"Done preprocessing; required wall time of "
+                f"{tt_timer.toc(msg=None, delta=True):.2f}s."
+            )
+
             # === Solve and load solution into model
             pyros_soln, final_iter_separation_solns = ROSolver_iterative_solve(
                 model_data, config
             )
+            IterationLogRecord.log_header_rule(config.progress_logger.info)
 
             return_soln = ROSolveResults()
             if pyros_soln is not None and final_iter_separation_solns is not None:
@@ -884,6 +1060,49 @@ class PyROS(object):
                 return_soln.final_objective_value = None
                 return_soln.time = get_main_elapsed_time(model_data.timing)
                 return_soln.iterations = 0
+
+        termination_msg_dict = {
+            pyrosTerminationCondition.robust_optimal: (
+                "Robust optimal solution identified."
+            ),
+            pyrosTerminationCondition.robust_feasible: (
+                "Robust feasible solution identified."
+            ),
+            pyrosTerminationCondition.robust_infeasible: (
+                "Problem is robust infeasible."
+            ),
+            pyrosTerminationCondition.time_out: (
+                "Maximum allowable time exceeded."
+            ),
+            pyrosTerminationCondition.max_iter: (
+                "Maximum number of iterations reached."
+            ),
+            pyrosTerminationCondition.subsolver_error: (
+                "Subordinate optimizer(s) could not solve a subproblem "
+                "to an acceptable status."
+            ),
+        }
+        config.progress_logger.info(
+            termination_msg_dict[return_soln.pyros_termination_condition]
+        )
+        config.progress_logger.info("-" * self._LOG_LINE_LENGTH)
+        config.progress_logger.info("Termination stats:")
+        config.progress_logger.info(
+            f" {'Iterations':<22s}: {return_soln.iterations}"
+        )
+        config.progress_logger.info(
+            f" {'Solve time (wall s)':<22s}: {return_soln.time:.4f}"
+        )
+        config.progress_logger.info(
+            f" {'Final objective value':<22s}: "
+            f"{return_soln.final_objective_value}"
+        )
+        config.progress_logger.info(
+            f" {'Termination condition':<22s}: "
+            f"{return_soln.pyros_termination_condition}"
+        )
+        config.progress_logger.info("=" * self._LOG_LINE_LENGTH)
+
         return return_soln
 
 

@@ -542,6 +542,22 @@ class SeparationResults:
         return attr_val
 
     @property
+    def worst_case_perf_con(self):
+        """
+        ...
+        """
+        return self.get_violating_attr("worst_case_perf_con")
+
+    @property
+    def main_loop_results(self):
+        """
+        Get main separation loop results.
+        """
+        if self.global_separation_loop_results is not None:
+            return self.global_separation_loop_results
+        return self.local_separation_loop_results
+
+    @property
     def found_violation(self):
         """
         bool: True if ``found_violation`` attribute for

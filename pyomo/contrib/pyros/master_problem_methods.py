@@ -298,6 +298,9 @@ def minimize_dr_vars(model_data, config):
     -------
     results : SolverResults
         Subordinate solver results for the polishing problem.
+    polishing_successful : bool
+        True if polishing model was solved to acceptable level,
+        False otherwise.
     """
     # config.progress_logger.info("Executing decision rule variable polishing solve.")
     model = model_data.master_model
@@ -493,7 +496,7 @@ def minimize_dr_vars(model_data, config):
     acceptable = {tc.globallyOptimal, tc.optimal, tc.locallyOptimal, tc.feasible}
     if results.solver.termination_condition not in acceptable:
         # continue with "unpolished" master model solution
-        return results
+        return results, False
 
     # update master model second-stage, state, and decision rule
     # variables to polishing model solution
@@ -520,7 +523,7 @@ def minimize_dr_vars(model_data, config):
             for mvar, pvar in zip(master_dr.values(), polish_dr.values()):
                 mvar.set_value(value(pvar), skip_validation=True)
 
-    return results
+    return results, True
 
 
 def add_p_robust_constraint(model_data, config):
