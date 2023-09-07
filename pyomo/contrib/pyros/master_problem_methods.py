@@ -550,9 +550,8 @@ def minimize_dr_vars(model_data, config):
         worst_blk_idx = max(
             model_data.master_model.scenarios.keys(),
             key=lambda idx: value(
-                model_data.master_model.scenarios[idx]
-                .second_stage_objective
-            )
+                model_data.master_model.scenarios[idx].second_stage_objective
+            ),
         )
     else:
         worst_blk_idx = (0, 0)
@@ -560,16 +559,13 @@ def minimize_dr_vars(model_data, config):
     # debugging: summarize objective breakdown
     worst_master_blk = model_data.master_model.scenarios[worst_blk_idx]
     config.progress_logger.debug(
-        " First-stage objective "
-        f"{value(worst_master_blk.first_stage_objective)}"
+        " First-stage objective " f"{value(worst_master_blk.first_stage_objective)}"
     )
     config.progress_logger.debug(
-        " Second-stage objective "
-        f"{value(worst_master_blk.second_stage_objective)}"
+        " Second-stage objective " f"{value(worst_master_blk.second_stage_objective)}"
     )
     polished_master_obj = value(
-        worst_master_blk.first_stage_objective
-        + worst_master_blk.second_stage_objective
+        worst_master_blk.first_stage_objective + worst_master_blk.second_stage_objective
     )
     config.progress_logger.debug(f" Objective {polished_master_obj}")
 
@@ -785,8 +781,7 @@ def solver_call_master(model_data, config, solver, solve_data):
                 f" Second-stage objective {master_soln.second_stage_objective}"
             )
             master_obj = (
-                master_soln.first_stage_objective
-                + master_soln.second_stage_objective
+                master_soln.first_stage_objective + master_soln.second_stage_objective
             )
             config.progress_logger.debug(f" Objective {master_obj}")
 
@@ -831,8 +826,7 @@ def solver_call_master(model_data, config, solver, solve_data):
             ),
         )
         nlp_model.write(
-            output_problem_path,
-            io_options={'symbolic_solver_labels': True},
+            output_problem_path, io_options={'symbolic_solver_labels': True}
         )
         serialization_msg = (
             f" Problem has been serialized to path {output_problem_path!r}."

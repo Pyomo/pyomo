@@ -62,18 +62,12 @@ def _get_pyomo_git_info():
 
     git_info_dict = {}
     commands_dict = {
-        "branch": [
-            "git", "-C", f"{pyros_dir}", "rev-parse", "--abbrev-ref", "HEAD"
-        ],
-        "commit hash": [
-            "git", "-C", f"{pyros_dir}", "rev-parse", "--short", "HEAD"
-        ],
+        "branch": ["git", "-C", f"{pyros_dir}", "rev-parse", "--abbrev-ref", "HEAD"],
+        "commit hash": ["git", "-C", f"{pyros_dir}", "rev-parse", "--short", "HEAD"],
     }
     for field, command in commands_dict.items():
         try:
-            field_val = (
-                subprocess.check_output(command).decode("ascii").strip()
-            )
+            field_val = subprocess.check_output(command).decode("ascii").strip()
         except subprocess.CalledProcessError:
             field_val = "unknown"
 
@@ -711,10 +705,7 @@ class PyROS(object):
             Should not include `msg`.
         """
         logger.log(msg="=" * self._LOG_LINE_LENGTH, **log_kwargs)
-        logger.log(
-            msg="PyROS: The Pyomo Robust Optimization Solver.",
-            **log_kwargs,
-        )
+        logger.log(msg="PyROS: The Pyomo Robust Optimization Solver.", **log_kwargs)
 
         git_info_str = ", ".join(
             f"{field}: {val}" for field, val in _get_pyomo_git_info().items()
@@ -747,8 +738,7 @@ class PyROS(object):
         )
         logger.log(
             msg=(
-                "(1) Carnegie Mellon University, "
-                "Department of Chemical Engineering"
+                "(1) Carnegie Mellon University, " "Department of Chemical Engineering"
             ),
             **log_kwargs,
         )
@@ -788,10 +778,7 @@ class PyROS(object):
         disclaimer_header = " DISCLAIMER ".center(self._LOG_LINE_LENGTH, "=")
 
         logger.log(msg=disclaimer_header, **log_kwargs)
-        logger.log(
-            msg="PyROS is still under development. ",
-            **log_kwargs,
-        )
+        logger.log(msg="PyROS is still under development. ", **log_kwargs)
         logger.log(
             msg=(
                 "Please provide feedback and/or report any issues by creating "
@@ -799,10 +786,7 @@ class PyROS(object):
             ),
             **log_kwargs,
         )
-        logger.log(
-            msg="https://github.com/Pyomo/pyomo/issues/new/choose",
-            **log_kwargs,
-        )
+        logger.log(msg="https://github.com/Pyomo/pyomo/issues/new/choose", **log_kwargs)
         logger.log(msg="=" * self._LOG_LINE_LENGTH, **log_kwargs)
 
     def solve(
@@ -887,20 +871,14 @@ class PyROS(object):
         # === Start timer, run the algorithm
         model_data.timing = Bunch()
         with time_code(
-                timing_data_obj=model_data.timing,
-                code_block_name='total',
-                is_main_timer=True,
-                ):
+            timing_data_obj=model_data.timing,
+            code_block_name='total',
+            is_main_timer=True,
+        ):
             tt_timer = model_data.timing.tic_toc_timer
             # output intro and disclaimer
-            self._log_intro(
-                config.progress_logger,
-                level=logging.INFO,
-            )
-            self._log_disclaimer(
-                config.progress_logger,
-                level=logging.INFO,
-            )
+            self._log_intro(config.progress_logger, level=logging.INFO)
+            self._log_disclaimer(config.progress_logger, level=logging.INFO)
 
             # log solver options
             excl_from_config_display = [
@@ -1070,9 +1048,7 @@ class PyROS(object):
             pyrosTerminationCondition.robust_infeasible: (
                 "Problem is robust infeasible."
             ),
-            pyrosTerminationCondition.time_out: (
-                "Maximum allowable time exceeded."
-            ),
+            pyrosTerminationCondition.time_out: ("Maximum allowable time exceeded."),
             pyrosTerminationCondition.max_iter: (
                 "Maximum number of iterations reached."
             ),
@@ -1086,15 +1062,12 @@ class PyROS(object):
         )
         config.progress_logger.info("-" * self._LOG_LINE_LENGTH)
         config.progress_logger.info("Termination stats:")
-        config.progress_logger.info(
-            f" {'Iterations':<22s}: {return_soln.iterations}"
-        )
+        config.progress_logger.info(f" {'Iterations':<22s}: {return_soln.iterations}")
         config.progress_logger.info(
             f" {'Solve time (wall s)':<22s}: {return_soln.time:.4f}"
         )
         config.progress_logger.info(
-            f" {'Final objective value':<22s}: "
-            f"{return_soln.final_objective_value}"
+            f" {'Final objective value':<22s}: " f"{return_soln.final_objective_value}"
         )
         config.progress_logger.info(
             f" {'Termination condition':<22s}: "

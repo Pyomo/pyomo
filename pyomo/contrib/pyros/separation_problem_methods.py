@@ -537,11 +537,8 @@ def get_worst_discrete_separation_solution(
 
 
 def get_con_name_repr(
-        separation_model,
-        perf_con,
-        with_orig_name=True,
-        with_obj_name=True,
-        ):
+    separation_model, perf_con, with_orig_name=True, with_obj_name=True
+):
     """
     Get string representation of performance constraint
     and any other modeling components to which it has
@@ -574,10 +571,8 @@ def get_con_name_repr(
     if with_orig_name:
         # check performance constraint was not added
         # at construction of separation problem
-        orig_con = (
-            separation_model
-            .util
-            .map_new_constraint_list_to_original_con.get(perf_con, perf_con)
+        orig_con = separation_model.util.map_new_constraint_list_to_original_con.get(
+            perf_con, perf_con
         )
         if orig_con is not perf_con:
             qual_strs.append(f"originally {orig_con.name!r}")
@@ -1136,7 +1131,9 @@ def solver_call_separation(
                 + ".bar"
             ),
         )
-        nlp_model.write(output_problem_path, io_options={'symbolic_solver_labels': True})
+        nlp_model.write(
+            output_problem_path, io_options={'symbolic_solver_labels': True}
+        )
         serialization_msg = (
             f"Problem has been serialized to path {output_problem_path!r}."
         )

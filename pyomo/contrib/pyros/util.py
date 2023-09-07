@@ -1467,17 +1467,17 @@ class IterationLogRecord:
     }
 
     def __init__(
-            self,
-            iteration,
-            objective,
-            first_stage_var_shift,
-            dr_var_shift,
-            dr_polishing_failed,
-            num_violated_cons,
-            all_sep_problems_solved,
-            max_violation,
-            elapsed_time,
-            ):
+        self,
+        iteration,
+        objective,
+        first_stage_var_shift,
+        dr_var_shift,
+        dr_polishing_failed,
+        num_violated_cons,
+        all_sep_problems_solved,
+        max_violation,
+        elapsed_time,
+    ):
         """Initialize self (see class docstring)."""
         self.iteration = iteration
         self.objective = objective
@@ -1529,9 +1529,7 @@ class IterationLogRecord:
 
             attr_val_str = f"{eval(attr_val_fstrs[attr_name])}{qual}"
 
-            return (
-                f"{attr_val_str:{f'<{self._ATTR_FORMAT_LENGTHS[attr_name]}'}}"
-            )
+            return f"{attr_val_str:{f'<{self._ATTR_FORMAT_LENGTHS[attr_name]}'}}"
 
     def log(self, log_func, **log_func_kwargs):
         """Log self."""

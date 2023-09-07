@@ -13,10 +13,7 @@ from pyomo.contrib.pyros.util import (
     pyrosTerminationCondition,
     IterationLogRecord,
 )
-from pyomo.contrib.pyros.util import (
-    get_main_elapsed_time,
-    coefficient_matching,
-)
+from pyomo.contrib.pyros.util import get_main_elapsed_time, coefficient_matching
 from pyomo.core.base import value
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.core.base.var import _VarData as VarData
@@ -51,20 +48,14 @@ def update_grcs_solve_data(
 
 
 def get_dr_var_to_scaled_expr_map(
-        decision_rule_eqns,
-        second_stage_vars,
-        uncertain_params,
-        decision_rule_vars,
-        ):
+    decision_rule_eqns, second_stage_vars, uncertain_params, decision_rule_vars
+):
     """
     Generate mapping from decision rule variables
     to their terms in a model's DR expression.
     """
     var_to_scaled_expr_map = ComponentMap()
-    ssv_dr_eq_zip = zip(
-        second_stage_vars,
-        decision_rule_eqns,
-    )
+    ssv_dr_eq_zip = zip(second_stage_vars, decision_rule_eqns)
     for ssv_idx, (ssv, dr_eq) in enumerate(ssv_dr_eq_zip):
         for term in dr_eq.body.args:
             is_ssv_term = (
@@ -83,16 +74,19 @@ def evaluate_and_log_component_stats(model_data, separation_model, config):
     """
     Evaluate and log model component statistics.
     """
-    config.progress_logger.info(
-        "Model statistics:"
-    )
+    config.progress_logger.info("Model statistics:")
     # print model statistics
-    dr_var_set = ComponentSet(chain(*tuple(
-        indexed_dr_var.values()
-        for indexed_dr_var in model_data.working_model.util.decision_rule_vars
-    )))
+    dr_var_set = ComponentSet(
+        chain(
+            *tuple(
+                indexed_dr_var.values()
+                for indexed_dr_var in model_data.working_model.util.decision_rule_vars
+            )
+        )
+    )
     first_stage_vars = [
-        var for var in model_data.working_model.util.first_stage_variables
+        var
+        for var in model_data.working_model.util.first_stage_variables
         if var not in dr_var_set
     ]
 
@@ -107,24 +101,25 @@ def evaluate_and_log_component_stats(model_data, separation_model, config):
     num_vars = int(has_epigraph_con) + num_fsv + num_ssv + num_sv + num_dr_vars
 
     eq_cons = [
-        con for con in
-        model_data.working_model.component_data_objects(
-            Constraint,
-            active=True,
+        con
+        for con in model_data.working_model.component_data_objects(
+            Constraint, active=True
         )
         if con.equality
     ]
-    dr_eq_set = ComponentSet(chain(*tuple(
-        indexed_dr_eq.values()
-        for indexed_dr_eq in model_data.working_model.util.decision_rule_eqns
-    )))
+    dr_eq_set = ComponentSet(
+        chain(
+            *tuple(
+                indexed_dr_eq.values()
+                for indexed_dr_eq in model_data.working_model.util.decision_rule_eqns
+            )
+        )
+    )
     num_eq_cons = len(eq_cons)
     num_dr_cons = len(dr_eq_set)
-    num_coefficient_matching_cons = len(getattr(
-        model_data.working_model,
-        "coefficient_matching_constraints",
-        [],
-    ))
+    num_coefficient_matching_cons = len(
+        getattr(model_data.working_model, "coefficient_matching_constraints", [])
+    )
     num_other_eq_cons = num_eq_cons - num_dr_cons - num_coefficient_matching_cons
 
     # get performance constraints as referenced in the separation
@@ -135,8 +130,7 @@ def evaluate_and_log_component_stats(model_data, separation_model, config):
         for con in separation_model.util.performance_constraints
     )
     is_epigraph_con_first_stage = (
-        has_epigraph_con
-        and sep_model_epigraph_con not in perf_con_set
+        has_epigraph_con and sep_model_epigraph_con not in perf_con_set
     )
     working_model_perf_con_set = ComponentSet(
         model_data.working_model.find_component(new_sep_con_map.get(con, con))
@@ -150,53 +144,38 @@ def evaluate_and_log_component_stats(model_data, separation_model, config):
         for var in first_stage_vars
     )
     ineq_con_set = [
-        con for con in
-        model_data.working_model.component_data_objects(
-            Constraint,
-            active=True,
+        con
+        for con in model_data.working_model.component_data_objects(
+            Constraint, active=True
         )
         if not con.equality
     ]
-    num_fsv_ineqs = num_fsv_bounds + len(
-        [con for con in ineq_con_set if con not in working_model_perf_con_set]
-    ) + is_epigraph_con_first_stage
-    num_ineq_cons = (
-        len(ineq_con_set)
-        + has_epigraph_con
-        + num_fsv_bounds
+    num_fsv_ineqs = (
+        num_fsv_bounds
+        + len([con for con in ineq_con_set if con not in working_model_perf_con_set])
+        + is_epigraph_con_first_stage
     )
+    num_ineq_cons = len(ineq_con_set) + has_epigraph_con + num_fsv_bounds
 
-    config.progress_logger.info(
-        f"{'  Number of variables'} : {num_vars}"
-    )
-    config.progress_logger.info(
-        f"{'    Epigraph variable'} : {int(has_epigraph_con)}"
-    )
+    config.progress_logger.info(f"{'  Number of variables'} : {num_vars}")
+    config.progress_logger.info(f"{'    Epigraph variable'} : {int(has_epigraph_con)}")
     config.progress_logger.info(f"{'    First-stage variables'} : {num_fsv}")
     config.progress_logger.info(f"{'    Second-stage variables'} : {num_ssv}")
     config.progress_logger.info(f"{'    State variables'} : {num_sv}")
     config.progress_logger.info(f"{'    Decision rule variables'} : {num_dr_vars}")
     config.progress_logger.info(
-        f"{'  Number of constraints'} : "
-        f"{num_ineq_cons + num_eq_cons}"
+        f"{'  Number of constraints'} : " f"{num_ineq_cons + num_eq_cons}"
     )
-    config.progress_logger.info(
-        f"{'    Equality constraints'} : {num_eq_cons}"
-    )
+    config.progress_logger.info(f"{'    Equality constraints'} : {num_eq_cons}")
     config.progress_logger.info(
         f"{'      Coefficient matching constraints'} : "
         f"{num_coefficient_matching_cons}"
     )
+    config.progress_logger.info(f"{'      Decision rule equations'} : {num_dr_cons}")
     config.progress_logger.info(
-        f"{'      Decision rule equations'} : {num_dr_cons}"
+        f"{'      All other equality constraints'} : " f"{num_other_eq_cons}"
     )
-    config.progress_logger.info(
-        f"{'      All other equality constraints'} : "
-        f"{num_other_eq_cons}"
-    )
-    config.progress_logger.info(
-        f"{'    Inequality constraints'} : {num_ineq_cons}"
-    )
+    config.progress_logger.info(f"{'    Inequality constraints'} : {num_ineq_cons}")
     config.progress_logger.info(
         f"{'      First-stage inequalities (incl. certain var bounds)'} : "
         f"{num_fsv_ineqs}"
@@ -319,9 +298,7 @@ def ROSolver_iterative_solve(model_data, config):
     )
 
     evaluate_and_log_component_stats(
-        model_data=model_data,
-        separation_model=separation_model,
-        config=config,
+        model_data=model_data, separation_model=separation_model, config=config
     )
 
     # === Create separation problem data container object and add information to catalog during solve
@@ -373,22 +350,23 @@ def ROSolver_iterative_solve(model_data, config):
     dr_var_lists_polished = []
 
     # set up first-stage variable and DR variable sets
-    master_dr_var_set = ComponentSet(chain(*tuple(
-        indexed_var.values()
-        for indexed_var
-        in master_data.master_model.scenarios[0, 0].util.decision_rule_vars
-    )))
+    master_dr_var_set = ComponentSet(
+        chain(
+            *tuple(
+                indexed_var.values()
+                for indexed_var in master_data.master_model.scenarios[
+                    0, 0
+                ].util.decision_rule_vars
+            )
+        )
+    )
     master_fsv_set = ComponentSet(
-        var for var in
-        master_data.master_model.scenarios[0, 0].util.first_stage_variables
+        var
+        for var in master_data.master_model.scenarios[0, 0].util.first_stage_variables
         if var not in master_dr_var_set
     )
-    previous_master_fsv_vals = ComponentMap(
-        (var, None) for var in master_fsv_set
-    )
-    previous_master_dr_var_vals = ComponentMap(
-        (var, None) for var in master_dr_var_set
-    )
+    previous_master_fsv_vals = ComponentMap((var, None) for var in master_fsv_set)
+    previous_master_dr_var_vals = ComponentMap((var, None) for var in master_dr_var_set)
 
     nom_master_util_blk = master_data.master_model.scenarios[0, 0].util
     dr_var_scaled_expr_map = get_dr_var_to_scaled_expr_map(
@@ -501,11 +479,11 @@ def ROSolver_iterative_solve(model_data, config):
                     vals.append(dvar.value)
                 dr_var_lists_original.append(vals)
 
-            polishing_results, polishing_successful = (
-                master_problem_methods.minimize_dr_vars(
-                    model_data=master_data,
-                    config=config,
-                )
+            (
+                polishing_results,
+                polishing_successful,
+            ) = master_problem_methods.minimize_dr_vars(
+                model_data=master_data, config=config
             )
             timing_data.total_dr_polish_time += get_time_from_solver(polishing_results)
 
@@ -522,22 +500,31 @@ def ROSolver_iterative_solve(model_data, config):
         # and compare with previous first-stage and DR variable
         # values
         current_master_fsv_vals = ComponentMap(
-            (var, value(var))
-            for var in master_fsv_set
+            (var, value(var)) for var in master_fsv_set
         )
         current_master_dr_var_vals = ComponentMap(
-            (var, value(var))
-            for var, expr in dr_var_scaled_expr_map.items()
+            (var, value(var)) for var, expr in dr_var_scaled_expr_map.items()
         )
         if k > 0:
-            first_stage_var_shift = max(
-                abs(current_master_fsv_vals[var] - previous_master_fsv_vals[var])
-                for var in previous_master_fsv_vals
-            ) if current_master_fsv_vals else None
-            dr_var_shift = max(
-                abs(current_master_dr_var_vals[var] - previous_master_dr_var_vals[var])
-                for var in previous_master_dr_var_vals
-            ) if current_master_dr_var_vals else None
+            first_stage_var_shift = (
+                max(
+                    abs(current_master_fsv_vals[var] - previous_master_fsv_vals[var])
+                    for var in previous_master_fsv_vals
+                )
+                if current_master_fsv_vals
+                else None
+            )
+            dr_var_shift = (
+                max(
+                    abs(
+                        current_master_dr_var_vals[var]
+                        - previous_master_dr_var_vals[var]
+                    )
+                    for var in previous_master_dr_var_vals
+                )
+                if current_master_dr_var_vals
+                else None
+            )
         else:
             first_stage_var_shift = None
             dr_var_shift = None
@@ -623,20 +610,16 @@ def ROSolver_iterative_solve(model_data, config):
 
         scaled_violations = [
             solve_call_res.scaled_violations[con]
-            for con, solve_call_res
-            in separation_results.main_loop_results.solver_call_results.items()
+            for con, solve_call_res in separation_results.main_loop_results.solver_call_results.items()
             if solve_call_res.scaled_violations is not None
         ]
         if scaled_violations:
             max_sep_con_violation = max(scaled_violations)
         else:
             max_sep_con_violation = None
-        num_violated_cons = len(
-            separation_results.violated_performance_constraints
-        )
-        all_sep_problems_solved = (
-            len(scaled_violations)
-            == len(separation_model.util.performance_constraints)
+        num_violated_cons = len(separation_results.violated_performance_constraints)
+        all_sep_problems_solved = len(scaled_violations) == len(
+            separation_model.util.performance_constraints
         )
 
         iter_log_record = IterationLogRecord(
@@ -723,7 +706,7 @@ def ROSolver_iterative_solve(model_data, config):
 
         config.progress_logger.debug("Points added to master:")
         config.progress_logger.debug(
-            np.array([pt for pt in separation_data.points_added_to_master]),
+            np.array([pt for pt in separation_data.points_added_to_master])
         )
 
         k += 1
