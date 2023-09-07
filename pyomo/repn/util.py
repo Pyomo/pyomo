@@ -323,13 +323,13 @@ class BeforeChildDispatcher(collections.defaultdict):
     @staticmethod
     def _before_npv(visitor, child):
         try:
-            return False, (_CONSTANT, visitor._eval_expr(child))
+            return False, (_CONSTANT, visitor.handle_constant(visitor.evaluate(child), child))
         except (ValueError, ArithmeticError):
             return True, None
 
     @staticmethod
     def _before_param(visitor, child):
-        return False, (_CONSTANT, visitor._eval_fixed(child))
+        return False, (_CONSTANT, visitor.handle_constant(child.value, child))
 
     #
     # The following methods must be defined by derivative classes (along

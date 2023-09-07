@@ -2282,7 +2282,7 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
         _id = id(child)
         if _id not in visitor.var_map:
             if child.fixed:
-                return False, (_CONSTANT, visitor._eval_fixed(child))
+                return False, (_CONSTANT, visitor.handle_constant(child.value, child))
             visitor.var_map[_id] = child
         return False, (_MONOMIAL, _id, 1)
 
@@ -2295,14 +2295,14 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
         arg1, arg2 = child._args_
         if arg1.__class__ not in native_types:
             try:
-                arg1 = visitor._eval_expr(arg1)
+                arg1 = visitor.handle_constant(visitor.evaluate(arg1), arg1)
             except (ValueError, ArithmeticError):
                 return True, None
 
         # Trap multiplication by 0 and nan.
         if not arg1:
             if arg2.fixed:
-                arg2 = visitor._eval_fixed(arg2)
+                arg2 = visitor.handle_constant(arg2.value, arg2)
                 if arg2 != arg2:
                     deprecation_warning(
                         f"Encountered {arg1}*{arg2} in expression tree.  "
@@ -2316,7 +2316,7 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
         _id = id(arg2)
         if _id not in visitor.var_map:
             if arg2.fixed:
-                return False, (_CONSTANT, arg1 * visitor._eval_fixed(arg2))
+                return False, (_CONSTANT, arg1 * visitor.handle_constant(arg2.value, arg2))
             visitor.var_map[_id] = arg2
         return False, (_MONOMIAL, _id, arg1)
 
@@ -2333,14 +2333,14 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
                 arg1, arg2 = arg._args_
                 if arg1.__class__ not in native_types:
                     try:
-                        arg1 = visitor._eval_expr(arg1)
+                        arg1 = visitor.handle_constant(visitor.evaluate(arg1), arg1)
                     except (ValueError, ArithmeticError):
                         return True, None
 
                 # Trap multiplication by 0 and nan.
                 if not arg1:
                     if arg2.fixed:
-                        arg2 = visitor._eval_fixed(arg2)
+                        arg2 = visitor.handle_constant(arg2.value, arg2)
                         if arg2 != arg2:
                             deprecation_warning(
                                 f"Encountered {arg1}*{str(arg2.value)} in expression "
@@ -2354,7 +2354,7 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
                 _id = id(arg2)
                 if _id not in var_map:
                     if arg2.fixed:
-                        const += arg1 * visitor._eval_fixed(arg2)
+                        const += arg1 * visitor.handle_constant(arg2.value, arg2)
                         continue
                     var_map[_id] = arg2
                     linear[_id] = arg1
@@ -2366,7 +2366,7 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
                 const += arg
             else:
                 try:
-                    const += visitor._eval_expr(arg)
+                    const += visitor.handle_constant(visitor.evaluate(arg), arg)
                 except (ValueError, ArithmeticError):
                     return True, None
 
@@ -2417,14 +2417,14 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         self.use_named_exprs = use_named_exprs
         self.encountered_string_arguments = False
         self._eval_expr_visitor = _EvaluationVisitor(True)
+        self.evaluate = self._eval_expr_visitor.dfs_postorder_stack
 
-    def _eval_fixed(self, obj):
-        ans = obj.value
+    def handle_constant(self, ans, obj):
         if ans.__class__ not in native_numeric_types:
             # None can be returned from uninitialized Var/Param objects
             if ans is None:
                 return InvalidNumber(
-                    None, f"'{obj}' contains a nonnumeric value '{ans}'"
+                    None, f"'{obj}' evaluated to a nonnumeric value '{ans}'"
                 )
             if ans.__class__ is InvalidNumber:
                 return ans
@@ -2443,43 +2443,10 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
                     ans = float(ans)
                 except:
                     return InvalidNumber(
-                        ans, f"'{obj}' contains a  nonnumeric value '{ans}'"
+                        ans, f"'{obj}' evaluated to a  nonnumeric value '{ans}'"
                     )
         if ans != ans:
-            return InvalidNumber(nan, f"'{obj}' contains a nonnumeric value '{ans}'")
-        if ans.__class__ in _complex_types:
-            return complex_number_error(ans, self, obj)
-        return ans
-
-    def _eval_expr(self, expr):
-        ans = self._eval_expr_visitor.dfs_postorder_stack(expr)
-        if ans.__class__ not in native_numeric_types:
-            # None can be returned from uninitialized Expression objects
-            if ans is None:
-                return InvalidNumber(
-                    ans, f"'{expr}' evaluated to nonnumeric value '{ans}'"
-                )
-            if ans.__class__ is InvalidNumber:
-                return ans
-            else:
-                # It is possible to get other non-numeric types.  Most
-                # common are bool and 1-element numpy.array().  We will
-                # attempt to convert the value to a float before
-                # proceeding.
-                #
-                # TODO: we should check bool and warn/error (while bool is
-                # convertible to float in Python, they have very
-                # different semantic meanings in Pyomo).
-                try:
-                    ans = float(ans)
-                except:
-                    return InvalidNumber(
-                        ans, f"'{expr}' evaluated to nonnumeric value '{ans}'"
-                    )
-        if ans != ans:
-            return InvalidNumber(ans, f"'{expr}' evaluated to nonnumeric value '{ans}'")
-        if ans.__class__ in _complex_types:
-            return complex_number_error(ans, self, expr)
+            return InvalidNumber(nan, f"'{obj}' evaluated to a nonnumeric value '{ans}'")
         return ans
 
     def initializeWalker(self, expr):
