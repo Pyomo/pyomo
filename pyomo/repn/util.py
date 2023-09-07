@@ -285,8 +285,8 @@ class BeforeChildDispatcher(collections.defaultdict):
                 finally:
                     child.__class__ = child_type
         elif (
-            issubclass(child_type, _named_subexpression_types):
-            or node_type is kernel.expression.noclone
+            issubclass(child_type, _named_subexpression_types)
+            or child_type is kernel.expression.noclone
         ):
             self[child_type] = self._before_named_expression
         else:
