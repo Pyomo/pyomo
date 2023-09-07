@@ -657,7 +657,7 @@ def solver_call_master(model_data, config, solver, solve_data):
             # errors, etc.)
             config.progress_logger.error(
                 f"Solver {repr(opt)} encountered exception attempting to "
-                f"optimize master problem in iteration {model_data.iteration}"
+                f"optimize master problem in iteration {model_data.iteration}."
             )
             raise
         else:
@@ -718,6 +718,20 @@ def solver_call_master(model_data, config, solver, solve_data):
                 nlp_model.scenarios[0, 0].first_stage_objective
             )
 
+            # debugging: log breakdown of master objective
+            config.progress_logger.debug("Master objective")
+            config.progress_logger.debug(
+                f" First-stage objective {master_soln.first_stage_objective}"
+            )
+            config.progress_logger.debug(
+                f" Second-stage objective {master_soln.second_stage_objective}"
+            )
+            master_obj = (
+                master_soln.first_stage_objective
+                + master_soln.second_stage_objective
+            )
+            config.progress_logger.debug(f" Objective {master_obj}")
+
             master_soln.nominal_block = nlp_model.scenarios[0, 0]
             master_soln.results = results
             master_soln.master_model = nlp_model
@@ -745,8 +759,9 @@ def solver_call_master(model_data, config, solver, solve_data):
     # NOTE: subproblem is written with variables set to their
     #       initial values (not the final subsolver iterate)
     save_dir = config.subproblem_file_directory
+    serialization_msg = ""
     if save_dir and config.keepfiles:
-        name = os.path.join(
+        output_problem_path = os.path.join(
             save_dir,
             (
                 config.uncertainty_set.type
@@ -757,15 +772,24 @@ def solver_call_master(model_data, config, solver, solve_data):
                 + ".bar"
             ),
         )
-        nlp_model.write(name, io_options={'symbolic_solver_labels': True})
-        output_logger(
-            config=config,
-            master_error=True,
-            status_dict=solver_term_cond_dict,
-            filename=name,
-            iteration=model_data.iteration,
+        nlp_model.write(
+            output_problem_path,
+            io_options={'symbolic_solver_labels': True},
         )
+        serialization_msg = (
+            f" Problem has been serialized to path {output_problem_path!r}."
+        )
+
     master_soln.pyros_termination_condition = pyrosTerminationCondition.subsolver_error
+    solve_mode = "global" if config.solve_master_globally else "local"
+    config.progress_logger.warning(
+        f"Could not successfully solve master problem of iteration "
+        f"{model_data.iteration} with any of the "
+        f"provided subordinate {solve_mode} optimizers. "
+        f"(Termination statuses: "
+        f"{[term_cond for term_cond in solver_term_cond_dict.values()]}.)"
+        f"{ serialization_msg}"
+    )
     return master_soln
 
 
