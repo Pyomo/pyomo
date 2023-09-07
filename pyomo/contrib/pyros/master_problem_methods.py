@@ -845,8 +845,8 @@ def solver_call_master(model_data, config, solver, solve_data):
         f"{model_data.iteration} with any of the "
         f"provided subordinate {solve_mode} optimizers. "
         f"(Termination statuses: "
-        f"{[term_cond for term_cond in solver_term_cond_dict.values()]}.)"
-        f"{ serialization_msg}"
+        f"{[term_cond for term_cond in solver_term_cond_dict.values()]}.) "
+        f"{serialization_msg}"
     )
     return master_soln
 
