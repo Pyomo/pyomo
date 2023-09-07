@@ -470,6 +470,15 @@ def minimize_dr_vars(model_data, config):
     else:
         solver = config.local_solver
 
+    config.progress_logger.debug("Solving DR polishing problem")
+
+    # NOTE: this objective evalaution may not be accurate, due
+    #       to the current initialization scheme for the auxiliary
+    #       variables. new initialization will be implemented in the
+    #       near future.
+    polishing_obj = polishing_model.scenarios[0, 0].polishing_obj
+    config.progress_logger.debug(f" Initial DR norm: {value(polishing_obj)}")
+
     # === Solve the polishing model
     timer = TicTocTimer()
     orig_setting, custom_setting_present = adjust_solver_time_settings(
@@ -491,6 +500,16 @@ def minimize_dr_vars(model_data, config):
         revert_solver_max_time_adjustment(
             solver, orig_setting, custom_setting_present, config
         )
+
+    # interested in the time and termination status for debugging
+    # purposes
+    config.progress_logger.debug(" Done solving DR polishing problem")
+    config.progress_logger.debug(
+        f"  Solve time: {getattr(results.solver, TIC_TOC_SOLVE_TIME_ATTR)} s"
+    )
+    config.progress_logger.debug(
+        f"  Termination status: {results.solver.termination_condition} "
+    )
 
     # === Process solution by termination condition
     acceptable = {tc.globallyOptimal, tc.optimal, tc.locallyOptimal, tc.feasible}
@@ -522,6 +541,37 @@ def minimize_dr_vars(model_data, config):
         for master_dr, polish_dr in dr_var_zip:
             for mvar, pvar in zip(master_dr.values(), polish_dr.values()):
                 mvar.set_value(value(pvar), skip_validation=True)
+
+    config.progress_logger.debug(f" Optimized DDR norm: {value(polishing_obj)}")
+    config.progress_logger.debug("Polished Master objective:")
+
+    # print master solution
+    if config.objective_focus == ObjectiveType.worst_case:
+        worst_blk_idx = max(
+            model_data.master_model.scenarios.keys(),
+            key=lambda idx: value(
+                model_data.master_model.scenarios[idx]
+                .second_stage_objective
+            )
+        )
+    else:
+        worst_blk_idx = (0, 0)
+
+    # debugging: summarize objective breakdown
+    worst_master_blk = model_data.master_model.scenarios[worst_blk_idx]
+    config.progress_logger.debug(
+        " First-stage objective "
+        f"{value(worst_master_blk.first_stage_objective)}"
+    )
+    config.progress_logger.debug(
+        " Second-stage objective "
+        f"{value(worst_master_blk.second_stage_objective)}"
+    )
+    polished_master_obj = value(
+        worst_master_blk.first_stage_objective
+        + worst_master_blk.second_stage_objective
+    )
+    config.progress_logger.debug(f" Objective {polished_master_obj}")
 
     return results, True
 
@@ -636,6 +686,8 @@ def solver_call_master(model_data, config, solver, solve_data):
         solvers = [solver] + config.backup_local_solvers
 
     higher_order_decision_rule_efficiency(config, model_data)
+
+    config.progress_logger.debug("Solving master problem")
 
     timer = TicTocTimer()
     for idx, opt in enumerate(solvers):

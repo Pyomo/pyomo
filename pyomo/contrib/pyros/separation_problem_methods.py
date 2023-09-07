@@ -536,6 +536,61 @@ def get_worst_discrete_separation_solution(
     )
 
 
+def get_con_name_repr(
+        separation_model,
+        perf_con,
+        with_orig_name=True,
+        with_obj_name=True,
+        ):
+    """
+    Get string representation of performance constraint
+    and any other modeling components to which it has
+    been mapped.
+
+    Parameters
+    ----------
+    separation_model : ConcreteModel
+        Separation model.
+    perf_con : ScalarConstraint or ConstraintData
+        Performance constraint for which to get the
+        representation
+    with_orig_name : bool, optional
+        If constraint was added during construction of the
+        separation problem (i.e. if the constraint is a member of
+        in `separation_model.util.new_constraints`),
+        include the name of the original constraint from which
+        `perf_con` was created.
+    with_obj_name : bool, optional
+        Include name of separation model objective to which
+        performance constraint is mapped.
+
+    Returns
+    -------
+    str
+        Constraint name representation.
+    """
+
+    qual_strs = []
+    if with_orig_name:
+        # check performance constraint was not added
+        # at construction of separation problem
+        orig_con = (
+            separation_model
+            .util
+            .map_new_constraint_list_to_original_con.get(perf_con, perf_con)
+        )
+        if orig_con is not perf_con:
+            qual_strs.append(f"originally {orig_con.name!r}")
+    if with_obj_name:
+        objectives_map = separation_model.util.map_obj_to_constr
+        separation_obj = objectives_map[perf_con]
+        qual_strs.append(f"mapped to objective {separation_obj.name!r}")
+
+    final_qual_str = f"({', '.join(qual_strs)})" if qual_strs else ""
+
+    return f"{perf_con.name!r} {final_qual_str}"
+
+
 def perform_separation_loop(model_data, config, solve_globally):
     """
     Loop through, and solve, PyROS separation problems to
@@ -635,7 +690,15 @@ def perform_separation_loop(model_data, config, solve_globally):
     all_solve_call_results = ComponentMap()
     for priority, perf_constraints in sorted_priority_groups.items():
         priority_group_solve_call_results = ComponentMap()
-        for perf_con in perf_constraints:
+        for idx, perf_con in enumerate(perf_constraints):
+            solve_adverb = "Globally" if solve_globally else "Locally"
+            config.progress_logger.debug(
+                f"{solve_adverb} separating constraint "
+                f"{get_con_name_repr(model_data.separation_model, perf_con)} "
+                f"(group priority {priority}, "
+                f"constraint {idx + 1} of {len(perf_constraints)})"
+            )
+
             # config.progress_logger.info(
             #     f"Separating constraint {perf_con.name}"
             # )
@@ -689,17 +752,27 @@ def perform_separation_loop(model_data, config, solve_globally):
                 )
 
             # # auxiliary log messages
-            # objectives_map = (
-            #     model_data.separation_model.util.map_obj_to_constr
-            # )
-            # violated_con_name = list(objectives_map.keys())[
-            #     worst_case_perf_con
-            # ]
-            # config.progress_logger.info(
-            #     f"Violation found for constraint {violated_con_name} "
-            #     "under realization "
-            #     f"{worst_case_res.violating_param_realization}"
-            # )
+            violated_con_names = "\n ".join(
+                get_con_name_repr(model_data.separation_model, con)
+                for con, res in all_solve_call_results.items()
+                if res.found_violation
+            )
+            config.progress_logger.debug(
+                f"Violated constraints:\n {violated_con_names} "
+            )
+            config.progress_logger.debug(
+                "Worst-case constraint: "
+                f"{get_con_name_repr(model_data.separation_model, worst_case_perf_con)} "
+                "under realization "
+                f"{worst_case_res.violating_param_realization}."
+            )
+            config.progress_logger.debug(
+                f"Maximal scaled violation "
+                f"{worst_case_res.scaled_violations[worst_case_perf_con]} "
+                "from this constraint "
+                "exceeds the robust feasibility tolerance "
+                f"{config.robust_feasibility_tolerance}"
+            )
 
             # violating separation problem solution now chosen.
             # exit loop
@@ -930,23 +1003,12 @@ def solver_call_separation(
     nlp_model = model_data.separation_model
 
     # get name of constraint for loggers
-    orig_con = (
-        nlp_model.util.map_new_constraint_list_to_original_con.get(
-            perf_con_to_maximize,
-            perf_con_to_maximize,
-        )
+    con_name_repr = get_con_name_repr(
+        separation_model=nlp_model,
+        perf_con=perf_con_to_maximize,
+        with_orig_name=True,
+        with_obj_name=True,
     )
-    if orig_con is perf_con_to_maximize:
-        con_name_repr = (
-            f"{perf_con_to_maximize.name!r} "
-            f"(mapped to objective {separation_obj.name!r})"
-        )
-    else:
-        con_name_repr = (
-            f"{perf_con_to_maximize.name!r} "
-            f"(originally named {orig_con.name!r}, "
-            f"mapped to objective {separation_obj.name!r})"
-        )
     solve_mode = "global" if solve_globally else "local"
 
     # === Initialize separation problem; fix first-stage variables
@@ -1043,6 +1105,15 @@ def solver_call_separation(
             separation_obj.deactivate()
 
             return solve_call_results
+        else:
+            config.progress_logger.debug(
+                f"Solver {opt} ({idx + 1} of {len(solvers)}) "
+                f"failed for {solve_mode} separation of performance "
+                f"constraint {con_name_repr} in iteration "
+                f"{model_data.iteration}. Termination condition: "
+                f"{results.solver.termination_condition!r}."
+            )
+            config.progress_logger.debug(f"Results:\n{results.solver}")
 
     # All subordinate solvers failed to optimize model to appropriate
     # termination condition. PyROS will terminate with subsolver

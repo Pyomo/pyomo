@@ -21,6 +21,7 @@ from pyomo.core.base import value
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.core.base.var import _VarData as VarData
 from itertools import chain
+import numpy as np
 
 
 def update_grcs_solve_data(
@@ -718,6 +719,11 @@ def ROSolver_iterative_solve(model_data, config):
         )
         separation_data.points_added_to_master.append(
             separation_results.violating_param_realization
+        )
+
+        config.progress_logger.debug("Points added to master:")
+        config.progress_logger.debug(
+            np.array([pt for pt in separation_data.points_added_to_master]),
         )
 
         k += 1
