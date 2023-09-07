@@ -85,19 +85,19 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((m.x**2 / m.p, None, None))
+            repn = info.visitor.walk_expression((m.x**2 / m.p, None, None, 1))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 0)
         self.assertEqual(repn.linear, {})
-        self.assertEqual(repn.nonlinear, ('o5\nv%s\nn2\n', [id(m.x)]))
+        self.assertEqual(repn.nonlinear, ('o5\n%s\nn2\n', [id(m.x)]))
 
         m.p = 2
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((4 / m.p, None, None))
+            repn = info.visitor.walk_expression((4 / m.p, None, None, 1))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
@@ -107,7 +107,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((m.x / m.p, None, None))
+            repn = info.visitor.walk_expression((m.x / m.p, None, None, 1))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
@@ -117,7 +117,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression(((4 * m.x) / m.p, None, None))
+            repn = info.visitor.walk_expression(((4 * m.x) / m.p, None, None, 1))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
@@ -127,7 +127,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((4 * (m.x + 2) / m.p, None, None))
+            repn = info.visitor.walk_expression((4 * (m.x + 2) / m.p, None, None, 1))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
@@ -137,23 +137,23 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((m.x**2 / m.p, None, None))
+            repn = info.visitor.walk_expression((m.x**2 / m.p, None, None, 1))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 0)
         self.assertEqual(repn.linear, {})
-        self.assertEqual(repn.nonlinear, ('o2\nn0.5\no5\nv%s\nn2\n', [id(m.x)]))
+        self.assertEqual(repn.nonlinear, ('o2\nn0.5\no5\n%s\nn2\n', [id(m.x)]))
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((log(m.x) / m.x, None, None))
+            repn = info.visitor.walk_expression((log(m.x) / m.x, None, None, 1))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 0)
         self.assertEqual(repn.linear, {})
-        self.assertEqual(repn.nonlinear, ('o3\no43\nv%s\nv%s\n', [id(m.x), id(m.x)]))
+        self.assertEqual(repn.nonlinear, ('o3\no43\n%s\n%s\n', [id(m.x), id(m.x)]))
 
     def test_errors_divide_by_0(self):
         m = ConcreteModel()
@@ -162,7 +162,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((1 / m.p, None, None))
+            repn = info.visitor.walk_expression((1 / m.p, None, None, 1))
         self.assertEqual(
             LOG.getvalue(),
             "Exception encountered evaluating expression 'div(1, 0)'\n"
@@ -177,7 +177,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((m.x / m.p, None, None))
+            repn = info.visitor.walk_expression((m.x / m.p, None, None, 1))
         self.assertEqual(
             LOG.getvalue(),
             "Exception encountered evaluating expression 'div(1, 0)'\n"
@@ -192,7 +192,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression(((3 * m.x) / m.p, None, None))
+            repn = info.visitor.walk_expression(((3 * m.x) / m.p, None, None, 1))
         self.assertEqual(
             LOG.getvalue(),
             "Exception encountered evaluating expression 'div(3, 0)'\n"
@@ -207,7 +207,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((3 * (m.x + 2) / m.p, None, None))
+            repn = info.visitor.walk_expression((3 * (m.x + 2) / m.p, None, None, 1))
         self.assertEqual(
             LOG.getvalue(),
             "Exception encountered evaluating expression 'div(3, 0)'\n"
@@ -222,7 +222,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((m.x**2 / m.p, None, None))
+            repn = info.visitor.walk_expression((m.x**2 / m.p, None, None, 1))
         self.assertEqual(
             LOG.getvalue(),
             "Exception encountered evaluating expression 'div(1, 0)'\n"
@@ -242,18 +242,18 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((m.x**m.p, None, None))
+            repn = info.visitor.walk_expression((m.x**m.p, None, None, 1))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 0)
         self.assertEqual(repn.linear, {})
-        self.assertEqual(repn.nonlinear, ('o5\nv%s\nn2\n', [id(m.x)]))
+        self.assertEqual(repn.nonlinear, ('o5\n%s\nn2\n', [id(m.x)]))
 
         m.p = 1
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((m.x**m.p, None, None))
+            repn = info.visitor.walk_expression((m.x**m.p, None, None, 1))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
@@ -264,7 +264,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         m.p = 0
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((m.x**m.p, None, None))
+            repn = info.visitor.walk_expression((m.x**m.p, None, None, 1))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
@@ -281,7 +281,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((m.p * (1 / m.p), None, None))
+            repn = info.visitor.walk_expression((m.p * (1 / m.p), None, None, 1))
         self.assertIn(
             "Exception encountered evaluating expression 'div(1, 0)'\n"
             "\tmessage: division by zero\n"
@@ -296,7 +296,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression(((1 / m.p) * m.p, None, None))
+            repn = info.visitor.walk_expression(((1 / m.p) * m.p, None, None, 1))
         self.assertIn(
             "Exception encountered evaluating expression 'div(1, 0)'\n"
             "\tmessage: division by zero\n"
@@ -311,7 +311,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((m.p * (m.x / m.p), None, None))
+            repn = info.visitor.walk_expression((m.p * (m.x / m.p), None, None, 1))
         self.assertIn(
             "Exception encountered evaluating expression 'div(1, 0)'\n"
             "\tmessage: division by zero\n"
@@ -327,7 +327,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         info = INFO()
         with LoggingIntercept() as LOG:
             repn = info.visitor.walk_expression(
-                (m.p * (3 * (m.x + 2) / m.p), None, None)
+                (m.p * (3 * (m.x + 2) / m.p), None, None, 1)
             )
         self.assertIn(
             "Exception encountered evaluating expression 'div(3, 0)'\n"
@@ -343,7 +343,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((m.p * (m.x**2 / m.p), None, None))
+            repn = info.visitor.walk_expression((m.p * (m.x**2 / m.p), None, None, 1))
         self.assertIn(
             "Exception encountered evaluating expression 'div(1, 0)'\n"
             "\tmessage: division by zero\n"
@@ -368,7 +368,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         try:
             info = INFO()
             with LoggingIntercept() as LOG, self.assertRaises(ZeroDivisionError):
-                info.visitor.walk_expression((1 / m.p, None, None))
+                info.visitor.walk_expression((1 / m.p, None, None, 1))
             self.assertEqual(
                 LOG.getvalue(),
                 "Exception encountered evaluating expression 'div(1, 0)'\n"
@@ -378,7 +378,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
             info = INFO()
             with LoggingIntercept() as LOG, self.assertRaises(ZeroDivisionError):
-                info.visitor.walk_expression((m.x / m.p, None, None))
+                info.visitor.walk_expression((m.x / m.p, None, None, 1))
             self.assertEqual(
                 LOG.getvalue(),
                 "Exception encountered evaluating expression 'div(1, 0)'\n"
@@ -388,7 +388,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
             info = INFO()
             with LoggingIntercept() as LOG, self.assertRaises(ZeroDivisionError):
-                info.visitor.walk_expression((3 * (m.x + 2) / m.p, None, None))
+                info.visitor.walk_expression((3 * (m.x + 2) / m.p, None, None, 1))
             self.assertEqual(
                 LOG.getvalue(),
                 "Exception encountered evaluating expression 'div(3, 0)'\n"
@@ -398,7 +398,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
             info = INFO()
             with LoggingIntercept() as LOG, self.assertRaises(ZeroDivisionError):
-                info.visitor.walk_expression((m.x**2 / m.p, None, None))
+                info.visitor.walk_expression((m.x**2 / m.p, None, None, 1))
             self.assertEqual(
                 LOG.getvalue(),
                 "Exception encountered evaluating expression 'div(1, 0)'\n"
@@ -415,7 +415,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((m.p ** (0.5), None, None))
+            repn = info.visitor.walk_expression((m.p ** (0.5), None, None, 1))
         self.assertEqual(
             LOG.getvalue(),
             "Complex number returned from expression\n"
@@ -431,7 +431,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         m.x.fix(0.5)
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((m.p**m.x, None, None))
+            repn = info.visitor.walk_expression((m.p**m.x, None, None, 1))
         self.assertEqual(
             LOG.getvalue(),
             "Complex number returned from expression\n"
@@ -451,7 +451,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((log(m.p), None, None))
+            repn = info.visitor.walk_expression((log(m.p), None, None, 1))
         self.assertEqual(
             LOG.getvalue(),
             "Exception encountered evaluating expression 'log(0)'\n"
@@ -476,7 +476,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((expr, None, None))
+            repn = info.visitor.walk_expression((expr, None, None, 1))
         self.assertEqual(
             LOG.getvalue(),
             "Exception encountered evaluating expression 'div(3, 0)'\n"
@@ -491,7 +491,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         m.y.fix(None)
         expr = log(m.y) + 3
-        repn = info.visitor.walk_expression((expr, None, None))
+        repn = info.visitor.walk_expression((expr, None, None, 1))
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
         self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
@@ -499,7 +499,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.nonlinear, None)
 
         expr = 3 * m.y
-        repn = info.visitor.walk_expression((expr, None, None))
+        repn = info.visitor.walk_expression((expr, None, None, 1))
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, InvalidNumber(None))
@@ -508,7 +508,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         m.p.value = None
         expr = 5 * (m.p * m.x + 2 * m.z)
-        repn = info.visitor.walk_expression((expr, None, None))
+        repn = info.visitor.walk_expression((expr, None, None, 1))
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 0)
@@ -516,7 +516,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.nonlinear, None)
 
         expr = m.y * m.x
-        repn = info.visitor.walk_expression((expr, None, None))
+        repn = info.visitor.walk_expression((expr, None, None, 1))
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 0)
@@ -527,17 +527,17 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         m.z[1].fix(None)
         expr = m.z[1] - ((m.z[2] * m.z[3]) * m.z[4])
         with INFO() as info:
-            repn = info.visitor.walk_expression((expr, None, None))
+            repn = info.visitor.walk_expression((expr, None, None, 1))
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, InvalidNumber(None))
         self.assertEqual(repn.linear, {})
-        self.assertEqual(repn.nonlinear[0], 'o16\no2\no2\nv%s\nv%s\nv%s\n')
+        self.assertEqual(repn.nonlinear[0], 'o16\no2\no2\n%s\n%s\n%s\n')
         self.assertEqual(repn.nonlinear[1], [id(m.z[2]), id(m.z[3]), id(m.z[4])])
 
         m.z[3].fix(float('nan'))
         with INFO() as info:
-            repn = info.visitor.walk_expression((expr, None, None))
+            repn = info.visitor.walk_expression((expr, None, None, 1))
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, InvalidNumber(None))
@@ -560,6 +560,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
                     ),
                     None,
                     None,
+                    1,
                 )
             )
         self.assertEqual(LOG.getvalue(), "")
@@ -575,18 +576,18 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((m.x ** (0.5), None, None))
+            repn = info.visitor.walk_expression((m.x ** (0.5), None, None, 1))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 0)
         self.assertEqual(repn.linear, {})
-        self.assertEqual(repn.nonlinear, ('o5\nv%s\nn0.5\n', [id(m.x)]))
+        self.assertEqual(repn.nonlinear, ('o5\n%s\nn0.5\n', [id(m.x)]))
 
         m.x.fix()
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((m.x ** (0.5), None, None))
+            repn = info.visitor.walk_expression((m.x ** (0.5), None, None, 1))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
@@ -600,18 +601,18 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((abs(m.x), None, None))
+            repn = info.visitor.walk_expression((abs(m.x), None, None, 1))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 0)
         self.assertEqual(repn.linear, {})
-        self.assertEqual(repn.nonlinear, ('o15\nv%s\n', [id(m.x)]))
+        self.assertEqual(repn.nonlinear, ('o15\n%s\n', [id(m.x)]))
 
         m.x.fix()
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((abs(m.x), None, None))
+            repn = info.visitor.walk_expression((abs(m.x), None, None, 1))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
@@ -625,18 +626,18 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((log(m.x), None, None))
+            repn = info.visitor.walk_expression((log(m.x), None, None, 1))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 0)
         self.assertEqual(repn.linear, {})
-        self.assertEqual(repn.nonlinear, ('o43\nv%s\n', [id(m.x)]))
+        self.assertEqual(repn.nonlinear, ('o43\n%s\n', [id(m.x)]))
 
         m.x.fix()
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((log(m.x), None, None))
+            repn = info.visitor.walk_expression((log(m.x), None, None, 1))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
@@ -652,7 +653,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((expr, None, None))
+            repn = info.visitor.walk_expression((expr, None, None, 1))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
@@ -660,13 +661,13 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.linear, {})
         self.assertEqual(
             repn.nonlinear,
-            ('o35\no23\nv%s\nn4\no5\nv%s\nn2\nv%s\n', [id(m.x), id(m.x), id(m.y)]),
+            ('o35\no23\n%s\nn4\no5\n%s\nn2\n%s\n', [id(m.x), id(m.x), id(m.y)]),
         )
 
         m.x.fix()
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((expr, None, None))
+            repn = info.visitor.walk_expression((expr, None, None, 1))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
@@ -677,7 +678,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         m.x.fix(5)
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((expr, None, None))
+            repn = info.visitor.walk_expression((expr, None, None, 1))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
@@ -693,7 +694,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((expr, None, None))
+            repn = info.visitor.walk_expression((expr, None, None, 1))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
@@ -701,13 +702,13 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.linear, {})
         self.assertEqual(
             repn.nonlinear,
-            ('o35\no24\nv%s\nn4\no5\nv%s\nn2\nv%s\n', [id(m.x), id(m.x), id(m.y)]),
+            ('o35\no24\n%s\nn4\no5\n%s\nn2\n%s\n', [id(m.x), id(m.x), id(m.y)]),
         )
 
         m.x.fix()
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((expr, None, None))
+            repn = info.visitor.walk_expression((expr, None, None, 1))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
@@ -718,7 +719,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         m.x.fix(5)
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((expr, None, None))
+            repn = info.visitor.walk_expression((expr, None, None, 1))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
@@ -734,7 +735,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((expr, None, None))
+            repn = info.visitor.walk_expression((expr, None, None, 1))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
@@ -743,7 +744,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(
             repn.nonlinear,
             (
-                'o35\no21\no23\nn1\nv%s\no23\nv%s\nn4\no5\nv%s\nn2\nv%s\n',
+                'o35\no21\no23\nn1\n%s\no23\n%s\nn4\no5\n%s\nn2\n%s\n',
                 [id(m.x), id(m.x), id(m.x), id(m.y)],
             ),
         )
@@ -751,7 +752,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         m.x.fix()
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((expr, None, None))
+            repn = info.visitor.walk_expression((expr, None, None, 1))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
@@ -762,7 +763,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         m.x.fix(5)
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((expr, None, None))
+            repn = info.visitor.walk_expression((expr, None, None, 1))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
@@ -773,7 +774,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         m.x.fix(0)
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((expr, None, None))
+            repn = info.visitor.walk_expression((expr, None, None, 1))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
@@ -793,7 +794,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         expr = m.e + m.e
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((expr, None, None))
+            repn = info.visitor.walk_expression((expr, None, None, 1))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
@@ -804,7 +805,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(len(info.subexpression_cache), 1)
         obj, repn, info = info.subexpression_cache[id(m.e)]
         self.assertIs(obj, m.e)
-        self.assertEqual(repn.nl, ('v%s\n', (id(m.e),)))
+        self.assertEqual(repn.nl, ('%s\n', (id(m.e),)))
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 3)
         self.assertEqual(repn.linear, {id(m.x): 1})
@@ -825,13 +826,13 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((expr, None, None))
+            repn = info.visitor.walk_expression((expr, None, None, 1))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 0)
         self.assertEqual(repn.linear, {})
-        self.assertEqual(repn.nonlinear, ('o24\no3\nn1\nv%s\nn0\n', [id(m.x)]))
+        self.assertEqual(repn.nonlinear, ('o24\no3\nn1\n%s\nn0\n', [id(m.x)]))
 
     def test_duplicate_shared_linear_expressions(self):
         # This tests an issue where AMPLRepn.duplicate() was not copying
@@ -848,8 +849,8 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn1 = info.visitor.walk_expression((expr1, None, None))
-            repn2 = info.visitor.walk_expression((expr2, None, None))
+            repn1 = info.visitor.walk_expression((expr1, None, None, 1))
+            repn2 = info.visitor.walk_expression((expr2, None, None, 1))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn1.nl, None)
         self.assertEqual(repn1.mult, 1)
