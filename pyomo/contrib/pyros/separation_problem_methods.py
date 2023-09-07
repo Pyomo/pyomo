@@ -987,7 +987,8 @@ def solver_call_separation(
             # errors, etc.)
             adverb = "globally" if solve_globally else "locally"
             config.progress_logger.error(
-                f"Optimizer {repr(opt)} encountered exception attempting "
+                f"Optimizer {repr(opt)} ({idx + 1} of {len(solvers)}) "
+                f"encountered exception attempting "
                 f"to {adverb} solve separation problem for constraint "
                 f"{con_name_repr} in iteration {model_data.iteration}."
             )

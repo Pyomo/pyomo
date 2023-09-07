@@ -661,7 +661,8 @@ def solver_call_master(model_data, config, solver, solve_data):
             # (such as segmentation faults, function evaluation
             # errors, etc.)
             config.progress_logger.error(
-                f"Optimizer {repr(opt)} encountered exception attempting to "
+                f"Optimizer {repr(opt)} ({idx + 1} of {len(solvers)}) "
+                "encountered exception attempting to "
                 f"solve master problem in iteration {model_data.iteration}."
             )
             raise
