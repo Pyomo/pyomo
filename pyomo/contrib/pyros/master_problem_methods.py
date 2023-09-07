@@ -253,8 +253,8 @@ def solve_master_feasibility_problem(model_data, config):
         # (such as segmentation faults, function evaluation
         # errors, etc.)
         config.progress_logger.error(
-            f"Solver {repr(solver)} encountered exception attempting to "
-            "optimize master feasibility problem in iteration "
+            f"Optimizer {repr(solver)} encountered exception "
+            "attempting to solve master feasibility problem in iteration "
             f"{model_data.iteration}"
         )
         raise
@@ -656,8 +656,8 @@ def solver_call_master(model_data, config, solver, solve_data):
             # (such as segmentation faults, function evaluation
             # errors, etc.)
             config.progress_logger.error(
-                f"Solver {repr(opt)} encountered exception attempting to "
-                f"optimize master problem in iteration {model_data.iteration}."
+                f"Optimizer {repr(opt)} encountered exception attempting to "
+                f"solve master problem in iteration {model_data.iteration}."
             )
             raise
         else:

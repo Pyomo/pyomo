@@ -978,10 +978,11 @@ def solver_call_separation(
             # account for possible external subsolver errors
             # (such as segmentation faults, function evaluation
             # errors, etc.)
+            adverb = "globally" if solve_globally else "locally"
             config.progress_logger.error(
-                f"Solver {repr(opt)} encountered exception attempting to "
-                "optimize separation problem in iteration "
-                f"{model_data.iteration}"
+                f"Optimizer {repr(opt)} encountered exception attempting "
+                f"to {adverb} solve separation problem for constraint "
+                f"{con_name_repr} in iteration {model_data.iteration}."
             )
             raise
         else:
