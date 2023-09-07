@@ -52,6 +52,8 @@ from pyomo.core.base.block import _BlockData
 
 from pyomo.repn.util import ExprType
 
+from pyomo.common import DeveloperError
+
 _CONSTANT = ExprType.CONSTANT
 _MONOMIAL = ExprType.MONOMIAL
 _GENERAL = ExprType.GENERAL
@@ -159,7 +161,7 @@ def precedenceChecker(node, arg1, arg2=None):
         precedence = node.PRECEDENCE
     else:
         # Should never hit this
-        raise RuntimeError(
+        raise DeveloperError(
             'This error should never be thrown, node does not have a precedence.  Report to developers'
         )
 
@@ -212,11 +214,11 @@ def handle_equality_node(visitor, node, arg1, arg2):
 
 
 def handle_inequality_node(visitor, node, arg1, arg2):
-    return arg1 + ' \leq ' + arg2
+    return arg1 + ' \\leq ' + arg2
 
 
 def handle_var_node(visitor, node):
-    overwriteDict = visitor.overwriteDict
+    overwrite_dict = visitor.overwrite_dict
     # varList = visitor.variableList
 
     name = node.name
@@ -234,10 +236,10 @@ def handle_var_node(visitor, node):
         declaredIndex = name[openBracketIndex + 1 : closeBracketIndex]
         name = name[0:openBracketIndex]
 
-    if name in overwriteDict.keys():
-        name = overwriteDict[name]
+    if name in overwrite_dict.keys():
+        name = overwrite_dict[name]
 
-    if visitor.useSmartVariables:
+    if visitor.use_smart_variables:
         splitName = name.split('_')
         if declaredIndex is not None:
             splitName.append(declaredIndex)
@@ -250,10 +252,10 @@ def handle_var_node(visitor, node):
             se = splitName[i]
             if se != 0:
                 if se == 'dot':
-                    prfx = '\dot{'
+                    prfx = '\\dot{'
                     psfx = '}'
                 elif se == 'hat':
-                    prfx = '\hat{'
+                    prfx = '\\hat{'
                     psfx = '}'
                 elif se == 'bar':
                     prfx = '\\bar{'
@@ -316,6 +318,8 @@ def handle_ranged_inequality_node(visitor, node, arg1, arg2, arg3):
 
 def handle_exprif_node(visitor, node, arg1, arg2, arg3):
     return 'f_{\\text{exprIf}}(' + arg1 + ',' + arg2 + ',' + arg3 + ')'
+
+    ## Could be handled in the future using cases or similar
 
     ## Raises not implemented error
     # raise NotImplementedError('Expr_if objects not supported by the Latex Printer')
@@ -388,9 +392,9 @@ def handle_templateSumExpression_node(visitor, node, *args):
 class _LatexVisitor(StreamBasedExpressionVisitor):
     def __init__(self):
         super().__init__()
-        self.useSmartVariables = False
-        self.xOnlyMode = False
-        self.overwriteDict = {}
+        self.use_smart_variables = False
+        self.x_only_mode = False
+        self.overwrite_dict = {}
 
         self._operator_handles = {
             ScalarVar: handle_var_node,
@@ -461,13 +465,15 @@ def number_to_letterStack(num):
 
 
 def latex_printer(
-    pyomoElement,
+    pyomo_component,
     filename=None,
-    useAlignEnvironment=False,
-    splitContinuousSets=False,
-    useSmartVariables=False,
-    xOnlyMode=0,
-    overwriteDict={},
+    use_align_environment=False,
+    split_continuous_sets=False,
+    use_smart_variables=False,
+    x_only_mode=0,
+    use_short_descriptors=False,
+    use_forall=False,
+    overwrite_dict={},
 ):
     """This function produces a string that can be rendered as LaTeX
 
@@ -475,13 +481,13 @@ def latex_printer(
 
     Parameters
     ----------
-    pyomoElement: _BlockData or Model or Constraint or Expression or Objective
+    pyomo_component: _BlockData or Model or Constraint or Expression or Objective
         The thing to be printed to LaTeX.  Accepts Blocks (including models), Constraints, and Expressions
 
     filename: str
         An optional file to write the LaTeX to.  Default of None produces no file
 
-    useAlignEnvironment: bool
+    use_align_environment: bool
         Default behavior uses equation/aligned and produces a single LaTeX Equation (ie, ==False).
         Setting this input to True will instead use the align environment, and produce equation numbers for each
         objective and constraint.  Each objective and constraint will be labeled with its name in the pyomo model.
@@ -494,7 +500,7 @@ def latex_printer(
     Returns
     -------
     str
-        A LaTeX string of the pyomoElement
+        A LaTeX string of the pyomo_component
 
     """
 
@@ -505,48 +511,48 @@ def latex_printer(
     # isSingle==False means a model or block
     isSingle = False
 
-    if isinstance(pyomoElement, pyo.Objective):
-        objectives = [pyomoElement]
+    if isinstance(pyomo_component, pyo.Objective):
+        objectives = [pyomo_component]
         constraints = []
         expressions = []
         templatize_fcn = templatize_constraint
-        useAlignEnvironment = False
+        use_align_environment = False
         isSingle = True
 
-    elif isinstance(pyomoElement, pyo.Constraint):
+    elif isinstance(pyomo_component, pyo.Constraint):
         objectives = []
-        constraints = [pyomoElement]
+        constraints = [pyomo_component]
         expressions = []
         templatize_fcn = templatize_constraint
-        useAlignEnvironment = False
+        use_align_environment = False
         isSingle = True
 
-    elif isinstance(pyomoElement, pyo.Expression):
+    elif isinstance(pyomo_component, pyo.Expression):
         objectives = []
         constraints = []
-        expressions = [pyomoElement]
+        expressions = [pyomo_component]
         templatize_fcn = templatize_expression
-        useAlignEnvironment = False
+        use_align_environment = False
         isSingle = True
 
-    elif isinstance(pyomoElement, ExpressionBase):
+    elif isinstance(pyomo_component, (ExpressionBase, pyo.Var)):
         objectives = []
         constraints = []
-        expressions = [pyomoElement]
+        expressions = [pyomo_component]
         templatize_fcn = templatize_passthrough
-        useAlignEnvironment = False
+        use_align_environment = False
         isSingle = True
 
-    elif isinstance(pyomoElement, _BlockData):
+    elif isinstance(pyomo_component, _BlockData):
         objectives = [
             obj
-            for obj in pyomoElement.component_data_objects(
+            for obj in pyomo_component.component_data_objects(
                 pyo.Objective, descend_into=True, active=True
             )
         ]
         constraints = [
             con
-            for con in pyomoElement.component_objects(
+            for con in pyomo_component.component_objects(
                 pyo.Constraint, descend_into=True, active=True
             )
         ]
@@ -555,16 +561,32 @@ def latex_printer(
 
     else:
         raise ValueError(
-            "Invalid type %s passed into the latex printer" % (str(type(pyomoElement)))
+            "Invalid type %s passed into the latex printer"
+            % (str(type(pyomo_component)))
         )
+
+    if use_forall:
+        forallTag = ' \\forall'
+    else:
+        forallTag = ', \\quad'
+
+    descriptorDict = {}
+    if use_short_descriptors:
+        descriptorDict['minimize'] = '\\min'
+        descriptorDict['maximize'] = '\\max'
+        descriptorDict['subject to'] = '\\text{s.t.}'
+    else:
+        descriptorDict['minimize'] = '\\text{minimize}'
+        descriptorDict['maximize'] = '\\text{maximize}'
+        descriptorDict['subject to'] = '\\text{subject to}'
 
     # In the case where just a single expression is passed, add this to the constraint list for printing
     constraints = constraints + expressions
 
     # Declare a visitor/walker
     visitor = _LatexVisitor()
-    visitor.useSmartVariables = useSmartVariables
-    # visitor.xOnlyMode = xOnlyMode
+    visitor.use_smart_variables = use_smart_variables
+    # visitor.x_only_mode = x_only_mode
 
     # # Only x modes
     # # Mode 0 : dont use
@@ -577,25 +599,25 @@ def latex_printer(
         # only works if you can get the variables from a block
         variableList = [
             vr
-            for vr in pyomoElement.component_objects(
+            for vr in pyomo_component.component_objects(
                 pyo.Var, descend_into=True, active=True
             )
         ]
-        if xOnlyMode == 1:
+        if x_only_mode == 1:
             newVariableList = ['x' for i in range(0, len(variableList))]
             for i in range(0, len(variableList)):
                 newVariableList[i] += '_' + str(i + 1)
-            overwriteDict = dict(zip([v.name for v in variableList], newVariableList))
-        elif xOnlyMode == 2:
+            overwrite_dict = dict(zip([v.name for v in variableList], newVariableList))
+        elif x_only_mode == 2:
             newVariableList = [
                 alphabetStringGenerator(i) for i in range(0, len(variableList))
             ]
-            overwriteDict = dict(zip([v.name for v in variableList], newVariableList))
-        elif xOnlyMode == 3:
+            overwrite_dict = dict(zip([v.name for v in variableList], newVariableList))
+        elif x_only_mode == 3:
             newVariableList = ['x' for i in range(0, len(variableList))]
             for i in range(0, len(variableList)):
                 newVariableList[i] += '_' + str(i + 1)
-            overwriteDict = dict(zip([v.name for v in variableList], newVariableList))
+            overwrite_dict = dict(zip([v.name for v in variableList], newVariableList))
 
             unwrappedVarCounter = 0
             wrappedVarCounter = 0
@@ -625,15 +647,16 @@ def latex_printer(
             # print(nameReplacementDict)
         else:
             # default to the standard mode where pyomo names are used
-            overwriteDict = {}
+            overwrite_dict = {}
 
-    visitor.overwriteDict = overwriteDict
+    visitor.overwrite_dict = overwrite_dict
 
     # starts building the output string
     pstr = ''
-    if useAlignEnvironment:
+    if use_align_environment:
         pstr += '\\begin{align} \n'
         tbSpc = 4
+        trailingAligner = '& '
     else:
         pstr += '\\begin{equation} \n'
         if not isSingle:
@@ -641,18 +664,22 @@ def latex_printer(
             tbSpc = 8
         else:
             tbSpc = 4
+        trailingAligner = ''
 
     # Iterate over the objectives and print
     for obj in objectives:
         obj_template, obj_indices = templatize_fcn(obj)
         if obj.sense == 1:
-            pstr += ' ' * tbSpc + '& \\text{%s} \n' % ('minimize')
+            pstr += ' ' * tbSpc + '& %s \n' % (descriptorDict['minimize'])
         else:
-            pstr += ' ' * tbSpc + '& \\text{%s} \n' % ('maximize')
+            pstr += ' ' * tbSpc + '& %s \n' % (descriptorDict['maximize'])
 
-        pstr += ' ' * tbSpc + '& & %s ' % (visitor.walk_expression(obj_template))
-        if useAlignEnvironment:
-            pstr += '\\label{obj:' + pyomoElement.name + '_' + obj.name + '} '
+        pstr += ' ' * tbSpc + '& & %s %s' % (
+            visitor.walk_expression(obj_template),
+            trailingAligner,
+        )
+        if use_align_environment:
+            pstr += '\\label{obj:' + pyomo_component.name + '_' + obj.name + '} '
         if not isSingle:
             pstr += '\\\\ \n'
         else:
@@ -662,7 +689,7 @@ def latex_printer(
     if len(constraints) > 0:
         # only print this if printing a full formulation
         if not isSingle:
-            pstr += ' ' * tbSpc + '& \\text{subject to} \n'
+            pstr += ' ' * tbSpc + '& %s \n' % (descriptorDict['subject to'])
 
         # first constraint needs different alignment because of the 'subject to':
         # & minimize   & & [Objective]
@@ -689,7 +716,9 @@ def latex_printer(
 
             # Walk the constraint
             conLine = (
-                ' ' * tbSpc + algn + ' %s ' % (visitor.walk_expression(con_template))
+                ' ' * tbSpc
+                + algn
+                + ' %s %s' % (visitor.walk_expression(con_template), trailingAligner)
             )
 
             # Multiple constraints are generated using a set
@@ -703,12 +732,26 @@ def latex_printer(
                     indices[0]._set,
                 )
 
-                conLine += ', \\quad %s \\in %s ' % (idxTag, setTag)
+                if use_forall:
+                    conLine += '%s %s \\in %s ' % (forallTag, idxTag, setTag)
+                else:
+                    if trailingAligner == '':
+                        conLine = (
+                            conLine
+                            + '%s %s \\in %s ' % (forallTag, idxTag, setTag)
+                            + trailingAligner
+                        )
+                    else:
+                        conLine = (
+                            conLine[0:-2]
+                            + '%s %s \\in %s ' % (forallTag, idxTag, setTag)
+                            + trailingAligner
+                        )
             pstr += conLine
 
             # Add labels as needed
-            if useAlignEnvironment:
-                pstr += '\\label{con:' + pyomoElement.name + '_' + con.name + '} '
+            if use_align_environment:
+                pstr += '\\label{con:' + pyomo_component.name + '_' + con.name + '} '
 
             # prevents an emptly blank line from being at the end of the latex output
             if i <= len(constraints) - 2:
@@ -716,14 +759,221 @@ def latex_printer(
             else:
                 pstr += '\n'
 
+    # Print bounds and sets
+    if not isSingle:
+        domainMap = {
+            'Reals': '\\mathcal{R}',
+            'PositiveReals': '\\mathcal{R}_{> 0}',
+            'NonPositiveReals': '\\mathcal{R}_{\\leq 0}',
+            'NegativeReals': '\\mathcal{R}_{< 0}',
+            'NonNegativeReals': '\\mathcal{R}_{\\geq 0}',
+            'Integers': '\\mathcal{Z}',
+            'PositiveIntegers': '\\mathcal{Z}_{> 0}',
+            'NonPositiveIntegers': '\\mathcal{Z}_{\\leq 0}',
+            'NegativeIntegers': '\\mathcal{Z}_{< 0}',
+            'NonNegativeIntegers': '\\mathcal{Z}_{\\geq 0}',
+            'Boolean': '\\left{ 0 , 1 \\right }',
+            'Binary': '\\left{ 0 , 1 \\right }',
+            'Any': None,
+            'AnyWithNone': None,
+            'EmptySet': '\\varnothing',
+            'UnitInterval': '\\left[ 0 , 1 \\right ]',
+            'PercentFraction': '\\left[ 0 , 1 \\right ]',
+            # 'RealInterval' :        None    ,
+            # 'IntegerInterval' :     None    ,
+        }
+
+        variableList = [
+            vr
+            for vr in pyomo_component.component_objects(
+                pyo.Var, descend_into=True, active=True
+            )
+        ]
+
+        varBoundData = [[] for v in variableList]
+        for i in range(0, len(variableList)):
+            vr = variableList[i]
+            if isinstance(vr, ScalarVar):
+                domainName = vr.domain.name
+                varBounds = vr.bounds
+                lowerBoundValue = varBounds[0]
+                upperBoundValue = varBounds[1]
+
+                varLatexName = visitor.walk_expression(vr)
+                if varLatexName in overwrite_dict.keys():
+                    varReplaceName = overwrite_dict[varLatexName]
+                else:
+                    varReplaceName = varLatexName
+
+                if domainName in ['Reals', 'Integers']:
+                    if lowerBoundValue is not None:
+                        lowerBound = str(lowerBoundValue) + ' \\leq '
+                    else:
+                        lowerBound = ''
+
+                    if upperBoundValue is not None:
+                        upperBound = ' \\leq ' + str(upperBoundValue)
+                    else:
+                        upperBound = ''
+
+                elif domainName in ['PositiveReals', 'PositiveIntegers']:
+                    if lowerBoundValue is not None:
+                        if lowerBoundValue > 0:
+                            lowerBound = str(lowerBoundValue) + ' \\leq '
+                        else:
+                            lowerBound = ' 0 < '
+                    else:
+                        lowerBound = ' 0 < '
+
+                    if upperBoundValue is not None:
+                        if upperBoundValue <= 0:
+                            raise ValueError(
+                                'Formulation is infeasible due to bounds on variable %s'
+                                % (vr.name)
+                            )
+                        else:
+                            upperBound = ' \\leq ' + str(upperBoundValue)
+                    else:
+                        upperBound = ''
+
+                elif domainName in ['NonPositiveReals', 'NonPositiveIntegers']:
+                    if lowerBoundValue is not None:
+                        if lowerBoundValue > 0:
+                            raise ValueError(
+                                'Formulation is infeasible due to bounds on variable %s'
+                                % (vr.name)
+                            )
+                        elif lowerBoundValue == 0:
+                            lowerBound = ' 0 = '
+                        else:
+                            lowerBound = str(upperBoundValue) + ' \\leq '
+                    else:
+                        lowerBound = ''
+
+                    if upperBoundValue is not None:
+                        if upperBoundValue >= 0:
+                            upperBound = ' \\leq 0 '
+                        else:
+                            upperBound = ' \\leq ' + str(upperBoundValue)
+                    else:
+                        upperBound = ' \\leq 0 '
+
+                elif domainName in ['NegativeReals', 'NegativeIntegers']:
+                    if lowerBoundValue is not None:
+                        if lowerBoundValue >= 0:
+                            raise ValueError(
+                                'Formulation is infeasible due to bounds on variable %s'
+                                % (vr.name)
+                            )
+                        else:
+                            lowerBound = str(upperBoundValue) + ' \\leq '
+                    else:
+                        lowerBound = ''
+
+                    if upperBoundValue is not None:
+                        if upperBoundValue >= 0:
+                            upperBound = ' < 0 '
+                        else:
+                            upperBound = ' \\leq ' + str(upperBoundValue)
+                    else:
+                        upperBound = ' < 0 '
+
+                elif domainName in ['NonNegativeReals', 'NonNegativeIntegers']:
+                    if lowerBoundValue is not None:
+                        if lowerBoundValue > 0:
+                            lowerBound = str(lowerBoundValue) + ' \\leq '
+                        else:
+                            lowerBound = ' 0 \\leq '
+                    else:
+                        lowerBound = ' 0 \\leq '
+
+                    if upperBoundValue is not None:
+                        if upperBoundValue < 0:
+                            raise ValueError(
+                                'Formulation is infeasible due to bounds on variable %s'
+                                % (vr.name)
+                            )
+                        elif upperBoundValue == 0:
+                            upperBound = ' = 0 '
+                        else:
+                            upperBound = ' \\leq ' + str(upperBoundValue)
+                    else:
+                        upperBound = ''
+
+                elif domainName in [
+                    'Boolean',
+                    'Binary',
+                    'Any',
+                    'AnyWithNone',
+                    'EmptySet',
+                ]:
+                    lowerBound = ''
+                    upperBound = ''
+
+                elif domainName in ['UnitInterval', 'PercentFraction']:
+                    if lowerBoundValue is not None:
+                        if lowerBoundValue > 0:
+                            upperBound = str(lowerBoundValue) + ' \\leq '
+                        elif lowerBoundValue > 1:
+                            raise ValueError(
+                                'Formulation is infeasible due to bounds on variable %s'
+                                % (vr.name)
+                            )
+                        elif lowerBoundValue == 1:
+                            lowerBound = ' = 1 '
+                        else:
+                            lowerBoundValue = ' 0 \\leq '
+                    else:
+                        lowerBound = ' 0 \\leq '
+
+                    if upperBoundValue is not None:
+                        if upperBoundValue < 1:
+                            upperBound = ' \\leq ' + str(upperBoundValue)
+                        elif upperBoundValue < 0:
+                            raise ValueError(
+                                'Formulation is infeasible due to bounds on variable %s'
+                                % (vr.name)
+                            )
+                        elif upperBoundValue == 0:
+                            upperBound = ' = 0 '
+                        else:
+                            upperBound = ' \\leq 1 '
+                    else:
+                        upperBound = ' \\leq 1 '
+
+                else:
+                    raise ValueError(
+                        'Domain %s not supported by the latex printer' % (domainName)
+                    )
+
+                varBoundData[i] = [
+                    vr,
+                    varLatexName,
+                    varReplaceName,
+                    lowerBound,
+                    upperBound,
+                    domainName,
+                    domainMap[domainName],
+                ]
+            elif isinstance(vr, IndexedVar):
+                # need to wrap in function and do individually
+                # Check on the final variable after all the indices are processed
+                pass
+            else:
+                raise DeveloperError(
+                    'Variable is not a variable.  Should not happen.  Contact developers'
+                )
+
+        # print the accumulated data to the string
+
     # close off the print string
-    if useAlignEnvironment:
+    if use_align_environment:
         pstr += '\\end{align} \n'
     else:
         if not isSingle:
             pstr += '    \\end{aligned} \n'
-            pstr += '    \\label{%s} \n' % (pyomoElement.name)
-        pstr += '\end{equation} \n'
+            pstr += '    \\label{%s} \n' % (pyomo_component.name)
+        pstr += '\\end{equation} \n'
 
     # Handling the iterator indices
 
@@ -752,7 +1002,7 @@ def latex_printer(
         ln = latexLines[jj]
         # only modify if there is a placeholder in the line
         if "PLACEHOLDER_8675309_GROUP_" in ln:
-            if xOnlyMode == 2:
+            if x_only_mode == 2:
                 raise RuntimeError(
                     'Unwrapping indexed variables when an indexed constraint is present yields incorrect results'
                 )
@@ -771,9 +1021,9 @@ def latex_printer(
             continuousSets = dict(
                 zip(uniqueSets, [False for i in range(0, len(uniqueSets))])
             )
-            if splitContinuousSets:
+            if split_continuous_sets:
                 for i in range(0, len(uniqueSets)):
-                    st = getattr(pyomoElement, uniqueSets[i])
+                    st = getattr(pyomo_component, uniqueSets[i])
                     stData = st.data()
                     stCont = True
                     for ii in range(0, len(stData)):
@@ -825,8 +1075,8 @@ def latex_printer(
             # replace the sets
             for ky, vl in setStrings.items():
                 # if the set is continuous and the flag has been set
-                if splitContinuousSets and vl[1]:
-                    st = getattr(pyomoElement, vl[2])
+                if split_continuous_sets and vl[1]:
+                    st = getattr(pyomo_component, vl[2])
                     stData = st.data()
                     bgn = stData[0]
                     ed = stData[-1]

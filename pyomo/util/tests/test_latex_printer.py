@@ -131,7 +131,7 @@ class TestLatexPrinter(unittest.TestCase):
         m = generate_model()
         pstr = latex_printer(m.objective_1)
         bstr = dedent(
-        r"""
+            r"""
         \begin{equation} 
             & \text{minimize} 
             & & x + y + z 
@@ -142,7 +142,7 @@ class TestLatexPrinter(unittest.TestCase):
 
         pstr = latex_printer(m.objective_3)
         bstr = dedent(
-        r"""
+            r"""
         \begin{equation} 
             & \text{maximize} 
             & & x + y + z 
@@ -156,7 +156,7 @@ class TestLatexPrinter(unittest.TestCase):
         pstr = latex_printer(m.constraint_1)
 
         bstr = dedent(
-        r"""
+            r"""
         \begin{equation} 
              x^{2} + y^{-2} - x y z + 1 = 2 
         \end{equation} 
@@ -173,7 +173,7 @@ class TestLatexPrinter(unittest.TestCase):
         pstr = latex_printer(m.express)
 
         bstr = dedent(
-        r"""
+            r"""
         \begin{equation} 
              x + y 
         \end{equation} 
@@ -187,7 +187,7 @@ class TestLatexPrinter(unittest.TestCase):
 
         pstr = latex_printer(m.x - m.y)
         bstr = dedent(
-        r"""
+            r"""
         \begin{equation} 
              x - y 
         \end{equation} 
@@ -197,7 +197,7 @@ class TestLatexPrinter(unittest.TestCase):
 
         pstr = latex_printer(m.x - 2 * m.y)
         bstr = dedent(
-        r"""
+            r"""
         \begin{equation} 
              x - 2 y 
         \end{equation} 
@@ -210,7 +210,7 @@ class TestLatexPrinter(unittest.TestCase):
 
         pstr = latex_printer(m.constraint_2)
         bstr = dedent(
-        r"""
+            r"""
         \begin{equation} 
               \left| \frac{x}{z^{-2}} \right|   \left( x + y \right)  \leq 2 
         \end{equation} 
@@ -220,7 +220,7 @@ class TestLatexPrinter(unittest.TestCase):
 
         pstr = latex_printer(pyo.Constraint(expr=pyo.sin(m.x) == 1))
         bstr = dedent(
-        r"""
+            r"""
         \begin{equation} 
              \sin \left( x \right)  = 1 
         \end{equation} 
@@ -230,7 +230,7 @@ class TestLatexPrinter(unittest.TestCase):
 
         pstr = latex_printer(pyo.Constraint(expr=pyo.log10(m.x) == 1))
         bstr = dedent(
-        r"""
+            r"""
         \begin{equation} 
              \log_{10} \left( x \right)  = 1 
         \end{equation} 
@@ -240,7 +240,7 @@ class TestLatexPrinter(unittest.TestCase):
 
         pstr = latex_printer(pyo.Constraint(expr=pyo.sqrt(m.x) == 1))
         bstr = dedent(
-        r"""
+            r"""
         \begin{equation} 
              \sqrt { x } = 1 
         \end{equation} 
@@ -253,7 +253,7 @@ class TestLatexPrinter(unittest.TestCase):
 
         pstr = latex_printer(m.constraint_4)
         bstr = dedent(
-        r"""
+            r"""
         \begin{equation} 
              1 \leq x \leq 2 
         \end{equation} 
@@ -266,7 +266,7 @@ class TestLatexPrinter(unittest.TestCase):
 
         pstr = latex_printer(m.constraint_5)
         bstr = dedent(
-        r"""
+            r"""
         \begin{equation} 
              f_{\text{exprIf}}(x \leq 1,z,y) \leq 1 
         \end{equation} 
@@ -279,7 +279,7 @@ class TestLatexPrinter(unittest.TestCase):
 
         pstr = latex_printer(m.constraint_6)
         bstr = dedent(
-        r"""
+            r"""
         \begin{equation} 
              x + f(x,y) = 2 
         \end{equation} 
@@ -292,7 +292,7 @@ class TestLatexPrinter(unittest.TestCase):
 
         pstr = latex_printer(m.constraint_7)
         bstr = dedent(
-        r"""
+            r"""
         \begin{equation} 
               \left( x + y \right)  \sum_{i \in I} v_{i} + u_{i,j}^{2} \leq 0 , \quad j \in I 
         \end{equation} 
@@ -302,7 +302,7 @@ class TestLatexPrinter(unittest.TestCase):
 
         pstr = latex_printer(m.constraint_8)
         bstr = dedent(
-        r"""
+            r"""
         \begin{equation} 
              \sum_{k \in K} p_{k} = 1 
         \end{equation} 
@@ -315,7 +315,7 @@ class TestLatexPrinter(unittest.TestCase):
 
         pstr = latex_printer(m)
         bstr = dedent(
-        r"""
+            r"""
         \begin{equation} 
             \begin{aligned} 
                 & \text{minimize} 
@@ -334,15 +334,15 @@ class TestLatexPrinter(unittest.TestCase):
 
         pstr = latex_printer(m, None, True)
         bstr = dedent(
-        r"""
+            r"""
         \begin{align} 
             & \text{minimize} 
-            & & x + y \label{obj:basicFormulation_objective_1} \\ 
+            & & x + y & \label{obj:basicFormulation_objective_1} \\ 
             & \text{subject to} 
-            & & x^{2} + y^{2} \leq 1 \label{con:basicFormulation_constraint_1} \\ 
-            &&& 0 \leq x \label{con:basicFormulation_constraint_2} \\ 
-            &&&  \left( x + y \right)  \sum_{i \in I} v_{i} + u_{i,j}^{2} \leq 0 , \quad j \in I \label{con:basicFormulation_constraint_7} \\ 
-            &&& \sum_{k \in K} p_{k} = 1 \label{con:basicFormulation_constraint_8} 
+            & & x^{2} + y^{2} \leq 1 & \label{con:basicFormulation_constraint_1} \\ 
+            &&& 0 \leq x & \label{con:basicFormulation_constraint_2} \\ 
+            &&&  \left( x + y \right)  \sum_{i \in I} v_{i} + u_{i,j}^{2} \leq 0 , \quad j \in I & \label{con:basicFormulation_constraint_7} \\ 
+            &&& \sum_{k \in K} p_{k} = 1 & \label{con:basicFormulation_constraint_8} 
         \end{align} 
         """
         )
@@ -350,7 +350,7 @@ class TestLatexPrinter(unittest.TestCase):
 
         pstr = latex_printer(m, None, False, True)
         bstr = dedent(
-        r"""
+            r"""
         \begin{equation} 
             \begin{aligned} 
                 & \text{minimize} 
@@ -369,15 +369,15 @@ class TestLatexPrinter(unittest.TestCase):
 
         pstr = latex_printer(m, None, True, True)
         bstr = dedent(
-        r"""
+            r"""
         \begin{align} 
             & \text{minimize} 
-            & & x + y \label{obj:basicFormulation_objective_1} \\ 
+            & & x + y & \label{obj:basicFormulation_objective_1} \\ 
             & \text{subject to} 
-            & & x^{2} + y^{2} \leq 1 \label{con:basicFormulation_constraint_1} \\ 
-            &&& 0 \leq x \label{con:basicFormulation_constraint_2} \\ 
-            &&&  \left( x + y \right)  \sum_{i = 1}^{5} v_{i} + u_{i,j}^{2} \leq 0 , \quad j \in I \label{con:basicFormulation_constraint_7} \\ 
-            &&& \sum_{k \in K} p_{k} = 1 \label{con:basicFormulation_constraint_8} 
+            & & x^{2} + y^{2} \leq 1 & \label{con:basicFormulation_constraint_1} \\ 
+            &&& 0 \leq x & \label{con:basicFormulation_constraint_2} \\ 
+            &&&  \left( x + y \right)  \sum_{i = 1}^{5} v_{i} + u_{i,j}^{2} \leq 0 , \quad j \in I & \label{con:basicFormulation_constraint_7} \\ 
+            &&& \sum_{k \in K} p_{k} = 1 & \label{con:basicFormulation_constraint_8} 
         \end{align} 
         """
         )
@@ -386,9 +386,9 @@ class TestLatexPrinter(unittest.TestCase):
     def test_latexPrinter_advancedVariables(self):
         m = generate_simple_model_2()
 
-        pstr = latex_printer(m,useSmartVariables=True)
+        pstr = latex_printer(m, use_smart_variables=True)
         bstr = dedent(
-        r"""
+            r"""
         \begin{equation} 
             \begin{aligned} 
                 & \text{minimize} 
@@ -400,7 +400,8 @@ class TestLatexPrinter(unittest.TestCase):
             \end{aligned} 
             \label{basicFormulation} 
         \end{equation} 
-        """)
+        """
+        )
         self.assertEqual('\n' + pstr, bstr)
 
     def test_latexPrinter_fileWriter(self):
@@ -421,7 +422,9 @@ class TestLatexPrinter(unittest.TestCase):
             self.assertEqual(pstr, bstr)
 
     def test_latexPrinter_inputError(self):
-        self.assertRaises(ValueError, latex_printer, **{'pyomoElement': 'errorString'})
+        self.assertRaises(
+            ValueError, latex_printer, **{'pyomo_component': 'errorString'}
+        )
 
 
 if __name__ == '__main__':
