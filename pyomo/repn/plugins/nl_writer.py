@@ -579,8 +579,6 @@ class _NLWriter_impl(object):
             # Note: Constraint.lb/ub guarantee a return value that is
             # either a (finite) native_numeric_type, or None
             const = expr.const
-            if const.__class__ not in int_float:
-                const = float(const)
             lb = con.lb
             if lb is not None:
                 lb = repr(lb - const)
@@ -1331,10 +1329,7 @@ class _NLWriter_impl(object):
                 continue
             ostream.write(f'J{row_idx} {len(linear)}{row_comments[row_idx]}\n')
             for _id in sorted(linear.keys(), key=column_order.__getitem__):
-                val = linear[_id]
-                if val.__class__ not in int_float:
-                    val = float(val)
-                ostream.write(f'{column_order[_id]} {val!r}\n')
+                ostream.write(f'{column_order[_id]} {linear[_id]!r}\n')
 
         #
         # "G" lines (non-empty terms in the Objective)
@@ -1347,10 +1342,7 @@ class _NLWriter_impl(object):
                 continue
             ostream.write(f'G{obj_idx} {len(linear)}{row_comments[obj_idx + n_cons]}\n')
             for _id in sorted(linear.keys(), key=column_order.__getitem__):
-                val = linear[_id]
-                if val.__class__ not in int_float:
-                    val = float(val)
-                ostream.write(f'{column_order[_id]} {val!r}\n')
+                ostream.write(f'{column_order[_id]} {linear[_id]!r}\n')
 
         # Generate the return information
         info = NLWriterInfo(
@@ -1502,33 +1494,18 @@ class _NLWriter_impl(object):
         # compiled before this point).  Omitting the assertion for
         # efficiency.
         # assert repn.mult == 1
+        #
+        # Note that repn.const should always be a int/float (it has
+        # already been compiled)
         if repn.nonlinear:
             nl, args = repn.nonlinear
             if include_const and repn.const:
                 # Add the constant to the NL expression.  AMPL adds the
                 # constant as the second argument, so we will too.
-                nl = (
-                    self.template.binary_sum
-                    + nl
-                    + (
-                        self.template.const
-                        % (
-                            repn.const
-                            if repn.const.__class__ in int_float
-                            else float(repn.const)
-                        )
-                    )
-                )
+                nl = self.template.binary_sum + nl + self.template.const % repn.const
             self.ostream.write(nl % tuple(map(self.var_id_to_nl.__getitem__, args)))
         elif include_const:
-            self.ostream.write(
-                self.template.const
-                % (
-                    repn.const
-                    if repn.const.__class__ in int_float
-                    else float(repn.const)
-                )
-            )
+            self.ostream.write(self.template.const % repn.const)
         else:
             self.ostream.write(self.template.const % 0)
 
@@ -1548,10 +1525,7 @@ class _NLWriter_impl(object):
         #
         ostream.write(f'V{self.next_V_line_id} {len(linear)} {k}{lbl}\n')
         for _id in sorted(linear, key=column_order.__getitem__):
-            val = linear[_id]
-            if val.__class__ not in int_float:
-                val = float(val)
-            ostream.write(f'{column_order[_id]} {val!r}\n')
+            ostream.write(f'{column_order[_id]} {linear[_id]!r}\n')
         self._write_nl_expression(info[1], True)
         self.next_V_line_id += 1
 
