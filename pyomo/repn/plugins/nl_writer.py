@@ -684,9 +684,6 @@ class _NLWriter_impl(object):
         constraints.extend(linear_cons)
         n_cons = len(constraints)
 
-        # initialize an empty row order, to be populated later if we need it
-        row_order = {}
-
         #
         # Collect constraints and objectives into the groupings
         # necessary for AMPL
