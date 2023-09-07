@@ -15,7 +15,11 @@ from operator import itemgetter
 from itertools import filterfalse
 
 from pyomo.common.deprecation import deprecation_warning
-from pyomo.common.numeric_types import native_types, native_numeric_types, native_complex_types
+from pyomo.common.numeric_types import (
+    native_types,
+    native_numeric_types,
+    native_complex_types,
+)
 from pyomo.core.expr.numeric_expr import (
     NegationExpression,
     ProductExpression,
@@ -610,7 +614,10 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
         _id = id(arg2)
         if _id not in visitor.var_map:
             if arg2.fixed:
-                return False, (_CONSTANT, arg1 * visitor.handle_constant(arg2.value, arg2))
+                return False, (
+                    _CONSTANT,
+                    arg1 * visitor.handle_constant(arg2.value, arg2),
+                )
             visitor.var_map[_id] = arg2
             visitor.var_order[_id] = len(visitor.var_order)
 

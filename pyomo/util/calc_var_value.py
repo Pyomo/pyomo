@@ -10,7 +10,12 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.errors import IterationLimitError
-from pyomo.common.numeric_types import native_numeric_types, native_complex_types, value, is_fixed
+from pyomo.common.numeric_types import (
+    native_numeric_types,
+    native_complex_types,
+    value,
+    is_fixed,
+)
 from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.core.base.constraint import Constraint, _ConstraintData
 
@@ -170,10 +175,7 @@ def calculate_variable_from_constraint(
         if slope:
             variable.set_value(-intercept / slope, skip_validation=True)
             body_val = value(body, exception=False)
-            if (
-                body_val.__class__ not in _invalid_types
-                and abs(body_val - upper) < eps
-            ):
+            if body_val.__class__ not in _invalid_types and abs(body_val - upper) < eps:
                 # Re-set the variable value to trigger any warnings WRT
                 # the final variable state
                 variable.set_value(variable.value)

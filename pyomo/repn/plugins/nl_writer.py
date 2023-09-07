@@ -1650,9 +1650,7 @@ class AMPLRepn(object):
                 args.extend(self.nonlinear[1])
         if self.const:
             nterms += 1
-            nl_sum += template.const % (
-                self.const if self.const.__class__ in int_float else float(self.const)
-            )
+            nl_sum += template.const % self.const
 
         if nterms > 2:
             return (prefix + (template.nary_sum % nterms) + nl_sum, args, named_exprs)
@@ -2290,7 +2288,10 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
         _id = id(arg2)
         if _id not in visitor.var_map:
             if arg2.fixed:
-                return False, (_CONSTANT, arg1 * visitor.handle_constant(arg2.value, arg2))
+                return False, (
+                    _CONSTANT,
+                    arg1 * visitor.handle_constant(arg2.value, arg2),
+                )
             visitor.var_map[_id] = arg2
         return False, (_MONOMIAL, _id, arg1)
 
@@ -2420,7 +2421,9 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
                         ans, f"'{obj}' evaluated to a  nonnumeric value '{ans}'"
                     )
         if ans != ans:
-            return InvalidNumber(nan, f"'{obj}' evaluated to a nonnumeric value '{ans}'")
+            return InvalidNumber(
+                nan, f"'{obj}' evaluated to a nonnumeric value '{ans}'"
+            )
         return ans
 
     def initializeWalker(self, expr):

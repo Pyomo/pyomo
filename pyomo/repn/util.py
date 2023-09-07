@@ -20,7 +20,11 @@ import sys
 from pyomo.common.collections import Sequence, ComponentMap
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.errors import DeveloperError, InvalidValueError
-from pyomo.common.numeric_types import native_types, native_numeric_types, native_complex_types
+from pyomo.common.numeric_types import (
+    native_types,
+    native_numeric_types,
+    native_complex_types,
+)
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.base import (
     Var,
@@ -252,6 +256,7 @@ class BeforeChildDispatcher(collections.defaultdict):
     dispatcher object.
 
     """
+
     def __missing__(self, key):
         return self.register_dispatcher
 
@@ -323,7 +328,10 @@ class BeforeChildDispatcher(collections.defaultdict):
     @staticmethod
     def _before_npv(visitor, child):
         try:
-            return False, (_CONSTANT, visitor.handle_constant(visitor.evaluate(child), child))
+            return False, (
+                _CONSTANT,
+                visitor.handle_constant(visitor.evaluate(child), child),
+            )
         except (ValueError, ArithmeticError):
             return True, None
 
