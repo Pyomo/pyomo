@@ -37,16 +37,15 @@ from pyomo.contrib.pyros.util import (
     transform_to_standard_form,
     turn_bounds_to_constraints,
     replace_uncertain_bounds_with_constraints,
+    IterationLogRecord,
+    DEFAULT_LOGGER_NAME,
 )
 from pyomo.contrib.pyros.solve_data import ROSolveResults
 from pyomo.contrib.pyros.pyros_algorithm_methods import ROSolver_iterative_solve
 from pyomo.contrib.pyros.uncertainty_sets import uncertainty_sets
 from pyomo.core.base import Constraint
-from pyomo.common.timing import TicTocTimer
-from pyomo.contrib.pyros.util import IterationLogRecord
 
 from datetime import datetime
-import logging
 
 
 __version__ = "1.2.7"
@@ -520,7 +519,7 @@ def pyros_config():
     CONFIG.declare(
         "progress_logger",
         PyROSConfigValue(
-            default="pyomo.contrib.pyros",
+            default=DEFAULT_LOGGER_NAME,
             domain=a_logger,
             doc=(
                 """

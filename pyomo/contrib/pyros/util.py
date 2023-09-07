@@ -51,6 +51,7 @@ COEFF_MATCH_REL_TOL = 1e-6
 COEFF_MATCH_ABS_TOL = 0
 ABS_CON_CHECK_FEAS_TOL = 1e-5
 TIC_TOC_SOLVE_TIME_ATTR = "pyros_tic_toc_time"
+DEFAULT_LOGGER_NAME = "pyomo.contrib.pyros"
 
 
 '''Code borrowed from gdpopt: time_code, get_main_elapsed_time, a_logger.'''
@@ -229,11 +230,42 @@ def revert_solver_max_time_adjustment(
 
 
 def a_logger(str_or_logger):
-    """Returns a logger when passed either a logger name or logger object."""
+    """
+    Standardize a string or logger object to a logger object.
+
+    Parameters
+    ----------
+    str_or_logger : str or logging.Logger
+        String or logger object to normalize.
+
+    Returns
+    -------
+    logging.Logger
+        If `str_or_logger` is of type `logging.Logger`,then
+        `str_or_logger` is returned.
+        Otherwise, a logger with name `str_or_logger`, INFO level,
+        ``propagate=False``, and handlers reduced to just a single
+        stream handler, is returned.
+    """
     if isinstance(str_or_logger, logging.Logger):
         return str_or_logger
     else:
-        return logging.getLogger(str_or_logger)
+        logger = logging.getLogger(str_or_logger)
+
+        if str_or_logger == DEFAULT_LOGGER_NAME:
+            # turn off propagate to remove possible influence
+            # of overarching Pyomo logger settings
+            logger.propagate = False
+
+        # clear handlers, want just a single stream handler
+        logger.handlers.clear()
+        ch = logging.StreamHandler()
+        logger.addHandler(ch)
+
+        # info level logger
+        logger.setLevel(logging.INFO)
+
+        return logger
 
 
 def ValidEnum(enum_class):
