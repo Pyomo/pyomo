@@ -59,6 +59,7 @@ from pyomo.environ import (
     sqrt,
     value,
 )
+import logging
 
 
 if not (numpy_available and scipy_available):
@@ -3589,6 +3590,7 @@ class testSolveMaster(unittest.TestCase):
         )
         config.declare("subproblem_file_directory", ConfigValue(default=None))
         config.declare("time_limit", ConfigValue(default=None))
+        config.declare("progress_logger", ConfigValue(default=logging.getLogger(__name__)))
 
         with time_code(master_data.timing, "total", is_main_timer=True):
             master_soln = solve_master(master_data, config)
@@ -3866,7 +3868,7 @@ class RegressionTest(unittest.TestCase):
         m.working_model.util.state_vars = []
 
         m.working_model.util.first_stage_variables = []
-        config = Block()
+        config = Bunch()
         config.decision_rule_order = 1
         config.objective_focus = ObjectiveType.nominal
         config.global_solver = SolverFactory('baron')
@@ -3874,6 +3876,7 @@ class RegressionTest(unittest.TestCase):
         config.tee = False
         config.solve_master_globally = True
         config.time_limit = None
+        config.progress_logger = logging.getLogger(__name__)
 
         add_decision_rule_variables(model_data=m, config=config)
         add_decision_rule_constraints(model_data=m, config=config)
@@ -3895,11 +3898,15 @@ class RegressionTest(unittest.TestCase):
 
         master_data.timing = Bunch()
         with time_code(master_data.timing, "total", is_main_timer=True):
-            results = minimize_dr_vars(model_data=master_data, config=config)
+            results, success = minimize_dr_vars(model_data=master_data, config=config)
             self.assertEqual(
                 results.solver.termination_condition,
                 TerminationCondition.optimal,
                 msg="Minimize dr norm did not solve to optimality.",
+            )
+            self.assertTrue(
+                success,
+                msg=f"DR polishing {success=}, expected True."
             )
 
     @unittest.skipUnless(
@@ -4867,8 +4874,7 @@ class RegressionTest(unittest.TestCase):
             with self.assertRaisesRegex(
                 ValueError,
                 expected_regex=(
-                    "Equality constraint.*cannot be guaranteed to be robustly "
-                    "feasible.*"
+                    "Coefficient matching unsuccessful. See the solver logs."
                 ),
             ):
                 res = pyros_solver.solve(
