@@ -287,7 +287,7 @@ class BeforeChildDispatcher(collections.defaultdict):
             if pv_base_type not in self:
                 try:
                     child.__class__ = pv_base_type
-                    self.register_child_handler(visitor, child)
+                    self.register_dispatcher(visitor, child)
                 finally:
                     child.__class__ = child_type
         elif (
