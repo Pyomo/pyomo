@@ -3590,7 +3590,9 @@ class testSolveMaster(unittest.TestCase):
         )
         config.declare("subproblem_file_directory", ConfigValue(default=None))
         config.declare("time_limit", ConfigValue(default=None))
-        config.declare("progress_logger", ConfigValue(default=logging.getLogger(__name__)))
+        config.declare(
+            "progress_logger", ConfigValue(default=logging.getLogger(__name__))
+        )
 
         with time_code(master_data.timing, "total", is_main_timer=True):
             master_soln = solve_master(master_data, config)
@@ -3904,10 +3906,7 @@ class RegressionTest(unittest.TestCase):
                 TerminationCondition.optimal,
                 msg="Minimize dr norm did not solve to optimality.",
             )
-            self.assertTrue(
-                success,
-                msg=f"DR polishing {success=}, expected True."
-            )
+            self.assertTrue(success, msg=f"DR polishing {success=}, expected True.")
 
     @unittest.skipUnless(
         baron_license_is_valid, "Global NLP solver is not available and licensed."
