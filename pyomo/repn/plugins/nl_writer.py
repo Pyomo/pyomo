@@ -64,9 +64,15 @@ from pyomo.core.base import (
     minimize,
 )
 from pyomo.core.base.component import ActiveComponent
+from pyomo.core.base.constraint import _ConstraintData
 from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
-from pyomo.core.base.objective import ScalarObjective, _GeneralObjectiveData
+from pyomo.core.base.objective import (
+    ScalarObjective,
+    _GeneralObjectiveData,
+    _ObjectiveData,
+)
 from pyomo.core.base.suffix import SuffixFinder
+from pyomo.core.base.var import _VarData
 import pyomo.core.kernel as kernel
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.opt import WriterFactory
