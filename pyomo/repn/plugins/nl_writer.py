@@ -200,6 +200,18 @@ class NLWriter(object):
         ),
     )
     CONFIG.declare(
+        'scale_model',
+        ConfigValue(
+            default=True,
+            domain=bool,
+            description="Write variables and constraints in scaled space",
+            doc="""
+            If True, then the writer will output the model constraints and
+            variables in 'scaled space' using the scaling from the
+            'scaling_factor' Suffix, if provided.""",
+        ),
+    )
+    CONFIG.declare(
         'export_nonlinear_variables',
         ConfigValue(
             default=None,
@@ -262,6 +274,7 @@ class NLWriter(object):
         col_fname = filename_base + '.col'
 
         config = self.config(io_options)
+        config.scale_model = False
         if config.symbolic_solver_labels:
             _open = lambda fname: open(fname, 'w')
         else:
@@ -410,7 +423,29 @@ class _SuffixData(object):
             )
 
 
+class CachingNumericSuffixFinder(SuffixFinder):
+    scale = True
+
+    def __init__(self, name, default=None):
+        super().__init__(name, default)
+        self.suffix_cache = {}
+
+    def __call__(self, obj):
         _id = id(obj)
+        if _id in self.suffix_cache:
+            return self.suffix_cache[_id]
+        ans = self.find(obj)
+        if ans.__class__ not in int_float:
+            ans = float(ans)
+        self.suffix_cache[_id] = ans
+        return ans
+
+
+class _NoScalingFactor(object):
+    scale = False
+
+    def __call__(self, obj):
+        return 1
 
 
 class _NLWriter_impl(object):
@@ -521,6 +556,12 @@ class _NLWriter_impl(object):
                     suffix_data[name].update(suffix)
             timer.toc("Collected suffixes", level=logging.DEBUG)
 
+        if self.config.scale_model and 'scaling_factor' in suffix_data:
+            scaling_factor = CachingNumericSuffixFinder('scaling_factor', 1)
+            del suffix_data['scaling_factor']
+        else:
+            scaling_factor = _NoScalingFactor()
+
         #
         # Tabulate the model expressions
         #
@@ -531,7 +572,7 @@ class _NLWriter_impl(object):
             if with_debug_timing and obj.parent_component() is not last_parent:
                 timer.toc('Objective %s', last_parent, level=logging.DEBUG)
                 last_parent = obj.parent_component()
-            expr = visitor.walk_expression((obj.expr, obj, 1))
+            expr = visitor.walk_expression((obj.expr, obj, 1, scaling_factor(obj)))
             if expr.named_exprs:
                 self._record_named_expression_usage(expr.named_exprs, obj, 1)
             if expr.nonlinear:
@@ -563,20 +604,30 @@ class _NLWriter_impl(object):
             if with_debug_timing and con.parent_component() is not last_parent:
                 timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
                 last_parent = con.parent_component()
-            expr = visitor.walk_expression((con.body, con, 0))
+            scale = scaling_factor(con)
+            expr = visitor.walk_expression((con.body, con, 0, scale))
             if expr.named_exprs:
                 self._record_named_expression_usage(expr.named_exprs, con, 0)
+
             # Note: Constraint.lb/ub guarantee a return value that is
             # either a (finite) native_numeric_type, or None
             const = expr.const
             if const.__class__ not in int_float:
                 const = float(const)
             lb = con.lb
-            if lb is not None:
-                lb = repr(lb - const)
             ub = con.ub
-            if ub is not None:
-                ub = repr(ub - const)
+            if scale != 1:
+                if lb is not None:
+                    lb = repr(lb * scale - const)
+                if ub is not None:
+                    ub = repr(ub * scale - const)
+                if scale < 0:
+                    lb, ub = ub, lb
+            else:
+                if lb is not None:
+                    lb = repr(lb - const)
+                if ub is not None:
+                    ub = repr(ub - const)
             _type = _RANGE_TYPE(lb, ub)
             if _type == 4:
                 n_equality += 1
@@ -817,10 +868,19 @@ class _NLWriter_impl(object):
             # Note: Var.bounds guarantees the values are either (finite)
             # native_numeric_types or None
             lb, ub = v.bounds
-            if lb is not None:
-                lb = repr(lb)
-            if ub is not None:
-                ub = repr(ub)
+            scale = scaling_factor(v)
+            if scale != 1:
+                if lb is not None:
+                    lb = repr(lb * scale)
+                if ub is not None:
+                    ub = repr(ub * scale)
+                if scale < 0:
+                    lb, ub = ub, lb
+            else:
+                if lb is not None:
+                    lb = repr(lb)
+                if ub is not None:
+                    ub = repr(ub)
             variables[idx] = (v, _id, _RANGE_TYPE(lb, ub), lb, ub)
         timer.toc("Computed variable bounds", level=logging.DEBUG)
 
@@ -888,10 +948,26 @@ class _NLWriter_impl(object):
             row_comments = [f'\t#{lbl}' for lbl in row_labels]
             col_labels = [labeler(info[0]) for info in variables]
             col_comments = [f'\t#{lbl}' for lbl in col_labels]
-            self.var_id_to_nl = {
-                info[1]: f'{var_idx}{col_comments[var_idx]}'
-                for var_idx, info in enumerate(variables)
-            }
+            if scaling_factor.scale:
+                self.var_id_to_nl = _map = {}
+                for var_idx, info in enumerate(variables):
+                    _id = info[1]
+                    scale = scaling_factor.suffix_cache[_id]
+                    if scale == 1:
+                        _map[_id] = f'v{var_idx}{col_comments[var_idx]}'
+                    else:
+                        _map[_id] = (
+                            template.division
+                            + f'v{var_idx}'
+                            + col_comments[var_idx]
+                            + '\n'
+                            + template.const % scale
+                        ).rstrip()
+            else:
+                self.var_id_to_nl = {
+                    info[1]: f'v{var_idx}{col_comments[var_idx]}'
+                    for var_idx, info in enumerate(variables)
+                }
             # Write out the .row and .col data
             if self.rowstream is not None:
                 self.rowstream.write('\n'.join(row_labels))
@@ -902,9 +978,21 @@ class _NLWriter_impl(object):
         else:
             row_labels = row_comments = [''] * (n_cons + n_objs)
             col_labels = col_comments = [''] * len(variables)
-            self.var_id_to_nl = {
-                info[1]: var_idx for var_idx, info in enumerate(variables)
-            }
+            if scaling_factor.scale:
+                self.var_id_to_nl = _map = {}
+                for var_idx, info in enumerate(variables):
+                    _id = info[1]
+                    scale = scaling_factor.suffix_cache[_id]
+                    if scale == 1:
+                        _map[_id] = f"v{var_idx}"
+                    else:
+                        _map[_id] = (
+                            template.division + f'v{var_idx}\n' + template.const % scale
+                        ).rstrip()
+            else:
+                self.var_id_to_nl = {
+                    info[1]: f"v{var_idx}" for var_idx, info in enumerate(variables)
+                }
         timer.toc("Generated row/col labels & comments", level=logging.DEBUG)
 
         #
@@ -1805,7 +1893,7 @@ class text_nl_debug_template(object):
     less_equal = 'o23\t# le\n'
     equality = 'o24\t# eq\n'
     external_fcn = 'f%d %d%s\n'
-    var = 'v%s\n'
+    var = '%s\n'  # NOTE: to support scaling, we do NOT include the 'v' here
     const = 'n%r\n'
     string = 'h%d:%s\n'
     monomial = product + const + var.replace('%', '%%')
@@ -2518,7 +2606,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         return ans
 
     def initializeWalker(self, expr):
-        expr, src, src_idx = expr
+        expr, src, src_idx, self.expression_scaling_factor = expr
         self.active_expression_source = (src_idx, id(src))
         walk, result = self.beforeChild(None, expr, 0)
         if not walk:
@@ -2552,6 +2640,9 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
 
     def finalizeResult(self, result):
         ans = node_result_to_amplrepn(result)
+
+        # Multiply the expression by the scaling factor provided by the caller
+        ans.mult *= self.expression_scaling_factor
 
         # If this was a nonlinear named expression, and that expression
         # has no linear portion, then we will directly use this as a
