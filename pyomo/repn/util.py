@@ -48,6 +48,11 @@ sum_like_expression_types = {
     EXPR.LinearExpression,
     EXPR.NPV_SumExpression,
 }
+_named_subexpression_types = (
+    _GeneralExpressionData,
+    kernel.expression.expression,
+    kernel.objective.objective,
+)
 
 HALT_ON_EVALUATION_ERROR = False
 nan = float('nan')
@@ -263,7 +268,10 @@ class BeforeChildDispatcher(collections.defaultdict):
                     self.register_child_handler(visitor, child)
                 finally:
                     child.__class__ = child_type
-        elif issubclass(child_type, _GeneralExpressionData):
+        elif (
+            issubclass(child_type, _named_subexpression_types):
+            or node_type is kernel.expression.noclone
+        ):
             self[child_type] = self._before_named_expression
         else:
             self[child_type] = self._before_general_expression
@@ -333,10 +341,9 @@ class ExitNodeDispatcher(collections.defaultdict):
         return functools.partial(self.register_dispatcher, key=key)
 
     def register_dispatcher(self, visitor, node, *data, key=None):
-        node_type = node.__class__
         if (
-            issubclass(node_type, self._named_subexpression_types)
-            or node_type is kernel.expression.noclone
+            isinstance(node, _named_subexpression_types)
+            or type(node) is kernel.expression.noclone
         ):
             base_type = Expression
         elif not node.is_potentially_variable():
