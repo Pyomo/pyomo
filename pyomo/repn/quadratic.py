@@ -28,7 +28,7 @@ from pyomo.core.expr.relational_expr import (
     InequalityExpression,
     RangedExpression,
 )
-from pyomo.core.base.expression import ScalarExpression
+from pyomo.core.base.expression import Expression
 from . import linear
 from .linear import _merge_dict, to_expression
 
@@ -339,7 +339,7 @@ _exit_node_handlers[UnaryFunctionExpression][
 #
 # NAMED EXPRESSION handlers
 #
-_exit_node_handlers[ScalarExpression][(_QUADRATIC,)] = linear._handle_named_ANY
+_exit_node_handlers[Expression][(_QUADRATIC,)] = linear._handle_named_ANY
 
 #
 # EXPR_IF handlers
@@ -399,5 +399,7 @@ _exit_node_handlers[RangedExpression].update(
 class QuadraticRepnVisitor(linear.LinearRepnVisitor):
     Result = QuadraticRepn
     exit_node_handlers = _exit_node_handlers
-    exit_node_dispatcher = linear._initialize_exit_node_dispatcher(_exit_node_handlers)
+    exit_node_dispatcher = linear.ExitNodeDispatcher(
+        linear._initialize_exit_node_dispatcher(_exit_node_handlers)
+    )
     max_exponential_expansion = 2
