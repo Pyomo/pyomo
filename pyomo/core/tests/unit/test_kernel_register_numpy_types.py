@@ -38,12 +38,14 @@ if numpy_available:
     numpy_float_names.append('float16')
     numpy_float_names.append('float32')
     numpy_float_names.append('float64')
+    numpy_float_names.append('float128')
 # Complex
 numpy_complex_names = []
 if numpy_available:
     numpy_complex_names.append('complex_')
     numpy_complex_names.append('complex64')
     numpy_complex_names.append('complex128')
+    numpy_complex_names.append('complex256')
 
 
 class TestNumpyRegistration(unittest.TestCase):

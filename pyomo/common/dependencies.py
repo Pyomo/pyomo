@@ -778,6 +778,8 @@ def _finalize_matplotlib(module, available):
 def _finalize_numpy(np, available):
     if not available:
         return
+    # Register ndarray as a native type to prevent 1-element ndarrays
+    # from accidentally registering ndarray as a native_numeric_type.
     numeric_types.native_types.add(np.ndarray)
     numeric_types.RegisterLogicalType(np.bool_)
     for t in (
@@ -798,12 +800,14 @@ def _finalize_numpy(np, available):
         # registration here (to bypass the deprecation warning) until we
         # finally remove all support for it
         numeric_types._native_boolean_types.add(t)
-    for t in (np.float_, np.float16, np.float32, np.float64):
+    for t in (np.float_, np.float16, np.float32, np.float64, np.float128):
         numeric_types.RegisterNumericType(t)
         # We have deprecated RegisterBooleanType, so we will mock up the
         # registration here (to bypass the deprecation warning) until we
         # finally remove all support for it
         numeric_types._native_boolean_types.add(t)
+    for t in (np.complex_, np.complex64, np.complex128, np.complex256):
+        numeric_types.RegisterComplexType(t)
 
 
 dill, dill_available = attempt_import('dill')
