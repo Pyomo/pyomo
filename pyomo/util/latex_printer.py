@@ -46,7 +46,7 @@ from pyomo.core.expr.template_expr import (
     templatize_rule,
 )
 from pyomo.core.base.var import ScalarVar, _GeneralVarData, IndexedVar
-from pyomo.core.base.param import _ParamData
+from pyomo.core.base.param import _ParamData, ScalarParam, IndexedParam
 from pyomo.core.base.set import _SetData
 from pyomo.core.base.constraint import ScalarConstraint, IndexedConstraint
 from pyomo.common.collections.component_map import ComponentMap
@@ -395,6 +395,11 @@ def handle_templateSumExpression_node(visitor, node, *args):
     )
     return pstr
 
+def handle_param_node(visitor,node):
+    # return node.name
+    return visitor.parameterMap[node]
+
+
 
 class _LatexVisitor(StreamBasedExpressionVisitor):
     def __init__(self):
@@ -431,6 +436,8 @@ class _LatexVisitor(StreamBasedExpressionVisitor):
             IndexTemplate: handle_indexTemplate_node,
             Numeric_GetItemExpression: handle_numericGIE_node,
             TemplateSumExpression: handle_templateSumExpression_node,
+            ScalarParam: handle_param_node,
+            _ParamData: handle_param_node,
         }
 
     def exitNode(self, node, data):
@@ -811,6 +818,31 @@ def latex_printer(
 
     visitor.variableMap = variableMap
 
+    parameterList = [
+        pm
+        for pm in pyomo_component.component_objects(
+            pyo.Param, descend_into=True, active=True
+        )
+    ]
+
+    parameterMap = ComponentMap()
+    pmIdx = 0
+    for i in range(0,len(parameterList)):
+        vr = parameterList[i]
+        pmIdx += 1
+        if isinstance(vr ,ScalarParam):
+            parameterMap[vr] = 'p_' + str(pmIdx)
+        elif isinstance(vr, IndexedParam):
+            parameterMap[vr] = 'p_' + str(pmIdx)
+            for sd in vr.index_set().data():
+                pmIdx += 1
+                parameterMap[vr[sd]] = 'p_' + str(pmIdx)
+        else:
+            raise DeveloperError( 'Parameter is not a parameter.  Should not happen.  Contact developers')
+
+    visitor.parameterMap = parameterMap
+
+
     # starts building the output string
     pstr = ''
     if not use_equation_environment:
@@ -991,7 +1023,7 @@ def latex_printer(
 
         if appendBoundString:
             pstr += ' ' * tbSpc + '& %s \n' % (descriptorDict['with bounds'])
-            pstr += bstr
+            pstr += bstr + '\n'
         else:
             pstr = pstr[0:-4] + '\n'
 
@@ -1140,13 +1172,13 @@ def latex_printer(
     pstr = '\n'.join(latexLines)
 
     if x_only_mode in [1,2,3]:
-        # Need to preserve only the non-variable elments in the overwrite_dict
+        # Need to preserve only the set elments in the overwrite_dict
         new_overwrite_dict = {}
         for ky, vl in overwrite_dict.items():
             if isinstance(ky,_GeneralVarData):
                 pass
             elif isinstance(ky,_ParamData):
-                raise ValueEror('not implemented yet')
+                pass
             elif isinstance(ky,_SetData):
                 new_overwrite_dict[ky] = overwrite_dict[ky]
             else:
@@ -1180,8 +1212,29 @@ def latex_printer(
             else:
                 raise DeveloperError( 'Variable is not a variable.  Should not happen.  Contact developers')
 
+        pmIdx = 0
+        new_parameterMap = ComponentMap()
+        for i in range(0,len(parameterList)):
+            pm = parameterList[i]
+            pmIdx += 1
+            if isinstance(pm ,ScalarParam):
+                new_parameterMap[pm] = 'p_{' + str(pmIdx) + '}'
+            elif isinstance(pm, IndexedParam):
+                new_parameterMap[pm] = 'p_{' + str(pmIdx) + '}'
+                for sd in pm.index_set().data():
+                    sdString = str(sd)
+                    if sdString[0]=='(':
+                        sdString = sdString[1:]
+                    if sdString[-1]==')':
+                        sdString = sdString[0:-1]
+                    new_parameterMap[pm[sd]] = 'p_{' + str(pmIdx) + '_{' + sdString + '}' + '}'
+            else:
+                raise DeveloperError( 'Parameter is not a parameter.  Should not happen.  Contact developers')
+
         new_overwrite_dict = ComponentMap()
         for ky, vl in new_variableMap.items():
+            new_overwrite_dict[ky] = vl
+        for ky, vl in new_parameterMap.items():
             new_overwrite_dict[ky] = vl
         for ky, vl in overwrite_dict.items():
             new_overwrite_dict[ky] = vl
@@ -1208,8 +1261,29 @@ def latex_printer(
             else:
                 raise DeveloperError( 'Variable is not a variable.  Should not happen.  Contact developers')
 
+        pmIdx = vrIdx-1
+        new_parameterMap = ComponentMap()
+        for i in range(0,len(parameterList)):
+            pm = parameterList[i]
+            pmIdx += 1
+            if isinstance(pm ,ScalarParam):
+                new_parameterMap[pm] = alphabetStringGenerator(pmIdx)
+            elif isinstance(pm, IndexedParam):
+                new_parameterMap[pm] = alphabetStringGenerator(pmIdx)
+                for sd in pm.index_set().data():
+                    sdString = str(sd)
+                    if sdString[0]=='(':
+                        sdString = sdString[1:]
+                    if sdString[-1]==')':
+                        sdString = sdString[0:-1]
+                    new_parameterMap[pm[sd]] = alphabetStringGenerator(pmIdx) + '_{' + sdString + '}'
+            else:
+                raise DeveloperError( 'Parameter is not a parameter.  Should not happen.  Contact developers')
+
         new_overwrite_dict = ComponentMap()
         for ky, vl in new_variableMap.items():
+            new_overwrite_dict[ky] = vl
+        for ky, vl in new_parameterMap.items():
             new_overwrite_dict[ky] = vl
         for ky, vl in overwrite_dict.items():
             new_overwrite_dict[ky] = vl
@@ -1218,6 +1292,8 @@ def latex_printer(
     elif x_only_mode == 3:
         new_overwrite_dict = ComponentMap()
         for ky, vl in variableMap.items():
+            new_overwrite_dict[ky] = vl
+        for ky, vl in parameterMap.items():
             new_overwrite_dict[ky] = vl
         for ky, vl in overwrite_dict.items():
             new_overwrite_dict[ky] = vl
@@ -1247,7 +1323,33 @@ def latex_printer(
             else:
                 raise DeveloperError( 'Variable is not a variable.  Should not happen.  Contact developers')
 
+        pmIdx = 0
+        new_parameterMap = ComponentMap()
+        for i in range(0,len(parameterList)):
+            pm = parameterList[i]
+            pmIdx += 1
+            if isinstance(pm ,ScalarParam):
+                new_parameterMap[pm] = pm.name
+            elif isinstance(pm, IndexedParam):
+                new_parameterMap[pm] = pm.name
+                for sd in pm.index_set().data():
+                    # pmIdx += 1
+                    sdString = str(sd)
+                    if sdString[0]=='(':
+                        sdString = sdString[1:]
+                    if sdString[-1]==')':
+                        sdString = sdString[0:-1]
+                    if use_smart_variables:
+                        new_parameterMap[pm[sd]] = applySmartVariables(pm.name + '_{' + sdString + '}')
+                    else:
+                        new_parameterMap[pm[sd]] = pm[sd].name
+            else:
+                raise DeveloperError( 'Parameter is not a parameter.  Should not happen.  Contact developers')
+
         for ky, vl in new_variableMap.items():
+            if ky not in overwrite_dict.keys():
+                overwrite_dict[ky] = vl
+        for ky, vl in new_parameterMap.items():
             if ky not in overwrite_dict.keys():
                 overwrite_dict[ky] = vl
 
@@ -1259,19 +1361,35 @@ def latex_printer(
             else:
                 overwrite_value = overwrite_dict[ky]
             rep_dict[variableMap[ky]] = overwrite_value
-        elif isinstance(ky,_ParamData):
-            raise ValueEror('not implemented yet')
+        elif isinstance(ky,(pyo.Param,_ParamData)):
+            if use_smart_variables and x_only_mode not in [1]:
+                overwrite_value = applySmartVariables(overwrite_dict[ky])
+            else:
+                overwrite_value = overwrite_dict[ky]
+            rep_dict[parameterMap[ky]] = overwrite_value    
         elif isinstance(ky,_SetData):
             # already handled
             pass
         else:
             raise ValueError('The overwrite_dict object has a key of invalid type: %s'%(str(ky)))
 
-    pstr = multiple_replace(pstr,rep_dict)
+    if not use_smart_variables:
+        for ky, vl in rep_dict.items():
+            rep_dict[ky] = vl.replace('_','\\_')
 
-    pattern = r'_([^{]*)_{([^{]*)}_bound'
-    replacement = r'_\1_\2_bound'
-    pstr = re.sub(pattern, replacement, pstr)
+    label_rep_dict = copy.deepcopy(rep_dict)
+    for ky, vl in label_rep_dict.items():
+        label_rep_dict[ky] = vl.replace('{','').replace('}','').replace('\\','')
+
+    splitLines = pstr.split('\n')
+    for i in range(0,len(splitLines)):
+        if '\\label{' in splitLines[i]:
+            epr, lbl = splitLines[i].split('\\label{')
+            epr = multiple_replace(epr,rep_dict)
+            lbl = multiple_replace(lbl,label_rep_dict)
+            splitLines[i] = epr + '\\label{' + lbl
+
+    pstr = '\n'.join(splitLines)
 
     pattern = r'_{([^{]*)}_{([^{]*)}'
     replacement = r'_{\1_{\2}}'
