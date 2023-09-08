@@ -10,6 +10,8 @@
 #  ___________________________________________________________________________
 
 import math
+import copy
+import re
 import pyomo.environ as pyo
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.core.expr import (
@@ -44,7 +46,10 @@ from pyomo.core.expr.template_expr import (
     templatize_rule,
 )
 from pyomo.core.base.var import ScalarVar, _GeneralVarData, IndexedVar
+from pyomo.core.base.param import _ParamData
+from pyomo.core.base.set import _SetData
 from pyomo.core.base.constraint import ScalarConstraint, IndexedConstraint
+from pyomo.common.collections.component_map import ComponentMap
 
 from pyomo.core.base.external import _PythonCallbackFunctionID
 
@@ -218,66 +223,68 @@ def handle_inequality_node(visitor, node, arg1, arg2):
 
 
 def handle_var_node(visitor, node):
-    overwrite_dict = visitor.overwrite_dict
-    # varList = visitor.variableList
+    return visitor.variableMap[node]
+    # return node.name
+    # overwrite_dict = visitor.overwrite_dict
+    # # varList = visitor.variableList
 
-    name = node.name
+    # name = node.name
 
-    declaredIndex = None
-    if '[' in name:
-        openBracketIndex = name.index('[')
-        closeBracketIndex = name.index(']')
-        if closeBracketIndex != len(name) - 1:
-            # I dont think this can happen, but possibly through a raw string and a user
-            # who is really hacking the variable name setter
-            raise ValueError(
-                'Variable %s has a close brace not at the end of the string' % (name)
-            )
-        declaredIndex = name[openBracketIndex + 1 : closeBracketIndex]
-        name = name[0:openBracketIndex]
+    # declaredIndex = None
+    # if '[' in name:
+    #     openBracketIndex = name.index('[')
+    #     closeBracketIndex = name.index(']')
+    #     if closeBracketIndex != len(name) - 1:
+    #         # I dont think this can happen, but possibly through a raw string and a user
+    #         # who is really hacking the variable name setter
+    #         raise ValueError(
+    #             'Variable %s has a close brace not at the end of the string' % (name)
+    #         )
+    #     declaredIndex = name[openBracketIndex + 1 : closeBracketIndex]
+    #     name = name[0:openBracketIndex]
 
-    if name in overwrite_dict.keys():
-        name = overwrite_dict[name]
+    # if name in overwrite_dict.keys():
+    #     name = overwrite_dict[name]
 
-    if visitor.use_smart_variables:
-        splitName = name.split('_')
-        if declaredIndex is not None:
-            splitName.append(declaredIndex)
+    # if visitor.use_smart_variables:
+    #     splitName = name.split('_')
+    #     if declaredIndex is not None:
+    #         splitName.append(declaredIndex)
 
-        filteredName = []
+    #     filteredName = []
 
-        prfx = ''
-        psfx = ''
-        for i in range(0, len(splitName)):
-            se = splitName[i]
-            if se != 0:
-                if se == 'dot':
-                    prfx = '\\dot{'
-                    psfx = '}'
-                elif se == 'hat':
-                    prfx = '\\hat{'
-                    psfx = '}'
-                elif se == 'bar':
-                    prfx = '\\bar{'
-                    psfx = '}'
-                else:
-                    filteredName.append(se)
-            else:
-                filteredName.append(se)
+    #     prfx = ''
+    #     psfx = ''
+    #     for i in range(0, len(splitName)):
+    #         se = splitName[i]
+    #         if se != 0:
+    #             if se == 'dot':
+    #                 prfx = '\\dot{'
+    #                 psfx = '}'
+    #             elif se == 'hat':
+    #                 prfx = '\\hat{'
+    #                 psfx = '}'
+    #             elif se == 'bar':
+    #                 prfx = '\\bar{'
+    #                 psfx = '}'
+    #             else:
+    #                 filteredName.append(se)
+    #         else:
+    #             filteredName.append(se)
 
-        joinedName = prfx + filteredName[0] + psfx
-        for i in range(1, len(filteredName)):
-            joinedName += '_{' + filteredName[i]
+    #     joinedName = prfx + filteredName[0] + psfx
+    #     for i in range(1, len(filteredName)):
+    #         joinedName += '_{' + filteredName[i]
 
-        joinedName += '}' * (len(filteredName) - 1)
+    #     joinedName += '}' * (len(filteredName) - 1)
 
-    else:
-        if declaredIndex is not None:
-            joinedName = name + '[' + declaredIndex + ']'
-        else:
-            joinedName = name
+    # else:
+    #     if declaredIndex is not None:
+    #         joinedName = name + '[' + declaredIndex + ']'
+    #     else:
+    #         joinedName = name
 
-    return joinedName
+    # return joinedName
 
 
 def handle_num_node(visitor, node):
@@ -355,16 +362,16 @@ def handle_indexTemplate_node(visitor, node, *args):
 
 
 def handle_numericGIE_node(visitor, node, *args):
-    addFinalBrace = False
-    if '_' in args[0]:
-        splitName = args[0].split('_')
-        joinedName = splitName[0]
-        for i in range(1, len(splitName)):
-            joinedName += '_{' + splitName[i]
-        joinedName += '}' * (len(splitName) - 2)
-        addFinalBrace = True
-    else:
-        joinedName = args[0]
+    # addFinalBrace = False
+    # if '_' in args[0]:
+    #     splitName = args[0].split('_')
+    #     joinedName = splitName[0]
+    #     for i in range(1, len(splitName)):
+    #         joinedName += '_{' + splitName[i]
+    #     joinedName += '}' * (len(splitName) - 2)
+    #     addFinalBrace = True
+    # else:
+    joinedName = args[0]
 
     pstr = ''
     pstr += joinedName + '_{'
@@ -374,8 +381,8 @@ def handle_numericGIE_node(visitor, node, *args):
             pstr += ','
         else:
             pstr += '}'
-    if addFinalBrace:
-        pstr += '}'
+    # if addFinalBrace:
+    #     pstr += '}'
     return pstr
 
 
@@ -392,9 +399,6 @@ def handle_templateSumExpression_node(visitor, node, *args):
 class _LatexVisitor(StreamBasedExpressionVisitor):
     def __init__(self):
         super().__init__()
-        self.use_smart_variables = False
-        self.x_only_mode = False
-        self.overwrite_dict = {}
 
         self._operator_handles = {
             ScalarVar: handle_var_node,
@@ -433,47 +437,237 @@ class _LatexVisitor(StreamBasedExpressionVisitor):
         return self._operator_handles[node.__class__](self, node, *data)
 
 
-def number_to_letterStack(num):
-    alphabet = [
-        'a',
-        'b',
-        'c',
-        'd',
-        'e',
-        'f',
-        'g',
-        'h',
-        'i',
-        'j',
-        'k',
-        'l',
-        'm',
-        'n',
-        'o',
-        'p',
-        'q',
-        'r',
-        's',
-        't',
-        'u',
-        'v',
-        'w',
-        'x',
-        'y',
-        'z',
-    ]
+def applySmartVariables(name):
+    splitName = name.split('_')
+    # print(splitName)
+
+    filteredName = []
+
+    prfx = ''
+    psfx = ''
+    for i in range(0, len(splitName)):
+        se = splitName[i]
+        if se != 0:
+            if se == 'dot':
+                prfx = '\\dot{'
+                psfx = '}'
+            elif se == 'hat':
+                prfx = '\\hat{'
+                psfx = '}'
+            elif se == 'bar':
+                prfx = '\\bar{'
+                psfx = '}'
+            else:
+                filteredName.append(se)
+        else:
+            filteredName.append(se)
+
+    joinedName = prfx + filteredName[0] + psfx
+    # print(joinedName)
+    # print(filteredName)
+    for i in range(1, len(filteredName)):
+        joinedName += '_{' + filteredName[i]
+
+    joinedName += '}' * (len(filteredName) - 1)
+    # print(joinedName)
+
+    return joinedName
+
+def analyze_variable(vr, visitor):
+    domainMap = {
+        'Reals': '\\mathds{R}',
+        'PositiveReals': '\\mathds{R}_{> 0}',
+        'NonPositiveReals': '\\mathds{R}_{\\leq 0}',
+        'NegativeReals': '\\mathds{R}_{< 0}',
+        'NonNegativeReals': '\\mathds{R}_{\\geq 0}',
+        'Integers': '\\mathds{Z}',
+        'PositiveIntegers': '\\mathds{Z}_{> 0}',
+        'NonPositiveIntegers': '\\mathds{Z}_{\\leq 0}',
+        'NegativeIntegers': '\\mathds{Z}_{< 0}',
+        'NonNegativeIntegers': '\\mathds{Z}_{\\geq 0}',
+        'Boolean': '\\left\\{ 0 , 1 \\right \\}',
+        'Binary': '\\left\\{ 0 , 1 \\right \\}',
+        # 'Any': None,
+        # 'AnyWithNone': None,
+        'EmptySet': '\\varnothing',
+        'UnitInterval': '\\mathds{R}',
+        'PercentFraction': '\\mathds{R}',
+        # 'RealInterval' :        None    ,
+        # 'IntegerInterval' :     None    ,
+    }
+
+    domainName = vr.domain.name
+    varBounds = vr.bounds
+    lowerBoundValue = varBounds[0]
+    upperBoundValue = varBounds[1]
+
+    if domainName in ['Reals', 'Integers']:
+        if lowerBoundValue is not None:
+            lowerBound = str(lowerBoundValue) + ' \\leq '
+        else:
+            lowerBound = ''
+
+        if upperBoundValue is not None:
+            upperBound = ' \\leq ' + str(upperBoundValue)
+        else:
+            upperBound = ''
+
+    elif domainName in ['PositiveReals', 'PositiveIntegers']:
+        if lowerBoundValue is not None:
+            if lowerBoundValue > 0:
+                lowerBound = str(lowerBoundValue) + ' \\leq '
+            else:
+                lowerBound = ' 0 < '
+        else:
+            lowerBound = ' 0 < '
+
+        if upperBoundValue is not None:
+            if upperBoundValue <= 0:
+                raise ValueError(
+                    'Formulation is infeasible due to bounds on variable %s'
+                    % (vr.name)
+                )
+            else:
+                upperBound = ' \\leq ' + str(upperBoundValue)
+        else:
+            upperBound = ''
+
+    elif domainName in ['NonPositiveReals', 'NonPositiveIntegers']:
+        if lowerBoundValue is not None:
+            if lowerBoundValue > 0:
+                raise ValueError(
+                    'Formulation is infeasible due to bounds on variable %s'
+                    % (vr.name)
+                )
+            elif lowerBoundValue == 0:
+                lowerBound = ' 0 = '
+            else:
+                lowerBound = str(upperBoundValue) + ' \\leq '
+        else:
+            lowerBound = ''
+
+        if upperBoundValue is not None:
+            if upperBoundValue >= 0:
+                upperBound = ' \\leq 0 '
+            else:
+                upperBound = ' \\leq ' + str(upperBoundValue)
+        else:
+            upperBound = ' \\leq 0 '
+
+    elif domainName in ['NegativeReals', 'NegativeIntegers']:
+        if lowerBoundValue is not None:
+            if lowerBoundValue >= 0:
+                raise ValueError(
+                    'Formulation is infeasible due to bounds on variable %s'
+                    % (vr.name)
+                )
+            else:
+                lowerBound = str(upperBoundValue) + ' \\leq '
+        else:
+            lowerBound = ''
+
+        if upperBoundValue is not None:
+            if upperBoundValue >= 0:
+                upperBound = ' < 0 '
+            else:
+                upperBound = ' \\leq ' + str(upperBoundValue)
+        else:
+            upperBound = ' < 0 '
+
+    elif domainName in ['NonNegativeReals', 'NonNegativeIntegers']:
+        if lowerBoundValue is not None:
+            if lowerBoundValue > 0:
+                lowerBound = str(lowerBoundValue) + ' \\leq '
+            else:
+                lowerBound = ' 0 \\leq '
+        else:
+            lowerBound = ' 0 \\leq '
+
+        if upperBoundValue is not None:
+            if upperBoundValue < 0:
+                raise ValueError(
+                    'Formulation is infeasible due to bounds on variable %s'
+                    % (vr.name)
+                )
+            elif upperBoundValue == 0:
+                upperBound = ' = 0 '
+            else:
+                upperBound = ' \\leq ' + str(upperBoundValue)
+        else:
+            upperBound = ''
+
+    elif domainName in [
+        'Boolean',
+        'Binary',
+        'Any',
+        'AnyWithNone',
+        'EmptySet',
+    ]:
+        lowerBound = ''
+        upperBound = ''
+
+    elif domainName in ['UnitInterval', 'PercentFraction']:
+        if lowerBoundValue is not None:
+            if lowerBoundValue > 0:
+                lowerBound = str(lowerBoundValue) + ' \\leq '
+            elif lowerBoundValue > 1:
+                raise ValueError(
+                    'Formulation is infeasible due to bounds on variable %s'
+                    % (vr.name)
+                )
+            elif lowerBoundValue == 1:
+                lowerBound = ' = 1 '
+            else:
+                lowerBound = ' 0 \\leq '
+        else:
+            lowerBound = ' 0 \\leq '
+
+        if upperBoundValue is not None:
+            if upperBoundValue < 1:
+                upperBound = ' \\leq ' + str(upperBoundValue)
+            elif upperBoundValue < 0:
+                raise ValueError(
+                    'Formulation is infeasible due to bounds on variable %s'
+                    % (vr.name)
+                )
+            elif upperBoundValue == 0:
+                upperBound = ' = 0 '
+            else:
+                upperBound = ' \\leq 1 '
+        else:
+            upperBound = ' \\leq 1 '
+
+    else:
+        raise ValueError(
+            'Domain %s not supported by the latex printer' % (domainName)
+        )
+
+    varBoundData = {
+        'variable' : vr,
+        'lowerBound' : lowerBound,
+        'upperBound' : upperBound,
+        'domainName' : domainName,
+        'domainLatex' : domainMap[domainName],
+    }
+
+    return varBoundData
+
+
+def multiple_replace(pstr, rep_dict):
+    pattern = re.compile("|".join(rep_dict.keys()), flags=re.DOTALL)
+    return pattern.sub(lambda x: rep_dict[x.group(0)], pstr)
 
 
 def latex_printer(
     pyomo_component,
     filename=None,
-    use_align_environment=False,
+    use_equation_environment=False,
     split_continuous_sets=False,
     use_smart_variables=False,
     x_only_mode=0,
     use_short_descriptors=False,
     use_forall=False,
-    overwrite_dict={},
+    overwrite_dict=None,
 ):
     """This function produces a string that can be rendered as LaTeX
 
@@ -487,15 +681,15 @@ def latex_printer(
     filename: str
         An optional file to write the LaTeX to.  Default of None produces no file
 
-    use_align_environment: bool
+    use_equation_environment: bool
         Default behavior uses equation/aligned and produces a single LaTeX Equation (ie, ==False).
         Setting this input to True will instead use the align environment, and produce equation numbers for each
         objective and constraint.  Each objective and constraint will be labeled with its name in the pyomo model.
         This flag is only relevant for Models and Blocks.
 
     splitContinuous: bool
-        Default behavior has all sum indices be over "i \in I" or similar.  Setting this flag to
-        True makes the sums go from: \sum_{i=1}^{5} if the set I is continuous and has 5 elements
+        Default behavior has all sum indices be over "i \\in I" or similar.  Setting this flag to
+        True makes the sums go from: \\sum_{i=1}^{5} if the set I is continuous and has 5 elements
 
     Returns
     -------
@@ -509,6 +703,10 @@ def latex_printer(
     # is Single implies Objective, constraint, or expression
     # these objects require a slight modification of behavior
     # isSingle==False means a model or block
+
+    if overwrite_dict is None:
+        overwrite_dict = ComponentMap()
+
     isSingle = False
 
     if isinstance(pyomo_component, pyo.Objective):
@@ -516,7 +714,7 @@ def latex_printer(
         constraints = []
         expressions = []
         templatize_fcn = templatize_constraint
-        use_align_environment = False
+        use_equation_environment = True
         isSingle = True
 
     elif isinstance(pyomo_component, pyo.Constraint):
@@ -524,7 +722,7 @@ def latex_printer(
         constraints = [pyomo_component]
         expressions = []
         templatize_fcn = templatize_constraint
-        use_align_environment = False
+        use_equation_environment = True
         isSingle = True
 
     elif isinstance(pyomo_component, pyo.Expression):
@@ -532,7 +730,7 @@ def latex_printer(
         constraints = []
         expressions = [pyomo_component]
         templatize_fcn = templatize_expression
-        use_align_environment = False
+        use_equation_environment = True
         isSingle = True
 
     elif isinstance(pyomo_component, (ExpressionBase, pyo.Var)):
@@ -540,7 +738,7 @@ def latex_printer(
         constraints = []
         expressions = [pyomo_component]
         templatize_fcn = templatize_passthrough
-        use_align_environment = False
+        use_equation_environment = True
         isSingle = True
 
     elif isinstance(pyomo_component, _BlockData):
@@ -566,94 +764,56 @@ def latex_printer(
         )
 
     if use_forall:
-        forallTag = ' \\forall'
+        forallTag = ' \\qquad \\forall'
     else:
-        forallTag = ', \\quad'
+        forallTag = ' \\quad'
 
     descriptorDict = {}
     if use_short_descriptors:
         descriptorDict['minimize'] = '\\min'
         descriptorDict['maximize'] = '\\max'
         descriptorDict['subject to'] = '\\text{s.t.}'
+        descriptorDict['with bounds'] = '\\text{w.b.}'
     else:
         descriptorDict['minimize'] = '\\text{minimize}'
         descriptorDict['maximize'] = '\\text{maximize}'
         descriptorDict['subject to'] = '\\text{subject to}'
+        descriptorDict['with bounds'] = '\\text{with bounds}'
 
     # In the case where just a single expression is passed, add this to the constraint list for printing
     constraints = constraints + expressions
 
     # Declare a visitor/walker
     visitor = _LatexVisitor()
-    visitor.use_smart_variables = use_smart_variables
-    # visitor.x_only_mode = x_only_mode
 
-    # # Only x modes
-    # # Mode 0 : dont use
-    # # Mode 1 : indexed variables become x_{_{ix}}
-    # # Mode 2 : uses standard alphabet [a,...,z,aa,...,az,...,aaa,...] with subscripts for indices, ex: abcd_{ix}
-    # # Mode 3 : unwrap everything into an x_{} list, WILL NOT WORK ON TEMPLATED CONSTRAINTS
 
-    nameReplacementDict = {}
-    if not isSingle:
-        # only works if you can get the variables from a block
-        variableList = [
-            vr
-            for vr in pyomo_component.component_objects(
-                pyo.Var, descend_into=True, active=True
-            )
-        ]
-        if x_only_mode == 1:
-            newVariableList = ['x' for i in range(0, len(variableList))]
-            for i in range(0, len(variableList)):
-                newVariableList[i] += '_' + str(i + 1)
-            overwrite_dict = dict(zip([v.name for v in variableList], newVariableList))
-        elif x_only_mode == 2:
-            newVariableList = [
-                alphabetStringGenerator(i) for i in range(0, len(variableList))
-            ]
-            overwrite_dict = dict(zip([v.name for v in variableList], newVariableList))
-        elif x_only_mode == 3:
-            newVariableList = ['x' for i in range(0, len(variableList))]
-            for i in range(0, len(variableList)):
-                newVariableList[i] += '_' + str(i + 1)
-            overwrite_dict = dict(zip([v.name for v in variableList], newVariableList))
+    variableList = [
+        vr
+        for vr in pyomo_component.component_objects(
+            pyo.Var, descend_into=True, active=True
+        )
+    ]
 
-            unwrappedVarCounter = 0
-            wrappedVarCounter = 0
-            for v in variableList:
-                setData = v.index_set().data()
-                if setData[0] is None:
-                    unwrappedVarCounter += 1
-                    wrappedVarCounter += 1
-                    nameReplacementDict['x_{' + str(wrappedVarCounter) + '}'] = (
-                        'x_{' + str(unwrappedVarCounter) + '}'
-                    )
-                else:
-                    wrappedVarCounter += 1
-                    for dta in setData:
-                        dta_str = str(dta)
-                        if '(' not in dta_str:
-                            dta_str = '(' + dta_str + ')'
-                        subsetString = dta_str.replace('(', '{')
-                        subsetString = subsetString.replace(')', '}')
-                        subsetString = subsetString.replace(' ', '')
-                        unwrappedVarCounter += 1
-                        nameReplacementDict[
-                            'x_{' + str(wrappedVarCounter) + '_' + subsetString + '}'
-                        ] = ('x_{' + str(unwrappedVarCounter) + '}')
-            # for ky, vl in nameReplacementDict.items():
-            #     print(ky,vl)
-            # print(nameReplacementDict)
+    variableMap = ComponentMap()
+    vrIdx = 0
+    for i in range(0,len(variableList)):
+        vr = variableList[i]
+        vrIdx += 1
+        if isinstance(vr ,ScalarVar):
+            variableMap[vr] = 'x_' + str(vrIdx)
+        elif isinstance(vr, IndexedVar):
+            variableMap[vr] = 'x_' + str(vrIdx)
+            for sd in vr.index_set().data():
+                vrIdx += 1
+                variableMap[vr[sd]] = 'x_' + str(vrIdx)
         else:
-            # default to the standard mode where pyomo names are used
-            overwrite_dict = {}
+            raise DeveloperError( 'Variable is not a variable.  Should not happen.  Contact developers')
 
-    visitor.overwrite_dict = overwrite_dict
+    visitor.variableMap = variableMap
 
     # starts building the output string
     pstr = ''
-    if use_align_environment:
+    if not use_equation_environment:
         pstr += '\\begin{align} \n'
         tbSpc = 4
         trailingAligner = '& '
@@ -664,7 +824,7 @@ def latex_printer(
             tbSpc = 8
         else:
             tbSpc = 4
-        trailingAligner = ''
+        trailingAligner = '&'
 
     # Iterate over the objectives and print
     for obj in objectives:
@@ -678,7 +838,7 @@ def latex_printer(
             visitor.walk_expression(obj_template),
             trailingAligner,
         )
-        if use_align_environment:
+        if not use_equation_environment:
             pstr += '\\label{obj:' + pyomo_component.name + '_' + obj.name + '} '
         if not isSingle:
             pstr += '\\\\ \n'
@@ -735,54 +895,26 @@ def latex_printer(
                 if use_forall:
                     conLine += '%s %s \\in %s ' % (forallTag, idxTag, setTag)
                 else:
-                    if trailingAligner == '':
-                        conLine = (
-                            conLine
-                            + '%s %s \\in %s ' % (forallTag, idxTag, setTag)
-                            + trailingAligner
-                        )
-                    else:
-                        conLine = (
-                            conLine[0:-2]
-                            + '%s %s \\in %s ' % (forallTag, idxTag, setTag)
-                            + trailingAligner
-                        )
+                    conLine = (
+                        conLine[0:-2]
+                        + ' ' + trailingAligner 
+                        + '%s %s \\in %s ' % (forallTag, idxTag, setTag)
+                    )
             pstr += conLine
 
             # Add labels as needed
-            if use_align_environment:
+            if not use_equation_environment:
                 pstr += '\\label{con:' + pyomo_component.name + '_' + con.name + '} '
 
             # prevents an emptly blank line from being at the end of the latex output
             if i <= len(constraints) - 2:
                 pstr += tail
             else:
-                pstr += '\n'
+                pstr += tail
+                # pstr += '\n'
 
     # Print bounds and sets
     if not isSingle:
-        domainMap = {
-            'Reals': '\\mathcal{R}',
-            'PositiveReals': '\\mathcal{R}_{> 0}',
-            'NonPositiveReals': '\\mathcal{R}_{\\leq 0}',
-            'NegativeReals': '\\mathcal{R}_{< 0}',
-            'NonNegativeReals': '\\mathcal{R}_{\\geq 0}',
-            'Integers': '\\mathcal{Z}',
-            'PositiveIntegers': '\\mathcal{Z}_{> 0}',
-            'NonPositiveIntegers': '\\mathcal{Z}_{\\leq 0}',
-            'NegativeIntegers': '\\mathcal{Z}_{< 0}',
-            'NonNegativeIntegers': '\\mathcal{Z}_{\\geq 0}',
-            'Boolean': '\\left{ 0 , 1 \\right }',
-            'Binary': '\\left{ 0 , 1 \\right }',
-            'Any': None,
-            'AnyWithNone': None,
-            'EmptySet': '\\varnothing',
-            'UnitInterval': '\\left[ 0 , 1 \\right ]',
-            'PercentFraction': '\\left[ 0 , 1 \\right ]',
-            # 'RealInterval' :        None    ,
-            # 'IntegerInterval' :     None    ,
-        }
-
         variableList = [
             vr
             for vr in pyomo_component.component_objects(
@@ -790,184 +922,81 @@ def latex_printer(
             )
         ]
 
-        varBoundData = [[] for v in variableList]
+        varBoundData = []
         for i in range(0, len(variableList)):
             vr = variableList[i]
             if isinstance(vr, ScalarVar):
-                domainName = vr.domain.name
-                varBounds = vr.bounds
-                lowerBoundValue = varBounds[0]
-                upperBoundValue = varBounds[1]
-
-                varLatexName = visitor.walk_expression(vr)
-                if varLatexName in overwrite_dict.keys():
-                    varReplaceName = overwrite_dict[varLatexName]
-                else:
-                    varReplaceName = varLatexName
-
-                if domainName in ['Reals', 'Integers']:
-                    if lowerBoundValue is not None:
-                        lowerBound = str(lowerBoundValue) + ' \\leq '
-                    else:
-                        lowerBound = ''
-
-                    if upperBoundValue is not None:
-                        upperBound = ' \\leq ' + str(upperBoundValue)
-                    else:
-                        upperBound = ''
-
-                elif domainName in ['PositiveReals', 'PositiveIntegers']:
-                    if lowerBoundValue is not None:
-                        if lowerBoundValue > 0:
-                            lowerBound = str(lowerBoundValue) + ' \\leq '
-                        else:
-                            lowerBound = ' 0 < '
-                    else:
-                        lowerBound = ' 0 < '
-
-                    if upperBoundValue is not None:
-                        if upperBoundValue <= 0:
-                            raise ValueError(
-                                'Formulation is infeasible due to bounds on variable %s'
-                                % (vr.name)
-                            )
-                        else:
-                            upperBound = ' \\leq ' + str(upperBoundValue)
-                    else:
-                        upperBound = ''
-
-                elif domainName in ['NonPositiveReals', 'NonPositiveIntegers']:
-                    if lowerBoundValue is not None:
-                        if lowerBoundValue > 0:
-                            raise ValueError(
-                                'Formulation is infeasible due to bounds on variable %s'
-                                % (vr.name)
-                            )
-                        elif lowerBoundValue == 0:
-                            lowerBound = ' 0 = '
-                        else:
-                            lowerBound = str(upperBoundValue) + ' \\leq '
-                    else:
-                        lowerBound = ''
-
-                    if upperBoundValue is not None:
-                        if upperBoundValue >= 0:
-                            upperBound = ' \\leq 0 '
-                        else:
-                            upperBound = ' \\leq ' + str(upperBoundValue)
-                    else:
-                        upperBound = ' \\leq 0 '
-
-                elif domainName in ['NegativeReals', 'NegativeIntegers']:
-                    if lowerBoundValue is not None:
-                        if lowerBoundValue >= 0:
-                            raise ValueError(
-                                'Formulation is infeasible due to bounds on variable %s'
-                                % (vr.name)
-                            )
-                        else:
-                            lowerBound = str(upperBoundValue) + ' \\leq '
-                    else:
-                        lowerBound = ''
-
-                    if upperBoundValue is not None:
-                        if upperBoundValue >= 0:
-                            upperBound = ' < 0 '
-                        else:
-                            upperBound = ' \\leq ' + str(upperBoundValue)
-                    else:
-                        upperBound = ' < 0 '
-
-                elif domainName in ['NonNegativeReals', 'NonNegativeIntegers']:
-                    if lowerBoundValue is not None:
-                        if lowerBoundValue > 0:
-                            lowerBound = str(lowerBoundValue) + ' \\leq '
-                        else:
-                            lowerBound = ' 0 \\leq '
-                    else:
-                        lowerBound = ' 0 \\leq '
-
-                    if upperBoundValue is not None:
-                        if upperBoundValue < 0:
-                            raise ValueError(
-                                'Formulation is infeasible due to bounds on variable %s'
-                                % (vr.name)
-                            )
-                        elif upperBoundValue == 0:
-                            upperBound = ' = 0 '
-                        else:
-                            upperBound = ' \\leq ' + str(upperBoundValue)
-                    else:
-                        upperBound = ''
-
-                elif domainName in [
-                    'Boolean',
-                    'Binary',
-                    'Any',
-                    'AnyWithNone',
-                    'EmptySet',
-                ]:
-                    lowerBound = ''
-                    upperBound = ''
-
-                elif domainName in ['UnitInterval', 'PercentFraction']:
-                    if lowerBoundValue is not None:
-                        if lowerBoundValue > 0:
-                            upperBound = str(lowerBoundValue) + ' \\leq '
-                        elif lowerBoundValue > 1:
-                            raise ValueError(
-                                'Formulation is infeasible due to bounds on variable %s'
-                                % (vr.name)
-                            )
-                        elif lowerBoundValue == 1:
-                            lowerBound = ' = 1 '
-                        else:
-                            lowerBoundValue = ' 0 \\leq '
-                    else:
-                        lowerBound = ' 0 \\leq '
-
-                    if upperBoundValue is not None:
-                        if upperBoundValue < 1:
-                            upperBound = ' \\leq ' + str(upperBoundValue)
-                        elif upperBoundValue < 0:
-                            raise ValueError(
-                                'Formulation is infeasible due to bounds on variable %s'
-                                % (vr.name)
-                            )
-                        elif upperBoundValue == 0:
-                            upperBound = ' = 0 '
-                        else:
-                            upperBound = ' \\leq 1 '
-                    else:
-                        upperBound = ' \\leq 1 '
-
-                else:
-                    raise ValueError(
-                        'Domain %s not supported by the latex printer' % (domainName)
-                    )
-
-                varBoundData[i] = [
-                    vr,
-                    varLatexName,
-                    varReplaceName,
-                    lowerBound,
-                    upperBound,
-                    domainName,
-                    domainMap[domainName],
-                ]
+                varBoundDataEntry = analyze_variable(vr, visitor)
+                varBoundData.append( varBoundDataEntry )
             elif isinstance(vr, IndexedVar):
+                varBoundData_indexedVar = []
                 # need to wrap in function and do individually
                 # Check on the final variable after all the indices are processed
-                pass
+                setData = vr.index_set().data()
+                for sd in setData:
+                    varBoundDataEntry = analyze_variable(vr[sd], visitor)
+                    varBoundData_indexedVar.append(varBoundDataEntry)
+                globIndexedVariables = True
+                for j in range(0,len(varBoundData_indexedVar)-1):
+                    chks = []
+                    chks.append(varBoundData_indexedVar[j]['lowerBound']==varBoundData_indexedVar[j+1]['lowerBound'])
+                    chks.append(varBoundData_indexedVar[j]['upperBound']==varBoundData_indexedVar[j+1]['upperBound'])
+                    chks.append(varBoundData_indexedVar[j]['domainName']==varBoundData_indexedVar[j+1]['domainName'])
+                    if not all(chks):
+                        globIndexedVariables = False
+                        break
+                if globIndexedVariables:
+                    varBoundData.append({'variable': vr,
+                                         'lowerBound': varBoundData_indexedVar[0]['lowerBound'],
+                                         'upperBound': varBoundData_indexedVar[0]['upperBound'],
+                                         'domainName': varBoundData_indexedVar[0]['domainName'],
+                                         'domainLatex': varBoundData_indexedVar[0]['domainLatex'],
+                                         })
+                else:
+                    varBoundData += varBoundData_indexedVar
             else:
                 raise DeveloperError(
                     'Variable is not a variable.  Should not happen.  Contact developers'
                 )
 
         # print the accumulated data to the string
+        bstr = ''
+        appendBoundString = False
+        useThreeAlgn = False
+        for i in range(0,len(varBoundData)):
+            vbd =  varBoundData[i]
+            if vbd['lowerBound'] == '' and vbd['upperBound'] == '' and vbd['domainName']=='Reals':
+                # unbounded all real, do not print
+                if i <= len(varBoundData)-2:
+                    bstr = bstr[0:-2]
+            else:
+                if not useThreeAlgn:
+                    algn = '& &'
+                    useThreeAlgn = True
+                else:
+                    algn = '&&&'
+
+                if use_equation_environment:
+                    conLabel = ''
+                else:
+                    conLabel = ' \\label{con:' + pyomo_component.name + '_' + variableMap[vbd['variable']]  + '_bound' + '} '
+
+                appendBoundString = True
+                coreString = vbd['lowerBound'] + variableMap[vbd['variable']] + vbd['upperBound'] + ' ' + trailingAligner + '\\qquad \\in ' + vbd['domainLatex'] + conLabel
+                bstr += ' ' * tbSpc + algn + ' %s' % (coreString)
+                if i <= len(varBoundData)-2:
+                    bstr += '\\\\ \n'
+                else:
+                    bstr += '\n'
+
+        if appendBoundString:
+            pstr += ' ' * tbSpc + '& %s \n' % (descriptorDict['with bounds'])
+            pstr += bstr
+        else:
+            pstr = pstr[0:-4] + '\n'
 
     # close off the print string
-    if use_align_environment:
+    if not use_equation_environment:
         pstr += '\\end{align} \n'
     else:
         if not isSingle:
@@ -977,6 +1006,13 @@ def latex_printer(
 
     # Handling the iterator indices
 
+
+    # ====================
+    # ====================
+    # ====================
+    # ====================
+    # ====================
+    # ====================
     # preferential order for indices
     setPreferenceOrder = [
         'I',
@@ -1002,10 +1038,6 @@ def latex_printer(
         ln = latexLines[jj]
         # only modify if there is a placeholder in the line
         if "PLACEHOLDER_8675309_GROUP_" in ln:
-            if x_only_mode == 2:
-                raise RuntimeError(
-                    'Unwrapping indexed variables when an indexed constraint is present yields incorrect results'
-                )
             splitLatex = ln.split('__')
             # Find the unique combinations of group numbers and set names
             for word in splitLatex:
@@ -1096,24 +1128,175 @@ def latex_printer(
         # Assign the newly modified line
         latexLines[jj] = ln
 
+    # ====================
+    # ====================
+    # ====================
+    # ====================
+    # ====================
+    # ====================
+
+
     # rejoin the corrected lines
     pstr = '\n'.join(latexLines)
+
+    if x_only_mode in [1,2,3]:
+        # Need to preserve only the non-variable elments in the overwrite_dict
+        new_overwrite_dict = {}
+        for ky, vl in overwrite_dict.items():
+            if isinstance(ky,_GeneralVarData):
+                pass
+            elif isinstance(ky,_ParamData):
+                raise ValueEror('not implemented yet')
+            elif isinstance(ky,_SetData):
+                new_overwrite_dict[ky] = overwrite_dict[ky]
+            else:
+                raise ValueError('The overwrite_dict object has a key of invalid type: %s'%(str(ky)))
+        overwrite_dict = new_overwrite_dict
+
+    # # Only x modes
+    # # Mode 0 : dont use
+    # # Mode 1 : indexed variables become x_{_{ix}}
+    # # Mode 2 : uses standard alphabet [a,...,z,aa,...,az,...,aaa,...] with subscripts for indices, ex: abcd_{ix}
+    # # Mode 3 : unwrap everything into an x_{} list, including the indexed vars themselves
+
+    if x_only_mode == 1:
+        vrIdx = 0
+        new_variableMap = ComponentMap()
+        for i in range(0,len(variableList)):
+            vr = variableList[i]
+            vrIdx += 1
+            if isinstance(vr ,ScalarVar):
+                new_variableMap[vr] = 'x_{' + str(vrIdx) + '}'
+            elif isinstance(vr, IndexedVar):
+                new_variableMap[vr] = 'x_{' + str(vrIdx) + '}'
+                for sd in vr.index_set().data():
+                    # vrIdx += 1
+                    sdString = str(sd)
+                    if sdString[0]=='(':
+                        sdString = sdString[1:]
+                    if sdString[-1]==')':
+                        sdString = sdString[0:-1]
+                    new_variableMap[vr[sd]] = 'x_{' + str(vrIdx) + '_{' + sdString + '}' + '}'
+            else:
+                raise DeveloperError( 'Variable is not a variable.  Should not happen.  Contact developers')
+
+        new_overwrite_dict = ComponentMap()
+        for ky, vl in new_variableMap.items():
+            new_overwrite_dict[ky] = vl
+        for ky, vl in overwrite_dict.items():
+            new_overwrite_dict[ky] = vl
+        overwrite_dict = new_overwrite_dict
+
+    elif x_only_mode == 2:
+        vrIdx = 0
+        new_variableMap = ComponentMap()
+        for i in range(0,len(variableList)):
+            vr = variableList[i]
+            vrIdx += 1
+            if isinstance(vr ,ScalarVar):
+                new_variableMap[vr] = alphabetStringGenerator(i)
+            elif isinstance(vr, IndexedVar):
+                new_variableMap[vr] = alphabetStringGenerator(i)
+                for sd in vr.index_set().data():
+                    # vrIdx += 1
+                    sdString = str(sd)
+                    if sdString[0]=='(':
+                        sdString = sdString[1:]
+                    if sdString[-1]==')':
+                        sdString = sdString[0:-1]
+                    new_variableMap[vr[sd]] = alphabetStringGenerator(i) + '_{' + sdString + '}'
+            else:
+                raise DeveloperError( 'Variable is not a variable.  Should not happen.  Contact developers')
+
+        new_overwrite_dict = ComponentMap()
+        for ky, vl in new_variableMap.items():
+            new_overwrite_dict[ky] = vl
+        for ky, vl in overwrite_dict.items():
+            new_overwrite_dict[ky] = vl
+        overwrite_dict = new_overwrite_dict
+
+    elif x_only_mode == 3:
+        new_overwrite_dict = ComponentMap()
+        for ky, vl in variableMap.items():
+            new_overwrite_dict[ky] = vl
+        for ky, vl in overwrite_dict.items():
+            new_overwrite_dict[ky] = vl
+        overwrite_dict = new_overwrite_dict
+
+    else: 
+        vrIdx = 0
+        new_variableMap = ComponentMap()
+        for i in range(0,len(variableList)):
+            vr = variableList[i]
+            vrIdx += 1
+            if isinstance(vr ,ScalarVar):
+                new_variableMap[vr] = vr.name
+            elif isinstance(vr, IndexedVar):
+                new_variableMap[vr] = vr.name
+                for sd in vr.index_set().data():
+                    # vrIdx += 1
+                    sdString = str(sd)
+                    if sdString[0]=='(':
+                        sdString = sdString[1:]
+                    if sdString[-1]==')':
+                        sdString = sdString[0:-1]
+                    if use_smart_variables:
+                        new_variableMap[vr[sd]] = applySmartVariables(vr.name + '_{' + sdString + '}')
+                    else:
+                        new_variableMap[vr[sd]] = vr[sd].name
+            else:
+                raise DeveloperError( 'Variable is not a variable.  Should not happen.  Contact developers')
+
+        for ky, vl in new_variableMap.items():
+            if ky not in overwrite_dict.keys():
+                overwrite_dict[ky] = vl
+
+    rep_dict = {}
+    for ky in list(reversed(list(overwrite_dict.keys()))):
+        if isinstance(ky,(pyo.Var,_GeneralVarData)):
+            if use_smart_variables and x_only_mode not in [1]:
+                overwrite_value = applySmartVariables(overwrite_dict[ky])
+            else:
+                overwrite_value = overwrite_dict[ky]
+            rep_dict[variableMap[ky]] = overwrite_value
+        elif isinstance(ky,_ParamData):
+            raise ValueEror('not implemented yet')
+        elif isinstance(ky,_SetData):
+            # already handled
+            pass
+        else:
+            raise ValueError('The overwrite_dict object has a key of invalid type: %s'%(str(ky)))
+
+    pstr = multiple_replace(pstr,rep_dict)
+
+    pattern = r'_([^{]*)_{([^{]*)}_bound'
+    replacement = r'_\1_\2_bound'
+    pstr = re.sub(pattern, replacement, pstr)
+
+    pattern = r'_{([^{]*)}_{([^{]*)}'
+    replacement = r'_{\1_{\2}}'
+    pstr = re.sub(pattern, replacement, pstr)
+
+    pattern = r'_(.)_{([^}]*)}'
+    replacement = r'_{\1_{\2}}'
+    pstr = re.sub(pattern, replacement, pstr)
+
+
 
     # optional write to output file
     if filename is not None:
         fstr = ''
         fstr += '\\documentclass{article} \n'
         fstr += '\\usepackage{amsmath} \n'
+        fstr += '\\usepackage{amssymb} \n'
+        fstr += '\\usepackage{dsfont} \n'
+        fstr += '\\allowdisplaybreaks \n'
         fstr += '\\begin{document} \n'
         fstr += pstr
         fstr += '\\end{document} \n'
         f = open(filename, 'w')
         f.write(fstr)
         f.close()
-
-    # Catch up on only x mode 3 and replace
-    for ky, vl in nameReplacementDict.items():
-        pstr = pstr.replace(ky, vl)
 
     # return the latex string
     return pstr
