@@ -25,6 +25,7 @@ from pyomo.core.expr.numeric_expr import (
     Numeric_NPV_Mixin,
     register_arg_type,
     ARG_TYPE,
+    _balanced_parens,
 )
 from pyomo.core.expr.numvalue import (
     NumericValue,
@@ -34,6 +35,7 @@ from pyomo.core.expr.numvalue import (
     value,
     is_constant,
 )
+from pyomo.core.expr.relational_expr import tuple_to_relational_expr
 from pyomo.core.expr.visitor import (
     ExpressionReplacementVisitor,
     StreamBasedExpressionVisitor,
@@ -1173,4 +1175,7 @@ def templatize_rule(block, rule, index_set):
 
 
 def templatize_constraint(con):
-    return templatize_rule(con.parent_block(), con.rule, con.index_set())
+    expr, indices = templatize_rule(con.parent_block(), con.rule, con.index_set())
+    if expr.__class__ is tuple:
+        expr = tuple_to_relational_expr(expr)
+    return expr, indices

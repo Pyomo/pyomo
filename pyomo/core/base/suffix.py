@@ -521,3 +521,82 @@ class Suffix(ComponentMap, ActiveComponent):
     def __ne__(self, other):
         """Not implemented."""
         raise NotImplementedError("Suffix components are not comparable")
+
+
+class SuffixFinder(object):
+    def __init__(self, name, default=None):
+        """This provides an efficient utility for finding suffix values on a
+        (hierarchical) Pyomo model.
+
+        Parameters
+        ----------
+        name: str
+
+            Name of Suffix to search for.
+
+        default:
+
+            Default value to return from `.find()` if no matching Suffix
+            is found.
+
+        """
+        self.name = name
+        self.default = default
+        self._suffixes_by_block = ComponentMap({None: []})
+        self.all_suffixes = []
+
+    def find(self, component_data):
+        """Find suffix value for a given component data object in model tree
+
+        Suffixes are searched by traversing the model hierarchy in three passes:
+
+        1. Search for a Suffix matching the specific component_data,
+           starting at the `root` and descending down the tree to
+           the component_data.  Return the first match found.
+        2. Search for a Suffix matching the component_data's container,
+           starting at the `root` and descending down the tree to
+           the component_data.  Return the first match found.
+        3. Search for a Suffix with key `None`, starting from the
+           component_data and working up the tree to the `root`.
+           Return the first match found.
+        4. Return the default value
+
+        Parameters
+        ----------
+        component_data: ComponentDataBase
+
+            Component or component data object to find suffix value for.
+
+        Returns
+        -------
+        The value for Suffix associated with component data if found, else None.
+
+        """
+        # Walk parent tree and search for suffixes
+        suffixes = self._get_suffix_list(component_data.parent_block())
+        # Pass 1: look for the component_data, working root to leaf
+        for s in suffixes:
+            if component_data in s:
+                return s[component_data]
+        # Pass 2: look for the component container, working root to leaf
+        parent_comp = component_data.parent_component()
+        if parent_comp is not component_data:
+            for s in suffixes:
+                if parent_comp in s:
+                    return s[parent_comp]
+        # Pass 3: look for None, working leaf to root
+        for s in reversed(suffixes):
+            if None in s:
+                return s[None]
+        return self.default
+
+    def _get_suffix_list(self, parent):
+        if parent in self._suffixes_by_block:
+            return self._suffixes_by_block[parent]
+        suffixes = list(self._get_suffix_list(parent.parent_block()))
+        self._suffixes_by_block[parent] = suffixes
+        s = parent.component(self.name)
+        if s is not None and s.ctype is Suffix and s.active:
+            suffixes.append(s)
+            self.all_suffixes.append(s)
+        return suffixes
