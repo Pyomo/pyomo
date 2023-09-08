@@ -102,39 +102,71 @@ def indexCorrector(ixs, base):
     return ixs
 
 
-def alphabetStringGenerator(num):
-    alphabet = [
-        '.',
-        'a',
-        'b',
-        'c',
-        'd',
-        'e',
-        'f',
-        'g',
-        'h',
-        'i',
-        'j',
-        'k',
-        'l',
-        'm',
-        'n',
-        'o',
-        'p',
-        'q',
-        'r',
-        's',
-        't',
-        'u',
-        'v',
-        'w',
-        'x',
-        'y',
-        'z',
-    ]
-    ixs = decoder(num + 1, 26)
+def alphabetStringGenerator(num,indexMode = False):
+    if indexMode:
+        alphabet = [
+            '.',
+            'i',
+            'j',
+            'k',
+            'm',
+            'n',
+            'p',
+            'q',
+            'r',
+            # 'a',
+            # 'b',
+            # 'c',
+            # 'd',
+            # 'e',
+            # 'f',
+            # 'g',
+            # 'h',
+            # 'l',
+            # 'o',
+            # 's',
+            # 't',
+            # 'u',
+            # 'v',
+            # 'w',
+            # 'x',
+            # 'y',
+            # 'z',
+        ]
+
+    else:
+        alphabet = [
+            '.',
+            'a',
+            'b',
+            'c',
+            'd',
+            'e',
+            'f',
+            'g',
+            'h',
+            'i',
+            'j',
+            'k',
+            'l',
+            'm',
+            'n',
+            'o',
+            'p',
+            'q',
+            'r',
+            's',
+            't',
+            'u',
+            'v',
+            'w',
+            'x',
+            'y',
+            'z',
+        ]
+    ixs = decoder(num + 1, len(alphabet)-1)
     pstr = ''
-    ixs = indexCorrector(ixs, 26)
+    ixs = indexCorrector(ixs, len(alphabet)-1)
     for i in range(0, len(ixs)):
         ix = ixs[i]
         pstr += alphabet[ix]
@@ -224,68 +256,6 @@ def handle_inequality_node(visitor, node, arg1, arg2):
 
 def handle_var_node(visitor, node):
     return visitor.variableMap[node]
-    # return node.name
-    # overwrite_dict = visitor.overwrite_dict
-    # # varList = visitor.variableList
-
-    # name = node.name
-
-    # declaredIndex = None
-    # if '[' in name:
-    #     openBracketIndex = name.index('[')
-    #     closeBracketIndex = name.index(']')
-    #     if closeBracketIndex != len(name) - 1:
-    #         # I dont think this can happen, but possibly through a raw string and a user
-    #         # who is really hacking the variable name setter
-    #         raise ValueError(
-    #             'Variable %s has a close brace not at the end of the string' % (name)
-    #         )
-    #     declaredIndex = name[openBracketIndex + 1 : closeBracketIndex]
-    #     name = name[0:openBracketIndex]
-
-    # if name in overwrite_dict.keys():
-    #     name = overwrite_dict[name]
-
-    # if visitor.use_smart_variables:
-    #     splitName = name.split('_')
-    #     if declaredIndex is not None:
-    #         splitName.append(declaredIndex)
-
-    #     filteredName = []
-
-    #     prfx = ''
-    #     psfx = ''
-    #     for i in range(0, len(splitName)):
-    #         se = splitName[i]
-    #         if se != 0:
-    #             if se == 'dot':
-    #                 prfx = '\\dot{'
-    #                 psfx = '}'
-    #             elif se == 'hat':
-    #                 prfx = '\\hat{'
-    #                 psfx = '}'
-    #             elif se == 'bar':
-    #                 prfx = '\\bar{'
-    #                 psfx = '}'
-    #             else:
-    #                 filteredName.append(se)
-    #         else:
-    #             filteredName.append(se)
-
-    #     joinedName = prfx + filteredName[0] + psfx
-    #     for i in range(1, len(filteredName)):
-    #         joinedName += '_{' + filteredName[i]
-
-    #     joinedName += '}' * (len(filteredName) - 1)
-
-    # else:
-    #     if declaredIndex is not None:
-    #         joinedName = name + '[' + declaredIndex + ']'
-    #     else:
-    #         joinedName = name
-
-    # return joinedName
-
 
 def handle_num_node(visitor, node):
     if isinstance(node, float):
@@ -358,19 +328,10 @@ def handle_functionID_node(visitor, node, *args):
 
 
 def handle_indexTemplate_node(visitor, node, *args):
-    return '__INDEX_PLACEHOLDER_8675309_GROUP_%s_%s__' % (node._group, node._set)
+    return '__I_PLACEHOLDER_8675309_GROUP_%s_%s__' % (node._group, visitor.setMap[node._set])
 
 
 def handle_numericGIE_node(visitor, node, *args):
-    # addFinalBrace = False
-    # if '_' in args[0]:
-    #     splitName = args[0].split('_')
-    #     joinedName = splitName[0]
-    #     for i in range(1, len(splitName)):
-    #         joinedName += '_{' + splitName[i]
-    #     joinedName += '}' * (len(splitName) - 2)
-    #     addFinalBrace = True
-    # else:
     joinedName = args[0]
 
     pstr = ''
@@ -381,22 +342,19 @@ def handle_numericGIE_node(visitor, node, *args):
             pstr += ','
         else:
             pstr += '}'
-    # if addFinalBrace:
-    #     pstr += '}'
     return pstr
 
 
 def handle_templateSumExpression_node(visitor, node, *args):
     pstr = ''
-    pstr += '\\sum_{%s} %s' % (
-        '__SET_PLACEHOLDER_8675309_GROUP_%s_%s__'
-        % (node._iters[0][0]._group, str(node._iters[0][0]._set)),
-        args[0],
-    )
+    for i in range(0,len(node._iters)):
+        pstr += '\\sum_{__S_PLACEHOLDER_8675309_GROUP_%s_%s__} ' %(node._iters[i][0]._group, visitor.setMap[node._iters[i][0]._set])
+
+    pstr += args[0]
+
     return pstr
 
 def handle_param_node(visitor,node):
-    # return node.name
     return visitor.parameterMap[node]
 
 
@@ -463,6 +421,9 @@ def applySmartVariables(name):
                 psfx = '}'
             elif se == 'bar':
                 prfx = '\\bar{'
+                psfx = '}'
+            elif se == 'mathcal':
+                prfx = '\\mathcal{'
                 psfx = '}'
             else:
                 filteredName.append(se)
@@ -673,7 +634,6 @@ def latex_printer(
     use_smart_variables=False,
     x_only_mode=0,
     use_short_descriptors=False,
-    use_forall=False,
     overwrite_dict=None,
 ):
     """This function produces a string that can be rendered as LaTeX
@@ -770,10 +730,7 @@ def latex_printer(
             % (str(type(pyomo_component)))
         )
 
-    if use_forall:
-        forallTag = ' \\qquad \\forall'
-    else:
-        forallTag = ' \\quad'
+    forallTag = ' \\qquad \\forall'
 
     descriptorDict = {}
     if use_short_descriptors:
@@ -800,7 +757,6 @@ def latex_printer(
             pyo.Var, descend_into=True, active=True
         )
     ]
-
     variableMap = ComponentMap()
     vrIdx = 0
     for i in range(0,len(variableList)):
@@ -815,7 +771,6 @@ def latex_printer(
                 variableMap[vr[sd]] = 'x_' + str(vrIdx)
         else:
             raise DeveloperError( 'Variable is not a variable.  Should not happen.  Contact developers')
-
     visitor.variableMap = variableMap
 
     parameterList = [
@@ -824,7 +779,7 @@ def latex_printer(
             pyo.Param, descend_into=True, active=True
         )
     ]
-
+    
     parameterMap = ComponentMap()
     pmIdx = 0
     for i in range(0,len(parameterList)):
@@ -839,9 +794,19 @@ def latex_printer(
                 parameterMap[vr[sd]] = 'p_' + str(pmIdx)
         else:
             raise DeveloperError( 'Parameter is not a parameter.  Should not happen.  Contact developers')
-
     visitor.parameterMap = parameterMap
 
+    setList = [
+        st
+        for st in pyomo_component.component_objects(
+            pyo.Set, descend_into=True, active=True
+        )
+    ]
+    setMap = ComponentMap()
+    for i in range(0,len(setList)):
+        st = setList[i]
+        setMap[st] = 'SET' + str(i+1)
+    visitor.setMap = setMap
 
     # starts building the output string
     pstr = ''
@@ -915,23 +880,16 @@ def latex_printer(
 
             # Multiple constraints are generated using a set
             if len(indices) > 0:
-                idxTag = '__INDEX_PLACEHOLDER_8675309_GROUP_%s_%s__' % (
+                idxTag = '__I_PLACEHOLDER_8675309_GROUP_%s_%s__' % (
                     indices[0]._group,
-                    indices[0]._set,
+                    setMap[indices[0]._set],
                 )
-                setTag = '__SET_PLACEHOLDER_8675309_GROUP_%s_%s__' % (
+                setTag = '__S_PLACEHOLDER_8675309_GROUP_%s_%s__' % (
                     indices[0]._group,
-                    indices[0]._set,
+                    setMap[indices[0]._set],
                 )
 
-                if use_forall:
-                    conLine += '%s %s \\in %s ' % (forallTag, idxTag, setTag)
-                else:
-                    conLine = (
-                        conLine[0:-2]
-                        + ' ' + trailingAligner 
-                        + '%s %s \\in %s ' % (forallTag, idxTag, setTag)
-                    )
+                conLine += '%s %s \\in %s ' % (forallTag, idxTag, setTag)
             pstr += conLine
 
             # Add labels as needed
@@ -1037,32 +995,28 @@ def latex_printer(
         pstr += '\\end{equation} \n'
 
     # Handling the iterator indices
+    defaultSetLatexNames = ComponentMap()
+    for i in range(0,len(setList)):
+        st = setList[i]
+        if use_smart_variables:
+            chkName = setList[i].name 
+            if len(chkName)==1 and chkName.upper() == chkName:
+                chkName += '_mathcal'
+            defaultSetLatexNames[st] = applySmartVariables( chkName )
+        else:
+            defaultSetLatexNames[st] = setList[i].name.replace('_','\\_')
 
+        ## Could be used in the future if someone has a lot of sets
+        # defaultSetLatexNames[st] = 'mathcal{' + alphabetStringGenerator(i).upper() + '}'
 
-    # ====================
-    # ====================
-    # ====================
-    # ====================
-    # ====================
-    # ====================
-    # preferential order for indices
-    setPreferenceOrder = [
-        'I',
-        'J',
-        'K',
-        'M',
-        'N',
-        'P',
-        'Q',
-        'R',
-        'S',
-        'T',
-        'U',
-        'V',
-        'W',
-    ]
+        if st in overwrite_dict.keys():
+            if use_smart_variables:
+                defaultSetLatexNames[st] = applySmartVariables( overwrite_dict[st][0] )
+            else:
+                defaultSetLatexNames[st] = overwrite_dict[st][0].replace('_','\\_')
 
-    # Go line by line and replace the placeholders with correct set names and index names
+        defaultSetLatexNames[st] = defaultSetLatexNames[st].replace('\\mathcal',r'\\mathcal')
+
     latexLines = pstr.split('\n')
     for jj in range(0, len(latexLines)):
         groupMap = {}
@@ -1082,94 +1036,84 @@ def latex_printer(
                         uniqueSets.append(stName)
 
             # Determine if the set is continuous
-            continuousSets = dict(
-                zip(uniqueSets, [False for i in range(0, len(uniqueSets))])
+            setInfo = dict(
+                zip(uniqueSets, [{'continuous':False} for i in range(0, len(uniqueSets))])
             )
+
+            for ky, vl in setInfo.items():
+                ix = int(ky[3:])-1
+                setInfo[ky]['setObject'] = setList[ix]
+                setInfo[ky]['setRegEx'] = r'__S_PLACEHOLDER_8675309_GROUP_([0-9*])_%s__'%(ky)
+                setInfo[ky]['sumSetRegEx'] = r'sum_{__S_PLACEHOLDER_8675309_GROUP_([0-9*])_%s__}'%(ky)
+                # setInfo[ky]['idxRegEx'] = r'__I_PLACEHOLDER_8675309_GROUP_[0-9*]_%s__'%(ky)
+
+
             if split_continuous_sets:
-                for i in range(0, len(uniqueSets)):
-                    st = getattr(pyomo_component, uniqueSets[i])
+                for ky, vl in setInfo.items():
+                    st = vl['setObject']
                     stData = st.data()
                     stCont = True
                     for ii in range(0, len(stData)):
                         if ii + stData[0] != stData[ii]:
                             stCont = False
                             break
-                    continuousSets[uniqueSets[i]] = stCont
+                    setInfo[ky]['continuous'] = stCont
 
-            # Add the continuous set data to the groupMap
-            for ky, vl in groupMap.items():
-                groupMap[ky].append(continuousSets[vl[0]])
-
-            # Set up new names for duplicate sets
-            assignedSetNames = []
-            gmk_list = list(groupMap.keys())
-            for i in range(0, len(groupMap.keys())):
-                ix = gmk_list[i]
-                # set not already used
-                if groupMap[str(ix)][0] not in assignedSetNames:
-                    assignedSetNames.append(groupMap[str(ix)][0])
-                    groupMap[str(ix)].append(groupMap[str(ix)][0])
-                else:
-                    # Pick a new set from the preference order
-                    for j in range(0, len(setPreferenceOrder)):
-                        stprf = setPreferenceOrder[j]
-                        # must not be already used
-                        if stprf not in assignedSetNames:
-                            assignedSetNames.append(stprf)
-                            groupMap[str(ix)].append(stprf)
-                            break
-
-            # set up the substitutions
-            setStrings = {}
-            indexStrings = {}
-            for ky, vl in groupMap.items():
-                setStrings['__SET_PLACEHOLDER_8675309_GROUP_%s_%s__' % (ky, vl[0])] = [
-                    vl[2],
-                    vl[1],
-                    vl[0],
-                ]
-                indexStrings[
-                    '__INDEX_PLACEHOLDER_8675309_GROUP_%s_%s__' % (ky, vl[0])
-                ] = vl[2].lower()
-
-            # replace the indices
-            for ky, vl in indexStrings.items():
-                ln = ln.replace(ky, vl)
 
             # replace the sets
-            for ky, vl in setStrings.items():
+            for ky, vl in setInfo.items():
                 # if the set is continuous and the flag has been set
-                if split_continuous_sets and vl[1]:
-                    st = getattr(pyomo_component, vl[2])
+                if split_continuous_sets and setInfo[ky]['continuous']:
+                    st = setInfo[ky]['setObject']
                     stData = st.data()
                     bgn = stData[0]
                     ed = stData[-1]
-                    ln = ln.replace(
-                        '\\sum_{%s}' % (ky),
-                        '\\sum_{%s = %d}^{%d}' % (vl[0].lower(), bgn, ed),
-                    )
-                    ln = ln.replace(ky, vl[2])
+
+                    replacement = r'sum_{ __I_PLACEHOLDER_8675309_GROUP_\1_%s__ = %d }^{%d}'%(ky,bgn,ed)
+                    ln = re.sub(setInfo[ky]['sumSetRegEx'], replacement, ln)
                 else:
                     # if the set is not continuous or the flag has not been set
-                    ln = ln.replace(
-                        '\\sum_{%s}' % (ky),
-                        '\\sum_{%s \\in %s}' % (vl[0].lower(), vl[0]),
-                    )
-                    ln = ln.replace(ky, vl[2])
+                    replacement = r'sum_{ __I_PLACEHOLDER_8675309_GROUP_\1_%s__ \\in __S_PLACEHOLDER_8675309_GROUP_\1_%s__  }'%(ky,ky)
+                    ln = re.sub(setInfo[ky]['sumSetRegEx'], replacement, ln)  
 
-        # Assign the newly modified line
+                replacement = defaultSetLatexNames[setInfo[ky]['setObject']]
+                ln = re.sub(setInfo[ky]['setRegEx'],replacement,ln)
+
+            # groupNumbers = re.findall(r'__I_PLACEHOLDER_8675309_GROUP_([0-9*])_SET[0-9]*__',ln)
+            setNumbers = re.findall(r'__I_PLACEHOLDER_8675309_GROUP_[0-9*]_SET([0-9]*)__',ln)
+            groupSetPairs = re.findall(r'__I_PLACEHOLDER_8675309_GROUP_([0-9*])_SET([0-9]*)__',ln)
+
+            groupInfo = {}
+            for vl in setNumbers:
+                groupInfo['SET'+vl] = {'setObject':setInfo['SET'+vl]['setObject'], 'indices':[]}
+
+            for gp in groupSetPairs:
+                if gp[0] not in groupInfo['SET'+gp[1]]['indices']:
+                    groupInfo['SET'+gp[1]]['indices'].append(gp[0])
+
+    
+            indexCounter = 0
+            for ky, vl in groupInfo.items():
+                if vl['setObject'] in overwrite_dict.keys():
+                    indexNames = overwrite_dict[vl['setObject']][1]
+                    if len(indexNames) < len(vl['indices']):
+                        raise ValueError('Insufficient number of indices provided to the overwite dictionary for set %s'%(vl['setObject'].name))
+                    for i in range(0,len(indexNames)):
+                        ln = ln.replace('__I_PLACEHOLDER_8675309_GROUP_%s_%s__'%(vl['indices'][i],ky),indexNames[i])
+                else:
+                    for i in range(0,len(vl['indices'])):
+                        ln = ln.replace('__I_PLACEHOLDER_8675309_GROUP_%s_%s__'%(vl['indices'][i],ky),alphabetStringGenerator(indexCounter,True))
+                        indexCounter += 1
+
+
+            # print('gn',groupInfo)
+            
+
         latexLines[jj] = ln
 
-    # ====================
-    # ====================
-    # ====================
-    # ====================
-    # ====================
-    # ====================
-
-
-    # rejoin the corrected lines
     pstr = '\n'.join(latexLines)
+    # pstr = pstr.replace('\\mathcal{', 'mathcal{')
+    # pstr = pstr.replace('mathcal{', '\\mathcal{')
 
     if x_only_mode in [1,2,3]:
         # Need to preserve only the set elments in the overwrite_dict
@@ -1342,7 +1286,7 @@ def latex_printer(
                     if use_smart_variables:
                         new_parameterMap[pm[sd]] = applySmartVariables(pm.name + '_{' + sdString + '}')
                     else:
-                        new_parameterMap[pm[sd]] = pm[sd].name
+                        new_parameterMap[pm[sd]] = str(pm[sd])#.name
             else:
                 raise DeveloperError( 'Parameter is not a parameter.  Should not happen.  Contact developers')
 
@@ -1369,6 +1313,9 @@ def latex_printer(
             rep_dict[parameterMap[ky]] = overwrite_value    
         elif isinstance(ky,_SetData):
             # already handled
+            pass
+        elif isinstance(ky,(float,int)):
+            # happens when immutable parameters are used, do nothing
             pass
         else:
             raise ValueError('The overwrite_dict object has a key of invalid type: %s'%(str(ky)))
@@ -1399,6 +1346,13 @@ def latex_printer(
     replacement = r'_{\1_{\2}}'
     pstr = re.sub(pattern, replacement, pstr)
 
+    splitLines = pstr.split('\n')
+    finalLines = []
+    for sl in splitLines:
+        if sl != '':
+            finalLines.append(sl)
+
+    pstr = '\n'.join(finalLines)
 
 
     # optional write to output file
