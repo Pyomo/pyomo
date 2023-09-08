@@ -124,7 +124,6 @@ class GreyBoxModel(ExternalGreyBoxModel):
     def evaluate_jacobian_outputs(self):
         """Evaluate the Jacobian of the outputs."""
         if self._use_exact_derivatives:
-
             # compute gradient of log determinant
             row = np.zeros(5)  # to store row index
             col = np.zeros(5)  # to store column index
