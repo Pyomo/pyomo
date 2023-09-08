@@ -778,6 +778,7 @@ def _finalize_matplotlib(module, available):
 def _finalize_numpy(np, available):
     if not available:
         return
+    numeric_types.native_types.add(np.ndarray)
     numeric_types.RegisterLogicalType(np.bool_)
     for t in (
         np.int_,

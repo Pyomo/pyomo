@@ -544,15 +544,13 @@ class TestLinear(unittest.TestCase):
         cfg = VisitorConfig()
         with LoggingIntercept() as LOG:
             repn = LinearRepnVisitor(*cfg).walk_expression(param_expr)
-        self.assertIn(
-            "DEPRECATED: Encountered 0*nan in expression tree.", LOG.getvalue()
-        )
+        self.assertEqual(LOG.getvalue(), "")
 
         self.assertEqual(cfg.subexpr, {})
         self.assertEqual(cfg.var_map, {})
         self.assertEqual(cfg.var_order, {})
         self.assertEqual(repn.multiplier, 1)
-        self.assertEqual(repn.constant, 0)
+        self.assertEqual(str(repn.constant), 'InvalidNumber(nan)')
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -1605,6 +1603,55 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(cfg.var_map, {})
         self.assertEqual(cfg.var_order, {})
         self.assertEqual(repn.multiplier, 1)
-        self.assertEqual(str(repn.constant), 'InvalidNumber([3 4])')
+        self.assertEqual(str(repn.constant), 'InvalidNumber(array([3, 4]))')
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
+
+    def test_zero_elimination(self):
+        m = ConcreteModel()
+        m.x = Var(range(4))
+
+        e = 0 * m.x[0] + 0 * m.x[1] * m.x[2] + 0 * log(m.x[3])
+
+        cfg = VisitorConfig()
+        repn = LinearRepnVisitor(*cfg).walk_expression(e)
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(
+            cfg.var_map,
+            {
+                id(m.x[0]): m.x[0],
+                id(m.x[1]): m.x[1],
+                id(m.x[2]): m.x[2],
+                id(m.x[3]): m.x[3],
+            },
+        )
+        self.assertEqual(
+            cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1, id(m.x[2]): 2, id(m.x[3]): 3}
+        )
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(repn.linear, {})
+        self.assertEqual(repn.nonlinear, None)
+
+        m.p = Param(mutable=True, within=Any, initialize=None)
+        e = m.p * m.x[0] + m.p * m.x[1] * m.x[2] + m.p * log(m.x[3])
+
+        cfg = VisitorConfig()
+        repn = LinearRepnVisitor(*cfg).walk_expression(e)
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(
+            cfg.var_map,
+            {
+                id(m.x[0]): m.x[0],
+                id(m.x[1]): m.x[1],
+                id(m.x[2]): m.x[2],
+                id(m.x[3]): m.x[3],
+            },
+        )
+        self.assertEqual(
+            cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1, id(m.x[2]): 2, id(m.x[3]): 3}
+        )
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(repn.linear, {id(m.x[0]): InvalidNumber(None)})
+        self.assertEqual(repn.nonlinear, InvalidNumber(None))

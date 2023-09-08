@@ -109,7 +109,7 @@ def supplyDemandRule(nn, model):
 model.supplyDemand = Constraint(model.places, rule=supplyDemandRule)
 }}}
 
-What we did was just construct a few additional variables; this wasn't required but makes reading and understanding the code much, much simpler.  The variable "amountIn" looks at each route to find ones that end in this location, then adds the amount on each of those routes together to determine how much flows to each location.  The "amountOut" variable functions similarly for the flow out.  Then we just create an "input" and "output" and ensure they're equal.  Like in some of the previous constraints, we feed the set of places into the constraint as an arguement so it will index over that set, and thus this rule functions for all the places in our network.
+What we did was just construct a few additional variables; this wasn't required but makes reading and understanding the code much, much simpler.  The variable "amountIn" looks at each route to find ones that end in this location, then adds the amount on each of those routes together to determine how much flows to each location.  The "amountOut" variable functions similarly for the flow out.  Then we just create an "input" and "output" and ensure they're equal.  Like in some of the previous constraints, we feed the set of places into the constraint as an argument so it will index over that set, and thus this rule functions for all the places in our network.
 
 We have now finished creating the model.  Save this as a .py file before continuing.
 

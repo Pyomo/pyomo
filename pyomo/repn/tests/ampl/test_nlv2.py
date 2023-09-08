@@ -21,6 +21,7 @@ import pyomo.repn.plugins.nl_writer as nl_writer
 from pyomo.repn.util import InvalidNumber
 from pyomo.repn.tests.nl_diff import nl_diff
 
+from pyomo.common.dependencies import numpy, numpy_available
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.expr import Expr_if, inequality, LinearExpression
@@ -1093,6 +1094,79 @@ G0 4    #OBJ
 1 2
 2 3
 3 1
+""",
+                OUT.getvalue(),
+            )
+        )
+
+    @unittest.skipUnless(numpy_available, "test requires numpy")
+    def test_nonfloat_constants(self):
+        import pyomo.environ as pyo
+
+        v = numpy.array([[8], [3], [6], [11]])
+        w = numpy.array([[5], [7], [4], [3]])
+        # Create model
+        m = pyo.ConcreteModel()
+        m.I = pyo.Set(initialize=range(4))
+        # Variables: note initialization with non-numeric value
+        m.zero = pyo.Param(initialize=numpy.array([0]), mutable=True)
+        m.one = pyo.Param(initialize=numpy.array([1]), mutable=True)
+        m.x = pyo.Var(m.I, bounds=(m.zero, m.one), domain=pyo.Integers, initialize=True)
+        # Params: initialize with 1-member ndarrays
+        m.limit = pyo.Param(initialize=numpy.array([14]), mutable=True)
+        m.v = pyo.Param(m.I, initialize=v, mutable=True)
+        m.w = pyo.Param(m.I, initialize=w, mutable=True)
+        # Objective: note use of numpy in coefficients
+        m.value = pyo.Objective(expr=pyo.sum_product(m.v, m.x), sense=pyo.maximize)
+        # Constraint: note use of numpy in coefficients and RHS
+        m.weight = pyo.Constraint(expr=pyo.sum_product(m.w, m.x) <= m.limit)
+
+        OUT = io.StringIO()
+        with LoggingIntercept() as LOG:
+            nl_writer.NLWriter().write(m, OUT, symbolic_solver_labels=True)
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(
+            *nl_diff(
+                """g3 1 1 0       #problem unknown
+ 4 1 1 0 0     #vars, constraints, objectives, ranges, eqns
+ 0 0 0 0 0 0   #nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0   #network constraints: nonlinear, linear
+ 0 0 0 #nonlinear vars in constraints, objectives, both
+ 0 0 0 1       #linear network variables; functions; arith, flags
+ 0 4 0 0 0     #discrete variables: binary, integer, nonlinear (b,c,o)
+ 4 4   #nonzeros in Jacobian, obj. gradient
+ 6 4   #max name lengths: constraints, variables
+ 0 0 0 0 0     #common exprs: b,c,o,c1,o1
+C0     #weight
+n0
+O0 1   #value
+n0
+x4     #initial guess
+0 1.0  #x[0]
+1 1.0  #x[1]
+2 1.0  #x[2]
+3 1.0  #x[3]
+r      #1 ranges (rhs's)
+1 14.0 #weight
+b      #4 bounds (on variables)
+0 0 1  #x[0]
+0 0 1  #x[1]
+0 0 1  #x[2]
+0 0 1  #x[3]
+k3     #intermediate Jacobian column lengths
+1
+2
+3
+J0 4   #weight
+0 5
+1 7
+2 4
+3 3
+G0 4   #value
+0 8
+1 3
+2 6
+3 11
 """,
                 OUT.getvalue(),
             )

@@ -50,49 +50,49 @@ from pyomo.core.expr.base import ExpressionBase, NPV_Mixin, visitor
 relocated_module_attribute(
     'is_potentially_variable',
     'pyomo.core.expr.numvalue.is_potentially_variable',
-    version='6.6.2.dev0',
+    version='6.6.2',
     f_globals=globals(),
 )
 relocated_module_attribute(
     'as_numeric',
     'pyomo.core.expr.numvalue.as_numeric',
-    version='6.6.2.dev0',
+    version='6.6.2',
     f_globals=globals(),
 )
 relocated_module_attribute(
     'clone_counter',
     'pyomo.core.expr.expr_common.clone_counter',
-    version='6.6.2.dev0',
+    version='6.6.2',
     f_globals=globals(),
 )
 relocated_module_attribute(
     'evaluate_expression',
     'pyomo.core.expr.visitor.evaluate_expression',
-    version='6.6.2.dev0',
+    version='6.6.2',
     f_globals=globals(),
 )
 relocated_module_attribute(
     'expression_to_string',
     'pyomo.core.expr.visitor.expression_to_string',
-    version='6.6.2.dev0',
+    version='6.6.2',
     f_globals=globals(),
 )
 relocated_module_attribute(
     'polynomial_degree',
     'pyomo.core.expr.visitor.polynomial_degree',
-    version='6.6.2.dev0',
+    version='6.6.2',
     f_globals=globals(),
 )
 relocated_module_attribute(
     'clone_expression',
     'pyomo.core.expr.visitor.clone_expression',
-    version='6.6.2.dev0',
+    version='6.6.2',
     f_globals=globals(),
 )
 relocated_module_attribute(
     'sizeof_expression',
     'pyomo.core.expr.visitor.sizeof_expression',
-    version='6.6.2.dev0',
+    version='6.6.2',
     f_globals=globals(),
 )
 
