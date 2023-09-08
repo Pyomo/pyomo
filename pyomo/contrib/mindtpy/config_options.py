@@ -494,6 +494,14 @@ def _add_common_configs(CONFIG):
             domain=bool,
         ),
     )
+    CONFIG.declare(
+        'load_solutions',
+        ConfigValue(
+            default=True,
+            description='Whether to load solutions in solve() function',
+            domain=bool,
+        ),
+    )
 
 
 def _add_subsolver_configs(CONFIG):

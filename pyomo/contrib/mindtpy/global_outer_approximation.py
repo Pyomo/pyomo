@@ -95,6 +95,7 @@ class MindtPy_GOA_Solver(_MindtPyAlgorithm):
         linearize_active=True,
         linearize_violated=True,
         cb_opt=None,
+        nlp=None,
     ):
         add_affine_cuts(self.mip, self.config, self.timing)
 
