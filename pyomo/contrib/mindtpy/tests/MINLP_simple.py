@@ -99,6 +99,7 @@ class SimpleMINLP(ConcreteModel):
                 sense=minimize,
             )
         else:
+
             def _model_i(b):
                 build_model_external(b)
 
