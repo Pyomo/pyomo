@@ -6,6 +6,12 @@ Pyomo offers interfaces into multiple solvers, both commercial and open source.
 .. currentmodule:: pyomo.solver
 
 
+Interface Implementation
+------------------------
+
+TBD: How to add a new interface; the pieces.
+
+
 Results
 -------
 
@@ -20,7 +26,7 @@ to a standard ``dict`` in Python.
 
 
 Termination Conditions
-----------------------
+^^^^^^^^^^^^^^^^^^^^^^
 
 Pyomo offers a standard set of termination conditions to map to solver
 returns. The intent of ``TerminationCondition`` is to notify the user of why
@@ -35,7 +41,7 @@ returned solver messages or logs for more information.
 
 
 Solution Status
----------------
+^^^^^^^^^^^^^^^
 
 Pyomo offers a standard set of solution statuses to map to solver output. The
 intent of ``SolutionStatus`` is to notify the user of what the solver returned
@@ -47,3 +53,7 @@ returned solver messages or logs for more information.
    :noindex:
 
 
+Solution
+--------
+
+TBD: How to load/parse a solution.
