@@ -30,47 +30,77 @@ from pyomo.solver.solution import SolutionLoaderBase
 
 class TerminationCondition(enum.Enum):
     """
-    An enumeration for checking the termination condition of solvers
+    An Enum that enumerates all possible exit statuses for a solver call.
+
+    Attributes
+    ----------
+    convergenceCriteriaSatisfied: 0
+        The solver exited because convergence criteria of the problem were
+        satisfied.
+    maxTimeLimit: 1
+        The solver exited due to reaching a specified time limit.
+    iterationLimit: 2
+        The solver exited due to reaching a specified iteration limit.
+    objectiveLimit: 3
+        The solver exited due to reaching an objective limit. For example,
+        in Gurobi, the exit message "Optimal objective for model was proven to
+        be worse than the value specified in the Cutoff parameter" would map
+        to objectiveLimit.
+    minStepLength: 4
+        The solver exited due to a minimum step length.
+        Minimum step length reached may mean that the problem is infeasible or
+        that the problem is feasible but the solver could not converge.
+    unbounded: 5
+        The solver exited because the problem has been found to be unbounded.
+    provenInfeasible: 6
+        The solver exited because the problem has been proven infeasible.
+    locallyInfeasible: 7
+        The solver exited because no feasible solution was found to the
+        submitted problem, but it could not be proven that no such solution exists.
+    infeasibleOrUnbounded: 8
+        Some solvers do not specify between infeasibility or unboundedness and
+        instead return that one or the other has occurred. For example, in
+        Gurobi, this may occur because there are some steps in presolve that
+        prevent Gurobi from distinguishing between infeasibility and unboundedness.
+    error: 9
+        The solver exited with some error. The error message will also be
+        captured and returned.
+    interrupted: 10
+        The solver was interrupted while running.
+    licensingProblems: 11
+        The solver experienced issues with licensing. This could be that no
+        license was found, the license is of the wrong type for the problem (e.g.,
+        problem is too big for type of license), or there was an issue contacting
+        a licensing server.
+    unknown: 42
+        All other unrecognized exit statuses fall in this category.
     """
 
-    """unknown serves as both a default value, and it is used when no other enum member makes sense"""
-    unknown = 42
-
-    """The solver exited because the convergence criteria were satisfied"""
     convergenceCriteriaSatisfied = 0
 
-    """The solver exited due to a time limit"""
     maxTimeLimit = 1
 
-    """The solver exited due to an iteration limit"""
     iterationLimit = 2
 
-    """The solver exited due to an objective limit"""
     objectiveLimit = 3
 
-    """The solver exited due to a minimum step length"""
     minStepLength = 4
 
-    """The solver exited because the problem is unbounded"""
     unbounded = 5
 
-    """The solver exited because the problem is proven infeasible"""
     provenInfeasible = 6
 
-    """The solver exited because the problem was found to be locally infeasible"""
     locallyInfeasible = 7
 
-    """The solver exited because the problem is either infeasible or unbounded"""
     infeasibleOrUnbounded = 8
 
-    """The solver exited due to an error"""
     error = 9
 
-    """The solver exited because it was interrupted"""
     interrupted = 10
 
-    """The solver exited due to licensing problems"""
     licensingProblems = 11
+
+    unknown = 42
 
 
 class SolutionStatus(enum.IntEnum):
@@ -78,20 +108,26 @@ class SolutionStatus(enum.IntEnum):
     An enumeration for interpreting the result of a termination. This describes the designated
     status by the solver to be loaded back into the model.
 
-    For now, we are choosing to use IntEnum such that return values are numerically
-    assigned in increasing order.
+    Attributes
+    ----------
+    noSolution: 0
+        No (single) solution was found; possible that a population of solutions
+        was returned.
+    infeasible: 10
+        Solution point does not satisfy some domains and/or constraints.
+    feasible: 20
+        A solution for which all of the constraints in the model are satisfied.
+    optimal: 30
+        A feasible solution where the objective function reaches its specified
+        sense (e.g., maximum, minimum)
     """
 
-    """No (single) solution found; possible that a population of solutions was returned"""
     noSolution = 0
 
-    """Solution point does not satisfy some domains and/or constraints"""
     infeasible = 10
 
-    """Feasible solution identified"""
     feasible = 20
 
-    """Optimal solution identified"""
     optimal = 30
 
 
@@ -99,9 +135,14 @@ class Results(ConfigDict):
     """
     Attributes
     ----------
+    solution_loader: SolutionLoaderBase
+        Object for loading the solution back into the model.
     termination_condition: TerminationCondition
         The reason the solver exited. This is a member of the
         TerminationCondition enum.
+    solution_status: SolutionStatus
+        The result of the solve call. This is a member of the SolutionStatus
+        enum.
     incumbent_objective: float
         If a feasible solution was found, this is the objective value of
         the best solution found. If no feasible solution was found, this is
@@ -111,6 +152,19 @@ class Results(ConfigDict):
         the lower bound. For maximization problems, this is the upper bound.
         For solvers that do not provide an objective bound, this should be -inf
         (minimization) or inf (maximization)
+    solver_name: str
+        The name of the solver in use.
+    solver_version: tuple
+        A tuple representing the version of the solver in use.
+    iteration_count: int
+        The total number of iterations.
+    timing_info: ConfigDict
+        A ConfigDict containing three pieces of information:
+            start_time: UTC timestamp of when run was initiated
+            wall_time: elapsed wall clock time for entire process
+            solver_wall_time: elapsed wall clock time for solve call
+    extra_info: ConfigDict
+        A ConfigDict to store extra information such as solver messages.
     """
 
     def __init__(
@@ -179,6 +233,24 @@ class Results(ConfigDict):
         s += 'incumbent_objective: ' + str(self.incumbent_objective) + '\n'
         s += 'objective_bound: ' + str(self.objective_bound)
         return s
+
+
+class ResultsReader:
+    pass
+
+
+def parse_sol_file(filename, results):
+    if results is None:
+        results = Results()
+    pass
+
+
+def parse_yaml():
+    pass
+
+
+def parse_json():
+    pass
 
 
 # Everything below here preserves backwards compatibility

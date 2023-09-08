@@ -133,9 +133,9 @@ class IPOPT(SolverBase):
                 config.solver_options['max_cpu_time'] = config.time_limit
             for key, val in config.solver_options.items():
                 cmd.append(key + '=' + val)
-            process = subprocess.run(cmd, timeout=config.time_limit,
-                                     env=env,
-                                     universal_newlines=True)
+            process = subprocess.run(
+                cmd, timeout=config.time_limit, env=env, universal_newlines=True
+            )
 
             if process.returncode != 0:
                 if self.config.load_solution:
