@@ -308,6 +308,25 @@ class pyrosTerminationCondition(Enum):
     time_out = 5
     """Maximum allowable time exceeded."""
 
+    @property
+    def message(self):
+        """
+        str : Message associated with a given PyROS
+        termination condition.
+        """
+        message_dict = {
+            self.robust_optimal: "Robust optimal solution identified.",
+            self.robust_feasible: "Robust feasible solution identified.",
+            self.robust_infeasible: "Problem is robust infeasible.",
+            self.time_out: "Maximum allowable time exceeded.",
+            self.max_iter: "Maximum number of iterations reached.",
+            self.subsolver_error: (
+                "Subordinate optimizer(s) could not solve a subproblem "
+                "to an acceptable status."
+            ),
+        }
+        return message_dict[self]
+
 
 class SeparationStrategy(Enum):
     all_violations = auto()

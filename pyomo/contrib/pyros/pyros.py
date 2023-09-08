@@ -1038,28 +1038,7 @@ class PyROS(object):
                 return_soln.time = get_main_elapsed_time(model_data.timing)
                 return_soln.iterations = 0
 
-        termination_msg_dict = {
-            pyrosTerminationCondition.robust_optimal: (
-                "Robust optimal solution identified."
-            ),
-            pyrosTerminationCondition.robust_feasible: (
-                "Robust feasible solution identified."
-            ),
-            pyrosTerminationCondition.robust_infeasible: (
-                "Problem is robust infeasible."
-            ),
-            pyrosTerminationCondition.time_out: ("Maximum allowable time exceeded."),
-            pyrosTerminationCondition.max_iter: (
-                "Maximum number of iterations reached."
-            ),
-            pyrosTerminationCondition.subsolver_error: (
-                "Subordinate optimizer(s) could not solve a subproblem "
-                "to an acceptable status."
-            ),
-        }
-        config.progress_logger.info(
-            termination_msg_dict[return_soln.pyros_termination_condition]
-        )
+        config.progress_logger.info(return_soln.pyros_termination_condition.message)
         config.progress_logger.info("-" * self._LOG_LINE_LENGTH)
         config.progress_logger.info("Termination stats:")
         config.progress_logger.info(f" {'Iterations':<22s}: {return_soln.iterations}")
