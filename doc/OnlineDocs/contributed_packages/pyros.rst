@@ -604,6 +604,8 @@ optional keyword argument ``decision_rule_order`` to the PyROS
 In this example, we select affine decision rules by setting
 ``decision_rule_order=1``:
 
+.. _example-two-stg:
+
 .. doctest::
   :skipif: not (baron.available() and baron.license_is_valid())
 
@@ -733,7 +735,278 @@ set size on the robust optimal objective function value
 and demonstrates the ease of implementing a price of robustness study
 for a given optimization problem under uncertainty.
 
-.. note::
+PyROS Solver Log Output
+-------------------------------
 
-    Please provide feedback and/or report any problems by opening an issue on
-    the `Pyomo GitHub page <https://github.com/Pyomo/pyomo/issues/new/choose>`_.
+The PyROS solver log output is controlled through the optional
+``progress_logger`` argument, itself cast to
+a standard Python logger (:py:class:`logging.Logger`) object
+at the outset of a :meth:`~pyomo.contrib.pyros.PyROS.solve` call.
+The level of detail of the solver log output
+can be adjusted by adjusting the level of the
+logger object; see :ref:`the following table <table-logging-levels>`.
+Note that by default, ``progress_logger`` is cast to a logger of level
+:py:obj:`logging.INFO`.
+
+We refer the reader to the
+:doc:`official Python logging library documentation <python:library/logging>`
+for customization of Python logger objects;
+for a basic tutorial, see the :doc:`logging HOWTO <python:howto/logging>`.
+
+.. _table-logging-levels:
+
+.. list-table:: PyROS solver log output at the various standard Python :py:mod:`logging` levels.
+   :widths: 10 50
+   :header-rows: 1
+
+   * - Logging Level
+     - Output Messages
+   * - :py:obj:`logging.ERROR`
+     - * Information on the subproblem for which an exception was raised
+         by a subordinate solver
+       * Details about failure of the PyROS coefficient matching routine
+   * - :py:obj:`logging.WARNING`
+     - * Information about a subproblem not solved to an acceptable status
+         by the user-provided subordinate optimizers
+       * Invocation of a backup solver for a particular subproblem
+       * Caution about solution robustness guarantees in event that
+         user passes ``bypass_global_separation=True``
+   * - :py:obj:`logging.INFO`
+     - * PyROS version, author, and disclaimer information
+       * Summary of user options
+       * Breakdown of model component statistics
+       * Iteration log table
+       * Termination details: message, timing breakdown, summary of statistics
+   * - :py:obj:`logging.DEBUG`
+     - * Termination outcomes (and/or summary of statistics)
+         for every subproblem
+       * Summary of separation loop outcomes: performance constraints
+         violated, uncertain parameter value added to master
+
+An example of an output log produced through the default PyROS
+progress logger is shown in
+:ref:`the snippet that follows <solver-log-snippet>`.
+Observe that the log contains the following information:
+
+
+* **Introductory information** (lines 1--18).
+  Includes the version number, author
+  information, (UTC) time at which the solver was invoked,
+  and, if available, information on the local Git branch and
+  commit hash.
+* **Summary of solver options** (lines 19--38).
+* **Preprocessing information** (lines 39--41).
+  Wall time required for preprocessing
+  the deterministic model and associated components,
+  i.e. standardizing model components and adding the decision rule
+  variables and equations.
+* **Model component statistics** (lines 42--57).
+  Breakdown of model component statistics.
+  Includes components added by PyROS, such as the decision rule variables
+  and equations.
+* **Iteration log table** (lines 58--68).
+  Summary information on the problem iterates and subproblem outcomes.
+  The constituent columns are defined in detail in
+  :ref:`the table following the snippet <table-iteration-log-columns>`.
+* **Termination message** (lines 69--70). Very brief summary of the termination outcome.
+* **Timing statistics** (lines 71--87).
+  Tabulated breakdown of the solver timing statistics, based on a
+  :class:`pyomo.common.timing.HierarchicalTimer` printout.
+  The identifiers are as follows:
+
+  * ``main``: Total time elapsed by the solver.
+  * ``main.dr_polishing``: Total time elapsed by the subordinate solvers
+    on polishing of the decision rules.
+  * ``main.global_separation``: Total time elapsed by the subordinate solvers
+    on global separation subproblems.
+  * ``main.local_separation``: Total time elapsed by the subordinate solvers
+    on local separation subproblems.
+  * ``main.master``: Total time elapsed by the subordinate solvers on
+    the master problems.
+  * ``main.master_feasibility``: Total time elapsed by the subordinate solvers
+    on the master feasibility problems.
+  * ``main.preprocessing``: Total preprocessing time.
+  * ``main.other``: Total overhead time.
+
+* **Termination statistics** (lines 88--93). Summary of statistics related to the
+  iterate at which PyROS terminates.
+* **Exit message** (lines 94--95).
+
+.. _solver-log-snippet:
+
+.. code-block:: text
+   :caption: PyROS solver output log for the :ref:`two-stage problem example <example-two-stg>`.
+   :linenos:
+
+   ==============================================================================
+   PyROS: The Pyomo Robust Optimization Solver.
+          Version 1.2.7 | Git branch: unknown, commit hash: unknown
+          Invoked at UTC 2023-09-09T18:13:21.893626
+
+   Developed by: Natalie M. Isenberg (1), Jason A. F. Sherman (1),
+                 John D. Siirola (2), Chrysanthos E. Gounaris (1)
+   (1) Carnegie Mellon University, Department of Chemical Engineering
+   (2) Sandia National Laboratories, Center for Computing Research
+
+   The developers gratefully acknowledge support from the U.S. Department
+   of Energy's Institute for the Design of Advanced Energy Systems (IDAES).
+   ==============================================================================
+   ================================= DISCLAIMER =================================
+   PyROS is still under development. 
+   Please provide feedback and/or report any issues by creating a ticket at
+   https://github.com/Pyomo/pyomo/issues/new/choose
+   ==============================================================================
+   Solver options:
+    time_limit=None
+    keepfiles=False
+    tee=False
+    load_solution=True
+    objective_focus=<ObjectiveType.worst_case: 1>
+    nominal_uncertain_param_vals=[0.13248000000000001, 4.97, 4.97, 1800]
+    decision_rule_order=1
+    solve_master_globally=True
+    max_iter=-1
+    robust_feasibility_tolerance=0.0001
+    separation_priority_order={}
+    progress_logger=<Logger pyomo.contrib.pyros (INFO)>
+    backup_local_solvers=[]
+    backup_global_solvers=[]
+    subproblem_file_directory=None
+    bypass_local_separation=False
+    bypass_global_separation=False
+    p_robustness={}
+   ------------------------------------------------------------------------------
+   Preprocessing...
+   Done preprocessing; required wall time of 0.23s.
+   ------------------------------------------------------------------------------
+   Model statistics:
+     Number of variables : 62
+       Epigraph variable : 1
+       First-stage variables : 7
+       Second-stage variables : 6
+       State variables : 18
+       Decision rule variables : 30
+     Number of constraints : 81
+       Equality constraints : 24
+         Coefficient matching constraints : 0
+         Decision rule equations : 6
+         All other equality constraints : 18
+       Inequality constraints : 57
+         First-stage inequalities (incl. certain var bounds) : 10
+         Performance constraints (incl. var bounds) : 47
+   ------------------------------------------------------------------------------
+   Itn  Objective    1-Stg Shift  DR Shift     #CViol  Max Viol    Wall Time (s) 
+   ------------------------------------------------------------------------------
+   0     3.5838e+07  -            -            5       1.8832e+04  1.212         
+   1     3.5838e+07  7.4506e-09   1.6105e+03   7       3.7766e+04  2.712         
+   2     3.6116e+07  2.7803e+05   1.2918e+03   8       1.3466e+06  4.548         
+   3     3.6285e+07  1.6957e+05   5.8386e+03   6       4.8734e+03  6.542         
+   4     3.6285e+07  1.4901e-08   3.3097e+03   1       3.5036e+01  8.916         
+   5     3.6285e+07  2.9786e-10   3.3597e+03   6       2.9103e+00  11.204        
+   6     3.6285e+07  7.4506e-07   8.7228e+02   5       4.1726e-01  13.546        
+   7     3.6285e+07  7.4506e-07   8.1995e+02   0       9.3279e-10  20.666        
+   ------------------------------------------------------------------------------
+   Robust optimal solution identified.
+   ------------------------------------------------------------------------------
+   Timing breakdown:
+
+   Identifier                ncalls   cumtime   percall      %
+   -----------------------------------------------------------
+   main                           1    20.668    20.668  100.0
+        ------------------------------------------------------
+        dr_polishing              7     1.459     0.208    7.1
+        global_separation        47     1.281     0.027    6.2
+        local_separation        376     9.105     0.024   44.1
+        master                    8     5.356     0.669   25.9
+        master_feasibility        7     0.456     0.065    2.2
+        preprocessing             1     0.232     0.232    1.1
+        other                   n/a     2.779       n/a   13.4
+        ======================================================
+   ===========================================================
+
+   ------------------------------------------------------------------------------
+   Termination stats:
+    Iterations             : 8
+    Solve time (wall s)    : 20.668
+    Final objective value  : 3.6285e+07
+    Termination condition  : pyrosTerminationCondition.robust_optimal
+   ------------------------------------------------------------------------------
+   All done. Exiting PyROS.
+   ==============================================================================
+
+
+The iteration log table is designed to provide, in a concise manner,
+important information about the progress of the iterative algorithm for
+the problem of interest.
+The constituent columns are defined in the
+:ref:`table that follows <table-iteration-log-columns>`.
+
+.. _table-iteration-log-columns:
+
+.. list-table:: PyROS iteration log table columns.
+   :widths: 10 50
+   :header-rows: 1
+
+   * - Column Name
+     - Definition
+   * - Itn
+     - Iteration number.
+   * - Objective
+     - Master solution objective function value.
+       If the objective of the deterministic model provided
+       has a maximization sense,
+       then the negative of the objective function value is displayed.
+       Expect this value to trend upward as the iteration number
+       increases.
+       If the master problems are solved globally
+       (by passing ``solve_master_globally=True``),
+       then this value should be monotonically nondecreasing
+       as the iteration number is increased.
+   * - 1-Stg Shift
+     - Infinity norm of the difference between the first-stage
+       variable vectors of the master solutions of the current
+       and previous iterations. Expect this value to trend
+       downward as the iteration number increases.
+       A dash ("-") is produced in lieu of a value in the first iteration,
+       if there are no first-stage variables, or if the master problem
+       of the current iteration is not solved successfully.
+   * - DR Shift
+     - Infinity norm of the difference between the decision rule
+       variable vectors of the master solutions of the current
+       and previous iterations.
+       Expect this value to trend downward as the iteration number increases.
+       An asterisk ("*") is appended to this value if the decision rules are
+       not successfully polished.
+       A dash ("-") is produced in lieu of a value in the first iteration,
+       if there are no decision rule variables, or if the master problem
+       of the current iteration is not solved successfully.
+   * - #CViol
+     - Number of performance constraints found to be violated during
+       the separation step of the current iteration.
+       Unless a custom prioritization of the model's performance constraints
+       is specified (through the ``separation_priority_order`` argument),
+       expect this number to trend downward as the iteration number increases.
+       A "+" is appended if not all of the separation problems
+       were solved, either due to custom prioritization, a time out, or
+       an issue encountered by the subordinate optimizers.
+       A dash ("-") is produced in lieu of a value if the separation
+       routine is not invoked during the current iteration.
+   * - Max Viol
+     - Maximum scaled performance constraint violation.
+       Expect this value to trend downward as the iteration number increases.
+       If this value is smaller than the robust feasibility tolerance,
+       then the master solution of the current iteration is certified to be
+       robust feasible or robust optimal (up to the robust feasibility tolerance),
+       and PyROS should terminate at the end of the iteration.
+       A dash ("-") is produced in lieu of a value if the separation
+       routine is not invoked during the current iteration, or if there are
+       no performance constraints.
+   * - Wall time (s)
+     - Total time elapsed by the solver, in seconds, up to the end of the
+       current iteration.
+
+
+Feedback and Reporting Issues
+-------------------------------
+Please provide feedback and/or report any problems by opening an issue on
+the `Pyomo GitHub page <https://github.com/Pyomo/pyomo/issues/new/choose>`_.
