@@ -546,7 +546,7 @@ def minimize_dr_vars(model_data, config):
             for mvar, pvar in zip(master_dr.values(), polish_dr.values()):
                 mvar.set_value(value(pvar), skip_validation=True)
 
-    config.progress_logger.debug(f" Optimized DDR norm: {value(polishing_obj)}")
+    config.progress_logger.debug(f" Optimized DR norm: {value(polishing_obj)}")
     config.progress_logger.debug("Polished Master objective:")
 
     # print master solution
