@@ -25,11 +25,12 @@ from io import StringIO
 import pyomo.common.unittest as unittest
 
 from pyomo.common.log import (
-    LoggingIntercept,
-    WrappingFormatter,
     LegacyPyomoFormatter,
+    LoggingIntercept,
     LogHandler,
     LogStream,
+    Preformatted,
+    WrappingFormatter,
     pyomo_formatter,
 )
 
@@ -268,6 +269,54 @@ class TestLegacyPyomoFormatter(unittest.TestCase):
             os.path.sep,
             lineno,
             testname,
+        )
+        self.assertEqual(self.stream.getvalue(), ans)
+
+    def test_preformatted(self):
+        self.handler.setFormatter(
+            LegacyPyomoFormatter(
+                base=os.path.dirname(__file__),
+                verbosity=lambda: logger.isEnabledFor(logging.DEBUG),
+            )
+        )
+
+        msg = """This is a long multi-line message that in normal circumstances \
+would be line-wrapped
+        with additional information
+        that normally be combined."""
+
+        logger.setLevel(logging.WARNING)
+        logger.info(msg)
+        self.assertEqual(self.stream.getvalue(), "")
+
+        logger.warning(Preformatted(msg))
+        ans = msg + "\n"
+        self.assertEqual(self.stream.getvalue(), ans)
+
+        logger.warning(msg)
+        ans += (
+            "WARNING: This is a long multi-line message that in normal "
+            "circumstances would\n"
+            "be line-wrapped with additional information that normally be combined.\n"
+        )
+        self.assertEqual(self.stream.getvalue(), ans)
+
+        logger.setLevel(logging.DEBUG)
+
+        logger.warning(Preformatted(msg))
+        ans += msg + "\n"
+        self.assertEqual(self.stream.getvalue(), ans)
+
+        logger.warning(msg)
+        lineno = getframeinfo(currentframe()).lineno - 1
+        ans += 'WARNING: "[base]%stest_log.py", %d, test_preformatted\n' % (
+            os.path.sep,
+            lineno,
+        )
+        ans += (
+            "    This is a long multi-line message that in normal "
+            "circumstances would be\n"
+            "    line-wrapped with additional information that normally be combined.\n"
         )
         self.assertEqual(self.stream.getvalue(), ans)
 
