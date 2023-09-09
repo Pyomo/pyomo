@@ -686,6 +686,7 @@ def solver_call_master(model_data, config, solver, solve_data):
 
     higher_order_decision_rule_efficiency(config, model_data)
 
+    solve_mode = "global" if config.solve_master_globally else "local"
     config.progress_logger.debug("Solving master problem")
 
     timer = TicTocTimer()
@@ -715,7 +716,7 @@ def solver_call_master(model_data, config, solver, solve_data):
             config.progress_logger.error(
                 f"Optimizer {repr(opt)} ({idx + 1} of {len(solvers)}) "
                 "encountered exception attempting to "
-                f"solve master problem in iteration {model_data.iteration}."
+                f"solve master problem in iteration {model_data.iteration}"
             )
             raise
         else:
@@ -836,16 +837,26 @@ def solver_call_master(model_data, config, solver, solve_data):
             f" Problem has been serialized to path {output_problem_path!r}."
         )
 
+    deterministic_model_qual = (
+        " (i.e., the deterministic model)"
+        if model_data.iteration == 0 else ""
+    )
+    deterministic_msg = (
+        " Please ensure your deterministic model "
+        f"is solvable by at least one of the subordinate {solve_mode} "
+        "optimizers provided."
+    ) if model_data.iteration == 0 else ""
     master_soln.pyros_termination_condition = pyrosTerminationCondition.subsolver_error
-    solve_mode = "global" if config.solve_master_globally else "local"
     config.progress_logger.warning(
         f"Could not successfully solve master problem of iteration "
-        f"{model_data.iteration} with any of the "
+        f"{model_data.iteration}{deterministic_model_qual} with any of the "
         f"provided subordinate {solve_mode} optimizers. "
         f"(Termination statuses: "
-        f"{[term_cond for term_cond in solver_term_cond_dict.values()]}.) "
+        f"{[term_cond for term_cond in solver_term_cond_dict.values()]}.)"
+        f"{deterministic_msg}"
         f"{serialization_msg}"
     )
+
     return master_soln
 
 
