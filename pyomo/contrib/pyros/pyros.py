@@ -984,9 +984,7 @@ class PyROS(object):
                     wm_util.ssv_bounds.append(c)
 
             model_data.timing.stop_timer("main.preprocessing")
-            preprocessing_time = model_data.timing.get_total_time(
-                "main.preprocessing",
-            )
+            preprocessing_time = model_data.timing.get_total_time("main.preprocessing")
             config.progress_logger.info(
                 f"Done preprocessing; required wall time of "
                 f"{preprocessing_time:.2f}s."
@@ -1048,13 +1046,9 @@ class PyROS(object):
                 return_soln.iterations = 0
 
         # log termination-related messages
-        config.progress_logger.info(
-            return_soln.pyros_termination_condition.message
-        )
+        config.progress_logger.info(return_soln.pyros_termination_condition.message)
         config.progress_logger.info("-" * self._LOG_LINE_LENGTH)
-        config.progress_logger.info(
-            f"Timing breakdown:\n\n{model_data.timing}",
-        )
+        config.progress_logger.info(f"Timing breakdown:\n\n{model_data.timing}")
         config.progress_logger.info("-" * self._LOG_LINE_LENGTH)
         config.progress_logger.info(return_soln)
         config.progress_logger.info("-" * self._LOG_LINE_LENGTH)

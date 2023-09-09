@@ -839,14 +839,17 @@ def solver_call_master(model_data, config, solver, solve_data):
         )
 
     deterministic_model_qual = (
-        " (i.e., the deterministic model)"
-        if model_data.iteration == 0 else ""
+        " (i.e., the deterministic model)" if model_data.iteration == 0 else ""
     )
     deterministic_msg = (
-        " Please ensure your deterministic model "
-        f"is solvable by at least one of the subordinate {solve_mode} "
-        "optimizers provided."
-    ) if model_data.iteration == 0 else ""
+        (
+            " Please ensure your deterministic model "
+            f"is solvable by at least one of the subordinate {solve_mode} "
+            "optimizers provided."
+        )
+        if model_data.iteration == 0
+        else ""
+    )
     master_soln.pyros_termination_condition = pyrosTerminationCondition.subsolver_error
     config.progress_logger.warning(
         f"Could not successfully solve master problem of iteration "

@@ -35,16 +35,14 @@ class ROSolveResults(object):
     """
 
     def __init__(
-            self,
-            config=None,
-            iterations=None,
-            time=None,
-            final_objective_value=None,
-            pyros_termination_condition=None,
-            ):
-        """Initialize self (see class docstring).
-
-        """
+        self,
+        config=None,
+        iterations=None,
+        time=None,
+        final_objective_value=None,
+        pyros_termination_condition=None,
+    ):
+        """Initialize self (see class docstring)."""
         self.config = config
         self.iterations = iterations
         self.time = time

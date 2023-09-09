@@ -80,9 +80,7 @@ class TimingData:
     }
 
     def __init__(self):
-        """Initialize self (see class docstring).
-
-        """
+        """Initialize self (see class docstring)."""
         self._hierarchical_timer = HierarchicalTimer()
 
     def __str__(self):
@@ -113,17 +111,13 @@ class TimingData:
             )
 
     def start_timer(self, full_identifier):
-        """Start timer for `self.hierarchical_timer`.
-
-        """
+        """Start timer for `self.hierarchical_timer`."""
         self._validate_full_identifier(full_identifier)
         identifier = full_identifier.split(".")[-1]
         return self._hierarchical_timer.start(identifier=identifier)
 
     def stop_timer(self, full_identifier):
-        """Stop timer for `self.hierarchical_timer`.
-
-        """
+        """Stop timer for `self.hierarchical_timer`."""
         self._validate_full_identifier(full_identifier)
         identifier = full_identifier.split(".")[-1]
         return self._hierarchical_timer.stop(identifier=identifier)
@@ -133,9 +127,7 @@ class TimingData:
         Get total time spent with identifier active.
         """
         self._validate_full_identifier(full_identifier)
-        return self._hierarchical_timer.get_total_time(
-            identifier=full_identifier,
-        )
+        return self._hierarchical_timer.get_total_time(identifier=full_identifier)
 
     def get_main_elapsed_time(self):
         """
@@ -154,8 +146,7 @@ class TimingData:
         """
         # clean?
         return self._hierarchical_timer.timers["main"].tic_toc.toc(
-            msg=None,
-            delta=False,
+            msg=None, delta=False
         )
 
 
