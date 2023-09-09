@@ -56,7 +56,7 @@ class ROSolveResults(object):
         Generate string representation of self.
         Does not include any information about `self.config`.
         """
-        lines = ["Termination_stats:"]
+        lines = ["Termination stats:"]
         attr_name_format_dict = {
             "iterations": ("Iterations", "f'{val}'"),
             "time": ("Solve time (wall s)", "f'{val:.3f}'"),
