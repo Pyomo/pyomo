@@ -1042,20 +1042,12 @@ class PyROS(object):
                 return_soln.time = get_main_elapsed_time(model_data.timing)
                 return_soln.iterations = 0
 
-        config.progress_logger.info(return_soln.pyros_termination_condition.message)
+        # log termination-related messages
+        config.progress_logger.info(
+            return_soln.pyros_termination_condition.message
+        )
         config.progress_logger.info("-" * self._LOG_LINE_LENGTH)
-        config.progress_logger.info("Termination stats:")
-        config.progress_logger.info(f" {'Iterations':<22s}: {return_soln.iterations}")
-        config.progress_logger.info(
-            f" {'Solve time (wall s)':<22s}: {return_soln.time:.3f}"
-        )
-        config.progress_logger.info(
-            f" {'Final objective value':<22s}: " f"{return_soln.final_objective_value:.4e}"
-        )
-        config.progress_logger.info(
-            f" {'Termination condition':<22s}: "
-            f"{return_soln.pyros_termination_condition}"
-        )
+        config.progress_logger.info(return_soln)
         config.progress_logger.info("-" * self._LOG_LINE_LENGTH)
         config.progress_logger.info(
             f"Timing breakdown:\n\n{model_data.timing}",
