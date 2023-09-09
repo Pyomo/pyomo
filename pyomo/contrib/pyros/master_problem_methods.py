@@ -22,7 +22,6 @@ from pyomo.contrib.pyros.util import (
     adjust_solver_time_settings,
     revert_solver_max_time_adjustment,
     get_main_elapsed_time,
-    output_logger,
 )
 from pyomo.contrib.pyros.solve_data import MasterProblemData, MasterResult
 from pyomo.opt.results import check_optimal_termination
@@ -807,7 +806,6 @@ def solver_call_master(model_data, config, solver, solve_data):
                 master_soln.pyros_termination_condition = (
                     pyrosTerminationCondition.time_out
                 )
-                output_logger(config=config, time_out=True, elapsed=elapsed)
 
         if not try_backup:
             return master_soln
@@ -883,10 +881,6 @@ def solve_master(model_data, config):
                     None,
                     pyrosTerminationCondition.time_out,
                 )
-
-                # log time out message
-                output_logger(config=config, time_out=True, elapsed=elapsed)
-
                 return master_soln
 
     solver = (

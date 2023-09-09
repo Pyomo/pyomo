@@ -6,7 +6,7 @@ from pyomo.core.base.objective import Objective, maximize, value
 from pyomo.core.base import Var, Param
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.dependencies import numpy as np
-from pyomo.contrib.pyros.util import ObjectiveType, get_time_from_solver, output_logger
+from pyomo.contrib.pyros.util import ObjectiveType, get_time_from_solver
 from pyomo.contrib.pyros.solve_data import (
     DiscreteSeparationSolveCallResults,
     SeparationSolveCallResults,
