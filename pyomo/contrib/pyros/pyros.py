@@ -519,13 +519,14 @@ def pyros_config():
             doc=(
                 """
                 Logger (or name thereof) used for reporting PyROS solver
-                progress. If a `str` is specified, then the string
-                is cast to a ``logging.Logger`` object
-                with ``name=progress_logger`` and ``level=logging.INFO``.
-                All handlers are cleared,
-                and a single ``StreamHandler`` (with default settings)
-                is added.
-                In the default case, we also set ``propagate=False``.
+                progress. If a `str` is specified, then ``progress_logger``
+                is cast to ``logging.getLogger(progress_logger)``.
+                In the default case, we also configure the logger
+                as follows:
+                set ``propagate=False``,
+                set ``level=logging.INFO``,
+                clear all handlers,
+                and add a single ``StreamHandler`` with default options.
                 """
             ),
             is_optional=True,

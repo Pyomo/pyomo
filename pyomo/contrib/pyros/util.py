@@ -323,6 +323,36 @@ def revert_solver_max_time_adjustment(
                     del solver.options[options_key]
 
 
+def setup_default_pyros_logger():
+    """
+    Setup default PyROS logger.
+
+    Returns
+    -------
+    logging.Logger
+        Default PyROS logger. Settings:
+
+        - ``name=DEFAULT_LOGGER_NAME``
+        - ``propagate=False``
+        - All handlers cleared, and a single ``StreamHandler``
+          (with default settings) added.
+    """
+    logger = logging.getLogger(DEFAULT_LOGGER_NAME)
+
+    # avoid possible influence of Pyomo logger customizations
+    logger.propagate = False
+
+    # clear handlers, want just a single stream handler
+    logger.handlers.clear()
+    ch = logging.StreamHandler()
+    logger.addHandler(ch)
+
+    # info level logger
+    logger.setLevel(logging.INFO)
+
+    return logger
+
+
 def a_logger(str_or_logger):
     """
     Standardize a string or logger object to a logger object.
@@ -344,21 +374,10 @@ def a_logger(str_or_logger):
     if isinstance(str_or_logger, logging.Logger):
         return str_or_logger
     else:
-        logger = logging.getLogger(str_or_logger)
-
         if str_or_logger == DEFAULT_LOGGER_NAME:
-            # turn off propagate to remove possible influence
-            # of overarching Pyomo logger settings
-            logger.propagate = False
-
-        # clear handlers, want just a single stream handler
-        logger.handlers.clear()
-        ch = logging.StreamHandler()
-        logger.addHandler(ch)
-
-        # info level logger
-        logger.setLevel(logging.INFO)
-
+            logger = setup_default_pyros_logger()
+        else:
+            logger = logging.getLogger(str_or_logger)
         return logger
 
 
