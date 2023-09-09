@@ -1575,8 +1575,8 @@ class IterationLogRecord:
         "first_stage_var_shift": 13,
         "dr_var_shift": 13,
         "num_violated_cons": 8,
-        "max_violation": 12,
-        "elapsed_time": 14,
+        "max_violation": 13,
+        "elapsed_time": 13,
     }
     _ATTR_HEADER_NAMES = {
         "iteration": "Itn",
@@ -1597,6 +1597,7 @@ class IterationLogRecord:
         dr_polishing_failed,
         num_violated_cons,
         all_sep_problems_solved,
+        global_separation,
         max_violation,
         elapsed_time,
     ):
@@ -1608,6 +1609,7 @@ class IterationLogRecord:
         self.dr_polishing_failed = dr_polishing_failed
         self.num_violated_cons = num_violated_cons
         self.all_sep_problems_solved = all_sep_problems_solved
+        self.global_separation = global_separation
         self.max_violation = max_violation
         self.elapsed_time = elapsed_time
 
@@ -1646,6 +1648,8 @@ class IterationLogRecord:
                 qual = "*" if self.dr_polishing_failed else ""
             elif attr_name == "num_violated_cons":
                 qual = "+" if not self.all_sep_problems_solved else ""
+            elif attr_name == "max_violation":
+                qual = "g" if self.global_separation else ""
             else:
                 qual = ""
 

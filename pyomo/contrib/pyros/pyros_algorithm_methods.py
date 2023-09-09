@@ -439,6 +439,7 @@ def ROSolver_iterative_solve(model_data, config):
                 max_violation=None,
                 dr_polishing_failed=None,
                 all_sep_problems_solved=None,
+                global_separation=None,
                 elapsed_time=get_main_elapsed_time(model_data.timing),
             )
             log_record.log(config.progress_logger.info)
@@ -543,6 +544,7 @@ def ROSolver_iterative_solve(model_data, config):
                     max_violation=None,
                     dr_polishing_failed=not polishing_successful,
                     all_sep_problems_solved=None,
+                    global_separation=None,
                     elapsed_time=elapsed,
                 )
                 update_grcs_solve_data(
@@ -632,6 +634,7 @@ def ROSolver_iterative_solve(model_data, config):
             max_violation=max_sep_con_violation,
             dr_polishing_failed=not polishing_successful,
             all_sep_problems_solved=all_sep_problems_solved,
+            global_separation=separation_results.solved_globally,
             elapsed_time=get_main_elapsed_time(model_data.timing),
         )
 
