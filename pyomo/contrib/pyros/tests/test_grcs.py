@@ -3907,7 +3907,7 @@ class RegressionTest(unittest.TestCase):
                 TerminationCondition.optimal,
                 msg="Minimize dr norm did not solve to optimality.",
             )
-            self.assertTrue(success, msg=f"DR polishing {success=}, expected True.")
+            self.assertTrue(success, msg=f"DR polishing success {success}, expected True.")
 
     @unittest.skipUnless(
         baron_license_is_valid, "Global NLP solver is not available and licensed."
