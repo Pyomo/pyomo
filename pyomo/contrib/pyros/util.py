@@ -1638,7 +1638,7 @@ class IterationLogRecord:
                 "dr_var_shift": "f'{attr_val:.4e}'",
                 "num_violated_cons": "f'{attr_val:d}'",
                 "max_violation": "f'{attr_val:.4e}'",
-                "elapsed_time": "f'{attr_val:.2f}'",
+                "elapsed_time": "f'{attr_val:.3f}'",
             }
 
             # qualifier for DR polishing and separation columns

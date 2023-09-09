@@ -1047,10 +1047,10 @@ class PyROS(object):
         config.progress_logger.info("Termination stats:")
         config.progress_logger.info(f" {'Iterations':<22s}: {return_soln.iterations}")
         config.progress_logger.info(
-            f" {'Solve time (wall s)':<22s}: {return_soln.time:.4f}"
+            f" {'Solve time (wall s)':<22s}: {return_soln.time:.3f}"
         )
         config.progress_logger.info(
-            f" {'Final objective value':<22s}: " f"{return_soln.final_objective_value}"
+            f" {'Final objective value':<22s}: " f"{return_soln.final_objective_value:.4e}"
         )
         config.progress_logger.info(
             f" {'Termination condition':<22s}: "
