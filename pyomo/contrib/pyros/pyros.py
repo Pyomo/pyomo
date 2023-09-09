@@ -39,6 +39,7 @@ from pyomo.contrib.pyros.util import (
     replace_uncertain_bounds_with_constraints,
     IterationLogRecord,
     DEFAULT_LOGGER_NAME,
+    TimingData,
 )
 from pyomo.contrib.pyros.solve_data import ROSolveResults
 from pyomo.contrib.pyros.pyros_algorithm_methods import ROSolver_iterative_solve
@@ -869,13 +870,12 @@ class PyROS(object):
         model_data.timing = Bunch()
 
         # === Start timer, run the algorithm
-        model_data.timing = Bunch()
+        model_data.timing = TimingData()
         with time_code(
             timing_data_obj=model_data.timing,
-            code_block_name='total',
+            code_block_name="main",
             is_main_timer=True,
         ):
-            tt_timer = model_data.timing.tic_toc_timer
             # output intro and disclaimer
             self._log_intro(config.progress_logger, level=logging.INFO)
             self._log_disclaimer(config.progress_logger, level=logging.INFO)
@@ -897,7 +897,7 @@ class PyROS(object):
 
             # begin preprocessing
             config.progress_logger.info("Preprocessing...")
-            tt_timer.toc(msg=None)
+            model_data.timing.start_timer("main.preprocessing")
 
             # === A block to hold list-type data to make cloning easy
             util = Block(concrete=True)
@@ -978,9 +978,13 @@ class PyROS(object):
                 if "bound_con" in c.name:
                     wm_util.ssv_bounds.append(c)
 
+            model_data.timing.stop_timer("main.preprocessing")
+            preprocessing_time = model_data.timing.get_total_time(
+                "main.preprocessing",
+            )
             config.progress_logger.info(
                 f"Done preprocessing; required wall time of "
-                f"{tt_timer.toc(msg=None, delta=True):.2f}s."
+                f"{preprocessing_time:.2f}s."
             )
 
             # === Solve and load solution into model
@@ -1052,6 +1056,12 @@ class PyROS(object):
             f" {'Termination condition':<22s}: "
             f"{return_soln.pyros_termination_condition}"
         )
+        config.progress_logger.info("-" * self._LOG_LINE_LENGTH)
+        config.progress_logger.info(
+            f"Timing breakdown:\n\n{model_data.timing}",
+        )
+        config.progress_logger.info("-" * self._LOG_LINE_LENGTH)
+        config.progress_logger.info("All done. Exiting PyROS.")
         config.progress_logger.info("=" * self._LOG_LINE_LENGTH)
 
         return return_soln

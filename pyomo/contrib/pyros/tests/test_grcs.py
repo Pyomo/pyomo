@@ -19,6 +19,7 @@ from pyomo.contrib.pyros.util import (
     ObjectiveType,
     pyrosTerminationCondition,
     coefficient_matching,
+    TimingData,
 )
 from pyomo.contrib.pyros.util import replace_uncertain_bounds_with_constraints
 from pyomo.contrib.pyros.util import get_vars_from_component
@@ -3568,7 +3569,7 @@ class testSolveMaster(unittest.TestCase):
             expr=master_data.master_model.scenarios[0, 0].x
         )
         master_data.iteration = 0
-        master_data.timing = Bunch()
+        master_data.timing = TimingData()
 
         box_set = BoxSet(bounds=[(0, 2)])
         solver = SolverFactory(global_solver)
@@ -3594,7 +3595,7 @@ class testSolveMaster(unittest.TestCase):
             "progress_logger", ConfigValue(default=logging.getLogger(__name__))
         )
 
-        with time_code(master_data.timing, "total", is_main_timer=True):
+        with time_code(master_data.timing, "main", is_main_timer=True):
             master_soln = solve_master(master_data, config)
             self.assertEqual(
                 master_soln.termination_condition,
@@ -3898,8 +3899,8 @@ class RegressionTest(unittest.TestCase):
         master_data.master_model.const_efficiency_applied = False
         master_data.master_model.linear_efficiency_applied = False
 
-        master_data.timing = Bunch()
-        with time_code(master_data.timing, "total", is_main_timer=True):
+        master_data.timing = TimingData()
+        with time_code(master_data.timing, "main", is_main_timer=True):
             results, success = minimize_dr_vars(model_data=master_data, config=config)
             self.assertEqual(
                 results.solver.termination_condition,

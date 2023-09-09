@@ -1030,6 +1030,7 @@ def solver_call_separation(
         orig_setting, custom_setting_present = adjust_solver_time_settings(
             model_data.timing, opt, config
         )
+        model_data.timing.start_timer(f"main.{solve_mode}_separation")
         timer.tic(msg=None)
         try:
             results = opt.solve(
@@ -1052,6 +1053,7 @@ def solver_call_separation(
             raise
         else:
             setattr(results.solver, TIC_TOC_SOLVE_TIME_ATTR, timer.toc(msg=None))
+            model_data.timing.stop_timer(f"main.{solve_mode}_separation")
         finally:
             revert_solver_max_time_adjustment(
                 opt, orig_setting, custom_setting_present, config

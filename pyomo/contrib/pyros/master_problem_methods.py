@@ -245,6 +245,7 @@ def solve_master_feasibility_problem(model_data, config):
     orig_setting, custom_setting_present = adjust_solver_time_settings(
         model_data.timing, solver, config
     )
+    model_data.timing.start_timer("main.master_feasibility")
     timer.tic(msg=None)
     try:
         results = solver.solve(model, tee=config.tee, load_solutions=False)
@@ -260,6 +261,7 @@ def solve_master_feasibility_problem(model_data, config):
         raise
     else:
         setattr(results.solver, TIC_TOC_SOLVE_TIME_ATTR, timer.toc(msg=None))
+        model_data.timing.stop_timer("main.master_feasibility")
     finally:
         revert_solver_max_time_adjustment(
             solver, orig_setting, custom_setting_present, config
@@ -484,6 +486,7 @@ def minimize_dr_vars(model_data, config):
     orig_setting, custom_setting_present = adjust_solver_time_settings(
         model_data.timing, solver, config
     )
+    model_data.timing.start_timer("main.dr_polishing")
     timer.tic(msg=None)
     try:
         results = solver.solve(polishing_model, tee=config.tee, load_solutions=False)
@@ -496,6 +499,7 @@ def minimize_dr_vars(model_data, config):
         raise
     else:
         setattr(results.solver, TIC_TOC_SOLVE_TIME_ATTR, timer.toc(msg=None))
+        model_data.timing.stop_timer("main.dr_polishing")
     finally:
         revert_solver_max_time_adjustment(
             solver, orig_setting, custom_setting_present, config
@@ -696,6 +700,7 @@ def solver_call_master(model_data, config, solver, solve_data):
         orig_setting, custom_setting_present = adjust_solver_time_settings(
             model_data.timing, opt, config
         )
+        model_data.timing.start_timer("main.master")
         timer.tic(msg=None)
         try:
             results = opt.solve(
@@ -716,6 +721,7 @@ def solver_call_master(model_data, config, solver, solve_data):
             raise
         else:
             setattr(results.solver, TIC_TOC_SOLVE_TIME_ATTR, timer.toc(msg=None))
+            model_data.timing.stop_timer("main.master")
         finally:
             revert_solver_max_time_adjustment(
                 solver, orig_setting, custom_setting_present, config

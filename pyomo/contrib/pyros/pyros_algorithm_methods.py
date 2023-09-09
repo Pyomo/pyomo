@@ -74,6 +74,7 @@ def evaluate_and_log_component_stats(model_data, separation_model, config):
     """
     Evaluate and log model component statistics.
     """
+    IterationLogRecord.log_header_rule(config.progress_logger.info)
     config.progress_logger.info("Model statistics:")
     # print model statistics
     dr_var_set = ComponentSet(

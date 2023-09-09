@@ -41,7 +41,7 @@ from contextlib import contextmanager
 import logging
 from pprint import pprint
 import math
-from pyomo.common.timing import TicTocTimer
+from pyomo.common.timing import HierarchicalTimer
 
 
 # Tolerances used in the code
@@ -54,40 +54,143 @@ TIC_TOC_SOLVE_TIME_ATTR = "pyros_tic_toc_time"
 DEFAULT_LOGGER_NAME = "pyomo.contrib.pyros"
 
 
+class TimingData:
+    """
+    PyROS solver timing data object.
+
+    A wrapper around `common.timing.HierarchicalTimer`,
+    with added functionality for enforcing a standardized
+    hierarchy of identifiers.
+
+    Attributes
+    ----------
+    hierarchical_timer_full_ids : set of str
+        (Class attribute.) Valid identifiers for use with
+        the encapsulated hierarchical timer.
+    """
+
+    hierarchical_timer_full_ids = {
+        "main",
+        "main.preprocessing",
+        "main.master_feasibility",
+        "main.master",
+        "main.dr_polishing",
+        "main.local_separation",
+        "main.global_separation",
+    }
+
+    def __init__(self):
+        """Initialize self (see class docstring).
+
+        """
+        self._hierarchical_timer = HierarchicalTimer()
+
+    def __str__(self):
+        """
+        String representation of `self`. Currently
+        returns the string representation of `self.hierarchical_timer`.
+
+        Returns
+        -------
+        str
+            String representation.
+        """
+        return self._hierarchical_timer.__str__()
+
+    def _validate_full_identifier(self, full_identifier):
+        """
+        Validate identifier for hierarchical timer.
+
+        Raises
+        ------
+        ValueError
+            If identifier not in `self.hierarchical_timer_full_ids`.
+        """
+        if full_identifier not in self.hierarchical_timer_full_ids:
+            raise ValueError(
+                "PyROS timing data object does not support timing ID: "
+                f"{full_identifier}."
+            )
+
+    def start_timer(self, full_identifier):
+        """Start timer for `self.hierarchical_timer`.
+
+        """
+        self._validate_full_identifier(full_identifier)
+        identifier = full_identifier.split(".")[-1]
+        return self._hierarchical_timer.start(identifier=identifier)
+
+    def stop_timer(self, full_identifier):
+        """Stop timer for `self.hierarchical_timer`.
+
+        """
+        self._validate_full_identifier(full_identifier)
+        identifier = full_identifier.split(".")[-1]
+        return self._hierarchical_timer.stop(identifier=identifier)
+
+    def get_total_time(self, full_identifier):
+        """
+        Get total time spent with identifier active.
+        """
+        self._validate_full_identifier(full_identifier)
+        return self._hierarchical_timer.get_total_time(
+            identifier=full_identifier,
+        )
+
+    def get_main_elapsed_time(self):
+        """
+        Get total time elapsed for main timer of
+        the HierarchicalTimer contained in self.
+
+        Returns
+        -------
+        float
+            Total elapsed time.
+
+        Note
+        ----
+        This method is meant for use while the main timer is active.
+        Otherwise, use ``self.get_total_time("main")``.
+        """
+        # clean?
+        return self._hierarchical_timer.timers["main"].tic_toc.toc(
+            msg=None,
+            delta=False,
+        )
+
+
 '''Code borrowed from gdpopt: time_code, get_main_elapsed_time, a_logger.'''
 
 
 @contextmanager
 def time_code(timing_data_obj, code_block_name, is_main_timer=False):
-    """Starts timer at entry, stores elapsed time at exit
+    """
+    Starts timer at entry, stores elapsed time at exit.
+
+    Parameters
+    ----------
+    timing_data_obj : TimingData
+        Timing data object.
+    code_block_name : str
+        Name of code block being timed.
 
     If `is_main_timer=True`, the start time is stored in the timing_data_obj,
     allowing calculation of total elapsed time 'on the fly' (e.g. to enforce
     a time limit) using `get_main_elapsed_time(timing_data_obj)`.
     """
     # initialize tic toc timer
-    timing_data_obj.tic_toc_timer = TicTocTimer()
-    timing_data_obj.tic_toc_timer.tic(msg=None)
+    timing_data_obj.start_timer(code_block_name)
 
     start_time = timeit.default_timer()
     if is_main_timer:
         timing_data_obj.main_timer_start_time = start_time
     yield
-    elapsed_time = timeit.default_timer() - start_time
-    prev_time = timing_data_obj.get(code_block_name, 0)
-    timing_data_obj[code_block_name] = prev_time + elapsed_time
+    timing_data_obj.stop_timer(code_block_name)
 
 
 def get_main_elapsed_time(timing_data_obj):
     """Returns the time since entering the main `time_code` context"""
-    current_time = timeit.default_timer()
-    try:
-        return current_time - timing_data_obj.main_timer_start_time
-    except AttributeError as e:
-        if 'main_timer_start_time' in str(e):
-            raise AttributeError(
-                "You need to be in a 'time_code' context to use `get_main_elapsed_time()`."
-            )
+    return timing_data_obj.get_main_elapsed_time()
 
 
 def adjust_solver_time_settings(timing_data_obj, solver, config):
