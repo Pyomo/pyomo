@@ -671,8 +671,8 @@ def ROSolver_iterative_solve(model_data, config):
         robustness_certified = separation_results.robustness_certified
         if robustness_certified:
             if config.bypass_global_separation:
-                config.progress_logger.info(
-                    "NOTE: Option to bypass global separation was chosen. "
+                config.progress_logger.warning(
+                    "Option to bypass global separation was chosen. "
                     "Robust feasibility and optimality of the reported "
                     "solution are not guaranteed."
                 )
