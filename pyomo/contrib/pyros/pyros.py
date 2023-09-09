@@ -1047,11 +1047,11 @@ class PyROS(object):
             return_soln.pyros_termination_condition.message
         )
         config.progress_logger.info("-" * self._LOG_LINE_LENGTH)
-        config.progress_logger.info(return_soln)
-        config.progress_logger.info("-" * self._LOG_LINE_LENGTH)
         config.progress_logger.info(
             f"Timing breakdown:\n\n{model_data.timing}",
         )
+        config.progress_logger.info("-" * self._LOG_LINE_LENGTH)
+        config.progress_logger.info(return_soln)
         config.progress_logger.info("-" * self._LOG_LINE_LENGTH)
         config.progress_logger.info("All done. Exiting PyROS.")
         config.progress_logger.info("=" * self._LOG_LINE_LENGTH)
