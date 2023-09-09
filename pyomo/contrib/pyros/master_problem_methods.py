@@ -834,7 +834,8 @@ def solver_call_master(model_data, config, solver, solve_data):
             output_problem_path, io_options={'symbolic_solver_labels': True}
         )
         serialization_msg = (
-            f" Problem has been serialized to path {output_problem_path!r}."
+            " For debugging, problem has been serialized to the file "
+            f"{output_problem_path!r}."
         )
 
     deterministic_model_qual = (

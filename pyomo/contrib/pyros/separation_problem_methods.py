@@ -1137,7 +1137,8 @@ def solver_call_separation(
             output_problem_path, io_options={'symbolic_solver_labels': True}
         )
         serialization_msg = (
-            f"Problem has been serialized to path {output_problem_path!r}."
+            " For debugging, problem has been serialized to the file "
+            f"{output_problem_path!r}."
         )
     solve_call_results.message = (
         "Could not successfully solve separation problem of iteration "
@@ -1145,7 +1146,7 @@ def solver_call_separation(
         f"for performance constraint {con_name_repr} with any of the "
         f"provided subordinate {solve_mode} optimizers. "
         f"(Termination statuses: "
-        f"{[str(term_cond) for term_cond in solver_status_dict.values()]}.) "
+        f"{[str(term_cond) for term_cond in solver_status_dict.values()]}.)"
         f"{serialization_msg}"
     )
     config.progress_logger.warning(solve_call_results.message)
