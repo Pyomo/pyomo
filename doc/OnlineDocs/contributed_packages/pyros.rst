@@ -878,7 +878,7 @@ Observe that the log contains the following information:
     p_robustness={}
    ------------------------------------------------------------------------------
    Preprocessing...
-   Done preprocessing; required wall time of 0.23s.
+   Done preprocessing; required wall time of 0.232s.
    ------------------------------------------------------------------------------
    Model statistics:
      Number of variables : 62
