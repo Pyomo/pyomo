@@ -1556,6 +1556,40 @@ class IterationLogRecord:
     """
     PyROS solver iteration log record.
 
+    Parameters
+    ----------
+    iteration : int or None, optional
+        Iteration number.
+    objective : int or None, optional
+        Master problem objective value.
+        Note: if the sense of the original model is maximization,
+        then this is the negative of the objective value
+        of the original model.
+    first_stage_var_shift : float or None, optional
+        Infinity norm of the difference between first-stage
+        variable vectors for the current and previous iterations.
+    dr_var_shift : float or None, optional
+        Infinity norm of the difference between decision rule
+        variable vectors for the current and previous iterations.
+    dr_polishing_success : bool or None, optional
+        True if DR polishing solved successfully, False otherwise.
+    num_violated_cons : int or None, optional
+        Number of performance constraints found to be violated
+        during separation step.
+    all_sep_problems_solved : int or None, optional
+        True if all separation problems were solved successfully,
+        False otherwise (such as if there was a time out, subsolver
+        error, or only a subset of the problems were solved due to
+        custom constraint prioritization).
+    global_separation : bool, optional
+        True if separation problems were solved with the subordinate
+        global optimizer(s), False otherwise.
+    max_violation : int or None
+        Maximum scaled violation of any performance constraint
+        found during separation step.
+    elapsed_time : float, optional
+        Total time elapsed up to the current iteration, in seconds.
+
     Attributes
     ----------
     iteration : int or None
@@ -1563,19 +1597,32 @@ class IterationLogRecord:
     objective : int or None
         Master problem objective value.
         Note: if the sense of the original model is maximization,
-        then this is the negative of the objective value.
+        then this is the negative of the objective value
+        of the original model.
     first_stage_var_shift : float or None
         Infinity norm of the difference between first-stage
         variable vectors for the current and previous iterations.
     dr_var_shift : float or None
         Infinity norm of the difference between decision rule
         variable vectors for the current and previous iterations.
+    dr_polishing_success : bool or None
+        True if DR polishing solved successfully, False otherwise.
     num_violated_cons : int or None
         Number of performance constraints found to be violated
         during separation step.
+    all_sep_problems_solved : int or None
+        True if all separation problems were solved successfully,
+        False otherwise (such as if there was a time out, subsolver
+        error, or only a subset of the problems were solved due to
+        custom constraint prioritization).
+    global_separation : bool
+        True if separation problems were solved with the subordinate
+        global optimizer(s), False otherwise.
     max_violation : int or None
         Maximum scaled violation of any performance constraint
         found during separation step.
+    elapsed_time : float
+        Total time elapsed up to the current iteration, in seconds.
     """
 
     _LINE_LENGTH = 78
@@ -1604,7 +1651,7 @@ class IterationLogRecord:
         objective,
         first_stage_var_shift,
         dr_var_shift,
-        dr_polishing_failed,
+        dr_polishing_success,
         num_violated_cons,
         all_sep_problems_solved,
         global_separation,
@@ -1616,7 +1663,7 @@ class IterationLogRecord:
         self.objective = objective
         self.first_stage_var_shift = first_stage_var_shift
         self.dr_var_shift = dr_var_shift
-        self.dr_polishing_failed = dr_polishing_failed
+        self.dr_polishing_success = dr_polishing_success
         self.num_violated_cons = num_violated_cons
         self.all_sep_problems_solved = all_sep_problems_solved
         self.global_separation = global_separation
@@ -1655,7 +1702,7 @@ class IterationLogRecord:
 
             # qualifier for DR polishing and separation columns
             if attr_name == "dr_var_shift":
-                qual = "*" if self.dr_polishing_failed else ""
+                qual = "*" if not self.dr_polishing_success else ""
             elif attr_name == "num_violated_cons":
                 qual = "+" if not self.all_sep_problems_solved else ""
             elif attr_name == "max_violation":

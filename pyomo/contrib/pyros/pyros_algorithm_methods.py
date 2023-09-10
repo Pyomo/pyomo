@@ -442,7 +442,7 @@ def ROSolver_iterative_solve(model_data, config):
                 dr_var_shift=None,
                 num_violated_cons=None,
                 max_violation=None,
-                dr_polishing_failed=None,
+                dr_polishing_success=None,
                 all_sep_problems_solved=None,
                 global_separation=None,
                 elapsed_time=get_main_elapsed_time(model_data.timing),
@@ -547,7 +547,7 @@ def ROSolver_iterative_solve(model_data, config):
                     dr_var_shift=dr_var_shift,
                     num_violated_cons=None,
                     max_violation=None,
-                    dr_polishing_failed=not polishing_successful,
+                    dr_polishing_success=polishing_successful,
                     all_sep_problems_solved=None,
                     global_separation=None,
                     elapsed_time=elapsed,
@@ -626,8 +626,13 @@ def ROSolver_iterative_solve(model_data, config):
         else:
             max_sep_con_violation = None
         num_violated_cons = len(separation_results.violated_performance_constraints)
-        all_sep_problems_solved = len(scaled_violations) == len(
-            separation_model.util.performance_constraints
+
+        all_sep_problems_solved = (
+            len(scaled_violations) == len(
+                separation_model.util.performance_constraints
+            )
+            and not separation_results.subsolver_error
+            and not separation_results.time_out
         )
 
         iter_log_record = IterationLogRecord(
@@ -637,7 +642,7 @@ def ROSolver_iterative_solve(model_data, config):
             dr_var_shift=dr_var_shift,
             num_violated_cons=num_violated_cons,
             max_violation=max_sep_con_violation,
-            dr_polishing_failed=not polishing_successful,
+            dr_polishing_success=polishing_successful,
             all_sep_problems_solved=all_sep_problems_solved,
             global_separation=separation_results.solved_globally,
             elapsed_time=get_main_elapsed_time(model_data.timing),
