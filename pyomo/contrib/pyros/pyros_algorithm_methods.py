@@ -101,6 +101,8 @@ def evaluate_and_log_component_stats(model_data, separation_model, config):
     num_dr_vars = len(dr_var_set)
     num_vars = int(has_epigraph_con) + num_fsv + num_ssv + num_sv + num_dr_vars
 
+    num_uncertain_params = len(model_data.working_model.util.uncertain_params)
+
     eq_cons = [
         con
         for con in model_data.working_model.component_data_objects(
@@ -164,6 +166,9 @@ def evaluate_and_log_component_stats(model_data, separation_model, config):
     config.progress_logger.info(f"{'    Second-stage variables'} : {num_ssv}")
     config.progress_logger.info(f"{'    State variables'} : {num_sv}")
     config.progress_logger.info(f"{'    Decision rule variables'} : {num_dr_vars}")
+    config.progress_logger.info(
+        f"{'  Number of uncertain parameters'} : {num_uncertain_params}"
+    )
     config.progress_logger.info(
         f"{'  Number of constraints'} : " f"{num_ineq_cons + num_eq_cons}"
     )

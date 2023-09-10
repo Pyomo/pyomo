@@ -800,16 +800,16 @@ Observe that the log contains the following information:
   the deterministic model and associated components,
   i.e. standardizing model components and adding the decision rule
   variables and equations.
-* **Model component statistics** (lines 42--57).
+* **Model component statistics** (lines 42--58).
   Breakdown of model component statistics.
   Includes components added by PyROS, such as the decision rule variables
   and equations.
-* **Iteration log table** (lines 58--68).
+* **Iteration log table** (lines 59--69).
   Summary information on the problem iterates and subproblem outcomes.
   The constituent columns are defined in detail in
   :ref:`the table following the snippet <table-iteration-log-columns>`.
-* **Termination message** (lines 69--70). Very brief summary of the termination outcome.
-* **Timing statistics** (lines 71--87).
+* **Termination message** (lines 70--71). Very brief summary of the termination outcome.
+* **Timing statistics** (lines 72--88).
   Tabulated breakdown of the solver timing statistics, based on a
   :class:`pyomo.common.timing.HierarchicalTimer` printout.
   The identifiers are as follows:
@@ -828,9 +828,9 @@ Observe that the log contains the following information:
   * ``main.preprocessing``: Total preprocessing time.
   * ``main.other``: Total overhead time.
 
-* **Termination statistics** (lines 88--93). Summary of statistics related to the
+* **Termination statistics** (lines 89--94). Summary of statistics related to the
   iterate at which PyROS terminates.
-* **Exit message** (lines 94--95).
+* **Exit message** (lines 95--96).
 
 
 .. _solver-log-snippet:
@@ -887,6 +887,7 @@ Observe that the log contains the following information:
        Second-stage variables : 6
        State variables : 18
        Decision rule variables : 30
+     Number of uncertain parameters : 4
      Number of constraints : 81
        Equality constraints : 24
          Coefficient matching constraints : 0
