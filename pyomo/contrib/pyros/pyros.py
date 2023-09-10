@@ -988,7 +988,7 @@ class PyROS(object):
             preprocessing_time = model_data.timing.get_total_time("main.preprocessing")
             config.progress_logger.info(
                 f"Done preprocessing; required wall time of "
-                f"{preprocessing_time:.2f}s."
+                f"{preprocessing_time:.3f}s."
             )
 
             # === Solve and load solution into model
