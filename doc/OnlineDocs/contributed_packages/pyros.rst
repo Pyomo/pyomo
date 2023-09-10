@@ -962,16 +962,20 @@ The constituent columns are defined in the
        increases.
        If the master problems are solved globally
        (by passing ``solve_master_globally=True``),
-       then this value should be monotonically nondecreasing
+       then after the iteration number exceeds the number of uncertain parameters,
+       this value should be monotonically nondecreasing
        as the iteration number is increased.
+       A dash ("-") is produced in lieu of a value if the master
+       problem of the current iteration is not solved successfully.
    * - 1-Stg Shift
      - Infinity norm of the difference between the first-stage
        variable vectors of the master solutions of the current
        and previous iterations. Expect this value to trend
        downward as the iteration number increases.
-       A dash ("-") is produced in lieu of a value in the first iteration,
-       if there are no first-stage variables, or if the master problem
-       of the current iteration is not solved successfully.
+       A dash ("-") is produced in lieu of a value
+       if the current iteration number is 0,
+       there are no first-stage variables,
+       or the master problem of the current iteration is not solved successfully.
    * - DR Shift
      - Infinity norm of the difference between the decision rule
        variable vectors of the master solutions of the current
@@ -979,9 +983,10 @@ The constituent columns are defined in the
        Expect this value to trend downward as the iteration number increases.
        An asterisk ("*") is appended to this value if the decision rules are
        not successfully polished.
-       A dash ("-") is produced in lieu of a value in the first iteration,
-       if there are no decision rule variables, or if the master problem
-       of the current iteration is not solved successfully.
+       A dash ("-") is produced in lieu of a value
+       if the current iteration number is 0,
+       there are no decision rule variables,
+       or the master problem of the current iteration is not solved successfully.
    * - #CViol
      - Number of performance constraints found to be violated during
        the separation step of the current iteration.
@@ -989,8 +994,8 @@ The constituent columns are defined in the
        is specified (through the ``separation_priority_order`` argument),
        expect this number to trend downward as the iteration number increases.
        A "+" is appended if not all of the separation problems
-       were solved, either due to custom prioritization, a time out, or
-       an issue encountered by the subordinate optimizers.
+       were solved successfully, either due to custom prioritization, a time out,
+       or an issue encountered by the subordinate optimizers.
        A dash ("-") is produced in lieu of a value if the separation
        routine is not invoked during the current iteration.
    * - Max Viol
