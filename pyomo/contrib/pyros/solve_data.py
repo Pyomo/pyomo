@@ -586,11 +586,7 @@ class SeparationResults:
         object
             Attribute value.
         """
-        return getattr(
-            self.main_loop_results,
-            attr_name,
-            None,
-        )
+        return getattr(self.main_loop_results, attr_name, None)
 
     @property
     def worst_case_perf_con(self):
