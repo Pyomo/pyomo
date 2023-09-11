@@ -497,6 +497,7 @@ class SeparationResults:
     ----------
     local_separation_loop_results
     global_separation_loop_results
+    main_loop_results
     subsolver_error
     time_out
     solved_locally
@@ -516,7 +517,7 @@ class SeparationResults:
     @property
     def time_out(self):
         """
-        Return True if time out found for local or global
+        bool : True if time out found for local or global
         separation loop, False otherwise.
         """
         local_time_out = (
@@ -530,7 +531,7 @@ class SeparationResults:
     @property
     def subsolver_error(self):
         """
-        Return True if subsolver error found for local or global
+        bool : True if subsolver error found for local or global
         separation loop, False otherwise.
         """
         local_subsolver_error = (
@@ -544,7 +545,7 @@ class SeparationResults:
     @property
     def solved_locally(self):
         """
-        Return true if local separation loop was invoked,
+        bool : true if local separation loop was invoked,
         False otherwise.
         """
         return self.local_separation_loop_results is not None
@@ -552,13 +553,18 @@ class SeparationResults:
     @property
     def solved_globally(self):
         """
-        Return True if global separation loop was invoked,
+        bool : True if global separation loop was invoked,
         False otherwise.
         """
         return self.global_separation_loop_results is not None
 
     def get_violating_attr(self, attr_name):
         """
+        If separation problems solved globally, returns
+        value of attribute of global separation loop results.
+
+        Otherwise, if separation problems solved locally,
+        returns value of attribute of local separation loop results.
         If local separation loop results specified, return
         value of attribute of local separation loop results.
 
@@ -580,39 +586,37 @@ class SeparationResults:
         object
             Attribute value.
         """
-        if self.solved_globally:
-            attr_val = getattr(self.global_separation_loop_results, attr_name)
-        else:
-            if self.solved_locally:
-                attr_val = getattr(self.local_separation_loop_results, attr_name)
-            else:
-                attr_val = None
-
-        return attr_val
+        return getattr(
+            self.main_loop_results,
+            attr_name,
+            None,
+        )
 
     @property
     def worst_case_perf_con(self):
         """
-        Performance constraint corresponding to the separation
-        solution chosen for the next master problem.
+        ConstraintData : Performance constraint corresponding to the
+        separation solution chosen for the next master problem.
         """
         return self.get_violating_attr("worst_case_perf_con")
 
     @property
     def main_loop_results(self):
         """
-        Get main separation loop results.
+        SeparationLoopResults : Main separation loop results.
+        In particular, this is considered to be the global
+        loop result if solved globally, and the local loop
+        results otherwise.
         """
-        if self.global_separation_loop_results is not None:
+        if self.solved_globally:
             return self.global_separation_loop_results
         return self.local_separation_loop_results
 
     @property
     def found_violation(self):
         """
-        bool: True if ``found_violation`` attribute for
-        local or global separation loop results found
-        to be True, False otherwise.
+        bool : True if ``found_violation`` attribute for
+        main separation loop results is True, False otherwise.
         """
         found_viol = self.get_violating_attr("found_violation")
         if found_viol is None:
