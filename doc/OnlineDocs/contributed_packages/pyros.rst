@@ -538,12 +538,16 @@ correspond to first-stage degrees of freedom.
   ...     solve_master_globally=True,
   ...     load_solution=False,
   ... )
-  ===========================================================================================
-  PyROS: Pyomo Robust Optimization Solver ...
-  ===========================================================================================
+  ==============================================================================
+  PyROS: The Pyomo Robust Optimization Solver.
   ...
-  INFO: Robust optimal solution identified. Exiting PyROS.
-
+  ------------------------------------------------------------------------------
+  Robust optimal solution identified.
+  ------------------------------------------------------------------------------
+  ...
+  ------------------------------------------------------------------------------
+  All done. Exiting PyROS.
+  ==============================================================================
   >>> # === Query results ===
   >>> time = results_1.time
   >>> iterations = results_1.iterations
@@ -627,11 +631,16 @@ In this example, we select affine decision rules by setting
   ...     solve_master_globally=True,
   ...     decision_rule_order=1,
   ... )
-  ===========================================================================================
-  PyROS: Pyomo Robust Optimization Solver ...
+  ==============================================================================
+  PyROS: The Pyomo Robust Optimization Solver.
   ...
-  INFO: Robust optimal solution identified. Exiting PyROS.
-
+  ------------------------------------------------------------------------------
+  Robust optimal solution identified.
+  ------------------------------------------------------------------------------
+  ...
+  ------------------------------------------------------------------------------
+  All done. Exiting PyROS.
+  ==============================================================================
   >>> # === Compare final objective to the single-stage solution
   >>> two_stage_final_objective = round(
   ...     pyo.value(results_2.final_objective_value),
