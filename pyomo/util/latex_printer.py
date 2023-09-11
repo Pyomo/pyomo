@@ -510,7 +510,7 @@ def analyze_variable(vr, visitor):
             elif lowerBoundValue == 0:
                 lowerBound = ' 0 = '
             else:
-                lowerBound = str(upperBoundValue) + ' \\leq '
+                lowerBound = str(lowerBoundValue) + ' \\leq '
         else:
             lowerBound = ''
 
@@ -530,7 +530,7 @@ def analyze_variable(vr, visitor):
                     % (vr.name)
                 )
             else:
-                lowerBound = str(upperBoundValue) + ' \\leq '
+                lowerBound = str(lowerBoundValue) + ' \\leq '
         else:
             lowerBound = ''
 
@@ -1284,7 +1284,7 @@ def latex_printer(
                     if sdString[-1]==')':
                         sdString = sdString[0:-1]
                     if use_smart_variables:
-                        new_parameterMap[pm[sd]] = applySmartVariables(pm.name + '_{' + sdString + '}')
+                        new_parameterMap[pm[sd]] = applySmartVariables(pm.name + '_' + sdString )
                     else:
                         new_parameterMap[pm[sd]] = str(pm[sd])#.name
             else:
@@ -1297,21 +1297,20 @@ def latex_printer(
             if ky not in overwrite_dict.keys():
                 overwrite_dict[ky] = vl
 
-
     rep_dict = {}
     for ky in list(reversed(list(overwrite_dict.keys()))):
-        if isinstance(ky,(pyo.Var,_GeneralVarData)):
+        if isinstance(ky,(pyo.Var,pyo.Param)):
+            if use_smart_variables and x_only_mode in [0,3]:
+                overwrite_value = applySmartVariables(overwrite_dict[ky])
+            else:
+                overwrite_value = overwrite_dict[ky]
+            rep_dict[variableMap[ky]] = overwrite_value
+        elif isinstance(ky,(_GeneralVarData,_ParamData)):
             if use_smart_variables and x_only_mode in [3]:
                 overwrite_value = applySmartVariables(overwrite_dict[ky])
             else:
                 overwrite_value = overwrite_dict[ky]
             rep_dict[variableMap[ky]] = overwrite_value
-        elif isinstance(ky,(pyo.Param,_ParamData)):
-            if use_smart_variables and x_only_mode in [3]:
-                overwrite_value = applySmartVariables(overwrite_dict[ky])
-            else:
-                overwrite_value = overwrite_dict[ky]
-            rep_dict[parameterMap[ky]] = overwrite_value    
         elif isinstance(ky,_SetData):
             # already handled
             pass
