@@ -1261,7 +1261,7 @@ def latex_printer(
                     if sdString[-1]==')':
                         sdString = sdString[0:-1]
                     if use_smart_variables:
-                        new_variableMap[vr[sd]] = applySmartVariables(vr.name + '_{' + sdString + '}')
+                        new_variableMap[vr[sd]] = applySmartVariables(vr.name + '_' + sdString )
                     else:
                         new_variableMap[vr[sd]] = vr[sd].name
             else:
@@ -1297,16 +1297,17 @@ def latex_printer(
             if ky not in overwrite_dict.keys():
                 overwrite_dict[ky] = vl
 
+
     rep_dict = {}
     for ky in list(reversed(list(overwrite_dict.keys()))):
         if isinstance(ky,(pyo.Var,_GeneralVarData)):
-            if use_smart_variables and x_only_mode not in [1]:
+            if use_smart_variables and x_only_mode in [3]:
                 overwrite_value = applySmartVariables(overwrite_dict[ky])
             else:
                 overwrite_value = overwrite_dict[ky]
             rep_dict[variableMap[ky]] = overwrite_value
         elif isinstance(ky,(pyo.Param,_ParamData)):
-            if use_smart_variables and x_only_mode not in [1]:
+            if use_smart_variables and x_only_mode in [3]:
                 overwrite_value = applySmartVariables(overwrite_dict[ky])
             else:
                 overwrite_value = overwrite_dict[ky]
@@ -1330,11 +1331,14 @@ def latex_printer(
 
     splitLines = pstr.split('\n')
     for i in range(0,len(splitLines)):
-        if '\\label{' in splitLines[i]:
-            epr, lbl = splitLines[i].split('\\label{')
-            epr = multiple_replace(epr,rep_dict)
-            lbl = multiple_replace(lbl,label_rep_dict)
-            splitLines[i] = epr + '\\label{' + lbl
+        if use_equation_environment:
+            splitLines[i] = multiple_replace(splitLines[i],rep_dict)
+        else:
+            if '\\label{' in splitLines[i]:
+                epr, lbl = splitLines[i].split('\\label{')
+                epr = multiple_replace(epr,rep_dict)
+                lbl = multiple_replace(lbl,label_rep_dict)
+                splitLines[i] = epr + '\\label{' + lbl
 
     pstr = '\n'.join(splitLines)
 
