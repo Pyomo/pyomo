@@ -11,34 +11,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import logging
-import math
-from pyomo.contrib.gdpopt.util import (
-    time_code,
-    lower_logger_level_to,
-    get_main_elapsed_time,
-)
-from pyomo.contrib.mindtpy.util import (
-    set_up_logger,
-    setup_results_object,
-    get_integer_solution,
-    copy_var_list_values_from_solution_pool,
-    add_var_bound,
-    add_feas_slacks,
-)
-from pyomo.core import (
-    TransformationFactory,
-    minimize,
-    maximize,
-    Objective,
-    ConstraintList,
-)
+
+from pyomo.contrib.gdpopt.util import get_main_elapsed_time
+from pyomo.core import ConstraintList
 from pyomo.opt import SolverFactory
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_GOA_config
 from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
-from pyomo.opt import TerminationCondition as tc
-from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
-from operator import itemgetter
 from pyomo.contrib.mindtpy.cut_generation import add_affine_cuts
 
 
@@ -128,5 +106,5 @@ class MindtPy_GOA_Solver(_MindtPyAlgorithm):
                     no_good_cuts[i].deactivate()
             if self.config.use_tabu_list:
                 self.integer_list = self.integer_list[:valid_no_good_cuts_num]
-        except KeyError:
-            self.config.logger.info('No-good cut deactivate failed.')
+        except KeyError as e:
+            self.config.logger.error(str(e) + '\nDeactivating no-good cuts failed.')
