@@ -580,16 +580,11 @@ class SeparationResults:
         object
             Attribute value.
         """
-        if self.solved_locally:
-            local_loop_val = getattr(self.local_separation_loop_results, attr_name)
+        if self.solved_globally:
+            attr_val = getattr(self.global_separation_loop_results, attr_name)
         else:
-            local_loop_val = None
-
-        if local_loop_val is not None:
-            attr_val = local_loop_val
-        else:
-            if self.solved_globally:
-                attr_val = getattr(self.global_separation_loop_results, attr_name)
+            if self.solved_locally:
+                attr_val = getattr(self.local_separation_loop_results, attr_name)
             else:
                 attr_val = None
 
@@ -598,7 +593,8 @@ class SeparationResults:
     @property
     def worst_case_perf_con(self):
         """
-        ...
+        Performance constraint corresponding to the separation
+        solution chosen for the next master problem.
         """
         return self.get_violating_attr("worst_case_perf_con")
 
