@@ -164,7 +164,7 @@ class IIdentityExpression(NumericValue):
 @deprecated(
     "noclone() is deprecated and can be omitted: "
     "Pyomo expressions natively support shared subexpressions.",
-    version='6.6.2.dev0',
+    version='6.6.2',
 )
 def noclone(expr):
     try:

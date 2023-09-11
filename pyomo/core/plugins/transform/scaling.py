@@ -22,6 +22,7 @@ from pyomo.core.base import (
 )
 from pyomo.core.plugins.transform.hierarchy import Transformation
 from pyomo.core.base import TransformationFactory
+from pyomo.core.base.suffix import SuffixFinder
 from pyomo.core.expr import replace_expressions
 from pyomo.util.components import rename_components
 
@@ -82,6 +83,7 @@ class ScaleModel(Transformation):
     def __init__(self, **kwds):
         kwds['name'] = "scale_model"
         self._scaling_method = kwds.pop('scaling_method', 'user')
+        self._suffix_finder = None
         super(ScaleModel, self).__init__(**kwds)
 
     def _create_using(self, original_model, **kwds):
@@ -89,107 +91,15 @@ class ScaleModel(Transformation):
         self._apply_to(scaled_model, **kwds)
         return scaled_model
 
-    def _suffix_finder(self, component_data, suffix_name, root=None):
-        """Find suffix value for a given component data object in model tree
-
-        Suffixes are searched by traversing the model hierarchy in three passes:
-
-        1. Search for a Suffix matching the specific component_data,
-           starting at the `root` and descending down the tree to
-           the component_data.  Return the first match found.
-        2. Search for a Suffix matching the component_data's container,
-           starting at the `root` and descending down the tree to
-           the component_data.  Return the first match found.
-        3. Search for a Suffix with key `None`, starting from the
-           component_data and working up the tree to the `root`.
-           Return the first match found.
-        4. Return None
-
-        Parameters
-        ----------
-        component_data: ComponentDataBase
-
-            Component or component data object to find suffix value for.
-
-        suffix_name: str
-
-            Name of Suffix to search for.
-
-        root: BlockData
-
-            When searching up the block hierarchy, stop at this
-            BlockData instead of traversing all the way to the
-            `component_data.model()` Block.  If the `component_data` is
-            not in the subtree defined by `root`, then the search will
-            proceed up to `component_data.model()`.
-
-        Returns
-        -------
-        The value for Suffix associated with component data if found, else None.
-
-        """
-        # Prototype for Suffix finder
-
-        # We want to *include* the root (if it is not None), so if
-        # it is not None, we want to stop as soon as we get to its
-        # parent.
-        if root is not None:
-            if root.ctype is not Block and not issubclass(root.ctype, Block):
-                raise ValueError(
-                    "_find_suffix: root must be a BlockData "
-                    f"(found {root.ctype.__name__}: {root})"
-                )
-            if root.is_indexed():
-                raise ValueError(
-                    "_find_suffix: root must be a BlockData "
-                    f"(found {type(root).__name__}: {root})"
-                )
-            root = root.parent_block()
-        # Walk parent tree and search for suffixes
-        parent = component_data.parent_block()
-        suffixes = []
-        while parent is not root:
-            s = parent.component(suffix_name)
-            if s is not None and s.ctype is Suffix:
-                suffixes.append(s)
-            parent = parent.parent_block()
-        # Pass 1: look for the component_data, working root to leaf
-        for s in reversed(suffixes):
-            if component_data in s:
-                return s[component_data]
-        # Pass 2: look for the component container, working root to leaf
-        parent_comp = component_data.parent_component()
-        if parent_comp is not component_data:
-            for s in reversed(suffixes):
-                if parent_comp in s:
-                    return s[parent_comp]
-        # Pass 3: look for None, working leaf to root
-        for s in suffixes:
-            if None in s:
-                return s[None]
-        return None
-
-    def _get_float_scaling_factor(self, instance, component_data):
-        scaling_factor = self._suffix_finder(component_data, "scaling_factor")
-
-        # If still no scaling factor, return 1.0
-        if scaling_factor is None:
-            return 1.0
-
-        # Make sure scaling factor is a float
-        try:
-            scaling_factor = float(scaling_factor)
-        except ValueError:
-            raise ValueError(
-                "Suffix 'scaling_factor' has a value %s for component %s that cannot be converted to a float. "
-                "Floating point values are required for this suffix in the ScaleModel transformation."
-                % (scaling_factor, component_data)
-            )
-        return scaling_factor
+    def _get_float_scaling_factor(self, component):
+        if self._suffix_finder is None:
+            self._suffix_finder = SuffixFinder('scaling_factor', 1.0)
+        return self._suffix_finder.find(component)
 
     def _apply_to(self, model, rename=True):
         # create a map of component to scaling factor
         component_scaling_factor_map = ComponentMap()
+        self._suffix_finder = SuffixFinder('scaling_factor', 1.0)
 
         # if the scaling_method is 'user', get the scaling parameters from the suffixes
         if self._scaling_method == 'user':
@@ -197,9 +107,7 @@ class ScaleModel(Transformation):
             for c in model.component_data_objects(
                 ctype=(Var, Constraint, Objective), descend_into=True
             ):
-                component_scaling_factor_map[c] = self._get_float_scaling_factor(
-                    model, c
-                )
+                component_scaling_factor_map[c] = self._suffix_finder.find(c)
         else:
             raise ValueError(
                 "ScaleModel transformation: unknown scaling_method found"
@@ -225,15 +133,16 @@ class ScaleModel(Transformation):
                 ]
             )
 
-        # scale the variable bounds and values and build the variable substitution map
-        # for scaling vars in constraints
+        # scale the variable bounds and values and build the variable
+        # substitution map for scaling vars in constraints
         variable_substitution_map = ComponentMap()
         already_scaled = set()
         for variable in [
             var for var in model.component_objects(ctype=Var, descend_into=True)
         ]:
             if variable.is_reference():
-                # Skip any references - these should get picked up when handling the actual variable
+                # Skip any references - these should get picked up when
+                # handling the actual variable
                 continue
 
             # set the bounds/value for the scaled variable
@@ -269,7 +178,7 @@ class ScaleModel(Transformation):
         # to variable_substitution_dict (key: id() of component)
         # ToDo: We should change replace_expressions to accept a ComponentMap as well
         variable_substitution_dict = {
-            id(k): variable_substitution_map[k] for k in variable_substitution_map
+            id(k): v for k, v in variable_substitution_map.items()
         }
 
         already_scaled = set()
@@ -277,7 +186,8 @@ class ScaleModel(Transformation):
             ctype=(Constraint, Objective), descend_into=True
         ):
             if component.is_reference():
-                # Skip any references - these should get picked up when handling the actual component
+                # Skip any references - these should get picked up when
+                # handling the actual component
                 continue
 
             for k in component:
@@ -325,7 +235,8 @@ class ScaleModel(Transformation):
                     )
                 else:
                     raise NotImplementedError(
-                        'Unknown object type found when applying scaling factors in ScaleModel transformation - Internal Error'
+                        'Unknown object type found when applying scaling factors '
+                        'in ScaleModel transformation - Internal Error'
                     )
 
         model.component_scaling_factor_map = component_scaling_factor_map
@@ -333,15 +244,23 @@ class ScaleModel(Transformation):
             scaled_component_to_original_name_map
         )
 
+        # Now that we have scaled the model, deactivate the relevant
+        # scaling suffixes so that we don't accidentally (later)
+        # double-scale.
+        for s in self._suffix_finder.all_suffixes:
+            s.deactivate()
+
         return model
 
     def propagate_solution(self, scaled_model, original_model):
-        """
-        This method takes the solution in scaled_model and maps it back to the original model.
+        """This method takes the solution in scaled_model and maps it back to
+        the original model.
 
-        It will also transform duals and reduced costs if the suffixes 'dual' and/or 'rc' are present.
-        The :code:`scaled_model` argument must be a model that was already scaled using this transformation
-        as it expects data from the transformation to perform the back mapping.
+        It will also transform duals and reduced costs if the suffixes
+        'dual' and/or 'rc' are present.  The :code:`scaled_model`
+        argument must be a model that was already scaled using this
+        transformation as it expects data from the transformation to
+        perform the back mapping.
 
         Parameters
         ----------
@@ -353,15 +272,17 @@ class ScaleModel(Transformation):
         """
         if not hasattr(scaled_model, 'component_scaling_factor_map'):
             raise AttributeError(
-                'ScaleModel:propagate_solution called with scaled_model that does not '
-                'have a component_scaling_factor_map. It is possible this method was called '
-                'using a model that was not scaled with the ScaleModel transformation'
+                'ScaleModel:propagate_solution called with scaled_model that does '
+                'not have a component_scaling_factor_map. It is possible this '
+                'method was called using a model that was not scaled with the '
+                'ScaleModel transformation'
             )
         if not hasattr(scaled_model, 'scaled_component_to_original_name_map'):
             raise AttributeError(
-                'ScaleModel:propagate_solution called with scaled_model that does not '
-                'have a scaled_component_to_original_name_map. It is possible this method was called '
-                'using a model that was not scaled with the ScaleModel transformation'
+                'ScaleModel:propagate_solution called with scaled_model that does '
+                'not have a scaled_component_to_original_name_map. It is possible '
+                'this method was called using a model that was not scaled with '
+                'the ScaleModel transformation'
             )
 
         component_scaling_factor_map = scaled_model.component_scaling_factor_map
@@ -385,7 +306,8 @@ class ScaleModel(Transformation):
             )
             if len(scaled_objectives) != 1:
                 raise NotImplementedError(
-                    'ScaleModel.propagate_solution requires a single active objective function, but %d objectives found.'
+                    'ScaleModel.propagate_solution requires a single active '
+                    'objective function, but %d objectives found.'
                     % (len(scaled_objectives))
                 )
             else:
