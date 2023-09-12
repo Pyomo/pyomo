@@ -1,0 +1,32 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - name: "Pyomo contributors"
+title: "Pyomo: a Python-based, open-source optimization modeling language with a diverse set of optimization capabilities"
+url: "https://github.com/Pyomo/pyomo"
+license-url: "https://github.com/Pyomo/pyomo/blob/main/LICENSE.md"
+version: 6.6.2
+date-released: "2023-08-23"
+preferred-citation:
+  type: book
+  authors:
+    - family-names: "Bynum"
+      given-names: "Michael L"
+    - family-names: "Hackebeil"
+      given-names: "Gabriel A"
+    - family-names: "Hart"
+      given-names: "William E"
+    - family-names: "Laird"
+      given-names: "Carl D"
+    - family-names: "Nicholson"
+      given-names: "Bethany L"
+    - family-names: "Siirola"
+      given-names: "John D"
+    - family-names: "Watson"
+      given-names: "Jean-Paul"
+    - family-names: "Woodruff"
+      given-names: "David L"
+  title: "Pyomo-optimization modeling in python"
+  publisher: "Springer"
+  volume: 67
+  year: 2021
