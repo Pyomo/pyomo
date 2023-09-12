@@ -26,6 +26,7 @@ from pyomo.opt.results.solver import (
     SolverStatus as LegacySolverStatus,
 )
 from pyomo.solver.solution import SolutionLoaderBase
+from pyomo.solver.util import SolverSystemError
 
 
 class TerminationCondition(enum.Enum):
@@ -239,10 +240,73 @@ class ResultsReader:
     pass
 
 
-def parse_sol_file(filename, results):
+def parse_sol_file(file, results):
+    # The original reader for sol files is in pyomo.opt.plugins.sol.
+    # Per my original complaint, it has "magic numbers" that I just don't
+    # know how to test. It's apparently less fragile than that in APPSI.
+    # NOTE: The Results object now also holds the solution loader, so we do
+    # not need pass in a solution like we did previously.
     if results is None:
         results = Results()
-    pass
+
+    # For backwards compatibility and general safety, we will parse all
+    # lines until "Options" appears. Anything before "Options" we will
+    # consider to be the solver message.
+    message = []
+    for line in file:
+        if not line:
+            break
+        line = line.strip()
+        if "Options" in line:
+            break
+        message.append(line)
+    message = '\n'.join(message)
+    # Once "Options" appears, we must now read the content under it.
+    model_objects = []
+    if "Options" in line:
+        line = file.readline()
+        number_of_options = int(line)
+        need_tolerance = False
+        if number_of_options > 4: # MRM: Entirely unclear why this is necessary, or if it even is
+            number_of_options -= 2
+            need_tolerance = True
+        for i in range(number_of_options + 4):
+            line = file.readline()
+            model_objects.append(int(line))
+        if need_tolerance: # MRM: Entirely unclear why this is necessary, or if it even is
+            line = file.readline()
+            model_objects.append(float(line))
+    else:
+        raise SolverSystemError("ERROR READING `sol` FILE. No 'Options' line found.")
+    # Identify the total number of variables and constraints
+    number_of_cons = model_objects[number_of_options + 1]
+    number_of_vars = model_objects[number_of_options + 3]
+    constraints = []
+    variables = []
+    # Parse through the constraint lines and capture the constraints
+    i = 0
+    while i < number_of_cons:
+        line = file.readline()
+        constraints.append(float(line))
+    # Parse through the variable lines and capture the variables
+    i = 0
+    while i < number_of_vars:
+        line = file.readline()
+        variables.append(float(line))
+    exit_code = [0, 0]
+    line = file.readline()
+    if line and ('objno' in line):
+        exit_code_line = line.split()
+        if (len(exit_code_line) != 3):
+            raise SolverSystemError(f"ERROR READING `sol` FILE. Expected two numbers in `objno` line; received {line}.")
+        exit_code = [int(exit_code_line[1]), int(exit_code_line[2])]
+    else:
+        raise SolverSystemError(f"ERROR READING `sol` FILE. Expected `objno`; received {line}.")
+    results.extra_info.solver_message = message.strip().replace('\n', '; ')
+    # Not sure if next two lines are needed
+    # if isinstance(res.solver.message, str):
+    #     res.solver.message = res.solver.message.replace(':', '\\x3a')
+    
 
 
 def parse_yaml():
