@@ -24,7 +24,8 @@ preferred-citation:
       given-names: "Jean-Paul"
     - family-names: "Woodruff"
       given-names: "David L"
-  title: "Pyomo-optimization modeling in python"
+  title: "Pyomo - optimization modeling in python"
   publisher: "Springer"
   volume: 67
   year: 2021
+  edition: "3rd"
