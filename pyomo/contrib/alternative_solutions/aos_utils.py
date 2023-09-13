@@ -16,30 +16,13 @@ from numpy.linalg import norm
 
 from pyomo.common.modeling import unique_component_name
 import pyomo.environ as pe
-from pyomo.opt import SolverFactory
-from pyomo.contrib import appsi
-
-def _get_solver(solver='gurobi', solver_options={}, 
-                use_persistent_solver=False):
-    if use_persistent_solver:
-        assert solver == 'gurobi', \
-            "Persistent solver option requires the use of Gurobi."
-        opt = appsi.solvers.Gurobi()
-        opt.config.stream_solver = True
-        for parameter, value in solver_options.items():
-            opt.set_gurobi_param(parameter, value)
-    else:
-        opt = SolverFactory(solver)
-        for parameter, value in solver_options.items():
-            opt.options[parameter] = value
-    return opt
 
 def _get_active_objective(model):
     '''
     Finds and returns the active objective function for a model. Currently 
     assume that there is exactly one active objective.
     '''
-    active_objs = [o for o in model.component_data_objects(cytpe=pe.Objective, 
+    active_objs = [o for o in model.component_data_objects(pe.Objective, 
                                                            active=True)]
     assert len(active_objs) == 1, \
         "Model has {} active objective functions, exactly one is required.".\
@@ -59,6 +42,7 @@ def _add_objective_constraint(aos_block, objective, objective_value,
     Adds a relative and/or absolute objective function constraint to the 
     specified block.
     '''
+    objective_constraints = []
     if rel_opt_gap is not None or abs_gap is not None:
         objective_is_min = objective.is_minimizing()
         objective_expr = objective.expr
@@ -79,6 +63,7 @@ def _add_objective_constraint(aos_block, objective, objective_value,
                 aos_block.optimality_tol_rel = \
                     pe.Constraint(expr=objective_expr >= \
                                   objective_cutoff)
+            objective_constraints.append(aos_block.optimality_tol_rel)
         
         if abs_gap is not None:
             objective_cutoff = objective_value + objective_sense \
@@ -92,6 +77,8 @@ def _add_objective_constraint(aos_block, objective, objective_value,
                 aos_block.optimality_tol_abs = \
                     pe.Constraint(expr=objective_expr >= \
                                   objective_cutoff)
+            objective_constraints.append(aos_block.optimality_tol_abs)
+    return objective_constraints
 
 def _get_max_solutions(max_solutions):
     assert isinstance(max_solutions, (int, type(None))), \
