@@ -123,7 +123,7 @@ from pyomo.core.expr.numvalue import (
 )
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr.visitor import ExpressionValueVisitor
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 
 pint_module, pint_available = attempt_import(
     'pint',
@@ -402,6 +402,10 @@ class _PyomoUnit(NumericValue):
         : float
            Returns 1.0
         """
+        return 1.0
+
+    @property
+    def value(self):
         return 1.0
 
     def pprint(self, ostream=None, verbose=False):

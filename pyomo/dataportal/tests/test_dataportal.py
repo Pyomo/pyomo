@@ -669,6 +669,20 @@ class PyomoDataPortal(unittest.TestCase):
         except IOError:
             pass
 
+    def test_md18(self):
+        cwd = os.getcwd()
+        os.chdir(currdir)
+
+        md = DataPortal()
+        md.load(filename=currdir + "data17.dat")
+
+        self.assertEqual(md['A'], 1)
+        self.assertEqual(md['B'], {'a': 1})
+        self.assertEqual(md['C'], {'a': 1, 'b': 2, 'c': 3})
+        self.assertEqual(md['D'], 1)
+
+        os.chdir(cwd)
+
     def test_dat_type_conversion(self):
         model = AbstractModel()
         model.I = Set()

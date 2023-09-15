@@ -22,7 +22,7 @@ from pyomo.core import (
     Var,
 )
 from pyomo.core.base import Transformation, TransformationFactory
-from pyomo.core.expr.current import identify_variables
+from pyomo.core.expr import identify_variables
 from pyomo.core.util import target_list
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import is_child_of, get_gdp_tree

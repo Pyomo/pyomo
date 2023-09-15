@@ -11,7 +11,7 @@
 
 import os
 
-import pyomo.core.expr.current as EXPR
+import pyomo.core.expr as EXPR
 
 
 def compare_floats(base, test, abstol=1e-14, reltol=1e-14):

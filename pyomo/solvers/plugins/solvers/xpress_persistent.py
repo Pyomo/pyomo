@@ -13,7 +13,7 @@ from pyomo.core.base.PyomoModel import ConcreteModel
 from pyomo.solvers.plugins.solvers.xpress_direct import XpressDirect
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.core.expr.numvalue import value, is_fixed
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.opt.base import SolverFactory
 import collections
 

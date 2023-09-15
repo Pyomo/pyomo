@@ -141,7 +141,12 @@ class QuadraticRepn(object):
             return
 
         mult = other.multiplier
-        self.constant += mult * other.constant
+        if not mult:
+            # 0 * other, so there is nothing to add/change about
+            # self.  We can just exit now.
+            return
+        if other.constant:
+            self.constant += mult * other.constant
         if other.linear:
             _merge_dict(self.linear, mult, other.linear)
         if other.quadratic:

@@ -14,6 +14,7 @@ import sys
 import pyomo.common.unittest as unittest
 from pyomo.contrib.mindtpy.tests.eight_process_problem import EightProcessFlowsheet
 from pyomo.contrib.mindtpy.tests.MINLP_simple import SimpleMINLP as SimpleMINLP
+from pyomo.contrib.mindtpy.tests.MINLP3_simple import SimpleMINLP as SimpleMINLP3
 from pyomo.contrib.mindtpy.tests.constraint_qualification_example import (
     ConstraintQualificationExample,
 )
@@ -26,7 +27,10 @@ available_mip_solvers = [
     s for s in required_mip_solvers if SolverFactory(s).available(False)
 ]
 
-if SolverFactory(required_nlp_solvers).available(False) and available_mip_solvers:
+if (
+    SolverFactory(required_nlp_solvers).available(exception_flag=False)
+    and available_mip_solvers
+):
     subsolvers_available = True
 else:
     subsolvers_available = False
@@ -36,6 +40,7 @@ model_list = [
     EightProcessFlowsheet(convex=True),
     ConstraintQualificationExample(),
     SimpleMINLP(),
+    SimpleMINLP3(),
 ]
 
 
@@ -76,6 +81,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='OA',
@@ -97,10 +103,11 @@ class TestMindtPy(unittest.TestCase):
         'gurobi_persistent' in available_mip_solvers,
         'gurobi_persistent solver is not available',
     )
-    def test_LPNLP_GUROBI(self):
+    def test_LPNLP_Gurobi(self):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='OA',
@@ -122,6 +129,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 for mip_solver in available_mip_solvers:
                     results = opt.solve(
                         model,
@@ -145,6 +153,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 for mip_solver in available_mip_solvers:
                     if known_solver_failure(mip_solver, model):
                         continue
@@ -170,6 +179,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 for mip_solver in available_mip_solvers:
                     results = opt.solve(
                         model,
@@ -193,6 +203,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 for mip_solver in available_mip_solvers:
                     results = opt.solve(
                         model,
@@ -216,6 +227,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 for mip_solver in available_mip_solvers:
                     if known_solver_failure(mip_solver, model):
                         continue
@@ -241,6 +253,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 for mip_solver in available_mip_solvers:
                     if known_solver_failure(mip_solver, model):
                         continue
@@ -266,6 +279,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 for mip_solver in available_mip_solvers:
                     if known_solver_failure(mip_solver, model):
                         continue

@@ -157,7 +157,10 @@ def Initializer(
             # 'int').  We will just have to assume this is a "normal"
             # IndexedCallInitializer
             return IndexedCallInitializer(arg)
-        if len(_args.args) - len(arg.args) == 1 and _args.varargs is None:
+        _positional_args = set(_args.args)
+        for key in arg.keywords:
+            _positional_args.discard(key)
+        if len(_positional_args) - len(arg.args) == 1 and _args.varargs is None:
             return ScalarCallInitializer(arg)
         else:
             return IndexedCallInitializer(arg)

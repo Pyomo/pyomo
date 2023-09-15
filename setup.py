@@ -229,7 +229,7 @@ setup_kwargs = dict(
             'pybind11',
         ],
         'docs': [
-            'Sphinx>2',
+            'Sphinx>4',
             'sphinx-copybutton',
             'sphinx_rtd_theme>0.5',
             'sphinxcontrib-jsmath',

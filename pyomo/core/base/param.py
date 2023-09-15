@@ -35,7 +35,7 @@ from pyomo.core.base.initializer import Initializer
 from pyomo.core.base.misc import apply_indexed_rule, apply_parameterized_indexed_rule
 from pyomo.core.base.set import Reals, _AnySet
 from pyomo.core.base.units_container import units
-from pyomo.core.expr.current import GetItemExpression
+from pyomo.core.expr import GetItemExpression
 
 logger = logging.getLogger('pyomo.core')
 
