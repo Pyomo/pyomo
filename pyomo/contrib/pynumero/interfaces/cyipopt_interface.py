@@ -353,9 +353,7 @@ class CyIpoptNLP(CyIpoptProblemInterface):
             self._set_primals_if_necessary(x)
             return self._nlp.evaluate_constraints()
         except PyNumeroEvaluationError:
-            raise cyipopt.CyIpoptEvaluationError(
-                "Error in constraint evaluation"
-            )
+            raise cyipopt.CyIpoptEvaluationError("Error in constraint evaluation")
 
     def jacobianstructure(self):
         return self._jac_g.row, self._jac_g.col
