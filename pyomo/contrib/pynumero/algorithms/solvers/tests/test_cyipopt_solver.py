@@ -167,7 +167,7 @@ def make_hs071_model():
     m.x[3] = 1.0
     m.obj = pyo.Objective(expr=m.x[0] * m.x[3] * (m.x[0] + m.x[1] + m.x[2]) + m.x[2])
     # This expression evaluates to zero, but is not well defined when x[0] > 1.1
-    trivial_expr_with_eval_error = ((pyo.sqrt(1.1 - m.x[0])) ** 2 + m.x[0] - 1.1)
+    trivial_expr_with_eval_error = (pyo.sqrt(1.1 - m.x[0])) ** 2 + m.x[0] - 1.1
     m.ineq1 = pyo.Constraint(expr=m.x[0] * m.x[1] * m.x[2] * m.x[3] >= 25.0)
     m.eq1 = pyo.Constraint(
         expr=(
