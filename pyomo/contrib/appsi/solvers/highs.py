@@ -462,9 +462,9 @@ class Highs(PersistentBase, PersistentSolver):
         self._pyomo_con_to_solver_con_map.clear()
         self._pyomo_con_to_solver_con_map.update(new_con_map)
         self._solver_con_to_pyomo_con_map.clear()
-        self._solver_con_to_pyomo_con_map.update({
-            v: k for k, v in self._pyomo_con_to_solver_con_map.items()
-        })
+        self._solver_con_to_pyomo_con_map.update(
+            {v: k for k, v in self._pyomo_con_to_solver_con_map.items()}
+        )
 
     def _remove_sos_constraints(self, cons: List[_SOSConstraintData]):
         if cons:

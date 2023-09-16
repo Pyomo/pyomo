@@ -17,7 +17,7 @@ class TestBugs(unittest.TestCase):
 
         m.p1 = pe.Param(mutable=True)
         m.p2 = pe.Param(mutable=True)
-        
+
         m.obj = pe.Objective(expr=m.y)
         m.c1 = pe.Constraint(expr=m.y >= m.x + m.p1)
         m.c2 = pe.Constraint(expr=m.y >= -m.x + m.p2)
@@ -44,7 +44,7 @@ class TestBugs(unittest.TestCase):
 
         m.y.setlb(m.p1)
         m.y.setub(m.p2)
-        
+
         m.obj = pe.Objective(expr=m.y)
         m.c1 = pe.Constraint(expr=m.y >= m.x + 1)
         m.c2 = pe.Constraint(expr=m.y >= -m.x + 1)
