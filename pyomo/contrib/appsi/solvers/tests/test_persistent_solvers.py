@@ -563,8 +563,8 @@ class TestSolvers(unittest.TestCase):
     def test_fixed_vars(
         self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):
-        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         for treat_fixed_vars_as_params in [True, False]:
+            opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
             opt.update_config.treat_fixed_vars_as_params = treat_fixed_vars_as_params
             if not opt.available():
                 raise unittest.SkipTest
@@ -1280,6 +1280,34 @@ class TestSolvers(unittest.TestCase):
         res = opt.solve(m)
         self.assertEqual(res.termination_condition, TerminationCondition.optimal)
         self.assertAlmostEqual(res.best_feasible_objective, 3)
+
+    @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
+    def test_bug_2(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
+        """
+        This test is for a bug where an objective containing a fixed variable does
+        not get updated properly when the variable is unfixed.
+        """
+        for fixed_var_option in [True, False]:
+            opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
+            if not opt.available():
+                raise unittest.SkipTest
+            opt.update_config.treat_fixed_vars_as_params = fixed_var_option
+            
+            m = pe.ConcreteModel()
+            m.x = pe.Var(bounds=(-10, 10))
+            m.y = pe.Var()
+            m.obj = pe.Objective(expr=3*m.y - m.x)
+            m.c = pe.Constraint(expr=m.y >= m.x)
+            
+            m.x.fix(1)
+            res = opt.solve(m)
+            self.assertAlmostEqual(res.best_feasible_objective, 2, 5)
+            
+            m.x.unfix()
+            m.x.setlb(-9)
+            m.x.setub(9)
+            res = opt.solve(m)
+            self.assertAlmostEqual(res.best_feasible_objective, -18, 5)
 
 
 @unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
