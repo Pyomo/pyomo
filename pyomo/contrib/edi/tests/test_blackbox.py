@@ -697,7 +697,7 @@ class TestEDIBlackBox(unittest.TestCase):
 
         t3 = bb.pyomo_value(2 * units.m)
         t3 = bb.pyomo_value(np.ones([2, 2]) * units.m)
-        self.assertRaises(ValueError, bb.pyomo_value, *(np.ones([2, 2]),))
+        t4 = bb.pyomo_value(np.ones([2, 2]))
 
         bb.sizeCheck([2, 2], np.ones([2, 2]) * units.m)
         self.assertRaises(ValueError, bb.sizeCheck, *(2, 3 * units.m))
