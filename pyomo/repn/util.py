@@ -38,7 +38,7 @@ from pyomo.core.base import (
     SortComponents,
 )
 from pyomo.core.base.component import ActiveComponent
-from pyomo.core.base.expression import _GeneralExpressionData
+from pyomo.core.base.expression import _ExpressionData
 from pyomo.core.expr.numvalue import is_fixed, value
 import pyomo.core.expr as EXPR
 import pyomo.core.kernel as kernel
@@ -53,7 +53,7 @@ sum_like_expression_types = {
     EXPR.NPV_SumExpression,
 }
 _named_subexpression_types = (
-    _GeneralExpressionData,
+    _ExpressionData,
     kernel.expression.expression,
     kernel.objective.objective,
 )
