@@ -10,11 +10,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.errors import IterationLimitError
-from pyomo.common.numeric_types import (
-    native_numeric_types,
-    native_complex_types,
-    value,
-)
+from pyomo.common.numeric_types import native_numeric_types, native_complex_types, value
 from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.core.base.constraint import Constraint, _ConstraintData
 

@@ -1497,31 +1497,27 @@ class TestLinear(unittest.TestCase):
         try:
             # native type
             self.assertEqual(
-                bcd.register_dispatcher(visitor, 5),
-                (False, (linear._CONSTANT, 5)),
+                bcd.register_dispatcher(visitor, 5), (False, (linear._CONSTANT, 5))
             )
             self.assertEqual(len(bcd), 1)
             self.assertIs(bcd[int], bcd._before_native)
             # complex type
             self.assertEqual(
-                bcd.register_dispatcher(visitor, 5j),
-                (False, (linear._CONSTANT, 5j)),
+                bcd.register_dispatcher(visitor, 5j), (False, (linear._CONSTANT, 5j))
             )
             self.assertEqual(len(bcd), 2)
             self.assertIs(bcd[complex], bcd._before_complex)
             # ScalarParam
             m.p = Param(initialize=5)
             self.assertEqual(
-                bcd.register_dispatcher(visitor, m.p),
-                (False, (linear._CONSTANT, 5)),
+                bcd.register_dispatcher(visitor, m.p), (False, (linear._CONSTANT, 5))
             )
             self.assertEqual(len(bcd), 3)
             self.assertIs(bcd[m.p.__class__], bcd._before_param)
             # ParamData
             m.q = Param([0], initialize=6, mutable=True)
             self.assertEqual(
-                bcd.register_dispatcher(visitor, m.q[0]),
-                (False, (linear._CONSTANT, 6)),
+                bcd.register_dispatcher(visitor, m.q[0]), (False, (linear._CONSTANT, 6))
             )
             self.assertEqual(len(bcd), 4)
             self.assertIs(bcd[m.q[0].__class__], bcd._before_param)
@@ -1535,9 +1531,7 @@ class TestLinear(unittest.TestCase):
             self.assertIs(bcd[LinearExpression], bcd._before_general_expression)
             # Named expression
             m.e = Expression(expr=m.p + m.q[0])
-            self.assertEqual(
-                bcd.register_dispatcher(visitor, m.e), (True, None)
-            )
+            self.assertEqual(bcd.register_dispatcher(visitor, m.e), (True, None))
             self.assertEqual(len(bcd), 7)
             self.assertIs(bcd[m.e.__class__], bcd._before_named_expression)
 
