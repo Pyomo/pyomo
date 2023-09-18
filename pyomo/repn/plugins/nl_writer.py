@@ -951,26 +951,10 @@ class _NLWriter_impl(object):
             row_comments = [f'\t#{lbl}' for lbl in row_labels]
             col_labels = [labeler(info[0]) for info in variables]
             col_comments = [f'\t#{lbl}' for lbl in col_labels]
-            if scaling_factor.scale:
-                self.var_id_to_nl = _map = {}
-                for var_idx, info in enumerate(variables):
-                    _id = info[1]
-                    scale = scaling_factor.suffix_cache[_id]
-                    if scale == 1:
-                        _map[_id] = f'v{var_idx}{col_comments[var_idx]}'
-                    else:
-                        _map[_id] = (
-                            template.division
-                            + f'v{var_idx}'
-                            + col_comments[var_idx]
-                            + '\n'
-                            + template.const % scale
-                        ).rstrip()
-            else:
-                self.var_id_to_nl = {
-                    info[1]: f'v{var_idx}{col_comments[var_idx]}'
-                    for var_idx, info in enumerate(variables)
-                }
+            self.var_id_to_nl = {
+                info[1]: f'v{var_idx}{col_comments[var_idx]}'
+                for var_idx, info in enumerate(variables)
+            }
             # Write out the .row and .col data
             if self.rowstream is not None:
                 self.rowstream.write('\n'.join(row_labels))
@@ -981,21 +965,20 @@ class _NLWriter_impl(object):
         else:
             row_labels = row_comments = [''] * (n_cons + n_objs)
             col_labels = col_comments = [''] * len(variables)
-            if scaling_factor.scale:
-                self.var_id_to_nl = _map = {}
-                for var_idx, info in enumerate(variables):
-                    _id = info[1]
-                    scale = scaling_factor.suffix_cache[_id]
-                    if scale == 1:
-                        _map[_id] = f"v{var_idx}"
-                    else:
-                        _map[_id] = (
-                            template.division + f'v{var_idx}\n' + template.const % scale
-                        ).rstrip()
-            else:
-                self.var_id_to_nl = {
-                    info[1]: f"v{var_idx}" for var_idx, info in enumerate(variables)
-                }
+            self.var_id_to_nl = {
+                info[1]: f"v{var_idx}" for var_idx, info in enumerate(variables)
+            }
+
+        if scaling_factor.scale:
+            _vmap = self.var_id_to_nl
+            for var_idx, info in enumerate(variables):
+                _id = info[1]
+                scale = _scaling[_id]
+                if scale != 1:
+                    _vmap[_id] = (
+                        template.division + _vmap[_id] + '\n' + template.const % scale
+                    ).rstrip()
+
         timer.toc("Generated row/col labels & comments", level=logging.DEBUG)
 
         #
