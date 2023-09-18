@@ -338,13 +338,13 @@ class NLWriter(object):
         # Now that the row/column ordering is resolved, create the labels
         symbol_map = SymbolMap()
         symbol_map.addSymbols(
-            (info[0], f"v{idx}") for idx, info in enumerate(info.variables)
+            (info, f"v{idx}") for idx, info in enumerate(info.variables)
         )
         symbol_map.addSymbols(
-            (info[0], f"c{idx}") for idx, info in enumerate(info.constraints)
+            (info, f"c{idx}") for idx, info in enumerate(info.constraints)
         )
         symbol_map.addSymbols(
-            (info[0], f"o{idx}") for idx, info in enumerate(info.objectives)
+            (info, f"o{idx}") for idx, info in enumerate(info.objectives)
         )
         return symbol_map
 
@@ -1412,9 +1412,9 @@ class _NLWriter_impl(object):
 
         # Generate the return information
         info = NLWriterInfo(
-            variables,
-            constraints,
-            objectives,
+            [info[0] for info in variables],
+            [info[0] for info in constraints],
+            [info[0] for info in objectives],
             sorted(amplfunc_libraries),
             row_labels,
             col_labels,
