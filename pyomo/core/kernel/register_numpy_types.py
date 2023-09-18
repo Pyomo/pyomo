@@ -17,10 +17,11 @@ deprecation_warning(
     version='6.1',
 )
 
-from pyomo.core.expr.numvalue import (
+from pyomo.common.numeric_types import (
     RegisterNumericType,
     RegisterIntegerType,
     RegisterBooleanType,
+    native_complex_types,
     native_numeric_types,
     native_integer_types,
     native_boolean_types,
@@ -37,6 +38,8 @@ numpy_float_names = []
 numpy_float = []
 numpy_bool_names = []
 numpy_bool = []
+numpy_complex_names = []
+numpy_complex = []
 
 if _has_numpy:
     # Historically, the lists included several numpy aliases
@@ -44,6 +47,8 @@ if _has_numpy:
     numpy_int.extend((numpy.int_, numpy.intc, numpy.intp))
     numpy_float_names.append('float_')
     numpy_float.append(numpy.float_)
+    numpy_complex_names.append('complex_')
+    numpy_complex.append(numpy.complex_)
 
 # Re-build the old numpy_* lists
 for t in native_boolean_types:
@@ -63,13 +68,8 @@ for t in native_boolean_types:
 
 
 # Complex
-numpy_complex_names = []
-numpy_complex = []
-if _has_numpy:
-    numpy_complex_names.extend(('complex_', 'complex64', 'complex128', 'complex256'))
-    for _type_name in numpy_complex_names:
-        try:
-            _type = getattr(numpy, _type_name)
-            numpy_complex.append(_type)
-        except:  # pragma:nocover
-            pass
+for t in native_complex_types:
+    if t.__module__ == 'numpy':
+        if t.__name__ not in numpy_complex_names:
+            numpy_complex.append(t)
+            numpy_complex_names.append(t.__name__)
