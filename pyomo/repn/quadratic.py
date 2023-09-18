@@ -222,7 +222,6 @@ def _handle_product_nonlinear(visitor, node, arg1, arg2):
     # We are multiplying (A + Bx + Cx^2 + D(x)) * (A + Bx + Cx^2 + Dx))
     _, x1 = arg1
     _, x2 = arg2
-    ans = visitor.Result()
     ans.multiplier = x1.multiplier * x2.multiplier
     x1.multiplier = x2.multiplier = 1
     # x1.const * x2.const [AA]
