@@ -564,6 +564,7 @@ class _NLWriter_impl(object):
 
         if self.config.scale_model and 'scaling_factor' in suffix_data:
             scaling_factor = CachingNumericSuffixFinder('scaling_factor', 1)
+            scaling_cache = scaling_factor.scaling_cache
             del suffix_data['scaling_factor']
         else:
             scaling_factor = _NoScalingFactor()
@@ -973,7 +974,7 @@ class _NLWriter_impl(object):
             _vmap = self.var_id_to_nl
             for var_idx, info in enumerate(variables):
                 _id = info[1]
-                scale = _scaling[_id]
+                scale = scaling_cache[_id]
                 if scale != 1:
                     _vmap[_id] = (
                         template.division + _vmap[_id] + '\n' + template.const % scale
@@ -1257,6 +1258,19 @@ class _NLWriter_impl(object):
         if 'dual' in suffix_data:
             data = suffix_data['dual']
             data.compile(column_order, row_order, obj_order, model_id)
+            if scaling_factor.scale:
+                if objectives:
+                    if len(objectives) > 1:
+                        logger.warning(
+                            "Scaling model with dual suffixes and multiple "
+                            "objectives.  Assuming that the duals are computed "
+                            "against the first objective."
+                        )
+                    _obj_scale = scaling_cache[objectives[0][1]]
+                else:
+                    _obj_scale = 1
+                for _id in _data.con:
+                    _data.con[_id] *= _obj_scale / scaling_cache[constraints[_id][1]]
             if data.var:
                 logger.warning("ignoring 'dual' suffix for Var types")
             if data.obj:
@@ -1278,6 +1292,9 @@ class _NLWriter_impl(object):
             for var_idx, val in enumerate(v[0].value for v in variables)
             if val is not None
         ]
+        if scaling_factor.scale:
+            for i, (var_idx, val) in _init_lines:
+                _init_lines[i] = (var_idx, val * scaling_cache[variables[var_idx][1]])
         ostream.write(
             'x%d%s\n'
             % (len(_init_lines), "\t# initial guess" if symbolic_solver_labels else '')
@@ -1370,12 +1387,14 @@ class _NLWriter_impl(object):
             # (i.e., a constant objective), then skip this entry
             if not linear:
                 continue
+            if scaling_factor.scale:
+                for _id, val in linear.items():
+                    linear[_id] /= scaling_cache[_id]
             ostream.write(f'J{row_idx} {len(linear)}{row_comments[row_idx]}\n')
-            for _id in sorted(linear.keys(), key=column_order.__getitem__):
-                val = linear[_id]
-                if val.__class__ not in int_float:
-                    val = float(val)
-                ostream.write(f'{column_order[_id]} {val!r}\n')
+            ostream.write(''.join(
+                f'{column_order[_id]} {linear[_id]!r}\n'
+                for _id in sorted(linear.keys(), key=column_order.__getitem__)
+            ))
 
         #
         # "G" lines (non-empty terms in the Objective)
@@ -1386,12 +1405,14 @@ class _NLWriter_impl(object):
             # (i.e., a constant objective), then skip this entry
             if not linear:
                 continue
+            if scaling_factor.scale:
+                for _id, val in linear.items():
+                    linear[_id] /= scaling_cache[_id]
             ostream.write(f'G{obj_idx} {len(linear)}{row_comments[obj_idx + n_cons]}\n')
-            for _id in sorted(linear.keys(), key=column_order.__getitem__):
-                val = linear[_id]
-                if val.__class__ not in int_float:
-                    val = float(val)
-                ostream.write(f'{column_order[_id]} {val!r}\n')
+            ostream.write(''.join(
+                f'{column_order[_id]} {linear[_id]!r}\n'
+                for _id in sorted(linear.keys(), key=column_order.__getitem__)
+            ))
 
         # Generate the return information
         info = NLWriterInfo(
