@@ -294,6 +294,9 @@ _exit_node_handlers[ProductExpression].update(
         (_QUADRATIC, _GENERAL): _handle_product_nonlinear,
         # Replace handler from the linear walker
         (_LINEAR, _LINEAR): _handle_product_linear_linear,
+        (_GENERAL, _GENERAL): _handle_product_nonlinear,
+        (_GENERAL, _LINEAR): _handle_product_nonlinear,
+        (_LINEAR, _GENERAL): _handle_product_nonlinear,
     }
 )
 
