@@ -800,13 +800,23 @@ def _finalize_numpy(np, available):
         # registration here (to bypass the deprecation warning) until we
         # finally remove all support for it
         numeric_types._native_boolean_types.add(t)
-    for t in (np.float_, np.float16, np.float32, np.float64, np.float128):
+    _floats = [np.float_, np.float16, np.float32, np.float64]
+    if hasattr(np, 'float96'):
+        _floats.append(np.float96)
+    if hasattr(np, 'float128'):
+        _floats.append(np.float128)
+    for t in _floats:
         numeric_types.RegisterNumericType(t)
         # We have deprecated RegisterBooleanType, so we will mock up the
         # registration here (to bypass the deprecation warning) until we
         # finally remove all support for it
         numeric_types._native_boolean_types.add(t)
-    for t in (np.complex_, np.complex64, np.complex128, np.complex256):
+    _complex = [np.complex_, np.complex64, np.complex128]
+    if hasattr(np, 'complex192'):
+        _complex.append(np.complex192)
+    if hasattr(np, 'complex256'):
+        _complex.append(np.complex256)
+    for t in _complex:
         numeric_types.RegisterComplexType(t)
 
 

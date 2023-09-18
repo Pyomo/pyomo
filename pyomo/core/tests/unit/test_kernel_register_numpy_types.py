@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
-from pyomo.common.dependencies import numpy_available
+from pyomo.common.dependencies import numpy, numpy_available
 from pyomo.common.log import LoggingIntercept
 
 # Boolean
@@ -38,14 +38,20 @@ if numpy_available:
     numpy_float_names.append('float16')
     numpy_float_names.append('float32')
     numpy_float_names.append('float64')
-    numpy_float_names.append('float128')
+    if hasattr(numpy, 'float96'):
+        numpy_float_names.append('float96')
+    if hasattr(numpy, 'float128'):
+        numpy_float_names.append('float128')
 # Complex
 numpy_complex_names = []
 if numpy_available:
     numpy_complex_names.append('complex_')
     numpy_complex_names.append('complex64')
     numpy_complex_names.append('complex128')
-    numpy_complex_names.append('complex256')
+    if hasattr(numpy, 'complex192'):
+        numpy_complex_names.append('complex192')
+    if hasattr(numpy, 'complex256'):
+        numpy_complex_names.append('complex256')
 
 
 class TestNumpyRegistration(unittest.TestCase):
