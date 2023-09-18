@@ -1292,17 +1292,17 @@ class TestSolvers(unittest.TestCase):
             if not opt.available():
                 raise unittest.SkipTest
             opt.update_config.treat_fixed_vars_as_params = fixed_var_option
-            
+
             m = pe.ConcreteModel()
             m.x = pe.Var(bounds=(-10, 10))
             m.y = pe.Var()
-            m.obj = pe.Objective(expr=3*m.y - m.x)
+            m.obj = pe.Objective(expr=3 * m.y - m.x)
             m.c = pe.Constraint(expr=m.y >= m.x)
-            
+
             m.x.fix(1)
             res = opt.solve(m)
             self.assertAlmostEqual(res.best_feasible_objective, 2, 5)
-            
+
             m.x.unfix()
             m.x.setlb(-9)
             m.x.setub(9)
