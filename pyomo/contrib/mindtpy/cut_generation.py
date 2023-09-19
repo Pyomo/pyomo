@@ -215,17 +215,18 @@ def add_oa_cuts_for_grey_box(
                 <= 0
             )
     # TODO: gurobi_persistent currently does not support greybox model.
-    if (
-        config.single_tree
-        and config.mip_solver == 'gurobi_persistent'
-        and mip_iter > 0
-        and cb_opt is not None
-    ):
-        cb_opt.cbLazy(
-            target_model.MindtPy_utils.cuts.oa_cuts[
-                len(target_model.MindtPy_utils.cuts.oa_cuts)
-            ]
-        )
+    # https://github.com/Pyomo/pyomo/issues/3000
+    # if (
+    #     config.single_tree
+    #     and config.mip_solver == 'gurobi_persistent'
+    #     and mip_iter > 0
+    #     and cb_opt is not None
+    # ):
+    #     cb_opt.cbLazy(
+    #         target_model.MindtPy_utils.cuts.oa_cuts[
+    #             len(target_model.MindtPy_utils.cuts.oa_cuts)
+    #         ]
+    #     )
 
 
 def add_ecp_cuts(
