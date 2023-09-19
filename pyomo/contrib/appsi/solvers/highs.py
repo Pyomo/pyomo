@@ -459,10 +459,12 @@ class Highs(PersistentBase, PersistentSolver):
         for c in self._pyomo_con_to_solver_con_map.keys():
             new_con_map[c] = con_ndx
             con_ndx += 1
-        self._pyomo_con_to_solver_con_map = new_con_map
-        self._solver_con_to_pyomo_con_map = {
-            v: k for k, v in self._pyomo_con_to_solver_con_map.items()
-        }
+        self._pyomo_con_to_solver_con_map.clear()
+        self._pyomo_con_to_solver_con_map.update(new_con_map)
+        self._solver_con_to_pyomo_con_map.clear()
+        self._solver_con_to_pyomo_con_map.update(
+            {v: k for k, v in self._pyomo_con_to_solver_con_map.items()}
+        )
 
     def _remove_sos_constraints(self, cons: List[_SOSConstraintData]):
         if cons:
@@ -480,6 +482,7 @@ class Highs(PersistentBase, PersistentSolver):
             v_ndx = self._pyomo_var_to_solver_var_map.pop(v_id)
             indices_to_remove.append(v_ndx)
             self._mutable_bounds.pop(v_id, None)
+        indices_to_remove.sort()
         self._solver_model.deleteVars(
             len(indices_to_remove), np.array(indices_to_remove)
         )
@@ -488,7 +491,8 @@ class Highs(PersistentBase, PersistentSolver):
         for v_id in self._pyomo_var_to_solver_var_map.keys():
             new_var_map[v_id] = v_ndx
             v_ndx += 1
-        self._pyomo_var_to_solver_var_map = new_var_map
+        self._pyomo_var_to_solver_var_map.clear()
+        self._pyomo_var_to_solver_var_map.update(new_var_map)
 
     def _remove_params(self, params: List[_ParamData]):
         pass
