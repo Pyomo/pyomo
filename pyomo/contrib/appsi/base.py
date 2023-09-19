@@ -1406,7 +1406,7 @@ class PersistentBase(abc.ABC):
             vars_to_update = list()
             for v in vars_to_check:
                 _v, lb, ub, fixed, domain_interval, value = self._vars[id(v)]
-                if (fixed is not v.fixed) or (fixed and (value != v.value)):
+                if (fixed != v.fixed) or (fixed and (value != v.value)):
                     vars_to_update.append(v)
                     if self.update_config.treat_fixed_vars_as_params:
                         for c in self._referenced_variables[id(v)][0]:
