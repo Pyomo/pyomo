@@ -426,7 +426,7 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
         # not we are minimizing or maximizing - this is done in the ASL interface
         # for ipopt, but does not appear to be done in cyipopt.
         obj_sign = 1.0
-        # since we will assert the number of objective functions, 
+        # since we will assert the number of objective functions,
         # we only focus on active objective function.
         objs = list(
             m.component_data_objects(
