@@ -31,6 +31,7 @@ from pyomo.core.expr import (
     ExternalFunctionExpression,
 )
 
+from pyomo.core.expr.visitor import identify_components
 from pyomo.core.expr.base import ExpressionBase
 from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
 from pyomo.core.base.objective import ScalarObjective, _GeneralObjectiveData
@@ -50,6 +51,7 @@ from pyomo.core.base.param import _ParamData, ScalarParam, IndexedParam
 from pyomo.core.base.set import _SetData
 from pyomo.core.base.constraint import ScalarConstraint, IndexedConstraint
 from pyomo.common.collections.component_map import ComponentMap
+from pyomo.common.collections.component_set import ComponentSet
 
 from pyomo.core.base.external import _PythonCallbackFunctionID
 
@@ -102,7 +104,7 @@ def indexCorrector(ixs, base):
     return ixs
 
 
-def alphabetStringGenerator(num,indexMode = False):
+def alphabetStringGenerator(num, indexMode=False):
     if indexMode:
         alphabet = [
             '.',
@@ -164,9 +166,9 @@ def alphabetStringGenerator(num,indexMode = False):
             'y',
             'z',
         ]
-    ixs = decoder(num + 1, len(alphabet)-1)
+    ixs = decoder(num + 1, len(alphabet) - 1)
     pstr = ''
-    ixs = indexCorrector(ixs, len(alphabet)-1)
+    ixs = indexCorrector(ixs, len(alphabet) - 1)
     for i in range(0, len(ixs)):
         ix = ixs[i]
         pstr += alphabet[ix]
@@ -257,6 +259,7 @@ def handle_inequality_node(visitor, node, arg1, arg2):
 def handle_var_node(visitor, node):
     return visitor.variableMap[node]
 
+
 def handle_num_node(visitor, node):
     if isinstance(node, float):
         if node.is_integer():
@@ -328,7 +331,10 @@ def handle_functionID_node(visitor, node, *args):
 
 
 def handle_indexTemplate_node(visitor, node, *args):
-    return '__I_PLACEHOLDER_8675309_GROUP_%s_%s__' % (node._group, visitor.setMap[node._set])
+    return '__I_PLACEHOLDER_8675309_GROUP_%s_%s__' % (
+        node._group,
+        visitor.setMap[node._set],
+    )
 
 
 def handle_numericGIE_node(visitor, node, *args):
@@ -347,16 +353,19 @@ def handle_numericGIE_node(visitor, node, *args):
 
 def handle_templateSumExpression_node(visitor, node, *args):
     pstr = ''
-    for i in range(0,len(node._iters)):
-        pstr += '\\sum_{__S_PLACEHOLDER_8675309_GROUP_%s_%s__} ' %(node._iters[i][0]._group, visitor.setMap[node._iters[i][0]._set])
+    for i in range(0, len(node._iters)):
+        pstr += '\\sum_{__S_PLACEHOLDER_8675309_GROUP_%s_%s__} ' % (
+            node._iters[i][0]._group,
+            visitor.setMap[node._iters[i][0]._set],
+        )
 
     pstr += args[0]
 
     return pstr
 
-def handle_param_node(visitor,node):
-    return visitor.parameterMap[node]
 
+def handle_param_node(visitor, node):
+    return visitor.parameterMap[node]
 
 
 class _LatexVisitor(StreamBasedExpressionVisitor):
@@ -441,6 +450,7 @@ def applySmartVariables(name):
 
     return joinedName
 
+
 def analyze_variable(vr, visitor):
     domainMap = {
         'Reals': '\\mathds{R}',
@@ -492,8 +502,7 @@ def analyze_variable(vr, visitor):
         if upperBoundValue is not None:
             if upperBoundValue <= 0:
                 raise ValueError(
-                    'Formulation is infeasible due to bounds on variable %s'
-                    % (vr.name)
+                    'Formulation is infeasible due to bounds on variable %s' % (vr.name)
                 )
             else:
                 upperBound = ' \\leq ' + str(upperBoundValue)
@@ -504,8 +513,7 @@ def analyze_variable(vr, visitor):
         if lowerBoundValue is not None:
             if lowerBoundValue > 0:
                 raise ValueError(
-                    'Formulation is infeasible due to bounds on variable %s'
-                    % (vr.name)
+                    'Formulation is infeasible due to bounds on variable %s' % (vr.name)
                 )
             elif lowerBoundValue == 0:
                 lowerBound = ' 0 = '
@@ -526,8 +534,7 @@ def analyze_variable(vr, visitor):
         if lowerBoundValue is not None:
             if lowerBoundValue >= 0:
                 raise ValueError(
-                    'Formulation is infeasible due to bounds on variable %s'
-                    % (vr.name)
+                    'Formulation is infeasible due to bounds on variable %s' % (vr.name)
                 )
             else:
                 lowerBound = str(lowerBoundValue) + ' \\leq '
@@ -554,8 +561,7 @@ def analyze_variable(vr, visitor):
         if upperBoundValue is not None:
             if upperBoundValue < 0:
                 raise ValueError(
-                    'Formulation is infeasible due to bounds on variable %s'
-                    % (vr.name)
+                    'Formulation is infeasible due to bounds on variable %s' % (vr.name)
                 )
             elif upperBoundValue == 0:
                 upperBound = ' = 0 '
@@ -564,13 +570,7 @@ def analyze_variable(vr, visitor):
         else:
             upperBound = ''
 
-    elif domainName in [
-        'Boolean',
-        'Binary',
-        'Any',
-        'AnyWithNone',
-        'EmptySet',
-    ]:
+    elif domainName in ['Boolean', 'Binary', 'Any', 'AnyWithNone', 'EmptySet']:
         lowerBound = ''
         upperBound = ''
 
@@ -580,8 +580,7 @@ def analyze_variable(vr, visitor):
                 lowerBound = str(lowerBoundValue) + ' \\leq '
             elif lowerBoundValue > 1:
                 raise ValueError(
-                    'Formulation is infeasible due to bounds on variable %s'
-                    % (vr.name)
+                    'Formulation is infeasible due to bounds on variable %s' % (vr.name)
                 )
             elif lowerBoundValue == 1:
                 lowerBound = ' = 1 '
@@ -595,8 +594,7 @@ def analyze_variable(vr, visitor):
                 upperBound = ' \\leq ' + str(upperBoundValue)
             elif upperBoundValue < 0:
                 raise ValueError(
-                    'Formulation is infeasible due to bounds on variable %s'
-                    % (vr.name)
+                    'Formulation is infeasible due to bounds on variable %s' % (vr.name)
                 )
             elif upperBoundValue == 0:
                 upperBound = ' = 0 '
@@ -606,16 +604,14 @@ def analyze_variable(vr, visitor):
             upperBound = ' \\leq 1 '
 
     else:
-        raise ValueError(
-            'Domain %s not supported by the latex printer' % (domainName)
-        )
+        raise ValueError('Domain %s not supported by the latex printer' % (domainName))
 
     varBoundData = {
-        'variable' : vr,
-        'lowerBound' : lowerBound,
-        'upperBound' : upperBound,
-        'domainName' : domainName,
-        'domainLatex' : domainMap[domainName],
+        'variable': vr,
+        'lowerBound': lowerBound,
+        'upperBound': upperBound,
+        'domainName': domainName,
+        'domainLatex': domainMap[domainName],
     }
 
     return varBoundData
@@ -730,6 +726,57 @@ def latex_printer(
             % (str(type(pyomo_component)))
         )
 
+    if isSingle:
+        temp_comp, temp_indexes = templatize_fcn(pyomo_component)
+        variableList = []
+        for v in identify_components(
+            temp_comp, [ScalarVar, _GeneralVarData, IndexedVar]
+        ):
+            if isinstance(v, _GeneralVarData):
+                v_write = v.parent_component()
+                if v_write not in ComponentSet(variableList):
+                    variableList.append(v_write)
+            else:
+                if v not in ComponentSet(variableList):
+                    variableList.append(v)
+
+        parameterList = []
+        for p in identify_components(
+            temp_comp, [ScalarParam, _ParamData, IndexedParam]
+        ):
+            if isinstance(p, _ParamData):
+                p_write = p.parent_component()
+                if p_write not in ComponentSet(parameterList):
+                    parameterList.append(p_write)
+            else:
+                if p not in ComponentSet(parameterList):
+                    parameterList.append(p)
+
+        # TODO:  cannot extract this information, waiting on resolution of an issue
+        # setList = identify_components(pyomo_component.expr, pyo.Set)
+
+    else:
+        variableList = [
+            vr
+            for vr in pyomo_component.component_objects(
+                pyo.Var, descend_into=True, active=True
+            )
+        ]
+
+        parameterList = [
+            pm
+            for pm in pyomo_component.component_objects(
+                pyo.Param, descend_into=True, active=True
+            )
+        ]
+
+        setList = [
+            st
+            for st in pyomo_component.component_objects(
+                pyo.Set, descend_into=True, active=True
+            )
+        ]
+
     forallTag = ' \\qquad \\forall'
 
     descriptorDict = {}
@@ -750,19 +797,12 @@ def latex_printer(
     # Declare a visitor/walker
     visitor = _LatexVisitor()
 
-
-    variableList = [
-        vr
-        for vr in pyomo_component.component_objects(
-            pyo.Var, descend_into=True, active=True
-        )
-    ]
     variableMap = ComponentMap()
     vrIdx = 0
-    for i in range(0,len(variableList)):
+    for i in range(0, len(variableList)):
         vr = variableList[i]
         vrIdx += 1
-        if isinstance(vr ,ScalarVar):
+        if isinstance(vr, ScalarVar):
             variableMap[vr] = 'x_' + str(vrIdx)
         elif isinstance(vr, IndexedVar):
             variableMap[vr] = 'x_' + str(vrIdx)
@@ -770,22 +810,17 @@ def latex_printer(
                 vrIdx += 1
                 variableMap[vr[sd]] = 'x_' + str(vrIdx)
         else:
-            raise DeveloperError( 'Variable is not a variable.  Should not happen.  Contact developers')
+            raise DeveloperError(
+                'Variable is not a variable.  Should not happen.  Contact developers'
+            )
     visitor.variableMap = variableMap
 
-    parameterList = [
-        pm
-        for pm in pyomo_component.component_objects(
-            pyo.Param, descend_into=True, active=True
-        )
-    ]
-    
     parameterMap = ComponentMap()
     pmIdx = 0
-    for i in range(0,len(parameterList)):
+    for i in range(0, len(parameterList)):
         vr = parameterList[i]
         pmIdx += 1
-        if isinstance(vr ,ScalarParam):
+        if isinstance(vr, ScalarParam):
             parameterMap[vr] = 'p_' + str(pmIdx)
         elif isinstance(vr, IndexedParam):
             parameterMap[vr] = 'p_' + str(pmIdx)
@@ -793,19 +828,15 @@ def latex_printer(
                 pmIdx += 1
                 parameterMap[vr[sd]] = 'p_' + str(pmIdx)
         else:
-            raise DeveloperError( 'Parameter is not a parameter.  Should not happen.  Contact developers')
+            raise DeveloperError(
+                'Parameter is not a parameter.  Should not happen.  Contact developers'
+            )
     visitor.parameterMap = parameterMap
 
-    setList = [
-        st
-        for st in pyomo_component.component_objects(
-            pyo.Set, descend_into=True, active=True
-        )
-    ]
     setMap = ComponentMap()
-    for i in range(0,len(setList)):
+    for i in range(0, len(setList)):
         st = setList[i]
-        setMap[st] = 'SET' + str(i+1)
+        setMap[st] = 'SET' + str(i + 1)
     visitor.setMap = setMap
 
     # starts building the output string
@@ -825,7 +856,13 @@ def latex_printer(
 
     # Iterate over the objectives and print
     for obj in objectives:
-        obj_template, obj_indices = templatize_fcn(obj)
+        try:
+            obj_template, obj_indices = templatize_fcn(obj)
+        except:
+            raise RuntimeError(
+                "An objective has been constructed that cannot be templatized"
+            )
+
         if obj.sense == 1:
             pstr += ' ' * tbSpc + '& %s \n' % (descriptorDict['minimize'])
         else:
@@ -869,7 +906,12 @@ def latex_printer(
 
             # grab the constraint and templatize
             con = constraints[i]
-            con_template, indices = templatize_fcn(con)
+            try:
+                con_template, indices = templatize_fcn(con)
+            except:
+                raise RuntimeError(
+                    "A constraint has been constructed that cannot be templatized"
+                )
 
             # Walk the constraint
             conLine = (
@@ -917,7 +959,7 @@ def latex_printer(
             vr = variableList[i]
             if isinstance(vr, ScalarVar):
                 varBoundDataEntry = analyze_variable(vr, visitor)
-                varBoundData.append( varBoundDataEntry )
+                varBoundData.append(varBoundDataEntry)
             elif isinstance(vr, IndexedVar):
                 varBoundData_indexedVar = []
                 # need to wrap in function and do individually
@@ -927,21 +969,33 @@ def latex_printer(
                     varBoundDataEntry = analyze_variable(vr[sd], visitor)
                     varBoundData_indexedVar.append(varBoundDataEntry)
                 globIndexedVariables = True
-                for j in range(0,len(varBoundData_indexedVar)-1):
+                for j in range(0, len(varBoundData_indexedVar) - 1):
                     chks = []
-                    chks.append(varBoundData_indexedVar[j]['lowerBound']==varBoundData_indexedVar[j+1]['lowerBound'])
-                    chks.append(varBoundData_indexedVar[j]['upperBound']==varBoundData_indexedVar[j+1]['upperBound'])
-                    chks.append(varBoundData_indexedVar[j]['domainName']==varBoundData_indexedVar[j+1]['domainName'])
+                    chks.append(
+                        varBoundData_indexedVar[j]['lowerBound']
+                        == varBoundData_indexedVar[j + 1]['lowerBound']
+                    )
+                    chks.append(
+                        varBoundData_indexedVar[j]['upperBound']
+                        == varBoundData_indexedVar[j + 1]['upperBound']
+                    )
+                    chks.append(
+                        varBoundData_indexedVar[j]['domainName']
+                        == varBoundData_indexedVar[j + 1]['domainName']
+                    )
                     if not all(chks):
                         globIndexedVariables = False
                         break
                 if globIndexedVariables:
-                    varBoundData.append({'variable': vr,
-                                         'lowerBound': varBoundData_indexedVar[0]['lowerBound'],
-                                         'upperBound': varBoundData_indexedVar[0]['upperBound'],
-                                         'domainName': varBoundData_indexedVar[0]['domainName'],
-                                         'domainLatex': varBoundData_indexedVar[0]['domainLatex'],
-                                         })
+                    varBoundData.append(
+                        {
+                            'variable': vr,
+                            'lowerBound': varBoundData_indexedVar[0]['lowerBound'],
+                            'upperBound': varBoundData_indexedVar[0]['upperBound'],
+                            'domainName': varBoundData_indexedVar[0]['domainName'],
+                            'domainLatex': varBoundData_indexedVar[0]['domainLatex'],
+                        }
+                    )
                 else:
                     varBoundData += varBoundData_indexedVar
             else:
@@ -953,11 +1007,15 @@ def latex_printer(
         bstr = ''
         appendBoundString = False
         useThreeAlgn = False
-        for i in range(0,len(varBoundData)):
-            vbd =  varBoundData[i]
-            if vbd['lowerBound'] == '' and vbd['upperBound'] == '' and vbd['domainName']=='Reals':
+        for i in range(0, len(varBoundData)):
+            vbd = varBoundData[i]
+            if (
+                vbd['lowerBound'] == ''
+                and vbd['upperBound'] == ''
+                and vbd['domainName'] == 'Reals'
+            ):
                 # unbounded all real, do not print
-                if i <= len(varBoundData)-2:
+                if i <= len(varBoundData) - 2:
                     bstr = bstr[0:-2]
             else:
                 if not useThreeAlgn:
@@ -969,12 +1027,28 @@ def latex_printer(
                 if use_equation_environment:
                     conLabel = ''
                 else:
-                    conLabel = ' \\label{con:' + pyomo_component.name + '_' + variableMap[vbd['variable']]  + '_bound' + '} '
+                    conLabel = (
+                        ' \\label{con:'
+                        + pyomo_component.name
+                        + '_'
+                        + variableMap[vbd['variable']]
+                        + '_bound'
+                        + '} '
+                    )
 
                 appendBoundString = True
-                coreString = vbd['lowerBound'] + variableMap[vbd['variable']] + vbd['upperBound'] + ' ' + trailingAligner + '\\qquad \\in ' + vbd['domainLatex'] + conLabel
+                coreString = (
+                    vbd['lowerBound']
+                    + variableMap[vbd['variable']]
+                    + vbd['upperBound']
+                    + ' '
+                    + trailingAligner
+                    + '\\qquad \\in '
+                    + vbd['domainLatex']
+                    + conLabel
+                )
                 bstr += ' ' * tbSpc + algn + ' %s' % (coreString)
-                if i <= len(varBoundData)-2:
+                if i <= len(varBoundData) - 2:
                     bstr += '\\\\ \n'
                 else:
                     bstr += '\n'
@@ -996,26 +1070,28 @@ def latex_printer(
 
     # Handling the iterator indices
     defaultSetLatexNames = ComponentMap()
-    for i in range(0,len(setList)):
+    for i in range(0, len(setList)):
         st = setList[i]
         if use_smart_variables:
-            chkName = setList[i].name 
-            if len(chkName)==1 and chkName.upper() == chkName:
+            chkName = setList[i].name
+            if len(chkName) == 1 and chkName.upper() == chkName:
                 chkName += '_mathcal'
-            defaultSetLatexNames[st] = applySmartVariables( chkName )
+            defaultSetLatexNames[st] = applySmartVariables(chkName)
         else:
-            defaultSetLatexNames[st] = setList[i].name.replace('_','\\_')
+            defaultSetLatexNames[st] = setList[i].name.replace('_', '\\_')
 
         ## Could be used in the future if someone has a lot of sets
         # defaultSetLatexNames[st] = 'mathcal{' + alphabetStringGenerator(i).upper() + '}'
 
         if st in overwrite_dict.keys():
             if use_smart_variables:
-                defaultSetLatexNames[st] = applySmartVariables( overwrite_dict[st][0] )
+                defaultSetLatexNames[st] = applySmartVariables(overwrite_dict[st][0])
             else:
-                defaultSetLatexNames[st] = overwrite_dict[st][0].replace('_','\\_')
+                defaultSetLatexNames[st] = overwrite_dict[st][0].replace('_', '\\_')
 
-        defaultSetLatexNames[st] = defaultSetLatexNames[st].replace('\\mathcal',r'\\mathcal')
+        defaultSetLatexNames[st] = defaultSetLatexNames[st].replace(
+            '\\mathcal', r'\\mathcal'
+        )
 
     latexLines = pstr.split('\n')
     for jj in range(0, len(latexLines)):
@@ -1037,16 +1113,22 @@ def latex_printer(
 
             # Determine if the set is continuous
             setInfo = dict(
-                zip(uniqueSets, [{'continuous':False} for i in range(0, len(uniqueSets))])
+                zip(
+                    uniqueSets,
+                    [{'continuous': False} for i in range(0, len(uniqueSets))],
+                )
             )
 
             for ky, vl in setInfo.items():
-                ix = int(ky[3:])-1
+                ix = int(ky[3:]) - 1
                 setInfo[ky]['setObject'] = setList[ix]
-                setInfo[ky]['setRegEx'] = r'__S_PLACEHOLDER_8675309_GROUP_([0-9*])_%s__'%(ky)
-                setInfo[ky]['sumSetRegEx'] = r'sum_{__S_PLACEHOLDER_8675309_GROUP_([0-9*])_%s__}'%(ky)
+                setInfo[ky][
+                    'setRegEx'
+                ] = r'__S_PLACEHOLDER_8675309_GROUP_([0-9*])_%s__' % (ky)
+                setInfo[ky][
+                    'sumSetRegEx'
+                ] = r'sum_{__S_PLACEHOLDER_8675309_GROUP_([0-9*])_%s__}' % (ky)
                 # setInfo[ky]['idxRegEx'] = r'__I_PLACEHOLDER_8675309_GROUP_[0-9*]_%s__'%(ky)
-
 
             if split_continuous_sets:
                 for ky, vl in setInfo.items():
@@ -1059,7 +1141,6 @@ def latex_printer(
                             break
                     setInfo[ky]['continuous'] = stCont
 
-
             # replace the sets
             for ky, vl in setInfo.items():
                 # if the set is continuous and the flag has been set
@@ -1069,45 +1150,66 @@ def latex_printer(
                     bgn = stData[0]
                     ed = stData[-1]
 
-                    replacement = r'sum_{ __I_PLACEHOLDER_8675309_GROUP_\1_%s__ = %d }^{%d}'%(ky,bgn,ed)
+                    replacement = (
+                        r'sum_{ __I_PLACEHOLDER_8675309_GROUP_\1_%s__ = %d }^{%d}'
+                        % (ky, bgn, ed)
+                    )
                     ln = re.sub(setInfo[ky]['sumSetRegEx'], replacement, ln)
                 else:
                     # if the set is not continuous or the flag has not been set
-                    replacement = r'sum_{ __I_PLACEHOLDER_8675309_GROUP_\1_%s__ \\in __S_PLACEHOLDER_8675309_GROUP_\1_%s__  }'%(ky,ky)
-                    ln = re.sub(setInfo[ky]['sumSetRegEx'], replacement, ln)  
+                    replacement = (
+                        r'sum_{ __I_PLACEHOLDER_8675309_GROUP_\1_%s__ \\in __S_PLACEHOLDER_8675309_GROUP_\1_%s__  }'
+                        % (ky, ky)
+                    )
+                    ln = re.sub(setInfo[ky]['sumSetRegEx'], replacement, ln)
 
                 replacement = defaultSetLatexNames[setInfo[ky]['setObject']]
-                ln = re.sub(setInfo[ky]['setRegEx'],replacement,ln)
+                ln = re.sub(setInfo[ky]['setRegEx'], replacement, ln)
 
             # groupNumbers = re.findall(r'__I_PLACEHOLDER_8675309_GROUP_([0-9*])_SET[0-9]*__',ln)
-            setNumbers = re.findall(r'__I_PLACEHOLDER_8675309_GROUP_[0-9*]_SET([0-9]*)__',ln)
-            groupSetPairs = re.findall(r'__I_PLACEHOLDER_8675309_GROUP_([0-9*])_SET([0-9]*)__',ln)
+            setNumbers = re.findall(
+                r'__I_PLACEHOLDER_8675309_GROUP_[0-9*]_SET([0-9]*)__', ln
+            )
+            groupSetPairs = re.findall(
+                r'__I_PLACEHOLDER_8675309_GROUP_([0-9*])_SET([0-9]*)__', ln
+            )
 
             groupInfo = {}
             for vl in setNumbers:
-                groupInfo['SET'+vl] = {'setObject':setInfo['SET'+vl]['setObject'], 'indices':[]}
+                groupInfo['SET' + vl] = {
+                    'setObject': setInfo['SET' + vl]['setObject'],
+                    'indices': [],
+                }
 
             for gp in groupSetPairs:
-                if gp[0] not in groupInfo['SET'+gp[1]]['indices']:
-                    groupInfo['SET'+gp[1]]['indices'].append(gp[0])
+                if gp[0] not in groupInfo['SET' + gp[1]]['indices']:
+                    groupInfo['SET' + gp[1]]['indices'].append(gp[0])
 
-    
             indexCounter = 0
             for ky, vl in groupInfo.items():
                 if vl['setObject'] in overwrite_dict.keys():
                     indexNames = overwrite_dict[vl['setObject']][1]
                     if len(indexNames) < len(vl['indices']):
-                        raise ValueError('Insufficient number of indices provided to the overwite dictionary for set %s'%(vl['setObject'].name))
-                    for i in range(0,len(indexNames)):
-                        ln = ln.replace('__I_PLACEHOLDER_8675309_GROUP_%s_%s__'%(vl['indices'][i],ky),indexNames[i])
+                        raise ValueError(
+                            'Insufficient number of indices provided to the overwrite dictionary for set %s'
+                            % (vl['setObject'].name)
+                        )
+                    for i in range(0, len(indexNames)):
+                        ln = ln.replace(
+                            '__I_PLACEHOLDER_8675309_GROUP_%s_%s__'
+                            % (vl['indices'][i], ky),
+                            indexNames[i],
+                        )
                 else:
-                    for i in range(0,len(vl['indices'])):
-                        ln = ln.replace('__I_PLACEHOLDER_8675309_GROUP_%s_%s__'%(vl['indices'][i],ky),alphabetStringGenerator(indexCounter,True))
+                    for i in range(0, len(vl['indices'])):
+                        ln = ln.replace(
+                            '__I_PLACEHOLDER_8675309_GROUP_%s_%s__'
+                            % (vl['indices'][i], ky),
+                            alphabetStringGenerator(indexCounter, True),
+                        )
                         indexCounter += 1
 
-
             # print('gn',groupInfo)
-            
 
         latexLines[jj] = ln
 
@@ -1115,18 +1217,21 @@ def latex_printer(
     # pstr = pstr.replace('\\mathcal{', 'mathcal{')
     # pstr = pstr.replace('mathcal{', '\\mathcal{')
 
-    if x_only_mode in [1,2,3]:
-        # Need to preserve only the set elments in the overwrite_dict
+    if x_only_mode in [1, 2, 3]:
+        # Need to preserve only the set elements in the overwrite_dict
         new_overwrite_dict = {}
         for ky, vl in overwrite_dict.items():
-            if isinstance(ky,_GeneralVarData):
+            if isinstance(ky, _GeneralVarData):
                 pass
-            elif isinstance(ky,_ParamData):
+            elif isinstance(ky, _ParamData):
                 pass
-            elif isinstance(ky,_SetData):
+            elif isinstance(ky, _SetData):
                 new_overwrite_dict[ky] = overwrite_dict[ky]
             else:
-                raise ValueError('The overwrite_dict object has a key of invalid type: %s'%(str(ky)))
+                raise ValueError(
+                    'The overwrite_dict object has a key of invalid type: %s'
+                    % (str(ky))
+                )
         overwrite_dict = new_overwrite_dict
 
     # # Only x modes
@@ -1138,42 +1243,50 @@ def latex_printer(
     if x_only_mode == 1:
         vrIdx = 0
         new_variableMap = ComponentMap()
-        for i in range(0,len(variableList)):
+        for i in range(0, len(variableList)):
             vr = variableList[i]
             vrIdx += 1
-            if isinstance(vr ,ScalarVar):
+            if isinstance(vr, ScalarVar):
                 new_variableMap[vr] = 'x_{' + str(vrIdx) + '}'
             elif isinstance(vr, IndexedVar):
                 new_variableMap[vr] = 'x_{' + str(vrIdx) + '}'
                 for sd in vr.index_set().data():
                     # vrIdx += 1
                     sdString = str(sd)
-                    if sdString[0]=='(':
+                    if sdString[0] == '(':
                         sdString = sdString[1:]
-                    if sdString[-1]==')':
+                    if sdString[-1] == ')':
                         sdString = sdString[0:-1]
-                    new_variableMap[vr[sd]] = 'x_{' + str(vrIdx) + '_{' + sdString + '}' + '}'
+                    new_variableMap[vr[sd]] = (
+                        'x_{' + str(vrIdx) + '_{' + sdString + '}' + '}'
+                    )
             else:
-                raise DeveloperError( 'Variable is not a variable.  Should not happen.  Contact developers')
+                raise DeveloperError(
+                    'Variable is not a variable.  Should not happen.  Contact developers'
+                )
 
         pmIdx = 0
         new_parameterMap = ComponentMap()
-        for i in range(0,len(parameterList)):
+        for i in range(0, len(parameterList)):
             pm = parameterList[i]
             pmIdx += 1
-            if isinstance(pm ,ScalarParam):
+            if isinstance(pm, ScalarParam):
                 new_parameterMap[pm] = 'p_{' + str(pmIdx) + '}'
             elif isinstance(pm, IndexedParam):
                 new_parameterMap[pm] = 'p_{' + str(pmIdx) + '}'
                 for sd in pm.index_set().data():
                     sdString = str(sd)
-                    if sdString[0]=='(':
+                    if sdString[0] == '(':
                         sdString = sdString[1:]
-                    if sdString[-1]==')':
+                    if sdString[-1] == ')':
                         sdString = sdString[0:-1]
-                    new_parameterMap[pm[sd]] = 'p_{' + str(pmIdx) + '_{' + sdString + '}' + '}'
+                    new_parameterMap[pm[sd]] = (
+                        'p_{' + str(pmIdx) + '_{' + sdString + '}' + '}'
+                    )
             else:
-                raise DeveloperError( 'Parameter is not a parameter.  Should not happen.  Contact developers')
+                raise DeveloperError(
+                    'Parameter is not a parameter.  Should not happen.  Contact developers'
+                )
 
         new_overwrite_dict = ComponentMap()
         for ky, vl in new_variableMap.items():
@@ -1187,42 +1300,50 @@ def latex_printer(
     elif x_only_mode == 2:
         vrIdx = 0
         new_variableMap = ComponentMap()
-        for i in range(0,len(variableList)):
+        for i in range(0, len(variableList)):
             vr = variableList[i]
             vrIdx += 1
-            if isinstance(vr ,ScalarVar):
+            if isinstance(vr, ScalarVar):
                 new_variableMap[vr] = alphabetStringGenerator(i)
             elif isinstance(vr, IndexedVar):
                 new_variableMap[vr] = alphabetStringGenerator(i)
                 for sd in vr.index_set().data():
                     # vrIdx += 1
                     sdString = str(sd)
-                    if sdString[0]=='(':
+                    if sdString[0] == '(':
                         sdString = sdString[1:]
-                    if sdString[-1]==')':
+                    if sdString[-1] == ')':
                         sdString = sdString[0:-1]
-                    new_variableMap[vr[sd]] = alphabetStringGenerator(i) + '_{' + sdString + '}'
+                    new_variableMap[vr[sd]] = (
+                        alphabetStringGenerator(i) + '_{' + sdString + '}'
+                    )
             else:
-                raise DeveloperError( 'Variable is not a variable.  Should not happen.  Contact developers')
+                raise DeveloperError(
+                    'Variable is not a variable.  Should not happen.  Contact developers'
+                )
 
-        pmIdx = vrIdx-1
+        pmIdx = vrIdx - 1
         new_parameterMap = ComponentMap()
-        for i in range(0,len(parameterList)):
+        for i in range(0, len(parameterList)):
             pm = parameterList[i]
             pmIdx += 1
-            if isinstance(pm ,ScalarParam):
+            if isinstance(pm, ScalarParam):
                 new_parameterMap[pm] = alphabetStringGenerator(pmIdx)
             elif isinstance(pm, IndexedParam):
                 new_parameterMap[pm] = alphabetStringGenerator(pmIdx)
                 for sd in pm.index_set().data():
                     sdString = str(sd)
-                    if sdString[0]=='(':
+                    if sdString[0] == '(':
                         sdString = sdString[1:]
-                    if sdString[-1]==')':
+                    if sdString[-1] == ')':
                         sdString = sdString[0:-1]
-                    new_parameterMap[pm[sd]] = alphabetStringGenerator(pmIdx) + '_{' + sdString + '}'
+                    new_parameterMap[pm[sd]] = (
+                        alphabetStringGenerator(pmIdx) + '_{' + sdString + '}'
+                    )
             else:
-                raise DeveloperError( 'Parameter is not a parameter.  Should not happen.  Contact developers')
+                raise DeveloperError(
+                    'Parameter is not a parameter.  Should not happen.  Contact developers'
+                )
 
         new_overwrite_dict = ComponentMap()
         for ky, vl in new_variableMap.items():
@@ -1243,52 +1364,60 @@ def latex_printer(
             new_overwrite_dict[ky] = vl
         overwrite_dict = new_overwrite_dict
 
-    else: 
+    else:
         vrIdx = 0
         new_variableMap = ComponentMap()
-        for i in range(0,len(variableList)):
+        for i in range(0, len(variableList)):
             vr = variableList[i]
             vrIdx += 1
-            if isinstance(vr ,ScalarVar):
+            if isinstance(vr, ScalarVar):
                 new_variableMap[vr] = vr.name
             elif isinstance(vr, IndexedVar):
                 new_variableMap[vr] = vr.name
                 for sd in vr.index_set().data():
                     # vrIdx += 1
                     sdString = str(sd)
-                    if sdString[0]=='(':
+                    if sdString[0] == '(':
                         sdString = sdString[1:]
-                    if sdString[-1]==')':
+                    if sdString[-1] == ')':
                         sdString = sdString[0:-1]
                     if use_smart_variables:
-                        new_variableMap[vr[sd]] = applySmartVariables(vr.name + '_' + sdString )
+                        new_variableMap[vr[sd]] = applySmartVariables(
+                            vr.name + '_' + sdString
+                        )
                     else:
                         new_variableMap[vr[sd]] = vr[sd].name
             else:
-                raise DeveloperError( 'Variable is not a variable.  Should not happen.  Contact developers')
+                raise DeveloperError(
+                    'Variable is not a variable.  Should not happen.  Contact developers'
+                )
 
         pmIdx = 0
         new_parameterMap = ComponentMap()
-        for i in range(0,len(parameterList)):
+        for i in range(0, len(parameterList)):
             pm = parameterList[i]
             pmIdx += 1
-            if isinstance(pm ,ScalarParam):
+            if isinstance(pm, ScalarParam):
                 new_parameterMap[pm] = pm.name
             elif isinstance(pm, IndexedParam):
                 new_parameterMap[pm] = pm.name
                 for sd in pm.index_set().data():
                     # pmIdx += 1
                     sdString = str(sd)
-                    if sdString[0]=='(':
+                    if sdString[0] == '(':
                         sdString = sdString[1:]
-                    if sdString[-1]==')':
+                    if sdString[-1] == ')':
                         sdString = sdString[0:-1]
                     if use_smart_variables:
-                        new_parameterMap[pm[sd]] = applySmartVariables(pm.name + '_' + sdString )
+                        new_parameterMap[pm[sd]] = applySmartVariables(
+                            pm.name + '_' + sdString
+                        )
                     else:
-                        new_parameterMap[pm[sd]] = str(pm[sd])#.name
+                        new_parameterMap[pm[sd]] = str(pm[sd])  # .name
             else:
-                raise DeveloperError( 'Parameter is not a parameter.  Should not happen.  Contact developers')
+                raise DeveloperError(
+                    'Parameter is not a parameter.  Should not happen.  Contact developers'
+                )
 
         for ky, vl in new_variableMap.items():
             if ky not in overwrite_dict.keys():
@@ -1299,44 +1428,46 @@ def latex_printer(
 
     rep_dict = {}
     for ky in list(reversed(list(overwrite_dict.keys()))):
-        if isinstance(ky,(pyo.Var,pyo.Param)):
-            if use_smart_variables and x_only_mode in [0,3]:
+        if isinstance(ky, (pyo.Var, pyo.Param)):
+            if use_smart_variables and x_only_mode in [0, 3]:
                 overwrite_value = applySmartVariables(overwrite_dict[ky])
             else:
                 overwrite_value = overwrite_dict[ky]
             rep_dict[variableMap[ky]] = overwrite_value
-        elif isinstance(ky,(_GeneralVarData,_ParamData)):
+        elif isinstance(ky, (_GeneralVarData, _ParamData)):
             if use_smart_variables and x_only_mode in [3]:
                 overwrite_value = applySmartVariables(overwrite_dict[ky])
             else:
                 overwrite_value = overwrite_dict[ky]
             rep_dict[variableMap[ky]] = overwrite_value
-        elif isinstance(ky,_SetData):
+        elif isinstance(ky, _SetData):
             # already handled
             pass
-        elif isinstance(ky,(float,int)):
+        elif isinstance(ky, (float, int)):
             # happens when immutable parameters are used, do nothing
             pass
         else:
-            raise ValueError('The overwrite_dict object has a key of invalid type: %s'%(str(ky)))
+            raise ValueError(
+                'The overwrite_dict object has a key of invalid type: %s' % (str(ky))
+            )
 
     if not use_smart_variables:
         for ky, vl in rep_dict.items():
-            rep_dict[ky] = vl.replace('_','\\_')
+            rep_dict[ky] = vl.replace('_', '\\_')
 
     label_rep_dict = copy.deepcopy(rep_dict)
     for ky, vl in label_rep_dict.items():
-        label_rep_dict[ky] = vl.replace('{','').replace('}','').replace('\\','')
+        label_rep_dict[ky] = vl.replace('{', '').replace('}', '').replace('\\', '')
 
     splitLines = pstr.split('\n')
-    for i in range(0,len(splitLines)):
+    for i in range(0, len(splitLines)):
         if use_equation_environment:
-            splitLines[i] = multiple_replace(splitLines[i],rep_dict)
+            splitLines[i] = multiple_replace(splitLines[i], rep_dict)
         else:
             if '\\label{' in splitLines[i]:
                 epr, lbl = splitLines[i].split('\\label{')
-                epr = multiple_replace(epr,rep_dict)
-                lbl = multiple_replace(lbl,label_rep_dict)
+                epr = multiple_replace(epr, rep_dict)
+                lbl = multiple_replace(lbl, label_rep_dict)
                 splitLines[i] = epr + '\\label{' + lbl
 
     pstr = '\n'.join(splitLines)
@@ -1356,7 +1487,6 @@ def latex_printer(
             finalLines.append(sl)
 
     pstr = '\n'.join(finalLines)
-
 
     # optional write to output file
     if filename is not None:
