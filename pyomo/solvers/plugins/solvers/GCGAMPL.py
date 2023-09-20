@@ -9,9 +9,14 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+# This interface is not compatible with the standard GCG installation.
+# Instead the GCG-AMPL-interface is needed which is available here: 	
+# https://portal.ampl.com/account/ampl/login
+# This gcg or gcg.exe executable file must be renamed to gcgampl respectively gcgampl.exe
+# Please be aware that this filename might change in future versions.
+
 import os
 
-# import os.path
 import subprocess
 
 from pyomo.common import Executable
@@ -72,7 +77,7 @@ class GCGAMPL(SystemCallSolver):
         return ResultsFormat.sol
 
     def _default_executable(self):
-        executable = Executable("gcgampl")#TODO
+        executable = Executable("gcgampl")
 
         if executable:
             executable_path = executable.path()
