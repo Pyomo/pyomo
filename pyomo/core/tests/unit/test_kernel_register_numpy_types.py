@@ -41,7 +41,8 @@ if numpy_available:
     if hasattr(numpy, 'float96'):
         numpy_float_names.append('float96')
     if hasattr(numpy, 'float128'):
-        numpy_float_names.append('float128')
+        # On some numpy builds, the name of float128 is longdouble
+        numpy_float_names.append(numpy.float128.__name__)
 # Complex
 numpy_complex_names = []
 if numpy_available:
