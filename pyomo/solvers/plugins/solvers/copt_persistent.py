@@ -16,6 +16,7 @@ from pyomo.opt.base import SolverFactory
 if coptpy_available:
     import coptpy
 
+
 @SolverFactory.register('copt_persistent', doc='Persistent python interface to COPT')
 class CoptPersistent(PersistentSolver, CoptDirect):
     """
