@@ -27,14 +27,17 @@ from pyomo.opt.results import (
     ProblemSense,
 )
 from pyomo.opt.solver import SystemCallSolver
+import pyomo.environ as pyo
+from pyomo.core import *
+from pyomo.core.expr.current import identify_variables
 
 import logging
 
 logger = logging.getLogger('pyomo.solvers')
 
 
-@SolverFactory.register('scip', doc='The SCIP LP/MIP solver')
-class SCIPAMPL(SystemCallSolver):
+@SolverFactory.register('gcg', doc='The GCG solver')
+class GCGAMPL(SystemCallSolver):
     """A generic optimizer that uses the AMPL Solver Library to interface with applications."""
 
     # Cache default executable, so we do not need to repeatedly query the
@@ -45,7 +48,7 @@ class SCIPAMPL(SystemCallSolver):
         #
         # Call base constructor
         #
-        kwds["type"] = "scip"
+        kwds["type"] = "gcg"
         SystemCallSolver.__init__(self, **kwds)
         #
         # Setup valid problem formats, and valid results for each problem format
@@ -69,34 +72,33 @@ class SCIPAMPL(SystemCallSolver):
         return ResultsFormat.sol
 
     def _default_executable(self):
-        executable = Executable("scip")
+        executable = Executable("gcgampl")#TODO
 
         if executable:
             executable_path = executable.path()
+            '''
             if executable_path not in self._known_versions:
                 self._known_versions[executable_path] = self._get_version(
                     executable_path
                 )
             _ver = self._known_versions[executable_path]
-            if _ver and _ver >= (8,):
+            if _ver: #and _ver >= (8,):
+            '''
+            if executable_path:
                 return executable_path
-
-        # revert to scipampl for older versions
-        executable = Executable("scipampl")
-        if not executable:
-            logger.warning(
-                "Could not locate the 'scip' executable or"
-                " the older 'scipampl' executable, which is "
-                "required for solver %s" % self.name
-            )
-            self.enable = False
-            return None
-        return executable.path()
+            else:
+                logger.warning(
+                    "Could not locate the 'gcg' executable, which is "
+                    "required for solver %s" % self.name
+                )
+                self.enable = False
+                return None
 
     def _get_version(self, solver_exec=None):
         """
         Returns a tuple describing the solver executable version.
         """
+        pass #TODO
         if solver_exec is None:
             solver_exec = self.executable()
             if solver_exec is None:
@@ -118,7 +120,7 @@ class SCIPAMPL(SystemCallSolver):
         # Define log file
         #
         if self._log_file is None:
-            self._log_file = TempfileManager.create_tempfile(suffix="_scip.log")
+            self._log_file = TempfileManager.create_tempfile(suffix="_gcg.log")
 
         fname = problem_files[0]
         if '.' in fname:
@@ -149,17 +151,8 @@ class SCIPAMPL(SystemCallSolver):
             else:
                 env['AMPLFUNC'] = env['PYOMO_AMPLFUNC']
 
-        # Since Version 8.0.0 .nl problem file paths should be provided without the .nl
-        # extension
-        if executable not in self._known_versions:
-            self._known_versions[executable] = self._get_version(executable)
-        _ver = self._known_versions[executable]
-        if _ver and _ver >= (8, 0, 0):
-            problem_file = os.path.splitext(problem_files[0])[0]
-        else:
-            problem_file = problem_files[0]
-
-        cmd = [executable, problem_file, '-AMPL']
+        problem_file = problem_files[0]
+        cmd = [executable, '-s', problem_file]
         if self._timer:
             cmd.insert(0, self._timer)
 
@@ -214,74 +207,66 @@ class SCIPAMPL(SystemCallSolver):
         return Bunch(cmd=cmd, log_file=self._log_file, env=env, cwd=options_dir)
 
     def _postsolve(self):
-        # find SCIP version (calling version() and _get_version() mess things)
 
-        executable = self._command.cmd[0]
+        # repeat code from super(GCGAMPL, self)._postsolve()
+        # in order to access the log file and get the results from there
 
-        version = self._known_versions[executable]
+        if self._log_file is not None:
+            OUTPUT = open(self._log_file, "w")
+            OUTPUT.write("Solver command line: " + str(self._command.cmd) + '\n')
+            OUTPUT.write("\n")
+            OUTPUT.write(self._log + '\n')
+            OUTPUT.close()
 
-        if version < (8, 0, 0, 0):
-            # it may be possible to get results from older version but this was
-            # not tested, so the old way of doing things is here preserved
+        # JPW: The cleanup of the problem file probably shouldn't be here, but
+        #   rather in the base OptSolver class. That would require movement of
+        #   the keepfiles attribute and associated cleanup logic to the base
+        #   class, which I didn't feel like doing at this present time. the
+        #   base class remove_files method should clean up the problem file.
 
-            results = super(SCIPAMPL, self)._postsolve()
+        if (self._log_file is not None) and (not os.path.exists(self._log_file)):
+            msg = "File '%s' not generated while executing %s"
+            raise IOError(msg % (self._log_file, self.path))
+        results = None
 
-        else:
-            # repeat code from super(SCIPAMPL, self)._postsolve()
-            # in order to access the log file and get the results from there
+        if self._results_format is not None:
+            results = self.process_output(self._rc)
 
-            if self._log_file is not None:
-                OUTPUT = open(self._log_file, "w")
-                OUTPUT.write("Solver command line: " + str(self._command.cmd) + '\n')
-                OUTPUT.write("\n")
-                OUTPUT.write(self._log + '\n')
-                OUTPUT.close()
+            # read results from the log file
 
-            # JPW: The cleanup of the problem file probably shouldn't be here, but
-            #   rather in the base OptSolver class. That would require movement of
-            #   the keepfiles attribute and associated cleanup logic to the base
-            #   class, which I didn't feel like doing at this present time. the
-            #   base class remove_files method should clean up the problem file.
+            log_dict = self.read_scip_log(self._log_file)
 
-            if (self._log_file is not None) and (not os.path.exists(self._log_file)):
-                msg = "File '%s' not generated while executing %s"
-                raise IOError(msg % (self._log_file, self.path))
-            results = None
+            if len(log_dict) != 0:
+                # if any were read, store them
 
-            if self._results_format is not None:
-                results = self.process_output(self._rc)
+                results.solver.time = log_dict['solving_time']
+                results.solver.gap = log_dict['gap']
+                results.solver.primal_bound = log_dict['primal_bound']
+                results.solver.dual_bound = log_dict['dual_bound']
+            print("_____________")
+            print("logdict", log_dict)
+            print("_____________")
+            print("Results: ", results)
+            print("_____________")
+            # TODO: get scip to produce a statistics file and read it
+            # Why? It has all the information one can possibly need.
+            #
+            # If keepfiles is true, then we pop the
+            # TempfileManager context while telling it to
+            # _not_ remove the files.
+            #
+            if not self._keepfiles:
+                # in some cases, the solution filename is
+                # not generated via the temp-file mechanism,
+                # instead being automatically derived from
+                # the input lp/nl filename. so, we may have
+                # to clean it up manually.
+                if (not self._soln_file is None) and os.path.exists(
+                    self._soln_file
+                ):
+                    os.remove(self._soln_file)
 
-                # read results from the log file
-
-                log_dict = self.read_scip_log(self._log_file)
-
-                if len(log_dict) != 0:
-                    # if any were read, store them
-
-                    results.solver.time = log_dict['solving_time']
-                    results.solver.gap = log_dict['gap']
-                    results.solver.primal_bound = log_dict['primal_bound']
-                    results.solver.dual_bound = log_dict['dual_bound']
-
-                # TODO: get scip to produce a statistics file and read it
-                # Why? It has all the information one can possibly need.
-                #
-                # If keepfiles is true, then we pop the
-                # TempfileManager context while telling it to
-                # _not_ remove the files.
-                #
-                if not self._keepfiles:
-                    # in some cases, the solution filename is
-                    # not generated via the temp-file mechanism,
-                    # instead being automatically derived from
-                    # the input lp/nl filename. so, we may have
-                    # to clean it up manually.
-                    if (not self._soln_file is None) and os.path.exists(
-                        self._soln_file
-                    ):
-                        os.remove(self._soln_file)
-
-            TempfileManager.pop(remove=not self._keepfiles)
+        TempfileManager.pop(remove=not self._keepfiles)
 
         # **********************************************************************
         # **********************************************************************
@@ -368,19 +353,21 @@ class SCIPAMPL(SystemCallSolver):
 
         # OK # optimal='optimal' # Found an optimal solution
 
-        elif results.solver.message == "optimal solution found":
+        #elif results.solver.message == "optimal solution found":
+        elif "optimal solution" in results.solver.message:
             results.solver.status = SolverStatus.ok
             results.solver.termination_condition = TerminationCondition.optimal
             if len(results.solution) > 0:
                 results.solution(0).status = SolutionStatus.optimal
-            if results.problem.sense == ProblemSense.minimize:
-                results.problem.lower_bound = results.solver.primal_bound
-            else:
-                results.problem.upper_bound = results.solver.primal_bound
+            #if results.problem.sense == ProblemSense.minimize:
+            #    results.problem.lower_bound = results.solver.primal_bound
+            #else:
+            #    results.problem.upper_bound = results.solver.primal_bound
 
         # WARNING # infeasible='infeasible' # Demonstrated that the problem is infeasible
 
-        elif results.solver.message == "infeasible":
+        #elif results.solver.message == "infeasible":
+        elif "infeasible problem" in results.solver.message:
             results.solver.status = SolverStatus.warning
             results.solver.termination_condition = TerminationCondition.infeasible
             if len(results.solution) > 0:
@@ -388,7 +375,8 @@ class SCIPAMPL(SystemCallSolver):
 
         # WARNING # unbounded='unbounded' # Demonstrated that problem is unbounded
 
-        elif results.solver.message == "unbounded":
+        elif "unbounded problem" in results.solver.message:
+        #elif results.solver.message == "unbounded":
             results.solver.status = SolverStatus.warning
             results.solver.termination_condition = TerminationCondition.unbounded
             if len(results.solution) > 0:
