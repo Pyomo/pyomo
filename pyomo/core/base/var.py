@@ -1016,6 +1016,10 @@ class IndexedVar(Var):
                 domain = domain_rule(self.parent_block(), None)
                 for vardata in self.values():
                     vardata._domain = domain
+            elif domain_rule.contains_indices():
+                parent = self.parent_block()
+                for index in domain_rule.indices():
+                    self[index]._domain = domain_rule(parent, index)
             else:
                 parent = self.parent_block()
                 for index, vardata in self.items():
