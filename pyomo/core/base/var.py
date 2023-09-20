@@ -1010,11 +1010,7 @@ class IndexedVar(Var):
     @domain.setter
     def domain(self, domain):
         """Sets the domain for all variables in this container."""
-        # TODO: Ideally we would pass valid arguments to the initializer
-        # that we just created.  However at the moment, getting the
-        # index() is expensive (see #1228).  As a result, for the moment
-        # we will only support constant initializers
-        domain = SetInitializer(domain)(None, None)
+        domain = SetInitializer(domain)(self.parent_block(), self.index())
         for vardata in self.values():
             vardata.domain = domain
 
