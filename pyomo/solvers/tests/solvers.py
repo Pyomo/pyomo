@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['test_solver_cases', 'available_solvers']
+__all__ = ['test_solver_cases']
 
 import logging
 

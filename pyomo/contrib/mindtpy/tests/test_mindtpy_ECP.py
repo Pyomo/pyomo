@@ -13,8 +13,7 @@ from pyomo.environ import SolverFactory, value
 from pyomo.opt import TerminationCondition
 
 required_solvers = ('ipopt', 'glpk')
-# required_solvers = ('gams', 'gams')
-if all(SolverFactory(s).available() for s in required_solvers):
+if all(SolverFactory(s).available(exception_flag=False) for s in required_solvers):
     subsolvers_available = True
 else:
     subsolvers_available = False
@@ -46,6 +45,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the extended cutting plane decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='ECP',
@@ -67,6 +67,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the extended cutting plane decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='ECP',

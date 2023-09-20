@@ -9,7 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.expr.current import ProductExpression, PowExpression
+from pyomo.core.expr import ProductExpression, PowExpression
+from pyomo.core.expr.numvalue import as_numeric
 from pyomo.core import Binary, value
 from pyomo.core.base import (
     Transformation,
@@ -20,7 +21,6 @@ from pyomo.core.base import (
     Block,
     RangeSet,
 )
-from pyomo.core.base.numvalue import as_numeric
 from pyomo.core.base.var import _VarData
 
 import logging

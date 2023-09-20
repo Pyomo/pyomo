@@ -17,22 +17,19 @@ import sys
 import warnings
 
 from .deprecation import deprecated, deprecation_warning, in_testing_environment
+from .errors import DeferredImportError
 from . import numeric_types
 
 
 SUPPRESS_DEPENDENCY_WARNINGS = False
 
 
-class DeferredImportError(ImportError):
-    pass
-
-
 class ModuleUnavailable(object):
-    """Mock object that raises a DeferredImportError upon attribute access
+    """Mock object that raises :py:class:`.DeferredImportError` upon attribute access
 
     This object is returned by :py:func:`attempt_import()` in lieu of
     the module in the case that the module import fails.  Any attempts
-    to access attributes on this object will raise a DeferredImportError
+    to access attributes on this object will raise a :py:class:`.DeferredImportError`
     exception.
 
     Parameters
@@ -134,7 +131,7 @@ class DeferredImportModule(object):
     ``defer_check=True``.  Any attempts to access attributes on this
     object will trigger the actual module import and return either the
     appropriate module attribute or else if the module import fails,
-    raise a DeferredImportError exception.
+    raise a :py:class:`.DeferredImportError` exception.
 
     """
 
@@ -184,6 +181,61 @@ class DeferredImportModule(object):
 
 
 def UnavailableClass(unavailable_module):
+    """Function to generate an "unavailable" base class
+
+    This function returns a custom class that wraps the
+    :py:class:`ModuleUnavailable` instance returned by
+    :py:func:`attempt_import` when the target module is not available.
+    Any attempt to instantiate this class (or a class derived from it)
+    or access a class attribute will raise the
+    :py:class:`.DeferredImportError` from the wrapped
+    :py:class:`ModuleUnavailable` object.
+
+    Parameters
+    ----------
+    unavailable_module: ModuleUnavailable
+        The :py:class:`ModuleUnavailable` instance (from
+        :py:func:`attempt_import`) to use to generate the
+        :py:class:`.DeferredImportError`.
+
+    Example
+    -------
+
+    Declaring a class that inherits from an optional dependency:
+
+    .. doctest::
+
+       >>> from pyomo.common.dependencies import attempt_import, UnavailableClass
+       >>> bogus, bogus_available = attempt_import('bogus_unavailable_class')
+       >>> class MyPlugin(bogus.plugin if bogus_available else UnavailableClass(bogus)):
+       ...     pass
+
+    Attempting to instantiate the derived class generates an exception
+    when the module is unavailable:
+
+    .. doctest::
+
+       >>> MyPlugin()
+       Traceback (most recent call last):
+          ...
+       pyomo.common.dependencies.DeferredImportError: The class 'MyPlugin' cannot be
+       created because a needed optional dependency was not found (import raised
+       ModuleNotFoundError: No module named 'bogus_unavailable_class')
+
+    As does attempting to access class attributes on the derived class:
+
+    .. doctest::
+
+       >>> MyPlugin.create_instance()
+       Traceback (most recent call last):
+          ...
+       pyomo.common.dependencies.DeferredImportError: The class attribute
+       'MyPlugin.create_instance' is not available because a needed optional
+       dependency was not found (import raised ModuleNotFoundError: No module
+       named 'bogus_unavailable_class')
+
+    """
+
     class UnavailableMeta(type):
         def __getattr__(cls, name):
             raise DeferredImportError(
@@ -224,11 +276,11 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
 
     This object serves as a placeholder for the Boolean indicator if a
     deferred module import was successful.  Casting this instance to
-    bool will cause the import to be attempted.  The actual import logic
-    is here and not in the DeferredImportModule to reduce the number of
-    attributes on the DeferredImportModule.
+    `bool` will cause the import to be attempted.  The actual import logic
+    is here and not in the :py:class:`DeferredImportModule` to reduce the number of
+    attributes on the :py:class:`DeferredImportModule`.
 
-    ``DeferredImportIndicator`` supports limited logical expressions
+    :py:class:`DeferredImportIndicator` supports limited logical expressions
     using the ``&`` (and) and ``|`` (or) binary operators.  Creating
     these expressions does not trigger the import of the corresponding
     :py:class:`DeferredImportModule` instances, although casting the
@@ -473,8 +525,8 @@ def attempt_import(
     defer_check: bool, optional
         If True (the default), then the attempted import is deferred
         until the first use of either the module or the availability
-        flag.  The method will return instances of DeferredImportModule
-        and DeferredImportIndicator.
+        flag.  The method will return instances of :py:class:`DeferredImportModule`
+        and :py:class:`DeferredImportIndicator`.
 
     deferred_submodules: Iterable[str], optional
         If provided, an iterable of submodule names within this module
@@ -622,7 +674,7 @@ def _perform_import(
 
 
 def declare_deferred_modules_as_importable(globals_dict):
-    """Make all DeferredImportModules in ``globals_dict`` importable
+    """Make all :py:class:`DeferredImportModules` in ``globals_dict`` importable
 
     This function will go throughout the specified ``globals_dict``
     dictionary and add any instances of :py:class:`DeferredImportModule`
@@ -726,6 +778,7 @@ def _finalize_matplotlib(module, available):
 def _finalize_numpy(np, available):
     if not available:
         return
+    numeric_types.native_types.add(np.ndarray)
     numeric_types.RegisterLogicalType(np.bool_)
     for t in (
         np.int_,

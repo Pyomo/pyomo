@@ -373,6 +373,7 @@ class TestGurobiPersistent(unittest.TestCase):
     def test_var_attr(self):
         m = pe.ConcreteModel()
         m.x = pe.Var(within=pe.Binary)
+        m.obj = pe.Objective(expr=m.x)
 
         opt = Gurobi()
         opt.set_instance(m)
@@ -694,6 +695,8 @@ class TestManualModel(unittest.TestCase):
         m.y = pe.Var()
 
         opt = self.opt
+        orig_only_child_vars = opt._only_child_vars
+        opt._only_child_vars = True
         opt.set_instance(m)
         self.assertEqual(opt._solver_model.getAttr('NumVars'), 2)
 
@@ -712,3 +715,4 @@ class TestManualModel(unittest.TestCase):
         opt.remove_variables([m.x])
         opt.update()
         self.assertEqual(opt._solver_model.getAttr('NumVars'), 1)
+        opt._only_child_vars = orig_only_child_vars

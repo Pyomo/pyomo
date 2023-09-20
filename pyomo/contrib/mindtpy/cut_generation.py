@@ -12,7 +12,7 @@
 """Cut generation."""
 from math import copysign
 from pyomo.core import minimize, value
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.contrib.gdpopt.util import time_code
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 
@@ -42,8 +42,14 @@ def add_oa_cuts(
         The relaxed linear model.
     dual_values : list
         The value of the duals for each constraint.
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
+    jacobians : ComponentMap
+        Map nonlinear_constraint --> Map(variable --> jacobian of constraint w.r.t. variable).
+    objective_sense : Int
+        Objective sense of model.
+    mip_constraint_polynomial_degree : Set
+        The polynomial degrees of constraints that are regarded as linear.
+    mip_iter : Int
+        MIP iteration counter.
     config : ConfigBlock
         The specific configurations for MindtPy.
     cb_opt : SolverFactory, optional
@@ -189,10 +195,12 @@ def add_ecp_cuts(
     ----------
     target_model : Pyomo model
         The relaxed linear model.
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
+    jacobians : ComponentMap
+        Map nonlinear_constraint --> Map(variable --> jacobian of constraint w.r.t. variable)
     config : ConfigBlock
         The specific configurations for MindtPy.
+    timing : Timing
+        Timing.
     linearize_active : bool, optional
         Whether to linearize the active nonlinear constraints, by default True.
     linearize_violated : bool, optional
@@ -213,9 +221,9 @@ def add_ecp_cuts(
             if constr.has_ub():
                 try:
                     upper_slack = constr.uslack()
-                except (ValueError, OverflowError):
-                    config.logger.warning(
-                        'constraint {} has caused either a '
+                except (ValueError, OverflowError) as e:
+                    config.logger.error(
+                        str(e) + '\nConstraint {} has caused either a '
                         'ValueError or OverflowError.'
                         '\n'.format(constr)
                     )
@@ -242,9 +250,9 @@ def add_ecp_cuts(
             if constr.has_lb():
                 try:
                     lower_slack = constr.lslack()
-                except (ValueError, OverflowError):
-                    config.logger.warning(
-                        'constraint {} has caused either a '
+                except (ValueError, OverflowError) as e:
+                    config.logger.error(
+                        str(e) + '\nConstraint {} has caused either a '
                         'ValueError or OverflowError.'
                         '\n'.format(constr)
                     )
@@ -278,14 +286,16 @@ def add_no_good_cuts(target_model, var_values, config, timing, mip_iter=0, cb_op
 
     Parameters
     ----------
+    target_model : Block
+        The model to add no-good cuts to.
     var_values : list
         Variable values of the current solution, used to generate the cut.
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
     config : ConfigBlock
         The specific configurations for MindtPy.
-    mip_iter: Int, optional
-        Mip iteration counter.
+    timing : Timing
+        Timing.
+    mip_iter : Int, optional
+        MIP iteration counter.
     cb_opt : SolverFactory, optional
         Gurobi_persistent solver, by default None.
 
@@ -346,10 +356,10 @@ def add_affine_cuts(target_model, config, timing):
 
     Parameters
     ----------
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
     config : ConfigBlock
         The specific configurations for MindtPy.
+    timing : Timing
+        Timing.
     """
     with time_code(timing, 'Affine cut generation'):
         m = target_model
@@ -365,8 +375,8 @@ def add_affine_cuts(target_model, config, timing):
             try:
                 mc_eqn = mc(constr.body)
             except MCPP_Error as e:
-                config.logger.debug(
-                    'Skipping constraint %s due to MCPP error %s'
+                config.logger.error(
+                    '\nSkipping constraint %s due to MCPP error %s'
                     % (constr.name, str(e))
                 )
                 continue  # skip to the next constraint
