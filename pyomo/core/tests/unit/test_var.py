@@ -817,6 +817,10 @@ class TestArrayVar(TestSimpleVar):
         self.assertIs(m.x[1].domain, Integers)
         self.assertIs(m.x[2].domain, Integers)
         self.assertIs(m.x[3].domain, Integers)
+        m.x.domain = lambda m, i: PositiveReals
+        self.assertIs(m.x[1].domain, PositiveReals)
+        self.assertIs(m.x[2].domain, PositiveReals)
+        self.assertIs(m.x[3].domain, PositiveReals)
         m.x.domain = {1: Reals, 2: NonPositiveReals, 3: NonNegativeReals}
         self.assertIs(m.x[1].domain, Reals)
         self.assertIs(m.x[2].domain, NonPositiveReals)
