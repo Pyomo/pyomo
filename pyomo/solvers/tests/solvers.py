@@ -379,6 +379,24 @@ def test_solver_cases(*args):
         )
 
         #
+        # GCG
+        #
+        _gcg_capabilities = set(
+            [
+                'linear',
+                'integer',
+                'quadratic_objective',
+                'quadratic_constraint',
+                'sos1',
+                'sos2',
+            ]
+        )
+
+        _test_solver_cases['gcg', 'nl'] = initialize(
+            name='gcg', io='nl', capabilities=_gcg_capabilities, import_suffixes=[]
+        )
+
+        #
         # CONOPT
         #
         _conopt_capabilities = set(
