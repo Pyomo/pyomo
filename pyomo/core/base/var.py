@@ -436,7 +436,7 @@ class _GeneralVarData(_VarData):
     @domain.setter
     def domain(self, domain):
         try:
-            self._domain = SetInitializer(domain)(None, None)
+            self._domain = SetInitializer(domain)(self.parent_block(), self.index())
         except:
             logger.error(
                 "%s is not a valid domain. Variable domains must be an "
