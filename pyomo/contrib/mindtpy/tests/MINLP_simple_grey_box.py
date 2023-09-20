@@ -1,6 +1,5 @@
-import numpy as np
-import pyomo.environ as pyo
-from scipy.sparse import coo_matrix
+from pyomo.common.dependencies import numpy as np
+from pyomo.common.dependencies.scipy.sparse import coo_matrix
 from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxModel
 from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
 
