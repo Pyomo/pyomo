@@ -582,6 +582,13 @@ jobs:
         $PYTHON_EXE -m pip install --cache-dir cache/pip highspy \
             || echo "WARNING: highspy is not available"
 
+    - name: Install COPT
+      if: ${{ ! matrix.slim }}
+      shell: bash
+      run: |
+        $PYTHON_EXE -m pip install --cache-dir cache/pip coptpy \
+            || echo "WARNING: coptpy is not available"
+
     - name: Set up coverage tracking
       run: |
         if test "${{matrix.TARGET}}" == win; then
