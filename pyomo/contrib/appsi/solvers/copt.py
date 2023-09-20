@@ -257,15 +257,16 @@ class Copt(PersistentBase, PersistentSolver):
 
     def available(self):
         if self._available is None:
-            m = self._coptenv.createModel('checklic')
-            m.setParam("Logging", 0)
-            try:
-                # COPT can solve LP up to 10k variables without license
-                m.addVars(10001)
-                m.solveLP()
-                self._available = Copt.Availability.FullLicense
-            except coptpy.CoptError:
-                self._available = Copt.Availability.LimitedLicense
+            if self._coptenv is not None:
+                m = self._coptenv.createModel('checklic')
+                m.setParam("Logging", 0)
+                try:
+                    # COPT can solve LP up to 10k variables without license
+                    m.addVars(10001)
+                    m.solveLP()
+                    self._available = Copt.Availability.FullLicense
+                except coptpy.CoptError:
+                    self._available = Copt.Availability.LimitedLicense
         return self._available
 
     def release_license(self):
