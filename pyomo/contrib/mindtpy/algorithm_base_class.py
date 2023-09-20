@@ -817,7 +817,6 @@ class _MindtPyAlgorithm(object):
         nlp_args = dict(config.nlp_solver_args)
         update_solver_timelimit(self.nlp_opt, config.nlp_solver, self.timing, config)
         with SuppressInfeasibleWarning():
-            print('solving rnlp')
             results = self.nlp_opt.solve(
                 self.rnlp,
                 tee=config.nlp_solver_tee,
@@ -2235,6 +2234,17 @@ class _MindtPyAlgorithm(object):
                 if config.mip_solver in {'appsi_cplex', 'appsi_gurobi'}:
                     config.logger.info("Solution pool does not support APPSI solver.")
                 config.mip_solver = 'cplex_persistent'
+
+        # related to https://github.com/Pyomo/pyomo/issues/2363
+        if (
+            'appsi' in config.mip_solver
+            or 'appsi' in config.nlp_solver
+            or (
+                config.mip_regularization_solver is not None
+                and 'appsi' in config.mip_regularization_solver
+            )
+        ):
+            config.load_solutions = False
 
     ################################################################################################################################
     # Feasibility Pump
