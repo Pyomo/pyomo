@@ -1654,7 +1654,7 @@ class LegacySolverInterface(object):
 
     @property
     def options(self):
-        for solver_name in ['gurobi', 'ipopt', 'cplex', 'cbc', 'highs']:
+        for solver_name in ['gurobi', 'ipopt', 'cplex', 'cbc', 'highs', 'copt']:
             if hasattr(self, solver_name + '_options'):
                 return getattr(self, solver_name + '_options')
         raise NotImplementedError('Could not find the correct options')
@@ -1662,7 +1662,7 @@ class LegacySolverInterface(object):
     @options.setter
     def options(self, val):
         found = False
-        for solver_name in ['gurobi', 'ipopt', 'cplex', 'cbc', 'highs']:
+        for solver_name in ['gurobi', 'ipopt', 'cplex', 'cbc', 'highs', 'copt']:
             if hasattr(self, solver_name + '_options'):
                 setattr(self, solver_name + '_options', val)
                 found = True

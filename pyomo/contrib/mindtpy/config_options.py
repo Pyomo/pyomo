@@ -531,13 +531,16 @@ def _add_subsolver_configs(CONFIG):
                 [
                     'gurobi',
                     'cplex',
+                    'copt',
                     'cbc',
                     'glpk',
                     'gams',
                     'gurobi_persistent',
                     'cplex_persistent',
+                    'copt_persistent',
                     'appsi_cplex',
                     'appsi_gurobi',
+                    'appsi_copt',
                     # 'appsi_highs', TODO: feasibility pump now fails with appsi_highs #2951
                 ]
             ),
@@ -613,13 +616,16 @@ def _add_subsolver_configs(CONFIG):
                 [
                     'gurobi',
                     'cplex',
+                    'copt',
                     'cbc',
                     'glpk',
                     'gams',
                     'gurobi_persistent',
                     'cplex_persistent',
+                    'copt_persistent',
                     'appsi_cplex',
                     'appsi_gurobi',
+                    'appsi_copt',
                     # 'appsi_highs',
                 ]
             ),

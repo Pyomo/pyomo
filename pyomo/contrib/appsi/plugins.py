@@ -1,6 +1,6 @@
 from pyomo.common.extensions import ExtensionBuilderFactory
 from .base import SolverFactory
-from .solvers import Gurobi, Ipopt, Cbc, Cplex, Highs
+from .solvers import Gurobi, Ipopt, Cbc, Cplex, Highs, Copt
 from .build import AppsiBuilder
 
 
@@ -21,3 +21,6 @@ def load():
     SolverFactory.register(
         name='appsi_highs', doc='Automated persistent interface to Highs'
     )(Highs)
+    SolverFactory.register(
+        name='appsi_copt', doc='Automated persistent interface to COPT'
+    )(Copt)
