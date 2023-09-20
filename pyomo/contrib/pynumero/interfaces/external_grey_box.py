@@ -11,8 +11,6 @@
 
 import abc
 import logging
-import numpy as np
-from scipy.sparse import coo_matrix
 
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
