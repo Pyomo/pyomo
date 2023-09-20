@@ -1010,9 +1010,23 @@ class IndexedVar(Var):
     @domain.setter
     def domain(self, domain):
         """Sets the domain for all variables in this container."""
-        domain = SetInitializer(domain)(self.parent_block(), self.index())
-        for vardata in self.values():
-            vardata.domain = domain
+        try:
+            domain_rule = SetInitializer(domain)
+            if domain_rule.constant():
+                domain = domain_rule(self.parent_block(), None)
+                for vardata in self.values():
+                    vardata._domain = domain
+            else:
+                parent = self.parent_block()
+                for index, vardata in self.items():
+                    vardata._domain = domain_rule(parent, index)
+        except:
+            logger.error(
+                "%s is not a valid domain. Variable domains must be an "
+                "instance of a Pyomo Set or convertible to a Pyomo Set." % (domain,),
+                extra={'id': 'E2001'},
+            )
+            raise
 
     # Because CP supports indirection [the ability to index objects by
     # another (inter) Var] for certain types (including Var), we will
