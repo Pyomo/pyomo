@@ -9,10 +9,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.solvers.plugins.solvers.copt_direct import CoptDirect, coptpy
+from pyomo.solvers.plugins.solvers.copt_direct import CoptDirect, coptpy_available
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.opt.base import SolverFactory
 
+if coptpy_available:
+    import coptpy
 
 @SolverFactory.register('copt_persistent', doc='Persistent python interface to COPT')
 class CoptPersistent(PersistentSolver, CoptDirect):
