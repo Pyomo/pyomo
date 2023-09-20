@@ -440,15 +440,8 @@ def test_solver_cases(*args):
             ]
         )
 
-        # _test_solver_cases['coptampl', 'nl'] = initialize(
-        #     name='coptampl',
-        #     io='nl',
-        #     capabilities=_copt_capabilities,
-        #     import_suffixes=['dual'],
-        # )
-
-        _test_solver_cases['copt_direct', 'python'] = initialize(
-            name='copt_direct',
+        _test_solver_cases['copt', 'python'] = initialize(
+            name='copt',
             io='python',
             capabilities=_copt_capabilities,
             import_suffixes=['slack', 'dual', 'rc'],
