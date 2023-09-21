@@ -2574,7 +2574,7 @@ class _MindtPyAlgorithm(object):
             self.nlp_opt, config.nlp_solver, config
         )
         set_solver_constraint_violation_tolerance(
-            self.feasibility_nlp_opt, config.nlp_solver, config
+            self.feasibility_nlp_opt, config.nlp_solver, config, warm_start=False
         )
 
         self.set_appsi_solver_update_config()

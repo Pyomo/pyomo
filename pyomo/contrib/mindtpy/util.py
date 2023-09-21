@@ -566,7 +566,7 @@ def set_solver_mipgap(opt, solver_name, config):
         opt.options['add_options'].append('option optcr=%s;' % config.mip_solver_mipgap)
 
 
-def set_solver_constraint_violation_tolerance(opt, solver_name, config):
+def set_solver_constraint_violation_tolerance(opt, solver_name, config, warm_start=True):
     """Set constraint violation tolerance for solvers.
 
     Parameters
@@ -600,15 +600,16 @@ def set_solver_constraint_violation_tolerance(opt, solver_name, config):
                 opt.options['add_options'].append(
                     'constr_viol_tol ' + str(config.zero_tolerance)
                 )
-                # Ipopt warmstart options
-                opt.options['add_options'].append(
-                    'warm_start_init_point       yes\n'
-                    'warm_start_bound_push       1e-9\n'
-                    'warm_start_bound_frac       1e-9\n'
-                    'warm_start_slack_bound_frac 1e-9\n'
-                    'warm_start_slack_bound_push 1e-9\n'
-                    'warm_start_mult_bound_push  1e-9\n'
-                )
+                if warm_start:
+                    # Ipopt warmstart options
+                    opt.options['add_options'].append(
+                        'warm_start_init_point       yes\n'
+                        'warm_start_bound_push       1e-9\n'
+                        'warm_start_bound_frac       1e-9\n'
+                        'warm_start_slack_bound_frac 1e-9\n'
+                        'warm_start_slack_bound_push 1e-9\n'
+                        'warm_start_mult_bound_push  1e-9\n'
+                    )
             elif config.nlp_solver_args['solver'] == 'conopt':
                 opt.options['add_options'].append(
                     'RTNWMA ' + str(config.zero_tolerance)
