@@ -1,5 +1,5 @@
 from pyomo.common.dependencies import numpy as np
-from pyomo.common.dependencies.scipy.sparse import coo_matrix
+import pyomo.common.dependencies.scipy.sparse as scipy_sparse
 from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxModel
 from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
 
@@ -135,4 +135,4 @@ class GreyBoxModel(ExternalGreyBoxModel):
             row[0], col[4], data[4] = (0, 4, 0.5)  # y3
 
             # sparse matrix
-            return coo_matrix((data, (row, col)), shape=(1, 5))
+            return scipy_sparse.coo_matrix((data, (row, col)), shape=(1, 5))
