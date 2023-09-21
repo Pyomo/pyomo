@@ -52,7 +52,8 @@ if numpy_available:
     if hasattr(numpy, 'complex192'):
         numpy_complex_names.append('complex192')
     if hasattr(numpy, 'complex256'):
-        numpy_complex_names.append('complex256')
+        # On some numpy builds, the name of complex256 is clongdouble
+        numpy_complex_names.append(numpy.complex256.__name__)
 
 
 class TestNumpyRegistration(unittest.TestCase):
