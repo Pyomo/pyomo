@@ -124,6 +124,9 @@ class _MindtPyAlgorithm(object):
         self.fixed_nlp_log_formatter = (
             '{:1}{:>9}   {:>15}   {:>15g}   {:>12g}   {:>12g}   {:>7.2%}   {:>7.2f}'
         )
+        self.infeasible_fixed_nlp_log_formatter = (
+            '{:1}{:>9}   {:>15}   {:>15}   {:>12g}   {:>12g}   {:>7.2%}   {:>7.2f}'
+        )
         self.log_note_formatter = ' {:>9}   {:>15}   {:>15}'
 
         # Flag indicating whether the solution improved in the past
@@ -1210,7 +1213,18 @@ class _MindtPyAlgorithm(object):
         # TODO try something else? Reinitialize with different initial
         # value?
         config = self.config
-        config.logger.info('NLP subproblem was locally infeasible.')
+        config.logger.info(
+            self.infeasible_fixed_nlp_log_formatter.format(
+                ' ',
+                self.nlp_iter,
+                'Fixed NLP',
+                'Infeasible',
+                self.primal_bound,
+                self.dual_bound,
+                self.rel_gap,
+                get_main_elapsed_time(self.timing),
+            )
+        )
         self.nlp_infeasible_counter += 1
         if config.calculate_dual_at_solution:
             for c in fixed_nlp.MindtPy_utils.constraint_list:
@@ -1232,7 +1246,7 @@ class _MindtPyAlgorithm(object):
         #         elif var.has_lb() and abs(value(var) - var.lb) < config.absolute_bound_tolerance:
         #             fixed_nlp.ipopt_zU_out[var] = -1
 
-        config.logger.info('Solving feasibility problem')
+        # config.logger.info('Solving feasibility problem')
         feas_subproblem, feas_subproblem_results = self.solve_feasibility_subproblem()
         # TODO: do we really need this?
         if self.should_terminate:
@@ -1365,6 +1379,18 @@ class _MindtPyAlgorithm(object):
                         feas_soln.solutions.load_from(feas_soln)
         self.handle_feasibility_subproblem_tc(
             feas_soln.solver.termination_condition, MindtPy
+        )
+        config.logger.info(
+            self.fixed_nlp_log_formatter.format(
+                ' ',
+                self.nlp_iter,
+                'Feasibility NLP',
+                value(feas_subproblem.MindtPy_utils.feas_obj),
+                self.primal_bound,
+                self.dual_bound,
+                self.rel_gap,
+                get_main_elapsed_time(self.timing),
+            )
         )
         MindtPy.feas_opt.deactivate()
         for constr in MindtPy.nonlinear_constraint_list:

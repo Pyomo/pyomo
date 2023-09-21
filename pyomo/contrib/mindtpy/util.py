@@ -988,8 +988,6 @@ def copy_var_list_values(from_list, to_list, config,
             v_to.set_value(0)
         elif v_to.is_integer() and (math.fabs(var_val - rounded_val) <=
                                     config.integer_tolerance):
-            print('var_val', var_val)
-            v_to.pprint()
             v_to.set_value(rounded_val)
         else:
             raise
