@@ -23,6 +23,7 @@ from pyomo.core import (
     RangeSet,
     ConstraintList,
     TransformationFactory,
+    value
 )
 from pyomo.repn import generate_standard_repn
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
@@ -964,3 +965,31 @@ def generate_norm_constraint(fp_nlp_model, mip_model, config):
             mip_model.MindtPy_utils.discrete_variable_list,
         ):
             fp_nlp_model.norm_constraint.add(nlp_var - mip_var.value <= rhs)
+
+def copy_var_list_values(from_list, to_list, config,
+                         skip_stale=False, skip_fixed=True,
+                         ignore_integrality=False):
+    """Copy variable values from one list to another.
+    Rounds to Binary/Integer if necessary
+    Sets to zero for NonNegativeReals if necessary
+    """
+    for v_from, v_to in zip(from_list, to_list):
+        if skip_stale and v_from.stale:
+            continue  # Skip stale variable values.
+        if skip_fixed and v_to.is_fixed():
+            continue  # Skip fixed variables.
+        var_val = value(v_from, exception=False)
+        rounded_val = int(round(var_val))
+        if var_val in v_to.domain:
+            v_to.set_value(value(v_from, exception=False))
+        elif ignore_integrality and v_to.is_integer():
+            v_to.set_value(value(v_from, exception=False))
+        elif abs(var_val) <= config.zero_tolerance and 0 in v_to.domain:
+            v_to.set_value(0)
+        elif v_to.is_integer() and (math.fabs(var_val - rounded_val) <=
+                                    config.integer_tolerance):
+            print('var_val', var_val)
+            v_to.pprint()
+            v_to.set_value(rounded_val)
+        else:
+            raise

@@ -16,9 +16,8 @@ from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 from pyomo.repn import generate_standard_repn
 import pyomo.core.expr as EXPR
 from math import copysign
-from pyomo.contrib.mindtpy.util import get_integer_solution
+from pyomo.contrib.mindtpy.util import get_integer_solution, copy_var_list_values
 from pyomo.contrib.gdpopt.util import (
-    copy_var_list_values,
     get_main_elapsed_time,
     time_code,
 )

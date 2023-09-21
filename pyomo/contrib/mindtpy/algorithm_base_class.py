@@ -56,7 +56,6 @@ from pyomo.contrib.gdpopt.util import (
     SuppressInfeasibleWarning,
     _DoNothing,
     lower_logger_level_to,
-    copy_var_list_values,
     get_main_elapsed_time,
     time_code,
 )
@@ -81,6 +80,7 @@ from pyomo.contrib.mindtpy.util import (
     set_solver_mipgap,
     set_solver_constraint_violation_tolerance,
     update_solver_timelimit,
+    copy_var_list_values
 )
 
 single_tree, single_tree_available = attempt_import('pyomo.contrib.mindtpy.single_tree')
@@ -866,12 +866,14 @@ class _MindtPyAlgorithm(object):
                     self.rnlp.MindtPy_utils.variable_list,
                     self.mip.MindtPy_utils.variable_list,
                     config,
+                    ignore_integrality=True
                 )
                 if config.init_strategy == 'FP':
                     copy_var_list_values(
                         self.rnlp.MindtPy_utils.variable_list,
                         self.working_model.MindtPy_utils.variable_list,
                         config,
+                        ignore_integrality=True
                     )
                 self.add_cuts(
                     dual_values=dual_values,
