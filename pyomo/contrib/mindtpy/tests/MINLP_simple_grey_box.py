@@ -1,6 +1,7 @@
 from pyomo.common.dependencies import numpy as np
 import pyomo.common.dependencies.scipy.sparse as scipy_sparse
 from pyomo.common.dependencies import attempt_import
+
 egb = attempt_import('pyomo.contrib.pynumero.interfaces.external_grey_box')[0]
 
 

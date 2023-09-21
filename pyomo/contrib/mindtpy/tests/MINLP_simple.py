@@ -40,6 +40,7 @@ from pyomo.environ import (
 from pyomo.common.collections import ComponentMap
 from pyomo.contrib.mindtpy.tests.MINLP_simple_grey_box import GreyBoxModel
 from pyomo.common.dependencies import attempt_import
+
 egb = attempt_import('pyomo.contrib.pynumero.interfaces.external_grey_box')[0]
 
 

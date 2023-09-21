@@ -86,6 +86,7 @@ single_tree, single_tree_available = attempt_import('pyomo.contrib.mindtpy.singl
 tabu_list, tabu_list_available = attempt_import('pyomo.contrib.mindtpy.tabu_list')
 egb = attempt_import('pyomo.contrib.pynumero.interfaces.external_grey_box')[0]
 
+
 class _MindtPyAlgorithm(object):
     def __init__(self, **kwds):
         """
