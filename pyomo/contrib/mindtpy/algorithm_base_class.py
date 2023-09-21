@@ -34,7 +34,6 @@ from pyomo.opt import (
     SolutionStatus,
     SolverStatus,
 )
-from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
 from pyomo.core import (
     minimize,
     maximize,
@@ -85,7 +84,7 @@ from pyomo.contrib.mindtpy.util import (
 
 single_tree, single_tree_available = attempt_import('pyomo.contrib.mindtpy.single_tree')
 tabu_list, tabu_list_available = attempt_import('pyomo.contrib.mindtpy.tabu_list')
-
+egb = attempt_import('pyomo.contrib.pynumero.interfaces.external_grey_box')[0]
 
 class _MindtPyAlgorithm(object):
     def __init__(self, **kwds):
@@ -326,7 +325,7 @@ class _MindtPyAlgorithm(object):
         )
         util_block.grey_box_list = list(
             model.component_data_objects(
-                ctype=ExternalGreyBoxBlock, active=True, descend_into=(Block)
+                ctype=egb.ExternalGreyBoxBlock, active=True, descend_into=(Block)
             )
         )
         util_block.linear_constraint_list = list(
@@ -359,7 +358,7 @@ class _MindtPyAlgorithm(object):
         util_block.variable_list = list(
             v
             for v in model.component_data_objects(
-                ctype=Var, descend_into=(Block, ExternalGreyBoxBlock)
+                ctype=Var, descend_into=(Block, egb.ExternalGreyBoxBlock)
             )
             if v in var_set
         )

@@ -1,10 +1,10 @@
 from pyomo.common.dependencies import numpy as np
 import pyomo.common.dependencies.scipy.sparse as scipy_sparse
-from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxModel
-from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
+from pyomo.common.dependencies import attempt_import
+egb = attempt_import('pyomo.contrib.pynumero.interfaces.external_grey_box')[0]
 
 
-class GreyBoxModel(ExternalGreyBoxModel):
+class GreyBoxModel(egb.ExternalGreyBoxModel):
     """Greybox model to compute the example OF."""
 
     def __init__(self, initial, use_exact_derivatives=True, verbose=True):

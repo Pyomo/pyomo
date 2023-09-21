@@ -39,12 +39,13 @@ from pyomo.environ import (
 )
 from pyomo.common.collections import ComponentMap
 from pyomo.contrib.mindtpy.tests.MINLP_simple_grey_box import GreyBoxModel
-from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
+from pyomo.common.dependencies import attempt_import
+egb = attempt_import('pyomo.contrib.pynumero.interfaces.external_grey_box')[0]
 
 
 def build_model_external(m):
     ex_model = GreyBoxModel(initial={"X1": 0, "X2": 0, "Y1": 0, "Y2": 1, "Y3": 1})
-    m.egb = ExternalGreyBoxBlock()
+    m.egb = egb.ExternalGreyBoxBlock()
     m.egb.set_external_model(ex_model)
 
 
