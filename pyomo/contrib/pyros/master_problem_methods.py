@@ -236,8 +236,10 @@ def solve_master_feasibility_problem(model_data, config):
     model = construct_master_feasibility_problem(model_data, config)
 
     active_obj = next(model.component_data_objects(Objective, active=True))
+
+    config.progress_logger.debug("Solving master feasibility problem")
     config.progress_logger.debug(
-        f"Initial master feasibility objective (total slack): {value(active_obj)}"
+        f" Initial objective (total slack): {value(active_obj)}"
     )
 
     if config.solve_master_globally:
@@ -260,7 +262,7 @@ def solve_master_feasibility_problem(model_data, config):
         config.progress_logger.error(
             f"Optimizer {repr(solver)} encountered exception "
             "attempting to solve master feasibility problem in iteration "
-            f"{model_data.iteration}"
+            f"{model_data.iteration}."
         )
         raise
     else:
@@ -280,7 +282,13 @@ def solve_master_feasibility_problem(model_data, config):
     if results.solver.termination_condition in feasible_terminations:
         model.solutions.load_from(results)
         config.progress_logger.debug(
-            f"Final master feasibility objective (total slack): {value(active_obj)}"
+            f" Final objective (total slack): {value(active_obj)}"
+        )
+        config.progress_logger.debug(
+            f" Termination condition: {results.solver.termination_condition}"
+        )
+        config.progress_logger.debug(
+            f" Solve time: {getattr(results.solver, TIC_TOC_SOLVE_TIME_ATTR)}s"
         )
     else:
         config.progress_logger.warning(
@@ -563,7 +571,7 @@ def minimize_dr_vars(model_data, config):
                 mvar.set_value(value(pvar), skip_validation=True)
 
     config.progress_logger.debug(f" Optimized DR norm: {value(polishing_obj)}")
-    config.progress_logger.debug("Polished Master objective:")
+    config.progress_logger.debug(" Polished Master objective:")
 
     # print master solution
     if config.objective_focus == ObjectiveType.worst_case:
@@ -579,15 +587,15 @@ def minimize_dr_vars(model_data, config):
     # debugging: summarize objective breakdown
     worst_master_blk = model_data.master_model.scenarios[worst_blk_idx]
     config.progress_logger.debug(
-        " First-stage objective " f"{value(worst_master_blk.first_stage_objective)}"
+        "  First-stage objective: " f"{value(worst_master_blk.first_stage_objective)}"
     )
     config.progress_logger.debug(
-        " Second-stage objective " f"{value(worst_master_blk.second_stage_objective)}"
+        "  Second-stage objective: " f"{value(worst_master_blk.second_stage_objective)}"
     )
     polished_master_obj = value(
         worst_master_blk.first_stage_objective + worst_master_blk.second_stage_objective
     )
-    config.progress_logger.debug(f" Objective {polished_master_obj}")
+    config.progress_logger.debug(f"  Objective: {polished_master_obj}")
 
     return results, True
 
@@ -796,17 +804,23 @@ def solver_call_master(model_data, config, solver, solve_data):
             )
 
             # debugging: log breakdown of master objective
-            config.progress_logger.debug("Master objective")
+            config.progress_logger.debug(" Optimized master objective breakdown:")
             config.progress_logger.debug(
-                f" First-stage objective {master_soln.first_stage_objective}"
+                f"  First-stage objective: {master_soln.first_stage_objective}"
             )
             config.progress_logger.debug(
-                f" Second-stage objective {master_soln.second_stage_objective}"
+                f"  Second-stage objective: {master_soln.second_stage_objective}"
             )
             master_obj = (
                 master_soln.first_stage_objective + master_soln.second_stage_objective
             )
-            config.progress_logger.debug(f" Objective {master_obj}")
+            config.progress_logger.debug(f"  Objective: {master_obj}")
+            config.progress_logger.debug(
+                f" Termination condition: {results.solver.termination_condition}"
+            )
+            config.progress_logger.debug(
+                f" Solve time: {getattr(results.solver, TIC_TOC_SOLVE_TIME_ATTR)}s"
+            )
 
             master_soln.nominal_block = nlp_model.scenarios[0, 0]
             master_soln.results = results
