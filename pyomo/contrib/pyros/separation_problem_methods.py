@@ -536,9 +536,7 @@ def get_worst_discrete_separation_solution(
     )
 
 
-def get_con_name_repr(
-    separation_model, con, with_orig_name=True, with_obj_name=True
-):
+def get_con_name_repr(separation_model, con, with_orig_name=True, with_obj_name=True):
     """
     Get string representation of performance constraint
     and any other modeling components to which it has
@@ -957,8 +955,7 @@ def initialize_separation(perf_con_to_maximize, model_data, config):
         with_obj_name=True,
     )
     uncertainty_set_is_discrete = (
-        config.uncertainty_set.geometry
-        is Geometry.DISCRETE_SCENARIOS
+        config.uncertainty_set.geometry is Geometry.DISCRETE_SCENARIOS
     )
     for con in sep_model.component_data_objects(Constraint, active=True):
         lslack, uslack = con.lslack(), con.uslack()
