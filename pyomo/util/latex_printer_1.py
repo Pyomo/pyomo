@@ -12,7 +12,6 @@
 import math
 import copy
 import re
-import io
 import pyomo.environ as pyo
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.core.expr import (
@@ -117,6 +116,24 @@ def alphabetStringGenerator(num, indexMode=False):
             'p',
             'q',
             'r',
+            # 'a',
+            # 'b',
+            # 'c',
+            # 'd',
+            # 'e',
+            # 'f',
+            # 'g',
+            # 'h',
+            # 'l',
+            # 'o',
+            # 's',
+            # 't',
+            # 'u',
+            # 'v',
+            # 'w',
+            # 'x',
+            # 'y',
+            # 'z',
         ]
 
     else:
@@ -393,7 +410,48 @@ class _LatexVisitor(StreamBasedExpressionVisitor):
     def exitNode(self, node, data):
         return self._operator_handles[node.__class__](self, node, *data)
 
-def analyze_variable(vr):
+
+def applySmartVariables(name):
+    splitName = name.split('_')
+    # print(splitName)
+
+    filteredName = []
+
+    prfx = ''
+    psfx = ''
+    for i in range(0, len(splitName)):
+        se = splitName[i]
+        if se != 0:
+            if se == 'dot':
+                prfx = '\\dot{'
+                psfx = '}'
+            elif se == 'hat':
+                prfx = '\\hat{'
+                psfx = '}'
+            elif se == 'bar':
+                prfx = '\\bar{'
+                psfx = '}'
+            elif se == 'mathcal':
+                prfx = '\\mathcal{'
+                psfx = '}'
+            else:
+                filteredName.append(se)
+        else:
+            filteredName.append(se)
+
+    joinedName = prfx + filteredName[0] + psfx
+    # print(joinedName)
+    # print(filteredName)
+    for i in range(1, len(filteredName)):
+        joinedName += '_{' + filteredName[i]
+
+    joinedName += '}' * (len(filteredName) - 1)
+    # print(joinedName)
+
+    return joinedName
+
+
+def analyze_variable(vr, visitor):
     domainMap = {
         'Reals': '\\mathds{R}',
         'PositiveReals': '\\mathds{R}_{> 0}',
@@ -566,12 +624,14 @@ def multiple_replace(pstr, rep_dict):
 
 def latex_printer(
     pyomo_component,
-    latex_component_map=None,
-    write_object=None,
+    filename=None,
     use_equation_environment=False,
     split_continuous_sets=False,
+    use_smart_variables=False,
+    x_only_mode=0,
     use_short_descriptors=False,
-    ):
+    overwrite_dict=None,
+):
     """This function produces a string that can be rendered as LaTeX
 
     As described, this function produces a string that can be rendered as LaTeX
@@ -581,7 +641,7 @@ def latex_printer(
     pyomo_component: _BlockData or Model or Constraint or Expression or Objective
         The thing to be printed to LaTeX.  Accepts Blocks (including models), Constraints, and Expressions
 
-    write_object: str
+    filename: str
         An optional file to write the LaTeX to.  Default of None produces no file
 
     use_equation_environment: bool
@@ -607,11 +667,8 @@ def latex_printer(
     # these objects require a slight modification of behavior
     # isSingle==False means a model or block
 
-    if latex_component_map is None:
-        latex_component_map = ComponentMap()
-        existing_components = ComponentSet([])
-    else:
-        existing_components = ComponentSet(list(latex_component_map.keys()))
+    if overwrite_dict is None:
+        overwrite_dict = ComponentMap()
 
     isSingle = False
 
@@ -696,8 +753,6 @@ def latex_printer(
                     parameterList.append(p)
 
         # TODO:  cannot extract this information, waiting on resolution of an issue
-        # For now, will raise an error
-        raise RuntimeError('Printing of non-models is not currently supported, but will be added soon')
         # setList = identify_components(pyomo_component.expr, pyo.Set)
 
     else:
@@ -721,6 +776,8 @@ def latex_printer(
                 pyo.Set, descend_into=True, active=True
             )
         ]
+
+    forallTag = ' \\qquad \\forall'
 
     descriptorDict = {}
     if use_short_descriptors:
@@ -874,29 +931,40 @@ def latex_printer(
                     setMap[indices[0]._set],
                 )
 
-                conLine += ' \\qquad \\forall %s \\in %s ' % (idxTag, setTag)
+                conLine += '%s %s \\in %s ' % (forallTag, idxTag, setTag)
             pstr += conLine
 
             # Add labels as needed
             if not use_equation_environment:
                 pstr += '\\label{con:' + pyomo_component.name + '_' + con.name + '} '
 
-            pstr += tail
-
+            # prevents an emptly blank line from being at the end of the latex output
+            if i <= len(constraints) - 2:
+                pstr += tail
+            else:
+                pstr += tail
+                # pstr += '\n'
 
     # Print bounds and sets
     if not isSingle:
+        variableList = [
+            vr
+            for vr in pyomo_component.component_objects(
+                pyo.Var, descend_into=True, active=True
+            )
+        ]
+
         varBoundData = []
         for i in range(0, len(variableList)):
             vr = variableList[i]
             if isinstance(vr, ScalarVar):
-                varBoundDataEntry = analyze_variable(vr)
+                varBoundDataEntry = analyze_variable(vr, visitor)
                 varBoundData.append(varBoundDataEntry)
             elif isinstance(vr, IndexedVar):
                 varBoundData_indexedVar = []
                 setData = vr.index_set().data()
                 for sd in setData:
-                    varBoundDataEntry = analyze_variable(vr[sd])
+                    varBoundDataEntry = analyze_variable(vr[sd], visitor)
                     varBoundData_indexedVar.append(varBoundDataEntry)
                 globIndexedVariables = True
                 for j in range(0, len(varBoundData_indexedVar) - 1):
@@ -1002,9 +1070,26 @@ def latex_printer(
     defaultSetLatexNames = ComponentMap()
     for i in range(0, len(setList)):
         st = setList[i]
-        defaultSetLatexNames[st] = setList[i].name.replace('_', '\\_')
-        if st in ComponentSet(latex_component_map.keys()):
-            defaultSetLatexNames[st] = latex_component_map[st][0]#.replace('_', '\\_')
+        if use_smart_variables:
+            chkName = setList[i].name
+            if len(chkName) == 1 and chkName.upper() == chkName:
+                chkName += '_mathcal'
+            defaultSetLatexNames[st] = applySmartVariables(chkName)
+        else:
+            defaultSetLatexNames[st] = setList[i].name.replace('_', '\\_')
+
+        ## Could be used in the future if someone has a lot of sets
+        # defaultSetLatexNames[st] = 'mathcal{' + alphabetStringGenerator(i).upper() + '}'
+
+        if st in overwrite_dict.keys():
+            if use_smart_variables:
+                defaultSetLatexNames[st] = applySmartVariables(overwrite_dict[st][0])
+            else:
+                defaultSetLatexNames[st] = overwrite_dict[st][0].replace('_', '\\_')
+
+        defaultSetLatexNames[st] = defaultSetLatexNames[st].replace(
+            '\\mathcal', r'\\mathcal'
+        )
 
     latexLines = pstr.split('\n')
     for jj in range(0, len(latexLines)):
@@ -1021,7 +1106,7 @@ def latex_printer(
                     gpNum, stName = ifo.split('_')
                     if gpNum not in groupMap.keys():
                         groupMap[gpNum] = [stName]
-                    if stName not in ComponentSet(uniqueSets):
+                    if stName not in uniqueSets:
                         uniqueSets.append(stName)
 
             # Determine if the set is continuous
@@ -1100,28 +1185,20 @@ def latex_printer(
 
             indexCounter = 0
             for ky, vl in groupInfo.items():
-                if vl['setObject'] in ComponentSet(latex_component_map.keys()) :
-                    indexNames = latex_component_map[vl['setObject']][1]
-                    if len(indexNames) != 0:
-                        if len(indexNames) < len(vl['indices']):
-                            raise ValueError(
-                                'Insufficient number of indices provided to the overwrite dictionary for set %s'
-                                % (vl['setObject'].name)
-                            )
-                        for i in range(0, len(indexNames)):
-                            ln = ln.replace(
-                                '__I_PLACEHOLDER_8675309_GROUP_%s_%s__'
-                                % (vl['indices'][i], ky),
-                                indexNames[i],
-                            )
-                    else:
-                        for i in range(0, len(vl['indices'])):
-                            ln = ln.replace(
-                                '__I_PLACEHOLDER_8675309_GROUP_%s_%s__'
-                                % (vl['indices'][i], ky),
-                                alphabetStringGenerator(indexCounter, True),
-                            )
-                            indexCounter += 1      
+                indexNames = latex_component_map[vl['setObject']][1]
+                if vl['setObject'] in latex_component_map.keys() and len(indexNames) != 0 :
+                    indexNames = overwrite_dict[vl['setObject']][1]
+                    if len(indexNames) < len(vl['indices']):
+                        raise ValueError(
+                            'Insufficient number of indices provided to the overwrite dictionary for set %s'
+                            % (vl['setObject'].name)
+                        )
+                    for i in range(0, len(indexNames)):
+                        ln = ln.replace(
+                            '__I_PLACEHOLDER_8675309_GROUP_%s_%s__'
+                            % (vl['indices'][i], ky),
+                            indexNames[i],
+                        )
                 else:
                     for i in range(0, len(vl['indices'])):
                         ln = ln.replace(
@@ -1131,73 +1208,237 @@ def latex_printer(
                         )
                         indexCounter += 1
 
+            # print('gn',groupInfo)
+
         latexLines[jj] = ln
 
     pstr = '\n'.join(latexLines)
+    # pstr = pstr.replace('\\mathcal{', 'mathcal{')
+    # pstr = pstr.replace('mathcal{', '\\mathcal{')
 
-    vrIdx = 0
-    new_variableMap = ComponentMap()
-    for i in range(0, len(variableList)):
-        vr = variableList[i]
-        vrIdx += 1
-        if isinstance(vr, ScalarVar):
-            new_variableMap[vr] = vr.name
-        elif isinstance(vr, IndexedVar):
-            new_variableMap[vr] = vr.name
-            for sd in vr.index_set().data():
-                # vrIdx += 1
-                sdString = str(sd)
-                if sdString[0] == '(':
-                    sdString = sdString[1:]
-                if sdString[-1] == ')':
-                    sdString = sdString[0:-1]
-                new_variableMap[vr[sd]] = vr[sd].name
-        else:
-            raise DeveloperError(
-                'Variable is not a variable.  Should not happen.  Contact developers'
-            )
+    if x_only_mode in [1, 2, 3]:
+        # Need to preserve only the set elements in the overwrite_dict
+        new_overwrite_dict = {}
+        for ky, vl in overwrite_dict.items():
+            if isinstance(ky, _GeneralVarData):
+                pass
+            elif isinstance(ky, _ParamData):
+                pass
+            elif isinstance(ky, _SetData):
+                new_overwrite_dict[ky] = overwrite_dict[ky]
+            else:
+                raise ValueError(
+                    'The overwrite_dict object has a key of invalid type: %s'
+                    % (str(ky))
+                )
+        overwrite_dict = new_overwrite_dict
 
-    pmIdx = 0
-    new_parameterMap = ComponentMap()
-    for i in range(0, len(parameterList)):
-        pm = parameterList[i]
-        pmIdx += 1
-        if isinstance(pm, ScalarParam):
-            new_parameterMap[pm] = pm.name
-        elif isinstance(pm, IndexedParam):
-            new_parameterMap[pm] = pm.name
-            for sd in pm.index_set().data():
-                # pmIdx += 1
-                sdString = str(sd)
-                if sdString[0] == '(':
-                    sdString = sdString[1:]
-                if sdString[-1] == ')':
-                    sdString = sdString[0:-1]
-                new_parameterMap[pm[sd]] = str(pm[sd])  # .name
-        else:
-            raise DeveloperError(
-                'Parameter is not a parameter.  Should not happen.  Contact developers'
-            )
+    # # Only x modes
+    # # Mode 0 : dont use
+    # # Mode 1 : indexed variables become x_{_{ix}}
+    # # Mode 2 : uses standard alphabet [a,...,z,aa,...,az,...,aaa,...] with subscripts for indices, ex: abcd_{ix}
+    # # Mode 3 : unwrap everything into an x_{} list, including the indexed vars themselves
 
-    for ky, vl in new_variableMap.items():
-        if ky not in ComponentSet(latex_component_map.keys()):
-            latex_component_map[ky] = vl
-    for ky, vl in new_parameterMap.items():
-        if ky not in ComponentSet(latex_component_map.keys()):
-            latex_component_map[ky] = vl
+    if x_only_mode == 1:
+        vrIdx = 0
+        new_variableMap = ComponentMap()
+        for i in range(0, len(variableList)):
+            vr = variableList[i]
+            vrIdx += 1
+            if isinstance(vr, ScalarVar):
+                new_variableMap[vr] = 'x_{' + str(vrIdx) + '}'
+            elif isinstance(vr, IndexedVar):
+                new_variableMap[vr] = 'x_{' + str(vrIdx) + '}'
+                for sd in vr.index_set().data():
+                    # vrIdx += 1
+                    sdString = str(sd)
+                    if sdString[0] == '(':
+                        sdString = sdString[1:]
+                    if sdString[-1] == ')':
+                        sdString = sdString[0:-1]
+                    new_variableMap[vr[sd]] = (
+                        'x_{' + str(vrIdx) + '_{' + sdString + '}' + '}'
+                    )
+            else:
+                raise DeveloperError(
+                    'Variable is not a variable.  Should not happen.  Contact developers'
+                )
+
+        pmIdx = 0
+        new_parameterMap = ComponentMap()
+        for i in range(0, len(parameterList)):
+            pm = parameterList[i]
+            pmIdx += 1
+            if isinstance(pm, ScalarParam):
+                new_parameterMap[pm] = 'p_{' + str(pmIdx) + '}'
+            elif isinstance(pm, IndexedParam):
+                new_parameterMap[pm] = 'p_{' + str(pmIdx) + '}'
+                for sd in pm.index_set().data():
+                    sdString = str(sd)
+                    if sdString[0] == '(':
+                        sdString = sdString[1:]
+                    if sdString[-1] == ')':
+                        sdString = sdString[0:-1]
+                    new_parameterMap[pm[sd]] = (
+                        'p_{' + str(pmIdx) + '_{' + sdString + '}' + '}'
+                    )
+            else:
+                raise DeveloperError(
+                    'Parameter is not a parameter.  Should not happen.  Contact developers'
+                )
+
+        new_overwrite_dict = ComponentMap()
+        for ky, vl in new_variableMap.items():
+            new_overwrite_dict[ky] = vl
+        for ky, vl in new_parameterMap.items():
+            new_overwrite_dict[ky] = vl
+        for ky, vl in overwrite_dict.items():
+            new_overwrite_dict[ky] = vl
+        overwrite_dict = new_overwrite_dict
+
+    elif x_only_mode == 2:
+        vrIdx = 0
+        new_variableMap = ComponentMap()
+        for i in range(0, len(variableList)):
+            vr = variableList[i]
+            vrIdx += 1
+            if isinstance(vr, ScalarVar):
+                new_variableMap[vr] = alphabetStringGenerator(i)
+            elif isinstance(vr, IndexedVar):
+                new_variableMap[vr] = alphabetStringGenerator(i)
+                for sd in vr.index_set().data():
+                    # vrIdx += 1
+                    sdString = str(sd)
+                    if sdString[0] == '(':
+                        sdString = sdString[1:]
+                    if sdString[-1] == ')':
+                        sdString = sdString[0:-1]
+                    new_variableMap[vr[sd]] = (
+                        alphabetStringGenerator(i) + '_{' + sdString + '}'
+                    )
+            else:
+                raise DeveloperError(
+                    'Variable is not a variable.  Should not happen.  Contact developers'
+                )
+
+        pmIdx = vrIdx - 1
+        new_parameterMap = ComponentMap()
+        for i in range(0, len(parameterList)):
+            pm = parameterList[i]
+            pmIdx += 1
+            if isinstance(pm, ScalarParam):
+                new_parameterMap[pm] = alphabetStringGenerator(pmIdx)
+            elif isinstance(pm, IndexedParam):
+                new_parameterMap[pm] = alphabetStringGenerator(pmIdx)
+                for sd in pm.index_set().data():
+                    sdString = str(sd)
+                    if sdString[0] == '(':
+                        sdString = sdString[1:]
+                    if sdString[-1] == ')':
+                        sdString = sdString[0:-1]
+                    new_parameterMap[pm[sd]] = (
+                        alphabetStringGenerator(pmIdx) + '_{' + sdString + '}'
+                    )
+            else:
+                raise DeveloperError(
+                    'Parameter is not a parameter.  Should not happen.  Contact developers'
+                )
+
+        new_overwrite_dict = ComponentMap()
+        for ky, vl in new_variableMap.items():
+            new_overwrite_dict[ky] = vl
+        for ky, vl in new_parameterMap.items():
+            new_overwrite_dict[ky] = vl
+        for ky, vl in overwrite_dict.items():
+            new_overwrite_dict[ky] = vl
+        overwrite_dict = new_overwrite_dict
+
+    elif x_only_mode == 3:
+        new_overwrite_dict = ComponentMap()
+        for ky, vl in variableMap.items():
+            new_overwrite_dict[ky] = vl
+        for ky, vl in parameterMap.items():
+            new_overwrite_dict[ky] = vl
+        for ky, vl in overwrite_dict.items():
+            new_overwrite_dict[ky] = vl
+        overwrite_dict = new_overwrite_dict
+
+    else:
+        vrIdx = 0
+        new_variableMap = ComponentMap()
+        for i in range(0, len(variableList)):
+            vr = variableList[i]
+            vrIdx += 1
+            if isinstance(vr, ScalarVar):
+                new_variableMap[vr] = vr.name
+            elif isinstance(vr, IndexedVar):
+                new_variableMap[vr] = vr.name
+                for sd in vr.index_set().data():
+                    # vrIdx += 1
+                    sdString = str(sd)
+                    if sdString[0] == '(':
+                        sdString = sdString[1:]
+                    if sdString[-1] == ')':
+                        sdString = sdString[0:-1]
+                    if use_smart_variables:
+                        new_variableMap[vr[sd]] = applySmartVariables(
+                            vr.name + '_' + sdString
+                        )
+                    else:
+                        new_variableMap[vr[sd]] = vr[sd].name
+            else:
+                raise DeveloperError(
+                    'Variable is not a variable.  Should not happen.  Contact developers'
+                )
+
+        pmIdx = 0
+        new_parameterMap = ComponentMap()
+        for i in range(0, len(parameterList)):
+            pm = parameterList[i]
+            pmIdx += 1
+            if isinstance(pm, ScalarParam):
+                new_parameterMap[pm] = pm.name
+            elif isinstance(pm, IndexedParam):
+                new_parameterMap[pm] = pm.name
+                for sd in pm.index_set().data():
+                    # pmIdx += 1
+                    sdString = str(sd)
+                    if sdString[0] == '(':
+                        sdString = sdString[1:]
+                    if sdString[-1] == ')':
+                        sdString = sdString[0:-1]
+                    if use_smart_variables:
+                        new_parameterMap[pm[sd]] = applySmartVariables(
+                            pm.name + '_' + sdString
+                        )
+                    else:
+                        new_parameterMap[pm[sd]] = str(pm[sd])  # .name
+            else:
+                raise DeveloperError(
+                    'Parameter is not a parameter.  Should not happen.  Contact developers'
+                )
+
+        for ky, vl in new_variableMap.items():
+            if ky not in overwrite_dict.keys():
+                overwrite_dict[ky] = vl
+        for ky, vl in new_parameterMap.items():
+            if ky not in overwrite_dict.keys():
+                overwrite_dict[ky] = vl
 
     rep_dict = {}
-    for ky in ComponentSet(list(reversed(list(latex_component_map.keys())))):
-        if isinstance(ky, (pyo.Var, _GeneralVarData)):
-            overwrite_value = latex_component_map[ky]
-            if ky not in existing_components:
-                overwrite_value = overwrite_value.replace('_', '\\_')
+    for ky in list(reversed(list(overwrite_dict.keys()))):
+        if isinstance(ky, (pyo.Var, pyo.Param)):
+            if use_smart_variables and x_only_mode in [0, 3]:
+                overwrite_value = applySmartVariables(overwrite_dict[ky])
+            else:
+                overwrite_value = overwrite_dict[ky]
             rep_dict[variableMap[ky]] = overwrite_value
-        elif isinstance(ky, (pyo.Param, _ParamData)):
-            overwrite_value = latex_component_map[ky]
-            if ky not in existing_components:
-                overwrite_value = overwrite_value.replace('_', '\\_')
-            rep_dict[parameterMap[ky]] = overwrite_value
+        elif isinstance(ky, (_GeneralVarData, _ParamData)):
+            if use_smart_variables and x_only_mode in [3]:
+                overwrite_value = applySmartVariables(overwrite_dict[ky])
+            else:
+                overwrite_value = overwrite_dict[ky]
+            rep_dict[variableMap[ky]] = overwrite_value
         elif isinstance(ky, _SetData):
             # already handled
             pass
@@ -1206,8 +1447,12 @@ def latex_printer(
             pass
         else:
             raise ValueError(
-                'The latex_component_map object has a key of invalid type: %s' % (str(ky))
+                'The overwrite_dict object has a key of invalid type: %s' % (str(ky))
             )
+
+    if not use_smart_variables:
+        for ky, vl in rep_dict.items():
+            rep_dict[ky] = vl.replace('_', '\\_')
 
     label_rep_dict = copy.deepcopy(rep_dict)
     for ky, vl in label_rep_dict.items():
@@ -1221,7 +1466,6 @@ def latex_printer(
             if '\\label{' in splitLines[i]:
                 epr, lbl = splitLines[i].split('\\label{')
                 epr = multiple_replace(epr, rep_dict)
-                # rep_dict[ky] = vl.replace('_', '\\_')
                 lbl = multiple_replace(lbl, label_rep_dict)
                 splitLines[i] = epr + '\\label{' + lbl
 
@@ -1243,7 +1487,8 @@ def latex_printer(
 
     pstr = '\n'.join(finalLines)
 
-    if write_object is not None:
+    # optional write to output file
+    if filename is not None:
         fstr = ''
         fstr += '\\documentclass{article} \n'
         fstr += '\\usepackage{amsmath} \n'
@@ -1251,18 +1496,11 @@ def latex_printer(
         fstr += '\\usepackage{dsfont} \n'
         fstr += '\\allowdisplaybreaks \n'
         fstr += '\\begin{document} \n'
-        fstr += pstr + '\n'
+        fstr += pstr
         fstr += '\\end{document} \n'
-
-    # optional write to output file
-    if isinstance(write_object, (io.TextIOWrapper, io.StringIO)):
-        write_object.write(fstr)
-    elif isinstance(write_object,str):
-        f = open(write_object, 'w')
+        f = open(filename, 'w')
         f.write(fstr)
         f.close()
-    else:
-        raise ValueError('Invalid type %s encountered when parsing the write_object.  Must be a StringIO, FileIO, or valid filename string')
 
     # return the latex string
     return pstr
