@@ -1007,13 +1007,9 @@ class PyROS(object):
                 ):
                     load_final_solution(model_data, pyros_soln.master_soln, config)
 
-                # === Return time info
-                model_data.total_cpu_time = get_main_elapsed_time(model_data.timing)
-                iterations = pyros_soln.total_iters + 1
-
-                # === Return config to user
-                return_soln.config = config
-                # Report the negative of the objective value if it was originally maximize, since we use the minimize form in the algorithm
+                # Report the negative of the objective value if it was
+                # originally maximize, since we use the minimize form
+                # in the algorithm
                 if next(model.component_data_objects(Objective)).sense == maximize:
                     negation = -1
                 else:
@@ -1029,9 +1025,7 @@ class PyROS(object):
                 return_soln.pyros_termination_condition = (
                     pyros_soln.pyros_termination_condition
                 )
-
-                return_soln.time = model_data.total_cpu_time
-                return_soln.iterations = iterations
+                return_soln.iterations = pyros_soln.total_iters + 1
 
                 # === Remove util block
                 model.del_component(model_data.util_block)
@@ -1039,12 +1033,14 @@ class PyROS(object):
                 del pyros_soln.util_block
                 del pyros_soln.working_model
             else:
+                return_soln.final_objective_value = None
                 return_soln.pyros_termination_condition = (
                     pyrosTerminationCondition.robust_infeasible
                 )
-                return_soln.final_objective_value = None
-                return_soln.time = get_main_elapsed_time(model_data.timing)
                 return_soln.iterations = 0
+
+        return_soln.config = config
+        return_soln.time = model_data.timing.get_main_elapsed_time()
 
         # log termination-related messages
         config.progress_logger.info(return_soln.pyros_termination_condition.message)
