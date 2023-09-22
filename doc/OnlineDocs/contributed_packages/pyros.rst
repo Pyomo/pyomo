@@ -787,10 +787,15 @@ for a basic tutorial, see the :doc:`logging HOWTO <python:howto/logging>`.
        * Iteration log table
        * Termination details: message, timing breakdown, summary of statistics
    * - :py:obj:`logging.DEBUG`
-     - * Termination outcomes (and/or summary of statistics)
-         for every subproblem
+     - * Termination outcomes and summary of statistics for
+         every master feasility, master, and DR polishing problem
+       * Progress updates for the separation procedure
+       * Separation subproblem initial point infeasibilities
        * Summary of separation loop outcomes: performance constraints
-         violated, uncertain parameter value added to master
+         violated, uncertain parameter scenario added to the
+         master problem
+       * Uncertain parameter scenarios added to the master problem
+         thus far
 
 An example of an output log produced through the default PyROS
 progress logger is shown in
