@@ -1032,19 +1032,16 @@ class PyROS(object):
                 ):
                     load_final_solution(model_data, pyros_soln.master_soln, config)
 
-                # Report the negative of the objective value if it was
-                # originally maximize, since we use the minimize form
-                # in the algorithm
-                if next(model.component_data_objects(Objective)).sense == maximize:
-                    negation = -1
-                else:
-                    negation = 1
+                # account for sense of the original model objective
+                # when reporting the final PyROS (master) objective,
+                # since maximization objective is changed to
+                # minimization objective during preprocessing
                 if config.objective_focus == ObjectiveType.nominal:
-                    return_soln.final_objective_value = negation * value(
+                    return_soln.final_objective_value = active_obj.sense * value(
                         pyros_soln.master_soln.master_model.obj
                     )
                 elif config.objective_focus == ObjectiveType.worst_case:
-                    return_soln.final_objective_value = negation * value(
+                    return_soln.final_objective_value = active_obj.sense * value(
                         pyros_soln.master_soln.master_model.zeta
                     )
                 return_soln.pyros_termination_condition = (
