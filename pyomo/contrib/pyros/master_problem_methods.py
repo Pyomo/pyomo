@@ -235,6 +235,11 @@ def solve_master_feasibility_problem(model_data, config):
     """
     model = construct_master_feasibility_problem(model_data, config)
 
+    active_obj = next(model.component_data_objects(Objective, active=True))
+    config.progress_logger.debug(
+        f"Initial master feasibility objective (total slack): {value(active_obj)}"
+    )
+
     if config.solve_master_globally:
         solver = config.global_solver
     else:
@@ -274,6 +279,18 @@ def solve_master_feasibility_problem(model_data, config):
     }
     if results.solver.termination_condition in feasible_terminations:
         model.solutions.load_from(results)
+        config.progress_logger.debug(
+            f"Final master feasibility objective (total slack): {value(active_obj)}"
+        )
+    else:
+        config.progress_logger.warning(
+            "Could not successfully solve master feasibility problem "
+            f" of iteration {model_data.iteration} with primary subordinate "
+            f"{'global' if config.solve_master_globally else 'local'} solver "
+            "to acceptable level. "
+            f"Termination stats:\n{results.solver}"
+            "Maintaining unoptimized point for master problem initialization."
+        )
 
     # load master feasibility point to master model
     for master_var, feas_var in model_data.feasibility_problem_varmap:
