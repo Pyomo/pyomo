@@ -796,6 +796,40 @@ class PyROS(object):
         logger.log(msg="https://github.com/Pyomo/pyomo/issues/new/choose", **log_kwargs)
         logger.log(msg="=" * self._LOG_LINE_LENGTH, **log_kwargs)
 
+    def _log_config(self, logger, config, exclude_options=None, **log_kwargs):
+        """
+        Log PyROS solver options.
+
+        Parameters
+        ----------
+        logger : logging.Logger
+            Logger for the solver options.
+        config : ConfigDict
+            PyROS solver options.
+        exclude_options : None or iterable of str, optional
+            Options (keys of the ConfigDict) to exclude from
+            logging. If `None` passed, then the names of the
+            required arguments to ``self.solve()`` are skipped.
+        **log_kwargs : dict, optional
+            Keyword arguments to each statement of ``logger.log()``.
+        """
+        # log solver options
+        if exclude_options is None:
+            exclude_options = [
+                "first_stage_variables",
+                "second_stage_variables",
+                "uncertain_params",
+                "uncertainty_set",
+                "local_solver",
+                "global_solver",
+            ]
+
+        logger.log(msg="Solver options:", **log_kwargs)
+        for key, val in config.items():
+            if key not in exclude_options:
+                logger.log(msg=f" {key}={val!r}", **log_kwargs)
+        logger.log(msg="-" * self._LOG_LINE_LENGTH, **log_kwargs)
+
     def solve(
         self,
         model,
@@ -883,23 +917,14 @@ class PyROS(object):
             is_main_timer=True,
         ):
             # output intro and disclaimer
-            self._log_intro(config.progress_logger, level=logging.INFO)
-            self._log_disclaimer(config.progress_logger, level=logging.INFO)
-
-            # log solver options
-            excl_from_config_display = [
-                "first_stage_variables",
-                "second_stage_variables",
-                "uncertain_params",
-                "uncertainty_set",
-                "local_solver",
-                "global_solver",
-            ]
-            config.progress_logger.info("Solver options:")
-            for key, val in config.items():
-                if key not in excl_from_config_display:
-                    config.progress_logger.info(f" {key}={val!r}")
-            config.progress_logger.info("-" * self._LOG_LINE_LENGTH)
+            self._log_intro(logger=config.progress_logger, level=logging.INFO)
+            self._log_disclaimer(logger=config.progress_logger, level=logging.INFO)
+            self._log_config(
+                logger=config.progress_logger,
+                config=config,
+                exclude_options=None,
+                level=logging.INFO,
+            )
 
             # begin preprocessing
             config.progress_logger.info("Preprocessing...")
