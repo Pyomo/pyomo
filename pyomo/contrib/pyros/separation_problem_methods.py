@@ -770,6 +770,8 @@ def perform_separation_loop(model_data, config, solve_globally):
             # violating separation problem solution now chosen.
             # exit loop
             break
+        else:
+            config.progress_logger.debug("No violated performance constraints found.")
 
     return SeparationLoopResults(
         solver_call_results=all_solve_call_results,
