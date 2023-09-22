@@ -537,7 +537,7 @@ def get_worst_discrete_separation_solution(
 
 
 def get_con_name_repr(
-    separation_model, perf_con, with_orig_name=True, with_obj_name=True
+    separation_model, con, with_orig_name=True, with_obj_name=True
 ):
     """
     Get string representation of performance constraint
@@ -548,9 +548,8 @@ def get_con_name_repr(
     ----------
     separation_model : ConcreteModel
         Separation model.
-    perf_con : ScalarConstraint or ConstraintData
-        Performance constraint for which to get the
-        representation
+    con : ScalarConstraint or ConstraintData
+        Constraint for which to get the representation.
     with_orig_name : bool, optional
         If constraint was added during construction of the
         separation problem (i.e. if the constraint is a member of
@@ -559,7 +558,8 @@ def get_con_name_repr(
         `perf_con` was created.
     with_obj_name : bool, optional
         Include name of separation model objective to which
-        performance constraint is mapped.
+        constraint is mapped. Applicable only to performance
+        constraints of the separation problem.
 
     Returns
     -------
@@ -572,18 +572,18 @@ def get_con_name_repr(
         # check performance constraint was not added
         # at construction of separation problem
         orig_con = separation_model.util.map_new_constraint_list_to_original_con.get(
-            perf_con, perf_con
+            con, con
         )
-        if orig_con is not perf_con:
+        if orig_con is not con:
             qual_strs.append(f"originally {orig_con.name!r}")
     if with_obj_name:
         objectives_map = separation_model.util.map_obj_to_constr
-        separation_obj = objectives_map[perf_con]
+        separation_obj = objectives_map[con]
         qual_strs.append(f"mapped to objective {separation_obj.name!r}")
 
-    final_qual_str = f"({', '.join(qual_strs)})" if qual_strs else ""
+    final_qual_str = f" ({', '.join(qual_strs)})" if qual_strs else ""
 
-    return f"{perf_con.name!r} {final_qual_str}"
+    return f"{con.name!r}{final_qual_str}"
 
 
 def perform_separation_loop(model_data, config, solve_globally):
@@ -854,7 +854,7 @@ def evaluate_performance_constraint_violations(
     return (violating_param_realization, scaled_violations, constraint_violated)
 
 
-def initialize_separation(model_data, config):
+def initialize_separation(perf_con_to_maximize, model_data, config):
     """
     Initialize separation problem variables, and fix all first-stage
     variables to their corresponding values from most recent
@@ -862,6 +862,9 @@ def initialize_separation(model_data, config):
 
     Parameters
     ----------
+    perf_con_to_maximize : ConstraintData
+        Performance constraint whose violation is to be maximized
+        for the separation problem of interest.
     model_data : SeparationProblemData
         Separation problem data.
     config : ConfigDict
@@ -943,13 +946,35 @@ def initialize_separation(model_data, config):
             "All h(x,q) type constraints must be deactivated in separation."
         )
 
-    # check: initial point feasible?
+    # confirm the initial point is feasible for cases where
+    # we expect it to be (i.e. non-discrete uncertainty sets).
+    # otherwise, log the violated constraints
+    tol = ABS_CON_CHECK_FEAS_TOL
+    perf_con_name_repr = get_con_name_repr(
+        separation_model=model_data.separation_model,
+        con=perf_con_to_maximize,
+        with_orig_name=True,
+        with_obj_name=True,
+    )
+    uncertainty_set_is_discrete = (
+        config.uncertainty_set.geometry
+        is Geometry.DISCRETE_SCENARIOS
+    )
     for con in sep_model.component_data_objects(Constraint, active=True):
-        lb, val, ub = value(con.lb), value(con.body), value(con.ub)
-        lb_viol = val < lb - ABS_CON_CHECK_FEAS_TOL if lb is not None else False
-        ub_viol = val > ub + ABS_CON_CHECK_FEAS_TOL if ub is not None else False
-        if lb_viol or ub_viol:
-            config.progress_logger.debug(con.name, lb, val, ub)
+        lslack, uslack = con.lslack(), con.uslack()
+        if (lslack < -tol or uslack < -tol) and not uncertainty_set_is_discrete:
+            con_name_repr = get_con_name_repr(
+                separation_model=model_data.separation_model,
+                con=con,
+                with_orig_name=True,
+                with_obj_name=False,
+            )
+            config.progress_logger.debug(
+                f"Initial point for separation of performance constraint "
+                f"{perf_con_name_repr} violates the model constraint "
+                f"{con_name_repr} by more than {tol}. "
+                f"(lslack={con.lslack()}, uslack={con.uslack()})"
+            )
 
 
 locally_acceptable = {tc.optimal, tc.locallyOptimal, tc.globallyOptimal}
@@ -1000,14 +1025,14 @@ def solver_call_separation(
     # get name of constraint for loggers
     con_name_repr = get_con_name_repr(
         separation_model=nlp_model,
-        perf_con=perf_con_to_maximize,
+        con=perf_con_to_maximize,
         with_orig_name=True,
         with_obj_name=True,
     )
     solve_mode = "global" if solve_globally else "local"
 
     # === Initialize separation problem; fix first-stage variables
-    initialize_separation(model_data, config)
+    initialize_separation(perf_con_to_maximize, model_data, config)
 
     separation_obj.activate()
 
