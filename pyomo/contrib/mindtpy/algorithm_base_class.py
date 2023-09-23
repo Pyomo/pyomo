@@ -1618,6 +1618,7 @@ class _MindtPyAlgorithm(object):
         # setup main problem
         self.setup_main()
         mip_args = self.set_up_mip_solver()
+        update_solver_timelimit(self.mip_opt, config.mip_solver, self.timing, config)
 
         try:
             main_mip_results = self.mip_opt.solve(
@@ -1675,6 +1676,9 @@ class _MindtPyAlgorithm(object):
         config = self.config
         self.setup_fp_main()
         mip_args = self.set_up_mip_solver()
+        update_solver_timelimit(
+                self.mip_opt, config.mip_solver, self.timing, config
+            )
 
         main_mip_results = self.mip_opt.solve(
             self.mip,
