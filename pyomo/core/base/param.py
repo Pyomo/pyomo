@@ -33,7 +33,7 @@ from pyomo.core.base.indexed_component import (
 )
 from pyomo.core.base.initializer import Initializer
 from pyomo.core.base.misc import apply_indexed_rule, apply_parameterized_indexed_rule
-from pyomo.core.base.set import Reals, _AnySet
+from pyomo.core.base.set import Reals, _AnySet, SetInitializer
 from pyomo.core.base.units_container import units
 from pyomo.core.expr import GetItemExpression
 
@@ -306,7 +306,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
 
     def __init__(self, *args, **kwd):
         _init = self._pop_from_kwargs('Param', kwd, ('rule', 'initialize'), NOTSET)
-        self.domain = self._pop_from_kwargs('Param', kwd, ('domain', 'within'))
+        _domain_rule = self._pop_from_kwargs('Param', kwd, ('domain', 'within'))
         self._validate = kwd.pop('validate', None)
         self._mutable = kwd.pop('mutable', Param.DefaultMutable)
         self._default_val = kwd.pop('default', Param.NoValue)
@@ -319,8 +319,13 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         kwd.setdefault('ctype', Param)
         IndexedComponent.__init__(self, *args, **kwd)
 
-        if self.domain is None:
+        # We don't support per-index param domains, so we only need to
+        # support constant initializers.
+        # (after IndexedComponent.__init__ so we can call parent_block())
+        if _domain_rule is None:
             self.domain = _ImplicitAny(owner=self, name='Any')
+        else:
+            self.domain = SetInitializer(_domain_rule)(self.parent_block(), None)
         # After IndexedComponent.__init__ so we can call is_indexed().
         self._rule = Initializer(
             _init,
@@ -854,8 +859,8 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
 
 class ScalarParam(_ParamData, Param):
     def __init__(self, *args, **kwds):
-        Param.__init__(self, *args, **kwds)
         _ParamData.__init__(self, component=self)
+        Param.__init__(self, *args, **kwds)
         self._index = UnindexedComponent_index
 
     #
