@@ -142,12 +142,7 @@ class _BaseTestModel(object):
             (suffix, getattr(model, suffix)) for suffix in kwds.pop('suffixes', [])
         )
         for suf in suffixes.values():
-            if isinstance(self.model, IBlock):
-                assert isinstance(suf, pmo.suffix)
-                assert suf.import_enabled
-            else:
-                assert isinstance(suf, Suffix)
-                assert suf.import_enabled()
+            assert suf.import_enabled()
 
         with open(filename, 'w') as f:
             #
@@ -197,12 +192,7 @@ class _BaseTestModel(object):
         )
         exclude = kwds.pop('exclude_suffixes', set())
         for suf in suffixes.values():
-            if isinstance(self.model, IBlock):
-                assert isinstance(suf, pmo.suffix)
-                assert suf.import_enabled
-            else:
-                assert isinstance(suf, Suffix)
-                assert suf.import_enabled()
+            assert suf.import_enabled()
         solution = None
         error_str = (
             "Difference in solution for {0}.{1}:\n\tBaseline - {2}\n\tCurrent - {3}"

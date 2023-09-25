@@ -141,7 +141,12 @@ class QuadraticRepn(object):
             return
 
         mult = other.multiplier
-        self.constant += mult * other.constant
+        if not mult:
+            # 0 * other, so there is nothing to add/change about
+            # self.  We can just exit now.
+            return
+        if other.constant:
+            self.constant += mult * other.constant
         if other.linear:
             _merge_dict(self.linear, mult, other.linear)
         if other.quadratic:
@@ -217,7 +222,6 @@ def _handle_product_nonlinear(visitor, node, arg1, arg2):
     # We are multiplying (A + Bx + Cx^2 + D(x)) * (A + Bx + Cx^2 + Dx))
     _, x1 = arg1
     _, x2 = arg2
-    ans = visitor.Result()
     ans.multiplier = x1.multiplier * x2.multiplier
     x1.multiplier = x2.multiplier = 1
     # x1.const * x2.const [AA]
@@ -269,7 +273,7 @@ def _handle_product_nonlinear(visitor, node, arg1, arg2):
         x1.quadratic = None
     x2.linear = {}
     # [BC] + [BD]
-    if x1_lin:
+    if x1_lin and (x2.nonlinear is not None or x2.quadratic):
         x1.linear = x1_lin
         ans.nonlinear += x1.to_expression(visitor) * x2.to_expression(visitor)
     # [AD]
@@ -289,6 +293,9 @@ _exit_node_handlers[ProductExpression].update(
         (_QUADRATIC, _GENERAL): _handle_product_nonlinear,
         # Replace handler from the linear walker
         (_LINEAR, _LINEAR): _handle_product_linear_linear,
+        (_GENERAL, _GENERAL): _handle_product_nonlinear,
+        (_GENERAL, _LINEAR): _handle_product_nonlinear,
+        (_LINEAR, _GENERAL): _handle_product_nonlinear,
     }
 )
 
