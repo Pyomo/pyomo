@@ -436,7 +436,7 @@ class _GeneralVarData(_VarData):
     @domain.setter
     def domain(self, domain):
         try:
-            self._domain = SetInitializer(domain)(None, None)
+            self._domain = SetInitializer(domain)(self.parent_block(), self.index())
         except:
             logger.error(
                 "%s is not a valid domain. Variable domains must be an "
@@ -1010,13 +1010,27 @@ class IndexedVar(Var):
     @domain.setter
     def domain(self, domain):
         """Sets the domain for all variables in this container."""
-        # TODO: Ideally we would pass valid arguments to the initializer
-        # that we just created.  However at the moment, getting the
-        # index() is expensive (see #1228).  As a result, for the moment
-        # we will only support constant initializers
-        domain = SetInitializer(domain)(None, None)
-        for vardata in self.values():
-            vardata.domain = domain
+        try:
+            domain_rule = SetInitializer(domain)
+            if domain_rule.constant():
+                domain = domain_rule(self.parent_block(), None)
+                for vardata in self.values():
+                    vardata._domain = domain
+            elif domain_rule.contains_indices():
+                parent = self.parent_block()
+                for index in domain_rule.indices():
+                    self[index]._domain = domain_rule(parent, index)
+            else:
+                parent = self.parent_block()
+                for index, vardata in self.items():
+                    vardata._domain = domain_rule(parent, index)
+        except:
+            logger.error(
+                "%s is not a valid domain. Variable domains must be an "
+                "instance of a Pyomo Set or convertible to a Pyomo Set." % (domain,),
+                extra={'id': 'E2001'},
+            )
+            raise
 
     # Because CP supports indirection [the ability to index objects by
     # another (inter) Var] for certain types (including Var), we will
