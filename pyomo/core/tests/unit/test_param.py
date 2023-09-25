@@ -1516,6 +1516,25 @@ q : Size=0, Index=None, Domain=Any, Default=None, Mutable=False
         """.strip(),
         )
 
+    @unittest.skipUnless(pint_available, "units test requires pint module")
+    def test_units_and_mutability(self):
+        m = ConcreteModel()
+        with LoggingIntercept() as LOG:
+            m.p = Param(units=units.g)
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertTrue(m.p.mutable)
+        with LoggingIntercept() as LOG:
+            m.q = Param(units=units.g, mutable=True)
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertTrue(m.q.mutable)
+        with LoggingIntercept() as LOG:
+            m.r = Param(units=units.g, mutable=False)
+        self.assertEqual(
+            LOG.getvalue(),
+            "Params with units must be mutable.  Converting Param 'r' to mutable.\n"
+        )
+        self.assertTrue(m.q.mutable)
+
     def test_scalar_get_mutable_when_not_present(self):
         m = ConcreteModel()
         m.p = Param(mutable=True)
