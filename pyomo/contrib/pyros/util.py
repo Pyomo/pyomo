@@ -339,8 +339,7 @@ class PreformattedLogger(logging.Logger):
         `logging.CRITICAL`.
         """
         return super(PreformattedLogger, self).critical(
-            Preformatted(msg % args if args else msg),
-            **kwargs,
+            Preformatted(msg % args if args else msg), **kwargs
         )
 
     def error(self, msg, *args, **kwargs):
@@ -349,8 +348,7 @@ class PreformattedLogger(logging.Logger):
         `logging.ERROR`.
         """
         return super(PreformattedLogger, self).error(
-            Preformatted(msg % args if args else msg),
-            **kwargs,
+            Preformatted(msg % args if args else msg), **kwargs
         )
 
     def warning(self, msg, *args, **kwargs):
@@ -359,8 +357,7 @@ class PreformattedLogger(logging.Logger):
         `logging.WARNING`.
         """
         return super(PreformattedLogger, self).warning(
-            Preformatted(msg % args if args else msg),
-            **kwargs,
+            Preformatted(msg % args if args else msg), **kwargs
         )
 
     def info(self, msg, *args, **kwargs):
@@ -369,8 +366,7 @@ class PreformattedLogger(logging.Logger):
         `logging.INFO`.
         """
         return super(PreformattedLogger, self).info(
-            Preformatted(msg % args if args else msg),
-            **kwargs,
+            Preformatted(msg % args if args else msg), **kwargs
         )
 
     def debug(self, msg, *args, **kwargs):
@@ -379,8 +375,7 @@ class PreformattedLogger(logging.Logger):
         `logging.DEBUG`.
         """
         return super(PreformattedLogger, self).debug(
-            Preformatted(msg % args if args else msg),
-            **kwargs,
+            Preformatted(msg % args if args else msg), **kwargs
         )
 
     def log(self, level, msg, *args, **kwargs):
@@ -389,9 +384,7 @@ class PreformattedLogger(logging.Logger):
         severity `level`.
         """
         return super(PreformattedLogger, self).log(
-            level,
-            Preformatted(msg % args if args else msg),
-            **kwargs,
+            level, Preformatted(msg % args if args else msg), **kwargs
         )
 
 
