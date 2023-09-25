@@ -1531,7 +1531,7 @@ q : Size=0, Index=None, Domain=Any, Default=None, Mutable=False
             m.r = Param(units=units.g, mutable=False)
         self.assertEqual(
             LOG.getvalue(),
-            "Params with units must be mutable.  Converting Param 'r' to mutable.\n"
+            "Params with units must be mutable.  Converting Param 'r' to mutable.\n",
         )
         self.assertTrue(m.q.mutable)
 
