@@ -1533,7 +1533,7 @@ q : Size=0, Index=None, Domain=Any, Default=None, Mutable=False
             LOG.getvalue(),
             "Params with units must be mutable.  Converting Param 'r' to mutable.\n",
         )
-        self.assertTrue(m.q.mutable)
+        self.assertTrue(m.r.mutable)
 
     def test_scalar_get_mutable_when_not_present(self):
         m = ConcreteModel()
