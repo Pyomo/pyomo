@@ -24,6 +24,7 @@ if all(SolverFactory(s).available(exception_flag=False) for s in required_solver
 else:
     subsolvers_available = False
 
+
 @unittest.skipIf(
     not subsolvers_available,
     'Required subsolvers %s are not available' % (required_solvers,),
@@ -31,15 +32,8 @@ else:
 @unittest.skipIf(
     not differentiate_available, 'Symbolic differentiation is not available'
 )
-@unittest.skipIf(
-    not numpy_available,
-    'Required numpy %s is not available',
-)
-@unittest.skipIf(
-    not scipy_available,
-    'Required scipy %s is not available',
-)
-
+@unittest.skipIf(not numpy_available, 'Required numpy %s is not available')
+@unittest.skipIf(not scipy_available, 'Required scipy %s is not available')
 class TestMindtPy(unittest.TestCase):
     """Tests for the MindtPy solver plugin."""
 
