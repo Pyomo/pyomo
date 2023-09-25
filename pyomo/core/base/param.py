@@ -313,6 +313,15 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         self._dense_initialize = kwd.pop('initialize_as_dense', False)
         self._units = kwd.pop('units', None)
 
+        if self._mutable is None:
+            if self._units is None:
+                self._mutable = Param.DefaultMutable
+            else:
+                # Params with units *must* be mutable, so that
+                # expression simplification does not remove units from
+                # the expression.
+                self._mutable = True
+
         kwd.setdefault('ctype', Param)
         IndexedComponent.__init__(self, *args, **kwd)
 
@@ -768,14 +777,12 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
 
         if self._units is not None:
             self._units = units.get_units(self._units)
-            if self._mutable is not None and not self._mutable:
+            if not self._mutable:
                 logger.warning(
                     "Params with units must be mutable.  "
                     f"Converting Param '{self.name}' to mutable."
                 )
-            self._mutable = True
-        elif self._mutable is None:
-            self._mutable = Param.DefaultMutable
+                self._mutable = True
 
         try:
             #
