@@ -66,7 +66,7 @@ class ROSolveResults(object):
         )
         for attr_name, (attr_desc, fmt_str) in attr_name_format_dict.items():
             val = getattr(self, attr_name)
-            val_str = eval(fmt_str)
+            val_str = eval(fmt_str) if val is not None else str(val)
             lines.append(f" {attr_desc:<{attr_desc_pad_length}s} : {val_str}")
 
         return "\n".join(lines)

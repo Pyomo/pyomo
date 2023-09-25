@@ -521,12 +521,9 @@ def pyros_config():
                 Logger (or name thereof) used for reporting PyROS solver
                 progress. If a `str` is specified, then ``progress_logger``
                 is cast to ``logging.getLogger(progress_logger)``.
-                In the default case, we also configure the logger
-                as follows:
-                set ``propagate=False``,
-                set ``level=logging.INFO``,
-                clear all handlers,
-                and add a single ``StreamHandler`` with default options.
+                In the default case, `progress_logger` is set to
+                a :class:`pyomo.contrib.pyros.util.PreformattedLogger`
+                object of level ``logging.INFO``.
                 """
             ),
             is_optional=True,

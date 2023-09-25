@@ -42,6 +42,7 @@ import logging
 from pprint import pprint
 import math
 from pyomo.common.timing import HierarchicalTimer
+from pyomo.common.log import Preformatted
 
 
 # Tolerances used in the code
@@ -323,34 +324,75 @@ def revert_solver_max_time_adjustment(
                     del solver.options[options_key]
 
 
-def setup_default_pyros_logger():
+class PreformattedLogger(logging.Logger):
     """
-    Setup default PyROS logger.
-
-    Returns
-    -------
-    logging.Logger
-        Default PyROS logger. Settings:
-
-        - ``name=DEFAULT_LOGGER_NAME``
-        - ``propagate=False``
-        - All handlers cleared, and a single ``StreamHandler``
-          (with default settings) added.
+    A specialized logger object designed to cast log messages
+    to Pyomo `Preformatted` objects prior to logging the messages.
+    Useful for circumventing the formatters of the standard Pyomo
+    logger in the event an instance is a descendant of the Pyomo
+    logger.
     """
-    logger = logging.getLogger(DEFAULT_LOGGER_NAME)
 
-    # avoid possible influence of Pyomo logger customizations
-    logger.propagate = False
+    def critical(self, msg, *args, **kwargs):
+        """
+        Preformat and log ``msg % args`` with severity
+        `logging.CRITICAL`.
+        """
+        return super(PreformattedLogger, self).critical(
+            Preformatted(msg % args if args else msg),
+            **kwargs,
+        )
 
-    # clear handlers, want just a single stream handler
-    logger.handlers.clear()
-    ch = logging.StreamHandler()
-    logger.addHandler(ch)
+    def error(self, msg, *args, **kwargs):
+        """
+        Preformat and log ``msg % args`` with severity
+        `logging.ERROR`.
+        """
+        return super(PreformattedLogger, self).error(
+            Preformatted(msg % args if args else msg),
+            **kwargs,
+        )
 
-    # info level logger
-    logger.setLevel(logging.INFO)
+    def warning(self, msg, *args, **kwargs):
+        """
+        Preformat and log ``msg % args`` with severity
+        `logging.WARNING`.
+        """
+        return super(PreformattedLogger, self).warning(
+            Preformatted(msg % args if args else msg),
+            **kwargs,
+        )
 
-    return logger
+    def info(self, msg, *args, **kwargs):
+        """
+        Preformat and log ``msg % args`` with severity
+        `logging.INFO`.
+        """
+        return super(PreformattedLogger, self).info(
+            Preformatted(msg % args if args else msg),
+            **kwargs,
+        )
+
+    def debug(self, msg, *args, **kwargs):
+        """
+        Preformat and log ``msg % args`` with severity
+        `logging.DEBUG`.
+        """
+        return super(PreformattedLogger, self).debug(
+            Preformatted(msg % args if args else msg),
+            **kwargs,
+        )
+
+    def log(self, level, msg, *args, **kwargs):
+        """
+        Preformat and log ``msg % args`` with integer
+        severity `level`.
+        """
+        return super(PreformattedLogger, self).log(
+            level,
+            Preformatted(msg % args if args else msg),
+            **kwargs,
+        )
 
 
 def a_logger(str_or_logger):
@@ -367,18 +409,27 @@ def a_logger(str_or_logger):
     logging.Logger
         If `str_or_logger` is of type `logging.Logger`,then
         `str_or_logger` is returned.
-        Otherwise, a logger with name `str_or_logger`, INFO level,
-        ``propagate=False``, and handlers reduced to just a single
-        stream handler, is returned.
+        Otherwise, ``logging.getLogger(str_or_logger)``
+        is returned. In the event `str_or_logger` is
+        the name of the default PyROS logger, the logger level
+        is set to `logging.INFO`, and a `PreformattedLogger`
+        instance is returned in lieu of a standard `Logger`
+        instance.
     """
     if isinstance(str_or_logger, logging.Logger):
-        return str_or_logger
+        logger = logging.getLogger(str_or_logger.name)
     else:
         if str_or_logger == DEFAULT_LOGGER_NAME:
-            logger = setup_default_pyros_logger()
+            # default logger: INFO level, with preformatted messages
+            current_logger_class = logging.getLoggerClass()
+            logging.setLoggerClass(PreformattedLogger)
+            logger = logging.getLogger(str_or_logger)
+            logger.setLevel(logging.INFO)
+            logging.setLoggerClass(current_logger_class)
         else:
             logger = logging.getLogger(str_or_logger)
-        return logger
+
+    return logger
 
 
 def ValidEnum(enum_class):
