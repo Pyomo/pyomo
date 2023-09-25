@@ -12,10 +12,12 @@
 """Tests for the MindtPy solver."""
 from pyomo.core.expr.calculus.diff_with_sympy import differentiate_available
 import pyomo.common.unittest as unittest
-from pyomo.contrib.mindtpy.tests.MINLP_simple import SimpleMINLP as SimpleMINLP
 from pyomo.environ import SolverFactory, value, maximize
 from pyomo.opt import TerminationCondition
 from pyomo.common.dependencies import numpy_available, scipy_available
+@unittest.skipIf(not numpy_available, 'Required numpy %s is not available')
+@unittest.skipIf(not scipy_available, 'Required scipy %s is not available')
+from pyomo.contrib.mindtpy.tests.MINLP_simple import SimpleMINLP as SimpleMINLP
 
 model_list = [SimpleMINLP(grey_box=True)]
 required_solvers = ('cyipopt', 'glpk')
@@ -32,8 +34,7 @@ else:
 @unittest.skipIf(
     not differentiate_available, 'Symbolic differentiation is not available'
 )
-@unittest.skipIf(not numpy_available, 'Required numpy %s is not available')
-@unittest.skipIf(not scipy_available, 'Required scipy %s is not available')
+
 class TestMindtPy(unittest.TestCase):
     """Tests for the MindtPy solver plugin."""
 
