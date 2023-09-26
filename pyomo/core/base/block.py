@@ -1975,7 +1975,8 @@ Components must now specify their rules explicitly using 'rule=' keywords."""
                     "Filename '%s' likely does not match specified "
                     "file format (%s)" % (filename, format)
                 )
-        problem_writer = WriterFactory(format, int_marker=int_marker)
+        int_marker_kwds = {"int_marker": int_marker} if int_marker else {}
+        problem_writer = WriterFactory(format, **int_marker_kwds)
         if problem_writer is None:
             raise ValueError(
                 "Cannot write model in format '%s': no model "
