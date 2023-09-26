@@ -1934,7 +1934,14 @@ Components must now specify their rules explicitly using 'rule=' keywords."""
         Model object."""
         return [ProblemFormat.pyomo]
 
-    def write(self, filename=None, format=None, solver_capability=None, io_options={}):
+    def write(
+        self,
+        filename=None,
+        format=None,
+        solver_capability=None,
+        io_options={},
+        int_marker=False,
+    ):
         """
         Write the model to a file, with a given format.
         """
@@ -1968,7 +1975,7 @@ Components must now specify their rules explicitly using 'rule=' keywords."""
                     "Filename '%s' likely does not match specified "
                     "file format (%s)" % (filename, format)
                 )
-        problem_writer = WriterFactory(format)
+        problem_writer = WriterFactory(format, int_marker=int_marker)
         if problem_writer is None:
             raise ValueError(
                 "Cannot write model in format '%s': no model "
