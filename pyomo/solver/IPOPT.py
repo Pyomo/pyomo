@@ -78,8 +78,7 @@ class IPOPT(SolverBase):
             universal_newlines=True,
         )
         version = results.stdout.splitlines()[0]
-        version = version.split(' ')[1]
-        version = version.strip()
+        version = version.split(' ')[1].strip()
         version = tuple(int(i) for i in version.split('.'))
         return version
 

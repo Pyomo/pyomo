@@ -293,6 +293,7 @@ def parse_sol_file(file, results):
     while i < number_of_vars:
         line = file.readline()
         variables.append(float(line))
+    # Parse the exit code line and capture it
     exit_code = [0, 0]
     line = file.readline()
     if line and ('objno' in line):
@@ -306,8 +307,34 @@ def parse_sol_file(file, results):
     # Not sure if next two lines are needed
     # if isinstance(res.solver.message, str):
     #     res.solver.message = res.solver.message.replace(':', '\\x3a')
+    if (exit_code[1] >= 0) and (exit_code[1] <= 99):
+        results.termination_condition = TerminationCondition.convergenceCriteriaSatisfied
+        results.solution_status = SolutionStatus.optimal
+    elif (exit_code[1] >= 100) and (exit_code[1] <= 199):
+        exit_code_message = "Optimal solution indicated, but ERROR LIKELY!"
+        results.termination_condition = TerminationCondition.convergenceCriteriaSatisfied
+        results.solution_status = SolutionStatus.optimal
+        if results.extra_info.solver_message:
+            results.extra_info.solver_message += '; ' + exit_code_message
+        else:
+            results.extra_info.solver_message = exit_code_message
+    elif (exit_code[1] >= 200) and (exit_code[1] <= 299):
+        results.termination_condition = TerminationCondition.locallyInfeasible
+        results.solution_status = SolutionStatus.infeasible
+    elif (exit_code[1] >= 300) and (exit_code[1] <= 399):
+        results.termination_condition = TerminationCondition.unbounded
+        results.solution_status = SolutionStatus.infeasible
+    elif (exit_code[1] >= 400) and (exit_code[1] <= 499):
+        results.solver.termination_condition = TerminationCondition.iterationLimit
+    elif (exit_code[1] >= 500) and (exit_code[1] <= 599):
+        exit_code_message = (
+            "FAILURE: the solver stopped by an error condition "
+            "in the solver routines!"
+        )
+        results.solver.termination_condition = TerminationCondition.error
+        return results
     
-
+    return results
 
 def parse_yaml():
     pass
