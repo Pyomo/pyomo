@@ -530,6 +530,7 @@ class ProblemWriter_mps(AbstractProblemWriter):
                                 f"     MARK{mark_cnt:04d} 'MARKER' 'INTORG'\n"
                             )
                             in_integer_section = True
+                            mark_cnt += 1
                     elif in_integer_section:  # and not vardata.is_integer()
                         output_file.write(
                             f"     MARK{mark_cnt:04d} 'MARKER' 'INTEND'\n"
