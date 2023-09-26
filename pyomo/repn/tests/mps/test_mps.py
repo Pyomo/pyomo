@@ -46,11 +46,14 @@ class TestMPSOrdering(unittest.TestCase):
         return prefix + ".mps.baseline", prefix + ".mps.out"
 
     def _check_baseline(self, model, **kwds):
+        int_marker = kwds.pop("int_marker", False)
         baseline_fname, test_fname = self._get_fnames()
         self._cleanup(test_fname)
         io_options = {"symbolic_solver_labels": True}
         io_options.update(kwds)
-        model.write(test_fname, format="mps", io_options=io_options)
+        model.write(
+            test_fname, format="mps", io_options=io_options, int_marker=int_marker
+        )
 
         self.assertTrue(
             cmp(test_fname, baseline_fname),
@@ -196,7 +199,7 @@ class TestMPSOrdering(unittest.TestCase):
         row_order[model.con4[2]] = -1
         self._check_baseline(model, row_order=row_order)
 
-    def test_knapsack_problem_binary_variable_declaration(self):
+    def test_knapsack_problem_binary_variable_declaration_with_marker(self):
         elements_size = [30, 24, 11, 35, 29, 8, 31, 18]
         elements_weight = [3, 2, 2, 4, 5, 4, 3, 1]
         capacity = 60
@@ -224,9 +227,9 @@ class TestMPSOrdering(unittest.TestCase):
             name="const",
         )
 
-        self._check_baseline(model)
+        self._check_baseline(model, int_marker=True)
 
-    def test_integer_variable_declaration(self):
+    def test_integer_variable_declaration_with_marker(self):
         model = ConcreteModel("Example-mix-integer-linear-problem")
 
         # Define the decision variables
@@ -240,7 +243,7 @@ class TestMPSOrdering(unittest.TestCase):
         model.const1 = Constraint(expr=4 * model.x1 + 3 * model.x2 >= 10)
         model.const2 = Constraint(expr=model.x1 + 2 * model.x2 <= 7)
 
-        self._check_baseline(model)
+        self._check_baseline(model, int_marker=True)
 
 
 if __name__ == "__main__":

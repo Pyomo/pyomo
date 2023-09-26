@@ -9,11 +9,11 @@ ROWS
  G  c_l_const1_
  L  c_u_const2_
 COLUMNS
-     INT 'MARKER' 'INTORG'
+     MARK0000 'MARKER' 'INTORG'
      x1 obj 3
      x1 c_l_const1_ 4
      x1 c_u_const2_ 1
-     INTEND 'MARKER' 'INTEND'
+     MARK0000 'MARKER' 'INTEND'
      x2 obj 2
      x2 c_l_const1_ 3
      x2 c_u_const2_ 2
