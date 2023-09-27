@@ -316,14 +316,18 @@ class BeforeChildDispatcher(collections.defaultdict):
     def _before_invalid(visitor, child):
         return False, (
             _CONSTANT,
-            InvalidNumber(child, "'{child}' is not a valid numeric type"),
+            InvalidNumber(
+                child, f"{child!r} ({type(child)}) is not a valid numeric type"
+            ),
         )
 
     @staticmethod
     def _before_string(visitor, child):
         return False, (
             _CONSTANT,
-            InvalidNumber(child, "'{child}' is not a valid numeric type"),
+            InvalidNumber(
+                child, f"{child!r} ({type(child)}) is not a valid numeric type"
+            ),
         )
 
     @staticmethod
@@ -401,8 +405,9 @@ class ExitNodeDispatcher(collections.defaultdict):
             base_key = base_type
         if base_key not in self:
             raise DeveloperError(
-                f"Base expression key '{key}' not found when inserting dispatcher "
-                f"for node '{type(node).__class__}' when walking expression tree."
+                f"Base expression key '{base_key}' not found when inserting dispatcher"
+                f" for node '{type(node).__name__}' when walking expression tree."
+            )
             )
         self[key] = self[base_key]
         return self[key](visitor, node, *data)
