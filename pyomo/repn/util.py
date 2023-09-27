@@ -21,6 +21,7 @@ from pyomo.common.collections import Sequence, ComponentMap
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.errors import DeveloperError, InvalidValueError
 from pyomo.common.numeric_types import (
+    check_if_numeric_type,
     native_types,
     native_numeric_types,
     native_complex_types,
