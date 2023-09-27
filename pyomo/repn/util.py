@@ -395,22 +395,31 @@ class ExitNodeDispatcher(collections.defaultdict):
         elif not node.is_potentially_variable():
             base_type = node.potentially_variable_base_class()
         else:
-            raise DeveloperError(
-                f"Unexpected expression node type '{type(node).__name__}' "
-                "found when walking expression tree."
-            )
+            base_type = node.__class__
         if isinstance(key, tuple):
             base_key = (base_type,) + key[1:]
+            # Only cache handlers for unary, binary and ternary operators
+            cache = len(key) <= 4
         else:
             base_key = base_type
-        if base_key not in self:
+            cache = True
+        if base_key in self:
+            fcn = self[base_key]
+        elif base_type in self:
+            fcn = self[base_type]
+        elif any((k[0] if k.__class__ is tuple else k) is base_type for k in self):
             raise DeveloperError(
                 f"Base expression key '{base_key}' not found when inserting dispatcher"
                 f" for node '{type(node).__name__}' when walking expression tree."
             )
+        else:
+            raise DeveloperError(
+                f"Unexpected expression node type '{type(node).__name__}' "
+                "found when walking expression tree."
             )
-        self[key] = self[base_key]
-        return self[key](visitor, node, *data)
+        if cache:
+            self[key] = fcn
+        return fcn(visitor, node, *data)
 
 
 def apply_node_operation(node, args):
