@@ -20,6 +20,7 @@ from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.contrib.cp.transform.logical_to_disjunctive_program import (
     LogicalToDisjunctive,
 )
+from pyomo.contrib.fbbt.fbbt import _FBBTVisitorLeafToRoot
 from pyomo.core import (
     Block,
     BooleanVar,
@@ -177,6 +178,10 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
 
     def _apply_to_impl(self, instance, **kwds):
         self._process_arguments(instance, **kwds)
+
+        bnds_dict = ComponentMap()
+        self._fbbt_visitor = _FBBTVisitorLeafToRoot(
+            bnds_dict, ignore_fixed=not self._config.assume_fixed_vars_permanent)
 
         # filter out inactive targets and handle case where targets aren't
         # specified.
