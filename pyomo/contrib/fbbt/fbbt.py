@@ -9,9 +9,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from collections import defaultdict
 from pyomo.common.collections import ComponentMap, ComponentSet
 import pyomo.core.expr.numeric_expr as numeric_expr
-from pyomo.core.expr.visitor import ExpressionValueVisitor, identify_variables
+from pyomo.core.expr.visitor import (
+    ExpressionValueVisitor, identify_variables, StreamBasedExpressionVisitor
+)
 from pyomo.core.expr.numvalue import nonpyomo_leaf_types, value
 from pyomo.core.expr.numvalue import is_fixed
 import pyomo.contrib.fbbt.interval as interval
@@ -450,8 +453,10 @@ def _prop_bnds_leaf_to_root_GeneralExpression(node, bnds_dict, feasibility_tol):
         expr_lb, expr_ub = bnds_dict[expr]
     bnds_dict[node] = (expr_lb, expr_ub)
 
+def _prop_no_bounds(node, bnds_dict, feasibility_tol):
+    bnds_dict[node] = (-interval.inf, interval.inf)
 
-_prop_bnds_leaf_to_root_map = dict()
+_prop_bnds_leaf_to_root_map = defaultdict(lambda: _prop_no_bounds)
 _prop_bnds_leaf_to_root_map[
     numeric_expr.ProductExpression
 ] = _prop_bnds_leaf_to_root_ProductExpression
@@ -1031,7 +1036,6 @@ def _prop_bnds_root_to_leaf_GeneralExpression(node, bnds_dict, feasibility_tol):
         expr_lb, expr_ub = bnds_dict[node]
         bnds_dict[node.expr] = (expr_lb, expr_ub)
 
-
 _prop_bnds_root_to_leaf_map = dict()
 _prop_bnds_root_to_leaf_map[
     numeric_expr.ProductExpression
@@ -1083,13 +1087,70 @@ def _check_and_reset_bounds(var, lb, ub):
         ub = orig_ub
     return lb, ub
 
+def _before_constant(visitor, child):
+    visitor.bnds_dict[child] = (child, child)
+    return False, None
 
-class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
+def _before_var(visitor, child):
+    if child in visitor.bnds_dict:
+        return False, None
+    elif child.is_fixed() and not visitor.ignore_fixed:
+        lb = value(child.value)
+        ub = lb
+    else:
+        lb = value(child.lb)
+        ub = value(child.ub)
+        if lb is None:
+            lb = -interval.inf
+        if ub is None:
+            ub = interval.inf
+        if lb - visitor.feasibility_tol > ub:
+            raise InfeasibleConstraintException(
+                'Variable has a lower bound that is larger than its '
+                'upper bound: {0}'.format(
+                    str(child)
+                )
+            )
+    visitor.bnds_dict[child] = (lb, ub)
+    return False, None
+
+def _before_NPV(visitor, child):
+    val = value(child)
+    visitor.bnds_dict[child] = (val, val)
+    return False, None
+
+def _before_other(visitor, child):
+    return True, None
+
+def _before_external_function(visitor, child):
+    # TODO: provide some mechanism for users to provide interval
+    # arithmetic callback functions for general external
+    # functions
+    visitor.bnds_dict[child] = (-interval.inf, interval.inf)
+    return False, None
+
+def _register_new_before_child_handler(visitor, child):
+    handlers = _before_child_handlers
+    child_type = child.__class__
+    if child.is_variable_type():
+        handlers[child_type] = _before_var
+    elif not child.is_potentially_variable():
+        handlers[child_type] = _before_NPV
+    else:
+        handlers[child_type] = _before_other
+    return handlers[child_type](visitor, child)
+
+_before_child_handlers = defaultdict(lambda: _register_new_before_child_handler)
+_before_child_handlers[
+    numeric_expr.ExternalFunctionExpression] = _before_external_function
+for _type in nonpyomo_leaf_types:
+    _before_child_handlers[_type] = _before_constant
+
+class _FBBTVisitorLeafToRoot(StreamBasedExpressionVisitor):
     """
     This walker propagates bounds from the variables to each node in
     the expression tree (all the way to the root node).
     """
-
     def __init__(
         self, bnds_dict, integer_tol=1e-4, feasibility_tol=1e-8, ignore_fixed=False
     ):
@@ -1099,68 +1160,120 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
         bnds_dict: ComponentMap
         integer_tol: float
         feasibility_tol: float
-            If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
-            feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
-            is also used when performing certain interval arithmetic operations to ensure that none of the feasible
-            region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
-            is more conservative).
+            If the bounds computed on the body of a constraint violate the bounds of
+            the constraint by more than feasibility_tol, then the constraint is
+            considered infeasible and an exception is raised. This tolerance is also
+            used when performing certain interval arithmetic operations to ensure that
+            none of the feasible region is removed due to floating point arithmetic and
+            to prevent math domain errors (a larger value is more conservative).
         """
+        super().__init__()
         self.bnds_dict = bnds_dict
         self.integer_tol = integer_tol
         self.feasibility_tol = feasibility_tol
         self.ignore_fixed = ignore_fixed
 
-    def visit(self, node, values):
-        if node.__class__ in _prop_bnds_leaf_to_root_map:
-            _prop_bnds_leaf_to_root_map[node.__class__](
-                node, self.bnds_dict, self.feasibility_tol
-            )
-        else:
-            self.bnds_dict[node] = (-interval.inf, interval.inf)
-        return None
+    def initializeWalker(self, expr):
+        walk, result = self.beforeChild(None, expr, 0)
+        if not walk:
+            return False, result#self.finalizeResult(result)
+        return True, expr
 
-    def visiting_potential_leaf(self, node):
-        if node.__class__ in nonpyomo_leaf_types:
-            self.bnds_dict[node] = (node, node)
-            return True, None
+    def beforeChild(self, node, child, child_idx):
+        return _before_child_handlers[child.__class__](self, child)
 
-        if node.is_variable_type():
-            if node in self.bnds_dict:
-                return True, None
-            if node.is_fixed() and not self.ignore_fixed:
-                lb = value(node.value)
-                ub = lb
-            else:
-                lb = value(node.lb)
-                ub = value(node.ub)
-                if lb is None:
-                    lb = -interval.inf
-                if ub is None:
-                    ub = interval.inf
-                if lb - self.feasibility_tol > ub:
-                    raise InfeasibleConstraintException(
-                        'Variable has a lower bound that is larger than its upper bound: {0}'.format(
-                            str(node)
-                        )
-                    )
-            self.bnds_dict[node] = (lb, ub)
-            return True, None
+    def exitNode(self, node, data):
+        _prop_bnds_leaf_to_root_map[node.__class__](node, self.bnds_dict,
+                                                    self.feasibility_tol)
+        # if node.__class__ in _prop_bnds_leaf_to_root_map:
+        #     _prop_bnds_leaf_to_root_map[node.__class__](
+        #         node, self.bnds_dict, self.feasibility_tol
+        #     )
+        # else:
+        #     self.bnds_dict[node] = (-interval.inf, interval.inf)
+        # return None
 
-        if not node.is_potentially_variable():
-            # NPV nodes are effectively constant leaves.  Evaluate it
-            # and return the value.
-            val = value(node)
-            self.bnds_dict[node] = (val, val)
-            return True, None
+    # def finalizeResult(self, result):
+    #     return result
+ 
 
-        if node.__class__ is numeric_expr.ExternalFunctionExpression:
-            # TODO: provide some mechanism for users to provide interval
-            # arithmetic callback functions for general external
-            # functions
-            self.bnds_dict[node] = (-interval.inf, interval.inf)
-            return True, None
+# class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
+#     """
+#     This walker propagates bounds from the variables to each node in
+#     the expression tree (all the way to the root node).
+#     """
 
-        return False, None
+#     def __init__(
+#         self, bnds_dict, integer_tol=1e-4, feasibility_tol=1e-8, ignore_fixed=False
+#     ):
+#         """
+#         Parameters
+#         ----------
+#         bnds_dict: ComponentMap
+#         integer_tol: float
+#         feasibility_tol: float
+#             If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+#             feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+#             is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+#             region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+#             is more conservative).
+#         """
+#         self.bnds_dict = bnds_dict
+#         self.integer_tol = integer_tol
+#         self.feasibility_tol = feasibility_tol
+#         self.ignore_fixed = ignore_fixed
+
+#     def visit(self, node, values):
+#         if node.__class__ in _prop_bnds_leaf_to_root_map:
+#             _prop_bnds_leaf_to_root_map[node.__class__](
+#                 node, self.bnds_dict, self.feasibility_tol
+#             )
+#         else:
+#             self.bnds_dict[node] = (-interval.inf, interval.inf)
+#         return None
+
+#     def visiting_potential_leaf(self, node):
+#         if node.__class__ in nonpyomo_leaf_types:
+#             self.bnds_dict[node] = (node, node)
+#             return True, None
+
+#         if node.is_variable_type():
+#             if node in self.bnds_dict:
+#                 return True, None
+#             if node.is_fixed() and not self.ignore_fixed:
+#                 lb = value(node.value)
+#                 ub = lb
+#             else:
+#                 lb = value(node.lb)
+#                 ub = value(node.ub)
+#                 if lb is None:
+#                     lb = -interval.inf
+#                 if ub is None:
+#                     ub = interval.inf
+#                 if lb - self.feasibility_tol > ub:
+#                     raise InfeasibleConstraintException(
+#                         'Variable has a lower bound that is larger than its upper bound: {0}'.format(
+#                             str(node)
+#                         )
+#                     )
+#             self.bnds_dict[node] = (lb, ub)
+#             return True, None
+
+#         if not node.is_potentially_variable():
+#             # NPV nodes are effectively constant leaves.  Evaluate it
+#             # and return the value.
+#             val = value(node)
+#             self.bnds_dict[node] = (val, val)
+#             return True, None
+
+#         if node.__class__ is numeric_expr.ExternalFunctionExpression:
+#             # TODO: provide some mechanism for users to provide interval
+#             # arithmetic callback functions for general external
+#             # functions
+#             self.bnds_dict[node] = (-interval.inf, interval.inf)
+#             return True, None
+
+#         return False, None
 
 
 class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
@@ -1331,7 +1444,7 @@ def _fbbt_con(con, config):
 
     # a walker to propagate bounds from the variables to the root
     visitorA = _FBBTVisitorLeafToRoot(bnds_dict, feasibility_tol=config.feasibility_tol)
-    visitorA.dfs_postorder_stack(con.body)
+    visitorA.walk_expression(con.body)
 
     # Now we need to replace the bounds in bnds_dict for the root
     # node with the bounds on the constraint (if those bounds are
@@ -1582,7 +1695,7 @@ def compute_bounds_on_expr(expr, ignore_fixed=False):
     """
     bnds_dict = ComponentMap()
     visitor = _FBBTVisitorLeafToRoot(bnds_dict, ignore_fixed=ignore_fixed)
-    visitor.dfs_postorder_stack(expr)
+    visitor.walk_expression(expr)
     lb, ub = bnds_dict[expr]
     if lb == -interval.inf:
         lb = None
