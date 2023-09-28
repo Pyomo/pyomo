@@ -106,9 +106,9 @@ class _BigM_MixIn(object):
 
     def _set_up_fbbt_visitor(self):
         bnds_dict = ComponentMap()
-        self._fbbt_visitor = _FBBTVisitorLeafToRoot(
-            bnds_dict, ignore_fixed=not self._config.assume_fixed_vars_permanent
-        )
+        # we assume the default config arg for 'assume_fixed_vars_permanent,`
+        # and we will change it during apply_to if we need to
+        self._fbbt_visitor = _FBBTVisitorLeafToRoot(bnds_dict, ignore_fixed=True)
 
     def _process_M_value(
         self,
@@ -217,9 +217,6 @@ class _BigM_MixIn(object):
         return lower, upper
 
     def _estimate_M(self, expr, constraint):
-        # expr_lb, expr_ub = compute_bounds_on_expr(
-        #     expr, ignore_fixed=not self._config.assume_fixed_vars_permanent
-        # )
         self._fbbt_visitor.walk_expression(expr)
         expr_lb, expr_ub = self._fbbt_visitor.bnds_dict[expr]
         if expr_lb == -interval.inf or expr_ub == interval.inf:

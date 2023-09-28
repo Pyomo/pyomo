@@ -202,6 +202,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         super().__init__(logger)
         self.handlers[Suffix] = self._warn_for_active_suffix
         self._arg_list = {}
+        self._set_up_fbbt_visitor()
 
     def _apply_to(self, instance, **kwds):
         self.used_args = ComponentMap()
@@ -214,7 +215,8 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
 
     def _apply_to_impl(self, instance, **kwds):
         self._process_arguments(instance, **kwds)
-        self._set_up_fbbt_visitor()
+        if self._config.assume_fixed_vars_permanent:
+            self._fbbt_visitor.ignore_fixed = False
 
         if (
             self._config.only_mbigm_bound_constraints
