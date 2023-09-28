@@ -20,7 +20,6 @@ from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.contrib.cp.transform.logical_to_disjunctive_program import (
     LogicalToDisjunctive,
 )
-from pyomo.contrib.fbbt.fbbt import _FBBTVisitorLeafToRoot
 from pyomo.core import (
     Block,
     BooleanVar,
