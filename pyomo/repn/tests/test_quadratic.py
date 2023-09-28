@@ -126,8 +126,6 @@ class TestQuadratic(unittest.TestCase):
         self.assertEqual(repn.constant, 0)
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.quadratic, None)
-        print(repn.nonlinear)
-        print(NL)
         assertExpressionsEqual(self, repn.nonlinear, NL)
 
         e = (1 + 2 * m.x + 3 * m.y) * (4 + 5 * m.x + 6 * m.y)
@@ -146,6 +144,70 @@ class TestQuadratic(unittest.TestCase):
             {(id(m.x), id(m.x)): 10, (id(m.y), id(m.y)): 18, (id(m.x), id(m.y)): 27},
         )
         assertExpressionsEqual(self, repn.nonlinear, None)
+
+        e = (m.x + m.y + log(m.x)) * m.x
+
+        cfg = VisitorConfig()
+        visitor = QuadraticRepnVisitor(*cfg)
+        visitor.expand_nonlinear_products = False
+        repn = visitor.walk_expression(e)
+
+        NL = (log(m.x) + (m.x + m.y)) * m.x
+
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {id(m.x): m.x, id(m.y): m.y})
+        self.assertEqual(cfg.var_order, {id(m.x): 0, id(m.y): 1})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(repn.linear, {})
+        self.assertEqual(repn.quadratic, None)
+        assertExpressionsEqual(self, repn.nonlinear, NL)
+
+        visitor.expand_nonlinear_products = True
+        repn = visitor.walk_expression(e)
+
+        NL = log(m.x) * m.x
+
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {id(m.x): m.x, id(m.y): m.y})
+        self.assertEqual(cfg.var_order, {id(m.x): 0, id(m.y): 1})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(repn.linear, {})
+        self.assertEqual(repn.quadratic, {(id(m.x), id(m.x)): 1, (id(m.x), id(m.y)): 1})
+        assertExpressionsEqual(self, repn.nonlinear, NL)
+
+        e = m.x * (m.x + m.y + log(m.x) + 2)
+
+        cfg = VisitorConfig()
+        visitor = QuadraticRepnVisitor(*cfg)
+        visitor.expand_nonlinear_products = False
+        repn = visitor.walk_expression(e)
+
+        NL = m.x * (log(m.x) + (m.x + m.y) + 2)
+
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {id(m.x): m.x, id(m.y): m.y})
+        self.assertEqual(cfg.var_order, {id(m.x): 0, id(m.y): 1})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(repn.linear, {})
+        self.assertEqual(repn.quadratic, None)
+        assertExpressionsEqual(self, repn.nonlinear, NL)
+
+        visitor.expand_nonlinear_products = True
+        repn = visitor.walk_expression(e)
+
+        NL = m.x * log(m.x)
+
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {id(m.x): m.x, id(m.y): m.y})
+        self.assertEqual(cfg.var_order, {id(m.x): 0, id(m.y): 1})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(repn.linear, {id(m.x): 2})
+        self.assertEqual(repn.quadratic, {(id(m.x), id(m.x)): 1, (id(m.x), id(m.y)): 1})
+        assertExpressionsEqual(self, repn.nonlinear, NL)
 
     def test_sum(self):
         m = ConcreteModel()
