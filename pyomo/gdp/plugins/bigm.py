@@ -181,7 +181,8 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
 
         bnds_dict = ComponentMap()
         self._fbbt_visitor = _FBBTVisitorLeafToRoot(
-            bnds_dict, ignore_fixed=not self._config.assume_fixed_vars_permanent)
+            bnds_dict, ignore_fixed=not self._config.assume_fixed_vars_permanent
+        )
 
         # filter out inactive targets and handle case where targets aren't
         # specified.

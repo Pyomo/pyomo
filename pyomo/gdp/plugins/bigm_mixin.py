@@ -12,7 +12,6 @@
 from pyomo.gdp import GDP_Error
 from pyomo.common.collections import ComponentSet
 import pyomo.contrib.fbbt.interval as interval
-#from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.core import Suffix
 
 
