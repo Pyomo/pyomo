@@ -13,7 +13,9 @@ from collections import defaultdict
 from pyomo.common.collections import ComponentMap, ComponentSet
 import pyomo.core.expr.numeric_expr as numeric_expr
 from pyomo.core.expr.visitor import (
-    ExpressionValueVisitor, identify_variables, StreamBasedExpressionVisitor
+    ExpressionValueVisitor,
+    identify_variables,
+    StreamBasedExpressionVisitor,
 )
 from pyomo.core.expr.numvalue import nonpyomo_leaf_types, value
 from pyomo.core.expr.numvalue import is_fixed
@@ -137,8 +139,9 @@ def _prop_bnds_leaf_to_root_DivisionExpression(visitor, node, arg1, arg2):
     bnds_dict = visitor.bnds_dict
     lb1, ub1 = bnds_dict[arg1]
     lb2, ub2 = bnds_dict[arg2]
-    bnds_dict[node] = interval.div(lb1, ub1, lb2, ub2,
-                                   feasibility_tol=visitor.feasibility_tol)
+    bnds_dict[node] = interval.div(
+        lb1, ub1, lb2, ub2, feasibility_tol=visitor.feasibility_tol
+    )
 
 
 def _prop_bnds_leaf_to_root_PowExpression(visitor, node, arg1, arg2):
@@ -383,8 +386,10 @@ def _prop_bnds_leaf_to_root_abs(visitor, node, arg):
     lb1, ub1 = bnds_dict[arg]
     bnds_dict[node] = interval.interval_abs(lb1, ub1)
 
+
 def _prop_no_bounds(visitor, node, *args):
     visitor.bnds_dict[node] = (-interval.inf, interval.inf)
+
 
 _unary_leaf_to_root_map = defaultdict(lambda: _prop_no_bounds)
 _unary_leaf_to_root_map['exp'] = _prop_bnds_leaf_to_root_exp
@@ -438,6 +443,7 @@ def _prop_bnds_leaf_to_root_GeneralExpression(visitor, node, expr):
     else:
         expr_lb, expr_ub = bnds_dict[expr]
     bnds_dict[node] = (expr_lb, expr_ub)
+
 
 _prop_bnds_leaf_to_root_map = defaultdict(lambda: _prop_no_bounds)
 _prop_bnds_leaf_to_root_map[
@@ -1019,6 +1025,7 @@ def _prop_bnds_root_to_leaf_GeneralExpression(node, bnds_dict, feasibility_tol):
         expr_lb, expr_ub = bnds_dict[node]
         bnds_dict[node.expr] = (expr_lb, expr_ub)
 
+
 _prop_bnds_root_to_leaf_map = dict()
 _prop_bnds_root_to_leaf_map[
     numeric_expr.ProductExpression
@@ -1070,9 +1077,11 @@ def _check_and_reset_bounds(var, lb, ub):
         ub = orig_ub
     return lb, ub
 
+
 def _before_constant(visitor, child):
     visitor.bnds_dict[child] = (child, child)
     return False, None
+
 
 def _before_var(visitor, child):
     if child in visitor.bnds_dict:
@@ -1090,20 +1099,21 @@ def _before_var(visitor, child):
         if lb - visitor.feasibility_tol > ub:
             raise InfeasibleConstraintException(
                 'Variable has a lower bound that is larger than its '
-                'upper bound: {0}'.format(
-                    str(child)
-                )
+                'upper bound: {0}'.format(str(child))
             )
     visitor.bnds_dict[child] = (lb, ub)
     return False, None
+
 
 def _before_NPV(visitor, child):
     val = value(child)
     visitor.bnds_dict[child] = (val, val)
     return False, None
 
+
 def _before_other(visitor, child):
     return True, None
+
 
 def _before_external_function(visitor, child):
     # TODO: provide some mechanism for users to provide interval
@@ -1111,6 +1121,7 @@ def _before_external_function(visitor, child):
     # functions
     visitor.bnds_dict[child] = (-interval.inf, interval.inf)
     return False, None
+
 
 def _register_new_before_child_handler(visitor, child):
     handlers = _before_child_handlers
@@ -1123,17 +1134,21 @@ def _register_new_before_child_handler(visitor, child):
         handlers[child_type] = _before_other
     return handlers[child_type](visitor, child)
 
+
 _before_child_handlers = defaultdict(lambda: _register_new_before_child_handler)
 _before_child_handlers[
-    numeric_expr.ExternalFunctionExpression] = _before_external_function
+    numeric_expr.ExternalFunctionExpression
+] = _before_external_function
 for _type in nonpyomo_leaf_types:
     _before_child_handlers[_type] = _before_constant
+
 
 class _FBBTVisitorLeafToRoot(StreamBasedExpressionVisitor):
     """
     This walker propagates bounds from the variables to each node in
     the expression tree (all the way to the root node).
     """
+
     def __init__(
         self, bnds_dict, integer_tol=1e-4, feasibility_tol=1e-8, ignore_fixed=False
     ):
@@ -1167,6 +1182,7 @@ class _FBBTVisitorLeafToRoot(StreamBasedExpressionVisitor):
 
     def exitNode(self, node, data):
         _prop_bnds_leaf_to_root_map[node.__class__](self, node, *node.args)
+
 
 # class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
 #     """
