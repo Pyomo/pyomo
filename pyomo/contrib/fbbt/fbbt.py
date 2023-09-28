@@ -83,14 +83,10 @@ def _prop_bnds_leaf_to_root_ProductExpression(visitor, node, arg1, arg2):
 
     Parameters
     ----------
+    visitor: _FBBTVisitorLeafToRoot
     node: pyomo.core.expr.numeric_expr.ProductExpression
-    bnds_dict: ComponentMap
-    feasibility_tol: float
-        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
-        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
-        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
-        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
-        is more conservative).
+    arg1: First arg in product expression
+    arg2: Second arg in product expression
     """
     bnds_dict = visitor.bnds_dict
     lb1, ub1 = bnds_dict[arg1]
@@ -106,14 +102,9 @@ def _prop_bnds_leaf_to_root_SumExpression(visitor, node, *args):
 
     Parameters
     ----------
+    visitor: _FBBTVisitorLeafToRoot
     node: pyomo.core.expr.numeric_expr.SumExpression
-    bnds_dict: ComponentMap
-    feasibility_tol: float
-        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
-        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
-        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
-        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
-        is more conservative).
+    args: summands in SumExpression
     """
     bnds_dict = visitor.bnds_dict
     bnds = (0, 0)
@@ -127,14 +118,10 @@ def _prop_bnds_leaf_to_root_DivisionExpression(visitor, node, arg1, arg2):
 
     Parameters
     ----------
+    visitor: _FBBTVisitorLeafToRoot
     node: pyomo.core.expr.numeric_expr.DivisionExpression
-    bnds_dict: ComponentMap
-    feasibility_tol: float
-        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
-        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
-        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
-        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
-        is more conservative).
+    arg1: dividend
+    arg2: divisor
     """
     bnds_dict = visitor.bnds_dict
     lb1, ub1 = bnds_dict[arg1]
@@ -149,14 +136,10 @@ def _prop_bnds_leaf_to_root_PowExpression(visitor, node, arg1, arg2):
 
     Parameters
     ----------
+    visitor: _FBBTVisitorLeafToRoot
     node: pyomo.core.expr.numeric_expr.PowExpression
-    bnds_dict: ComponentMap
-    feasibility_tol: float
-        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
-        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
-        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
-        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
-        is more conservative).
+    arg1: base
+    arg2: exponent
     """
     bnds_dict = visitor.bnds_dict
     lb1, ub1 = bnds_dict[arg1]
@@ -171,14 +154,9 @@ def _prop_bnds_leaf_to_root_NegationExpression(visitor, node, arg):
 
     Parameters
     ----------
-    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
-    bnds_dict: ComponentMap
-    feasibility_tol: float
-        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
-        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
-        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
-        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
-        is more conservative).
+    visitor: _FBBTVisitorLeafToRoot
+    node: pyomo.core.expr.numeric_expr.NegationExpression
+    arg: NegationExpression arg
     """
     bnds_dict = visitor.bnds_dict
     lb1, ub1 = bnds_dict[arg]
@@ -190,14 +168,9 @@ def _prop_bnds_leaf_to_root_exp(visitor, node, arg):
 
     Parameters
     ----------
+    visitor: _FBBTVisitorLeafToRoot
     node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
-    bnds_dict: ComponentMap
-    feasibility_tol: float
-        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
-        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
-        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
-        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
-        is more conservative).
+    arg: UnaryFunctionExpression arg
     """
     bnds_dict = visitor.bnds_dict
     lb1, ub1 = bnds_dict[arg]
@@ -209,14 +182,9 @@ def _prop_bnds_leaf_to_root_log(visitor, node, arg):
 
     Parameters
     ----------
+    visitor: _FBBTVisitorLeafToRoot
     node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
-    bnds_dict: ComponentMap
-    feasibility_tol: float
-        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
-        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
-        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
-        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
-        is more conservative).
+    arg: UnaryFunctionExpression arg
     """
     bnds_dict = visitor.bnds_dict
     lb1, ub1 = bnds_dict[arg]
@@ -228,14 +196,9 @@ def _prop_bnds_leaf_to_root_log10(visitor, node, arg):
 
     Parameters
     ----------
+    visitor: _FBBTVisitorLeafToRoot
     node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
-    bnds_dict: ComponentMap
-    feasibility_tol: float
-        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
-        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
-        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
-        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
-        is more conservative).
+    arg: UnaryFunctionExpression arg
     """
     bnds_dict = visitor.bnds_dict
     lb1, ub1 = bnds_dict[arg]
@@ -247,14 +210,9 @@ def _prop_bnds_leaf_to_root_sin(visitor, node, arg):
 
     Parameters
     ----------
+    visitor: _FBBTVisitorLeafToRoot
     node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
-    bnds_dict: ComponentMap
-    feasibility_tol: float
-        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
-        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
-        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
-        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
-        is more conservative).
+    arg: UnaryFunctionExpression arg
     """
     bnds_dict = visitor.bnds_dict
     lb1, ub1 = bnds_dict[arg]
@@ -266,14 +224,9 @@ def _prop_bnds_leaf_to_root_cos(visitor, node, arg):
 
     Parameters
     ----------
+    visitor: _FBBTVisitorLeafToRoot
     node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
-    bnds_dict: ComponentMap
-    feasibility_tol: float
-        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
-        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
-        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
-        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
-        is more conservative).
+    arg: UnaryFunctionExpression arg
     """
     bnds_dict = visitor.bnds_dict
     lb1, ub1 = bnds_dict[arg]
@@ -285,14 +238,9 @@ def _prop_bnds_leaf_to_root_tan(visitor, node, arg):
 
     Parameters
     ----------
+    visitor: _FBBTVisitorLeafToRoot
     node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
-    bnds_dict: ComponentMap
-    feasibility_tol: float
-        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
-        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
-        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
-        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
-        is more conservative).
+    arg: UnaryFunctionExpression arg
     """
     bnds_dict = visitor.bnds_dict
     lb1, ub1 = bnds_dict[arg]
@@ -304,14 +252,9 @@ def _prop_bnds_leaf_to_root_asin(visitor, node, arg):
 
     Parameters
     ----------
+    visitor: _FBBTVisitorLeafToRoot
     node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
-    bnds_dict: ComponentMap
-    feasibility_tol: float
-        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
-        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
-        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
-        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
-        is more conservative).
+    arg: UnaryFunctionExpression arg
     """
     bnds_dict = visitor.bnds_dict
     lb1, ub1 = bnds_dict[arg]
@@ -325,14 +268,9 @@ def _prop_bnds_leaf_to_root_acos(visitor, node, arg):
 
     Parameters
     ----------
+    visitor: _FBBTVisitorLeafToRoot
     node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
-    bnds_dict: ComponentMap
-    feasibility_tol: float
-        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
-        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
-        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
-        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
-        is more conservative).
+    arg: UnaryFunctionExpression arg
     """
     bnds_dict = visitor.bnds_dict
     lb1, ub1 = bnds_dict[arg]
@@ -346,14 +284,9 @@ def _prop_bnds_leaf_to_root_atan(visitor, node, arg):
 
     Parameters
     ----------
+    visitor: _FBBTVisitorLeafToRoot
     node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
-    bnds_dict: ComponentMap
-    feasibility_tol: float
-        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
-        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
-        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
-        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
-        is more conservative).
+
     """
     bnds_dict = visitor.bnds_dict
     lb1, ub1 = bnds_dict[arg]
@@ -365,14 +298,9 @@ def _prop_bnds_leaf_to_root_sqrt(visitor, node, arg):
 
     Parameters
     ----------
+    visitor: _FBBTVisitorLeafToRoot
     node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
-    bnds_dict: ComponentMap
-    feasibility_tol: float
-        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
-        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
-        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
-        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
-        is more conservative).
+    arg: UnaryFunctionExpression arg
     """
     bnds_dict = visitor.bnds_dict
     lb1, ub1 = bnds_dict[arg]
@@ -410,14 +338,9 @@ def _prop_bnds_leaf_to_root_UnaryFunctionExpression(visitor, node, arg):
 
     Parameters
     ----------
+    visitor: _FBBTVisitorLeafToRoot
     node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
-    bnds_dict: ComponentMap
-    feasibility_tol: float
-        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
-        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
-        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
-        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
-        is more conservative).
+    arg: UnaryFunctionExpression arg
     """
     _unary_leaf_to_root_map[node.getname()](visitor, node, arg)
 
@@ -428,14 +351,9 @@ def _prop_bnds_leaf_to_root_GeneralExpression(visitor, node, expr):
 
     Parameters
     ----------
+    visitor: _FBBTVisitorLeafToRoot
     node: pyomo.core.base.expression._GeneralExpressionData
-    bnds_dict: ComponentMap
-    feasibility_tol: float
-        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
-        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
-        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
-        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
-        is more conservative).
+    expr: GeneralExpression arg
     """
     bnds_dict = visitor.bnds_dict
     if expr.__class__ in native_types:
@@ -1182,85 +1100,6 @@ class _FBBTVisitorLeafToRoot(StreamBasedExpressionVisitor):
 
     def exitNode(self, node, data):
         _prop_bnds_leaf_to_root_map[node.__class__](self, node, *node.args)
-
-
-# class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
-#     """
-#     This walker propagates bounds from the variables to each node in
-#     the expression tree (all the way to the root node).
-#     """
-
-#     def __init__(
-#         self, bnds_dict, integer_tol=1e-4, feasibility_tol=1e-8, ignore_fixed=False
-#     ):
-#         """
-#         Parameters
-#         ----------
-#         bnds_dict: ComponentMap
-#         integer_tol: float
-#         feasibility_tol: float
-#             If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
-#             feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
-#             is also used when performing certain interval arithmetic operations to ensure that none of the feasible
-#             region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
-#             is more conservative).
-#         """
-#         self.bnds_dict = bnds_dict
-#         self.integer_tol = integer_tol
-#         self.feasibility_tol = feasibility_tol
-#         self.ignore_fixed = ignore_fixed
-
-#     def visit(self, node, values):
-#         if node.__class__ in _prop_bnds_leaf_to_root_map:
-#             _prop_bnds_leaf_to_root_map[node.__class__](
-#                 node, self.bnds_dict, self.feasibility_tol
-#             )
-#         else:
-#             self.bnds_dict[node] = (-interval.inf, interval.inf)
-#         return None
-
-#     def visiting_potential_leaf(self, node):
-#         if node.__class__ in nonpyomo_leaf_types:
-#             self.bnds_dict[node] = (node, node)
-#             return True, None
-
-#         if node.is_variable_type():
-#             if node in self.bnds_dict:
-#                 return True, None
-#             if node.is_fixed() and not self.ignore_fixed:
-#                 lb = value(node.value)
-#                 ub = lb
-#             else:
-#                 lb = value(node.lb)
-#                 ub = value(node.ub)
-#                 if lb is None:
-#                     lb = -interval.inf
-#                 if ub is None:
-#                     ub = interval.inf
-#                 if lb - self.feasibility_tol > ub:
-#                     raise InfeasibleConstraintException(
-#                         'Variable has a lower bound that is larger than its upper bound: {0}'.format(
-#                             str(node)
-#                         )
-#                     )
-#             self.bnds_dict[node] = (lb, ub)
-#             return True, None
-
-#         if not node.is_potentially_variable():
-#             # NPV nodes are effectively constant leaves.  Evaluate it
-#             # and return the value.
-#             val = value(node)
-#             self.bnds_dict[node] = (val, val)
-#             return True, None
-
-#         if node.__class__ is numeric_expr.ExternalFunctionExpression:
-#             # TODO: provide some mechanism for users to provide interval
-#             # arithmetic callback functions for general external
-#             # functions
-#             self.bnds_dict[node] = (-interval.inf, interval.inf)
-#             return True, None
-
-#         return False, None
 
 
 class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
