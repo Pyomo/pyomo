@@ -10,7 +10,8 @@
 #  ___________________________________________________________________________
 
 from pyomo.gdp import GDP_Error
-from pyomo.common.collections import ComponentSet
+from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.contrib.fbbt.fbbt import _FBBTVisitorLeafToRoot
 import pyomo.contrib.fbbt.interval as interval
 from pyomo.core import Suffix
 
@@ -102,6 +103,12 @@ class _BigM_MixIn(object):
                 arg_list.append({block: bigm_args[block]})
             block = block.parent_block()
         return arg_list
+
+    def _set_up_fbbt_visitor(self):
+        bnds_dict = ComponentMap()
+        self._fbbt_visitor = _FBBTVisitorLeafToRoot(
+            bnds_dict, ignore_fixed=not self._config.assume_fixed_vars_permanent
+        )
 
     def _process_M_value(
         self,

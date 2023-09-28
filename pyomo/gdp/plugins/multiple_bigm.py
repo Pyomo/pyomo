@@ -214,6 +214,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
 
     def _apply_to_impl(self, instance, **kwds):
         self._process_arguments(instance, **kwds)
+        self._set_up_fbbt_visitor()
 
         if (
             self._config.only_mbigm_bound_constraints

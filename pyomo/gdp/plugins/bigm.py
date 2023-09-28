@@ -178,11 +178,7 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
 
     def _apply_to_impl(self, instance, **kwds):
         self._process_arguments(instance, **kwds)
-
-        bnds_dict = ComponentMap()
-        self._fbbt_visitor = _FBBTVisitorLeafToRoot(
-            bnds_dict, ignore_fixed=not self._config.assume_fixed_vars_permanent
-        )
+        self._set_up_fbbt_visitor()
 
         # filter out inactive targets and handle case where targets aren't
         # specified.
