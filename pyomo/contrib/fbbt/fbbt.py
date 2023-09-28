@@ -76,7 +76,7 @@ class FBBTException(PyomoException):
     pass
 
 
-def _prop_bnds_leaf_to_root_ProductExpression(node, bnds_dict, feasibility_tol):
+def _prop_bnds_leaf_to_root_ProductExpression(visitor, node, arg1, arg2):
     """
 
     Parameters
@@ -90,17 +90,16 @@ def _prop_bnds_leaf_to_root_ProductExpression(node, bnds_dict, feasibility_tol):
         region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
         is more conservative).
     """
-    assert len(node.args) == 2
-    arg1, arg2 = node.args
+    bnds_dict = visitor.bnds_dict
     lb1, ub1 = bnds_dict[arg1]
     lb2, ub2 = bnds_dict[arg2]
     if arg1 is arg2:
-        bnds_dict[node] = interval.power(lb1, ub1, 2, 2, feasibility_tol)
+        bnds_dict[node] = interval.power(lb1, ub1, 2, 2, visitor.feasibility_tol)
     else:
         bnds_dict[node] = interval.mul(lb1, ub1, lb2, ub2)
 
 
-def _prop_bnds_leaf_to_root_SumExpression(node, bnds_dict, feasibility_tol):
+def _prop_bnds_leaf_to_root_SumExpression(visitor, node, *args):
     """
 
     Parameters
@@ -114,13 +113,14 @@ def _prop_bnds_leaf_to_root_SumExpression(node, bnds_dict, feasibility_tol):
         region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
         is more conservative).
     """
+    bnds_dict = visitor.bnds_dict
     bnds = (0, 0)
-    for arg in node.args:
+    for arg in args:
         bnds = interval.add(*bnds, *bnds_dict[arg])
     bnds_dict[node] = bnds
 
 
-def _prop_bnds_leaf_to_root_DivisionExpression(node, bnds_dict, feasibility_tol):
+def _prop_bnds_leaf_to_root_DivisionExpression(visitor, node, arg1, arg2):
     """
 
     Parameters
@@ -134,14 +134,14 @@ def _prop_bnds_leaf_to_root_DivisionExpression(node, bnds_dict, feasibility_tol)
         region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
         is more conservative).
     """
-    assert len(node.args) == 2
-    arg1, arg2 = node.args
+    bnds_dict = visitor.bnds_dict
     lb1, ub1 = bnds_dict[arg1]
     lb2, ub2 = bnds_dict[arg2]
-    bnds_dict[node] = interval.div(lb1, ub1, lb2, ub2, feasibility_tol=feasibility_tol)
+    bnds_dict[node] = interval.div(lb1, ub1, lb2, ub2,
+                                   feasibility_tol=visitor.feasibility_tol)
 
 
-def _prop_bnds_leaf_to_root_PowExpression(node, bnds_dict, feasibility_tol):
+def _prop_bnds_leaf_to_root_PowExpression(visitor, node, arg1, arg2):
     """
 
     Parameters
@@ -155,16 +155,15 @@ def _prop_bnds_leaf_to_root_PowExpression(node, bnds_dict, feasibility_tol):
         region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
         is more conservative).
     """
-    assert len(node.args) == 2
-    arg1, arg2 = node.args
+    bnds_dict = visitor.bnds_dict
     lb1, ub1 = bnds_dict[arg1]
     lb2, ub2 = bnds_dict[arg2]
     bnds_dict[node] = interval.power(
-        lb1, ub1, lb2, ub2, feasibility_tol=feasibility_tol
+        lb1, ub1, lb2, ub2, feasibility_tol=visitor.feasibility_tol
     )
 
 
-def _prop_bnds_leaf_to_root_NegationExpression(node, bnds_dict, feasibility_tol):
+def _prop_bnds_leaf_to_root_NegationExpression(visitor, node, arg):
     """
 
     Parameters
@@ -178,13 +177,12 @@ def _prop_bnds_leaf_to_root_NegationExpression(node, bnds_dict, feasibility_tol)
         region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
         is more conservative).
     """
-    assert len(node.args) == 1
-    arg = node.args[0]
+    bnds_dict = visitor.bnds_dict
     lb1, ub1 = bnds_dict[arg]
     bnds_dict[node] = interval.sub(0, 0, lb1, ub1)
 
 
-def _prop_bnds_leaf_to_root_exp(node, bnds_dict, feasibility_tol):
+def _prop_bnds_leaf_to_root_exp(visitor, node, arg):
     """
 
     Parameters
@@ -198,13 +196,12 @@ def _prop_bnds_leaf_to_root_exp(node, bnds_dict, feasibility_tol):
         region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
         is more conservative).
     """
-    assert len(node.args) == 1
-    arg = node.args[0]
+    bnds_dict = visitor.bnds_dict
     lb1, ub1 = bnds_dict[arg]
     bnds_dict[node] = interval.exp(lb1, ub1)
 
 
-def _prop_bnds_leaf_to_root_log(node, bnds_dict, feasibility_tol):
+def _prop_bnds_leaf_to_root_log(visitor, node, arg):
     """
 
     Parameters
@@ -218,13 +215,12 @@ def _prop_bnds_leaf_to_root_log(node, bnds_dict, feasibility_tol):
         region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
         is more conservative).
     """
-    assert len(node.args) == 1
-    arg = node.args[0]
+    bnds_dict = visitor.bnds_dict
     lb1, ub1 = bnds_dict[arg]
     bnds_dict[node] = interval.log(lb1, ub1)
 
 
-def _prop_bnds_leaf_to_root_log10(node, bnds_dict, feasibility_tol):
+def _prop_bnds_leaf_to_root_log10(visitor, node, arg):
     """
 
     Parameters
@@ -238,13 +234,12 @@ def _prop_bnds_leaf_to_root_log10(node, bnds_dict, feasibility_tol):
         region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
         is more conservative).
     """
-    assert len(node.args) == 1
-    arg = node.args[0]
+    bnds_dict = visitor.bnds_dict
     lb1, ub1 = bnds_dict[arg]
     bnds_dict[node] = interval.log10(lb1, ub1)
 
 
-def _prop_bnds_leaf_to_root_sin(node, bnds_dict, feasibility_tol):
+def _prop_bnds_leaf_to_root_sin(visitor, node, arg):
     """
 
     Parameters
@@ -258,13 +253,12 @@ def _prop_bnds_leaf_to_root_sin(node, bnds_dict, feasibility_tol):
         region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
         is more conservative).
     """
-    assert len(node.args) == 1
-    arg = node.args[0]
+    bnds_dict = visitor.bnds_dict
     lb1, ub1 = bnds_dict[arg]
     bnds_dict[node] = interval.sin(lb1, ub1)
 
 
-def _prop_bnds_leaf_to_root_cos(node, bnds_dict, feasibility_tol):
+def _prop_bnds_leaf_to_root_cos(visitor, node, arg):
     """
 
     Parameters
@@ -278,13 +272,12 @@ def _prop_bnds_leaf_to_root_cos(node, bnds_dict, feasibility_tol):
         region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
         is more conservative).
     """
-    assert len(node.args) == 1
-    arg = node.args[0]
+    bnds_dict = visitor.bnds_dict
     lb1, ub1 = bnds_dict[arg]
     bnds_dict[node] = interval.cos(lb1, ub1)
 
 
-def _prop_bnds_leaf_to_root_tan(node, bnds_dict, feasibility_tol):
+def _prop_bnds_leaf_to_root_tan(visitor, node, arg):
     """
 
     Parameters
@@ -298,13 +291,12 @@ def _prop_bnds_leaf_to_root_tan(node, bnds_dict, feasibility_tol):
         region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
         is more conservative).
     """
-    assert len(node.args) == 1
-    arg = node.args[0]
+    bnds_dict = visitor.bnds_dict
     lb1, ub1 = bnds_dict[arg]
     bnds_dict[node] = interval.tan(lb1, ub1)
 
 
-def _prop_bnds_leaf_to_root_asin(node, bnds_dict, feasibility_tol):
+def _prop_bnds_leaf_to_root_asin(visitor, node, arg):
     """
 
     Parameters
@@ -318,15 +310,14 @@ def _prop_bnds_leaf_to_root_asin(node, bnds_dict, feasibility_tol):
         region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
         is more conservative).
     """
-    assert len(node.args) == 1
-    arg = node.args[0]
+    bnds_dict = visitor.bnds_dict
     lb1, ub1 = bnds_dict[arg]
     bnds_dict[node] = interval.asin(
-        lb1, ub1, -interval.inf, interval.inf, feasibility_tol
+        lb1, ub1, -interval.inf, interval.inf, visitor.feasibility_tol
     )
 
 
-def _prop_bnds_leaf_to_root_acos(node, bnds_dict, feasibility_tol):
+def _prop_bnds_leaf_to_root_acos(visitor, node, arg):
     """
 
     Parameters
@@ -340,15 +331,14 @@ def _prop_bnds_leaf_to_root_acos(node, bnds_dict, feasibility_tol):
         region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
         is more conservative).
     """
-    assert len(node.args) == 1
-    arg = node.args[0]
+    bnds_dict = visitor.bnds_dict
     lb1, ub1 = bnds_dict[arg]
     bnds_dict[node] = interval.acos(
-        lb1, ub1, -interval.inf, interval.inf, feasibility_tol
+        lb1, ub1, -interval.inf, interval.inf, visitor.feasibility_tol
     )
 
 
-def _prop_bnds_leaf_to_root_atan(node, bnds_dict, feasibility_tol):
+def _prop_bnds_leaf_to_root_atan(visitor, node, arg):
     """
 
     Parameters
@@ -362,13 +352,12 @@ def _prop_bnds_leaf_to_root_atan(node, bnds_dict, feasibility_tol):
         region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
         is more conservative).
     """
-    assert len(node.args) == 1
-    arg = node.args[0]
+    bnds_dict = visitor.bnds_dict
     lb1, ub1 = bnds_dict[arg]
     bnds_dict[node] = interval.atan(lb1, ub1, -interval.inf, interval.inf)
 
 
-def _prop_bnds_leaf_to_root_sqrt(node, bnds_dict, feasibility_tol):
+def _prop_bnds_leaf_to_root_sqrt(visitor, node, arg):
     """
 
     Parameters
@@ -382,22 +371,22 @@ def _prop_bnds_leaf_to_root_sqrt(node, bnds_dict, feasibility_tol):
         region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
         is more conservative).
     """
-    assert len(node.args) == 1
-    arg = node.args[0]
+    bnds_dict = visitor.bnds_dict
     lb1, ub1 = bnds_dict[arg]
     bnds_dict[node] = interval.power(
-        lb1, ub1, 0.5, 0.5, feasibility_tol=feasibility_tol
+        lb1, ub1, 0.5, 0.5, feasibility_tol=visitor.feasibility_tol
     )
 
 
-def _prop_bnds_leaf_to_root_abs(node, bnds_dict, feasibility_tol):
-    assert len(node.args) == 1
-    arg = node.args[0]
+def _prop_bnds_leaf_to_root_abs(visitor, node, arg):
+    bnds_dict = visitor.bnds_dict
     lb1, ub1 = bnds_dict[arg]
     bnds_dict[node] = interval.interval_abs(lb1, ub1)
 
+def _prop_no_bounds(visitor, node, *args):
+    visitor.bnds_dict[node] = (-interval.inf, interval.inf)
 
-_unary_leaf_to_root_map = dict()
+_unary_leaf_to_root_map = defaultdict(lambda: _prop_no_bounds)
 _unary_leaf_to_root_map['exp'] = _prop_bnds_leaf_to_root_exp
 _unary_leaf_to_root_map['log'] = _prop_bnds_leaf_to_root_log
 _unary_leaf_to_root_map['log10'] = _prop_bnds_leaf_to_root_log10
@@ -411,7 +400,7 @@ _unary_leaf_to_root_map['sqrt'] = _prop_bnds_leaf_to_root_sqrt
 _unary_leaf_to_root_map['abs'] = _prop_bnds_leaf_to_root_abs
 
 
-def _prop_bnds_leaf_to_root_UnaryFunctionExpression(node, bnds_dict, feasibility_tol):
+def _prop_bnds_leaf_to_root_UnaryFunctionExpression(visitor, node, arg):
     """
 
     Parameters
@@ -425,13 +414,10 @@ def _prop_bnds_leaf_to_root_UnaryFunctionExpression(node, bnds_dict, feasibility
         region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
         is more conservative).
     """
-    if node.getname() in _unary_leaf_to_root_map:
-        _unary_leaf_to_root_map[node.getname()](node, bnds_dict, feasibility_tol)
-    else:
-        bnds_dict[node] = (-interval.inf, interval.inf)
+    _unary_leaf_to_root_map[node.getname()](visitor, node, arg)
 
 
-def _prop_bnds_leaf_to_root_GeneralExpression(node, bnds_dict, feasibility_tol):
+def _prop_bnds_leaf_to_root_GeneralExpression(visitor, node, expr):
     """
     Propagate bounds from children to parent
 
@@ -446,15 +432,12 @@ def _prop_bnds_leaf_to_root_GeneralExpression(node, bnds_dict, feasibility_tol):
         region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
         is more conservative).
     """
-    (expr,) = node.args
+    bnds_dict = visitor.bnds_dict
     if expr.__class__ in native_types:
         expr_lb = expr_ub = expr
     else:
         expr_lb, expr_ub = bnds_dict[expr]
     bnds_dict[node] = (expr_lb, expr_ub)
-
-def _prop_no_bounds(node, bnds_dict, feasibility_tol):
-    bnds_dict[node] = (-interval.inf, interval.inf)
 
 _prop_bnds_leaf_to_root_map = defaultdict(lambda: _prop_no_bounds)
 _prop_bnds_leaf_to_root_map[
@@ -1176,26 +1159,14 @@ class _FBBTVisitorLeafToRoot(StreamBasedExpressionVisitor):
     def initializeWalker(self, expr):
         walk, result = self.beforeChild(None, expr, 0)
         if not walk:
-            return False, result#self.finalizeResult(result)
+            return False, result
         return True, expr
 
     def beforeChild(self, node, child, child_idx):
         return _before_child_handlers[child.__class__](self, child)
 
     def exitNode(self, node, data):
-        _prop_bnds_leaf_to_root_map[node.__class__](node, self.bnds_dict,
-                                                    self.feasibility_tol)
-        # if node.__class__ in _prop_bnds_leaf_to_root_map:
-        #     _prop_bnds_leaf_to_root_map[node.__class__](
-        #         node, self.bnds_dict, self.feasibility_tol
-        #     )
-        # else:
-        #     self.bnds_dict[node] = (-interval.inf, interval.inf)
-        # return None
-
-    # def finalizeResult(self, result):
-    #     return result
- 
+        _prop_bnds_leaf_to_root_map[node.__class__](self, node, *node.args)
 
 # class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
 #     """
