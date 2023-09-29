@@ -265,9 +265,9 @@ class CyIpoptNLP(CyIpoptProblemInterface):
         self._intermediate_callback = intermediate_callback
 
         if halt_on_evaluation_error is None:
-            # If using cyipopt >= 1.3, the default is to halt.
-            # Otherwise, the default is not to halt (because we can't).
-            self._halt_on_evaluation_error = hasattr(cyipopt, "CyIpoptEvaluationError")
+            # If using cyipopt >= 1.3, the default is to continue.
+            # Otherwise, the default is to halt (because we are forced to).
+            self._halt_on_evaluation_error = not hasattr(cyipopt, "CyIpoptEvaluationError")
         elif halt_on_evaluation_error and not hasattr(cyipopt, "CyIpoptEvaluationError"):
             raise ValueError(
                 "halt_on_evaluation_error is only supported for cyipopt >= 1.3.0"
@@ -348,11 +348,11 @@ class CyIpoptNLP(CyIpoptProblemInterface):
             # TODO: halt_on_evaluation_error option. If set, we re-raise the
             # original exception.
             if self._halt_on_evaluation_error:
+                raise
+            else:
                 raise cyipopt.CyIpoptEvaluationError(
                     "Error in objective function evaluation"
                 )
-            else:
-                raise
 
     def gradient(self, x):
         try:
@@ -360,11 +360,11 @@ class CyIpoptNLP(CyIpoptProblemInterface):
             return self._nlp.evaluate_grad_objective()
         except PyNumeroEvaluationError:
             if self._halt_on_evaluation_error:
+                raise
+            else:
                 raise cyipopt.CyIpoptEvaluationError(
                     "Error in objective gradient evaluation"
                 )
-            else:
-                raise
 
     def constraints(self, x):
         try:
@@ -372,9 +372,9 @@ class CyIpoptNLP(CyIpoptProblemInterface):
             return self._nlp.evaluate_constraints()
         except PyNumeroEvaluationError:
             if self._halt_on_evaluation_error:
-                raise cyipopt.CyIpoptEvaluationError("Error in constraint evaluation")
-            else:
                 raise
+            else:
+                raise cyipopt.CyIpoptEvaluationError("Error in constraint evaluation")
 
     def jacobianstructure(self):
         return self._jac_g.row, self._jac_g.col
@@ -386,11 +386,11 @@ class CyIpoptNLP(CyIpoptProblemInterface):
             return self._jac_g.data
         except PyNumeroEvaluationError:
             if self._halt_on_evaluation_error:
+                raise
+            else:
                 raise cyipopt.CyIpoptEvaluationError(
                     "Error in constraint Jacobian evaluation"
                 )
-            else:
-                raise
 
     def hessianstructure(self):
         if not self._hessian_available:
@@ -413,11 +413,11 @@ class CyIpoptNLP(CyIpoptProblemInterface):
             return data
         except PyNumeroEvaluationError:
             if self._halt_on_evaluation_error:
+                raise
+            else:
                 raise cyipopt.CyIpoptEvaluationError(
                     "Error in Lagrangian Hessian evaluation"
                 )
-            else:
-                raise
 
     def intermediate(
         self,
