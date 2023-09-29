@@ -274,7 +274,7 @@ class CyIpoptNLP(CyIpoptProblemInterface):
             # If CyIpopt is not available, we "halt" (re-raise the original
             # exception).
             self._halt_on_evaluation_error = not cyipopt_has_eval_error
-        elif not halt_on_evaluation_error and not has_cyipopt_eval_error:
+        elif not halt_on_evaluation_error and not cyipopt_has_eval_error:
             raise ValueError(
                 "halt_on_evaluation_error=False is only supported for cyipopt >= 1.3.0"
             )
