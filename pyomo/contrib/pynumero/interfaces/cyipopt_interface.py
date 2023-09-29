@@ -253,7 +253,7 @@ class CyIpoptProblemInterface(cyipopt_Problem, metaclass=abc.ABCMeta):
 
 
 class CyIpoptNLP(CyIpoptProblemInterface):
-    def __init__(self, nlp, intermediate_callback=None):
+    def __init__(self, nlp, intermediate_callback=None, halt_on_evaluation_error=None):
         """This class provides a CyIpoptProblemInterface for use
         with the CyIpoptSolver class that can take in an NLP
         as long as it provides vectors as numpy ndarrays and
@@ -263,6 +263,18 @@ class CyIpoptNLP(CyIpoptProblemInterface):
         """
         self._nlp = nlp
         self._intermediate_callback = intermediate_callback
+
+        if halt_on_evaluation_error is None:
+            # If using cyipopt >= 1.3, the default is to halt.
+            # Otherwise, the default is not to halt (because we can't).
+            self._halt_on_evaluation_error = hasattr(cyipopt, "CyIpoptEvaluationError")
+        elif halt_on_evaluation_error and not hasattr(cyipopt, "CyIpoptEvaluationError"):
+            raise ValueError(
+                "halt_on_evaluation_error is only supported for cyipopt >= 1.3.0"
+            )
+        else:
+            self._halt_on_evaluation_error = halt_on_evaluation_error
+
 
         x = nlp.init_primals()
         y = nlp.init_duals()
@@ -335,25 +347,34 @@ class CyIpoptNLP(CyIpoptProblemInterface):
         except PyNumeroEvaluationError:
             # TODO: halt_on_evaluation_error option. If set, we re-raise the
             # original exception.
-            raise cyipopt.CyIpoptEvaluationError(
-                "Error in objective function evaluation"
-            )
+            if self._halt_on_evaluation_error:
+                raise cyipopt.CyIpoptEvaluationError(
+                    "Error in objective function evaluation"
+                )
+            else:
+                raise
 
     def gradient(self, x):
         try:
             self._set_primals_if_necessary(x)
             return self._nlp.evaluate_grad_objective()
         except PyNumeroEvaluationError:
-            raise cyipopt.CyIpoptEvaluationError(
-                "Error in objective gradient evaluation"
-            )
+            if self._halt_on_evaluation_error:
+                raise cyipopt.CyIpoptEvaluationError(
+                    "Error in objective gradient evaluation"
+                )
+            else:
+                raise
 
     def constraints(self, x):
         try:
             self._set_primals_if_necessary(x)
             return self._nlp.evaluate_constraints()
         except PyNumeroEvaluationError:
-            raise cyipopt.CyIpoptEvaluationError("Error in constraint evaluation")
+            if self._halt_on_evaluation_error:
+                raise cyipopt.CyIpoptEvaluationError("Error in constraint evaluation")
+            else:
+                raise
 
     def jacobianstructure(self):
         return self._jac_g.row, self._jac_g.col
@@ -364,9 +385,12 @@ class CyIpoptNLP(CyIpoptProblemInterface):
             self._nlp.evaluate_jacobian(out=self._jac_g)
             return self._jac_g.data
         except PyNumeroEvaluationError:
-            raise cyipopt.CyIpoptEvaluationError(
-                "Error in constraint Jacobian evaluation"
-            )
+            if self._halt_on_evaluation_error:
+                raise cyipopt.CyIpoptEvaluationError(
+                    "Error in constraint Jacobian evaluation"
+                )
+            else:
+                raise
 
     def hessianstructure(self):
         if not self._hessian_available:
@@ -388,9 +412,12 @@ class CyIpoptNLP(CyIpoptProblemInterface):
             data = np.compress(self._hess_lower_mask, self._hess_lag.data)
             return data
         except PyNumeroEvaluationError:
-            raise cyipopt.CyIpoptEvaluationError(
-                "Error in Lagrangian Hessian evaluation"
-            )
+            if self._halt_on_evaluation_error:
+                raise cyipopt.CyIpoptEvaluationError(
+                    "Error in Lagrangian Hessian evaluation"
+                )
+            else:
+                raise
 
     def intermediate(
         self,
