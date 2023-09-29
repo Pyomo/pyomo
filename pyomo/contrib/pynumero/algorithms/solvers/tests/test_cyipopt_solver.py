@@ -42,7 +42,10 @@ from pyomo.contrib.pynumero.interfaces.cyipopt_interface import (
 
 from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import CyIpoptSolver
 
-cyipopt_ge_1_3 = hasattr(cyipopt, "CyIpoptEvaluationError")
+if cyipopt_available:
+    # We don't raise unittest.SkipTest if not cyipopt_available as there is a
+    # test below that tests an exception when cyipopt is unavailable.
+    cyipopt_ge_1_3 = hasattr(cyipopt, "CyIpoptEvaluationError")
 
 
 def create_model1():
