@@ -264,8 +264,8 @@ class CyIpoptNLP(CyIpoptProblemInterface):
         self._nlp = nlp
         self._intermediate_callback = intermediate_callback
 
-        cyipopt_has_eval_error = (
-            cyipopt_available and hasattr(cyipopt, "CyIpoptEvaluationError")
+        cyipopt_has_eval_error = cyipopt_available and hasattr(
+            cyipopt, "CyIpoptEvaluationError"
         )
         if halt_on_evaluation_error is None:
             # If using cyipopt >= 1.3, the default is to continue.
