@@ -267,8 +267,12 @@ class CyIpoptNLP(CyIpoptProblemInterface):
         if halt_on_evaluation_error is None:
             # If using cyipopt >= 1.3, the default is to continue.
             # Otherwise, the default is to halt (because we are forced to).
-            self._halt_on_evaluation_error = not hasattr(cyipopt, "CyIpoptEvaluationError")
-        elif halt_on_evaluation_error and not hasattr(cyipopt, "CyIpoptEvaluationError"):
+            self._halt_on_evaluation_error = not hasattr(
+                cyipopt, "CyIpoptEvaluationError"
+            )
+        elif halt_on_evaluation_error and not hasattr(
+            cyipopt, "CyIpoptEvaluationError"
+        ):
             raise ValueError(
                 "halt_on_evaluation_error is only supported for cyipopt >= 1.3.0"
             )

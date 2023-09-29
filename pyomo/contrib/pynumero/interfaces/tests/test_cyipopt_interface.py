@@ -110,7 +110,6 @@ def _get_model_nlp_interface(halt_on_evaluation_error=None):
 
 
 class TestCyIpoptVersionDependentConfig(unittest.TestCase):
-
     @unittest.skipIf(cyipopt_ge_1_3, "cyipopt version >= 1.3.0")
     def test_config_error(self):
         _, nlp, _, _ = _get_model_nlp_interface()
@@ -135,7 +134,6 @@ class TestCyIpoptVersionDependentConfig(unittest.TestCase):
 
 
 class TestCyIpoptEvaluationErrors(unittest.TestCase):
-
     @unittest.skipUnless(cyipopt_ge_1_3, "cyipopt version < 1.3.0")
     def test_error_in_objective(self):
         m, nlp, interface, bad_x = _get_model_nlp_interface(
