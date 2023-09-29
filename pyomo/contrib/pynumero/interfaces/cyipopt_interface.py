@@ -279,7 +279,6 @@ class CyIpoptNLP(CyIpoptProblemInterface):
         else:
             self._halt_on_evaluation_error = halt_on_evaluation_error
 
-
         x = nlp.init_primals()
         y = nlp.init_duals()
         if np.any(np.isnan(y)):
