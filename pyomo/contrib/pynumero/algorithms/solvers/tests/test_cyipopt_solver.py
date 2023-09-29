@@ -24,6 +24,7 @@ from pyomo.common.dependencies.scipy import sparse as spa
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
+from pyomo.contrib.pynumero.exceptions import PyNumeroEvaluationError
 from pyomo.contrib.pynumero.asl import AmplInterface
 
 if not AmplInterface.available():
@@ -34,11 +35,14 @@ if not AmplInterface.available():
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 
 from pyomo.contrib.pynumero.interfaces.cyipopt_interface import (
+    cyipopt,
     cyipopt_available,
     CyIpoptNLP,
 )
 
 from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import CyIpoptSolver
+
+cyipopt_ge_1_3 = hasattr(cyipopt, "CyIpoptEvaluationError")
 
 
 def create_model1():
@@ -281,6 +285,7 @@ class TestCyIpoptSolver(unittest.TestCase):
         nlp.set_primals(x)
         self.assertAlmostEqual(nlp.evaluate_objective(), -5.0879028e02, places=5)
 
+    @unittest.skipUnless(cyipopt_ge_1_3, "cyipopt version < 1.3.0")
     def test_hs071_evalerror(self):
         m = make_hs071_model()
         solver = pyo.SolverFactory("cyipopt")
@@ -289,3 +294,18 @@ class TestCyIpoptSolver(unittest.TestCase):
         x = list(m.x[:].value)
         expected_x = np.array([1.0, 4.74299964, 3.82114998, 1.37940829])
         np.testing.assert_allclose(x, expected_x)
+
+    def test_hs071_evalerror_halt(self):
+        m = make_hs071_model()
+        solver = pyo.SolverFactory("cyipopt", halt_on_evaluation_error=True)
+        msg = "Error in AMPL evaluation"
+        with self.assertRaisesRegex(PyNumeroEvaluationError, msg):
+            res = solver.solve(m, tee=True)
+
+    @unittest.skipIf(cyipopt_ge_1_3, "cyipopt version >= 1.3.0")
+    def test_hs071_evalerror_old_cyipopt(self):
+        m = make_hs071_model()
+        solver = pyo.SolverFactory("cyipopt")
+        msg = "Error in AMPL evaluation"
+        with self.assertRaisesRegex(PyNumeroEvaluationError, msg):
+            res = solver.solve(m, tee=True)
