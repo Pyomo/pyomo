@@ -288,7 +288,9 @@ class TestCyIpoptSolver(unittest.TestCase):
         nlp.set_primals(x)
         self.assertAlmostEqual(nlp.evaluate_objective(), -5.0879028e02, places=5)
 
-    @unittest.skipUnless(cyipopt_ge_1_3, "cyipopt version < 1.3.0")
+    @unittest.skipUnless(
+        cyipopt_available and cyipopt_ge_1_3, "cyipopt version < 1.3.0"
+    )
     def test_hs071_evalerror(self):
         m = make_hs071_model()
         solver = pyo.SolverFactory("cyipopt")
@@ -305,7 +307,9 @@ class TestCyIpoptSolver(unittest.TestCase):
         with self.assertRaisesRegex(PyNumeroEvaluationError, msg):
             res = solver.solve(m, tee=True)
 
-    @unittest.skipIf(cyipopt_ge_1_3, "cyipopt version >= 1.3.0")
+    @unittest.skipIf(
+        not cyipopt_available or cyipopt_ge_1_3, "cyipopt version >= 1.3.0"
+    )
     def test_hs071_evalerror_old_cyipopt(self):
         m = make_hs071_model()
         solver = pyo.SolverFactory("cyipopt")
