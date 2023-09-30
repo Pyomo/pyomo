@@ -18,7 +18,7 @@ from pyomo.core.base import value
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.core.base.var import _VarData as VarData
 from itertools import chain
-import numpy as np
+from pyomo.common.dependencies import numpy as np
 
 
 def update_grcs_solve_data(
