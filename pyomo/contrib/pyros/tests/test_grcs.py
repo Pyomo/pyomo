@@ -20,6 +20,7 @@ from pyomo.contrib.pyros.util import (
     pyrosTerminationCondition,
     coefficient_matching,
     TimingData,
+    IterationLogRecord,
 )
 from pyomo.contrib.pyros.util import replace_uncertain_bounds_with_constraints
 from pyomo.contrib.pyros.util import get_vars_from_component
@@ -61,6 +62,9 @@ from pyomo.environ import (
     value,
 )
 import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 if not (numpy_available and scipy_available):
@@ -5636,6 +5640,205 @@ class TestSubsolverTiming(unittest.TestCase):
             results.iterations,
             0,
             msg="Robust infeasible model terminated in 0 iterations (nominal case).",
+        )
+
+
+class TestIterationLogRecord(unittest.TestCase):
+    """
+    Test the PyROS `IterationLogRecord` class.
+    """
+
+    def test_log_header(self):
+        """Test method for logging iteration log table header."""
+        ans = (
+            "------------------------------------------------------------------------------\n"
+            "Itn  Objective    1-Stg Shift  DR Shift     #CViol  Max Viol     Wall Time (s)\n"
+            "------------------------------------------------------------------------------\n"
+        )
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            IterationLogRecord.log_header(logger.info)
+
+        self.assertEqual(
+            LOG.getvalue(),
+            ans,
+            msg="Messages logged for iteration table header do not match expected result",
+        )
+
+    def test_log_standard_iter_record(self):
+        """Test logging function for PyROS IterationLogRecord."""
+
+        # for some fields, we choose floats with more than four
+        # four decimal points to ensure rounding also matches
+        iter_record = IterationLogRecord(
+            iteration=4,
+            objective=1.234567,
+            first_stage_var_shift=2.3456789e-8,
+            dr_var_shift=3.456789e-7,
+            num_violated_cons=10,
+            max_violation=7.654321e-3,
+            elapsed_time=21.2,
+            dr_polishing_success=True,
+            all_sep_problems_solved=True,
+            global_separation=False,
+        )
+
+        # now check record logged as expected
+        ans = (
+            "4     1.2346e+00  2.3457e-08   3.4568e-07   10      7.6543e-03   "
+            "21.200       \n"
+        )
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            iter_record.log(logger.info)
+        result = LOG.getvalue()
+
+        self.assertEqual(
+            ans,
+            result,
+            msg="Iteration log record message does not match expected result",
+        )
+
+    def test_log_iter_record_polishing_failed(self):
+        """Test iteration log record in event of polishing failure."""
+        # for some fields, we choose floats with more than four
+        # four decimal points to ensure rounding also matches
+        iter_record = IterationLogRecord(
+            iteration=4,
+            objective=1.234567,
+            first_stage_var_shift=2.3456789e-8,
+            dr_var_shift=3.456789e-7,
+            num_violated_cons=10,
+            max_violation=7.654321e-3,
+            elapsed_time=21.2,
+            dr_polishing_success=False,
+            all_sep_problems_solved=True,
+            global_separation=False,
+        )
+
+        # now check record logged as expected
+        ans = (
+            "4     1.2346e+00  2.3457e-08   3.4568e-07*  10      7.6543e-03   "
+            "21.200       \n"
+        )
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            iter_record.log(logger.info)
+        result = LOG.getvalue()
+
+        self.assertEqual(
+            ans,
+            result,
+            msg="Iteration log record message does not match expected result",
+        )
+
+    def test_log_iter_record_global_separation(self):
+        """
+        Test iteration log record in event global separation performed.
+        In this case, a 'g' should be appended to the max violation
+        reported. Useful in the event neither local nor global separation
+        was bypassed.
+        """
+        # for some fields, we choose floats with more than four
+        # four decimal points to ensure rounding also matches
+        iter_record = IterationLogRecord(
+            iteration=4,
+            objective=1.234567,
+            first_stage_var_shift=2.3456789e-8,
+            dr_var_shift=3.456789e-7,
+            num_violated_cons=10,
+            max_violation=7.654321e-3,
+            elapsed_time=21.2,
+            dr_polishing_success=True,
+            all_sep_problems_solved=True,
+            global_separation=True,
+        )
+
+        # now check record logged as expected
+        ans = (
+            "4     1.2346e+00  2.3457e-08   3.4568e-07   10      7.6543e-03g  "
+            "21.200       \n"
+        )
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            iter_record.log(logger.info)
+        result = LOG.getvalue()
+
+        self.assertEqual(
+            ans,
+            result,
+            msg="Iteration log record message does not match expected result",
+        )
+
+    def test_log_iter_record_not_all_sep_solved(self):
+        """
+        Test iteration log record in event not all separation problems
+        were solved successfully. This may have occurred if the PyROS
+        solver time limit was reached, or the user-provides subordinate
+        optimizer(s) were unable to solve a separation subproblem
+        to an acceptable level.
+        A '+' should be appended to the number of performance constraints
+        found to be violated.
+        """
+        # for some fields, we choose floats with more than four
+        # four decimal points to ensure rounding also matches
+        iter_record = IterationLogRecord(
+            iteration=4,
+            objective=1.234567,
+            first_stage_var_shift=2.3456789e-8,
+            dr_var_shift=3.456789e-7,
+            num_violated_cons=10,
+            max_violation=7.654321e-3,
+            elapsed_time=21.2,
+            dr_polishing_success=True,
+            all_sep_problems_solved=False,
+            global_separation=False,
+        )
+
+        # now check record logged as expected
+        ans = (
+            "4     1.2346e+00  2.3457e-08   3.4568e-07   10+     7.6543e-03   "
+            "21.200       \n"
+        )
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            iter_record.log(logger.info)
+        result = LOG.getvalue()
+
+        self.assertEqual(
+            ans,
+            result,
+            msg="Iteration log record message does not match expected result",
+        )
+
+    def test_log_iter_record_all_special(self):
+        """
+        Test iteration log record in event DR polishing and global
+        separation failed.
+        """
+        # for some fields, we choose floats with more than four
+        # four decimal points to ensure rounding also matches
+        iter_record = IterationLogRecord(
+            iteration=4,
+            objective=1.234567,
+            first_stage_var_shift=2.3456789e-8,
+            dr_var_shift=3.456789e-7,
+            num_violated_cons=10,
+            max_violation=7.654321e-3,
+            elapsed_time=21.2,
+            dr_polishing_success=False,
+            all_sep_problems_solved=False,
+            global_separation=True,
+        )
+
+        # now check record logged as expected
+        ans = (
+            "4     1.2346e+00  2.3457e-08   3.4568e-07*  10+     7.6543e-03g  "
+            "21.200       \n"
+        )
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            iter_record.log(logger.info)
+        result = LOG.getvalue()
+
+        self.assertEqual(
+            ans,
+            result,
+            msg="Iteration log record message does not match expected result",
         )
 
 
