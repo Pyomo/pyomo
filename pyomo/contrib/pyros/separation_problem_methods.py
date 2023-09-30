@@ -681,20 +681,22 @@ def perform_separation_loop(model_data, config, solve_globally):
             )
 
     all_solve_call_results = ComponentMap()
-    for priority, perf_constraints in sorted_priority_groups.items():
+    priority_groups_enum = enumerate(sorted_priority_groups.items())
+    for group_idx, (priority, perf_constraints) in priority_groups_enum:
         priority_group_solve_call_results = ComponentMap()
         for idx, perf_con in enumerate(perf_constraints):
+            # log progress of separation loop
             solve_adverb = "Globally" if solve_globally else "Locally"
             config.progress_logger.debug(
-                f"{solve_adverb} separating constraint "
+                f"{solve_adverb} separating performance constraint "
                 f"{get_con_name_repr(model_data.separation_model, perf_con)} "
-                f"(group priority {priority}, "
-                f"constraint {idx + 1} of {len(perf_constraints)})"
+                f"(priority {priority}, priority group {group_idx + 1} of "
+                f"{len(sorted_priority_groups)}, "
+                f"constraint {idx + 1} of {len(perf_constraints)} "
+                "in priority group, "
+                f"{len(all_solve_call_results) + idx + 1} of "
+                f"{len(all_performance_constraints)} total)"
             )
-
-            # config.progress_logger.info(
-            #     f"Separating constraint {perf_con.name}"
-            # )
 
             # solve separation problem for this performance constraint
             if uncertainty_set_is_discrete:
