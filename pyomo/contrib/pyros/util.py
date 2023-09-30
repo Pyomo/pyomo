@@ -388,6 +388,20 @@ class PreformattedLogger(logging.Logger):
         )
 
 
+def setup_pyros_logger(name=DEFAULT_LOGGER_NAME):
+    """
+    Set up pyros logger.
+    """
+    # default logger: INFO level, with preformatted messages
+    current_logger_class = logging.getLoggerClass()
+    logging.setLoggerClass(PreformattedLogger)
+    logger = logging.getLogger(DEFAULT_LOGGER_NAME)
+    logger.setLevel(logging.INFO)
+    logging.setLoggerClass(current_logger_class)
+
+    return logger
+
+
 def a_logger(str_or_logger):
     """
     Standardize a string or logger object to a logger object.
@@ -410,19 +424,9 @@ def a_logger(str_or_logger):
         instance.
     """
     if isinstance(str_or_logger, logging.Logger):
-        logger = logging.getLogger(str_or_logger.name)
+        return logging.getLogger(str_or_logger.name)
     else:
-        if str_or_logger == DEFAULT_LOGGER_NAME:
-            # default logger: INFO level, with preformatted messages
-            current_logger_class = logging.getLoggerClass()
-            logging.setLoggerClass(PreformattedLogger)
-            logger = logging.getLogger(str_or_logger)
-            logger.setLevel(logging.INFO)
-            logging.setLoggerClass(current_logger_class)
-        else:
-            logger = logging.getLogger(str_or_logger)
-
-    return logger
+        return logging.getLogger(str_or_logger)
 
 
 def ValidEnum(enum_class):

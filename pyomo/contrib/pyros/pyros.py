@@ -38,7 +38,7 @@ from pyomo.contrib.pyros.util import (
     turn_bounds_to_constraints,
     replace_uncertain_bounds_with_constraints,
     IterationLogRecord,
-    DEFAULT_LOGGER_NAME,
+    setup_pyros_logger,
     TimingData,
 )
 from pyomo.contrib.pyros.solve_data import ROSolveResults
@@ -50,6 +50,9 @@ from datetime import datetime
 
 
 __version__ = "1.2.7"
+
+
+default_pyros_solver_logger = setup_pyros_logger()
 
 
 def _get_pyomo_git_info():
@@ -514,7 +517,7 @@ def pyros_config():
     CONFIG.declare(
         "progress_logger",
         PyROSConfigValue(
-            default=DEFAULT_LOGGER_NAME,
+            default=default_pyros_solver_logger,
             domain=a_logger,
             doc=(
                 """
