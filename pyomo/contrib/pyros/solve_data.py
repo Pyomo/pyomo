@@ -61,7 +61,7 @@ class ROSolveResults(object):
             "final_objective_value": ("Final objective value", "f'{val:.4e}'"),
             "pyros_termination_condition": ("Termination condition", "f'{val}'"),
         }
-        attr_desc_pad_length = 1 + max(
+        attr_desc_pad_length = max(
             len(desc) for desc, _ in attr_name_format_dict.values()
         )
         for attr_name, (attr_desc, fmt_str) in attr_name_format_dict.items():
