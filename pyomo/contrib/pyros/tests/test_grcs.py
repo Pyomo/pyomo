@@ -5221,11 +5221,25 @@ class testModelMultipleObjectives(unittest.TestCase):
         # and solve again
         m.obj_max = Objective(expr=-m.obj.expr, sense=pyo_max)
         m.obj.deactivate()
-        res = pyros_solver.solve(**solve_kwargs)
+        max_obj_res = pyros_solver.solve(**solve_kwargs)
 
         # check active objectives
         self.assertEqual(len(list(m.component_data_objects(Objective, active=True))), 1)
         self.assertTrue(m.obj_max.active)
+
+        self.assertTrue(
+            math.isclose(
+                res.final_objective_value,
+                -max_obj_res.final_objective_value,
+                abs_tol=2e-4,  # 2x the default robust feasibility tolerance
+            ),
+            msg=(
+                f"Robust optimal objective value {res.final_objective_value} "
+                "for problem with minimization objective not close to "
+                f"negative of value {max_obj_res.final_objective_value} "
+                "of equivalent maximization objective."
+            ),
+        )
 
 
 class testModelIdentifyObjectives(unittest.TestCase):

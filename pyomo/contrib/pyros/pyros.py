@@ -961,6 +961,7 @@ class PyROS(object):
             )
             assert len(active_objs) == 1
             active_obj = active_objs[0]
+            active_obj_original_sense = active_obj.sense
             recast_to_min_obj(model_data.working_model, active_obj)
 
             # === Determine first and second-stage objectives
@@ -1037,12 +1038,14 @@ class PyROS(object):
                 # since maximization objective is changed to
                 # minimization objective during preprocessing
                 if config.objective_focus == ObjectiveType.nominal:
-                    return_soln.final_objective_value = active_obj.sense * value(
-                        pyros_soln.master_soln.master_model.obj
+                    return_soln.final_objective_value = (
+                        active_obj_original_sense
+                        * value(pyros_soln.master_soln.master_model.obj)
                     )
                 elif config.objective_focus == ObjectiveType.worst_case:
-                    return_soln.final_objective_value = active_obj.sense * value(
-                        pyros_soln.master_soln.master_model.zeta
+                    return_soln.final_objective_value = (
+                        active_obj_original_sense
+                        * value(pyros_soln.master_soln.master_model.zeta)
                     )
                 return_soln.pyros_termination_condition = (
                     pyros_soln.pyros_termination_condition
