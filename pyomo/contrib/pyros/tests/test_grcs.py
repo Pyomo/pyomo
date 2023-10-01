@@ -3970,7 +3970,8 @@ class RegressionTest(unittest.TestCase):
         baron_license_is_valid, "Global NLP solver is not available and licensed."
     )
     @unittest.skipUnless(
-        baron_version < (23, 1, 5), "Test known to fail beginning with Baron 23.1.5"
+        baron_version < (23, 1, 5) or baron_version >= (23, 6, 23),
+        "Test known to fail for BARON 23.1.5 and versions preceding 23.6.23",
     )
     def test_terminate_with_max_iter(self):
         m = ConcreteModel()
@@ -4015,6 +4016,15 @@ class RegressionTest(unittest.TestCase):
             results.pyros_termination_condition,
             pyrosTerminationCondition.max_iter,
             msg="Returned termination condition is not return max_iter.",
+        )
+
+        self.assertEqual(
+            results.iterations,
+            1,
+            msg=(
+                f"Number of iterations in results object is {results.iterations}, "
+                f"but expected value 1."
+            )
         )
 
     @unittest.skipUnless(
