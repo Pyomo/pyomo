@@ -5930,5 +5930,54 @@ class TestROSolveResults(unittest.TestCase):
         )
 
 
+class TestPyROSSolverLogIntros(unittest.TestCase):
+    """
+    Test logging of introductory information by PyROS solver.
+    """
+    def test_log_config(self):
+        """
+        Test method for logging PyROS solver config dict.
+        """
+        pyros_solver = SolverFactory("pyros")
+        config = pyros_solver.CONFIG(dict(
+            nominal_uncertain_param_vals=[0.5],
+        ))
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            pyros_solver._log_config(logger=logger, config=config, level=logging.INFO)
+
+        ans = (
+            "Solver options:\n"
+            " time_limit=None\n"
+            " keepfiles=False\n"
+            " tee=False\n"
+            " load_solution=True\n"
+            " objective_focus=<ObjectiveType.nominal: 2>\n"
+            " nominal_uncertain_param_vals=[0.5]\n"
+            " decision_rule_order=0\n"
+            " solve_master_globally=False\n"
+            " max_iter=-1\n"
+            " robust_feasibility_tolerance=0.0001\n"
+            " separation_priority_order={}\n"
+            " progress_logger=<PreformattedLogger pyomo.contrib.pyros (INFO)>\n"
+            " backup_local_solvers=[]\n"
+            " backup_global_solvers=[]\n"
+            " subproblem_file_directory=None\n"
+            " bypass_local_separation=False\n"
+            " bypass_global_separation=False\n"
+            " p_robustness={}\n"
+            + "-" * 78 + "\n"
+        )
+
+        logged_str = LOG.getvalue()
+        self.assertEqual(
+            logged_str,
+            ans,
+            msg=(
+                "Logger output for PyROS solver config (default case) "
+                "does not match expected result."
+            ),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
