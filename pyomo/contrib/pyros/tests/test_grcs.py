@@ -4024,7 +4024,7 @@ class RegressionTest(unittest.TestCase):
             msg=(
                 f"Number of iterations in results object is {results.iterations}, "
                 f"but expected value 1."
-            )
+            ),
         )
 
     @unittest.skipUnless(
