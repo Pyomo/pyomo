@@ -19,6 +19,7 @@ from pyomo.environ import (
     Set,
     Constraint,
     ComponentMap,
+    SolverFactory,
     Suffix,
     ConcreteModel,
     Var,
@@ -44,6 +45,8 @@ import pyomo.network as ntwk
 import random
 
 from io import StringIO
+
+gurobi_available = SolverFactory('gurobi').available()
 
 
 class CommonTests:
@@ -1729,8 +1732,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         self.assertEqual(len(disjBlock), len(pairs))
 
         # This test will also rely on the disjunctions being relaxed in the same
-        # order every time (and moved up to the new transformation block in the
-        # same order)
+        # order every time
         bigm = TransformationFactory('gdp.bigm')
         for i, j in pairs:
             for comp in j:
@@ -1750,9 +1752,9 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
             (1, [m.simpledisjunct.innerdisjunct1.c]),
             (2, []),  # No constraints, just a reference to simpledisjunct's
             # indicator_var
-            (3, [m.disjunct[0].c]),
-            (4, [m.disjunct[1].innerdisjunct[0].c]),
-            (5, [m.disjunct[1].innerdisjunct[1].c]),
+            (5, [m.disjunct[0].c]),
+            (2, [m.disjunct[1].innerdisjunct[0].c]),
+            (3, [m.disjunct[1].innerdisjunct[1].c]),
             (6, []),  # Again no constraints, just indicator var ref
         ]
         self.check_disjunction_transformation_block_structure(transBlock, pairs)
@@ -1792,14 +1794,14 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         # I want to check that I correctly updated the pointers to the
         # transformation blocks on the inner Disjuncts.
         self.assertIs(
-            m.disjunct[1].innerdisjunct[0].transformation_block, disjunctBlocks[4]
+            m.disjunct[1].innerdisjunct[0].transformation_block, disjunctBlocks[2]
         )
-        self.assertIs(disjunctBlocks[4]._src_disjunct(), m.disjunct[1].innerdisjunct[0])
+        self.assertIs(disjunctBlocks[2]._src_disjunct(), m.disjunct[1].innerdisjunct[0])
 
         self.assertIs(
-            m.disjunct[1].innerdisjunct[1].transformation_block, disjunctBlocks[5]
+            m.disjunct[1].innerdisjunct[1].transformation_block, disjunctBlocks[3]
         )
-        self.assertIs(disjunctBlocks[5]._src_disjunct(), m.disjunct[1].innerdisjunct[1])
+        self.assertIs(disjunctBlocks[3]._src_disjunct(), m.disjunct[1].innerdisjunct[1])
 
         self.assertIs(
             m.simpledisjunct.innerdisjunct0.transformation_block, disjunctBlocks[0]
@@ -2842,6 +2844,24 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
     @unittest.skipIf(not dill_available, "Dill is not available")
     def test_dill_pickle(self):
         ct.check_transformed_model_pickles_with_dill(self, 'bigm')
+
+
+@unittest.skipUnless(gurobi_available, "Gurobi is not available")
+class NestedDisjunctsInFlatGDP(unittest.TestCase):
+    """
+    This class tests the fix for #2702
+    """
+
+    def test_declare_disjuncts_in_disjunction_rule(self):
+        m = models.make_non_nested_model_declaring_Disjuncts_on_each_other()
+        TransformationFactory('gdp.bigm').apply_to(m)
+        SolverFactory('gurobi').solve(m)
+        self.assertAlmostEqual(value(m.obj), 1020)
+
+        # check the Boolean solution
+        for t in m.T:
+            self.assertTrue(value(m.disj1[t].indicator_var))
+            self.assertTrue(value(m.disj1[t].sub1.indicator_var))
 
 
 if __name__ == '__main__':
