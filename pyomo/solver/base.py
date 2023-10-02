@@ -39,11 +39,11 @@ from pyomo.solver.results import (
 
 class SolverBase(abc.ABC):
     class Availability(enum.IntEnum):
+        FullLicense = 2
+        LimitedLicense = 1
         NotFound = 0
         BadVersion = -1
         BadLicense = -2
-        FullLicense = 1
-        LimitedLicense = 2
         NeedsCompiledExtension = -3
 
         def __bool__(self):
