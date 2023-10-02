@@ -5892,6 +5892,44 @@ class TestIterationLogRecord(unittest.TestCase):
             msg="Iteration log record message does not match expected result",
         )
 
+    def test_log_iter_record_attrs_none(self):
+        """
+        Test logging of iteration record in event some
+        attributes are of value `None`. In this case, a '-'
+        should be printed in lieu of a numerical value.
+        Example where this occurs: the first iteration,
+        in which there is no first-stage shift or DR shift.
+        """
+        # for some fields, we choose floats with more than four
+        # four decimal points to ensure rounding also matches
+        iter_record = IterationLogRecord(
+            iteration=0,
+            objective=-1.234567,
+            first_stage_var_shift=None,
+            dr_var_shift=None,
+            num_violated_cons=10,
+            max_violation=7.654321e-3,
+            elapsed_time=21.2,
+            dr_polishing_success=True,
+            all_sep_problems_solved=False,
+            global_separation=True,
+        )
+
+        # now check record logged as expected
+        ans = (
+            "0    -1.2346e+00  -            -            10+     7.6543e-03g  "
+            "21.200       \n"
+        )
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            iter_record.log(logger.info)
+        result = LOG.getvalue()
+
+        self.assertEqual(
+            ans,
+            result,
+            msg="Iteration log record message does not match expected result",
+        )
+
 
 class TestROSolveResults(unittest.TestCase):
     """
