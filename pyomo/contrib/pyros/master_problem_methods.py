@@ -293,10 +293,10 @@ def solve_master_feasibility_problem(model_data, config):
     else:
         config.progress_logger.warning(
             "Could not successfully solve master feasibility problem "
-            f" of iteration {model_data.iteration} with primary subordinate "
+            f"of iteration {model_data.iteration} with primary subordinate "
             f"{'global' if config.solve_master_globally else 'local'} solver "
             "to acceptable level. "
-            f"Termination stats:\n{results.solver}"
+            f"Termination stats:\n{results.solver}\n"
             "Maintaining unoptimized point for master problem initialization."
         )
 
