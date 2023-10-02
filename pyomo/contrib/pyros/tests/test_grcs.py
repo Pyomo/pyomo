@@ -4887,13 +4887,16 @@ class RegressionTest(unittest.TestCase):
         # solve with PyROS
         dr_orders = [1, 2]
         for dr_order in dr_orders:
-            with self.assertRaisesRegex(
+            regex_assert_mgr = self.assertRaisesRegex(
                 ValueError,
                 expected_regex=(
                     "Coefficient matching unsuccessful. See the solver logs."
                 ),
-            ):
-                res = pyros_solver.solve(
+            )
+            logging_intercept_mgr = LoggingIntercept(level=logging.ERROR)
+
+            with regex_assert_mgr, logging_intercept_mgr as LOG:
+                pyros_solver.solve(
                     model=m,
                     first_stage_variables=[],
                     second_stage_variables=[m.x1, m.x2, m.x3],
@@ -4907,6 +4910,16 @@ class RegressionTest(unittest.TestCase):
                     bypass_local_separation=True,
                     robust_feasibility_tolerance=1e-4,
                 )
+
+            detailed_error_msg = LOG.getvalue()
+            self.assertRegex(
+                detailed_error_msg[:-1],
+                (
+                    r"Equality constraint.*cannot be guaranteed to "
+                    r"be robustly feasible.*"
+                    r"Consider editing this constraint.*"
+                ),
+            )
 
     def test_coefficient_matching_robust_infeasible_proof_in_pyros(self):
         # Write the deterministic Pyomo model
