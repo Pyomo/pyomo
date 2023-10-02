@@ -16,6 +16,7 @@ from datetime import datetime
 from pyomo.common.config import (
     ConfigDict,
     ConfigValue,
+    Datetime,
     NonNegativeInt,
     In,
     NonNegativeFloat,
@@ -213,9 +214,9 @@ class Results(ConfigDict):
             'iteration_count', ConfigValue(domain=NonNegativeInt)
         )
         self.timing_info: ConfigDict = self.declare('timing_info', ConfigDict())
-        # TODO: Implement type checking for datetime
+
         self.timing_info.start_time: datetime = self.timing_info.declare(
-            'start_time', ConfigValue()
+            'start_time', ConfigValue(domain=Datetime)
         )
         self.timing_info.wall_time: Optional[float] = self.timing_info.declare(
             'wall_time', ConfigValue(domain=NonNegativeFloat)
@@ -331,6 +332,10 @@ def parse_sol_file(file, results):
             "FAILURE: the solver stopped by an error condition "
             "in the solver routines!"
         )
+        if results.extra_info.solver_message:
+            results.extra_info.solver_message += '; ' + exit_code_message
+        else:
+            results.extra_info.solver_message = exit_code_message
         results.solver.termination_condition = TerminationCondition.error
         return results
     
