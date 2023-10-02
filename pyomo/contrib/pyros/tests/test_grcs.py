@@ -5934,14 +5934,13 @@ class TestPyROSSolverLogIntros(unittest.TestCase):
     """
     Test logging of introductory information by PyROS solver.
     """
+
     def test_log_config(self):
         """
         Test method for logging PyROS solver config dict.
         """
         pyros_solver = SolverFactory("pyros")
-        config = pyros_solver.CONFIG(dict(
-            nominal_uncertain_param_vals=[0.5],
-        ))
+        config = pyros_solver.CONFIG(dict(nominal_uncertain_param_vals=[0.5]))
         with LoggingIntercept(level=logging.INFO) as LOG:
             pyros_solver._log_config(logger=logger, config=config, level=logging.INFO)
 
@@ -5964,8 +5963,7 @@ class TestPyROSSolverLogIntros(unittest.TestCase):
             " subproblem_file_directory=None\n"
             " bypass_local_separation=False\n"
             " bypass_global_separation=False\n"
-            " p_robustness={}\n"
-            + "-" * 78 + "\n"
+            " p_robustness={}\n" + "-" * 78 + "\n"
         )
 
         logged_str = LOG.getvalue()
@@ -6035,10 +6033,7 @@ class TestPyROSSolverLogIntros(unittest.TestCase):
         )
 
         # regex first line of disclaimer section
-        self.assertRegex(
-            disclaimer_msg_lines[0],
-            r"=.* DISCLAIMER .*=",
-        )
+        self.assertRegex(disclaimer_msg_lines[0], r"=.* DISCLAIMER .*=")
         # check last line of disclaimer section
         self.assertEqual(disclaimer_msg_lines[-1], "=" * 78)
 
