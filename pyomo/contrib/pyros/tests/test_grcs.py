@@ -6011,6 +6011,43 @@ class TestPyROSSolverLogIntros(unittest.TestCase):
             r"PyROS: The Pyomo Robust Optimization Solver\..* \(IDAES\)\.",
         )
 
+    def test_log_disclaimer(self):
+        """
+        Test logging of PyROS solver disclaimer messages.
+        """
+        pyros_solver = SolverFactory("pyros")
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            pyros_solver._log_disclaimer(logger=logger, level=logging.INFO)
+
+        disclaimer_msgs = LOG.getvalue()
+
+        # last character should be newline; disregard it
+        disclaimer_msg_lines = disclaimer_msgs.split("\n")[:-1]
+
+        # check number of lines is as expected
+        self.assertEqual(
+            len(disclaimer_msg_lines),
+            5,
+            msg=(
+                "PyROS solver disclaimer message does not contain"
+                "the expected number of lines."
+            ),
+        )
+
+        # regex first line of disclaimer section
+        self.assertRegex(
+            disclaimer_msg_lines[0],
+            r"=.* DISCLAIMER .*=",
+        )
+        # check last line of disclaimer section
+        self.assertEqual(disclaimer_msg_lines[-1], "=" * 78)
+
+        # check regex main text
+        self.assertRegex(
+            " ".join(disclaimer_msg_lines[1:-1]),
+            r"PyROS is still under development.*ticket at.*",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
