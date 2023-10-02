@@ -856,7 +856,7 @@ Observe that the log contains the following information:
    ==============================================================================
    PyROS: The Pyomo Robust Optimization Solver.
           Version 1.2.7 | Git branch: unknown, commit hash: unknown
-          Invoked at UTC 2023-09-09T18:13:21.893626
+          Invoked at UTC 2023-10-02T03:42:54.264507
 
    Developed by: Natalie M. Isenberg (1), Jason A. F. Sherman (1),
                  John D. Siirola (2), Chrysanthos E. Gounaris (1)
@@ -883,7 +883,7 @@ Observe that the log contains the following information:
     max_iter=-1
     robust_feasibility_tolerance=0.0001
     separation_priority_order={}
-    progress_logger=<Logger pyomo.contrib.pyros (INFO)>
+    progress_logger=<PreformattedLogger pyomo.contrib.pyros (INFO)>
     backup_local_solvers=[]
     backup_global_solvers=[]
     subproblem_file_directory=None
