@@ -59,7 +59,7 @@ class TimingData:
     """
     PyROS solver timing data object.
 
-    A wrapper around `common.timing.HierarchicalTimer`,
+    Implemented as a wrapper around `common.timing.HierarchicalTimer`,
     with added functionality for enforcing a standardized
     hierarchy of identifiers.
 
@@ -100,10 +100,15 @@ class TimingData:
         """
         Validate identifier for hierarchical timer.
 
+        Parameters
+        ----------
+        full_identifier : str
+            Identifier to validate.
+
         Raises
         ------
         ValueError
-            If identifier not in `self.hierarchical_timer_full_ids`.
+            If identifier not in `TimingData.hierarchical_timer_full_ids`.
         """
         if full_identifier not in self.hierarchical_timer_full_ids:
             raise ValueError(
@@ -112,13 +117,31 @@ class TimingData:
             )
 
     def start_timer(self, full_identifier):
-        """Start timer for `self.hierarchical_timer`."""
+        """
+        Start timer for `self.hierarchical_timer`.
+
+        Parameters
+        ----------
+        full_identifier : str
+            Full identifier for the timer to be started.
+            Must be an entry of
+            `TimingData.hierarchical_timer_full_ids`.
+        """
         self._validate_full_identifier(full_identifier)
         identifier = full_identifier.split(".")[-1]
         return self._hierarchical_timer.start(identifier=identifier)
 
     def stop_timer(self, full_identifier):
-        """Stop timer for `self.hierarchical_timer`."""
+        """
+        Stop timer for `self.hierarchical_timer`.
+
+        Parameters
+        ----------
+        full_identifier : str
+            Full identifier for the timer to be stopped.
+            Must be an entry of
+            `TimingData.hierarchical_timer_full_ids`.
+        """
         self._validate_full_identifier(full_identifier)
         identifier = full_identifier.split(".")[-1]
         return self._hierarchical_timer.stop(identifier=identifier)
@@ -126,8 +149,17 @@ class TimingData:
     def get_total_time(self, full_identifier):
         """
         Get total time spent with identifier active.
+
+        Parameters
+        ----------
+        full_identifier : str
+            Full identifier for the timer of interest.
+
+        Returns
+        -------
+        float
+            Total time spent with identifier active.
         """
-        self._validate_full_identifier(full_identifier)
         return self._hierarchical_timer.get_total_time(identifier=full_identifier)
 
     def get_main_elapsed_time(self):
