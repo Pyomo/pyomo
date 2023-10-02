@@ -5978,6 +5978,39 @@ class TestPyROSSolverLogIntros(unittest.TestCase):
             ),
         )
 
+    def test_log_intro(self):
+        """
+        Test logging of PyROS solver introductory messages.
+        """
+        pyros_solver = SolverFactory("pyros")
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            pyros_solver._log_intro(logger=logger, level=logging.INFO)
+
+        intro_msgs = LOG.getvalue()
+
+        # last character should be newline; disregard it
+        intro_msg_lines = intro_msgs.split("\n")[:-1]
+
+        # check number of lines is as expected
+        self.assertEqual(
+            len(intro_msg_lines),
+            13,
+            msg=(
+                "PyROS solver introductory message does not contain"
+                "the expected number of lines."
+            ),
+        )
+
+        # first and last lines of the introductory section
+        self.assertEqual(intro_msg_lines[0], "=" * 78)
+        self.assertEqual(intro_msg_lines[-1], "=" * 78)
+
+        # check regex main text
+        self.assertRegex(
+            " ".join(intro_msg_lines[1:-1]),
+            r"PyROS: The Pyomo Robust Optimization Solver\..* \(IDAES\)\.",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
