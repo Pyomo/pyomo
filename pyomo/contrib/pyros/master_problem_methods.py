@@ -543,6 +543,14 @@ def minimize_dr_vars(model_data, config):
     acceptable = {tc.globallyOptimal, tc.optimal, tc.locallyOptimal, tc.feasible}
     if results.solver.termination_condition not in acceptable:
         # continue with "unpolished" master model solution
+        config.progress_logger.warning(
+            "Could not successfully solve DR polishing problem "
+            f"of iteration {model_data.iteration} with primary subordinate "
+            f"{'global' if config.solve_master_globally else 'local'} solver "
+            "to acceptable level. "
+            f"Termination stats:\n{results.solver}\n"
+            "Maintaining unpolished master problem solution."
+        )
         return results, False
 
     # update master model second-stage, state, and decision rule

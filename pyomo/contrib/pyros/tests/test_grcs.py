@@ -3902,6 +3902,7 @@ class RegressionTest(unittest.TestCase):
         master_data.master_model = master
         master_data.master_model.const_efficiency_applied = False
         master_data.master_model.linear_efficiency_applied = False
+        master_data.iteration = 0
 
         master_data.timing = TimingData()
         with time_code(master_data.timing, "main", is_main_timer=True):
