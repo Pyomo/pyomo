@@ -1065,7 +1065,7 @@ class PyROS(object):
                 return_soln.iterations = 0
 
         return_soln.config = config
-        return_soln.time = model_data.timing.get_main_elapsed_time()
+        return_soln.time = model_data.timing.get_total_time("main")
 
         # log termination-related messages
         config.progress_logger.info(return_soln.pyros_termination_condition.message)
