@@ -57,6 +57,8 @@ from filecmp import cmp
 EPS = TransformationFactory('gdp.hull').CONFIG.EPS
 linear_solvers = ct.linear_solvers
 
+gurobi_available = SolverFactory('gurobi').available()
+
 
 class CommonTests:
     def setUp(self):
@@ -2695,3 +2697,13 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
     @unittest.skipIf(not dill_available, "Dill is not available")
     def test_dill_pickle(self):
         ct.check_transformed_model_pickles_with_dill(self, 'hull')
+
+
+@unittest.skipUnless(gurobi_available, "Gurobi is not available")
+class NestedDisjunctsInFlatGDP(unittest.TestCase):
+    """
+    This class tests the fix for #2702
+    """
+
+    def test_declare_disjuncts_in_disjunction_rule(self):
+        ct.check_nested_disjuncts_in_flat_gdp(self, 'hull')

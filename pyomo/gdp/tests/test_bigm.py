@@ -2853,15 +2853,7 @@ class NestedDisjunctsInFlatGDP(unittest.TestCase):
     """
 
     def test_declare_disjuncts_in_disjunction_rule(self):
-        m = models.make_non_nested_model_declaring_Disjuncts_on_each_other()
-        TransformationFactory('gdp.bigm').apply_to(m)
-        SolverFactory('gurobi').solve(m)
-        self.assertAlmostEqual(value(m.obj), 1020)
-
-        # check the Boolean solution
-        for t in m.T:
-            self.assertTrue(value(m.disj1[t].indicator_var))
-            self.assertTrue(value(m.disj1[t].sub1.indicator_var))
+        ct.check_nested_disjuncts_in_flat_gdp(self, 'bigm')
 
 
 if __name__ == '__main__':
