@@ -5046,26 +5046,40 @@ class testBypassingSeparation(unittest.TestCase):
         global_subsolver = SolverFactory("baron")
 
         # Call the PyROS solver
-        results = pyros_solver.solve(
-            model=m,
-            first_stage_variables=[m.x1],
-            second_stage_variables=[m.x2],
-            uncertain_params=[m.u],
-            uncertainty_set=interval,
-            local_solver=local_subsolver,
-            global_solver=global_subsolver,
-            options={
-                "objective_focus": ObjectiveType.worst_case,
-                "solve_master_globally": True,
-                "decision_rule_order": 0,
-                "bypass_global_separation": True,
-            },
-        )
+        with LoggingIntercept(level=logging.WARNING) as LOG:
+            results = pyros_solver.solve(
+                model=m,
+                first_stage_variables=[m.x1],
+                second_stage_variables=[m.x2],
+                uncertain_params=[m.u],
+                uncertainty_set=interval,
+                local_solver=local_subsolver,
+                global_solver=global_subsolver,
+                options={
+                    "objective_focus": ObjectiveType.worst_case,
+                    "solve_master_globally": True,
+                    "decision_rule_order": 0,
+                    "bypass_global_separation": True,
+                },
+            )
 
+        # check termination robust optimal
         self.assertEqual(
             results.pyros_termination_condition,
             pyrosTerminationCondition.robust_optimal,
             msg="Returned termination condition is not return robust_optimal.",
+        )
+
+        # since robust optimal, we also expect warning-level logger
+        # message about bypassing of global separation subproblems
+        warning_msgs = LOG.getvalue()
+        self.assertRegex(
+            warning_msgs,
+            (
+                r".*Option to bypass global separation was chosen\. "
+                r"Robust feasibility and optimality of the reported "
+                r"solution are not guaranteed\."
+            ),
         )
 
 
