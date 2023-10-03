@@ -11,6 +11,8 @@ from pyomo.core import (
     Any,
     Expression,
     maximize,
+    minimize,
+    NonNegativeReals,
     TransformationFactory,
     BooleanVar,
     LogicalConstraint,
@@ -1186,14 +1188,19 @@ def make_non_nested_model_declaring_Disjuncts_on_each_other():
     return model
 
 
-def make_model_to_break_mbm():
+def make_indexed_equality_model():
+    """
+    min  x_1 + x_2
+    s.t. [x_1 = 1] v [x_1 = 2]
+         [x_2 = 1] v [x_2 = 2]
+    """
     def disj_rule(m, t):
         return [[m.x[t] == 1], [m.x[t] == 2]]
 
-    m = pyo.ConcreteModel()
-    m.T = pyo.RangeSet(2)
-    m.x = pyo.Var(m.T, within=pyo.NonNegativeReals, bounds=(0, 5))
+    m = ConcreteModel()
+    m.T = RangeSet(2)
+    m.x = Var(m.T, within=NonNegativeReals, bounds=(0, 5))
     m.d = Disjunction(m.T, rule=disj_rule)
-    m.obj = pyo.Objective(expr=m.x[1] + m.x[2], sense=pyo.minimize)
+    m.obj = Objective(expr=m.x[1] + m.x[2], sense=minimize)
 
     return m
