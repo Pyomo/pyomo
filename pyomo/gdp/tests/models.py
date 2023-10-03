@@ -1194,6 +1194,7 @@ def make_indexed_equality_model():
     s.t. [x_1 = 1] v [x_1 = 2]
          [x_2 = 1] v [x_2 = 2]
     """
+
     def disj_rule(m, t):
         return [[m.x[t] == 1], [m.x[t] == 2]]
 

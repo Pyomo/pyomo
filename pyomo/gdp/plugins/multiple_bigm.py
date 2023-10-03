@@ -560,7 +560,8 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             # Will store M values as we transform
             transBlock._mbm_values = {}
             transBlock.transformed_bound_constraints = Constraint(
-                NonNegativeIntegers, ['lb', 'ub'])
+                NonNegativeIntegers, ['lb', 'ub']
+            )
         return transBlock, new_block
 
     def _get_all_var_objects(self, active_disjuncts):

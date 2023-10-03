@@ -863,13 +863,16 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
             m, mbm, {m.d1: (-1050, 1050), m.d2: (-2000, 1200), m.d3: (-4000, 4000)}
         )
 
+
 @unittest.skipUnless(gurobi_available, "Gurobi is not available")
 class NestedDisjunctsInFlatGDP(unittest.TestCase):
     """
     This class tests the fix for #2702
     """
+
     def test_declare_disjuncts_in_disjunction_rule(self):
         check_nested_disjuncts_in_flat_gdp(self, 'bigm')
+
 
 @unittest.skipUnless(gurobi_available, "Gurobi is not available")
 class IndexedDisjunction(unittest.TestCase):
@@ -888,14 +891,16 @@ class IndexedDisjunction(unittest.TestCase):
         assertExpressionsEqual(
             self,
             cons[0].expr,
-            m.x[1] >= m.d[1].disjuncts[0].binary_indicator_var + 
-            2.0*m.d[1].disjuncts[1].binary_indicator_var
+            m.x[1]
+            >= m.d[1].disjuncts[0].binary_indicator_var
+            + 2.0 * m.d[1].disjuncts[1].binary_indicator_var,
         )
         assertExpressionsEqual(
             self,
             cons[1].expr,
-            m.x[1] <= m.d[1].disjuncts[0].binary_indicator_var + 
-            2.0*m.d[1].disjuncts[1].binary_indicator_var
+            m.x[1]
+            <= m.d[1].disjuncts[0].binary_indicator_var
+            + 2.0 * m.d[1].disjuncts[1].binary_indicator_var,
         )
         cons_again = mbm.get_transformed_constraints(m.d[1].disjuncts[1].constraint[1])
         self.assertEqual(len(cons_again), 2)
@@ -907,14 +912,16 @@ class IndexedDisjunction(unittest.TestCase):
         assertExpressionsEqual(
             self,
             cons[0].expr,
-            m.x[2] >= m.d[2].disjuncts[0].binary_indicator_var + 
-            2.0*m.d[2].disjuncts[1].binary_indicator_var
+            m.x[2]
+            >= m.d[2].disjuncts[0].binary_indicator_var
+            + 2.0 * m.d[2].disjuncts[1].binary_indicator_var,
         )
         assertExpressionsEqual(
             self,
             cons[1].expr,
-            m.x[2] <= m.d[2].disjuncts[0].binary_indicator_var + 
-            2.0*m.d[2].disjuncts[1].binary_indicator_var
+            m.x[2]
+            <= m.d[2].disjuncts[0].binary_indicator_var
+            + 2.0 * m.d[2].disjuncts[1].binary_indicator_var,
         )
         cons_again = mbm.get_transformed_constraints(m.d[2].disjuncts[1].constraint[1])
         self.assertEqual(len(cons_again), 2)
