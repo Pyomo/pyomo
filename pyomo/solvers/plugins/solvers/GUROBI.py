@@ -19,6 +19,7 @@ import subprocess
 from pyomo.common import Executable
 from pyomo.common.collections import Bunch
 from pyomo.common.fileutils import this_file_dir
+from pyomo.common.tee import capture_output
 from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver
@@ -32,8 +33,10 @@ from pyomo.opt.results import (
 )
 from pyomo.opt.solver import ILMLicensedSystemCallSolver
 from pyomo.core.kernel.block import IBlock
+from pyomo.core import ConcreteModel, Var, Objective
 
 from .gurobi_direct import gurobipy_available
+from .ASL import ASL
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -69,12 +72,27 @@ class GUROBI(OptSolver):
         if mode == 'os':
             opt = SolverFactory('_ossolver', **kwds)
         elif mode == 'nl':
-            opt = SolverFactory('asl', **kwds)
+            opt = SolverFactory('_gurobi_nl', **kwds)
         else:
             logger.error('Unknown IO type: %s' % mode)
             return
         opt.set_options('solver=gurobi_ampl')
         return opt
+
+
+@SolverFactory.register('_gurobi_nl', doc='NL interface to the Gurobi solver')
+class GUROBINL(ASL):
+    """NL interface to gurobi_ampl."""
+    def license_is_valid(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0,1))
+        m.obj = Objective(expr=m.x)
+        try:
+            with capture_output():
+                self.solve(m)
+            return m.x.value == 0
+        except:
+            return False
 
 
 @SolverFactory.register(
