@@ -235,6 +235,7 @@ class TestFileUtils(unittest.TestCase):
         and (
             platform.mac_ver()[0].startswith('10.16')
             or platform.mac_ver()[0].startswith('12.6')
+            or platform.mac_ver()[0].startswith('12.7')
         ),
         "find_library has known bugs in Big Sur/Monterey for Python<3.8",
     )
