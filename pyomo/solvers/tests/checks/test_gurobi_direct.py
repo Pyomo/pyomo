@@ -22,6 +22,7 @@ try:
 except ImportError:
     gurobipy_available = False
 
+gurobi_available = GurobiDirect().available(exception_flag=False)
 
 def clean_up_global_state():
     # Best efforts to dispose any gurobipy objects from previous tests
@@ -79,6 +80,7 @@ class GurobiImportFailedTests(unittest.TestCase):
 
 
 @unittest.skipIf(not gurobipy_available, "gurobipy is not available")
+@unittest.skipIf(not gurobi_available, "gurobi license is not valid")
 class GurobiParameterTests(GurobiBase):
     # Test parameter handling at the model and environment level
 
@@ -158,6 +160,7 @@ class GurobiParameterTests(GurobiBase):
 
 
 @unittest.skipIf(not gurobipy_available, "gurobipy is not available")
+@unittest.skipIf(not gurobi_available, "gurobi license is not valid")
 class GurobiEnvironmentTests(GurobiBase):
     # Test handling of gurobi environments
 
@@ -318,6 +321,7 @@ class GurobiEnvironmentTests(GurobiBase):
 
 
 @unittest.skipIf(not gurobipy_available, "gurobipy is not available")
+@unittest.skipIf(not gurobi_available, "gurobi license is not valid")
 @unittest.skipIf(not single_use_license(), reason="test needs a single use license")
 class GurobiSingleUseTests(GurobiBase):
     # Integration tests for Gurobi single-use licenses (useful for checking all Gurobi

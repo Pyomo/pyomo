@@ -45,7 +45,10 @@ from pyomo.environ import (
     TransformationFactory,
 )
 
-gurobi_available = SolverFactory('gurobi').available(exception_flag=False)
+gurobi_available = (
+    SolverFactory('gurobi').available(exception_flag=False) and
+    SolverFactory('gurobi').license_is_valid()
+)
 
 
 class TestLogicalToDisjunctiveVisitor(unittest.TestCase):

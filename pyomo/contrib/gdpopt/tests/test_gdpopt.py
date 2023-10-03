@@ -72,6 +72,11 @@ license_available = (
     else False
 )
 
+gurobi_available = (
+    SolverFactory('gurobi').available(exception_flag=False) and
+    SolverFactory('gurobi').license_is_valid()
+)
+
 
 class TestGDPoptUnit(unittest.TestCase):
     """Real unit tests for GDPopt"""
@@ -129,7 +134,7 @@ class TestGDPoptUnit(unittest.TestCase):
             self.assertAlmostEqual(results.problem.lower_bound, 1)
             self.assertAlmostEqual(results.problem.upper_bound, 1)
 
-    @unittest.skipUnless(SolverFactory('gurobi').available(), 'Gurobi not available')
+    @unittest.skipUnless(gurobi_available, 'Gurobi not available')
     def test_solve_nlp(self):
         m = ConcreteModel()
         m.x = Var(bounds=(-5, 5))
@@ -222,7 +227,7 @@ class TestGDPoptUnit(unittest.TestCase):
         with self.assertRaisesRegex(NotImplementedError, "Found active disjunct"):
             is_feasible(m, GDP_LOA_Solver.CONFIG())
 
-    @unittest.skipUnless(SolverFactory('gurobi').available(), 'Gurobi not available')
+    @unittest.skipUnless(gurobi_available, 'Gurobi not available')
     def test_infeasible_or_unbounded_mip_termination(self):
         m = ConcreteModel()
         m.x = Var()
@@ -461,9 +466,7 @@ class TestGDPopt(unittest.TestCase):
     # [ESJ 5/16/22]: Using Gurobi for this test because glpk seems to get angry
     # on Windows when the MIP is arbitrarily bounded with the large bounds. And
     # I think I blame glpk...
-    @unittest.skipUnless(
-        SolverFactory('gurobi').available(), "Gurobi solver not available"
-    )
+    @unittest.skipUnless(gurobi_available, "Gurobi solver not available")
     def test_GDP_nonlinear_objective(self):
         m = ConcreteModel()
         m.x = Var(bounds=(-1, 10))
@@ -1672,7 +1675,7 @@ class TestConfigOptions(unittest.TestCase):
         return m
 
     @unittest.skipIf(not mcpp_available(), "MC++ is not available")
-    @unittest.skipUnless(SolverFactory('gurobi').available(), 'Gurobi not available')
+    @unittest.skipUnless(gurobi_available, 'Gurobi not available')
     def test_set_options_on_config_block(self):
         m = self.make_model()
 
@@ -1711,7 +1714,7 @@ class TestConfigOptions(unittest.TestCase):
         self.assertAlmostEqual(value(m.obj), -0.25)
 
     @unittest.skipIf(not mcpp_available(), "MC++ is not available")
-    @unittest.skipUnless(SolverFactory('gurobi').available(), 'Gurobi not available')
+    @unittest.skipUnless(gurobi_available, 'Gurobi not available')
     def test_set_options_in_init(self):
         m = self.make_model()
 
@@ -1735,7 +1738,7 @@ class TestConfigOptions(unittest.TestCase):
         self.assertAlmostEqual(value(m.obj), -0.25)
         self.assertEqual(opt.config.mip_solver, 'gurobi')
 
-    @unittest.skipUnless(SolverFactory('gurobi').available(), 'Gurobi not available')
+    @unittest.skipUnless(gurobi_available, 'Gurobi not available')
     def test_no_default_algorithm(self):
         m = self.make_model()
 
