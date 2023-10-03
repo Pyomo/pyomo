@@ -86,12 +86,12 @@ class GUROBINL(ASL):
 
     def license_is_valid(self):
         m = ConcreteModel()
-        m.x = Var(bounds=(0, 1))
+        m.x = Var(bounds=(1, 2))
         m.obj = Objective(expr=m.x)
         try:
             with capture_output():
                 self.solve(m)
-            return m.x.value == 0
+            return abs(m.x.value - 1) <= 1e-4
         except:
             return False
 
