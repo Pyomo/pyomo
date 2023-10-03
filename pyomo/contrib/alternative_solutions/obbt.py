@@ -68,15 +68,11 @@ def obbt_analysis(model, variables='all', rel_opt_gap=None, abs_opt_gap=None,
     if variables == 'all' or warmstart:
         all_variables = var_utils.get_model_variables(model, 'all',
                                                       include_fixed=False)
+        variable_list = all_variables
     if warmstart:
         solutions = pe.ComponentMap()
         for var in all_variables:
             solutions[var] = []
-    if variables == 'all':
-        variable_list = all_variables
-    else:
-        variable_list = var_utils.check_variables(model, variables, 
-                                                  include_fixed=False)
     
     num_vars = len(variable_list)
     print('Analyzing {} variables ({} total solves).'.format(num_vars, 
