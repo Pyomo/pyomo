@@ -73,8 +73,8 @@ license_available = (
 )
 
 gurobi_available = (
-    SolverFactory('gurobi').available(exception_flag=False) and
-    SolverFactory('gurobi').license_is_valid()
+    SolverFactory('gurobi').available(exception_flag=False)
+    and SolverFactory('gurobi').license_is_valid()
 )
 
 

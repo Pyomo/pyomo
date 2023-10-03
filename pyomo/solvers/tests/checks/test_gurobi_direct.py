@@ -24,6 +24,7 @@ except ImportError:
 
 gurobi_available = GurobiDirect().available(exception_flag=False)
 
+
 def clean_up_global_state():
     # Best efforts to dispose any gurobipy objects from previous tests
     # which might keep the default environment active

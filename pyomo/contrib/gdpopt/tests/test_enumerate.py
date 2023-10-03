@@ -26,6 +26,7 @@ from pyomo.environ import (
 from pyomo.gdp import Disjunction
 import pyomo.gdp.tests.models as models
 
+
 @unittest.skipUnless(SolverFactory('gurobi').available(), 'Gurobi not available')
 @unittest.skipUnless(SolverFactory('gurobi').license_is_valid(), 'Gurobi not licensed')
 class TestGDPoptEnumerate(unittest.TestCase):

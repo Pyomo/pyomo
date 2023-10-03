@@ -83,9 +83,10 @@ class GUROBI(OptSolver):
 @SolverFactory.register('_gurobi_nl', doc='NL interface to the Gurobi solver')
 class GUROBINL(ASL):
     """NL interface to gurobi_ampl."""
+
     def license_is_valid(self):
         m = ConcreteModel()
-        m.x = Var(bounds=(0,1))
+        m.x = Var(bounds=(0, 1))
         m.obj = Objective(expr=m.x)
         try:
             with capture_output():
