@@ -171,10 +171,9 @@ class TestTransformPiecewiseModelToOuterRepnGDP(unittest.TestCase):
             self, 'contrib.piecewise.outer_repn_gdp'
         )
 
-    @unittest.skipUnless(
-        SolverFactory('gurobi').available() and scipy_available,
-        'Gurobi and/or scipy is not available',
-    )
+    @unittest.skipUnless(scipy_available, "scipy is not available")
+    @unittest.skipUnless(SolverFactory('gurobi').available(), 'Gurobi is not available')
+    @unittest.skipUnless(SolverFactory('gurobi').license_is_valid(), 'No license')
     def test_solve_multiple_choice_model(self):
         m = models.make_log_x_model()
         TransformationFactory('contrib.piecewise.multiple_choice').apply_to(m)
