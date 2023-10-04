@@ -41,7 +41,10 @@ from pyomo.gdp.tests.common_tests import (
 )
 from pyomo.repn import generate_standard_repn
 
-gurobi_available = SolverFactory('gurobi').available()
+gurobi_available = (
+    SolverFactory('gurobi').available(exception_flag=False)
+    and SolverFactory('gurobi').license_is_valid()
+)
 exdir = normpath(join(PYOMO_ROOT_DIR, 'examples', 'gdp'))
 
 
