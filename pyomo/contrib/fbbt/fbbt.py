@@ -31,12 +31,10 @@ from pyomo.common.errors import InfeasibleConstraintException, PyomoException
 from pyomo.common.config import (
     ConfigDict,
     ConfigValue,
-    document_kwargs_from_configdict,
     In,
     NonNegativeFloat,
     NonNegativeInt,
 )
-from pyomo.common.gc_manager import PauseGC
 from pyomo.common.numeric_types import native_types
 
 logger = logging.getLogger(__name__)
@@ -1060,62 +1058,6 @@ _before_child_handlers[
 ] = _before_external_function
 for _type in nonpyomo_leaf_types:
     _before_child_handlers[_type] = _before_constant
-
-
-class FBBTVisitorLeafToRoot(object):
-    CONFIG = ConfigDict('fbbt_leaf_to_root')
-    # CONFIG.declare(
-    #     'bnds_dict',
-    #     ConfigValue(
-    #         domain=dict
-    #     )
-    # )
-    CONFIG.declare(
-        'integer_tol',
-        ConfigValue(
-            default=1e-4,
-            domain=float,
-            description="Integer tolerance"
-        )
-    )
-    CONFIG.declare(
-        'feasibility_tol',
-        ConfigValue(
-            default=1e-8,
-            domain=float,
-            description="Constraint feasibility tolerance",
-            doc="""
-            If the bounds computed on the body of a constraint violate the bounds of
-            the constraint by more than feasibility_tol, then the constraint is
-            considered infeasible and an exception is raised. This tolerance is also
-            used when performing certain interval arithmetic operations to ensure that
-            none of the feasible region is removed due to floating point arithmetic and
-            to prevent math domain errors (a larger value is more conservative).
-            """
-        )
-    )
-    CONFIG.declare(
-        'ignore_fixed',
-        ConfigValue(
-            default=False,
-            domain=bool,
-            description="Whether or not to treat fixed Vars as constants"
-        )
-    )
-
-    @document_kwargs_from_configdict(CONFIG)
-    def __init__(self, bnds_dict, **kwds):
-        self.bnds_dict = bnds_dict
-        self.config = self.CONFIG(kwds)
-        print(kwds)
-        print(self.config.ignore_fixed)
-
-    def walk_expression(self, expr):
-        with PauseGC():
-            _FBBTVisitorLeafToRoot(
-                self.bnds_dict, integer_tol=self.config.integer_tol,
-                feasibility_tol=self.config.feasibility_tol,
-                ignore_fixed=self.config.ignore_fixed).walk_expression(expr)
 
 
 class _FBBTVisitorLeafToRoot(StreamBasedExpressionVisitor):

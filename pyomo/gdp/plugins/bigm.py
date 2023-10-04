@@ -15,6 +15,7 @@ import logging
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.config import ConfigDict, ConfigValue
+from pyomo.common.gc_manager import PauseGC
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.contrib.cp.transform.logical_to_disjunctive_program import (
@@ -170,17 +171,18 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         # as a key in bigMargs, I need the error
         # not to be when I try to put it into
         # this map!
-        try:
-            self._apply_to_impl(instance, **kwds)
-        finally:
-            self._restore_state()
-            self.used_args.clear()
-            self._fbbt_visitor.config.ignore_fixed = True
+        with PauseGC():
+            try:
+                self._apply_to_impl(instance, **kwds)
+            finally:
+                self._restore_state()
+                self.used_args.clear()
+                self._fbbt_visitor.ignore_fixed = True
 
     def _apply_to_impl(self, instance, **kwds):
         self._process_arguments(instance, **kwds)
         if self._config.assume_fixed_vars_permanent:
-            self._fbbt_visitor.config.ignore_fixed = False
+            self._fbbt_visitor.ignore_fixed = False
 
         # filter out inactive targets and handle case where targets aren't
         # specified.
