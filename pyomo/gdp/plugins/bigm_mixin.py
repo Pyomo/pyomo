@@ -11,7 +11,7 @@
 
 from pyomo.gdp import GDP_Error
 from pyomo.common.collections import ComponentMap, ComponentSet
-from pyomo.contrib.fbbt.fbbt import _FBBTVisitorLeafToRoot
+from pyomo.contrib.fbbt.fbbt import FBBTVisitorLeafToRoot
 import pyomo.contrib.fbbt.interval as interval
 from pyomo.core import Suffix
 
@@ -108,7 +108,7 @@ class _BigM_MixIn(object):
         bnds_dict = ComponentMap()
         # we assume the default config arg for 'assume_fixed_vars_permanent,`
         # and we will change it during apply_to if we need to
-        self._fbbt_visitor = _FBBTVisitorLeafToRoot(bnds_dict, ignore_fixed=True)
+        self._fbbt_visitor = FBBTVisitorLeafToRoot(bnds_dict, ignore_fixed=True)
 
     def _process_M_value(
         self,

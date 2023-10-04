@@ -36,14 +36,6 @@ def mul(xl, xu, yl, yu):
         if i != i: # math.isnan(i)
             return (-inf, inf)
     return lb, ub
-    # options = [xl * yl, xl * yu, xu * yl, xu * yu]
-    # if any(math.isnan(i) for i in options):
-    #     lb = -inf
-    #     ub = inf
-    # else:
-    #     lb = min(options)
-    #     ub = max(options)
-    # return lb, ub
 
 
 def inv(xl, xu, feasibility_tol):
@@ -89,8 +81,7 @@ def inv(xl, xu, feasibility_tol):
 
 
 def div(xl, xu, yl, yu, feasibility_tol):
-    lb, ub = mul(xl, xu, *inv(yl, yu, feasibility_tol))
-    return lb, ub
+    return mul(xl, xu, *inv(yl, yu, feasibility_tol))
 
 
 def power(xl, xu, yl, yu, feasibility_tol):

@@ -29,12 +29,14 @@ from pyomo.core.base.expression import _GeneralExpressionData, ScalarExpression
 import logging
 from pyomo.common.errors import InfeasibleConstraintException, PyomoException
 from pyomo.common.config import (
-    ConfigBlock,
+    ConfigDict,
     ConfigValue,
+    document_kwargs_from_configdict,
     In,
     NonNegativeFloat,
     NonNegativeInt,
 )
+from pyomo.common.gc_manager import PauseGC
 from pyomo.common.numeric_types import native_types
 
 logger = logging.getLogger(__name__)
@@ -89,12 +91,11 @@ def _prop_bnds_leaf_to_root_ProductExpression(visitor, node, arg1, arg2):
     arg2: Second arg in product expression
     """
     bnds_dict = visitor.bnds_dict
-    lb1, ub1 = bnds_dict[arg1]
-    lb2, ub2 = bnds_dict[arg2]
     if arg1 is arg2:
-        bnds_dict[node] = interval.power(lb1, ub1, 2, 2, visitor.feasibility_tol)
+        bnds_dict[node] = interval.power(*bnds_dict[arg1], 2, 2,
+                                         visitor.feasibility_tol)
     else:
-        bnds_dict[node] = interval.mul(lb1, ub1, lb2, ub2)
+        bnds_dict[node] = interval.mul(*bnds_dict[arg1], *bnds_dict[arg2])
 
 
 def _prop_bnds_leaf_to_root_SumExpression(visitor, node, *args):
@@ -1061,6 +1062,62 @@ for _type in nonpyomo_leaf_types:
     _before_child_handlers[_type] = _before_constant
 
 
+class FBBTVisitorLeafToRoot(object):
+    CONFIG = ConfigDict('fbbt_leaf_to_root')
+    # CONFIG.declare(
+    #     'bnds_dict',
+    #     ConfigValue(
+    #         domain=dict
+    #     )
+    # )
+    CONFIG.declare(
+        'integer_tol',
+        ConfigValue(
+            default=1e-4,
+            domain=float,
+            description="Integer tolerance"
+        )
+    )
+    CONFIG.declare(
+        'feasibility_tol',
+        ConfigValue(
+            default=1e-8,
+            domain=float,
+            description="Constraint feasibility tolerance",
+            doc="""
+            If the bounds computed on the body of a constraint violate the bounds of
+            the constraint by more than feasibility_tol, then the constraint is
+            considered infeasible and an exception is raised. This tolerance is also
+            used when performing certain interval arithmetic operations to ensure that
+            none of the feasible region is removed due to floating point arithmetic and
+            to prevent math domain errors (a larger value is more conservative).
+            """
+        )
+    )
+    CONFIG.declare(
+        'ignore_fixed',
+        ConfigValue(
+            default=False,
+            domain=bool,
+            description="Whether or not to treat fixed Vars as constants"
+        )
+    )
+
+    @document_kwargs_from_configdict(CONFIG)
+    def __init__(self, bnds_dict, **kwds):
+        self.bnds_dict = bnds_dict
+        self.config = self.CONFIG(kwds)
+        print(kwds)
+        print(self.config.ignore_fixed)
+
+    def walk_expression(self, expr):
+        with PauseGC():
+            _FBBTVisitorLeafToRoot(
+                self.bnds_dict, integer_tol=self.config.integer_tol,
+                feasibility_tol=self.config.feasibility_tol,
+                ignore_fixed=self.config.ignore_fixed).walk_expression(expr)
+
+
 class _FBBTVisitorLeafToRoot(StreamBasedExpressionVisitor):
     """
     This walker propagates bounds from the variables to each node in
@@ -1252,7 +1309,7 @@ def _fbbt_con(con, config):
     ----------
     con: pyomo.core.base.constraint.Constraint
         constraint on which to perform fbbt
-    config: ConfigBlock
+    config: ConfigDict
         see documentation for fbbt
 
     Returns
@@ -1337,7 +1394,7 @@ def _fbbt_block(m, config):
     Parameters
     ----------
     m: pyomo.core.base.block.Block or pyomo.core.base.PyomoModel.ConcreteModel
-    config: ConfigBlock
+    config: ConfigDict
         See the docs for fbbt
 
     Returns
@@ -1468,7 +1525,7 @@ def fbbt(
         A ComponentMap mapping from variables a tuple containing the lower and upper bounds, respectively, computed
         from FBBT.
     """
-    config = ConfigBlock()
+    config = ConfigDict()
     dsc_config = ConfigValue(
         default=deactivate_satisfied_constraints, domain=In({True, False})
     )
