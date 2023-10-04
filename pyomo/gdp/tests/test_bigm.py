@@ -46,7 +46,10 @@ import random
 
 from io import StringIO
 
-gurobi_available = SolverFactory('gurobi').available()
+gurobi_available = (
+    SolverFactory('gurobi').available(exception_flag=False)
+    and SolverFactory('gurobi').license_is_valid()
+)
 
 
 class CommonTests:

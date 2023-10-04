@@ -57,7 +57,10 @@ from filecmp import cmp
 EPS = TransformationFactory('gdp.hull').CONFIG.EPS
 linear_solvers = ct.linear_solvers
 
-gurobi_available = SolverFactory('gurobi').available()
+gurobi_available = (
+    SolverFactory('gurobi').available(exception_flag=False)
+    and SolverFactory('gurobi').license_is_valid()
+)
 
 
 class CommonTests:
