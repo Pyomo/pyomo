@@ -26,14 +26,24 @@ def sub(xl, xu, yl, yu):
 
 
 def mul(xl, xu, yl, yu):
-    options = [xl * yl, xl * yu, xu * yl, xu * yu]
-    if any(math.isnan(i) for i in options):
-        lb = -inf
-        ub = inf
-    else:
-        lb = min(options)
-        ub = max(options)
+    lb = inf
+    ub = -inf
+    for i in (xl * yl, xu * yu, xu * yl, xl * yu):
+        if i < lb:
+            lb = i
+        if i > ub:
+            ub = i
+        if i != i: # math.isnan(i)
+            return (-inf, inf)
     return lb, ub
+    # options = [xl * yl, xl * yu, xu * yl, xu * yu]
+    # if any(math.isnan(i) for i in options):
+    #     lb = -inf
+    #     ub = inf
+    # else:
+    #     lb = min(options)
+    #     ub = max(options)
+    # return lb, ub
 
 
 def inv(xl, xu, feasibility_tol):
