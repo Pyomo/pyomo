@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.environ as pe
+from pyomo.common.collections import ComponentSet
 import pyomo.common.unittest as unittest
 import pyomo.contrib.alternative_solutions.aos_utils as au
 
@@ -90,7 +91,6 @@ class TestAOSUtilsUnit(unittest.TestCase):
     def test_min_both_obj_constraint(self):
         m = self.get_simple_model()
         cons = au._add_objective_constraint(m, m.o, -10, 0.3, 5)
-        m.pprint()
         self.assertEqual(len(cons), 2)
         self.assertEqual(m.find_component('optimality_tol_rel'), cons[0])
         self.assertEqual(m.find_component('optimality_tol_abs'), cons[1])
@@ -122,25 +122,112 @@ class TestAOSUtilsUnit(unittest.TestCase):
         self.assertEqual(9, cons[1].lower)
 
     def get_var_model(self):
+        
+        indices = [0,1,2,3]
+        
         m = pe.ConcreteModel()
+        
         m.b1 = pe.Block()
         m.b2 = pe.Block()
-        m.b1.sb = pe.Block()
-        m.b2.sb = pe.Block()
-        m.c = pe.Var(domain=pe.Reals)
-        m.b = pe.Var(domain=pe.Binary)
-        m.i = pe.var(domain=pe.Integers)
-        m.c_f = pe.Var(domain=pe.Reals)
-        m.b_f = pe.Var(domain=pe.Binary)
-        m.i_f = pe.var(domain=pe.Integers)
-        m.c_f.fix(0)
-        m.b_f.fix(0)
-        m.i_f.fix(0)
-        m.b1.o = pe.Objective(expr=m.x)
-        m.b2.o = pe.Objective([0,1])
-        m.b2.o[0] = pe.Objective(expr=m.y)
-        m.b2.o[1] = pe.Objective(expr=m.x+m.y)
+        m.b1.sb1 = pe.Block()
+        m.b2.sb2 = pe.Block()
+        
+        m.x = pe.Var(domain=pe.Reals)
+        m.b1.y = pe.Var(domain=pe.Binary)
+        m.b2.z = pe.Var(domain=pe.Integers)
+        
+        m.x_f = pe.Var(domain=pe.Reals)
+        m.b1.y_f = pe.Var(domain=pe.Binary)
+        m.b2.z_f = pe.Var(domain=pe.Integers)
+        m.x_f.fix(0)
+        m.b1.y_f.fix(0)
+        m.b2.z_f.fix(0)
+        
+        m.b1.sb1.x_l = pe.Var(indices, domain=pe.Reals)
+        m.b1.sb1.y_l = pe.Var(indices, domain=pe.Binary)
+        m.b2.sb2.z_l = pe.Var(indices, domain=pe.Integers)
+        
+        m.b1.sb1.x_l[3].fix(0)
+        m.b1.sb1.y_l[3].fix(0)
+        m.b2.sb2.z_l[3].fix(0)
+        
+        vars_minus_x = [m.b1.y, m.b2.z, m.x_f, m.b1.y_f, m.b2.z_f] + \
+                        [m.b1.sb1.x_l[i] for i in indices] + \
+                        [m.b1.sb1.y_l[i] for i in indices] + \
+                        [m.b2.sb2.z_l[i] for i in indices]
+        
+        m.con = pe.Constraint(expr=sum(v for v in vars_minus_x) <= 1)
+        m.obj = pe.Objective(expr=m.x)
+
+        m.all_vars = ComponentSet([m.x] + vars_minus_x)        
+        m.unfixed_vars = ComponentSet([var for var in m.all_vars \
+                                          if not var.is_fixed()])
+        
         return m
+        
+    def test_get_all_variables_unfixed(self):
+        m = self.get_var_model()
+        var = au.get_model_variables(m)
+        self.assertEqual(var, m.unfixed_vars)
+        
+    def test_get_all_variables(self):
+        m = self.get_var_model()
+        var = au.get_model_variables(m, include_fixed=True)
+        self.assertEqual(var, m.all_vars)
+        
+    def test_get_all_continuous(self):
+        m = self.get_var_model()
+        var = au.get_model_variables(m, 
+                                     include_continuous=True, 
+                                     include_binary=False, 
+                                     include_integer=False)
+        continuous_vars = ComponentSet(var for var in m.unfixed_vars \
+                                       if var.is_continuous())
+        self.assertEqual(var, continuous_vars)
+        
+    def test_get_all_binary(self):
+        m = self.get_var_model()
+        var = au.get_model_variables(m, 
+                                     include_continuous=False, 
+                                     include_binary=True, 
+                                     include_integer=False)
+        binary_vars = ComponentSet(var for var in m.unfixed_vars \
+                                       if var.is_binary())
+        self.assertEqual(var, binary_vars)
+
+    def test_get_all_integer(self):
+        m = self.get_var_model()
+        var = au.get_model_variables(m, 
+                                     include_continuous=False, 
+                                     include_binary=False, 
+                                     include_integer=True)
+        continuous_vars = ComponentSet(var for var in m.unfixed_vars \
+                                       if var.is_integer())
+        self.assertEqual(var, continuous_vars)
+
+    def test_get_specific_vars(self):
+        m = self.get_var_model()
+        components = [m.x, m.b1.sb1.y_l[0], m.b2.sb2.z_l]
+        var = au.get_model_variables(m, components=components)
+        specific_vars = ComponentSet([m.x, m.b1.sb1.y_l[0], m.b2.sb2.z_l[0], 
+                                      m.b2.sb2.z_l[1], m.b2.sb2.z_l[2]])
+        self.assertEqual(var, specific_vars)
+        
+    def test_get_block_vars(self):
+        m = self.get_var_model()
+        components = [m.b2.sb2.z_l, (m.b1, False)]
+        var = au.get_model_variables(m, components=components)
+        specific_vars = ComponentSet([m.b1.y, m.b2.sb2.z_l[0], 
+                                      m.b2.sb2.z_l[1], m.b2.sb2.z_l[2]])
+        self.assertEqual(var, specific_vars)
+
+    def test_get_constraint_vars(self):
+        m = self.get_var_model()
+        components = [m.con, m.obj]
+        var = au.get_model_variables(m, components=components)
+        print(var)
+        print(m.unfixed_vars)
+        self.assertEqual(var, m.unfixed_vars)
 
 if __name__ == '__main__':
     unittest.main()

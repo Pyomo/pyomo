@@ -98,14 +98,18 @@ def _get_random_direction(num_dimensions):
     Get a unit vector of dimension num_dimensions by sampling from and 
     normalizing a standard multivariate Gaussian distribution.
     '''
+    
+    iterations = 1000
+    min_norm = 1e-4
     idx = 0
-    while idx < 100:
+    while idx < iterations:
         samples = normal(size=num_dimensions)
         samples_norm = norm(samples)
         if samples_norm > 1e-4:
             return samples / samples_norm
         idx += 1
-    raise Exception
+    raise Exception(("Generated {} sequential Gaussian draws with a norm of "
+                     "less than {}.".format(iterations, min_norm)))
 
 def _filter_model_variables(variable_set, var_generator, 
                             include_continuous=True, include_binary=True, 
@@ -154,9 +158,10 @@ def get_model_variables(model, components='all', include_continuous=True,
             A Pyomo ComponentSet containing _GeneralVarData variables.
     '''
     
+    component_list = (pe.Objective, pe.Constraint)
     variable_set = ComponentSet()
     if components == 'all':
-        var_generator = vfe.get_vars_from_components(model, pe.Constraint, 
+        var_generator = vfe.get_vars_from_components(model, component_list, 
                                                      include_fixed=\
                                                          include_fixed)
         _filter_model_variables(variable_set, var_generator, 
@@ -168,23 +173,23 @@ def get_model_variables(model, components='all', include_continuous=True,
                 blocks = comp.values() if comp.is_indexed() else (comp,)
                 for item in blocks:
                     variables = vfe.get_vars_from_components(item, 
-                         pe.Constraint, include_fixed=include_fixed)
+                         component_list, include_fixed=include_fixed)
                     _filter_model_variables(variable_set, variables, 
                         include_continuous, include_binary, include_integer, 
                         include_fixed)
-            elif (isinstance(comp, tuple) and isinstance(comp[1], bool) and 
-                  hasattr(comp[0], 'ctype') and comp[0].ctype == pe.Block):
+            elif (isinstance(comp, tuple) and hasattr(comp[0], 'ctype') \
+                  and comp[0].ctype == pe.Block):
                 block = comp[0]
                 descend_into = pe.Block if comp[1] else False
                 blocks = block.values() if block.is_indexed() else (block,)
                 for item in blocks:
                     variables = vfe.get_vars_from_components(item, 
-                         pe.Constraint, include_fixed=include_fixed, 
+                         component_list, include_fixed=include_fixed, 
                          descend_into=descend_into)
                     _filter_model_variables(variable_set, variables, 
                         include_continuous, include_binary, include_integer, 
                         include_fixed)   
-            elif hasattr(comp, 'ctype') and comp.ctype == pe.Constraint:
+            elif hasattr(comp, 'ctype') and comp.ctype in component_list:
                 constraints = comp.values() if comp.is_indexed() else (comp,)
                 for item in constraints:
                     variables = pe.expr.identify_variables(item.expr,
