@@ -1072,8 +1072,8 @@ class _FBBTVisitorLeafToRoot(StreamBasedExpressionVisitor):
     the expression tree (all the way to the root node).
     """
 
-    def __init__(self, leaf_bnds_dict=None, bnds_dict=None, integer_tol=1e-4,
-                 feasibility_tol=1e-8, ignore_fixed=False ):
+    def __init__(self, integer_tol=1e-4, feasibility_tol=1e-8,
+                 ignore_fixed=False ):
         """
         Parameters
         ----------
@@ -1089,9 +1089,9 @@ class _FBBTVisitorLeafToRoot(StreamBasedExpressionVisitor):
             to prevent math domain errors (a larger value is more conservative).
         """
         super().__init__()
-        self.bnds_dict = bnds_dict if bnds_dict is not None else ComponentMap()
-        self.leaf_bnds_dict = leaf_bnds_dict if leaf_bnds_dict is not None else \
-                              ComponentMap()
+        # self.bnds_dict = bnds_dict if bnds_dict is not None else ComponentMap()
+        # self.leaf_bnds_dict = leaf_bnds_dict if leaf_bnds_dict is not None else \
+        #                       ComponentMap()
         self.integer_tol = integer_tol
         self.feasibility_tol = feasibility_tol
         self.ignore_fixed = ignore_fixed
@@ -1107,6 +1107,20 @@ class _FBBTVisitorLeafToRoot(StreamBasedExpressionVisitor):
 
     def exitNode(self, node, data):
         _prop_bnds_leaf_to_root_map[node.__class__](self, node, *node.args)
+
+    def walk_expression(self, expr, bnds_dict=None, leaf_bnds_dict=None):
+        try:
+            self.bnds_dict = bnds_dict if bnds_dict is not None else ComponentMap()
+            self.leaf_bnds_dict = leaf_bnds_dict if leaf_bnds_dict is not None else \
+                                  ComponentMap()
+            super().walk_expression(expr)
+            result = self.bnds_dict[expr]
+        finally:
+            if bnds_dict is None:
+                self.bnds_dict.clear()
+            if leaf_bnds_dict is None:
+                self.leaf_bnds_dict.clear()
+        return result
 
 
 # class FBBTVisitorLeafToRoot(_FBBTVisitorLeafToRoot):
@@ -1283,9 +1297,8 @@ def _fbbt_con(con, config):
     )  # a dictionary to store the bounds of every node in the tree
 
     # a walker to propagate bounds from the variables to the root
-    visitorA = _FBBTVisitorLeafToRoot(bnds_dict=bnds_dict,
-                                      feasibility_tol=config.feasibility_tol)
-    visitorA.walk_expression(con.body)
+    visitorA = _FBBTVisitorLeafToRoot(feasibility_tol=config.feasibility_tol)
+    visitorA.walk_expression(con.body, bnds_dict=bnds_dict)
 
     # Now we need to replace the bounds in bnds_dict for the root
     # node with the bounds on the constraint (if those bounds are
@@ -1521,7 +1534,7 @@ def fbbt(
     return new_var_bounds
 
 
-def compute_bounds_on_expr(expr, ignore_fixed=False, leaf_bnds_dict=None):
+def compute_bounds_on_expr(expr, ignore_fixed=False):
     """
     Compute bounds on an expression based on the bounds on the variables in
     the expression.
@@ -1531,19 +1544,16 @@ def compute_bounds_on_expr(expr, ignore_fixed=False, leaf_bnds_dict=None):
     expr: pyomo.core.expr.numeric_expr.NumericExpression
     ignore_fixed: bool, treats fixed Vars as constants if False, else treats
                   them as Vars
-    leaf_bnds_dict: ComponentMap, caches bounds for Vars, Params, and
-                    Expressions, that could be helpful in future bound 
-                    computations on the same model.
 
     Returns
     -------
     lb: float
     ub: float
     """
-    visitor = _FBBTVisitorLeafToRoot(leaf_bnds_dict=leaf_bnds_dict,
-                                     ignore_fixed=ignore_fixed)
-    visitor.walk_expression(expr)
-    lb, ub = visitor.bnds_dict[expr]
+    bnds_dict = ComponentMap()
+    visitor = _FBBTVisitorLeafToRoot(ignore_fixed=ignore_fixed)
+    visitor.walk_expression(expr, bnds_dict=bnds_dict)
+    lb, ub = bnds_dict[expr]
     if lb == -interval.inf:
         lb = None
     if ub == interval.inf:
