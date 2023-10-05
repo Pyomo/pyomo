@@ -157,6 +157,8 @@ class TestAOSUtilsUnit(unittest.TestCase):
                         [m.b2.sb2.z_l[i] for i in indices]
         
         m.con = pe.Constraint(expr=sum(v for v in vars_minus_x) <= 1)
+        m.b1.con = pe.Constraint(expr=m.b1.y<= 1)
+        m.b1.sb1.con = pe.Constraint(expr=m.b1.sb1.y_l[0]<= 1)
         m.obj = pe.Objective(expr=m.x)
 
         m.all_vars = ComponentSet([m.x] + vars_minus_x)        
@@ -225,8 +227,6 @@ class TestAOSUtilsUnit(unittest.TestCase):
         m = self.get_var_model()
         components = [m.con, m.obj]
         var = au.get_model_variables(m, components=components)
-        print(var)
-        print(m.unfixed_vars)
         self.assertEqual(var, m.unfixed_vars)
 
 if __name__ == '__main__':

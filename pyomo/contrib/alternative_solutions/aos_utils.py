@@ -9,8 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import sys
-
 from numpy.random import normal
 from numpy.linalg import norm
 
@@ -139,10 +137,10 @@ def get_model_variables(model, components='all', include_continuous=True,
             indicates that all variables will be included. Alternatively, a 
             collection of Pyomo Blocks, Constraints, or Variables (indexed or
             non-indexed) from which variables will be gathered can be provided. 
-            By default all variables in sub-Blocks will be added if a Block 
-            element is provided. A tuple element with the format (Block, False) 
-            indicates that only variables from the Block should be added but 
-            not any of its sub-Blocks.
+            If a Block is provided, all variables associated with constraints 
+            in that that block and its sub-blocks will be returned. To exclude 
+            sub-blocks, a tuple element with the format (Block, False) can be 
+            used.
         include_continuous : boolean
             Boolean indicating that continuous variables should be included.
         include_binary : boolean

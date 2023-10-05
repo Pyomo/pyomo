@@ -10,11 +10,11 @@
 #  ___________________________________________________________________________
 
 import pyomo.environ as pe
-from pyomo.contrib.alternative_solutions import  aos_utils, var_utils
+from pyomo.contrib.alternative_solutions import aos_utils
 
 def obbt_analysis(model, variables='all', rel_opt_gap=None, abs_opt_gap=None, 
-                  refine_discrete_bounds=True, warmstart=True, solver='gurobi', 
-                  solver_options={}, tee=False):
+                  refine_discrete_bounds=False, warmstart=True, 
+                  solver='gurobi', solver_options={}, tee=False):
     '''
     Calculates the bounds on each variable by solving a series of min and max 
     optimization problems where each variable is used as the objective function
@@ -25,7 +25,7 @@ def obbt_analysis(model, variables='all', rel_opt_gap=None, abs_opt_gap=None,
         ----------
         model : ConcreteModel
             A concrete Pyomo model.
-        variables: 'all' or a collection of Pyomo _GenereralVarData variables
+        variables: 'all' or a collection of Pyomo _GeneralVarData variables
             The variables for which bounds will be generated. 'all' indicates 
             that all variables will be included. Alternatively, a collection of
             _GenereralVarData variables can be provided.
@@ -48,11 +48,6 @@ def obbt_analysis(model, variables='all', rel_opt_gap=None, abs_opt_gap=None,
             The solver to be used.
         solver_options : dict
             Solver option-value pairs to be passed to the solver.
-        use_appsi : boolean
-            Boolean indicating if the the APPSI persistent solver interface
-            should be used. To use APPSI pass the base solver name and set this
-            input to true. E.g., passing 'gurobi' as the solver and a value of 
-            true will create an instance of an 'appsi_gurobi' solver.
         tee : boolean
             Boolean indicating that the solver output should be displayed.
             
@@ -66,7 +61,7 @@ def obbt_analysis(model, variables='all', rel_opt_gap=None, abs_opt_gap=None,
     
     print('STARTING OBBT ANALYSIS')
     if variables == 'all' or warmstart:
-        all_variables = var_utils.get_model_variables(model, 'all',
+        all_variables = aos_utils.get_model_variables(model, 'all',
                                                       include_fixed=False)
         variable_list = all_variables
     if warmstart:
@@ -89,6 +84,9 @@ def obbt_analysis(model, variables='all', rel_opt_gap=None, abs_opt_gap=None,
     results = opt.solve(model, warmstart=warmstart, tee=tee)
     status = results.solver.status
     condition = results.solver.termination_condition
+    print('OBBT cannot be applied, SolverStatus = {}, '
+                     'TerminationCondition = {}'.format(status.value, 
+                                                         condition.value))
     if condition != pe.TerminationCondition.optimal:
         raise Exception(('OBBT cannot be applied, SolverStatus = {}, '
                          'TerminationCondition = {}').format(status.value, 
