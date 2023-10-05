@@ -123,10 +123,8 @@ def _prop_bnds_leaf_to_root_DivisionExpression(visitor, node, arg1, arg2):
     arg2: divisor
     """
     bnds_dict = visitor.bnds_dict
-    lb1, ub1 = bnds_dict[arg1]
-    lb2, ub2 = bnds_dict[arg2]
     bnds_dict[node] = interval.div(
-        lb1, ub1, lb2, ub2, feasibility_tol=visitor.feasibility_tol
+        *bnds_dict[arg1], *bnds_dict[arg2], feasibility_tol=visitor.feasibility_tol
     )
 
 
@@ -141,10 +139,8 @@ def _prop_bnds_leaf_to_root_PowExpression(visitor, node, arg1, arg2):
     arg2: exponent
     """
     bnds_dict = visitor.bnds_dict
-    lb1, ub1 = bnds_dict[arg1]
-    lb2, ub2 = bnds_dict[arg2]
     bnds_dict[node] = interval.power(
-        lb1, ub1, lb2, ub2, feasibility_tol=visitor.feasibility_tol
+        *bnds_dict[arg1], *bnds_dict[arg2], feasibility_tol=visitor.feasibility_tol
     )
 
 
@@ -158,8 +154,7 @@ def _prop_bnds_leaf_to_root_NegationExpression(visitor, node, arg):
     arg: NegationExpression arg
     """
     bnds_dict = visitor.bnds_dict
-    lb1, ub1 = bnds_dict[arg]
-    bnds_dict[node] = interval.sub(0, 0, lb1, ub1)
+    bnds_dict[node] = interval.sub(0, 0, *bnds_dict[arg])
 
 
 def _prop_bnds_leaf_to_root_exp(visitor, node, arg):
@@ -172,8 +167,7 @@ def _prop_bnds_leaf_to_root_exp(visitor, node, arg):
     arg: UnaryFunctionExpression arg
     """
     bnds_dict = visitor.bnds_dict
-    lb1, ub1 = bnds_dict[arg]
-    bnds_dict[node] = interval.exp(lb1, ub1)
+    bnds_dict[node] = interval.exp(*bnds_dict[arg])
 
 
 def _prop_bnds_leaf_to_root_log(visitor, node, arg):
@@ -186,8 +180,7 @@ def _prop_bnds_leaf_to_root_log(visitor, node, arg):
     arg: UnaryFunctionExpression arg
     """
     bnds_dict = visitor.bnds_dict
-    lb1, ub1 = bnds_dict[arg]
-    bnds_dict[node] = interval.log(lb1, ub1)
+    bnds_dict[node] = interval.log(*bnds_dict[arg])
 
 
 def _prop_bnds_leaf_to_root_log10(visitor, node, arg):
@@ -200,8 +193,7 @@ def _prop_bnds_leaf_to_root_log10(visitor, node, arg):
     arg: UnaryFunctionExpression arg
     """
     bnds_dict = visitor.bnds_dict
-    lb1, ub1 = bnds_dict[arg]
-    bnds_dict[node] = interval.log10(lb1, ub1)
+    bnds_dict[node] = interval.log10(*bnds_dict[arg])
 
 
 def _prop_bnds_leaf_to_root_sin(visitor, node, arg):
@@ -214,8 +206,7 @@ def _prop_bnds_leaf_to_root_sin(visitor, node, arg):
     arg: UnaryFunctionExpression arg
     """
     bnds_dict = visitor.bnds_dict
-    lb1, ub1 = bnds_dict[arg]
-    bnds_dict[node] = interval.sin(lb1, ub1)
+    bnds_dict[node] = interval.sin(*bnds_dict[arg])
 
 
 def _prop_bnds_leaf_to_root_cos(visitor, node, arg):
@@ -228,8 +219,7 @@ def _prop_bnds_leaf_to_root_cos(visitor, node, arg):
     arg: UnaryFunctionExpression arg
     """
     bnds_dict = visitor.bnds_dict
-    lb1, ub1 = bnds_dict[arg]
-    bnds_dict[node] = interval.cos(lb1, ub1)
+    bnds_dict[node] = interval.cos(*bnds_dict[arg])
 
 
 def _prop_bnds_leaf_to_root_tan(visitor, node, arg):
@@ -242,8 +232,7 @@ def _prop_bnds_leaf_to_root_tan(visitor, node, arg):
     arg: UnaryFunctionExpression arg
     """
     bnds_dict = visitor.bnds_dict
-    lb1, ub1 = bnds_dict[arg]
-    bnds_dict[node] = interval.tan(lb1, ub1)
+    bnds_dict[node] = interval.tan(*bnds_dict[arg])
 
 
 def _prop_bnds_leaf_to_root_asin(visitor, node, arg):
@@ -256,9 +245,8 @@ def _prop_bnds_leaf_to_root_asin(visitor, node, arg):
     arg: UnaryFunctionExpression arg
     """
     bnds_dict = visitor.bnds_dict
-    lb1, ub1 = bnds_dict[arg]
     bnds_dict[node] = interval.asin(
-        lb1, ub1, -interval.inf, interval.inf, visitor.feasibility_tol
+        *bnds_dict[arg], -interval.inf, interval.inf, visitor.feasibility_tol
     )
 
 
@@ -272,9 +260,8 @@ def _prop_bnds_leaf_to_root_acos(visitor, node, arg):
     arg: UnaryFunctionExpression arg
     """
     bnds_dict = visitor.bnds_dict
-    lb1, ub1 = bnds_dict[arg]
     bnds_dict[node] = interval.acos(
-        lb1, ub1, -interval.inf, interval.inf, visitor.feasibility_tol
+        *bnds_dict[arg], -interval.inf, interval.inf, visitor.feasibility_tol
     )
 
 
@@ -288,8 +275,7 @@ def _prop_bnds_leaf_to_root_atan(visitor, node, arg):
 
     """
     bnds_dict = visitor.bnds_dict
-    lb1, ub1 = bnds_dict[arg]
-    bnds_dict[node] = interval.atan(lb1, ub1, -interval.inf, interval.inf)
+    bnds_dict[node] = interval.atan(*bnds_dict[arg], -interval.inf, interval.inf)
 
 
 def _prop_bnds_leaf_to_root_sqrt(visitor, node, arg):
@@ -302,16 +288,14 @@ def _prop_bnds_leaf_to_root_sqrt(visitor, node, arg):
     arg: UnaryFunctionExpression arg
     """
     bnds_dict = visitor.bnds_dict
-    lb1, ub1 = bnds_dict[arg]
     bnds_dict[node] = interval.power(
-        lb1, ub1, 0.5, 0.5, feasibility_tol=visitor.feasibility_tol
+        *bnds_dict[arg], 0.5, 0.5, feasibility_tol=visitor.feasibility_tol
     )
 
 
 def _prop_bnds_leaf_to_root_abs(visitor, node, arg):
     bnds_dict = visitor.bnds_dict
-    lb1, ub1 = bnds_dict[arg]
-    bnds_dict[node] = interval.interval_abs(lb1, ub1)
+    bnds_dict[node] = interval.interval_abs(*bnds_dict[arg])
 
 
 def _prop_no_bounds(visitor, node, *args):
