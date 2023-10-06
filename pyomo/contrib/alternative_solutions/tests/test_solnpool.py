@@ -1,8 +1,6 @@
 import os
 from os.path import join
 import yaml
-import pytest
-import random
 
 import pyutilib.misc
 import pyomo.environ as pe
@@ -12,30 +10,6 @@ from pyomo.common.fileutils import this_file_dir
 from pyomo.contrib.alternative_solutions.comparison import consensus
 
 currdir = this_file_dir()
-
-
-def knapsack(N):
-    random.seed(1000)
-
-    N = N
-    W = N/10.0
-
-
-    model = pe.ConcreteModel()
-
-    model.INDEX = pe.RangeSet(1,N)
-
-    model.w = pe.Param(model.INDEX, initialize=lambda model, i : random.uniform(0.0,1.0), within=pe.Reals)
-
-    model.v = pe.Param(model.INDEX, initialize=lambda model, i : random.uniform(0.0,1.0), within=pe.Reals)
-
-    model.x = pe.Var(model.INDEX, within=pe.Boolean)
-
-    model.o = pe.Objective(expr=sum(model.v[i]*model.x[i] for i in model.INDEX), sense=pe.maximize)
-
-    model.c = pe.Constraint(expr=sum(model.w[i]*model.x[i] for i in model.INDEX) <= W)
-
-    return model
 
 
 def run(testname, model, N, debug=False):
@@ -70,12 +44,36 @@ def run(testname, model, N, debug=False):
 
 
 
-def test_knapsack_100_1():
-    run('knapsack_100_1', knapsack(100), 1)
+import test_cases
 
-def test_knapsack_100_10():
-    run('knapsack_100_10', knapsack(100), 10)
+model = test_cases.knapsack(10)
 
-def test_knapsack_100_100():
-    run('knapsack_100_100', knapsack(100), 100)
+ast = '*'*10
 
+# print(ast,'Start APPSI',ast)
+# from pyomo.contrib import appsi
+# opt = appsi.solvers.Gurobi()
+# opt.config.stream_solver = True
+# #opt.set_instance(model)
+# opt.gurobi_options['PoolSolutions'] = 10
+# opt.gurobi_options['PoolSearchMode'] = 2
+# #opt.set_gurobi_param('PoolSolutions', 10)
+# #opt.set_gurobi_param('PoolSearchMode', 2)
+# results = opt.solve(model)
+# print(ast,'END APPSI',ast)
+
+# print(ast,'Start Solve Factory',ast)
+# from pyomo.opt import SolverFactory
+# opt2 = SolverFactory('gurobi')
+# opt.gurobi_options['PoolSolutions'] = 10
+# opt.gurobi_options['PoolSearchMode'] = 2
+# opt2.solve(model, tee=True)
+# print(ast,'End Solve Factory',ast)
+
+print(ast,'Start Solve Factory',ast)
+from pyomo.opt import SolverFactory
+opt3 = SolverFactory('appsi_gurobi')
+opt3.gurobi_options['PoolSolutions'] = 10
+opt3.gurobi_options['PoolSearchMode'] = 2
+opt3.solve(model, tee=True)
+print(ast,'End Solve Factory',ast)

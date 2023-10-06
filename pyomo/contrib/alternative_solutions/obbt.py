@@ -84,9 +84,7 @@ def obbt_analysis(model, variables='all', rel_opt_gap=None, abs_opt_gap=None,
     results = opt.solve(model, warmstart=warmstart, tee=tee)
     status = results.solver.status
     condition = results.solver.termination_condition
-    print('OBBT cannot be applied, SolverStatus = {}, '
-                     'TerminationCondition = {}'.format(status.value, 
-                                                         condition.value))
+
     if condition != pe.TerminationCondition.optimal:
         raise Exception(('OBBT cannot be applied, SolverStatus = {}, '
                          'TerminationCondition = {}').format(status.value, 
@@ -199,7 +197,7 @@ def obbt_analysis(model, variables='all', rel_opt_gap=None, abs_opt_gap=None,
     
     print('COMPLETED OBBT ANALYSIS')
     
-    return variable_bounds, solutions
+    return variable_bounds
 
 def _add_solution(solutions):
     '''Add the current variable values to the solution list.'''

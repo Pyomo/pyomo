@@ -38,7 +38,8 @@ class Solution:
         Get a dictionary of objective name-objective value pairs.
     """
     
-    def __init__(self, model, variable_list, include_fixed=True):
+    def __init__(self, model, variable_list, include_fixed=True, 
+                 objective=None):
         """
         Constructs a Pyomo Solution object.
 
@@ -51,6 +52,10 @@ class Solution:
             include_fixed : boolean
                 Boolean indicating that fixed variables should be added to the 
                 solution.
+            objective: None or Objective
+                The objective functions for which the value will be saved. None
+                indicates that the active objective should be used, but a
+                different objective can be stored as well.
         """
         
         self.variables = ComponentMap()
@@ -61,9 +66,10 @@ class Solution:
                 self.fixed_vars.add(var)
             if include_fixed or not is_fixed:
                 self.variables[var] = pe.value(var)
-            
-        obj = aos_utils._get_active_objective(model)
-        self.objective = (obj, pe.value(obj))
+        
+        if objective is None:
+            objective = aos_utils._get_active_objective(model)
+        self.objective = (objective, pe.value(objective))
     
     def _round_variable_value(self, variable, value, round_discrete=True):
         return value if not round_discrete or variable.is_continuous() \
