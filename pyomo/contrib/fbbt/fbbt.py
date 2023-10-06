@@ -1028,6 +1028,7 @@ def _before_NPV(visitor, child):
         return False, None
     if child in visitor.leaf_bnds_dict:
         visitor.bnds_dict[child] = visitor.leaf_bnds_dict[child]
+        return False, None
     val = value(child)
     visitor.bnds_dict[child] = (val, val)
     visitor.leaf_bnds_dict[child] = (val, val)
