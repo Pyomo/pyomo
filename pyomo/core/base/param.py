@@ -308,13 +308,19 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         _init = self._pop_from_kwargs('Param', kwd, ('rule', 'initialize'), NOTSET)
         _domain_rule = self._pop_from_kwargs('Param', kwd, ('domain', 'within'))
         self._validate = kwd.pop('validate', None)
-        self._mutable = kwd.pop('mutable', Param.DefaultMutable)
+        self._mutable = kwd.pop('mutable', None)
         self._default_val = kwd.pop('default', Param.NoValue)
         self._dense_initialize = kwd.pop('initialize_as_dense', False)
         self._units = kwd.pop('units', None)
-        if self._units is not None:
-            self._units = units.get_units(self._units)
-            self._mutable = True
+
+        if self._mutable is None:
+            if self._units is None:
+                self._mutable = Param.DefaultMutable
+            else:
+                # Params with units *must* be mutable, so that
+                # expression simplification does not remove units from
+                # the expression.
+                self._mutable = True
 
         kwd.setdefault('ctype', Param)
         IndexedComponent.__init__(self, *args, **kwd)
@@ -768,6 +774,15 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             logger.debug(
                 "Constructing Param, name=%s, from data=%s" % (self.name, str(data))
             )
+
+        if self._units is not None:
+            self._units = units.get_units(self._units)
+            if not self._mutable:
+                logger.warning(
+                    "Params with units must be mutable.  "
+                    f"Converting Param '{self.name}' to mutable."
+                )
+                self._mutable = True
 
         try:
             #
