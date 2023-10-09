@@ -1110,6 +1110,7 @@ class FbbtTestBase(object):
         m.y = pyo.Var(bounds=(-1, 1))
         e = m.x + m.y
         lb, ub = compute_bounds_on_expr(e)
+        print(lb, ub)
         self.assertAlmostEqual(lb, -2, 14)
         self.assertAlmostEqual(ub, 2, 14)
 

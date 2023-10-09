@@ -11,6 +11,7 @@
 
 from collections import defaultdict
 from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.contrib.fbbt.expression_bounds_walker import ExpressionBoundsVisitor
 import pyomo.core.expr.numeric_expr as numeric_expr
 from pyomo.core.expr.visitor import (
     ExpressionValueVisitor,
@@ -1551,10 +1552,8 @@ def compute_bounds_on_expr(expr, ignore_fixed=False):
     lb: float
     ub: float
     """
-    bnds_dict = ComponentMap()
-    visitor = _FBBTVisitorLeafToRoot(ignore_fixed=ignore_fixed)
-    visitor.walk_expression(expr, bnds_dict=bnds_dict)
-    lb, ub = bnds_dict[expr]
+    lb, ub = ExpressionBoundsVisitor(
+        use_fixed_var_values_as_bounds=not ignore_fixed).walk_expression(expr)
     if lb == -interval.inf:
         lb = None
     if ub == interval.inf:
