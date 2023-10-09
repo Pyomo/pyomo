@@ -229,8 +229,6 @@ class ExpressionBoundsVisitor(StreamBasedExpressionVisitor):
         self.use_fixed_var_values_as_bounds = use_fixed_var_values_as_bounds
 
     def initializeWalker(self, expr):
-        print(expr)
-        print(self.beforeChild(None, expr, 0))
         walk, result = self.beforeChild(None, expr, 0)
         if not walk:
             return False, result
