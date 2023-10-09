@@ -255,6 +255,9 @@ class BoundPretransformation(Transformation):
             for v, v_bounds in bound_dict.items():
                 unique_id = len(trans_block.transformed_bound_constraints)
                 if not any(disj in v_bounds for disj in disjunction.disjuncts):
+                    # There are no bound Constraints on this Disjunction. We
+                    # don't want to create a bunch of empty Blocks and things as
+                    # if there were, so we contine to the next.
                     continue
                 all_lbs = True
                 all_ubs = True
