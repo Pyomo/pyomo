@@ -13,8 +13,7 @@ import pyomo.environ as pe
 from pyomo.contrib.alternative_solutions import aos_utils, solution
 
 def gurobi_generate_solutions(model, num_solutions=10, rel_opt_gap=None, 
-                              abs_opt_gap=None, search_mode=2, 
-                              solver_options={}, tee=True):
+                              abs_opt_gap=None, solver_options={}, tee=True):
     '''
     Finds alternative optimal solutions for discrete variables using Gurobi's 
     built-in Solution Pool capability. See the Gurobi Solution Pool
@@ -36,13 +35,6 @@ def gurobi_generate_solutions(model, num_solutions=10, rel_opt_gap=None,
             None implies that there is no limit on the absolute optimality gap 
             (i.e. that any feasible solution can be considered by Gurobi).
             This parameter maps to the PoolGapAbs parameter in Gurobi.
-        search_mode : 0, 1, or 2
-            Indicates the SolutionPool mode that is used to generate 
-            alternative solutions in Gurobi. Mode 2 should typically be used as 
-            it finds the top n solutions. Mode 0 finds a single optimal 
-            solution (i.e. the standard mode in Gurobi). Mode 1 will generate n 
-            solutions without providing guarantees on their quality. This 
-            parameter maps to the PoolSearchMode in Gurobi.
         solver_options : dict
             Solver option-value pairs to be passed to the Gurobi solver.
         tee : boolean
@@ -60,7 +52,7 @@ def gurobi_generate_solutions(model, num_solutions=10, rel_opt_gap=None,
     for parameter, value in solver_options.items():
         opt.options[parameter] = value
     opt.options['PoolSolutions'] = num_solutions
-    opt.options['PoolSearchMode'] = search_mode
+    opt.options['PoolSearchMode'] = 2
     if rel_opt_gap is not None:
         opt.options['PoolGap'] = rel_opt_gap
     if abs_opt_gap is not None:
