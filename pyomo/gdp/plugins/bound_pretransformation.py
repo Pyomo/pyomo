@@ -271,8 +271,13 @@ class BoundPretransformation(Transformation):
                     )
                     if lb is None:
                         all_lbs = False
+                        if not all_ubs:
+                            # We're not going to get all of either: we're done.
+                            break
                     if ub is None:
                         all_ubs = False
+                        if not all_lbs:
+                            break
                     if all_lbs:
                         lb_expr += lb * disj.binary_indicator_var
                         # If these bounds came from above here in the GDP
