@@ -1644,7 +1644,8 @@ class _MindtPyAlgorithm(object):
                         "No-good cuts are added and GOA algorithm doesn't converge within the time limit. "
                         'No integer solution is found, so the CPLEX solver will report an error status. '
                     )
-            return None, None
+            # Value error will be raised if the MIP problem is unbounded and appsi solver is used when loading solutions. Although the problem is unbounded, a valid result is provided and we do not return None to let the algorithm continue.
+            return self.mip, main_mip_results
         if config.solution_pool:
             main_mip_results._solver_model = self.mip_opt._solver_model
             main_mip_results._pyomo_var_to_solver_var_map = (
