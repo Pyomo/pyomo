@@ -198,7 +198,7 @@ class BoundPretransformation(Transformation):
                     if disjunct in v_bounds['to_deactivate']:
                         v_bounds['to_deactivate'][disjunct].add(constraint)
                     else:
-                        v_bounds['to_deactivate'][disjunct] = set([constraint])
+                        v_bounds['to_deactivate'][disjunct] = ComponentSet([constraint])
 
     def _get_tightest_ancestral_bounds(self, v_bounds, disjunct, gdp_forest):
         lb = None
@@ -260,8 +260,8 @@ class BoundPretransformation(Transformation):
                 all_ubs = True
                 lb_expr = 0
                 ub_expr = 0
-                deactivate_lower = set()
-                deactivate_upper = set()
+                deactivate_lower = ComponentSet()
+                deactivate_upper = ComponentSet()
                 for disj in disjunction.disjuncts:
                     (lb, ub) = self._get_tightest_ancestral_bounds(
                         v_bounds, disj, gdp_forest
