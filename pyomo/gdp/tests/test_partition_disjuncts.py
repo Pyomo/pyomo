@@ -455,7 +455,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.check_transformation_block_nested_disjunction(m, disj2, m.disj1.x)
 
     def test_transformation_block_nested_disjunction_badly_ordered_targets(self):
-        """This tests that we preprocess targets correctly becuase we don't
+        """This tests that we preprocess targets correctly because we don't
         want to double transform the inner disjunct, which is what would happen
         if we did things in the order given."""
         m = models.makeBetweenStepsPaperExample_Nested()
