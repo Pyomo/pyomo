@@ -40,6 +40,24 @@ def get_2d_diamond_problem(discrete_x=False, discrete_y=False):
     return m
 
 
+def get_2d_unbounded_problem():
+    m = pe.ConcreteModel()
+    m.x = pe.Var(within=pe.Reals)
+    m.y = pe.Var(within=pe.Reals)
+    
+    m.o = pe.Objective(expr = m.x + m.y)
+    
+    m.c1 = pe.Constraint(expr= m.x <= 4)
+    m.c2 = pe.Constraint(expr= m.y >= 2)
+
+    m.extreme_points = {(4, 2)}
+
+    m.continuous_bounds = pe.ComponentMap()
+    m.continuous_bounds[m.x] = (float('-inf'), 4)
+    m.continuous_bounds[m.y] = (2, float('inf'))
+
+    return m
+
 def get_triangle_ip():
     m = pe.ConcreteModel()
     var_max = 5

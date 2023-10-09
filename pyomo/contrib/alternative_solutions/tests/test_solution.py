@@ -10,7 +10,6 @@
 #  ___________________________________________________________________________
 
 import pyomo.environ as pe
-from pyomo.common.collections import ComponentSet
 import pyomo.common.unittest as unittest
 import pyomo.contrib.alternative_solutions.aos_utils as au
 import pyomo.contrib.alternative_solutions.solution as sol
@@ -31,7 +30,7 @@ class TestSolutionUnit(unittest.TestCase):
         m.con_z = pe.Constraint(expr=m.z <= 3)
         return m
         
-    def test_multiple_objectives(self):
+    def test_solution(self):
         model = self.get_model()
         opt = pe.SolverFactory('cplex')
         opt.solve(model)

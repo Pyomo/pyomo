@@ -55,16 +55,16 @@ def gurobi_generate_solutions(model, num_solutions=10, rel_opt_gap=None,
             [Solution]
     '''
     
-    opt = pe.SolverFactory('gurobi_appsi')
+    opt = pe.SolverFactory('appsi_gurobi')
     
     for parameter, value in solver_options.items():
         opt.options[parameter] = value
-    opt.options('PoolSolutions', num_solutions)
-    opt.options('PoolSearchMode', search_mode)
+    opt.options['PoolSolutions'] = num_solutions
+    opt.options['PoolSearchMode'] = search_mode
     if rel_opt_gap is not None:
-        opt.options('PoolGap', rel_opt_gap)
+        opt.options['PoolGap'] = rel_opt_gap
     if abs_opt_gap is not None:
-        opt.options('PoolGapAbs', abs_opt_gap)
+        opt.options['PoolGapAbs'] = abs_opt_gap
         
     results = opt.solve(model, tee=tee)
     status = results.solver.status
