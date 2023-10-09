@@ -11,7 +11,7 @@
 
 from pyomo.gdp import GDP_Error
 from pyomo.common.collections import ComponentMap, ComponentSet
-from pyomo.contrib.fbbt.fbbt import _FBBTVisitorLeafToRoot
+from pyomo.contrib.fbbt.expression_bounds_walker import ExpressionBoundsVisitor
 import pyomo.contrib.fbbt.interval as interval
 from pyomo.core import Suffix
 
@@ -104,11 +104,12 @@ class _BigM_MixIn(object):
             block = block.parent_block()
         return arg_list
 
-    def _set_up_fbbt_visitor(self):
+    def _set_up_expr_bound_visitor(self):
         #bnds_dict = ComponentMap()
         # we assume the default config arg for 'assume_fixed_vars_permanent,`
         # and we will change it during apply_to if we need to
-        self._fbbt_visitor = _FBBTVisitorLeafToRoot(ignore_fixed=True)
+        self._expr_bound_visitor = ExpressionBoundsVisitor(
+            use_fixed_var_values_as_bounds=False)
 
     def _process_M_value(
         self,
@@ -217,8 +218,7 @@ class _BigM_MixIn(object):
         return lower, upper
 
     def _estimate_M(self, expr, constraint):
-        expr_lb, expr_ub = self._fbbt_visitor.walk_expression(
-            expr, leaf_bnds_dict=self._leaf_bnds_dict)
+        expr_lb, expr_ub = self._expr_bound_visitor.walk_expression(expr)
         if expr_lb == -interval.inf or expr_ub == interval.inf:
             raise GDP_Error(
                 "Cannot estimate M for unbounded "

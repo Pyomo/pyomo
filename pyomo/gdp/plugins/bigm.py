@@ -162,7 +162,7 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
 
     def __init__(self):
         super().__init__(logger)
-        self._set_up_fbbt_visitor()
+        self._set_up_expr_bound_visitor()
 
     def _apply_to(self, instance, **kwds):
         self.used_args = ComponentMap()  # If everything was sure to go well,
@@ -179,12 +179,12 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                 self._restore_state()
                 self.used_args.clear()
                 self._leaf_bnds_dict = ComponentMap()
-                self._fbbt_visitor.ignore_fixed = True
+                self._expr_bound_visitor.use_fixed_var_values_as_bounds = False
 
     def _apply_to_impl(self, instance, **kwds):
         self._process_arguments(instance, **kwds)
         if self._config.assume_fixed_vars_permanent:
-            self._fbbt_visitor.ignore_fixed = False
+            self._expr_bound_visitor.use_fixed_var_values_as_bounds = True
 
         # filter out inactive targets and handle case where targets aren't
         # specified.
