@@ -348,6 +348,7 @@ jobs:
             fi
         done
         echo "*** Install Pyomo dependencies ***"
+        set -x
         conda install --update-deps -q -y $CONDA_DEPENDENCIES
         if test -z "${{matrix.slim}}"; then
             PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
@@ -369,13 +370,16 @@ jobs:
                     _ISPY=$(echo "$_BUILDS" | grep "^py")
                     _PYOK=$(echo "$_BUILDS" | grep "^$PYVER")
                     if test -z "$_ISPY" -o -n "$_PYOK"; then
+                        echo "... INSTALLING $PKG"
                         conda install -y "$PKG" || _BUILDS=""
                     fi
                 fi
                 if test -z "$_BUILDS"; then
                     echo "WARNING: $PKG is not available"
                 fi
+                echo "... DONE with $PKG"
             done
+            echo "DONE installing"
             # TODO: This is a hack to stop test_qt.py from running until we
             # can better troubleshoot why it fails on GHA
             for QTPACKAGE in qt pyqt; do
