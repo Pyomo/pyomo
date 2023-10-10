@@ -477,10 +477,9 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         # Now we actually construct the constraints. We do this separately so
         # that we can make sure that we have a term for every active disjunct in
         # the disjunction (falling back on the variable bounds if they are there
-        transformed = transBlock.transformed_bound_constraints = Constraint(
-            NonNegativeIntegers, ['lb', 'ub']
-        )
-        for idx, (v, (lower_dict, upper_dict)) in enumerate(bounds_cons.items()):
+        transformed = transBlock.transformed_bound_constraints
+        offset = len(transformed)
+        for i, (v, (lower_dict, upper_dict)) in enumerate(bounds_cons.items()):
             lower_rhs = 0
             upper_rhs = 0
             for disj in active_disjuncts:
@@ -515,6 +514,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                             "one of these." % (v.name, disj.name)
                         )
                     upper_rhs += M * disj.indicator_var.get_associated_binary()
+            idx = i + offset
             if len(lower_dict) > 0:
                 transformed.add((idx, 'lb'), v >= lower_rhs)
                 relaxationBlock._constraintMap['srcConstraints'][
@@ -559,6 +559,9 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         if new_block:
             # Will store M values as we transform
             transBlock._mbm_values = {}
+            transBlock.transformed_bound_constraints = Constraint(
+                NonNegativeIntegers, ['lb', 'ub']
+            )
         return transBlock, new_block
 
     def _get_all_var_objects(self, active_disjuncts):
