@@ -983,7 +983,7 @@ def copy_var_list_values(from_list, to_list, config,
         if var_val in v_to.domain:
             v_to.set_value(value(v_from, exception=False))
         elif ignore_integrality and v_to.is_integer():
-            v_to.set_value(value(v_from, exception=False))
+            v_to.set_value(value(v_from, exception=False), skip_validation=True)
         elif abs(var_val) <= config.zero_tolerance and 0 in v_to.domain:
             v_to.set_value(0)
         elif v_to.is_integer() and (math.fabs(var_val - rounded_val) <=
