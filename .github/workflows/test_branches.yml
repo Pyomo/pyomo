@@ -320,7 +320,8 @@ jobs:
         echo "*** Install Pyomo dependencies ***"
         conda install --update-deps -q -y $CONDA_DEPENDENCIES
         if test -z "${{matrix.slim}}"; then
-            PYVER=$(echo "py${{matrix.python}}" | sed 's|\.||g')
+            PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
+            echo "Installing for $PYVER"
             for PKG in 'cplex>=12.10' docplex gurobi xpress cyipopt pymumps scip; do
                 echo ""
                 echo "*** Install $PKG ***"
@@ -335,13 +336,10 @@ jobs:
                 _BUILDS=$(echo "$_PKGLIST" | grep "^$_BASE " \
                     | sed -r 's/\s+/ /g' | cut -d\  -f3)
                 if test -n "$_BUILDS"; then
-                    _PY=$(echo "$_BUILDS" | grep "^py")
+                    _ISPY=$(echo "$_BUILDS" | grep "^py")
                     _PYOK=$(echo "$_BUILDS" | grep "^$PYVER")
-                    if test -z "$_PY" -o -n "$_PYOK"; then
-                        conda install -q -y "$PKG"
-                        if test "$?" -ne 0; then
-                            _BUILDS=""
-                        fi
+                    if test -z "$_ISPY" -o -n "$_PYOK"; then
+                        conda install -y "$PKG" || _BUILDS=""
                     fi
                 fi
                 if test -z "$_BUILDS"; then
