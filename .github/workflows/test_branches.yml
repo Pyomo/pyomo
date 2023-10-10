@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
@@ -62,7 +62,7 @@ jobs:
 
         include:
         - os: ubuntu-latest
-          python: '3.11'
+          python: '3.12'
           TARGET: linux
           PYENV: pip
 
@@ -112,7 +112,7 @@ jobs:
 
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Configure job parameters
       run: |
@@ -657,7 +657,7 @@ jobs:
     timeout-minutes: 10
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Set up Python 3.8
       uses: actions/setup-python@v4
@@ -712,7 +712,7 @@ jobs:
 
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       # We need the source for .codecov.yml and running "coverage xml"
 
     #- name: Pip package cache
