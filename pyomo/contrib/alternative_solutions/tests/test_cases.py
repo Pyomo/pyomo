@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 from itertools import product
+from math import ceil, floor
 
 import numpy as np
 
@@ -37,6 +38,14 @@ Other cases come to mind? A quadtratic maybe?
 '''
 
 
+def _is_satified(constraint, feasability_tol=1e-6):
+    value = pe.value(constraint.body)
+    if constraint.has_lb() and value < constraint.lb - feasability_tol:
+        return False
+    if constraint.has_ub() and value > constraint.ub + feasability_tol:
+        return False
+    return True
+
 def get_2d_diamond_problem(discrete_x=False, discrete_y=False):
     '''Simple 2d problem where the feasible is diamond-shaped.'''
     m = pe.ConcreteModel()
@@ -50,6 +59,7 @@ def get_2d_diamond_problem(discrete_x=False, discrete_y=False):
     m.c3 = pe.Constraint(expr=  2/9 * m.x + 2 >= m.y)
     m.c4 = pe.Constraint(expr= -1/2 * m.x + 3 >= m.y)
 
+    # Continuous exteme points and bounds
     m.extreme_points = {(0.737704918, -4.590163934),
                         (-5.869565217, 0.695652174),
                         (1.384615385, 2.307692308),
@@ -58,6 +68,56 @@ def get_2d_diamond_problem(discrete_x=False, discrete_y=False):
     m.continuous_bounds = pe.ComponentMap()
     m.continuous_bounds[m.x] = (-5.869565217, 7.578947368)
     m.continuous_bounds[m.y] = (-4.590163934, 2.307692308)
+
+    # Continuous exteme points and bounds for the case where an objective 
+    # constraint is added within a 100% relative gap of optimality or an 
+    # absolute gap of 6.789473684
+    
+    m.extreme_points_cut = {(45/14, -45/14),
+                            (-18/11, 18/11),
+                            (1.384615385, 2.307692308),
+                            (7.578947368, -0.789473684)}
+
+    m.continuous_bounds_cut = pe.ComponentMap()
+    m.continuous_bounds_cut[m.x] = (-18/11, 7.578947368)
+    m.continuous_bounds_cut[m.y] = (-45/14, 2.307692308)
+
+    # Discrete feasible solutions and bounds
+    feasible_sols = []
+    x_lower_bound = None
+    x_upper_bound = None
+    y_lower_bound = None
+    y_upper_bound = None
+    
+    x_lower = ceil(m.continuous_bounds[m.x][0])
+    x_upper = floor(m.continuous_bounds[m.x][1])
+    y_lower = ceil(m.continuous_bounds[m.y][0])
+    y_upper = floor(m.continuous_bounds[m.y][1])
+    cons = [m.c1, m.c2, m.c3, m.c4]
+    for x_value in range(x_lower, x_upper+1):
+        for y_value in range(y_lower, y_upper+1):
+            m.x.set_value(x_value)
+            m.y.set_value(y_value)
+            is_feasible = True
+            for con in cons:
+                if not _is_satified(con):
+                    is_feasible = False
+                    break
+            if is_feasible:
+                if x_lower_bound is None or x_value < x_lower_bound:
+                    x_lower_bound = x_value
+                if x_upper_bound is None or x_value > x_upper_bound:
+                    x_upper_bound = x_value
+                if y_lower_bound is None or y_value < y_lower_bound:
+                    y_lower_bound = y_value
+                if y_upper_bound is None or y_value > y_upper_bound:
+                    y_upper_bound = y_value
+                feasible_sols.append(((x_value, y_value), x_value + y_value))
+    m.discrete_feasible = sorted(feasible_sols, key=lambda sol: sol[1], 
+                                 reverse=True)
+    m.discrete_bounds = pe.ComponentMap()
+    m.discrete_bounds[m.x] = (x_lower_bound, x_upper_bound)
+    m.discrete_bounds[m.y] = (y_lower_bound, y_upper_bound)
 
     return m
 
