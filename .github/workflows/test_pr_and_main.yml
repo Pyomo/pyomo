@@ -359,16 +359,22 @@ jobs:
                 # if the package is available for this interpreter before
                 # attempting an install.
                 # NOTE: conda search will attempt approximate matches.
-                conda search -f "$PKG"
-                BASE=$(echo "$PKG" | sed 's/[=<>].*//')
-                OK=$(conda search -f "$PKG" |& grep "^$BASE " | grep " $PYVER" | wc -l)
-                if test "$OK" -gt 0; then
-                    conda install -q -y "$PKG"
-                    if test "$?" -ne 0; then
-                        OK=0
+                _PKGLIST=$(conda search -f "$PKG")
+                echo "$_PKGLIST"
+                _BASE=$(echo "$PKG" | sed 's/[=<>].*//')
+                _BUILDS=$(echo "$_PKGLIST" | grep "^$_BASE " \
+                    | sed -r 's/\s+/ /g' | cut -d\  -f3)
+                if test -n "$_BUILDS"; then
+                    _PY=$(echo "$_BUILDS" | grep "^py")
+                    _PYOK=$(echo "$_BUILDS" | grep "^$PYVER")
+                    test -z "$_PY" -o -n "$_PYOK"; then
+                        conda install -q -y "$PKG"
+                        if test "$?" -ne 0; then
+                            _BUILDS=""
+                        fi
                     fi
                 fi
-                if test "$OK" -eq 0; then
+                if test -z "$_BUILDS" -eq 0; then
                     echo "WARNING: $PKG is not available"
                 fi
             done
