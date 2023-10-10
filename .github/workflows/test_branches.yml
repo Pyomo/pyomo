@@ -335,9 +335,9 @@ jobs:
                 _BUILDS=$(echo "$_PKGLIST" | grep "^$_BASE " \
                     | sed -r 's/\s+/ /g' | cut -d\  -f3)
                 if test -n "$_BUILDS"; then
-                    _PY=$(echo "_$BUILDS" | grep "^py")
+                    _PY=$(echo "$_BUILDS" | grep "^py")
                     _PYOK=$(echo "$_BUILDS" | grep "^$PYVER")
-                    test -z "$_PY" -o -n "$_PYOK"; then
+                    if test -z "$_PY" -o -n "$_PYOK"; then
                         conda install -q -y "$PKG"
                         if test "$?" -ne 0; then
                             _BUILDS=""
