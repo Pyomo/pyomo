@@ -60,7 +60,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python: [3.7, 3.8, 3.9, '3.10', '3.11']
+        python: [ 3.8, 3.9, '3.10', '3.11' ]
         other: [""]
         category: [""]
 
@@ -87,7 +87,7 @@ jobs:
           PACKAGES:
 
         - os: ubuntu-latest
-          python: 3.8
+          python: 3.9
           other: /mpi
           mpi: 3
           skip_doctest: 1
@@ -120,7 +120,7 @@ jobs:
           PYENV: pip
 
         - os: ubuntu-latest
-          python: 3.7
+          python: 3.8
           other: /slim
           slim: 1
           skip_doctest: 1
@@ -128,7 +128,7 @@ jobs:
           PYENV: pip
 
         - os: ubuntu-latest
-          python: 3.8
+          python: 3.9
           other: /pyutilib
           TARGET: linux
           PYENV: pip
