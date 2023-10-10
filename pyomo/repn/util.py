@@ -258,6 +258,8 @@ class BeforeChildDispatcher(collections.defaultdict):
 
     """
 
+    __slots__ = ()
+
     def __missing__(self, key):
         return self.register_dispatcher
 
@@ -379,6 +381,8 @@ class ExitNodeDispatcher(collections.defaultdict):
     - Automatic mappimg of NPV expressions to their equivalent non-NPV handlers
 
     """
+
+    __slots__ = ()
 
     def __init__(self, *args, **kwargs):
         super().__init__(None, *args, **kwargs)

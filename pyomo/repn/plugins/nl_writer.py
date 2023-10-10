@@ -2234,7 +2234,7 @@ _operator_handles = ExitNodeDispatcher(
 
 
 class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
-    operator_handles = _operator_handles
+    __slots__ = ()
 
     def __init__(self):
         # Special linear / summation expressions
