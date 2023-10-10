@@ -40,7 +40,8 @@ jobs:
             CIBW_SKIP: "pp* cp36* cp37*"
             CIBW_BUILD_VERBOSITY: 1
             CIBW_ARCHS: ${{ matrix.arch }}
-            CIBW_CONFIG_SETTINGS: $PYOMO_SETUP_ARGS
+            CIBW_BEFORE_BUILD: pip install cython pybind11
+            CIBW_CONFIG_SETTINGS: '--global-option="--with-cython --with-distributable-extensions"'
       - uses: actions/upload-artifact@v3
         with:
           name: wheels
