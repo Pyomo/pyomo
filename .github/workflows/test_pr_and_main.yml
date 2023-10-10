@@ -360,7 +360,7 @@ jobs:
                 # if the package is available for this interpreter before
                 # attempting an install.
                 # NOTE: conda search will attempt approximate matches.
-                _PKGLIST=$(conda search -f "$PKG")
+                _PKGLIST=$(conda search -f "$PKG") || echo "Package $PKG not found"
                 echo "$_PKGLIST"
                 _BASE=$(echo "$PKG" | sed 's/[=<>].*//')
                 _BUILDS=$(echo "$_PKGLIST" | grep "^$_BASE " \
