@@ -336,9 +336,12 @@ jobs:
                 _BUILDS=$(echo "$_PKGLIST" | grep "^$_BASE " \
                     | sed -r 's/\s+/ /g' | cut -d\  -f3)
                 if test -n "$_BUILDS"; then
-                    _ISPY=$(echo "$_BUILDS" | grep "^py")
-                    _PYOK=$(echo "$_BUILDS" | grep "^$PYVER")
+                    _ISPY=$(echo "$_BUILDS" | grep "^py") \
+                        || echo "No python build detected"
+                    _PYOK=$(echo "$_BUILDS" | grep "^$PYVER") \
+                        || echo "No python build matching $PYVER detected"
                     if test -z "$_ISPY" -o -n "$_PYOK"; then
+                        echo "... INSTALLING $PKG"
                         conda install -y "$PKG" || _BUILDS=""
                     fi
                 fi
