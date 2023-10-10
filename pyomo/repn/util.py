@@ -410,12 +410,12 @@ class ExitNodeDispatcher(collections.defaultdict):
         elif any((k[0] if k.__class__ is tuple else k) is base_type for k in self):
             raise DeveloperError(
                 f"Base expression key '{base_key}' not found when inserting dispatcher"
-                f" for node '{type(node).__name__}' when walking expression tree."
+                f" for node '{type(node).__name__}' while walking expression tree."
             )
         else:
             raise DeveloperError(
                 f"Unexpected expression node type '{type(node).__name__}' "
-                "found when walking expression tree."
+                "found while walking expression tree."
             )
         if cache:
             self[key] = fcn

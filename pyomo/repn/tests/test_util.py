@@ -692,7 +692,7 @@ class TestRepnUtils(unittest.TestCase):
             DeveloperError,
             r"(?s)Base expression key '\(<class.*"
             r"'pyomo.core.expr.numeric_expr.SumExpression'>, 3\)' not found when.*"
-            r"inserting dispatcher for node 'SumExpression' when walking.*"
+            r"inserting dispatcher for node 'SumExpression' while walking.*"
             r"expression tree.",
         ):
             end[node.__class__, 3](None, node, *node.args)
