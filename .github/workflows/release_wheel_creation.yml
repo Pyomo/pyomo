@@ -37,7 +37,6 @@ jobs:
         with:
           output-dir: dist
         env:
-            WRAPT_INSTALL_EXTENSIONS: true
             CIBW_SKIP: "pp* cp36* cp37*"
             CIBW_BUILD_VERBOSITY: 1
             CIBW_ARCHS: ${{ matrix.arch }}
