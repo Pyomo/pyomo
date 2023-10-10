@@ -829,6 +829,23 @@ class _MindtPyAlgorithm(object):
             if len(results.solution) > 0:
                 self.rnlp.solutions.load_from(results)
         subprob_terminate_cond = results.solver.termination_condition
+
+        # Sometimes, the NLP solver might be trapped in a infeasible solution if the objective function is nonlinear and partition_obj_nonlinear_terms is True. If this happens, we will use the original objective function instead.
+        if subprob_terminate_cond == tc.infeasible and config.partition_obj_nonlinear_terms:
+            config.logger.info(
+                'Initial relaxed NLP problem is infeasible. This might be related to partition_obj_nonlinear_terms. Try to solve it again without partitioning nonlinear objective function.')
+            self.rnlp.MindtPy_utils.objective.deactivate()
+            self.rnlp.MindtPy_utils.objective_list[0].activate()
+            results = self.nlp_opt.solve(
+                self.rnlp,
+                tee=config.nlp_solver_tee,
+                load_solutions=config.load_solutions,
+                **nlp_args,
+            )
+            if len(results.solution) > 0:
+                self.rnlp.solutions.load_from(results)
+            subprob_terminate_cond = results.solver.termination_condition
+
         if subprob_terminate_cond in {tc.optimal, tc.feasible, tc.locallyOptimal}:
             main_objective = MindtPy.objective_list[-1]
             if subprob_terminate_cond == tc.optimal:
