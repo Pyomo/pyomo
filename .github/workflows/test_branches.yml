@@ -330,7 +330,8 @@ jobs:
                 # attempting an install.
                 # NOTE: conda search will attempt approximate matches.
                 conda search -f "$PKG"
-                OK=$(conda search -f "$PKG" |& grep "^$PKG " | grep " $PYVER" | wc -l)
+                BASE=$(echo "$PKG" | sed 's/[=<>].*//')
+                OK=$(conda search -f "$PKG" |& grep "^$BASE " | grep " $PYVER" | wc -l)
                 if test "$OK" -gt 0; then
                     conda install -q -y "$PKG"
                     if test "$?" -ne 0; then
