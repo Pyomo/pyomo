@@ -350,7 +350,7 @@ jobs:
         echo "*** Install Pyomo dependencies ***"
         conda install --update-deps -q -y $CONDA_DEPENDENCIES
         if test -z "${{matrix.slim}}"; then
-            PYVER=`echo "${{matrix.python}}" | sed 's|\.||g'`
+            PYVER=$(echo "py${{matrix.python}}" | sed 's|\.||g')
             for PKG in 'cplex>=12.10' docplex gurobi xpress cyipopt pymumps scip; do
                 echo ""
                 echo "*** Install $PKG ***"
@@ -358,8 +358,9 @@ jobs:
                 # package is not available.  Perform a quick search to see
                 # if the package is available for this interpreter before
                 # attempting an install.
-                # NOTE: conda search will attempt approximatches.
-                OK=$(conda search "$PKG" |& grep "^$PKG " | grep " py$PYVER" | wc -l)
+                # NOTE: conda search will attempt approximate matches.
+                conda search -f "$PKG"
+                OK=$(conda search -f "$PKG" |& grep "^$PKG " | grep " $PYVER" | wc -l)
                 if test "$OK" -gt 0; then
                     conda install -q -y "$PKG"
                     if test "$?" -ne 0; then
