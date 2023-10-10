@@ -12,12 +12,13 @@
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 
+coptpy_available = False
 try:
     import coptpy
 
     coptpy_available = True
 except:
-    coptpy_available = False
+    pass
 
 
 class TestCoptPersistent(unittest.TestCase):

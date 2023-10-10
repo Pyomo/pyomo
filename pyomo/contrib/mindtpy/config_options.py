@@ -531,7 +531,6 @@ def _add_subsolver_configs(CONFIG):
                 [
                     'gurobi',
                     'cplex',
-                    'copt',
                     'cbc',
                     'glpk',
                     'gams',
@@ -616,7 +615,6 @@ def _add_subsolver_configs(CONFIG):
                 [
                     'gurobi',
                     'cplex',
-                    'copt',
                     'cbc',
                     'glpk',
                     'gams',

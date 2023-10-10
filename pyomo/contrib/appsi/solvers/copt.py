@@ -2,11 +2,13 @@ import logging
 import math
 from typing import List, Dict, Optional
 from pyomo.common.collections import ComponentMap, OrderedSet
+from pyomo.common.log import LogStream
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import PyomoException
+from pyomo.common.tee import capture_output, TeeStream
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.shutdown import python_is_shutting_down
-from pyomo.common.config import ConfigValue
+from pyomo.common.config import ConfigValue, NonNegativeInt
 from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
 from pyomo.core.base.var import _GeneralVarData
@@ -26,22 +28,24 @@ from pyomo.contrib.appsi.base import (
 )
 from pyomo.contrib.appsi.cmodel import cmodel, cmodel_available
 from pyomo.core.staleflag import StaleFlagManager
+import sys
 
 logger = logging.getLogger(__name__)
 
 
-coptpy_available = False
-try:
-    import coptpy
+def _import_coptpy():
+    try:
+        import coptpy
+    except ImportError:
+        Copt._available = Copt.Availability.NotFound
+        raise
+    if coptpy.COPT.VERSION_MAJOR < 6:
+        Copt._available = Copt.Availability.BadVersion
+        raise ImportError('The APPSI COPT interface requires coptpy>=6.0.0')
+    return coptpy
 
-    if not (
-        coptpy.COPT.VERSION_MAJOR > 6
-        or (coptpy.COPT.VERSION_MAJOR == 6 and coptpy.COPT.VERSION_MINOR >= 5)
-    ):
-        raise ImportError('The APPSI Copt interface requires coptpy>=6.5.0')
-    coptpy_available = True
-except:
-    pass
+
+coptpy, coptpy_available = attempt_import('coptpy', importer=_import_coptpy)
 
 
 class DegreeError(PyomoException):
@@ -66,7 +70,12 @@ class CoptConfig(MIPSolverConfig):
         )
 
         self.declare('logfile', ConfigValue(domain=str))
+        self.declare('solver_output_logger', ConfigValue())
+        self.declare('log_level', ConfigValue(domain=NonNegativeInt))
+
         self.logfile = ''
+        self.solver_output_logger = logger
+        self.log_level = logging.INFO
 
 
 class CoptSolutionLoader(PersistentSolutionLoader):
@@ -226,6 +235,7 @@ class Copt(PersistentBase, PersistentSolver):
 
     _available = None
     _num_instances = 0
+    _coptenv = None
 
     def __init__(self, only_child_vars=True):
         super(Copt, self).__init__(only_child_vars=only_child_vars)
@@ -235,10 +245,8 @@ class Copt(PersistentBase, PersistentSolver):
         self._solver_options = dict()
         self._solver_model = None
 
-        if coptpy_available:
+        if coptpy_available and self._coptenv is None:
             self._coptenv = coptpy.Envr()
-        else:
-            self._coptenv = None
 
         self._symbol_map = SymbolMap()
         self._labeler = None
@@ -256,7 +264,12 @@ class Copt(PersistentBase, PersistentSolver):
         self._last_results_object: Optional[CoptResults] = None
 
     def available(self):
-        if self._available is None:
+        if not coptpy_available:
+            return self.Availability.NotFound
+        elif self._available == self.Availability.BadVersion:
+            return self.Availability.BadVersion
+        else:
+            self._available = Copt.Availability.BadLicense
             if self._coptenv is not None:
                 m = self._coptenv.createModel('checklic')
                 m.setParam("Logging", 0)
@@ -267,7 +280,7 @@ class Copt(PersistentBase, PersistentSolver):
                     self._available = Copt.Availability.FullLicense
                 except coptpy.CoptError:
                     self._available = Copt.Availability.LimitedLicense
-        return self._available
+            return self._available
 
     def release_license(self):
         self._reinit()
@@ -316,25 +329,37 @@ class Copt(PersistentBase, PersistentSolver):
         return self._symbol_map
 
     def _solve(self, timer: HierarchicalTimer):
-        config = self.config
-        options = self.copt_options
-        if config.stream_solver:
-            self._solver_model.setParam('LogToConsole', 1)
-        else:
-            self._solver_model.setParam('LogToConsole', 0)
-        self._solver_model.setLogFile(config.logfile)
+        ostreams = [
+            LogStream(
+                level=self.config.log_level, logger=self.config.solver_output_logger
+            )
+        ]
+        if self.config.stream_solver:
+            ostreams.append(sys.stdout)
 
-        if config.time_limit is not None:
-            self._solver_model.setParam('TimeLimit', config.time_limit)
-        if config.mip_gap is not None:
-            self._solver_model.setParam('RelGap', config.mip_gap)
+        with TeeStream(*ostreams) as t:
+            with capture_output(output=t.STDOUT, capture_fd=False):
+                config = self.config
+                options = self.copt_options
 
-        for key, option in options.items():
-            self._solver_model.setParam(key, option)
-        timer.start('solve')
-        self._solver_model.solve(self._callback)
-        timer.stop('solve')
-        self._needs_updated = False
+                if config.stream_solver:
+                    self._solver_model.setParam('LogToConsole', 1)
+                else:
+                    self._solver_model.setParam('LogToConsole', 0)
+                self._solver_model.setLogFile(config.logfile)
+
+                if config.time_limit is not None:
+                    self._solver_model.setParam('TimeLimit', config.time_limit)
+                if config.mip_gap is not None:
+                    self._solver_model.setParam('RelGap', config.mip_gap)
+
+                for key, option in options.items():
+                    self._solver_model.setParam(key, option)
+
+                timer.start('solve')
+                self._solver_model.solve()
+                timer.stop('solve')
+
         return self._postsolve(timer)
 
     def solve(self, model, timer: HierarchicalTimer = None) -> Results:

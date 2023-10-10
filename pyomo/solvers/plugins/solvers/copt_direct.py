@@ -14,6 +14,7 @@ import re
 import sys
 
 from pyomo.common.collections import ComponentSet, ComponentMap, Bunch
+from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import ApplicationError
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.expr.numvalue import value, is_fixed
@@ -32,21 +33,35 @@ from pyomo.core.base.suffix import Suffix
 
 logger = logging.getLogger('pyomo.solvers')
 
-coptpy_available = False
-try:
-    import coptpy
-
-    coptpy_available = True
-except:
-    pass
-
 
 class DegreeError(ValueError):
     pass
 
 
+def _parse_coptpy_version(coptpy, avail):
+    if not avail:
+        return
+    coptpy_major = coptpy.COPT.VERSION_MAJOR
+    coptpy_minor = coptpy.COPT.VERSION_MINOR
+    coptpy_tech = coptpy.COPT.VERSION_TECHNICAL
+    CoptDirect._version = (coptpy_major, coptpy_minor, coptpy_tech)
+    CoptDirect._name = "COPT %s.%s.%s" % CoptDirect._version
+    while len(CoptDirect._version) < 4:
+        CoptDirect._version += (0,)
+    CoptDirect._version = CoptDirect._version[:4]
+
+
+coptpy, coptpy_available = attempt_import(
+    'coptpy', catch_exceptions=(Exception,), callback=_parse_coptpy_version
+)
+
+
 @SolverFactory.register('copt_direct', doc='Direct python interface to COPT')
 class CoptDirect(DirectSolver):
+    _name = None
+    _version = 0
+    _coptenv = None
+
     def __init__(self, **kwds):
         if 'type' not in kwds:
             kwds['type'] = 'copt_direct'
@@ -54,21 +69,6 @@ class CoptDirect(DirectSolver):
         super(CoptDirect, self).__init__(**kwds)
 
         self._python_api_exists = True
-
-        self._version_major = coptpy.COPT.VERSION_MAJOR
-        self._version_minor = coptpy.COPT.VERSION_MINOR
-        self._version_technical = coptpy.COPT.VERSION_TECHNICAL
-        self._version_name = "COPT %s.%s.%s" % (
-            self._version_major,
-            self._version_minor,
-            self._version_technical,
-        )
-
-        if coptpy_available:
-            self._coptenv = coptpy.Envr()
-        else:
-            self._coptenv = None
-        self._coptmodel_name = "coptprob"
 
         self._pyomo_var_to_solver_var_map = ComponentMap()
         self._solver_var_to_pyomo_var_map = ComponentMap()
@@ -84,6 +84,11 @@ class CoptDirect(DirectSolver):
         self._capabilities.integer = True
         self._capabilities.sos1 = True
         self._capabilities.sos2 = True
+
+        if coptpy_available and self._coptenv is None:
+            self._coptenv = coptpy.Envr()
+        self._coptmodel_name = "coptprob"
+        self._solver_model = None
 
     def available(self, exception_flag=True):
         if not coptpy_available:
@@ -338,6 +343,9 @@ class CoptDirect(DirectSolver):
         self._pyomo_var_to_solver_var_map = ComponentMap()
         self._solver_var_to_pyomo_var_map = ComponentMap()
 
+        if self._solver_model is not None:
+            self._solver_model.clear()
+            self._solver_model = None
         try:
             if model.name is not None:
                 self._solver_model = self._coptenv.createModel(model.name)
@@ -403,7 +411,7 @@ class CoptDirect(DirectSolver):
         self.results = SolverResults()
         soln = Solution()
 
-        self.results.solver.name = self._version_name
+        self.results.solver.name = self._name
         self.results.solver.wallclock_time = self._solver_model.SolvingTime
 
         status = self._solver_model.status
