@@ -37,6 +37,10 @@ jobs:
     steps:
     - name: Checkout Pyomo source
       uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
     - name: Black Formatting Check
       run: |
         pip install black
@@ -346,19 +350,34 @@ jobs:
         echo "*** Install Pyomo dependencies ***"
         conda install --update-deps -q -y $CONDA_DEPENDENCIES
         if test -z "${{matrix.slim}}"; then
-            echo "*** Install CPLEX ***"
-            conda install -q -y 'cplex>=12.10' docplex \
-                || echo "WARNING: CPLEX Community Edition is not available"
-            echo "*** Install Gurobi ***"
-            conda install -q -y gurobi \
-                || echo "WARNING: Gurobi is not available"
-            echo "*** Install Xpress ***"
-            conda install -q -y xpress \
-                || echo "WARNING: Xpress Community Edition is not available"
-            for PKG in cyipopt pymumps scip; do
+            PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
+            echo "Installing for $PYVER"
+            for PKG in 'cplex>=12.10' docplex gurobi xpress cyipopt pymumps scip; do
+                echo ""
                 echo "*** Install $PKG ***"
-                conda install -q -y $PKG \
-                    || echo "WARNING: $PKG is not available"
+                # conda can literally take an hour to determine that a
+                # package is not available.  Perform a quick search to see
+                # if the package is available for this interpreter before
+                # attempting an install.
+                # NOTE: conda search will attempt approximate matches.
+                _PKGLIST=$(conda search -f "$PKG") || echo "Package $PKG not found"
+                echo "$_PKGLIST"
+                _BASE=$(echo "$PKG" | sed 's/[=<>].*//')
+                _BUILDS=$(echo "$_PKGLIST" | grep "^$_BASE " \
+                    | sed -r 's/\s+/ /g' | cut -d\  -f3) || echo ""
+                if test -n "$_BUILDS"; then
+                    _ISPY=$(echo "$_BUILDS" | grep "^py") \
+                        || echo "No python build detected"
+                    _PYOK=$(echo "$_BUILDS" | grep "^$PYVER") \
+                        || echo "No python build matching $PYVER detected"
+                    if test -z "$_ISPY" -o -n "$_PYOK"; then
+                        echo "... INSTALLING $PKG"
+                        conda install -y "$PKG" || _BUILDS=""
+                    fi
+                fi
+                if test -z "$_BUILDS"; then
+                    echo "WARNING: $PKG is not available"
+                fi
             done
             # TODO: This is a hack to stop test_qt.py from running until we
             # can better troubleshoot why it fails on GHA
