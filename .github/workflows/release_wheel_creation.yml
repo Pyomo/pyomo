@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PYOMO_SETUP_ARGS: --with-distributable-extensions
+  PYOMO_SETUP_ARGS: "--with-cython --with-distributable-extensions"
 
 jobs:
   bdist_wheel:
@@ -40,6 +40,7 @@ jobs:
             CIBW_SKIP: "pp* cp36* cp37*"
             CIBW_BUILD_VERBOSITY: 1
             CIBW_ARCHS: ${{ matrix.arch }}
+            CIBW_CONFIG_SETTINGS: $PYOMO_SETUP_ARGS
       - uses: actions/upload-artifact@v3
         with:
           name: wheels
