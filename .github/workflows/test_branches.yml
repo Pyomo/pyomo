@@ -56,7 +56,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python: ['3.11']
+        python: ['3.12']
         other: [""]
         category: [""]
 
