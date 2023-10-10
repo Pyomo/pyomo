@@ -358,9 +358,12 @@ jobs:
                 # package is not available.  Perform a quick search to see
                 # if the package is available for this interpreter before
                 # attempting an install.
-                OK=`conda search "$PKG" |& grep " py$PYVER" | wc -l`
+                OK=$(conda search "$PKG" |& grep " py$PYVER" | wc -l)
                 if test "$OK" -gt 0; then
-                    conda install -q -y $PKG || OK=0
+                    conda install -q -y "$PKG"
+                    if test "$?" -ne 0; then
+                        OK=0
+                    fi
                 fi
                 if test "$OK" -eq 0; then
                     echo "WARNING: $PKG is not available"
