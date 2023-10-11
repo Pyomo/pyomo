@@ -17,8 +17,8 @@ import itertools
 import logging
 import math
 from io import StringIO
+from contextlib import nullcontext
 
-from pyomo.common.backports import nullcontext
 from pyomo.common.collections import OrderedSet
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter, WriterFactory

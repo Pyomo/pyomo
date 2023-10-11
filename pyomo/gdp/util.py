@@ -154,6 +154,14 @@ class GDPTree:
         else:
             return None
 
+    def children(self, u):
+        """Returns the direct descendents of node u.
+
+        Arg:
+            u : A node in the tree
+        """
+        return self._children[u]
+
     def parent_disjunct(self, u):
         """Returns the parent Disjunct of u, or None if u is the
         closest-to-root Disjunct in the forest.

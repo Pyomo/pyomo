@@ -195,12 +195,9 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                 self._transform_disjunctionData(
                     t,
                     t.index(),
+                    bigM,
                     parent_disjunct=gdp_tree.parent(t),
                     root_disjunct=gdp_tree.root_disjunct(t),
-                )
-            else:  # We know t is a Disjunct after preprocessing
-                self._transform_disjunct(
-                    t, bigM, root_disjunct=gdp_tree.root_disjunct(t)
                 )
 
         # issue warnings about anything that was in the bigM args dict that we
@@ -208,14 +205,17 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         _warn_for_unused_bigM_args(bigM, self.used_args, logger)
 
     def _transform_disjunctionData(
-        self, obj, index, parent_disjunct=None, root_disjunct=None
+        self, obj, index, bigM, parent_disjunct=None, root_disjunct=None
     ):
         (transBlock, xorConstraint) = self._setup_transform_disjunctionData(
             obj, root_disjunct
         )
 
         # add or (or xor) constraint
-        or_expr = sum(disjunct.binary_indicator_var for disjunct in obj.disjuncts)
+        or_expr = 0
+        for disjunct in obj.disjuncts:
+            or_expr += disjunct.binary_indicator_var
+            self._transform_disjunct(disjunct, bigM, transBlock)
 
         rhs = 1 if parent_disjunct is None else parent_disjunct.binary_indicator_var
         if obj.xor:
@@ -229,13 +229,13 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         # and deactivate for the writers
         obj.deactivate()
 
-    def _transform_disjunct(self, obj, bigM, root_disjunct):
-        root = (
-            root_disjunct.parent_block()
-            if root_disjunct is not None
-            else obj.parent_block()
-        )
-        transBlock = self._add_transformation_block(root)[0]
+    def _transform_disjunct(self, obj, bigM, transBlock):
+        # We're not using the preprocessed list here, so this could be
+        # inactive. We've already done the error checking in preprocessing, so
+        # we just skip it here.
+        if not obj.active:
+            return
+
         suffix_list = _get_bigM_suffix_list(obj)
         arg_list = self._get_bigM_arg_list(bigM, obj)
 
