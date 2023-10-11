@@ -75,21 +75,25 @@ _GENERAL = ExprType.GENERAL
 
 
 def decoder(num, base):
-    if isinstance(base, float):
-        if not base.is_integer():
-            raise ValueError('Invalid base')
-        else:
-            base = int(base)
+    # Needed in the general case, but not as implemented
+    # if isinstance(base, float):
+    #     if not base.is_integer():
+    #         raise ValueError('Invalid base')
+    #     else:
+    #         base = int(base)
 
-    if base <= 1:
-        raise ValueError('Invalid base')
+    # Needed in the general case, but not as implemented
+    # if base <= 1:
+    #     raise ValueError('Invalid base')
 
-    if num == 0:
-        numDigs = 1
-    else:
-        numDigs = math.ceil(math.log(num, base))
-        if math.log(num, base).is_integer():
-            numDigs += 1
+    # Needed in the general case, but not as implemented
+    # if num == 0:
+    #     numDigs = 1
+    # else:
+    numDigs = math.ceil(math.log(num, base))
+    if math.log(num, base).is_integer():
+        numDigs += 1
+            
     digs = [0.0 for i in range(0, numDigs)]
     rem = num
     for i in range(0, numDigs):
@@ -125,7 +129,7 @@ def alphabetStringGenerator(num, indexMode=False):
             'q',
             'r',
         ]
-
+        
     else:
         alphabet = [
             '.',
@@ -447,11 +451,7 @@ class _LatexVisitor(StreamBasedExpressionVisitor):
         try:
             return self._operator_handles[node.__class__](self, node, *data)
         except:
-            print(node.__class__)
-            print(node)
-            print(data)
-            
-            return 'xxx'
+            raise DeveloperError('Latex printer encountered an error when processing type %s, contact the developers'%(node.__class__))
 
 def analyze_variable(vr):
     domainMap = {
@@ -640,21 +640,44 @@ def latex_printer(
 
     Parameters
     ----------
-    pyomo_component: _BlockData or Model or Constraint or Expression or Objective
-        The thing to be printed to LaTeX.  Accepts Blocks (including models), Constraints, and Expressions
-
-    write_object: str
-        An optional file to write the LaTeX to.  Default of None produces no file
-
+    pyomo_component: _BlockData or Model or Objective or Constraint or Expression
+        The Pyomo component to be printed
+   
+    latex_component_map: pyomo.common.collections.component_map.ComponentMap
+        A map keyed by Pyomo component, values become the latex representation in 
+        the printer
+   
+    write_object: io.TextIOWrapper or io.StringIO or str
+        The object to print the latex string to.  Can be an open file object, 
+        string I/O object, or a string for a filename to write to
+   
     use_equation_environment: bool
-        Default behavior uses equation/aligned and produces a single LaTeX Equation (ie, ==False).
-        Setting this input to True will instead use the align environment, and produce equation numbers for each
-        objective and constraint.  Each objective and constraint will be labeled with its name in the pyomo model.
-        This flag is only relevant for Models and Blocks.
-
-    splitContinuous: bool
-        Default behavior has all sum indices be over "i \\in I" or similar.  Setting this flag to
-        True makes the sums go from: \\sum_{i=1}^{5} if the set I is continuous and has 5 elements
+        If False, the equation/aligned construction is used to create a single
+         LaTeX equation.  If True, then the align environment is used in LaTeX and 
+         each constraint and objective will be given an individual equation number
+   
+    split_continuous_sets: bool
+        If False, all sums will be done over 'index in set' or similar.  If True, 
+        sums will be done over 'i=1' to 'N' or similar if the set is a continuous 
+        set
+   
+    use_short_descriptors: bool 
+        If False, will print full 'minimize' and 'subject to' etc.  If true, uses
+        'min' and 's.t.' instead
+   
+    fontsize: str or int
+        Sets the font size of the latex output when writing to a file.  Can take 
+        in any of the latex font size keywords ['tiny', 'scriptsize', 
+        'footnotesize', 'small', 'normalsize', 'large', 'Large', 'LARGE', huge', 
+        'Huge'], or an integer referenced off of 'normalsize' (ex: small is -1, 
+        Large is +2)
+   
+    paper_dimensions: dict
+        A dictionary that controls the paper margins and size.  Keys are: 
+        [ 'height', 'width', 'margin_left', 'margin_right', 'margin_top', 
+        'margin_bottom' ].  Default is standard 8.5x11 with one inch margins. 
+        Values are in inches 
+   
 
     Returns
     -------
@@ -682,7 +705,7 @@ def latex_printer(
     fontsizes_ints    = [    -4,           -3,             -2,      -1,            0,       1,       2,        3,     4,     5 ]
 
     if fontsize is None:
-        fontsize = 0
+        fontsize = '\\normalsize'
 
     elif fontsize in fontSizes:
         #no editing needed
@@ -800,10 +823,8 @@ def latex_printer(
                 if p not in ComponentSet(parameterList):
                     parameterList.append(p)
 
-        # TODO:  cannot extract this information, waiting on resolution of an issue
-        # For now, will raise an error
-        raise RuntimeError('Printing of non-models is not currently supported, but will be added soon')
-        # setList = identify_components(pyomo_component.expr, pyo.Set)
+        # Will grab the sets as the expression is walked
+        setList = []
 
     else:
         variableList = [
@@ -900,7 +921,7 @@ def latex_printer(
             tbSpc = 8
         else:
             tbSpc = 4
-        trailingAligner = '&'
+        trailingAligner = ''
 
     # Iterate over the objectives and print
     for obj in objectives:
@@ -950,7 +971,10 @@ def latex_printer(
             else:
                 algn = ''
 
-            tail = '\\\\ \n'
+            if not isSingle:
+                tail = '\\\\ \n'
+            else:
+                tail = '\n'
 
             # grab the constraint and templatize
             con = constraints[i]
@@ -1198,7 +1222,7 @@ def latex_printer(
                     )
                     ln = re.sub(setInfo[ky]['sumSetRegEx'], replacement, ln)
 
-                replacement = defaultSetLatexNames[setInfo[ky]['setObject']]
+                replacement = repr(defaultSetLatexNames[setInfo[ky]['setObject']])[1:-1]
                 ln = re.sub(setInfo[ky]['setRegEx'], replacement, ln)
 
             # groupNumbers = re.findall(r'__I_PLACEHOLDER_8675309_GROUP_([0-9*])_SET[0-9]*__',ln)
@@ -1230,7 +1254,7 @@ def latex_printer(
                                 'Insufficient number of indices provided to the overwrite dictionary for set %s'
                                 % (vl['setObject'].name)
                             )
-                        for i in range(0, len(indexNames)):
+                        for i in range(0, len(vl['indices'])):
                             ln = ln.replace(
                                 '__I_PLACEHOLDER_8675309_GROUP_%s_%s__'
                                 % (vl['indices'][i], ky),
@@ -1389,15 +1413,15 @@ def latex_printer(
         fstr += pstr + '\n'
         fstr += '\\end{document} \n'
 
-    # optional write to output file
-    if isinstance(write_object, (io.TextIOWrapper, io.StringIO)):
-        write_object.write(fstr)
-    elif isinstance(write_object,str):
-        f = open(write_object, 'w')
-        f.write(fstr)
-        f.close()
-    else:
-        raise ValueError('Invalid type %s encountered when parsing the write_object.  Must be a StringIO, FileIO, or valid filename string')
+        # optional write to output file
+        if isinstance(write_object, (io.TextIOWrapper, io.StringIO)):
+            write_object.write(fstr)
+        elif isinstance(write_object,str):
+            f = open(write_object, 'w')
+            f.write(fstr)
+            f.close()
+        else:
+            raise ValueError('Invalid type %s encountered when parsing the write_object.  Must be a StringIO, FileIO, or valid filename string')
 
     # return the latex string
     return pstr

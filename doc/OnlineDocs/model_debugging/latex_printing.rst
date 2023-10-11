@@ -3,23 +3,30 @@ Latex Printing
 
 Pyomo models can be printed to a LaTeX compatible format using the ``pyomo.util.latex_printer`` function:
 
-.. py:function:: latex_printer(pyomoElement, filename=None, useAlignEnvironment=False, splitContinuousSets=False)
+.. py:function:: latex_printer(pyomo_component, latex_component_map=None, write_object=None, use_equation_environment=False, split_continuous_sets=False, use_short_descriptors=False, fontsize = None, paper_dimensions=None)
 
     Prints a pyomo element (Block, Model, Objective, Constraint, or Expression) to a LaTeX compatible string
 
-   :param pyomoElement: The pyomo element to be printed
-   :type  pyomoElement: _BlockData or Model or Objective or Constraint or Expression
-   :param filename: An optional filename where the latex will be saved
-   :type  filename: str
-   :param useAlignEnvironment: If False, the equation/aligned construction is used to create a single LaTeX equation.  If True, then the align environment is used in LaTeX and each constraint and objective will be given an individual equation number
-   :type useAlignEnvironment: bool
-   :param splitContinuousSets: If False, all sums will be done over 'index in set' or similar.  If True, sums will be done over 'i=1' to 'N' or similar if the set is a continuous set
-   :type splitContinuousSets: bool
+   :param pyomo_component: The Pyomo component to be printed
+   :type pyomo_component: _BlockData or Model or Objective or Constraint or Expression
+   :param latex_component_map: A map keyed by Pyomo component, values become the latex representation in the printer
+   :type latex_component_map: pyomo.common.collections.component_map.ComponentMap
+   :param write_object: The object to print the latex string to.  Can be an open file object, string I/O object, or a string for a filename to write to
+   :type write_object: io.TextIOWrapper or io.StringIO or str
+   :param use_equation_environment: If False, the equation/aligned construction is used to create a single LaTeX equation.  If True, then the align environment is used in LaTeX and each constraint and objective will be given an individual equation number
+   :type use_equation_environment: bool
+   :param split_continuous_sets: If False, all sums will be done over 'index in set' or similar.  If True, sums will be done over 'i=1' to 'N' or similar if the set is a continuous set
+   :type split_continuous_sets: bool
+   :param use_short_descriptors: If False, will print full 'minimize' and 'subject to' etc.  If true, uses 'min' and 's.t.' instead
+   :type use_short_descriptors: bool 
+   :param fontsize: Sets the font size of the latex output when writing to a file.  Can take in any of the latex font size keywords ['tiny', 'scriptsize', 'footnotesize', 'small', 'normalsize', 'large', 'Large', 'LARGE', 'huge', 'Huge'], or an integer referenced off of 'normalsize' (ex: small is -1, Large is +2)
+   :type fontsize: str or int
+   :param paper_dimensions: A dictionary that controls the paper margins and size.  Keys are: [ 'height', 'width', 'margin_left', 'margin_right', 'margin_top', 'margin_bottom' ].  Default is standard 8.5x11 with one inch margins.  Values are in inches 
+   :type paper_dimensions: dict
 
 
    :return: A LaTeX style string that represents the passed in pyomoElement
    :rtype: str
-
 
 .. note::
 
@@ -29,14 +36,6 @@ Pyomo models can be printed to a LaTeX compatible format using the ``pyomo.util.
 
     ``display(Math(latex_printer(m))``
 
-The LaTeX printer will auto detect the following structures in variable names:
-
-    * ``_``: underscores will get rendered as subscripts, ie ``x_var`` is rendered as ``x_{var}``
-    * ``_dot``: will format as a ``\dot{}`` and remove from the underscore formatting.  Ex: ``x_dot_1`` becomes ``\dot{x}_1``
-    * ``_hat``: will format as a ``\hat{}`` and remove from the underscore formatting.  Ex: ``x_hat_1`` becomes ``\hat{x}_1``
-    * ``_bar``: will format as a ``\bar{}`` and remove from the underscore formatting.  Ex: ``x_bar_1`` becomes ``\bar{x}_1``
-
-
 Examples
 --------
 
@@ -45,39 +44,16 @@ A Model
 
 .. doctest::
 
-    >>> # Note: this model is not mathematically sensible
-
     >>> import pyomo.environ as pe
-    >>> from pyomo.core.expr import Expr_if
-    >>> from pyomo.core.base import ExternalFunction
     >>> from pyomo.util.latex_printer import latex_printer
 
     >>> m = pe.ConcreteModel(name = 'basicFormulation')
     >>> m.x = pe.Var()
     >>> m.y = pe.Var()
     >>> m.z = pe.Var()
+    >>> m.c = pe.Param(initialize=1.0, mutable=True)
     >>> m.objective    = pe.Objective( expr = m.x + m.y + m.z )
-    >>> m.constraint_1 = pe.Constraint(expr = m.x**2 + m.y**-2.0 - m.x*m.y*m.z  + 1 == 2.0)
-    >>> m.constraint_2 = pe.Constraint(expr = abs(m.x/m.z**-2) * (m.x + m.y) <= 2.0)
-    >>> m.constraint_3 = pe.Constraint(expr = pe.sqrt(m.x/m.z**-2) <= 2.0)
-    >>> m.constraint_4 = pe.Constraint(expr = (1,m.x,2))
-    >>> m.constraint_5 = pe.Constraint(expr = Expr_if(m.x<=1.0, m.z, m.y) <= 1.0)
-
-    >>> def blackbox(a, b): return sin(a - b)
-    >>> m.bb = ExternalFunction(blackbox)
-    >>> m.constraint_6 = pe.Constraint(expr= m.x + m.bb(m.x,m.y) == 2 )
-
-    >>> m.I = pe.Set(initialize=[1,2,3,4,5])
-    >>> m.J = pe.Set(initialize=[1,2,3])
-    >>> m.u = pe.Var(m.I*m.I)
-    >>> m.v = pe.Var(m.I)
-    >>> m.w = pe.Var(m.J)
-
-    >>> def ruleMaker(m,j): return (m.x + m.y) * sum( m.v[i] + m.u[i,j]**2 for i in m.I ) <= 0
-    >>> m.constraint_7 = pe.Constraint(m.I, rule = ruleMaker)
-
-    >>> def ruleMaker(m): return (m.x + m.y) * sum( m.w[j] for j in m.J )
-    >>> m.objective_2  = pe.Objective(rule = ruleMaker)
+    >>> m.constraint_1 = pe.Constraint(expr = m.x**2 + m.y**2.0 - m.z**2.0 <= m.c )
 
     >>> pstr = latex_printer(m)
 
@@ -97,6 +73,46 @@ A Constraint
     >>> m.constraint_1 = pe.Constraint(expr = m.x**2 + m.y**2 <= 1.0)
 
     >>> pstr = latex_printer(m.constraint_1)
+
+A Constraint with a Set
++++++++++++++++++++++++
+
+.. doctest::
+
+    >>> import pyomo.environ as pe
+    >>> from pyomo.util.latex_printer import latex_printer
+    >>> m = pe.ConcreteModel(name='basicFormulation')
+    >>> m.I = pe.Set(initialize=[1, 2, 3, 4, 5])
+    >>> m.v = pe.Var(m.I)
+
+    >>> def ruleMaker(m): return sum(m.v[i] for i in m.I) <= 0
+
+    >>> m.constraint = pe.Constraint(rule=ruleMaker)
+
+    >>> pstr = latex_printer(m.constraint)
+
+Using a ComponentMap
+++++++++++++++++++++
+
+.. doctest::
+
+    >>> import pyomo.environ as pe
+    >>> from pyomo.util.latex_printer import latex_printer
+    >>> from pyomo.common.collections.component_map import ComponentMap
+
+    >>> m = pe.ConcreteModel(name='basicFormulation')
+    >>> m.I = pe.Set(initialize=[1, 2, 3, 4, 5])
+    >>> m.v = pe.Var(m.I)
+
+    >>> def ruleMaker(m):  return sum(m.v[i] for i in m.I) <= 0
+
+    >>> m.constraint = pe.Constraint(rule=ruleMaker)
+
+    >>> lcm = ComponentMap()
+    >>> lcm[m.v] = 'x'
+    >>> lcm[m.I] = ['\\mathcal{A}',['j','k']]
+
+    >>> pstr = latex_printer(m.constraint, latex_component_map=lcm)
 
 
 An Expression
