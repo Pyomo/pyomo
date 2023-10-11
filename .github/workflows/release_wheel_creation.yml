@@ -38,9 +38,9 @@ jobs:
         with:
           output-dir: dist
         env:
-            CIBW_ARCHS_LINUX: "auto aarch64"
-            CIBW_ARCHS_MACOS: "auto arm64"
-            CIBW_ARCHS_WINDOWS: "auto ARM64"
+            CIBW_ARCHS_LINUX: "native aarch64"
+            CIBW_ARCHS_MACOS: "native arm64"
+            CIBW_ARCHS_WINDOWS: "native ARM64"
             CIBW_SKIP: "*-musllinux*"
             CIBW_BUILD: ${{ matrix.wheel-version }}
             CIBW_BUILD_VERBOSITY: 1
