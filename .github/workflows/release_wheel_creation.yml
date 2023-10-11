@@ -37,7 +37,8 @@ jobs:
         with:
           output-dir: dist
         env:
-            CIBW_SKIP: "pp* cp36* cp37* *-musllinux-*"
+            CIBW_PLATFORM: auto
+            CIBW_SKIP: "pp* cp36* cp37* *-musllinux*"
             CIBW_BUILD_VERBOSITY: 1
             CIBW_ARCHS: ${{ matrix.arch }}
             CIBW_BEFORE_BUILD: pip install cython pybind11
