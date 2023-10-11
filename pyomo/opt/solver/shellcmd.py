@@ -17,8 +17,8 @@ import time
 import logging
 import subprocess
 from io import StringIO
+from contextlib import nullcontext
 
-from pyomo.common.backports import nullcontext
 from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import Bunch
 from pyomo.common.log import is_debug_set, LoggingIntercept

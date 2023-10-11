@@ -10,11 +10,12 @@
 #  ___________________________________________________________________________
 """Functionality for identifying variables that participate in expressions
 """
-import enum
+
+from contextlib import nullcontext
+
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.core.expr.numvalue import value as pyo_value
 from pyomo.repn import generate_standard_repn
-from pyomo.common.backports import nullcontext
 from pyomo.util.subsystems import TemporarySubsystemManager
 from pyomo.contrib.incidence_analysis.config import IncidenceMethod, IncidenceConfig
 
