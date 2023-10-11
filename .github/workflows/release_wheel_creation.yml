@@ -19,7 +19,7 @@ env:
 
 jobs:
   native_wheels:
-    name: Build wheels (${{ matrix.wheel-version }}) on ${{ matrix.os }} for native architecture
+    name: Build wheels (${{ matrix.wheel-version }}) on ${{ matrix.os }} for native and cross-compiled architecture
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -34,8 +34,8 @@ jobs:
           output-dir: dist
         env:
             CIBW_ARCHS_LINUX: "native"
-            CIBW_ARCHS_MACOS: "native"
-            CIBW_ARCHS_WINDOWS: "native"
+            CIBW_ARCHS_MACOS: "native arm64"
+            CIBW_ARCHS_WINDOWS: "native ARM64"
             CIBW_SKIP: "*-musllinux*"
             CIBW_BUILD: ${{ matrix.wheel-version }}
             CIBW_BUILD_VERBOSITY: 1
@@ -47,11 +47,11 @@ jobs:
           path: dist/*.whl
 
   alternative_wheels:
-    name: Build wheels (${{ matrix.wheel-version }}) on ${{ matrix.os }} for alternative architecture
+    name: Build wheels (${{ matrix.wheel-version }}) on ${{ matrix.os }} for aarch64
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-22.04, windows-latest, macos-latest]
+        os: [ubuntu-22.04]
         arch: [all]
         wheel-version: ['cp38*', 'cp39*', 'cp310*', 'cp311*']
     steps:
@@ -67,8 +67,6 @@ jobs:
           output-dir: dist
         env:
             CIBW_ARCHS_LINUX: "aarch64"
-            CIBW_ARCHS_MACOS: "arm64"
-            CIBW_ARCHS_WINDOWS: "ARM64"
             CIBW_SKIP: "*-musllinux*"
             CIBW_BUILD: ${{ matrix.wheel-version }}
             CIBW_BUILD_VERBOSITY: 1
