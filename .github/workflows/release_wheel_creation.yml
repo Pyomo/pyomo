@@ -24,7 +24,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-20.04, windows-latest, macos-latest]
-        arch: [auto]
+        arch: [native]
         include:
           - os: ubuntu-20.04
             arch: aarch64
@@ -37,7 +37,7 @@ jobs:
         with:
           output-dir: dist
         env:
-            CIBW_SKIP: "pp* cp36* cp37*"
+            CIBW_SKIP: "pp* cp36* cp37* *-musllinux-*"
             CIBW_BUILD_VERBOSITY: 1
             CIBW_ARCHS: ${{ matrix.arch }}
             CIBW_BEFORE_BUILD: pip install cython pybind11
