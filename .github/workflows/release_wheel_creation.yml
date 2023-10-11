@@ -25,11 +25,14 @@ jobs:
       matrix:
         os: [ubuntu-22.04, windows-latest, macos-latest]
         arch: [native]
+        wheel-version: ['cp38-cp38', 'cp39-cp39', 'cp310-cp310', 'cp311-cp311']
         include:
           # This doesn't work yet - have to explore why
           # - os: ubuntu-22.04
           #   arch: aarch64
           - os: macos-latest
+            arch: arm64
+          - os: windows-latest
             arch: arm64
     steps:
       - uses: actions/checkout@v4
@@ -39,7 +42,8 @@ jobs:
           output-dir: dist
         env:
             CIBW_PLATFORM: auto
-            CIBW_SKIP: "pp* cp36* cp37* *-musllinux*"
+            CIBW_SKIP: "*-musllinux*"
+            CIBW_BUILD: ${{ matrix.wheel-version }}
             CIBW_BUILD_VERBOSITY: 1
             CIBW_ARCHS: ${{ matrix.arch }}
             CIBW_BEFORE_BUILD: pip install cython pybind11
