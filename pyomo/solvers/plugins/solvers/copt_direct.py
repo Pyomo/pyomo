@@ -49,6 +49,7 @@ def _parse_coptpy_version(coptpy, avail):
     while len(CoptDirect._version) < 4:
         CoptDirect._version += (0,)
     CoptDirect._version = CoptDirect._version[:4]
+    CoptDirect._version_major = CoptDirect._version[0]
 
 
 coptpy, coptpy_available = attempt_import(
@@ -60,6 +61,7 @@ coptpy, coptpy_available = attempt_import(
 class CoptDirect(DirectSolver):
     _name = None
     _version = 0
+    _version_major = 0
     _coptenv = None
 
     def __init__(self, **kwds):
@@ -397,10 +399,6 @@ class CoptDirect(DirectSolver):
                 )
 
         if self._solver_model.ismip:
-            # TODO: Fix getting slacks for MIP
-            if extract_slacks:
-                logger.warning("Cannot get slacks for MIP.")
-                extract_slacks = False
             if extract_reduced_costs:
                 logger.warning("Cannot get reduced costs for MIP.")
                 extract_reduced_costs = False
@@ -605,17 +603,56 @@ class CoptDirect(DirectSolver):
                     for val, name in zip(vals, con_names):
                         soln_constraints[name]['Dual'] = val
                     # TODO: Get duals for quadratic constraints
+                    if self._solver_model.qconstrs > 0:
+                        raise RuntimeError(
+                            "Dual solution for quadratic constraints is not available in COPT"
+                        )
 
                 if extract_slacks:
                     # NOTE: Slacks in COPT are activities of constraints
-                    vals = self._solver_model.getInfo('Slack', copt_cons)
-                    for val, name in zip(vals, con_names):
-                        soln_constraints[name]['Slack'] = val
+                    if self._solver_model.ismip:
+                        l_vals = list()
+                        for con in copt_cons:
+                            row = self._solver_model.getRow(con)
+                            l_vals.append(row.getValue())
+                    else:
+                        l_vals = self._solver_model.getInfo('Slack', copt_cons)
+                    l_lb = self._solver_model.getInfo("LB", copt_cons)
+                    l_ub = self._solver_model.getInfo("UB", copt_cons)
+
+                    for val, lb, ub, name in zip(l_vals, l_lb, l_ub, con_names):
+                        # lb <= l_con <= ub
+                        if lb > -coptpy.COPT.INFINITY and ub < +coptpy.COPT.INFINITY:
+                            if lb == ub:
+                                soln_constraints[name]['Slack'] = ub - val
+                            else:
+                                soln_constraints[name]['Slack'] = (
+                                    ub - val if ub - val <= val - lb else lb - val
+                                )
+                        # l_con >= lb
+                        elif lb > -coptpy.COPT.INFINITY and ub >= +coptpy.COPT.INFINITY:
+                            soln_constraints[name]['Slack'] = lb - val
+                        # l_con <= ub
+                        elif lb <= -coptpy.COPT.INFINITY and ub < +coptpy.COPT.INFINITY:
+                            soln_constraints[name]['Slack'] = ub - val
+                        # free l_con
+                        else:
+                            soln_constraints[name]['Slack'] = val
 
                     if self._solver_model.qconstrs > 0:
-                        q_vals = self._solver_model.getInfo('Slack', copt_q_cons)
-                        for val, name in zip(q_vals, q_con_names):
-                            soln_constraints[name]['Slack'] = val
+                        if self._solver_model.ismip:
+                            q_vals = list()
+                            for q_con in copt_q_cons:
+                                q_row = self._solver_model.getQuadRow(q_con)
+                                q_vals.append(q_row.getValue())
+                        else:
+                            q_vals = self._solver_model.getInfo('Slack', copt_q_cons)
+                        q_rhs = list()
+                        for q_con in copt_q_cons:
+                            q_rhs.append(q_con.rhs)
+
+                        for val, rhs, name in zip(q_vals, q_rhs, q_con_names):
+                            soln_constraints[name]['Slack'] = rhs - val
         elif self._load_solutions:
             if self._solver_model.haslpsol or self._solver_model.hasmipsol:
                 self.load_vars()
@@ -623,7 +660,6 @@ class CoptDirect(DirectSolver):
                     self._load_rc()
                 if extract_duals:
                     self._load_duals()
-                # TODO: Fix getting slacks for MIP
                 if extract_slacks:
                     self._load_slacks()
         self.results.solution.insert(soln)
@@ -675,19 +711,30 @@ class CoptDirect(DirectSolver):
 
     def _load_duals(self, cons_to_load=None):
         # TODO: Dual solution for quadratic constraints are not available
+        if self._solver_model.qconstrs > 0:
+            raise RuntimeError(
+                "Dual solution for quadratic constraints is not available in COPT"
+            )
         if not hasattr(self._pyomo_model, 'dual'):
             self._pyomo_model.dual = Suffix(direction=Suffix.IMPORT)
 
         dual = self._pyomo_model.dual
         con_map = self._pyomo_con_to_solver_con_map
+        reverse_con_map = self._solver_con_to_pyomo_con_map
 
         if cons_to_load is None:
-            pyomo_cons_to_load = con_map.keys()
+            linear_cons_to_load = self._solver_model.getConstrs()
         else:
-            pyomo_cons_to_load = cons_to_load
+            copt_cons_to_load = set([con_map[pyomo_con] for pyomo_con in cons_to_load])
+            linear_cons_to_load = copt_cons_to_load.intersection(
+                set(self._solver_model.getConstrs())
+            )
 
-        for pyomo_con in pyomo_cons_to_load:
-            dual[pyomo_con] = con_map[pyomo_con].dual
+        linear_vals = self._solver_model.getInfo("Dual", linear_cons_to_load)
+
+        for copt_con, val in zip(linear_cons_to_load, linear_vals):
+            pyomo_con = reverse_con_map[copt_con]
+            dual[pyomo_con] = val
 
     def _load_slacks(self, cons_to_load=None):
         # NOTE: Slacks in COPT are activities of constraints
@@ -696,14 +743,66 @@ class CoptDirect(DirectSolver):
 
         slack = self._pyomo_model.slack
         con_map = self._pyomo_con_to_solver_con_map
+        reverse_con_map = self._solver_con_to_pyomo_con_map
 
         if cons_to_load is None:
-            pyomo_cons_to_load = con_map.keys()
+            linear_cons_to_load = self._solver_model.getConstrs()
+            quadratic_cons_to_load = self._solver_model.getQConstrs()
         else:
-            pyomo_cons_to_load = cons_to_load
+            copt_cons_to_load = set([con_map[pyomo_con] for pyomo_con in cons_to_load])
+            linear_cons_to_load = copt_cons_to_load.intersection(
+                set(self._solver_model.getConstrs())
+            )
+            quadratic_cons_to_load = copt_cons_to_load.intersection(
+                set(self._solver_model.getQConstrs())
+            )
 
-        for pyomo_con in pyomo_cons_to_load:
-            slack[pyomo_con] = con_map[pyomo_con].slack
+        if self._solver_model.ismip:
+            linear_vals = list()
+            for copt_con in linear_cons_to_load:
+                copt_row = self._solver_model.getRow(copt_con)
+                linear_vals.append(copt_row.getValue())
+        else:
+            linear_vals = self._solver_model.getInfo("Slack", linear_cons_to_load)
+        linear_lb = self._solver_model.getInfo("LB", linear_cons_to_load)
+        linear_ub = self._solver_model.getInfo("UB", linear_cons_to_load)
+
+        for copt_con, val, lb, ub in zip(
+            linear_cons_to_load, linear_vals, linear_lb, linear_ub
+        ):
+            pyomo_con = reverse_con_map[copt_con]
+            # lb <= linear_con <= ub
+            if lb > -coptpy.COPT.INFINITY and ub < +coptpy.COPT.INFINITY:
+                if lb == ub:
+                    slack[pyomo_con] = ub - val
+                else:
+                    slack[pyomo_con] = ub - val if ub - val <= val - lb else lb - val
+            # linear_con >= lb
+            elif lb > -coptpy.COPT.INFINITY and ub >= +coptpy.COPT.INFINITY:
+                slack[pyomo_con] = lb - val
+            # linear_con <= ub
+            elif lb <= -coptpy.COPT.INFINITY and ub < +coptpy.COPT.INFINITY:
+                slack[pyomo_con] = ub - val
+            # free linear_con
+            else:
+                slack[pyomo_con] = val
+
+        if self._solver_model.ismip:
+            quadratic_vals = list()
+            for copt_con in quadratic_cons_to_load:
+                copt_row = self._solver_model.getQuadRow(copt_con)
+                quadratic_vals.append(copt_row.getValue())
+        else:
+            quadratic_vals = self._solver_model.getInfo("Slack", quadratic_cons_to_load)
+        quadratic_rhs = list()
+        for copt_con in quadratic_cons_to_load:
+            quadratic_rhs.append(copt_con.rhs)
+
+        for copt_con, val, rhs in zip(
+            quadratic_cons_to_load, quadratic_vals, quadratic_rhs
+        ):
+            pyomo_con = reverse_con_map[copt_con]
+            slack[pyomo_con] = rhs - val
 
     def load_duals(self, cons_to_load=None):
         """

@@ -979,6 +979,11 @@ class Copt(PersistentBase, PersistentSolver):
                 'Solver does not currently have valid duals. Please '
                 'check the termination condition.'
             )
+        # TODO: Cannot get duals for quadratic constraints so far with COPT
+        if self._solver_model.qconstrs > 0:
+            raise RuntimeError(
+                "Dual solution for quadratic constraints is not available in COPT"
+            )
 
         con_map = self._pyomo_con_to_solver_con_map
         reverse_con_map = self._solver_con_to_pyomo_con_map
@@ -986,7 +991,6 @@ class Copt(PersistentBase, PersistentSolver):
 
         if cons_to_load is None:
             linear_cons_to_load = self._solver_model.getConstrs()
-            quadratic_cons_to_load = self._solver_model.getQConstrs()
         else:
             copt_cons_to_load = OrderedSet(
                 [con_map[pyomo_con] for pyomo_con in cons_to_load]
@@ -996,19 +1000,9 @@ class Copt(PersistentBase, PersistentSolver):
                     OrderedSet(self._solver_model.getConstrs())
                 )
             )
-            quadratic_cons_to_load = list(
-                copt_cons_to_load.intersection(
-                    OrderedSet(self._solver_model.getQConstrs())
-                )
-            )
         linear_vals = self._solver_model.getInfo("Dual", linear_cons_to_load)
-        # TODO: Cannot get duals for quadratic constraints so far with COPT
-        quadratic_vals = self._solver_model.getInfo("Dual", quadratic_cons_to_load)
 
         for copt_con, val in zip(linear_cons_to_load, linear_vals):
-            pyomo_con = reverse_con_map[id(copt_con)]
-            dual[pyomo_con] = val
-        for copt_con, val in zip(quadratic_cons_to_load, quadratic_vals):
             pyomo_con = reverse_con_map[id(copt_con)]
             dual[pyomo_con] = val
 
@@ -1043,15 +1037,54 @@ class Copt(PersistentBase, PersistentSolver):
                     OrderedSet(self._solver_model.getQConstrs())
                 )
             )
-        linear_vals = self._solver_model.getInfo("Slack", linear_cons_to_load)
-        quadratic_vals = self._solver_model.getInfo("Slack", quadratic_cons_to_load)
 
-        for copt_con, val in zip(linear_cons_to_load, linear_vals):
+        if self._solver_model.ismip:
+            linear_vals = list()
+            for copt_con in linear_cons_to_load:
+                copt_row = self._solver_model.getRow(copt_con)
+                linear_vals.append(copt_row.getValue())
+        else:
+            linear_vals = self._solver_model.getInfo("Slack", linear_cons_to_load)
+        linear_lb = self._solver_model.getInfo("LB", linear_cons_to_load)
+        linear_ub = self._solver_model.getInfo("UB", linear_cons_to_load)
+
+        for copt_con, val, lb, ub in zip(
+            linear_cons_to_load, linear_vals, linear_lb, linear_ub
+        ):
             pyomo_con = reverse_con_map[id(copt_con)]
-            slack[pyomo_con] = val
-        for copt_con, val in zip(quadratic_cons_to_load, quadratic_vals):
+            # lb <= linear_con <= ub
+            if lb > -coptpy.COPT.INFINITY and ub < +coptpy.COPT.INFINITY:
+                if lb == ub:
+                    slack[pyomo_con] = ub - val
+                else:
+                    slack[pyomo_con] = ub - val if ub - val <= val - lb else lb - val
+            # linear_con >= lb
+            elif lb > -coptpy.COPT.INFINITY and ub >= +coptpy.COPT.INFINITY:
+                slack[pyomo_con] = lb - val
+            # linear_con <= ub
+            elif lb <= -coptpy.COPT.INFINITY and ub < +coptpy.COPT.INFINITY:
+                slack[pyomo_con] = ub - val
+            # free linear_con
+            else:
+                slack[pyomo_con] = val
+
+        if self._solver_model.ismip:
+            quadratic_vals = list()
+            for copt_con in quadratic_cons_to_load:
+                copt_row = self._solver_model.getQuadRow(copt_con)
+                quadratic_vals.append(copt_row.getValue())
+        else:
+            quadratic_vals = self._solver_model.getInfo("Slack", quadratic_cons_to_load)
+        quadratic_rhs = list()
+        for copt_con in quadratic_cons_to_load:
+            quadratic_rhs.append(copt_con.rhs)
+
+        for copt_con, val, rhs in zip(
+            quadratic_cons_to_load, quadratic_vals, quadratic_rhs
+        ):
             pyomo_con = reverse_con_map[id(copt_con)]
-            slack[pyomo_con] = val
+            slack[pyomo_con] = rhs - val
+
         return slack
 
     def update(self, timer: HierarchicalTimer = None):
