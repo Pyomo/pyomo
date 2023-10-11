@@ -26,8 +26,9 @@ jobs:
         os: [ubuntu-22.04, windows-latest, macos-latest]
         arch: [native]
         include:
-          - os: ubuntu-22.04
-            arch: aarch64
+          # This doesn't work yet - have to explore why
+          # - os: ubuntu-22.04
+          #   arch: aarch64
           - os: macos-latest
             arch: arm64
     steps:
