@@ -18,8 +18,36 @@ env:
   PYOMO_SETUP_ARGS: "--with-cython --with-distributable-extensions"
 
 jobs:
-  bdist_wheel:
-    name: Build wheels (${{ matrix.wheel-version }}) on ${{ matrix.os }}
+  native_wheels:
+    name: Build wheels (${{ matrix.wheel-version }}) on ${{ matrix.os }} for native architecture
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, windows-latest, macos-latest]
+        arch: [all]
+        wheel-version: ['cp38*', 'cp39*', 'cp310*', 'cp311*']
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.16.2
+        with:
+          output-dir: dist
+        env:
+            CIBW_ARCHS_LINUX: "native"
+            CIBW_ARCHS_MACOS: "native"
+            CIBW_ARCHS_WINDOWS: "native"
+            CIBW_SKIP: "*-musllinux*"
+            CIBW_BUILD: ${{ matrix.wheel-version }}
+            CIBW_BUILD_VERBOSITY: 1
+            CIBW_BEFORE_BUILD: pip install cython pybind11
+            CIBW_CONFIG_SETTINGS: '--global-option="--with-cython --with-distributable-extensions"'
+      - uses: actions/upload-artifact@v3
+        with:
+          name: native_wheels
+          path: dist/*.whl
+
+  alternative_wheels:
+    name: Build wheels (${{ matrix.wheel-version }}) on ${{ matrix.os }} for alternative architecture
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -38,9 +66,9 @@ jobs:
         with:
           output-dir: dist
         env:
-            CIBW_ARCHS_LINUX: "native aarch64"
-            CIBW_ARCHS_MACOS: "native arm64"
-            CIBW_ARCHS_WINDOWS: "native ARM64"
+            CIBW_ARCHS_LINUX: "aarch64"
+            CIBW_ARCHS_MACOS: "arm64"
+            CIBW_ARCHS_WINDOWS: "ARM64"
             CIBW_SKIP: "*-musllinux*"
             CIBW_BUILD: ${{ matrix.wheel-version }}
             CIBW_BUILD_VERBOSITY: 1
@@ -48,7 +76,7 @@ jobs:
             CIBW_CONFIG_SETTINGS: '--global-option="--with-cython --with-distributable-extensions"'
       - uses: actions/upload-artifact@v3
         with:
-          name: wheels
+          name: alt_wheels
           path: dist/*.whl
 
   generictarball:
