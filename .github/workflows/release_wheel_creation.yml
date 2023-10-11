@@ -23,10 +23,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04, windows-latest, macos-latest]
+        os: [ubuntu-22.04, windows-latest, macos-latest]
         arch: [native]
         include:
-          - os: ubuntu-20.04
+          - os: ubuntu-22.04
             arch: aarch64
           - os: macos-latest
             arch: arm64
