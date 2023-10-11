@@ -19,13 +19,13 @@ env:
 
 jobs:
   bdist_wheel:
-    name: Build wheels (3.8+) on ${{ matrix.os }} for ${{ matrix.arch }}
+    name: Build wheels (${{ matrix.wheel-version }}) on ${{ matrix.os }} for ${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-22.04, windows-latest, macos-latest]
         arch: [native]
-        wheel-version: ['cp38-cp38', 'cp39-cp39', 'cp310-cp310', 'cp311-cp311']
+        wheel-version: ['cp38*', 'cp39*', 'cp310*', 'cp311*']
         include:
           # This doesn't work yet - have to explore why
           # - os: ubuntu-22.04
