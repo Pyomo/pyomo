@@ -19,35 +19,31 @@ env:
 
 jobs:
   bdist_wheel:
-    name: Build wheels (${{ matrix.wheel-version }}) on ${{ matrix.os }} for ${{ matrix.arch }}
+    name: Build wheels (${{ matrix.wheel-version }}) on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-22.04, windows-latest, macos-latest]
-        arch: [native]
+        arch: [all]
         wheel-version: ['cp38*', 'cp39*', 'cp310*', 'cp311*']
-        include:
-          # This doesn't work yet - have to explore why
-          # - os: ubuntu-22.04
-          #   arch: aarch64
-          - os: macos-latest
-            arch: arm64
-            wheel-version: ['cp38*', 'cp39*', 'cp310*', 'cp311*']
-          - os: windows-latest
-            arch: ARM64
-            wheel-version: ['cp38*', 'cp39*', 'cp310*', 'cp311*']
     steps:
       - uses: actions/checkout@v4
+      - name: Set up QEMU
+        if: runner.os == 'Linux'
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: all
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.16.2
         with:
           output-dir: dist
         env:
-            CIBW_PLATFORM: auto
+            CIBW_ARCHS_LINUX: "auto aarch64"
+            CIBW_ARCHS_MACOS: "auto arm64"
+            CIBW_ARCHS_WINDOWS: "auto ARM64"
             CIBW_SKIP: "*-musllinux*"
             CIBW_BUILD: ${{ matrix.wheel-version }}
             CIBW_BUILD_VERBOSITY: 1
-            CIBW_ARCHS: ${{ matrix.arch }}
             CIBW_BEFORE_BUILD: pip install cython pybind11
             CIBW_CONFIG_SETTINGS: '--global-option="--with-cython --with-distributable-extensions"'
       - uses: actions/upload-artifact@v3
