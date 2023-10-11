@@ -32,8 +32,10 @@ jobs:
           #   arch: aarch64
           - os: macos-latest
             arch: arm64
+            wheel-version: ['cp38*', 'cp39*', 'cp310*', 'cp311*']
           - os: windows-latest
-            arch: arm64
+            arch: ARM64
+            wheel-version: ['cp38*', 'cp39*', 'cp310*', 'cp311*']
     steps:
       - uses: actions/checkout@v4
       - name: Build wheels
