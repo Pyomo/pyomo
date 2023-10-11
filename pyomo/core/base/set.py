@@ -68,8 +68,6 @@ from operator import itemgetter
 
 logger = logging.getLogger('pyomo.core')
 
-_prePython37 = sys.version_info[:2] < (3, 7)
-
 _inf = float('inf')
 
 FLATTEN_CROSS_PRODUCT = True
@@ -1950,8 +1948,6 @@ class Set(IndexedComponent):
 
     _ValidOrderedAuguments = {True, False, InsertionOrder, SortedOrder}
     _UnorderedInitializers = {set}
-    if _prePython37:
-        _UnorderedInitializers.add(dict)
 
     def __new__(cls, *args, **kwds):
         if cls is not Set:

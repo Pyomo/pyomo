@@ -24,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        wheel-version: ['cp37-cp37m', 'cp38-cp38', 'cp39-cp39', 'cp310-cp310', 'cp311-cp311']
+        wheel-version: ['cp38-cp38', 'cp39-cp39', 'cp310-cp310', 'cp311-cp311']
         os: [ubuntu-latest]
         include:
         - os: ubuntu-latest
@@ -102,7 +102,7 @@ jobs:
         include:
         - os: macos-latest
           TARGET: osx
-        python-version: [ 3.7, 3.8, 3.9, '3.10', '3.11' ]
+        python-version: [ 3.8, 3.9, '3.10', '3.11' ]
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
@@ -133,7 +133,7 @@ jobs:
         include:
         - os: windows-latest
           TARGET: win
-        python-version: [ 3.7, 3.8, 3.9, '3.10', '3.11' ]
+        python-version: [ 3.8, 3.9, '3.10', '3.11' ]
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
