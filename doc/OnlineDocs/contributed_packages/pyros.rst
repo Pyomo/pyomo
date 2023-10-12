@@ -855,8 +855,8 @@ Observe that the log contains the following information:
 
    ==============================================================================
    PyROS: The Pyomo Robust Optimization Solver.
-          Version 1.2.7 | Git branch: unknown, commit hash: unknown
-          Invoked at UTC 2023-10-02T03:42:54.264507
+          Version 1.2.8 | Git branch: unknown, commit hash: unknown
+          Invoked at UTC 2023-10-12T15:36:19.035916
 
    Developed by: Natalie M. Isenberg (1), Jason A. F. Sherman (1),
                  John D. Siirola (2), Chrysanthos E. Gounaris (1)
@@ -892,7 +892,7 @@ Observe that the log contains the following information:
     p_robustness={}
    ------------------------------------------------------------------------------
    Preprocessing...
-   Done preprocessing; required wall time of 0.232s.
+   Done preprocessing; required wall time of 0.175s.
    ------------------------------------------------------------------------------
    Model statistics:
      Number of variables : 62
@@ -911,16 +911,16 @@ Observe that the log contains the following information:
          First-stage inequalities (incl. certain var bounds) : 10
          Performance constraints (incl. var bounds) : 47
    ------------------------------------------------------------------------------
-   Itn  Objective    1-Stg Shift  DR Shift     #CViol  Max Viol     Wall Time (s) 
+   Itn  Objective    1-Stg Shift  DR Shift     #CViol  Max Viol     Wall Time (s)
    ------------------------------------------------------------------------------
-   0     3.5838e+07  -            -            5       1.8832e+04   1.212         
-   1     3.5838e+07  7.4506e-09   1.6105e+03   7       3.7766e+04   2.712         
-   2     3.6116e+07  2.7803e+05   1.2918e+03   8       1.3466e+06   4.548         
-   3     3.6285e+07  1.6957e+05   5.8386e+03   6       4.8734e+03   6.542         
-   4     3.6285e+07  1.4901e-08   3.3097e+03   1       3.5036e+01   8.916         
-   5     3.6285e+07  2.9786e-10   3.3597e+03   6       2.9103e+00   11.204        
-   6     3.6285e+07  7.4506e-07   8.7228e+02   5       4.1726e-01   13.546        
-   7     3.6285e+07  7.4506e-07   8.1995e+02   0       9.3279e-10g  20.666        
+   0     3.5838e+07  -            -            5       1.8832e+04   1.198        
+   1     3.5838e+07  7.4506e-09   1.6105e+03   7       3.7766e+04   2.893        
+   2     3.6116e+07  2.7803e+05   1.2918e+03   8       1.3466e+06   4.732        
+   3     3.6285e+07  1.6957e+05   5.8386e+03   6       4.8734e+03   6.740        
+   4     3.6285e+07  1.4901e-08   3.3097e+03   1       3.5036e+01   9.099        
+   5     3.6285e+07  2.9786e-10   3.3597e+03   6       2.9103e+00   11.588       
+   6     3.6285e+07  7.4506e-07   8.7228e+02   5       4.1726e-01   14.360       
+   7     3.6285e+07  7.4506e-07   8.1995e+02   0       9.3279e-10g  21.597       
    ------------------------------------------------------------------------------
    Robust optimal solution identified.
    ------------------------------------------------------------------------------
@@ -928,24 +928,24 @@ Observe that the log contains the following information:
 
    Identifier                ncalls   cumtime   percall      %
    -----------------------------------------------------------
-   main                           1    20.668    20.668  100.0
+   main                           1    21.598    21.598  100.0
         ------------------------------------------------------
-        dr_polishing              7     1.459     0.208    7.1
-        global_separation        47     1.281     0.027    6.2
-        local_separation        376     9.105     0.024   44.1
-        master                    8     5.356     0.669   25.9
-        master_feasibility        7     0.456     0.065    2.2
-        preprocessing             1     0.232     0.232    1.1
-        other                   n/a     2.779       n/a   13.4
+        dr_polishing              7     1.502     0.215    7.0
+        global_separation        47     1.300     0.028    6.0
+        local_separation        376     9.779     0.026   45.3
+        master                    8     5.385     0.673   24.9
+        master_feasibility        7     0.531     0.076    2.5
+        preprocessing             1     0.175     0.175    0.8
+        other                   n/a     2.926       n/a   13.5
         ======================================================
    ===========================================================
 
    ------------------------------------------------------------------------------
    Termination stats:
-    Iterations             : 8
-    Solve time (wall s)    : 20.668
-    Final objective value  : 3.6285e+07
-    Termination condition  : pyrosTerminationCondition.robust_optimal
+    Iterations            : 8
+    Solve time (wall s)   : 21.598
+    Final objective value : 3.6285e+07
+    Termination condition : pyrosTerminationCondition.robust_optimal
    ------------------------------------------------------------------------------
    All done. Exiting PyROS.
    ==============================================================================
