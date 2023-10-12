@@ -342,11 +342,10 @@ class Copt(PersistentBase, PersistentSolver):
                 config = self.config
                 options = self.copt_options
 
-                if config.stream_solver:
-                    self._solver_model.setParam('LogToConsole', 1)
-                else:
-                    self._solver_model.setParam('LogToConsole', 0)
-                self._solver_model.setLogFile(config.logfile)
+                if not config.stream_solver:
+                    self._solver_model.setParam("LogToConsole", 0)
+                if config.logfile:
+                    self._solver_model.setLogFile(config.logfile)
 
                 if config.time_limit is not None:
                     self._solver_model.setParam('TimeLimit', config.time_limit)
@@ -1068,7 +1067,7 @@ class Copt(PersistentBase, PersistentSolver):
         return slack
 
     def update(self, timer: HierarchicalTimer = None):
-        pass
+        super(Copt, self).update(timer=timer)
 
     def get_model_attr(self, attr):
         """
