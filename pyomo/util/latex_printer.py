@@ -56,7 +56,7 @@ from pyomo.common.collections.component_set import ComponentSet
 from pyomo.core.expr.template_expr import (
     NPV_Numeric_GetItemExpression,
     NPV_Structural_GetItemExpression,
-    Numeric_GetAttrExpression
+    Numeric_GetAttrExpression,
 )
 from pyomo.core.expr.numeric_expr import NPV_SumExpression
 from pyomo.core.base.block import IndexedBlock
@@ -93,7 +93,7 @@ def decoder(num, base):
     numDigs = math.ceil(math.log(num, base))
     if math.log(num, base).is_integer():
         numDigs += 1
-            
+
     digs = [0.0 for i in range(0, numDigs)]
     rem = num
     for i in range(0, numDigs):
@@ -118,18 +118,8 @@ def indexCorrector(ixs, base):
 
 def alphabetStringGenerator(num, indexMode=False):
     if indexMode:
-        alphabet = [
-            '.',
-            'i',
-            'j',
-            'k',
-            'm',
-            'n',
-            'p',
-            'q',
-            'r',
-        ]
-        
+        alphabet = ['.', 'i', 'j', 'k', 'm', 'n', 'p', 'q', 'r']
+
     else:
         alphabet = [
             '.',
@@ -329,12 +319,13 @@ def handle_indexTemplate_node(visitor, node, *args):
         # already detected set, do nothing
         pass
     else:
-        visitor.setMap[node._set] = 'SET%d'%(len(visitor.setMap.keys())+1)
+        visitor.setMap[node._set] = 'SET%d' % (len(visitor.setMap.keys()) + 1)
 
     return '__I_PLACEHOLDER_8675309_GROUP_%s_%s__' % (
         node._group,
         visitor.setMap[node._set],
     )
+
 
 def handle_numericGIE_node(visitor, node, *args):
     joinedName = args[0]
@@ -366,8 +357,10 @@ def handle_templateSumExpression_node(visitor, node, *args):
 def handle_param_node(visitor, node):
     return visitor.parameterMap[node]
 
+
 def handle_str_node(visitor, node):
     return node.replace('_', '\\_')
+
 
 def handle_npv_numericGetItemExpression_node(visitor, node, *args):
     joinedName = args[0]
@@ -382,6 +375,7 @@ def handle_npv_numericGetItemExpression_node(visitor, node, *args):
             pstr += '}'
     return pstr
 
+
 def handle_npv_structuralGetItemExpression_node(visitor, node, *args):
     joinedName = args[0]
 
@@ -395,11 +389,14 @@ def handle_npv_structuralGetItemExpression_node(visitor, node, *args):
             pstr += ']'
     return pstr
 
+
 def handle_indexedBlock_node(visitor, node, *args):
     return str(node)
 
+
 def handle_numericGetAttrExpression_node(visitor, node, *args):
     return args[0] + '.' + args[1]
+
 
 class _LatexVisitor(StreamBasedExpressionVisitor):
     def __init__(self):
@@ -451,7 +448,11 @@ class _LatexVisitor(StreamBasedExpressionVisitor):
         try:
             return self._operator_handles[node.__class__](self, node, *data)
         except:
-            raise DeveloperError('Latex printer encountered an error when processing type %s, contact the developers'%(node.__class__))
+            raise DeveloperError(
+                'Latex printer encountered an error when processing type %s, contact the developers'
+                % (node.__class__)
+            )
+
 
 def analyze_variable(vr):
     domainMap = {
@@ -493,13 +494,13 @@ def analyze_variable(vr):
             upperBound = ''
 
     elif domainName in ['PositiveReals', 'PositiveIntegers']:
-        if lowerBoundValue is not None:
-            if lowerBoundValue > 0:
-                lowerBound = str(lowerBoundValue) + ' \\leq '
-            else:
-                lowerBound = ' 0 < '
+        # if lowerBoundValue is not None:
+        if lowerBoundValue > 0:
+            lowerBound = str(lowerBoundValue) + ' \\leq '
         else:
             lowerBound = ' 0 < '
+        # else:
+        #     lowerBound = ' 0 < '
 
         if upperBoundValue is not None:
             if upperBoundValue <= 0:
@@ -524,13 +525,13 @@ def analyze_variable(vr):
         else:
             lowerBound = ''
 
-        if upperBoundValue is not None:
-            if upperBoundValue >= 0:
-                upperBound = ' \\leq 0 '
-            else:
-                upperBound = ' \\leq ' + str(upperBoundValue)
-        else:
+        # if upperBoundValue is not None:
+        if upperBoundValue >= 0:
             upperBound = ' \\leq 0 '
+        else:
+            upperBound = ' \\leq ' + str(upperBoundValue)
+        # else:
+        #     upperBound = ' \\leq 0 '
 
     elif domainName in ['NegativeReals', 'NegativeIntegers']:
         if lowerBoundValue is not None:
@@ -543,22 +544,22 @@ def analyze_variable(vr):
         else:
             lowerBound = ''
 
-        if upperBoundValue is not None:
-            if upperBoundValue >= 0:
-                upperBound = ' < 0 '
-            else:
-                upperBound = ' \\leq ' + str(upperBoundValue)
-        else:
+        # if upperBoundValue is not None:
+        if upperBoundValue >= 0:
             upperBound = ' < 0 '
+        else:
+            upperBound = ' \\leq ' + str(upperBoundValue)
+        # else:
+        #     upperBound = ' < 0 '
 
     elif domainName in ['NonNegativeReals', 'NonNegativeIntegers']:
-        if lowerBoundValue is not None:
-            if lowerBoundValue > 0:
-                lowerBound = str(lowerBoundValue) + ' \\leq '
-            else:
-                lowerBound = ' 0 \\leq '
+        # if lowerBoundValue is not None:
+        if lowerBoundValue > 0:
+            lowerBound = str(lowerBoundValue) + ' \\leq '
         else:
             lowerBound = ' 0 \\leq '
+        # else:
+        #     lowerBound = ' 0 \\leq '
 
         if upperBoundValue is not None:
             if upperBoundValue < 0:
@@ -577,36 +578,38 @@ def analyze_variable(vr):
         upperBound = ''
 
     elif domainName in ['UnitInterval', 'PercentFraction']:
-        if lowerBoundValue is not None:
-            if lowerBoundValue > 0:
-                lowerBound = str(lowerBoundValue) + ' \\leq '
-            elif lowerBoundValue > 1:
-                raise ValueError(
-                    'Formulation is infeasible due to bounds on variable %s' % (vr.name)
-                )
-            elif lowerBoundValue == 1:
-                lowerBound = ' = 1 '
-            else:
-                lowerBound = ' 0 \\leq '
+        # if lowerBoundValue is not None:
+        if lowerBoundValue > 1:
+            raise ValueError(
+                'Formulation is infeasible due to bounds on variable %s' % (vr.name)
+            )
+        elif lowerBoundValue == 1:
+            lowerBound = ' = 1 '
+        elif lowerBoundValue > 0:
+            lowerBound = str(lowerBoundValue) + ' \\leq '
         else:
             lowerBound = ' 0 \\leq '
+        # else:
+        #     lowerBound = ' 0 \\leq '
 
-        if upperBoundValue is not None:
-            if upperBoundValue < 1:
-                upperBound = ' \\leq ' + str(upperBoundValue)
-            elif upperBoundValue < 0:
-                raise ValueError(
-                    'Formulation is infeasible due to bounds on variable %s' % (vr.name)
-                )
-            elif upperBoundValue == 0:
-                upperBound = ' = 0 '
-            else:
-                upperBound = ' \\leq 1 '
+        # if upperBoundValue is not None:
+        if upperBoundValue < 0:
+            raise ValueError(
+                'Formulation is infeasible due to bounds on variable %s' % (vr.name)
+            )
+        elif upperBoundValue == 0:
+            upperBound = ' = 0 '
+        elif upperBoundValue < 1:
+            upperBound = ' \\leq ' + str(upperBoundValue)
         else:
             upperBound = ' \\leq 1 '
+        # else:
+        #     upperBound = ' \\leq 1 '
 
     else:
-        raise ValueError('Domain %s not supported by the latex printer' % (domainName))
+        raise DeveloperError(
+            'Invalid domain somehow encountered, contact the developers'
+        )
 
     varBoundData = {
         'variable': vr,
@@ -631,9 +634,9 @@ def latex_printer(
     use_equation_environment=False,
     split_continuous_sets=False,
     use_short_descriptors=False,
-    fontsize = None,
+    fontsize=None,
     paper_dimensions=None,
-    ):
+):
     """This function produces a string that can be rendered as LaTeX
 
     As described, this function produces a string that can be rendered as LaTeX
@@ -642,42 +645,42 @@ def latex_printer(
     ----------
     pyomo_component: _BlockData or Model or Objective or Constraint or Expression
         The Pyomo component to be printed
-   
+
     latex_component_map: pyomo.common.collections.component_map.ComponentMap
-        A map keyed by Pyomo component, values become the latex representation in 
+        A map keyed by Pyomo component, values become the latex representation in
         the printer
-   
+
     write_object: io.TextIOWrapper or io.StringIO or str
-        The object to print the latex string to.  Can be an open file object, 
+        The object to print the latex string to.  Can be an open file object,
         string I/O object, or a string for a filename to write to
-   
+
     use_equation_environment: bool
         If False, the equation/aligned construction is used to create a single
-         LaTeX equation.  If True, then the align environment is used in LaTeX and 
+         LaTeX equation.  If True, then the align environment is used in LaTeX and
          each constraint and objective will be given an individual equation number
-   
+
     split_continuous_sets: bool
-        If False, all sums will be done over 'index in set' or similar.  If True, 
-        sums will be done over 'i=1' to 'N' or similar if the set is a continuous 
+        If False, all sums will be done over 'index in set' or similar.  If True,
+        sums will be done over 'i=1' to 'N' or similar if the set is a continuous
         set
-   
-    use_short_descriptors: bool 
+
+    use_short_descriptors: bool
         If False, will print full 'minimize' and 'subject to' etc.  If true, uses
         'min' and 's.t.' instead
-   
+
     fontsize: str or int
-        Sets the font size of the latex output when writing to a file.  Can take 
-        in any of the latex font size keywords ['tiny', 'scriptsize', 
-        'footnotesize', 'small', 'normalsize', 'large', 'Large', 'LARGE', huge', 
-        'Huge'], or an integer referenced off of 'normalsize' (ex: small is -1, 
+        Sets the font size of the latex output when writing to a file.  Can take
+        in any of the latex font size keywords ['tiny', 'scriptsize',
+        'footnotesize', 'small', 'normalsize', 'large', 'Large', 'LARGE', huge',
+        'Huge'], or an integer referenced off of 'normalsize' (ex: small is -1,
         Large is +2)
-   
+
     paper_dimensions: dict
-        A dictionary that controls the paper margins and size.  Keys are: 
-        [ 'height', 'width', 'margin_left', 'margin_right', 'margin_top', 
-        'margin_bottom' ].  Default is standard 8.5x11 with one inch margins. 
-        Values are in inches 
-   
+        A dictionary that controls the paper margins and size.  Keys are:
+        [ 'height', 'width', 'margin_left', 'margin_right', 'margin_top',
+        'margin_bottom' ].  Default is standard 8.5x11 with one inch margins.
+        Values are in inches
+
 
     Returns
     -------
@@ -700,22 +703,44 @@ def latex_printer(
 
     isSingle = False
 
-    fontSizes         = ['\\tiny', '\\scriptsize', '\\footnotesize', '\\small', '\\normalsize', '\\large', '\\Large', '\\LARGE', '\\huge', '\\Huge']
-    fontSizes_noSlash = ['tiny', 'scriptsize', 'footnotesize', 'small', 'normalsize', 'large', 'Large', 'LARGE', 'huge', 'Huge']
-    fontsizes_ints    = [    -4,           -3,             -2,      -1,            0,       1,       2,        3,     4,     5 ]
+    fontSizes = [
+        '\\tiny',
+        '\\scriptsize',
+        '\\footnotesize',
+        '\\small',
+        '\\normalsize',
+        '\\large',
+        '\\Large',
+        '\\LARGE',
+        '\\huge',
+        '\\Huge',
+    ]
+    fontSizes_noSlash = [
+        'tiny',
+        'scriptsize',
+        'footnotesize',
+        'small',
+        'normalsize',
+        'large',
+        'Large',
+        'LARGE',
+        'huge',
+        'Huge',
+    ]
+    fontsizes_ints = [-4, -3, -2, -1, 0, 1, 2, 3, 4, 5]
 
     if fontsize is None:
         fontsize = '\\normalsize'
 
     elif fontsize in fontSizes:
-        #no editing needed
+        # no editing needed
         pass
     elif fontsize in fontSizes_noSlash:
         fontsize = '\\' + fontsize
     elif fontsize in fontsizes_ints:
         fontsize = fontSizes[fontsizes_ints.index(fontsize)]
     else:
-        raise ValueError('passed an invalid font size option %s'%(fontsize))
+        raise ValueError('passed an invalid font size option %s' % (fontsize))
 
     paper_dimensions_used = {}
     paper_dimensions_used['height'] = 11.0
@@ -726,22 +751,29 @@ def latex_printer(
     paper_dimensions_used['margin_bottom'] = 1.0
 
     if paper_dimensions is not None:
-        for ky in [ 'height', 'width', 'margin_left', 'margin_right', 'margin_top', 'margin_bottom' ]:
+        for ky in [
+            'height',
+            'width',
+            'margin_left',
+            'margin_right',
+            'margin_top',
+            'margin_bottom',
+        ]:
             if ky in paper_dimensions.keys():
                 paper_dimensions_used[ky] = paper_dimensions[ky]
-    else:
-        if paper_dimensions_used['height'] >= 225 :
-            raise ValueError('Paper height exceeds maximum dimension of 225')
-        if paper_dimensions_used['width'] >= 225 :
-            raise ValueError('Paper width exceeds maximum dimension of 225')
-        if paper_dimensions_used['margin_left'] < 0.0:
-            raise ValueError('Paper margin_left must be greater than or equal to zero')
-        if paper_dimensions_used['margin_right'] < 0.0:
-            raise ValueError('Paper margin_right must be greater than or equal to zero')
-        if paper_dimensions_used['margin_top'] < 0.0:
-            raise ValueError('Paper margin_top must be greater than or equal to zero')
-        if paper_dimensions_used['margin_bottom'] < 0.0:
-            raise ValueError('Paper margin_bottom must be greater than or equal to zero')
+
+    if paper_dimensions_used['height'] >= 225:
+        raise ValueError('Paper height exceeds maximum dimension of 225')
+    if paper_dimensions_used['width'] >= 225:
+        raise ValueError('Paper width exceeds maximum dimension of 225')
+    if paper_dimensions_used['margin_left'] < 0.0:
+        raise ValueError('Paper margin_left must be greater than or equal to zero')
+    if paper_dimensions_used['margin_right'] < 0.0:
+        raise ValueError('Paper margin_right must be greater than or equal to zero')
+    if paper_dimensions_used['margin_top'] < 0.0:
+        raise ValueError('Paper margin_top must be greater than or equal to zero')
+    if paper_dimensions_used['margin_bottom'] < 0.0:
+        raise ValueError('Paper margin_bottom must be greater than or equal to zero')
 
     if isinstance(pyomo_component, pyo.Objective):
         objectives = [pyomo_component]
@@ -999,7 +1031,9 @@ def latex_printer(
                     # already detected set, do nothing
                     pass
                 else:
-                    visitor.setMap[indices[0]._set] = 'SET%d'%(len(visitor.setMap.keys())+1)
+                    visitor.setMap[indices[0]._set] = 'SET%d' % (
+                        len(visitor.setMap.keys()) + 1
+                    )
 
                 idxTag = '__I_PLACEHOLDER_8675309_GROUP_%s_%s__' % (
                     indices[0]._group,
@@ -1018,7 +1052,6 @@ def latex_printer(
                 pstr += '\\label{con:' + pyomo_component.name + '_' + con.name + '} '
 
             pstr += tail
-
 
     # Print bounds and sets
     if not isSingle:
@@ -1136,21 +1169,18 @@ def latex_printer(
             pstr += '    \\label{%s} \n' % (pyomo_component.name)
         pstr += '\\end{equation} \n'
 
-
     setMap = visitor.setMap
     setMap_inverse = {vl: ky for ky, vl in setMap.items()}
-    # print(setMap)
-
-    # print('\n\n\n\n')
-    # print(pstr)
 
     # Handling the iterator indices
     defaultSetLatexNames = ComponentMap()
-    for ky,vl in setMap.items():
+    for ky, vl in setMap.items():
         st = ky
         defaultSetLatexNames[st] = st.name.replace('_', '\\_')
         if st in ComponentSet(latex_component_map.keys()):
-            defaultSetLatexNames[st] = latex_component_map[st][0]#.replace('_', '\\_')
+            defaultSetLatexNames[st] = latex_component_map[st][
+                0
+            ]  # .replace('_', '\\_')
 
     latexLines = pstr.split('\n')
     for jj in range(0, len(latexLines)):
@@ -1180,7 +1210,7 @@ def latex_printer(
 
             for ky, vl in setInfo.items():
                 ix = int(ky[3:]) - 1
-                setInfo[ky]['setObject'] = setMap_inverse[ky]#setList[ix]
+                setInfo[ky]['setObject'] = setMap_inverse[ky]  # setList[ix]
                 setInfo[ky][
                     'setRegEx'
                 ] = r'__S_PLACEHOLDER_8675309_GROUP_([0-9*])_%s__' % (ky)
@@ -1246,7 +1276,7 @@ def latex_printer(
 
             indexCounter = 0
             for ky, vl in groupInfo.items():
-                if vl['setObject'] in ComponentSet(latex_component_map.keys()) :
+                if vl['setObject'] in ComponentSet(latex_component_map.keys()):
                     indexNames = latex_component_map[vl['setObject']][1]
                     if len(indexNames) != 0:
                         if len(indexNames) < len(vl['indices']):
@@ -1267,7 +1297,7 @@ def latex_printer(
                                 % (vl['indices'][i], ky),
                                 alphabetStringGenerator(indexCounter, True),
                             )
-                            indexCounter += 1      
+                            indexCounter += 1
                 else:
                     for i in range(0, len(vl['indices'])):
                         ln = ln.replace(
@@ -1280,8 +1310,6 @@ def latex_printer(
         latexLines[jj] = ln
 
     pstr = '\n'.join(latexLines)
-    # print('\n\n\n\n')
-    # print(pstr)
 
     vrIdx = 0
     new_variableMap = ComponentMap()
@@ -1354,15 +1382,13 @@ def latex_printer(
             pass
         else:
             raise ValueError(
-                'The latex_component_map object has a key of invalid type: %s' % (str(ky))
+                'The latex_component_map object has a key of invalid type: %s'
+                % (str(ky))
             )
 
     label_rep_dict = copy.deepcopy(rep_dict)
     for ky, vl in label_rep_dict.items():
         label_rep_dict[ky] = vl.replace('{', '').replace('}', '').replace('\\', '')
-
-    # print('\n\n\n\n')
-    # print(pstr)
 
     splitLines = pstr.split('\n')
     for i in range(0, len(splitLines)):
@@ -1370,10 +1396,7 @@ def latex_printer(
             splitLines[i] = multiple_replace(splitLines[i], rep_dict)
         else:
             if '\\label{' in splitLines[i]:
-                try:
-                    epr, lbl = splitLines[i].split('\\label{')
-                except:
-                    print(splitLines[i])
+                epr, lbl = splitLines[i].split('\\label{')
                 epr = multiple_replace(epr, rep_dict)
                 # rep_dict[ky] = vl.replace('_', '\\_')
                 lbl = multiple_replace(lbl, label_rep_dict)
@@ -1403,10 +1426,17 @@ def latex_printer(
         fstr += '\\usepackage{amsmath} \n'
         fstr += '\\usepackage{amssymb} \n'
         fstr += '\\usepackage{dsfont} \n'
-        fstr += '\\usepackage[paperheight=%.4fin, paperwidth=%.4fin, left=%.4fin,right=%.4fin, top=%.4fin, bottom=%.4fin]{geometry} \n'%(
-                                paper_dimensions_used['height'], paper_dimensions_used['width'], 
-                                paper_dimensions_used['margin_left'], paper_dimensions_used['margin_right'], 
-                                paper_dimensions_used['margin_top'], paper_dimensions_used['margin_bottom'] )
+        fstr += (
+            '\\usepackage[paperheight=%.4fin, paperwidth=%.4fin, left=%.4fin, right=%.4fin, top=%.4fin, bottom=%.4fin]{geometry} \n'
+            % (
+                paper_dimensions_used['height'],
+                paper_dimensions_used['width'],
+                paper_dimensions_used['margin_left'],
+                paper_dimensions_used['margin_right'],
+                paper_dimensions_used['margin_top'],
+                paper_dimensions_used['margin_bottom'],
+            )
+        )
         fstr += '\\allowdisplaybreaks \n'
         fstr += '\\begin{document} \n'
         fstr += fontsize + ' \n'
@@ -1416,12 +1446,14 @@ def latex_printer(
         # optional write to output file
         if isinstance(write_object, (io.TextIOWrapper, io.StringIO)):
             write_object.write(fstr)
-        elif isinstance(write_object,str):
+        elif isinstance(write_object, str):
             f = open(write_object, 'w')
             f.write(fstr)
             f.close()
         else:
-            raise ValueError('Invalid type %s encountered when parsing the write_object.  Must be a StringIO, FileIO, or valid filename string')
+            raise ValueError(
+                'Invalid type %s encountered when parsing the write_object.  Must be a StringIO, FileIO, or valid filename string'
+            )
 
     # return the latex string
     return pstr

@@ -9,12 +9,35 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import io
 import pyomo.common.unittest as unittest
 from pyomo.util.latex_printer import latex_printer
 import pyomo.environ as pyo
 from textwrap import dedent
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.collections.component_map import ComponentMap
+
+from pyomo.environ import (
+    Reals,
+    PositiveReals,
+    NonPositiveReals,
+    NegativeReals,
+    NonNegativeReals,
+    Integers,
+    PositiveIntegers,
+    NonPositiveIntegers,
+    NegativeIntegers,
+    NonNegativeIntegers,
+    Boolean,
+    Binary,
+    Any,
+    # AnyWithNone,
+    EmptySet,
+    UnitInterval,
+    PercentFraction,
+    # RealInterval,
+    # IntegerInterval,
+)
 
 
 def generate_model():
@@ -130,7 +153,7 @@ def generate_simple_model_2():
 class TestLatexPrinter(unittest.TestCase):
     def test_latexPrinter_simpleDocTests(self):
         # Ex 1 -----------------------
-        m = pyo.ConcreteModel(name = 'basicFormulation')
+        m = pyo.ConcreteModel(name='basicFormulation')
         m.x = pyo.Var()
         m.y = pyo.Var()
         pstr = latex_printer(m.x + m.y)
@@ -142,12 +165,12 @@ class TestLatexPrinter(unittest.TestCase):
         """
         )
         self.assertEqual('\n' + pstr + '\n', bstr)
-        
+
         # Ex 2 -----------------------
-        m = pyo.ConcreteModel(name = 'basicFormulation')
+        m = pyo.ConcreteModel(name='basicFormulation')
         m.x = pyo.Var()
         m.y = pyo.Var()
-        m.expression_1 = pyo.Expression(expr = m.x**2 + m.y**2)
+        m.expression_1 = pyo.Expression(expr=m.x**2 + m.y**2)
         pstr = latex_printer(m.expression_1)
         bstr = dedent(
             r"""
@@ -157,12 +180,12 @@ class TestLatexPrinter(unittest.TestCase):
         """
         )
         self.assertEqual('\n' + pstr + '\n', bstr)
-        
+
         # Ex 3 -----------------------
-        m = pyo.ConcreteModel(name = 'basicFormulation')
+        m = pyo.ConcreteModel(name='basicFormulation')
         m.x = pyo.Var()
         m.y = pyo.Var()
-        m.constraint_1 = pyo.Constraint(expr = m.x**2 + m.y**2 <= 1.0)
+        m.constraint_1 = pyo.Constraint(expr=m.x**2 + m.y**2 <= 1.0)
         pstr = latex_printer(m.constraint_1)
         bstr = dedent(
             r"""
@@ -172,12 +195,15 @@ class TestLatexPrinter(unittest.TestCase):
         """
         )
         self.assertEqual('\n' + pstr + '\n', bstr)
-        
+
         # Ex 4 -----------------------
         m = pyo.ConcreteModel(name='basicFormulation')
         m.I = pyo.Set(initialize=[1, 2, 3, 4, 5])
         m.v = pyo.Var(m.I)
-        def ruleMaker(m):  return sum(m.v[i] for i in m.I) <= 0
+
+        def ruleMaker(m):
+            return sum(m.v[i] for i in m.I) <= 0
+
         m.constraint = pyo.Constraint(rule=ruleMaker)
         pstr = latex_printer(m.constraint)
         bstr = dedent(
@@ -190,13 +216,13 @@ class TestLatexPrinter(unittest.TestCase):
         self.assertEqual('\n' + pstr + '\n', bstr)
 
         # Ex 5 -----------------------
-        m = pyo.ConcreteModel(name = 'basicFormulation')
+        m = pyo.ConcreteModel(name='basicFormulation')
         m.x = pyo.Var()
         m.y = pyo.Var()
         m.z = pyo.Var()
         m.c = pyo.Param(initialize=1.0, mutable=True)
-        m.objective    = pyo.Objective( expr = m.x + m.y + m.z )
-        m.constraint_1 = pyo.Constraint(expr = m.x**2 + m.y**2.0 - m.z**2.0 <= m.c )
+        m.objective = pyo.Objective(expr=m.x + m.y + m.z)
+        m.constraint_1 = pyo.Constraint(expr=m.x**2 + m.y**2.0 - m.z**2.0 <= m.c)
         pstr = latex_printer(m)
         bstr = dedent(
             r"""
@@ -214,11 +240,14 @@ class TestLatexPrinter(unittest.TestCase):
         m = pyo.ConcreteModel(name='basicFormulation')
         m.I = pyo.Set(initialize=[1, 2, 3, 4, 5])
         m.v = pyo.Var(m.I)
-        def ruleMaker(m):  return sum(m.v[i] for i in m.I) <= 0
+
+        def ruleMaker(m):
+            return sum(m.v[i] for i in m.I) <= 0
+
         m.constraint = pyo.Constraint(rule=ruleMaker)
         lcm = ComponentMap()
         lcm[m.v] = 'x'
-        lcm[m.I] = ['\\mathcal{A}',['j','k']]
+        lcm[m.I] = ['\\mathcal{A}', ['j', 'k']]
         pstr = latex_printer(m.constraint, latex_component_map=lcm)
         bstr = dedent(
             r"""
@@ -231,11 +260,11 @@ class TestLatexPrinter(unittest.TestCase):
 
     def test_latexPrinter_checkAlphabetFunction(self):
         from pyomo.util.latex_printer import alphabetStringGenerator
-        self.assertEqual('z',alphabetStringGenerator(25))
-        self.assertEqual('aa',alphabetStringGenerator(26))
-        self.assertEqual('alm',alphabetStringGenerator(1000))
-        self.assertEqual('iqni',alphabetStringGenerator(1000,True))
 
+        self.assertEqual('z', alphabetStringGenerator(25))
+        self.assertEqual('aa', alphabetStringGenerator(26))
+        self.assertEqual('alm', alphabetStringGenerator(1000))
+        self.assertEqual('iqni', alphabetStringGenerator(1000, True))
 
     def test_latexPrinter_objective(self):
         m = generate_model()
@@ -420,78 +449,27 @@ class TestLatexPrinter(unittest.TestCase):
         )
         self.assertEqual('\n' + pstr + '\n', bstr)
 
-    # def test_latexPrinter_model(self):
-    #     m = generate_simple_model()
+    def test_latexPrinter_fileWriter(self):
+        m = generate_simple_model()
 
-    #     pstr = latex_printer(m)
-    #     bstr = dedent(
-    #         r"""
-    #     \begin{equation} 
-    #         \begin{aligned} 
-    #             & \text{minimize} 
-    #             & & x + y \\ 
-    #             & \text{subject to} 
-    #             & & x^{2} + y^{2} \leq 1 \\ 
-    #             &&& 0 \leq x \\ 
-    #             &&&  \left( x + y \right)  \sum_{i \in I} v_{i} + u_{i,j}^{2} \leq 0 , \quad j \in I \\ 
-    #             &&& \sum_{k \in K} p_{k} = 1 
-    #         \end{aligned} 
-    #         \label{basicFormulation} 
-    #     \end{equation} 
-    #     """
-    #     )
-    #     self.assertEqual('\n' + pstr, bstr)
+        with TempfileManager.new_context() as tempfile:
+            fd, fname = tempfile.mkstemp()
+            pstr = latex_printer(m, write_object=fname)
 
-    #     pstr = latex_printer(m, None, True)
-    #     bstr = dedent(
-    #         r"""
-    #     \begin{align} 
-    #         & \text{minimize} 
-    #         & & x + y & \label{obj:basicFormulation_objective_1} \\ 
-    #         & \text{subject to} 
-    #         & & x^{2} + y^{2} \leq 1 & \label{con:basicFormulation_constraint_1} \\ 
-    #         &&& 0 \leq x & \label{con:basicFormulation_constraint_2} \\ 
-    #         &&&  \left( x + y \right)  \sum_{i \in I} v_{i} + u_{i,j}^{2} \leq 0 , \quad j \in I & \label{con:basicFormulation_constraint_7} \\ 
-    #         &&& \sum_{k \in K} p_{k} = 1 & \label{con:basicFormulation_constraint_8} 
-    #     \end{align} 
-    #     """
-    #     )
-    #     self.assertEqual('\n' + pstr, bstr)
+            f = open(fname)
+            bstr = f.read()
+            f.close()
 
-    #     pstr = latex_printer(m, None, False, True)
-    #     bstr = dedent(
-    #         r"""
-    #     \begin{equation} 
-    #         \begin{aligned} 
-    #             & \text{minimize} 
-    #             & & x + y \\ 
-    #             & \text{subject to} 
-    #             & & x^{2} + y^{2} \leq 1 \\ 
-    #             &&& 0 \leq x \\ 
-    #             &&&  \left( x + y \right)  \sum_{i = 1}^{5} v_{i} + u_{i,j}^{2} \leq 0 , \quad j \in I \\ 
-    #             &&& \sum_{k \in K} p_{k} = 1 
-    #         \end{aligned} 
-    #         \label{basicFormulation} 
-    #     \end{equation} 
-    #     """
-    #     )
-    #     self.assertEqual('\n' + pstr, bstr)
+            bstr_split = bstr.split('\n')
+            bstr_stripped = bstr_split[8:-2]
+            bstr = '\n'.join(bstr_stripped) + '\n'
 
-    #     pstr = latex_printer(m, None, True, True)
-    #     bstr = dedent(
-    #         r"""
-    #     \begin{align} 
-    #         & \text{minimize} 
-    #         & & x + y & \label{obj:basicFormulation_objective_1} \\ 
-    #         & \text{subject to} 
-    #         & & x^{2} + y^{2} \leq 1 & \label{con:basicFormulation_constraint_1} \\ 
-    #         &&& 0 \leq x & \label{con:basicFormulation_constraint_2} \\ 
-    #         &&&  \left( x + y \right)  \sum_{i = 1}^{5} v_{i} + u_{i,j}^{2} \leq 0 , \quad j \in I & \label{con:basicFormulation_constraint_7} \\ 
-    #         &&& \sum_{k \in K} p_{k} = 1 & \label{con:basicFormulation_constraint_8} 
-    #     \end{align} 
-    #     """
-    #     )
-    #     self.assertEqual('\n' + pstr, bstr)
+            self.assertEqual(pstr + '\n', bstr)
+
+    def test_latexPrinter_inputError(self):
+        self.assertRaises(
+            ValueError, latex_printer, **{'pyomo_component': 'errorString'}
+        )
 
     def test_latexPrinter_fileWriter(self):
         m = generate_simple_model()
@@ -505,15 +483,499 @@ class TestLatexPrinter(unittest.TestCase):
             f.close()
 
             bstr_split = bstr.split('\n')
-            bstr_stripped = bstr_split[3:-2]
+            bstr_stripped = bstr_split[8:-2]
             bstr = '\n'.join(bstr_stripped) + '\n'
 
-            self.assertEqual(pstr, bstr)
+            self.assertEqual(pstr + '\n', bstr)
 
-    def test_latexPrinter_inputError(self):
         self.assertRaises(
-            ValueError, latex_printer, **{'pyomo_component': 'errorString'}
+            ValueError, latex_printer, **{'pyomo_component': m, 'write_object': 2.0}
         )
+
+    def test_latexPrinter_fontSizes_1(self):
+        m = generate_simple_model()
+        strio = io.StringIO('')
+        tsh = latex_printer(m, write_object=strio, fontsize='\\normalsize')
+        strio.seek(0)
+        pstr = strio.read()
+
+        bstr = dedent(
+            r"""
+        \documentclass{article} 
+        \usepackage{amsmath} 
+        \usepackage{amssymb} 
+        \usepackage{dsfont} 
+        \usepackage[paperheight=11.0000in, paperwidth=8.5000in, left=1.0000in, right=1.0000in, top=1.0000in, bottom=1.0000in]{geometry} 
+        \allowdisplaybreaks 
+        \begin{document} 
+        \normalsize 
+        \begin{align} 
+            & \text{minimize} 
+            & & x + y & \label{obj:basicFormulation_objective_1} \\ 
+            & \text{subject to} 
+            & & x^{2} + y^{2} \leq 1 & \label{con:basicFormulation_constraint_1} \\ 
+            &&& 0 \leq x & \label{con:basicFormulation_constraint_2} \\ 
+            &&&  \left( x + y \right)  \sum_{ i \in I  } v_{i} + u_{i,j}^{2} \leq 0 &  \qquad \forall j \in I \label{con:basicFormulation_constraint_7} \\ 
+            &&& \sum_{ i \in K  } p_{i} = 1 & \label{con:basicFormulation_constraint_8} 
+        \end{align} 
+        \end{document} 
+        """
+        )
+        strio.close()
+        self.assertEqual('\n' + pstr, bstr)
+
+    def test_latexPrinter_fontSizes_2(self):
+        m = generate_simple_model()
+        strio = io.StringIO('')
+        tsh = latex_printer(m, write_object=strio, fontsize='normalsize')
+        strio.seek(0)
+        pstr = strio.read()
+
+        bstr = dedent(
+            r"""
+        \documentclass{article} 
+        \usepackage{amsmath} 
+        \usepackage{amssymb} 
+        \usepackage{dsfont} 
+        \usepackage[paperheight=11.0000in, paperwidth=8.5000in, left=1.0000in, right=1.0000in, top=1.0000in, bottom=1.0000in]{geometry} 
+        \allowdisplaybreaks 
+        \begin{document} 
+        \normalsize 
+        \begin{align} 
+            & \text{minimize} 
+            & & x + y & \label{obj:basicFormulation_objective_1} \\ 
+            & \text{subject to} 
+            & & x^{2} + y^{2} \leq 1 & \label{con:basicFormulation_constraint_1} \\ 
+            &&& 0 \leq x & \label{con:basicFormulation_constraint_2} \\ 
+            &&&  \left( x + y \right)  \sum_{ i \in I  } v_{i} + u_{i,j}^{2} \leq 0 &  \qquad \forall j \in I \label{con:basicFormulation_constraint_7} \\ 
+            &&& \sum_{ i \in K  } p_{i} = 1 & \label{con:basicFormulation_constraint_8} 
+        \end{align} 
+        \end{document} 
+        """
+        )
+        strio.close()
+        self.assertEqual('\n' + pstr, bstr)
+
+    def test_latexPrinter_fontSizes_3(self):
+        m = generate_simple_model()
+        strio = io.StringIO('')
+        tsh = latex_printer(m, write_object=strio, fontsize=0)
+        strio.seek(0)
+        pstr = strio.read()
+
+        bstr = dedent(
+            r"""
+        \documentclass{article} 
+        \usepackage{amsmath} 
+        \usepackage{amssymb} 
+        \usepackage{dsfont} 
+        \usepackage[paperheight=11.0000in, paperwidth=8.5000in, left=1.0000in, right=1.0000in, top=1.0000in, bottom=1.0000in]{geometry} 
+        \allowdisplaybreaks 
+        \begin{document} 
+        \normalsize 
+        \begin{align} 
+            & \text{minimize} 
+            & & x + y & \label{obj:basicFormulation_objective_1} \\ 
+            & \text{subject to} 
+            & & x^{2} + y^{2} \leq 1 & \label{con:basicFormulation_constraint_1} \\ 
+            &&& 0 \leq x & \label{con:basicFormulation_constraint_2} \\ 
+            &&&  \left( x + y \right)  \sum_{ i \in I  } v_{i} + u_{i,j}^{2} \leq 0 &  \qquad \forall j \in I \label{con:basicFormulation_constraint_7} \\ 
+            &&& \sum_{ i \in K  } p_{i} = 1 & \label{con:basicFormulation_constraint_8} 
+        \end{align} 
+        \end{document} 
+        """
+        )
+        strio.close()
+        self.assertEqual('\n' + pstr, bstr)
+
+    def test_latexPrinter_fontSizes_4(self):
+        m = generate_simple_model()
+        strio = io.StringIO('')
+        self.assertRaises(
+            ValueError,
+            latex_printer,
+            **{'pyomo_component': m, 'write_object': strio, 'fontsize': -10}
+        )
+        strio.close()
+
+    def test_latexPrinter_paperDims(self):
+        m = generate_simple_model()
+        strio = io.StringIO('')
+        pdms = {}
+        pdms['height'] = 13.0
+        pdms['width'] = 10.5
+        pdms['margin_left'] = 2.0
+        pdms['margin_right'] = 2.0
+        pdms['margin_top'] = 2.0
+        pdms['margin_bottom'] = 2.0
+        tsh = latex_printer(m, write_object=strio, paper_dimensions=pdms)
+        strio.seek(0)
+        pstr = strio.read()
+
+        bstr = dedent(
+            r"""
+        \documentclass{article} 
+        \usepackage{amsmath} 
+        \usepackage{amssymb} 
+        \usepackage{dsfont} 
+        \usepackage[paperheight=13.0000in, paperwidth=10.5000in, left=2.0000in, right=2.0000in, top=2.0000in, bottom=2.0000in]{geometry} 
+        \allowdisplaybreaks 
+        \begin{document} 
+        \normalsize 
+        \begin{align} 
+            & \text{minimize} 
+            & & x + y & \label{obj:basicFormulation_objective_1} \\ 
+            & \text{subject to} 
+            & & x^{2} + y^{2} \leq 1 & \label{con:basicFormulation_constraint_1} \\ 
+            &&& 0 \leq x & \label{con:basicFormulation_constraint_2} \\ 
+            &&&  \left( x + y \right)  \sum_{ i \in I  } v_{i} + u_{i,j}^{2} \leq 0 &  \qquad \forall j \in I \label{con:basicFormulation_constraint_7} \\ 
+            &&& \sum_{ i \in K  } p_{i} = 1 & \label{con:basicFormulation_constraint_8} 
+        \end{align} 
+        \end{document} 
+        """
+        )
+        strio.close()
+        self.assertEqual('\n' + pstr, bstr)
+
+        strio = io.StringIO('')
+        self.assertRaises(
+            ValueError,
+            latex_printer,
+            **{
+                'pyomo_component': m,
+                'write_object': strio,
+                'paper_dimensions': {'height': 230},
+            }
+        )
+        self.assertRaises(
+            ValueError,
+            latex_printer,
+            **{
+                'pyomo_component': m,
+                'write_object': strio,
+                'paper_dimensions': {'width': 230},
+            }
+        )
+        self.assertRaises(
+            ValueError,
+            latex_printer,
+            **{
+                'pyomo_component': m,
+                'write_object': strio,
+                'paper_dimensions': {'margin_left': -1},
+            }
+        )
+        self.assertRaises(
+            ValueError,
+            latex_printer,
+            **{
+                'pyomo_component': m,
+                'write_object': strio,
+                'paper_dimensions': {'margin_right': -1},
+            }
+        )
+        self.assertRaises(
+            ValueError,
+            latex_printer,
+            **{
+                'pyomo_component': m,
+                'write_object': strio,
+                'paper_dimensions': {'margin_top': -1},
+            }
+        )
+        self.assertRaises(
+            ValueError,
+            latex_printer,
+            **{
+                'pyomo_component': m,
+                'write_object': strio,
+                'paper_dimensions': {'margin_bottom': -1},
+            }
+        )
+        strio.close()
+
+    def test_latexPrinter_overwriteError(self):
+        m = pyo.ConcreteModel(name='basicFormulation')
+        m.I = pyo.Set(initialize=[1, 2, 3, 4, 5])
+        m.v = pyo.Var(m.I)
+
+        def ruleMaker(m):
+            return sum(m.v[i] for i in m.I) <= 0
+
+        m.constraint = pyo.Constraint(rule=ruleMaker)
+        lcm = ComponentMap()
+        lcm[m.v] = 'x'
+        lcm[m.I] = ['\\mathcal{A}', ['j', 'k']]
+        lcm['err'] = 1.0
+
+        self.assertRaises(
+            ValueError,
+            latex_printer,
+            **{'pyomo_component': m.constraint, 'latex_component_map': lcm}
+        )
+
+    def test_latexPrinter_indexedParam(self):
+        m = pyo.ConcreteModel(name='basicFormulation')
+        m.I = pyo.Set(initialize=[1, 2, 3, 4, 5])
+        m.x = pyo.Var(m.I * m.I)
+        m.c = pyo.Param(m.I * m.I, initialize=1.0, mutable=True)
+
+        def ruleMaker_1(m):
+            return sum(m.c[i, j] * m.x[i, j] for i in m.I for j in m.I)
+
+        def ruleMaker_2(m):
+            return sum(m.x[i, j] ** 2 for i in m.I for j in m.I) <= 1
+
+        m.objective = pyo.Objective(rule=ruleMaker_1)
+        m.constraint_1 = pyo.Constraint(rule=ruleMaker_2)
+        pstr = latex_printer(m)
+
+        bstr = dedent(
+            r"""
+        \begin{align} 
+            & \text{minimize} 
+            & & \sum_{ i \in I  } \sum_{ j \in I  } c_{i,j} x_{i,j} & \label{obj:basicFormulation_objective} \\ 
+            & \text{subject to} 
+            & & \sum_{ i \in I  } \sum_{ j \in I  } x_{i,j}^{2} \leq 1 & \label{con:basicFormulation_constraint_1} 
+        \end{align} 
+        """
+        )
+
+        self.assertEqual('\n' + pstr + '\n', bstr)
+
+        lcm = ComponentMap()
+        lcm[m.I] = ['\\mathcal{A}', ['j']]
+        self.assertRaises(
+            ValueError,
+            latex_printer,
+            **{'pyomo_component': m, 'latex_component_map': lcm}
+        )
+
+    def test_latexPrinter_involvedModel(self):
+        m = generate_model()
+        pstr = latex_printer(m)
+        print(pstr)
+
+        bstr = dedent(
+            r"""
+        \begin{align} 
+            & \text{minimize} 
+            & & x + y + z & \label{obj:basicFormulation_objective_1} \\ 
+            & \text{minimize} 
+            & &  \left( x + y \right)  \sum_{ i \in J  } w_{i} & \label{obj:basicFormulation_objective_2} \\ 
+            & \text{maximize} 
+            & & x + y + z & \label{obj:basicFormulation_objective_3} \\ 
+            & \text{subject to} 
+            & & x^{2} + y^{-2} - x y z + 1 = 2 & \label{con:basicFormulation_constraint_1} \\ 
+            &&&  \left| \frac{x}{z^{-2}} \right|   \left( x + y \right)  \leq 2 & \label{con:basicFormulation_constraint_2} \\ 
+            &&& \sqrt { \frac{x}{z^{-2}} } \leq 2 & \label{con:basicFormulation_constraint_3} \\ 
+            &&& 1 \leq x \leq 2 & \label{con:basicFormulation_constraint_4} \\ 
+            &&& f_{\text{exprIf}}(x \leq 1,z,y) \leq 1 & \label{con:basicFormulation_constraint_5} \\ 
+            &&& x + f(x,y) = 2 & \label{con:basicFormulation_constraint_6} \\ 
+            &&&  \left( x + y \right)  \sum_{ i \in I  } v_{i} + u_{i,j}^{2} \leq 0 &  \qquad \forall j \in I \label{con:basicFormulation_constraint_7} \\ 
+            &&& \sum_{ i \in K  } p_{i} = 1 & \label{con:basicFormulation_constraint_8} 
+        \end{align} 
+        """
+        )
+
+        self.assertEqual('\n' + pstr + '\n', bstr)
+
+    def test_latexPrinter_continuousSet(self):
+        m = pyo.ConcreteModel(name='basicFormulation')
+        m.I = pyo.Set(initialize=[1, 2, 3, 4, 5])
+        m.v = pyo.Var(m.I)
+
+        def ruleMaker(m):
+            return sum(m.v[i] for i in m.I) <= 0
+
+        m.constraint = pyo.Constraint(rule=ruleMaker)
+        pstr = latex_printer(m.constraint, split_continuous_sets=True)
+
+        bstr = dedent(
+            r"""
+        \begin{equation} 
+             \sum_{ i = 1 }^{5} v_{i} \leq 0 
+        \end{equation} 
+        """
+        )
+        self.assertEqual('\n' + pstr + '\n', bstr)
+
+    def test_latexPrinter_notContinuousSet(self):
+        m = pyo.ConcreteModel(name='basicFormulation')
+        m.I = pyo.Set(initialize=[1, 3, 4, 5])
+        m.v = pyo.Var(m.I)
+
+        def ruleMaker(m):
+            return sum(m.v[i] for i in m.I) <= 0
+
+        m.constraint = pyo.Constraint(rule=ruleMaker)
+        pstr = latex_printer(m.constraint, split_continuous_sets=True)
+
+        bstr = dedent(
+            r"""
+        \begin{equation} 
+             \sum_{ i \in I  } v_{i} \leq 0 
+        \end{equation} 
+        """
+        )
+        self.assertEqual('\n' + pstr + '\n', bstr)
+
+    def test_latexPrinter_autoIndex(self):
+        m = pyo.ConcreteModel(name='basicFormulation')
+        m.I = pyo.Set(initialize=[1, 2, 3, 4, 5])
+        m.v = pyo.Var(m.I)
+
+        def ruleMaker(m):
+            return sum(m.v[i] for i in m.I) <= 0
+
+        m.constraint = pyo.Constraint(rule=ruleMaker)
+        lcm = ComponentMap()
+        lcm[m.v] = 'x'
+        lcm[m.I] = ['\\mathcal{A}', []]
+        pstr = latex_printer(m.constraint, latex_component_map=lcm)
+        bstr = dedent(
+            r"""
+        \begin{equation} 
+             \sum_{ i \in \mathcal{A}  } x_{i} \leq 0 
+        \end{equation} 
+        """
+        )
+        self.assertEqual('\n' + pstr + '\n', bstr)
+
+    def test_latexPrinter_equationEnvironment(self):
+        m = pyo.ConcreteModel(name='basicFormulation')
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.z = pyo.Var()
+        m.c = pyo.Param(initialize=1.0, mutable=True)
+        m.objective = pyo.Objective(expr=m.x + m.y + m.z)
+        m.constraint_1 = pyo.Constraint(expr=m.x**2 + m.y**2.0 - m.z**2.0 <= m.c)
+        pstr = latex_printer(m, use_equation_environment=True)
+
+        bstr = dedent(
+            r"""
+        \begin{equation} 
+            \begin{aligned} 
+                & \text{minimize} 
+                & & x + y + z \\ 
+                & \text{subject to} 
+                & & x^{2} + y^{2} - z^{2} \leq c 
+            \end{aligned} 
+            \label{basicFormulation} 
+        \end{equation} 
+        """
+        )
+        self.assertEqual('\n' + pstr + '\n', bstr)
+
+    def test_latexPrinter_manyVariablesWithDomains(self):
+        m = pyo.ConcreteModel(name='basicFormulation')
+        m.x = pyo.Var(domain=Integers, bounds=(-10, 10))
+        m.y = pyo.Var(domain=Binary, bounds=(-10, 10))
+        m.z = pyo.Var(domain=PositiveReals, bounds=(-10, 10))
+        m.u = pyo.Var(domain=NonNegativeIntegers, bounds=(-10, 10))
+        m.v = pyo.Var(domain=NegativeReals, bounds=(-10, 10))
+        m.w = pyo.Var(domain=PercentFraction, bounds=(-10, 10))
+        m.objective = pyo.Objective(expr=m.x + m.y + m.z + m.u + m.v + m.w)
+        pstr = latex_printer(m)
+
+        bstr = dedent(
+            r"""
+        \begin{align} 
+            & \text{minimize} 
+            & & x + y + z + u + v + w & \label{obj:basicFormulation_objective} \\ 
+            & \text{with bounds} 
+            & & -10 \leq x \leq 10 & \qquad \in \mathds{Z} \label{con:basicFormulation_x_bound} \\ 
+            &&& y & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_y_bound} \\ 
+            &&&  0 < z \leq 10 & \qquad \in \mathds{R}_{> 0} \label{con:basicFormulation_z_bound} \\ 
+            &&&  0 \leq u \leq 10 & \qquad \in \mathds{Z}_{\geq 0} \label{con:basicFormulation_u_bound} \\ 
+            &&& -10 \leq v < 0  & \qquad \in \mathds{R}_{< 0} \label{con:basicFormulation_v_bound} \\ 
+            &&&  0 \leq w \leq 1  & \qquad \in \mathds{R} \label{con:basicFormulation_w_bound} 
+        \end{align} 
+        """
+        )
+
+        self.assertEqual("\n" + pstr + "\n", bstr)
+
+    def test_latexPrinter_manyVariablesWithDomains_eqn(self):
+        m = pyo.ConcreteModel(name='basicFormulation')
+        m.x = pyo.Var(domain=Integers, bounds=(-10, 10))
+        m.y = pyo.Var(domain=Binary, bounds=(-10, 10))
+        m.z = pyo.Var(domain=PositiveReals, bounds=(-10, 10))
+        m.u = pyo.Var(domain=NonNegativeIntegers, bounds=(-10, 10))
+        m.v = pyo.Var(domain=NegativeReals, bounds=(-10, 10))
+        m.w = pyo.Var(domain=PercentFraction, bounds=(-10, 10))
+        m.objective = pyo.Objective(expr=m.x + m.y + m.z + m.u + m.v + m.w)
+        pstr = latex_printer(m, use_equation_environment=True)
+
+        bstr = dedent(
+            r"""
+        \begin{equation} 
+            \begin{aligned} 
+                & \text{minimize} 
+                & & x + y + z + u + v + w \\ 
+                & \text{with bounds} 
+                & & -10 \leq x \leq 10 \qquad \in \mathds{Z}\\ 
+                &&& y \qquad \in \left\{ 0 , 1 \right \}\\ 
+                &&&  0 < z \leq 10 \qquad \in \mathds{R}_{> 0}\\ 
+                &&&  0 \leq u \leq 10 \qquad \in \mathds{Z}_{\geq 0}\\ 
+                &&& -10 \leq v < 0  \qquad \in \mathds{R}_{< 0}\\ 
+                &&&  0 \leq w \leq 1  \qquad \in \mathds{R}
+            \end{aligned} 
+            \label{basicFormulation} 
+        \end{equation} 
+        """
+        )
+
+        self.assertEqual("\n" + pstr + "\n", bstr)
+
+    def test_latexPrinter_shortDescriptors(self):
+        m = pyo.ConcreteModel(name='basicFormulation')
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.z = pyo.Var()
+        m.c = pyo.Param(initialize=1.0, mutable=True)
+        m.objective = pyo.Objective(expr=m.x + m.y + m.z)
+        m.constraint_1 = pyo.Constraint(expr=m.x**2 + m.y**2.0 - m.z**2.0 <= m.c)
+        pstr = latex_printer(m, use_short_descriptors=True)
+
+        bstr = dedent(
+            r"""
+        \begin{align} 
+            & \min 
+            & & x + y + z & \label{obj:basicFormulation_objective} \\ 
+            & \text{s.t.} 
+            & & x^{2} + y^{2} - z^{2} \leq c & \label{con:basicFormulation_constraint_1} 
+        \end{align} 
+        """
+        )
+        self.assertEqual('\n' + pstr + '\n', bstr)
+
+    def test_latexPrinter_indexedParamSingle(self):
+        m = pyo.ConcreteModel(name='basicFormulation')
+        m.I = pyo.Set(initialize=[1, 2, 3, 4, 5])
+        m.x = pyo.Var(m.I * m.I)
+        m.c = pyo.Param(m.I * m.I, initialize=1.0, mutable=True)
+
+        def ruleMaker_1(m):
+            return sum(m.c[i, j] * m.x[i, j] for i in m.I for j in m.I)
+
+        def ruleMaker_2(m):
+            return sum(m.c[i, j] * m.x[i, j] ** 2 for i in m.I for j in m.I) <= 1
+
+        m.objective = pyo.Objective(rule=ruleMaker_1)
+        m.constraint_1 = pyo.Constraint(rule=ruleMaker_2)
+        pstr = latex_printer(m.constraint_1)
+        print(pstr)
+
+        bstr = dedent(
+            r"""
+        \begin{equation} 
+             \sum_{ i \in I  } \sum_{ j \in I  } c_{i,j} x_{i,j}^{2} \leq 1 
+        \end{equation} 
+        """
+        )
+
+        self.assertEqual('\n' + pstr + '\n', bstr)
 
 
 if __name__ == '__main__':

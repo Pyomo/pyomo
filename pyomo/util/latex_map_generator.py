@@ -65,6 +65,7 @@ _CONSTANT = ExprType.CONSTANT
 _MONOMIAL = ExprType.MONOMIAL
 _GENERAL = ExprType.GENERAL
 
+
 def applySmartVariables(name):
     splitName = name.split('_')
     # print(splitName)
@@ -103,6 +104,7 @@ def applySmartVariables(name):
     # print(joinedName)
 
     return joinedName
+
 
 # def multiple_replace(pstr, rep_dict):
 #     pattern = re.compile("|".join(rep_dict.keys()), flags=re.DOTALL)
@@ -156,7 +158,10 @@ def latex_component_map_generator(
 
     isSingle = False
 
-    if isinstance(pyomo_component, (pyo.Objective, pyo.Constraint, pyo.Expression, ExpressionBase, pyo.Var)):
+    if isinstance(
+        pyomo_component,
+        (pyo.Objective, pyo.Constraint, pyo.Expression, ExpressionBase, pyo.Var),
+    ):
         isSingle = True
     elif isinstance(pyomo_component, _BlockData):
         # is not single, leave alone
@@ -195,7 +200,9 @@ def latex_component_map_generator(
 
         # TODO:  cannot extract this information, waiting on resolution of an issue
         # For now, will raise an error
-        raise RuntimeError('Printing of non-models is not currently supported, but will be added soon')
+        raise RuntimeError(
+            'Printing of non-models is not currently supported, but will be added soon'
+        )
         # setList = identify_components(pyomo_component.expr, pyo.Set)
 
     else:
@@ -428,8 +435,6 @@ def latex_component_map_generator(
         else:
             overwrite_dict[ky] = vl.replace('_', '\\_')
 
-
-
     defaultSetLatexNames = ComponentMap()
     for i in range(0, len(setList)):
         st = setList[i]
@@ -455,6 +460,6 @@ def latex_component_map_generator(
         )
 
     for ky, vl in defaultSetLatexNames.items():
-        overwrite_dict[ky] = [ vl , [] ]
+        overwrite_dict[ky] = [vl, []]
 
     return overwrite_dict
