@@ -15,17 +15,19 @@ from math import ceil, log2
     "contrib.piecewise.disaggregated_logarithmic",
     doc="""
     Represent a piecewise linear function "logarithmically" by using a MIP with
-    log_2(|P|) binary decision variables. This method of logarithmically 
-    formulating the piecewise linear function imposes no restrictions on the 
-    family of polytopes. This method is due to Vielma et al., 2010.
+    log_2(|P|) binary decision variables. This is a direct-to-MIP transformation; 
+    GDP is not used. This method of logarithmically formulating the piecewise 
+    linear function imposes no restrictions on the family of polytopes, but we 
+    assume we have simplces in this code. This method is due to Vielma et al., 2010.
     """,
 )
 class DisaggregatedLogarithmicInnerGDPTransformation(PiecewiseLinearToGDP):
     """
     Represent a piecewise linear function "logarithmically" by using a MIP with
-    log_2(|P|) binary decision variables. This method of logarithmically
-    formulating the piecewise linear function imposes no restrictions on the
-    family of polytopes. This method is due to Vielma et al., 2010.
+    log_2(|P|) binary decision variables. This is a direct-to-MIP transformation; 
+    GDP is not used. This method of logarithmically formulating the piecewise 
+    linear function imposes no restrictions on the family of polytopes, but we 
+    assume we have simplces in this code. This method is due to Vielma et al., 2010.
     """
 
     CONFIG = PiecewiseLinearToGDP.CONFIG()
@@ -35,8 +37,8 @@ class DisaggregatedLogarithmicInnerGDPTransformation(PiecewiseLinearToGDP):
     # that replaces the transformed piecewise linear expr
     def _transform_pw_linear_expr(self, pw_expr, pw_linear_func, transformation_block):
 
-        # Get a new Block() in transformation_block.transformed_functions, which
-        # is a Block(Any). This is where we will put our new components.
+        # Get a new Block for our transformationin transformation_block.transformed_functions, 
+        # which is a Block(Any). This is where we will put our new components.
         transBlock = transformation_block.transformed_functions[
             len(transformation_block.transformed_functions)
         ]
@@ -61,32 +63,28 @@ class DisaggregatedLogarithmicInnerGDPTransformation(PiecewiseLinearToGDP):
         # which is dimension + 1
         transBlock.simplex_point_indices = RangeSet(0, dimension)
 
-        # Enumeration of simplices, map from simplex number to simplex object
+        # Enumeration of simplices: map from simplex number to simplex object
         self.idx_to_simplex = {k: v for k, v in zip(transBlock.simplex_indices, simplices)}
-        # Inverse of previous enumeration
-        self.simplex_to_idx = {v: k for k, v in self.idx_to_simplex.items()}
 
-        # List of tuples of simplices with their linear function
-        simplices_and_lin_funcs = list(zip(simplices, pw_linear_func._linear_functions))
+        # List of tuples of simplex indices with their linear function
+        simplex_indices_and_lin_funcs = list(zip(transBlock.simplex_indices, pw_linear_func._linear_functions))
 
         # We don't seem to get a convenient opportunity later, so let's just widen 
         # the bounds here. All we need to do is go through the corners of each simplex.
-        for P, linear_func in simplices_and_lin_funcs:
+        for P, linear_func in simplex_indices_and_lin_funcs:
             for v in transBlock.simplex_point_indices:
-                val = linear_func(*pw_linear_func._points[P[v]])
+                val = linear_func(*pw_linear_func._points[self.idx_to_simplex[P][v]])
                 if val < self.substitute_var_lb:
                     self.substitute_var_lb = val
                 if val > self.substitute_var_ub:
                     self.substitute_var_ub = val
         # Now set those bounds
-        if self.substitute_var_lb < float('inf'):
-            transBlock.substitute_var.setlb(self.substitute_var_lb)
-        if self.substitute_var_ub > -float('inf'):
-            transBlock.substitute_var.setub(self.substitute_var_ub)
+        transBlock.substitute_var.setlb(self.substitute_var_lb)
+        transBlock.substitute_var.setub(self.substitute_var_ub)
 
         log_dimension = ceil(log2(num_simplices))
         transBlock.log_simplex_indices = RangeSet(0, log_dimension - 1)
-        binaries = transBlock.binaries = Var(transBlock.log_simplex_indices, domain=Binary)
+        transBlock.binaries = Var(transBlock.log_simplex_indices, domain=Binary)
 
         # Injective function B: \mathcal{P} -> {0,1}^ceil(log_2(|P|)) used to identify simplices
         # (really just polytopes are required) with binary vectors. Any injective function
@@ -115,22 +113,22 @@ class DisaggregatedLogarithmicInnerGDPTransformation(PiecewiseLinearToGDP):
         def simplex_choice_1(b, l):
             return (
                 sum(
-                    transBlock.lambdas[self.simplex_to_idx[P], v]
-                    for P in self._P_plus(B, l, simplices)
+                    transBlock.lambdas[P, v]
+                    for P in self._P_plus(B, l, transBlock.simplex_indices)
                     for v in transBlock.simplex_point_indices
                 )
-                <= binaries[l]
+                <= transBlock.binaries[l]
             )
 
         @transBlock.Constraint(transBlock.log_simplex_indices)  # (6c.2)
         def simplex_choice_2(b, l):
             return (
                 sum(
-                    transBlock.lambdas[self.simplex_to_idx[P], v]
-                    for P in self._P_0(B, l, simplices)
+                    transBlock.lambdas[P, v]
+                    for P in self._P_0(B, l, transBlock.simplex_indices)
                     for v in transBlock.simplex_point_indices
                 )
-                <= 1 - binaries[l]
+                <= 1 - transBlock.binaries[l]
             )
 
         # for i, (simplex, pwlf) in enumerate(choices):
@@ -138,9 +136,9 @@ class DisaggregatedLogarithmicInnerGDPTransformation(PiecewiseLinearToGDP):
         @transBlock.Constraint(transBlock.dimension_indices)  # (6a.1)
         def x_constraint(b, i):
             return pw_expr.args[i] == sum(
-                transBlock.lambdas[self.simplex_to_idx[P], v]
-                * pw_linear_func._points[P[v]][i]
-                for P in simplices
+                transBlock.lambdas[P, v]
+                * pw_linear_func._points[self.idx_to_simplex[P][v]][i]
+                for P in transBlock.simplex_indices
                 for v in transBlock.simplex_point_indices
             )
 
@@ -157,11 +155,11 @@ class DisaggregatedLogarithmicInnerGDPTransformation(PiecewiseLinearToGDP):
             expr=substitute_var
             == sum(
                 sum(
-                    transBlock.lambdas[self.simplex_to_idx[P], v]
-                    * linear_func(*pw_linear_func._points[P[v]])
+                    transBlock.lambdas[P, v]
+                    * linear_func(*pw_linear_func._points[self.idx_to_simplex[P][v]])
                     for v in transBlock.simplex_point_indices
                 )
-                for (P, linear_func) in simplices_and_lin_funcs
+                for (P, linear_func) in simplex_indices_and_lin_funcs
             )
         )
 
@@ -177,9 +175,9 @@ class DisaggregatedLogarithmicInnerGDPTransformation(PiecewiseLinearToGDP):
         return tuple(int(x) for x in format(num, f"0{length}b"))
 
     # Return {P \in \mathcal{P} | B(P)_l = 0}
-    def _P_0(self, B, l, simplices):
-        return [p for p in simplices if B[self.simplex_to_idx[p]][l] == 0]
+    def _P_0(self, B, l, simplex_indices):
+        return [p for p in simplex_indices if B[p][l] == 0]
 
     # Return {P \in \mathcal{P} | B(P)_l = 1}
-    def _P_plus(self, B, l, simplices):
-        return [p for p in simplices if B[self.simplex_to_idx[p]][l] == 1]
+    def _P_plus(self, B, l, simplex_indices):
+        return [p for p in simplex_indices if B[p][l] == 1]
