@@ -125,7 +125,7 @@ class _MutableLinearCoefficient(object):
         self.copt_model = None
 
     def update(self):
-        self.copt_model.sefCoeff(self.con, self.var, value(self.expr))
+        self.copt_model.setCoeff(self.con, self.var, value(self.expr))
 
 
 class _MutableRangeConstant(object):
@@ -148,17 +148,27 @@ class _MutableConstant(object):
         self.con = None
 
     def update(self):
-        if self.con.equality or (self.con.has_lb() and self.con.has_ub()):
-            self.con.lb = value(self.expr)
-            self.con.ub = value(self.expr)
-        elif self.con.has_lb():
-            self.con.lb = value(self.expr)
-        elif self.con.has_ub():
-            self.con.ub = value(self.expr)
+        if isinstance(self.con, coptpy.Constraint):
+            lb = self.con.lb
+            ub = self.con.ub
+            # lb <= con <= ub
+            if lb > -coptpy.COPT.INFINITY and ub < +coptpy.COPT.INFINITY:
+                self.con.lb = value(self.expr)
+                self.con.ub = value(self.expr)
+            # con >= lb
+            elif lb > -coptpy.COPT.INFINITY and ub >= +coptpy.COPT.INFINITY:
+                self.con.lb = value(self.expr)
+            # con <= ub
+            elif lb <= -coptpy.COPT.INFINITY and ub < +coptpy.COPT.INFINITY:
+                self.con.ub = value(self.expr)
+            else:
+                raise ValueError(
+                    "Constraint does not has lower/upper bound: {0} \n".format(self.con)
+                )
+        elif isinstance(self.con, coptpy.QConstraint):
+            self.con.rhs = value(self.expr)
         else:
-            raise ValueError(
-                "Constraint does not has lower/upper bound: {0} \n".format(self.con)
-            )
+            raise TypeError("Unexpected constraint type")
 
 
 class _MutableQuadraticConstraint(object):
@@ -990,8 +1000,6 @@ class Copt(PersistentBase, PersistentSolver):
 
         if cons_to_load is None:
             cons_to_load = con_map.keys()
-        else:
-            cons_to_load = [id(con) for con in cons_to_load]
 
         copt_cons_to_load = [con_map[pyomo_con_id] for pyomo_con_id in cons_to_load]
         vals = list()
@@ -1018,8 +1026,6 @@ class Copt(PersistentBase, PersistentSolver):
 
         if cons_to_load is None:
             cons_to_load = con_map.keys()
-        else:
-            cons_to_load = [id(con) for con in cons_to_load]
 
         copt_cons_to_load = [con_map[pyomo_con_id] for pyomo_con_id in cons_to_load]
         vals = list()
