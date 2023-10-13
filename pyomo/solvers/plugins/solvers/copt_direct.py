@@ -405,6 +405,11 @@ class CoptDirect(DirectSolver):
             if extract_duals:
                 logger.warning("Cannot get duals for MIP.")
                 extract_duals = False
+        else:
+            if self._solver_model.lpstatus != coptpy.COPT.OPTIMAL:
+                extract_reduced_costs = False
+                extract_duals = False
+                extract_slacks = False
 
         self.results = SolverResults()
         soln = Solution()
@@ -627,7 +632,7 @@ class CoptDirect(DirectSolver):
                                 soln_constraints[name]['Slack'] = ub - val
                             else:
                                 soln_constraints[name]['Slack'] = (
-                                    ub - val if ub - val <= val - lb else lb - val
+                                    lb - val if val - lb > ub - val else ub - val
                                 )
                         # l_con >= lb
                         elif lb > -coptpy.COPT.INFINITY and ub >= +coptpy.COPT.INFINITY:
@@ -763,7 +768,7 @@ class CoptDirect(DirectSolver):
                     if lb == ub:
                         val = ub - slack
                     else:
-                        val = ub - slack if ub - slack <= slack - lb else lb - slack
+                        val = lb - slack if slack - lb > ub - slack else ub - slack
                 # copt_con >= lb
                 elif lb > -coptpy.COPT.INFINITY and ub >= +coptpy.COPT.INFINITY:
                     val = lb - slack

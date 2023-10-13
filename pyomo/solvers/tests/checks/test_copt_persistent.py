@@ -65,9 +65,9 @@ class TestCoptPersistent(unittest.TestCase):
         self.assertEqual(opt.get_model_attr('Rows'), 1)
         self.assertEqual(opt.get_model_attr('QConstrs'), 0)
 
-        self.assertEqual(opt.get_copt_param_info('FeasTol')[2], 1e-6)
+        self.assertEqual(opt.get_copt_param_info('FeasTol')[1], 1e-6)
         res = opt.solve(options={'FeasTol': '1e-7'})
-        self.assertEqual(opt.get_copt_param_info('FeasTol')[2], 1e-7)
+        self.assertEqual(opt.get_copt_param_info('FeasTol')[1], 1e-7)
         self.assertAlmostEqual(m.x.value, -0.4)
         self.assertAlmostEqual(m.y.value, 0.2)
 
@@ -117,7 +117,7 @@ class TestCoptPersistent(unittest.TestCase):
 
         opt = pyo.SolverFactory('copt_persistent')
         opt.set_instance(m)
-        self.assertEqual(opt._solver_model.getAttr('QConstrs'), 0)
+        self.assertEqual(opt._solver_model.getAttr('QConstrs'), 1)
 
         opt.remove_constraint(m.c1)
         self.assertEqual(opt._solver_model.getAttr('QConstrs'), 0)
@@ -136,13 +136,13 @@ class TestCoptPersistent(unittest.TestCase):
 
         opt = pyo.SolverFactory('copt_persistent')
         opt.set_instance(m)
-        self.assertEqual(opt._solver_model.getAttr('QConstrs'), 0)
+        self.assertEqual(opt._solver_model.getAttr('Rows'), 1)
 
         opt.remove_constraint(m.c2)
-        self.assertEqual(opt._solver_model.getAttr('QConstrs'), 0)
+        self.assertEqual(opt._solver_model.getAttr('Rows'), 0)
 
         opt.add_constraint(m.c2)
-        self.assertEqual(opt._solver_model.getAttr('QConstrs'), 1)
+        self.assertEqual(opt._solver_model.getAttr('Rows'), 1)
 
     @unittest.skipIf(not coptpy_available, "coptpy is not available")
     def test_update3(self):
@@ -173,12 +173,12 @@ class TestCoptPersistent(unittest.TestCase):
 
         opt = pyo.SolverFactory('copt_persistent')
         opt.set_instance(m)
-        self.assertEqual(opt._solver_model.getAttr('QConstrs'), 1)
+        self.assertEqual(opt._solver_model.getAttr('Rows'), 1)
         m.c2 = pyo.Constraint(expr=m.y >= m.x)
         opt.add_constraint(m.c2)
-        self.assertEqual(opt._solver_model.getAttr('QConstrs'), 1)
+        self.assertEqual(opt._solver_model.getAttr('Rows'), 2)
         opt.remove_constraint(m.c2)
-        self.assertEqual(opt._solver_model.getAttr('QConstrs'), 1)
+        self.assertEqual(opt._solver_model.getAttr('Rows'), 1)
 
     @unittest.skipIf(not coptpy_available, "coptpy is not available")
     def test_update5(self):
@@ -191,7 +191,7 @@ class TestCoptPersistent(unittest.TestCase):
 
         opt = pyo.SolverFactory('copt_persistent')
         opt.set_instance(m)
-        self.assertEqual(opt._solver_model.getAttr('Soss'), 0)
+        self.assertEqual(opt._solver_model.getAttr('Soss'), 1)
 
         opt.remove_sos_constraint(m.c1)
         self.assertEqual(opt._solver_model.getAttr('Soss'), 0)
@@ -225,7 +225,7 @@ class TestCoptPersistent(unittest.TestCase):
 
         opt = pyo.SolverFactory('copt_persistent')
         opt.set_instance(m)
-        self.assertEqual(opt._solver_model.getAttr('Cols'), 0)
+        self.assertEqual(opt._solver_model.getAttr('Cols'), 2)
 
         opt.remove_var(m.x)
         self.assertEqual(opt._solver_model.getAttr('Cols'), 1)

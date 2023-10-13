@@ -440,18 +440,19 @@ def test_solver_cases(*args):
             ]
         )
 
+        # TODO: Enable 'dual' suffix tests when duals for quad rows available too
         _test_solver_cases['copt_direct', 'python'] = initialize(
             name='copt_direct',
             io='python',
             capabilities=_copt_capabilities,
-            import_suffixes=['slack', 'dual', 'rc'],
+            import_suffixes=['slack', 'rc'],
         )
 
         _test_solver_cases['copt_persistent', 'python'] = initialize(
             name='copt_persistent',
             io='python',
             capabilities=_copt_capabilities,
-            import_suffixes=['slack', 'dual', 'rc'],
+            import_suffixes=['slack', 'rc'],
         )
 
         logging.disable(logging.NOTSET)

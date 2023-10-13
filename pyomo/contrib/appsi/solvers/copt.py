@@ -1044,7 +1044,7 @@ class Copt(PersistentBase, PersistentSolver):
                     if lb == ub:
                         val = ub - slack
                     else:
-                        val = ub - slack if ub - slack <= slack - lb else lb - slack
+                        val = lb - slack if slack - lb > ub - slack else ub - slack
                 # copt_con >= lb
                 elif lb > -coptpy.COPT.INFINITY and ub >= +coptpy.COPT.INFINITY:
                     val = lb - slack

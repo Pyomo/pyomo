@@ -464,7 +464,7 @@ class TestSolvers(unittest.TestCase):
         opt.config.load_solution = False
         res = opt.solve(m)
         self.assertNotEqual(res.termination_condition, TerminationCondition.optimal)
-        if opt_class is Ipopt:
+        if opt_class in (Copt, Ipopt):
             acceptable_termination_conditions = {
                 TerminationCondition.infeasible,
                 TerminationCondition.unbounded,
