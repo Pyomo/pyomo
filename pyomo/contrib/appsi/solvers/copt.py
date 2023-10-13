@@ -872,10 +872,13 @@ class Copt(PersistentBase, PersistentSolver):
         results.best_feasible_objective = None
         results.best_objective_bound = None
         if self._objective is not None:
-            if self._solver_model.ismip:
+            if self._solver_model.ismip and self._solver_model.hasmipsol:
                 results.best_feasible_objective = self._solver_model.objval
                 results.best_objective_bound = self._solver_model.bestbnd
-            else:
+            elif (
+                self._solver_model.ismip == 0
+                and results.termination_condition == TerminationCondition.optimal
+            ):
                 results.best_feasible_objective = self._solver_model.lpobjval
                 results.best_objective_bound = self._solver_model.lpobjval
             if results.best_feasible_objective is not None and not math.isfinite(
