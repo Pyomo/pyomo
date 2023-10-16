@@ -16,20 +16,11 @@
 #  the U.S. Government retains certain rights in this software.
 #  ___________________________________________________________________________
 
-import collections
 import inspect
-import sys
 from weakref import ref as weakref_ref
 
 from pyomo.common.errors import PyomoException
 from pyomo.common.deprecation import deprecated, deprecation_warning
-
-if sys.version_info[:2] >= (3, 7):
-    _deterministic_dict = dict
-else:
-    from pyomo.common.collections import OrderedDict
-
-    _deterministic_dict = OrderedDict
 
 
 class PluginGlobals(object):
@@ -206,7 +197,7 @@ class PluginMeta(type):
 
         # Register the new class with the interfaces
         for interface, inherit, service in implements:
-            interface._plugins[new_class] = _deterministic_dict()
+            interface._plugins[new_class] = {}
             interface._aliases.update({name: (new_class, doc) for name, doc in aliases})
 
         if _singleton:
