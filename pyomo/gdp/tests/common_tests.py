@@ -1865,3 +1865,15 @@ def check_transformed_model_pickles_with_dill(self, transformation):
     unpickle = dill.loads(dill.dumps(m))
 
     check_pprint_equal(self, m, unpickle)
+
+
+def check_nested_disjuncts_in_flat_gdp(self, transformation):
+    m = models.make_non_nested_model_declaring_Disjuncts_on_each_other()
+    TransformationFactory('gdp.%s' % transformation).apply_to(m)
+    SolverFactory('gurobi').solve(m)
+    self.assertAlmostEqual(value(m.obj), 1020)
+
+    # check the Boolean solution
+    for t in m.T:
+        self.assertTrue(value(m.disj1[t].indicator_var))
+        self.assertTrue(value(m.disj1[t].sub1.indicator_var))
