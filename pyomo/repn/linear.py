@@ -143,9 +143,11 @@ class LinearRepn(object):
         Notes
         -----
         This method assumes that the operator was "+". It is implemented
-        so that we can directly use a LinearRepn() as a data object in
-        the expression walker (thereby avoiding the function call for a
-        custom callback)
+        so that we can directly use a LinearRepn() as a `data` object in
+        the expression walker (thereby allowing us to use the default
+        implementation of acceptChildResult [which calls
+        `data.append()`] and avoid the function call for a custom
+        callback).
 
         """
         # Note that self.multiplier will always be 1 (we only call append()
@@ -158,6 +160,10 @@ class LinearRepn(object):
             return
 
         mult = other.multiplier
+        if not mult:
+            # 0 * other, so there is nothing to add/change about
+            # self.  We can just exit now.
+            return
         if other.constant:
             self.constant += mult * other.constant
         if other.linear:
@@ -622,6 +628,17 @@ def _before_monomial(visitor, child):
         except (ValueError, ArithmeticError):
             return True, None
 
+    # We want to check / update the var_map before processing "0"
+    # coefficients so that we are consistent with what gets added to the
+    # var_map (e.g., 0*x*y: y is processed by _before_var and will
+    # always be added, but x is processed here)
+    _id = id(arg2)
+    if _id not in visitor.var_map:
+        if arg2.fixed:
+            return False, (_CONSTANT, arg1 * visitor._eval_fixed(arg2))
+        visitor.var_map[_id] = arg2
+        visitor.var_order[_id] = len(visitor.var_order)
+
     # Trap multiplication by 0 and nan.
     if not arg1:
         if arg2.fixed:
@@ -636,12 +653,6 @@ def _before_monomial(visitor, child):
                 )
         return False, (_CONSTANT, arg1)
 
-    _id = id(arg2)
-    if _id not in visitor.var_map:
-        if arg2.fixed:
-            return False, (_CONSTANT, arg1 * visitor._eval_fixed(arg2))
-        visitor.var_map[_id] = arg2
-        visitor.var_order[_id] = len(visitor.var_order)
     ans = visitor.Result()
     ans.linear[_id] = arg1
     return False, (_LINEAR, ans)

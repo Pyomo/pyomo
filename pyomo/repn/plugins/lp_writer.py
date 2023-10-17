@@ -320,6 +320,30 @@ class _LPWriter_impl(object):
 
         timer.toc('Initialized column order', level=logging.DEBUG)
 
+        # We don't export any suffix information to the LP file
+        #
+        if component_map[Suffix]:
+            suffixesByName = {}
+            for block in component_map[Suffix]:
+                for suffix in block.component_objects(
+                    Suffix, active=True, descend_into=False, sort=sorter
+                ):
+                    if not suffix.export_enabled() or not suffix:
+                        continue
+                    name = suffix.local_name
+                    if name in suffixesByName:
+                        suffixesByName[name].append(suffix)
+                    else:
+                        suffixesByName[name] = [suffix]
+            for name, suffixes in suffixesByName.items():
+                n = len(suffixes)
+                plural = 's' if n > 1 else ''
+                logger.warning(
+                    f"EXPORT Suffix '{name}' found on {n} block{plural}:\n    "
+                    + "\n    ".join(s.name for s in suffixes)
+                    + "\nLP writer cannot export suffixes to LP files.  Skipping."
+                )
+
         ostream.write(f"\\* Source Pyomo model name={model.name} *\\\n\n")
 
         #
