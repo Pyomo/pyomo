@@ -11,6 +11,7 @@
 
 import pyomo.environ as pe
 from pyomo.contrib.alternative_solutions import aos_utils
+import pdb
 
 def obbt_analysis(model, variables='all', rel_opt_gap=None, abs_opt_gap=None, 
                   refine_discrete_bounds=False, warmstart=True, 

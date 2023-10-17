@@ -13,8 +13,10 @@ from itertools import product
 from math import ceil, floor
 
 import numpy as np
+from collections import Counter
 
 import pyomo.environ as pe
+import pdb
 
 # TODO: Add more test probelms as needed.
 '''
@@ -148,8 +150,8 @@ def get_triangle_ip():
     Simple 2d discrete problem where the feasible region looks like a 90-45-45
     right triangle and the optimal solutions fall along the hypotenuse.
     '''
-    m = pe.ConcreteModel()
     var_max = 5
+    m = pe.ConcreteModel()
     m.x = pe.Var(within=pe.NonNegativeIntegers, bounds=(0,var_max))
     m.y = pe.Var(within=pe.NonNegativeIntegers, bounds=(0,var_max))
     
@@ -163,6 +165,7 @@ def get_triangle_ip():
                 feasible_sols.append(((i, j), i + j))
     feasible_sols = sorted(feasible_sols, key=lambda sol: sol[1], reverse=True)
     m.feasible_sols = feasible_sols
+    m.num_ranked_solns = [6,5,4,3,2,1]
     
     return m
 
@@ -229,5 +232,51 @@ def get_aos_test_knapsack(var_max, weights, values, capacity_fraction):
         if np.dot(sol, weights) <= capacity:
             feasible_sols.append((sol, np.dot(sol, values)))
     feasible_sols = sorted(feasible_sols, key=lambda sol: sol[1], reverse=True)
-    print(feasible_sols)
+    return m
+
+def get_hexagonal_pyramid_mip():
+    ''' 
+    Pentagonal pyramid with integer coordinates in the first two dimensions and 
+    a third continuous dimension.
+
+    '''
+    var_max = 5
+    m = pe.ConcreteModel()
+    m.x = pe.Var(within=pe.Integers, bounds=(-var_max,var_max))
+    m.y = pe.Var(within=pe.Integers, bounds=(-var_max,var_max))
+    m.z = pe.Var(within=pe.NonNegativeReals, bounds=(0,var_max))
+    m.o = pe.Objective(expr=m.z, sense=pe.maximize)
+    base_points = np.array([[0, var_max, 0], [var_max, 0, 0], [var_max/2.0, -var_max, 0], [-var_max/2.0, -var_max, 0], [-var_max, 0, 0]])
+    apex_point = np.array([0, 0, var_max])
+
+    m.c = pe.ConstraintList()
+    for i in range(5):
+        vec_1 = base_points[i] - apex_point
+        vec_2 = base_points[(i+1) % var_max] - base_points[i]
+        n = np.cross(vec_1, vec_2)
+        m.c.add(n[0]*(m.x - apex_point[0]) + n[1]*(m.y - apex_point[1]) + n[2]*(m.z - apex_point[2]) >= 0)
+    m.num_ranked_solns = [1, 4, 2, 8, 2, 12, 4, 16, 4, 20]
+    return m
+
+def get_bloated_hexagonal_pyramid_mip():
+    ''' 
+    Pentagonal pyramid with integer coordinates in the first two dimensions and 
+    a third continuous dimension. Bounds are artificially widened for obbt testing purposes
+    '''
+    var_max = 5
+    m = pe.ConcreteModel()
+    m.x = pe.Var(within=pe.Integers, bounds=(-2*var_max, 2*var_max))
+    m.y = pe.Var(within=pe.Integers, bounds=(-2*var_max, var_max))
+    m.z = pe.Var(within=pe.NonNegativeReals, bounds=(0, 2*var_max))
+    m.var_bounds = pe.ComponentMap()
+    m.o = pe.Objective(expr=m.z, sense=pe.maximize)
+    base_points = np.array([[0, var_max, 0], [var_max, 0, 0], [var_max/2.0, -var_max, 0], [-var_max/2.0, -var_max, 0], [-var_max, 0, 0]])
+    apex_point = np.array([0, 0, var_max])
+
+    m.c = pe.ConstraintList()
+    for i in range(5):
+        vec_1 = base_points[i] - apex_point
+        vec_2 = base_points[(i+1) % var_max] - base_points[i]
+        n = np.cross(vec_1, vec_2)
+        m.c.add(n[0]*(m.x - apex_point[0]) + n[1]*(m.y - apex_point[1]) + n[2]*(m.z - apex_point[2]) >= 0)
     return m
