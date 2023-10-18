@@ -93,9 +93,6 @@ class TestPyomoEnviron(unittest.TestCase):
             )
 
     @unittest.skipIf(
-        sys.version_info[:2] < (3, 7), "Import timing introduced in python 3.7"
-    )
-    @unittest.skipIf(
         'pypy_version_info' in dir(sys), "PyPy does not support '-X importtime"
     )
     def test_tpl_import_time(self):

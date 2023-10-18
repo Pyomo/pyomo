@@ -9,13 +9,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import copy
 import itertools
 import logging
 import sys
 import builtins
+from contextlib import nullcontext
 
-from pyomo.common.backports import nullcontext
 from pyomo.common.errors import TemplateExpressionError
 from pyomo.core.expr.base import ExpressionBase, ExpressionArgs_Mixin, NPV_Mixin
 from pyomo.core.expr.logical_expr import BooleanExpression
