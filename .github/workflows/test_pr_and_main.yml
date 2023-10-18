@@ -350,12 +350,16 @@ jobs:
         echo "*** Install Pyomo dependencies ***"
         conda install --update-deps -q -y $CONDA_DEPENDENCIES || CONDA_INSTALL_ERR=1
         if test -n "$CONDA_INSTALL_ERR"; then
+            echo "WARNING: 'conda install' returned nonzero return code."
+            echo "Verifying packages:"
             CONDAENV=$(conda list)
             CONDA_INSTALL_ERR=
             for PKG in $CONDA_DEPENDENCIES; do
                 if test `echo "$CONDAENV" | grep "^$PKG " | wc -l` -eq 0; then
-                    echo "Conda dependency $PKG failed to install"
+                    echo "[FAIL] $PKG"
                     CONDA_INSTALL_ERR=1
+                else
+                    echo "[ OK ] $PKG"
                 fi
             done
             if test -n "$CONDA_INSTALL_ERR"; then
