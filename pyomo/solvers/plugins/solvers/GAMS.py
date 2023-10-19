@@ -250,6 +250,7 @@ class GAMSDirect(_GAMSSolver):
         self.available()
 
         from gams import GamsWorkspace, DebugLevel
+
         try:
             from gams import GamsExceptionExecution
         except ImportError:
