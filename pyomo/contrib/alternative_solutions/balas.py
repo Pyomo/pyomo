@@ -92,7 +92,8 @@ def enumerate_binary_solutions(model, num_solutions=10, variables='all',
     use_appsi = False
     if 'appsi' in solver:
         use_appsi = True
-        opt.update_config.check_for_new_or_removed_constraints = False
+        opt.update_config.update_constraints = False
+        opt.update_config.check_for_new_or_removed_constraints = True
         opt.update_config.check_for_new_or_removed_vars = False
         opt.update_config.check_for_new_or_removed_params = False
         opt.update_config.update_vars = False
@@ -109,7 +110,6 @@ def enumerate_binary_solutions(model, num_solutions=10, variables='all',
         else:
             opt.update_config.check_for_new_objective = False
             opt.update_config.update_objective = False           
-        opt.update_config.update_constraints = True
         
     print('Peforming initial solve of model.')
     results = opt.solve(model, tee=tee)

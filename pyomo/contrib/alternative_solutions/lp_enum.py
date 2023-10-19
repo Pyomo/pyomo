@@ -1,9 +1,13 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Dec  1 11:18:04 2022
-
-@author: jlgearh
-"""
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 import pyomo.environ as pe
 from pyomo.opt import SolverStatus, TerminationCondition
@@ -11,210 +15,134 @@ from pyomo.gdp.util import clone_without_expression_components
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 import aos_utils
     
-# TODO set the variable values at the end
-
-model = pe.ConcreteModel()
-
-model.x = pe.Var(within=pe.PercentFraction)
-model.y = pe.Var(within=pe.PercentFraction)
-
-
-model.obj = pe.Objective(expr=model.x+model.y, sense=pe.maximize)
-
-model.wx_limit = pe.Constraint(expr=model.x+model.y<=2)
-
-# model = pe.ConcreteModel()
-
-# model.w = pe.Var(within=pe.NonNegativeReals)
-# model.x = pe.Var(within=pe.Reals)
-# model.y = pe.Var(within=pe.PercentFraction)
-# model.z = pe.Var(within=pe.Reals, bounds=(0,1))
-
-
-# model.obj = pe.Objective(expr=model.w+model.x+model.y+model.z, sense=pe.maximize)
-
-# model.wx_limit = pe.Constraint(expr=model.w+model.x<=2)
-# model.wu_limit = pe.Constraint(expr=model.w<=1)
-# model.xl_limit = pe.Constraint(expr=model.x>=0)
-# model.xu_limit = pe.Constraint(expr=model.x<=1)
-
-# model.b = pe.Block()
-# model.b.yz_limit = pe.Constraint(expr=-model.y-model.z>=-2)
-# model.b.wy = pe.Constraint(expr=model.w+model.y==1)
-
-# model = pe.ConcreteModel()
-
-# model.w = pe.Var(within=pe.PercentFraction)
-# model.x = pe.Var(within=pe.PercentFraction)
-# model.y = pe.Var(within=pe.PercentFraction)
-# model.z = pe.Var(within=pe.PercentFraction)
-
-
-# model.obj = pe.Objective(expr=model.w+model.x+model.y+model.z, sense=pe.maximize)
-
-# model.wx_limit = pe.Constraint(expr=model.w+model.x<=2)
-
-
-# model.b = pe.Block()
-# model.b.yz_limit = pe.Constraint(expr=-model.y-model.z>=-2)
-# model.b.wy = pe.Constraint(expr=model.w+model.y==1)
-
-# Get a Pyomo concrete model
-
-
-# Get all continuous variables in the model and check that they have finite
-# bounds
-# TODO handle fixed variables
-model_vars = aos_utils.get_model_variables(model, 'all')
-model_var_names = {}
-model_var_names_bounds = {}
-for mv in model_vars:
-    assert mv.is_continuous, 'Variable {} is not continuous'.format(mv.name)
-    assert not (mv.lb is None and mv.ub is None)
-    var_name = mv.name
-    model_var_names[id(mv)] = var_name
-    model_var_names_bounds[var_name] = (0,mv.ub - mv.lb)
-
-canon_lp = aos_utils._add_aos_block(model, name='canon_lp')
-
-# Replace original variables with shifted lower and upper bound "s" variables 
-# TODO use unique names
-
-canon_lp.var_index = pe.Set(initialize=model_var_names_bounds.keys())
-
-canon_lp.var_lower = pe.Var(canon_lp.var_index, domain=pe.NonNegativeReals, 
-                            bounds=model_var_names_bounds)
-canon_lp.var_upper = pe.Var(canon_lp.var_index, domain=pe.NonNegativeReals, 
-                            bounds=model_var_names_bounds)
-
-def link_vars_rule(model, var_index):
-    return model.var_lower[var_index] + model.var_upper[var_index] == \
-        model.var_upper[var_index].ub
-canon_lp.link_vars = pe.Constraint(canon_lp.var_index, rule=link_vars_rule)
-
-var_lower_map = {}
-var_lower_bounds = {}
-for mv in model_vars:
-    var_lower_map[id(mv)] = canon_lp.var_lower[model_var_names[id(mv)]]
-    var_lower_bounds[id(mv)] = mv.lb
-
-# Substitue the new s variables into the objective function
-orig_objective = aos_utils._get_active_objective(model)
-c_var_lower = clone_without_expression_components(orig_objective.expr, 
-                                                  substitute=var_lower_map)
-c_fix_lower = clone_without_expression_components(orig_objective.expr, 
-                                                  substitute=var_lower_bounds)
-canon_lp.objective = pe.Objective(expr=c_var_lower + c_fix_lower,
-                                  name=orig_objective.name + '_shifted',
-                                  sense=orig_objective.sense)
-
-new_constraints = {}
-slacks = []
-for constraint in model.component_data_objects(pe.Constraint, active=None,
-                                               sort=False, 
-                                               descend_into=pe.Block,
-                                               descent_order=None):
-    if constraint.parent_block() == canon_lp:
-        continue
-    if constraint.equality:
-        constraint_name = constraint.name + '_equal'
-        new_constraints[constraint_name] = (constraint,0)
-    else:
-        if constraint.lb is not None:
-            constraint_name = constraint.name + '_lower'
-            new_constraints[constraint_name] = (constraint,-1)
-            slacks.append(constraint_name)
-        if constraint.ub is not None:
-            constraint_name = constraint.name + '_upper'
-            new_constraints[constraint_name] = (constraint,1)
-            slacks.append(constraint_name)
-canon_lp.constraint_index = pe.Set(initialize=new_constraints.keys())
-canon_lp.slack_index = pe.Set(initialize=slacks)
-canon_lp.slack_vars = pe.Var(canon_lp.slack_index, domain=pe.NonNegativeReals)
-canon_lp.constraints = pe.Constraint(canon_lp.constraint_index)
-
-constraint_map = {}
-constraint_bounds = {}
-
-def set_slack_ub(expression, slack_var):
-    slack_lb, slack_ub = compute_bounds_on_expr(expression)
-    assert slack_lb == 0 and slack_ub >= 0
-    slack_var.setub(slack_ub)
-                    
-for constraint_name, (constraint, constraint_type) in new_constraints.items():
-    
-    a_sub_var_lower = clone_without_expression_components(constraint.body, 
-                                                  substitute=var_lower_map)
-    a_sub_fix_lower = clone_without_expression_components(constraint.body, 
-                                                  substitute=var_lower_bounds)
-    b_lower = constraint.lb
-    b_upper = constraint.ub
-    if constraint_type == 0:
-        expression = a_sub_var_lower + a_sub_fix_lower - b_lower == 0     
-    elif constraint_type == -1:
-        expression_rhs = a_sub_var_lower + a_sub_fix_lower - b_lower
-        expression = canon_lp.slack_vars[constraint_name] == expression_rhs
-        set_slack_ub(expression_rhs, canon_lp.slack_vars[constraint_name])
-    elif constraint_type == 1:
-        expression_rhs = b_upper - a_sub_var_lower - a_sub_fix_lower
-        expression = canon_lp.slack_vars[constraint_name] == expression_rhs
-        set_slack_ub(expression_rhs, canon_lp.slack_vars[constraint_name])
-    canon_lp.constraints[constraint_name] = expression
-
-
-def enumerate_linear_solutions(model, max_solutions=10, variables='all', 
-                                rel_opt_gap=None, abs_gap=None,
-                                search_mode='optimal', already_solved=False,
-                                solver='cplex', solver_options={}, tee=False):
+def enumerate_linear_solutions(model, num_solutions=10, variables='all', 
+                               rel_opt_gap=None, abs_gap=None,
+                               search_mode='optimal', solver='cplex', 
+                               solver_options={}, tee=False):
     '''Finds alternative optimal solutions for a binary problem.
 
         Parameters
         ----------
         model : ConcreteModel
             A concrete Pyomo model
-        max_solutions : int or None
-            The maximum number of solutions to generate. None indictes no upper
-            limit. Note, using None could lead to a large number of solutions.
-        variables: 'all', None, Block, or a Collection of Pyomo components
-            The binary variables for which alternative solutions will be 
-            generated. 'all' or None indicates that all binary variables will 
-            be included.
+        num_solutions : int
+            The maximum number of solutions to generate.
+        variables: 'all' or a collection of Pyomo _GeneralVarData variables
+            The variables for which bounds will be generated. 'all' indicates 
+            that all variables will be included. Alternatively, a collection of
+            _GenereralVarData variables can be provided.
         rel_opt_gap : float or None
-            The relative optimality gap for allowable alternative solutions.
-            None indicates that a relative gap constraint will not be added to
-            the model.
-        abs_gap : float or None
-            The absolute optimality gap for allowable alternative solutions.
-            None indicates that an absolute gap constraint will not be added to
-            the model.
-        search_mode : 'optimal', 'random', or 'hamming'
+            The relative optimality gap for the original objective for which 
+            variable bounds will be found. None indicates that a relative gap 
+            constraint will not be added to the model.
+        abs_opt_gap : float or None
+            The absolute optimality gap for the original objective for which 
+            variable bounds will be found. None indicates that an absolute gap 
+            constraint will not be added to the model.
+        search_mode : 'optimal', 'random', or 'norm'
             Indicates the mode that is used to generate alternative solutions.
             The optimal mode finds the next best solution. The random mode
             finds an alternative solution in the direction of a random ray. The
-            hamming mode iteratively finds solution that maximize the hamming 
-            distance from previously discovered solutions.
-        already_solved : boolean
-            Indicates that the model has already been solved and that the 
-            alternative solution search can start from the current solution.
+            norm mode iteratively finds solution that maximize the L2 distance 
+            from previously discovered solutions.
         solver : string
-            The solver to be used for alternative solution search.
+            The solver to be used.
         solver_options : dict
             Solver option-value pairs to be passed to the solver.
         tee : boolean
-            Boolean indicating if the solver output should be displayed.
+            Boolean indicating that the solver output should be displayed.
             
         Returns
         -------
         solutions
-            A dictionary of alternative optimal solutions.
-            {solution_id: (objective_value,[variable, variable_value])}
+            A list of Solution objects.
+            [Solution]
     '''
-
-
-    # Find the maximum number of solutions to generate
-    num_solutions = aos_utils._get_max_solutions(max_solutions)
-    opt = aos_utils._get_solver(solver, solver_options)
-
+    print('STARTING LP ENUMERATION ANALYSIS')
+    
+    # For now keeping things simple
+    assert variables == 'all'
+    
+    assert search_mode in ['optimal', 'random', 'norm'], \
+        'search mode must be "optimal", "random", or "norm".'
+        
+    if variables == 'all':
+        all_variables = aos_utils.get_model_variables(model, 'all')
+    # else:
+    #     binary_variables = ComponentSet()
+    #     non_binary_variables = []
+    #     for var in variables:
+    #         if var.is_binary():
+    #             binary_variables.append(var)
+    #         else:
+    #             non_binary_variables.append(var.name)
+    #     if len(non_binary_variables) > 0:
+    #         print(('Warning: The following non-binary variables were included'
+    #                'in the variable list and will be ignored:'))
+    #         print(", ".join(non_binary_variables))
+    # all_variables = aos_utils.get_model_variables(model, 'all', 
+    #                                               include_fixed=True)
+    
+    for var in all_variables:
+        assert var.is_continuous(), 'Model must be an LP'
+    
+    orig_objective = aos_utils._get_active_objective(model)
+    
+    opt = pe.SolverFactory(solver)
+    for parameter, value in solver_options.items():
+        opt.options[parameter] = value
+        
+    use_appsi = False
+    # TODO Check all this once implemented
+    if 'appsi' in solver:
+        use_appsi = True
+        opt.update_config.check_for_new_or_removed_constraints = True
+        opt.update_config.update_constraints = False
+        opt.update_config.check_for_new_or_removed_vars = True
+        opt.update_config.check_for_new_or_removed_params = False
+        opt.update_config.update_vars = False
+        opt.update_config.update_params = False
+        opt.update_config.update_named_expressions = False
+        opt.update_config.treat_fixed_vars_as_params = False
+        
+        if search_mode == 'norm':
+            opt.update_config.check_for_new_objective = True
+            opt.update_config.update_objective = True
+        elif search_mode == 'random':
+            opt.update_config.check_for_new_objective = True
+            opt.update_config.update_objective = False   
+        else:
+            opt.update_config.check_for_new_objective = False
+            opt.update_config.update_objective = False
+        
+    print('Peforming initial solve of model.')
+    results = opt.solve(model, tee=tee)
+    status = results.solver.status
+    condition = results.solver.termination_condition
+    if condition != pe.TerminationCondition.optimal:
+        raise Exception(('LP enumeration analysis cannot be applied, '
+                         'SolverStatus = {}, '
+                         'TerminationCondition = {}').format(status.value, 
+                                                             condition.value))
+    
+    orig_objective_value = pe.value(orig_objective)
+    print('Found optimal solution, value = {}.'.format(orig_objective_value))
+    
+    aos_block = aos_utils._add_aos_block(model, name='_lp_enum')
+    print('Added block {} to the model.'.format(aos_block))
+    aos_utils._add_objective_constraint(aos_block, orig_objective, 
+                                        orig_objective_value, rel_opt_gap, 
+                                        abs_opt_gap)   
+    
+    canon_block = get_canonical_lp(model)    
+    
+   
+    solution_number = 2
+    
+    orig_objective.deactivate()
+    solutions = [solution.Solution(model, all_variables)]
+    
+    while solution_number <= num_solutions:
     model.iteration = pe.Set(dimen=1)
 
     model.basic_lower = pe.Var(pe.Any, domain=pe.Binary, dense=False)
