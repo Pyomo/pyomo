@@ -154,15 +154,15 @@ def _handle_tan(visitor, node, arg):
 
 
 def _handle_asin(visitor, node, arg):
-    return asin(*arg)
+    return asin(*arg, -inf, inf, visitor.feasibility_tol)
 
 
 def _handle_acos(visitor, node, arg):
-    return acos(*arg)
+    return acos(*arg, -inf, inf, visitor.feasibility_tol)
 
 
 def _handle_atan(visitor, node, arg):
-    return atan(*arg)
+    return atan(*arg, -inf, inf)
 
 
 def _handle_sqrt(visitor, node, arg):
