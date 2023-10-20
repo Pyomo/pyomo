@@ -210,6 +210,7 @@ def enumerate_linear_solutions(model, num_solutions=10, variables='all',
                         basic_var = basic_last_list[idx][var]
                         force_out_expr += basic_var
                         cb.link_in_out[var] = basic_var + binary_var[var] <= 1
+            cb.force_out = pe.Constraint(expr=force_out_expr >= 0)
             cb.cut_set[solution_number] = non_zero_basic_expr <= num_non_zero
             
             solution_number += 1
