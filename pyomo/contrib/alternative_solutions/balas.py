@@ -179,7 +179,8 @@ def enumerate_binary_solutions(model, num_solutions=10, variables='all',
             solution_number += 1
         elif (condition == pe.TerminationCondition.infeasibleOrUnbounded or 
               condition == pe.TerminationCondition.infeasible):
-            print("Iteration {}: Infeasible, no additional binary solutions.")
+            print("Iteration {}: Infeasible, no additional binary solutions.".\
+                  format(solution_number))
             break
         else:
             print(("Iteration {}: Unexpected condition, SolverStatus = {}, "

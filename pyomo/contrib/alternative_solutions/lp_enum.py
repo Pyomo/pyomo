@@ -10,16 +10,14 @@
 #  ___________________________________________________________________________
 
 import pyomo.environ as pe
-from pyomo.opt import SolverStatus, TerminationCondition
-from pyomo.gdp.util import clone_without_expression_components
-from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
-import aos_utils
+from pyomo.contrib.alternative_solutions import aos_utils, shifted_lp, solution
     
 def enumerate_linear_solutions(model, num_solutions=10, variables='all', 
-                               rel_opt_gap=None, abs_gap=None,
+                               rel_opt_gap=None, abs_opt_gap=None,
                                search_mode='optimal', solver='cplex', 
                                solver_options={}, tee=False):
-    '''Finds alternative optimal solutions for a binary problem.
+    '''
+    Finds alternative optimal solutions for a binary problem.
 
         Parameters
         ----------
@@ -58,9 +56,12 @@ def enumerate_linear_solutions(model, num_solutions=10, variables='all',
             A list of Solution objects.
             [Solution]
     '''
+    # TODO: Set this intelligently
+    zero_threshold = 1e-5
     print('STARTING LP ENUMERATION ANALYSIS')
     
     # For now keeping things simple
+    # TODO: Relax this
     assert variables == 'all'
     
     assert search_mode in ['optimal', 'random', 'norm'], \
@@ -83,11 +84,10 @@ def enumerate_linear_solutions(model, num_solutions=10, variables='all',
     # all_variables = aos_utils.get_model_variables(model, 'all', 
     #                                               include_fixed=True)
     
+    # TODO: Relax this if possible
     for var in all_variables:
         assert var.is_continuous(), 'Model must be an LP'
-    
-    orig_objective = aos_utils._get_active_objective(model)
-    
+
     opt = pe.SolverFactory(solver)
     for parameter, value in solver_options.items():
         opt.options[parameter] = value
@@ -120,11 +120,12 @@ def enumerate_linear_solutions(model, num_solutions=10, variables='all',
     status = results.solver.status
     condition = results.solver.termination_condition
     if condition != pe.TerminationCondition.optimal:
-        raise Exception(('LP enumeration analysis cannot be applied, '
-                         'SolverStatus = {}, '
+        raise Exception(('Model could not be solve. LP enumeration analysis '
+                         'cannot be applied, SolverStatus = {}, '
                          'TerminationCondition = {}').format(status.value, 
                                                              condition.value))
     
+    orig_objective = aos_utils._get_active_objective(model)
     orig_objective_value = pe.value(orig_objective)
     print('Found optimal solution, value = {}.'.format(orig_objective_value))
     
@@ -134,67 +135,95 @@ def enumerate_linear_solutions(model, num_solutions=10, variables='all',
                                         orig_objective_value, rel_opt_gap, 
                                         abs_opt_gap)   
     
-    canon_block = get_canonical_lp(model)    
-    
-   
-    solution_number = 2
-    
-    orig_objective.deactivate()
-    solutions = [solution.Solution(model, all_variables)]
-    
-    while solution_number <= num_solutions:
-    model.iteration = pe.Set(dimen=1)
+    canon_block = shifted_lp.get_shifted_linear_model(model)
+    cb = canon_block
+        
+    # Set K
+    cb.iteration = pe.Set(pe.PositiveIntegers)
 
-    model.basic_lower = pe.Var(pe.Any, domain=pe.Binary, dense=False)
-    model.basic_upper = pe.Var(pe.Any, domain=pe.Binary, dense=False)
-    model.basic_slack = pe.Var(pe.Any, domain=pe.Binary, dense=False)
+    # w variables
+    cb.basic_lower = pe.Var(pe.Any, domain=pe.Binary, dense=False)
+    cb.basic_upper = pe.Var(pe.Any, domain=pe.Binary, dense=False)
+    cb.basic_slack = pe.Var(pe.Any, domain=pe.Binary, dense=False)
   
-    model.bound_lower = pe.Constraint(pe.Any)
-    model.bound_upper = pe.Constraint(pe.Any)
-    model.bound_slack = pe.Constraint(pe.Any)
-    model.cut_set = pe.Constraint(pe.Any)
+    # w upper bounds constraints
+    cb.bound_lower = pe.Constraint(pe.Any)
+    cb.bound_upper = pe.Constraint(pe.Any)
+    cb.bound_slack = pe.Constraint(pe.Any)
     
-    variable_groups = [(model.var_lower, model.basic_lower, model.bound_lower),
-                       (model.var_upper, model.basic_upper, model.bound_upper),
-                       (model.slack_vars, model.basic_slack, model.bound_slack)]
+    # non-zero basic variable no-good cut set
+    cb.cut_set = pe.Constraint(pe.PositiveIntegers)
     
-    # Repeat until all solutions are found
+    variable_groups = [(cb.var_lower, cb.basic_lower, cb.bound_lower),
+                       (cb.var_upper, cb.basic_upper, cb.bound_upper),
+                       (cb.slack_vars, cb.basic_slack, cb.bound_slack)]
+
     solution_number = 1
-    solutions = {}
-    while solution_number < num_solutions:
-    
-        # Solve the model unless this is the first solution and the model was 
-        # not already solved
-        if solution_number > 1 or not already_solved:
-            print('Iteration: {}'.format(solution_number))
-            results = opt.solve(model, tee=tee)
-    
-        if (((results.solver.status == SolverStatus.ok) and
-        (results.solver.termination_condition == TerminationCondition.optimal))
-        or (already_solved and solution_number == 0)):
-            #objective_value = pe.value(orig_objective)
+    solutions = []    
+    while solution_number <= num_solutions:
+        print('Solving Iteration {}: '.format(solution_number), end='')
+        results = opt.solve(cb, tee=tee)
+        status = results.solver.status
+        condition = results.solver.termination_condition
+        if condition == pe.TerminationCondition.optimal:
+            for var, index in cb.var_map.items():
+                var.set_value(var.lb + cb.var_lower[index].value)
+            sol = solution.Solution(model, all_variables, 
+                                     objective=orig_objective)
+            solutions.append(sol)
+            orig_objective_value = sol.objective[1]
+            print('Solved, objective = {}'.format(orig_objective_value))
+            for var, index in cb.var_map.items():
+                print('{} = {}'.format(var.name, var.lb + cb.var_lower[index].value))
+            if hasattr(cb, 'force_out'):
+                cb.del_component('force_out')
+            if hasattr(cb, 'link_in_out'):
+                cb.del_component('link_in_out')
 
-            for variable in model.var_lower:
-                print('Var {} = {}'.format(variable, 
-                                         pe.value(model.var_lower[variable])))
-
-            expr = 1
-            num_non_zeros = 0
+            if hasattr(cb, 'basic_last_lower'):
+                cb.del_component('basic_last_lower')       
+            if hasattr(cb, 'basic_last_upper'):
+                cb.del_component('basic_last_upper')
+            if hasattr(cb, 'basic_last_slack'):
+                cb.del_component('basic_last_slack')
+                
+            cb.link_in_out = pe.Constraint(pe.Any)
+            cb.basic_last_lower = pe.Var(pe.Any, domain=pe.Binary, dense=False)
+            cb.basic_last_upper = pe.Var(pe.Any, domain=pe.Binary, dense=False)
+            cb.basic_last_slack = pe.Var(pe.Any, domain=pe.Binary, dense=False)
+            basic_last_list = [cb.basic_last_lower, cb.basic_last_upper, 
+                               cb.basic_last_slack]
             
-            for continuous_var, binary_var, constraint in variable_groups:
-                for variable in continuous_var:
-                    if pe.value(continuous_var[variable]) > 1e-5:
-                        if variable not in binary_var:
-                            model.basic_upper[variable]
-                        constraint[variable] = continuous_var[variable] <= \
-                            continuous_var[variable].ub * binary_var[variable]
-                        expr += binary_var[variable]
-                        num_non_zeros += 1
-            model.cut_set[solution_number] = expr <= num_non_zeros
+            num_non_zero = 0
+            force_out_expr = -1
+            non_zero_basic_expr = 1
+            for idx in range(len(variable_groups)):
+                continuous_var, binary_var, constraint = variable_groups[idx]
+                for var in continuous_var:
+                    if continuous_var[var].value > zero_threshold:
+                        num_non_zero += 1
+                        if var not in binary_var:
+                            binary_var[var]
+                            constraint[var] = continuous_var[var] <= \
+                                continuous_var[var].ub * binary_var[var]
+                        non_zero_basic_expr += binary_var[var]
+                        basic_var = basic_last_list[idx][var]
+                        force_out_expr += basic_var
+                        cb.link_in_out[var] = basic_var + binary_var[var] <= 1
+            cb.cut_set[solution_number] = non_zero_basic_expr <= num_non_zero
+            
             solution_number += 1
-            
-        else:
-            print('Algorithm Stopped. Solver Status: {}. Solver Condition: {}.'\
-                  .format(results.solver.status,
-                          results.solver.termination_condition))
+        elif (condition == pe.TerminationCondition.infeasibleOrUnbounded or 
+              condition == pe.TerminationCondition.infeasible):
+            print("Infeasible, all alternative solutions have been found.")
             break
+        else:
+            print(("Unexpected solver condition. Stopping LP enumeration. "
+                   "SolverStatus = {}, TerminationCondition = {}").format(
+                       status.value, condition.value))
+            break
+
+    aos_block.deactivate()
+    print('COMPLETED LP ENUMERATION ANALYSIS')
+    
+    return solutions

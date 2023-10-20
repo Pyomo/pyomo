@@ -145,6 +145,23 @@ def get_2d_unbounded_problem():
 
     return m
 
+def get_2d_degenerate_lp():
+    '''
+    Simple 2d problem that includes a redundant contraint such that three 
+    constraints are active at optimality.'''
+    m = pe.ConcreteModel()
+    
+    m.x = pe.Var(within=pe.Reals, bounds=(-1,3))
+    m.y = pe.Var(within=pe.Reals, bounds=(-3,2))
+    
+    m.obj = pe.Objective(expr=m.x+2*m.y, sense=pe.maximize)
+    
+    m.con1 = pe.Constraint(expr=m.x+m.y<=3)
+    m.con2 = pe.Constraint(expr=m.x+2*m.y<=5)
+    m.con3 = pe.Constraint(expr=m.x+m.y>=-1)
+    
+    return m
+
 def get_triangle_ip():
     ''' 
     Simple 2d discrete problem where the feasible region looks like a 90-45-45
