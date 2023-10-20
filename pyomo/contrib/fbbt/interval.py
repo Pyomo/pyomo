@@ -147,7 +147,7 @@ def power(xl, xu, yl, yu, feasibility_tol):
                 else:
                     lb = xl**y
                     ub = xu**y
-        else:
+        else: # xu is positive
             if y < 0:
                 if y % 2 == 0:
                     lb = min(xl**y, xu**y)
@@ -155,8 +155,9 @@ def power(xl, xu, yl, yu, feasibility_tol):
                 else:
                     lb = -inf
                     ub = inf
-            else:
+            else: # exponent is nonnegative
                 if y % 2 == 0:
+                    # xl is negative and xu is positive, so lb is 0
                     lb = 0
                     ub = max(xl**y, xu**y)
                 else:
@@ -321,7 +322,7 @@ def _inverse_power2(zl, zu, xl, xu, feasiblity_tol):
 def interval_abs(xl, xu):
     abs_xl = abs(xl)
     abs_xu = abs(xu)
-    if xl <= 0 <= xu:
+    if xl <= 0 and 0 <= xu:
         res_lb = 0
         res_ub = max(abs_xl, abs_xu)
     else:
