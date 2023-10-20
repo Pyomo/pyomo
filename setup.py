@@ -242,7 +242,12 @@ setup_kwargs = dict(
             # Note: matplotlib 3.6.1 has bug #24127, which breaks
             # seaborn's histplot (triggering parmest failures)
             'matplotlib!=3.6.1',
-            'networkx',  # network, incidence_analysis, community_detection
+            # network, incidence_analysis, community_detection
+            # Note: networkx 3.2 is Python>-3.9, but there is a broken
+            # 3.2 package on conda-forgethat will get implicitly
+            # installed on python 3.8
+            'networkx<3.2;python_version<3.9',
+            'networkx;python_version>=3.9',
             'numpy',
             'openpyxl',  # dataportals
             #'pathos',   # requested for #963, but PR currently closed
