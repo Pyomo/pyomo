@@ -169,7 +169,7 @@ def _handle_sqrt(visitor, node, arg):
     return power(*arg, 0.5, 0.5, feasibility_tol=visitor.feasibility_tol)
 
 
-def _handle_abs(visitor, node, arg):
+def _handle_AbsExpression(visitor, node, arg):
     return interval_abs(*arg)
 
 
@@ -197,7 +197,6 @@ _unary_function_dispatcher = {
     'acos': _handle_acos,
     'atan': _handle_atan,
     'sqrt': _handle_sqrt,
-    'abs': _handle_abs,
 }
 
 _operator_dispatcher = defaultdict(
@@ -205,6 +204,7 @@ _operator_dispatcher = defaultdict(
         ProductExpression: _handle_ProductExpression,
         DivisionExpression: _handle_DivisionExpression,
         PowExpression: _handle_PowExpression,
+        AbsExpression: _handle_AbsExpression,
         SumExpression: _handle_SumExpression,
         MonomialTermExpression: _handle_ProductExpression,
         NegationExpression: _handle_NegationExpression,
