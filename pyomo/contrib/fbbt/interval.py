@@ -33,7 +33,7 @@ def mul(xl, xu, yl, yu):
             lb = i
         if i > ub:
             ub = i
-        if i != i: # math.isnan(i)
+        if i != i:  # math.isnan(i)
             return (-inf, inf)
     return lb, ub
 
@@ -147,7 +147,7 @@ def power(xl, xu, yl, yu, feasibility_tol):
                 else:
                     lb = xl**y
                     ub = xu**y
-        else: # xu is positive
+        else:  # xu is positive
             if y < 0:
                 if y % 2 == 0:
                     lb = min(xl**y, xu**y)
@@ -155,7 +155,7 @@ def power(xl, xu, yl, yu, feasibility_tol):
                 else:
                     lb = -inf
                     ub = inf
-            else: # exponent is nonnegative
+            else:  # exponent is nonnegative
                 if y % 2 == 0:
                     # xl is negative and xu is positive, so lb is 0
                     lb = 0

@@ -91,8 +91,9 @@ def _prop_bnds_leaf_to_root_ProductExpression(visitor, node, arg1, arg2):
     """
     bnds_dict = visitor.bnds_dict
     if arg1 is arg2:
-        bnds_dict[node] = interval.power(*bnds_dict[arg1], 2, 2,
-                                         visitor.feasibility_tol)
+        bnds_dict[node] = interval.power(
+            *bnds_dict[arg1], 2, 2, visitor.feasibility_tol
+        )
     else:
         bnds_dict[node] = interval.mul(*bnds_dict[arg1], *bnds_dict[arg2])
 
@@ -1074,8 +1075,7 @@ class _FBBTVisitorLeafToRoot(StreamBasedExpressionVisitor):
     the expression tree (all the way to the root node).
     """
 
-    def __init__(self, integer_tol=1e-4, feasibility_tol=1e-8,
-                 ignore_fixed=False ):
+    def __init__(self, integer_tol=1e-4, feasibility_tol=1e-8, ignore_fixed=False):
         """
         Parameters
         ----------
@@ -1113,8 +1113,9 @@ class _FBBTVisitorLeafToRoot(StreamBasedExpressionVisitor):
     def walk_expression(self, expr, bnds_dict=None, leaf_bnds_dict=None):
         try:
             self.bnds_dict = bnds_dict if bnds_dict is not None else ComponentMap()
-            self.leaf_bnds_dict = leaf_bnds_dict if leaf_bnds_dict is not None else \
-                                  ComponentMap()
+            self.leaf_bnds_dict = (
+                leaf_bnds_dict if leaf_bnds_dict is not None else ComponentMap()
+            )
             super().walk_expression(expr)
             result = self.bnds_dict[expr]
         finally:
@@ -1130,7 +1131,7 @@ class _FBBTVisitorLeafToRoot(StreamBasedExpressionVisitor):
 #                  feasibility_tol=1e-8, ignore_fixed=False):
 #         if bnds_dict is None:
 #             bnds_dict = {}
-            
+
 
 class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
     """
@@ -1553,7 +1554,8 @@ def compute_bounds_on_expr(expr, ignore_fixed=False):
     ub: float
     """
     lb, ub = ExpressionBoundsVisitor(
-        use_fixed_var_values_as_bounds=not ignore_fixed).walk_expression(expr)
+        use_fixed_var_values_as_bounds=not ignore_fixed
+    ).walk_expression(expr)
     if lb == -interval.inf:
         lb = None
     if ub == interval.inf:

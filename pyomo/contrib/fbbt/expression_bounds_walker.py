@@ -12,8 +12,21 @@
 from collections import defaultdict
 from pyomo.common.collections import ComponentMap
 from pyomo.contrib.fbbt.interval import (
-    add, acos, asin, atan, cos, div, exp, interval_abs, log,
-    log10, mul, power, sin, sub, tan, 
+    add,
+    acos,
+    asin,
+    atan,
+    cos,
+    div,
+    exp,
+    interval_abs,
+    log,
+    log10,
+    mul,
+    power,
+    sin,
+    sub,
+    tan,
 )
 from pyomo.core.base.expression import _GeneralExpressionData, ScalarExpression
 from pyomo.core.expr.numeric_expr import (
@@ -27,7 +40,7 @@ from pyomo.core.expr.numeric_expr import (
     LinearExpression,
     SumExpression,
     ExternalFunctionExpression,
-) 
+)
 from pyomo.core.expr.numvalue import native_numeric_types, native_types, value
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 
@@ -49,7 +62,8 @@ def _before_var(visitor, child):
         if val is None:
             raise ValueError(
                 "Var '%s' is fixed to None. This value cannot be used to "
-                "calculate bounds." % child.name)
+                "calculate bounds." % child.name
+            )
         leaf_bounds[child] = (child.value, child.value)
     else:
         lb = value(child.lb)
@@ -200,7 +214,8 @@ _unary_function_dispatcher = {
 }
 
 _operator_dispatcher = defaultdict(
-    lambda: _handle_no_bounds, {
+    lambda: _handle_no_bounds,
+    {
         ProductExpression: _handle_ProductExpression,
         DivisionExpression: _handle_DivisionExpression,
         PowExpression: _handle_PowExpression,
@@ -212,19 +227,24 @@ _operator_dispatcher = defaultdict(
         LinearExpression: _handle_SumExpression,
         _GeneralExpressionData: _handle_named_expression,
         ScalarExpression: _handle_named_expression,
-    }
+    },
 )
+
 
 class ExpressionBoundsVisitor(StreamBasedExpressionVisitor):
     """
     Walker to calculate bounds on an expression, from leaf to root, with
     caching of terminal node bounds (Vars and Expressions)
     """
-    def __init__(self, leaf_bounds=None, feasibility_tol=1e-8,
-                 use_fixed_var_values_as_bounds=False):
+
+    def __init__(
+        self,
+        leaf_bounds=None,
+        feasibility_tol=1e-8,
+        use_fixed_var_values_as_bounds=False,
+    ):
         super().__init__()
-        self.leaf_bounds = leaf_bounds if leaf_bounds is not None \
-                           else ComponentMap()
+        self.leaf_bounds = leaf_bounds if leaf_bounds is not None else ComponentMap()
         self.feasibility_tol = feasibility_tol
         self.use_fixed_var_values_as_bounds = use_fixed_var_values_as_bounds
 
