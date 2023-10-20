@@ -168,18 +168,25 @@ class DependenciesCommand(Command):
     def _print_deps(self, deplist):
         class version_cmp(object):
             ver = tuple(map(int, platform.python_version_tuple()[:2]))
+
             def __lt__(self, other):
                 return self.ver < tuple(map(int, other.split('.')))
+
             def __le__(self, other):
                 return self.ver <= tuple(map(int, other.split('.')))
+
             def __gt__(self, other):
                 return not self.__le__(other)
+
             def __ge__(self, other):
                 return not self.__lt__(other)
+
             def __eq__(self, other):
                 return self.ver == tuple(map(int, other.split('.')))
+
             def __ne__(self, other):
                 return not self.__eq__(other)
+
         implementation_name = sys.implementation.name
         platform_system = platform.system()
         python_version = version_cmp()
