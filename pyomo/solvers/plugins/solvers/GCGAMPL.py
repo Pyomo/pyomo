@@ -68,10 +68,10 @@ class GCGAMPL(SystemCallSolver):
         self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.integer = True
-        self._capabilities.quadratic_objective = True
-        self._capabilities.quadratic_constraint = True
-        self._capabilities.sos1 = True
-        self._capabilities.sos2 = True
+        self._capabilities.quadratic_objective = False
+        self._capabilities.quadratic_constraint = False
+        self._capabilities.sos1 = False
+        self._capabilities.sos2 = False
 
     def _default_results_format(self, prob_format):
         return ResultsFormat.sol
@@ -203,7 +203,7 @@ class GCGAMPL(SystemCallSolver):
 
             options_dir = TempfileManager.create_tempdir()
             # Now write the new options file
-            with open(os.path.join(options_dir, 'scip.set'), 'w') as f:
+            with open(os.path.join(options_dir, 'gcg.set'), 'w') as f:
                 for line in of_opt:
                     f.write(line + "\n")
         else:

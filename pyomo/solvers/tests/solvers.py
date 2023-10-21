@@ -385,10 +385,6 @@ def test_solver_cases(*args):
             [
                 'linear',
                 'integer',
-                'quadratic_objective',
-                'quadratic_constraint',
-                'sos1',
-                'sos2',
             ]
         )
 
