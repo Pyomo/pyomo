@@ -1354,13 +1354,13 @@ class TestSolvers(unittest.TestCase):
 
             m.x.fix(1)
             res = opt.solve(m)
-            self.assertAlmostEqual(res.best_feasible_objective, 2, 5)
+            self.assertAlmostEqual(res.incumbent_objective, 2, 5)
 
             m.x.unfix()
             m.x.setlb(-9)
             m.x.setub(9)
             res = opt.solve(m)
-            self.assertAlmostEqual(res.best_feasible_objective, -18, 5)
+            self.assertAlmostEqual(res.incumbent_objective, -18, 5)
 
 
 @unittest.skipUnless(cmodel_available, 'appsi extensions are not available')

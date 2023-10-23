@@ -37,7 +37,7 @@ class TestBugs(unittest.TestCase):
         del m.c1
         m.p2.value = 2
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, -8)
+        self.assertAlmostEqual(res.incumbent_objective, -8)
 
     def test_mutable_params_with_remove_vars(self):
         m = pe.ConcreteModel()
@@ -59,14 +59,14 @@ class TestBugs(unittest.TestCase):
 
         opt = Highs()
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 1)
+        self.assertAlmostEqual(res.incumbent_objective, 1)
 
         del m.c1
         del m.c2
         m.p1.value = -9
         m.p2.value = 9
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, -9)
+        self.assertAlmostEqual(res.incumbent_objective, -9)
 
     def test_capture_highs_output(self):
         # tests issue #3003

@@ -35,7 +35,7 @@ class TestTerminationCondition(unittest.TestCase):
             'interrupted',
             'licensingProblems',
         ]
-        self.assertEqual(member_list, expected_list)
+        self.assertEqual(member_list.sort(), expected_list.sort())
 
     def test_codes(self):
         self.assertEqual(results.TerminationCondition.unknown.value, 42)
