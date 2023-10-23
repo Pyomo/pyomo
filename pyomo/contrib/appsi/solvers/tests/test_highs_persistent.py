@@ -94,7 +94,7 @@ class TestBugs(unittest.TestCase):
 
         model[-2:-1] = [
             'opt = Highs()',
-            'opt.config.stream_solver = True',
+            'opt.config.tee = True',
             'result = opt.solve(m)',
         ]
         with LoggingIntercept() as LOG, capture_output(capture_fd=True) as OUT:
