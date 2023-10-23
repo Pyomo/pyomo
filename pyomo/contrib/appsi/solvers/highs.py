@@ -342,13 +342,24 @@ class Highs(PersistentSolverUtils, PersistentSolverBase):
                 f'Solver {c.__module__}.{c.__qualname__} is not available '
                 f'({self.available()}).'
             )
-        self._reinit()
-        self._model = model
 
-        self._solver_model = highspy.Highs()
-        self.add_block(model)
-        if self._objective is None:
-            self.set_objective(None)
+
+        ostreams = [
+            LogStream(
+                level=self.config.log_level, logger=self.config.solver_output_logger
+            )
+        ]
+        if self.config.stream_solver:
+            ostreams.append(sys.stdout)
+        with TeeStream(*ostreams) as t:
+            with capture_output(output=t.STDOUT, capture_fd=True):
+                self._reinit()
+                self._model = model
+
+                self._solver_model = highspy.Highs()
+                self.add_block(model)
+                if self._objective is None:
+                    self.set_objective(None)
 
     def _add_constraints(self, cons: List[_GeneralConstraintData]):
         self._sol = None
@@ -454,10 +465,12 @@ class Highs(PersistentSolverUtils, PersistentSolverBase):
         for c in self._pyomo_con_to_solver_con_map.keys():
             new_con_map[c] = con_ndx
             con_ndx += 1
-        self._pyomo_con_to_solver_con_map = new_con_map
-        self._solver_con_to_pyomo_con_map = {
-            v: k for k, v in self._pyomo_con_to_solver_con_map.items()
-        }
+        self._pyomo_con_to_solver_con_map.clear()
+        self._pyomo_con_to_solver_con_map.update(new_con_map)
+        self._solver_con_to_pyomo_con_map.clear()
+        self._solver_con_to_pyomo_con_map.update(
+            {v: k for k, v in self._pyomo_con_to_solver_con_map.items()}
+        )
 
     def _remove_sos_constraints(self, cons: List[_SOSConstraintData]):
         if cons:
@@ -475,6 +488,7 @@ class Highs(PersistentSolverUtils, PersistentSolverBase):
             v_ndx = self._pyomo_var_to_solver_var_map.pop(v_id)
             indices_to_remove.append(v_ndx)
             self._mutable_bounds.pop(v_id, None)
+        indices_to_remove.sort()
         self._solver_model.deleteVars(
             len(indices_to_remove), np.array(indices_to_remove)
         )
@@ -483,7 +497,8 @@ class Highs(PersistentSolverUtils, PersistentSolverBase):
         for v_id in self._pyomo_var_to_solver_var_map.keys():
             new_var_map[v_id] = v_ndx
             v_ndx += 1
-        self._pyomo_var_to_solver_var_map = new_var_map
+        self._pyomo_var_to_solver_var_map.clear()
+        self._pyomo_var_to_solver_var_map.update(new_var_map)
 
     def _remove_params(self, params: List[_ParamData]):
         pass

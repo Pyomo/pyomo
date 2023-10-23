@@ -328,7 +328,7 @@ def _diff_GeneralExpression(node, val_dict, der_dict):
     val_dict: ComponentMap
     der_dict: ComponentMap
     """
-    der_dict[node.expr] += der_dict[node]
+    der_dict[node.arg(0)] += der_dict[node]
 
 
 def _diff_ExternalFunctionExpression(node, val_dict, der_dict):
