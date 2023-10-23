@@ -32,7 +32,7 @@ class TestBugs(unittest.TestCase):
 
         opt = Highs()
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 1)
+        self.assertAlmostEqual(res.incumbent_objective, 1)
 
         del m.c1
         m.p2.value = 2
