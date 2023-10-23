@@ -7,7 +7,6 @@ import pyomo.environ as pe
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tee import capture_output
 from pyomo.contrib.appsi.solvers.highs import Highs
-from pyomo.contrib.appsi.base import TerminationCondition
 
 
 opt = Highs()
