@@ -2,12 +2,12 @@
 Context Managers
 ================
 
-.. autoclass:: pyomo.core.expr.current.nonlinear_expression
+.. autoclass:: pyomo.core.expr.nonlinear_expression
     :members:
 
-.. autoclass:: pyomo.core.expr.current.linear_expression
+.. autoclass:: pyomo.core.expr.linear_expression
     :members:
 
-.. autoclass:: pyomo.core.expr.current.clone_counter
+.. autoclass:: pyomo.core.expr.clone_counter
     :members:
 

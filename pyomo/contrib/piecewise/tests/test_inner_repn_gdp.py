@@ -167,6 +167,7 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
         )
 
     @unittest.skipUnless(SolverFactory('gurobi').available(), 'Gurobi is not available')
+    @unittest.skipUnless(SolverFactory('gurobi').license_is_valid(), 'No license')
     def test_solve_disaggregated_convex_combo_model(self):
         m = models.make_log_x_model()
         TransformationFactory(

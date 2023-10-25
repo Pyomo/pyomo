@@ -458,3 +458,10 @@ def _generate_relational_expression(etype, lhs, rhs):
             )
     else:
         return InequalityExpression((lhs, rhs), _relational_op[etype][2])
+
+
+def tuple_to_relational_expr(args):
+    if len(args) == 2:
+        return EqualityExpression(args)
+    else:
+        return inequality(*args)

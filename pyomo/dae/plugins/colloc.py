@@ -462,8 +462,6 @@ class Collocation_Discretization_Transformation(Transformation):
 
         self._transformBlock(instance, currentds)
 
-        return instance
-
     def _transformBlock(self, block, currentds):
         self._fe = {}
         for ds in block.component_objects(ContinuousSet, descend_into=True):

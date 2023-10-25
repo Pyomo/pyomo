@@ -778,6 +778,9 @@ def _finalize_matplotlib(module, available):
 def _finalize_numpy(np, available):
     if not available:
         return
+    # Register ndarray as a native type to prevent 1-element ndarrays
+    # from accidentally registering ndarray as a native_numeric_type.
+    numeric_types.native_types.add(np.ndarray)
     numeric_types.RegisterLogicalType(np.bool_)
     for t in (
         np.int_,
@@ -797,12 +800,30 @@ def _finalize_numpy(np, available):
         # registration here (to bypass the deprecation warning) until we
         # finally remove all support for it
         numeric_types._native_boolean_types.add(t)
-    for t in (np.float_, np.float16, np.float32, np.float64):
+    _floats = [np.float_, np.float16, np.float32, np.float64]
+    # float96 and float128 may or may not be defined in this particular
+    # numpy build (it depends on platform and version).
+    # Register them only if they are present
+    if hasattr(np, 'float96'):
+        _floats.append(np.float96)
+    if hasattr(np, 'float128'):
+        _floats.append(np.float128)
+    for t in _floats:
         numeric_types.RegisterNumericType(t)
         # We have deprecated RegisterBooleanType, so we will mock up the
         # registration here (to bypass the deprecation warning) until we
         # finally remove all support for it
         numeric_types._native_boolean_types.add(t)
+    _complex = [np.complex_, np.complex64, np.complex128]
+    # complex192 and complex256 may or may not be defined in this
+    # particular numpy build (it depends on platform and version).
+    # Register them only if they are present
+    if hasattr(np, 'complex192'):
+        _complex.append(np.complex192)
+    if hasattr(np, 'complex256'):
+        _complex.append(np.complex256)
+    for t in _complex:
+        numeric_types.RegisterComplexType(t)
 
 
 dill, dill_available = attempt_import('dill')

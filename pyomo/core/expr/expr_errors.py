@@ -14,6 +14,6 @@ from pyomo.common.deprecation import relocated_module_attribute
 relocated_module_attribute(
     'TemplateExpressionError',
     'pyomo.common.errors.TemplateExpressionError',
-    version='6.6.2.dev0',
+    version='6.6.2',
     f_globals=globals(),
 )
