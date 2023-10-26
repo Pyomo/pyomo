@@ -350,8 +350,6 @@ class CyIpoptNLP(CyIpoptProblemInterface):
             self._set_primals_if_necessary(x)
             return self._nlp.evaluate_objective()
         except PyNumeroEvaluationError:
-            # TODO: halt_on_evaluation_error option. If set, we re-raise the
-            # original exception.
             if self._halt_on_evaluation_error:
                 raise
             else:
