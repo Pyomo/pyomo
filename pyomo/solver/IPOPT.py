@@ -84,11 +84,11 @@ class IPOPT(SolverBase):
 
     @property
     def config(self):
-        return self._config
+        return self.config
 
     @config.setter
     def config(self, val):
-        self._config = val
+        self.config = val
 
     def solve(self, model, **kwds):
         # Check if solver is available
