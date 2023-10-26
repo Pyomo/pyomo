@@ -61,7 +61,7 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
             # Add the disjunction
             transBlock.disj = self._get_disjunction(choices, transBlock, pw_expr, transBlock)
 
-        # Widen bounds as determined when setting up the disjunction
+        # Set bounds as determined when setting up the disjunction
         if self.substitute_var_lb < float('inf'):
             transBlock.substitute_var.setlb(self.substitute_var_lb)
         if self.substitute_var_ub > -float('inf'):

@@ -101,7 +101,7 @@ class IncrementalInnerGDPTransformation(PiecewiseLinearToGDP):
         # Set up the binary y_i variables, which interleave with the delta_i^j in
         # an odd way
         transBlock.y_binaries = Var(
-            transBlock.simplex_indices,
+            transBlock.simplex_indices_except_last,
             domain=Binary
         )
 
