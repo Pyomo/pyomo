@@ -56,7 +56,7 @@ class IncrementalInnerGDPTransformation(PiecewiseLinearToGDP):
         # which is dimension + 1
         transBlock.simplex_point_indices = RangeSet(0, dimension)
         transBlock.nonzero_simplex_point_indices = RangeSet(1, dimension)
-        transBlock.last_simplex_point_index = Param(dimension)
+        transBlock.last_simplex_point_index = Param(initialize=dimension)
 
 
         # Ordering of simplices to follow Vielma
@@ -67,11 +67,11 @@ class IncrementalInnerGDPTransformation(PiecewiseLinearToGDP):
 
         # Enumeration of simplices: map from simplex number to correct simplex object
         self.idx_to_simplex = {
-            n: simplices[m] for n, m in self.simplex_ordering
+            n: simplices[m] for n, m in self.simplex_ordering.items()
         }
         # Associate simplex indices with correct linear functions
         self.idx_to_lin_func = {
-            n: pw_linear_func._linear_functions[m] for n, m in self.simplex_ordering
+            n: pw_linear_func._linear_functions[m] for n, m in self.simplex_ordering.items()
         }
 
         # For each individual simplex, the points need to be permuted in a way that
@@ -83,7 +83,7 @@ class IncrementalInnerGDPTransformation(PiecewiseLinearToGDP):
         }
 
         # Inital vertex (v_0^0 in Vielma)
-        self.initial_vertex = pw_linear_func._points[self.index_to_simplex[0][self.vertex_ordering[0, 0]]]
+        self.initial_vertex = pw_linear_func._points[self.idx_to_simplex[0][self.vertex_ordering[0, 0]]]
 
         # delta_i^j = delta[simplex][point]
         transBlock.delta = Var(
@@ -128,8 +128,8 @@ class IncrementalInnerGDPTransformation(PiecewiseLinearToGDP):
                 self.initial_vertex[n] + sum(
                     sum(
                         # delta_i^j * (v_i^j - v_i^0)
-                        transBlock.delta[i, j] * (pw_linear_func._points[self.index_to_simplex[i][self.vertex_ordering[i, j]]][n]
-                                                - pw_linear_func._points[self.index_to_simplex[i][self.vertex_ordering[i, 0]]][n])
+                        transBlock.delta[i, j] * (pw_linear_func._points[self.idx_to_simplex[i][self.vertex_ordering[i, j]]][n]
+                                                - pw_linear_func._points[self.idx_to_simplex[i][self.vertex_ordering[i, 0]]][n])
                         for j in transBlock.nonzero_simplex_point_indices
                     )
                     for i in transBlock.simplex_indices
@@ -142,8 +142,8 @@ class IncrementalInnerGDPTransformation(PiecewiseLinearToGDP):
             == self.idx_to_lin_func[0](*self.initial_vertex) + sum(
                     sum(
                         # delta_i^j * (f(v_i^j) - f(v_i^0))
-                        transBlock.delta[i, j] * (self.idx_to_lin_func[i](*pw_linear_func._points[self.index_to_simplex[i][self.vertex_ordering[i, j]]])
-                                                - self.idx_to_lin_func[i](*pw_linear_func._points[self.index_to_simplex[i][self.vertex_ordering[i, 0]]]))
+                        transBlock.delta[i, j] * (self.idx_to_lin_func[i](*pw_linear_func._points[self.idx_to_simplex[i][self.vertex_ordering[i, j]]])
+                                                - self.idx_to_lin_func[i](*pw_linear_func._points[self.idx_to_simplex[i][self.vertex_ordering[i, 0]]]))
                         for j in transBlock.nonzero_simplex_point_indices
                     )
                     for i in transBlock.simplex_indices
