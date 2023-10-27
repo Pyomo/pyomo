@@ -173,12 +173,11 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         # this map!
         with PauseGC():
             try:
-                self._leaf_bnds_dict = ComponentMap()
                 self._apply_to_impl(instance, **kwds)
             finally:
                 self._restore_state()
                 self.used_args.clear()
-                self._leaf_bnds_dict = ComponentMap()
+                self._expr_bound_visitor.leaf_bounds.clear()
                 self._expr_bound_visitor.use_fixed_var_values_as_bounds = False
 
     def _apply_to_impl(self, instance, **kwds):

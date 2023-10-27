@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.gdp import GDP_Error
-from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.common.collections import ComponentSet
 from pyomo.contrib.fbbt.expression_bounds_walker import ExpressionBoundsVisitor
 import pyomo.contrib.fbbt.interval as interval
 from pyomo.core import Suffix
@@ -105,7 +105,6 @@ class _BigM_MixIn(object):
         return arg_list
 
     def _set_up_expr_bound_visitor(self):
-        # bnds_dict = ComponentMap()
         # we assume the default config arg for 'assume_fixed_vars_permanent,`
         # and we will change it during apply_to if we need to
         self._expr_bound_visitor = ExpressionBoundsVisitor(
