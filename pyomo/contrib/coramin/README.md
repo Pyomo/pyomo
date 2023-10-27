@@ -25,7 +25,7 @@ filtering techniques.
 ### [Carl Laird](https://github.com/carldlaird)
 - Parallel OBBT
 - McCormick and piecewise McCormick relaxations for bilinear terms
-- Relaxations for univariate convex/concave fucntions
+- Relaxations for univariate convex/concave functions
 
 ### [Anya Castillo](https://github.com/anyacastillo)
 - Relaxation classes

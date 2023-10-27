@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 def compute_k_segment_points(v, k):
     """
-    Return a list of points that generats k segments between v.lb and v.ub
+    Return a list of points that generates k segments between v.lb and v.ub
 
     Parameters
     ----------

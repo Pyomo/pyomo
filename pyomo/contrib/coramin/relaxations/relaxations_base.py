@@ -703,7 +703,7 @@ class BasePWRelaxationData(BaseRelaxationData):
         BaseRelaxationData.__init__(self, component)
 
         self._partitions = ComponentMap()  # ComponentMap: var: list of float
-        self._saved_partitions = list()  # list of CompnentMap
+        self._saved_partitions = list()  # list of ComponentMap
 
     def rebuild(self, build_nonlinear_constraint=False, ensure_oa_at_vertices=True):
         """
