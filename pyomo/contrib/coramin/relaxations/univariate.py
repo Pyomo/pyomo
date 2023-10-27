@@ -302,9 +302,9 @@ def pw_sin_relaxation(
         OE_tangent_intercept,
     ) = _compute_sine_overestimator_tangent_point(xlb)
     (
-        UE_tangent_x,
-        UE_tangent_slope,
-        UE_tangent_intercept,
+        ue_tangent_x,
+        ue_tangent_slope,
+        ue_tangent_intercept,
     ) = _compute_sine_underestimator_tangent_point(xub)
     non_piecewise_overestimators_pts = []
     non_piecewise_underestimator_pts = []
@@ -319,11 +319,11 @@ def pw_sin_relaxation(
             )
             x_pts = new_x_pts
     elif relaxation_side == RelaxationSide.UNDER:
-        if UE_tangent_x > xlb:
+        if ue_tangent_x > xlb:
             new_x_pts = [xlb]
-            new_x_pts.extend(i for i in x_pts if i > UE_tangent_x)
-            non_piecewise_underestimator_pts = [i for i in x_pts if i < UE_tangent_x]
-            non_piecewise_underestimator_pts.append(UE_tangent_x)
+            new_x_pts.extend(i for i in x_pts if i > ue_tangent_x)
+            non_piecewise_underestimator_pts = [i for i in x_pts if i < ue_tangent_x]
+            non_piecewise_underestimator_pts.append(ue_tangent_x)
             x_pts = new_x_pts
 
     b.non_piecewise_overestimators = pyo.ConstraintList()
@@ -498,9 +498,9 @@ def pw_arctan_relaxation(
         OE_tangent_intercept,
     ) = _compute_arctan_overestimator_tangent_point(xlb)
     (
-        UE_tangent_x,
-        UE_tangent_slope,
-        UE_tangent_intercept,
+        ue_tangent_x,
+        ue_tangent_slope,
+        ue_tangent_intercept,
     ) = _compute_arctan_underestimator_tangent_point(xub)
     non_piecewise_overestimators_pts = []
     non_piecewise_underestimator_pts = []
@@ -515,11 +515,11 @@ def pw_arctan_relaxation(
             )
             x_pts = new_x_pts
     elif relaxation_side == RelaxationSide.UNDER:
-        if UE_tangent_x > xlb:
+        if ue_tangent_x > xlb:
             new_x_pts = [xlb]
-            new_x_pts.extend(i for i in x_pts if i > UE_tangent_x)
-            non_piecewise_underestimator_pts = [i for i in x_pts if i < UE_tangent_x]
-            non_piecewise_underestimator_pts.append(UE_tangent_x)
+            new_x_pts.extend(i for i in x_pts if i > ue_tangent_x)
+            non_piecewise_underestimator_pts = [i for i in x_pts if i < ue_tangent_x]
+            non_piecewise_underestimator_pts.append(ue_tangent_x)
             x_pts = new_x_pts
 
     b.non_piecewise_overestimators = pyo.ConstraintList()
