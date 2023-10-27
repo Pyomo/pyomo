@@ -317,7 +317,8 @@ _unary_leaf_to_root_map = defaultdict(
         'atan': _prop_bnds_leaf_to_root_atan,
         'sqrt': _prop_bnds_leaf_to_root_sqrt,
         'abs': _prop_bnds_leaf_to_root_abs,
-    })
+    },
+)
 
 
 def _prop_bnds_leaf_to_root_UnaryFunctionExpression(visitor, node, arg):
@@ -1062,8 +1063,9 @@ class _FBBTVisitorLeafToRoot(StreamBasedExpressionVisitor):
     the expression tree (all the way to the root node).
     """
 
-    def __init__(self, bnds_dict, integer_tol=1e-4, feasibility_tol=1e-8,
-                 ignore_fixed=False):
+    def __init__(
+        self, bnds_dict, integer_tol=1e-4, feasibility_tol=1e-8, ignore_fixed=False
+    ):
         """
         Parameters
         ----------
@@ -1263,8 +1265,9 @@ def _fbbt_con(con, config):
     )  # a dictionary to store the bounds of every node in the tree
 
     # a walker to propagate bounds from the variables to the root
-    visitorA = _FBBTVisitorLeafToRoot(bnds_dict=bnds_dict,
-                                      feasibility_tol=config.feasibility_tol)
+    visitorA = _FBBTVisitorLeafToRoot(
+        bnds_dict=bnds_dict, feasibility_tol=config.feasibility_tol
+    )
     visitorA.walk_expression(con.body)
 
     # Now we need to replace the bounds in bnds_dict for the root
