@@ -207,7 +207,7 @@ class PWMcCormickRelaxationData(BasePWRelaxationData):
         x2 : pyomo.core.base.var._GeneralVarData
             The "x2" variable in x1*x2
         aux_var : pyomo.core.base.var._GeneralVarData
-            The "aux_var" auxillary variable that is replacing x1*x2
+            The "aux_var" auxiliary variable that is replacing x1*x2
         relaxation_side : minlp.minlp_defn.RelaxationSide
             Provide the desired side for the relaxation (OVER, UNDER, or BOTH)
         """
@@ -242,7 +242,7 @@ class PWMcCormickRelaxationData(BasePWRelaxationData):
         x2 : pyomo.core.base.var._GeneralVarData
             The "x2" variable in x1*x2
         aux_var : pyomo.core.base.var._GeneralVarData
-            The "aux_var" auxillary variable that is replacing x1*x2
+            The "aux_var" auxiliary variable that is replacing x1*x2
         relaxation_side : minlp.minlp_defn.RelaxationSide
             Provide the desired side for the relaxation (OVER, UNDER, or BOTH)
         """

@@ -180,7 +180,7 @@ def _pw_univariate_relaxation(
     f_x_expr: pyomo expression
         An expression for f(x)
     pw_repn: str
-        This must be one of the valid strings for the peicewise representation to use (directly from the Piecewise
+        This must be one of the valid strings for the piecewise representation to use (directly from the Piecewise
         component). Use help(Piecewise) to learn more.
     shape: FunctionShape
         Specify the shape of the function. Valid values are minlp.FunctionShape.CONVEX or minlp.FunctionShape.CONCAVE
@@ -268,7 +268,7 @@ def pw_sin_relaxation(
         The "x" variable in sin(x). The lower bound on x must greater than or equal to
         -pi/2 and the upper bound on x must be less than or equal to pi/2.
     w: pyomo.core.base.var.SimpleVar or pyomo.core.base.var._GeneralVarData
-        The auxillary variable replacing sin(x)
+        The auxiliary variable replacing sin(x)
     x_pts: Sequence[float]
         A list of floating point numbers to define the points over which the piecewise
         representation will be generated. This list must be ordered, and it is expected
@@ -302,9 +302,9 @@ def pw_sin_relaxation(
         OE_tangent_intercept,
     ) = _compute_sine_overestimator_tangent_point(xlb)
     (
-        ue_tangent_x,
-        ue_tangent_slope,
-        ue_tangent_intercept,
+        under_estimator_tangent_x,
+        under_estimator_tangent_slope,
+        under_estimator_tangent_intercept,
     ) = _compute_sine_underestimator_tangent_point(xub)
     non_piecewise_overestimators_pts = []
     non_piecewise_underestimator_pts = []
@@ -319,11 +319,13 @@ def pw_sin_relaxation(
             )
             x_pts = new_x_pts
     elif relaxation_side == RelaxationSide.UNDER:
-        if ue_tangent_x > xlb:
+        if under_estimator_tangent_x > xlb:
             new_x_pts = [xlb]
-            new_x_pts.extend(i for i in x_pts if i > ue_tangent_x)
-            non_piecewise_underestimator_pts = [i for i in x_pts if i < ue_tangent_x]
-            non_piecewise_underestimator_pts.append(ue_tangent_x)
+            new_x_pts.extend(i for i in x_pts if i > under_estimator_tangent_x)
+            non_piecewise_underestimator_pts = [
+                i for i in x_pts if i < under_estimator_tangent_x
+            ]
+            non_piecewise_underestimator_pts.append(under_estimator_tangent_x)
             x_pts = new_x_pts
 
     b.non_piecewise_overestimators = pyo.ConstraintList()
@@ -466,7 +468,7 @@ def pw_arctan_relaxation(
         The "x" variable in sin(x). The lower bound on x must greater than or equal to
         -pi/2 and the upper bound on x must be less than or equal to pi/2.
     w: pyomo.core.base.var.SimpleVar or pyomo.core.base.var._GeneralVarData
-        The auxillary variable replacing sin(x)
+        The auxiliary variable replacing sin(x)
     x_pts: Sequence[float]
         A list of floating point numbers to define the points over which the piecewise
         representation will be generated. This list must be ordered, and it is expected
@@ -498,9 +500,9 @@ def pw_arctan_relaxation(
         OE_tangent_intercept,
     ) = _compute_arctan_overestimator_tangent_point(xlb)
     (
-        ue_tangent_x,
-        ue_tangent_slope,
-        ue_tangent_intercept,
+        under_estimator_tangent_x,
+        under_estimator_tangent_slope,
+        under_estimator_tangent_intercept,
     ) = _compute_arctan_underestimator_tangent_point(xub)
     non_piecewise_overestimators_pts = []
     non_piecewise_underestimator_pts = []
@@ -515,11 +517,13 @@ def pw_arctan_relaxation(
             )
             x_pts = new_x_pts
     elif relaxation_side == RelaxationSide.UNDER:
-        if ue_tangent_x > xlb:
+        if under_estimator_tangent_x > xlb:
             new_x_pts = [xlb]
-            new_x_pts.extend(i for i in x_pts if i > ue_tangent_x)
-            non_piecewise_underestimator_pts = [i for i in x_pts if i < ue_tangent_x]
-            non_piecewise_underestimator_pts.append(ue_tangent_x)
+            new_x_pts.extend(i for i in x_pts if i > under_estimator_tangent_x)
+            non_piecewise_underestimator_pts = [
+                i for i in x_pts if i < under_estimator_tangent_x
+            ]
+            non_piecewise_underestimator_pts.append(under_estimator_tangent_x)
             x_pts = new_x_pts
 
     b.non_piecewise_overestimators = pyo.ConstraintList()
@@ -712,7 +716,7 @@ class PWUnivariateRelaxationData(BasePWRelaxationData):
         x: pyomo.core.base.var._GeneralVarData
             The "x" variable in aux_var = f(x).
         aux_var: pyomo.core.base.var._GeneralVarData
-            The auxillary variable replacing f(x)
+            The auxiliary variable replacing f(x)
         shape: FunctionShape
             Options are FunctionShape.CONVEX and FunctionShape.CONCAVE
         f_x_expr: pyomo expression
@@ -760,7 +764,7 @@ class PWUnivariateRelaxationData(BasePWRelaxationData):
         x: pyomo.core.base.var._GeneralVarData
             The "x" variable in aux_var = f(x).
         aux_var: pyomo.core.base.var._GeneralVarData
-            The auxillary variable replacing f(x)
+            The auxiliary variable replacing f(x)
         shape: FunctionShape
             Options are FunctionShape.CONVEX and FunctionShape.CONCAVE
         f_x_expr: pyomo expression
@@ -997,7 +1001,7 @@ class CustomUnivariateBaseRelaxationData(PWUnivariateRelaxationData):
         x: pyomo.core.base.var._GeneralVarData
             The "x" variable in aux_var = f(x).
         aux_var: pyomo.core.base.var._GeneralVarData
-            The auxillary variable replacing f(x)
+            The auxiliary variable replacing f(x)
         pw_repn: str
             This must be one of the valid strings for the piecewise representation to use (directly from the Piecewise
             component). Use help(Piecewise) to learn more.
@@ -1036,7 +1040,7 @@ class CustomUnivariateBaseRelaxationData(PWUnivariateRelaxationData):
         x: pyomo.core.base.var._GeneralVarData
             The "x" variable in aux_var = f(x).
         aux_var: pyomo.core.base.var._GeneralVarData
-            The auxillary variable replacing f(x)
+            The auxiliary variable replacing f(x)
         pw_repn: str
             This must be one of the valid strings for the piecewise representation to use (directly from the Piecewise
             component). Use help(Piecewise) to learn more.

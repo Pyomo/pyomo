@@ -478,7 +478,7 @@ def _refine_partition(
 
         if not correct_structure:
             logger.info(
-                f'Constriant {str(c)} is contributing to {count} removed '
+                f'Constraint {str(c)} is contributing to {count} removed '
                 f'edges, but we cannot split the constraint because some of '
                 f'the terms in the SumExpression contain variables from both '
                 f'partitions.'
@@ -793,7 +793,7 @@ def num_cons_in_graph(graph, include_rels=True):
 class DecompositionStatus(enum.Enum):
     normal = 0  # the model was successfullay decomposed at least once and no exception was raised
     error = 1  # an exception was raised
-    bad_ratio = 2  # the model could not be decomposed at all because the min_parition_ratio was not satisfied
+    bad_ratio = 2  # the model could not be decomposed at all because the min_partition_ratio was not satisfied
     problem_too_small = 3  # the model could not be decomposed at all because the number of jacobian nonzeros in the original problem was less than max_leaf_nnz
 
 
@@ -897,7 +897,7 @@ def _decompose_model(
     new_model: TreeBlockData
         The decomposed model
     component_map: pe.ComponentMap
-        A ComponentMap mapping varialbes and constraints in model to those in new_model
+        A ComponentMap mapping variables and constraints in model to those in new_model
     termination_reason: DecompositionStatus
         An enum member from DecompositionStatus
     """
@@ -1056,7 +1056,7 @@ def decompose_model(
     new_model: TreeBlockData
         The decomposed model
     component_map: pe.ComponentMap
-        A ComponentMap mapping varialbes and constraints in model to those in new_model
+        A ComponentMap mapping variables and constraints in model to those in new_model
     termination_reason: DecompositionStatus
         An enum member from DecompositionStatus
     """
