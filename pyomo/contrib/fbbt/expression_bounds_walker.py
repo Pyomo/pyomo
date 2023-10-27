@@ -28,7 +28,7 @@ from pyomo.contrib.fbbt.interval import (
     sub,
     tan,
 )
-from pyomo.core.base.expression import _GeneralExpressionData, ScalarExpression
+from pyomo.core.base.expression import Expression
 from pyomo.core.expr.numeric_expr import (
     NegationExpression,
     ProductExpression,
@@ -43,83 +43,86 @@ from pyomo.core.expr.numeric_expr import (
 )
 from pyomo.core.expr.numvalue import native_numeric_types, native_types, value
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
+from pyomo.repn.util import BeforeChildDispatcher, ExitNodeDispatcher
 
 inf = float('inf')
 
+class ExpressionBoundsBeforeChildDispatcher(BeforeChildDispatcher):
+    __slots__ = ()
 
-def _before_external_function(visitor, child):
-    # [ESJ 10/6/23]: If external functions ever implement callbacks to help with
-    # this then this should use them
-    return False, (-inf, inf)
+    def __init__(self):
+        self[ExternalFunctionExpression] = self._before_external_function
 
+    @staticmethod
+    def _before_external_function(visitor, child):
+        # [ESJ 10/6/23]: If external functions ever implement callbacks to help with
+        # this then this should use them
+        return False, (-inf, inf)
 
-def _before_var(visitor, child):
-    leaf_bounds = visitor.leaf_bounds
-    if child in leaf_bounds:
-        pass
-    elif child.is_fixed() and visitor.use_fixed_var_values_as_bounds:
-        val = child.value
-        if val is None:
-            raise ValueError(
-                "Var '%s' is fixed to None. This value cannot be used to "
-                "calculate bounds." % child.name
-            )
-        leaf_bounds[child] = (child.value, child.value)
-    else:
-        lb = value(child.lb)
-        ub = value(child.ub)
-        if lb is None:
-            lb = -inf
-        if ub is None:
-            ub = inf
-        leaf_bounds[child] = (lb, ub)
-    return False, leaf_bounds[child]
-
-
-def _before_named_expression(visitor, child):
-    leaf_bounds = visitor.leaf_bounds
-    if child in leaf_bounds:
-        return False, leaf_bounds[child]
-    else:
-        return True, None
-
-
-def _before_param(visitor, child):
-    return False, (child.value, child.value)
-
-
-def _before_constant(visitor, child):
-    return False, (child, child)
-
-
-def _before_other(visitor, child):
-    return True, None
-
-
-def _register_new_before_child_handler(visitor, child):
-    handlers = _before_child_handlers
-    child_type = child.__class__
-    if child_type in native_numeric_types:
-        handlers[child_type] = _before_constant
-    elif child_type in native_types:
-        pass
-        # TODO: catch this, it's bad.
-    elif not child.is_expression_type():
-        if child.is_potentially_variable():
-            handlers[child_type] = _before_var
+    @staticmethod
+    def _before_var(visitor, child):
+        leaf_bounds = visitor.leaf_bounds
+        if child in leaf_bounds:
+            pass
+        elif child.is_fixed() and visitor.use_fixed_var_values_as_bounds:
+            val = child.value
+            if val is None:
+                raise ValueError(
+                    "Var '%s' is fixed to None. This value cannot be used to "
+                    "calculate bounds." % child.name
+                )
+            leaf_bounds[child] = (child.value, child.value)
         else:
-            handlers[child_type] = _before_param
-    elif issubclass(child_type, _GeneralExpressionData):
-        handlers[child_type] = _before_named_expression
-    else:
-        handlers[child_type] = _before_other
-    return handlers[child_type](visitor, child)
+            lb = value(child.lb)
+            ub = value(child.ub)
+            if lb is None:
+                lb = -inf
+            if ub is None:
+                ub = inf
+            leaf_bounds[child] = (lb, ub)
+        return False, leaf_bounds[child]
 
+    @staticmethod
+    def _before_named_expression(visitor, child):
+        leaf_bounds = visitor.leaf_bounds
+        if child in leaf_bounds:
+            return False, leaf_bounds[child]
+        else:
+            return True, None
 
-_before_child_handlers = defaultdict(lambda: _register_new_before_child_handler)
-_before_child_handlers[ExternalFunctionExpression] = _before_external_function
+    @staticmethod
+    def _before_param(visitor, child):
+        return False, (child.value, child.value)
 
+    @staticmethod
+    def _before_native(visitor, child):
+        return False, (child, child)
 
+    @staticmethod
+    def _before_string(visitor, child):
+        raise ValueError(
+            f"Cannot compute bounds on expression containing {child!r} "
+            "of type {type(child)}, which is not a valid numeric type")
+
+    @staticmethod
+    def _before_invalid(visitor, child):
+        raise ValueError(
+            f"Cannot compute bounds on expression containing {child!r} "
+            "of type {type(child)}, which is not a valid numeric type")
+
+    @staticmethod
+    def _before_complex(visitor, child):
+        raise ValueError(
+            f"Cannot compute bounds on expression containing "
+            "complex numbers. Encountered when processing {child!r}")
+
+    @staticmethod
+    def _before_npv(visitor, child):
+        return False, (value(child), value(child))
+
+_before_child_handlers = ExpressionBoundsBeforeChildDispatcher()
+
+        
 def _handle_ProductExpression(visitor, node, arg1, arg2):
     return mul(*arg1, *arg2)
 
@@ -187,10 +190,6 @@ def _handle_AbsExpression(visitor, node, arg):
     return interval_abs(*arg)
 
 
-def _handle_no_bounds(visitor, node, *args):
-    return (-inf, inf)
-
-
 def _handle_UnaryFunctionExpression(visitor, node, arg):
     return _unary_function_dispatcher[node.getname()](visitor, node, arg)
 
@@ -213,8 +212,8 @@ _unary_function_dispatcher = {
     'sqrt': _handle_sqrt,
 }
 
-_operator_dispatcher = defaultdict(
-    lambda: _handle_no_bounds,
+
+_operator_dispatcher = ExitNodeDispatcher(
     {
         ProductExpression: _handle_ProductExpression,
         DivisionExpression: _handle_DivisionExpression,
@@ -225,9 +224,8 @@ _operator_dispatcher = defaultdict(
         NegationExpression: _handle_NegationExpression,
         UnaryFunctionExpression: _handle_UnaryFunctionExpression,
         LinearExpression: _handle_SumExpression,
-        _GeneralExpressionData: _handle_named_expression,
-        ScalarExpression: _handle_named_expression,
-    },
+        Expression: _handle_named_expression,
+    }
 )
 
 
