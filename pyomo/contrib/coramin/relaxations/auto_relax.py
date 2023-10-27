@@ -1163,7 +1163,7 @@ _relax_root_to_leaf_map[SimpleExpression] = _relax_root_to_leaf_GeneralExpressio
 class _FactorableRelaxationVisitor(ExpressionValueVisitor):
     """
     This walker generates new constraints with nonlinear terms replaced by
-    auxiliary variables, and relaxations relating the auxilliary variables to
+    auxiliary variables, and relaxations relating the auxiliary variables to
     the original variables.
     """
 
@@ -1508,10 +1508,10 @@ def relax(
     anytime the variable bounds are updated. For example, suppose the model is relaxed and, only after OBBT is 
     performed, we find out x >= 0. We should be able to easily update the relaxation so that x**3 is then relaxed 
     as a convex univariate function. The reason FBBT needs to be performed after relaxing the model is that 
-    we want to make sure that all of the auxilliary variables introduced get tightened bounds. The correct way to 
-    handle this is to perform FBBT with the original model with suspect, which forms a DAG. Each auxilliary variable 
+    we want to make sure that all of the auxiliary variables introduced get tightened bounds. The correct way to 
+    handle this is to perform FBBT with the original model with suspect, which forms a DAG. Each auxiliary variable 
     introduced in the relaxed model corresponds to a node in the DAG. If we use suspect, then we can easily 
-    update the bounds of the auxilliary variables without performing FBBT a second time.
+    update the bounds of the auxiliary variables without performing FBBT a second time.
     """
     if not in_place:
         m = model.clone()
