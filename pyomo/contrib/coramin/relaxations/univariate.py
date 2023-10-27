@@ -1,5 +1,5 @@
 import pyomo.environ as pyo
-from coramin.utils.coramin_enums import RelaxationSide, FunctionShape
+from pyomo.contrib.coramin.utils.coramin_enums import RelaxationSide, FunctionShape
 from .relaxations_base import BasePWRelaxationData, ComponentWeakRef, _check_cut
 from .custom_block import declare_custom_block
 import numpy as np

@@ -7,14 +7,14 @@ from pyomo.core.expr.numvalue import is_fixed
 import math
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 import numpy as np
-from coramin.utils.coramin_enums import EigenValueBounder
+from pyomo.contrib.coramin.utils.coramin_enums import EigenValueBounder
 from pyomo.core.base.block import _BlockData
 from typing import Optional, MutableMapping
 from pyomo.core.expr.numeric_expr import ExpressionBase
 from pyomo.contrib import appsi
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.base.var import _GeneralVarData
-from coramin.utils.pyomo_utils import simplify_expr
+from pyomo.contrib.coramin.utils.pyomo_utils import simplify_expr
 
 
 def _2d_determinant(mat: np.ndarray):

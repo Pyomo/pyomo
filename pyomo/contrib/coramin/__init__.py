@@ -1,8 +1,8 @@
-from coramin import utils
-from coramin import domain_reduction
-from coramin import relaxations
-from coramin import algorithms
-from coramin import third_party
+from . import utils
+from . import domain_reduction
+from . import relaxations
+from . import algorithms
+from . import third_party
 from .utils import (
     RelaxationSide,
     FunctionShape,

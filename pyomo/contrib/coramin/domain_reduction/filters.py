@@ -1,5 +1,5 @@
 from pyomo.common.collections import ComponentSet
-from coramin.domain_reduction.obbt import _bt_prep, _bt_cleanup
+from pyomo.contrib.coramin.domain_reduction.obbt import _bt_prep, _bt_cleanup
 import pyomo.environ as pe
 from pyomo.core.expr.numeric_expr import LinearExpression
 import logging

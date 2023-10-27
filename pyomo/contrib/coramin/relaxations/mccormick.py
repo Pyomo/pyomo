@@ -1,6 +1,6 @@
 import logging
 import pyomo.environ as pyo
-from coramin.utils.coramin_enums import RelaxationSide
+from pyomo.contrib.coramin.utils.coramin_enums import RelaxationSide
 from .custom_block import declare_custom_block
 from .relaxations_base import BasePWRelaxationData, ComponentWeakRef, _check_cut
 import math

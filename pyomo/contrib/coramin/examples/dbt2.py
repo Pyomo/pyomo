@@ -11,7 +11,7 @@ import itertools
 import os
 import time
 from suspect.pyomo import read_osil
-from coramin.third_party.minlplib_tools import get_minlplib
+from pyomo.contrib.coramin.third_party.minlplib_tools import get_minlplib
 
 
 print('Downloading camshape800 from MINLPLib')

@@ -1,7 +1,7 @@
-from coramin.utils.coramin_enums import EigenValueBounder, RelaxationSide
-from coramin.relaxations.custom_block import declare_custom_block
-from coramin.relaxations.relaxations_base import BaseRelaxationData, ComponentWeakRef
-from coramin.relaxations.hessian import Hessian
+from pyomo.contrib.coramin.utils.coramin_enums import EigenValueBounder, RelaxationSide
+from pyomo.contrib.coramin.relaxations.custom_block import declare_custom_block
+from pyomo.contrib.coramin.relaxations.relaxations_base import BaseRelaxationData, ComponentWeakRef
+from pyomo.contrib.coramin.relaxations.hessian import Hessian
 from typing import Optional, Tuple
 from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.expr.numeric_expr import ExpressionBase

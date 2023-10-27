@@ -6,7 +6,7 @@ from .univariate import PWXSquaredRelaxation, PWUnivariateRelaxation, PWArctanRe
 from .alphabb import AlphaBBRelaxation, AlphaBBRelaxationData
 from .multivariate import MultivariateRelaxationData, MultivariateRelaxation
 from pyomo.core.expr.visitor import replace_expressions
-from coramin.utils.coramin_enums import FunctionShape
+from pyomo.contrib.coramin.utils.coramin_enums import FunctionShape
 
 
 def copy_relaxation_with_local_data(rel, old_var_to_new_var_map):

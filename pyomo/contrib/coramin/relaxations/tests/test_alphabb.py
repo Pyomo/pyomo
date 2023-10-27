@@ -3,7 +3,7 @@ import itertools
 import math
 import pyomo.environ as pe
 import coramin
-from coramin.relaxations.alphabb import AlphaBBRelaxation
+from pyomo.contrib.coramin.relaxations.alphabb import AlphaBBRelaxation
 
 
 class TestAlphaBBRelaxation(unittest.TestCase):

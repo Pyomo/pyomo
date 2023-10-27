@@ -16,16 +16,16 @@ from .univariate import PWUnivariateRelaxation, PWXSquaredRelaxation, PWCosRelax
 from .mccormick import PWMcCormickRelaxation
 from .multivariate import MultivariateRelaxation
 from .alphabb import AlphaBBRelaxation
-from coramin.utils.coramin_enums import RelaxationSide, FunctionShape, Effort, EigenValueBounder
+from pyomo.contrib.coramin.utils.coramin_enums import RelaxationSide, FunctionShape, Effort, EigenValueBounder
 from pyomo.gdp import Disjunct
 from pyomo.core.base.expression import _GeneralExpressionData, SimpleExpression
-from coramin.relaxations.iterators import nonrelaxation_component_data_objects
+from pyomo.contrib.coramin.relaxations.iterators import nonrelaxation_component_data_objects
 from pyomo.contrib import appsi
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.contrib.fbbt import interval
 from pyomo.core.expr.compare import convert_expression_to_prefix_notation
 from .split_expr import split_expr
-from coramin.utils.pyomo_utils import simplify_expr, active_vars
+from pyomo.contrib.coramin.utils.pyomo_utils import simplify_expr, active_vars
 from .hessian import Hessian
 from typing import MutableMapping, Tuple, Union, Optional
 from pyomo.core.base.block import _BlockData

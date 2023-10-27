@@ -1,5 +1,5 @@
 import math
-from coramin.relaxations.relaxations_base import (
+from pyomo.contrib.coramin.relaxations.relaxations_base import (
     BaseRelaxationData,
     BasePWRelaxationData,
 )
@@ -21,22 +21,22 @@ from pyomo.common.config import (
     ConfigValue, NonNegativeInt, PositiveFloat, PositiveInt, NonNegativeFloat, InEnum
 )
 import logging
-from coramin.relaxations.auto_relax import relax
-from coramin.relaxations.iterators import relaxation_data_objects
-from coramin.utils.coramin_enums import RelaxationSide, Effort, EigenValueBounder
-from coramin.domain_reduction.dbt import push_integers, pop_integers, collect_vars_to_tighten
-from coramin.domain_reduction.obbt import perform_obbt
+from pyomo.contrib.coramin.relaxations.auto_relax import relax
+from pyomo.contrib.coramin.relaxations.iterators import relaxation_data_objects
+from pyomo.contrib.coramin.utils.coramin_enums import RelaxationSide, Effort, EigenValueBounder
+from pyomo.contrib.coramin.domain_reduction.dbt import push_integers, pop_integers, collect_vars_to_tighten
+from pyomo.contrib.coramin.domain_reduction.obbt import perform_obbt
 import time
 from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.base.objective import _GeneralObjectiveData
-from coramin.utils.pyomo_utils import get_objective, active_vars
+from pyomo.contrib.coramin.utils.pyomo_utils import get_objective, active_vars
 from pyomo.common.collections.component_set import ComponentSet
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import BoundsManager
 import numpy as np
 from pyomo.core.expr.visitor import identify_variables
-from coramin.clone import clone_active_flat
+from pyomo.contrib.coramin.clone import clone_active_flat
 
 
 logger = logging.getLogger(__name__)

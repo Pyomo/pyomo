@@ -1,7 +1,7 @@
 import math
 
 import coramin
-from coramin.third_party.minlplib_tools import get_minlplib, get_minlplib_instancedata
+from pyomo.contrib.coramin.third_party.minlplib_tools import get_minlplib, get_minlplib_instancedata
 import unittest
 from pyomo.contrib import appsi
 import os

@@ -4,7 +4,7 @@ import weakref
 import pyomo.environ as pe
 from collections.abc import Iterable
 from pyomo.common.collections import ComponentSet, ComponentMap
-from coramin.utils.coramin_enums import FunctionShape, RelaxationSide
+from pyomo.contrib.coramin.utils.coramin_enums import FunctionShape, RelaxationSide
 import warnings
 import logging
 import math

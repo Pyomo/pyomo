@@ -1,13 +1,13 @@
 from pyomo.contrib import appsi
 from pyomo.common.collections import ComponentSet
-from coramin.utils.coramin_enums import RelaxationSide
+from pyomo.contrib.coramin.utils.coramin_enums import RelaxationSide
 import pyomo.environ as pe
 import time
 from pyomo.common.config import ConfigValue, NonNegativeInt, NonNegativeFloat, In
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.staleflag import StaleFlagManager
-from coramin.utils import get_objective
-from coramin.relaxations import relaxation_data_objects
+from pyomo.contrib.coramin.utils import get_objective
+from pyomo.contrib.coramin.relaxations import relaxation_data_objects
 from typing import Optional
 from typing import Sequence, Mapping, MutableMapping, Tuple, List
 from pyomo.core.base.var import _GeneralVarData

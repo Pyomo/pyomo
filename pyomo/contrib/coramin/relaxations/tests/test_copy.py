@@ -1,4 +1,4 @@
-from coramin.relaxations.copy_relaxation import copy_relaxation_with_local_data
+from pyomo.contrib.coramin.relaxations.copy_relaxation import copy_relaxation_with_local_data
 import unittest
 import pyomo.environ as pe
 import coramin

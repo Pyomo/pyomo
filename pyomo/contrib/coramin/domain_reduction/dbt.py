@@ -11,7 +11,7 @@ import pyomo.environ as pe
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.common.collections import ComponentSet
 from pyomo.common.collections.orderedset import OrderedSet
-from coramin.relaxations.iterators import relaxation_data_objects, nonrelaxation_component_data_objects
+from pyomo.contrib.coramin.relaxations.iterators import relaxation_data_objects, nonrelaxation_component_data_objects
 from pyomo.core.expr.visitor import replace_expressions
 import logging
 import networkx
@@ -23,16 +23,16 @@ except ImportError:
 import numpy as np
 import math
 from pyomo.core.base.block import declare_custom_block, _BlockData
-from coramin.utils.pyomo_utils import get_objective
+from pyomo.contrib.coramin.utils.pyomo_utils import get_objective
 from pyomo.core.base.var import _GeneralVarData
-from coramin.relaxations.copy_relaxation import copy_relaxation_with_local_data
-from coramin.relaxations.relaxations_base import BaseRelaxationData
-from coramin.utils import RelaxationSide
+from pyomo.contrib.coramin.relaxations.copy_relaxation import copy_relaxation_with_local_data
+from pyomo.contrib.coramin.relaxations.relaxations_base import BaseRelaxationData
+from pyomo.contrib.coramin.utils import RelaxationSide
 from collections import defaultdict
 from pyomo.core.expr import numeric_expr
 from pyomo.core.expr.visitor import ExpressionValueVisitor, nonpyomo_leaf_types
 from pyomo.common.modeling import unique_component_name
-from coramin.relaxations.split_expr import flatten_expr
+from pyomo.contrib.coramin.relaxations.split_expr import flatten_expr
 
 
 logger = logging.getLogger(__name__)

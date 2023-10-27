@@ -9,7 +9,7 @@ import numpy as np
 from pyomo.core.base.param import _ParamData, ScalarParam
 from pyomo.core.expr.sympy_tools import sympyify_expression
 from pyomo.contrib import appsi
-from coramin.utils import RelaxationSide, Effort, EigenValueBounder
+from pyomo.contrib.coramin.utils import RelaxationSide, Effort, EigenValueBounder
 
 
 class TestAutoRelax(unittest.TestCase):

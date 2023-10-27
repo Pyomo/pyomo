@@ -3,7 +3,7 @@ import math
 import pyomo.environ as pe
 import coramin
 import numpy as np
-from coramin.relaxations.segments import compute_k_segment_points
+from pyomo.contrib.coramin.relaxations.segments import compute_k_segment_points
 
 
 class TestUnivariateExp(unittest.TestCase):

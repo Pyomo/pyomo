@@ -1,4 +1,4 @@
-from coramin.domain_reduction.dbt import TreeBlock, TreeBlockError, convert_pyomo_model_to_bipartite_graph, \
+from pyomo.contrib.coramin.domain_reduction.dbt import TreeBlock, TreeBlockError, convert_pyomo_model_to_bipartite_graph, \
     _VarNode, _ConNode, _RelNode, split_metis, num_cons_in_graph, collect_vars_to_tighten_by_block, decompose_model, \
     perform_dbt, OBBTMethod, FilterMethod
 import unittest
@@ -13,7 +13,7 @@ from egret.thirdparty.get_pglib_opf import get_pglib_opf
 from egret.data.model_data import ModelData
 from egret.models.acopf import create_psv_acopf_model
 import os
-from coramin.utils.pyomo_utils import get_objective
+from pyomo.contrib.coramin.utils.pyomo_utils import get_objective
 import filecmp
 from pyomo.contrib import appsi
 import pytest
