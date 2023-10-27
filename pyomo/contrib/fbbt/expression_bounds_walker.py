@@ -9,7 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from collections import defaultdict
 from math import pi
 from pyomo.common.collections import ComponentMap
 from pyomo.contrib.fbbt.interval import (
