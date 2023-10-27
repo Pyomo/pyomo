@@ -129,6 +129,8 @@ _before_child_handlers = ExpressionBoundsBeforeChildDispatcher()
 
 
 def _handle_ProductExpression(visitor, node, arg1, arg2):
+    if arg1 is arg2:
+        return power(*arg1, 2, 2, feasibility_tol=visitor.feasibility_tol)
     return mul(*arg1, *arg2)
 
 

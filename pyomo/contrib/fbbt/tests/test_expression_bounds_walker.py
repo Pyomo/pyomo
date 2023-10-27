@@ -88,6 +88,14 @@ class TestExpressionBoundsWalker(unittest.TestCase):
         self.assertEqual(lb, 5 ** (-2))
         self.assertEqual(ub, 5**4)
 
+    def test_sums_of_squares_bounds(self):
+        m = ConcreteModel()
+        m.x = Var([1, 2], bounds=(-2, 6))
+        visitor = ExpressionBoundsVisitor()
+        lb, ub = visitor.walk_expression(m.x[1] * m.x[1] + m.x[2] * m.x[2])
+        self.assertEqual(lb, 0)
+        self.assertEqual(ub, 72)
+
     def test_negation_bounds(self):
         m = self.make_model()
         visitor = ExpressionBoundsVisitor()
