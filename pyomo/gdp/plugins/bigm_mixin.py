@@ -105,11 +105,12 @@ class _BigM_MixIn(object):
         return arg_list
 
     def _set_up_expr_bound_visitor(self):
-        #bnds_dict = ComponentMap()
+        # bnds_dict = ComponentMap()
         # we assume the default config arg for 'assume_fixed_vars_permanent,`
         # and we will change it during apply_to if we need to
         self._expr_bound_visitor = ExpressionBoundsVisitor(
-            use_fixed_var_values_as_bounds=False)
+            use_fixed_var_values_as_bounds=False
+        )
 
     def _process_M_value(
         self,
