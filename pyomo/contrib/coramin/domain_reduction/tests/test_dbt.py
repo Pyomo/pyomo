@@ -786,9 +786,7 @@ class TestDBTWithECP(unittest.TestCase):
 
         return m
 
-    @pytest.mark.parallel
-    @pytest.mark.two_proc
-    @pytest.mark.three_proc
+    @pytest.mark.mpi
     def test_bounds_tightening(self):
         from mpi4py import MPI
 
