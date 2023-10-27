@@ -824,7 +824,7 @@ class TestRelaxationBasics(unittest.TestCase):
         self.large_bounds_helper(m, m.rel, lb=-1e6, ub=1e6)
         self.small_coef_helper(m, m.rel, e)
         self.original_constraint_helper(m, m.rel, e)
-        with self.assertRaisesRegex(ValueError, "Relaxations of type <class 'coramin.relaxations.custom_block._ScalarPWMcCormickRelaxation'> do not support relaxations that are not linear."):
+        with self.assertRaisesRegex(ValueError, "Relaxations of type <class 'pyomo.contrib.coramin.relaxations.custom_block._ScalarPWMcCormickRelaxation'> do not support relaxations that are not linear."):
             self.nonlinear_relaxation_helper(m, m.rel, e)
         self.relaxation_side_helper(m, m.rel, e, check_nonlinear_relaxation=False)
         self.deviation_helper(m.rel, e)
