@@ -436,26 +436,25 @@ def _refine_partition(graph: nx.Graph, model: _BlockData,
             new_c1 = model.dbt_partition_cons.add(graph_a_var == sum(graph_a_args))
             new_c2 = model.dbt_partition_cons.add(graph_b_var == sum(graph_b_args))
             if c.equality:
-                new_c3 = model.dbt_partition_cons.add(graph_a_var + graph_b_var == c.lower)
+                c.set_value(graph_a_var + graph_b_var == c.lower)
             else:
-                new_c3 = model.dbt_partition_cons.add((c.lower, graph_a_var + graph_b_var, c.upper))
+                c.set_value((c.lower, graph_a_var + graph_b_var, c.upper))
         elif c.lower is None:
             assert c.upper is not None
             new_c1 = model.dbt_partition_cons.add(graph_a_var >= sum(graph_a_args))
             new_c2 = model.dbt_partition_cons.add(graph_b_var >= sum(graph_b_args))
-            new_c3 = model.dbt_partition_cons.add(graph_a_var + graph_b_var <= c.upper)
+            c.set_value(graph_a_var + graph_b_var <= c.upper)
         else:
             assert c.upper is None
             new_c1 = model.dbt_partition_cons.add(graph_a_var <= sum(graph_a_args))
             new_c2 = model.dbt_partition_cons.add(graph_b_var <= sum(graph_b_args))
-            new_c3 = model.dbt_partition_cons.add(graph_a_var + graph_b_var >= c.lower)
-        c.deactivate()
+            c.set_value(graph_a_var + graph_b_var >= c.lower)
 
         # update the graph
         graph.remove_node(_ConNode(c))
         graph.add_node(_VarNode(graph_a_var))
         graph.add_node(_VarNode(graph_b_var))
-        for new_con in [new_c1, new_c2, new_c3]:
+        for new_con in [new_c1, new_c2, c]:
             graph.add_node(_ConNode(new_con))
             for v in identify_variables(new_con.body, include_fixed=False):
                 graph.add_edge(_VarNode(v), _ConNode(new_con))
@@ -466,7 +465,7 @@ def _refine_partition(graph: nx.Graph, model: _BlockData,
             if e.node2.comp is not c:
                 new_removed_edges.append(e)
 
-        new_removed_edges.append(_Edge(_VarNode(graph_a_var), _ConNode(new_c3)))
+        new_removed_edges.append(_Edge(_VarNode(graph_a_var), _ConNode(c)))
         removed_edges = new_removed_edges
 
         # update graph_a_nodes and graph_b_nodes
@@ -476,7 +475,7 @@ def _refine_partition(graph: nx.Graph, model: _BlockData,
         graph_b_nodes.add(_VarNode(graph_b_var))
         graph_a_nodes.add(_ConNode(new_c1))
         graph_b_nodes.add(_ConNode(new_c2))
-        graph_b_nodes.add(_ConNode(new_c3))
+        graph_b_nodes.add(_ConNode(c))
 
     return removed_edges
 
