@@ -1,4 +1,4 @@
-import unittest
+from pyomo.common import unittest
 import itertools
 import math
 import pyomo.environ as pe

@@ -1,6 +1,6 @@
 import pyomo.environ as pe
 import coramin
-import unittest
+from pyomo.common import unittest
 from pyomo.core.expr.calculus.diff_with_pyomo import reverse_sd
 from pyomo.core.expr.visitor import identify_variables, identify_components
 import math

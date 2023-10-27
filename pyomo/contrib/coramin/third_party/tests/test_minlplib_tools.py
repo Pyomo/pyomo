@@ -1,5 +1,5 @@
 import coramin
-import unittest
+from pyomo.common import unittest
 import os
 from pyomo.common.fileutils import this_file_dir
 from urllib.request import urlopen

@@ -1,5 +1,5 @@
 from pyomo.contrib.coramin.relaxations.copy_relaxation import copy_relaxation_with_local_data
-import unittest
+from pyomo.common import unittest
 import pyomo.environ as pe
 import coramin
 from pyomo.common.collections import ComponentSet

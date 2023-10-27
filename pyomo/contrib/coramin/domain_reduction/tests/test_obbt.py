@@ -1,5 +1,5 @@
 import coramin
-import unittest
+from pyomo.common import unittest
 import pyomo.environ as pyo
 from pyomo.contrib import appsi
 

@@ -2,7 +2,7 @@ import math
 
 import coramin
 from pyomo.contrib.coramin.third_party.minlplib_tools import get_minlplib, get_minlplib_instancedata
-import unittest
+from pyomo.common import unittest
 from pyomo.contrib import appsi
 import os
 import logging

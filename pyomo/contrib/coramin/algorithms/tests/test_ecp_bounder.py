@@ -1,7 +1,7 @@
 import pyomo.environ as pe
 import coramin
 from pyomo.contrib.coramin.algorithms.ecp_bounder import ECPBounder
-import unittest
+from pyomo.common import unittest
 import logging
 from pyomo.contrib import appsi
 

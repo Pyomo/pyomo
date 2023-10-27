@@ -1,7 +1,7 @@
 from pyomo.contrib.coramin.domain_reduction.dbt import TreeBlock, TreeBlockError, convert_pyomo_model_to_bipartite_graph, \
     _VarNode, _ConNode, _RelNode, split_metis, num_cons_in_graph, collect_vars_to_tighten_by_block, decompose_model, \
     perform_dbt, OBBTMethod, FilterMethod
-import unittest
+from pyomo.common import unittest
 import pyomo.environ as pe
 import coramin
 from networkx import is_bipartite

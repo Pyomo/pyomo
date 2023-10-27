@@ -1,4 +1,4 @@
-import unittest
+from pyomo.common import unittest
 import pyomo.environ as pe
 from pyomo.opt import assert_optimal_termination
 import coramin

@@ -1,6 +1,6 @@
 import pyomo.environ as pe
 import coramin
-import unittest
+from pyomo.common import unittest
 from pyomo.contrib import appsi
 
 

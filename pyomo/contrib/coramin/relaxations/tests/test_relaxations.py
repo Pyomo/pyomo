@@ -1,4 +1,4 @@
-import unittest
+from pyomo.common import unittest
 import pyomo.environ as pe
 import coramin
 from pyomo.core.base.block import _BlockData
