@@ -831,7 +831,7 @@ class _MindtPyAlgorithm(object):
         subprob_terminate_cond = results.solver.termination_condition
 
         # Sometimes, the NLP solver might be trapped in a infeasible solution if the objective function is nonlinear and partition_obj_nonlinear_terms is True. If this happens, we will use the original objective function instead.
-        if subprob_terminate_cond == tc.infeasible and config.partition_obj_nonlinear_terms:
+        if subprob_terminate_cond == tc.infeasible and config.partition_obj_nonlinear_terms and self.rnlp.MindtPy_utils.objective_list[0].expr.polynomial_degree() not in self.mip_objective_polynomial_degree:
             config.logger.info(
                 'Initial relaxed NLP problem is infeasible. This might be related to partition_obj_nonlinear_terms. Try to solve it again without partitioning nonlinear objective function.')
             self.rnlp.MindtPy_utils.objective.deactivate()
