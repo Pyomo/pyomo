@@ -354,39 +354,22 @@ def _prop_bnds_leaf_to_root_GeneralExpression(visitor, node, expr):
     bnds_dict[node] = (expr_lb, expr_ub)
 
 
-_prop_bnds_leaf_to_root_map = defaultdict(lambda: _prop_no_bounds)
-_prop_bnds_leaf_to_root_map[
-    numeric_expr.ProductExpression
-] = _prop_bnds_leaf_to_root_ProductExpression
-_prop_bnds_leaf_to_root_map[
-    numeric_expr.DivisionExpression
-] = _prop_bnds_leaf_to_root_DivisionExpression
-_prop_bnds_leaf_to_root_map[
-    numeric_expr.PowExpression
-] = _prop_bnds_leaf_to_root_PowExpression
-_prop_bnds_leaf_to_root_map[
-    numeric_expr.SumExpression
-] = _prop_bnds_leaf_to_root_SumExpression
-_prop_bnds_leaf_to_root_map[
-    numeric_expr.MonomialTermExpression
-] = _prop_bnds_leaf_to_root_ProductExpression
-_prop_bnds_leaf_to_root_map[
-    numeric_expr.NegationExpression
-] = _prop_bnds_leaf_to_root_NegationExpression
-_prop_bnds_leaf_to_root_map[
-    numeric_expr.UnaryFunctionExpression
-] = _prop_bnds_leaf_to_root_UnaryFunctionExpression
-_prop_bnds_leaf_to_root_map[
-    numeric_expr.LinearExpression
-] = _prop_bnds_leaf_to_root_SumExpression
-_prop_bnds_leaf_to_root_map[numeric_expr.AbsExpression] = _prop_bnds_leaf_to_root_abs
-
-_prop_bnds_leaf_to_root_map[
-    _GeneralExpressionData
-] = _prop_bnds_leaf_to_root_GeneralExpression
-_prop_bnds_leaf_to_root_map[
-    ScalarExpression
-] = _prop_bnds_leaf_to_root_GeneralExpression
+_prop_bnds_leaf_to_root_map = defaultdict(
+    lambda: _prop_no_bounds,
+    {
+        numeric_expr.ProductExpression: _prop_bnds_leaf_to_root_ProductExpression,
+        numeric_expr.DivisionExpression: _prop_bnds_leaf_to_root_DivisionExpression,
+        numeric_expr.PowExpression: _prop_bnds_leaf_to_root_PowExpression,
+        numeric_expr.SumExpression: _prop_bnds_leaf_to_root_SumExpression,
+        numeric_expr.MonomialTermExpression: _prop_bnds_leaf_to_root_ProductExpression,
+        numeric_expr.NegationExpression: _prop_bnds_leaf_to_root_NegationExpression,
+        numeric_expr.UnaryFunctionExpression: _prop_bnds_leaf_to_root_UnaryFunctionExpression,
+        numeric_expr.LinearExpression: _prop_bnds_leaf_to_root_SumExpression,
+        numeric_expr.AbsExpression: _prop_bnds_leaf_to_root_abs,
+        _GeneralExpressionData: _prop_bnds_leaf_to_root_GeneralExpression,
+        ScalarExpression: _prop_bnds_leaf_to_root_GeneralExpression,
+    },
+)
 
 
 def _prop_bnds_root_to_leaf_ProductExpression(node, bnds_dict, feasibility_tol):
