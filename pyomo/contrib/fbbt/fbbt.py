@@ -1248,9 +1248,7 @@ def _fbbt_con(con, config):
     )  # a dictionary to store the bounds of every node in the tree
 
     # a walker to propagate bounds from the variables to the root
-    visitorA = _FBBTVisitorLeafToRoot(
-        bnds_dict=bnds_dict, feasibility_tol=config.feasibility_tol
-    )
+    visitorA = _FBBTVisitorLeafToRoot(bnds_dict, feasibility_tol=config.feasibility_tol)
     visitorA.walk_expression(con.body)
 
     # Now we need to replace the bounds in bnds_dict for the root
