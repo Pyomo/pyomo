@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 from collections import defaultdict
+from math import pi
 from pyomo.common.collections import ComponentMap
 from pyomo.contrib.fbbt.interval import (
     add,
@@ -101,20 +102,23 @@ class ExpressionBoundsBeforeChildDispatcher(BeforeChildDispatcher):
     @staticmethod
     def _before_string(visitor, child):
         raise ValueError(
-            f"Cannot compute bounds on expression containing {child!r} "
-            "of type {type(child)}, which is not a valid numeric type")
+            f"{child!r} ({type(child)}) is not a valid numeric type. "
+            f"Cannot compute bounds on expression."
+        )
 
     @staticmethod
     def _before_invalid(visitor, child):
         raise ValueError(
-            f"Cannot compute bounds on expression containing {child!r} "
-            "of type {type(child)}, which is not a valid numeric type")
+            f"{child!r} ({type(child)}) is not a valid numeric type. "
+            f"Cannot compute bounds on expression."
+        )
 
     @staticmethod
     def _before_complex(visitor, child):
         raise ValueError(
-            f"Cannot compute bounds on expression containing "
-            "complex numbers. Encountered when processing {child!r}")
+            f"Cannot compute bounds on expressions containing "
+            f"complex numbers. Encountered when processing {child}"
+        )
 
     @staticmethod
     def _before_npv(visitor, child):
@@ -171,15 +175,15 @@ def _handle_tan(visitor, node, arg):
 
 
 def _handle_asin(visitor, node, arg):
-    return asin(*arg, -inf, inf, visitor.feasibility_tol)
+    return asin(*arg, -pi/2, pi/2, visitor.feasibility_tol)
 
 
 def _handle_acos(visitor, node, arg):
-    return acos(*arg, -inf, inf, visitor.feasibility_tol)
+    return acos(*arg, 0, pi, visitor.feasibility_tol)
 
 
 def _handle_atan(visitor, node, arg):
-    return atan(*arg, -inf, inf)
+    return atan(*arg, -pi/2, pi/2)
 
 
 def _handle_sqrt(visitor, node, arg):
