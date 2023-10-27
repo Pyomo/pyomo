@@ -259,7 +259,7 @@ class TestExpressionBoundsWalker(unittest.TestCase):
         m = self.make_model()
         m.p = Param(initialize=4, mutable=True)
         visitor = ExpressionBoundsVisitor()
-        lb, ub = visitor.walk_expression(1/m.p)
+        lb, ub = visitor.walk_expression(1 / m.p)
         self.assertEqual(lb, 0.25)
         self.assertEqual(ub, 0.25)
 
@@ -268,9 +268,10 @@ class TestExpressionBoundsWalker(unittest.TestCase):
         m.p = Param(initialize=True, domain=Any)
         visitor = ExpressionBoundsVisitor()
         with self.assertRaisesRegex(
-                ValueError,
-                r"True \(<class 'bool'>\) is not a valid numeric type. "
-                r"Cannot compute bounds on expression."):
+            ValueError,
+            r"True \(<class 'bool'>\) is not a valid numeric type. "
+            r"Cannot compute bounds on expression.",
+        ):
             lb, ub = visitor.walk_expression(m.p + m.y)
 
     def test_invalid_string(self):
@@ -278,9 +279,10 @@ class TestExpressionBoundsWalker(unittest.TestCase):
         m.p = Param(initialize='True', domain=Any)
         visitor = ExpressionBoundsVisitor()
         with self.assertRaisesRegex(
-                ValueError,
-                r"'True' \(<class 'str'>\) is not a valid numeric type. "
-                r"Cannot compute bounds on expression."):
+            ValueError,
+            r"'True' \(<class 'str'>\) is not a valid numeric type. "
+            r"Cannot compute bounds on expression.",
+        ):
             lb, ub = visitor.walk_expression(m.p + m.y)
 
     def test_invalid_complex(self):
@@ -288,8 +290,8 @@ class TestExpressionBoundsWalker(unittest.TestCase):
         m.p = Param(initialize=complex(4, 5), domain=Any)
         visitor = ExpressionBoundsVisitor()
         with self.assertRaisesRegex(
-                ValueError,
-                r"Cannot compute bounds on expressions containing "
-                r"complex numbers. Encountered when processing \(4\+5j\)"
+            ValueError,
+            r"Cannot compute bounds on expressions containing "
+            r"complex numbers. Encountered when processing \(4\+5j\)",
         ):
             lb, ub = visitor.walk_expression(m.p + m.y)

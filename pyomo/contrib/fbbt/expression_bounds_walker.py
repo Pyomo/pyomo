@@ -48,6 +48,7 @@ from pyomo.repn.util import BeforeChildDispatcher, ExitNodeDispatcher
 
 inf = float('inf')
 
+
 class ExpressionBoundsBeforeChildDispatcher(BeforeChildDispatcher):
     __slots__ = ()
 
@@ -124,9 +125,10 @@ class ExpressionBoundsBeforeChildDispatcher(BeforeChildDispatcher):
     def _before_npv(visitor, child):
         return False, (value(child), value(child))
 
+
 _before_child_handlers = ExpressionBoundsBeforeChildDispatcher()
 
-        
+
 def _handle_ProductExpression(visitor, node, arg1, arg2):
     return mul(*arg1, *arg2)
 
@@ -175,7 +177,7 @@ def _handle_tan(visitor, node, arg):
 
 
 def _handle_asin(visitor, node, arg):
-    return asin(*arg, -pi/2, pi/2, visitor.feasibility_tol)
+    return asin(*arg, -pi / 2, pi / 2, visitor.feasibility_tol)
 
 
 def _handle_acos(visitor, node, arg):
@@ -183,7 +185,7 @@ def _handle_acos(visitor, node, arg):
 
 
 def _handle_atan(visitor, node, arg):
-    return atan(*arg, -pi/2, pi/2)
+    return atan(*arg, -pi / 2, pi / 2)
 
 
 def _handle_sqrt(visitor, node, arg):
