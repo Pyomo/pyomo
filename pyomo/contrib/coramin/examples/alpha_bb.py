@@ -1,5 +1,5 @@
 import pyomo.environ as pe
-import coramin
+from pyomo.contrib import coramin
 from pyomo.contrib.coramin.utils.plot_relaxation import plot_relaxation
 from pyomo.contrib import appsi
 

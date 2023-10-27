@@ -13,7 +13,7 @@ import time
 from typing import Union, Sequence, Optional, List
 from pyomo.core.base.objective import ScalarObjective, _GeneralObjectiveData
 try:
-    import coramin.utils.mpi_utils as mpiu
+    import pyomo.contrib.coramin.utils.mpi_utils as mpiu
     mpi_available = True
 except ImportError:
     mpi_available = False

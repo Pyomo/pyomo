@@ -1,4 +1,4 @@
-import coramin
+from pyomo.contrib import coramin
 from pyomo.common import unittest
 import os
 from pyomo.common.fileutils import this_file_dir

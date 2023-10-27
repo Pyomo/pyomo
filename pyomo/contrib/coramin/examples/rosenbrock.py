@@ -1,5 +1,5 @@
 import pyomo.environ as pe
-import coramin
+from pyomo.contrib import coramin
 
 
 def create_nlp(a, b):

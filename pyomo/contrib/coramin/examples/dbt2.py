@@ -6,7 +6,7 @@ the filename in the "read_osil" function bedlow. The file can be
 downloaded from minlplib.org. Suspect is also needed.
 """
 import pyomo.environ as pe
-import coramin
+from pyomo.contrib import coramin
 import itertools
 import os
 import time

@@ -2,7 +2,7 @@ from pyomo.common import unittest
 import itertools
 import math
 import pyomo.environ as pe
-import coramin
+from pyomo.contrib import coramin
 from pyomo.contrib.coramin.relaxations.alphabb import AlphaBBRelaxation
 
 

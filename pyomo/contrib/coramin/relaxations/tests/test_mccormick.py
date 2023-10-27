@@ -1,6 +1,6 @@
 import pyomo.environ as pyo
 from pyomo.common import unittest
-import coramin
+from pyomo.contrib import coramin
 
 
 class TestMcCormick(unittest.TestCase):

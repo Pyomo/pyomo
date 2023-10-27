@@ -1,7 +1,7 @@
 from pyomo.common import unittest
 import math
 import pyomo.environ as pe
-import coramin
+from pyomo.contrib import coramin
 import numpy as np
 from pyomo.contrib.coramin.relaxations.segments import compute_k_segment_points
 

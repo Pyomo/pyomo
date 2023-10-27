@@ -3,7 +3,7 @@ This example demonstrates how to used decomposed bounds
 tightening. The example problem is an ACOPF problem.
 """
 import pyomo.environ as pe
-import coramin
+from pyomo.contrib import coramin
 from egret.data.model_data import ModelData
 from egret.thirdparty.get_pglib_opf import get_pglib_opf
 from egret.models.ac_relaxations import create_polar_acopf_relaxation

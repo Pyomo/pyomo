@@ -1,6 +1,6 @@
 from pyomo.common import unittest
 import pyomo.environ as pe
-import coramin
+from pyomo.contrib import coramin
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.expr.numeric_expr import ExpressionBase

@@ -1,4 +1,4 @@
-import coramin
+from pyomo.contrib import coramin
 from pyomo.common import unittest
 import pyomo.environ as pe
 from pyomo.common.collections import ComponentSet

@@ -1,5 +1,5 @@
 import pyomo.environ as pe
-import coramin
+from pyomo.contrib import coramin
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 
 

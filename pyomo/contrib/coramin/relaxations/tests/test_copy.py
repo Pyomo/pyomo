@@ -1,7 +1,7 @@
 from pyomo.contrib.coramin.relaxations.copy_relaxation import copy_relaxation_with_local_data
 from pyomo.common import unittest
 import pyomo.environ as pe
-import coramin
+from pyomo.contrib import coramin
 from pyomo.common.collections import ComponentSet
 from pyomo.core.expr.sympy_tools import sympyify_expression
 

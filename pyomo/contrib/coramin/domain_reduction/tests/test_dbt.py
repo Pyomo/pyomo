@@ -3,7 +3,7 @@ from pyomo.contrib.coramin.domain_reduction.dbt import TreeBlock, TreeBlockError
     perform_dbt, OBBTMethod, FilterMethod
 from pyomo.common import unittest
 import pyomo.environ as pe
-import coramin
+from pyomo.contrib import coramin
 from networkx import is_bipartite
 from pyomo.common.collections import ComponentSet
 from networkx import Graph
