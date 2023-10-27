@@ -8,7 +8,7 @@ def create_nlp(a, b):
     m.x = pe.Var(bounds=(-20.0, 20.0))
     m.y = pe.Var(bounds=(-20.0, 20.0))
 
-    m.objective = pe.Objective(expr=(a - m.x)**2 + b*(m.y - m.x**2)**2)
+    m.objective = pe.Objective(expr=(a - m.x) ** 2 + b * (m.y - m.x**2) ** 2)
 
     return m
 
@@ -20,7 +20,7 @@ def create_relaxation(a, b):
     m.y = pe.Var(bounds=(-20.0, 20.0))
     m.z = pe.Var()
 
-    m.objective = pe.Objective(expr=(a - m.x)**2 + b*m.z**2)
+    m.objective = pe.Objective(expr=(a - m.x) ** 2 + b * m.z**2)
     m.con1 = pe.Constraint(expr=m.z == m.y - m.x_sq)
     m.x_sq_con = coramin.relaxations.PWXSquaredRelaxation()
     m.x_sq_con.build(x=m.x, aux_var=m.x_sq, use_linear_relaxation=True)

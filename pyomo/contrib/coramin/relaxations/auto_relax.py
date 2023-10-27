@@ -3,8 +3,13 @@ from pyomo.common.collections import ComponentMap, ComponentSet
 import pyomo.core.expr.numeric_expr as numeric_expr
 from pyomo.core.expr.visitor import ExpressionValueVisitor
 from pyomo.core.expr.numvalue import (
-    nonpyomo_leaf_types, value, NumericValue, is_fixed, polynomial_degree, is_constant,
-    native_numeric_types
+    nonpyomo_leaf_types,
+    value,
+    NumericValue,
+    is_fixed,
+    polynomial_degree,
+    is_constant,
+    native_numeric_types,
 )
 from pyomo.core.expr.numeric_expr import ExpressionBase
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr, fbbt
@@ -12,14 +17,27 @@ import math
 from pyomo.core.base.constraint import Constraint
 import logging
 from .relaxations_base import BaseRelaxationData
-from .univariate import PWUnivariateRelaxation, PWXSquaredRelaxation, PWCosRelaxation, PWSinRelaxation, PWArctanRelaxation
+from .univariate import (
+    PWUnivariateRelaxation,
+    PWXSquaredRelaxation,
+    PWCosRelaxation,
+    PWSinRelaxation,
+    PWArctanRelaxation,
+)
 from .mccormick import PWMcCormickRelaxation
 from .multivariate import MultivariateRelaxation
 from .alphabb import AlphaBBRelaxation
-from pyomo.contrib.coramin.utils.coramin_enums import RelaxationSide, FunctionShape, Effort, EigenValueBounder
+from pyomo.contrib.coramin.utils.coramin_enums import (
+    RelaxationSide,
+    FunctionShape,
+    Effort,
+    EigenValueBounder,
+)
 from pyomo.gdp import Disjunct
 from pyomo.core.base.expression import _GeneralExpressionData, SimpleExpression
-from pyomo.contrib.coramin.relaxations.iterators import nonrelaxation_component_data_objects
+from pyomo.contrib.coramin.relaxations.iterators import (
+    nonrelaxation_component_data_objects,
+)
 from pyomo.contrib import appsi
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.contrib.fbbt import interval
@@ -45,8 +63,7 @@ class Hashable:
             elif isinstance(i, NumericValue):
                 entries.append(id(i))
             else:
-                raise NotImplementedError(
-                    f'unexpected entry: {str(i)}')
+                raise NotImplementedError(f'unexpected entry: {str(i)}')
         self.entries = entries
         self.hashable_entries = tuple(entries)
 
@@ -110,7 +127,9 @@ def _get_aux_var(parent_block, expr):
     return _aux_var
 
 
-def _relax_leaf_to_root_ProductExpression(node, values, aux_var_map, degree_map, parent_block, relaxation_side_map, counter):
+def _relax_leaf_to_root_ProductExpression(
+    node, values, aux_var_map, degree_map, parent_block, relaxation_side_map, counter
+):
     arg1, arg2 = values
 
     # The purpose of the next bit of code is to find common quadratic terms. For example, suppose we are relaxing
@@ -154,7 +173,10 @@ def _relax_leaf_to_root_ProductExpression(node, values, aux_var_map, degree_map,
         elif degree_2 == 0:
             res = arg2 * arg1
             degree_map[res] = degree_1
-        elif arg1.__class__ == numeric_expr.MonomialTermExpression or arg2.__class__ == numeric_expr.MonomialTermExpression:
+        elif (
+            arg1.__class__ == numeric_expr.MonomialTermExpression
+            or arg2.__class__ == numeric_expr.MonomialTermExpression
+        ):
             if arg1.__class__ == numeric_expr.MonomialTermExpression:
                 coef1, arg1 = arg1.args
             else:
@@ -167,16 +189,28 @@ def _relax_leaf_to_root_ProductExpression(node, values, aux_var_map, degree_map,
             _new_relaxation_side_map = ComponentMap()
             _reformulated = coef * (arg1 * arg2)
             _new_relaxation_side_map[_reformulated] = relaxation_side_map[node]
-            res = _relax_expr(expr=_reformulated, aux_var_map=aux_var_map, parent_block=parent_block,
-                              relaxation_side_map=_new_relaxation_side_map, counter=counter, degree_map=degree_map)
+            res = _relax_expr(
+                expr=_reformulated,
+                aux_var_map=aux_var_map,
+                parent_block=parent_block,
+                relaxation_side_map=_new_relaxation_side_map,
+                counter=counter,
+                degree_map=degree_map,
+            )
             degree_map[res] = 1
         elif arg1 is arg2:
             # reformulate arg1 * arg2 as arg1**2
             _new_relaxation_side_map = ComponentMap()
             _reformulated = arg1**2
             _new_relaxation_side_map[_reformulated] = relaxation_side_map[node]
-            res = _relax_expr(expr=_reformulated, aux_var_map=aux_var_map, parent_block=parent_block,
-                              relaxation_side_map=_new_relaxation_side_map, counter=counter, degree_map=degree_map)
+            res = _relax_expr(
+                expr=_reformulated,
+                aux_var_map=aux_var_map,
+                parent_block=parent_block,
+                relaxation_side_map=_new_relaxation_side_map,
+                counter=counter,
+                degree_map=degree_map,
+            )
             degree_map[res] = 1
         else:
             _aux_var = _get_aux_var(parent_block, arg1 * arg2)
@@ -184,16 +218,20 @@ def _relax_leaf_to_root_ProductExpression(node, values, aux_var_map, degree_map,
             arg2 = replace_sub_expression_with_aux_var(arg2, parent_block)
             relaxation_side = relaxation_side_map[node]
             relaxation = PWMcCormickRelaxation()
-            relaxation.set_input(x1=arg1, x2=arg2, aux_var=_aux_var, relaxation_side=relaxation_side)
+            relaxation.set_input(
+                x1=arg1, x2=arg2, aux_var=_aux_var, relaxation_side=relaxation_side
+            )
             aux_var_map[h1] = (_aux_var, relaxation)
-            setattr(parent_block.relaxations, 'rel'+str(counter), relaxation)
+            setattr(parent_block.relaxations, 'rel' + str(counter), relaxation)
             counter.increment()
             res = _aux_var
             degree_map[res] = 1
     return res
 
 
-def _relax_leaf_to_root_DivisionExpression(node, values, aux_var_map, degree_map, parent_block, relaxation_side_map, counter):
+def _relax_leaf_to_root_DivisionExpression(
+    node, values, aux_var_map, degree_map, parent_block, relaxation_side_map, counter
+):
     arg1, arg2 = values
     h1 = Hashable(arg1, arg2, 'div')
     if arg1.__class__ == numeric_expr.MonomialTermExpression:
@@ -204,7 +242,7 @@ def _relax_leaf_to_root_DivisionExpression(node, values, aux_var_map, degree_map
         coef2, arg2 = arg2.args
     else:
         coef2 = 1
-    coef = coef1/coef2
+    coef = coef1 / coef2
     degree_1 = degree_map[arg1]
     degree_2 = degree_map[arg2]
 
@@ -233,25 +271,37 @@ def _relax_leaf_to_root_DivisionExpression(node, values, aux_var_map, degree_map
             degree_map[res] = 1
             return res
         else:
-            _aux_var = _get_aux_var(parent_block, 1/arg2)
+            _aux_var = _get_aux_var(parent_block, 1 / arg2)
             arg2 = replace_sub_expression_with_aux_var(arg2, parent_block)
             relaxation_side = relaxation_side_map[node]
             degree_map[_aux_var] = 1
             if compute_float_bounds_on_expr(arg2)[0] > 0:
                 relaxation = PWUnivariateRelaxation()
-                relaxation.set_input(x=arg2, aux_var=_aux_var, relaxation_side=relaxation_side, f_x_expr=1/arg2,
-                                     shape=FunctionShape.CONVEX)
+                relaxation.set_input(
+                    x=arg2,
+                    aux_var=_aux_var,
+                    relaxation_side=relaxation_side,
+                    f_x_expr=1 / arg2,
+                    shape=FunctionShape.CONVEX,
+                )
             elif compute_float_bounds_on_expr(arg2)[1] < 0:
                 relaxation = PWUnivariateRelaxation()
-                relaxation.set_input(x=arg2, aux_var=_aux_var, relaxation_side=relaxation_side, f_x_expr=1/arg2,
-                                     shape=FunctionShape.CONCAVE)
+                relaxation.set_input(
+                    x=arg2,
+                    aux_var=_aux_var,
+                    relaxation_side=relaxation_side,
+                    f_x_expr=1 / arg2,
+                    shape=FunctionShape.CONCAVE,
+                )
             else:
                 _one = parent_block.aux_vars.add()
                 _one.fix(1)
                 relaxation = PWMcCormickRelaxation()
-                relaxation.set_input(x1=arg2, x2=_aux_var, aux_var=_one, relaxation_side=relaxation_side)
+                relaxation.set_input(
+                    x1=arg2, x2=_aux_var, aux_var=_one, relaxation_side=relaxation_side
+                )
             aux_var_map[h2] = (_aux_var, relaxation)
-            setattr(parent_block.relaxations, 'rel'+str(counter), relaxation)
+            setattr(parent_block.relaxations, 'rel' + str(counter), relaxation)
             counter.increment()
             res = coef * arg1 * _aux_var
             degree_map[res] = 1
@@ -274,9 +324,11 @@ def _relax_leaf_to_root_DivisionExpression(node, values, aux_var_map, degree_map
         else:
             relaxation_side = RelaxationSide.BOTH
         relaxation = PWMcCormickRelaxation()
-        relaxation.set_input(x1=arg2, x2=_aux_var, aux_var=arg1, relaxation_side=relaxation_side)
+        relaxation.set_input(
+            x1=arg2, x2=_aux_var, aux_var=arg1, relaxation_side=relaxation_side
+        )
         aux_var_map[h1] = (_aux_var, relaxation)
-        setattr(parent_block.relaxations, 'rel'+str(counter), relaxation)
+        setattr(parent_block.relaxations, 'rel' + str(counter), relaxation)
         counter.increment()
         res = coef * _aux_var
         degree_map[_aux_var] = 1
@@ -284,7 +336,9 @@ def _relax_leaf_to_root_DivisionExpression(node, values, aux_var_map, degree_map
         return res
 
 
-def _relax_quadratic(arg1, aux_var_map, relaxation_side, degree_map, parent_block, counter):
+def _relax_quadratic(
+    arg1, aux_var_map, relaxation_side, degree_map, parent_block, counter
+):
     _aux_var = _get_aux_var(parent_block, arg1**2)
     arg1 = replace_sub_expression_with_aux_var(arg1, parent_block)
     degree_map[_aux_var] = 1
@@ -296,7 +350,16 @@ def _relax_quadratic(arg1, aux_var_map, relaxation_side, degree_map, parent_bloc
     return _aux_var
 
 
-def _relax_convex_pow(arg1, arg2, aux_var_map, relaxation_side, degree_map, parent_block, counter, swap=False):
+def _relax_convex_pow(
+    arg1,
+    arg2,
+    aux_var_map,
+    relaxation_side,
+    degree_map,
+    parent_block,
+    counter,
+    swap=False,
+):
     _aux_var = _get_aux_var(parent_block, arg1**arg2)
     if swap:
         arg2 = replace_sub_expression_with_aux_var(arg2, parent_block)
@@ -306,28 +369,42 @@ def _relax_convex_pow(arg1, arg2, aux_var_map, relaxation_side, degree_map, pare
         _x = arg1
     degree_map[_aux_var] = 1
     relaxation = PWUnivariateRelaxation()
-    relaxation.set_input(x=_x, aux_var=_aux_var, relaxation_side=relaxation_side, f_x_expr=arg1 ** arg2,
-                         shape=FunctionShape.CONVEX)
+    relaxation.set_input(
+        x=_x,
+        aux_var=_aux_var,
+        relaxation_side=relaxation_side,
+        f_x_expr=arg1**arg2,
+        shape=FunctionShape.CONVEX,
+    )
     aux_var_map[Hashable(arg1, arg2, 'pow')] = (_aux_var, relaxation)
     setattr(parent_block.relaxations, 'rel' + str(counter), relaxation)
     counter.increment()
     return _aux_var
 
 
-def _relax_concave_pow(arg1, arg2, aux_var_map, relaxation_side, degree_map, parent_block, counter):
-    _aux_var = _get_aux_var(parent_block, arg1 ** arg2)
+def _relax_concave_pow(
+    arg1, arg2, aux_var_map, relaxation_side, degree_map, parent_block, counter
+):
+    _aux_var = _get_aux_var(parent_block, arg1**arg2)
     arg1 = replace_sub_expression_with_aux_var(arg1, parent_block)
     degree_map[_aux_var] = 1
     relaxation = PWUnivariateRelaxation()
-    relaxation.set_input(x=arg1, aux_var=_aux_var, relaxation_side=relaxation_side, f_x_expr=arg1 ** arg2,
-                         shape=FunctionShape.CONCAVE)
+    relaxation.set_input(
+        x=arg1,
+        aux_var=_aux_var,
+        relaxation_side=relaxation_side,
+        f_x_expr=arg1**arg2,
+        shape=FunctionShape.CONCAVE,
+    )
     aux_var_map[Hashable(arg1, arg2, 'pow')] = (_aux_var, relaxation)
     setattr(parent_block.relaxations, 'rel' + str(counter), relaxation)
     counter.increment()
     return _aux_var
 
 
-def _relax_leaf_to_root_PowExpression(node, values, aux_var_map, degree_map, parent_block, relaxation_side_map, counter):
+def _relax_leaf_to_root_PowExpression(
+    node, values, aux_var_map, degree_map, parent_block, relaxation_side_map, counter
+):
     arg1, arg2 = values
     h = Hashable(arg1, arg2, 'pow')
     if h in aux_var_map:
@@ -341,11 +418,17 @@ def _relax_leaf_to_root_PowExpression(node, values, aux_var_map, degree_map, par
         degree2 = degree_map[arg2]
         if degree2 == 0:
             if degree1 == 0:
-                res = arg1 ** arg2
+                res = arg1**arg2
                 degree_map[res] = 0
                 return res
             if not is_constant(arg2):
-                logger.warning('Only constant exponents are supported: ' + str(arg1**arg2) + '\nReplacing ' + str(arg2) + ' with its value.')
+                logger.warning(
+                    'Only constant exponents are supported: '
+                    + str(arg1**arg2)
+                    + '\nReplacing '
+                    + str(arg2)
+                    + ' with its value.'
+                )
             arg2 = pe.value(arg2)
             if arg2 == 1:
                 return arg1
@@ -354,114 +437,214 @@ def _relax_leaf_to_root_PowExpression(node, values, aux_var_map, degree_map, par
                 degree_map[res] = 0
                 return res
             elif arg2 == 2:
-                return _relax_quadratic(arg1=arg1, aux_var_map=aux_var_map, relaxation_side=relaxation_side_map[node],
-                                        degree_map=degree_map, parent_block=parent_block, counter=counter)
+                return _relax_quadratic(
+                    arg1=arg1,
+                    aux_var_map=aux_var_map,
+                    relaxation_side=relaxation_side_map[node],
+                    degree_map=degree_map,
+                    parent_block=parent_block,
+                    counter=counter,
+                )
             elif arg2 >= 0:
                 if arg2 == round(arg2):
                     if arg2 % 2 == 0 or compute_float_bounds_on_expr(arg1)[0] >= 0:
-                        return _relax_convex_pow(arg1=arg1, arg2=arg2, aux_var_map=aux_var_map,
-                                                 relaxation_side=relaxation_side_map[node], degree_map=degree_map,
-                                                 parent_block=parent_block, counter=counter)
+                        return _relax_convex_pow(
+                            arg1=arg1,
+                            arg2=arg2,
+                            aux_var_map=aux_var_map,
+                            relaxation_side=relaxation_side_map[node],
+                            degree_map=degree_map,
+                            parent_block=parent_block,
+                            counter=counter,
+                        )
                     elif compute_float_bounds_on_expr(arg1)[1] <= 0:
-                        return _relax_concave_pow(arg1=arg1, arg2=arg2, aux_var_map=aux_var_map,
-                                                  relaxation_side=relaxation_side_map[node], degree_map=degree_map,
-                                                  parent_block=parent_block, counter=counter)
+                        return _relax_concave_pow(
+                            arg1=arg1,
+                            arg2=arg2,
+                            aux_var_map=aux_var_map,
+                            relaxation_side=relaxation_side_map[node],
+                            degree_map=degree_map,
+                            parent_block=parent_block,
+                            counter=counter,
+                        )
                     else:  # reformulate arg1 ** arg2 as arg1 * arg1 ** (arg2 - 1)
                         _new_relaxation_side_map = ComponentMap()
                         _reformulated = arg1 * arg1 ** (arg2 - 1)
-                        _new_relaxation_side_map[_reformulated] = relaxation_side_map[node]
-                        res = _relax_expr(expr=_reformulated, aux_var_map=aux_var_map, parent_block=parent_block,
-                                          relaxation_side_map=_new_relaxation_side_map, counter=counter,
-                                          degree_map=degree_map)
+                        _new_relaxation_side_map[_reformulated] = relaxation_side_map[
+                            node
+                        ]
+                        res = _relax_expr(
+                            expr=_reformulated,
+                            aux_var_map=aux_var_map,
+                            parent_block=parent_block,
+                            relaxation_side_map=_new_relaxation_side_map,
+                            counter=counter,
+                            degree_map=degree_map,
+                        )
                         degree_map[res] = 1
                         return res
                 else:
                     if arg2 < 1:
-                        return _relax_concave_pow(arg1=arg1, arg2=arg2, aux_var_map=aux_var_map,
-                                                  relaxation_side=relaxation_side_map[node], degree_map=degree_map,
-                                                  parent_block=parent_block, counter=counter)
+                        return _relax_concave_pow(
+                            arg1=arg1,
+                            arg2=arg2,
+                            aux_var_map=aux_var_map,
+                            relaxation_side=relaxation_side_map[node],
+                            degree_map=degree_map,
+                            parent_block=parent_block,
+                            counter=counter,
+                        )
                     else:
-                        return _relax_convex_pow(arg1=arg1, arg2=arg2, aux_var_map=aux_var_map,
-                                                 relaxation_side=relaxation_side_map[node], degree_map=degree_map,
-                                                 parent_block=parent_block, counter=counter)
+                        return _relax_convex_pow(
+                            arg1=arg1,
+                            arg2=arg2,
+                            aux_var_map=aux_var_map,
+                            relaxation_side=relaxation_side_map[node],
+                            degree_map=degree_map,
+                            parent_block=parent_block,
+                            counter=counter,
+                        )
             else:
                 if arg2 == round(arg2):
                     if compute_float_bounds_on_expr(arg1)[0] >= 0:
-                        return _relax_convex_pow(arg1=arg1, arg2=arg2, aux_var_map=aux_var_map,
-                                                 relaxation_side=relaxation_side_map[node], degree_map=degree_map,
-                                                 parent_block=parent_block, counter=counter)
+                        return _relax_convex_pow(
+                            arg1=arg1,
+                            arg2=arg2,
+                            aux_var_map=aux_var_map,
+                            relaxation_side=relaxation_side_map[node],
+                            degree_map=degree_map,
+                            parent_block=parent_block,
+                            counter=counter,
+                        )
                     elif compute_float_bounds_on_expr(arg1)[1] <= 0:
                         if arg2 % 2 == 0:
-                            return _relax_convex_pow(arg1=arg1, arg2=arg2, aux_var_map=aux_var_map,
-                                                     relaxation_side=relaxation_side_map[node], degree_map=degree_map,
-                                                     parent_block=parent_block, counter=counter)
+                            return _relax_convex_pow(
+                                arg1=arg1,
+                                arg2=arg2,
+                                aux_var_map=aux_var_map,
+                                relaxation_side=relaxation_side_map[node],
+                                degree_map=degree_map,
+                                parent_block=parent_block,
+                                counter=counter,
+                            )
                         else:
-                            return _relax_concave_pow(arg1=arg1, arg2=arg2, aux_var_map=aux_var_map,
-                                                      relaxation_side=relaxation_side_map[node], degree_map=degree_map,
-                                                      parent_block=parent_block, counter=counter)
+                            return _relax_concave_pow(
+                                arg1=arg1,
+                                arg2=arg2,
+                                aux_var_map=aux_var_map,
+                                relaxation_side=relaxation_side_map[node],
+                                degree_map=degree_map,
+                                parent_block=parent_block,
+                                counter=counter,
+                            )
                     else:
                         # reformulate arg1 ** arg2 as 1 / arg1 ** (-arg2)
                         _new_relaxation_side_map = ComponentMap()
                         _reformulated = 1 / (arg1 ** (-arg2))
-                        _new_relaxation_side_map[_reformulated] = relaxation_side_map[node]
-                        res = _relax_expr(expr=_reformulated, aux_var_map=aux_var_map, parent_block=parent_block,
-                                          relaxation_side_map=_new_relaxation_side_map, counter=counter,
-                                          degree_map=degree_map)
+                        _new_relaxation_side_map[_reformulated] = relaxation_side_map[
+                            node
+                        ]
+                        res = _relax_expr(
+                            expr=_reformulated,
+                            aux_var_map=aux_var_map,
+                            parent_block=parent_block,
+                            relaxation_side_map=_new_relaxation_side_map,
+                            counter=counter,
+                            degree_map=degree_map,
+                        )
                         degree_map[res] = 1
                         return res
                 else:
                     assert compute_float_bounds_on_expr(arg1)[0] >= 0
-                    return _relax_convex_pow(arg1=arg1, arg2=arg2, aux_var_map=aux_var_map,
-                                             relaxation_side=relaxation_side_map[node], degree_map=degree_map,
-                                             parent_block=parent_block, counter=counter)
+                    return _relax_convex_pow(
+                        arg1=arg1,
+                        arg2=arg2,
+                        aux_var_map=aux_var_map,
+                        relaxation_side=relaxation_side_map[node],
+                        degree_map=degree_map,
+                        parent_block=parent_block,
+                        counter=counter,
+                    )
         elif degree1 == 0:
             if not is_constant(arg1):
-                logger.warning('Found {0} raised to a variable power. However, {0} does not appear to be constant (maybe '
-                               'it is or depends on a mutable Param?). Replacing {0} with its value.'.format(str(arg1)))
+                logger.warning(
+                    'Found {0} raised to a variable power. However, {0} does not appear to be constant (maybe '
+                    'it is or depends on a mutable Param?). Replacing {0} with its value.'.format(
+                        str(arg1)
+                    )
+                )
                 arg1 = pe.value(arg1)
             if arg1 < 0:
-                raise ValueError('Cannot raise a negative base to a variable exponent: ' + str(arg1**arg2))
-            return _relax_convex_pow(arg1=arg1, arg2=arg2, aux_var_map=aux_var_map,
-                                     relaxation_side=relaxation_side_map[node], degree_map=degree_map,
-                                     parent_block=parent_block, counter=counter, swap=True)
+                raise ValueError(
+                    'Cannot raise a negative base to a variable exponent: '
+                    + str(arg1**arg2)
+                )
+            return _relax_convex_pow(
+                arg1=arg1,
+                arg2=arg2,
+                aux_var_map=aux_var_map,
+                relaxation_side=relaxation_side_map[node],
+                degree_map=degree_map,
+                parent_block=parent_block,
+                counter=counter,
+                swap=True,
+            )
         else:
             assert compute_float_bounds_on_expr(arg1)[0] >= 0
             _new_relaxation_side_map = ComponentMap()
             _reformulated = pe.exp(arg2 * pe.log(arg1))
             _new_relaxation_side_map[_reformulated] = relaxation_side_map[node]
-            res = _relax_expr(expr=_reformulated, aux_var_map=aux_var_map, parent_block=parent_block,
-                              relaxation_side_map=_new_relaxation_side_map, counter=counter,
-                              degree_map=degree_map)
+            res = _relax_expr(
+                expr=_reformulated,
+                aux_var_map=aux_var_map,
+                parent_block=parent_block,
+                relaxation_side_map=_new_relaxation_side_map,
+                counter=counter,
+                degree_map=degree_map,
+            )
             degree_map[res] = 1
             return res
 
 
-def _relax_leaf_to_root_SumExpression(node, values, aux_var_map, degree_map, parent_block, relaxation_side_map, counter):
+def _relax_leaf_to_root_SumExpression(
+    node, values, aux_var_map, degree_map, parent_block, relaxation_side_map, counter
+):
     res = sum(values)
     degree_map[res] = max([degree_map[arg] for arg in values])
     return res
 
 
-def _relax_leaf_to_root_NegationExpression(node, values, aux_var_map, degree_map, parent_block, relaxation_side_map, counter):
+def _relax_leaf_to_root_NegationExpression(
+    node, values, aux_var_map, degree_map, parent_block, relaxation_side_map, counter
+):
     arg = values[0]
     res = -arg
     degree_map[res] = degree_map[arg]
     return res
 
 
-def _relax_leaf_to_root_sqrt(node, values, aux_var_map, degree_map, parent_block, relaxation_side_map, counter):
+def _relax_leaf_to_root_sqrt(
+    node, values, aux_var_map, degree_map, parent_block, relaxation_side_map, counter
+):
     arg = values[0]
     _new_relaxation_side_map = ComponentMap()
     _reformulated = arg**0.5
     _new_relaxation_side_map[_reformulated] = relaxation_side_map[node]
-    res = _relax_expr(expr=_reformulated, aux_var_map=aux_var_map, parent_block=parent_block,
-                      relaxation_side_map=_new_relaxation_side_map, counter=counter,
-                      degree_map=degree_map)
+    res = _relax_expr(
+        expr=_reformulated,
+        aux_var_map=aux_var_map,
+        parent_block=parent_block,
+        relaxation_side_map=_new_relaxation_side_map,
+        counter=counter,
+        degree_map=degree_map,
+    )
     degree_map[res] = 1
     return res
 
 
-def _relax_leaf_to_root_exp(node, values, aux_var_map, degree_map, parent_block, relaxation_side_map, counter):
+def _relax_leaf_to_root_exp(
+    node, values, aux_var_map, degree_map, parent_block, relaxation_side_map, counter
+):
     arg = values[0]
     degree = degree_map[arg]
     if degree == 0:
@@ -481,15 +664,22 @@ def _relax_leaf_to_root_exp(node, values, aux_var_map, degree_map, parent_block,
         relaxation_side = relaxation_side_map[node]
         degree_map[_aux_var] = 1
         relaxation = PWUnivariateRelaxation()
-        relaxation.set_input(x=arg, aux_var=_aux_var, relaxation_side=relaxation_side, f_x_expr=pe.exp(arg),
-                             shape=FunctionShape.CONVEX)
+        relaxation.set_input(
+            x=arg,
+            aux_var=_aux_var,
+            relaxation_side=relaxation_side,
+            f_x_expr=pe.exp(arg),
+            shape=FunctionShape.CONVEX,
+        )
         aux_var_map[id(arg), 'exp'] = (_aux_var, relaxation)
-        setattr(parent_block.relaxations, 'rel'+str(counter), relaxation)
+        setattr(parent_block.relaxations, 'rel' + str(counter), relaxation)
         counter.increment()
         return _aux_var
 
 
-def _relax_leaf_to_root_log(node, values, aux_var_map, degree_map, parent_block, relaxation_side_map, counter):
+def _relax_leaf_to_root_log(
+    node, values, aux_var_map, degree_map, parent_block, relaxation_side_map, counter
+):
     arg = values[0]
     degree = degree_map[arg]
     if degree == 0:
@@ -509,15 +699,22 @@ def _relax_leaf_to_root_log(node, values, aux_var_map, degree_map, parent_block,
         relaxation_side = relaxation_side_map[node]
         degree_map[_aux_var] = 1
         relaxation = PWUnivariateRelaxation()
-        relaxation.set_input(x=arg, aux_var=_aux_var, relaxation_side=relaxation_side, f_x_expr=pe.log(arg),
-                             shape=FunctionShape.CONCAVE)
+        relaxation.set_input(
+            x=arg,
+            aux_var=_aux_var,
+            relaxation_side=relaxation_side,
+            f_x_expr=pe.log(arg),
+            shape=FunctionShape.CONCAVE,
+        )
         aux_var_map[id(arg), 'log'] = (_aux_var, relaxation)
-        setattr(parent_block.relaxations, 'rel'+str(counter), relaxation)
+        setattr(parent_block.relaxations, 'rel' + str(counter), relaxation)
         counter.increment()
         return _aux_var
 
 
-def _relax_leaf_to_root_log10(node, values, aux_var_map, degree_map, parent_block, relaxation_side_map, counter):
+def _relax_leaf_to_root_log10(
+    node, values, aux_var_map, degree_map, parent_block, relaxation_side_map, counter
+):
     arg = values[0]
     degree = degree_map[arg]
     if degree == 0:
@@ -537,15 +734,22 @@ def _relax_leaf_to_root_log10(node, values, aux_var_map, degree_map, parent_bloc
         relaxation_side = relaxation_side_map[node]
         degree_map[_aux_var] = 1
         relaxation = PWUnivariateRelaxation()
-        relaxation.set_input(x=arg, aux_var=_aux_var, relaxation_side=relaxation_side, f_x_expr=pe.log10(arg),
-                             shape=FunctionShape.CONCAVE)
+        relaxation.set_input(
+            x=arg,
+            aux_var=_aux_var,
+            relaxation_side=relaxation_side,
+            f_x_expr=pe.log10(arg),
+            shape=FunctionShape.CONCAVE,
+        )
         aux_var_map[id(arg), 'log10'] = (_aux_var, relaxation)
-        setattr(parent_block.relaxations, 'rel'+str(counter), relaxation)
+        setattr(parent_block.relaxations, 'rel' + str(counter), relaxation)
         counter.increment()
         return _aux_var
 
 
-def _relax_leaf_to_root_sin(node, values, aux_var_map, degree_map, parent_block, relaxation_side_map, counter):
+def _relax_leaf_to_root_sin(
+    node, values, aux_var_map, degree_map, parent_block, relaxation_side_map, counter
+):
     arg = values[0]
     degree = degree_map[arg]
     if degree == 0:
@@ -567,12 +771,14 @@ def _relax_leaf_to_root_sin(node, values, aux_var_map, degree_map, parent_block,
         relaxation = PWSinRelaxation()
         relaxation.set_input(x=arg, aux_var=_aux_var, relaxation_side=relaxation_side)
         aux_var_map[id(arg), 'sin'] = (_aux_var, relaxation)
-        setattr(parent_block.relaxations, 'rel'+str(counter), relaxation)
+        setattr(parent_block.relaxations, 'rel' + str(counter), relaxation)
         counter.increment()
         return _aux_var
 
 
-def _relax_leaf_to_root_cos(node, values, aux_var_map, degree_map, parent_block, relaxation_side_map, counter):
+def _relax_leaf_to_root_cos(
+    node, values, aux_var_map, degree_map, parent_block, relaxation_side_map, counter
+):
     arg = values[0]
     degree = degree_map[arg]
     if degree == 0:
@@ -594,12 +800,14 @@ def _relax_leaf_to_root_cos(node, values, aux_var_map, degree_map, parent_block,
         relaxation = PWCosRelaxation()
         relaxation.set_input(x=arg, aux_var=_aux_var, relaxation_side=relaxation_side)
         aux_var_map[id(arg), 'cos'] = (_aux_var, relaxation)
-        setattr(parent_block.relaxations, 'rel'+str(counter), relaxation)
+        setattr(parent_block.relaxations, 'rel' + str(counter), relaxation)
         counter.increment()
         return _aux_var
 
 
-def _relax_leaf_to_root_arctan(node, values, aux_var_map, degree_map, parent_block, relaxation_side_map, counter):
+def _relax_leaf_to_root_arctan(
+    node, values, aux_var_map, degree_map, parent_block, relaxation_side_map, counter
+):
     arg = values[0]
     degree = degree_map[arg]
     if degree == 0:
@@ -621,12 +829,14 @@ def _relax_leaf_to_root_arctan(node, values, aux_var_map, degree_map, parent_blo
         relaxation = PWArctanRelaxation()
         relaxation.set_input(x=arg, aux_var=_aux_var, relaxation_side=relaxation_side)
         aux_var_map[id(arg), 'arctan'] = (_aux_var, relaxation)
-        setattr(parent_block.relaxations, 'rel'+str(counter), relaxation)
+        setattr(parent_block.relaxations, 'rel' + str(counter), relaxation)
         counter.increment()
         return _aux_var
 
 
-def _relax_leaf_to_root_tan(node, values, aux_var_map, degree_map, parent_block, relaxation_side_map, counter):
+def _relax_leaf_to_root_tan(
+    node, values, aux_var_map, degree_map, parent_block, relaxation_side_map, counter
+):
     arg = values[0]
     degree = degree_map[arg]
     if degree == 0:
@@ -646,22 +856,28 @@ def _relax_leaf_to_root_tan(node, values, aux_var_map, degree_map, parent_block,
         relaxation_side = relaxation_side_map[node]
         degree_map[_aux_var] = 1
 
-        if arg.lb >=0 and arg.ub <= math.pi/2:
+        if arg.lb >= 0 and arg.ub <= math.pi / 2:
             relaxation = PWUnivariateRelaxation()
             relaxation.set_input(
-                x=arg, aux_var=_aux_var, shape=FunctionShape.CONVEX,
-                f_x_expr=pe.tan(arg), relaxation_side=relaxation_side
+                x=arg,
+                aux_var=_aux_var,
+                shape=FunctionShape.CONVEX,
+                f_x_expr=pe.tan(arg),
+                relaxation_side=relaxation_side,
             )
-        elif arg.lb >= -math.pi/2 and arg.ub <= 0:
+        elif arg.lb >= -math.pi / 2 and arg.ub <= 0:
             relaxation = PWUnivariateRelaxation()
             relaxation.set_input(
-                x=arg, aux_var=_aux_var, shape=FunctionShape.CONCAVE,
-                f_x_expr=pe.tan(arg), relaxation_side=relaxation_side
+                x=arg,
+                aux_var=_aux_var,
+                shape=FunctionShape.CONCAVE,
+                f_x_expr=pe.tan(arg),
+                relaxation_side=relaxation_side,
             )
         else:
             raise NotImplementedError('Use alpha-BB here')
         aux_var_map[id(arg), 'tan'] = (_aux_var, relaxation)
-        setattr(parent_block.relaxations, 'rel'+str(counter), relaxation)
+        setattr(parent_block.relaxations, 'rel' + str(counter), relaxation)
         counter.increment()
         return _aux_var
 
@@ -677,35 +893,69 @@ _unary_leaf_to_root_map['sqrt'] = _relax_leaf_to_root_sqrt
 _unary_leaf_to_root_map['tan'] = _relax_leaf_to_root_tan
 
 
-def _relax_leaf_to_root_UnaryFunctionExpression(node, values, aux_var_map, degree_map, parent_block, relaxation_side_map, counter):
+def _relax_leaf_to_root_UnaryFunctionExpression(
+    node, values, aux_var_map, degree_map, parent_block, relaxation_side_map, counter
+):
     if node.getname() in _unary_leaf_to_root_map:
-        return _unary_leaf_to_root_map[node.getname()](node=node, values=values, aux_var_map=aux_var_map,
-                                                       degree_map=degree_map, parent_block=parent_block,
-                                                       relaxation_side_map=relaxation_side_map, counter=counter)
+        return _unary_leaf_to_root_map[node.getname()](
+            node=node,
+            values=values,
+            aux_var_map=aux_var_map,
+            degree_map=degree_map,
+            parent_block=parent_block,
+            relaxation_side_map=relaxation_side_map,
+            counter=counter,
+        )
     else:
         raise NotImplementedError('Cannot automatically relax ' + str(node))
 
 
-def _relax_leaf_to_root_GeneralExpression(node, values, aux_var_map, degree_map, parent_block, relaxation_side_map, counter):
+def _relax_leaf_to_root_GeneralExpression(
+    node, values, aux_var_map, degree_map, parent_block, relaxation_side_map, counter
+):
     arg = values[0]
     return arg
 
 
 _relax_leaf_to_root_map = dict()
-_relax_leaf_to_root_map[numeric_expr.ProductExpression] = _relax_leaf_to_root_ProductExpression
+_relax_leaf_to_root_map[
+    numeric_expr.ProductExpression
+] = _relax_leaf_to_root_ProductExpression
 _relax_leaf_to_root_map[numeric_expr.SumExpression] = _relax_leaf_to_root_SumExpression
-_relax_leaf_to_root_map[numeric_expr.LinearExpression] = _relax_leaf_to_root_SumExpression
-_relax_leaf_to_root_map[numeric_expr.MonomialTermExpression] = _relax_leaf_to_root_ProductExpression
-_relax_leaf_to_root_map[numeric_expr.NegationExpression] = _relax_leaf_to_root_NegationExpression
+_relax_leaf_to_root_map[
+    numeric_expr.LinearExpression
+] = _relax_leaf_to_root_SumExpression
+_relax_leaf_to_root_map[
+    numeric_expr.MonomialTermExpression
+] = _relax_leaf_to_root_ProductExpression
+_relax_leaf_to_root_map[
+    numeric_expr.NegationExpression
+] = _relax_leaf_to_root_NegationExpression
 _relax_leaf_to_root_map[numeric_expr.PowExpression] = _relax_leaf_to_root_PowExpression
-_relax_leaf_to_root_map[numeric_expr.DivisionExpression] = _relax_leaf_to_root_DivisionExpression
-_relax_leaf_to_root_map[numeric_expr.UnaryFunctionExpression] = _relax_leaf_to_root_UnaryFunctionExpression
-_relax_leaf_to_root_map[numeric_expr.NPV_ProductExpression] = _relax_leaf_to_root_ProductExpression
-_relax_leaf_to_root_map[numeric_expr.NPV_SumExpression] = _relax_leaf_to_root_SumExpression
-_relax_leaf_to_root_map[numeric_expr.NPV_NegationExpression] = _relax_leaf_to_root_NegationExpression
-_relax_leaf_to_root_map[numeric_expr.NPV_PowExpression] = _relax_leaf_to_root_PowExpression
-_relax_leaf_to_root_map[numeric_expr.NPV_DivisionExpression] = _relax_leaf_to_root_DivisionExpression
-_relax_leaf_to_root_map[numeric_expr.NPV_UnaryFunctionExpression] = _relax_leaf_to_root_UnaryFunctionExpression
+_relax_leaf_to_root_map[
+    numeric_expr.DivisionExpression
+] = _relax_leaf_to_root_DivisionExpression
+_relax_leaf_to_root_map[
+    numeric_expr.UnaryFunctionExpression
+] = _relax_leaf_to_root_UnaryFunctionExpression
+_relax_leaf_to_root_map[
+    numeric_expr.NPV_ProductExpression
+] = _relax_leaf_to_root_ProductExpression
+_relax_leaf_to_root_map[
+    numeric_expr.NPV_SumExpression
+] = _relax_leaf_to_root_SumExpression
+_relax_leaf_to_root_map[
+    numeric_expr.NPV_NegationExpression
+] = _relax_leaf_to_root_NegationExpression
+_relax_leaf_to_root_map[
+    numeric_expr.NPV_PowExpression
+] = _relax_leaf_to_root_PowExpression
+_relax_leaf_to_root_map[
+    numeric_expr.NPV_DivisionExpression
+] = _relax_leaf_to_root_DivisionExpression
+_relax_leaf_to_root_map[
+    numeric_expr.NPV_UnaryFunctionExpression
+] = _relax_leaf_to_root_UnaryFunctionExpression
 _relax_leaf_to_root_map[_GeneralExpressionData] = _relax_leaf_to_root_GeneralExpression
 _relax_leaf_to_root_map[SimpleExpression] = _relax_leaf_to_root_GeneralExpression
 
@@ -868,20 +1118,44 @@ def _relax_root_to_leaf_GeneralExpression(node, relaxation_side_map):
 
 
 _relax_root_to_leaf_map = dict()
-_relax_root_to_leaf_map[numeric_expr.ProductExpression] = _relax_root_to_leaf_ProductExpression
+_relax_root_to_leaf_map[
+    numeric_expr.ProductExpression
+] = _relax_root_to_leaf_ProductExpression
 _relax_root_to_leaf_map[numeric_expr.SumExpression] = _relax_root_to_leaf_SumExpression
-_relax_root_to_leaf_map[numeric_expr.LinearExpression] = _relax_root_to_leaf_SumExpression
-_relax_root_to_leaf_map[numeric_expr.MonomialTermExpression] = _relax_root_to_leaf_ProductExpression
-_relax_root_to_leaf_map[numeric_expr.NegationExpression] = _relax_root_to_leaf_NegationExpression
+_relax_root_to_leaf_map[
+    numeric_expr.LinearExpression
+] = _relax_root_to_leaf_SumExpression
+_relax_root_to_leaf_map[
+    numeric_expr.MonomialTermExpression
+] = _relax_root_to_leaf_ProductExpression
+_relax_root_to_leaf_map[
+    numeric_expr.NegationExpression
+] = _relax_root_to_leaf_NegationExpression
 _relax_root_to_leaf_map[numeric_expr.PowExpression] = _relax_root_to_leaf_PowExpression
-_relax_root_to_leaf_map[numeric_expr.DivisionExpression] = _relax_root_to_leaf_DivisionExpression
-_relax_root_to_leaf_map[numeric_expr.UnaryFunctionExpression] = _relax_root_to_leaf_UnaryFunctionExpression
-_relax_root_to_leaf_map[numeric_expr.NPV_ProductExpression] = _relax_root_to_leaf_ProductExpression
-_relax_root_to_leaf_map[numeric_expr.NPV_SumExpression] = _relax_root_to_leaf_SumExpression
-_relax_root_to_leaf_map[numeric_expr.NPV_NegationExpression] = _relax_root_to_leaf_NegationExpression
-_relax_root_to_leaf_map[numeric_expr.NPV_PowExpression] = _relax_root_to_leaf_PowExpression
-_relax_root_to_leaf_map[numeric_expr.NPV_DivisionExpression] = _relax_root_to_leaf_DivisionExpression
-_relax_root_to_leaf_map[numeric_expr.NPV_UnaryFunctionExpression] = _relax_root_to_leaf_UnaryFunctionExpression
+_relax_root_to_leaf_map[
+    numeric_expr.DivisionExpression
+] = _relax_root_to_leaf_DivisionExpression
+_relax_root_to_leaf_map[
+    numeric_expr.UnaryFunctionExpression
+] = _relax_root_to_leaf_UnaryFunctionExpression
+_relax_root_to_leaf_map[
+    numeric_expr.NPV_ProductExpression
+] = _relax_root_to_leaf_ProductExpression
+_relax_root_to_leaf_map[
+    numeric_expr.NPV_SumExpression
+] = _relax_root_to_leaf_SumExpression
+_relax_root_to_leaf_map[
+    numeric_expr.NPV_NegationExpression
+] = _relax_root_to_leaf_NegationExpression
+_relax_root_to_leaf_map[
+    numeric_expr.NPV_PowExpression
+] = _relax_root_to_leaf_PowExpression
+_relax_root_to_leaf_map[
+    numeric_expr.NPV_DivisionExpression
+] = _relax_root_to_leaf_DivisionExpression
+_relax_root_to_leaf_map[
+    numeric_expr.NPV_UnaryFunctionExpression
+] = _relax_root_to_leaf_UnaryFunctionExpression
 _relax_root_to_leaf_map[_GeneralExpressionData] = _relax_root_to_leaf_GeneralExpression
 _relax_root_to_leaf_map[SimpleExpression] = _relax_root_to_leaf_GeneralExpression
 
@@ -892,7 +1166,10 @@ class _FactorableRelaxationVisitor(ExpressionValueVisitor):
     auxiliary variables, and relaxations relating the auxilliary variables to
     the original variables.
     """
-    def __init__(self, aux_var_map, parent_block, relaxation_side_map, counter, degree_map):
+
+    def __init__(
+        self, aux_var_map, parent_block, relaxation_side_map, counter, degree_map
+    ):
         self.aux_var_map = aux_var_map
         self.parent_block = parent_block
         self.relaxation_side_map = relaxation_side_map
@@ -901,11 +1178,20 @@ class _FactorableRelaxationVisitor(ExpressionValueVisitor):
 
     def visit(self, node, values):
         if node.__class__ in _relax_leaf_to_root_map:
-            res = _relax_leaf_to_root_map[node.__class__](node, values, self.aux_var_map, self.degree_map,
-                                                          self.parent_block, self.relaxation_side_map, self.counter)
+            res = _relax_leaf_to_root_map[node.__class__](
+                node,
+                values,
+                self.aux_var_map,
+                self.degree_map,
+                self.parent_block,
+                self.relaxation_side_map,
+                self.counter,
+            )
             return res
         else:
-            raise NotImplementedError('Cannot relax an expression of type ' + str(type(node)))
+            raise NotImplementedError(
+                'Cannot relax an expression of type ' + str(type(node))
+            )
 
     def visiting_potential_leaf(self, node):
         if node.__class__ in nonpyomo_leaf_types:
@@ -926,7 +1212,9 @@ class _FactorableRelaxationVisitor(ExpressionValueVisitor):
         if node.__class__ in _relax_root_to_leaf_map:
             _relax_root_to_leaf_map[node.__class__](node, self.relaxation_side_map)
         else:
-            raise NotImplementedError('Cannot relax an expression of type ' + str(type(node)))
+            raise NotImplementedError(
+                'Cannot relax an expression of type ' + str(type(node))
+            )
 
         return False, None
 
@@ -949,10 +1237,16 @@ def _get_prefix_notation(expr):
     return tuple(res)
 
 
-def _relax_expr(expr, aux_var_map, parent_block, relaxation_side_map, counter, degree_map):
-    visitor = _FactorableRelaxationVisitor(aux_var_map=aux_var_map, parent_block=parent_block,
-                                           relaxation_side_map=relaxation_side_map, counter=counter,
-                                           degree_map=degree_map)
+def _relax_expr(
+    expr, aux_var_map, parent_block, relaxation_side_map, counter, degree_map
+):
+    visitor = _FactorableRelaxationVisitor(
+        aux_var_map=aux_var_map,
+        parent_block=parent_block,
+        relaxation_side_map=relaxation_side_map,
+        counter=counter,
+        degree_map=degree_map,
+    )
     new_expr = visitor.dfs_postorder_stack(expr)
     return new_expr
 
@@ -961,9 +1255,10 @@ def _relax_split_expr(
     expr: ExpressionBase,
     aux_var_map: MutableMapping[
         Tuple,
-        Tuple[NumericValue,
-              Union[BaseRelaxationData,
-                    Tuple[BaseRelaxationData, BaseRelaxationData]]]
+        Tuple[
+            NumericValue,
+            Union[BaseRelaxationData, Tuple[BaseRelaxationData, BaseRelaxationData]],
+        ],
     ],
     parent_block: _BlockData,
     relaxation_side_map: MutableMapping[NumericValue, RelaxationSide],
@@ -1003,15 +1298,19 @@ def _relax_split_expr(
             else:
                 shape = FunctionShape.CONCAVE
             relaxation.set_input(
-                x=vlist[0], aux_var=new_expr, relaxation_side=relaxation_side,
-                f_x_expr=expr, shape=shape,
+                x=vlist[0],
+                aux_var=new_expr,
+                relaxation_side=relaxation_side,
+                f_x_expr=expr,
+                shape=shape,
             )
             aux_var_map[pn] = (new_expr, relaxation)
             setattr(parent_block.relaxations, 'rel' + str(counter), relaxation)
             counter.increment()
             degree_map[new_expr] = 1
-    elif ((is_convex and relaxation_side == RelaxationSide.UNDER)
-          or (is_concave and relaxation_side == RelaxationSide.OVER)):
+    elif (is_convex and relaxation_side == RelaxationSide.UNDER) or (
+        is_concave and relaxation_side == RelaxationSide.OVER
+    ):
         pn = _get_prefix_notation(expr)
         if pn in aux_var_map:
             new_expr, (underestimator, overestimator) = aux_var_map[pn]
@@ -1019,9 +1318,8 @@ def _relax_split_expr(
             new_expr, underestimator, overestimator = None, None, None
         if new_expr is None:
             new_expr = _get_aux_var(parent_block, expr)
-        if (
-            (is_convex and underestimator is None)
-            or (is_concave and overestimator is None)
+        if (is_convex and underestimator is None) or (
+            is_concave and overestimator is None
         ):
             relaxation = MultivariateRelaxation()
             if is_convex:
@@ -1030,9 +1328,7 @@ def _relax_split_expr(
             else:
                 shape = FunctionShape.CONCAVE
                 overestimator = relaxation
-            relaxation.set_input(
-                aux_var=new_expr, shape=shape, f_x_expr=expr,
-            )
+            relaxation.set_input(aux_var=new_expr, shape=shape, f_x_expr=expr)
             aux_var_map[pn] = (new_expr, (underestimator, overestimator))
             setattr(parent_block.relaxations, 'rel' + str(counter), relaxation)
             counter.increment()
@@ -1041,8 +1337,14 @@ def _relax_split_expr(
         all_vars_bounded
         and len(vlist) <= max_vars_per_alpha_bb
         and (
-            (relaxation_side == RelaxationSide.UNDER and min_eig >= -abs(max_eigenvalue_for_alpha_bb))
-            or (relaxation_side == RelaxationSide.OVER and max_eig <= abs(max_eigenvalue_for_alpha_bb))
+            (
+                relaxation_side == RelaxationSide.UNDER
+                and min_eig >= -abs(max_eigenvalue_for_alpha_bb)
+            )
+            or (
+                relaxation_side == RelaxationSide.OVER
+                and max_eig <= abs(max_eigenvalue_for_alpha_bb)
+            )
         )
     ):
         pn = _get_prefix_notation(expr)
@@ -1052,9 +1354,8 @@ def _relax_split_expr(
             new_expr, underestimator, overestimator = None, None, None
         if new_expr is None:
             new_expr = _get_aux_var(parent_block, expr)
-        if (
-            (relaxation_side == RelaxationSide.UNDER and underestimator is None)
-            or (relaxation_side == RelaxationSide.OVER and overestimator is None)
+        if (relaxation_side == RelaxationSide.UNDER and underestimator is None) or (
+            relaxation_side == RelaxationSide.OVER and overestimator is None
         ):
             relaxation = AlphaBBRelaxation()
             relaxation.set_input(
@@ -1072,11 +1373,13 @@ def _relax_split_expr(
             counter.increment()
             degree_map[new_expr] = 1
     else:
-        visitor = _FactorableRelaxationVisitor(aux_var_map=aux_var_map,
-                                               parent_block=parent_block,
-                                               relaxation_side_map=relaxation_side_map,
-                                               counter=counter,
-                                               degree_map=degree_map)
+        visitor = _FactorableRelaxationVisitor(
+            aux_var_map=aux_var_map,
+            parent_block=parent_block,
+            relaxation_side_map=relaxation_side_map,
+            counter=counter,
+            degree_map=degree_map,
+        )
         new_expr = visitor.dfs_postorder_stack(expr)
     return new_expr
 
@@ -1085,9 +1388,10 @@ def _relax_expr_with_convexity_check(
     orig_expr: ExpressionBase,
     aux_var_map: MutableMapping[
         Tuple,
-        Tuple[NumericValue,
-              Union[BaseRelaxationData,
-                    Tuple[BaseRelaxationData, BaseRelaxationData]]]
+        Tuple[
+            NumericValue,
+            Union[BaseRelaxationData, Tuple[BaseRelaxationData, BaseRelaxationData]],
+        ],
     ],
     parent_block: _BlockData,
     relaxation_side_map: MutableMapping[NumericValue, RelaxationSide],
@@ -1118,7 +1422,9 @@ def _relax_expr_with_convexity_check(
             )
             res_list.append(tmp_res)
         linking_expr = res_list[0] - res_list[1]
-        linking_repn = generate_standard_repn(linking_expr, compute_values=False, quadratic=True)
+        linking_repn = generate_standard_repn(
+            linking_expr, compute_values=False, quadratic=True
+        )
         linking_expr = linking_repn.to_expression()
         if is_constant(linking_expr):
             assert value(linking_expr) == 0
@@ -1177,10 +1483,10 @@ def relax(
         The types of pyomo components that should be checked for constraints to be relaxed. The
         default is (Block, Disjunct).
     in_place: bool, optional
-        If False (default=False), model will be cloned, and the clone will be relaxed. 
+        If False (default=False), model will be cloned, and the clone will be relaxed.
         If True, then model will be modified in place.
     use_fbbt: bool, optional
-        If True (default=True), then FBBT will be used to tighten variable bounds. If False, 
+        If True (default=True), then FBBT will be used to tighten variable bounds. If False,
         FBBT will not be used.
     fbbt_options: dict, optional
         The options to pass to the call to fbbt. See pyomo.contrib.fbbt.fbbt.fbbt for details.
@@ -1234,7 +1540,9 @@ def relax(
     counter_dict = dict()
     degree_map = ComponentMap()
 
-    for c in nonrelaxation_component_data_objects(m, ctype=Constraint, active=True, descend_into=descend_into, sort=True):
+    for c in nonrelaxation_component_data_objects(
+        m, ctype=Constraint, active=True, descend_into=descend_into, sort=True
+    ):
         body_degree = polynomial_degree(c.body)
         if body_degree is not None:
             if body_degree <= 1:
@@ -1247,7 +1555,9 @@ def relax(
         elif c.upper is not None:
             relaxation_side = RelaxationSide.UNDER
         else:
-            raise ValueError('Encountered a constraint without a lower or an upper bound: ' + str(c))
+            raise ValueError(
+                'Encountered a constraint without a lower or an upper bound: ' + str(c)
+            )
 
         parent_block = c.parent_block()
 
@@ -1264,7 +1574,11 @@ def relax(
         assert len(repn.quadratic_vars) == 0
         assert repn.nonlinear_expr is not None
         if len(repn.linear_vars) > 0:
-            new_body = numeric_expr.LinearExpression(constant=repn.constant, linear_coefs=repn.linear_coefs, linear_vars=repn.linear_vars)
+            new_body = numeric_expr.LinearExpression(
+                constant=repn.constant,
+                linear_coefs=repn.linear_coefs,
+                linear_vars=repn.linear_vars,
+            )
         else:
             new_body = repn.constant
 
@@ -1273,15 +1587,21 @@ def relax(
 
         if not use_alpha_bb:
             new_body += _relax_expr(
-                expr=repn.nonlinear_expr, aux_var_map=aux_var_map,
-                parent_block=parent_block, relaxation_side_map=relaxation_side_map,
-                counter=counter, degree_map=degree_map
+                expr=repn.nonlinear_expr,
+                aux_var_map=aux_var_map,
+                parent_block=parent_block,
+                relaxation_side_map=relaxation_side_map,
+                counter=counter,
+                degree_map=degree_map,
             )
         else:
             new_body += _relax_expr_with_convexity_check(
-                orig_expr=repn.nonlinear_expr, aux_var_map=aux_var_map,
-                parent_block=parent_block, relaxation_side_map=relaxation_side_map,
-                counter=counter, degree_map=degree_map,
+                orig_expr=repn.nonlinear_expr,
+                aux_var_map=aux_var_map,
+                parent_block=parent_block,
+                relaxation_side_map=relaxation_side_map,
+                counter=counter,
+                degree_map=degree_map,
                 perform_expression_simplification=perform_expression_simplification,
                 eigenvalue_bounder=eigenvalue_bounder,
                 max_vars_per_alpha_bb=max_vars_per_alpha_bb,
@@ -1297,7 +1617,9 @@ def relax(
         else:
             parent_block.del_component(c)
 
-    for c in nonrelaxation_component_data_objects(m, ctype=pe.Objective, active=True, descend_into=descend_into, sort=True):
+    for c in nonrelaxation_component_data_objects(
+        m, ctype=pe.Objective, active=True, descend_into=descend_into, sort=True
+    ):
         degree = polynomial_degree(c.expr)
         if degree is not None:
             if degree <= 1:
@@ -1308,7 +1630,9 @@ def relax(
         elif c.sense == pe.maximize:
             relaxation_side = RelaxationSide.OVER
         else:
-            raise ValueError('Encountered an objective with an unrecognized sense: ' + str(c))
+            raise ValueError(
+                'Encountered an objective with an unrecognized sense: ' + str(c)
+            )
 
         parent_block = c.parent_block()
 
@@ -1328,7 +1652,11 @@ def relax(
         assert len(repn.quadratic_vars) == 0
         assert repn.nonlinear_expr is not None
         if len(repn.linear_vars) > 0:
-            new_body = numeric_expr.LinearExpression(constant=repn.constant, linear_coefs=repn.linear_coefs, linear_vars=repn.linear_vars)
+            new_body = numeric_expr.LinearExpression(
+                constant=repn.constant,
+                linear_coefs=repn.linear_coefs,
+                linear_vars=repn.linear_vars,
+            )
         else:
             new_body = repn.constant
 
@@ -1337,15 +1665,21 @@ def relax(
 
         if not use_alpha_bb:
             new_body += _relax_expr(
-                expr=repn.nonlinear_expr, aux_var_map=aux_var_map,
-                parent_block=parent_block, relaxation_side_map=relaxation_side_map,
-                counter=counter, degree_map=degree_map
+                expr=repn.nonlinear_expr,
+                aux_var_map=aux_var_map,
+                parent_block=parent_block,
+                relaxation_side_map=relaxation_side_map,
+                counter=counter,
+                degree_map=degree_map,
             )
         else:
             new_body += _relax_expr_with_convexity_check(
-                orig_expr=repn.nonlinear_expr, aux_var_map=aux_var_map,
-                parent_block=parent_block, relaxation_side_map=relaxation_side_map,
-                counter=counter, degree_map=degree_map,
+                orig_expr=repn.nonlinear_expr,
+                aux_var_map=aux_var_map,
+                parent_block=parent_block,
+                relaxation_side_map=relaxation_side_map,
+                counter=counter,
+                degree_map=degree_map,
                 perform_expression_simplification=perform_expression_simplification,
                 eigenvalue_bounder=eigenvalue_bounder,
                 max_vars_per_alpha_bb=max_vars_per_alpha_bb,

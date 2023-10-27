@@ -31,14 +31,14 @@ def _determinant(mat):
     else:
         i = 0
         det = 0
-        next_rows = np.array(list(range(i+1, nrows)), dtype=int)
+        next_rows = np.array(list(range(i + 1, nrows)), dtype=int)
         for j in range(nrows):
             next_cols = [k for k in range(j)]
-            next_cols.extend(k for k in range(j+1, nrows))
+            next_cols.extend(k for k in range(j + 1, nrows))
             next_cols = np.array(next_cols, dtype=int)
             next_mat = mat[next_rows, :]
             next_mat = next_mat[:, next_cols]
-            det += (-1)**(i + j) * mat[i, j] * _determinant(next_mat)
+            det += (-1) ** (i + j) * mat[i, j] * _determinant(next_mat)
     return simplify_expr(det)
 
 
@@ -112,19 +112,21 @@ class Hessian(object):
                     if rel_ub is None or orig_ub < rel_ub:
                         rel_v.setub(orig_ub)
             from .iterators import relaxation_data_objects
-            for b in relaxation_data_objects(self._eigenvalue_relaxation, descend_into=True, active=True):
+
+            for b in relaxation_data_objects(
+                self._eigenvalue_relaxation, descend_into=True, active=True
+            ):
                 b.rebuild()
             self._eigenvalue_relaxation.obj.sense = sense
             return self._eigenvalue_relaxation
         m = self.formulate_eigenvalue_problem(sense=sense)
         all_vars = list(
-            ComponentSet(
-                m.component_data_objects(pe.Var, descend_into=True)
-            )
+            ComponentSet(m.component_data_objects(pe.Var, descend_into=True))
         )
         tmp_name = unique_component_name(m, "all_vars")
         setattr(m, tmp_name, all_vars)
         from .auto_relax import relax
+
         relaxation = relax(m, in_place=False)
         new_vars = getattr(relaxation, "all_vars")
         self._orig_to_relaxation_vars = pe.ComponentMap(zip(all_vars, new_vars))

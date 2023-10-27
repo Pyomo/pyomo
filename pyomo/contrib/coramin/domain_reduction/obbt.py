@@ -12,8 +12,10 @@ import math
 import time
 from typing import Union, Sequence, Optional, List
 from pyomo.core.base.objective import ScalarObjective, _GeneralObjectiveData
+
 try:
     import pyomo.contrib.coramin.utils.mpi_utils as mpiu
+
     mpi_available = True
 except ImportError:
     mpi_available = False
@@ -34,11 +36,15 @@ class OBBTInfo(object):
 
 
 def _bt_cleanup(
-    model, solver: Union[appsi.base.Solver, appsi.base.PersistentSolver],
+    model,
+    solver: Union[appsi.base.Solver, appsi.base.PersistentSolver],
     vardatalist: Optional[List[_GeneralVarData]],
-    initial_var_values, deactivated_objectives, orig_update_config, orig_config,
+    initial_var_values,
+    deactivated_objectives,
+    orig_update_config,
+    orig_config,
     lower_bounds: Optional[Sequence[float]] = None,
-    upper_bounds: Optional[Sequence[float]] = None
+    upper_bounds: Optional[Sequence[float]] = None,
 ):
     """
     Cleanup the changes made to the model during bounds tightening.
@@ -62,7 +68,9 @@ def _bt_cleanup(
         Only needed if you want to update the bounds of the variables. Should be in the same order as
         self.vars_to_tighten.
     """
-    for v in model.component_data_objects(ctype=pyo.Var, active=None, sort=True, descend_into=True):
+    for v in model.component_data_objects(
+        ctype=pyo.Var, active=None, sort=True, descend_into=True
+    ):
         v.set_value(initial_var_values[v], skip_validation=True)
 
     if hasattr(model, '__objective_ineq'):
@@ -94,32 +102,40 @@ def _bt_cleanup(
         solver.update_variables(vardatalist)
 
     if solver.is_persistent():
-        solver.update_config.check_for_new_or_removed_constraints = \
+        solver.update_config.check_for_new_or_removed_constraints = (
             orig_update_config.check_for_new_or_removed_constraints
-        solver.update_config.check_for_new_or_removed_vars = \
+        )
+        solver.update_config.check_for_new_or_removed_vars = (
             orig_update_config.check_for_new_or_removed_vars
-        solver.update_config.check_for_new_or_removed_params = \
+        )
+        solver.update_config.check_for_new_or_removed_params = (
             orig_update_config.check_for_new_or_removed_params
-        solver.update_config.check_for_new_objective = \
+        )
+        solver.update_config.check_for_new_objective = (
             orig_update_config.check_for_new_objective
-        solver.update_config.update_constraints = \
-            orig_update_config.update_constraints
-        solver.update_config.update_vars = \
-            orig_update_config.update_vars
-        solver.update_config.update_params = \
-            orig_update_config.update_params
-        solver.update_config.update_named_expressions = \
+        )
+        solver.update_config.update_constraints = orig_update_config.update_constraints
+        solver.update_config.update_vars = orig_update_config.update_vars
+        solver.update_config.update_params = orig_update_config.update_params
+        solver.update_config.update_named_expressions = (
             orig_update_config.update_named_expressions
-        solver.update_config.update_objective = \
-            orig_update_config.update_objective
-        solver.update_config.treat_fixed_vars_as_params = \
+        )
+        solver.update_config.update_objective = orig_update_config.update_objective
+        solver.update_config.treat_fixed_vars_as_params = (
             orig_update_config.treat_fixed_vars_as_params
+        )
 
     solver.config.stream_solver = orig_config.stream_solver
     solver.config.load_solution = orig_config.load_solution
 
 
-def _single_solve(v, model, solver: Union[appsi.base.Solver, appsi.base.PersistentSolver], lb_or_ub, obbt_info):
+def _single_solve(
+    v,
+    model,
+    solver: Union[appsi.base.Solver, appsi.base.PersistentSolver],
+    lb_or_ub,
+    obbt_info,
+):
     obbt_info.num_problems_attempted += 1
     # solve for lower var bound
     if lb_or_ub == 'lb':
@@ -133,7 +149,9 @@ def _single_solve(v, model, solver: Union[appsi.base.Solver, appsi.base.Persiste
     results = solver.solve(model)
     if results.termination_condition == appsi.base.TerminationCondition.optimal:
         obbt_info.num_successful_problems += 1
-    if results.best_objective_bound is not None and math.isfinite(results.best_objective_bound):
+    if results.best_objective_bound is not None and math.isfinite(
+        results.best_objective_bound
+    ):
         new_bnd = results.best_objective_bound
     elif results.termination_condition == appsi.base.TerminationCondition.optimal:
         new_bnd = results.best_feasible_objective  # assumes the problem is convex
@@ -167,7 +185,16 @@ def _single_solve(v, model, solver: Union[appsi.base.Solver, appsi.base.Persiste
     return new_bnd
 
 
-def _tighten_bnds(model, solver, vardatalist, lb_or_ub, obbt_info, with_progress_bar=False, time_limit=math.inf, progress_bar_string=None):
+def _tighten_bnds(
+    model,
+    solver,
+    vardatalist,
+    lb_or_ub,
+    obbt_info,
+    with_progress_bar=False,
+    time_limit=math.inf,
+    progress_bar_string=None,
+):
     """
     Tighten the lower bounds of all variables in vardatalist (or self.vars_to_tighten if vardatalist is None).
 
@@ -203,7 +230,9 @@ def _tighten_bnds(model, solver, vardatalist, lb_or_ub, obbt_info, with_progress
             tqdm_position = mpiu.MPI.COMM_WORLD.Get_rank()
         else:
             tqdm_position = 0
-        for v in tqdm(vardatalist, ncols=100, desc=bnd_str, leave=False, position=tqdm_position):
+        for v in tqdm(
+            vardatalist, ncols=100, desc=bnd_str, leave=False, position=tqdm_position
+        ):
             if time.time() - t0 > time_limit:
                 if lb_or_ub == 'lb':
                     if v.lb is None:
@@ -216,9 +245,13 @@ def _tighten_bnds(model, solver, vardatalist, lb_or_ub, obbt_info, with_progress
                     else:
                         new_bounds.append(pyo.value(v.ub))
             else:
-                new_bnd = _single_solve(v=v, model=model, solver=solver,
-                                        lb_or_ub=lb_or_ub,
-                                        obbt_info=obbt_info)
+                new_bnd = _single_solve(
+                    v=v,
+                    model=model,
+                    solver=solver,
+                    lb_or_ub=lb_or_ub,
+                    obbt_info=obbt_info,
+                )
                 new_bounds.append(new_bnd)
     else:
         for v in vardatalist:
@@ -234,9 +267,13 @@ def _tighten_bnds(model, solver, vardatalist, lb_or_ub, obbt_info, with_progress
                     else:
                         new_bounds.append(pyo.value(v.ub))
             else:
-                new_bnd = _single_solve(v=v, model=model, solver=solver,
-                                        lb_or_ub=lb_or_ub,
-                                        obbt_info=obbt_info)
+                new_bnd = _single_solve(
+                    v=v,
+                    model=model,
+                    solver=solver,
+                    lb_or_ub=lb_or_ub,
+                    obbt_info=obbt_info,
+                )
                 new_bounds.append(new_bnd)
 
     return new_bounds
@@ -287,11 +324,15 @@ def _bt_prep(model, solver, objective_bound=None):
         solver.set_instance(model)
 
     initial_var_values = ComponentMap()
-    for v in model.component_data_objects(ctype=pyo.Var, active=None, sort=True, descend_into=True):
+    for v in model.component_data_objects(
+        ctype=pyo.Var, active=None, sort=True, descend_into=True
+    ):
         initial_var_values[v] = v.value
 
     deactivated_objectives = list()
-    for obj in model.component_data_objects(pyo.Objective, active=True, sort=True, descend_into=True):
+    for obj in model.component_data_objects(
+        pyo.Objective, active=True, sort=True, descend_into=True
+    ):
         deactivated_objectives.append(obj)
         obj.deactivate()
 
@@ -299,17 +340,22 @@ def _bt_prep(model, solver, objective_bound=None):
     # obj.expr <= objective_ub
     if objective_bound is not None and math.isfinite(objective_bound):
         if len(deactivated_objectives) != 1:
-            e = 'BoundsTightener: When providing objective_ub,' + \
-                ' the model must have one and only one objective function.'
+            e = (
+                'BoundsTightener: When providing objective_ub,'
+                + ' the model must have one and only one objective function.'
+            )
             logger.error(e)
             raise ValueError(e)
         original_obj = deactivated_objectives[0]
         if original_obj.sense == minimize:
-            model.__objective_ineq = \
-                pyo.Constraint(expr=original_obj.expr <= objective_bound)
+            model.__objective_ineq = pyo.Constraint(
+                expr=original_obj.expr <= objective_bound
+            )
         else:
             assert original_obj.sense == maximize
-            model.__objective_ineq = pyo.Constraint(expr=original_obj.expr >= objective_bound)
+            model.__objective_ineq = pyo.Constraint(
+                expr=original_obj.expr >= objective_bound
+            )
         if solver.is_persistent():
             solver.add_constraints([model.__objective_ineq])
 
@@ -354,7 +400,9 @@ def _build_vardatalist(model, varlist=None, warning_threshold=0):
         if not v.is_fixed():
             if v.has_lb() and v.has_ub():
                 if v.ub - v.lb < warning_threshold:
-                    e = 'Warning: Tightening a variable with ub - lb is less than {threshold}: {v}, lb: {lb}, ub: {ub}'.format(threshold=warning_threshold, v=v, lb=v.lb, ub=v.ub)
+                    e = 'Warning: Tightening a variable with ub - lb is less than {threshold}: {v}, lb: {lb}, ub: {ub}'.format(
+                        threshold=warning_threshold, v=v, lb=v.lb, ub=v.ub
+                    )
                     logger.warning(e)
                     warnings.warn(e)
             corrected_vardatalist.append(v)
@@ -362,9 +410,20 @@ def _build_vardatalist(model, varlist=None, warning_threshold=0):
     return corrected_vardatalist
 
 
-def perform_obbt(model, solver, varlist=None, objective_bound=None, update_bounds=True, with_progress_bar=False,
-                 direction='both', time_limit=math.inf, parallel=True, collect_obbt_info=False,
-                 warning_threshold=0, progress_bar_string=None):
+def perform_obbt(
+    model,
+    solver,
+    varlist=None,
+    objective_bound=None,
+    update_bounds=True,
+    with_progress_bar=False,
+    direction='both',
+    time_limit=math.inf,
+    parallel=True,
+    collect_obbt_info=False,
+    warning_threshold=0,
+    progress_bar_string=None,
+):
     """
     Perform optimization-based bounds tighening on the variables in varlist subject to the constraints in model.
 
@@ -410,9 +469,16 @@ def perform_obbt(model, solver, varlist=None, objective_bound=None, update_bound
     obbt_info.num_successful_problems = 0
 
     t0 = time.time()
-    initial_var_values, deactivated_objectives, orig_update_config, orig_config = _bt_prep(model=model, solver=solver, objective_bound=objective_bound)
+    (
+        initial_var_values,
+        deactivated_objectives,
+        orig_update_config,
+        orig_config,
+    ) = _bt_prep(model=model, solver=solver, objective_bound=objective_bound)
 
-    vardata_list = _build_vardatalist(model=model, varlist=varlist, warning_threshold=warning_threshold)
+    vardata_list = _build_vardatalist(
+        model=model, varlist=varlist, warning_threshold=warning_threshold
+    )
     if mpi_available and parallel:
         mpi_interface = mpiu.MPIInterface()
         alloc_map = mpiu.MPIAllocationMap(mpi_interface, len(vardata_list))
@@ -423,13 +489,16 @@ def perform_obbt(model, solver, varlist=None, objective_bound=None, update_bound
     exc = None
     try:
         if direction in {'both', 'lbs'}:
-            local_lower_bounds = _tighten_bnds(model=model, solver=solver,
-                                               vardatalist=local_vardata_list,
-                                               lb_or_ub='lb',
-                                               obbt_info=obbt_info,
-                                               with_progress_bar=with_progress_bar,
-                                               time_limit=(time_limit - (time.time() - t0)),
-                                               progress_bar_string=progress_bar_string)
+            local_lower_bounds = _tighten_bnds(
+                model=model,
+                solver=solver,
+                vardatalist=local_vardata_list,
+                lb_or_ub='lb',
+                obbt_info=obbt_info,
+                with_progress_bar=with_progress_bar,
+                time_limit=(time_limit - (time.time() - t0)),
+                progress_bar_string=progress_bar_string,
+            )
         else:
             local_lower_bounds = list()
             for v in local_vardata_list:
@@ -438,13 +507,16 @@ def perform_obbt(model, solver, varlist=None, objective_bound=None, update_bound
                 else:
                     local_lower_bounds.append(pyo.value(v.lb))
         if direction in {'both', 'ubs'}:
-            local_upper_bounds = _tighten_bnds(model=model, solver=solver,
-                                               vardatalist=local_vardata_list,
-                                               lb_or_ub='ub',
-                                               obbt_info=obbt_info,
-                                               with_progress_bar=with_progress_bar,
-                                               time_limit=(time_limit - (time.time() - t0)),
-                                               progress_bar_string=progress_bar_string)
+            local_upper_bounds = _tighten_bnds(
+                model=model,
+                solver=solver,
+                vardatalist=local_vardata_list,
+                lb_or_ub='ub',
+                obbt_info=obbt_info,
+                with_progress_bar=with_progress_bar,
+                time_limit=(time_limit - (time.time() - t0)),
+                progress_bar_string=progress_bar_string,
+            )
         else:
             local_upper_bounds = list()
             for v in local_vardata_list:
@@ -462,8 +534,12 @@ def perform_obbt(model, solver, varlist=None, objective_bound=None, update_bound
 
     if mpi_available and parallel:
         local_status = np.array([status], dtype='i')
-        global_status = np.array([0 for i in range(mpiu.MPI.COMM_WORLD.Get_size())], dtype='i')
-        mpiu.MPI.COMM_WORLD.Allgatherv([local_status, mpiu.MPI.INT], [global_status, mpiu.MPI.INT])
+        global_status = np.array(
+            [0 for i in range(mpiu.MPI.COMM_WORLD.Get_size())], dtype='i'
+        )
+        mpiu.MPI.COMM_WORLD.Allgatherv(
+            [local_status, mpiu.MPI.INT], [global_status, mpiu.MPI.INT]
+        )
         if not np.all(global_status):
             messages = mpi_interface.comm.allgather(msg)
             msg = None
@@ -471,7 +547,9 @@ def perform_obbt(model, solver, varlist=None, objective_bound=None, update_bound
                 if m is not None:
                     msg = m
             logger.error('An error was raised in one or more processes:\n' + msg)
-            raise mpiu.MPISyncError('An error was raised in one or more processes:\n' + msg)
+            raise mpiu.MPISyncError(
+                'An error was raised in one or more processes:\n' + msg
+            )
     else:
         if status != 1:
             logger.error('An error was raised during OBBT:\n' + msg)
@@ -480,9 +558,15 @@ def perform_obbt(model, solver, varlist=None, objective_bound=None, update_bound
     if mpi_available and parallel:
         global_lower = alloc_map.global_list_float64(local_lower_bounds)
         global_upper = alloc_map.global_list_float64(local_upper_bounds)
-        obbt_info.total_num_problems = mpiu.MPI.COMM_WORLD.allreduce(obbt_info.total_num_problems)
-        obbt_info.num_problems_attempted = mpiu.MPI.COMM_WORLD.allreduce(obbt_info.num_problems_attempted)
-        obbt_info.num_successful_problems = mpiu.MPI.COMM_WORLD.allreduce(obbt_info.num_successful_problems)
+        obbt_info.total_num_problems = mpiu.MPI.COMM_WORLD.allreduce(
+            obbt_info.total_num_problems
+        )
+        obbt_info.num_problems_attempted = mpiu.MPI.COMM_WORLD.allreduce(
+            obbt_info.num_problems_attempted
+        )
+        obbt_info.num_successful_problems = mpiu.MPI.COMM_WORLD.allreduce(
+            obbt_info.num_successful_problems
+        )
     else:
         global_lower = local_lower_bounds
         global_upper = local_upper_bounds
@@ -509,11 +593,15 @@ def perform_obbt(model, solver, varlist=None, objective_bound=None, update_bound
         _lower_bounds = global_lower
         _upper_bounds = global_upper
     _bt_cleanup(
-        model=model, solver=solver, vardatalist=vardata_list,
+        model=model,
+        solver=solver,
+        vardatalist=vardata_list,
         initial_var_values=initial_var_values,
         deactivated_objectives=deactivated_objectives,
-        orig_update_config=orig_update_config, orig_config=orig_config,
-        lower_bounds=_lower_bounds, upper_bounds=_upper_bounds
+        orig_update_config=orig_update_config,
+        orig_config=orig_config,
+        lower_bounds=_lower_bounds,
+        upper_bounds=_upper_bounds,
     )
 
     if collect_obbt_info:

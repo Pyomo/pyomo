@@ -1,6 +1,9 @@
 from pyomo.contrib.coramin.utils.coramin_enums import RelaxationSide, FunctionShape
 from pyomo.contrib.coramin.relaxations.custom_block import declare_custom_block
-from pyomo.contrib.coramin.relaxations.relaxations_base import BaseRelaxationData, ComponentWeakRef
+from pyomo.contrib.coramin.relaxations.relaxations_base import (
+    BaseRelaxationData,
+    ComponentWeakRef,
+)
 from pyomo.core.expr.visitor import identify_variables
 import math
 import pyomo.environ as pe
@@ -29,8 +32,16 @@ class MultivariateRelaxationData(BaseRelaxationData):
     def vars_with_bounds_in_relaxation(self):
         return list()
 
-    def set_input(self, aux_var, shape, f_x_expr, use_linear_relaxation=True, large_coef=1e5, small_coef=1e-10,
-                  safety_tol=1e-10):
+    def set_input(
+        self,
+        aux_var,
+        shape,
+        f_x_expr,
+        use_linear_relaxation=True,
+        large_coef=1e5,
+        small_coef=1e-10,
+        safety_tol=1e-10,
+    ):
         """
         Parameters
         ----------
@@ -44,24 +55,44 @@ class MultivariateRelaxationData(BaseRelaxationData):
             Specifies whether a linear or nonlinear relaxation should be used
         """
         if shape not in {FunctionShape.CONVEX, FunctionShape.CONCAVE}:
-            raise ValueError('MultivariateRelaxation only supports concave or convex functions.')
+            raise ValueError(
+                'MultivariateRelaxation only supports concave or convex functions.'
+            )
         self._function_shape = shape
         if shape == FunctionShape.CONVEX:
             relaxation_side = RelaxationSide.UNDER
         else:
             relaxation_side = RelaxationSide.OVER
-        super().set_input(relaxation_side=relaxation_side,
-                          use_linear_relaxation=use_linear_relaxation,
-                          large_coef=large_coef, small_coef=small_coef,
-                          safety_tol=safety_tol)
+        super().set_input(
+            relaxation_side=relaxation_side,
+            use_linear_relaxation=use_linear_relaxation,
+            large_coef=large_coef,
+            small_coef=small_coef,
+            safety_tol=safety_tol,
+        )
         self._xs = tuple(identify_variables(f_x_expr, include_fixed=False))
         self._aux_var_ref.set_component(aux_var)
         self._f_x_expr = f_x_expr
 
-    def build(self, aux_var, shape, f_x_expr, use_linear_relaxation=True, large_coef=1e5, small_coef=1e-10,
-              safety_tol=1e-10):
-        self.set_input(aux_var=aux_var, shape=shape, f_x_expr=f_x_expr, use_linear_relaxation=use_linear_relaxation,
-                       large_coef=large_coef, small_coef=small_coef, safety_tol=safety_tol)
+    def build(
+        self,
+        aux_var,
+        shape,
+        f_x_expr,
+        use_linear_relaxation=True,
+        large_coef=1e5,
+        small_coef=1e-10,
+        safety_tol=1e-10,
+    ):
+        self.set_input(
+            aux_var=aux_var,
+            shape=shape,
+            f_x_expr=f_x_expr,
+            use_linear_relaxation=use_linear_relaxation,
+            large_coef=large_coef,
+            small_coef=small_coef,
+            safety_tol=safety_tol,
+        )
         self.rebuild()
 
     def is_rhs_convex(self):
@@ -86,8 +117,12 @@ class MultivariateRelaxationData(BaseRelaxationData):
     def relaxation_side(self, val):
         if self.is_rhs_convex():
             if val != RelaxationSide.UNDER:
-                raise ValueError('MultivariateRelaxations only support underestimators for convex functions')
+                raise ValueError(
+                    'MultivariateRelaxations only support underestimators for convex functions'
+                )
         if self.is_rhs_concave():
             if val != RelaxationSide.OVER:
-                raise ValueError('MultivariateRelaxations only support overestimators for concave functions')
+                raise ValueError(
+                    'MultivariateRelaxations only support overestimators for concave functions'
+                )
         BaseRelaxationData.relaxation_side.fset(self, val)

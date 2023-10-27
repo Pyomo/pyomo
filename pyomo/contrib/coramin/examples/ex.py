@@ -17,7 +17,7 @@ min x**4 - 3*x**2 + x
 # Build and solve the NLP
 nlp = pe.ConcreteModel()
 nlp.x = pe.Var(bounds=(-2, 2))
-nlp.obj = pe.Objective(expr=nlp.x**4 - 3*nlp.x**2 + nlp.x)
+nlp.obj = pe.Objective(expr=nlp.x**4 - 3 * nlp.x**2 + nlp.x)
 opt = pe.SolverFactory('ipopt')
 res = opt.solve(nlp)
 ub = pe.value(nlp.obj)
@@ -41,7 +41,7 @@ rel.x2_con = coramin.relaxations.PWXSquaredRelaxation()
 rel.x2_con.build(x=rel.x, aux_var=rel.x2, use_linear_relaxation=True)
 rel.x4_con = coramin.relaxations.PWXSquaredRelaxation()
 rel.x4_con.build(x=rel.x2, aux_var=rel.x4, use_linear_relaxation=True)
-rel.obj = pe.Objective(expr=rel.x4 - 3*rel.x2 + rel.x)
+rel.obj = pe.Objective(expr=rel.x4 - 3 * rel.x2 + rel.x)
 
 
 # Now solve the relaxation and refine the convex sides of the constraints with add_cut
@@ -54,7 +54,9 @@ lb = pe.value(rel.obj)
 print('gap: ' + str(100 * abs(ub - lb) / abs(ub)) + ' %')
 
 for _iter in range(10):
-    for b in rel.component_data_objects(pe.Block, active=True, sort=True, descend_into=True):
+    for b in rel.component_data_objects(
+        pe.Block, active=True, sort=True, descend_into=True
+    ):
         if isinstance(b, coramin.relaxations.BaseRelaxationData):
             b.add_cut()
     res = opt.solve(rel)
@@ -62,7 +64,9 @@ for _iter in range(10):
     print('gap: ' + str(100 * abs(ub - lb) / abs(ub)) + ' %')
 
 # we want to discard the cuts generated above just to demonstrate OBBT
-for b in rel.component_data_objects(pe.Block, active=True, sort=True, descend_into=True):
+for b in rel.component_data_objects(
+    pe.Block, active=True, sort=True, descend_into=True
+):
     if isinstance(b, coramin.relaxations.BasePWRelaxationData):
         b.clear_oa_points()
         b.rebuild()
@@ -76,11 +80,11 @@ lb = pe.value(rel.obj)
 print('gap: ' + str(100 * abs(ub - lb) / abs(ub)) + ' %')
 for _iter in range(10):
     coramin.domain_reduction.perform_obbt(rel, opt, [rel.x, rel.x2], objective_bound=ub)
-    for b in rel.component_data_objects(pe.Block, active=True, sort=True, descend_into=True):
+    for b in rel.component_data_objects(
+        pe.Block, active=True, sort=True, descend_into=True
+    ):
         if isinstance(b, coramin.relaxations.BasePWRelaxationData):
             b.rebuild()
     res = opt.solve(rel)
     lb = pe.value(rel.obj)
     print('gap: ' + str(100 * abs(ub - lb) / abs(ub)) + ' %')
-
-

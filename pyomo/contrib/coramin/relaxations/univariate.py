@@ -12,6 +12,7 @@ from pyomo.core.expr.numeric_expr import LinearExpression
 import logging
 from typing import Optional, Union, Sequence
 from pyomo.core.expr.calculus.diff_with_pyomo import reverse_sd
+
 logger = logging.getLogger(__name__)
 pe = pyo
 
@@ -26,28 +27,44 @@ def _sin_underestimator_fn(x, UB):
 
 def _compute_sine_overestimator_tangent_point(vlb):
     assert vlb < 0
-    tangent_point, res = scipy.optimize.bisect(f=_sin_overestimator_fn, a=0, b=math.pi / 2, args=(vlb,),
-                                               full_output=True, disp=False)
+    tangent_point, res = scipy.optimize.bisect(
+        f=_sin_overestimator_fn,
+        a=0,
+        b=math.pi / 2,
+        args=(vlb,),
+        full_output=True,
+        disp=False,
+    )
     if res.converged:
         tangent_point = float(tangent_point)
         slope = float(np.cos(tangent_point))
         intercept = float(np.sin(vlb) - slope * vlb)
         return tangent_point, slope, intercept
     else:
-        raise RuntimeError('Unable to build relaxation for sin(x)\nBisect info: ' + str(res))
+        raise RuntimeError(
+            'Unable to build relaxation for sin(x)\nBisect info: ' + str(res)
+        )
 
 
 def _compute_sine_underestimator_tangent_point(vub):
     assert vub > 0
-    tangent_point, res = scipy.optimize.bisect(f=_sin_underestimator_fn, a=-math.pi / 2, b=0, args=(vub,),
-                                               full_output=True, disp=False)
+    tangent_point, res = scipy.optimize.bisect(
+        f=_sin_underestimator_fn,
+        a=-math.pi / 2,
+        b=0,
+        args=(vub,),
+        full_output=True,
+        disp=False,
+    )
     if res.converged:
         tangent_point = float(tangent_point)
         slope = float(np.cos(-tangent_point))
         intercept = float(np.sin(vub) - slope * vub)
         return tangent_point, slope, intercept
     else:
-        raise RuntimeError('Unable to build relaxation for sin(x)\nBisect info: ' + str(res))
+        raise RuntimeError(
+            'Unable to build relaxation for sin(x)\nBisect info: ' + str(res)
+        )
 
 
 def _atan_overestimator_fn(x, LB):
@@ -60,28 +77,44 @@ def _atan_underestimator_fn(x, UB):
 
 def _compute_arctan_overestimator_tangent_point(vlb):
     assert vlb < 0
-    tangent_point, res = scipy.optimize.bisect(f=_atan_overestimator_fn, a=0, b=abs(vlb), args=(vlb,),
-                                               full_output=True, disp=False)
+    tangent_point, res = scipy.optimize.bisect(
+        f=_atan_overestimator_fn,
+        a=0,
+        b=abs(vlb),
+        args=(vlb,),
+        full_output=True,
+        disp=False,
+    )
     if res.converged:
         tangent_point = float(tangent_point)
-        slope = 1/(1 + tangent_point**2)
+        slope = 1 / (1 + tangent_point**2)
         intercept = float(np.arctan(vlb) - slope * vlb)
         return tangent_point, slope, intercept
     else:
-        raise RuntimeError('Unable to build relaxation for arctan(x)\nBisect info: ' + str(res))
+        raise RuntimeError(
+            'Unable to build relaxation for arctan(x)\nBisect info: ' + str(res)
+        )
 
 
 def _compute_arctan_underestimator_tangent_point(vub):
     assert vub > 0
-    tangent_point, res = scipy.optimize.bisect(f=_atan_underestimator_fn, a=-vub, b=0, args=(vub,),
-                                               full_output=True, disp=False)
+    tangent_point, res = scipy.optimize.bisect(
+        f=_atan_underestimator_fn,
+        a=-vub,
+        b=0,
+        args=(vub,),
+        full_output=True,
+        disp=False,
+    )
     if res.converged:
         tangent_point = float(tangent_point)
-        slope = 1/(1 + tangent_point**2)
+        slope = 1 / (1 + tangent_point**2)
         intercept = float(np.arctan(vub) - slope * vub)
         return tangent_point, slope, intercept
     else:
-        raise RuntimeError('Unable to build relaxation for arctan(x)\nBisect info: ' + str(res))
+        raise RuntimeError(
+            'Unable to build relaxation for arctan(x)\nBisect info: ' + str(res)
+        )
 
 
 class _FxExpr(object):
@@ -113,12 +146,22 @@ class _FxExpr(object):
 def _func_wrapper(obj):
     def _func(m, val):
         return obj(val)
+
     return _func
 
 
-def _pw_univariate_relaxation(b, x, w, x_pts, f_x_expr, pw_repn='INC', shape=FunctionShape.UNKNOWN,
-                              relaxation_side=RelaxationSide.BOTH, large_eval_tol=math.inf,
-                              safety_tol=0):
+def _pw_univariate_relaxation(
+    b,
+    x,
+    w,
+    x_pts,
+    f_x_expr,
+    pw_repn='INC',
+    shape=FunctionShape.UNKNOWN,
+    relaxation_side=RelaxationSide.BOTH,
+    large_eval_tol=math.inf,
+    safety_tol=0,
+):
     """
     This function creates piecewise envelopes to relax "w=f(x)" where f(x) is univariate and either convex over the
     entire domain of x or concave over the entire domain of x.
@@ -144,7 +187,7 @@ def _pw_univariate_relaxation(b, x, w, x_pts, f_x_expr, pw_repn='INC', shape=Fun
     relaxation_side: RelaxationSide
         Provide the desired side for the relaxation (OVER, UNDER, or BOTH)
     large_eval_tol: float
-        To avoid numerical problems, if f_x_expr or its derivative evaluates to a value larger than large_eval_tol, 
+        To avoid numerical problems, if f_x_expr or its derivative evaluates to a value larger than large_eval_tol,
         at a point in x_pts, then that point is skipped.
     """
     assert shape in {FunctionShape.CONCAVE, FunctionShape.CONVEX}
@@ -168,10 +211,16 @@ def _pw_univariate_relaxation(b, x, w, x_pts, f_x_expr, pw_repn='INC', shape=Fun
         # Do the non-convex piecewise portion if shape=CONCAVE and relaxation_side=Under/BOTH
         # or if shape=CONVEX and relaxation_side=Over/BOTH
         pw_constr_type = None
-        if shape == FunctionShape.CONVEX and relaxation_side in {RelaxationSide.OVER, RelaxationSide.BOTH}:
+        if shape == FunctionShape.CONVEX and relaxation_side in {
+            RelaxationSide.OVER,
+            RelaxationSide.BOTH,
+        }:
             pw_constr_type = 'UB'
             _eval = _FxExpr(expr=f_x_expr + safety_tol, x=x)
-        if shape == FunctionShape.CONCAVE and relaxation_side in {RelaxationSide.UNDER, RelaxationSide.BOTH}:
+        if shape == FunctionShape.CONCAVE and relaxation_side in {
+            RelaxationSide.UNDER,
+            RelaxationSide.BOTH,
+        }:
             pw_constr_type = 'LB'
             _eval = _FxExpr(expr=f_x_expr - safety_tol, x=x)
 
@@ -183,22 +232,32 @@ def _pw_univariate_relaxation(b, x, w, x_pts, f_x_expr, pw_repn='INC', shape=Fun
                     try:
                         f = _eval(_pt)
                         if abs(f) >= large_eval_tol:
-                            logger.warning(f'Skipping pt {_pt} for var {str(x)} because |{str(f_x_expr)}| '
-                                           f'evaluated at {_pt} is larger than {large_eval_tol}')
+                            logger.warning(
+                                f'Skipping pt {_pt} for var {str(x)} because |{str(f_x_expr)}| '
+                                f'evaluated at {_pt} is larger than {large_eval_tol}'
+                            )
                             continue
                         tmp_pts.append(_pt)
                     except (ZeroDivisionError, ValueError, OverflowError):
                         pass
-                if len(tmp_pts) >= 2 and tmp_pts[0] == x_pts[0] and tmp_pts[-1] == x_pts[-1]:
-                    b.pw_linear_under_over = pyo.Piecewise(w, x,
-                                                           pw_pts=tmp_pts,
-                                                           pw_repn=pw_repn,
-                                                           pw_constr_type=pw_constr_type,
-                                                           f_rule=_func_wrapper(_eval)
-                                                           )
+                if (
+                    len(tmp_pts) >= 2
+                    and tmp_pts[0] == x_pts[0]
+                    and tmp_pts[-1] == x_pts[-1]
+                ):
+                    b.pw_linear_under_over = pyo.Piecewise(
+                        w,
+                        x,
+                        pw_pts=tmp_pts,
+                        pw_repn=pw_repn,
+                        pw_constr_type=pw_constr_type,
+                        f_rule=_func_wrapper(_eval),
+                    )
 
 
-def pw_sin_relaxation(b, x, w, x_pts, relaxation_side=RelaxationSide.BOTH, safety_tol=1e-10):
+def pw_sin_relaxation(
+    b, x, w, x_pts, relaxation_side=RelaxationSide.BOTH, safety_tol=1e-10
+):
     """
     This function creates piecewise relaxations to relax "w=sin(x)" for -pi/2 <= x <= pi/2.
 
@@ -237,8 +296,16 @@ def pw_sin_relaxation(b, x, w, x_pts, relaxation_side=RelaxationSide.BOTH, safet
     if xub > np.pi / 2.0:
         return
 
-    OE_tangent_x, OE_tangent_slope, OE_tangent_intercept = _compute_sine_overestimator_tangent_point(xlb)
-    UE_tangent_x, UE_tangent_slope, UE_tangent_intercept = _compute_sine_underestimator_tangent_point(xub)
+    (
+        OE_tangent_x,
+        OE_tangent_slope,
+        OE_tangent_intercept,
+    ) = _compute_sine_overestimator_tangent_point(xlb)
+    (
+        UE_tangent_x,
+        UE_tangent_slope,
+        UE_tangent_intercept,
+    ) = _compute_sine_underestimator_tangent_point(xub)
     non_piecewise_overestimators_pts = []
     non_piecewise_underestimator_pts = []
 
@@ -247,7 +314,9 @@ def pw_sin_relaxation(b, x, w, x_pts, relaxation_side=RelaxationSide.BOTH, safet
             new_x_pts = [i for i in x_pts if i < OE_tangent_x]
             new_x_pts.append(xub)
             non_piecewise_overestimators_pts = [OE_tangent_x]
-            non_piecewise_overestimators_pts.extend(i for i in x_pts if i > OE_tangent_x)
+            non_piecewise_overestimators_pts.extend(
+                i for i in x_pts if i > OE_tangent_x
+            )
             x_pts = new_x_pts
     elif relaxation_side == RelaxationSide.UNDER:
         if UE_tangent_x > xlb:
@@ -260,13 +329,17 @@ def pw_sin_relaxation(b, x, w, x_pts, relaxation_side=RelaxationSide.BOTH, safet
     b.non_piecewise_overestimators = pyo.ConstraintList()
     b.non_piecewise_underestimators = pyo.ConstraintList()
     for pt in non_piecewise_overestimators_pts:
-        b.non_piecewise_overestimators.add(w <= math.sin(pt) + safety_tol + (x - pt) * math.cos(pt))
+        b.non_piecewise_overestimators.add(
+            w <= math.sin(pt) + safety_tol + (x - pt) * math.cos(pt)
+        )
     for pt in non_piecewise_underestimator_pts:
-        b.non_piecewise_underestimators.add(w >= math.sin(pt) - safety_tol + (x - pt) * math.cos(pt))
+        b.non_piecewise_underestimators.add(
+            w >= math.sin(pt) - safety_tol + (x - pt) * math.cos(pt)
+        )
 
     intervals = []
-    for i in range(len(x_pts)-1):
-        intervals.append((x_pts[i], x_pts[i+1]))
+    for i in range(len(x_pts) - 1):
+        intervals.append((x_pts[i], x_pts[i + 1]))
 
     b.interval_set = pyo.Set(initialize=range(len(intervals)), ordered=True)
     b.x = pyo.Var(b.interval_set)
@@ -296,49 +369,93 @@ def pw_sin_relaxation(b, x, w, x_pts, relaxation_side=RelaxationSide.BOTH, safet
             if x0 < 0 and x1 <= 0:
                 slope = (math.sin(x1) - math.sin(x0)) / (x1 - x0)
                 intercept = math.sin(x0) - slope * x0
-                b.overestimators.add(b.w[i] <= slope * b.x[i] + (intercept + safety_tol) * b.lam[i])
+                b.overestimators.add(
+                    b.w[i] <= slope * b.x[i] + (intercept + safety_tol) * b.lam[i]
+                )
             elif (x0 < 0) and (x1 > 0):
-                tangent_x, tangent_slope, tangent_intercept = _compute_sine_overestimator_tangent_point(x0)
+                (
+                    tangent_x,
+                    tangent_slope,
+                    tangent_intercept,
+                ) = _compute_sine_overestimator_tangent_point(x0)
                 if tangent_x <= x1:
-                    b.overestimators.add(b.w[i] <= tangent_slope * b.x[i] + (tangent_intercept + safety_tol) * b.lam[i])
-                    b.overestimators.add(b.w[i] <= math.cos(x1) * b.x[i] +
-                                         (math.sin(x1) - x1 * math.cos(x1) + safety_tol) * b.lam[i])
+                    b.overestimators.add(
+                        b.w[i]
+                        <= tangent_slope * b.x[i]
+                        + (tangent_intercept + safety_tol) * b.lam[i]
+                    )
+                    b.overestimators.add(
+                        b.w[i]
+                        <= math.cos(x1) * b.x[i]
+                        + (math.sin(x1) - x1 * math.cos(x1) + safety_tol) * b.lam[i]
+                    )
                 else:
                     slope = (math.sin(x1) - math.sin(x0)) / (x1 - x0)
                     intercept = math.sin(x0) - slope * x0
-                    b.overestimators.add(b.w[i] <= slope * b.x[i] + (intercept + safety_tol) * b.lam[i])
+                    b.overestimators.add(
+                        b.w[i] <= slope * b.x[i] + (intercept + safety_tol) * b.lam[i]
+                    )
             else:
-                b.overestimators.add(b.w[i] <= math.cos(x0)*b.x[i] +
-                                     (math.sin(x0) - x0*math.cos(x0) + safety_tol)*b.lam[i])
-                b.overestimators.add(b.w[i] <= math.cos(x1)*b.x[i] +
-                                     (math.sin(x1) - x1*math.cos(x1) + safety_tol)*b.lam[i])
+                b.overestimators.add(
+                    b.w[i]
+                    <= math.cos(x0) * b.x[i]
+                    + (math.sin(x0) - x0 * math.cos(x0) + safety_tol) * b.lam[i]
+                )
+                b.overestimators.add(
+                    b.w[i]
+                    <= math.cos(x1) * b.x[i]
+                    + (math.sin(x1) - x1 * math.cos(x1) + safety_tol) * b.lam[i]
+                )
 
         # Underestimators
         if relaxation_side in {RelaxationSide.UNDER, RelaxationSide.BOTH}:
             if x0 >= 0 and x1 > 0:
                 slope = (math.sin(x1) - math.sin(x0)) / (x1 - x0)
                 intercept = math.sin(x0) - slope * x0
-                b.underestimators.add(b.w[i] >= slope * b.x[i] + (intercept - safety_tol) * b.lam[i])
+                b.underestimators.add(
+                    b.w[i] >= slope * b.x[i] + (intercept - safety_tol) * b.lam[i]
+                )
             elif (x1 > 0) and (x0 < 0):
-                tangent_x, tangent_slope, tangent_intercept = _compute_sine_underestimator_tangent_point(x1)
+                (
+                    tangent_x,
+                    tangent_slope,
+                    tangent_intercept,
+                ) = _compute_sine_underestimator_tangent_point(x1)
                 if tangent_x >= x0:
-                    b.underestimators.add(b.w[i] >= tangent_slope*b.x[i] + (tangent_intercept - safety_tol)*b.lam[i])
-                    b.underestimators.add(b.w[i] >= math.cos(x0)*b.x[i] +
-                                          (math.sin(x0) - x0 * math.cos(x0) - safety_tol)*b.lam[i])
+                    b.underestimators.add(
+                        b.w[i]
+                        >= tangent_slope * b.x[i]
+                        + (tangent_intercept - safety_tol) * b.lam[i]
+                    )
+                    b.underestimators.add(
+                        b.w[i]
+                        >= math.cos(x0) * b.x[i]
+                        + (math.sin(x0) - x0 * math.cos(x0) - safety_tol) * b.lam[i]
+                    )
                 else:
                     slope = (math.sin(x1) - math.sin(x0)) / (x1 - x0)
                     intercept = math.sin(x0) - slope * x0
-                    b.underestimators.add(b.w[i] >= slope * b.x[i] + (intercept - safety_tol) * b.lam[i])
+                    b.underestimators.add(
+                        b.w[i] >= slope * b.x[i] + (intercept - safety_tol) * b.lam[i]
+                    )
             else:
-                b.underestimators.add(b.w[i] >= math.cos(x0)*b.x[i] +
-                                      (math.sin(x0) - x0 * math.cos(x0) - safety_tol)*b.lam[i])
-                b.underestimators.add(b.w[i] >= math.cos(x1)*b.x[i] +
-                                      (math.sin(x1) - x1 * math.cos(x1) - safety_tol)*b.lam[i])
+                b.underestimators.add(
+                    b.w[i]
+                    >= math.cos(x0) * b.x[i]
+                    + (math.sin(x0) - x0 * math.cos(x0) - safety_tol) * b.lam[i]
+                )
+                b.underestimators.add(
+                    b.w[i]
+                    >= math.cos(x1) * b.x[i]
+                    + (math.sin(x1) - x1 * math.cos(x1) - safety_tol) * b.lam[i]
+                )
 
     return x_pts
 
 
-def pw_arctan_relaxation(b, x, w, x_pts, relaxation_side=RelaxationSide.BOTH, safety_tol=1e-10):
+def pw_arctan_relaxation(
+    b, x, w, x_pts, relaxation_side=RelaxationSide.BOTH, safety_tol=1e-10
+):
     """
     This function creates piecewise relaxations to relax "w=sin(x)" for -pi/2 <= x <= pi/2.
 
@@ -375,8 +492,16 @@ def pw_arctan_relaxation(b, x, w, x_pts, relaxation_side=RelaxationSide.BOTH, sa
     if xlb == -math.inf or xub == math.inf:
         return
 
-    OE_tangent_x, OE_tangent_slope, OE_tangent_intercept = _compute_arctan_overestimator_tangent_point(xlb)
-    UE_tangent_x, UE_tangent_slope, UE_tangent_intercept = _compute_arctan_underestimator_tangent_point(xub)
+    (
+        OE_tangent_x,
+        OE_tangent_slope,
+        OE_tangent_intercept,
+    ) = _compute_arctan_overestimator_tangent_point(xlb)
+    (
+        UE_tangent_x,
+        UE_tangent_slope,
+        UE_tangent_intercept,
+    ) = _compute_arctan_underestimator_tangent_point(xub)
     non_piecewise_overestimators_pts = []
     non_piecewise_underestimator_pts = []
 
@@ -385,7 +510,9 @@ def pw_arctan_relaxation(b, x, w, x_pts, relaxation_side=RelaxationSide.BOTH, sa
             new_x_pts = [i for i in x_pts if i < OE_tangent_x]
             new_x_pts.append(xub)
             non_piecewise_overestimators_pts = [OE_tangent_x]
-            non_piecewise_overestimators_pts.extend(i for i in x_pts if i > OE_tangent_x)
+            non_piecewise_overestimators_pts.extend(
+                i for i in x_pts if i > OE_tangent_x
+            )
             x_pts = new_x_pts
     elif relaxation_side == RelaxationSide.UNDER:
         if UE_tangent_x > xlb:
@@ -398,13 +525,17 @@ def pw_arctan_relaxation(b, x, w, x_pts, relaxation_side=RelaxationSide.BOTH, sa
     b.non_piecewise_overestimators = pyo.ConstraintList()
     b.non_piecewise_underestimators = pyo.ConstraintList()
     for pt in non_piecewise_overestimators_pts:
-        b.non_piecewise_overestimators.add(w <= math.atan(pt) + safety_tol + (x - pt) * _eval.deriv(pt))
+        b.non_piecewise_overestimators.add(
+            w <= math.atan(pt) + safety_tol + (x - pt) * _eval.deriv(pt)
+        )
     for pt in non_piecewise_underestimator_pts:
-        b.non_piecewise_underestimators.add(w >= math.atan(pt) - safety_tol + (x - pt) * _eval.deriv(pt))
+        b.non_piecewise_underestimators.add(
+            w >= math.atan(pt) - safety_tol + (x - pt) * _eval.deriv(pt)
+        )
 
     intervals = []
-    for i in range(len(x_pts)-1):
-        intervals.append((x_pts[i], x_pts[i+1]))
+    for i in range(len(x_pts) - 1):
+        intervals.append((x_pts[i], x_pts[i + 1]))
 
     b.interval_set = pyo.Set(initialize=range(len(intervals)))
     b.x = pyo.Var(b.interval_set)
@@ -434,44 +565,86 @@ def pw_arctan_relaxation(b, x, w, x_pts, relaxation_side=RelaxationSide.BOTH, sa
             if x0 < 0 and x1 <= 0:
                 slope = (math.atan(x1) - math.atan(x0)) / (x1 - x0)
                 intercept = math.atan(x0) - slope * x0
-                b.overestimators.add(b.w[i] <= slope * b.x[i] + (intercept + safety_tol) * b.lam[i])
+                b.overestimators.add(
+                    b.w[i] <= slope * b.x[i] + (intercept + safety_tol) * b.lam[i]
+                )
             elif (x0 < 0) and (x1 > 0):
-                tangent_x, tangent_slope, tangent_intercept = _compute_arctan_overestimator_tangent_point(x0)
+                (
+                    tangent_x,
+                    tangent_slope,
+                    tangent_intercept,
+                ) = _compute_arctan_overestimator_tangent_point(x0)
                 if tangent_x <= x1:
-                    b.overestimators.add(b.w[i] <= tangent_slope * b.x[i] + (tangent_intercept + safety_tol) * b.lam[i])
-                    b.overestimators.add(b.w[i] <= _eval.deriv(x1)*b.x[i] +
-                                         (math.atan(x1) - x1*_eval.deriv(x1) + safety_tol)*b.lam[i])
+                    b.overestimators.add(
+                        b.w[i]
+                        <= tangent_slope * b.x[i]
+                        + (tangent_intercept + safety_tol) * b.lam[i]
+                    )
+                    b.overestimators.add(
+                        b.w[i]
+                        <= _eval.deriv(x1) * b.x[i]
+                        + (math.atan(x1) - x1 * _eval.deriv(x1) + safety_tol) * b.lam[i]
+                    )
                 else:
                     slope = (math.atan(x1) - math.atan(x0)) / (x1 - x0)
                     intercept = math.atan(x0) - slope * x0
-                    b.overestimators.add(b.w[i] <= slope * b.x[i] + (intercept + safety_tol) * b.lam[i])
+                    b.overestimators.add(
+                        b.w[i] <= slope * b.x[i] + (intercept + safety_tol) * b.lam[i]
+                    )
             else:
-                b.overestimators.add(b.w[i] <= _eval.deriv(x0)*b.x[i] +
-                                     (math.atan(x0) - x0*_eval.deriv(x0) + safety_tol)*b.lam[i])
-                b.overestimators.add(b.w[i] <= _eval.deriv(x1)*b.x[i] +
-                                     (math.atan(x1) - x1*_eval.deriv(x1) + safety_tol)*b.lam[i])
+                b.overestimators.add(
+                    b.w[i]
+                    <= _eval.deriv(x0) * b.x[i]
+                    + (math.atan(x0) - x0 * _eval.deriv(x0) + safety_tol) * b.lam[i]
+                )
+                b.overestimators.add(
+                    b.w[i]
+                    <= _eval.deriv(x1) * b.x[i]
+                    + (math.atan(x1) - x1 * _eval.deriv(x1) + safety_tol) * b.lam[i]
+                )
 
         # Underestimators
         if relaxation_side in {RelaxationSide.UNDER, RelaxationSide.BOTH}:
             if x0 >= 0 and x1 > 0:
                 slope = (math.atan(x1) - math.atan(x0)) / (x1 - x0)
                 intercept = math.atan(x0) - slope * x0
-                b.underestimators.add(b.w[i] >= slope * b.x[i] + (intercept - safety_tol) * b.lam[i])
+                b.underestimators.add(
+                    b.w[i] >= slope * b.x[i] + (intercept - safety_tol) * b.lam[i]
+                )
             elif (x1 > 0) and (x0 < 0):
-                tangent_x, tangent_slope, tangent_intercept = _compute_arctan_underestimator_tangent_point(x1)
+                (
+                    tangent_x,
+                    tangent_slope,
+                    tangent_intercept,
+                ) = _compute_arctan_underestimator_tangent_point(x1)
                 if tangent_x >= x0:
-                    b.underestimators.add(b.w[i] >= tangent_slope*b.x[i] + (tangent_intercept - safety_tol)*b.lam[i])
-                    b.underestimators.add(b.w[i] >= _eval.deriv(x0)*b.x[i] +
-                                          (math.atan(x0) - x0*_eval.deriv(x0) - safety_tol)*b.lam[i])
+                    b.underestimators.add(
+                        b.w[i]
+                        >= tangent_slope * b.x[i]
+                        + (tangent_intercept - safety_tol) * b.lam[i]
+                    )
+                    b.underestimators.add(
+                        b.w[i]
+                        >= _eval.deriv(x0) * b.x[i]
+                        + (math.atan(x0) - x0 * _eval.deriv(x0) - safety_tol) * b.lam[i]
+                    )
                 else:
                     slope = (math.atan(x1) - math.atan(x0)) / (x1 - x0)
                     intercept = math.atan(x0) - slope * x0
-                    b.underestimators.add(b.w[i] >= slope * b.x[i] + (intercept - safety_tol) * b.lam[i])
+                    b.underestimators.add(
+                        b.w[i] >= slope * b.x[i] + (intercept - safety_tol) * b.lam[i]
+                    )
             else:
-                b.underestimators.add(b.w[i] >= _eval.deriv(x0)*b.x[i] +
-                                      (math.atan(x0) - x0*_eval.deriv(x0) - safety_tol)*b.lam[i])
-                b.underestimators.add(b.w[i] >= _eval.deriv(x1)*b.x[i] +
-                                      (math.atan(x1) - x1*_eval.deriv(x1) - safety_tol)*b.lam[i])
+                b.underestimators.add(
+                    b.w[i]
+                    >= _eval.deriv(x0) * b.x[i]
+                    + (math.atan(x0) - x0 * _eval.deriv(x0) - safety_tol) * b.lam[i]
+                )
+                b.underestimators.add(
+                    b.w[i]
+                    >= _eval.deriv(x1) * b.x[i]
+                    + (math.atan(x1) - x1 * _eval.deriv(x1) - safety_tol) * b.lam[i]
+                )
 
     return x_pts
 
@@ -505,7 +678,7 @@ class PWUnivariateRelaxationData(BasePWRelaxationData):
         return self._aux_var_ref.get_component()
 
     def get_rhs_vars(self):
-        return self._x,
+        return (self._x,)
 
     def get_rhs_expr(self):
         return self._f_x_expr
@@ -520,8 +693,19 @@ class PWUnivariateRelaxationData(BasePWRelaxationData):
             res.append(self._x)
         return res
 
-    def set_input(self, x, aux_var, shape, f_x_expr, pw_repn='INC', relaxation_side=RelaxationSide.BOTH,
-                  use_linear_relaxation=True, large_coef=1e5, small_coef=1e-10, safety_tol=1e-10):
+    def set_input(
+        self,
+        x,
+        aux_var,
+        shape,
+        f_x_expr,
+        pw_repn='INC',
+        relaxation_side=RelaxationSide.BOTH,
+        use_linear_relaxation=True,
+        large_coef=1e5,
+        small_coef=1e-10,
+        safety_tol=1e-10,
+    ):
         """
         Parameters
         ----------
@@ -541,10 +725,13 @@ class PWUnivariateRelaxationData(BasePWRelaxationData):
         use_linear_relaxation: bool
             Specifies whether a linear or nonlinear relaxation should be used
         """
-        super().set_input(relaxation_side=relaxation_side,
-                          use_linear_relaxation=use_linear_relaxation,
-                          large_coef=large_coef, small_coef=small_coef,
-                          safety_tol=safety_tol)
+        super().set_input(
+            relaxation_side=relaxation_side,
+            use_linear_relaxation=use_linear_relaxation,
+            large_coef=large_coef,
+            small_coef=small_coef,
+            safety_tol=safety_tol,
+        )
         self._pw_repn = pw_repn
         self._function_shape = shape
         self._f_x_expr = f_x_expr
@@ -554,8 +741,19 @@ class PWUnivariateRelaxationData(BasePWRelaxationData):
         bnds_list = _get_bnds_list(self._x)
         self._partitions[self._x] = bnds_list
 
-    def build(self, x, aux_var, shape, f_x_expr, pw_repn='INC', relaxation_side=RelaxationSide.BOTH,
-              use_linear_relaxation=True, large_coef=1e5, small_coef=1e-10, safety_tol=1e-10):
+    def build(
+        self,
+        x,
+        aux_var,
+        shape,
+        f_x_expr,
+        pw_repn='INC',
+        relaxation_side=RelaxationSide.BOTH,
+        use_linear_relaxation=True,
+        large_coef=1e5,
+        small_coef=1e-10,
+        safety_tol=1e-10,
+    ):
         """
         Parameters
         ----------
@@ -575,9 +773,18 @@ class PWUnivariateRelaxationData(BasePWRelaxationData):
         use_linear_relaxation: bool
             Specifies whether a linear or nonlinear relaxation should be used
         """
-        self.set_input(x=x, aux_var=aux_var, shape=shape, f_x_expr=f_x_expr, pw_repn=pw_repn,
-                       relaxation_side=relaxation_side, use_linear_relaxation=use_linear_relaxation,
-                       large_coef=large_coef, small_coef=small_coef, safety_tol=safety_tol)
+        self.set_input(
+            x=x,
+            aux_var=aux_var,
+            shape=shape,
+            f_x_expr=f_x_expr,
+            pw_repn=pw_repn,
+            relaxation_side=relaxation_side,
+            use_linear_relaxation=use_linear_relaxation,
+            large_coef=large_coef,
+            small_coef=small_coef,
+            safety_tol=safety_tol,
+        )
         self.rebuild()
 
     def _remove_relaxation(self):
@@ -593,7 +800,9 @@ class PWUnivariateRelaxationData(BasePWRelaxationData):
         self._remove_relaxation()
 
     def _needs_secant(self):
-        if self.relaxation_side == RelaxationSide.BOTH and (self.is_rhs_convex() or self.is_rhs_concave()):
+        if self.relaxation_side == RelaxationSide.BOTH and (
+            self.is_rhs_convex() or self.is_rhs_concave()
+        ):
             return True
         elif self.relaxation_side == RelaxationSide.UNDER and self.is_rhs_concave():
             return True
@@ -603,8 +812,10 @@ class PWUnivariateRelaxationData(BasePWRelaxationData):
             return False
 
     def rebuild(self, build_nonlinear_constraint=False, ensure_oa_at_vertices=True):
-        super().rebuild(build_nonlinear_constraint=build_nonlinear_constraint,
-                        ensure_oa_at_vertices=ensure_oa_at_vertices)
+        super().rebuild(
+            build_nonlinear_constraint=build_nonlinear_constraint,
+            ensure_oa_at_vertices=ensure_oa_at_vertices,
+        )
         if not build_nonlinear_constraint:
             if self._check_valid_domain_for_relaxation():
                 if self._needs_secant():
@@ -628,14 +839,20 @@ class PWUnivariateRelaxationData(BasePWRelaxationData):
         del self._secant_expr
         self._secant_slope = ScalarParam(mutable=True)
         self._secant_intercept = ScalarParam(mutable=True)
-        e = LinearExpression(constant=self._secant_intercept, linear_coefs=[self._secant_slope], linear_vars=[self._x])
+        e = LinearExpression(
+            constant=self._secant_intercept,
+            linear_coefs=[self._secant_slope],
+            linear_vars=[self._x],
+        )
         self._secant_expr = e
         if self.is_rhs_concave():
             self._secant = ScalarConstraint(expr=self._aux_var >= e)
         elif self.is_rhs_convex():
             self._secant = ScalarConstraint(expr=self._aux_var <= e)
         else:
-            raise RuntimeError('Function should be either convex or concave in order to build the secant')
+            raise RuntimeError(
+                'Function should be either convex or concave in order to build the secant'
+            )
 
     def _update_secant(self):
         _eval = _FxExpr(self._f_x_expr, self._x)
@@ -651,14 +868,16 @@ class PWUnivariateRelaxationData(BasePWRelaxationData):
                 y1 = _eval(x1)
                 y2 = _eval(x2)
                 slope = (y2 - y1) / (x2 - x1)
-                intercept = y2 - slope*x2
+                intercept = y2 - slope * x2
             err_message = None
         except (ZeroDivisionError, OverflowError, ValueError) as e:
             slope = None
             intercept = None
             err_message = str(e)
         if err_message is not None:
-            logger.debug(f'Encountered exception when adding secant for "{self._get_pprint_string()}"; Error message: {err_message}')
+            logger.debug(
+                f'Encountered exception when adding secant for "{self._get_pprint_string()}"; Error message: {err_message}'
+            )
             self._remove_relaxation()
         else:
             self._secant_slope._value = slope
@@ -667,9 +886,13 @@ class PWUnivariateRelaxationData(BasePWRelaxationData):
                 rel_side = RelaxationSide.UNDER
             else:
                 rel_side = RelaxationSide.OVER
-            success, bad_var, bad_coef, err_msg = _check_cut(self._secant_expr, too_small=self.small_coef,
-                                                             too_large=self.large_coef, relaxation_side=rel_side,
-                                                             safety_tol=self.safety_tol)
+            success, bad_var, bad_coef, err_msg = _check_cut(
+                self._secant_expr,
+                too_small=self.small_coef,
+                too_large=self.large_coef,
+                relaxation_side=rel_side,
+                safety_tol=self.safety_tol,
+            )
             if not success:
                 self._log_bad_cut(bad_var, bad_coef, err_msg)
                 self._secant.deactivate()
@@ -680,15 +903,31 @@ class PWUnivariateRelaxationData(BasePWRelaxationData):
         del self._pw_secant
         self._pw_secant = pe.Block(concrete=True)
         if self.is_rhs_convex():
-            _pw_univariate_relaxation(b=self._pw_secant, x=self._x, w=self._aux_var, x_pts=self._partitions[self._x],
-                                      f_x_expr=self._f_x_expr, pw_repn=self._pw_repn, shape=FunctionShape.CONVEX,
-                                      relaxation_side=RelaxationSide.OVER, large_eval_tol=self.large_coef,
-                                      safety_tol=self.safety_tol)
+            _pw_univariate_relaxation(
+                b=self._pw_secant,
+                x=self._x,
+                w=self._aux_var,
+                x_pts=self._partitions[self._x],
+                f_x_expr=self._f_x_expr,
+                pw_repn=self._pw_repn,
+                shape=FunctionShape.CONVEX,
+                relaxation_side=RelaxationSide.OVER,
+                large_eval_tol=self.large_coef,
+                safety_tol=self.safety_tol,
+            )
         else:
-            _pw_univariate_relaxation(b=self._pw_secant, x=self._x, w=self._aux_var, x_pts=self._partitions[self._x],
-                                      f_x_expr=self._f_x_expr, pw_repn=self._pw_repn, shape=FunctionShape.CONCAVE,
-                                      relaxation_side=RelaxationSide.UNDER, large_eval_tol=self.large_coef,
-                                      safety_tol=self.safety_tol)
+            _pw_univariate_relaxation(
+                b=self._pw_secant,
+                x=self._x,
+                w=self._aux_var,
+                x_pts=self._partitions[self._x],
+                f_x_expr=self._f_x_expr,
+                pw_repn=self._pw_repn,
+                shape=FunctionShape.CONCAVE,
+                relaxation_side=RelaxationSide.UNDER,
+                large_eval_tol=self.large_coef,
+                safety_tol=self.safety_tol,
+            )
 
     def add_partition_point(self, value=None):
         """
@@ -741,8 +980,17 @@ class CustomUnivariateBaseRelaxationData(PWUnivariateRelaxationData):
     def _rhs_func(self, x):
         raise NotImplementedError('This should be implemented by a derived class')
 
-    def set_input(self, x, aux_var, pw_repn='INC', relaxation_side=RelaxationSide.BOTH,
-                  use_linear_relaxation=True, large_coef=1e5, small_coef=1e-10, safety_tol=1e-10):
+    def set_input(
+        self,
+        x,
+        aux_var,
+        pw_repn='INC',
+        relaxation_side=RelaxationSide.BOTH,
+        use_linear_relaxation=True,
+        large_coef=1e5,
+        small_coef=1e-10,
+        safety_tol=1e-10,
+    ):
         """
         Parameters
         ----------
@@ -758,15 +1006,30 @@ class CustomUnivariateBaseRelaxationData(PWUnivariateRelaxationData):
         use_linear_relaxation: bool
             Specifies whether a linear or nonlinear relaxation should be used
         """
-        super().set_input(x=x, aux_var=aux_var, shape=FunctionShape.UNKNOWN,
-                          f_x_expr=self._rhs_func(x), pw_repn=pw_repn,
-                          relaxation_side=relaxation_side,
-                          use_linear_relaxation=use_linear_relaxation,
-                          large_coef=large_coef, small_coef=small_coef,
-                          safety_tol=safety_tol)
+        super().set_input(
+            x=x,
+            aux_var=aux_var,
+            shape=FunctionShape.UNKNOWN,
+            f_x_expr=self._rhs_func(x),
+            pw_repn=pw_repn,
+            relaxation_side=relaxation_side,
+            use_linear_relaxation=use_linear_relaxation,
+            large_coef=large_coef,
+            small_coef=small_coef,
+            safety_tol=safety_tol,
+        )
 
-    def build(self, x, aux_var, pw_repn='INC', relaxation_side=RelaxationSide.BOTH,
-              use_linear_relaxation=True, large_coef=1e5, small_coef=1e-10, safety_tol=1e-10):
+    def build(
+        self,
+        x,
+        aux_var,
+        pw_repn='INC',
+        relaxation_side=RelaxationSide.BOTH,
+        use_linear_relaxation=True,
+        large_coef=1e5,
+        small_coef=1e-10,
+        safety_tol=1e-10,
+    ):
         """
         Parameters
         ----------
@@ -782,9 +1045,16 @@ class CustomUnivariateBaseRelaxationData(PWUnivariateRelaxationData):
         use_linear_relaxation: bool
             Specifies whether a linear or nonlinear relaxation should be used
         """
-        self.set_input(x=x, aux_var=aux_var, pw_repn=pw_repn, relaxation_side=relaxation_side,
-                       use_linear_relaxation=use_linear_relaxation, large_coef=large_coef, small_coef=small_coef,
-                       safety_tol=safety_tol)
+        self.set_input(
+            x=x,
+            aux_var=aux_var,
+            pw_repn=pw_repn,
+            relaxation_side=relaxation_side,
+            use_linear_relaxation=use_linear_relaxation,
+            large_coef=large_coef,
+            small_coef=small_coef,
+            safety_tol=safety_tol,
+        )
         self.rebuild()
 
 
@@ -793,6 +1063,7 @@ class PWXSquaredRelaxationData(CustomUnivariateBaseRelaxationData):
     """
     A helper class for building and modifying piecewise relaxations of aux_var = x**2.
     """
+
     def _rhs_func(self, x):
         return x**2
 
@@ -815,15 +1086,17 @@ class PWCosRelaxationData(CustomUnivariateBaseRelaxationData):
         if current_concave != self._last_concave:
             self._needs_rebuilt = True
         self._last_concave = current_concave
-        super().rebuild(build_nonlinear_constraint=build_nonlinear_constraint,
-                        ensure_oa_at_vertices=ensure_oa_at_vertices)
+        super().rebuild(
+            build_nonlinear_constraint=build_nonlinear_constraint,
+            ensure_oa_at_vertices=ensure_oa_at_vertices,
+        )
 
     def _rhs_func(self, x):
         return pe.cos(x)
 
     def is_rhs_concave(self):
         lb, ub = tuple(_get_bnds_list(self._x))
-        if lb >= -math.pi/2 and ub <= math.pi/2:
+        if lb >= -math.pi / 2 and ub <= math.pi / 2:
             return True
         else:
             return False
@@ -868,8 +1141,10 @@ class SinArctanBaseRelaxationData(CustomUnivariateBaseRelaxationData):
             self._needs_rebuilt = True
         self._last_convex = current_convex
         self._last_concave = current_concave
-        super().rebuild(build_nonlinear_constraint=build_nonlinear_constraint,
-                        ensure_oa_at_vertices=ensure_oa_at_vertices)
+        super().rebuild(
+            build_nonlinear_constraint=build_nonlinear_constraint,
+            ensure_oa_at_vertices=ensure_oa_at_vertices,
+        )
         if not build_nonlinear_constraint:
             if self._check_valid_domain_for_relaxation():
                 if (not self.is_rhs_convex()) and (not self.is_rhs_concave()):
@@ -882,9 +1157,14 @@ class SinArctanBaseRelaxationData(CustomUnivariateBaseRelaxationData):
                         self._remove_relaxation()
                         del self._pw_secant
                         self._pw_secant = pe.Block(concrete=True)
-                        self._pw_func()(b=self._pw_secant, x=self._x, w=self._aux_var, x_pts=self._partitions[self._x],
-                                        relaxation_side=self.relaxation_side,
-                                        safety_tol=self.safety_tol)
+                        self._pw_func()(
+                            b=self._pw_secant,
+                            x=self._x,
+                            w=self._aux_var,
+                            x_pts=self._partitions[self._x],
+                            relaxation_side=self.relaxation_side,
+                            safety_tol=self.safety_tol,
+                        )
             else:
                 self._remove_relaxation()
 
@@ -897,14 +1177,20 @@ class SinArctanBaseRelaxationData(CustomUnivariateBaseRelaxationData):
         self._secant = IndexedConstraint(self._secant_index)
         if self.relaxation_side in {RelaxationSide.BOTH, RelaxationSide.UNDER}:
             for ndx in [0, 1]:
-                e = LinearExpression(constant=self._secant_intercept[ndx],
-                                     linear_coefs=[self._secant_slope[ndx]], linear_vars=[self._x])
+                e = LinearExpression(
+                    constant=self._secant_intercept[ndx],
+                    linear_coefs=[self._secant_slope[ndx]],
+                    linear_vars=[self._x],
+                )
                 self._secant_exprs[ndx] = e
                 self._secant[ndx] = self._aux_var >= e
         if self.relaxation_side in {RelaxationSide.BOTH, RelaxationSide.OVER}:
             for ndx in [2, 3]:
-                e = LinearExpression(constant=self._secant_intercept[ndx],
-                                     linear_coefs=[self._secant_slope[ndx]], linear_vars=[self._x])
+                e = LinearExpression(
+                    constant=self._secant_intercept[ndx],
+                    linear_coefs=[self._secant_slope[ndx]],
+                    linear_vars=[self._x],
+                )
                 self._secant_exprs[ndx] = e
                 self._secant[ndx] = self._aux_var <= e
 
@@ -913,9 +1199,13 @@ class SinArctanBaseRelaxationData(CustomUnivariateBaseRelaxationData):
             rel_side = RelaxationSide.UNDER
         else:
             rel_side = RelaxationSide.OVER
-        success, bad_var, bad_coef, err_msg = _check_cut(self._secant_exprs[ndx], too_small=self.small_coef,
-                                                         too_large=self.large_coef, relaxation_side=rel_side,
-                                                         safety_tol=self.safety_tol)
+        success, bad_var, bad_coef, err_msg = _check_cut(
+            self._secant_exprs[ndx],
+            too_small=self.small_coef,
+            too_large=self.large_coef,
+            relaxation_side=rel_side,
+            safety_tol=self.safety_tol,
+        )
         if not success:
             self._log_bad_cut(bad_var, bad_coef, err_msg)
             self._secant[ndx].deactivate()

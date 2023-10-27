@@ -11,21 +11,28 @@ import pyomo.environ as pe
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.common.collections import ComponentSet
 from pyomo.common.collections.orderedset import OrderedSet
-from pyomo.contrib.coramin.relaxations.iterators import relaxation_data_objects, nonrelaxation_component_data_objects
+from pyomo.contrib.coramin.relaxations.iterators import (
+    relaxation_data_objects,
+    nonrelaxation_component_data_objects,
+)
 from pyomo.core.expr.visitor import replace_expressions
 import logging
 import networkx
+
 try:
     import metis
+
     metis_available = True
 except ImportError:
-    metis_available = False    
+    metis_available = False
 import numpy as np
 import math
 from pyomo.core.base.block import declare_custom_block, _BlockData
 from pyomo.contrib.coramin.utils.pyomo_utils import get_objective
 from pyomo.core.base.var import _GeneralVarData
-from pyomo.contrib.coramin.relaxations.copy_relaxation import copy_relaxation_with_local_data
+from pyomo.contrib.coramin.relaxations.copy_relaxation import (
+    copy_relaxation_with_local_data,
+)
 from pyomo.contrib.coramin.relaxations.relaxations_base import BaseRelaxationData
 from pyomo.contrib.coramin.utils import RelaxationSide
 from collections import defaultdict
@@ -79,7 +86,9 @@ class TreeBlockData(_BlockData):
 
     def _assert_setup(self):
         if not self._already_setup:
-            raise TreeBlockError('The TreeBlock has not been setup yet. Please call the setup method.')
+            raise TreeBlockError(
+                'The TreeBlock has not been setup yet. Please call the setup method.'
+            )
 
     def is_leaf(self):
         self._assert_setup()
@@ -87,23 +96,33 @@ class TreeBlockData(_BlockData):
 
     def add_component(self, name, val):
         self._assert_setup()
-        if self.is_leaf() or self._allow_changes or not isinstance(val, _GeneralVarData):
+        if (
+            self.is_leaf()
+            or self._allow_changes
+            or not isinstance(val, _GeneralVarData)
+        ):
             _BlockData.add_component(self, name, val)
         else:
-            raise TreeBlockError('Pyomo variables cannot be added to a TreeBlock unless it is a leaf.')
+            raise TreeBlockError(
+                'Pyomo variables cannot be added to a TreeBlock unless it is a leaf.'
+            )
 
     @property
     def children(self):
         self._assert_setup()
         if self.is_leaf():
-            raise TreeBlockError('Leaf TreeBlocks do not have children. Please check the is_leaf method')
+            raise TreeBlockError(
+                'Leaf TreeBlocks do not have children. Please check the is_leaf method'
+            )
         return self._children
 
     @property
     def linking_constraints(self):
         self._assert_setup()
         if self.is_leaf():
-            raise TreeBlockError('leaf TreeBlocks do not have linking_constraints. Please check the is_leaf method.')
+            raise TreeBlockError(
+                'leaf TreeBlocks do not have linking_constraints. Please check the is_leaf method.'
+            )
         return self._linking_constraints
 
     def _num_stages(self):
@@ -115,7 +134,9 @@ class TreeBlockData(_BlockData):
 
     def num_stages(self):
         if not self._is_root:
-            raise TreeBlockError('The num_stages method can only be called from the root TreeBlock')
+            raise TreeBlockError(
+                'The num_stages method can only be called from the root TreeBlock'
+            )
         return self._num_stages()
 
     @staticmethod
@@ -126,13 +147,17 @@ class TreeBlockData(_BlockData):
         else:
             for child in children.values():
                 if not child.is_leaf():
-                    for b in TreeBlockData._stage_blocks(child.children, count+1, stage):
+                    for b in TreeBlockData._stage_blocks(
+                        child.children, count + 1, stage
+                    ):
                         yield b
 
     def stage_blocks(self, stage, active=None):
         self._assert_setup()
         if not self._is_root:
-            raise TreeBlockError('The num_stages method can only be called from the root TreeBlock')
+            raise TreeBlockError(
+                'The num_stages method can only be called from the root TreeBlock'
+            )
         if stage == 0:
             if (active and self.active) or (not active):
                 yield self
@@ -144,7 +169,9 @@ class TreeBlockData(_BlockData):
     def get_block_stage(self, block):
         self._assert_setup()
         if not self._is_root:
-            raise TreeBlockError('The get_block_stage method can only be called from the root TreeBlock.')
+            raise TreeBlockError(
+                'The get_block_stage method can only be called from the root TreeBlock.'
+            )
         for stage_ndx in range(self.num_stages()):
             stage_blocks = OrderedSet(self.stage_blocks(stage_ndx))
             if block in stage_blocks:
@@ -241,19 +268,29 @@ class _Tree(object):
                 tmp_component_map = child.build_pyomo_model(block=block.children[i])
             elif isinstance(child, networkx.Graph):
                 block.children[i].setup(children_keys=list())
-                tmp_component_map = build_pyomo_model_from_graph(graph=child, block=block.children[i])
+                tmp_component_map = build_pyomo_model_from_graph(
+                    graph=child, block=block.children[i]
+                )
             else:
                 raise ValueError('Unexpected child type: {0}'.format(str(type(child))))
             replacement_map_by_child[child] = tmp_component_map
             component_map.update(tmp_component_map)
 
-        logger.debug('creating linking cons linking the children of {0}'.format(str(block)))
+        logger.debug(
+            'creating linking cons linking the children of {0}'.format(str(block))
+        )
         for edge in self.edges_between_children:
             logger.debug('adding linking constraint for edge {0}'.format(str(edge)))
             if edge.node1.comp is not edge.node2.comp:
-                raise DecompositionError('Edge {0} node1.comp is not node2.comp'.format(edge))
+                raise DecompositionError(
+                    'Edge {0} node1.comp is not node2.comp'.format(edge)
+                )
             if edge.node1.comp not in component_map:
-                logger.warning('Edge {0} node {1} is not in the component map'.format(str(edge), str(edge.node1)))
+                logger.warning(
+                    'Edge {0} node {1} is not in the component map'.format(
+                        str(edge), str(edge.node1)
+                    )
+                )
             all_children = list(self.children)
             assert len(all_children) == 2
             child0 = all_children[0]
@@ -271,12 +308,14 @@ class _Tree(object):
             if isinstance(_child, _Tree):
                 _child.log(prefix=prefix + '  ')
             else:
-                logger.debug(prefix + '  Leaf: # NNZ: {0}'.format(_child.number_of_edges()))
+                logger.debug(
+                    prefix + '  Leaf: # NNZ: {0}'.format(_child.number_of_edges())
+                )
 
 
 def _is_dominated(ndx, num_cuts, balance, num_cuts_array, balance_array):
-    cut_diff = ((num_cuts - num_cuts_array) >= 0)
-    balance_diff = ((abs(balance - 0.5) - abs(balance_array - 0.5)) >= 0)
+    cut_diff = (num_cuts - num_cuts_array) >= 0
+    balance_diff = (abs(balance - 0.5) - abs(balance_array - 0.5)) >= 0
     cut_diff[ndx] = False
     balance_diff[ndx] = False
     return np.any(cut_diff & balance_diff)
@@ -311,15 +350,28 @@ def choose_metis_partition(graph, max_size_diff_trials, seed_trials):
     seed_selected: float
     """
     if not metis_available:
-        raise ImportError('Cannot perform graph partitioning without metis. Please install metis (including the python bindings).')
+        raise ImportError(
+            'Cannot perform graph partitioning without metis. Please install metis (including the python bindings).'
+        )
     cut_list = list()
     for _max_size_diff in max_size_diff_trials:
         for _seed in seed_trials:
             if _seed is None:
-                edgecuts, parts = metis.part_graph(_networkx_to_adjacency_list(graph), nparts=2, ubvec=[1 + _max_size_diff])
+                edgecuts, parts = metis.part_graph(
+                    _networkx_to_adjacency_list(graph),
+                    nparts=2,
+                    ubvec=[1 + _max_size_diff],
+                )
             else:
-                edgecuts, parts = metis.part_graph(_networkx_to_adjacency_list(graph), nparts=2, ubvec=[1 + _max_size_diff], seed=_seed)
-            cut_list.append((edgecuts, sum(parts)/graph.number_of_nodes(), _max_size_diff, _seed))
+                edgecuts, parts = metis.part_graph(
+                    _networkx_to_adjacency_list(graph),
+                    nparts=2,
+                    ubvec=[1 + _max_size_diff],
+                    seed=_seed,
+                )
+            cut_list.append(
+                (edgecuts, sum(parts) / graph.number_of_nodes(), _max_size_diff, _seed)
+            )
     cut_list.sort(key=lambda i: i[0])
 
     ############################
@@ -352,7 +404,9 @@ def evaluate_partition(original_graph, tree):
     tree: _Tree
     """
     original_graph_nnz = original_graph.number_of_edges()
-    original_graph_n_vars_to_tighten = len(collect_vars_to_tighten_from_graph(graph=original_graph))
+    original_graph_n_vars_to_tighten = len(
+        collect_vars_to_tighten_from_graph(graph=original_graph)
+    )
     original_obbt_nnz = original_graph_nnz * original_graph_n_vars_to_tighten
 
     tree_obbt_nnz = 0
@@ -370,10 +424,13 @@ def evaluate_partition(original_graph, tree):
     return partitioning_ratio
 
 
-def _refine_partition(graph: nx.Graph, model: _BlockData,
-                      removed_edges: Sequence[_Edge],
-                      graph_a_nodes: MutableSet[_Node],
-                      graph_b_nodes: MutableSet[_Node]):
+def _refine_partition(
+    graph: nx.Graph,
+    model: _BlockData,
+    removed_edges: Sequence[_Edge],
+    graph_a_nodes: MutableSet[_Node],
+    graph_b_nodes: MutableSet[_Node],
+):
     con_count = defaultdict(int)
     for edge in removed_edges:
         n1, n2 = edge.node1, edge.node2
@@ -389,9 +446,11 @@ def _refine_partition(graph: nx.Graph, model: _BlockData,
         new_body = flatten_expr(c.body)
 
         if type(new_body) is not numeric_expr.SumExpression:
-            logger.info(f'Constraint {str(c)} is contributing to {count} removed '
-                        f'edges, but we cannot split the constraint because the '
-                        f'body is not a SumExpression.')
+            logger.info(
+                f'Constraint {str(c)} is contributing to {count} removed '
+                f'edges, but we cannot split the constraint because the '
+                f'body is not a SumExpression.'
+            )
             continue
 
         graph_a_args = list()
@@ -418,10 +477,12 @@ def _refine_partition(graph: nx.Graph, model: _BlockData,
                 graph_a_args.append(arg)
 
         if not correct_structure:
-            logger.info(f'Constriant {str(c)} is contributing to {count} removed '
-                        f'edges, but we cannot split the constraint because some of '
-                        f'the terms in the SumExpression contain variables from both '
-                        f'partitions.')
+            logger.info(
+                f'Constriant {str(c)} is contributing to {count} removed '
+                f'edges, but we cannot split the constraint because some of '
+                f'the terms in the SumExpression contain variables from both '
+                f'partitions.'
+            )
             continue
 
         # update the model
@@ -492,12 +553,23 @@ def split_metis(graph, model):
     tree: _Tree
     """
     if not metis_available:
-        raise ImportError('Cannot perform graph partitioning without metis. Please install metis (including the python bindings).')
-    max_size_diff, seed = choose_metis_partition(graph, max_size_diff_trials=[0.15], seed_trials=list(range(10)))
+        raise ImportError(
+            'Cannot perform graph partitioning without metis. Please install metis (including the python bindings).'
+        )
+    max_size_diff, seed = choose_metis_partition(
+        graph, max_size_diff_trials=[0.15], seed_trials=list(range(10))
+    )
     if seed is None:
-        edgecuts, parts = metis.part_graph(_networkx_to_adjacency_list(graph), nparts=2, ubvec=[1 + max_size_diff])
+        edgecuts, parts = metis.part_graph(
+            _networkx_to_adjacency_list(graph), nparts=2, ubvec=[1 + max_size_diff]
+        )
     else:
-        edgecuts, parts = metis.part_graph(_networkx_to_adjacency_list(graph), nparts=2, ubvec=[1 + max_size_diff], seed=seed)
+        edgecuts, parts = metis.part_graph(
+            _networkx_to_adjacency_list(graph),
+            nparts=2,
+            ubvec=[1 + max_size_diff],
+            seed=seed,
+        )
 
     graph_a_nodes = OrderedSet()
     graph_b_nodes = OrderedSet()
@@ -522,10 +594,13 @@ def split_metis(graph, model):
         else:
             removed_edges.append(_Edge(n1, n2))
 
-    removed_edges = _refine_partition(graph=graph, model=model,
-                                      removed_edges=removed_edges,
-                                      graph_a_nodes=graph_a_nodes,
-                                      graph_b_nodes=graph_b_nodes)
+    removed_edges = _refine_partition(
+        graph=graph,
+        model=model,
+        removed_edges=removed_edges,
+        graph_a_nodes=graph_a_nodes,
+        graph_b_nodes=graph_b_nodes,
+    )
 
     graph_a_edges = list()
     graph_b_edges = list()
@@ -571,8 +646,9 @@ def split_metis(graph, model):
     graph_a.add_edges_from(graph_a_edges)
     graph_b.add_edges_from(graph_b_edges)
 
-    if ((graph_a.number_of_nodes() >= 0.99 * graph.number_of_nodes()) or
-            (graph_b.number_of_nodes() >= 0.99 * graph.number_of_nodes())):
+    if (graph_a.number_of_nodes() >= 0.99 * graph.number_of_nodes()) or (
+        graph_b.number_of_nodes() >= 0.99 * graph.number_of_nodes()
+    ):
         raise DecompositionError('Failed to partition graph')
 
     tree = _Tree(children=[graph_a, graph_b], edges_between_children=linking_edges)
@@ -595,7 +671,9 @@ def convert_pyomo_model_to_bipartite_graph(m: _BlockData):
     graph = networkx.Graph()
     var_map = pe.ComponentMap()
 
-    for v in nonrelaxation_component_data_objects(m, pe.Var, sort=True, descend_into=True):
+    for v in nonrelaxation_component_data_objects(
+        m, pe.Var, sort=True, descend_into=True
+    ):
         if v.fixed:
             continue
         var_map[v] = _VarNode(v)
@@ -603,11 +681,13 @@ def convert_pyomo_model_to_bipartite_graph(m: _BlockData):
 
     for b in relaxation_data_objects(m, descend_into=True, active=True, sort=True):
         node2 = _RelNode(b)
-        for v in (list(b.get_rhs_vars()) + [b.get_aux_var()]):
+        for v in list(b.get_rhs_vars()) + [b.get_aux_var()]:
             node1 = var_map[v]
             graph.add_edge(node1, node2)
 
-    for c in nonrelaxation_component_data_objects(m, pe.Constraint, active=True, sort=True, descend_into=True):
+    for c in nonrelaxation_component_data_objects(
+        m, pe.Constraint, active=True, sort=True, descend_into=True
+    ):
         node2 = _ConNode(c)
         for v in identify_variables(c.body, include_fixed=False):
             node1 = var_map[v]
@@ -670,13 +750,20 @@ def build_pyomo_model_from_graph(graph, block):
 
     for c_name, c in zip(con_names, cons):
         if c.comp.equality:
-            block.cons[c_name] = (replace_expressions(c.comp.body, substitution_map=var_map,
-                                                      remove_named_expressions=True) == c.comp.lower)
+            block.cons[c_name] = (
+                replace_expressions(
+                    c.comp.body, substitution_map=var_map, remove_named_expressions=True
+                )
+                == c.comp.lower
+            )
         else:
-            block.cons[c_name] = (pe.inequality(lower=c.comp.lower,
-                                                body=replace_expressions(c.comp.body, substitution_map=var_map,
-                                                                         remove_named_expressions=True),
-                                                upper=c.comp.upper))
+            block.cons[c_name] = pe.inequality(
+                lower=c.comp.lower,
+                body=replace_expressions(
+                    c.comp.body, substitution_map=var_map, remove_named_expressions=True
+                ),
+                upper=c.comp.upper,
+            )
         component_map[c.comp] = block.cons[c_name]
 
     for r_name, r in zip(rel_names, rels):
@@ -710,14 +797,21 @@ class DecompositionStatus(enum.Enum):
     problem_too_small = 3  # the model could not be decomposed at all because the number of jacobian nonzeros in the original problem was less than max_leaf_nnz
 
 
-def compute_partition_ratio(original_model: _BlockData, decomposed_model: TreeBlockData):
+def compute_partition_ratio(
+    original_model: _BlockData, decomposed_model: TreeBlockData
+):
     graph = convert_pyomo_model_to_bipartite_graph(original_model)
-    pr_numerator = graph.number_of_edges() * len(collect_vars_to_tighten(original_model))
+    pr_numerator = graph.number_of_edges() * len(
+        collect_vars_to_tighten(original_model)
+    )
 
     pr_denominator = 0
     vars_to_tighten_by_block = collect_vars_to_tighten_by_block(decomposed_model, 'dbt')
     for block, vars_to_tighten in vars_to_tighten_by_block.items():
-        pr_denominator += len(vars_to_tighten) * convert_pyomo_model_to_bipartite_graph(block).number_of_edges()
+        pr_denominator += (
+            len(vars_to_tighten)
+            * convert_pyomo_model_to_bipartite_graph(block).number_of_edges()
+        )
     pr = pr_numerator / pr_denominator
     return pr
 
@@ -748,27 +842,42 @@ def _eliminate_mutable_params(model):
     for p in nonrelaxation_component_data_objects(model, pe.Param, descend_into=True):
         sub_map[id(p)] = p.value
 
-    for c in nonrelaxation_component_data_objects(model, pe.Constraint, active=True, descend_into=True):
+    for c in nonrelaxation_component_data_objects(
+        model, pe.Constraint, active=True, descend_into=True
+    ):
         if c.lower is None:
             new_lower = None
         else:
-            new_lower = replace_expressions(c.lower, sub_map,
-                                            descend_into_named_expressions=True,
-                                            remove_named_expressions=True)
-        new_body = replace_expressions(c.body, sub_map,
-                                       descend_into_named_expressions=True,
-                                       remove_named_expressions=True)
+            new_lower = replace_expressions(
+                c.lower,
+                sub_map,
+                descend_into_named_expressions=True,
+                remove_named_expressions=True,
+            )
+        new_body = replace_expressions(
+            c.body,
+            sub_map,
+            descend_into_named_expressions=True,
+            remove_named_expressions=True,
+        )
         if c.upper is None:
             new_upper = None
         else:
-            new_upper = replace_expressions(c.upper, sub_map,
-                                            descend_into_named_expressions=True,
-                                            remove_named_expressions=True)
+            new_upper = replace_expressions(
+                c.upper,
+                sub_map,
+                descend_into_named_expressions=True,
+                remove_named_expressions=True,
+            )
         c.set_value((new_lower, new_body, new_upper))
 
 
-def _decompose_model(model: _BlockData, max_leaf_nnz: Optional[int] = None,
-                     min_partition_ratio: float = 1.25, limit_num_stages: bool = True):
+def _decompose_model(
+    model: _BlockData,
+    max_leaf_nnz: Optional[int] = None,
+    min_partition_ratio: float = 1.25,
+    limit_num_stages: bool = True,
+):
     """
     Parameters
     ----------
@@ -823,8 +932,11 @@ def _decompose_model(model: _BlockData, max_leaf_nnz: Optional[int] = None,
         logger.debug('done building pyomo model from graph')
     else:
         root_tree, partitioning_ratio = split_metis(graph=graph, model=model)
-        logger.debug('partitioned original tree; partitioning ratio: {ratio}'.format(
-            ratio=partitioning_ratio))
+        logger.debug(
+            'partitioned original tree; partitioning ratio: {ratio}'.format(
+                ratio=partitioning_ratio
+            )
+        )
         if partitioning_ratio < min_partition_ratio:
             logger.debug('obtained bad partitioning ratio; abandoning partition')
             new_model = TreeBlock(concrete=True)
@@ -839,9 +951,12 @@ def _decompose_model(model: _BlockData, max_leaf_nnz: Optional[int] = None,
             needs_split = list()
             for child in parent.children:
                 logger.debug(
-                    'number of NNZ in child: {0}'.format(child.number_of_edges()))
-                if child.number_of_edges() > max_leaf_nnz and num_cons_in_graph(
-                        child) > 1:
+                    'number of NNZ in child: {0}'.format(child.number_of_edges())
+                )
+                if (
+                    child.number_of_edges() > max_leaf_nnz
+                    and num_cons_in_graph(child) > 1
+                ):
                     needs_split.append((child, parent, 1))
 
             while len(needs_split) > 0:
@@ -849,34 +964,49 @@ def _decompose_model(model: _BlockData, max_leaf_nnz: Optional[int] = None,
                 _graph, _parent, _stage = needs_split.pop()
                 try:
                     if _stage + 1 >= max_stages:
-                        logger.debug(f'stage {_stage}: not partitiong graph with '
-                                     f'{_graph.number_of_edges()} NNZ due to the max '
-                                     f'stages rule;')
+                        logger.debug(
+                            f'stage {_stage}: not partitiong graph with '
+                            f'{_graph.number_of_edges()} NNZ due to the max '
+                            f'stages rule;'
+                        )
                         continue
-                    logger.debug(f'stage {_stage}: partitioning graph with '
-                                 f'{_graph.number_of_edges()} NNZ')
-                    sub_tree, partitioning_ratio = split_metis(graph=_graph,
-                                                               model=model)
                     logger.debug(
-                        'partitioning ratio: {ratio}'.format(ratio=partitioning_ratio))
+                        f'stage {_stage}: partitioning graph with '
+                        f'{_graph.number_of_edges()} NNZ'
+                    )
+                    sub_tree, partitioning_ratio = split_metis(
+                        graph=_graph, model=model
+                    )
+                    logger.debug(
+                        'partitioning ratio: {ratio}'.format(ratio=partitioning_ratio)
+                    )
                     if partitioning_ratio > min_partition_ratio:
                         logger.debug('partitioned {0}'.format(str(_graph)))
                         _parent.children.discard(_graph)
                         _parent.children.add(sub_tree)
 
                         for child in sub_tree.children:
-                            logger.debug('number of NNZ in child: {0}'.format(
-                                child.number_of_edges()))
-                            if (child.number_of_edges() > max_leaf_nnz
-                                    and num_cons_in_graph(child) > 1):
+                            logger.debug(
+                                'number of NNZ in child: {0}'.format(
+                                    child.number_of_edges()
+                                )
+                            )
+                            if (
+                                child.number_of_edges() > max_leaf_nnz
+                                and num_cons_in_graph(child) > 1
+                            ):
                                 needs_split.append((child, sub_tree, _stage + 1))
                     else:
                         logger.debug(
-                            'obtained bad partitioning ratio; abandoning partition')
+                            'obtained bad partitioning ratio; abandoning partition'
+                        )
                 except DecompositionError:
                     termination_reason = DecompositionStatus.error
-                    logger.error('failed to partition graph with {0} NNZ'.format(
-                        _graph.number_of_edges()))
+                    logger.error(
+                        'failed to partition graph with {0} NNZ'.format(
+                            _graph.number_of_edges()
+                        )
+                    )
 
             logger.debug('Tree Info:')
             root_tree.log()
@@ -889,9 +1019,11 @@ def _decompose_model(model: _BlockData, max_leaf_nnz: Optional[int] = None,
     if obj is not None:
         var_map = {id(k): v for k, v in component_map.items()}
         new_model.objective = pe.Objective(
-            expr=replace_expressions(obj.expr, substitution_map=var_map,
-                                     remove_named_expressions=True),
-            sense=obj.sense)
+            expr=replace_expressions(
+                obj.expr, substitution_map=var_map, remove_named_expressions=True
+            ),
+            sense=obj.sense,
+        )
         logger.debug('done adding objective to new model')
     else:
         logger.debug('No objective was found to add to the new model')
@@ -899,8 +1031,12 @@ def _decompose_model(model: _BlockData, max_leaf_nnz: Optional[int] = None,
     return new_model, component_map, termination_reason
 
 
-def decompose_model(model: _BlockData, max_leaf_nnz: Optional[int] = None,
-                    min_partition_ratio: float = 1.25, limit_num_stages: bool = True):
+def decompose_model(
+    model: _BlockData,
+    max_leaf_nnz: Optional[int] = None,
+    min_partition_ratio: float = 1.25,
+    limit_num_stages: bool = True,
+):
     """
     Parameters
     ----------
@@ -925,27 +1061,42 @@ def decompose_model(model: _BlockData, max_leaf_nnz: Optional[int] = None,
         An enum member from DecompositionStatus
     """
     # we have to clone the model because we modify it in _refine_partition
-    all_comps = list(ComponentSet(
-        nonrelaxation_component_data_objects(model, pe.Var, descend_into=True)))
-    all_comps.extend(ComponentSet(
-        nonrelaxation_component_data_objects(model, pe.Constraint, active=True,
-                                             descend_into=True)))
+    all_comps = list(
+        ComponentSet(
+            nonrelaxation_component_data_objects(model, pe.Var, descend_into=True)
+        )
+    )
+    all_comps.extend(
+        ComponentSet(
+            nonrelaxation_component_data_objects(
+                model, pe.Constraint, active=True, descend_into=True
+            )
+        )
+    )
     all_comps.extend(relaxation_data_objects(model, descend_into=True, active=True))
-    all_comps.extend(ComponentSet(
-        nonrelaxation_component_data_objects(model, pe.Objective, active=True,
-                                             descend_into=True)))
+    all_comps.extend(
+        ComponentSet(
+            nonrelaxation_component_data_objects(
+                model, pe.Objective, active=True, descend_into=True
+            )
+        )
+    )
     tmp_name = unique_component_name(model, 'all_comps')
     setattr(model, tmp_name, all_comps)
     new_model = model.clone()
-    old_to_new_comps_map = pe.ComponentMap(zip(getattr(model, tmp_name),
-                                               getattr(new_model, tmp_name)))
+    old_to_new_comps_map = pe.ComponentMap(
+        zip(getattr(model, tmp_name), getattr(new_model, tmp_name))
+    )
     delattr(model, tmp_name)
     delattr(new_model, tmp_name)
     model = new_model
 
-    tmp = _decompose_model(model, max_leaf_nnz=max_leaf_nnz,
-                           min_partition_ratio=min_partition_ratio,
-                           limit_num_stages=limit_num_stages)
+    tmp = _decompose_model(
+        model,
+        max_leaf_nnz=max_leaf_nnz,
+        min_partition_ratio=min_partition_ratio,
+        limit_num_stages=limit_num_stages,
+    )
     tree_model, component_map, termination_reason = tmp
 
     for orig_comp, clone_comp in list(old_to_new_comps_map.items()):
@@ -961,9 +1112,17 @@ def collect_vars_to_tighten_from_graph(graph):
     for n in graph.nodes():
         if n.is_rel():
             rel: BaseRelaxationData = n.comp
-            if rel.is_rhs_convex() and rel.relaxation_side == RelaxationSide.UNDER and not rel.use_linear_relaxation:
+            if (
+                rel.is_rhs_convex()
+                and rel.relaxation_side == RelaxationSide.UNDER
+                and not rel.use_linear_relaxation
+            ):
                 continue
-            if rel.is_rhs_concave() and rel.relaxation_side == RelaxationSide.OVER and not rel.use_linear_relaxation:
+            if (
+                rel.is_rhs_concave()
+                and rel.relaxation_side == RelaxationSide.OVER
+                and not rel.use_linear_relaxation
+            ):
                 continue
             vars_to_tighten.update(rel.get_rhs_vars())
         elif n.is_var():
@@ -1021,7 +1180,9 @@ def collect_vars_to_tighten_by_block(m, method):
             all_vars_to_account_for.discard(v)
 
     if len(all_vars_to_account_for) != 0:
-        raise RuntimeError('There are variables that need tightened that are unaccounted for!')
+        raise RuntimeError(
+            'There are variables that need tightened that are unaccounted for!'
+        )
 
     return vars_to_tighten_by_block
 
@@ -1043,29 +1204,30 @@ class DBTInfo(object):
     ----------
     num_coupling_vars_to_tighten: int
         The total number of coupling variables that need tightened. Note that this includes
-        coupling variables that get filtered. If you subtract num_coupling_vars_attempted 
-        and num_coupling_vars_filtered from num_coupling_vars_to_tighten, you should get 
+        coupling variables that get filtered. If you subtract num_coupling_vars_attempted
+        and num_coupling_vars_filtered from num_coupling_vars_to_tighten, you should get
         the number of coupling variables that were not tightened due to a time limit.
     num_coupling_vars_attempted: int
         The number of coupling variables for which tightening was attempted.
     num_coupling_vars_successful: int
-        The number of coupling variables for which tightening was attempted and the solver 
+        The number of coupling variables for which tightening was attempted and the solver
         terminated optimally.
     num_coupling_vars_filtered: int
         The number of coupling vars that did not need to be tightened (identified by filtering).
     num_vars_to_tighten: int
-        The total number of nonlinear and discrete variables that need tightened. Note that 
-        this includes variables that get filtered. If you subtract num_vars_attempted and 
-        num_vars_filtered from num_vars_to_tighten, you should get the number of nonlinear 
+        The total number of nonlinear and discrete variables that need tightened. Note that
+        this includes variables that get filtered. If you subtract num_vars_attempted and
+        num_vars_filtered from num_vars_to_tighten, you should get the number of nonlinear
         and discrete variables that were not tightened due to a time limit.
     num_vars_attempted: int
         The number of variables for which tightening was attempted.
     num_vars_successful: int
-        The number of variables for which tightening was attempted and the solver 
+        The number of variables for which tightening was attempted and the solver
         terminated optimally.
     num_vars_filtered: int
         The number of vars that did not need to be tightened (identified by filtering).
     """
+
     def __init__(self):
         self.num_coupling_vars_to_tighten = None
         self.num_coupling_vars_attempted = None
@@ -1088,7 +1250,14 @@ class DBTInfo(object):
         return s
 
 
-def _update_var_bounds(varlist, new_lower_bounds, new_upper_bounds, feasibility_tol, safety_tol, max_acceptable_bound):
+def _update_var_bounds(
+    varlist,
+    new_lower_bounds,
+    new_upper_bounds,
+    feasibility_tol,
+    safety_tol,
+    max_acceptable_bound,
+):
     for ndx, v in enumerate(varlist):
         new_lb = new_lower_bounds[ndx]
         new_ub = new_upper_bounds[ndx]
@@ -1115,11 +1284,16 @@ def _update_var_bounds(varlist, new_lower_bounds, new_upper_bounds, feasibility_
             new_ub = math.inf
 
         if new_lb > new_ub:
-            msg = 'variable ub is less than lb; var: {0}; lb: {1}; ub: {2}'.format(str(v), new_lb, new_ub)
+            msg = 'variable ub is less than lb; var: {0}; lb: {1}; ub: {2}'.format(
+                str(v), new_lb, new_ub
+            )
             if new_lb > new_ub + feasibility_tol:
                 raise ValueError(msg)
             else:
-                logger.warning(msg + '; decreasing lb and increasing ub by {0}'.format(feasibility_tol))
+                logger.warning(
+                    msg
+                    + '; decreasing lb and increasing ub by {0}'.format(feasibility_tol)
+                )
                 warnings.warn(msg)
                 new_lb -= feasibility_tol
                 new_ub += feasibility_tol
@@ -1135,11 +1309,21 @@ def _update_var_bounds(varlist, new_lower_bounds, new_upper_bounds, feasibility_
             v.setub(new_ub)
 
 
-def perform_dbt(relaxation, solver, obbt_method=OBBTMethod.DECOMPOSED,
-                filter_method=FilterMethod.AGGRESSIVE, time_limit=math.inf,
-                objective_bound=None, with_progress_bar=False, parallel=False,
-                vars_to_tighten_by_block=None, feasibility_tol=0,
-                safety_tol=0, max_acceptable_bound=math.inf, update_relaxations_between_stages=True):
+def perform_dbt(
+    relaxation,
+    solver,
+    obbt_method=OBBTMethod.DECOMPOSED,
+    filter_method=FilterMethod.AGGRESSIVE,
+    time_limit=math.inf,
+    objective_bound=None,
+    with_progress_bar=False,
+    parallel=False,
+    vars_to_tighten_by_block=None,
+    feasibility_tol=0,
+    safety_tol=0,
+    max_acceptable_bound=math.inf,
+    update_relaxations_between_stages=True,
+):
     """This function performs optimization-based bounds tightening (OBBT) with a decomposition scheme.
 
     Parameters
@@ -1197,8 +1381,8 @@ def perform_dbt(relaxation, solver, obbt_method=OBBTMethod.DECOMPOSED,
         account for numerical error in the solution of the OBBT problems and to avoid cutting
         off valid portions of the feasible region.
     max_acceptable_bound: float
-        If the upper bound computed for a variable is larger than max_acceptable_bound, then the 
-        computed bound will be rejected. If the lower bound computed for a variable is less than 
+        If the upper bound computed for a variable is larger than max_acceptable_bound, then the
+        computed bound will be rejected. If the lower bound computed for a variable is less than
         -max_acceptable_bound, then the computed bound will be rejected.
     update_relaxations_between_stages: bool
         This is meant for unit testing only and should not be modified
@@ -1209,7 +1393,7 @@ def perform_dbt(relaxation, solver, obbt_method=OBBTMethod.DECOMPOSED,
 
     """
     t0 = time.time()
-    
+
     if not isinstance(relaxation, TreeBlockData):
         raise ValueError('relaxation must be an instance of dbt.decomp.TreeBlockData.')
     if obbt_method not in OBBTMethod:
@@ -1265,8 +1449,13 @@ def perform_dbt(relaxation, solver, obbt_method=OBBTMethod.DECOMPOSED,
             all_vars_to_tighten.update(block_vars_to_tighten)
         if filter_method == FilterMethod.AGGRESSIVE:
             logger.debug('starting full space filter')
-            res = aggressive_filter(candidate_variables=all_vars_to_tighten, relaxation=relaxation,
-                                    solver=solver, tolerance=1e-4, objective_bound=objective_bound)
+            res = aggressive_filter(
+                candidate_variables=all_vars_to_tighten,
+                relaxation=relaxation,
+                solver=solver,
+                tolerance=1e-4,
+                objective_bound=objective_bound,
+            )
             full_space_lb_vars, full_space_ub_vars = res
             logger.debug('finished full space filter')
         else:
@@ -1275,21 +1464,29 @@ def perform_dbt(relaxation, solver, obbt_method=OBBTMethod.DECOMPOSED,
     else:
         full_space_lb_vars = None
         full_space_ub_vars = None
-    
+
     for stage in range(num_stages):
         logger.info(f'Performing DBT on stage {stage+1} of {num_stages}')
         if time.time() - t0 >= time_limit:
             break
-        
+
         stage_blocks = list(relaxation.stage_blocks(stage))
-        logger.debug('DBT stage {0} of {1} with {1} blocks'.format(stage, num_stages, len(stage_blocks)))
+        logger.debug(
+            'DBT stage {0} of {1} with {1} blocks'.format(
+                stage, num_stages, len(stage_blocks)
+            )
+        )
 
         for block_ndx, block in enumerate(stage_blocks):
-            logger.info(f'performing DBT on block {block_ndx+1} of {len(stage_blocks)} in stage {stage+1}')
+            logger.info(
+                f'performing DBT on block {block_ndx+1} of {len(stage_blocks)} in stage {stage+1}'
+            )
             if time.time() - t0 >= time_limit:
                 break
 
-            if obbt_method in {OBBTMethod.LEAVES, OBBTMethod.FULL_SPACE} and (not block.is_leaf()):
+            if obbt_method in {OBBTMethod.LEAVES, OBBTMethod.FULL_SPACE} and (
+                not block.is_leaf()
+            ):
                 continue
             if obbt_method == OBBTMethod.FULL_SPACE:
                 block_to_tighten_with = relaxation
@@ -1300,49 +1497,84 @@ def perform_dbt(relaxation, solver, obbt_method=OBBTMethod.DECOMPOSED,
                     _ub = objective_bound
                 else:
                     _ub = None
-                    
+
             vars_to_tighten = vars_to_tighten_by_block[block]
 
             if filter_method == FilterMethod.AGGRESSIVE:
                 logger.debug('starting filter')
                 if obbt_method == OBBTMethod.FULL_SPACE:
-                    lb_vars = ComponentSet([v for v in vars_to_tighten if v in full_space_lb_vars])
-                    ub_vars = ComponentSet([v for v in vars_to_tighten if v in full_space_ub_vars])
+                    lb_vars = ComponentSet(
+                        [v for v in vars_to_tighten if v in full_space_lb_vars]
+                    )
+                    ub_vars = ComponentSet(
+                        [v for v in vars_to_tighten if v in full_space_ub_vars]
+                    )
                 else:
-                    res = aggressive_filter(candidate_variables=vars_to_tighten, relaxation=block_to_tighten_with,
-                                            solver=solver, tolerance=1e-4, objective_bound=_ub)
+                    res = aggressive_filter(
+                        candidate_variables=vars_to_tighten,
+                        relaxation=block_to_tighten_with,
+                        solver=solver,
+                        tolerance=1e-4,
+                        objective_bound=_ub,
+                    )
                     lb_vars, ub_vars = res
                 if block.is_leaf():
-                    dbt_info.num_vars_filtered += 2*len(vars_to_tighten) - len(lb_vars) - len(ub_vars)
+                    dbt_info.num_vars_filtered += (
+                        2 * len(vars_to_tighten) - len(lb_vars) - len(ub_vars)
+                    )
                 else:
-                    dbt_info.num_coupling_vars_filtered += 2*len(vars_to_tighten) - len(lb_vars) - len(ub_vars)
+                    dbt_info.num_coupling_vars_filtered += (
+                        2 * len(vars_to_tighten) - len(lb_vars) - len(ub_vars)
+                    )
                 logger.debug('done filtering')
             else:
                 lb_vars = list(vars_to_tighten)
                 ub_vars = list(vars_to_tighten)
 
-            logger.debug(f'performing OBBT (LB) on variables {str([str(i) for i in lb_vars])}')
-            res = normal_obbt(block_to_tighten_with, solver=solver, varlist=lb_vars,
-                              objective_bound=_ub, with_progress_bar=with_progress_bar,
-                              direction='lbs', time_limit=(time_limit - (time.time() - t0)),
-                              update_bounds=False, parallel=parallel, collect_obbt_info=True,
-                              progress_bar_string=f'DBT LBs Stage {stage+1} of {num_stages} Block {block_ndx+1} of {len(stage_blocks)}')
+            logger.debug(
+                f'performing OBBT (LB) on variables {str([str(i) for i in lb_vars])}'
+            )
+            res = normal_obbt(
+                block_to_tighten_with,
+                solver=solver,
+                varlist=lb_vars,
+                objective_bound=_ub,
+                with_progress_bar=with_progress_bar,
+                direction='lbs',
+                time_limit=(time_limit - (time.time() - t0)),
+                update_bounds=False,
+                parallel=parallel,
+                collect_obbt_info=True,
+                progress_bar_string=f'DBT LBs Stage {stage+1} of {num_stages} Block {block_ndx+1} of {len(stage_blocks)}',
+            )
             lower, unused_upper, obbt_info = res
             if block.is_leaf():
                 dbt_info.num_vars_attempted += obbt_info.num_problems_attempted
                 dbt_info.num_vars_successful += obbt_info.num_successful_problems
             else:
                 dbt_info.num_coupling_vars_attempted += obbt_info.num_problems_attempted
-                dbt_info.num_coupling_vars_successful += obbt_info.num_successful_problems
+                dbt_info.num_coupling_vars_successful += (
+                    obbt_info.num_successful_problems
+                )
 
             logger.debug('done tightening lbs')
 
-            logger.debug(f'performing OBBT (UB) on variables {str([str(i) for i in ub_vars])}')
-            res = normal_obbt(block_to_tighten_with, solver=solver, varlist=ub_vars,
-                              objective_bound=_ub, with_progress_bar=with_progress_bar,
-                              direction='ubs', time_limit=(time_limit - (time.time() - t0)),
-                              update_bounds=False, parallel=parallel, collect_obbt_info=True,
-                              progress_bar_string=f'DBT UBs Stage {stage+1} of {num_stages} Block {block_ndx+1} of {len(stage_blocks)}')
+            logger.debug(
+                f'performing OBBT (UB) on variables {str([str(i) for i in ub_vars])}'
+            )
+            res = normal_obbt(
+                block_to_tighten_with,
+                solver=solver,
+                varlist=ub_vars,
+                objective_bound=_ub,
+                with_progress_bar=with_progress_bar,
+                direction='ubs',
+                time_limit=(time_limit - (time.time() - t0)),
+                update_bounds=False,
+                parallel=parallel,
+                collect_obbt_info=True,
+                progress_bar_string=f'DBT UBs Stage {stage+1} of {num_stages} Block {block_ndx+1} of {len(stage_blocks)}',
+            )
 
             unused_lower, upper, obbt_info = res
             if block.is_leaf():
@@ -1350,15 +1582,27 @@ def perform_dbt(relaxation, solver, obbt_method=OBBTMethod.DECOMPOSED,
                 dbt_info.num_vars_successful += obbt_info.num_successful_problems
             else:
                 dbt_info.num_coupling_vars_attempted += obbt_info.num_problems_attempted
-                dbt_info.num_coupling_vars_successful += obbt_info.num_successful_problems
+                dbt_info.num_coupling_vars_successful += (
+                    obbt_info.num_successful_problems
+                )
 
-            _update_var_bounds(varlist=lb_vars, new_lower_bounds=lower,
-                               new_upper_bounds=unused_upper, feasibility_tol=feasibility_tol,
-                               safety_tol=safety_tol, max_acceptable_bound=max_acceptable_bound)
+            _update_var_bounds(
+                varlist=lb_vars,
+                new_lower_bounds=lower,
+                new_upper_bounds=unused_upper,
+                feasibility_tol=feasibility_tol,
+                safety_tol=safety_tol,
+                max_acceptable_bound=max_acceptable_bound,
+            )
 
-            _update_var_bounds(varlist=ub_vars, new_lower_bounds=unused_lower,
-                               new_upper_bounds=upper, feasibility_tol=feasibility_tol,
-                               safety_tol=safety_tol, max_acceptable_bound=max_acceptable_bound)
+            _update_var_bounds(
+                varlist=ub_vars,
+                new_lower_bounds=unused_lower,
+                new_upper_bounds=upper,
+                feasibility_tol=feasibility_tol,
+                safety_tol=safety_tol,
+                max_acceptable_bound=max_acceptable_bound,
+            )
 
             if update_relaxations_between_stages:
                 # this is needed to ensure consistency for parallel computing; this accounts
@@ -1419,11 +1663,21 @@ def pop_integers(relaxed_binary_vars, relaxed_integer_vars):
         v.domain = pe.Integers
 
 
-def perform_dbt_with_integers_relaxed(relaxation, solver, obbt_method=OBBTMethod.DECOMPOSED,
-                                      filter_method=FilterMethod.AGGRESSIVE, time_limit=math.inf,
-                                      objective_bound=None, with_progress_bar=False, parallel=False,
-                                      vars_to_tighten_by_block=None, feasibility_tol=0,
-                                      integer_tol=1e-2, safety_tol=0, max_acceptable_bound=math.inf):
+def perform_dbt_with_integers_relaxed(
+    relaxation,
+    solver,
+    obbt_method=OBBTMethod.DECOMPOSED,
+    filter_method=FilterMethod.AGGRESSIVE,
+    time_limit=math.inf,
+    objective_bound=None,
+    with_progress_bar=False,
+    parallel=False,
+    vars_to_tighten_by_block=None,
+    feasibility_tol=0,
+    integer_tol=1e-2,
+    safety_tol=0,
+    max_acceptable_bound=math.inf,
+):
     """
     This function performs optimization-based bounds tightening (OBBT) with a decomposition scheme.
     However, all OBBT problems are solved with the binary and integer variables relaxed.
@@ -1487,8 +1741,8 @@ def perform_dbt_with_integers_relaxed(relaxation, solver, obbt_method=OBBTMethod
         account for numerical error in the solution of the OBBT problems and to avoid cutting
         off valid portions of the feasible region.
     max_acceptable_bound: float
-        If the upper bound computed for a variable is larger than max_acceptable_bound, then the 
-        computed bound will be rejected. If the lower bound computed for a variable is less than 
+        If the upper bound computed for a variable is larger than max_acceptable_bound, then the
+        computed bound will be rejected. If the lower bound computed for a variable is less than
         -max_acceptable_bound, then the computed bound will be rejected.
 
     Returns
@@ -1507,22 +1761,24 @@ def perform_dbt_with_integers_relaxed(relaxation, solver, obbt_method=OBBTMethod
 
     relaxed_binary_vars, relaxed_integer_vars = push_integers(relaxation)
 
-    dbt_info = perform_dbt(relaxation=relaxation,
-                           solver=solver,
-                           obbt_method=obbt_method,
-                           filter_method=filter_method,
-                           time_limit=time_limit,
-                           objective_bound=objective_bound,
-                           with_progress_bar=with_progress_bar,
-                           parallel=parallel,
-                           vars_to_tighten_by_block=vars_to_tighten_by_block,
-                           feasibility_tol=feasibility_tol,
-                           safety_tol=safety_tol,
-                           max_acceptable_bound=max_acceptable_bound)
+    dbt_info = perform_dbt(
+        relaxation=relaxation,
+        solver=solver,
+        obbt_method=obbt_method,
+        filter_method=filter_method,
+        time_limit=time_limit,
+        objective_bound=objective_bound,
+        with_progress_bar=with_progress_bar,
+        parallel=parallel,
+        vars_to_tighten_by_block=vars_to_tighten_by_block,
+        feasibility_tol=feasibility_tol,
+        safety_tol=safety_tol,
+        max_acceptable_bound=max_acceptable_bound,
+    )
 
     pop_integers(relaxed_binary_vars, relaxed_integer_vars)
 
-    for v in (list(relaxed_binary_vars) + list(relaxed_integer_vars)):
+    for v in list(relaxed_binary_vars) + list(relaxed_integer_vars):
         lb = v.lb
         ub = v.ub
         if lb is None:

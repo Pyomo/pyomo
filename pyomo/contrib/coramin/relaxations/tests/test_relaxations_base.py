@@ -92,14 +92,18 @@ class TestBaseRelaxation(unittest.TestCase):
         self.assertEqual(list(m.c._oa_points.keys()), [(-1,), (1,), (0,), (0.5,)])
         m.c.push_oa_points()
         m.c.add_oa_point(pe.ComponentMap([(m.x, -0.5)]))
-        self.assertEqual(list(m.c._oa_points.keys()), [(-1,), (1,), (0,), (0.5,), (-0.5,)])
+        self.assertEqual(
+            list(m.c._oa_points.keys()), [(-1,), (1,), (0,), (0.5,), (-0.5,)]
+        )
         m.c.push_oa_points(key='second key')
         m.c.pop_oa_points(key='first key')
         self.assertEqual(list(m.c._oa_points.keys()), [(-1,), (1,), (0,)])
         m.c.pop_oa_points()
         self.assertEqual(list(m.c._oa_points.keys()), [(-1,), (1,), (0,), (0.5,)])
         m.c.pop_oa_points(key='second key')
-        self.assertEqual(list(m.c._oa_points.keys()), [(-1,), (1,), (0,), (0.5,), (-0.5,)])
+        self.assertEqual(
+            list(m.c._oa_points.keys()), [(-1,), (1,), (0,), (0.5,), (-0.5,)]
+        )
 
     def test_push_and_pop_partitions(self):
         m = pe.ConcreteModel()

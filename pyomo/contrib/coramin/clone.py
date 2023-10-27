@@ -13,10 +13,7 @@ def clone_active_flat(m1):
 
     # constraints
     for c in iterators.nonrelaxation_component_data_objects(
-        m1,
-        pe.Constraint,
-        active=True,
-        descend_into=True,
+        m1, pe.Constraint, active=True, descend_into=True
     ):
         lb = pe.value(c.lower)
         ub = pe.value(c.upper)
@@ -35,11 +32,7 @@ def clone_active_flat(m1):
     m2.obj = pe.Objective(expr=obj_expr, sense=obj.sense)
 
     rel_list = list()
-    for r in iterators.relaxation_data_objects(
-        m1,
-        descend_into=True,
-        active=True,
-    ):
+    for r in iterators.relaxation_data_objects(m1, descend_into=True, active=True):
         rel_list.append(r)
 
     for ndx, r in enumerate(rel_list):

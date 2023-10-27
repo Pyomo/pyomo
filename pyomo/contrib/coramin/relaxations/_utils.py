@@ -52,18 +52,31 @@ def check_var_pts(x, x_pts=None):
     msg = None
 
     if xub < xlb:
-        msg = 'Lower bound is larger than upper bound:\n' + var_info_str(x) + bnds_info_str(xlb, xub)
+        msg = (
+            'Lower bound is larger than upper bound:\n'
+            + var_info_str(x)
+            + bnds_info_str(xlb, xub)
+        )
         raise_error = True
 
     if x_pts is not None:
-        ordered = all(x_pts[i] <= x_pts[i+1] for i in range(len(x_pts)-1))
+        ordered = all(x_pts[i] <= x_pts[i + 1] for i in range(len(x_pts) - 1))
         if not ordered:
-            msg = 'x_pts must be ordered:\n' + var_info_str(x) + bnds_info_str(xlb, xub) + x_pts_info_str(x_pts)
+            msg = (
+                'x_pts must be ordered:\n'
+                + var_info_str(x)
+                + bnds_info_str(xlb, xub)
+                + x_pts_info_str(x_pts)
+            )
             raise_error = True
 
         if xlb != x_pts[0] or xub != x_pts[-1]:
-            msg = ('end points of the x_pts list must be equal to the bounds on the x variable:\n' + var_info_str(x) +
-                   bnds_info_str(xlb, xub) + x_pts_info_str(x_pts))
+            msg = (
+                'end points of the x_pts list must be equal to the bounds on the x variable:\n'
+                + var_info_str(x)
+                + bnds_info_str(xlb, xub)
+                + x_pts_info_str(x_pts)
+            )
             raise_error = True
 
     if raise_error:

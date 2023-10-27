@@ -15,14 +15,15 @@ class TestAlphaBBRelaxation(unittest.TestCase):
         model.y = pe.Var(bounds=(-1, 1))
         model.w = pe.Var()
 
-        model.f_x = pe.cos(model.x)*pe.sin(model.y) - model.x/(model.y**2 + 1)
+        model.f_x = pe.cos(model.x) * pe.sin(model.y) - model.x / (model.y**2 + 1)
 
         model.obj = pe.Objective(expr=model.w)
         model.abb = AlphaBBRelaxation()
         model.abb.build(
-            aux_var=model.w, f_x_expr=model.f_x,
+            aux_var=model.w,
+            f_x_expr=model.f_x,
             relaxation_side=coramin.RelaxationSide.UNDER,
-            eigenvalue_bounder=coramin.EigenValueBounder.GershgorinWithSimplification
+            eigenvalue_bounder=coramin.EigenValueBounder.GershgorinWithSimplification,
         )
 
     def test_nonlinear(self):

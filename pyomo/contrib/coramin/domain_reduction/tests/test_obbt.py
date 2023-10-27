@@ -24,13 +24,14 @@ class TestBoundsTightener(unittest.TestCase):
         x_points = [-5.0, 5.0]
         model.under_estimators = pyo.ConstraintList()
         for xp in x_points:
-            m = 2*xp
+            m = 2 * xp
             b = -(xp**2)
-            model.under_estimators.add(model.y >= m*model.x + b)
+            model.under_estimators.add(model.y >= m * model.x + b)
 
         solver = appsi.solvers.Ipopt()
-        (lower, upper) = coramin.domain_reduction.perform_obbt(model=model, solver=solver, varlist=[model.x, model.y],
-                                                               update_bounds=True)
+        (lower, upper) = coramin.domain_reduction.perform_obbt(
+            model=model, solver=solver, varlist=[model.x, model.y], update_bounds=True
+        )
         self.assertAlmostEqual(pyo.value(model.x.lb), -5.0, delta=1e-6)
         self.assertAlmostEqual(pyo.value(model.x.ub), 5.0, delta=1e-6)
         self.assertAlmostEqual(pyo.value(model.y.lb), -25.0, delta=1e-6)
@@ -52,11 +53,13 @@ class TestBoundsTightener(unittest.TestCase):
         model.under_estimators = pyo.ConstraintList()
         for xp in x_points:
             m = 2 * xp
-            b = -(xp ** 2)
+            b = -(xp**2)
             model.under_estimators.add(model.y >= m * model.x + b)
 
         solver = appsi.solvers.Ipopt()
-        (lower, upper) = coramin.domain_reduction.perform_obbt(model=model, solver=solver, varlist=model.y, update_bounds=True)
+        (lower, upper) = coramin.domain_reduction.perform_obbt(
+            model=model, solver=solver, varlist=model.y, update_bounds=True
+        )
         self.assertAlmostEqual(pyo.value(model.x.lb), -5.0, delta=1e-6)
         self.assertAlmostEqual(pyo.value(model.x.ub), 5.0, delta=1e-6)
         self.assertAlmostEqual(pyo.value(model.y.lb), -25.0, delta=1e-6)
@@ -77,13 +80,15 @@ class TestBoundsTightener(unittest.TestCase):
         model.under_estimators = pyo.ConstraintList()
         for xp in x_points:
             m = 2 * xp
-            b = -(xp ** 2)
+            b = -(xp**2)
             model.under_estimators.add(model.y['A'] >= m * model.x + b)
 
         model.con = pyo.Constraint(expr=model.y['A'] == 1 + model.y['B'])
 
         solver = appsi.solvers.Ipopt()
-        lower, upper = coramin.domain_reduction.perform_obbt(model=model, solver=solver, varlist=model.y, update_bounds=True)
+        lower, upper = coramin.domain_reduction.perform_obbt(
+            model=model, solver=solver, varlist=model.y, update_bounds=True
+        )
         self.assertAlmostEqual(pyo.value(model.x.lb), -5.0, delta=1e-6)
         self.assertAlmostEqual(pyo.value(model.x.ub), 5.0, delta=1e-6)
         self.assertAlmostEqual(pyo.value(model.y['A'].lb), -25.0, delta=1e-6)
@@ -94,7 +99,7 @@ class TestBoundsTightener(unittest.TestCase):
         self.assertAlmostEqual(upper[0], 100.0, delta=1e-6)
         self.assertAlmostEqual(lower[1], -26.0, delta=1e-6)
         self.assertAlmostEqual(upper[1], 99.0, delta=1e-6)
-        
+
     def test_too_many_obj(self):
         model = pyo.ConcreteModel()
         model.x = pyo.Var(bounds=(-5.0, 5.0))
@@ -105,8 +110,13 @@ class TestBoundsTightener(unittest.TestCase):
 
         solver = pyo.SolverFactory('ipopt')
         with self.assertRaises(ValueError):
-            coramin.domain_reduction.perform_obbt(model=model, solver=solver, varlist=[model.x, model.y],
-                                                  objective_bound=0.0, update_bounds=True)
+            coramin.domain_reduction.perform_obbt(
+                model=model,
+                solver=solver,
+                varlist=[model.x, model.y],
+                objective_bound=0.0,
+                update_bounds=True,
+            )
 
 
 if __name__ == '__main__':

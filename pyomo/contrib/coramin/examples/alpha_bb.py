@@ -13,7 +13,7 @@ def main():
 
     m.c.build(
         aux_var=m.z,
-        f_x_expr=m.x*pe.log(m.x/m.y),
+        f_x_expr=m.x * pe.log(m.x / m.y),
         relaxation_side=coramin.RelaxationSide.UNDER,
         eigenvalue_bounder=coramin.EigenValueBounder.GershgorinWithSimplification,
     )
@@ -37,8 +37,7 @@ def main():
     mip_opt = appsi.solvers.Gurobi()
     nlp_opt = appsi.solvers.Ipopt()
     eigenvalue_opt = coramin.algorithms.MultiTree(
-        mip_solver=mip_opt,
-        nlp_solver=nlp_opt,
+        mip_solver=mip_opt, nlp_solver=nlp_opt
     )
     eigenvalue_opt.config.convexity_effort = 'medium'
     m.c.hessian.opt = eigenvalue_opt

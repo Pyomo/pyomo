@@ -12,11 +12,13 @@ from typing import Sequence, Optional, Union
 logger = logging.getLogger(__name__)
 
 
-def filter_variables_from_solution(candidate_variables_at_relaxation_solution, tolerance=1e-6):
+def filter_variables_from_solution(
+    candidate_variables_at_relaxation_solution, tolerance=1e-6
+):
     """
-    This function takes a set of candidate variables for OBBT and filters out 
-    the variables that are at their bounds in the provided solution to the 
-    relaxation. See 
+    This function takes a set of candidate variables for OBBT and filters out
+    the variables that are at their bounds in the provided solution to the
+    relaxation. See
 
     Gleixner, Ambros M., et al. "Three enhancements for
     optimization-based bound tightening." Journal of Global
@@ -35,8 +37,8 @@ def filter_variables_from_solution(candidate_variables_at_relaxation_solution, t
     Parameters
     ----------
     candidate_variables_at_relaxation_solution: iterable of _GeneralVarData
-        This should be an iterable of the variables which are candidates 
-        for OBBT. The values of the variables should be feasible for the 
+        This should be an iterable of the variables which are candidates
+        for OBBT. The values of the variables should be feasible for the
         relaxation that would be used to perform OBBT on the variables.
     tolerance: float
         A float greater than or equal to zero. If the value of the variable
@@ -71,11 +73,11 @@ def aggressive_filter(
     tolerance: float = 1e-6,
     objective_bound: Optional[float] = None,
     max_iter: int = 10,
-    improvement_threshold: int = 5
+    improvement_threshold: int = 5,
 ):
     """
-    This function takes a set of candidate variables for OBBT and filters out 
-    the variables for which it does not make senese to perform OBBT on. See 
+    This function takes a set of candidate variables for OBBT and filters out
+    the variables for which it does not make senese to perform OBBT on. See
 
     Gleixner, Ambros M., et al. "Three enhancements for
     optimization-based bound tightening." Journal of Global
@@ -86,13 +88,13 @@ def aggressive_filter(
     minimizing x subject to that relaxation is guaranteed to result in
     an optimal solution of x* = xl.
 
-    This function solves a series of optimization problems to try to 
+    This function solves a series of optimization problems to try to
     filter as many variables as possible.
 
     Parameters
     ----------
     candidate_variables: iterable of _GeneralVarData
-        This should be an iterable of the variables which are candidates 
+        This should be an iterable of the variables which are candidates
         for OBBT.
     relaxation: Block
         a convex relaxation
@@ -143,7 +145,9 @@ def aggressive_filter(
             else:
                 obj_coefs = [-1 for v in _set]
             obj_vars = list(_set)
-            relaxation.__filter_obj = pe.Objective(expr=LinearExpression(linear_coefs=obj_coefs, linear_vars=obj_vars))
+            relaxation.__filter_obj = pe.Objective(
+                expr=LinearExpression(linear_coefs=obj_coefs, linear_vars=obj_vars)
+            )
             if solver.is_persistent():
                 solver.set_objective(relaxation.__filter_obj)
             solver.config.load_solution = False
@@ -183,11 +187,15 @@ def aggressive_filter(
         vars_to_maximize.add(v)
 
     _bt_cleanup(
-        model=relaxation, solver=solver, vardatalist=None,
+        model=relaxation,
+        solver=solver,
+        vardatalist=None,
         initial_var_values=initial_var_values,
         deactivated_objectives=deactivated_objectives,
-        orig_update_config=orig_update_config, orig_config=orig_config,
-        lower_bounds=None, upper_bounds=None
+        orig_update_config=orig_update_config,
+        orig_config=orig_config,
+        lower_bounds=None,
+        upper_bounds=None,
     )
 
     return vars_to_minimize, vars_to_maximize

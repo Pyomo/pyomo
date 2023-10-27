@@ -1,6 +1,18 @@
-from pyomo.contrib.coramin.domain_reduction.dbt import TreeBlock, TreeBlockError, convert_pyomo_model_to_bipartite_graph, \
-    _VarNode, _ConNode, _RelNode, split_metis, num_cons_in_graph, collect_vars_to_tighten_by_block, decompose_model, \
-    perform_dbt, OBBTMethod, FilterMethod
+from pyomo.contrib.coramin.domain_reduction.dbt import (
+    TreeBlock,
+    TreeBlockError,
+    convert_pyomo_model_to_bipartite_graph,
+    _VarNode,
+    _ConNode,
+    _RelNode,
+    split_metis,
+    num_cons_in_graph,
+    collect_vars_to_tighten_by_block,
+    decompose_model,
+    perform_dbt,
+    OBBTMethod,
+    FilterMethod,
+)
 from pyomo.common import unittest
 import pyomo.environ as pe
 from pyomo.contrib import coramin
@@ -71,7 +83,9 @@ class TestTreeBlock(unittest.TestCase):
             b.children[2].x = pe.Var()
         b.children[2].children['a'].x = pe.Var()
         b.children[2].children['b'].x = pe.Var()
-        self.assertEqual(len(list(b.component_data_objects(pe.Var, descend_into=True, sort=True))), 3)
+        self.assertEqual(
+            len(list(b.component_data_objects(pe.Var, descend_into=True, sort=True))), 3
+        )
 
         self.assertEqual(b.num_stages(), 3)
         with self.assertRaises(TreeBlockError):
@@ -144,15 +158,42 @@ class TestGraphConversion(unittest.TestCase):
         self.assertIn(m.c2, graph_node_comps)
         self.assertIn(m.c3, graph_node_comps)
         graph_edge_comps = {(id(i.comp), id(j.comp)) for i, j in graph.edges()}
-        self.assertTrue(((id(m.x), id(m.c1)) in graph_edge_comps) or ((id(m.c1), id(m.x)) in graph_edge_comps))
-        self.assertTrue(((id(m.y), id(m.c1)) in graph_edge_comps) or ((id(m.c1), id(m.y)) in graph_edge_comps))
-        self.assertTrue(((id(m.z), id(m.c1)) in graph_edge_comps) or ((id(m.c1), id(m.z)) in graph_edge_comps))
-        self.assertTrue(((id(m.x), id(m.c2)) in graph_edge_comps) or ((id(m.c2), id(m.x)) in graph_edge_comps))
-        self.assertFalse(((id(m.y), id(m.c2)) in graph_edge_comps) or ((id(m.c2), id(m.y)) in graph_edge_comps))
-        self.assertTrue(((id(m.z), id(m.c2)) in graph_edge_comps) or ((id(m.c2), id(m.z)) in graph_edge_comps))
-        self.assertTrue(((id(m.x), id(m.c3)) in graph_edge_comps) or ((id(m.c3), id(m.x)) in graph_edge_comps))
-        self.assertTrue(((id(m.y), id(m.c3)) in graph_edge_comps) or ((id(m.c3), id(m.y)) in graph_edge_comps))
-        self.assertTrue(((id(m.z), id(m.c3)) in graph_edge_comps) or ((id(m.c3), id(m.z)) in graph_edge_comps))
+        self.assertTrue(
+            ((id(m.x), id(m.c1)) in graph_edge_comps)
+            or ((id(m.c1), id(m.x)) in graph_edge_comps)
+        )
+        self.assertTrue(
+            ((id(m.y), id(m.c1)) in graph_edge_comps)
+            or ((id(m.c1), id(m.y)) in graph_edge_comps)
+        )
+        self.assertTrue(
+            ((id(m.z), id(m.c1)) in graph_edge_comps)
+            or ((id(m.c1), id(m.z)) in graph_edge_comps)
+        )
+        self.assertTrue(
+            ((id(m.x), id(m.c2)) in graph_edge_comps)
+            or ((id(m.c2), id(m.x)) in graph_edge_comps)
+        )
+        self.assertFalse(
+            ((id(m.y), id(m.c2)) in graph_edge_comps)
+            or ((id(m.c2), id(m.y)) in graph_edge_comps)
+        )
+        self.assertTrue(
+            ((id(m.z), id(m.c2)) in graph_edge_comps)
+            or ((id(m.c2), id(m.z)) in graph_edge_comps)
+        )
+        self.assertTrue(
+            ((id(m.x), id(m.c3)) in graph_edge_comps)
+            or ((id(m.c3), id(m.x)) in graph_edge_comps)
+        )
+        self.assertTrue(
+            ((id(m.y), id(m.c3)) in graph_edge_comps)
+            or ((id(m.c3), id(m.y)) in graph_edge_comps)
+        )
+        self.assertTrue(
+            ((id(m.z), id(m.c3)) in graph_edge_comps)
+            or ((id(m.c3), id(m.z)) in graph_edge_comps)
+        )
         self.assertEqual(num_cons_in_graph(graph=graph, include_rels=True), 3)
         self.assertEqual(num_cons_in_graph(graph=graph, include_rels=False), 2)
 
@@ -204,7 +245,7 @@ class TestSplit(unittest.TestCase):
         g.add_edge(v6, c2)
 
         tree, partitioning_ratio = split_metis(graph=g, model=m)
-        self.assertAlmostEqual(partitioning_ratio, 3*12/(14*1+6*2+6*2))
+        self.assertAlmostEqual(partitioning_ratio, 3 * 12 / (14 * 1 + 6 * 2 + 6 * 2))
 
         children = list(tree.children)
         self.assertEqual(len(children), 2)
@@ -249,23 +290,32 @@ class TestSplit(unittest.TestCase):
         edges_between_children = list(tree.edges_between_children)
         self.assertEqual(len(edges_between_children), 1)
         edge = edges_between_children[0]
-        self.assertTrue((v4 is edge.node1 and v4_hat is edge.node2) or (v4 is edge.node2 and v4_hat is edge.node1))
+        self.assertTrue(
+            (v4 is edge.node1 and v4_hat is edge.node2)
+            or (v4 is edge.node2 and v4_hat is edge.node1)
+        )
 
         new_model = TreeBlock(concrete=True)
         component_map = tree.build_pyomo_model(block=new_model)
-        new_vars = list(coramin.relaxations.nonrelaxation_component_data_objects(new_model,
-                                                                                 ctype=pe.Var,
-                                                                                 descend_into=True,
-                                                                                 sort=True))
-        new_cons = list(coramin.relaxations.nonrelaxation_component_data_objects(new_model,
-                                                                                 ctype=pe.Constraint,
-                                                                                 active=True,
-                                                                                 descend_into=True,
-                                                                                 sort=True))
-        new_rels = list(coramin.relaxations.relaxation_data_objects(new_model,
-                                                                    descend_into=True,
-                                                                    active=True,
-                                                                    sort=True))
+        new_vars = list(
+            coramin.relaxations.nonrelaxation_component_data_objects(
+                new_model, ctype=pe.Var, descend_into=True, sort=True
+            )
+        )
+        new_cons = list(
+            coramin.relaxations.nonrelaxation_component_data_objects(
+                new_model,
+                ctype=pe.Constraint,
+                active=True,
+                descend_into=True,
+                sort=True,
+            )
+        )
+        new_rels = list(
+            coramin.relaxations.relaxation_data_objects(
+                new_model, descend_into=True, active=True, sort=True
+            )
+        )
         self.assertEqual(len(new_vars), 7)
         self.assertEqual(len(new_cons), 3)
         self.assertEqual(len(new_rels), 2)
@@ -273,44 +323,55 @@ class TestSplit(unittest.TestCase):
         self.assertEqual(len(new_model.linking_constraints), 1)
         self.assertEqual(new_model.num_stages(), 2)
 
-        stage0_vars = list(new_model.component_data_objects(pe.Var, descend_into=False, sort=True))
-        stage0_cons = list(new_model.component_data_objects(pe.Constraint, descend_into=False, sort=True, active=True))
-        stage0_rels = list(coramin.relaxations.relaxation_data_objects(new_model,
-                                                                       descend_into=False,
-                                                                       active=True,
-                                                                       sort=True))
+        stage0_vars = list(
+            new_model.component_data_objects(pe.Var, descend_into=False, sort=True)
+        )
+        stage0_cons = list(
+            new_model.component_data_objects(
+                pe.Constraint, descend_into=False, sort=True, active=True
+            )
+        )
+        stage0_rels = list(
+            coramin.relaxations.relaxation_data_objects(
+                new_model, descend_into=False, active=True, sort=True
+            )
+        )
         self.assertEqual(len(stage0_vars), 0)
         self.assertEqual(len(stage0_cons), 1)
         self.assertEqual(len(stage0_rels), 0)
 
         block_a = new_model.children[0]
         block_b = new_model.children[1]
-        block_a_vars = ComponentSet(coramin.relaxations.nonrelaxation_component_data_objects(block_a,
-                                                                                             ctype=pe.Var,
-                                                                                             descend_into=True,
-                                                                                             sort=True))
-        block_b_vars = ComponentSet(coramin.relaxations.nonrelaxation_component_data_objects(block_b,
-                                                                                             ctype=pe.Var,
-                                                                                             descend_into=True,
-                                                                                             sort=True))
-        block_a_cons = ComponentSet(coramin.relaxations.nonrelaxation_component_data_objects(block_a,
-                                                                                             ctype=pe.Constraint,
-                                                                                             descend_into=True,
-                                                                                             active=True,
-                                                                                             sort=True))
-        block_b_cons = ComponentSet(coramin.relaxations.nonrelaxation_component_data_objects(block_b,
-                                                                                             ctype=pe.Constraint,
-                                                                                             descend_into=True,
-                                                                                             active=True,
-                                                                                             sort=True))
-        block_a_rels = ComponentSet(coramin.relaxations.relaxation_data_objects(block_a,
-                                                                                descend_into=True,
-                                                                                active=True,
-                                                                                sort=True))
-        block_b_rels = ComponentSet(coramin.relaxations.relaxation_data_objects(block_b,
-                                                                                descend_into=True,
-                                                                                active=True,
-                                                                                sort=True))
+        block_a_vars = ComponentSet(
+            coramin.relaxations.nonrelaxation_component_data_objects(
+                block_a, ctype=pe.Var, descend_into=True, sort=True
+            )
+        )
+        block_b_vars = ComponentSet(
+            coramin.relaxations.nonrelaxation_component_data_objects(
+                block_b, ctype=pe.Var, descend_into=True, sort=True
+            )
+        )
+        block_a_cons = ComponentSet(
+            coramin.relaxations.nonrelaxation_component_data_objects(
+                block_a, ctype=pe.Constraint, descend_into=True, active=True, sort=True
+            )
+        )
+        block_b_cons = ComponentSet(
+            coramin.relaxations.nonrelaxation_component_data_objects(
+                block_b, ctype=pe.Constraint, descend_into=True, active=True, sort=True
+            )
+        )
+        block_a_rels = ComponentSet(
+            coramin.relaxations.relaxation_data_objects(
+                block_a, descend_into=True, active=True, sort=True
+            )
+        )
+        block_b_rels = ComponentSet(
+            coramin.relaxations.relaxation_data_objects(
+                block_b, descend_into=True, active=True, sort=True
+            )
+        )
         if component_map[m.v1] not in block_a_vars:
             block_a, block_b = block_b, block_a
             block_a_vars, block_b_vars = block_b_vars, block_a_vars
@@ -358,9 +419,13 @@ class TestSplit(unittest.TestCase):
         self.assertEqual(len(linking_con_vars), 2)
         self.assertIn(v4_a, linking_con_vars)
         self.assertIn(v4_b, linking_con_vars)
-        derivs = differentiate(expr=linking_con.body, mode=differentiate.Modes.reverse_symbolic)
-        self.assertTrue((derivs[v4_a] == 1 and derivs[v4_b] == -1) or
-                        (derivs[v4_a] == -1 and derivs[v4_b] == 1))
+        derivs = differentiate(
+            expr=linking_con.body, mode=differentiate.Modes.reverse_symbolic
+        )
+        self.assertTrue(
+            (derivs[v4_a] == 1 and derivs[v4_b] == -1)
+            or (derivs[v4_a] == -1 and derivs[v4_b] == 1)
+        )
         self.assertEqual(linking_con.lower, 0)
         self.assertEqual(linking_con.upper, 0)
 
@@ -409,11 +474,13 @@ class TestNumCons(unittest.TestCase):
         m.y = pe.Var()
         m.z = pe.Var()
         m.r = coramin.relaxations.PWUnivariateRelaxation()
-        m.r.build(x=m.x,
-                  aux_var=m.y,
-                  shape=coramin.utils.FunctionShape.CONVEX,
-                  f_x_expr=pe.exp(m.x))
-        m.c = pe.Constraint(expr=m.z == 2*m.x)
+        m.r.build(
+            x=m.x,
+            aux_var=m.y,
+            shape=coramin.utils.FunctionShape.CONVEX,
+            f_x_expr=pe.exp(m.x),
+        )
+        m.c = pe.Constraint(expr=m.z == 2 * m.x)
         g = convert_pyomo_model_to_bipartite_graph(m)
         self.assertEqual(num_cons_in_graph(g, include_rels=False), 1)
         self.assertEqual(num_cons_in_graph(g), 2)
@@ -435,34 +502,46 @@ class TestDecompose(unittest.TestCase):
         opt = pe.SolverFactory('ipopt')
         res = opt.solve(m, tee=False)
 
-        relaxed_m = coramin.relaxations.relax(m,
-                                              in_place=False,
-                                              use_fbbt=False,
-                                              fbbt_options={'deactivate_satisfied_constraints': True,
-                                                            'max_iter': 2},
-                                              use_alpha_bb=False)
-        (decomposed_m,
-         component_map,
-         termination_reason) = decompose_model(model=relaxed_m,
-                                               max_leaf_nnz=1000,
-                                               min_partition_ratio=1.4,
-                                               limit_num_stages=True)
+        relaxed_m = coramin.relaxations.relax(
+            m,
+            in_place=False,
+            use_fbbt=False,
+            fbbt_options={'deactivate_satisfied_constraints': True, 'max_iter': 2},
+            use_alpha_bb=False,
+        )
+        (decomposed_m, component_map, termination_reason) = decompose_model(
+            model=relaxed_m,
+            max_leaf_nnz=1000,
+            min_partition_ratio=1.4,
+            limit_num_stages=True,
+        )
         self.assertEqual(termination_reason, expected_termination)
-        if expected_termination == coramin.domain_reduction.dbt.DecompositionStatus.normal:
+        if (
+            expected_termination
+            == coramin.domain_reduction.dbt.DecompositionStatus.normal
+        ):
             self.assertGreaterEqual(decomposed_m.num_stages(), 2)
 
-        for r in coramin.relaxations.relaxation_data_objects(block=relaxed_m, descend_into=True,
-                                                             active=True, sort=True):
+        for r in coramin.relaxations.relaxation_data_objects(
+            block=relaxed_m, descend_into=True, active=True, sort=True
+        ):
             r.rebuild(build_nonlinear_constraint=True)
-        for r in coramin.relaxations.relaxation_data_objects(block=decomposed_m, descend_into=True,
-                                                             active=True, sort=True):
+        for r in coramin.relaxations.relaxation_data_objects(
+            block=decomposed_m, descend_into=True, active=True, sort=True
+        ):
             r.rebuild(build_nonlinear_constraint=True)
         relaxed_res = opt.solve(relaxed_m, tee=False)
         decomposed_res = opt.solve(decomposed_m, tee=False)
 
-        self.assertEqual(res.solver.termination_condition, pe.TerminationCondition.optimal)
-        self.assertEqual(relaxed_res.solver.termination_condition, pe.TerminationCondition.optimal)
-        self.assertEqual(decomposed_res.solver.termination_condition, pe.TerminationCondition.optimal)
+        self.assertEqual(
+            res.solver.termination_condition, pe.TerminationCondition.optimal
+        )
+        self.assertEqual(
+            relaxed_res.solver.termination_condition, pe.TerminationCondition.optimal
+        )
+        self.assertEqual(
+            decomposed_res.solver.termination_condition, pe.TerminationCondition.optimal
+        )
         obj = get_objective(m)
         relaxed_obj = get_objective(relaxed_m)
         decomposed_obj = get_objective(decomposed_m)
@@ -474,33 +553,37 @@ class TestDecompose(unittest.TestCase):
         self.assertAlmostEqual(relaxed_rel_diff, 0, 5)
         self.assertAlmostEqual(decomposed_rel_diff, 0, 5)
 
-        relaxed_vars = list(coramin.relaxations.nonrelaxation_component_data_objects(relaxed_m,
-                                                                                     pe.Var,
-                                                                                     sort=True,
-                                                                                     descend_into=True))
+        relaxed_vars = list(
+            coramin.relaxations.nonrelaxation_component_data_objects(
+                relaxed_m, pe.Var, sort=True, descend_into=True
+            )
+        )
         relaxed_vars = [v for v in relaxed_vars if not v.fixed]
-        relaxed_cons = list(coramin.relaxations.nonrelaxation_component_data_objects(relaxed_m,
-                                                                                     pe.Constraint,
-                                                                                     active=True,
-                                                                                     sort=True,
-                                                                                     descend_into=True))
-        relaxed_rels = list(coramin.relaxations.relaxation_data_objects(relaxed_m,
-                                                                        descend_into=True,
-                                                                        active=True,
-                                                                        sort=True))
-        decomposed_vars = list(coramin.relaxations.nonrelaxation_component_data_objects(decomposed_m,
-                                                                                        pe.Var,
-                                                                                        sort=True,
-                                                                                        descend_into=True))
-        decomposed_cons = list(coramin.relaxations.nonrelaxation_component_data_objects(decomposed_m,
-                                                                                        pe.Constraint,
-                                                                                        active=True,
-                                                                                        sort=True,
-                                                                                        descend_into=True))
-        decomposed_rels = list(coramin.relaxations.relaxation_data_objects(decomposed_m,
-                                                                           descend_into=True,
-                                                                           active=True,
-                                                                           sort=True))
+        relaxed_cons = list(
+            coramin.relaxations.nonrelaxation_component_data_objects(
+                relaxed_m, pe.Constraint, active=True, sort=True, descend_into=True
+            )
+        )
+        relaxed_rels = list(
+            coramin.relaxations.relaxation_data_objects(
+                relaxed_m, descend_into=True, active=True, sort=True
+            )
+        )
+        decomposed_vars = list(
+            coramin.relaxations.nonrelaxation_component_data_objects(
+                decomposed_m, pe.Var, sort=True, descend_into=True
+            )
+        )
+        decomposed_cons = list(
+            coramin.relaxations.nonrelaxation_component_data_objects(
+                decomposed_m, pe.Constraint, active=True, sort=True, descend_into=True
+            )
+        )
+        decomposed_rels = list(
+            coramin.relaxations.relaxation_data_objects(
+                decomposed_m, descend_into=True, active=True, sort=True
+            )
+        )
         linking_cons = list()
         for stage in range(decomposed_m.num_stages()):
             for block in decomposed_m.stage_blocks(stage):
@@ -515,13 +598,17 @@ class TestDecompose(unittest.TestCase):
         for c in linking_cons:
             for v in identify_variables(c.body, include_fixed=True):
                 extra_vars.add(v)
-        for v in coramin.relaxations.nonrelaxation_component_data_objects(decomposed_m, pe.Var, descend_into=True):
+        for v in coramin.relaxations.nonrelaxation_component_data_objects(
+            decomposed_m, pe.Var, descend_into=True
+        ):
             if 'dbt_partition_vars' in str(v) or 'obj_var' in str(v):
                 extra_vars.add(v)
         extra_vars = extra_vars - relaxed_vars_mapped
         partition_cons = ComponentSet()
         obj_cons = ComponentSet()
-        for c in coramin.relaxations.nonrelaxation_component_data_objects(decomposed_m, pe.Constraint, active=True, descend_into=True):
+        for c in coramin.relaxations.nonrelaxation_component_data_objects(
+            decomposed_m, pe.Constraint, active=True, descend_into=True
+        ):
             if 'dbt_partition_cons' in str(c):
                 partition_cons.add(c)
             elif 'obj_con' in str(c):
@@ -563,16 +650,32 @@ class TestDecompose(unittest.TestCase):
         self.assertEqual(len(relaxed_rels), len(decomposed_rels))
 
     def test_decompose1(self):
-        self.helper('pglib_opf_case5_pjm.m', min_partition_ratio=1.5, expected_termination=coramin.domain_reduction.dbt.DecompositionStatus.problem_too_small)
+        self.helper(
+            'pglib_opf_case5_pjm.m',
+            min_partition_ratio=1.5,
+            expected_termination=coramin.domain_reduction.dbt.DecompositionStatus.problem_too_small,
+        )
 
     def test_decompose2(self):
-        self.helper('pglib_opf_case30_ieee.m', min_partition_ratio=1.5, expected_termination=coramin.domain_reduction.dbt.DecompositionStatus.normal)
+        self.helper(
+            'pglib_opf_case30_ieee.m',
+            min_partition_ratio=1.5,
+            expected_termination=coramin.domain_reduction.dbt.DecompositionStatus.normal,
+        )
 
     def test_decompose3(self):
-        self.helper('pglib_opf_case118_ieee.m', min_partition_ratio=1.5, expected_termination=coramin.domain_reduction.dbt.DecompositionStatus.normal)
+        self.helper(
+            'pglib_opf_case118_ieee.m',
+            min_partition_ratio=1.5,
+            expected_termination=coramin.domain_reduction.dbt.DecompositionStatus.normal,
+        )
 
     def test_decompose4(self):
-        self.helper('pglib_opf_case14_ieee.m', min_partition_ratio=1.4, expected_termination=coramin.domain_reduction.dbt.DecompositionStatus.normal)
+        self.helper(
+            'pglib_opf_case14_ieee.m',
+            min_partition_ratio=1.4,
+            expected_termination=coramin.domain_reduction.dbt.DecompositionStatus.normal,
+        )
 
 
 class TestVarsToTightenByBlock(unittest.TestCase):
@@ -598,21 +701,25 @@ class TestVarsToTightenByBlock(unittest.TestCase):
         b2.c = pe.Constraint(expr=b2.x + b2.y + b2.z == 0)
 
         b1.r = coramin.relaxations.PWUnivariateRelaxation()
-        b1.r.set_input(x=b1.x,
-                       aux_var=b1.aux,
-                       shape=coramin.utils.FunctionShape.CONVEX,
-                       f_x_expr=pe.exp(b1.x))
+        b1.r.set_input(
+            x=b1.x,
+            aux_var=b1.aux,
+            shape=coramin.utils.FunctionShape.CONVEX,
+            f_x_expr=pe.exp(b1.x),
+        )
         b1.r.rebuild()
 
         b2.r = coramin.relaxations.PWXSquaredRelaxation()
-        b2.r.set_input(x=b2.x,
-                       aux_var=b2.aux,
-                       relaxation_side=coramin.utils.RelaxationSide.UNDER)
+        b2.r.set_input(
+            x=b2.x, aux_var=b2.aux, relaxation_side=coramin.utils.RelaxationSide.UNDER
+        )
         b2.r.rebuild()
 
         m.linking_constraints.add(b1.z == b2.z)
 
-        vars_to_tighten_by_block = collect_vars_to_tighten_by_block(m, method='full_space')
+        vars_to_tighten_by_block = collect_vars_to_tighten_by_block(
+            m, method='full_space'
+        )
         self.assertEqual(len(vars_to_tighten_by_block), 3)
         vars_to_tighten = vars_to_tighten_by_block[m]
         self.assertEqual(len(vars_to_tighten), 0)
@@ -660,13 +767,23 @@ class TestDBT(unittest.TestCase):
         b0.y = pe.Var(bounds=(-5, 5))
         b0.p = pe.Param(initialize=1.0, mutable=True)
         b0.c = coramin.relaxations.PWUnivariateRelaxation()
-        b0.c.build(x=b0.x, aux_var=b0.y, shape=coramin.utils.FunctionShape.CONVEX, f_x_expr=b0.p*b0.x)
+        b0.c.build(
+            x=b0.x,
+            aux_var=b0.y,
+            shape=coramin.utils.FunctionShape.CONVEX,
+            f_x_expr=b0.p * b0.x,
+        )
 
         b1.x = pe.Var(bounds=(-5, 5))
         b1.y = pe.Var(bounds=(-5, 5))
         b1.p = pe.Param(initialize=1.0, mutable=True)
         b1.c = coramin.relaxations.PWUnivariateRelaxation()
-        b1.c.build(x=b1.x, aux_var=b1.y, shape=coramin.utils.FunctionShape.CONVEX, f_x_expr=b1.p*b1.x)
+        b1.c.build(
+            x=b1.x,
+            aux_var=b1.y,
+            shape=coramin.utils.FunctionShape.CONVEX,
+            f_x_expr=b1.p * b1.x,
+        )
 
         m.linking_constraints.add(b0.y == b1.y)
 
@@ -677,7 +794,12 @@ class TestDBT(unittest.TestCase):
         b0 = m.children[0]
         b1 = m.children[1]
         opt = appsi.solvers.Gurobi()
-        perform_dbt(relaxation=m, solver=opt, obbt_method=OBBTMethod.FULL_SPACE, filter_method=FilterMethod.NONE)
+        perform_dbt(
+            relaxation=m,
+            solver=opt,
+            obbt_method=OBBTMethod.FULL_SPACE,
+            filter_method=FilterMethod.NONE,
+        )
         self.assertAlmostEqual(b0.x.lb, -1)
         self.assertAlmostEqual(b0.x.ub, 1)
         self.assertAlmostEqual(b0.y.lb, -5)
@@ -692,7 +814,12 @@ class TestDBT(unittest.TestCase):
         b0 = m.children[0]
         b1 = m.children[1]
         opt = appsi.solvers.Gurobi()
-        perform_dbt(relaxation=m, solver=opt, obbt_method=OBBTMethod.LEAVES, filter_method=FilterMethod.NONE)
+        perform_dbt(
+            relaxation=m,
+            solver=opt,
+            obbt_method=OBBTMethod.LEAVES,
+            filter_method=FilterMethod.NONE,
+        )
         self.assertAlmostEqual(b0.x.lb, -1)
         self.assertAlmostEqual(b0.x.ub, 1)
         self.assertAlmostEqual(b0.y.lb, -5)
@@ -707,7 +834,12 @@ class TestDBT(unittest.TestCase):
         b0 = m.children[0]
         b1 = m.children[1]
         opt = appsi.solvers.Gurobi()
-        perform_dbt(relaxation=m, solver=opt, obbt_method=OBBTMethod.DECOMPOSED, filter_method=FilterMethod.NONE)
+        perform_dbt(
+            relaxation=m,
+            solver=opt,
+            obbt_method=OBBTMethod.DECOMPOSED,
+            filter_method=FilterMethod.NONE,
+        )
         self.assertAlmostEqual(b0.x.lb, -1)
         self.assertAlmostEqual(b0.x.ub, 1)
         self.assertAlmostEqual(b0.y.lb, -1)
@@ -722,7 +854,12 @@ class TestDBT(unittest.TestCase):
         b0 = m.children[0]
         b1 = m.children[1]
         opt = appsi.solvers.Gurobi()
-        perform_dbt(relaxation=m, solver=opt, obbt_method=OBBTMethod.DECOMPOSED, filter_method=FilterMethod.AGGRESSIVE)
+        perform_dbt(
+            relaxation=m,
+            solver=opt,
+            obbt_method=OBBTMethod.DECOMPOSED,
+            filter_method=FilterMethod.AGGRESSIVE,
+        )
         self.assertAlmostEqual(b0.x.lb, -1)
         self.assertAlmostEqual(b0.x.ub, 1)
         self.assertAlmostEqual(b0.y.lb, -1)
@@ -765,11 +902,11 @@ class TestDBTWithECP(unittest.TestCase):
         b4.x11 = pe.Var(bounds=(0.5, 5))
         b4.x12 = pe.Var(bounds=(0.5, 5))
 
-        b1.c1 = pe.Constraint(expr=b1.x1 == b1.x2 ** 2 - b1.x3 ** 2)
+        b1.c1 = pe.Constraint(expr=b1.x1 == b1.x2**2 - b1.x3**2)
         b1.c2 = pe.Constraint(expr=b1.x2 == pe.log(b1.x3) + b1.x3)
 
         b2.c1 = pe.Constraint(expr=b2.x4 == b2.x5 * b2.x6)
-        b2.c2 = pe.Constraint(expr=b2.x5 == b2.x6 ** 2)
+        b2.c2 = pe.Constraint(expr=b2.x5 == b2.x6**2)
 
         b3.c1 = pe.Constraint(expr=b3.x7 == pe.log(b3.x8) - pe.log(b3.x9))
         b3.c2 = pe.Constraint(expr=b3.x8 + b3.x9 == 4)
@@ -782,7 +919,19 @@ class TestDBTWithECP(unittest.TestCase):
         m.linking_constraints.add(b1.x3 == b3.x9)
 
         m.obj = pe.Objective(
-            expr=b1.x1 + b1.x2 + b1.x3 + b2.x4 + b2.x5 + b2.x6 + b3.x7 + b3.x8 + b3.x9 + b4.x10 + b4.x11 + b4.x12)
+            expr=b1.x1
+            + b1.x2
+            + b1.x3
+            + b2.x4
+            + b2.x5
+            + b2.x6
+            + b3.x7
+            + b3.x8
+            + b3.x9
+            + b4.x10
+            + b4.x11
+            + b4.x12
+        )
 
         return m
 
@@ -798,8 +947,12 @@ class TestDBTWithECP(unittest.TestCase):
         opt = coramin.algorithms.ECPBounder(subproblem_solver=appsi.solvers.Gurobi())
         opt.config.keep_cuts = False
         opt.config.feasibility_tol = 1e-5
-        coramin.domain_reduction.perform_dbt(m, opt, filter_method=coramin.domain_reduction.FilterMethod.NONE,
-                                             parallel=True)
+        coramin.domain_reduction.perform_dbt(
+            m,
+            opt,
+            filter_method=coramin.domain_reduction.FilterMethod.NONE,
+            parallel=True,
+        )
         m.write(f'rank{rank}.lp')
         comm.Barrier()
         if rank == 0:
@@ -813,8 +966,13 @@ class TestDBTWithECP(unittest.TestCase):
         opt = coramin.algorithms.ECPBounder(subproblem_solver=appsi.solvers.Gurobi())
         opt.config.keep_cuts = False
         opt.config.feasibility_tol = 1e-5
-        coramin.domain_reduction.perform_dbt(m, opt, filter_method=coramin.domain_reduction.FilterMethod.NONE,
-                                             parallel=True, update_relaxations_between_stages=False)
+        coramin.domain_reduction.perform_dbt(
+            m,
+            opt,
+            filter_method=coramin.domain_reduction.FilterMethod.NONE,
+            parallel=True,
+            update_relaxations_between_stages=False,
+        )
         m.write(f'rank{rank}.lp')
         comm.Barrier()
         if rank == 0:

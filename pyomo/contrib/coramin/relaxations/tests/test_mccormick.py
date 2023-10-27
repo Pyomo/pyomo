@@ -36,8 +36,10 @@ class TestMcCormick(unittest.TestCase):
 
         model.obj = pyo.Objective(expr=-model.w - 2 * model.x)
         model.con = pyo.Constraint(expr=model.w <= 12)
+
         def mc_rule(b):
             b.build(x1=model.x, x2=model.y, aux_var=model.w)
+
         model.mc = coramin.relaxations.PWMcCormickRelaxation(rule=mc_rule)
 
         linsolver = pyo.SolverFactory('gurobi_direct')
@@ -57,6 +59,7 @@ class TestMcCormick(unittest.TestCase):
         def mc_rule(b):
             m = b.parent_block()
             b.build(x1=m.x, x2=m.y, aux_var=m.w)
+
         model.mc = coramin.relaxations.PWMcCormickRelaxation(rule=mc_rule)
 
         linsolver = pyo.SolverFactory('gurobi_direct', tee=True)
@@ -70,12 +73,18 @@ class TestMcCormick(unittest.TestCase):
         model.y = pyo.Var(bounds=(0, 3))
         model.w = pyo.Var()
 
-        model.obj = pyo.Objective(expr=-model.w + 0.1*model.x + 0.1*model.y)
+        model.obj = pyo.Objective(expr=-model.w + 0.1 * model.x + 0.1 * model.y)
         model.con = pyo.Constraint(expr=model.w <= 12)
 
         def mc_rule(b):
             m = b.parent_block()
-            b.build(x1=m.x, x2=m.y, aux_var=m.w, relaxation_side=coramin.utils.RelaxationSide.OVER)
+            b.build(
+                x1=m.x,
+                x2=m.y,
+                aux_var=m.w,
+                relaxation_side=coramin.utils.RelaxationSide.OVER,
+            )
+
         model.mc = coramin.relaxations.PWMcCormickRelaxation(rule=mc_rule)
 
         linsolver = pyo.SolverFactory('gurobi_direct')
@@ -94,7 +103,13 @@ class TestMcCormick(unittest.TestCase):
 
         def mc_rule(b):
             m = b.parent_block()
-            b.build(x1=m.x, x2=m.y, aux_var=m.w, relaxation_side=coramin.utils.RelaxationSide.UNDER)
+            b.build(
+                x1=m.x,
+                x2=m.y,
+                aux_var=m.w,
+                relaxation_side=coramin.utils.RelaxationSide.UNDER,
+            )
+
         model.mc = coramin.relaxations.PWMcCormickRelaxation(rule=mc_rule)
 
         linsolver = pyo.SolverFactory('gurobi_direct', tee=True)

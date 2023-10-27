@@ -1,4 +1,9 @@
-from .relaxations_base import BaseRelaxation, BaseRelaxationData, BasePWRelaxation, BasePWRelaxationData
+from .relaxations_base import (
+    BaseRelaxation,
+    BaseRelaxationData,
+    BasePWRelaxation,
+    BasePWRelaxationData,
+)
 from .mccormick import PWMcCormickRelaxation, PWMcCormickRelaxationData
 from .segments import compute_k_segment_points
 from .univariate import PWXSquaredRelaxation, PWXSquaredRelaxationData

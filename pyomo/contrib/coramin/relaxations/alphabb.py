@@ -1,6 +1,9 @@
 from pyomo.contrib.coramin.utils.coramin_enums import EigenValueBounder, RelaxationSide
 from pyomo.contrib.coramin.relaxations.custom_block import declare_custom_block
-from pyomo.contrib.coramin.relaxations.relaxations_base import BaseRelaxationData, ComponentWeakRef
+from pyomo.contrib.coramin.relaxations.relaxations_base import (
+    BaseRelaxationData,
+    ComponentWeakRef,
+)
 from pyomo.contrib.coramin.relaxations.hessian import Hessian
 from typing import Optional, Tuple
 from pyomo.core.base.var import _GeneralVarData
@@ -83,7 +86,7 @@ class AlphaBBRelaxationData(BaseRelaxationData):
             use_linear_relaxation=use_linear_relaxation,
             large_coef=large_coef,
             small_coef=small_coef,
-            safety_tol=safety_tol
+            safety_tol=safety_tol,
         )
         self._xs = tuple(identify_variables(f_x_expr, include_fixed=False))
         self._aux_var_ref.set_component(aux_var)
@@ -134,15 +137,19 @@ class AlphaBBRelaxationData(BaseRelaxationData):
     @relaxation_side.setter
     def relaxation_side(self, val):
         if val != self.relaxation_side:
-            raise ValueError('Cannot change the relaxation side of an AlphaBBRelaxation')
+            raise ValueError(
+                'Cannot change the relaxation side of an AlphaBBRelaxation'
+            )
         if val == RelaxationSide.BOTH:
-            raise ValueError('AlphaBBRelaxation only supports relaxation sides of UNDER or OVER, not BOTH.')
+            raise ValueError(
+                'AlphaBBRelaxation only supports relaxation sides of UNDER or OVER, not BOTH.'
+            )
 
     def rebuild(self, build_nonlinear_constraint=False, ensure_oa_at_vertices=True):
         if self.relaxation_side == RelaxationSide.UNDER:
             alpha = max(0, -0.5 * self._hessian.get_minimum_eigenvalue())
         else:
-            alpha = max(0, 0.5*self._hessian.get_maximum_eigenvalue())
+            alpha = max(0, 0.5 * self._hessian.get_maximum_eigenvalue())
             alpha = -alpha
         if self._alpha is None:
             del self._alpha, self._alphabb_rhs, self._var_set
@@ -162,5 +169,7 @@ class AlphaBBRelaxationData(BaseRelaxationData):
             self._lb_params[ndx].value = v.lb
             self._ub_params[ndx].value = v.ub
 
-        super().rebuild(build_nonlinear_constraint=build_nonlinear_constraint,
-                        ensure_oa_at_vertices=ensure_oa_at_vertices)
+        super().rebuild(
+            build_nonlinear_constraint=build_nonlinear_constraint,
+            ensure_oa_at_vertices=ensure_oa_at_vertices,
+        )

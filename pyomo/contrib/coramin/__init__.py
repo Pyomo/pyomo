@@ -9,5 +9,5 @@ from .utils import (
     Effort,
     EigenValueBounder,
     simplify_expr,
-    get_objective
+    get_objective,
 )

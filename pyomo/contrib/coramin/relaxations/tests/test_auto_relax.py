@@ -15,10 +15,10 @@ from pyomo.contrib.coramin.utils import RelaxationSide, Effort, EigenValueBounde
 class TestAutoRelax(unittest.TestCase):
     def test_product1(self):
         m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(-1,1))
-        m.y = pe.Var(bounds=(-1,1))
+        m.x = pe.Var(bounds=(-1, 1))
+        m.y = pe.Var(bounds=(-1, 1))
         m.z = pe.Var()
-        m.c = pe.Constraint(expr=m.z - m.x*m.y == 0)
+        m.c = pe.Constraint(expr=m.z - m.x * m.y == 0)
 
         rel = coramin.relaxations.relax(m, use_alpha_bb=False)
 
@@ -37,19 +37,21 @@ class TestAutoRelax(unittest.TestCase):
 
         self.assertTrue(hasattr(rel, 'relaxations'))
         self.assertTrue(hasattr(rel.relaxations, 'rel0'))
-        self.assertTrue(isinstance(rel.relaxations.rel0, coramin.relaxations.PWMcCormickRelaxation))
+        self.assertTrue(
+            isinstance(rel.relaxations.rel0, coramin.relaxations.PWMcCormickRelaxation)
+        )
         self.assertIn(rel.x, ComponentSet(rel.relaxations.rel0.get_rhs_vars()))
         self.assertIn(rel.y, ComponentSet(rel.relaxations.rel0.get_rhs_vars()))
         self.assertEqual(id(rel.aux_vars[1]), id(rel.relaxations.rel0.get_aux_var()))
 
     def test_product2(self):
         m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(-1,1))
-        m.y = pe.Var(bounds=(-1,1))
+        m.x = pe.Var(bounds=(-1, 1))
+        m.y = pe.Var(bounds=(-1, 1))
         m.z = pe.Var()
         m.v = pe.Var()
-        m.c1 = pe.Constraint(expr=m.z - m.x*m.y == 0)
-        m.c2 = pe.Constraint(expr=m.v - 3*m.x*m.y == 0)
+        m.c1 = pe.Constraint(expr=m.z - m.x * m.y == 0)
+        m.c2 = pe.Constraint(expr=m.v - 3 * m.x * m.y == 0)
 
         rel = coramin.relaxations.relax(m, use_alpha_bb=False)
 
@@ -76,17 +78,19 @@ class TestAutoRelax(unittest.TestCase):
 
         self.assertTrue(hasattr(rel, 'relaxations'))
         self.assertTrue(hasattr(rel.relaxations, 'rel0'))
-        self.assertTrue(isinstance(rel.relaxations.rel0, coramin.relaxations.PWMcCormickRelaxation))
+        self.assertTrue(
+            isinstance(rel.relaxations.rel0, coramin.relaxations.PWMcCormickRelaxation)
+        )
         self.assertIn(rel.x, ComponentSet(rel.relaxations.rel0.get_rhs_vars()))
         self.assertIn(rel.y, ComponentSet(rel.relaxations.rel0.get_rhs_vars()))
         self.assertEqual(id(rel.aux_vars[1]), id(rel.relaxations.rel0.get_aux_var()))
 
     def test_product3(self):
         m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(-1,1))
-        m.y = pe.Var(bounds=(-1,1))
+        m.x = pe.Var(bounds=(-1, 1))
+        m.y = pe.Var(bounds=(-1, 1))
         m.z = pe.Var()
-        m.c = pe.Constraint(expr=m.z - m.x*m.y*3 == 0)
+        m.c = pe.Constraint(expr=m.z - m.x * m.y * 3 == 0)
 
         rel = coramin.relaxations.relax(m, use_alpha_bb=False)
 
@@ -105,7 +109,9 @@ class TestAutoRelax(unittest.TestCase):
 
         self.assertTrue(hasattr(rel, 'relaxations'))
         self.assertTrue(hasattr(rel.relaxations, 'rel0'))
-        self.assertTrue(isinstance(rel.relaxations.rel0, coramin.relaxations.PWMcCormickRelaxation))
+        self.assertTrue(
+            isinstance(rel.relaxations.rel0, coramin.relaxations.PWMcCormickRelaxation)
+        )
         self.assertIn(rel.x, ComponentSet(rel.relaxations.rel0.get_rhs_vars()))
         self.assertIn(rel.y, ComponentSet(rel.relaxations.rel0.get_rhs_vars()))
         self.assertEqual(id(rel.aux_vars[1]), id(rel.relaxations.rel0.get_aux_var()))
@@ -114,9 +120,9 @@ class TestAutoRelax(unittest.TestCase):
 
     def test_product4(self):
         m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(-1,1))
+        m.x = pe.Var(bounds=(-1, 1))
         m.z = pe.Var()
-        m.c = pe.Constraint(expr=m.z - m.x*m.x == 0)
+        m.c = pe.Constraint(expr=m.z - m.x * m.x == 0)
 
         rel = coramin.relaxations.relax(m, use_alpha_bb=False)
 
@@ -135,7 +141,11 @@ class TestAutoRelax(unittest.TestCase):
 
         self.assertTrue(hasattr(rel, 'relaxations'))
         self.assertTrue(hasattr(rel.relaxations, 'rel0'))
-        self.assertTrue(isinstance(rel.relaxations.rel0, coramin.relaxations.PWXSquaredRelaxationData))
+        self.assertTrue(
+            isinstance(
+                rel.relaxations.rel0, coramin.relaxations.PWXSquaredRelaxationData
+            )
+        )
         self.assertIn(rel.x, ComponentSet(rel.relaxations.rel0.get_rhs_vars()))
         self.assertEqual(len(rel.relaxations.rel0.get_rhs_vars()), 1)
         self.assertEqual(id(rel.aux_vars[1]), id(rel.relaxations.rel0.get_aux_var()))
@@ -144,12 +154,12 @@ class TestAutoRelax(unittest.TestCase):
 
     def test_quadratic(self):
         m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(-1,1))
+        m.x = pe.Var(bounds=(-1, 1))
         m.y = pe.Var()
         m.z = pe.Var()
         m.w = pe.Var()
         m.c = pe.Constraint(expr=m.x**2 + m.y + m.z == 0)
-        m.c2 = pe.Constraint(expr=m.w - 3*m.x**2 == 0)
+        m.c2 = pe.Constraint(expr=m.w - 3 * m.x**2 == 0)
 
         rel = coramin.relaxations.relax(m, use_alpha_bb=False)
 
@@ -177,19 +187,21 @@ class TestAutoRelax(unittest.TestCase):
 
         self.assertTrue(hasattr(rel, 'relaxations'))
         self.assertTrue(hasattr(rel.relaxations, 'rel0'))
-        self.assertTrue(isinstance(rel.relaxations.rel0, coramin.relaxations.PWXSquaredRelaxation))
+        self.assertTrue(
+            isinstance(rel.relaxations.rel0, coramin.relaxations.PWXSquaredRelaxation)
+        )
         self.assertIn(rel.x, ComponentSet(rel.relaxations.rel0.get_rhs_vars()))
         self.assertEqual(id(rel.aux_vars[1]), id(rel.relaxations.rel0.get_aux_var()))
         self.assertFalse(hasattr(rel.relaxations, 'rel1'))
 
     def test_cubic_convex(self):
         m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(1,2))
+        m.x = pe.Var(bounds=(1, 2))
         m.y = pe.Var()
         m.z = pe.Var()
         m.w = pe.Var()
         m.c = pe.Constraint(expr=m.x**3 + m.y + m.z == 0)
-        m.c2 = pe.Constraint(expr=m.w - 3*m.x**3 == 0)
+        m.c2 = pe.Constraint(expr=m.w - 3 * m.x**3 == 0)
 
         rel = coramin.relaxations.relax(m, use_alpha_bb=False)
 
@@ -217,7 +229,9 @@ class TestAutoRelax(unittest.TestCase):
 
         self.assertTrue(hasattr(rel, 'relaxations'))
         self.assertTrue(hasattr(rel.relaxations, 'rel0'))
-        self.assertTrue(isinstance(rel.relaxations.rel0, coramin.relaxations.PWUnivariateRelaxation))
+        self.assertTrue(
+            isinstance(rel.relaxations.rel0, coramin.relaxations.PWUnivariateRelaxation)
+        )
         self.assertIn(rel.x, ComponentSet(rel.relaxations.rel0.get_rhs_vars()))
         self.assertEqual(id(rel.aux_vars[1]), id(rel.relaxations.rel0.get_aux_var()))
         self.assertTrue(rel.relaxations.rel0.is_rhs_convex())
@@ -226,12 +240,12 @@ class TestAutoRelax(unittest.TestCase):
 
     def test_cubic_concave(self):
         m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(-2,-1))
+        m.x = pe.Var(bounds=(-2, -1))
         m.y = pe.Var()
         m.z = pe.Var()
         m.w = pe.Var()
         m.c = pe.Constraint(expr=m.x**3 + m.y + m.z == 0)
-        m.c2 = pe.Constraint(expr=m.w - 3*m.x**3 == 0)
+        m.c2 = pe.Constraint(expr=m.w - 3 * m.x**3 == 0)
 
         rel = coramin.relaxations.relax(m, use_alpha_bb=False)
 
@@ -259,7 +273,9 @@ class TestAutoRelax(unittest.TestCase):
 
         self.assertTrue(hasattr(rel, 'relaxations'))
         self.assertTrue(hasattr(rel.relaxations, 'rel0'))
-        self.assertTrue(isinstance(rel.relaxations.rel0, coramin.relaxations.PWUnivariateRelaxation))
+        self.assertTrue(
+            isinstance(rel.relaxations.rel0, coramin.relaxations.PWUnivariateRelaxation)
+        )
         self.assertIn(rel.x, ComponentSet(rel.relaxations.rel0.get_rhs_vars()))
         self.assertEqual(id(rel.aux_vars[1]), id(rel.relaxations.rel0.get_aux_var()))
         self.assertFalse(rel.relaxations.rel0.is_rhs_convex())
@@ -268,12 +284,12 @@ class TestAutoRelax(unittest.TestCase):
 
     def test_cubic(self):
         m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(-1,1))
+        m.x = pe.Var(bounds=(-1, 1))
         m.y = pe.Var()
         m.z = pe.Var()
         m.w = pe.Var()
         m.c = pe.Constraint(expr=m.x**3 + m.y + m.z == 0)
-        m.c2 = pe.Constraint(expr=m.w - 3*m.x**3 == 0)
+        m.c2 = pe.Constraint(expr=m.w - 3 * m.x**3 == 0)
 
         rel = coramin.relaxations.relax(m, use_alpha_bb=False)
 
@@ -312,25 +328,31 @@ class TestAutoRelax(unittest.TestCase):
 
         self.assertTrue(hasattr(rel, 'relaxations'))
         self.assertTrue(hasattr(rel.relaxations, 'rel0'))
-        self.assertTrue(isinstance(rel.relaxations.rel0, coramin.relaxations.PWXSquaredRelaxation))
+        self.assertTrue(
+            isinstance(rel.relaxations.rel0, coramin.relaxations.PWXSquaredRelaxation)
+        )
         self.assertIn(rel.x, ComponentSet(rel.relaxations.rel0.get_rhs_vars()))
         self.assertEqual(id(rel.aux_vars[1]), id(rel.relaxations.rel0.get_aux_var()))
 
         self.assertTrue(hasattr(rel.relaxations, 'rel1'))
-        self.assertTrue(isinstance(rel.relaxations.rel1, coramin.relaxations.PWMcCormickRelaxation))
+        self.assertTrue(
+            isinstance(rel.relaxations.rel1, coramin.relaxations.PWMcCormickRelaxation)
+        )
         self.assertIn(rel.x, ComponentSet(rel.relaxations.rel1.get_rhs_vars()))
-        self.assertIn(rel.aux_vars[1], ComponentSet(rel.relaxations.rel1.get_rhs_vars()))
+        self.assertIn(
+            rel.aux_vars[1], ComponentSet(rel.relaxations.rel1.get_rhs_vars())
+        )
         self.assertEqual(id(rel.aux_vars[2]), id(rel.relaxations.rel1.get_aux_var()))
 
     def test_pow_fractional1(self):
         m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(-1,1))
+        m.x = pe.Var(bounds=(-1, 1))
         m.y = pe.Var()
         m.z = pe.Var()
         m.w = pe.Var()
         m.p = pe.Param(initialize=0.5)
         m.c = pe.Constraint(expr=m.x**m.p + m.y + m.z == 0)
-        m.c2 = pe.Constraint(expr=m.w - 3*m.x**m.p == 0)
+        m.c2 = pe.Constraint(expr=m.w - 3 * m.x**m.p == 0)
 
         rel = coramin.relaxations.relax(m, use_alpha_bb=False)
 
@@ -358,7 +380,9 @@ class TestAutoRelax(unittest.TestCase):
 
         self.assertTrue(hasattr(rel, 'relaxations'))
         self.assertTrue(hasattr(rel.relaxations, 'rel0'))
-        self.assertTrue(isinstance(rel.relaxations.rel0, coramin.relaxations.PWUnivariateRelaxation))
+        self.assertTrue(
+            isinstance(rel.relaxations.rel0, coramin.relaxations.PWUnivariateRelaxation)
+        )
         self.assertIn(rel.x, ComponentSet(rel.relaxations.rel0.get_rhs_vars()))
         self.assertEqual(id(rel.aux_vars[1]), id(rel.relaxations.rel0.get_aux_var()))
         self.assertFalse(rel.relaxations.rel0.is_rhs_convex())
@@ -367,13 +391,13 @@ class TestAutoRelax(unittest.TestCase):
 
     def test_pow_fractional2(self):
         m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(-1,1))
+        m.x = pe.Var(bounds=(-1, 1))
         m.y = pe.Var()
         m.z = pe.Var()
         m.w = pe.Var()
         m.p = pe.Param(initialize=1.5)
         m.c = pe.Constraint(expr=m.x**m.p + m.y + m.z == 0)
-        m.c2 = pe.Constraint(expr=m.w - 3*m.x**m.p == 0)
+        m.c2 = pe.Constraint(expr=m.w - 3 * m.x**m.p == 0)
 
         rel = coramin.relaxations.relax(m, use_alpha_bb=False)
 
@@ -401,7 +425,9 @@ class TestAutoRelax(unittest.TestCase):
 
         self.assertTrue(hasattr(rel, 'relaxations'))
         self.assertTrue(hasattr(rel.relaxations, 'rel0'))
-        self.assertTrue(isinstance(rel.relaxations.rel0, coramin.relaxations.PWUnivariateRelaxation))
+        self.assertTrue(
+            isinstance(rel.relaxations.rel0, coramin.relaxations.PWUnivariateRelaxation)
+        )
         self.assertIn(rel.x, ComponentSet(rel.relaxations.rel0.get_rhs_vars()))
         self.assertEqual(id(rel.aux_vars[1]), id(rel.relaxations.rel0.get_aux_var()))
         self.assertTrue(rel.relaxations.rel0.is_rhs_convex())
@@ -410,13 +436,13 @@ class TestAutoRelax(unittest.TestCase):
 
     def test_pow_neg_even1(self):
         m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(1,2))
+        m.x = pe.Var(bounds=(1, 2))
         m.y = pe.Var()
         m.z = pe.Var()
         m.w = pe.Var()
         m.p = pe.Param(initialize=-2)
         m.c = pe.Constraint(expr=m.x**m.p + m.y + m.z == 0)
-        m.c2 = pe.Constraint(expr=m.w - 3*m.x**m.p == 0)
+        m.c2 = pe.Constraint(expr=m.w - 3 * m.x**m.p == 0)
 
         rel = coramin.relaxations.relax(m, use_alpha_bb=False)
 
@@ -444,7 +470,9 @@ class TestAutoRelax(unittest.TestCase):
 
         self.assertTrue(hasattr(rel, 'relaxations'))
         self.assertTrue(hasattr(rel.relaxations, 'rel0'))
-        self.assertTrue(isinstance(rel.relaxations.rel0, coramin.relaxations.PWUnivariateRelaxation))
+        self.assertTrue(
+            isinstance(rel.relaxations.rel0, coramin.relaxations.PWUnivariateRelaxation)
+        )
         self.assertIn(rel.x, ComponentSet(rel.relaxations.rel0.get_rhs_vars()))
         self.assertEqual(id(rel.aux_vars[1]), id(rel.relaxations.rel0.get_aux_var()))
         self.assertTrue(rel.relaxations.rel0.is_rhs_convex())
@@ -453,13 +481,13 @@ class TestAutoRelax(unittest.TestCase):
 
     def test_pow_neg_even2(self):
         m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(-2,-1))
+        m.x = pe.Var(bounds=(-2, -1))
         m.y = pe.Var()
         m.z = pe.Var()
         m.w = pe.Var()
         m.p = pe.Param(initialize=-2)
         m.c = pe.Constraint(expr=m.x**m.p + m.y + m.z == 0)
-        m.c2 = pe.Constraint(expr=m.w - 3*m.x**m.p == 0)
+        m.c2 = pe.Constraint(expr=m.w - 3 * m.x**m.p == 0)
 
         rel = coramin.relaxations.relax(m, use_alpha_bb=False)
 
@@ -487,7 +515,9 @@ class TestAutoRelax(unittest.TestCase):
 
         self.assertTrue(hasattr(rel, 'relaxations'))
         self.assertTrue(hasattr(rel.relaxations, 'rel0'))
-        self.assertTrue(isinstance(rel.relaxations.rel0, coramin.relaxations.PWUnivariateRelaxation))
+        self.assertTrue(
+            isinstance(rel.relaxations.rel0, coramin.relaxations.PWUnivariateRelaxation)
+        )
         self.assertIn(rel.x, ComponentSet(rel.relaxations.rel0.get_rhs_vars()))
         self.assertEqual(id(rel.aux_vars[1]), id(rel.relaxations.rel0.get_aux_var()))
         self.assertTrue(rel.relaxations.rel0.is_rhs_convex())
@@ -496,13 +526,13 @@ class TestAutoRelax(unittest.TestCase):
 
     def test_pow_neg_odd1(self):
         m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(1,2))
+        m.x = pe.Var(bounds=(1, 2))
         m.y = pe.Var()
         m.z = pe.Var()
         m.w = pe.Var()
         m.p = pe.Param(initialize=-3)
         m.c = pe.Constraint(expr=m.x**m.p + m.y + m.z == 0)
-        m.c2 = pe.Constraint(expr=m.w - 3*m.x**m.p == 0)
+        m.c2 = pe.Constraint(expr=m.w - 3 * m.x**m.p == 0)
 
         rel = coramin.relaxations.relax(m, use_alpha_bb=False)
 
@@ -530,7 +560,9 @@ class TestAutoRelax(unittest.TestCase):
 
         self.assertTrue(hasattr(rel, 'relaxations'))
         self.assertTrue(hasattr(rel.relaxations, 'rel0'))
-        self.assertTrue(isinstance(rel.relaxations.rel0, coramin.relaxations.PWUnivariateRelaxation))
+        self.assertTrue(
+            isinstance(rel.relaxations.rel0, coramin.relaxations.PWUnivariateRelaxation)
+        )
         self.assertIn(rel.x, ComponentSet(rel.relaxations.rel0.get_rhs_vars()))
         self.assertEqual(id(rel.aux_vars[1]), id(rel.relaxations.rel0.get_aux_var()))
         self.assertTrue(rel.relaxations.rel0.is_rhs_convex())
@@ -539,13 +571,13 @@ class TestAutoRelax(unittest.TestCase):
 
     def test_pow_neg_odd2(self):
         m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(-2,-1))
+        m.x = pe.Var(bounds=(-2, -1))
         m.y = pe.Var()
         m.z = pe.Var()
         m.w = pe.Var()
         m.p = pe.Param(initialize=-3)
         m.c = pe.Constraint(expr=m.x**m.p + m.y + m.z == 0)
-        m.c2 = pe.Constraint(expr=m.w - 3*m.x**m.p == 0)
+        m.c2 = pe.Constraint(expr=m.w - 3 * m.x**m.p == 0)
 
         rel = coramin.relaxations.relax(m, use_alpha_bb=False)
 
@@ -573,7 +605,9 @@ class TestAutoRelax(unittest.TestCase):
 
         self.assertTrue(hasattr(rel, 'relaxations'))
         self.assertTrue(hasattr(rel.relaxations, 'rel0'))
-        self.assertTrue(isinstance(rel.relaxations.rel0, coramin.relaxations.PWUnivariateRelaxation))
+        self.assertTrue(
+            isinstance(rel.relaxations.rel0, coramin.relaxations.PWUnivariateRelaxation)
+        )
         self.assertIn(rel.x, ComponentSet(rel.relaxations.rel0.get_rhs_vars()))
         self.assertEqual(id(rel.aux_vars[1]), id(rel.relaxations.rel0.get_aux_var()))
         self.assertFalse(rel.relaxations.rel0.is_rhs_convex())
@@ -582,13 +616,13 @@ class TestAutoRelax(unittest.TestCase):
 
     def test_pow_neg(self):
         m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(-1,1))
+        m.x = pe.Var(bounds=(-1, 1))
         m.y = pe.Var()
         m.z = pe.Var()
         m.w = pe.Var()
         m.p = pe.Param(initialize=-2)
         m.c = pe.Constraint(expr=m.x**m.p + m.y + m.z == 0)
-        m.c2 = pe.Constraint(expr=m.w - 3*m.x**m.p == 0)
+        m.c2 = pe.Constraint(expr=m.w - 3 * m.x**m.p == 0)
 
         rel = coramin.relaxations.relax(m, use_alpha_bb=False)
 
@@ -629,16 +663,24 @@ class TestAutoRelax(unittest.TestCase):
 
         self.assertTrue(hasattr(rel, 'relaxations'))
         self.assertTrue(hasattr(rel.relaxations, 'rel0'))
-        self.assertTrue(isinstance(rel.relaxations.rel0, coramin.relaxations.PWXSquaredRelaxation))
+        self.assertTrue(
+            isinstance(rel.relaxations.rel0, coramin.relaxations.PWXSquaredRelaxation)
+        )
         self.assertIn(rel.x, ComponentSet(rel.relaxations.rel0.get_rhs_vars()))
         self.assertEqual(id(rel.aux_vars[1]), id(rel.relaxations.rel0.get_aux_var()))
         self.assertTrue(rel.relaxations.rel0.is_rhs_convex())
         self.assertFalse(rel.relaxations.rel0.is_rhs_concave())
 
         self.assertTrue(hasattr(rel.relaxations, 'rel1'))
-        self.assertTrue(isinstance(rel.relaxations.rel1, coramin.relaxations.PWMcCormickRelaxation))
-        self.assertIn(rel.aux_vars[1], ComponentSet(rel.relaxations.rel1.get_rhs_vars()))
-        self.assertIn(rel.aux_vars[2], ComponentSet(rel.relaxations.rel1.get_rhs_vars()))
+        self.assertTrue(
+            isinstance(rel.relaxations.rel1, coramin.relaxations.PWMcCormickRelaxation)
+        )
+        self.assertIn(
+            rel.aux_vars[1], ComponentSet(rel.relaxations.rel1.get_rhs_vars())
+        )
+        self.assertIn(
+            rel.aux_vars[2], ComponentSet(rel.relaxations.rel1.get_rhs_vars())
+        )
         self.assertEqual(id(rel.aux_vars[3]), id(rel.relaxations.rel1.get_aux_var()))
 
         self.assertFalse(hasattr(rel.relaxations, 'rel2'))
@@ -647,16 +689,29 @@ class TestAutoRelax(unittest.TestCase):
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.z = pe.Var()
-        m.c = pe.Constraint(expr=m.z + pe.sqrt(2*pe.log(m.x)) <= 1)
+        m.c = pe.Constraint(expr=m.z + pe.sqrt(2 * pe.log(m.x)) <= 1)
         coramin.relaxations.relax(m, in_place=True, use_fbbt=False, use_alpha_bb=False)
-        rels = list(coramin.relaxations.relaxation_data_objects(m, descend_into=True, active=True, sort=True))
+        rels = list(
+            coramin.relaxations.relaxation_data_objects(
+                m, descend_into=True, active=True, sort=True
+            )
+        )
         self.assertEqual(len(rels), 2)
         rel0 = m.relaxations.rel0  # log
         rel1 = m.relaxations.rel1  # sqrt
         self.assertEqual(sympyify_expression(rel0.get_rhs_expr() - pe.log(m.x))[1], 0)
-        self.assertEqual(sympyify_expression(rel1.get_rhs_expr() - m.aux_vars[3]**0.5)[1], 0)
-        self.assertEqual(sympyify_expression(m.aux_cons[1].body - m.aux_vars[3] + 2 * m.aux_vars[1])[1], 0)
-        self.assertEqual(sympyify_expression(m.aux_cons[2].body - m.z - m.aux_vars[2])[1], 0)
+        self.assertEqual(
+            sympyify_expression(rel1.get_rhs_expr() - m.aux_vars[3] ** 0.5)[1], 0
+        )
+        self.assertEqual(
+            sympyify_expression(m.aux_cons[1].body - m.aux_vars[3] + 2 * m.aux_vars[1])[
+                1
+            ],
+            0,
+        )
+        self.assertEqual(
+            sympyify_expression(m.aux_cons[2].body - m.z - m.aux_vars[2])[1], 0
+        )
         self.assertEqual(m.aux_cons[1].lower, 0)
         self.assertEqual(m.aux_cons[2].lower, None)
         self.assertEqual(m.aux_cons[2].upper, 1)
@@ -667,12 +722,12 @@ class TestAutoRelax(unittest.TestCase):
 
     def test_exp(self):
         m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(-1,1))
-        m.y = pe.Var(bounds=(-1,1))
+        m.x = pe.Var(bounds=(-1, 1))
+        m.y = pe.Var(bounds=(-1, 1))
         m.z = pe.Var()
         m.w = pe.Var()
-        m.c = pe.Constraint(expr=pe.exp(m.x*m.y) + m.z == 0)
-        m.c2 = pe.Constraint(expr=m.w - 3*pe.exp(m.x*m.y) == 0)
+        m.c = pe.Constraint(expr=pe.exp(m.x * m.y) + m.z == 0)
+        m.c2 = pe.Constraint(expr=m.w - 3 * pe.exp(m.x * m.y) == 0)
 
         rel = coramin.relaxations.relax(m, use_alpha_bb=False)
 
@@ -703,13 +758,17 @@ class TestAutoRelax(unittest.TestCase):
 
         self.assertTrue(hasattr(rel, 'relaxations'))
         self.assertTrue(hasattr(rel.relaxations, 'rel0'))
-        self.assertTrue(isinstance(rel.relaxations.rel0, coramin.relaxations.PWMcCormickRelaxation))
+        self.assertTrue(
+            isinstance(rel.relaxations.rel0, coramin.relaxations.PWMcCormickRelaxation)
+        )
         self.assertIn(rel.x, ComponentSet(rel.relaxations.rel0.get_rhs_vars()))
         self.assertIn(rel.y, ComponentSet(rel.relaxations.rel0.get_rhs_vars()))
         self.assertEqual(id(rel.aux_vars[1]), id(rel.relaxations.rel0.get_aux_var()))
 
         self.assertTrue(hasattr(rel.relaxations, 'rel1'))
-        self.assertTrue(isinstance(rel.relaxations.rel1, coramin.relaxations.PWUnivariateRelaxation))
+        self.assertTrue(
+            isinstance(rel.relaxations.rel1, coramin.relaxations.PWUnivariateRelaxation)
+        )
         self.assertEqual(id(rel.aux_vars[1]), id(rel.relaxations.rel1._x))
         self.assertEqual(id(rel.aux_vars[2]), id(rel.relaxations.rel1.get_aux_var()))
         self.assertTrue(rel.relaxations.rel1.is_rhs_convex())
@@ -719,12 +778,12 @@ class TestAutoRelax(unittest.TestCase):
 
     def test_log(self):
         m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(1,2))
-        m.y = pe.Var(bounds=(1,2))
+        m.x = pe.Var(bounds=(1, 2))
+        m.y = pe.Var(bounds=(1, 2))
         m.z = pe.Var()
         m.w = pe.Var()
-        m.c = pe.Constraint(expr=pe.log(m.x*m.y) + m.z == 0)
-        m.c2 = pe.Constraint(expr=m.w - 3*pe.log(m.x*m.y) == 0)
+        m.c = pe.Constraint(expr=pe.log(m.x * m.y) + m.z == 0)
+        m.c2 = pe.Constraint(expr=m.w - 3 * pe.log(m.x * m.y) == 0)
 
         rel = coramin.relaxations.relax(m, use_alpha_bb=False)
 
@@ -755,14 +814,20 @@ class TestAutoRelax(unittest.TestCase):
 
         self.assertTrue(hasattr(rel, 'relaxations'))
         self.assertTrue(hasattr(rel.relaxations, 'rel0'))
-        self.assertTrue(isinstance(rel.relaxations.rel0, coramin.relaxations.PWMcCormickRelaxation))
+        self.assertTrue(
+            isinstance(rel.relaxations.rel0, coramin.relaxations.PWMcCormickRelaxation)
+        )
         self.assertIn(rel.x, ComponentSet(rel.relaxations.rel0.get_rhs_vars()))
         self.assertIn(rel.y, ComponentSet(rel.relaxations.rel0.get_rhs_vars()))
         self.assertEqual(id(rel.aux_vars[1]), id(rel.relaxations.rel0.get_aux_var()))
 
         self.assertTrue(hasattr(rel.relaxations, 'rel1'))
-        self.assertTrue(isinstance(rel.relaxations.rel1, coramin.relaxations.PWUnivariateRelaxation))
-        self.assertIn(rel.aux_vars[1], ComponentSet(rel.relaxations.rel1.get_rhs_vars()))
+        self.assertTrue(
+            isinstance(rel.relaxations.rel1, coramin.relaxations.PWUnivariateRelaxation)
+        )
+        self.assertIn(
+            rel.aux_vars[1], ComponentSet(rel.relaxations.rel1.get_rhs_vars())
+        )
         self.assertEqual(id(rel.aux_vars[2]), id(rel.relaxations.rel1.get_aux_var()))
         self.assertFalse(rel.relaxations.rel1.is_rhs_convex())
         self.assertTrue(rel.relaxations.rel1.is_rhs_concave())
@@ -774,12 +839,18 @@ class TestAutoRelax(unittest.TestCase):
         m.x = pe.Var(bounds=(-1, 1))
         m.y = pe.Var(bounds=(1, 2))
         m.z = pe.Var()
-        m.c = pe.Constraint(expr=m.z - m.x/m.y == 0)
+        m.c = pe.Constraint(expr=m.z - m.x / m.y == 0)
         rel = coramin.relaxations.relax(m, in_place=True, use_alpha_bb=False)
         self.assertIs(m, rel)
         relaxations = list(coramin.relaxations.relaxation_data_objects(m))
-        constraints = list(coramin.relaxations.nonrelaxation_component_data_objects(m, ctype=pe.Constraint))
-        vars = list(coramin.relaxations.nonrelaxation_component_data_objects(m, ctype=pe.Var))
+        constraints = list(
+            coramin.relaxations.nonrelaxation_component_data_objects(
+                m, ctype=pe.Constraint
+            )
+        )
+        vars = list(
+            coramin.relaxations.nonrelaxation_component_data_objects(m, ctype=pe.Var)
+        )
         self.assertEqual(len(relaxations), 1)
         self.assertEqual(len(constraints), 1)
         self.assertEqual(len(vars), 4)
@@ -798,10 +869,10 @@ class TestAutoRelax(unittest.TestCase):
 
     def test_div2(self):
         m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(-1,1))
-        m.y = pe.Var(bounds=(-1,1))
+        m.x = pe.Var(bounds=(-1, 1))
+        m.y = pe.Var(bounds=(-1, 1))
         m.z = pe.Var()
-        m.c = pe.Constraint(expr=m.z - m.x*m.y/2 == 0)
+        m.c = pe.Constraint(expr=m.z - m.x * m.y / 2 == 0)
 
         rel = coramin.relaxations.relax(m, use_alpha_bb=False)
 
@@ -820,7 +891,9 @@ class TestAutoRelax(unittest.TestCase):
 
         self.assertTrue(hasattr(rel, 'relaxations'))
         self.assertTrue(hasattr(rel.relaxations, 'rel0'))
-        self.assertTrue(isinstance(rel.relaxations.rel0, coramin.relaxations.PWMcCormickRelaxation))
+        self.assertTrue(
+            isinstance(rel.relaxations.rel0, coramin.relaxations.PWMcCormickRelaxation)
+        )
         self.assertIn(rel.x, ComponentSet(rel.relaxations.rel0.get_rhs_vars()))
         self.assertIn(rel.y, ComponentSet(rel.relaxations.rel0.get_rhs_vars()))
         self.assertEqual(id(rel.aux_vars[1]), id(rel.relaxations.rel0.get_aux_var()))
@@ -833,13 +906,19 @@ class TestAutoRelax(unittest.TestCase):
         m.y = pe.Var(bounds=(1, 2))
         m.z = pe.Var()
         m.w = pe.Var()
-        m.c = pe.Constraint(expr=m.z - m.x/m.y == 0)
-        m.c2 = pe.Constraint(expr=m.w - m.x/m.y == 0)
+        m.c = pe.Constraint(expr=m.z - m.x / m.y == 0)
+        m.c2 = pe.Constraint(expr=m.w - m.x / m.y == 0)
         rel = coramin.relaxations.relax(m, in_place=True, use_alpha_bb=False)
         self.assertIs(m, rel)
         relaxations = list(coramin.relaxations.relaxation_data_objects(m))
-        constraints = list(coramin.relaxations.nonrelaxation_component_data_objects(m, ctype=pe.Constraint))
-        vars = list(coramin.relaxations.nonrelaxation_component_data_objects(m, ctype=pe.Var))
+        constraints = list(
+            coramin.relaxations.nonrelaxation_component_data_objects(
+                m, ctype=pe.Constraint
+            )
+        )
+        vars = list(
+            coramin.relaxations.nonrelaxation_component_data_objects(m, ctype=pe.Var)
+        )
         self.assertEqual(len(relaxations), 1)
         self.assertEqual(len(constraints), 2)
         self.assertEqual(len(vars), 5)
@@ -863,7 +942,7 @@ class TestAutoRelax(unittest.TestCase):
 
 
 def _log_of_linear(x):
-    return pe.log(2*x + 1)
+    return pe.log(2 * x + 1)
 
 
 def _log_of_polynomial(x):
@@ -903,17 +982,19 @@ def _pow_neg_3(x):
 
 
 def _pow_neg_point5(x):
-    return x**(-0.5)
+    return x ** (-0.5)
 
 
 def _pow_neg_1point2(x):
-    return x**(-1.2)
+    return x ** (-1.2)
 
 
 class TestUnivariate(unittest.TestCase):
     def helper(self, func, bounds_list):
         for relaxation_side in [
-            RelaxationSide.UNDER, RelaxationSide.OVER, RelaxationSide.BOTH
+            RelaxationSide.UNDER,
+            RelaxationSide.OVER,
+            RelaxationSide.BOTH,
         ]:
             for simplification, use_alpha_bb, eigenvalue_bounder in [
                 (True, True, EigenValueBounder.Gershgorin),
@@ -950,18 +1031,24 @@ class TestUnivariate(unittest.TestCase):
                         m.x.fix(_x)
                         m.aux.fix(pe.value(expr))
                         res = opt.solve(m)
-                        self.assertEqual(res.termination_condition,
-                                         appsi.base.TerminationCondition.optimal)
+                        self.assertEqual(
+                            res.termination_condition,
+                            appsi.base.TerminationCondition.optimal,
+                        )
                         if relaxation_side == coramin.utils.RelaxationSide.UNDER:
                             m.aux.fix(max(pe.value(func(lb)), pe.value(func(ub))) + 1)
                             res = opt.solve(m)
-                            self.assertEqual(res.termination_condition,
-                                             appsi.base.TerminationCondition.optimal)
+                            self.assertEqual(
+                                res.termination_condition,
+                                appsi.base.TerminationCondition.optimal,
+                            )
                         elif relaxation_side == coramin.utils.RelaxationSide.OVER:
                             m.aux.fix(min(pe.value(func(lb)), pe.value(func(ub))) - 1)
                             res = opt.solve(m)
-                            self.assertEqual(res.termination_condition,
-                                             appsi.base.TerminationCondition.optimal)
+                            self.assertEqual(
+                                res.termination_condition,
+                                appsi.base.TerminationCondition.optimal,
+                            )
 
                     # ensure the relaxation is exact at the bounds of x
                     m.aux.unfix()
@@ -969,17 +1056,27 @@ class TestUnivariate(unittest.TestCase):
                     m.obj = pe.Objective(expr=m.aux)
                     for _x in [lb, ub]:
                         m.x.fix(_x)
-                        if relaxation_side in {coramin.utils.RelaxationSide.BOTH, coramin.utils.RelaxationSide.UNDER}:
+                        if relaxation_side in {
+                            coramin.utils.RelaxationSide.BOTH,
+                            coramin.utils.RelaxationSide.UNDER,
+                        }:
                             m.obj.sense = pe.minimize
                             res = opt.solve(m)
-                            self.assertEqual(res.termination_condition,
-                                             appsi.base.TerminationCondition.optimal)
+                            self.assertEqual(
+                                res.termination_condition,
+                                appsi.base.TerminationCondition.optimal,
+                            )
                             self.assertAlmostEqual(m.aux.value, pe.value(func(_x)))
-                        if relaxation_side in {coramin.utils.RelaxationSide.BOTH, coramin.utils.RelaxationSide.OVER}:
+                        if relaxation_side in {
+                            coramin.utils.RelaxationSide.BOTH,
+                            coramin.utils.RelaxationSide.OVER,
+                        }:
                             m.obj.sense = pe.maximize
                             res = opt.solve(m)
-                            self.assertEqual(res.termination_condition,
-                                             appsi.base.TerminationCondition.optimal)
+                            self.assertEqual(
+                                res.termination_condition,
+                                appsi.base.TerminationCondition.optimal,
+                            )
                             self.assertAlmostEqual(m.aux.value, pe.value(func(_x)), 5)
 
     def test_exp(self):
@@ -1066,6 +1163,7 @@ class TestRepeatedTerms(unittest.TestCase):
     def test_quadratic(self):
         def func(x):
             return x**2
+
         self.helper(func=func, lb=-1, ub=2)
 
     def test_arctan(self):
@@ -1085,13 +1183,20 @@ class TestDegree0(unittest.TestCase):
         m.aux = pe.Var()
         m.p = pe.Param(mutable=True, initialize=param_val)
         m.c = pe.Constraint(expr=m.aux == func(m.p) * m.x**2)
-        self.assertIn(m.p, ComponentSet(identify_components(m.c.body, [_ParamData, ScalarParam])))
+        self.assertIn(
+            m.p, ComponentSet(identify_components(m.c.body, [_ParamData, ScalarParam]))
+        )
         coramin.relaxations.relax(m, in_place=True, use_alpha_bb=False)
         rels = list(coramin.relaxations.relaxation_data_objects(m))
         self.assertEqual(len(rels), 1)
         r = rels[0]
         self.assertIsInstance(r, coramin.relaxations.PWXSquaredRelaxationData)
-        self.assertIn(m.p, ComponentSet(identify_components(m.aux_cons[1].body, [_ParamData, ScalarParam])))
+        self.assertIn(
+            m.p,
+            ComponentSet(
+                identify_components(m.aux_cons[1].body, [_ParamData, ScalarParam])
+            ),
+        )
 
     def test_exp(self):
         self.helper(func=pe.exp, param_val=1)

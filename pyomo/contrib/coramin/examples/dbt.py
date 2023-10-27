@@ -25,14 +25,22 @@ relaxation, scaled_md2 = create_polar_acopf_relaxation(md)
 
 # perform decomposition
 print('Decomposing relaxation')
-relaxation, component_map, termination_reason = coramin.domain_reduction.decompose_model(relaxation, max_leaf_nnz=1000)
+(
+    relaxation,
+    component_map,
+    termination_reason,
+) = coramin.domain_reduction.decompose_model(relaxation, max_leaf_nnz=1000)
 
 # Add more outer approximation points for the second order cone constraints
 print('Adding extra outer-approximation points for SOC constraints')
-for b in coramin.relaxations.relaxation_data_objects(relaxation, descend_into=True, active=True, sort=True):
+for b in coramin.relaxations.relaxation_data_objects(
+    relaxation, descend_into=True, active=True, sort=True
+):
     if isinstance(b, coramin.relaxations.MultivariateRelaxationData):
         b.clear_oa_points()
-        for bnd_combination in itertools.product(*[itertools.product(['L', 'U'], [v]) for v in b.get_rhs_vars()]):
+        for bnd_combination in itertools.product(
+            *[itertools.product(['L', 'U'], [v]) for v in b.get_rhs_vars()]
+        ):
             bnd_dict = pe.ComponentMap()
             for lower_or_upper, v in bnd_combination:
                 if lower_or_upper == 'L':
@@ -49,7 +57,9 @@ for b in coramin.relaxations.relaxation_data_objects(relaxation, descend_into=Tr
             b.add_oa_point(var_values=bnd_dict)
 
 # rebuild the relaxations
-for b in coramin.relaxations.relaxation_data_objects(relaxation, descend_into=True, active=True, sort=True):
+for b in coramin.relaxations.relaxation_data_objects(
+    relaxation, descend_into=True, active=True, sort=True
+):
     b.rebuild()
 
 # create solvers
@@ -69,22 +79,38 @@ res = rel_opt.solve(save_results=False)
 assert res.solver.termination_condition == pe.TerminationCondition.optimal
 lb = pe.value(coramin.utils.get_objective(relaxation))
 gap = (ub - lb) / ub * 100
-print('{ub:<20}{lb:<20}{gap:<20}{time:<20}'.format(ub='UB', lb='LB', gap='% gap', time='Time'))
+print(
+    '{ub:<20}{lb:<20}{gap:<20}{time:<20}'.format(
+        ub='UB', lb='LB', gap='% gap', time='Time'
+    )
+)
 t0 = time.time()
-print('{ub:<20.2f}{lb:<20.2f}{gap:<20.2f}{time:<20.2f}'.format(ub=ub, lb=lb, gap=gap, time=time.time() - t0))
+print(
+    '{ub:<20.2f}{lb:<20.2f}{gap:<20.2f}{time:<20.2f}'.format(
+        ub=ub, lb=lb, gap=gap, time=time.time() - t0
+    )
+)
 
 for _iter in range(3):
-    coramin.domain_reduction.perform_dbt(relaxation=relaxation,
-                                         solver=rel_opt,
-                                         obbt_method=coramin.domain_reduction.OBBTMethod.DECOMPOSED,
-                                         filter_method=coramin.domain_reduction.FilterMethod.AGGRESSIVE,
-                                         objective_bound=ub,
-                                         with_progress_bar=True)
-    for r in coramin.relaxations.relaxation_data_objects(relaxation, descend_into=True, active=True, sort=True):
+    coramin.domain_reduction.perform_dbt(
+        relaxation=relaxation,
+        solver=rel_opt,
+        obbt_method=coramin.domain_reduction.OBBTMethod.DECOMPOSED,
+        filter_method=coramin.domain_reduction.FilterMethod.AGGRESSIVE,
+        objective_bound=ub,
+        with_progress_bar=True,
+    )
+    for r in coramin.relaxations.relaxation_data_objects(
+        relaxation, descend_into=True, active=True, sort=True
+    ):
         r.rebuild()
     rel_opt.set_instance(relaxation)
     res = rel_opt.solve(save_results=False)
     assert res.solver.termination_condition == pe.TerminationCondition.optimal
     lb = pe.value(coramin.utils.get_objective(relaxation))
     gap = (ub - lb) / ub * 100
-    print('{ub:<20.2f}{lb:<20.2f}{gap:<20.2f}{time:<20.2f}'.format(ub=ub, lb=lb, gap=gap, time=time.time() - t0))
+    print(
+        '{ub:<20.2f}{lb:<20.2f}{gap:<20.2f}{time:<20.2f}'.format(
+            ub=ub, lb=lb, gap=gap, time=time.time() - t0
+        )
+    )

@@ -16,7 +16,11 @@ from pyomo.core.base.param import IndexedParam, ScalarParam, _ParamData
 from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.expr.calculus.diff_with_pyomo import reverse_sd
 from pyomo.core.expr.numeric_expr import LinearExpression, ExpressionBase
-from pyomo.core.base.constraint import IndexedConstraint, ScalarConstraint, _GeneralConstraintData
+from pyomo.core.base.constraint import (
+    IndexedConstraint,
+    ScalarConstraint,
+    _GeneralConstraintData,
+)
 from pyomo.contrib.fbbt import interval
 
 pyo = pe
@@ -28,28 +32,34 @@ Base classes for relaxations
 
 
 class _OACut(object):
-    def __init__(self,
-                 nonlin_expr,
-                 expr_vars: Sequence[_GeneralVarData],
-                 coefficients: Sequence[_ParamData],
-                 offset: _ParamData):
+    def __init__(
+        self,
+        nonlin_expr,
+        expr_vars: Sequence[_GeneralVarData],
+        coefficients: Sequence[_ParamData],
+        offset: _ParamData,
+    ):
         self.expr_vars = expr_vars
         self.nonlin_expr = nonlin_expr
         self.coefficients = coefficients
         self.offset = offset
         derivs = reverse_sd(self.nonlin_expr)
         self.derivs = [derivs[i] for i in self.expr_vars]
-        self.cut_expr = LinearExpression(constant=self.offset,
-                                         linear_coefs=self.coefficients,
-                                         linear_vars=self.expr_vars)
+        self.cut_expr = LinearExpression(
+            constant=self.offset,
+            linear_coefs=self.coefficients,
+            linear_vars=self.expr_vars,
+        )
         self.current_pt = None
 
-    def update(self,
-               var_vals: Sequence[float],
-               relaxation_side: RelaxationSide,
-               too_small: float,
-               too_large: float,
-               safety_tol: float) -> Tuple[bool, Optional[_GeneralVarData], Optional[float], Optional[str]]:
+    def update(
+        self,
+        var_vals: Sequence[float],
+        relaxation_side: RelaxationSide,
+        too_small: float,
+        too_large: float,
+        safety_tol: float,
+    ) -> Tuple[bool, Optional[_GeneralVarData], Optional[float], Optional[str]]:
         res = (True, None, None, None)
         self.current_pt = var_vals
         orig_values = [i.value for i in self.expr_vars]
@@ -68,8 +78,13 @@ class _OACut(object):
             for v, val in zip(self.expr_vars, orig_values):
                 v.set_value(val, skip_validation=True)
         if res[0]:
-            res = _check_cut(self.cut_expr, too_small=too_small, too_large=too_large, relaxation_side=relaxation_side,
-                             safety_tol=safety_tol)
+            res = _check_cut(
+                self.cut_expr,
+                too_small=too_small,
+                too_large=too_large,
+                relaxation_side=relaxation_side,
+                safety_tol=safety_tol,
+            )
         return res
 
     def __repr__(self):
@@ -82,7 +97,9 @@ class _OACut(object):
         return self.__repr__()
 
 
-def _check_cut(cut: LinearExpression, too_small, too_large, relaxation_side, safety_tol):
+def _check_cut(
+    cut: LinearExpression, too_small, too_large, relaxation_side, safety_tol
+):
     res = (True, None, None, None)
     for coef_p, v in zip(cut.linear_coefs, cut.linear_vars):
         coef = coef_p.value
@@ -91,11 +108,17 @@ def _check_cut(cut: LinearExpression, too_small, too_large, relaxation_side, saf
         elif 0 < abs(coef) <= too_small and v.has_lb() and v.has_ub():
             coef_p._value = 0
             if relaxation_side == RelaxationSide.UNDER:
-                cut.constant._value = interval.add(cut.constant.value, cut.constant.value,
-                                                   *interval.mul(v.lb, v.ub, coef, coef))[0]
+                cut.constant._value = interval.add(
+                    cut.constant.value,
+                    cut.constant.value,
+                    *interval.mul(v.lb, v.ub, coef, coef),
+                )[0]
             elif relaxation_side == RelaxationSide.OVER:
-                cut.constant._value = interval.add(cut.constant.value, cut.constant.value,
-                                                   *interval.mul(v.lb, v.ub, coef, coef))[1]
+                cut.constant._value = interval.add(
+                    cut.constant.value,
+                    cut.constant.value,
+                    *interval.mul(v.lb, v.ub, coef, coef),
+                )[1]
             else:
                 raise ValueError('relaxation_side should be either UNDER or OVER')
     if relaxation_side == RelaxationSide.UNDER:
@@ -130,9 +153,14 @@ class BaseRelaxationData(_BlockData):
         self._original_constraint: Optional[ScalarConstraint] = None
         self._nonlinear: Optional[ScalarConstraint] = None
 
-    def set_input(self, relaxation_side=RelaxationSide.BOTH,
-                  use_linear_relaxation=True, large_coef=1e5,
-                  small_coef=1e-10, safety_tol=1e-10):
+    def set_input(
+        self,
+        relaxation_side=RelaxationSide.BOTH,
+        use_linear_relaxation=True,
+        large_coef=1e5,
+        small_coef=1e-10,
+        safety_tol=1e-10,
+    ):
         self.relaxation_side = relaxation_side
         self.use_linear_relaxation = use_linear_relaxation
         self._large_coef = large_coef
@@ -195,7 +223,11 @@ class BaseRelaxationData(_BlockData):
     @use_linear_relaxation.setter
     def use_linear_relaxation(self, val: bool):
         if not val:
-            raise ValueError('Relaxations of type {0} do not support relaxations that are not linear.'.format(type(self)))
+            raise ValueError(
+                'Relaxations of type {0} do not support relaxations that are not linear.'.format(
+                    type(self)
+                )
+            )
 
     def remove_relaxation(self):
         """
@@ -209,9 +241,15 @@ class BaseRelaxationData(_BlockData):
         self._nonlinear = None
 
     def _has_a_convex_side(self):
-        if self.has_convex_underestimator() and self.relaxation_side in {RelaxationSide.UNDER, RelaxationSide.BOTH}:
+        if self.has_convex_underestimator() and self.relaxation_side in {
+            RelaxationSide.UNDER,
+            RelaxationSide.BOTH,
+        }:
             return True
-        if self.has_concave_overestimator() and self.relaxation_side in {RelaxationSide.OVER, RelaxationSide.BOTH}:
+        if self.has_concave_overestimator() and self.relaxation_side in {
+            RelaxationSide.OVER,
+            RelaxationSide.BOTH,
+        }:
             return True
         return False
 
@@ -248,11 +286,17 @@ class BaseRelaxationData(_BlockData):
         if build_nonlinear_constraint and self._original_constraint is None:
             del self._original_constraint
             if self.relaxation_side == RelaxationSide.BOTH:
-                self._original_constraint = pe.Constraint(expr=self.get_aux_var() == self.get_rhs_expr())
+                self._original_constraint = pe.Constraint(
+                    expr=self.get_aux_var() == self.get_rhs_expr()
+                )
             elif self.relaxation_side == RelaxationSide.UNDER:
-                self._original_constraint = pe.Constraint(expr=self.get_aux_var() >= self.get_rhs_expr())
+                self._original_constraint = pe.Constraint(
+                    expr=self.get_aux_var() >= self.get_rhs_expr()
+                )
             else:
-                self._original_constraint = pe.Constraint(expr=self.get_aux_var() <= self.get_rhs_expr())
+                self._original_constraint = pe.Constraint(
+                    expr=self.get_aux_var() <= self.get_rhs_expr()
+                )
         else:
             if self._has_a_convex_side():
                 if self.use_linear_relaxation:
@@ -268,10 +312,16 @@ class BaseRelaxationData(_BlockData):
                     if self._nonlinear is None:
                         del self._nonlinear
                         if self.has_convex_underestimator():
-                            self._nonlinear = pe.Constraint(expr=self.get_aux_var() >= self._get_expr_for_oa() - self.safety_tol)
+                            self._nonlinear = pe.Constraint(
+                                expr=self.get_aux_var()
+                                >= self._get_expr_for_oa() - self.safety_tol
+                            )
                         else:
                             assert self.has_concave_overestimator()
-                            self._nonlinear = pe.Constraint(expr=self.get_aux_var() <= self._get_expr_for_oa() + self.safety_tol)
+                            self._nonlinear = pe.Constraint(
+                                expr=self.get_aux_var()
+                                <= self._get_expr_for_oa() + self.safety_tol
+                            )
 
     def vars_with_bounds_in_relaxation(self):
         """
@@ -291,7 +341,9 @@ class BaseRelaxationData(_BlockData):
         As another example, take w >= x**2. A linear relaxation of this constraint just involves linear underestimators,
         which do not depend on the bounds of x or w. Therefore, this method would return an empty list.
         """
-        raise NotImplementedError('This method should be implemented in the derived class.')
+        raise NotImplementedError(
+            'This method should be implemented in the derived class.'
+        )
 
     def get_deviation(self):
         """
@@ -323,7 +375,9 @@ class BaseRelaxationData(_BlockData):
         -------
         bool
         """
-        raise NotImplementedError('This method should be implemented in the derived class.')
+        raise NotImplementedError(
+            'This method should be implemented in the derived class.'
+        )
 
     def is_rhs_concave(self):
         """
@@ -334,7 +388,9 @@ class BaseRelaxationData(_BlockData):
         -------
         bool
         """
-        raise NotImplementedError('This method should be implemented in the derived class.')
+        raise NotImplementedError(
+            'This method should be implemented in the derived class.'
+        )
 
     def has_convex_underestimator(self):
         return self.is_rhs_convex()
@@ -369,11 +425,14 @@ class BaseRelaxationData(_BlockData):
         if ostream is None:
             ostream = sys.stdout
 
-        ostream.write('{0}{1}: {2}\n'.format(prefix, self.name, self._get_pprint_string()))
+        ostream.write(
+            '{0}{1}: {2}\n'.format(prefix, self.name, self._get_pprint_string())
+        )
 
         if verbose:
-            super(BaseRelaxationData, self).pprint(ostream=ostream,
-                                                   verbose=verbose, prefix=(prefix + '  '))
+            super(BaseRelaxationData, self).pprint(
+                ostream=ostream, verbose=verbose, prefix=(prefix + '  ')
+            )
 
     def _get_oa_cut(self) -> _OACut:
         rhs_vars = self.get_rhs_vars()
@@ -395,21 +454,31 @@ class BaseRelaxationData(_BlockData):
             del self._oa_param_indices[p]
         del self._oa_params[self._oa_param_indices[oa_cut.offset]]
         del self._oa_param_indices[oa_cut.offset]
-        if oa_cut in self._cuts:  # if the cut did not pass _check_cut, it won't be in self._cuts
+        if (
+            oa_cut in self._cuts
+        ):  # if the cut did not pass _check_cut, it won't be in self._cuts
             del self._cuts[oa_cut]
 
     def _log_bad_cut(self, fail_var, fail_coef, err_msg):
         if fail_var is None and fail_coef is None:
-            logger.debug(f'Encountered exception when adding OA cut '
-                         f'for "{self._get_pprint_string()}"; Error message: {err_msg}')
+            logger.debug(
+                f'Encountered exception when adding OA cut '
+                f'for "{self._get_pprint_string()}"; Error message: {err_msg}'
+            )
         elif fail_var is None:
-            logger.debug(f'Skipped OA cut for "{self._get_pprint_string()}" due to a '
-                         f'large constant value: {fail_coef}')
+            logger.debug(
+                f'Skipped OA cut for "{self._get_pprint_string()}" due to a '
+                f'large constant value: {fail_coef}'
+            )
         else:
-            logger.debug(f'Skipped OA cut for "{self._get_pprint_string()}" due to a '
-                         f'small or large coefficient for {str(fail_var)}: {fail_coef}')
+            logger.debug(
+                f'Skipped OA cut for "{self._get_pprint_string()}" due to a '
+                f'small or large coefficient for {str(fail_var)}: {fail_coef}'
+            )
 
-    def _add_oa_cut(self, pt_tuple: Tuple[float, ...], oa_cut: _OACut) -> Optional[_GeneralConstraintData]:
+    def _add_oa_cut(
+        self, pt_tuple: Tuple[float, ...], oa_cut: _OACut
+    ) -> Optional[_GeneralConstraintData]:
         if self._nonlinear is not None or self._original_constraint is not None:
             raise ValueError('Can only add an OA cut when using a linear relaxation')
         if self.has_convex_underestimator():
@@ -417,9 +486,13 @@ class BaseRelaxationData(_BlockData):
         else:
             assert self.has_concave_overestimator()
             rel_side = RelaxationSide.OVER
-        cut_info = oa_cut.update(var_vals=pt_tuple, relaxation_side=rel_side,
-                                 too_small=self.small_coef, too_large=self.large_coef,
-                                 safety_tol=self.safety_tol)
+        cut_info = oa_cut.update(
+            var_vals=pt_tuple,
+            relaxation_side=rel_side,
+            too_small=self.small_coef,
+            too_large=self.large_coef,
+            safety_tol=self.safety_tol,
+        )
         success, fail_var, fail_coef, err_msg = cut_info
         if not success:
             self._log_bad_cut(fail_var, fail_coef, err_msg)
@@ -448,7 +521,12 @@ class BaseRelaxationData(_BlockData):
         if pt_tuple not in self._oa_points:
             self._oa_points[pt_tuple] = self._get_oa_cut()
 
-    def add_oa_point(self, var_values: Optional[Union[Tuple[float, ...], Mapping[_GeneralVarData, float]]] = None):
+    def add_oa_point(
+        self,
+        var_values: Optional[
+            Union[Tuple[float, ...], Mapping[_GeneralVarData, float]]
+        ] = None,
+    ):
         """
         Add a point at which an outer-approximation cut for a convex constraint should be added. This does not
         rebuild the relaxation. You must call rebuild() for the constraint to get added.
@@ -502,7 +580,9 @@ class BaseRelaxationData(_BlockData):
         for pt_tuple in list_of_points:
             self._add_oa_point(pt_tuple)
 
-    def add_cut(self, keep_cut=True, check_violation=True, feasibility_tol=1e-8) -> Optional[_GeneralConstraintData]:
+    def add_cut(
+        self, keep_cut=True, check_violation=True, feasibility_tol=1e-8
+    ) -> Optional[_GeneralConstraintData]:
         """
         This function will add a linear cut to the relaxation. Cuts are only generated for the convex side of the
         constraint (if the constraint has a convex side). For example, if the relaxation is a PWXSquaredRelaxationData
@@ -610,7 +690,7 @@ class BaseRelaxationData(_BlockData):
             if ub_tuple not in self._oa_points:
                 if len(self._oa_points) <= 1:
                     self._add_oa_point(ub_tuple)
-                else: # move the largest point to ub_tuple
+                else:  # move the largest point to ub_tuple
                     max_pt = max(self._oa_points.keys())
                     max_oa_cut = self._oa_points[max_pt]
                     del self._oa_points[max_pt]
@@ -629,15 +709,27 @@ class BasePWRelaxationData(BaseRelaxationData):
         """
         Remove any auto-created vars/constraints from the relaxation block and recreate it
         """
-        super(BasePWRelaxationData, self).rebuild(build_nonlinear_constraint=build_nonlinear_constraint,
-                                                  ensure_oa_at_vertices=ensure_oa_at_vertices)
+        super(BasePWRelaxationData, self).rebuild(
+            build_nonlinear_constraint=build_nonlinear_constraint,
+            ensure_oa_at_vertices=ensure_oa_at_vertices,
+        )
         self.clean_partitions()
 
-    def set_input(self, relaxation_side=RelaxationSide.BOTH, use_linear_relaxation=True, large_coef=1e5,
-                  small_coef=1e-10, safety_tol=1e-10):
-        super(BasePWRelaxationData, self).set_input(relaxation_side=relaxation_side,
-                                                    use_linear_relaxation=use_linear_relaxation, large_coef=large_coef,
-                                                    small_coef=small_coef, safety_tol=safety_tol)
+    def set_input(
+        self,
+        relaxation_side=RelaxationSide.BOTH,
+        use_linear_relaxation=True,
+        large_coef=1e5,
+        small_coef=1e-10,
+        safety_tol=1e-10,
+    ):
+        super(BasePWRelaxationData, self).set_input(
+            relaxation_side=relaxation_side,
+            use_linear_relaxation=use_linear_relaxation,
+            large_coef=large_coef,
+            small_coef=small_coef,
+            safety_tol=safety_tol,
+        )
         self._partitions = ComponentMap()
         self._saved_partitions = list()
 
@@ -646,7 +738,9 @@ class BasePWRelaxationData(BaseRelaxationData):
         Add a point to the current partitioning. This does not rebuild the relaxation. You must call rebuild()
         to rebuild the relaxation.
         """
-        raise NotImplementedError('This method should be implemented in the derived class.')
+        raise NotImplementedError(
+            'This method should be implemented in the derived class.'
+        )
 
     def _add_partition_point(self, var, value=None):
         if value is None:
@@ -659,7 +753,9 @@ class BasePWRelaxationData(BaseRelaxationData):
         """
         Save the current partitioning for later use through pop_partitions().
         """
-        self._saved_partitions.append(pe.ComponentMap((k, list(v)) for k, v in self._partitions.items()))
+        self._saved_partitions.append(
+            pe.ComponentMap((k, list(v)) for k, v in self._partitions.items())
+        )
 
     def clear_partitions(self):
         """
@@ -701,7 +797,9 @@ class BasePWRelaxationData(BaseRelaxationData):
             lower = None
             upper = None
             if not (pts[0] - 1e-6 <= val <= pts[-1] + 1e-6):
-                raise ValueError('The variable value must be within the variable bounds')
+                raise ValueError(
+                    'The variable value must be within the variable bounds'
+                )
             if val < pts[0]:
                 lower = pts[0]
                 upper = pts[1]
@@ -724,6 +822,7 @@ class ComponentWeakRef(object):
     """
     This object is used to reference components from a block that are not owned by that block.
     """
+
     # ToDo: Example in the documentation
     def __init__(self, comp):
         self.compref = None

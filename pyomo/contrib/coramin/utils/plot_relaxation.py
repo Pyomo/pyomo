@@ -1,4 +1,5 @@
 import numpy as np
+
 try:
     import plotly.graph_objects as go
 except ImportError:
@@ -7,6 +8,7 @@ import pyomo.environ as pe
 from .pyomo_utils import get_objective
 from .coramin_enums import RelaxationSide
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
+
 try:
     import tqdm
 except ImportError:
@@ -23,7 +25,9 @@ def _solve(m, using_persistent_solver, solver, rhs_vars, aux_var, obj):
     else:
         res = solver.solve(m, load_solutions=False)
     if res.solver.termination_condition != pe.TerminationCondition.optimal:
-        raise RuntimeError('Could not produce plot because solver did not terminate optimally')
+        raise RuntimeError(
+            'Could not produce plot because solver did not terminate optimally'
+        )
     if using_persistent_solver:
         solver.load_vars([aux_var])
     else:
@@ -42,8 +46,9 @@ def _solve_loop(m, x, w, x_list, using_persistent_solver, solver):
             res = solver.solve(m, load_solutions=False)
         if res.solver.termination_condition != pe.TerminationCondition.optimal:
             raise RuntimeError(
-                'Could not produce plot because solver did not terminate optimally. Termination condition: ' + str(
-                    res.solver.termination_condition))
+                'Could not produce plot because solver did not terminate optimally. Termination condition: '
+                + str(res.solver.termination_condition)
+            )
         if using_persistent_solver:
             solver.load_vars([w])
         else:
@@ -149,11 +154,28 @@ def _plot_3d(m, relaxation, solver, show_plot, num_pts):
         for y_ndx, _y in enumerate(y_list):
             y.fix(_y)
             w_true[x_ndx, y_ndx] = pe.value(rhs_expr)
-            if relaxation.relaxation_side in {RelaxationSide.UNDER, RelaxationSide.BOTH}:
-                _solve(m, using_persistent_solver, solver, rhs_vars, w, m._underestimator_obj)
+            if relaxation.relaxation_side in {
+                RelaxationSide.UNDER,
+                RelaxationSide.BOTH,
+            }:
+                _solve(
+                    m,
+                    using_persistent_solver,
+                    solver,
+                    rhs_vars,
+                    w,
+                    m._underestimator_obj,
+                )
                 w_min[x_ndx, y_ndx] = w.value
             if relaxation.relaxation_side in {RelaxationSide.OVER, RelaxationSide.BOTH}:
-                _solve(m, using_persistent_solver, solver, rhs_vars, w, m._overestimator_obj)
+                _solve(
+                    m,
+                    using_persistent_solver,
+                    solver,
+                    rhs_vars,
+                    w,
+                    m._overestimator_obj,
+                )
                 w_max[x_ndx, y_ndx] = w.value
 
     if tqdm is not None:
@@ -166,9 +188,13 @@ def _plot_3d(m, relaxation, solver, show_plot, num_pts):
     plotly_data = list()
     plotly_data.append(go.Surface(x=x_list, y=y_list, z=w_true, name=str(rhs_expr)))
     if relaxation.relaxation_side in {RelaxationSide.UNDER, RelaxationSide.BOTH}:
-        plotly_data.append(go.Surface(x=x_list, y=y_list, z=w_min, name='underestimator'))
+        plotly_data.append(
+            go.Surface(x=x_list, y=y_list, z=w_min, name='underestimator')
+        )
     if relaxation.relaxation_side in {RelaxationSide.OVER, RelaxationSide.BOTH}:
-        plotly_data.append(go.Surface(x=x_list, y=y_list, z=w_max, name='overestimator'))
+        plotly_data.append(
+            go.Surface(x=x_list, y=y_list, z=w_max, name='overestimator')
+        )
 
     fig = go.Figure(data=plotly_data)
     if show_plot:
@@ -193,5 +219,6 @@ def plot_relaxation(m, relaxation, solver, show_plot=True, num_pts=100):
     elif len(rhs_vars) == 2:
         _plot_3d(m, relaxation, solver, show_plot, num_pts)
     else:
-        raise NotImplementedError('Cannot generate plot for relaxation with more than 2 RHS vars')
-
+        raise NotImplementedError(
+            'Cannot generate plot for relaxation with more than 2 RHS vars'
+        )
