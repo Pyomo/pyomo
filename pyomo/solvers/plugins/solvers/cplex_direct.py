@@ -598,7 +598,7 @@ class CPLEXDirect(DirectSolver):
         )
         # CPLEX actually uses x'Qx/2 in the objective, as the
         # off-diagonal entries appear in both the lower triangle and the
-        # upper triancle (i.e., c*x1*x2 and c*x2*x1).  However, since
+        # upper triangle (i.e., c*x1*x2 and c*x2*x1).  However, since
         # the diagonal entries only appear once, we need to double them.
         for i, v1 in enumerate(cplex_expr.q_variables1):
             if v1 == cplex_expr.q_variables2[i]:
