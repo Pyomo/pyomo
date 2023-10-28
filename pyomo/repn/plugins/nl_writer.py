@@ -2494,7 +2494,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
                     ans = float(ans)
                 except:
                     return InvalidNumber(
-                        ans, f"'{obj}' evaluated to a  nonnumeric value '{ans}'"
+                        ans, f"'{obj}' evaluated to a nonnumeric value '{ans}'"
                     )
         if ans != ans:
             return InvalidNumber(
