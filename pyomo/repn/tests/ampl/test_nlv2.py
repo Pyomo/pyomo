@@ -474,8 +474,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         expr = m.y**2 * m.x**2 * (((3 * m.x) / m.p) * m.x) / m.y
 
-        info = INFO()
-        with LoggingIntercept() as LOG:
+        with LoggingIntercept() as LOG, INFO() as info:
             repn = info.visitor.walk_expression((expr, None, None, 1))
         self.assertEqual(
             LOG.getvalue(),
@@ -491,7 +490,8 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         m.y.fix(None)
         expr = log(m.y) + 3
-        repn = info.visitor.walk_expression((expr, None, None, 1))
+        with INFO() as info:
+            repn = info.visitor.walk_expression((expr, None, None, 1))
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
         self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
@@ -499,7 +499,8 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.nonlinear, None)
 
         expr = 3 * m.y
-        repn = info.visitor.walk_expression((expr, None, None, 1))
+        with INFO() as info:
+            repn = info.visitor.walk_expression((expr, None, None, 1))
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, InvalidNumber(None))
@@ -508,7 +509,8 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         m.p.value = None
         expr = 5 * (m.p * m.x + 2 * m.z)
-        repn = info.visitor.walk_expression((expr, None, None, 1))
+        with INFO() as info:
+            repn = info.visitor.walk_expression((expr, None, None, 1))
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 0)
@@ -516,7 +518,8 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.nonlinear, None)
 
         expr = m.y * m.x
-        repn = info.visitor.walk_expression((expr, None, None, 1))
+        with INFO() as info:
+            repn = info.visitor.walk_expression((expr, None, None, 1))
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 0)
