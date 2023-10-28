@@ -1586,7 +1586,7 @@ class _NLWriter_impl(object):
             lbl = '\t#%s' % info[0].name
         else:
             lbl = ''
-        self.var_id_to_nl[expr_id] = f"{self.next_V_line_id}{lbl}"
+        self.var_id_to_nl[expr_id] = f"v{self.next_V_line_id}{lbl}"
         # Do NOT write out 0 coefficients here: doing so fouls up the
         # ASL's logic for calculating derivatives, leading to 'nan' in
         # the Hessian results.
