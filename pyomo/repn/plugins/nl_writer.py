@@ -1281,10 +1281,10 @@ class _NLWriter_impl(object):
             if data.prob:
                 logger.warning("ignoring 'dual' suffix for Model")
             if data.con:
-                ostream.write(f"d{len(_data.con)}\n")
+                ostream.write(f"d{len(data.con)}\n")
                 # Note: _SuffixData.compile() guarantees the value is int/float
                 ostream.write(
-                    ''.join(f"{_id} {_data.con[_id]!r}\n" for _id in sorted(data.con))
+                    ''.join(f"{_id} {data.con[_id]!r}\n" for _id in sorted(data.con))
                 )
 
         #
