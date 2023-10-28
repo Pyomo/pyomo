@@ -2323,7 +2323,9 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
         _id = id(child)
         if _id not in visitor.var_map:
             if child.fixed:
-                return False, (_CONSTANT, visitor.handle_constant(child.value, child))
+                if _id not in visitor.fixed_vars:
+                    visitor.cache_fixed_var(_id, child)
+                return False, (_CONSTANT, visitor.fixed_vars[_id])
             visitor.var_map[_id] = child
         return False, (_MONOMIAL, _id, 1)
 
@@ -2336,14 +2338,17 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
         arg1, arg2 = child._args_
         if arg1.__class__ not in native_types:
             try:
-                arg1 = visitor.handle_constant(visitor.evaluate(arg1), arg1)
+                arg1 = visitor.check_constant(visitor.evaluate(arg1), arg1)
             except (ValueError, ArithmeticError):
                 return True, None
 
         # Trap multiplication by 0 and nan.
         if not arg1:
             if arg2.fixed:
-                arg2 = visitor.handle_constant(arg2.value, arg2)
+                _id = id(arg2)
+                if _id not in visitor.fixed_vars:
+                    visitor.cache_fixed_var(id(arg2), arg2)
+                arg2 = visitor.fixed_vars[_id]
                 if arg2 != arg2:
                     deprecation_warning(
                         f"Encountered {arg1}*{arg2} in expression tree.  "
@@ -2357,10 +2362,9 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
         _id = id(arg2)
         if _id not in visitor.var_map:
             if arg2.fixed:
-                return False, (
-                    _CONSTANT,
-                    arg1 * visitor.handle_constant(arg2.value, arg2),
-                )
+                if _id not in visitor.fixed_vars:
+                    visitor.cache_fixed_var(_id, arg2)
+                return False, (_CONSTANT, arg1 * visitor.fixed_vars[_id])
             visitor.var_map[_id] = arg2
         return False, (_MONOMIAL, _id, arg1)
 
@@ -2377,14 +2381,14 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
                 arg1, arg2 = arg._args_
                 if arg1.__class__ not in native_types:
                     try:
-                        arg1 = visitor.handle_constant(visitor.evaluate(arg1), arg1)
+                        arg1 = visitor.check_constant(visitor.evaluate(arg1), arg1)
                     except (ValueError, ArithmeticError):
                         return True, None
 
                 # Trap multiplication by 0 and nan.
                 if not arg1:
                     if arg2.fixed:
-                        arg2 = visitor.handle_constant(arg2.value, arg2)
+                        arg2 = visitor.check_constant(arg2.value, arg2)
                         if arg2 != arg2:
                             deprecation_warning(
                                 f"Encountered {arg1}*{str(arg2.value)} in expression "
@@ -2398,7 +2402,9 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
                 _id = id(arg2)
                 if _id not in var_map:
                     if arg2.fixed:
-                        const += arg1 * visitor.handle_constant(arg2.value, arg2)
+                        if _id not in visitor.fixed_vars:
+                            visitor.cache_fixed_var(_id, arg2)
+                        const += arg1 * visitor.fixed_vars[_id]
                         continue
                     var_map[_id] = arg2
                     linear[_id] = arg1
@@ -2410,7 +2416,7 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
                 const += arg
             else:
                 try:
-                    const += visitor.handle_constant(visitor.evaluate(arg), arg)
+                    const += visitor.check_constant(visitor.evaluate(arg), arg)
                 except (ValueError, ArithmeticError):
                     return True, None
 
@@ -2460,10 +2466,11 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         self.symbolic_solver_labels = symbolic_solver_labels
         self.use_named_exprs = use_named_exprs
         self.encountered_string_arguments = False
+        self.fixed_vars = {}
         self._eval_expr_visitor = _EvaluationVisitor(True)
         self.evaluate = self._eval_expr_visitor.dfs_postorder_stack
 
-    def handle_constant(self, ans, obj):
+    def check_constant(self, ans, obj):
         if ans.__class__ not in native_numeric_types:
             # None can be returned from uninitialized Var/Param objects
             if ans is None:
@@ -2494,6 +2501,17 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
                 nan, f"'{obj}' evaluated to a nonnumeric value '{ans}'"
             )
         return ans
+
+    def cache_fixed_var(self, _id, child):
+        val = self.check_constant(child.value, child)
+        lb, ub = child.bounds
+        if (lb is not None and lb - val > TOL) or (ub is not None and ub - val < -TOL):
+            raise InfeasibleError(
+                "model contains a trivially infeasible "
+                f"variable '{child.name}' (fixed value "
+                f"{val} outside bounds [lb, ub])."
+            )
+        self.fixed_vars[_id] = self.check_constant(child.value, child)
 
     def initializeWalker(self, expr):
         expr, src, src_idx, self.expression_scaling_factor = expr
