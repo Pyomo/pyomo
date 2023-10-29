@@ -684,41 +684,42 @@ def copy_var_list_values_from_solution_pool(
         Whether to ignore the integrality of integer variables, by default False.
     """
     for v_from, v_to in zip(from_list, to_list):
-        try:
-            if config.mip_solver == 'cplex_persistent':
-                var_val = solver_model.solution.pool.get_values(
-                    solution_name, var_map[v_from]
-                )
-            elif config.mip_solver == 'gurobi_persistent':
-                solver_model.setParam(gurobipy.GRB.Param.SolutionNumber, solution_name)
-                var_val = var_map[v_from].Xn
-            # We don't want to trigger the reset of the global stale
-            # indicator, so we will set this variable to be "stale",
-            # knowing that set_value will switch it back to "not
-            # stale"
-            v_to.stale = True
-            # NOTE: PEP 2180 changes the var behavior so that domain /
-            # bounds violations no longer generate exceptions (and
-            # instead log warnings).  This means that the following will
-            # always succeed and the ValueError should never be raised.
+        if config.mip_solver == 'cplex_persistent':
+            var_val = solver_model.solution.pool.get_values(
+                solution_name, var_map[v_from]
+            )
+        elif config.mip_solver == 'gurobi_persistent':
+            solver_model.setParam(gurobipy.GRB.Param.SolutionNumber, solution_name)
+            var_val = var_map[v_from].Xn
+        # We don't want to trigger the reset of the global stale
+        # indicator, so we will set this variable to be "stale",
+        # knowing that set_value will switch it back to "not
+        # stale"
+        v_to.stale = True
+        rounded_val = int(round(var_val))
+        # NOTE: PEP 2180 changes the var behavior so that domain /
+        # bounds violations no longer generate exceptions (and
+        # instead log warnings).  This means that the following will
+        # always succeed and the ValueError should never be raised.
+        if var_val in v_to.domain \
+            and not ((v_to.has_lb() and var_val < v_to.lb)) \
+            and not ((v_to.has_ub() and var_val > v_to.ub)):
             v_to.set_value(var_val, skip_validation=True)
-        except ValueError as e:
-            config.logger.error(e)
-            rounded_val = int(round(var_val))
-            # Check to see if this is just a tolerance issue
-            if ignore_integrality and v_to.is_integer():
-                v_to.set_value(var_val, skip_validation=True)
-            elif v_to.is_integer() and (
-                abs(var_val - rounded_val) <= config.integer_tolerance
-            ):
-                v_to.set_value(rounded_val, skip_validation=True)
-            elif abs(var_val) <= config.zero_tolerance and 0 in v_to.domain:
-                v_to.set_value(0, skip_validation=True)
-            else:
-                config.logger.error(
-                    'Unknown validation domain error setting variable %s' % (v_to.name,)
-                )
-                raise
+        elif v_to.has_lb() and var_val < v_to.lb:
+            v_to.set_value(v_to.lb)
+        elif v_to.has_ub() and var_val > v_to.ub:
+            v_to.set_value(v_to.ub)
+        # Check to see if this is just a tolerance issue
+        elif ignore_integrality and v_to.is_integer():
+            v_to.set_value(var_val, skip_validation=True)
+        elif v_to.is_integer() and (
+            abs(var_val - rounded_val) <= config.integer_tolerance
+        ):
+            v_to.set_value(rounded_val, skip_validation=True)
+        elif abs(var_val) <= config.zero_tolerance and 0 in v_to.domain:
+            v_to.set_value(0, skip_validation=True)
+        else:
+            raise ValueError("copy_var_list_values_from_solution_pool failed.")
 
 
 class GurobiPersistent4MindtPy(GurobiPersistent):
@@ -980,14 +981,20 @@ def copy_var_list_values(from_list, to_list, config,
             continue  # Skip fixed variables.
         var_val = value(v_from, exception=False)
         rounded_val = int(round(var_val))
-        if var_val in v_to.domain:
+        if var_val in v_to.domain \
+            and not ((v_to.has_lb() and var_val < v_to.lb)) \
+            and not ((v_to.has_ub() and var_val > v_to.ub)):
             v_to.set_value(value(v_from, exception=False))
+        elif v_to.has_lb() and var_val < v_to.lb:
+            v_to.set_value(v_to.lb)
+        elif v_to.has_ub() and var_val > v_to.ub:
+            v_to.set_value(v_to.ub)
         elif ignore_integrality and v_to.is_integer():
             v_to.set_value(value(v_from, exception=False), skip_validation=True)
-        elif abs(var_val) <= config.zero_tolerance and 0 in v_to.domain:
-            v_to.set_value(0)
         elif v_to.is_integer() and (math.fabs(var_val - rounded_val) <=
                                     config.integer_tolerance):
             v_to.set_value(rounded_val)
+        elif abs(var_val) <= config.zero_tolerance and 0 in v_to.domain:
+            v_to.set_value(0)
         else:
-            raise
+            raise ValueError("copy_var_list_values failed.")

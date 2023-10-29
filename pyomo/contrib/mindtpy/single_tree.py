@@ -24,6 +24,7 @@ from pyomo.contrib.gdpopt.util import (
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core import minimize, value
 from pyomo.core.expr import identify_variables
+import math
 
 cplex, cplex_available = attempt_import('cplex')
 
@@ -41,7 +42,6 @@ class LazyOACallback_cplex(
         config,
         skip_stale=False,
         skip_fixed=True,
-        ignore_integrality=False,
     ):
         """This function copies variable values from one list to another.
 
@@ -71,43 +71,43 @@ class LazyOACallback_cplex(
             if skip_fixed and v_to.is_fixed():
                 continue  # Skip fixed variables.
             v_val = self.get_values(opt._pyomo_var_to_solver_var_map[v_from])
-            try:
-                # We don't want to trigger the reset of the global stale
-                # indicator, so we will set this variable to be "stale",
-                # knowing that set_value will switch it back to "not
-                # stale"
-                v_to.stale = True
-                # NOTE: PEP 2180 changes the var behavior so that domain
-                # / bounds violations no longer generate exceptions (and
-                # instead log warnings).  This means that the following
-                # will always succeed and the ValueError should never be
-                # raised.
-                v_to.set_value(v_val, skip_validation=True)
-            except ValueError as e:
-                # Snap the value to the bounds
-                config.logger.error(e)
-                if (
-                    v_to.has_lb()
-                    and v_val < v_to.lb
-                    and v_to.lb - v_val <= config.variable_tolerance
-                ):
-                    v_to.set_value(v_to.lb, skip_validation=True)
-                elif (
-                    v_to.has_ub()
-                    and v_val > v_to.ub
-                    and v_val - v_to.ub <= config.variable_tolerance
-                ):
-                    v_to.set_value(v_to.ub, skip_validation=True)
-                # ... or the nearest integer
-                elif v_to.is_integer():
-                    rounded_val = int(round(v_val))
-                    if (
-                        ignore_integrality
-                        or abs(v_val - rounded_val) <= config.integer_tolerance
-                    ) and rounded_val in v_to.domain:
-                        v_to.set_value(rounded_val, skip_validation=True)
-                else:
-                    raise
+            rounded_val = int(round(v_val))
+            # We don't want to trigger the reset of the global stale
+            # indicator, so we will set this variable to be "stale",
+            # knowing that set_value will switch it back to "not
+            # stale"
+            v_to.stale = True
+            # NOTE: PEP 2180 changes the var behavior so that domain
+            # / bounds violations no longer generate exceptions (and
+            # instead log warnings).  This means that the following
+            # will always succeed and the ValueError should never be
+            # raised.
+            if v_val in v_to.domain \
+                and not ((v_to.has_lb() and v_val < v_to.lb)) \
+                and not ((v_to.has_ub() and v_val > v_to.ub)):
+                v_to.set_value(v_val)
+            # Snap the value to the bounds
+            # TODO: check the performance of 
+            # v_to.lb - v_val <= config.variable_tolerance
+            elif (
+                v_to.has_lb()
+                and v_val < v_to.lb
+                # and v_to.lb - v_val <= config.variable_tolerance
+            ):
+                v_to.set_value(v_to.lb)
+            elif (
+                v_to.has_ub()
+                and v_val > v_to.ub
+                # and v_val - v_to.ub <= config.variable_tolerance
+            ):
+                v_to.set_value(v_to.ub)
+            # ... or the nearest integer
+            elif v_to.is_integer() and math.fabs(v_val - rounded_val) <= config.integer_tolerance: # and rounded_val in v_to.domain:
+                v_to.set_value(rounded_val)
+            elif abs(v_val) <= config.zero_tolerance and 0 in v_to.domain:
+                v_to.set_value(0)
+            else:
+                raise ValueError('copy_lazy_var_list_values failed.')
 
     def add_lazy_oa_cuts(
         self,
