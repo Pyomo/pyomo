@@ -379,6 +379,11 @@ class SCIPAMPL(SystemCallSolver):
                 else:
                     results.problem.upper_bound = results.solver.primal_bound
             except AttributeError:
+                """
+                This may occur if SCIP solves the problem during presolve. In that case,
+                the log file may not get parsed correctly (self.read_scip_log), and
+                results.solver.primal_bound will not be populated.
+                """
                 pass
 
         # WARNING # infeasible='infeasible' # Demonstrated that the problem is infeasible
