@@ -50,6 +50,7 @@ class TestUtils(unittest.TestCase):
 
         theta_names = ['k1', 'k2', 'k3']
 
+        print(data.loc[0])
         instance = reactor_design_model(data.loc[0])
         solver = pyo.SolverFactory('ipopt')
         solver.solve(instance)

@@ -639,10 +639,10 @@ class TestReactorDesign(unittest.TestCase):
 
         def SSE(model, data):
             expr = (
-                (float(data['ca']) - model.ca) ** 2
-                + (float(data['cb']) - model.cb) ** 2
-                + (float(data['cc']) - model.cc) ** 2
-                + (float(data['cd']) - model.cd) ** 2
+                (float(data.iloc[0]['ca']) - model.ca) ** 2
+                + (float(data.iloc[0]['cb']) - model.cb) ** 2
+                + (float(data.iloc[0]['cc']) - model.cc) ** 2
+                + (float(data.iloc[0]['cd']) - model.cd) ** 2
             )
             return expr
 

@@ -37,17 +37,21 @@ def reactor_design_model(data):
     )  # m^3/(gmol min)
 
     # Inlet concentration of A, gmol/m^3
-    if isinstance(data, dict):
+    if isinstance(data, dict) or isinstance(data, pd.Series):
         model.caf = Param(initialize=float(data['caf']), within=PositiveReals)
-    else:
+    elif isinstance(data, pd.DataFrame):
         model.caf = Param(initialize=float(data.iloc[0]['caf']), within=PositiveReals)
+    else:
+        raise ValueError('Unrecognized data type.')
 
     # Space velocity (flowrate/volume)
-    if isinstance(data, dict):
+    if isinstance(data, dict) or isinstance(data, pd.Series):
         model.sv = Param(initialize=float(data['sv']), within=PositiveReals)
-    else:
+    elif isinstance(data, pd.DataFrame):
         model.sv = Param(initialize=float(data.iloc[0]['sv']), within=PositiveReals)
-
+    else:
+        raise ValueError('Unrecognized data type.')
+    
     # Outlet concentration of each component
     model.ca = Var(initialize=5000.0, within=PositiveReals)
     model.cb = Var(initialize=2000.0, within=PositiveReals)
