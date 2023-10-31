@@ -178,7 +178,6 @@ def _add_obj_contour(x, y, color, columns, data, theta_star, label=None):
         X, Y, Z = _get_data_slice(xvar, yvar, columns, data, theta_star)
 
         triang = matplotlib.tri.Triangulation(X, Y)
-        #cmap = plt.cm.get_cmap('Greys')
         cmap = matplotlib.colormaps['Greys']
 
         plt.tricontourf(triang, Z, cmap=cmap)
