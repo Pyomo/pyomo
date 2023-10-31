@@ -34,6 +34,16 @@ from pyomo.dae import ContinuousSet, DerivativeVar
 
 
 def generate_model(data):
+
+    # if data is a file name, then load file first
+    if isinstance(data, str):
+        file_name = data
+        try:
+            with open(file_name, 'r') as infile:
+                data = json.load(infile)
+        except:
+            raise RuntimeError(f'Could not read {file_name} as json')
+
     # unpack and fix the data
     cameastemp = data['Ca_meas']
     cbmeastemp = data['Cb_meas']

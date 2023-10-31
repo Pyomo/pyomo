@@ -61,10 +61,10 @@ def main():
     # Define sum of squared error objective function for data rec
     def SSE(model, data):
         expr = (
-            ((float(data['ca']) - model.ca) / float(data_std['ca'])) ** 2
-            + ((float(data['cb']) - model.cb) / float(data_std['cb'])) ** 2
-            + ((float(data['cc']) - model.cc) / float(data_std['cc'])) ** 2
-            + ((float(data['cd']) - model.cd) / float(data_std['cd'])) ** 2
+            ((float(data.iloc[0]['ca']) - model.ca) / float(data_std['ca'])) ** 2
+            + ((float(data.iloc[0]['cb']) - model.cb) / float(data_std['cb'])) ** 2
+            + ((float(data.iloc[0]['cc']) - model.cc) / float(data_std['cc'])) ** 2
+            + ((float(data.iloc[0]['cd']) - model.cd) / float(data_std['cd'])) ** 2
         )
         return expr
 

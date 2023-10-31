@@ -31,13 +31,13 @@ def main():
     # Sum of squared error function
     def SSE_multisensor(model, data):
         expr = (
-            ((float(data['ca1']) - model.ca) ** 2) * (1 / 3)
-            + ((float(data['ca2']) - model.ca) ** 2) * (1 / 3)
-            + ((float(data['ca3']) - model.ca) ** 2) * (1 / 3)
-            + (float(data['cb']) - model.cb) ** 2
-            + ((float(data['cc1']) - model.cc) ** 2) * (1 / 2)
-            + ((float(data['cc2']) - model.cc) ** 2) * (1 / 2)
-            + (float(data['cd']) - model.cd) ** 2
+            ((float(data.iloc[0]['ca1']) - model.ca) ** 2) * (1 / 3)
+            + ((float(data.iloc[0]['ca2']) - model.ca) ** 2) * (1 / 3)
+            + ((float(data.iloc[0]['ca3']) - model.ca) ** 2) * (1 / 3)
+            + (float(data.iloc[0]['cb']) - model.cb) ** 2
+            + ((float(data.iloc[0]['cc1']) - model.cc) ** 2) * (1 / 2)
+            + ((float(data.iloc[0]['cc2']) - model.cc) ** 2) * (1 / 2)
+            + (float(data.iloc[0]['cd']) - model.cd) ** 2
         )
         return expr
 

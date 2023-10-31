@@ -37,10 +37,16 @@ def reactor_design_model(data):
     )  # m^3/(gmol min)
 
     # Inlet concentration of A, gmol/m^3
-    model.caf = Param(initialize=float(data['caf']), within=PositiveReals)
+    if isinstance(data, dict):
+        model.caf = Param(initialize=float(data['caf']), within=PositiveReals)
+    else:
+        model.caf = Param(initialize=float(data.iloc[0]['caf']), within=PositiveReals)
 
     # Space velocity (flowrate/volume)
-    model.sv = Param(initialize=float(data['sv']), within=PositiveReals)
+    if isinstance(data, dict):
+        model.sv = Param(initialize=float(data['sv']), within=PositiveReals)
+    else:
+        model.sv = Param(initialize=float(data.iloc[0]['sv']), within=PositiveReals)
 
     # Outlet concentration of each component
     model.ca = Var(initialize=5000.0, within=PositiveReals)
@@ -81,7 +87,7 @@ def main():
     sv_values = [1.0 + v * 0.05 for v in range(1, 20)]
     caf = 10000
     for sv in sv_values:
-        model = reactor_design_model({'caf': caf, 'sv': sv})
+        model = reactor_design_model(pd.DataFrame(data={'caf': [caf], 'sv': [sv]}))
         solver = SolverFactory('ipopt')
         solver.solve(model)
         results.append([sv, caf, model.ca(), model.cb(), model.cc(), model.cd()])
