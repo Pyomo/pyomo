@@ -38,16 +38,10 @@ from pyomo.environ import (
     Block,
 )
 from pyomo.common.collections import ComponentMap
-from pyomo.contrib.mindtpy.tests.MINLP_simple_grey_box import GreyBoxModel
-from pyomo.common.dependencies import attempt_import
-
-egb = attempt_import('pyomo.contrib.pynumero.interfaces.external_grey_box')[0]
-
-
-def build_model_external(m):
-    ex_model = GreyBoxModel(initial={"X1": 0, "X2": 0, "Y1": 0, "Y2": 1, "Y3": 1})
-    m.egb = egb.ExternalGreyBoxBlock()
-    m.egb.set_external_model(ex_model)
+from pyomo.contrib.mindtpy.tests.MINLP_simple_grey_box import (
+    GreyBoxModel,
+    build_model_external,
+)
 
 
 class SimpleMINLP(ConcreteModel):
@@ -56,6 +50,10 @@ class SimpleMINLP(ConcreteModel):
     def __init__(self, grey_box=False, *args, **kwargs):
         """Create the problem."""
         kwargs.setdefault('name', 'SimpleMINLP')
+        if grey_box and GreyBoxModel is None:
+            m = None
+            return
+
         super(SimpleMINLP, self).__init__(*args, **kwargs)
         m = self
 

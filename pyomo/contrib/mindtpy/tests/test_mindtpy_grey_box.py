@@ -25,6 +25,7 @@ else:
     subsolvers_available = False
 
 
+@unittest.skipIf(model_list[0] is None, 'Unable to generate the Grey Box model.')
 @unittest.skipIf(
     not subsolvers_available,
     'Required subsolvers %s are not available' % (required_solvers,),
@@ -32,8 +33,6 @@ else:
 @unittest.skipIf(
     not differentiate_available, 'Symbolic differentiation is not available'
 )
-@unittest.skipIf(not numpy_available, 'Required numpy %s is not available')
-@unittest.skipIf(not scipy_available, 'Required scipy %s is not available')
 class TestMindtPy(unittest.TestCase):
     """Tests for the MindtPy solver plugin."""
 
