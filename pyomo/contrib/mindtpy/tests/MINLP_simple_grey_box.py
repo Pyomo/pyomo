@@ -100,8 +100,8 @@ class GreyBoxModel(egb.ExternalGreyBoxModel):
         z = x1**2 + x2**2 + y1 + 1.5 * y2 + 0.5 * y3
 
         if self.verbose:
-            print("\n Consider inputs [x1,x2,y1,y2,y3] =\n",x1, x2, y1, y2, y3)
-            print("   z = ",z,"\n")
+            print("\n Consider inputs [x1,x2,y1,y2,y3] =\n", x1, x2, y1, y2, y3)
+            print("   z = ", z, "\n")
 
         return np.asarray([z], dtype=np.float64)
 

@@ -34,7 +34,6 @@ else:
 )
 @unittest.skipIf(not numpy_available, 'Required numpy %s is not available')
 @unittest.skipIf(not scipy_available, 'Required scipy %s is not available')
-
 class TestMindtPy(unittest.TestCase):
     """Tests for the MindtPy solver plugin."""
 
