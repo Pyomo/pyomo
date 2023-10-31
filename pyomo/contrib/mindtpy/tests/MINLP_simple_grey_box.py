@@ -8,7 +8,7 @@ egb = attempt_import('pyomo.contrib.pynumero.interfaces.external_grey_box')[0]
 class GreyBoxModel(egb.ExternalGreyBoxModel):
     """Greybox model to compute the example OF."""
 
-    def __init__(self, initial, use_exact_derivatives=True, verbose=True):
+    def __init__(self, initial, use_exact_derivatives=True, verbose=False):
         """
         Parameters
 
@@ -85,7 +85,6 @@ class GreyBoxModel(egb.ExternalGreyBoxModel):
 
     def evaluate_equality_constraints(self):
         """Evaluate the equality constraints."""
-        # Not sure what this function should return with no equality constraints
         return None
 
     def evaluate_outputs(self):
@@ -101,9 +100,8 @@ class GreyBoxModel(egb.ExternalGreyBoxModel):
         z = x1**2 + x2**2 + y1 + 1.5 * y2 + 0.5 * y3
 
         if self.verbose:
-            pass
-            # print("\n Consider inputs [x1,x2,y1,y2,y3] =\n",x1, x2, y1, y2, y3)
-            # print("   z = ",z,"\n")
+            print("\n Consider inputs [x1,x2,y1,y2,y3] =\n",x1, x2, y1, y2, y3)
+            print("   z = ",z,"\n")
 
         return np.asarray([z], dtype=np.float64)
 
