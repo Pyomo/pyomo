@@ -262,7 +262,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                     t,
                     t.index(),
                     parent_disjunct=gdp_tree.parent(t),
-                    root_disjunct=gdp_tree.root_disjunct(t),
                 )
             # We skip disjuncts now, because we need information from the
             # disjunctions to transform them (which variables to disaggregate),
@@ -298,9 +297,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
         return transBlock, True
 
-    def _transform_disjunctionData(
-        self, obj, index, parent_disjunct=None, root_disjunct=None
-    ):
+    def _transform_disjunctionData(self, obj, index, parent_disjunct=None):
         # Hull reformulation doesn't work if this is an OR constraint. So if
         # xor is false, give up
         if not obj.xor:
@@ -310,8 +307,12 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 "Must be an XOR!" % obj.name
             )
 
+        # We put *all* transformed things on the parent Block of this
+        # disjunction. We'll mark the disaggregated Vars as local, but beyond
+        # that, we actually need everything to get transformed again as we go up
+        # the nested hierarchy (if there is one)
         transBlock, xorConstraint = self._setup_transform_disjunctionData(
-            obj, root_disjunct
+            obj, root_disjunct=None
         )
 
         disaggregationConstraint = transBlock.disaggregationConstraints
@@ -325,7 +326,8 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         varOrder = []
         varsByDisjunct = ComponentMap()
         localVarsByDisjunct = ComponentMap()
-        include_fixed_vars = not self._config.assume_fixed_vars_permanent
+        disjunctsVarAppearsIn = ComponentMap()
+        setOfDisjunctsVarAppearsIn = ComponentMap()
         for disjunct in obj.disjuncts:
             if not disjunct.active:
                 continue
@@ -338,7 +340,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 Constraint,
                 active=True,
                 sort=SortComponents.deterministic,
-                descend_into=(Block, Disjunct),
+                descend_into=Block,
             ):
                 # [ESJ 02/14/2020] By default, we disaggregate fixed variables
                 # on the philosophy that fixing is not a promise for the future
@@ -348,8 +350,8 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 # assume_fixed_vars_permanent to True in which case we will skip
                 # them
                 for var in EXPR.identify_variables(
-                    cons.body, include_fixed=include_fixed_vars
-                ):
+                        cons.body, include_fixed=not
+                        self._config.assume_fixed_vars_permanent):
                     # Note the use of a list so that we will
                     # eventually disaggregate the vars in a
                     # deterministic order (the order that we found
@@ -358,6 +360,12 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                     if not var in varOrder_set:
                         varOrder.append(var)
                         varOrder_set.add(var)
+                        disjunctsVarAppearsIn[var] = [disjunct]
+                        setOfDisjunctsVarAppearsIn[var] = ComponentSet([disjunct])
+                    else:
+                        if disjunct not in setOfDisjunctsVarAppearsIn[var]:
+                            disjunctsVarAppearsIn[var].append(disjunct)
+                            setOfDisjunctsVarAppearsIn[var].add(disjunct)
 
             # check for LocalVars Suffix
             localVarsByDisjunct = self._get_local_var_suffixes(
@@ -368,7 +376,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         # being local. Since we transform from leaf to root, we are implicitly
         # treating our own disaggregated variables as local, so they will not be
         # re-disaggregated.
-        varSet = []
         varSet = {disj: [] for disj in obj.disjuncts}
         # Note that variables are local with respect to a Disjunct. We deal with
         # them here to do some error checking (if something is obviously not
@@ -379,11 +386,8 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         # localVars of a Disjunct later)
         localVars = ComponentMap()
         varsToDisaggregate = []
-        disjunctsVarAppearsIn = ComponentMap()
         for var in varOrder:
-            disjuncts = disjunctsVarAppearsIn[var] = [
-                d for d in varsByDisjunct if var in varsByDisjunct[d]
-            ]
+            disjuncts = disjunctsVarAppearsIn[var]
             # clearly not local if used in more than one disjunct
             if len(disjuncts) > 1:
                 if self._generate_debug_messages:
@@ -398,8 +402,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             # disjuncts is a list of length 1
             elif localVarsByDisjunct.get(disjuncts[0]) is not None:
                 if var in localVarsByDisjunct[disjuncts[0]]:
-                    localVars_thisDisjunct = localVars.get(disjuncts[0])
-                    if localVars_thisDisjunct is not None:
+                    if localVars.get(disjuncts[0]) is not None:
                         localVars[disjuncts[0]].append(var)
                     else:
                         localVars[disjuncts[0]] = [var]
@@ -408,7 +411,8 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                     varSet[disjuncts[0]].append(var)
                     varsToDisaggregate.append(var)
             else:
-                # We don't even have have any local vars for this Disjunct.
+                # The user didn't declare any local vars for this Disjunct, so
+                # we know we're disaggregating it
                 varSet[disjuncts[0]].append(var)
                 varsToDisaggregate.append(var)
 
@@ -497,18 +501,8 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 )
                 disaggregatedExpr += disaggregatedVar
 
-            # We equate the sum of the disaggregated vars to var (the original)
-            # if parent_disjunct is None, else it needs to be the disaggregated
-            # var corresponding to var on the parent disjunct. This is the
-            # reason we transform from root to leaf: This constraint is now
-            # correct regardless of how nested something may have been.
-            parent_var = (
-                var
-                if parent_disjunct is None
-                else self.get_disaggregated_var(var, parent_disjunct)
-            )
             cons_idx = len(disaggregationConstraint)
-            disaggregationConstraint.add(cons_idx, parent_var == disaggregatedExpr)
+            disaggregationConstraint.add(cons_idx, var == disaggregatedExpr)
             # and update the map so that we can find this later. We index by
             # variable and the particular disjunction because there is a
             # different one for each disjunction
