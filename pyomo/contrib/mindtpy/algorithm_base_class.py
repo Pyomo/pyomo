@@ -332,6 +332,8 @@ class _MindtPyAlgorithm(object):
                     ctype=egb.ExternalGreyBoxBlock, active=True, descend_into=(Block)
                 )
             )
+        else:
+            util_block.grey_box_list = []
         util_block.linear_constraint_list = list(
             c
             for c in util_block.constraint_list
