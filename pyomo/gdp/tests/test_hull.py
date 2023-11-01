@@ -1832,6 +1832,103 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         cons = hull.get_disaggregation_constraint(m.x, m.d_r.inner_disj)
         assertExpressionsEqual(self, cons.expr, x2 == x3 + x4)
 
+    def test_nested_with_var_that_does_not_appear_in_every_disjunct(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 10))
+        m.y = Var(bounds=(-4, 5))
+        m.parent1 = Disjunct()
+        m.parent2 = Disjunct()
+        m.parent2.c = Constraint(expr=m.x == 0)
+        m.parent_disjunction = Disjunction(expr=[m.parent1, m.parent2])
+        m.child1 = Disjunct()
+        m.child1.c = Constraint(expr=m.x <= 8)
+        m.child2 = Disjunct()
+        m.child2.c = Constraint(expr=m.x + m.y <= 3)
+        m.child3 = Disjunct()
+        m.child3.c = Constraint(expr=m.x <= 7)
+        m.parent1.disjunction = Disjunction(expr=[m.child1, m.child2, m.child3])
+
+        hull = TransformationFactory('gdp.hull')
+        hull.apply_to(m)
+
+        y_c2 = hull.get_disaggregated_var(m.y, m.child2)
+        self.assertEqual(y_c2.bounds, (-4, 5))
+        other_y = hull.get_disaggregated_var(m.y, m.child1)
+        self.assertEqual(other_y.bounds, (-4, 5))
+        other_other_y = hull.get_disaggregated_var(m.y, m.child3)
+        self.assertIs(other_y, other_other_y)
+        y_p1 = hull.get_disaggregated_var(m.y, m.parent1)
+        self.assertEqual(y_p1.bounds, (-4, 5))
+        y_p2 = hull.get_disaggregated_var(m.y, m.parent2)
+        self.assertEqual(y_p2.bounds, (-4, 5))
+        y_cons = hull.get_disaggregation_constraint(m.y, m.parent1.disjunction)
+        # check that the disaggregated ys in the nested just sum to the original
+        assertExpressionsEqual(self, y_cons.expr, y_p1 == other_y + y_c2)
+        y_cons = hull.get_disaggregation_constraint(m.y, m.parent_disjunction)
+        assertExpressionsEqual(self, y_cons.expr, m.y == y_p1 + y_p2)
+
+        x_c1 = hull.get_disaggregated_var(m.x, m.child1)
+        x_c2 = hull.get_disaggregated_var(m.x, m.child2)
+        x_c3 = hull.get_disaggregated_var(m.x, m.child3)
+        x_p1 = hull.get_disaggregated_var(m.x, m.parent1)
+        x_p2 = hull.get_disaggregated_var(m.x, m.parent2)
+        x_cons_parent = hull.get_disaggregation_constraint(m.x, m.parent_disjunction)
+        assertExpressionsEqual(self, x_cons_parent.expr, m.x == x_p1 + x_p2)
+        x_cons_child = hull.get_disaggregation_constraint(m.x, m.parent1.disjunction)
+        assertExpressionsEqual(self, x_cons_child.expr, x_p1 == x_c1 + x_c2 + x_c3)
+
+    def test_nested_with_var_that_skips_a_level(self):
+        m = ConcreteModel()
+
+        m.x = Var(bounds=(-2, 9))
+        m.y = Var(bounds=(-3, 8))
+
+        m.y1 = Disjunct()
+        m.y1.c1 = Constraint(expr=m.x >= 4)
+        m.y1.z1 = Disjunct()
+        m.y1.z1.c1 = Constraint(expr=m.y == 0)
+        m.y1.z1.w1 = Disjunct()
+        m.y1.z1.w1.c1 = Constraint(expr=m.x == 0)
+        m.y1.z1.w2 = Disjunct()
+        m.y1.z1.w2.c1 = Constraint(expr=m.x >= 1)
+        m.y1.z1.disjunction = Disjunction(expr=[m.y1.z1.w1, m.y1.z1.w2])
+        m.y1.z2 = Disjunct()
+        m.y1.z2.c1 = Constraint(expr=m.y == 1)
+        m.y1.disjunction = Disjunction(expr=[m.y1.z1, m.y1.z2])
+        m.y2 = Disjunct()
+        m.y2.c1 = Constraint(expr=m.x == 0)
+        m.disjunction = Disjunction(expr=[m.y1, m.y2])
+
+        hull = TransformationFactory('gdp.hull')
+        hull.apply_to(m)
+
+        x_y1 = hull.get_disaggregated_var(m.x, m.y1)
+        x_y2 = hull.get_disaggregated_var(m.x, m.y2)
+        x_z1 = hull.get_disaggregated_var(m.x, m.y1.z1)
+        x_z2 = hull.get_disaggregated_var(m.x, m.y1.z2)
+        x_w1 = hull.get_disaggregated_var(m.x, m.y1.z1.w1)
+        x_w2 = hull.get_disaggregated_var(m.x, m.y1.z1.w2)
+
+        y_z1 = hull.get_disaggregated_var(m.y, m.y1.z1)
+        y_z2 = hull.get_disaggregated_var(m.y, m.y1.z2)
+        y_y1 = hull.get_disaggregated_var(m.y, m.y1)
+        y_y2 = hull.get_disaggregated_var(m.y, m.y2)
+
+        cons = hull.get_disaggregation_constraint(m.x, m.y1.z1.disjunction)
+        assertExpressionsEqual(self, cons.expr, x_z1 == x_w1 + x_w2)
+        cons = hull.get_disaggregation_constraint(m.x, m.y1.disjunction)
+        assertExpressionsEqual(self, cons.expr, x_y1 == x_z2 + x_z1)
+        cons = hull.get_disaggregation_constraint(m.x, m.disjunction)
+        assertExpressionsEqual(self, cons.expr, m.x == x_y1 + x_y2)
+
+        cons = hull.get_disaggregation_constraint(m.y, m.y1.z1.disjunction,
+                                                  raise_exception=False)
+        self.assertIsNone(cons)
+        cons = hull.get_disaggregation_constraint(m.y, m.y1.disjunction)
+        assertExpressionsEqual(self, cons.expr, y_y1 == y_z1 + y_z2)
+        cons = hull.get_disaggregation_constraint(m.y, m.disjunction)
+        assertExpressionsEqual(self, cons.expr, m.y == y_y2 + y_y1)
+
 
 class TestSpecialCases(unittest.TestCase):
     def test_local_vars(self):
