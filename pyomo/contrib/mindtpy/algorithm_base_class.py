@@ -84,7 +84,7 @@ from pyomo.contrib.mindtpy.util import (
 
 single_tree, single_tree_available = attempt_import('pyomo.contrib.mindtpy.single_tree')
 tabu_list, tabu_list_available = attempt_import('pyomo.contrib.mindtpy.tabu_list')
-egb = attempt_import('pyomo.contrib.pynumero.interfaces.external_grey_box')[0]
+egb, egb_available = attempt_import('pyomo.contrib.pynumero.interfaces.external_grey_box')
 
 
 class _MindtPyAlgorithm(object):
@@ -324,11 +324,12 @@ class _MindtPyAlgorithm(object):
                 ctype=Constraint, active=True, descend_into=(Block)
             )
         )
-        util_block.grey_box_list = list(
-            model.component_data_objects(
-                ctype=egb.ExternalGreyBoxBlock, active=True, descend_into=(Block)
+        if egb_available:
+            util_block.grey_box_list = list(
+                model.component_data_objects(
+                    ctype=egb.ExternalGreyBoxBlock, active=True, descend_into=(Block)
+                )
             )
-        )
         util_block.linear_constraint_list = list(
             c
             for c in util_block.constraint_list
@@ -356,13 +357,22 @@ class _MindtPyAlgorithm(object):
 
         # We use component_data_objects rather than list(var_set) in order to
         # preserve a deterministic ordering.
-        util_block.variable_list = list(
-            v
-            for v in model.component_data_objects(
-                ctype=Var, descend_into=(Block, egb.ExternalGreyBoxBlock)
+        if egb_available:
+            util_block.variable_list = list(
+                v
+                for v in model.component_data_objects(
+                    ctype=Var, descend_into=(Block, egb.ExternalGreyBoxBlock)
+                )
+                if v in var_set
             )
-            if v in var_set
-        )
+        else:
+            util_block.variable_list = list(
+                v
+                for v in model.component_data_objects(
+                    ctype=Var, descend_into=(Block)
+                )
+                if v in var_set
+            )
         util_block.discrete_variable_list = list(
             v for v in util_block.variable_list if v in var_set and v.is_integer()
         )
