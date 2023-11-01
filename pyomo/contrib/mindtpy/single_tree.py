@@ -910,19 +910,7 @@ def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, mindtpy_solver, config):
             if mindtpy_solver.dual_bound != mindtpy_solver.dual_bound_progress[0]:
                 mindtpy_solver.add_regularization()
 
-        if (
-            abs(mindtpy_solver.primal_bound - mindtpy_solver.dual_bound)
-            <= config.absolute_bound_tolerance
-        ):
-            config.logger.info(
-                'MindtPy exiting on bound convergence. '
-                '|Primal Bound: {} - Dual Bound: {}| <= (absolute tolerance {})  \n'.format(
-                    mindtpy_solver.primal_bound,
-                    mindtpy_solver.dual_bound,
-                    config.absolute_bound_tolerance,
-                )
-            )
-            mindtpy_solver.results.solver.termination_condition = tc.optimal
+        if mindtpy_solver.bounds_converged() or mindtpy_solver.reached_time_limit():
             cb_opt._solver_model.terminate()
             return
 
