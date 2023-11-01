@@ -464,14 +464,15 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                     (idx, 'ub'),
                     var_free,
                 )
-                # maintain the mappings
+                # For every Disjunct the Var does not appear in, we want to map
+                # that this new variable is its disaggreggated variable.
                 for disj in obj.disjuncts:
                     # Because we called _transform_disjunct above, we know that
                     # if this isn't transformed it is because it was cleanly
                     # deactivated, and we can just skip it.
                     if (
                         disj._transformation_block is not None
-                        and disj not in disjunctsVarAppearsIn[var]
+                        and disj not in setOfDisjunctsVarAppearsIn[var]
                     ):
                         relaxationBlock = disj._transformation_block().parent_block()
                         relaxationBlock._bigMConstraintMap[
@@ -488,12 +489,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             else:
                 disaggregatedExpr = 0
             for disjunct in disjunctsVarAppearsIn[var]:
-                if disjunct._transformation_block is None:
-                    # Because we called _transform_disjunct above, we know that
-                    # if this isn't transformed it is because it was cleanly
-                    # deactivated, and we can just skip it.
-                    continue
-
+                # We know this Disjunct was active, so it has been transformed now.
                 disaggregatedVar = (
                     disjunct._transformation_block()
                     .parent_block()
@@ -502,6 +498,8 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 disaggregatedExpr += disaggregatedVar
 
             cons_idx = len(disaggregationConstraint)
+            # We always aggregate to the original var. If this is nested, this
+            # constraint will be transformed again.
             disaggregationConstraint.add(cons_idx, var == disaggregatedExpr)
             # and update the map so that we can find this later. We index by
             # variable and the particular disjunction because there is a
