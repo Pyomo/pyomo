@@ -510,10 +510,10 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         for i in [0, 1]:
             mappings = ComponentMap()
             mappings[m.x] = disjBlock[i].disaggregatedVars.x
-            if i == 1:  # this disjunct as x, w, and no y
+            if i == 1:  # this disjunct has x, w, and no y
                 mappings[m.w] = disjBlock[i].disaggregatedVars.w
                 mappings[m.y] = transBlock._disaggregatedVars[0]
-            elif i == 0:  # this disjunct as x, y, and no w
+            elif i == 0:  # this disjunct has x, y, and no w
                 mappings[m.y] = disjBlock[i].disaggregatedVars.y
                 mappings[m.w] = transBlock._disaggregatedVars[1]
 
@@ -1427,16 +1427,16 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         solver = SolverFactory(linear_solvers[0])
 
         cases = [
-            (1, 1, 1, 1, None),
-            (0, 0, 0, 0, None),
-            (1, 0, 0, 0, None),
-            (0, 1, 0, 0, 1.1),
-            (0, 0, 1, 0, None),
-            (0, 0, 0, 1, None),
-            (1, 1, 0, 0, None),
-            (1, 0, 1, 0, 1.2),
-            (1, 0, 0, 1, 1.3),
-            (1, 0, 1, 1, None),
+            (True, True, True, True, None),
+            (False, False, False, False, None),
+            (True, False, False, False, None),
+            (False, True, False, False, 1.1),
+            (False, False, True, False, None),
+            (False, False, False, True, None),
+            (True, True, False, False, None),
+            (True, False, True, False, 1.2),
+            (True, False, False, True, 1.3),
+            (True, False, True, True, None),
         ]
         for case in cases:
             m.d1.indicator_var.fix(case[0])
@@ -1468,16 +1468,16 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         solver = SolverFactory(linear_solvers[0])
 
         cases = [
-            (1, 1, 1, 1, None),
-            (0, 0, 0, 0, None),
-            (1, 0, 0, 0, None),
-            (0, 1, 0, 0, 1.1),
-            (0, 0, 1, 0, None),
-            (0, 0, 0, 1, None),
-            (1, 1, 0, 0, None),
-            (1, 0, 1, 0, 1.2),
-            (1, 0, 0, 1, 1.3),
-            (1, 0, 1, 1, None),
+            (True, True, True, True, None),
+            (False, False, False, False, None),
+            (True, False, False, False, None),
+            (False, True, False, False, 1.1),
+            (False, False, True, False, None),
+            (False, False, False, True, None),
+            (True, True, False, False, None),
+            (True, False, True, False, 1.2),
+            (True, False, False, True, 1.3),
+            (True, False, True, True, None),
         ]
         for case in cases:
             m.d1.indicator_var.fix(case[0])
@@ -1722,10 +1722,10 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         hull.apply_to(m)
 
         # this should be a feasible integer solution
-        m.d1.indicator_var.fix(0)
-        m.d2.indicator_var.fix(1)
-        m.d3.indicator_var.fix(0)
-        m.d4.indicator_var.fix(0)
+        m.d1.indicator_var.fix(False)
+        m.d2.indicator_var.fix(True)
+        m.d3.indicator_var.fix(False)
+        m.d4.indicator_var.fix(False)
 
         results = SolverFactory(linear_solvers[0]).solve(m)
         self.assertEqual(
@@ -1739,10 +1739,10 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         self.assertEqual(value(hull.get_disaggregated_var(m.x, m.d4)), 0)
 
         # and what if one of the inner disjuncts is true?
-        m.d1.indicator_var.fix(1)
-        m.d2.indicator_var.fix(0)
-        m.d3.indicator_var.fix(1)
-        m.d4.indicator_var.fix(0)
+        m.d1.indicator_var.fix(True)
+        m.d2.indicator_var.fix(False)
+        m.d3.indicator_var.fix(True)
+        m.d4.indicator_var.fix(False)
 
         results = SolverFactory(linear_solvers[0]).solve(m)
         self.assertEqual(
@@ -2398,12 +2398,12 @@ class KmeansTest(unittest.TestCase):
         TransformationFactory('gdp.hull').apply_to(m)
 
         # fix an optimal solution
-        m.AssignPoint[1, 1].indicator_var.fix(1)
-        m.AssignPoint[1, 2].indicator_var.fix(0)
-        m.AssignPoint[2, 1].indicator_var.fix(0)
-        m.AssignPoint[2, 2].indicator_var.fix(1)
-        m.AssignPoint[3, 1].indicator_var.fix(1)
-        m.AssignPoint[3, 2].indicator_var.fix(0)
+        m.AssignPoint[1, 1].indicator_var.fix(True)
+        m.AssignPoint[1, 2].indicator_var.fix(False)
+        m.AssignPoint[2, 1].indicator_var.fix(False)
+        m.AssignPoint[2, 2].indicator_var.fix(True)
+        m.AssignPoint[3, 1].indicator_var.fix(True)
+        m.AssignPoint[3, 2].indicator_var.fix(False)
 
         m.cluster_center[1].fix(0.3059)
         m.cluster_center[2].fix(0.8043)
