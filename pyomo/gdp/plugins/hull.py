@@ -253,7 +253,10 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         # Preprocess in order to find what disjunctive components need
         # transformation
         gdp_tree = self._get_gdp_tree_from_targets(instance, targets)
-        preprocessed_targets = gdp_tree.topological_sort()
+        # Transform from leaf to root: This is important for hull because for
+        # nested GDPs, we will introduce variables that need disaggregating into
+        # parent Disjuncts as we transform their child Disjunctions.
+        preprocessed_targets = gdp_tree.reverse_topological_sort()
         self._targets_set = set(preprocessed_targets)
 
         for t in preprocessed_targets:
@@ -565,8 +568,8 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             )
 
         for var in localVars:
-            # we don't need to disaggregated, we can use this Var, but we do
-            # need to set up its bounds constraints.
+            # we don't need to disaggregate, i.e., we can use this Var, but we
+            # do need to set up its bounds constraints.
 
             # naming conflicts are possible here since this is a bunch
             # of variables from different blocks coming together, so we
@@ -670,24 +673,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             local_var_set = parent_disjunct.LocalVars[parent_disjunct]
 
         return local_var_set
-
-    def _warn_for_active_disjunct(
-        self, innerdisjunct, outerdisjunct, var_substitute_map, zero_substitute_map
-    ):
-        # We override the base class method because in hull, it might just be
-        # that we haven't gotten here yet.
-        disjuncts = (
-            innerdisjunct.values() if innerdisjunct.is_indexed() else (innerdisjunct,)
-        )
-        for disj in disjuncts:
-            if disj in self._targets_set:
-                # We're getting to this, have some patience.
-                continue
-            else:
-                # But if it wasn't in the targets after preprocessing, it
-                # doesn't belong in an active Disjunction that we are
-                # transforming and we should be confused.
-                _warn_for_active_disjunct(innerdisjunct, outerdisjunct)
 
     def _transform_constraint(
         self, obj, disjunct, var_substitute_map, zero_substitute_map
