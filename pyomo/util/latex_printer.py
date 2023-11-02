@@ -58,10 +58,7 @@ from pyomo.core.expr.template_expr import (
     NPV_Structural_GetItemExpression,
     Numeric_GetAttrExpression,
 )
-from pyomo.core.expr.numeric_expr import (
-    NPV_SumExpression,
-    NPV_DivisionExpression,
-)
+from pyomo.core.expr.numeric_expr import NPV_SumExpression, NPV_DivisionExpression
 from pyomo.core.base.block import IndexedBlock
 
 from pyomo.core.base.external import _PythonCallbackFunctionID
@@ -77,6 +74,7 @@ _MONOMIAL = ExprType.MONOMIAL
 _GENERAL = ExprType.GENERAL
 
 from pyomo.common.dependencies import numpy, numpy_available
+
 if numpy_available:
     import numpy as np
 
@@ -1036,7 +1034,8 @@ def latex_printer(
                 conLine = (
                     ' ' * tbSpc
                     + algn
-                    + ' %s %s' % (visitor.walk_expression(con_template), trailingAligner)
+                    + ' %s %s'
+                    % (visitor.walk_expression(con_template), trailingAligner)
                 )
 
                 # setMap = visitor.setMap
@@ -1064,7 +1063,9 @@ def latex_printer(
 
                 # Add labels as needed
                 if not use_equation_environment:
-                    pstr += '\\label{con:' + pyomo_component.name + '_' + con.name + '} '
+                    pstr += (
+                        '\\label{con:' + pyomo_component.name + '_' + con.name + '} '
+                    )
 
                 pstr += tail
 
