@@ -19,20 +19,20 @@ from pyomo.contrib.parmest.examples.reactor_design.reactor_design import (
 
 def main():
     # Vars to estimate
-    theta_names = ['k1', 'k2', 'k3']
+    theta_names = ["k1", "k2", "k3"]
 
     # Data
     file_dirname = dirname(abspath(str(__file__)))
-    file_name = abspath(join(file_dirname, 'reactor_data.csv'))
+    file_name = abspath(join(file_dirname, "reactor_data.csv"))
     data = pd.read_csv(file_name)
 
     # Sum of squared error function
     def SSE(model, data):
         expr = (
-            (float(data.iloc[0]['ca']) - model.ca) ** 2
-            + (float(data.iloc[0]['cb']) - model.cb) ** 2
-            + (float(data.iloc[0]['cc']) - model.cc) ** 2
-            + (float(data.iloc[0]['cd']) - model.cd) ** 2
+            (float(data.iloc[0]["ca"]) - model.ca) ** 2
+            + (float(data.iloc[0]["cb"]) - model.cb) ** 2
+            + (float(data.iloc[0]["cc"]) - model.cc) ** 2
+            + (float(data.iloc[0]["cd"]) - model.cd) ** 2
         )
         return expr
 
@@ -46,13 +46,13 @@ def main():
     bootstrap_theta = pest.theta_est_bootstrap(50)
 
     # Plot results
-    parmest.graphics.pairwise_plot(bootstrap_theta, title='Bootstrap theta')
+    parmest.graphics.pairwise_plot(bootstrap_theta, title="Bootstrap theta")
     parmest.graphics.pairwise_plot(
         bootstrap_theta,
         theta,
         0.8,
-        ['MVN', 'KDE', 'Rect'],
-        title='Bootstrap theta with confidence regions',
+        ["MVN", "KDE", "Rect"],
+        title="Bootstrap theta with confidence regions",
     )
 
 

@@ -22,7 +22,7 @@ from pyomo.common.dependencies import (
 
 import platform
 
-is_osx = platform.mac_ver()[0] != ''
+is_osx = platform.mac_ver()[0] != ""
 
 import pyomo.common.unittest as unittest
 import sys
@@ -38,11 +38,11 @@ import pyomo.dae as dae
 
 from pyomo.opt import SolverFactory
 
-ipopt_available = SolverFactory('ipopt').available()
+ipopt_available = SolverFactory("ipopt").available()
 
 from pyomo.common.fileutils import find_library
 
-pynumero_ASL_available = False if find_library('pynumero_ASL') is None else True
+pynumero_ASL_available = False if find_library("pynumero_ASL") is None else True
 
 testdir = os.path.dirname(os.path.abspath(__file__))
 
@@ -61,10 +61,10 @@ class TestRooneyBiegler(unittest.TestCase):
         # Note, the data used in this test has been corrected to use data.loc[5,'hour'] = 7 (instead of 6)
         data = pd.DataFrame(
             data=[[1, 8.3], [2, 10.3], [3, 19.0], [4, 16.0], [5, 15.6], [7, 19.8]],
-            columns=['hour', 'y'],
+            columns=["hour", "y"],
         )
 
-        theta_names = ['asymptote', 'rate_constant']
+        theta_names = ["asymptote", "rate_constant"]
 
         def SSE(model, data):
             expr = sum(
@@ -73,7 +73,7 @@ class TestRooneyBiegler(unittest.TestCase):
             )
             return expr
 
-        solver_options = {'tol': 1e-8}
+        solver_options = {"tol": 1e-8}
 
         self.data = data
         self.pest = parmest.Estimator(
@@ -90,10 +90,10 @@ class TestRooneyBiegler(unittest.TestCase):
 
         self.assertAlmostEqual(objval, 4.3317112, places=2)
         self.assertAlmostEqual(
-            thetavals['asymptote'], 19.1426, places=2
+            thetavals["asymptote"], 19.1426, places=2
         )  # 19.1426 from the paper
         self.assertAlmostEqual(
-            thetavals['rate_constant'], 0.5311, places=2
+            thetavals["rate_constant"], 0.5311, places=2
         )  # 0.5311 from the paper
 
     @unittest.skipIf(
@@ -105,14 +105,14 @@ class TestRooneyBiegler(unittest.TestCase):
         num_bootstraps = 10
         theta_est = self.pest.theta_est_bootstrap(num_bootstraps, return_samples=True)
 
-        num_samples = theta_est['samples'].apply(len)
+        num_samples = theta_est["samples"].apply(len)
         self.assertTrue(len(theta_est.index), 10)
         self.assertTrue(num_samples.equals(pd.Series([6] * 10)))
 
-        del theta_est['samples']
+        del theta_est["samples"]
 
         # apply confidence region test
-        CR = self.pest.confidence_region_test(theta_est, 'MVN', [0.5, 0.75, 1.0])
+        CR = self.pest.confidence_region_test(theta_est, "MVN", [0.5, 0.75, 1.0])
 
         self.assertTrue(set(CR.columns) >= set([0.5, 0.75, 1.0]))
         self.assertTrue(CR[0.5].sum() == 5)
@@ -121,7 +121,7 @@ class TestRooneyBiegler(unittest.TestCase):
 
         graphics.pairwise_plot(theta_est)
         graphics.pairwise_plot(theta_est, thetavals)
-        graphics.pairwise_plot(theta_est, thetavals, 0.8, ['MVN', 'KDE', 'Rect'])
+        graphics.pairwise_plot(theta_est, thetavals, 0.8, ["MVN", "KDE", "Rect"])
 
     @unittest.skipIf(
         not graphics.imports_available, "parmest.graphics imports are unavailable"
@@ -151,7 +151,7 @@ class TestRooneyBiegler(unittest.TestCase):
         self.assertTrue(lNo_theta.shape == (6, 2))
 
         results = self.pest.leaveNout_bootstrap_test(
-            1, None, 3, 'Rect', [0.5, 1.0], seed=5436
+            1, None, 3, "Rect", [0.5, 1.0], seed=5436
         )
         self.assertTrue(len(results) == 6)  # 6 lNo samples
         i = 1
@@ -221,10 +221,10 @@ class TestRooneyBiegler(unittest.TestCase):
 
         self.assertAlmostEqual(objval, 4.3317112, places=2)
         self.assertAlmostEqual(
-            thetavals['asymptote'], 19.1426, places=2
+            thetavals["asymptote"], 19.1426, places=2
         )  # 19.1426 from the paper
         self.assertAlmostEqual(
-            thetavals['rate_constant'], 0.5311, places=2
+            thetavals["rate_constant"], 0.5311, places=2
         )  # 0.5311 from the paper
 
         # Covariance matrix
@@ -239,22 +239,22 @@ class TestRooneyBiegler(unittest.TestCase):
         )  # -0.4322 from paper
         self.assertAlmostEqual(cov.iloc[1, 1], 0.04124, places=2)  # 0.04124 from paper
 
-        ''' Why does the covariance matrix from parmest not match the paper? Parmest is
+        """ Why does the covariance matrix from parmest not match the paper? Parmest is
         calculating the exact reduced Hessian. The paper (Rooney and Bielger, 2001) likely
         employed the first order approximation common for nonlinear regression. The paper
         values were verified with Scipy, which uses the same first order approximation.
         The formula used in parmest was verified against equations (7-5-15) and (7-5-16) in
         "Nonlinear Parameter Estimation", Y. Bard, 1974.
-        '''
+        """
 
     def test_cov_scipy_least_squares_comparison(self):
-        '''
+        """
         Scipy results differ in the 3rd decimal place from the paper. It is possible
         the paper used an alternative finite difference approximation for the Jacobian.
-        '''
+        """
 
         def model(theta, t):
-            '''
+            """
             Model to be fitted y = model(theta, t)
             Arguments:
                 theta: vector of fitted parameters
@@ -262,32 +262,32 @@ class TestRooneyBiegler(unittest.TestCase):
 
             Returns:
                 y: model predictions [need to check paper for units]
-            '''
+            """
             asymptote = theta[0]
             rate_constant = theta[1]
 
             return asymptote * (1 - np.exp(-rate_constant * t))
 
         def residual(theta, t, y):
-            '''
+            """
             Calculate residuals
             Arguments:
                 theta: vector of fitted parameters
                 t: independent variable [hours]
                 y: dependent variable [?]
-            '''
+            """
             return y - model(theta, t)
 
         # define data
-        t = self.data['hour'].to_numpy()
-        y = self.data['y'].to_numpy()
+        t = self.data["hour"].to_numpy()
+        y = self.data["y"].to_numpy()
 
         # define initial guess
         theta_guess = np.array([15, 0.5])
 
         ## solve with optimize.least_squares
         sol = scipy.optimize.least_squares(
-            residual, theta_guess, method='trf', args=(t, y), verbose=2
+            residual, theta_guess, method="trf", args=(t, y), verbose=2
         )
         theta_hat = sol.x
 
@@ -313,18 +313,18 @@ class TestRooneyBiegler(unittest.TestCase):
         self.assertAlmostEqual(cov[1, 1], 0.04124, places=2)  # 0.04124 from paper
 
     def test_cov_scipy_curve_fit_comparison(self):
-        '''
+        """
         Scipy results differ in the 3rd decimal place from the paper. It is possible
         the paper used an alternative finite difference approximation for the Jacobian.
-        '''
+        """
 
         ## solve with optimize.curve_fit
         def model(t, asymptote, rate_constant):
             return asymptote * (1 - np.exp(-rate_constant * t))
 
         # define data
-        t = self.data['hour'].to_numpy()
-        y = self.data['y'].to_numpy()
+        t = self.data["hour"].to_numpy()
+        y = self.data["y"].to_numpy()
 
         # define initial guess
         theta_guess = np.array([15, 0.5])
@@ -351,7 +351,7 @@ class TestModelVariants(unittest.TestCase):
     def setUp(self):
         self.data = pd.DataFrame(
             data=[[1, 8.3], [2, 10.3], [3, 19.0], [4, 16.0], [5, 15.6], [7, 19.8]],
-            columns=['hour', 'y'],
+            columns=["hour", "y"],
         )
 
         def rooney_biegler_params(data):
@@ -371,16 +371,16 @@ class TestModelVariants(unittest.TestCase):
         def rooney_biegler_indexed_params(data):
             model = pyo.ConcreteModel()
 
-            model.param_names = pyo.Set(initialize=['asymptote', 'rate_constant'])
+            model.param_names = pyo.Set(initialize=["asymptote", "rate_constant"])
             model.theta = pyo.Param(
                 model.param_names,
-                initialize={'asymptote': 15, 'rate_constant': 0.5},
+                initialize={"asymptote": 15, "rate_constant": 0.5},
                 mutable=True,
             )
 
             def response_rule(m, h):
-                expr = m.theta['asymptote'] * (
-                    1 - pyo.exp(-m.theta['rate_constant'] * h)
+                expr = m.theta["asymptote"] * (
+                    1 - pyo.exp(-m.theta["rate_constant"] * h)
                 )
                 return expr
 
@@ -407,20 +407,20 @@ class TestModelVariants(unittest.TestCase):
         def rooney_biegler_indexed_vars(data):
             model = pyo.ConcreteModel()
 
-            model.var_names = pyo.Set(initialize=['asymptote', 'rate_constant'])
+            model.var_names = pyo.Set(initialize=["asymptote", "rate_constant"])
             model.theta = pyo.Var(
-                model.var_names, initialize={'asymptote': 15, 'rate_constant': 0.5}
+                model.var_names, initialize={"asymptote": 15, "rate_constant": 0.5}
             )
             model.theta[
-                'asymptote'
+                "asymptote"
             ].fixed = (
                 True  # parmest will unfix theta variables, even when they are indexed
             )
-            model.theta['rate_constant'].fixed = True
+            model.theta["rate_constant"].fixed = True
 
             def response_rule(m, h):
-                expr = m.theta['asymptote'] * (
-                    1 - pyo.exp(-m.theta['rate_constant'] * h)
+                expr = m.theta["asymptote"] * (
+                    1 - pyo.exp(-m.theta["rate_constant"] * h)
                 )
                 return expr
 
@@ -437,41 +437,41 @@ class TestModelVariants(unittest.TestCase):
 
         self.objective_function = SSE
 
-        theta_vals = pd.DataFrame([20, 1], index=['asymptote', 'rate_constant']).T
+        theta_vals = pd.DataFrame([20, 1], index=["asymptote", "rate_constant"]).T
         theta_vals_index = pd.DataFrame(
             [20, 1], index=["theta['asymptote']", "theta['rate_constant']"]
         ).T
 
         self.input = {
-            'param': {
-                'model': rooney_biegler_params,
-                'theta_names': ['asymptote', 'rate_constant'],
-                'theta_vals': theta_vals,
+            "param": {
+                "model": rooney_biegler_params,
+                "theta_names": ["asymptote", "rate_constant"],
+                "theta_vals": theta_vals,
             },
-            'param_index': {
-                'model': rooney_biegler_indexed_params,
-                'theta_names': ['theta'],
-                'theta_vals': theta_vals_index,
+            "param_index": {
+                "model": rooney_biegler_indexed_params,
+                "theta_names": ["theta"],
+                "theta_vals": theta_vals_index,
             },
-            'vars': {
-                'model': rooney_biegler_vars,
-                'theta_names': ['asymptote', 'rate_constant'],
-                'theta_vals': theta_vals,
+            "vars": {
+                "model": rooney_biegler_vars,
+                "theta_names": ["asymptote", "rate_constant"],
+                "theta_vals": theta_vals,
             },
-            'vars_index': {
-                'model': rooney_biegler_indexed_vars,
-                'theta_names': ['theta'],
-                'theta_vals': theta_vals_index,
+            "vars_index": {
+                "model": rooney_biegler_indexed_vars,
+                "theta_names": ["theta"],
+                "theta_vals": theta_vals_index,
             },
-            'vars_quoted_index': {
-                'model': rooney_biegler_indexed_vars,
-                'theta_names': ["theta['asymptote']", "theta['rate_constant']"],
-                'theta_vals': theta_vals_index,
+            "vars_quoted_index": {
+                "model": rooney_biegler_indexed_vars,
+                "theta_names": ["theta['asymptote']", "theta['rate_constant']"],
+                "theta_vals": theta_vals_index,
             },
-            'vars_str_index': {
-                'model': rooney_biegler_indexed_vars,
-                'theta_names': ["theta[asymptote]", "theta[rate_constant]"],
-                'theta_vals': theta_vals_index,
+            "vars_str_index": {
+                "model": rooney_biegler_indexed_vars,
+                "theta_names": ["theta[asymptote]", "theta[rate_constant]"],
+                "theta_vals": theta_vals_index,
             },
         }
 
@@ -483,9 +483,9 @@ class TestModelVariants(unittest.TestCase):
     def test_parmest_basics(self):
         for model_type, parmest_input in self.input.items():
             pest = parmest.Estimator(
-                parmest_input['model'],
+                parmest_input["model"],
                 self.data,
-                parmest_input['theta_names'],
+                parmest_input["theta_names"],
                 self.objective_function,
             )
 
@@ -505,15 +505,15 @@ class TestModelVariants(unittest.TestCase):
                 cov.iloc[1, 1], 0.04193591, places=2
             )  # 0.04124 from paper
 
-            obj_at_theta = pest.objective_at_theta(parmest_input['theta_vals'])
-            self.assertAlmostEqual(obj_at_theta['obj'][0], 16.531953, places=2)
+            obj_at_theta = pest.objective_at_theta(parmest_input["theta_vals"])
+            self.assertAlmostEqual(obj_at_theta["obj"][0], 16.531953, places=2)
 
     def test_parmest_basics_with_initialize_parmest_model_option(self):
         for model_type, parmest_input in self.input.items():
             pest = parmest.Estimator(
-                parmest_input['model'],
+                parmest_input["model"],
                 self.data,
-                parmest_input['theta_names'],
+                parmest_input["theta_names"],
                 self.objective_function,
             )
 
@@ -534,22 +534,22 @@ class TestModelVariants(unittest.TestCase):
             )  # 0.04124 from paper
 
             obj_at_theta = pest.objective_at_theta(
-                parmest_input['theta_vals'], initialize_parmest_model=True
+                parmest_input["theta_vals"], initialize_parmest_model=True
             )
 
-            self.assertAlmostEqual(obj_at_theta['obj'][0], 16.531953, places=2)
+            self.assertAlmostEqual(obj_at_theta["obj"][0], 16.531953, places=2)
 
     def test_parmest_basics_with_square_problem_solve(self):
         for model_type, parmest_input in self.input.items():
             pest = parmest.Estimator(
-                parmest_input['model'],
+                parmest_input["model"],
                 self.data,
-                parmest_input['theta_names'],
+                parmest_input["theta_names"],
                 self.objective_function,
             )
 
             obj_at_theta = pest.objective_at_theta(
-                parmest_input['theta_vals'], initialize_parmest_model=True
+                parmest_input["theta_vals"], initialize_parmest_model=True
             )
 
             objval, thetavals, cov = pest.theta_est(calc_cov=True, cov_n=6)
@@ -568,14 +568,14 @@ class TestModelVariants(unittest.TestCase):
                 cov.iloc[1, 1], 0.04193591, places=2
             )  # 0.04124 from paper
 
-            self.assertAlmostEqual(obj_at_theta['obj'][0], 16.531953, places=2)
+            self.assertAlmostEqual(obj_at_theta["obj"][0], 16.531953, places=2)
 
     def test_parmest_basics_with_square_problem_solve_no_theta_vals(self):
         for model_type, parmest_input in self.input.items():
             pest = parmest.Estimator(
-                parmest_input['model'],
+                parmest_input["model"],
                 self.data,
-                parmest_input['theta_names'],
+                parmest_input["theta_names"],
                 self.objective_function,
             )
 
@@ -632,17 +632,17 @@ class TestReactorDesign(unittest.TestCase):
                 [1.90, 10000, 4491.3, 1049.4, 920.5, 1769.4],
                 [1.95, 10000, 4538.8, 1045.8, 893.9, 1760.8],
             ],
-            columns=['sv', 'caf', 'ca', 'cb', 'cc', 'cd'],
+            columns=["sv", "caf", "ca", "cb", "cc", "cd"],
         )
 
-        theta_names = ['k1', 'k2', 'k3']
+        theta_names = ["k1", "k2", "k3"]
 
         def SSE(model, data):
             expr = (
-                (float(data.iloc[0]['ca']) - model.ca) ** 2
-                + (float(data.iloc[0]['cb']) - model.cb) ** 2
-                + (float(data.iloc[0]['cc']) - model.cc) ** 2
-                + (float(data.iloc[0]['cd']) - model.cd) ** 2
+                (float(data.iloc[0]["ca"]) - model.ca) ** 2
+                + (float(data.iloc[0]["cb"]) - model.cb) ** 2
+                + (float(data.iloc[0]["cc"]) - model.cc) ** 2
+                + (float(data.iloc[0]["cd"]) - model.cd) ** 2
             )
             return expr
 
@@ -656,13 +656,13 @@ class TestReactorDesign(unittest.TestCase):
         # used in data reconciliation
         objval, thetavals = self.pest.theta_est()
 
-        self.assertAlmostEqual(thetavals['k1'], 5.0 / 6.0, places=4)
-        self.assertAlmostEqual(thetavals['k2'], 5.0 / 3.0, places=4)
-        self.assertAlmostEqual(thetavals['k3'], 1.0 / 6000.0, places=7)
+        self.assertAlmostEqual(thetavals["k1"], 5.0 / 6.0, places=4)
+        self.assertAlmostEqual(thetavals["k2"], 5.0 / 3.0, places=4)
+        self.assertAlmostEqual(thetavals["k3"], 1.0 / 6000.0, places=7)
 
     def test_return_values(self):
         objval, thetavals, data_rec = self.pest.theta_est(
-            return_values=['ca', 'cb', 'cc', 'cd', 'caf']
+            return_values=["ca", "cb", "cc", "cd", "caf"]
         )
         self.assertAlmostEqual(data_rec["cc"].loc[18], 893.84924, places=3)
 
@@ -679,9 +679,9 @@ class TestReactorDesign_DAE(unittest.TestCase):
 
     def setUp(self):
         def ABC_model(data):
-            ca_meas = data['ca']
-            cb_meas = data['cb']
-            cc_meas = data['cc']
+            ca_meas = data["ca"]
+            cb_meas = data["cb"]
+            cc_meas = data["cc"]
 
             if isinstance(data, pd.DataFrame):
                 meas_t = data.index  # time index
@@ -754,7 +754,7 @@ class TestReactorDesign_DAE(unittest.TestCase):
                 rule=total_cost_rule, sense=pyo.minimize
             )
 
-            disc = pyo.TransformationFactory('dae.collocation')
+            disc = pyo.TransformationFactory("dae.collocation")
             disc.apply_to(m, nfe=20, ncp=2)
 
             return m
@@ -785,15 +785,15 @@ class TestReactorDesign_DAE(unittest.TestCase):
             [4.737, 0.004, 0.036, 0.971],
             [5.000, -0.024, 0.028, 0.985],
         ]
-        data = pd.DataFrame(data, columns=['t', 'ca', 'cb', 'cc'])
-        data_df = data.set_index('t')
+        data = pd.DataFrame(data, columns=["t", "ca", "cb", "cc"])
+        data_df = data.set_index("t")
         data_dict = {
-            'ca': {k: v for (k, v) in zip(data.t, data.ca)},
-            'cb': {k: v for (k, v) in zip(data.t, data.cb)},
-            'cc': {k: v for (k, v) in zip(data.t, data.cc)},
+            "ca": {k: v for (k, v) in zip(data.t, data.ca)},
+            "cb": {k: v for (k, v) in zip(data.t, data.cb)},
+            "cc": {k: v for (k, v) in zip(data.t, data.cc)},
         }
 
-        theta_names = ['k1', 'k2']
+        theta_names = ["k1", "k2"]
 
         self.pest_df = parmest.Estimator(ABC_model, [data_df], theta_names)
         self.pest_dict = parmest.Estimator(ABC_model, [data_dict], theta_names)
@@ -815,30 +815,30 @@ class TestReactorDesign_DAE(unittest.TestCase):
         obj2, theta2 = self.pest_dict.theta_est()
 
         self.assertAlmostEqual(obj1, obj2, places=6)
-        self.assertAlmostEqual(theta1['k1'], theta2['k1'], places=6)
-        self.assertAlmostEqual(theta1['k2'], theta2['k2'], places=6)
+        self.assertAlmostEqual(theta1["k1"], theta2["k1"], places=6)
+        self.assertAlmostEqual(theta1["k2"], theta2["k2"], places=6)
 
     def test_return_continuous_set(self):
-        '''
+        """
         test if ContinuousSet elements are returned correctly from theta_est()
-        '''
-        obj1, theta1, return_vals1 = self.pest_df.theta_est(return_values=['time'])
-        obj2, theta2, return_vals2 = self.pest_dict.theta_est(return_values=['time'])
-        self.assertAlmostEqual(return_vals1['time'].loc[0][18], 2.368, places=3)
-        self.assertAlmostEqual(return_vals2['time'].loc[0][18], 2.368, places=3)
+        """
+        obj1, theta1, return_vals1 = self.pest_df.theta_est(return_values=["time"])
+        obj2, theta2, return_vals2 = self.pest_dict.theta_est(return_values=["time"])
+        self.assertAlmostEqual(return_vals1["time"].loc[0][18], 2.368, places=3)
+        self.assertAlmostEqual(return_vals2["time"].loc[0][18], 2.368, places=3)
 
     def test_return_continuous_set_multiple_datasets(self):
-        '''
+        """
         test if ContinuousSet elements are returned correctly from theta_est()
-        '''
+        """
         obj1, theta1, return_vals1 = self.pest_df_multiple.theta_est(
-            return_values=['time']
+            return_values=["time"]
         )
         obj2, theta2, return_vals2 = self.pest_dict_multiple.theta_est(
-            return_values=['time']
+            return_values=["time"]
         )
-        self.assertAlmostEqual(return_vals1['time'].loc[1][18], 2.368, places=3)
-        self.assertAlmostEqual(return_vals2['time'].loc[1][18], 2.368, places=3)
+        self.assertAlmostEqual(return_vals1["time"].loc[1][18], 2.368, places=3)
+        self.assertAlmostEqual(return_vals2["time"].loc[1][18], 2.368, places=3)
 
     def test_covariance(self):
         from pyomo.contrib.interior_point.inverse_reduced_hessian import (
@@ -862,13 +862,13 @@ class TestReactorDesign_DAE(unittest.TestCase):
         l = len(vars_list)
         cov_interior_point = 2 * obj / (n - l) * inv_red_hes
         cov_interior_point = pd.DataFrame(
-            cov_interior_point, ['k1', 'k2'], ['k1', 'k2']
+            cov_interior_point, ["k1", "k2"], ["k1", "k2"]
         )
 
         cov_diff = (cov - cov_interior_point).abs().sum().sum()
 
-        self.assertTrue(cov.loc['k1', 'k1'] > 0)
-        self.assertTrue(cov.loc['k2', 'k2'] > 0)
+        self.assertTrue(cov.loc["k1", "k1"] > 0)
+        self.assertTrue(cov.loc["k2", "k2"] > 0)
         self.assertAlmostEqual(cov_diff, 0, places=6)
 
 
@@ -886,10 +886,10 @@ class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
         # Note, the data used in this test has been corrected to use data.loc[5,'hour'] = 7 (instead of 6)
         data = pd.DataFrame(
             data=[[1, 8.3], [2, 10.3], [3, 19.0], [4, 16.0], [5, 15.6], [7, 19.8]],
-            columns=['hour', 'y'],
+            columns=["hour", "y"],
         )
 
-        theta_names = ['asymptote', 'rate_constant']
+        theta_names = ["asymptote", "rate_constant"]
 
         def SSE(model, data):
             expr = sum(
@@ -898,7 +898,7 @@ class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
             )
             return expr
 
-        solver_options = {'tol': 1e-8}
+        solver_options = {"tol": 1e-8}
 
         self.data = data
         self.pest = parmest.Estimator(
@@ -916,15 +916,15 @@ class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
 
         self.assertAlmostEqual(objval, 4.3317112, places=2)
         self.assertAlmostEqual(
-            thetavals['asymptote'], 19.1426, places=2
+            thetavals["asymptote"], 19.1426, places=2
         )  # 19.1426 from the paper
         self.assertAlmostEqual(
-            thetavals['rate_constant'], 0.5311, places=2
+            thetavals["rate_constant"], 0.5311, places=2
         )  # 0.5311 from the paper
 
     def test_theta_est_with_square_initialization_and_custom_init_theta(self):
         theta_vals_init = pd.DataFrame(
-            data=[[19.0, 0.5]], columns=['asymptote', 'rate_constant']
+            data=[[19.0, 0.5]], columns=["asymptote", "rate_constant"]
         )
         obj_init = self.pest.objective_at_theta(
             theta_values=theta_vals_init, initialize_parmest_model=True
@@ -932,10 +932,10 @@ class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
         objval, thetavals = self.pest.theta_est()
         self.assertAlmostEqual(objval, 4.3317112, places=2)
         self.assertAlmostEqual(
-            thetavals['asymptote'], 19.1426, places=2
+            thetavals["asymptote"], 19.1426, places=2
         )  # 19.1426 from the paper
         self.assertAlmostEqual(
-            thetavals['rate_constant'], 0.5311, places=2
+            thetavals["rate_constant"], 0.5311, places=2
         )  # 0.5311 from the paper
 
     def test_theta_est_with_square_initialization_diagnostic_mode_true(self):
@@ -945,14 +945,14 @@ class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
 
         self.assertAlmostEqual(objval, 4.3317112, places=2)
         self.assertAlmostEqual(
-            thetavals['asymptote'], 19.1426, places=2
+            thetavals["asymptote"], 19.1426, places=2
         )  # 19.1426 from the paper
         self.assertAlmostEqual(
-            thetavals['rate_constant'], 0.5311, places=2
+            thetavals["rate_constant"], 0.5311, places=2
         )  # 0.5311 from the paper
 
         self.pest.diagnostic_mode = False
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

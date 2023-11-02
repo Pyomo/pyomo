@@ -21,23 +21,23 @@ def main():
     # Parameter estimation using multisensor data
 
     # Vars to estimate
-    theta_names = ['k1', 'k2', 'k3']
+    theta_names = ["k1", "k2", "k3"]
 
     # Data, includes multiple sensors for ca and cc
     file_dirname = dirname(abspath(str(__file__)))
-    file_name = abspath(join(file_dirname, 'reactor_data_multisensor.csv'))
+    file_name = abspath(join(file_dirname, "reactor_data_multisensor.csv"))
     data = pd.read_csv(file_name)
 
     # Sum of squared error function
     def SSE_multisensor(model, data):
         expr = (
-            ((float(data.iloc[0]['ca1']) - model.ca) ** 2) * (1 / 3)
-            + ((float(data.iloc[0]['ca2']) - model.ca) ** 2) * (1 / 3)
-            + ((float(data.iloc[0]['ca3']) - model.ca) ** 2) * (1 / 3)
-            + (float(data.iloc[0]['cb']) - model.cb) ** 2
-            + ((float(data.iloc[0]['cc1']) - model.cc) ** 2) * (1 / 2)
-            + ((float(data.iloc[0]['cc2']) - model.cc) ** 2) * (1 / 2)
-            + (float(data.iloc[0]['cd']) - model.cd) ** 2
+            ((float(data.iloc[0]["ca1"]) - model.ca) ** 2) * (1 / 3)
+            + ((float(data.iloc[0]["ca2"]) - model.ca) ** 2) * (1 / 3)
+            + ((float(data.iloc[0]["ca3"]) - model.ca) ** 2) * (1 / 3)
+            + (float(data.iloc[0]["cb"]) - model.cb) ** 2
+            + ((float(data.iloc[0]["cc1"]) - model.cc) ** 2) * (1 / 2)
+            + ((float(data.iloc[0]["cc2"]) - model.cc) ** 2) * (1 / 2)
+            + (float(data.iloc[0]["cd"]) - model.cd) ** 2
         )
         return expr
 
