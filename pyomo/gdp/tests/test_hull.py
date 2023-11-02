@@ -41,6 +41,7 @@ from pyomo.core.expr.compare import (
 import pyomo.core.expr as EXPR
 from pyomo.core.base import constraint
 from pyomo.repn import generate_standard_repn
+from pyomo.repn.linear import LinearRepnVisitor
 
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 import pyomo.gdp.tests.models as models
@@ -1877,6 +1878,15 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         x_cons_child = hull.get_disaggregation_constraint(m.x, m.parent1.disjunction)
         assertExpressionsEqual(self, x_cons_child.expr, x_p1 == x_c1 + x_c2 + x_c3)
 
+    def simplify_cons(self, cons):
+        visitor = LinearRepnVisitor({}, {}, {})
+        lb = cons.lower
+        ub = cons.upper
+        self.assertEqual(cons.lb, cons.ub)
+        repn = visitor.walk_expression(cons.body)
+        self.assertIsNone(repn.nonlinear)
+        return repn.to_expression(visitor) == lb
+
     def test_nested_with_var_that_skips_a_level(self):
         m = ConcreteModel()
 
@@ -1915,18 +1925,27 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         y_y2 = hull.get_disaggregated_var(m.y, m.y2)
 
         cons = hull.get_disaggregation_constraint(m.x, m.y1.z1.disjunction)
-        assertExpressionsEqual(self, cons.expr, x_z1 == x_w1 + x_w2)
+        self.assertTrue(cons.active)
+        cons_expr = self.simplify_cons(cons)
+        print(cons_expr)
+        print("")
+        print(x_z1 - x_w2 - x_w1 == 0)
+        assertExpressionsEqual(self, cons_expr, x_z1 - x_w2 - x_w1 == 0)
         cons = hull.get_disaggregation_constraint(m.x, m.y1.disjunction)
+        self.assertTrue(cons.active)
         assertExpressionsEqual(self, cons.expr, x_y1 == x_z2 + x_z1)
         cons = hull.get_disaggregation_constraint(m.x, m.disjunction)
+        self.assertTrue(cons.active)
         assertExpressionsEqual(self, cons.expr, m.x == x_y1 + x_y2)
 
         cons = hull.get_disaggregation_constraint(m.y, m.y1.z1.disjunction,
                                                   raise_exception=False)
         self.assertIsNone(cons)
         cons = hull.get_disaggregation_constraint(m.y, m.y1.disjunction)
+        self.assertTrue(cons.active)
         assertExpressionsEqual(self, cons.expr, y_y1 == y_z1 + y_z2)
         cons = hull.get_disaggregation_constraint(m.y, m.disjunction)
+        self.assertTrue(cons.active)
         assertExpressionsEqual(self, cons.expr, m.y == y_y2 + y_y1)
 
 

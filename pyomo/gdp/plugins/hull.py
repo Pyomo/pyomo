@@ -204,16 +204,16 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         super().__init__(logger)
         self._targets = set()
 
-    def _add_local_vars(self, block, local_var_dict):
+    def _collect_local_vars_from_block(self, block, local_var_dict):
         localVars = block.component('LocalVars')
-        if type(localVars) is Suffix:
+        if localVars is not None and localVars.ctype is Suffix:
             for disj, var_list in localVars.items():
-                if local_var_dict.get(disj) is None:
-                    local_var_dict[disj] = ComponentSet(var_list)
-                else:
+                if disj in local_var_dict:
                     local_var_dict[disj].update(var_list)
+                else:
+                    local_var_dict[disj] = ComponentSet(var_list)
 
-    def _get_local_var_suffixes(self, block, local_var_dict):
+    def _get_local_vars_from_suffixes(self, block, local_var_dict):
         # You can specify suffixes on any block (disjuncts included). This
         # method starts from a Disjunct (presumably) and checks for a LocalVar
         # suffixes going both up and down the tree, adding them into the
@@ -222,15 +222,13 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         # first look beneath where we are (there could be Blocks on this
         # disjunct)
         for b in block.component_data_objects(
-            Block, descend_into=(Block), active=True, sort=SortComponents.deterministic
+            Block, descend_into=Block, active=True, sort=SortComponents.deterministic
         ):
-            self._add_local_vars(b, local_var_dict)
+            self._collect_local_vars_from_block(b, local_var_dict)
         # now traverse upwards and get what's above
         while block is not None:
-            self._add_local_vars(block, local_var_dict)
+            self._collect_local_vars_from_block(block, local_var_dict)
             block = block.parent_block()
-
-        return local_var_dict
 
     def _apply_to(self, instance, **kwds):
         try:
@@ -239,7 +237,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             self._restore_state()
             self._transformation_blocks.clear()
             self._algebraic_constraints.clear()
-            self._targets_set = set()
 
     def _apply_to_impl(self, instance, **kwds):
         self._process_arguments(instance, **kwds)
@@ -257,14 +254,13 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         # nested GDPs, we will introduce variables that need disaggregating into
         # parent Disjuncts as we transform their child Disjunctions.
         preprocessed_targets = gdp_tree.reverse_topological_sort()
-        self._targets_set = set(preprocessed_targets)
 
         for t in preprocessed_targets:
             if t.ctype is Disjunction:
                 self._transform_disjunctionData(
                     t,
                     t.index(),
-                    parent_disjunct=gdp_tree.parent(t),
+                    gdp_tree.parent(t),
                 )
             # We skip disjuncts now, because we need information from the
             # disjunctions to transform them (which variables to disaggregate),
@@ -300,7 +296,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
         return transBlock, True
 
-    def _transform_disjunctionData(self, obj, index, parent_disjunct=None):
+    def _transform_disjunctionData(self, obj, index, parent_disjunct):
         # Hull reformulation doesn't work if this is an OR constraint. So if
         # xor is false, give up
         if not obj.xor:
@@ -371,9 +367,12 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                             setOfDisjunctsVarAppearsIn[var].add(disjunct)
 
             # check for LocalVars Suffix
-            localVarsByDisjunct = self._get_local_var_suffixes(
-                disjunct, localVarsByDisjunct
-            )
+            # [ESJ 11/2/23] TODO: This could be a lot more efficient if we
+            # centralized it. Right now we walk up the tree to the root model
+            # for each Disjunct, which is pretty dumb. We could get
+            # user-speficied suffixes once, and then we know where we will
+            # create ours, or we can just track what we create.
+            self._get_local_vars_from_suffixes(disjunct, localVarsByDisjunct)
 
         # We will disaggregate all variables that are not explicitly declared as
         # being local. Since we transform from leaf to root, we are implicitly
@@ -387,7 +386,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         # transform the Disjuncts: Values of localVarsByDisjunct are
         # ComponentSets, so we need this for determinism (we iterate through the
         # localVars of a Disjunct later)
-        localVars = ComponentMap()
+        localVars = {disj: [] for disj in obj.disjuncts}
         varsToDisaggregate = []
         for var in varOrder:
             disjuncts = disjunctsVarAppearsIn[var]
@@ -405,10 +404,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             # disjuncts is a list of length 1
             elif localVarsByDisjunct.get(disjuncts[0]) is not None:
                 if var in localVarsByDisjunct[disjuncts[0]]:
-                    if localVars.get(disjuncts[0]) is not None:
-                        localVars[disjuncts[0]].append(var)
-                    else:
-                        localVars[disjuncts[0]] = [var]
+                    localVars[disjuncts[0]].append(var)
                 else:
                     # It's not local to this Disjunct
                     varSet[disjuncts[0]].append(var)
@@ -421,7 +417,10 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
         # Now that we know who we need to disaggregate, we will do it
         # while we also transform the disjuncts.
-        local_var_set = self._get_local_var_set(obj)
+        print("obj: %s" % obj)
+        print("parent disjunct: %s" % parent_disjunct)
+        parent_local_var_list = self._get_local_var_list(parent_disjunct)
+        print("parent_local_var_list: %s" % parent_local_var_list)
         or_expr = 0
         for disjunct in obj.disjuncts:
             or_expr += disjunct.indicator_var.get_associated_binary()
@@ -429,11 +428,10 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 disjunct,
                 transBlock,
                 varSet[disjunct],
-                localVars.get(disjunct, []),
-                local_var_set,
+                localVars[disjunct],
+                parent_local_var_list,
             )
-        rhs = 1 if parent_disjunct is None else parent_disjunct.binary_indicator_var
-        xorConstraint.add(index, (or_expr, rhs))
+        xorConstraint.add(index, (or_expr, 1))
         # map the DisjunctionData to its XOR constraint to mark it as
         # transformed
         obj._algebraic_constraint = weakref_ref(xorConstraint[index])
@@ -452,8 +450,8 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 disaggregated_var = disaggregatedVars[idx]
                 # mark this as local because we won't re-disaggregate if this is
                 # a nested disjunction
-                if local_var_set is not None:
-                    local_var_set.append(disaggregated_var)
+                if parent_local_var_list is not None:
+                    parent_local_var_list.append(disaggregated_var)
                 var_free = 1 - sum(
                     disj.indicator_var.get_associated_binary()
                     for disj in disjunctsVarAppearsIn[var]
@@ -518,7 +516,8 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         # deactivate for the writers
         obj.deactivate()
 
-    def _transform_disjunct(self, obj, transBlock, varSet, localVars, local_var_set):
+    def _transform_disjunct(self, obj, transBlock, varSet, localVars,
+                            parent_local_var_list):
         # We're not using the preprocessed list here, so this could be
         # inactive. We've already done the error checking in preprocessing, so
         # we just skip it here.
@@ -535,6 +534,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         # add the disaggregated variables and their bigm constraints
         # to the relaxationBlock
         for var in varSet:
+            print("disaggregating %s" % var)
             disaggregatedVar = Var(within=Reals, initialize=var.value)
             # naming conflicts are possible here since this is a bunch
             # of variables from different blocks coming together, so we
@@ -547,8 +547,8 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             )
             # mark this as local because we won't re-disaggregate if this is a
             # nested disjunction
-            if local_var_set is not None:
-                local_var_set.append(disaggregatedVar)
+            if parent_local_var_list is not None:
+                parent_local_var_list.append(disaggregatedVar)
 
             # add the bigm constraint
             bigmConstraint = Constraint(transBlock.lbub)
@@ -568,6 +568,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             )
 
         for var in localVars:
+            print("we knew %s was local" % var)
             # we don't need to disaggregate, i.e., we can use this Var, but we
             # do need to set up its bounds constraints.
 
@@ -652,27 +653,23 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             transBlock._disaggregatedVarMap['srcVar'][disaggregatedVar] = original_var
             transBlock._bigMConstraintMap[disaggregatedVar] = bigmConstraint
 
-    def _get_local_var_set(self, disjunction):
-        # add Suffix to the relaxation block that disaggregated variables are
-        # local (in case this is nested in another Disjunct)
-        local_var_set = None
-        parent_disjunct = disjunction.parent_block()
-        while parent_disjunct is not None:
-            if parent_disjunct.ctype is Disjunct:
-                break
-            parent_disjunct = parent_disjunct.parent_block()
+    def _get_local_var_list(self, parent_disjunct):
+        # Add or retrieve Suffix from parent_disjunct so that, if this is
+        # nested, we can use it to declare that the disaggregated variables are
+        # local. We return the list so that we can add to it.
+        local_var_list = None
         if parent_disjunct is not None:
             # This limits the cases that a user is allowed to name something
             # (other than a Suffix) 'LocalVars' on a Disjunct. But I am assuming
             # that the Suffix has to be somewhere above the disjunct in the
             # tree, so I can't put it on a Block that I own. And if I'm coopting
             # something of theirs, it may as well be here.
-            self._add_local_var_suffix(parent_disjunct)
+            self._get_local_var_suffix(parent_disjunct)
             if parent_disjunct.LocalVars.get(parent_disjunct) is None:
                 parent_disjunct.LocalVars[parent_disjunct] = []
-            local_var_set = parent_disjunct.LocalVars[parent_disjunct]
+            local_var_list = parent_disjunct.LocalVars[parent_disjunct]
 
-        return local_var_set
+        return local_var_list
 
     def _transform_constraint(
         self, obj, disjunct, var_substitute_map, zero_substitute_map
@@ -847,7 +844,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         # deactivate now that we have transformed
         obj.deactivate()
 
-    def _add_local_var_suffix(self, disjunct):
+    def _get_local_var_suffix(self, disjunct):
         # If the Suffix is there, we will borrow it. If not, we make it. If it's
         # something else, we complain.
         localSuffix = disjunct.component("LocalVars")
@@ -948,7 +945,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             )
 
         try:
-            return (
+            cons = (
                 transBlock()
                 .parent_block()
                 ._disaggregationConstraintMap[original_var][disjunction]
@@ -962,6 +959,9 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 )
                 raise
             return None
+        while not cons.active:
+            cons = self.get_transformed_constraints(cons)[0]
+        return cons
 
     def get_var_bounds_constraint(self, v):
         """
