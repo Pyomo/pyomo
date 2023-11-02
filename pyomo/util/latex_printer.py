@@ -73,6 +73,10 @@ _CONSTANT = ExprType.CONSTANT
 _MONOMIAL = ExprType.MONOMIAL
 _GENERAL = ExprType.GENERAL
 
+from pyomo.common.dependencies import numpy, numpy_available
+if numpy_available:
+    import numpy as np
+
 
 def decoder(num, base):
     # Needed in the general case, but not as implemented
@@ -443,6 +447,8 @@ class _LatexVisitor(StreamBasedExpressionVisitor):
             Numeric_GetAttrExpression: handle_numericGetAttrExpression_node,
             NPV_SumExpression: handle_sumExpression_node,
         }
+        if numpy_available:
+            self._operator_handles[np.float64] = handle_num_node
 
     def exitNode(self, node, data):
         try:
