@@ -106,6 +106,8 @@ class _MindtPyAlgorithm(object):
         self.curr_int_sol = []
         self.should_terminate = False
         self.integer_list = []
+        # dictionary {integer solution (list): cuts index (list)}
+        self.int_sol_2_cuts_ind = dict()
 
         # Set up iteration counters
         self.nlp_iter = 0
@@ -794,6 +796,7 @@ class _MindtPyAlgorithm(object):
             self.integer_list.append(self.curr_int_sol)
             fixed_nlp, fixed_nlp_result = self.solve_subproblem()
             self.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result)
+            self.int_sol_2_cuts_ind[self.curr_int_sol] = list(range(1, len(self.mip.MindtPy_utils.cuts.oa_cuts) + 1))
         elif config.init_strategy == 'FP':
             self.init_rNLP()
             self.fp_loop()
