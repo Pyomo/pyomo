@@ -58,7 +58,10 @@ from pyomo.core.expr.template_expr import (
     NPV_Structural_GetItemExpression,
     Numeric_GetAttrExpression,
 )
-from pyomo.core.expr.numeric_expr import NPV_SumExpression
+from pyomo.core.expr.numeric_expr import (
+    NPV_SumExpression,
+    NPV_DivisionExpression,
+)
 from pyomo.core.base.block import IndexedBlock
 
 from pyomo.core.base.external import _PythonCallbackFunctionID
@@ -446,6 +449,7 @@ class _LatexVisitor(StreamBasedExpressionVisitor):
             str: handle_str_node,
             Numeric_GetAttrExpression: handle_numericGetAttrExpression_node,
             NPV_SumExpression: handle_sumExpression_node,
+            NPV_DivisionExpression: handle_division_node,
         }
         if numpy_available:
             self._operator_handles[np.float64] = handle_num_node
@@ -966,9 +970,10 @@ def latex_printer(
         try:
             obj_template, obj_indices = templatize_fcn(obj)
         except:
-            raise RuntimeError(
-                "An objective has been constructed that cannot be templatized"
-            )
+            obj_template = obj
+            # raise RuntimeError(
+            #     "An objective has been constructed that cannot be templatized"
+            # )
 
         if obj.sense == 1:
             pstr += ' ' * tbSpc + '& %s \n' % (descriptorDict['minimize'])
@@ -1018,46 +1023,50 @@ def latex_printer(
             con = constraints[i]
             try:
                 con_template, indices = templatize_fcn(con)
+                con_template_list = [con_template]
             except:
-                raise RuntimeError(
-                    "A constraint has been constructed that cannot be templatized"
+                # con_template = con[0]
+                con_template_list = [c.expr for c in con.values()]
+                indices = []
+                # raise RuntimeError(
+                #     "A constraint has been constructed that cannot be templatized"
+                # )
+            for con_template in con_template_list:
+                # Walk the constraint
+                conLine = (
+                    ' ' * tbSpc
+                    + algn
+                    + ' %s %s' % (visitor.walk_expression(con_template), trailingAligner)
                 )
 
-            # Walk the constraint
-            conLine = (
-                ' ' * tbSpc
-                + algn
-                + ' %s %s' % (visitor.walk_expression(con_template), trailingAligner)
-            )
+                # setMap = visitor.setMap
+                # Multiple constraints are generated using a set
+                if len(indices) > 0:
+                    if indices[0]._set in ComponentSet(visitor.setMap.keys()):
+                        # already detected set, do nothing
+                        pass
+                    else:
+                        visitor.setMap[indices[0]._set] = 'SET%d' % (
+                            len(visitor.setMap.keys()) + 1
+                        )
 
-            # setMap = visitor.setMap
-            # Multiple constraints are generated using a set
-            if len(indices) > 0:
-                if indices[0]._set in ComponentSet(visitor.setMap.keys()):
-                    # already detected set, do nothing
-                    pass
-                else:
-                    visitor.setMap[indices[0]._set] = 'SET%d' % (
-                        len(visitor.setMap.keys()) + 1
+                    idxTag = '__I_PLACEHOLDER_8675309_GROUP_%s_%s__' % (
+                        indices[0]._group,
+                        visitor.setMap[indices[0]._set],
+                    )
+                    setTag = '__S_PLACEHOLDER_8675309_GROUP_%s_%s__' % (
+                        indices[0]._group,
+                        visitor.setMap[indices[0]._set],
                     )
 
-                idxTag = '__I_PLACEHOLDER_8675309_GROUP_%s_%s__' % (
-                    indices[0]._group,
-                    visitor.setMap[indices[0]._set],
-                )
-                setTag = '__S_PLACEHOLDER_8675309_GROUP_%s_%s__' % (
-                    indices[0]._group,
-                    visitor.setMap[indices[0]._set],
-                )
+                    conLine += ' \\qquad \\forall %s \\in %s ' % (idxTag, setTag)
+                pstr += conLine
 
-                conLine += ' \\qquad \\forall %s \\in %s ' % (idxTag, setTag)
-            pstr += conLine
+                # Add labels as needed
+                if not use_equation_environment:
+                    pstr += '\\label{con:' + pyomo_component.name + '_' + con.name + '} '
 
-            # Add labels as needed
-            if not use_equation_environment:
-                pstr += '\\label{con:' + pyomo_component.name + '_' + con.name + '} '
-
-            pstr += tail
+                pstr += tail
 
     # Print bounds and sets
     if not isSingle:
