@@ -54,6 +54,7 @@ from weakref import ref as weakref_ref
 
 logger = logging.getLogger('pyomo.gdp.hull')
 
+from pytest import set_trace
 
 @TransformationFactory.register(
     'gdp.hull', doc="Relax disjunctive model by forming the hull reformulation."
@@ -336,6 +337,10 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 "Disjunction '%s' with OR constraint.  "
                 "Must be an XOR!" % obj.name
             )
+        # collect the Disjuncts we are going to transform now because we will
+        # change their active status when we transform them, but still need this
+        # list after the fact.
+        active_disjuncts = [disj for disj in obj.disjuncts if disj.active]
 
         # We put *all* transformed things on the parent Block of this
         # disjunction. We'll mark the disaggregated Vars as local, but beyond
@@ -354,9 +359,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         # are going to disaggregate.
         var_order = ComponentSet()
         disjuncts_var_appears_in = ComponentMap()
-        for disjunct in obj.disjuncts:
-            if not disjunct.active:
-                continue
+        for disjunct in active_disjuncts:
             # create the key for each disjunct now
             transBlock._disaggregatedVarMap['disaggregatedVar'][
                 disjunct
@@ -440,9 +443,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
         # add the reaggregation constraints
         i = 0
-        for disj in obj.disjuncts:
-            if not disj.active:
-                continue
+        for disj in active_disjuncts:
             for var in vars_to_disaggregate[disj]:
                 # There are two cases here: Either the var appeared in every
                 # disjunct in the disjunction, or it didn't. If it did, there's
@@ -510,6 +511,9 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 cons_idx = len(disaggregationConstraint)
                 # We always aggregate to the original var. If this is nested, this
                 # constraint will be transformed again.
+                print("Adding disaggregation constraint for '%s' on Disjunction '%s' "
+                      "to Block '%s'" %
+                      (var, obj, disaggregationConstraint.parent_block()))
                 disaggregationConstraint.add(cons_idx, var == disaggregatedExpr)
                 # and update the map so that we can find this later. We index by
                 # variable and the particular disjunction because there is a
@@ -951,7 +955,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         disjunction: a transformed Disjunction containing original_var
         """
         for disjunct in disjunction.disjuncts:
-            transBlock = disjunct._transformation_block
+            transBlock = disjunct.transformation_block
             if transBlock is not None:
                 break
         if transBlock is None:
@@ -963,7 +967,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
         try:
             cons = (
-                transBlock()
+                transBlock
                 .parent_block()
                 ._disaggregationConstraintMap[original_var][disjunction]
             )
