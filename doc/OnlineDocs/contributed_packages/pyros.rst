@@ -632,7 +632,7 @@ In this example, we select affine decision rules by setting
   ...     decision_rule_order=1,
   ... )
   ==============================================================================
-  PyROS: The Pyomo Robust Optimization Solver.
+  PyROS: The Pyomo Robust Optimization Solver...
   ...
   ------------------------------------------------------------------------------
   Robust optimal solution identified.
@@ -854,9 +854,10 @@ Observe that the log contains the following information:
    :linenos:
 
    ==============================================================================
-   PyROS: The Pyomo Robust Optimization Solver.
-          Version 1.2.8 | Git branch: unknown, commit hash: unknown
-          Invoked at UTC 2023-10-12T15:36:19.035916
+   PyROS: The Pyomo Robust Optimization Solver, v1.2.8.
+          Pyomo version: 6.7.0
+          Commit hash: unknown
+          Invoked at UTC 2023-11-03T04:27:42.954101
 
    Developed by: Natalie M. Isenberg (1), Jason A. F. Sherman (1),
                  John D. Siirola (2), Chrysanthos E. Gounaris (1)

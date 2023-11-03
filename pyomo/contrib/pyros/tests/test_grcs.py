@@ -6058,7 +6058,7 @@ class TestPyROSSolverLogIntros(unittest.TestCase):
         # check number of lines is as expected
         self.assertEqual(
             len(intro_msg_lines),
-            13,
+            14,
             msg=(
                 "PyROS solver introductory message does not contain"
                 "the expected number of lines."
@@ -6072,7 +6072,7 @@ class TestPyROSSolverLogIntros(unittest.TestCase):
         # check regex main text
         self.assertRegex(
             " ".join(intro_msg_lines[1:-1]),
-            r"PyROS: The Pyomo Robust Optimization Solver\..* \(IDAES\)\.",
+            r"PyROS: The Pyomo Robust Optimization Solver, v.* \(IDAES\)\.",
         )
 
     def test_log_disclaimer(self):

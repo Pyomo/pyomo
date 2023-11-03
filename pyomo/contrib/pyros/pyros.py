@@ -55,29 +55,34 @@ __version__ = "1.2.8"
 default_pyros_solver_logger = setup_pyros_logger()
 
 
-def _get_pyomo_git_info():
+def _get_pyomo_version_info():
     """
-    Get Pyomo git commit hash.
+    Get Pyomo version information.
     """
     import os
     import subprocess
+    from pyomo.version import version
+
+    pyomo_version = version
+    commit_hash = "unknown"
 
     pyros_dir = os.path.join(*os.path.split(__file__)[:-1])
+    commit_hash_command_args = [
+        "git",
+        "-C",
+        f"{pyros_dir}",
+        "rev-parse",
+        "--short",
+        "HEAD",
+    ]
+    try:
+        commit_hash = (
+            subprocess.check_output(commit_hash_command_args).decode("ascii").strip()
+        )
+    except subprocess.CalledProcessError:
+        commit_hash = "unknown"
 
-    git_info_dict = {}
-    commands_dict = {
-        "branch": ["git", "-C", f"{pyros_dir}", "rev-parse", "--abbrev-ref", "HEAD"],
-        "commit hash": ["git", "-C", f"{pyros_dir}", "rev-parse", "--short", "HEAD"],
-    }
-    for field, command in commands_dict.items():
-        try:
-            field_val = subprocess.check_output(command).decode("ascii").strip()
-        except subprocess.CalledProcessError:
-            field_val = "unknown"
-
-        git_info_dict[field] = field_val
-
-    return git_info_dict
+    return {"Pyomo version": pyomo_version, "Commit hash": commit_hash}
 
 
 def NonNegIntOrMinusOne(obj):
@@ -712,18 +717,19 @@ class PyROS(object):
             Should not include `msg`.
         """
         logger.log(msg="=" * self._LOG_LINE_LENGTH, **log_kwargs)
-        logger.log(msg="PyROS: The Pyomo Robust Optimization Solver.", **log_kwargs)
-
-        git_info_str = ", ".join(
-            f"{field}: {val}" for field, val in _get_pyomo_git_info().items()
-        )
         logger.log(
-            msg=(
-                f"{' ' * len('PyROS:')} Version {self.version()} | "
-                f"Git {git_info_str}"
-            ),
+            msg=f"PyROS: The Pyomo Robust Optimization Solver, v{self.version()}.",
             **log_kwargs,
         )
+
+        # git_info_str = ", ".join(
+        #     f"{field}: {val}" for field, val in _get_pyomo_git_info().items()
+        # )
+        version_info = _get_pyomo_version_info()
+        version_info_str = ' ' * len("PyROS: ") + ("\n" + ' ' * len("PyROS: ")).join(
+            f"{key}: {val}" for key, val in version_info.items()
+        )
+        logger.log(msg=version_info_str, **log_kwargs)
         logger.log(
             msg=(
                 f"{' ' * len('PyROS:')} "
