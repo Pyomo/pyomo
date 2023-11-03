@@ -1011,10 +1011,30 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 logger.error(msg)
                 raise
         try:
-            return transBlock._bigMConstraintMap[v]
+            cons = transBlock._bigMConstraintMap[v]
         except:
             logger.error(msg)
             raise
+        transformed_cons = {key: con for key, con in cons.items()}
+        def is_active(cons):
+            return all(c.active for c in cons.values())
+        while not is_active(transformed_cons):
+            if 'lb' in transformed_cons:
+                transformed_cons['lb'] = self.get_transformed_constraints(
+                    transformed_cons['lb'])[0]
+            if 'ub' in transformed_cons:
+                transformed_cons['ub'] = self.get_transformed_constraints(
+                    transformed_cons['ub'])[0]
+        return transformed_cons
+
+    def get_transformed_constraints(self, cons):
+        cons = super().get_transformed_constraints(cons)
+        while not cons[0].active:
+            transformed_cons = []
+            for con in cons:
+                transformed_cons += super().get_transformed_constraints(con)
+            cons = transformed_cons
+        return cons
 
 
 @TransformationFactory.register(
