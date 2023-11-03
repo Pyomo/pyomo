@@ -74,8 +74,8 @@ class ExpressionBoundsBeforeChildDispatcher(BeforeChildDispatcher):
                 )
             leaf_bounds[child] = (child.value, child.value)
         else:
-            lb = value(child.lb)
-            ub = value(child.ub)
+            lb = child.lb
+            ub = child.ub
             if lb is None:
                 lb = -inf
             if ub is None:
@@ -122,7 +122,8 @@ class ExpressionBoundsBeforeChildDispatcher(BeforeChildDispatcher):
 
     @staticmethod
     def _before_npv(visitor, child):
-        return False, (value(child), value(child))
+        val = value(child)
+        return False, (val, val)
 
 
 _before_child_handlers = ExpressionBoundsBeforeChildDispatcher()

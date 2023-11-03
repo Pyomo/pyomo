@@ -957,8 +957,8 @@ def _check_and_reset_bounds(var, lb, ub):
     """
     This function ensures that lb is not less than var.lb and that ub is not greater than var.ub.
     """
-    orig_lb = value(var.lb)
-    orig_ub = value(var.ub)
+    orig_lb = var.lb
+    orig_ub = var.ub
     if orig_lb is None:
         orig_lb = -interval.inf
     if orig_ub is None:
@@ -985,8 +985,8 @@ def _before_var(visitor, child):
         lb = value(child.value)
         ub = lb
     else:
-        lb = value(child.lb)
-        ub = value(child.ub)
+        lb = child.lb
+        ub = child.ub
         if lb is None:
             lb = -interval.inf
         if ub is None:
@@ -1339,11 +1339,11 @@ def _fbbt_block(m, config):
             if v.lb is None:
                 var_lbs[v] = -interval.inf
             else:
-                var_lbs[v] = value(v.lb)
+                var_lbs[v] = v.lb
             if v.ub is None:
                 var_ubs[v] = interval.inf
             else:
-                var_ubs[v] = value(v.ub)
+                var_ubs[v] = v.ub
             var_to_con_map[v].append(c)
         n_cons += 1
 
