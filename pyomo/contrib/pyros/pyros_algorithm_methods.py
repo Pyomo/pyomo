@@ -222,7 +222,7 @@ def ROSolver_iterative_solve(model_data, config):
             config.progress_logger.error(
                 f"Equality constraint {c.name!r} cannot be guaranteed to "
                 "be robustly feasible, given the current partitioning "
-                "between first-stage, second-stage, and state variables. "
+                "among first-stage, second-stage, and state variables. "
                 "Consider editing this constraint to reference some "
                 "second-stage and/or state variable(s)."
             )
