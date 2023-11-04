@@ -31,7 +31,10 @@ from tempfile import mkdtemp
 opt_py = SolverFactory('gams', solver_io='python')
 gamspy_available = opt_py.available(exception_flag=False)
 if gamspy_available:
-    from gams.workspace import GamsExceptionExecution
+    try:
+        from gams import GamsExceptionExecution
+    except:
+        from gams.workspace import GamsExceptionExecution
 
 opt_gms = SolverFactory('gams', solver_io='gms')
 gamsgms_available = opt_gms.available(exception_flag=False)
