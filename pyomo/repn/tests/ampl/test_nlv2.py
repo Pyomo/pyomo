@@ -1175,3 +1175,129 @@ G0 4   #value
                 OUT.getvalue(),
             )
         )
+
+    def test_presolve_lower_triangular(self):
+        # This tests the example from issue #2827
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(range(5), bounds=(-10, 10))
+        m.obj = Objective(expr=m.x[3] + m.x[4])
+        m.c = pyo.ConstraintList()
+        m.c.add(m.x[0] == 5)
+        m.c.add(2 * m.x[0] + 3 * m.x[2] == 19)
+        m.c.add(m.x[0] + 2 * m.x[2] - 2 * m.x[1] == 3)
+        m.c.add(-2 * m.x[0] + m.x[2] + m.x[1] - m.x[3] == 1)
+
+        OUT = io.StringIO()
+        with LoggingIntercept() as LOG:
+            nlinfo = nl_writer.NLWriter().write(m, OUT, linear_presolve=True)
+        self.assertEqual(LOG.getvalue(), "")
+
+        self.assertEqual(
+            nlinfo.eliminated_vars,
+            [
+                (m.x[3], nl_writer.AMPLRepn(-4.0, {}, None)),
+                (m.x[1], nl_writer.AMPLRepn(4.0, {}, None)),
+                (m.x[2], nl_writer.AMPLRepn(3.0, {}, None)),
+                (m.x[0], nl_writer.AMPLRepn(5.0, {}, None)),
+            ],
+        )
+        self.assertEqual(
+            *nl_diff(
+                """g3 1 1 0	# problem unknown
+ 1 0 1 0 0 	# vars, constraints, objectives, ranges, eqns
+ 0 0 0 0 0 0	# nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0	# network constraints: nonlinear, linear
+ 0 0 0 	# nonlinear vars in constraints, objectives, both
+ 0 0 0 1	# linear network variables; functions; arith, flags
+ 0 0 0 0 0 	# discrete variables: binary, integer, nonlinear (b,c,o)
+ 0 1 	# nonzeros in Jacobian, obj. gradient
+ 0 0	# max name lengths: constraints, variables
+ 0 0 0 0 0	# common exprs: b,c,o,c1,o1
+O0 0
+n-4.0
+x0
+r
+b
+0 -10 10
+k0
+G0 1
+0 1
+""",
+                OUT.getvalue(),
+            )
+        )
+
+    def test_presolve_almost_lower_triangular(self):
+        # This tests the example from issue #2827
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(range(5), bounds=(-10, 10))
+        m.obj = Objective(expr=m.x[3] + m.x[4])
+        m.c = pyo.ConstraintList()
+        m.c.add(m.x[0] + 2 * m.x[4] == 5)
+        m.c.add(2 * m.x[0] + 3 * m.x[2] == 19)
+        m.c.add(m.x[0] + 2 * m.x[2] - 2 * m.x[1] == 3)
+        m.c.add(-2 * m.x[0] + m.x[2] + m.x[1] - m.x[3] == 1)
+
+        OUT = io.StringIO()
+        with LoggingIntercept() as LOG:
+            nlinfo = nl_writer.NLWriter().write(m, OUT, linear_presolve=True)
+        self.assertEqual(LOG.getvalue(), "")
+
+        self.assertEqual(
+            nlinfo.eliminated_vars,
+            [
+                (m.x[4], nl_writer.AMPLRepn(-12, {id(m.x[1]): 3}, None)),
+                (m.x[3], nl_writer.AMPLRepn(-72, {id(m.x[1]): 17}, None)),
+                (m.x[2], nl_writer.AMPLRepn(-13, {id(m.x[1]): 4}, None)),
+                (m.x[0], nl_writer.AMPLRepn(29, {id(m.x[1]): -6}, None)),
+            ],
+        )
+        # Note: bounds on x[1] are:
+        #   min(22/3, 82/17, 23/4, -39/-6) == 4.823529411764706
+        #   max(2/3, 62/17, 3/4, -19/-6) == 3.6470588235294117
+        self.assertEqual(
+            *nl_diff(
+                """g3 1 1 0	# problem unknown
+ 1 0 1 0 0 	# vars, constraints, objectives, ranges, eqns
+ 0 0 0 0 0 0	# nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0	# network constraints: nonlinear, linear
+ 0 0 0 	# nonlinear vars in constraints, objectives, both
+ 0 0 0 1	# linear network variables; functions; arith, flags
+ 0 0 0 0 0 	# discrete variables: binary, integer, nonlinear (b,c,o)
+ 0 1 	# nonzeros in Jacobian, obj. gradient
+ 0 0	# max name lengths: constraints, variables
+ 0 0 0 0 0	# common exprs: b,c,o,c1,o1
+O0 0
+n-84.0
+x0
+r
+b
+0 3.6470588235294117 4.823529411764706
+k0
+G0 1
+0 20
+""",
+                OUT.getvalue(),
+            )
+        )
+
+    def test_presolve_lower_triangular_out_of_bounds(self):
+        # This tests the example from issue #2827
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(range(5), domain=pyo.NonNegativeReals)
+        m.obj = Objective(expr=m.x[3] + m.x[4])
+        m.c = pyo.ConstraintList()
+        m.c.add(m.x[0] == 5)
+        m.c.add(2 * m.x[0] + 3 * m.x[2] == 19)
+        m.c.add(m.x[0] + 2 * m.x[2] - 2 * m.x[1] == 3)
+        m.c.add(-2 * m.x[0] + m.x[2] + m.x[1] - m.x[3] == 1)
+
+        OUT = io.StringIO()
+        with self.assertRaisesRegex(
+            nl_writer.InfeasibleConstraintException,
+            r"model contains a trivially infeasible variable 'x\[3\]' "
+            r"\(presolved to a value of -4.0 outside bounds \[0, None\]\).",
+        ):
+            with LoggingIntercept() as LOG:
+                nlinfo = nl_writer.NLWriter().write(m, OUT, linear_presolve=True)
+        self.assertEqual(LOG.getvalue(), "")
