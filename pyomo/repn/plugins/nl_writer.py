@@ -836,12 +836,21 @@ class _NLWriter_impl(object):
             filter(self.used_named_expressions.__contains__, self.subexpression_order)
         )
 
-        # linear contribution by (constraint, objective) component.
+        # linear contribution by (constraint, objective, variable) component.
         # Keys are component id(), Values are dicts mapping variable
         # id() to linear coefficient.  All nonzeros in the component
         # (variables appearing in the linear and/or nonlinear
         # subexpressions) will appear in the dict.
-        linear_by_comp = {}
+        #
+        # We initialize the map with any variables eliminated from
+        # (presolved out of) the model (necessary so that
+        # _categorize_vars will map eliminated vars to the current
+        # vars).  Note that at the moment, we only consider linear
+        # equality constraints in the presolve.  If that ever changes
+        # (e.g., to support eliminating variables appearing linearly in
+        # nonlinear equality constraints), then this logic will need to
+        # be revisited.
+        linear_by_comp = {_id: info.linear for _id, info in eliminated_vars.items()}
 
         # We need to categorize the named subexpressions first so that
         # we know their linear / nonlinear vars when we encounter them
@@ -1095,7 +1104,7 @@ class _NLWriter_impl(object):
 
         for _id, expr_info in eliminated_vars.items():
             nl, args, _ = expr_info.compile_repn(visitor)
-            _vmap[_id] = nl % args
+            _vmap[_id] = nl.rstrip() % tuple(_vmap[_id] for _id in args)
 
         r_lines = [None] * n_cons
         for idx, (con, expr_info, lb, ub) in enumerate(constraints):

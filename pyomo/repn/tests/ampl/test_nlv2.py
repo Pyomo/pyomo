@@ -1281,6 +1281,92 @@ G0 1
             )
         )
 
+    def test_presolve_almost_lower_triangular_nonlinear(self):
+        # This tests the example from issue #2827
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(range(5), bounds=(-10, 10))
+        m.obj = Objective(expr=m.x[3] + m.x[4] + pyo.log(m.x[0]))
+        m.c = pyo.ConstraintList()
+        m.c.add(m.x[0] + 2 * m.x[4] == 5)
+        m.c.add(2 * m.x[0] + 3 * m.x[2] == 19)
+        m.c.add(m.x[0] + 2 * m.x[2] - 2 * m.x[1] == 3)
+        m.c.add(-2 * m.x[0] + m.x[2] + m.x[1] - m.x[3] == 1)
+        m.c.add(2 * (m.x[0] ** 2) + m.x[0] + m.x[2] + 3 * (m.x[3] ** 3) == 10)
+
+        OUT = io.StringIO()
+        with LoggingIntercept() as LOG:
+            nlinfo = nl_writer.NLWriter().write(m, OUT, linear_presolve=True)
+        self.assertEqual(LOG.getvalue(), "")
+
+        self.assertEqual(
+            nlinfo.eliminated_vars,
+            [
+                (m.x[4], nl_writer.AMPLRepn(-12, {id(m.x[1]): 3}, None)),
+                (m.x[3], nl_writer.AMPLRepn(-72, {id(m.x[1]): 17}, None)),
+                (m.x[2], nl_writer.AMPLRepn(-13, {id(m.x[1]): 4}, None)),
+                (m.x[0], nl_writer.AMPLRepn(29, {id(m.x[1]): -6}, None)),
+            ],
+        )
+        # Note: bounds on x[1] are:
+        #   min(22/3, 82/17, 23/4, -39/-6) == 4.823529411764706
+        #   max(2/3, 62/17, 3/4, -19/-6) == 3.6470588235294117
+        print(OUT.getvalue())
+        self.assertEqual(
+            *nl_diff(
+                """g3 1 1 0	# problem unknown
+ 1 1 1 0 1 	# vars, constraints, objectives, ranges, eqns
+ 1 1 0 0 0 0	# nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0	# network constraints: nonlinear, linear
+ 1 1 1 	# nonlinear vars in constraints, objectives, both
+ 0 0 0 1	# linear network variables; functions; arith, flags
+ 0 0 0 0 0 	# discrete variables: binary, integer, nonlinear (b,c,o)
+ 1 1 	# nonzeros in Jacobian, obj. gradient
+ 0 0	# max name lengths: constraints, variables
+ 0 0 0 0 0	# common exprs: b,c,o,c1,o1
+C0
+o0
+o2
+n2
+o5
+o0
+o2
+n-6.0
+v0
+n29.0
+n2
+o2
+n3
+o5
+o0
+o2
+n17.0
+v0
+n-72.0
+n3
+O0 0
+o0
+o43
+o0
+o2
+n-6.0
+v0
+n29.0
+n-84.0
+x0
+r
+4 -6.0
+b
+0 3.6470588235294117 4.823529411764706
+k0
+J0 1
+0 -2.0
+G0 1
+0 20.0
+""",
+                OUT.getvalue(),
+            )
+        )
+
     def test_presolve_lower_triangular_out_of_bounds(self):
         # This tests the example from issue #2827
         m = pyo.ConcreteModel()
