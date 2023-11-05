@@ -574,6 +574,9 @@ class _NLWriter_impl(object):
                     suffix_data[name].update(suffix)
             timer.toc("Collected suffixes", level=logging.DEBUG)
 
+        #
+        # Data structures to support variable/constraint scaling
+        #
         if self.config.scale_model and 'scaling_factor' in suffix_data:
             scaling_factor = CachingNumericSuffixFinder('scaling_factor', 1)
             scaling_cache = scaling_factor.scaling_cache
@@ -584,13 +587,14 @@ class _NLWriter_impl(object):
         #
         # Data structures to support presolve
         #
-        # con_by_linear_nnz stores all constraints grouped by the NNZ
+        # lcon_by_linear_nnz stores all linear constraints grouped by the NNZ
         # in the linear portion of the expression.  The value is another
         # dict mapping id(con) to constraint info
-        con_by_linear_nnz = defaultdict(dict)
-        # con_by_linear_var maps id(var) to lists of constraint infos
-        # that have that var in the linear portion of the expression
-        con_by_linear_var = defaultdict(list)
+        lcon_by_linear_nnz = defaultdict(dict)
+        # comp_by_linear_var maps id(var) to lists of constraint /
+        # object infos that have that var in the linear portion of the
+        # expression
+        comp_by_linear_var = defaultdict(list)
 
         #
         # Tabulate the model expressions
@@ -612,7 +616,7 @@ class _NLWriter_impl(object):
             if linear_presolve:
                 obj_id = id(obj)
                 for _id in expr_info.linear:
-                    con_by_linear_var[_id].append((obj_id, expr_info))
+                    comp_by_linear_var[_id].append((obj_id, expr_info))
         if with_debug_timing:
             # report the last objective
             timer.toc('Objective %s', last_parent, level=logging.DEBUG)
@@ -676,9 +680,9 @@ class _NLWriter_impl(object):
             if linear_presolve:
                 con_id = id(con)
                 if not expr_info.nonlinear and lb == ub and lb is not None:
-                    con_by_linear_nnz[len(expr_info.linear)][con_id] = expr_info, lb
+                    lcon_by_linear_nnz[len(expr_info.linear)][con_id] = expr_info, lb
                 for _id in expr_info.linear:
-                    con_by_linear_var[_id].append((con_id, expr_info))
+                    comp_by_linear_var[_id].append((con_id, expr_info))
         if with_debug_timing:
             # report the last constraint
             timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
@@ -689,129 +693,11 @@ class _NLWriter_impl(object):
         # the column ordering.
         var_bounds = {_id: v.bounds for _id, v in var_map.items()}
 
-        substitutions_by_linear_var = defaultdict(set)
-        eliminated_vars = {}
-        eliminated_cons = set()
-        if linear_presolve:
-            template = self.template
-            one_var = con_by_linear_nnz[1]
-            two_var = con_by_linear_nnz[2]
-            while 1:
-                if one_var:
-                    con_id, info = one_var.popitem()
-                    expr_info, lb = info
-                    _id, coef = expr_info.linear.popitem()
-                    # substituting _id with a*x + b
-                    a = x = None
-                    b = expr_info.const = (lb - expr_info.const) / coef
-                    logger.debug(
-                        "NL presolve: substituting %s := %s",
-                        var_map[_id],
-                        expr_info.const,
-                    )
-                    eliminated_vars[_id] = expr_info  # , nl=(template.const % b, ())
-                    lb, ub = var_bounds[_id]
-                    if (lb is not None and lb - b > TOL) or (
-                        ub is not None and ub - b < -TOL
-                    ):
-                        raise InfeasibleConstraintException(
-                            "model contains a trivially infeasible variable "
-                            f"'{var_map[_id].name}' (presolved to a value of "
-                            f"{b} outside bounds [{lb}, {ub}])."
-                        )
-                elif two_var:
-                    con_id, info = two_var.popitem()
-                    expr_info, lb = info
-                    _id, coef = expr_info.linear.popitem()
-                    id2, coef2 = expr_info.linear.popitem()
-                    # For no particularly good reason, we will solve for
-                    # (and substitute out) the variable with the smaller
-                    # magnitude)
-                    if abs(coef2) < abs(coef):
-                        _id, id2 = id2, _id
-                        coef, coef2 = coef2, coef
-                    # substituting _id with a*x + b
-                    a = -coef2 / coef
-                    x = id2
-                    b = expr_info.const = (lb - expr_info.const) / coef
-                    expr_info.linear[x] = a
-                    substitutions_by_linear_var[x].add(_id)
-                    eliminated_vars[_id] = expr_info
-                    logger.debug(
-                        "NL presolve: substituting %s := %s*%s + %s",
-                        var_map[_id],
-                        a,
-                        var_map[x],
-                        b,
-                    )
-                    #     repn=expr_info,
-                    #     nl=(
-                    #         template.binary_sum
-                    #         + template.product
-                    #         + (template.const % a)
-                    #         + template.var
-                    #         + (template.const % b),
-                    #         (x,),
-                    #     )
-                    # )
-                    # Tighten variable bounds
-                    x_lb, x_ub = var_bounds[x]
-                    lb, ub = var_bounds[_id]
-                    if lb is not None:
-                        lb = (lb - b) / a
-                    if ub is not None:
-                        ub = (ub - b) / a
-                    if a < 0:
-                        lb, ub = ub, lb
-                    if x_lb is None or lb > x_lb:
-                        x_lb = lb
-                    if x_ub is None or ub < x_ub:
-                        x_ub = ub
-                    var_bounds[x] = x_lb, x_ub
-                else:
-                    del con_by_linear_nnz
-                    del con_by_linear_var
-                    break
-                eliminated_cons.add(con_id)
-                for con_id, expr_info in con_by_linear_var[_id]:
-                    # Note that if we were aggregating (i.e., _id was
-                    # from two_var), then one of these info's will be
-                    # for the constraint we just eliminated.  In this
-                    # case, _id will no longer be in expr_info.linear - so c
-                    # will be 0 - thereby preventing us from re-updating
-                    # the expression.  We still want it to persist so
-                    # that if later substitutions replace x with
-                    # something else, then the expr_info gets updated
-                    # appropriately (that expr_info is persisting in the
-                    # eliminated_vars dict - and we will use that to
-                    # update other linear expressions later.)
-                    c = expr_info.linear.pop(_id, 0)
-                    expr_info.const += c * b
-                    if x in expr_info.linear:
-                        expr_info.linear[x] += c * a
-                    elif a:
-                        expr_info.linear[x] = c * a
-                        # replacing _id with x... NNZ is not changing,
-                        # but we need to remember that x is now part of
-                        # this constraint
-                        con_by_linear_var[x].append((con_id, expr_info))
-                        continue
-                    # NNZ has been reduced by 1
-                    nnz = len(expr_info.linear)
-                    _old = con_by_linear_nnz[nnz + 1]
-                    if con_id in _old:
-                        con_by_linear_nnz[nnz][con_id] = _old.pop(con_id)
-                # If variables were replaced by the variable that
-                # we are currently eliminating, then we need to update
-                # the representation of those variables
-                for resubst in substitutions_by_linear_var.pop(_id, ()):
-                    expr_info = eliminated_vars[resubst]
-                    c = expr_info.linear.pop(_id, 0)
-                    expr_info.const += c * b
-                    if x in expr_info.linear:
-                        expr_info.linear[x] += c * a
-                    elif a:
-                        expr_info.linear[x] = c * a
+        eliminated_cons, eliminated_vars = self._linear_presolve(
+            comp_by_linear_var, lcon_by_linear_nnz, var_bounds
+        )
+        del comp_by_linear_var
+        del lcon_by_linear_nnz
 
         # Order the constraints, moving all nonlinear constraints to
         # the beginning
@@ -1109,7 +995,7 @@ class _NLWriter_impl(object):
         r_lines = [None] * n_cons
         for idx, (con, expr_info, lb, ub) in enumerate(constraints):
             if lb == ub:  # TBD: should this be within tolerance?
-                if lb is None:  # and self.config.skip_trivial_constraints:
+                if lb is None:
                     # type = 3  # -inf <= c <= inf
                     r_lines[idx] = "3"
                 else:
@@ -1714,6 +1600,130 @@ class _NLWriter_impl(object):
             else:
                 n_subexpressions[0] += 1
         return n_subexpressions
+
+    def _linear_presolve(self, comp_by_linear_var, lcon_by_linear_nnz, var_bounds):
+        eliminated_vars = {}
+        eliminated_cons = set()
+        if not self.config.linear_presolve:
+            return eliminated_cons, eliminated_vars
+
+        var_map = self.var_map
+        substitutions_by_linear_var = defaultdict(set)
+        template = self.template
+        one_var = lcon_by_linear_nnz[1]
+        two_var = lcon_by_linear_nnz[2]
+        while 1:
+            if one_var:
+                con_id, info = one_var.popitem()
+                expr_info, lb = info
+                _id, coef = expr_info.linear.popitem()
+                # substituting _id with a*x + b
+                a = x = None
+                b = expr_info.const = (lb - expr_info.const) / coef
+                logger.debug(
+                    "NL presolve: substituting %s := %s", var_map[_id], expr_info.const
+                )
+                eliminated_vars[_id] = expr_info  # , nl=(template.const % b, ())
+                lb, ub = var_bounds[_id]
+                if (lb is not None and lb - b > TOL) or (
+                    ub is not None and ub - b < -TOL
+                ):
+                    raise InfeasibleConstraintException(
+                        "model contains a trivially infeasible variable "
+                        f"'{var_map[_id].name}' (presolved to a value of "
+                        f"{b} outside bounds [{lb}, {ub}])."
+                    )
+            elif two_var:
+                con_id, info = two_var.popitem()
+                expr_info, lb = info
+                _id, coef = expr_info.linear.popitem()
+                id2, coef2 = expr_info.linear.popitem()
+                # For no particularly good reason, we will solve for
+                # (and substitute out) the variable with the smaller
+                # magnitude)
+                if abs(coef2) < abs(coef):
+                    _id, id2 = id2, _id
+                    coef, coef2 = coef2, coef
+                # substituting _id with a*x + b
+                a = -coef2 / coef
+                x = id2
+                b = expr_info.const = (lb - expr_info.const) / coef
+                expr_info.linear[x] = a
+                substitutions_by_linear_var[x].add(_id)
+                eliminated_vars[_id] = expr_info
+                logger.debug(
+                    "NL presolve: substituting %s := %s*%s + %s",
+                    var_map[_id],
+                    a,
+                    var_map[x],
+                    b,
+                )
+                #     repn=expr_info,
+                #     nl=(
+                #         template.binary_sum
+                #         + template.product
+                #         + (template.const % a)
+                #         + template.var
+                #         + (template.const % b),
+                #         (x,),
+                #     )
+                # )
+                # Tighten variable bounds
+                x_lb, x_ub = var_bounds[x]
+                lb, ub = var_bounds[_id]
+                if lb is not None:
+                    lb = (lb - b) / a
+                if ub is not None:
+                    ub = (ub - b) / a
+                if a < 0:
+                    lb, ub = ub, lb
+                if x_lb is None or lb > x_lb:
+                    x_lb = lb
+                if x_ub is None or ub < x_ub:
+                    x_ub = ub
+                var_bounds[x] = x_lb, x_ub
+            else:
+                return eliminated_cons, eliminated_vars
+            eliminated_cons.add(con_id)
+            for con_id, expr_info in comp_by_linear_var[_id]:
+                # Note that if we were aggregating (i.e., _id was
+                # from two_var), then one of these info's will be
+                # for the constraint we just eliminated.  In this
+                # case, _id will no longer be in expr_info.linear - so c
+                # will be 0 - thereby preventing us from re-updating
+                # the expression.  We still want it to persist so
+                # that if later substitutions replace x with
+                # something else, then the expr_info gets updated
+                # appropriately (that expr_info is persisting in the
+                # eliminated_vars dict - and we will use that to
+                # update other linear expressions later.)
+                c = expr_info.linear.pop(_id, 0)
+                expr_info.const += c * b
+                if x in expr_info.linear:
+                    expr_info.linear[x] += c * a
+                elif a:
+                    expr_info.linear[x] = c * a
+                    # replacing _id with x... NNZ is not changing,
+                    # but we need to remember that x is now part of
+                    # this constraint
+                    comp_by_linear_var[x].append((con_id, expr_info))
+                    continue
+                # NNZ has been reduced by 1
+                nnz = len(expr_info.linear)
+                _old = lcon_by_linear_nnz[nnz + 1]
+                if con_id in _old:
+                    lcon_by_linear_nnz[nnz][con_id] = _old.pop(con_id)
+            # If variables were replaced by the variable that
+            # we are currently eliminating, then we need to update
+            # the representation of those variables
+            for resubst in substitutions_by_linear_var.pop(_id, ()):
+                expr_info = eliminated_vars[resubst]
+                c = expr_info.linear.pop(_id, 0)
+                expr_info.const += c * b
+                if x in expr_info.linear:
+                    expr_info.linear[x] += c * a
+                elif a:
+                    expr_info.linear[x] = c * a
 
     def _record_named_expression_usage(self, named_exprs, src, comp_type):
         self.used_named_expressions.update(named_exprs)
