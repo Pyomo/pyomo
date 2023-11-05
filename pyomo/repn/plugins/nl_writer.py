@@ -9,10 +9,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import itertools
 import logging
 import os
 from collections import deque, defaultdict
+from itertools import filterfalse, product
 from operator import itemgetter, attrgetter, setitem
 from contextlib import nullcontext
 
@@ -419,11 +419,8 @@ class _SuffixData(object):
                     # component data is not in the original dictionary
                     # of values that we extracted from the Suffixes
                     queue.append(
-                        itertools.product(
-                            itertools.filterfalse(
-                                self.values.__contains__, obj.values()
-                            ),
-                            (val,),
+                        product(
+                            filterfalse(self.values.__contains__, obj.values()), (val,)
                         )
                     )
                 else:
@@ -688,7 +685,7 @@ class _NLWriter_impl(object):
 
         # This may fetch more bounds than needed, but only in the cases
         # where variables were completely eliminated while walking the
-        # expressions, and when users provide superfluous variables in
+        # expressions, or when users provide superfluous variables in
         # the column ordering.
         var_bounds = {_id: v.bounds for _id, v in var_map.items()}
 
@@ -704,10 +701,14 @@ class _NLWriter_impl(object):
                     con_id, info = one_var.popitem()
                     expr_info, lb = info
                     _id, coef = expr_info.linear.popitem()
-                    # replacing _id with a*x + b
+                    # substituting _id with a*x + b
                     a = x = None
                     b = expr_info.const = (lb - expr_info.const) / coef
-                    print(f"PRESOLVE: {var_map[_id]} := {expr_info.const}")
+                    logger.debug(
+                        "NL presolve: substituting %s := %s",
+                        var_map[_id],
+                        expr_info.const,
+                    )
                     eliminated_vars[_id] = expr_info  # , nl=(template.const % b, ())
                     lb, ub = var_bounds[_id]
                     if (lb is not None and lb - b > TOL) or (
@@ -729,15 +730,19 @@ class _NLWriter_impl(object):
                     if abs(coef2) < abs(coef):
                         _id, id2 = id2, _id
                         coef, coef2 = coef2, coef
-                    # replacing _id with a*x + b
+                    # substituting _id with a*x + b
                     a = -coef2 / coef
                     x = id2
                     b = expr_info.const = (lb - expr_info.const) / coef
                     expr_info.linear[x] = a
                     substitutions_by_linear_var[x].add(_id)
                     eliminated_vars[_id] = expr_info
-                    print(
-                        f"PRESOLVE: {var_map[_id]} := {expr_info.const} + {a}*{var_map[x]}"
+                    logger.debug(
+                        "NL presolve: substituting %s := %s*%s + %s",
+                        var_map[_id],
+                        a,
+                        var_map[x],
+                        b,
                     )
                     #     repn=expr_info,
                     #     nl=(
@@ -813,9 +818,7 @@ class _NLWriter_impl(object):
         n_nonlinear_cons = len(constraints)
         if eliminated_cons:
             _removed = eliminated_cons.__contains__
-            constraints.extend(
-                itertools.filterfalse(lambda c: _removed(id(c[0])), linear_cons)
-            )
+            constraints.extend(filterfalse(lambda c: _removed(id(c[0])), linear_cons))
         else:
             constraints.extend(linear_cons)
         n_cons = len(constraints)
@@ -1650,7 +1653,7 @@ class _NLWriter_impl(object):
                 if expr_info.linear:
                     # Ensure any variables that only appear nonlinearly
                     # in the expression have 0's in the linear dict
-                    for i in nonlinear_vars - linear_vars:
+                    for i in filterfalse(linear_vars.__contains__, nonlinear_vars):
                         expr_info.linear[i] = 0
                 else:
                     # All variables are nonlinear; generate the linear
