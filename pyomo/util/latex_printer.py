@@ -644,6 +644,7 @@ def latex_printer(
     use_short_descriptors=False,
     fontsize=None,
     paper_dimensions=None,
+    throw_templatization_error=False,
 ):
     """This function produces a string that can be rendered as LaTeX
 
@@ -688,6 +689,10 @@ def latex_printer(
         [ 'height', 'width', 'margin_left', 'margin_right', 'margin_top',
         'margin_bottom' ].  Default is standard 8.5x11 with one inch margins.
         Values are in inches
+
+    throw_templatization_error: bool
+        Option to throw an error on templatization failure rather than
+        printing each constraint individually, useful for very large models
 
 
     Returns
@@ -968,10 +973,12 @@ def latex_printer(
         try:
             obj_template, obj_indices = templatize_fcn(obj)
         except:
-            obj_template = obj
-            # raise RuntimeError(
-            #     "An objective has been constructed that cannot be templatized"
-            # )
+            if throw_templatization_error:
+                raise RuntimeError(
+                    "An objective has been constructed that cannot be templatized"
+                )
+            else:
+                obj_template = obj
 
         if obj.sense == 1:
             pstr += ' ' * tbSpc + '& %s \n' % (descriptorDict['minimize'])
@@ -1023,12 +1030,14 @@ def latex_printer(
                 con_template, indices = templatize_fcn(con)
                 con_template_list = [con_template]
             except:
-                # con_template = con[0]
-                con_template_list = [c.expr for c in con.values()]
-                indices = []
-                # raise RuntimeError(
-                #     "A constraint has been constructed that cannot be templatized"
-                # )
+                if throw_templatization_error:
+                    raise RuntimeError(
+                        "A constraint has been constructed that cannot be templatized"
+                    )
+                else:
+                    con_template_list = [c.expr for c in con.values()]
+                    indices = []
+
             for con_template in con_template_list:
                 # Walk the constraint
                 conLine = (

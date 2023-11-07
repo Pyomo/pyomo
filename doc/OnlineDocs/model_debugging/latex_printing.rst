@@ -23,6 +23,8 @@ Pyomo models can be printed to a LaTeX compatible format using the ``pyomo.util.
    :type fontsize: str or int
    :param paper_dimensions: A dictionary that controls the paper margins and size.  Keys are: [ 'height', 'width', 'margin_left', 'margin_right', 'margin_top', 'margin_bottom' ].  Default is standard 8.5x11 with one inch margins.  Values are in inches 
    :type paper_dimensions: dict
+   :param throw_templatization_error: Option to throw an error on templatization failure rather than printing each constraint individually, useful for very large models
+   :type throw_templatization_error: bool
 
 
    :return: A LaTeX style string that represents the passed in pyomoElement
