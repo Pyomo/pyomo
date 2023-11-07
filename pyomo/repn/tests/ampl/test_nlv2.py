@@ -1439,3 +1439,143 @@ G0 1
             with LoggingIntercept() as LOG:
                 nlinfo = nl_writer.NLWriter().write(m, OUT, linear_presolve=True)
         self.assertEqual(LOG.getvalue(), "")
+
+    def test_scaling(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=0)
+        m.y = pyo.Var(initialize=0, bounds=(-1e5, 1e5))
+        m.z = pyo.Var(initialize=0, bounds=(1e3, None))
+        m.obj = pyo.Objective(expr=m.x**2 + (m.y - 50000) ** 2 + m.z)
+        m.c = pyo.ConstraintList()
+        m.c.add(100 * m.x + m.y / 100 >= 600)
+        m.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT_EXPORT)
+
+        m.dual[m.c[1]] = 0.02
+
+        OUT = io.StringIO()
+        with LoggingIntercept() as LOG:
+            nlinfo = nl_writer.NLWriter().write(m, OUT, scale_model=False)
+        self.assertEqual(LOG.getvalue(), "")
+
+        nl1 = OUT.getvalue()
+        self.assertEqual(
+            *nl_diff(
+                nl1,
+                """g3 1 1 0	# problem unknown
+ 3 1 1 0 0 	# vars, constraints, objectives, ranges, eqns
+ 0 1 0 0 0 0	# nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0	# network constraints: nonlinear, linear
+ 0 2 0 	# nonlinear vars in constraints, objectives, both
+ 0 0 0 1	# linear network variables; functions; arith, flags
+ 0 0 0 0 0 	# discrete variables: binary, integer, nonlinear (b,c,o)
+ 2 3 	# nonzeros in Jacobian, obj. gradient
+ 0 0	# max name lengths: constraints, variables
+ 0 0 0 0 0	# common exprs: b,c,o,c1,o1
+C0
+n0
+O0 0
+o0
+o5
+v0
+n2
+o5
+o0
+v1
+n-50000
+n2
+d1
+0 0.02
+x3
+0 0
+1 0
+2 0
+r
+2 600
+b
+3
+0 -100000.0 100000.0
+2 1000.0
+k2
+1
+2
+J0 2
+0 100
+1 0.01
+G0 3
+0 0
+1 0
+2 1
+""",
+            )
+        )
+
+        m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+        m.scaling_factor[m.x] = 1
+        m.scaling_factor[m.y] = 1 / 50000
+        m.scaling_factor[m.z] = 1 / 1000
+        m.scaling_factor[m.c[1]] = 1 / 10
+        m.scaling_factor[m.obj] = 1 / 100
+
+        OUT = io.StringIO()
+        with LoggingIntercept() as LOG:
+            nlinfo = nl_writer.NLWriter().write(m, OUT, scale_model=True)
+        self.assertEqual(LOG.getvalue(), "")
+
+        nl2 = OUT.getvalue()
+        self.assertEqual(
+            *nl_diff(
+                nl2,
+                """g3 1 1 0	# problem unknown
+ 3 1 1 0 0 	# vars, constraints, objectives, ranges, eqns
+ 0 1 0 0 0 0	# nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0	# network constraints: nonlinear, linear
+ 0 2 0 	# nonlinear vars in constraints, objectives, both
+ 0 0 0 1	# linear network variables; functions; arith, flags
+ 0 0 0 0 0 	# discrete variables: binary, integer, nonlinear (b,c,o)
+ 2 3 	# nonzeros in Jacobian, obj. gradient
+ 0 0	# max name lengths: constraints, variables
+ 0 0 0 0 0	# common exprs: b,c,o,c1,o1
+C0
+n0
+O0 0
+o2
+n0.01
+o0
+o5
+v0
+n2
+o5
+o0
+o3
+v1
+n2e-05
+n-50000
+n2
+d1
+0 0.002
+x3
+0 0
+1 0.0
+2 0.0
+r
+2 60.0
+b
+3
+0 -2.0 2.0
+2 1.0
+k2
+1
+2
+J0 2
+0 10.0
+1 50.0
+G0 3
+0 0.0
+1 0.0
+2 10.0
+""",
+            )
+        )
+
+        # Debugging: this diffs the unscaled & scaled models
+        # self.assertEqual(*nl_diff(nl1, nl2))

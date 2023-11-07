@@ -579,7 +579,7 @@ class _NLWriter_impl(object):
         #
         if self.config.scale_model and 'scaling_factor' in suffix_data:
             scaling_factor = CachingNumericSuffixFinder('scaling_factor', 1)
-            scaling_cache = scaling_factor.scaling_cache
+            scaling_cache = scaling_factor.suffix_cache
             del suffix_data['scaling_factor']
         else:
             scaling_factor = _NoScalingFactor()
@@ -982,7 +982,7 @@ class _NLWriter_impl(object):
         if scaling_factor.scale:
             template = self.template
             for var_idx, _id in enumerate(variables):
-                scale = scaling_cache[_id]
+                scale = scaling_factor(var_map[_id])
                 if scale != 1:
                     _vmap[_id] = (
                         template.division + _vmap[_id] + '\n' + template.const % scale
@@ -1320,11 +1320,11 @@ class _NLWriter_impl(object):
                             "objectives.  Assuming that the duals are computed "
                             "against the first objective."
                         )
-                    _obj_scale = scaling_cache[objectives[0][1]]
+                    _obj_scale = scaling_cache[id(objectives[0][0])]
                 else:
                     _obj_scale = 1
-                for _id in _data.con:
-                    _data.con[_id] *= _obj_scale / scaling_cache[constraints[_id][1]]
+                for _id in data.con:
+                    data.con[_id] *= _obj_scale / scaling_cache[id(constraints[_id][0])]
             if data.var:
                 logger.warning("ignoring 'dual' suffix for Var types")
             if data.obj:
