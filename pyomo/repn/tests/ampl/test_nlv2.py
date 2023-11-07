@@ -1177,7 +1177,6 @@ G0 4   #value
         )
 
     def test_presolve_lower_triangular(self):
-        # This tests the example from issue #2827
         m = pyo.ConcreteModel()
         m.x = pyo.Var(range(5), bounds=(-10, 10))
         m.obj = Objective(expr=m.x[3] + m.x[4])
@@ -1228,7 +1227,6 @@ G0 1
         )
 
     def test_presolve_lower_triangular_fixed(self):
-        # This tests the example from issue #2827
         m = pyo.ConcreteModel()
         m.x = pyo.Var(range(5), bounds=(-10, 10))
         m.obj = Objective(expr=m.x[3] + m.x[4])
@@ -1333,7 +1331,6 @@ G0 1
         )
 
     def test_presolve_almost_lower_triangular(self):
-        # This tests the example from issue #2827
         m = pyo.ConcreteModel()
         m.x = pyo.Var(range(5), bounds=(-10, 10))
         m.obj = Objective(expr=m.x[3] + m.x[4])
@@ -1387,7 +1384,6 @@ G0 1
         )
 
     def test_presolve_almost_lower_triangular_nonlinear(self):
-        # This tests the example from issue #2827
         m = pyo.ConcreteModel()
         m.x = pyo.Var(range(5), bounds=(-10, 10))
         m.obj = Objective(expr=m.x[3] + m.x[4] + pyo.log(m.x[0]))
@@ -1473,7 +1469,6 @@ G0 1
         )
 
     def test_presolve_lower_triangular_out_of_bounds(self):
-        # This tests the example from issue #2827
         m = pyo.ConcreteModel()
         m.x = pyo.Var(range(5), domain=pyo.NonNegativeReals)
         m.obj = Objective(expr=m.x[3] + m.x[4])

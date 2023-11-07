@@ -1637,7 +1637,7 @@ class _NLWriter_impl(object):
                 logger.debug(
                     "NL presolve: substituting %s := %s", var_map[_id], b
                 )
-                eliminated_vars[_id] = expr_info  # , nl=(template.const % b, ())
+                eliminated_vars[_id] = expr_info
                 lb, ub = var_bounds[_id]
                 if (lb is not None and lb - b > TOL) or (
                     ub is not None and ub - b < -TOL
@@ -1673,16 +1673,6 @@ class _NLWriter_impl(object):
                     var_map[x],
                     b,
                 )
-                #     repn=expr_info,
-                #     nl=(
-                #         template.binary_sum
-                #         + template.product
-                #         + (template.const % a)
-                #         + template.var
-                #         + (template.const % b),
-                #         (x,),
-                #     )
-                # )
                 # Tighten variable bounds
                 x_lb, x_ub = var_bounds[x]
                 lb, ub = var_bounds[_id]
