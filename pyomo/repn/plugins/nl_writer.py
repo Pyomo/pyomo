@@ -1623,9 +1623,7 @@ class _NLWriter_impl(object):
                 _id = fixed_vars.pop()
                 a = x = None
                 b, _ = var_bounds[_id]
-                logger.debug(
-                    "NL presolve: bounds fixed %s := %s", var_map[_id], b
-                )
+                logger.debug("NL presolve: bounds fixed %s := %s", var_map[_id], b)
                 eliminated_vars[_id] = AMPLRepn(b, {}, None)
             elif one_var:
                 con_id, info = one_var.popitem()
@@ -1634,9 +1632,7 @@ class _NLWriter_impl(object):
                 # substituting _id with a*x + b
                 a = x = None
                 b = expr_info.const = (lb - expr_info.const) / coef
-                logger.debug(
-                    "NL presolve: substituting %s := %s", var_map[_id], b
-                )
+                logger.debug("NL presolve: substituting %s := %s", var_map[_id], b)
                 eliminated_vars[_id] = expr_info
                 lb, ub = var_bounds[_id]
                 if (lb is not None and lb - b > TOL) or (
