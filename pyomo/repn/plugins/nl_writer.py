@@ -1607,13 +1607,21 @@ class _NLWriter_impl(object):
         if not self.config.linear_presolve:
             return eliminated_cons, eliminated_vars
 
+        fixed_vars = [
+            _id for _id, (lb, ub) in var_bounds.items() if lb == ub and lb is not None
+        ]
         var_map = self.var_map
         substitutions_by_linear_var = defaultdict(set)
         template = self.template
         one_var = lcon_by_linear_nnz[1]
         two_var = lcon_by_linear_nnz[2]
         while 1:
-            if one_var:
+            if fixed_vars:
+                _id = fixed_vars.pop()
+                a = x = None
+                b, _ = var_bounds[_id]
+                eliminated_vars[_id] = AMPLRepn(b, {}, None)
+            elif one_var:
                 con_id, info = one_var.popitem()
                 expr_info, lb = info
                 _id, coef = expr_info.linear.popitem()
@@ -1633,6 +1641,7 @@ class _NLWriter_impl(object):
                         f"'{var_map[_id].name}' (presolved to a value of "
                         f"{b} outside bounds [{lb}, {ub}])."
                     )
+                eliminated_cons.add(con_id)
             elif two_var:
                 con_id, info = two_var.popitem()
                 expr_info, lb = info
@@ -1682,9 +1691,9 @@ class _NLWriter_impl(object):
                 if x_ub is None or ub < x_ub:
                     x_ub = ub
                 var_bounds[x] = x_lb, x_ub
+                eliminated_cons.add(con_id)
             else:
                 return eliminated_cons, eliminated_vars
-            eliminated_cons.add(con_id)
             for con_id, expr_info in comp_by_linear_var[_id]:
                 # Note that if we were aggregating (i.e., _id was
                 # from two_var), then one of these info's will be
