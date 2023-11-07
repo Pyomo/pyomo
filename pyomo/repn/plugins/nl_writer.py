@@ -401,6 +401,9 @@ class _SuffixData(object):
         while queue:
             for obj, val in queue.pop(0):
                 if val.__class__ not in int_float:
+                    if isinstance(val, dict):
+                        queue.append(val.items())
+                        continue
                     val = float(val)
                 _id = id(obj)
                 if _id in column_order:
