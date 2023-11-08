@@ -46,16 +46,16 @@ A Model
 
 .. doctest::
 
-    >>> import pyomo.environ as pe
+    >>> import pyomo.environ as pyo
     >>> from pyomo.util.latex_printer import latex_printer
 
-    >>> m = pe.ConcreteModel(name = 'basicFormulation')
-    >>> m.x = pe.Var()
-    >>> m.y = pe.Var()
-    >>> m.z = pe.Var()
-    >>> m.c = pe.Param(initialize=1.0, mutable=True)
-    >>> m.objective    = pe.Objective( expr = m.x + m.y + m.z )
-    >>> m.constraint_1 = pe.Constraint(expr = m.x**2 + m.y**2.0 - m.z**2.0 <= m.c )
+    >>> m = pyo.ConcreteModel(name = 'basicFormulation')
+    >>> m.x = pyo.Var()
+    >>> m.y = pyo.Var()
+    >>> m.z = pyo.Var()
+    >>> m.c = pyo.Param(initialize=1.0, mutable=True)
+    >>> m.objective    = pyo.Objective( expr = m.x + m.y + m.z )
+    >>> m.constraint_1 = pyo.Constraint(expr = m.x**2 + m.y**2.0 - m.z**2.0 <= m.c )
 
     >>> pstr = latex_printer(m)
 
@@ -65,14 +65,14 @@ A Constraint
 
 .. doctest::
 
-    >>> import pyomo.environ as pe
+    >>> import pyomo.environ as pyo
     >>> from pyomo.util.latex_printer import latex_printer
 
-    >>> m = pe.ConcreteModel(name = 'basicFormulation')
-    >>> m.x = pe.Var()
-    >>> m.y = pe.Var()
+    >>> m = pyo.ConcreteModel(name = 'basicFormulation')
+    >>> m.x = pyo.Var()
+    >>> m.y = pyo.Var()
 
-    >>> m.constraint_1 = pe.Constraint(expr = m.x**2 + m.y**2 <= 1.0)
+    >>> m.constraint_1 = pyo.Constraint(expr = m.x**2 + m.y**2 <= 1.0)
 
     >>> pstr = latex_printer(m.constraint_1)
 
@@ -81,15 +81,15 @@ A Constraint with a Set
 
 .. doctest::
 
-    >>> import pyomo.environ as pe
+    >>> import pyomo.environ as pyo
     >>> from pyomo.util.latex_printer import latex_printer
-    >>> m = pe.ConcreteModel(name='basicFormulation')
-    >>> m.I = pe.Set(initialize=[1, 2, 3, 4, 5])
-    >>> m.v = pe.Var(m.I)
+    >>> m = pyo.ConcreteModel(name='basicFormulation')
+    >>> m.I = pyo.Set(initialize=[1, 2, 3, 4, 5])
+    >>> m.v = pyo.Var(m.I)
 
     >>> def ruleMaker(m): return sum(m.v[i] for i in m.I) <= 0
 
-    >>> m.constraint = pe.Constraint(rule=ruleMaker)
+    >>> m.constraint = pyo.Constraint(rule=ruleMaker)
 
     >>> pstr = latex_printer(m.constraint)
 
@@ -98,17 +98,17 @@ Using a ComponentMap
 
 .. doctest::
 
-    >>> import pyomo.environ as pe
+    >>> import pyomo.environ as pyo
     >>> from pyomo.util.latex_printer import latex_printer
     >>> from pyomo.common.collections.component_map import ComponentMap
 
-    >>> m = pe.ConcreteModel(name='basicFormulation')
-    >>> m.I = pe.Set(initialize=[1, 2, 3, 4, 5])
-    >>> m.v = pe.Var(m.I)
+    >>> m = pyo.ConcreteModel(name='basicFormulation')
+    >>> m.I = pyo.Set(initialize=[1, 2, 3, 4, 5])
+    >>> m.v = pyo.Var(m.I)
 
     >>> def ruleMaker(m):  return sum(m.v[i] for i in m.I) <= 0
 
-    >>> m.constraint = pe.Constraint(rule=ruleMaker)
+    >>> m.constraint = pyo.Constraint(rule=ruleMaker)
 
     >>> lcm = ComponentMap()
     >>> lcm[m.v] = 'x'
@@ -122,14 +122,14 @@ An Expression
 
 .. doctest::
 
-    >>> import pyomo.environ as pe
+    >>> import pyomo.environ as pyo
     >>> from pyomo.util.latex_printer import latex_printer
 
-    >>> m = pe.ConcreteModel(name = 'basicFormulation')
-    >>> m.x = pe.Var()
-    >>> m.y = pe.Var()
+    >>> m = pyo.ConcreteModel(name = 'basicFormulation')
+    >>> m.x = pyo.Var()
+    >>> m.y = pyo.Var()
 
-    >>> m.expression_1 = pe.Expression(expr = m.x**2 + m.y**2)
+    >>> m.expression_1 = pyo.Expression(expr = m.x**2 + m.y**2)
 
     >>> pstr = latex_printer(m.expression_1)
 
@@ -139,12 +139,12 @@ A Simple Expression
 
 .. doctest::
 
-    >>> import pyomo.environ as pe
+    >>> import pyomo.environ as pyo
     >>> from pyomo.util.latex_printer import latex_printer
 
-    >>> m = pe.ConcreteModel(name = 'basicFormulation')
-    >>> m.x = pe.Var()
-    >>> m.y = pe.Var()
+    >>> m = pyo.ConcreteModel(name = 'basicFormulation')
+    >>> m.x = pyo.Var()
+    >>> m.y = pyo.Var()
 
     >>> pstr = latex_printer(m.x + m.y)
 
