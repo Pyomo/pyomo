@@ -24,7 +24,7 @@ import pyomo.contrib.parmest.scenariocreator as sc
 import pyomo.environ as pyo
 from pyomo.environ import SolverFactory
 
-ipopt_available = SolverFactory('ipopt').available()
+ipopt_available = SolverFactory("ipopt").available()
 
 testdir = os.path.dirname(os.path.abspath(__file__))
 
@@ -63,17 +63,17 @@ class TestScenarioReactorDesign(unittest.TestCase):
                 [1.90, 10000, 4491.3, 1049.4, 920.5, 1769.4],
                 [1.95, 10000, 4538.8, 1045.8, 893.9, 1760.8],
             ],
-            columns=['sv', 'caf', 'ca', 'cb', 'cc', 'cd'],
+            columns=["sv", "caf", "ca", "cb", "cc", "cd"],
         )
 
-        theta_names = ['k1', 'k2', 'k3']
+        theta_names = ["k1", "k2", "k3"]
 
         def SSE(model, data):
             expr = (
-                (float(data['ca']) - model.ca) ** 2
-                + (float(data['cb']) - model.cb) ** 2
-                + (float(data['cc']) - model.cc) ** 2
-                + (float(data['cd']) - model.cd) ** 2
+                (float(data.iloc[0]["ca"]) - model.ca) ** 2
+                + (float(data.iloc[0]["cb"]) - model.cb) ** 2
+                + (float(data.iloc[0]["cc"]) - model.cc) ** 2
+                + (float(data.iloc[0]["cd"]) - model.cd) ** 2
             )
             return expr
 
@@ -116,7 +116,7 @@ class TestScenarioSemibatch(unittest.TestCase):
         import json
 
         # Vars to estimate in parmest
-        theta_names = ['k1', 'k2', 'E1', 'E2']
+        theta_names = ["k1", "k2", "E1", "E2"]
 
         self.fbase = os.path.join(testdir, "..", "examples", "semibatch")
         # Data, list of dictionaries
@@ -124,7 +124,7 @@ class TestScenarioSemibatch(unittest.TestCase):
         for exp_num in range(10):
             fname = "exp" + str(exp_num + 1) + ".out"
             fullname = os.path.join(self.fbase, fname)
-            with open(fullname, 'r') as infile:
+            with open(fullname, "r") as infile:
                 d = json.load(infile)
                 data.append(d)
 
@@ -142,5 +142,5 @@ class TestScenarioSemibatch(unittest.TestCase):
         self.assertAlmostEqual(tval, 20.64, places=1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
