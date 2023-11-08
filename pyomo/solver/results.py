@@ -289,11 +289,13 @@ def parse_sol_file(file, results):
     while i < number_of_cons:
         line = file.readline()
         constraints.append(float(line))
+        i += 1
     # Parse through the variable lines and capture the variables
     i = 0
     while i < number_of_vars:
         line = file.readline()
         variables.append(float(line))
+        i += 1
     # Parse the exit code line and capture it
     exit_code = [0, 0]
     line = file.readline()
@@ -315,30 +317,29 @@ def parse_sol_file(file, results):
         exit_code_message = "Optimal solution indicated, but ERROR LIKELY!"
         results.termination_condition = TerminationCondition.convergenceCriteriaSatisfied
         results.solution_status = SolutionStatus.optimal
-        if results.extra_info.solver_message:
-            results.extra_info.solver_message += '; ' + exit_code_message
-        else:
-            results.extra_info.solver_message = exit_code_message
     elif (exit_code[1] >= 200) and (exit_code[1] <= 299):
+        exit_code_message = "INFEASIBLE SOLUTION: constraints cannot be satisfied!"
         results.termination_condition = TerminationCondition.locallyInfeasible
         results.solution_status = SolutionStatus.infeasible
     elif (exit_code[1] >= 300) and (exit_code[1] <= 399):
+        exit_code_message = "UNBOUNDED PROBLEM: the objective can be improved without limit!"
         results.termination_condition = TerminationCondition.unbounded
         results.solution_status = SolutionStatus.infeasible
     elif (exit_code[1] >= 400) and (exit_code[1] <= 499):
+        exit_code_message = ("EXCEEDED MAXIMUM NUMBER OF ITERATIONS: the solver "
+        "was stopped by a limit that you set!")
         results.solver.termination_condition = TerminationCondition.iterationLimit
     elif (exit_code[1] >= 500) and (exit_code[1] <= 599):
         exit_code_message = (
             "FAILURE: the solver stopped by an error condition "
             "in the solver routines!"
         )
-        if results.extra_info.solver_message:
-            results.extra_info.solver_message += '; ' + exit_code_message
-        else:
-            results.extra_info.solver_message = exit_code_message
         results.solver.termination_condition = TerminationCondition.error
-        return results
-    
+
+    if results.extra_info.solver_message:
+        results.extra_info.solver_message += '; ' + exit_code_message
+    else:
+        results.extra_info.solver_message = exit_code_message
     return results
 
 def parse_yaml():
