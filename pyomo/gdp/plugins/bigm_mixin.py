@@ -11,7 +11,8 @@
 
 from pyomo.gdp import GDP_Error
 from pyomo.common.collections import ComponentSet
-from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
+from pyomo.contrib.fbbt.expression_bounds_walker import ExpressionBoundsVisitor
+import pyomo.contrib.fbbt.interval as interval
 from pyomo.core import Suffix
 
 
@@ -102,6 +103,13 @@ class _BigM_MixIn(object):
                 arg_list.append({block: bigm_args[block]})
             block = block.parent_block()
         return arg_list
+
+    def _set_up_expr_bound_visitor(self):
+        # we assume the default config arg for 'assume_fixed_vars_permanent,`
+        # and we will change it during apply_to if we need to
+        self._expr_bound_visitor = ExpressionBoundsVisitor(
+            use_fixed_var_values_as_bounds=False
+        )
 
     def _process_M_value(
         self,
@@ -210,10 +218,8 @@ class _BigM_MixIn(object):
         return lower, upper
 
     def _estimate_M(self, expr, constraint):
-        expr_lb, expr_ub = compute_bounds_on_expr(
-            expr, ignore_fixed=not self._config.assume_fixed_vars_permanent
-        )
-        if expr_lb is None or expr_ub is None:
+        expr_lb, expr_ub = self._expr_bound_visitor.walk_expression(expr)
+        if expr_lb == -interval.inf or expr_ub == interval.inf:
             raise GDP_Error(
                 "Cannot estimate M for unbounded "
                 "expressions.\n\t(found while processing "

@@ -26,13 +26,15 @@ def sub(xl, xu, yl, yu):
 
 
 def mul(xl, xu, yl, yu):
-    options = [xl * yl, xl * yu, xu * yl, xu * yu]
-    if any(math.isnan(i) for i in options):
-        lb = -inf
-        ub = inf
-    else:
-        lb = min(options)
-        ub = max(options)
+    lb = inf
+    ub = -inf
+    for i in (xl * yl, xu * yu, xu * yl, xl * yu):
+        if i < lb:
+            lb = i
+        if i > ub:
+            ub = i
+        if i != i:  # math.isnan(i)
+            return (-inf, inf)
     return lb, ub
 
 
@@ -79,8 +81,7 @@ def inv(xl, xu, feasibility_tol):
 
 
 def div(xl, xu, yl, yu, feasibility_tol):
-    lb, ub = mul(xl, xu, *inv(yl, yu, feasibility_tol))
-    return lb, ub
+    return mul(xl, xu, *inv(yl, yu, feasibility_tol))
 
 
 def power(xl, xu, yl, yu, feasibility_tol):
@@ -146,7 +147,7 @@ def power(xl, xu, yl, yu, feasibility_tol):
                 else:
                     lb = xl**y
                     ub = xu**y
-        else:
+        else:  # xu is positive
             if y < 0:
                 if y % 2 == 0:
                     lb = min(xl**y, xu**y)
@@ -154,8 +155,9 @@ def power(xl, xu, yl, yu, feasibility_tol):
                 else:
                     lb = -inf
                     ub = inf
-            else:
+            else:  # exponent is nonnegative
                 if y % 2 == 0:
+                    # xl is negative and xu is positive, so lb is 0
                     lb = 0
                     ub = max(xl**y, xu**y)
                 else:
@@ -320,7 +322,7 @@ def _inverse_power2(zl, zu, xl, xu, feasiblity_tol):
 def interval_abs(xl, xu):
     abs_xl = abs(xl)
     abs_xu = abs(xu)
-    if xl <= 0 <= xu:
+    if xl <= 0 and 0 <= xu:
         res_lb = 0
         res_ub = max(abs_xl, abs_xu)
     else:
