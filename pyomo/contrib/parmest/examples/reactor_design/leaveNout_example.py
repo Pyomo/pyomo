@@ -20,11 +20,11 @@ from pyomo.contrib.parmest.examples.reactor_design.reactor_design import (
 
 def main():
     # Vars to estimate
-    theta_names = ['k1', 'k2', 'k3']
+    theta_names = ["k1", "k2", "k3"]
 
     # Data
     file_dirname = dirname(abspath(str(__file__)))
-    file_name = abspath(join(file_dirname, 'reactor_data.csv'))
+    file_name = abspath(join(file_dirname, "reactor_data.csv"))
     data = pd.read_csv(file_name)
 
     # Create more data for the example
@@ -37,10 +37,10 @@ def main():
     # Sum of squared error function
     def SSE(model, data):
         expr = (
-            (float(data['ca']) - model.ca) ** 2
-            + (float(data['cb']) - model.cb) ** 2
-            + (float(data['cc']) - model.cc) ** 2
-            + (float(data['cd']) - model.cd) ** 2
+            (float(data.iloc[0]["ca"]) - model.ca) ** 2
+            + (float(data.iloc[0]["cb"]) - model.cb) ** 2
+            + (float(data.iloc[0]["cc"]) - model.cc) ** 2
+            + (float(data.iloc[0]["cd"]) - model.cd) ** 2
         )
         return expr
 
@@ -68,7 +68,7 @@ def main():
     lNo = 25
     lNo_samples = 5
     bootstrap_samples = 20
-    dist = 'MVN'
+    dist = "MVN"
     alphas = [0.7, 0.8, 0.9]
 
     results = pest.leaveNout_bootstrap_test(
@@ -84,8 +84,8 @@ def main():
             bootstrap_results,
             theta_est_N,
             alpha,
-            ['MVN'],
-            title='Alpha: ' + str(alpha) + ', ' + str(theta_est_N.loc[0, alpha]),
+            ["MVN"],
+            title="Alpha: " + str(alpha) + ", " + str(theta_est_N.loc[0, alpha]),
         )
 
     # Extract the percent of points that are within the alpha region
