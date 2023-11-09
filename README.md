@@ -42,7 +42,7 @@ subproblems using Python parallel communication libraries.
 * [About Pyomo](http://www.pyomo.org/about)
 * [Download](http://www.pyomo.org/installation/)
 * [Documentation](http://www.pyomo.org/documentation/)
-* [Performance Plots](https://software.sandia.gov/downloads/pub/pyomo/performance/index.html)
+* [Performance Plots](https://pyomo.github.io/performance/)
 
 Pyomo was formerly released as the Coopr software library.
 
