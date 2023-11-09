@@ -18,10 +18,13 @@ from pyomo.core.expr.compare import (
     assertExpressionsStructurallyEqual,
 )
 from pyomo.gdp import Disjunct, Disjunction
-from pyomo.environ import Constraint, SolverFactory, Var, ConcreteModel, Objective, log, value
+from pyomo.environ import Constraint, SolverFactory, Var, ConcreteModel, Objective, log, value, maximize
 from pyomo.contrib.piecewise import PiecewiseLinearFunction
 
 from pyomo.contrib.piecewise.transform.incremental import IncrementalInnerGDPTransformation
+from pyomo.contrib.piecewise.transform.disagreggated_logarithmic import (
+    DisaggregatedLogarithmicInnerGDPTransformation
+)
 
 class TestTransformPiecewiseModelToNestedInnerRepnGDP(unittest.TestCase):
 
@@ -58,17 +61,19 @@ class TestTransformPiecewiseModelToNestedInnerRepnGDP(unittest.TestCase):
         m.f3 = f3
 
         m.log_expr = m.pw_log(m.x)
-        m.obj = Objective(expr=m.log_expr)
+        m.obj = Objective(expr=m.log_expr, sense=maximize)
 
         TransformationFactory(
             'contrib.piecewise.incremental'
+            #'contrib.piecewise.disaggregated_logarithmic'
         ).apply_to(m)
         m.pprint()
         TransformationFactory(
-            'gdp.hull'
+            'gdp.bigm'
         ).apply_to(m)
         print('####### PPRINTNG AGAIN AFTER BIGM #######')
         m.pprint()
         # log is increasing so the optimal value should be log(10)
         SolverFactory('gurobi').solve(m)
+        print(f"optimal value is {value(m.obj)}")
         self.assertTrue(abs(value(m.obj) - log(10)) < 0.001)

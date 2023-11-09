@@ -10,7 +10,6 @@ from pyomo.core.expr.visitor import SimpleExpressionVisitor
 from pyomo.core.expr.current import identify_components
 from math import ceil, log2
 
-
 @TransformationFactory.register(
     "contrib.piecewise.incremental",
     doc="""
@@ -57,6 +56,19 @@ class IncrementalInnerGDPTransformation(PiecewiseLinearToGDP):
         transBlock.simplex_point_indices = RangeSet(0, dimension)
         transBlock.nonzero_simplex_point_indices = RangeSet(1, dimension)
         transBlock.last_simplex_point_index = Param(initialize=dimension)
+
+        # We don't seem to get a convenient opportunity later, so let's just widen 
+        # the bounds here. All we need to do is go through the corners of each simplex.
+        for P, linear_func in zip(transBlock.simplex_indices, pw_linear_func._linear_functions):
+            for v in transBlock.simplex_point_indices:
+                val = linear_func(*pw_linear_func._points[simplices[P][v]])
+                if val < self.substitute_var_lb:
+                    self.substitute_var_lb = val
+                if val > self.substitute_var_ub:
+                    self.substitute_var_ub = val
+        # Now set those bounds
+        transBlock.substitute_var.setlb(self.substitute_var_lb)
+        transBlock.substitute_var.setub(self.substitute_var_ub)
 
 
         # Ordering of simplices to follow Vielma
@@ -149,3 +161,5 @@ class IncrementalInnerGDPTransformation(PiecewiseLinearToGDP):
                     for i in transBlock.simplex_indices
                 )
         )
+
+        return substitute_var
