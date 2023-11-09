@@ -20,17 +20,15 @@ from pyomo.core.expr.compare import (
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.environ import Constraint, SolverFactory, Var
 
-from pyomo.contrib.piecewise.transform.disagreggated_logarithmic import DisaggregatedLogarithmicInnerGDPTransformation
+from pyomo.contrib.piecewise.transform.disagreggated_logarithmic import (
+    DisaggregatedLogarithmicInnerGDPTransformation,
+)
+
 
 class TestTransformPiecewiseModelToNestedInnerRepnGDP(unittest.TestCase):
-
     def test_solve_log_model(self):
         m = models.make_log_x_model()
-        TransformationFactory(
-            'contrib.piecewise.disaggregated_logarithmic'
-        ).apply_to(m)
-        TransformationFactory(
-            'gdp.bigm'
-        ).apply_to(m)
-        SolverFactory('gurobi').solve(m)
+        TransformationFactory("contrib.piecewise.disaggregated_logarithmic").apply_to(m)
+        TransformationFactory("gdp.bigm").apply_to(m)
+        SolverFactory("gurobi").solve(m)
         ct.check_log_x_model_soln(self, m)

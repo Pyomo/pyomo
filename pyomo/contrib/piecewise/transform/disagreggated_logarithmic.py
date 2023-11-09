@@ -20,9 +20,9 @@ from math import ceil, log2
 class DisaggregatedLogarithmicInnerGDPTransformation(PiecewiseLinearToGDP):
     """
     Represent a piecewise linear function "logarithmically" by using a MIP with
-    log_2(|P|) binary decision variables. This is a direct-to-MIP transformation; 
-    GDP is not used. This method of logarithmically formulating the piecewise 
-    linear function imposes no restrictions on the family of polytopes, but we 
+    log_2(|P|) binary decision variables. This is a direct-to-MIP transformation;
+    GDP is not used. This method of logarithmically formulating the piecewise
+    linear function imposes no restrictions on the family of polytopes, but we
     assume we have simplces in this code. This method is due to Vielma et al., 2010.
     """
 
@@ -32,8 +32,7 @@ class DisaggregatedLogarithmicInnerGDPTransformation(PiecewiseLinearToGDP):
     # Implement to use PiecewiseLinearToGDP. This function returns the Var
     # that replaces the transformed piecewise linear expr
     def _transform_pw_linear_expr(self, pw_expr, pw_linear_func, transformation_block):
-
-        # Get a new Block for our transformation in transformation_block.transformed_functions, 
+        # Get a new Block for our transformation in transformation_block.transformed_functions,
         # which is a Block(Any). This is where we will put our new components.
         transBlock = transformation_block.transformed_functions[
             len(transformation_block.transformed_functions)
@@ -60,12 +59,16 @@ class DisaggregatedLogarithmicInnerGDPTransformation(PiecewiseLinearToGDP):
         transBlock.simplex_point_indices = RangeSet(0, dimension)
 
         # Enumeration of simplices: map from simplex number to simplex object
-        self.idx_to_simplex = {k: v for k, v in zip(transBlock.simplex_indices, simplices)}
+        self.idx_to_simplex = {
+            k: v for k, v in zip(transBlock.simplex_indices, simplices)
+        }
 
         # List of tuples of simplex indices with their linear function
-        simplex_indices_and_lin_funcs = list(zip(transBlock.simplex_indices, pw_linear_func._linear_functions))
+        simplex_indices_and_lin_funcs = list(
+            zip(transBlock.simplex_indices, pw_linear_func._linear_functions)
+        )
 
-        # We don't seem to get a convenient opportunity later, so let's just widen 
+        # We don't seem to get a convenient opportunity later, so let's just widen
         # the bounds here. All we need to do is go through the corners of each simplex.
         for P, linear_func in simplex_indices_and_lin_funcs:
             for v in transBlock.simplex_point_indices:
@@ -90,9 +93,11 @@ class DisaggregatedLogarithmicInnerGDPTransformation(PiecewiseLinearToGDP):
             B[i] = self._get_binary_vector(i, log_dimension)
 
         # The lambda variables \lambda_{P,v} are indexed by the simplex and the point in it
-        transBlock.lambdas = Var(transBlock.simplex_indices, transBlock.simplex_point_indices, bounds=(0, 1))
+        transBlock.lambdas = Var(
+            transBlock.simplex_indices, transBlock.simplex_point_indices, bounds=(0, 1)
+        )
 
-        # Numbered citations are from Vielma et al 2010, Mixed-Integer Models 
+        # Numbered citations are from Vielma et al 2010, Mixed-Integer Models
         # for Nonseparable Piecewise-Linear Optimization
 
         # Sum of all lambdas is one (6b)
