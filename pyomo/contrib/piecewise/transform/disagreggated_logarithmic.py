@@ -1,13 +1,9 @@
-from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.contrib.piecewise.transform.piecewise_to_gdp_transformation import (
     PiecewiseLinearToGDP,
 )
-from pyomo.core import Constraint, Binary, NonNegativeIntegers, Suffix, Var, RangeSet
+from pyomo.core import Constraint, Binary, Var, RangeSet
 from pyomo.core.base import TransformationFactory
-from pyomo.gdp import Disjunct, Disjunction
 from pyomo.common.errors import DeveloperError
-from pyomo.core.expr.visitor import SimpleExpressionVisitor
-from pyomo.core.expr.current import identify_components
 from math import ceil, log2
 
 
@@ -37,7 +33,7 @@ class DisaggregatedLogarithmicInnerGDPTransformation(PiecewiseLinearToGDP):
     # that replaces the transformed piecewise linear expr
     def _transform_pw_linear_expr(self, pw_expr, pw_linear_func, transformation_block):
 
-        # Get a new Block for our transformationin transformation_block.transformed_functions, 
+        # Get a new Block for our transformation in transformation_block.transformed_functions, 
         # which is a Block(Any). This is where we will put our new components.
         transBlock = transformation_block.transformed_functions[
             len(transformation_block.transformed_functions)
@@ -78,7 +74,6 @@ class DisaggregatedLogarithmicInnerGDPTransformation(PiecewiseLinearToGDP):
                     self.substitute_var_lb = val
                 if val > self.substitute_var_ub:
                     self.substitute_var_ub = val
-        # Now set those bounds
         transBlock.substitute_var.setlb(self.substitute_var_lb)
         transBlock.substitute_var.setub(self.substitute_var_ub)
 
@@ -96,6 +91,9 @@ class DisaggregatedLogarithmicInnerGDPTransformation(PiecewiseLinearToGDP):
 
         # The lambda variables \lambda_{P,v} are indexed by the simplex and the point in it
         transBlock.lambdas = Var(transBlock.simplex_indices, transBlock.simplex_point_indices, bounds=(0, 1))
+
+        # Numbered citations are from Vielma et al 2010, Mixed-Integer Models 
+        # for Nonseparable Piecewise-Linear Optimization
 
         # Sum of all lambdas is one (6b)
         transBlock.convex_combo = Constraint(
@@ -143,14 +141,6 @@ class DisaggregatedLogarithmicInnerGDPTransformation(PiecewiseLinearToGDP):
             )
 
         # Make the substitute Var equal the PWLE (6a.2)
-        #for P, linear_func in simplices_and_lin_funcs:
-        #    print(f"P, linear_func = {P}, {linear_func}")
-        #    for v in transBlock.simplex_point_indices:
-        #        print(f"    v={v}")
-        #        print(f"    pt={pw_linear_func._points[P[v]]}")
-        #        print(
-        #            f"    lin_func_val = {linear_func(*pw_linear_func._points[P[v]])}"
-        #        )
         transBlock.set_substitute = Constraint(
             expr=substitute_var
             == sum(
@@ -165,13 +155,13 @@ class DisaggregatedLogarithmicInnerGDPTransformation(PiecewiseLinearToGDP):
 
         return substitute_var
 
-    # Not a gray code, just a regular binary representation
-    # TODO this may not be optimal, test the gray codes too
+    # Not a Gray code, just a regular binary representation
+    # TODO test the Gray codes too
     def _get_binary_vector(self, num, length):
         if num != 0 and ceil(log2(num)) > length:
             raise DeveloperError("Invalid input in _get_binary_vector")
-        # Hack: use python's string formatting instead of bothering with modular
-        # arithmetic. May be slow.
+        # Use python's string formatting instead of bothering with modular
+        # arithmetic. Hopefully not slow.
         return tuple(int(x) for x in format(num, f"0{length}b"))
 
     # Return {P \in \mathcal{P} | B(P)_l = 0}

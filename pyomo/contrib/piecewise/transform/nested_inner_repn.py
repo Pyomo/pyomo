@@ -28,7 +28,7 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
     # Implement to use PiecewiseLinearToGDP. This function returns the Var
     # that replaces the transformed piecewise linear expr
     def _transform_pw_linear_expr(self, pw_expr, pw_linear_func, transformation_block):
-        self.DEBUG = False
+
         # Get a new Block() in transformation_block.transformed_functions, which
         # is a Block(Any)
         transBlock = transformation_block.transformed_functions[
@@ -46,9 +46,6 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
         
         choices = list(zip(pw_linear_func._simplices, pw_linear_func._linear_functions))
 
-        if self.DEBUG:
-            print(f"dimension is {self.dimension}")
-
         # If there was only one choice, don't bother making a disjunction, just
         # use the linear function directly (but still use the substitute_var for 
         # consistency).
@@ -61,14 +58,11 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
             # Add the disjunction
             transBlock.disj = self._get_disjunction(choices, transBlock, pw_expr, transBlock)
 
-        # Widen bounds as determined when setting up the disjunction
+        # Set bounds as determined when setting up the disjunction
         if self.substitute_var_lb < float('inf'):
             transBlock.substitute_var.setlb(self.substitute_var_lb)
         if self.substitute_var_ub > -float('inf'):
             transBlock.substitute_var.setub(self.substitute_var_ub)
-        
-        if self.DEBUG:
-            print(f"lb is {self.substitute_var_lb}, ub is {self.substitute_var_ub}")
         
         return substitute_var
 
@@ -77,8 +71,7 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
     # many calls deep.
     def _get_disjunction(self, choices, parent_block, pw_expr, root_block):
         size = len(choices)
-        if self.DEBUG:
-            print(f"calling _get_disjunction with size={size}")
+
         # Our base cases will be 3 and 2, since it would be silly to construct
         # a Disjunction containing only one Disjunct. We can ensure that size
         # is never 1 unless it was only passsed a single choice from the start,
@@ -88,7 +81,6 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
             # This tree will be slightly heavier on the right side
             choices_l = choices[:half]
             choices_r = choices[half:]
-            # Is this valid Pyomo?
             @parent_block.Disjunct()
             def d_l(b):
                 b.inner_disjunction_l = self._get_disjunction(choices_l, b, pw_expr, root_block)
@@ -124,32 +116,38 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
                                  "_get_disjunction in nested_inner_repn.py.")
 
     def _set_disjunct_block_constraints(self, b, simplex, linear_func, pw_expr, root_block):
-        # Define the lambdas sparsely like in the version I'm copying,
+        # Define the lambdas sparsely like in the normal inner repn,
         # only the first few will participate in constraints
         b.lambdas = Var(NonNegativeIntegers, dense=False, bounds=(0, 1))
+
         # Get the extreme points to add up
         extreme_pts = []
         for idx in simplex:
             extreme_pts.append(self.pw_linear_func._points[idx])
+
         # Constrain sum(lambda_i) = 1     
         b.convex_combo = Constraint(
             expr=sum(b.lambdas[i] for i in range(len(extreme_pts))) == 1
         )
         linear_func_expr = linear_func(*pw_expr.args)
+
         # Make the substitute Var equal the PWLE
         b.set_substitute = Constraint(expr=root_block.substitute_var == linear_func_expr)
+
         # Widen the variable bounds to those of this linear func expression
         (lb, ub) = compute_bounds_on_expr(linear_func_expr)
         if lb is not None and lb < self.substitute_var_lb:
             self.substitute_var_lb = lb
         if ub is not None and ub > self.substitute_var_ub:
             self.substitute_var_ub = ub
+
         # Constrain x = \sum \lambda_i v_i
         @b.Constraint(range(self.dimension))
         def linear_combo(d, i):
             return pw_expr.args[i] == sum(
                 d.lambdas[j] * pt[i] for j, pt in enumerate(extreme_pts)
             )
+
         # Mark the lambdas as local in order to prevent disagreggating multiple
         # times in the hull transformation
         b.LocalVars = Suffix(direction=Suffix.LOCAL)
