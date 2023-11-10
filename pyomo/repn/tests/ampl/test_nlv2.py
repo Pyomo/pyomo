@@ -1126,9 +1126,13 @@ G0 4    #OBJ
         m.weight = pyo.Constraint(expr=pyo.sum_product(m.w, m.x) <= m.limit)
 
         OUT = io.StringIO()
+        ROW = io.StringIO()
+        COL = io.StringIO()
         with LoggingIntercept() as LOG:
-            nl_writer.NLWriter().write(m, OUT, symbolic_solver_labels=True)
+            nl_writer.NLWriter().write(m, OUT, ROW, COL, symbolic_solver_labels=True)
         self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(ROW.getvalue(), "weight\nvalue\n")
+        self.assertEqual(COL.getvalue(), "x[0]\nx[1]\nx[2]\nx[3]\n")
         self.assertEqual(
             *nl_diff(
                 """g3 1 1 0       #problem unknown
@@ -1498,7 +1502,7 @@ G0 1
         m.obj = pyo.Objective(expr=m.x**2 + (m.y - 50000) ** 2 + m.z)
         m.c = pyo.ConstraintList()
         m.c.add(100 * m.x + m.y / 100 >= 600)
-        m.c.add(1000*m.w + m.v * m.x <= 100)
+        m.c.add(1000 * m.w + m.v * m.x <= 100)
         m.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT_EXPORT)
 
         m.dual[m.c[1]] = 0.02
@@ -1578,7 +1582,7 @@ G0 3
         m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
         m.scaling_factor[m.v] = 1 / 250
         m.scaling_factor[m.w] = 1 / 500
-        #m.scaling_factor[m.x] = 1
+        # m.scaling_factor[m.x] = 1
         m.scaling_factor[m.y] = -1 / 50000
         m.scaling_factor[m.z] = 1 / 1000
         m.scaling_factor[m.c[1]] = 1 / 10
@@ -1668,3 +1672,104 @@ G0 3
 
         # Debugging: this diffs the unscaled & scaled models
         # self.assertEqual(*nl_diff(nl1, nl2))
+
+    def test_named_expressions(self):
+        # This tests an error possibly reported by #2810
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.z = Var()
+        m.E1 = Expression(expr=3*(m.x*m.y + m.z))
+        m.E2 = Expression(expr=m.z*m.y)
+        m.E3 = Expression(expr=m.x*m.z + m.y)
+        m.o1 = Objective(expr=m.E1 + m.E2)
+        m.o2 = Objective(expr=m.E1**2)
+        m.c1 = Constraint(expr=m.E2 + 2*m.E3 >= 0)
+        m.c2 = Constraint(expr=pyo.inequality(0, m.E3**2, 10))
+
+        OUT = io.StringIO()
+        nl_writer.NLWriter().write(m, OUT, symbolic_solver_labels=True)
+        print(OUT.getvalue())
+        self.assertEqual(
+            *nl_diff(
+                """g3 1 1 0	# problem unknown
+ 3 2 2 1 0 	# vars, constraints, objectives, ranges, eqns
+ 2 2 0 0 0 0	# nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0	# network constraints: nonlinear, linear
+ 3 3 3 	# nonlinear vars in constraints, objectives, both
+ 0 0 0 1	# linear network variables; functions; arith, flags
+ 0 0 0 0 0 	# discrete variables: binary, integer, nonlinear (b,c,o)
+ 6 6 	# nonzeros in Jacobian, obj. gradient
+ 2 1	# max name lengths: constraints, variables
+ 1 1 1 1 1	# common exprs: b,c,o,c1,o1
+V3 0 0	#nl(E1)
+o2	#*
+v0	#x
+v1	#y
+V4 0 0	#E2
+o2	#*
+v2	#z
+v1	#y
+V5 0 0	#nl(E3)
+o2	#*
+v0	#x
+v2	#z
+C0	#c1
+o0	#+
+v4	#E2
+o2	#*
+n2
+v5	#nl(E3)
+V6 1 2	#E3
+1 1
+v5	#nl(E3)
+C1	#c2
+o5	#^
+v6	#E3
+n2
+O0 0	#o1
+o0	#+
+o2	#*
+n3
+v3	#nl(E1)
+v4	#E2
+V7 1 4	#E1
+2 3
+o2	#*
+n3
+v3	#nl(E1)
+O1 0	#o2
+o5	#^
+v7	#E1
+n2
+x0	# initial guess
+r	#2 ranges (rhs's)
+2 0	#c1
+0 0 10	#c2
+b	#3 bounds (on variables)
+3	#x
+3	#y
+3	#z
+k2	#intermediate Jacobian column lengths
+2
+4
+J0 3	#c1
+0 0
+1 2
+2 0
+J1 3	#c2
+0 0
+1 0
+2 0
+G0 3	#o1
+0 0
+1 0
+2 3
+G1 3	#o2
+0 0
+1 0
+2 0
+""",
+                OUT.getvalue(),
+            )
+        )
