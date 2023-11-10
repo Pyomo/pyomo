@@ -409,6 +409,12 @@ class _SuffixData(object):
         while queue:
             for obj, val in queue.pop(0):
                 if val.__class__ not in int_float:
+                    # [JDS] I am not entirely sure why, but we have
+                    # historically supported suffix values that hold
+                    # dictionaries that map arbirtary component data
+                    # objects to values.  We will preserve that behavior
+                    # here.  This behavior is exercised by a
+                    # ExternalGreyBox test.
                     if isinstance(val, dict):
                         queue.append(val.items())
                         continue
