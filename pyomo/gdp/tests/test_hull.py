@@ -52,6 +52,9 @@ from io import StringIO
 import os
 from os.path import abspath, dirname, join
 
+##DEBUG
+from pytest import set_trace
+
 currdir = dirname(abspath(__file__))
 from filecmp import cmp
 
@@ -1724,11 +1727,6 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
 
         SolverFactory(linear_solvers[0]).solve(m_hull)
 
-        print("MODEL")
-        for cons in m_hull.component_data_objects(Constraint, active=True,
-                                                  descend_into=Block):
-            print(cons.expr)
-
         # check solution
         self.assertEqual(value(m_hull.d1.binary_indicator_var), 0)
         self.assertEqual(value(m_hull.d2.binary_indicator_var), 1)
@@ -1892,11 +1890,14 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         self.assertEqual(y_p1.bounds, (-4, 5))
         y_p2 = hull.get_disaggregated_var(m.y, m.parent2)
         self.assertEqual(y_p2.bounds, (-4, 5))
+
         y_cons = hull.get_disaggregation_constraint(m.y, m.parent1.disjunction)
         # check that the disaggregated ys in the nested just sum to the original
-        assertExpressionsEqual(self, y_cons.expr, y_p1 == other_y + y_c2)
+        y_cons_expr = self.simplify_cons(y_cons)
+        assertExpressionsEqual(self, y_cons_expr, y_p1 - other_y - y_c2 == 0.0)
         y_cons = hull.get_disaggregation_constraint(m.y, m.parent_disjunction)
-        assertExpressionsEqual(self, y_cons.expr, m.y == y_p1 + y_p2)
+        y_cons_expr = self.simplify_cons(y_cons)
+        assertExpressionsEqual(self, y_cons_expr, m.y - y_p2 - y_p1 == 0.0)
 
         x_c1 = hull.get_disaggregated_var(m.x, m.child1)
         x_c2 = hull.get_disaggregated_var(m.x, m.child2)
@@ -1906,7 +1907,9 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         x_cons_parent = hull.get_disaggregation_constraint(m.x, m.parent_disjunction)
         assertExpressionsEqual(self, x_cons_parent.expr, m.x == x_p1 + x_p2)
         x_cons_child = hull.get_disaggregation_constraint(m.x, m.parent1.disjunction)
-        assertExpressionsEqual(self, x_cons_child.expr, x_p1 == x_c1 + x_c2 + x_c3)
+        x_cons_child_expr = self.simplify_cons(x_cons_child)
+        assertExpressionsEqual(self, x_cons_child_expr, x_p1 - x_c1 - x_c2 -
+                               x_c3 == 0.0)
 
     def simplify_cons(self, cons):
         visitor = LinearRepnVisitor({}, {}, {})
@@ -1934,9 +1937,9 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         m.y1 = Disjunct()
         m.y1.c1 = Constraint(expr=m.x >= 4)
         m.y1.z1 = Disjunct()
-        m.y1.z1.c1 = Constraint(expr=m.y == 0)
+        m.y1.z1.c1 = Constraint(expr=m.y == 2)
         m.y1.z1.w1 = Disjunct()
-        m.y1.z1.w1.c1 = Constraint(expr=m.x == 0)
+        m.y1.z1.w1.c1 = Constraint(expr=m.x == 3)
         m.y1.z1.w2 = Disjunct()
         m.y1.z1.w2.c1 = Constraint(expr=m.x >= 1)
         m.y1.z1.disjunction = Disjunction(expr=[m.y1.z1.w1, m.y1.z1.w2])
@@ -1944,7 +1947,7 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         m.y1.z2.c1 = Constraint(expr=m.y == 1)
         m.y1.disjunction = Disjunction(expr=[m.y1.z1, m.y1.z2])
         m.y2 = Disjunct()
-        m.y2.c1 = Constraint(expr=m.x == 0)
+        m.y2.c1 = Constraint(expr=m.x == 4)
         m.disjunction = Disjunction(expr=[m.y1, m.y2])
 
         hull = TransformationFactory('gdp.hull')
@@ -1965,26 +1968,26 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         cons = hull.get_disaggregation_constraint(m.x, m.y1.z1.disjunction)
         self.assertTrue(cons.active)
         cons_expr = self.simplify_cons(cons)
-        print(cons_expr)
-        print("")
-        print(x_z1 - x_w2 - x_w1 == 0)
-        assertExpressionsEqual(self, cons_expr, x_z1 - x_w2 - x_w1 == 0)
+        assertExpressionsEqual(self, cons_expr, x_z1 - x_w1 - x_w2 == 0.0)
         cons = hull.get_disaggregation_constraint(m.x, m.y1.disjunction)
         self.assertTrue(cons.active)
-        assertExpressionsEqual(self, cons.expr, x_y1 == x_z2 + x_z1)
+        cons_expr = self.simplify_cons(cons)
+        assertExpressionsEqual(self, cons_expr, x_y1 - x_z2 - x_z1 == 0.0)
         cons = hull.get_disaggregation_constraint(m.x, m.disjunction)
         self.assertTrue(cons.active)
-        assertExpressionsEqual(self, cons.expr, m.x == x_y1 + x_y2)
-
+        cons_expr = self.simplify_cons(cons)
+        assertExpressionsEqual(self, cons_expr, m.x - x_y1 - x_y2 == 0.0)
         cons = hull.get_disaggregation_constraint(m.y, m.y1.z1.disjunction,
                                                   raise_exception=False)
         self.assertIsNone(cons)
         cons = hull.get_disaggregation_constraint(m.y, m.y1.disjunction)
         self.assertTrue(cons.active)
-        assertExpressionsEqual(self, cons.expr, y_y1 == y_z1 + y_z2)
+        cons_expr = self.simplify_cons(cons)
+        assertExpressionsEqual(self, cons_expr, y_y1 - y_z1 - y_z2 == 0.0)
         cons = hull.get_disaggregation_constraint(m.y, m.disjunction)
         self.assertTrue(cons.active)
-        assertExpressionsEqual(self, cons.expr, m.y == y_y2 + y_y1)
+        cons_expr = self.simplify_cons(cons)
+        assertExpressionsEqual(self, cons_expr, m.y - y_y2 - y_y1 == 0.0)
 
 
 class TestSpecialCases(unittest.TestCase):
