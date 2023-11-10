@@ -594,6 +594,7 @@ class _NLWriter_impl(object):
             del suffix_data['scaling_factor']
         else:
             scaling_factor = _NoScalingFactor()
+        scale_model = scaling_factor.scale
 
         #
         # Data structures to support presolve
@@ -990,15 +991,30 @@ class _NLWriter_impl(object):
             }
 
         _vmap = self.var_id_to_nl
-        if scaling_factor.scale:
+        if scale_model:
             template = self.template
             for var_idx, _id in enumerate(variables):
                 scale = scaling_factor(var_map[_id])
-                if scale != 1:
-                    _vmap[_id] = (
-                        template.division + _vmap[_id] + '\n' + template.const % scale
-                    ).rstrip()
+                if scale == 1:
+                    continue
+                # Update var_bounds to be scaled bounds
+                if scale < 0:
+                    # Note: reverse bounds for negative scaling factors
+                    ub, lb = var_bounds[_id]
+                else:
+                    lb, ub = var_bounds[_id]
+                if lb is not None:
+                    lb *= scale
+                if ub is not None:
+                    ub *= scale
+                var_bounds[_id] = lb, ub
+                # Update _vmap to output scaled variables in NL expressions
+                _vmap[_id] = (
+                    template.division + _vmap[_id] + '\n' + template.const % scale
+                ).rstrip()
 
+        # Update any eliminated variables to point to the (potentially
+        # scaled) substituted variables
         for _id, expr_info in eliminated_vars.items():
             nl, args, _ = expr_info.compile_repn(visitor)
             _vmap[_id] = nl.rstrip() % tuple(_vmap[_id] for _id in args)
@@ -1323,7 +1339,7 @@ class _NLWriter_impl(object):
         if 'dual' in suffix_data:
             data = suffix_data['dual']
             data.compile(column_order, row_order, obj_order, model_id)
-            if scaling_factor.scale:
+            if scale_model:
                 if objectives:
                     if len(objectives) > 1:
                         logger.warning(
@@ -1357,7 +1373,7 @@ class _NLWriter_impl(object):
             for var_idx, val in enumerate(var_map[_id].value for _id in variables)
             if val is not None
         ]
-        if scaling_factor.scale:
+        if scale_model:
             for i, (var_idx, val) in enumerate(_init_lines):
                 _init_lines[i] = (var_idx, val * scaling_cache[variables[var_idx]])
         ostream.write(
@@ -1403,22 +1419,12 @@ class _NLWriter_impl(object):
                 if lb is None:  # unbounded
                     ostream.write(f"3{col_comments[var_idx]}\n")
                 else:  # ==
-                    if scaling_factor.scale:
-                        lb *= scaling_factor(var_map[_id])
                     ostream.write(f"4 {lb!r}{col_comments[var_idx]}\n")
             elif lb is None:  # var <= ub
-                if scaling_factor.scale:
-                    ub *= scaling_factor(var_map[_id])
                 ostream.write(f"1 {ub!r}{col_comments[var_idx]}\n")
             elif ub is None:  # lb <= body
-                if scaling_factor.scale:
-                    lb *= scaling_factor(var_map[_id])
                 ostream.write(f"2 {lb!r}{col_comments[var_idx]}\n")
             else:  # lb <= body <= ub
-                if scaling_factor.scale:
-                    _sf = scaling_factor(var_map[_id])
-                    lb *= _sf
-                    ub *= _sf
                 ostream.write(f"0 {lb!r} {ub!r}{col_comments[var_idx]}\n")
 
         #
@@ -1447,7 +1453,7 @@ class _NLWriter_impl(object):
             # (e.g., a nonlinear-only constraint), then skip this entry
             if not linear:
                 continue
-            if scaling_factor.scale:
+            if scale_model:
                 for _id, val in linear.items():
                     linear[_id] /= scaling_cache[_id]
             ostream.write(f'J{row_idx} {len(linear)}{row_comments[row_idx]}\n')
@@ -1463,7 +1469,7 @@ class _NLWriter_impl(object):
             # (e.g., a constant objective), then skip this entry
             if not linear:
                 continue
-            if scaling_factor.scale:
+            if scale_model:
                 for _id, val in linear.items():
                     linear[_id] /= scaling_cache[_id]
             ostream.write(f'G{obj_idx} {len(linear)}{row_comments[obj_idx + n_cons]}\n')
