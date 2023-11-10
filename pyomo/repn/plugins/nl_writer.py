@@ -308,7 +308,15 @@ class NLWriter(object):
         col_fname = filename_base + '.col'
 
         config = self.config(io_options)
+
+        # There is no (convenient) way to pass the scaling factors or
+        # information about presolved variables back to the solver
+        # through the old "call" interface (since solvers that used that
+        # interface predated scaling / presolve).  We will play it safe
+        # and disable scaling / presolve when called through this API
         config.scale_model = False
+        config.linear_presolve = False
+
         if config.symbolic_solver_labels:
             _open = lambda fname: open(fname, 'w')
         else:
