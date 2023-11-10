@@ -355,8 +355,9 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         disaggregatedVars = transBlock._disaggregatedVars
         disaggregated_var_bounds = transBlock._boundsConstraints
 
-        # We first go through and collect all the variables that we
-        # are going to disaggregate.
+        # We first go through and collect all the variables that we are going to
+        # disaggregate. We do this in its own pass because we want to know all
+        # the Disjuncts that each Var appears in.
         var_order = ComponentSet()
         disjuncts_var_appears_in = ComponentMap()
         for disjunct in active_disjuncts:
@@ -390,9 +391,8 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                         disjuncts_var_appears_in[var].add(disjunct)
 
         # We will disaggregate all variables that are not explicitly declared as
-        # being local. Since we transform from leaf to root, we are implicitly
-        # treating our own disaggregated variables as local, so they will not be
-        # re-disaggregated.
+        # being local. We have marked our own disaggregated variables as local,
+        # so they will not be re-disaggregated.
         vars_to_disaggregate = {disj: ComponentSet() for disj in obj.disjuncts}
         for var in var_order:
             disjuncts = disjuncts_var_appears_in[var]
@@ -420,10 +420,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
         # Now that we know who we need to disaggregate, we will do it
         # while we also transform the disjuncts.
-        print("obj: %s" % obj)
-        print("parent disjunct: %s" % parent_disjunct)
         parent_local_var_list = self._get_local_var_list(parent_disjunct)
-        print("parent_local_var_list: %s" % parent_local_var_list)
         or_expr = 0
         for disjunct in obj.disjuncts:
             or_expr += disjunct.indicator_var.get_associated_binary()
@@ -443,90 +440,86 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
         # add the reaggregation constraints
         i = 0
-        for disj in active_disjuncts:
-            for var in vars_to_disaggregate[disj]:
-                # There are two cases here: Either the var appeared in every
-                # disjunct in the disjunction, or it didn't. If it did, there's
-                # nothing special to do: All of the disaggregated variables have
-                # been created, and we can just proceed and make this constraint. If
-                # it didn't, we need one more disaggregated variable, correctly
-                # defined. And then we can make the constraint.
-                if len(disjuncts_var_appears_in[var]) < len(obj.disjuncts):
-                    # create one more disaggregated var
-                    idx = len(disaggregatedVars)
-                    disaggregated_var = disaggregatedVars[idx]
-                    # mark this as local because we won't re-disaggregate if this is
-                    # a nested disjunction
-                    if parent_local_var_list is not None:
-                        parent_local_var_list.append(disaggregated_var)
-                    local_vars_by_disjunct[parent_disjunct].add(disaggregated_var)
-                    var_free = 1 - sum(
-                        disj.indicator_var.get_associated_binary()
-                        for disj in disjuncts_var_appears_in[var]
-                    )
-                    self._declare_disaggregated_var_bounds(
-                        var,
-                        disaggregated_var,
-                        obj,
-                        disaggregated_var_bounds,
-                        (idx, 'lb'),
-                        (idx, 'ub'),
-                        var_free,
-                    )
-                    # For every Disjunct the Var does not appear in, we want to map
-                    # that this new variable is its disaggreggated variable.
-                    for disj in obj.disjuncts:
-                        # Because we called _transform_disjunct above, we know that
-                        # if this isn't transformed it is because it was cleanly
-                        # deactivated, and we can just skip it.
-                        if (
-                            disj._transformation_block is not None
-                            and disj not in disjuncts_var_appears_in[var]
-                        ):
-                            relaxationBlock = disj._transformation_block().\
-                                              parent_block()
-                            relaxationBlock._bigMConstraintMap[
-                                disaggregated_var
-                            ] = Reference(disaggregated_var_bounds[idx, :])
-                            relaxationBlock._disaggregatedVarMap['srcVar'][
-                                disaggregated_var
-                            ] = var
-                            relaxationBlock._disaggregatedVarMap[
-                                'disaggregatedVar'][disj][
-                                var
-                            ] = disaggregated_var
+        for var in var_order:
+            # There are two cases here: Either the var appeared in every
+            # disjunct in the disjunction, or it didn't. If it did, there's
+            # nothing special to do: All of the disaggregated variables have
+            # been created, and we can just proceed and make this constraint. If
+            # it didn't, we need one more disaggregated variable, correctly
+            # defined. And then we can make the constraint.
+            if len(disjuncts_var_appears_in[var]) < len(active_disjuncts):
+                # create one more disaggregated var
+                idx = len(disaggregatedVars)
+                disaggregated_var = disaggregatedVars[idx]
+                # mark this as local because we won't re-disaggregate if this is
+                # a nested disjunction
+                if parent_local_var_list is not None:
+                    parent_local_var_list.append(disaggregated_var)
+                local_vars_by_disjunct[parent_disjunct].add(disaggregated_var)
+                var_free = 1 - sum(
+                    disj.indicator_var.get_associated_binary()
+                    for disj in disjuncts_var_appears_in[var]
+                )
+                self._declare_disaggregated_var_bounds(
+                    var,
+                    disaggregated_var,
+                    obj,
+                    disaggregated_var_bounds,
+                    (idx, 'lb'),
+                    (idx, 'ub'),
+                    var_free,
+                )
+                # For every Disjunct the Var does not appear in, we want to map
+                # that this new variable is its disaggreggated variable.
+                for disj in active_disjuncts:
+                    # Because we called _transform_disjunct above, we know that
+                    # if this isn't transformed it is because it was cleanly
+                    # deactivated, and we can just skip it.
+                    if (
+                        disj._transformation_block is not None
+                        and disj not in disjuncts_var_appears_in[var]
+                    ):
+                        relaxationBlock = disj._transformation_block().\
+                                          parent_block()
+                        relaxationBlock._bigMConstraintMap[
+                            disaggregated_var
+                        ] = Reference(disaggregated_var_bounds[idx, :])
+                        relaxationBlock._disaggregatedVarMap['srcVar'][
+                            disaggregated_var
+                        ] = var
+                        relaxationBlock._disaggregatedVarMap[
+                            'disaggregatedVar'][disj][
+                            var
+                        ] = disaggregated_var
 
-                    disaggregatedExpr = disaggregated_var
-                else:
-                    disaggregatedExpr = 0
-                for disjunct in disjuncts_var_appears_in[var]:
-                    # We know this Disjunct was active, so it has been transformed now.
-                    disaggregatedVar = (
-                        disjunct._transformation_block()
-                        .parent_block()
-                        ._disaggregatedVarMap['disaggregatedVar'][disjunct][var]
-                    )
-                    disaggregatedExpr += disaggregatedVar
+                disaggregatedExpr = disaggregated_var
+            else:
+                disaggregatedExpr = 0
+            for disjunct in disjuncts_var_appears_in[var]:
+                # We know this Disjunct was active, so it has been transformed now.
+                disaggregatedVar = (
+                    disjunct._transformation_block()
+                    .parent_block()
+                    ._disaggregatedVarMap['disaggregatedVar'][disjunct][var]
+                )
+                disaggregatedExpr += disaggregatedVar
 
-                cons_idx = len(disaggregationConstraint)
-                # We always aggregate to the original var. If this is nested, this
-                # constraint will be transformed again.
-                print("Adding disaggregation constraint for '%s' on Disjunction '%s' "
-                      "to Block '%s'" %
-                      (var, obj, disaggregationConstraint.parent_block()))
-                disaggregationConstraint.add(cons_idx, var == disaggregatedExpr)
-                # and update the map so that we can find this later. We index by
-                # variable and the particular disjunction because there is a
-                # different one for each disjunction
-                if disaggregationConstraintMap.get(var) is not None:
-                    disaggregationConstraintMap[var][obj] = disaggregationConstraint[
-                        cons_idx
-                    ]
-                else:
-                    thismap = disaggregationConstraintMap[var] = ComponentMap()
-                    thismap[obj] = disaggregationConstraint[cons_idx]
+            cons_idx = len(disaggregationConstraint)
+            # We always aggregate to the original var. If this is nested, this
+            # constraint will be transformed again.
+            disaggregationConstraint.add(cons_idx, var == disaggregatedExpr)
+            # and update the map so that we can find this later. We index by
+            # variable and the particular disjunction because there is a
+            # different one for each disjunction
+            if disaggregationConstraintMap.get(var) is not None:
+                disaggregationConstraintMap[var][obj] = disaggregationConstraint[
+                    cons_idx
+                ]
+            else:
+                thismap = disaggregationConstraintMap[var] = ComponentMap()
+                thismap[obj] = disaggregationConstraint[cons_idx]
 
-                i += 1
+            i += 1
 
         # deactivate for the writers
         obj.deactivate()
@@ -543,7 +536,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         # add the disaggregated variables and their bigm constraints
         # to the relaxationBlock
         for var in vars_to_disaggregate:
-            print("disaggregating %s" % var)
             disaggregatedVar = Var(within=Reals, initialize=var.value)
             # naming conflicts are possible here since this is a bunch
             # of variables from different blocks coming together, so we
@@ -586,7 +578,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                     "but it appeared in multiple Disjuncts, so it will be "
                     "disaggregated." % (var.name, obj.name))
                 continue
-            print("we knew %s was local" % var)
             # we don't need to disaggregate, i.e., we can use this Var, but we
             # do need to set up its bounds constraints.
 
