@@ -394,6 +394,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         # being local. We have marked our own disaggregated variables as local,
         # so they will not be re-disaggregated.
         vars_to_disaggregate = {disj: ComponentSet() for disj in obj.disjuncts}
+        all_vars_to_disaggregate = ComponentSet()
         for var in var_order:
             disjuncts = disjuncts_var_appears_in[var]
             # clearly not local if used in more than one disjunct
@@ -406,6 +407,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                     )
                 for disj in disjuncts:
                     vars_to_disaggregate[disj].add(var)
+                    all_vars_to_disaggregate.add(var)
             else: # disjuncts is a set of length 1
                 disjunct = next(iter(disjuncts))
                 if disjunct in local_vars_by_disjunct:
@@ -413,10 +415,12 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                         # It's not declared local to this Disjunct, so we
                         # disaggregate
                         vars_to_disaggregate[disjunct].add(var)
+                        all_vars_to_disaggregate.add(var)
                 else:
                     # The user didn't declare any local vars for this
                     # Disjunct, so we know we're disaggregating it
                     vars_to_disaggregate[disjunct].add(var)
+                    all_vars_to_disaggregate.add(var)
 
         # Now that we know who we need to disaggregate, we will do it
         # while we also transform the disjuncts.
@@ -440,7 +444,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
         # add the reaggregation constraints
         i = 0
-        for var in var_order:
+        for var in all_vars_to_disaggregate:
             # There are two cases here: Either the var appeared in every
             # disjunct in the disjunction, or it didn't. If it did, there's
             # nothing special to do: All of the disaggregated variables have
@@ -526,6 +530,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
     def _transform_disjunct(self, obj, transBlock, vars_to_disaggregate, local_vars,
                             parent_local_var_suffix, parent_disjunct_local_vars):
+        print("\nTransforming '%s'" % obj.name)
         relaxationBlock = self._get_disjunct_transformation_block(obj, transBlock)
 
         # Put the disaggregated variables all on their own block so that we can
@@ -560,6 +565,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 disaggregatedVarName + "_bounds", bigmConstraint
             )
 
+            print("Adding bounds constraints for '%s'" % var)
             self._declare_disaggregated_var_bounds(
                 var,
                 disaggregatedVar,
@@ -590,6 +596,9 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             bigmConstraint = Constraint(transBlock.lbub)
             relaxationBlock.add_component(conName, bigmConstraint)
 
+            print("Adding bounds constraints for local var '%s'" % var)
+            # TODO: This gets mapped in a place where we can't find it if we ask
+            # for it from the local var itself.
             self._declare_disaggregated_var_bounds(
                 var,
                 var,
@@ -984,7 +993,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
         Parameters
         ----------
-        v: a Var which was created by the hull  transformation as a
+        v: a Var that was created by the hull transformation as a
            disaggregated variable (and so appears on a transformation
            block of some Disjunct)
         """
