@@ -191,6 +191,68 @@ def evaluate_and_log_component_stats(model_data, separation_model, config):
     )
 
 
+def evaluate_first_stage_var_shift(
+        current_master_fsv_vals,
+        previous_master_fsv_vals,
+        first_iter_master_fsv_vals,
+        ):
+    """
+    Evaluate first-stage variable "shift".
+    """
+    if not current_master_fsv_vals:
+        # there are no first-stage variables
+        return None
+    else:
+        return max(
+            abs(current_master_fsv_vals[var] - previous_master_fsv_vals[var])
+            / max((abs(first_iter_master_fsv_vals[var]), 1))
+            for var in previous_master_fsv_vals
+        )
+
+
+def evalaute_second_stage_var_shift(
+        current_master_nom_ssv_vals,
+        previous_master_nom_ssv_vals,
+        first_iter_master_nom_ssv_vals,
+        ):
+    """
+    Evaluate second-stage variable "shift".
+    """
+    if not current_master_nom_ssv_vals:
+        return None
+    else:
+        return max(
+            abs(
+                current_master_nom_ssv_vals[ssv]
+                - previous_master_nom_ssv_vals[ssv]
+            )
+            / max((abs(first_iter_master_nom_ssv_vals[ssv]), 1))
+            for ssv in previous_master_nom_ssv_vals
+        )
+
+
+def evaluate_dr_var_shift(
+        current_master_dr_var_vals,
+        previous_master_dr_var_vals,
+        first_iter_master_nom_ssv_vals,
+        dr_var_to_ssv_map,
+        ):
+    """
+    Evalaute decision rule variable "shift".
+    """
+    if not current_master_dr_var_vals:
+        return None
+    else:
+        return max(
+            abs(
+                current_master_dr_var_vals[drvar]
+                - previous_master_dr_var_vals[drvar]
+            )
+            / max((1, abs(first_iter_master_nom_ssv_vals[dr_var_to_ssv_map[drvar]])))
+            for drvar in previous_master_dr_var_vals
+        )
+
+
 def ROSolver_iterative_solve(model_data, config):
     '''
     GRCS algorithm implementation
@@ -371,9 +433,20 @@ def ROSolver_iterative_solve(model_data, config):
         for var in master_data.master_model.scenarios[0, 0].util.first_stage_variables
         if var not in master_dr_var_set
     )
+    master_nom_ssv_set = ComponentSet(
+        master_data.master_model.scenarios[0, 0].util.second_stage_variables
+    )
     previous_master_fsv_vals = ComponentMap((var, None) for var in master_fsv_set)
     previous_master_dr_var_vals = ComponentMap((var, None) for var in master_dr_var_set)
+    previous_master_nom_ssv_vals = ComponentMap(
+        (var, None) for var in master_nom_ssv_set
+    )
 
+    first_iter_master_fsv_vals = ComponentMap((var, None) for var in master_fsv_set)
+    first_iter_master_nom_ssv_vals = ComponentMap(
+        (var, None) for var in master_nom_ssv_set
+    )
+    first_iter_dr_var_vals = ComponentMap((var, None) for var in master_dr_var_set)
     nom_master_util_blk = master_data.master_model.scenarios[0, 0].util
     dr_var_scaled_expr_map = get_dr_var_to_scaled_expr_map(
         decision_rule_vars=nom_master_util_blk.decision_rule_vars,
@@ -381,6 +454,14 @@ def ROSolver_iterative_solve(model_data, config):
         second_stage_vars=nom_master_util_blk.second_stage_variables,
         uncertain_params=nom_master_util_blk.uncertain_params,
     )
+    dr_var_to_ssv_map = ComponentMap()
+    dr_ssv_zip = zip(
+        nom_master_util_blk.decision_rule_vars,
+        nom_master_util_blk.second_stage_variables,
+    )
+    for indexed_dr_var, ssv in dr_ssv_zip:
+        for drvar in indexed_dr_var.values():
+            dr_var_to_ssv_map[drvar] = ssv
 
     IterationLogRecord.log_header(config.progress_logger.info)
     k = 0
@@ -439,6 +520,7 @@ def ROSolver_iterative_solve(model_data, config):
                 iteration=k,
                 objective=None,
                 first_stage_var_shift=None,
+                second_stage_var_shift=None,
                 dr_var_shift=None,
                 num_violated_cons=None,
                 max_violation=None,
@@ -509,31 +591,38 @@ def ROSolver_iterative_solve(model_data, config):
         current_master_fsv_vals = ComponentMap(
             (var, value(var)) for var in master_fsv_set
         )
+        current_master_nom_ssv_vals = ComponentMap(
+            (var, value(var)) for var in master_nom_ssv_set
+        )
         current_master_dr_var_vals = ComponentMap(
-            (var, value(var)) for var, expr in dr_var_scaled_expr_map.items()
+            (var, value(expr)) for var, expr in dr_var_scaled_expr_map.items()
         )
         if k > 0:
-            first_stage_var_shift = (
-                max(
-                    abs(current_master_fsv_vals[var] - previous_master_fsv_vals[var])
-                    for var in previous_master_fsv_vals
-                )
-                if current_master_fsv_vals
-                else None
+            first_stage_var_shift = evaluate_first_stage_var_shift(
+                current_master_fsv_vals=current_master_fsv_vals,
+                previous_master_fsv_vals=previous_master_fsv_vals,
+                first_iter_master_fsv_vals=first_iter_master_fsv_vals,
             )
-            dr_var_shift = (
-                max(
-                    abs(
-                        current_master_dr_var_vals[var]
-                        - previous_master_dr_var_vals[var]
-                    )
-                    for var in previous_master_dr_var_vals
-                )
-                if current_master_dr_var_vals
-                else None
+            second_stage_var_shift = evalaute_second_stage_var_shift(
+                current_master_nom_ssv_vals=current_master_nom_ssv_vals,
+                previous_master_nom_ssv_vals=previous_master_nom_ssv_vals,
+                first_iter_master_nom_ssv_vals=first_iter_master_nom_ssv_vals,
+            )
+            dr_var_shift = evaluate_dr_var_shift(
+                current_master_dr_var_vals=current_master_dr_var_vals,
+                previous_master_dr_var_vals=previous_master_dr_var_vals,
+                first_iter_master_nom_ssv_vals=first_iter_master_nom_ssv_vals,
+                dr_var_to_ssv_map=dr_var_to_ssv_map,
             )
         else:
+            for fsv in first_iter_master_fsv_vals:
+                first_iter_master_fsv_vals[fsv] = value(fsv)
+            for ssv in first_iter_master_nom_ssv_vals:
+                first_iter_master_nom_ssv_vals[ssv] = value(ssv)
+            for drvar in first_iter_dr_var_vals:
+                first_iter_dr_var_vals[drvar] = value(dr_var_scaled_expr_map[drvar])
             first_stage_var_shift = None
+            second_stage_var_shift = None
             dr_var_shift = None
 
         # === Check if time limit reached after polishing
@@ -544,6 +633,7 @@ def ROSolver_iterative_solve(model_data, config):
                     iteration=k,
                     objective=value(master_data.master_model.obj),
                     first_stage_var_shift=first_stage_var_shift,
+                    second_stage_var_shift=second_stage_var_shift,
                     dr_var_shift=dr_var_shift,
                     num_violated_cons=None,
                     max_violation=None,
@@ -637,6 +727,7 @@ def ROSolver_iterative_solve(model_data, config):
             iteration=k,
             objective=value(master_data.master_model.obj),
             first_stage_var_shift=first_stage_var_shift,
+            second_stage_var_shift=second_stage_var_shift,
             dr_var_shift=dr_var_shift,
             num_violated_cons=num_violated_cons,
             max_violation=max_sep_con_violation,
@@ -725,6 +816,7 @@ def ROSolver_iterative_solve(model_data, config):
 
         iter_log_record.log(config.progress_logger.info)
         previous_master_fsv_vals = current_master_fsv_vals
+        previous_master_nom_ssv_vals = current_master_nom_ssv_vals
         previous_master_dr_var_vals = current_master_dr_var_vals
 
     # Iteration limit reached
