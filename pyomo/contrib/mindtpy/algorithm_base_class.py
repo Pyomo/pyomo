@@ -80,7 +80,7 @@ from pyomo.contrib.mindtpy.util import (
     set_solver_mipgap,
     set_solver_constraint_violation_tolerance,
     update_solver_timelimit,
-    copy_var_list_values
+    copy_var_list_values,
 )
 
 single_tree, single_tree_available = attempt_import('pyomo.contrib.mindtpy.single_tree')
@@ -796,7 +796,9 @@ class _MindtPyAlgorithm(object):
             self.integer_list.append(self.curr_int_sol)
             fixed_nlp, fixed_nlp_result = self.solve_subproblem()
             self.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result)
-            self.int_sol_2_cuts_ind[self.curr_int_sol] = list(range(1, len(self.mip.MindtPy_utils.cuts.oa_cuts) + 1))
+            self.int_sol_2_cuts_ind[self.curr_int_sol] = list(
+                range(1, len(self.mip.MindtPy_utils.cuts.oa_cuts) + 1)
+            )
         elif config.init_strategy == 'FP':
             self.init_rNLP()
             self.fp_loop()
@@ -834,9 +836,15 @@ class _MindtPyAlgorithm(object):
         subprob_terminate_cond = results.solver.termination_condition
 
         # Sometimes, the NLP solver might be trapped in a infeasible solution if the objective function is nonlinear and partition_obj_nonlinear_terms is True. If this happens, we will use the original objective function instead.
-        if subprob_terminate_cond == tc.infeasible and config.partition_obj_nonlinear_terms and self.rnlp.MindtPy_utils.objective_list[0].expr.polynomial_degree() not in self.mip_objective_polynomial_degree:
+        if (
+            subprob_terminate_cond == tc.infeasible
+            and config.partition_obj_nonlinear_terms
+            and self.rnlp.MindtPy_utils.objective_list[0].expr.polynomial_degree()
+            not in self.mip_objective_polynomial_degree
+        ):
             config.logger.info(
-                'Initial relaxed NLP problem is infeasible. This might be related to partition_obj_nonlinear_terms. Try to solve it again without partitioning nonlinear objective function.')
+                'Initial relaxed NLP problem is infeasible. This might be related to partition_obj_nonlinear_terms. Try to solve it again without partitioning nonlinear objective function.'
+            )
             self.rnlp.MindtPy_utils.objective.deactivate()
             self.rnlp.MindtPy_utils.objective_list[0].activate()
             results = self.nlp_opt.solve(
@@ -889,14 +897,14 @@ class _MindtPyAlgorithm(object):
                     self.rnlp.MindtPy_utils.variable_list,
                     self.mip.MindtPy_utils.variable_list,
                     config,
-                    ignore_integrality=True
+                    ignore_integrality=True,
                 )
                 if config.init_strategy == 'FP':
                     copy_var_list_values(
                         self.rnlp.MindtPy_utils.variable_list,
                         self.working_model.MindtPy_utils.variable_list,
                         config,
-                        ignore_integrality=True
+                        ignore_integrality=True,
                     )
                 self.add_cuts(
                     dual_values=dual_values,
@@ -1700,9 +1708,7 @@ class _MindtPyAlgorithm(object):
         config = self.config
         self.setup_fp_main()
         mip_args = self.set_up_mip_solver()
-        update_solver_timelimit(
-                self.mip_opt, config.mip_solver, self.timing, config
-            )
+        update_solver_timelimit(self.mip_opt, config.mip_solver, self.timing, config)
 
         main_mip_results = self.mip_opt.solve(
             self.mip,
@@ -2387,7 +2393,7 @@ class _MindtPyAlgorithm(object):
             fp_nlp.MindtPy_utils.variable_list,
             self.working_model.MindtPy_utils.variable_list,
             self.config,
-            ignore_integrality=True
+            ignore_integrality=True,
         )
         add_orthogonality_cuts(self.working_model, self.mip, self.config)
 

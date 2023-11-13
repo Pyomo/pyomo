@@ -17,10 +17,7 @@ from pyomo.repn import generate_standard_repn
 import pyomo.core.expr as EXPR
 from math import copysign
 from pyomo.contrib.mindtpy.util import get_integer_solution, copy_var_list_values
-from pyomo.contrib.gdpopt.util import (
-    get_main_elapsed_time,
-    time_code,
-)
+from pyomo.contrib.gdpopt.util import get_main_elapsed_time, time_code
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core import minimize, value
 from pyomo.core.expr import identify_variables
@@ -35,13 +32,7 @@ class LazyOACallback_cplex(
     """Inherent class in CPLEX to call Lazy callback."""
 
     def copy_lazy_var_list_values(
-        self,
-        opt,
-        from_list,
-        to_list,
-        config,
-        skip_stale=False,
-        skip_fixed=True,
+        self, opt, from_list, to_list, config, skip_stale=False, skip_fixed=True
     ):
         """This function copies variable values from one list to another.
 
@@ -82,12 +73,14 @@ class LazyOACallback_cplex(
             # instead log warnings).  This means that the following
             # will always succeed and the ValueError should never be
             # raised.
-            if v_val in v_to.domain \
-                and not ((v_to.has_lb() and v_val < v_to.lb)) \
-                and not ((v_to.has_ub() and v_val > v_to.ub)):
+            if (
+                v_val in v_to.domain
+                and not ((v_to.has_lb() and v_val < v_to.lb))
+                and not ((v_to.has_ub() and v_val > v_to.ub))
+            ):
                 v_to.set_value(v_val)
             # Snap the value to the bounds
-            # TODO: check the performance of 
+            # TODO: check the performance of
             # v_to.lb - v_val <= config.variable_tolerance
             elif (
                 v_to.has_lb()
@@ -102,7 +95,10 @@ class LazyOACallback_cplex(
             ):
                 v_to.set_value(v_to.ub)
             # ... or the nearest integer
-            elif v_to.is_integer() and math.fabs(v_val - rounded_val) <= config.integer_tolerance: # and rounded_val in v_to.domain:
+            elif (
+                v_to.is_integer()
+                and math.fabs(v_val - rounded_val) <= config.integer_tolerance
+            ):  # and rounded_val in v_to.domain:
                 v_to.set_value(rounded_val)
             elif abs(v_val) <= config.zero_tolerance and 0 in v_to.domain:
                 v_to.set_value(0)
@@ -945,7 +941,9 @@ def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, mindtpy_solver, config):
                 # Your callback should be prepared to cut off solutions that violate any of your lazy constraints, including those that have already been added. Node solutions will usually respect previously added lazy constraints, but not always.
                 # https://www.gurobi.com/documentation/current/refman/cs_cb_addlazy.html
                 # If this happens, MindtPy will look for the index of corresponding cuts, instead of solving the fixed-NLP again.
-                for ind in mindtpy_solver.int_sol_2_cuts_ind[mindtpy_solver.curr_int_sol]:
+                for ind in mindtpy_solver.int_sol_2_cuts_ind[
+                    mindtpy_solver.curr_int_sol
+                ]:
                     cb_opt.cbLazy(mindtpy_solver.mip.MindtPy_utils.cuts.oa_cuts[ind])
                 return
         else:
@@ -960,7 +958,11 @@ def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, mindtpy_solver, config):
         mindtpy_solver.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result, cb_opt)
         if config.strategy == 'OA':
             # store the cut index corresponding to current integer solution.
-            mindtpy_solver.int_sol_2_cuts_ind[mindtpy_solver.curr_int_sol] = list(range(cut_ind + 1, len(mindtpy_solver.mip.MindtPy_utils.cuts.oa_cuts) + 1))
+            mindtpy_solver.int_sol_2_cuts_ind[mindtpy_solver.curr_int_sol] = list(
+                range(
+                    cut_ind + 1, len(mindtpy_solver.mip.MindtPy_utils.cuts.oa_cuts) + 1
+                )
+            )
 
 
 def handle_lazy_main_feasible_solution_gurobi(cb_m, cb_opt, mindtpy_solver, config):
