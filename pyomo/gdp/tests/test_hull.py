@@ -1564,6 +1564,36 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         hull = TransformationFactory('gdp.hull')
         hull.apply_to(m)
 
+        self.check_transformed_model_nestedDisjuncts(m, m.d1.d3.binary_indicator_var,
+                                                     m.d1.d4.binary_indicator_var)
+
+        # Last, check that there aren't things we weren't expecting
+
+        all_cons = list(m.component_data_objects(Constraint, active=True,
+                                                 descend_into=Block))
+        num_cons = len(all_cons)
+        # TODO: I shouldn't have d1.binary_indicator_var in the local list
+        # above, but I think if I do it should be ignored when it doesn't appear
+        # in any Disjuncts...
+
+        # TODO: We get duplicate bounds constraints for inner disaggregated Vars
+        # because we declare bounds constraints for local vars every time. We
+        # should actually track them separately so that we don't duplicate
+        # bounds constraints over and over again.
+        for idx, cons in enumerate(all_cons):
+            print(idx)
+            print(cons.name)
+            print(cons.expr)
+            print("")
+        # 2 disaggregation constraints for x 0,3
+        # + 4 bounds constraints for x 6,8,9,13,  These are dumb: 10,14,16
+        # + 2 bounds constraints for inner indicator vars 11, 12
+        # + 2 exactly-one constraints 1,4
+        # + 4 transformed constraints 2,5,7,15
+        self.assertEqual(num_cons, 14)
+
+    def check_transformed_model_nestedDisjuncts(self, m, d3, d4):
+        hull = TransformationFactory('gdp.hull')
         transBlock = m._pyomo_gdp_hull_reformulation
         self.assertTrue(transBlock.active)
 
@@ -1590,8 +1620,8 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         assertExpressionsEqual(
             self,
             xor_expr,
-            m.d1.d3.binary_indicator_var +
-            m.d1.d4.binary_indicator_var -
+            d3 +
+            d4 -
             m.d1.binary_indicator_var == 0.0
         )
 
@@ -1621,8 +1651,6 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
             cons_expr,
             m.x - x_d1 - x_d2 == 0.0
         )
-
-        ## Bound constraints
 
         ## Transformed constraints
         cons = hull.get_transformed_constraints(m.d1.d3.c)
@@ -1698,7 +1726,7 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         assertExpressionsEqual(
             self,
             cons_expr,
-            x_d3 - 2*m.d1.d3.binary_indicator_var <= 0.0
+            x_d3 - 2*d3 <= 0.0
         )
         cons = hull.get_var_bounds_constraint(x_d4)
         # the lb is trivial in this case, so we just have 1
@@ -1708,7 +1736,23 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         assertExpressionsEqual(
             self,
             cons_expr,
-            x_d4 - 2*m.d1.d4.binary_indicator_var <= 0.0
+            x_d4 - 2*d4 <= 0.0
+        )
+
+        # Bounds constraints for local vars
+        cons = hull.get_var_bounds_constraint(m.d1.d3.binary_indicator_var)
+        ct.check_obj_in_active_tree(self, cons['ub'])
+        assertExpressionsEqual(
+            self,
+            cons['ub'].expr,
+            m.d1.d3.binary_indicator_var <= m.d1.binary_indicator_var
+        )
+        cons = hull.get_var_bounds_constraint(m.d1.d4.binary_indicator_var)
+        ct.check_obj_in_active_tree(self, cons['ub'])
+        assertExpressionsEqual(
+            self,
+            cons['ub'].expr,
+            m.d1.d4.binary_indicator_var <= m.d1.binary_indicator_var
         )
 
     @unittest.skipIf(not linear_solvers, "No linear solver available")

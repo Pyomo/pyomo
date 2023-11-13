@@ -1703,17 +1703,45 @@ def check_all_components_transformed(self, m):
 def check_transformation_blocks_nestedDisjunctions(self, m, transformation):
     disjunctionTransBlock = m.disj.algebraic_constraint.parent_block()
     transBlocks = disjunctionTransBlock.relaxedDisjuncts
-    self.assertEqual(len(transBlocks), 4)
     if transformation == 'bigm':
+        self.assertEqual(len(transBlocks), 4)
         self.assertIs(transBlocks[0], m.d1.d3.transformation_block)
         self.assertIs(transBlocks[1], m.d1.d4.transformation_block)
         self.assertIs(transBlocks[2], m.d1.transformation_block)
         self.assertIs(transBlocks[3], m.d2.transformation_block)
     if transformation == 'hull':
-        self.assertIs(transBlocks[2], m.d1.d3.transformation_block)
-        self.assertIs(transBlocks[3], m.d1.d4.transformation_block)
-        self.assertIs(transBlocks[0], m.d1.transformation_block)
-        self.assertIs(transBlocks[1], m.d2.transformation_block)
+        # This is a much more comprehensive test that doesn't depend on
+        # transformation Block structure, so just reuse it:
+        hull = TransformationFactory('gdp.hull')
+        d3 = hull.get_disaggregated_var(m.d1.d3.indicator_var, m.d1)
+        d4 = hull.get_disaggregated_var(m.d1.d4.indicator_var, m.d1)
+        self.check_transformed_model_nestedDisjuncts(m, d3, d4)
+
+        # check the disaggregated indicator var bound constraints too
+        cons = hull.get_var_bounds_constraint(d3)
+        self.assertEqual(len(cons), 1)
+        check_obj_in_active_tree(self, cons['ub'])
+        cons_expr = self.simplify_leq_cons(cons['ub'])
+        assertExpressionsEqual(
+            self,
+            cons_expr,
+            d3 - m.d1.binary_indicator_var <= 0.0
+        )
+
+        cons = hull.get_var_bounds_constraint(d4)
+        self.assertEqual(len(cons), 1)
+        check_obj_in_active_tree(self, cons['ub'])
+        cons_expr = self.simplify_leq_cons(cons['ub'])
+        assertExpressionsEqual(
+            self,
+            cons_expr,
+            d4 - m.d1.binary_indicator_var <= 0.0
+        )
+
+        num_cons = len(m.component_data_objects(Constraint,
+                                                active=True,
+                                                descend_into=Block))
+        self.assertEqual(num_cons, 10)
 
 
 def check_nested_disjunction_target(self, transformation):
