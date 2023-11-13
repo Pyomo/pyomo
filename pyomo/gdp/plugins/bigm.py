@@ -15,6 +15,7 @@ import logging
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.config import ConfigDict, ConfigValue
+from pyomo.common.gc_manager import PauseGC
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.contrib.cp.transform.logical_to_disjunctive_program import (
@@ -161,6 +162,7 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
 
     def __init__(self):
         super().__init__(logger)
+        self._set_up_expr_bound_visitor()
 
     def _apply_to(self, instance, **kwds):
         self.used_args = ComponentMap()  # If everything was sure to go well,
@@ -169,14 +171,19 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         # as a key in bigMargs, I need the error
         # not to be when I try to put it into
         # this map!
-        try:
-            self._apply_to_impl(instance, **kwds)
-        finally:
-            self._restore_state()
-            self.used_args.clear()
+        with PauseGC():
+            try:
+                self._apply_to_impl(instance, **kwds)
+            finally:
+                self._restore_state()
+                self.used_args.clear()
+                self._expr_bound_visitor.leaf_bounds.clear()
+                self._expr_bound_visitor.use_fixed_var_values_as_bounds = False
 
     def _apply_to_impl(self, instance, **kwds):
         self._process_arguments(instance, **kwds)
+        if self._config.assume_fixed_vars_permanent:
+            self._expr_bound_visitor.use_fixed_var_values_as_bounds = True
 
         # filter out inactive targets and handle case where targets aren't
         # specified.
