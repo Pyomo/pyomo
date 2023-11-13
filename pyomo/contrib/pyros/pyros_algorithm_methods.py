@@ -192,10 +192,8 @@ def evaluate_and_log_component_stats(model_data, separation_model, config):
 
 
 def evaluate_first_stage_var_shift(
-        current_master_fsv_vals,
-        previous_master_fsv_vals,
-        first_iter_master_fsv_vals,
-        ):
+    current_master_fsv_vals, previous_master_fsv_vals, first_iter_master_fsv_vals
+):
     """
     Evaluate first-stage variable "shift": the maximum relative
     difference between first-stage variable values from the current
@@ -235,10 +233,10 @@ def evaluate_first_stage_var_shift(
 
 
 def evalaute_second_stage_var_shift(
-        current_master_nom_ssv_vals,
-        previous_master_nom_ssv_vals,
-        first_iter_master_nom_ssv_vals,
-        ):
+    current_master_nom_ssv_vals,
+    previous_master_nom_ssv_vals,
+    first_iter_master_nom_ssv_vals,
+):
     """
     Evaluate second-stage variable "shift": the maximum relative
     difference between second-stage variable values from the current
@@ -274,21 +272,18 @@ def evalaute_second_stage_var_shift(
         return None
     else:
         return max(
-            abs(
-                current_master_nom_ssv_vals[ssv]
-                - previous_master_nom_ssv_vals[ssv]
-            )
+            abs(current_master_nom_ssv_vals[ssv] - previous_master_nom_ssv_vals[ssv])
             / max((abs(first_iter_master_nom_ssv_vals[ssv]), 1))
             for ssv in previous_master_nom_ssv_vals
         )
 
 
 def evaluate_dr_var_shift(
-        current_master_dr_var_vals,
-        previous_master_dr_var_vals,
-        first_iter_master_nom_ssv_vals,
-        dr_var_to_ssv_map,
-        ):
+    current_master_dr_var_vals,
+    previous_master_dr_var_vals,
+    first_iter_master_nom_ssv_vals,
+    dr_var_to_ssv_map,
+):
     """
     Evaluate decision rule variable "shift": the maximum relative
     difference between scaled decision rule (DR) variable expressions
@@ -326,10 +321,7 @@ def evaluate_dr_var_shift(
         return None
     else:
         return max(
-            abs(
-                current_master_dr_var_vals[drvar]
-                - previous_master_dr_var_vals[drvar]
-            )
+            abs(current_master_dr_var_vals[drvar] - previous_master_dr_var_vals[drvar])
             / max((1, abs(first_iter_master_nom_ssv_vals[dr_var_to_ssv_map[drvar]])))
             for drvar in previous_master_dr_var_vals
         )
