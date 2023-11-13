@@ -232,7 +232,7 @@ def evaluate_first_stage_var_shift(
         )
 
 
-def evalaute_second_stage_var_shift(
+def evaluate_second_stage_var_shift(
     current_master_nom_ssv_vals,
     previous_master_nom_ssv_vals,
     first_iter_master_nom_ssv_vals,
@@ -299,7 +299,7 @@ def evaluate_dr_var_shift(
         DR variable values from the previous master
         iteration.
     first_iter_master_nom_ssv_vals : ComponentMap
-        Second-stage variable values (evalauted subject to the
+        Second-stage variable values (evaluated subject to the
         nominal uncertain parameter realization)
         from the first master iteration.
     dr_var_to_ssv_map : ComponentMap
@@ -677,7 +677,7 @@ def ROSolver_iterative_solve(model_data, config):
                 previous_master_fsv_vals=previous_master_fsv_vals,
                 first_iter_master_fsv_vals=first_iter_master_fsv_vals,
             )
-            second_stage_var_shift = evalaute_second_stage_var_shift(
+            second_stage_var_shift = evaluate_second_stage_var_shift(
                 current_master_nom_ssv_vals=current_master_nom_ssv_vals,
                 previous_master_nom_ssv_vals=previous_master_nom_ssv_vals,
                 first_iter_master_nom_ssv_vals=first_iter_master_nom_ssv_vals,
