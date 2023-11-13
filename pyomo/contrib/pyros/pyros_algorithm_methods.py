@@ -197,7 +197,31 @@ def evaluate_first_stage_var_shift(
         first_iter_master_fsv_vals,
         ):
     """
-    Evaluate first-stage variable "shift".
+    Evaluate first-stage variable "shift": the maximum relative
+    difference between first-stage variable values from the current
+    and previous master iterations.
+
+    Parameters
+    ----------
+    current_master_fsv_vals : ComponentMap
+        First-stage variable values from the current master
+        iteration.
+    previous_master_fsv_vals : ComponentMap
+        First-stage variable values from the previous master
+        iteration.
+    first_iter_master_fsv_vals : ComponentMap
+        First-stage variable values from the first master
+        iteration.
+
+    Returns
+    -------
+    None
+        Returned only if `current_master_fsv_vals` is empty,
+        which should occur only if the problem has no first-stage
+        variables.
+    float
+        The maximum relative difference
+        Returned only if `current_master_fsv_vals` is not empty.
     """
     if not current_master_fsv_vals:
         # there are no first-stage variables
@@ -216,7 +240,35 @@ def evalaute_second_stage_var_shift(
         first_iter_master_nom_ssv_vals,
         ):
     """
-    Evaluate second-stage variable "shift".
+    Evaluate second-stage variable "shift": the maximum relative
+    difference between second-stage variable values from the current
+    and previous master iterations as evaluated subject to the
+    nominal uncertain parameter realization.
+
+    Parameters
+    ----------
+    current_master_nom_ssv_vals : ComponentMap
+        Second-stage variable values from the current master
+        iteration, evaluated subject to the nominal uncertain
+        parameter realization.
+    previous_master_nom_ssv_vals : ComponentMap
+        Second-stage variable values from the previous master
+        iteration, evaluated subject to the nominal uncertain
+        parameter realization.
+    first_iter_master_nom_ssv_vals : ComponentMap
+        Second-stage variable values from the first master
+        iteration, evaluated subject to the nominal uncertain
+        parameter realization.
+
+    Returns
+    -------
+    None
+        Returned only if `current_master_nom_ssv_vals` is empty,
+        which should occur only if the problem has no second-stage
+        variables.
+    float
+        The maximum relative difference.
+        Returned only if `current_master_nom_ssv_vals` is not empty.
     """
     if not current_master_nom_ssv_vals:
         return None
@@ -238,7 +290,37 @@ def evaluate_dr_var_shift(
         dr_var_to_ssv_map,
         ):
     """
-    Evalaute decision rule variable "shift".
+    Evaluate decision rule variable "shift": the maximum relative
+    difference between scaled decision rule (DR) variable expressions
+    (terms in the DR equations) from the current
+    and previous master iterations.
+
+    Parameters
+    ----------
+    current_master_dr_var_vals : ComponentMap
+        DR variable values from the current master
+        iteration.
+    previous_master_dr_var_vals : ComponentMap
+        DR variable values from the previous master
+        iteration.
+    first_iter_master_nom_ssv_vals : ComponentMap
+        Second-stage variable values (evalauted subject to the
+        nominal uncertain parameter realization)
+        from the first master iteration.
+    dr_var_to_ssv_map : ComponentMap
+        Mapping from each DR variable to the
+        second-stage variable whose value is a function of the
+        DR variable.
+
+    Returns
+    -------
+    None
+        Returned only if `current_master_dr_var_vals` is empty,
+        which should occur only if the problem has no decision rule
+        (or equivalently, second-stage) variables.
+    float
+        The maximum relative difference.
+        Returned only if `current_master_dr_var_vals` is not empty.
     """
     if not current_master_dr_var_vals:
         return None
