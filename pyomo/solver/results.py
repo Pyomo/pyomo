@@ -241,20 +241,20 @@ class ResultsReader:
     pass
 
 
-def parse_sol_file(file, results):
+def parse_sol_file(sol_file, nl_info):
     # The original reader for sol files is in pyomo.opt.plugins.sol.
     # Per my original complaint, it has "magic numbers" that I just don't
     # know how to test. It's apparently less fragile than that in APPSI.
     # NOTE: The Results object now also holds the solution loader, so we do
     # not need pass in a solution like we did previously.
-    if results is None:
-        results = Results()
+    # nl_info is an NLWriterInfo object that has vars, cons, etc.
+    results = Results()
 
     # For backwards compatibility and general safety, we will parse all
     # lines until "Options" appears. Anything before "Options" we will
     # consider to be the solver message.
     message = []
-    for line in file:
+    for line in sol_file:
         if not line:
             break
         line = line.strip()
@@ -265,40 +265,32 @@ def parse_sol_file(file, results):
     # Once "Options" appears, we must now read the content under it.
     model_objects = []
     if "Options" in line:
-        line = file.readline()
+        line = sol_file.readline()
         number_of_options = int(line)
         need_tolerance = False
         if number_of_options > 4: # MRM: Entirely unclear why this is necessary, or if it even is
             number_of_options -= 2
             need_tolerance = True
         for i in range(number_of_options + 4):
-            line = file.readline()
+            line = sol_file.readline()
             model_objects.append(int(line))
         if need_tolerance: # MRM: Entirely unclear why this is necessary, or if it even is
-            line = file.readline()
+            line = sol_file.readline()
             model_objects.append(float(line))
     else:
         raise SolverSystemError("ERROR READING `sol` FILE. No 'Options' line found.")
     # Identify the total number of variables and constraints
     number_of_cons = model_objects[number_of_options + 1]
     number_of_vars = model_objects[number_of_options + 3]
-    constraints = []
-    variables = []
-    # Parse through the constraint lines and capture the constraints
-    i = 0
-    while i < number_of_cons:
-        line = file.readline()
-        constraints.append(float(line))
-        i += 1
-    # Parse through the variable lines and capture the variables
-    i = 0
-    while i < number_of_vars:
-        line = file.readline()
-        variables.append(float(line))
-        i += 1
+    assert number_of_cons == len(nl_info.constraints)
+    assert number_of_vars == len(nl_info.variables)
+
+    duals = [float(sol_file.readline()) for i in range(number_of_cons)]
+    variable_vals = [float(sol_file.readline()) for i in range(number_of_vars)]
+
     # Parse the exit code line and capture it
     exit_code = [0, 0]
-    line = file.readline()
+    line = sol_file.readline()
     if line and ('objno' in line):
         exit_code_line = line.split()
         if (len(exit_code_line) != 3):

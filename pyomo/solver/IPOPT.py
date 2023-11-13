@@ -147,7 +147,9 @@ class IPOPT(SolverBase):
                 results = Results()
                 results.termination_condition = TerminationCondition.error
             else:
-                results = self._parse_solution()
+                # TODO: Make a context manager out of this and open the file
+                # to pass to the results, instead of doing this thing.
+                results = self._parse_solution(os.path.join(dname, model.name + '.sol'), self.info)
 
     def _parse_solution(self):
         # STOPPING POINT: The suggestion here is to look at the original

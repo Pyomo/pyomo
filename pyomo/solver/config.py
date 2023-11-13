@@ -61,6 +61,7 @@ class SolverConfig(ConfigDict):
         self.load_solution: bool = self.declare(
             'load_solution', ConfigValue(domain=bool, default=True)
         )
+        self.raise_exception_on_nonoptimal_result: bool = self.declare('raise_exception_on_nonoptimal_result', ConfigValue(domain=bool, default=True))
         self.symbolic_solver_labels: bool = self.declare(
             'symbolic_solver_labels', ConfigValue(domain=bool, default=False)
         )

@@ -189,6 +189,7 @@ class ResultsReader_sol(results.AbstractResultsReader):
                 if line == "":
                     continue
                 line = line.split()
+                # Some sort of garbage we tag onto the solver message, assuming we are past the suffixes
                 if line[0] != 'suffix':
                     # We assume this is the start of a
                     # section like kestrel_option, which
