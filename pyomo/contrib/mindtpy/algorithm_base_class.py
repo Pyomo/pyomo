@@ -143,6 +143,8 @@ class _MindtPyAlgorithm(object):
         self.last_iter_cuts = False
         # Store the OA cuts generated in the mip_start_process.
         self.mip_start_lazy_oa_cuts = []
+        # Whether to load solutions in solve() function
+        self.load_solutions = True
 
     # Support use as a context manager under current solver API
     def __enter__(self):
@@ -292,7 +294,7 @@ class _MindtPyAlgorithm(object):
                 results = self.mip_opt.solve(
                     self.original_model,
                     tee=config.mip_solver_tee,
-                    load_solutions=config.load_solutions,
+                    load_solutions=self.load_solutions,
                     **config.mip_solver_args,
                 )
                 if len(results.solution) > 0:
@@ -832,7 +834,7 @@ class _MindtPyAlgorithm(object):
             results = self.nlp_opt.solve(
                 self.rnlp,
                 tee=config.nlp_solver_tee,
-                load_solutions=config.load_solutions,
+                load_solutions=self.load_solutions,
                 **nlp_args,
             )
             if len(results.solution) > 0:
@@ -962,7 +964,7 @@ class _MindtPyAlgorithm(object):
         results = self.mip_opt.solve(
             m,
             tee=config.mip_solver_tee,
-            load_solutions=config.load_solutions,
+            load_solutions=self.load_solutions,
             **mip_args,
         )
         if len(results.solution) > 0:
@@ -1082,7 +1084,7 @@ class _MindtPyAlgorithm(object):
                 results = self.nlp_opt.solve(
                     self.fixed_nlp,
                     tee=config.nlp_solver_tee,
-                    load_solutions=config.load_solutions,
+                    load_solutions=self.load_solutions,
                     **nlp_args,
                 )
                 if len(results.solution) > 0:
@@ -1520,7 +1522,7 @@ class _MindtPyAlgorithm(object):
             main_mip_results = self.mip_opt.solve(
                 self.mip,
                 tee=config.mip_solver_tee,
-                load_solutions=config.load_solutions,
+                load_solutions=self.load_solutions,
                 **mip_args,
             )
             if len(main_mip_results.solution) > 0:
@@ -1607,7 +1609,7 @@ class _MindtPyAlgorithm(object):
             main_mip_results = self.mip_opt.solve(
                 self.mip,
                 tee=config.mip_solver_tee,
-                load_solutions=config.load_solutions,
+                load_solutions=self.load_solutions,
                 **mip_args,
             )
             # update_attributes should be before load_from(main_mip_results), since load_from(main_mip_results) may fail.
@@ -1663,7 +1665,7 @@ class _MindtPyAlgorithm(object):
         main_mip_results = self.mip_opt.solve(
             self.mip,
             tee=config.mip_solver_tee,
-            load_solutions=config.load_solutions,
+            load_solutions=self.load_solutions,
             **mip_args,
         )
         # update_attributes should be before load_from(main_mip_results), since load_from(main_mip_results) may fail.
@@ -1706,7 +1708,7 @@ class _MindtPyAlgorithm(object):
         main_mip_results = self.regularization_mip_opt.solve(
             self.mip,
             tee=config.mip_solver_tee,
-            load_solutions=config.load_solutions,
+            load_solutions=self.load_solutions,
             **dict(config.mip_solver_args),
         )
         if len(main_mip_results.solution) > 0:
@@ -1918,7 +1920,7 @@ class _MindtPyAlgorithm(object):
             main_mip_results = self.mip_opt.solve(
                 main_mip,
                 tee=config.mip_solver_tee,
-                load_solutions=config.load_solutions,
+                load_solutions=self.load_solutions,
                 **config.mip_solver_args,
             )
             if len(main_mip_results.solution) > 0:
@@ -2256,7 +2258,7 @@ class _MindtPyAlgorithm(object):
                 and 'appsi' in config.mip_regularization_solver
             )
         ):
-            config.load_solutions = False
+            self.load_solutions = False
 
     ################################################################################################################################
     # Feasibility Pump
@@ -2323,7 +2325,7 @@ class _MindtPyAlgorithm(object):
                 results = self.nlp_opt.solve(
                     fp_nlp,
                     tee=config.nlp_solver_tee,
-                    load_solutions=config.load_solutions,
+                    load_solutions=self.load_solutions,
                     **nlp_args,
                 )
                 if len(results.solution) > 0:
