@@ -36,7 +36,7 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearTransformationBa
     CONFIG = PiecewiseLinearTransformationBase.CONFIG()
     _transformation_name = "pw_linear_nested_inner_repn"
 
-    # Implement to use PiecewiseLinearToGDP. This function returns the Var
+    # Implement to use PiecewiseLinearTransformationBase. This function returns the Var
     # that replaces the transformed piecewise linear expr
     def _transform_pw_linear_expr(self, pw_expr, pw_linear_func, transformation_block):
         # Get a new Block() in transformation_block.transformed_functions, which

@@ -21,11 +21,11 @@ from pyomo.gdp import Disjunct, Disjunction
 from pyomo.environ import Constraint, SolverFactory, Var
 
 from pyomo.contrib.piecewise.transform.disagreggated_logarithmic import (
-    DisaggregatedLogarithmicInnerGDPTransformation,
+    DisaggregatedLogarithmicInnerMIPTransformation
 )
 
 
-class TestTransformPiecewiseModelToNestedInnerRepnGDP(unittest.TestCase):
+class TestTransformPiecewiseModelToNestedInnerRepnMIP(unittest.TestCase):
     def test_solve_log_model(self):
         m = models.make_log_x_model()
         TransformationFactory("contrib.piecewise.disaggregated_logarithmic").apply_to(m)
