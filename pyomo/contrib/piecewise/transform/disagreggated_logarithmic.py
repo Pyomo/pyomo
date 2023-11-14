@@ -1,5 +1,5 @@
 from pyomo.contrib.piecewise.transform.piecewise_to_gdp_transformation import (
-    PiecewiseLinearToGDP,
+    PiecewiseLinearTransformationBase,
 )
 from pyomo.core import Constraint, Binary, Var, RangeSet
 from pyomo.core.base import TransformationFactory
@@ -17,7 +17,7 @@ from math import ceil, log2
     assume we have simplces in this code. This method is due to Vielma et al., 2010.
     """,
 )
-class DisaggregatedLogarithmicInnerGDPTransformation(PiecewiseLinearToGDP):
+class DisaggregatedLogarithmicInnerMIPTransformation(PiecewiseLinearTransformationBase):
     """
     Represent a piecewise linear function "logarithmically" by using a MIP with
     log_2(|P|) binary decision variables. This is a direct-to-MIP transformation;
@@ -26,7 +26,7 @@ class DisaggregatedLogarithmicInnerGDPTransformation(PiecewiseLinearToGDP):
     assume we have simplces in this code. This method is due to Vielma et al., 2010.
     """
 
-    CONFIG = PiecewiseLinearToGDP.CONFIG()
+    CONFIG = PiecewiseLinearTransformationBase.CONFIG()
     _transformation_name = "pw_linear_disaggregated_log"
 
     # Implement to use PiecewiseLinearToGDP. This function returns the Var

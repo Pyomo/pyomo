@@ -1,6 +1,6 @@
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.contrib.piecewise.transform.piecewise_to_gdp_transformation import (
-    PiecewiseLinearToGDP,
+    PiecewiseLinearTransformationBase,
 )
 from pyomo.core import Constraint, NonNegativeIntegers, Suffix, Var
 from pyomo.core.base import TransformationFactory
@@ -10,9 +10,18 @@ from pyomo.common.errors import DeveloperError
 
 @TransformationFactory.register(
     "contrib.piecewise.nested_inner_repn_gdp",
-    doc="TODO document",  # TODO
+    doc="""
+    Represent a piecewise linear function by using a nested GDP to determine
+    which polytope a point is in, then representing it as a convex combination
+    of extreme points, with multipliers "local" to that particular polytope,
+    i.e., not shared with neighbors. This method of formulating the piecewise
+    linear function imposes no restrictions on the family of polytopes. Note
+    that this is NOT a logarithmic formulation - it has linearly many binaries.
+    This method was, however, inspired by the disagreggated logarithmic
+    formulation of Vielma et al., 2010.
+    """
 )
-class NestedInnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
+class NestedInnerRepresentationGDPTransformation(PiecewiseLinearTransformationBase):
     """
     Represent a piecewise linear function by using a nested GDP to determine
     which polytope a point is in, then representing it as a convex combination
@@ -24,7 +33,7 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
     formulation of Vielma et al., 2010.
     """
 
-    CONFIG = PiecewiseLinearToGDP.CONFIG()
+    CONFIG = PiecewiseLinearTransformationBase.CONFIG()
     _transformation_name = "pw_linear_nested_inner_repn"
 
     # Implement to use PiecewiseLinearToGDP. This function returns the Var

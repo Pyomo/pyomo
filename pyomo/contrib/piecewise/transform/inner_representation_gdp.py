@@ -11,7 +11,7 @@
 
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.contrib.piecewise.transform.piecewise_to_gdp_transformation import (
-    PiecewiseLinearToGDP,
+    PiecewiseLinearTransformationBase,
 )
 from pyomo.core import Constraint, NonNegativeIntegers, Suffix, Var
 from pyomo.core.base import TransformationFactory
@@ -25,7 +25,7 @@ from pyomo.gdp import Disjunct, Disjunction
     "simplices that are the domains of the linear "
     "functions.",
 )
-class InnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
+class InnerRepresentationGDPTransformation(PiecewiseLinearTransformationBase):
     """
     Convert a model involving piecewise linear expressions into a GDP by
     representing the piecewise linear functions as Disjunctions where the
@@ -49,7 +49,7 @@ class InnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
            this mode, targets must be Blocks, Constraints, and/or Objectives.
     """
 
-    CONFIG = PiecewiseLinearToGDP.CONFIG()
+    CONFIG = PiecewiseLinearTransformationBase.CONFIG()
     _transformation_name = 'pw_linear_inner_repn'
 
     def _transform_pw_linear_expr(self, pw_expr, pw_linear_func, transformation_block):
