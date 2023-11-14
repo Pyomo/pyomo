@@ -962,10 +962,7 @@ class _MindtPyAlgorithm(object):
         mip_args = dict(config.mip_solver_args)
         update_solver_timelimit(self.mip_opt, config.mip_solver, self.timing, config)
         results = self.mip_opt.solve(
-            m,
-            tee=config.mip_solver_tee,
-            load_solutions=self.load_solutions,
-            **mip_args,
+            m, tee=config.mip_solver_tee, load_solutions=self.load_solutions, **mip_args
         )
         if len(results.solution) > 0:
             m.solutions.load_from(results)
