@@ -11,7 +11,7 @@
 
 import logging
 import os
-from collections import deque, defaultdict
+from collections import deque, defaultdict, namedtuple
 from itertools import filterfalse, product
 from operator import itemgetter, attrgetter, setitem
 from contextlib import nullcontext
@@ -116,6 +116,9 @@ _CONSTANT = ExprType.CONSTANT
 _MONOMIAL = ExprType.MONOMIAL
 _GENERAL = ExprType.GENERAL
 
+ScalingFactors = namedtuple(
+    'ScalingFactors', ['variables', 'constraints', 'objectives']
+)
 
 # TODO: make a proper base class
 class NLWriterInfo(object):
@@ -165,10 +168,16 @@ class NLWriterInfo(object):
         appearing in the expression must either have been sent to the
         solver, or appear *earlier* in this list.
 
+    scaling: ScalingFactors or None
+
+        namedtuple holding 3 lists of (variables, constraints, objectives)
+        scaling factors in the same order (and size) as the `variables`,
+        `constraints`, and `objectives` attributes above.
+
     """
 
     def __init__(
-        self, var, con, obj, external_libs, row_labels, col_labels, eliminated_vars
+        self, var, con, obj, external_libs, row_labels, col_labels, eliminated_vars, scaling
     ):
         self.variables = var
         self.constraints = con
@@ -177,6 +186,7 @@ class NLWriterInfo(object):
         self.row_labels = row_labels
         self.column_labels = col_labels
         self.eliminated_vars = eliminated_vars
+        self.scaling = scaling
 
 
 @WriterFactory.register('nl_v2', 'Generate the corresponding AMPL NL file (version 2).')
@@ -905,7 +915,7 @@ class _NLWriter_impl(object):
             level=logging.DEBUG,
         )
 
-        # Update the column order.
+        # Update the column order (based on our reordering of the variables above).
         #
         # Note that as we allow var_map to contain "known" variables
         # that are not needed in the NL file (and column_order was
@@ -999,8 +1009,10 @@ class _NLWriter_impl(object):
         _vmap = self.var_id_to_nl
         if scale_model:
             template = self.template
-            for var_idx, _id in enumerate(variables):
-                scale = scaling_factor(var_map[_id])
+            objective_scaling = [scaling_cache[id(info[0])] for info in objectives]
+            constraint_scaling = [scaling_cache[id(info[0])] for info in constraints]
+            variable_scaling = [scaling_factor(var_map[_id]) for _id in variables]
+            for _id, scale in zip(variables, variable_scaling):
                 if scale == 1:
                     continue
                 # Update var_bounds to be scaled bounds
@@ -1353,11 +1365,11 @@ class _NLWriter_impl(object):
                             "objectives.  Assuming that the duals are computed "
                             "against the first objective."
                         )
-                    _obj_scale = scaling_cache[id(objectives[0][0])]
+                    _obj_scale = objective_scaling[0]
                 else:
                     _obj_scale = 1
-                for _id in data.con:
-                    data.con[_id] *= _obj_scale / scaling_cache[id(constraints[_id][0])]
+                for i in data.con:
+                    data.con[i] *= _obj_scale / constraint_scaling[i]
             if data.var:
                 logger.warning("ignoring 'dual' suffix for Var types")
             if data.obj:
@@ -1380,8 +1392,9 @@ class _NLWriter_impl(object):
             if val is not None
         ]
         if scale_model:
-            for i, (var_idx, val) in enumerate(_init_lines):
-                _init_lines[i] = (var_idx, val * scaling_cache[variables[var_idx]])
+            _init_lines = [
+                (var_idx, val * variable_scaling[var_idx]) for var_idx, val in _init_lines
+            ]
         ostream.write(
             'x%d%s\n'
             % (len(_init_lines), "\t# initial guess" if symbolic_solver_labels else '')
@@ -1487,6 +1500,14 @@ class _NLWriter_impl(object):
             (var_map[_id], expr_info) for _id, expr_info in eliminated_vars.items()
         ]
         eliminated_vars.reverse()
+        if scale_model:
+            scaling = ScalingFactors(
+                variables=variable_scaling,
+                constraints=constraint_scaling,
+                objectives=objective_scaling,
+            )
+        else:
+            scaling = None
         info = NLWriterInfo(
             var=[var_map[_id] for _id in variables],
             con=[info[0] for info in constraints],
@@ -1495,6 +1516,7 @@ class _NLWriter_impl(object):
             row_labels=row_labels,
             col_labels=col_labels,
             eliminated_vars=eliminated_vars,
+            scaling=scaling,
         )
         timer.toc("Wrote NL stream", level=logging.DEBUG)
         timer.toc("Generated NL representation", delta=False)
