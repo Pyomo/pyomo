@@ -14,11 +14,7 @@ from pyomo.common.errors import DeveloperError
     Represent a piecewise linear function by using a nested GDP to determine
     which polytope a point is in, then representing it as a convex combination
     of extreme points, with multipliers "local" to that particular polytope,
-    i.e., not shared with neighbors. This method of formulating the piecewise
-    linear function imposes no restrictions on the family of polytopes. Note
-    that this is NOT a logarithmic formulation - it has linearly many binaries.
-    This method was, however, inspired by the disagreggated logarithmic
-    formulation of Vielma et al., 2010.
+    i.e., not shared with neighbors. This formulation has linearly many binaries.
     """,
 )
 class NestedInnerRepresentationGDPTransformation(PiecewiseLinearTransformationBase):
@@ -29,8 +25,14 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearTransformationBa
     i.e., not shared with neighbors. This method of formulating the piecewise
     linear function imposes no restrictions on the family of polytopes. Note
     that this is NOT a logarithmic formulation - it has linearly many binaries.
-    This method was, however, inspired by the disagreggated logarithmic
-    formulation of Vielma et al., 2010.
+    However, it is inspired by the disaggregated logarithmic formulation of [1].
+
+    References
+    ----------
+    [1] J.P. Vielma, S. Ahmed, and G. Nemhauser, "Mixed-integer models
+        for nonseparable piecewise-linear optimization: unifying framework
+        and extensions," Operations Research, vol. 58, no. 2, pp. 305-315,
+        2010.
     """
 
     CONFIG = PiecewiseLinearTransformationBase.CONFIG()

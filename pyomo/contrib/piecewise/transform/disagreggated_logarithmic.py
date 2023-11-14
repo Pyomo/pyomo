@@ -12,22 +12,24 @@ from math import ceil, log2
     doc="""
     Represent a piecewise linear function "logarithmically" by using a MIP with
     log_2(|P|) binary decision variables. This is a direct-to-MIP transformation;
-    GDP is not used. This method of logarithmically formulating the piecewise
-    linear function imposes no restrictions on the family of polytopes, but we
-    assume we have simplices in this code. This method is due to Vielma, Ahmed, 
-    and Nemhauser 2010, Mixed-Integer Models for Nonseparable Piecewise-Linear 
-    Optimization. 
+    GDP is not used.
     """,
 )
 class DisaggregatedLogarithmicInnerMIPTransformation(PiecewiseLinearTransformationBase):
     """
     Represent a piecewise linear function "logarithmically" by using a MIP with
-    log_2(|P|) binary decision variables. This is a direct-to-MIP transformation;
-    GDP is not used. This method of logarithmically formulating the piecewise
-    linear function imposes no restrictions on the family of polytopes, but we
-    assume we have simplices in this code. This method is due to Vielma, Ahmed, 
-    and Nemhauser 2010, Mixed-Integer Models for Nonseparable Piecewise-Linear 
-    Optimization. 
+    log_2(|P|) binary decision variables, following the "disaggregated logarithmic"
+    method from [1]. This is a direct-to-MIP transformation; GDP is not used.
+    This method of logarithmically formulating the piecewise linear function
+    imposes no restrictions on the family of polytopes, but we assume we have
+    simplices in this code.
+
+    References
+    ----------
+    [1] J.P. Vielma, S. Ahmed, and G. Nemhauser, "Mixed-integer models
+        for nonseparable piecewise-linear optimization: unifying framework
+        and extensions," Operations Research, vol. 58, no. 2, pp. 305-315,
+        2010.
     """
 
     CONFIG = PiecewiseLinearTransformationBase.CONFIG()
