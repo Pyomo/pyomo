@@ -120,6 +120,7 @@ ScalingFactors = namedtuple(
     'ScalingFactors', ['variables', 'constraints', 'objectives']
 )
 
+
 # TODO: make a proper base class
 class NLWriterInfo(object):
     """Return type for NLWriter.write()
@@ -177,7 +178,15 @@ class NLWriterInfo(object):
     """
 
     def __init__(
-        self, var, con, obj, external_libs, row_labels, col_labels, eliminated_vars, scaling
+        self,
+        var,
+        con,
+        obj,
+        external_libs,
+        row_labels,
+        col_labels,
+        eliminated_vars,
+        scaling,
     ):
         self.variables = var
         self.constraints = con
@@ -421,7 +430,7 @@ class _SuffixData(object):
                 if val.__class__ not in int_float:
                     # [JDS] I am not entirely sure why, but we have
                     # historically supported suffix values that hold
-                    # dictionaries that map arbirtary component data
+                    # dictionaries that map arbitrary component data
                     # objects to values.  We will preserve that behavior
                     # here.  This behavior is exercised by a
                     # ExternalGreyBox test.
@@ -1393,7 +1402,8 @@ class _NLWriter_impl(object):
         ]
         if scale_model:
             _init_lines = [
-                (var_idx, val * variable_scaling[var_idx]) for var_idx, val in _init_lines
+                (var_idx, val * variable_scaling[var_idx])
+                for var_idx, val in _init_lines
             ]
         ostream.write(
             'x%d%s\n'
