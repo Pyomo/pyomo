@@ -345,15 +345,25 @@ class Highs(PersistentBase, PersistentSolver):
                 f'Solver {c.__module__}.{c.__qualname__} is not available '
                 f'({self.available()}).'
             )
-        self._reinit()
-        self._model = model
-        if self.use_extensions and cmodel_available:
-            self._expr_types = cmodel.PyomoExprTypes()
 
-        self._solver_model = highspy.Highs()
-        self.add_block(model)
-        if self._objective is None:
-            self.set_objective(None)
+        ostreams = [
+            LogStream(
+                level=self.config.log_level, logger=self.config.solver_output_logger
+            )
+        ]
+        if self.config.stream_solver:
+            ostreams.append(sys.stdout)
+        with TeeStream(*ostreams) as t:
+            with capture_output(output=t.STDOUT, capture_fd=True):
+                self._reinit()
+                self._model = model
+                if self.use_extensions and cmodel_available:
+                    self._expr_types = cmodel.PyomoExprTypes()
+
+                self._solver_model = highspy.Highs()
+                self.add_block(model)
+                if self._objective is None:
+                    self.set_objective(None)
 
     def _add_constraints(self, cons: List[_GeneralConstraintData]):
         self._sol = None
