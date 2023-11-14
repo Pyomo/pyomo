@@ -19,7 +19,7 @@ from pyomo.common.errors import DeveloperError
     that this is NOT a logarithmic formulation - it has linearly many binaries.
     This method was, however, inspired by the disagreggated logarithmic
     formulation of Vielma et al., 2010.
-    """
+    """,
 )
 class NestedInnerRepresentationGDPTransformation(PiecewiseLinearTransformationBase):
     """
