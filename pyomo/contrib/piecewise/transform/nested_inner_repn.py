@@ -90,7 +90,7 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearTransformationBa
 
         # Our base cases will be 3 and 2, since it would be silly to construct
         # a Disjunction containing only one Disjunct. We can ensure that size
-        # is never 1 unless it was only passsed a single choice from the start,
+        # is never 1 unless it was only passed a single choice from the start,
         # which we can handle before calling.
         if size > 3:
             half = size // 2  # (integer divide)
