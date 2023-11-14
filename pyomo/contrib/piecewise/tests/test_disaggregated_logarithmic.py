@@ -13,16 +13,7 @@ import pyomo.common.unittest as unittest
 from pyomo.contrib.piecewise.tests import models
 import pyomo.contrib.piecewise.tests.common_tests as ct
 from pyomo.core.base import TransformationFactory
-from pyomo.core.expr.compare import (
-    assertExpressionsEqual,
-    assertExpressionsStructurallyEqual,
-)
-from pyomo.gdp import Disjunct, Disjunction
-from pyomo.environ import Constraint, SolverFactory, Var
-
-from pyomo.contrib.piecewise.transform.disagreggated_logarithmic import (
-    DisaggregatedLogarithmicInnerMIPTransformation
-)
+from pyomo.environ import SolverFactory
 
 
 class TestTransformPiecewiseModelToNestedInnerRepnMIP(unittest.TestCase):
