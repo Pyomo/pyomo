@@ -1745,7 +1745,7 @@ class _NLWriter_impl(object):
                 if x_ub is None or (ub is not None and ub < x_ub):
                     x_ub = ub
                 var_bounds[x] = x_lb, x_ub
-                if x_lb == x_ub:
+                if x_lb == x_ub and x_lb is not None:
                     fixed_vars.append(x)
                 eliminated_cons.add(con_id)
             else:
