@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import ctypes
 import logging
 import os
 from collections import deque, defaultdict, namedtuple
@@ -1894,6 +1895,13 @@ class AMPLRepn(object):
             and self.linear == other.linear
             and self.nonlinear == other.nonlinear
             and self.named_exprs == other.named_exprs
+        )
+
+    def __hash__(self):
+        # Approximation of the Python default object hash
+        # (4 LSB are rolled to the MSB to reduce hash collisions)
+        return id(self) // 16 + (
+            (id(self) & 15) << 8 * ctypes.sizeof(ctypes.c_void_p) - 4
         )
 
     def duplicate(self):
