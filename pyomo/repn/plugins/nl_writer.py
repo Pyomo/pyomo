@@ -283,7 +283,7 @@ class NLWriter(object):
         return filename, symbol_map
 
     @document_kwargs_from_configdict(CONFIG)
-    def write(self, model, ostream, rowstream=None, colstream=None, **options):
+    def write(self, model, ostream, rowstream=None, colstream=None, **options) -> NLWriterInfo:
         """Write a model in NL format.
 
         Returns

@@ -10,8 +10,10 @@
 #  ___________________________________________________________________________
 
 import enum
-from typing import Optional, Tuple
+import re
+from typing import Optional, Tuple, Dict, Any, Sequence, List
 from datetime import datetime
+import io
 
 from pyomo.common.config import (
     ConfigDict,
@@ -21,6 +23,10 @@ from pyomo.common.config import (
     In,
     NonNegativeFloat,
 )
+from pyomo.common.collections import ComponentMap
+from pyomo.core.base.var import _GeneralVarData
+from pyomo.core.base.constraint import _ConstraintData
+from pyomo.core.base.objective import _ObjectiveData
 from pyomo.opt.results.solution import SolutionStatus as LegacySolutionStatus
 from pyomo.opt.results.solver import (
     TerminationCondition as LegacyTerminationCondition,
@@ -28,6 +34,7 @@ from pyomo.opt.results.solver import (
 )
 from pyomo.solver.solution import SolutionLoaderBase
 from pyomo.solver.util import SolverSystemError
+from pyomo.repn.plugins.nl_writer import NLWriterInfo
 
 
 class TerminationCondition(enum.Enum):
@@ -199,10 +206,10 @@ class Results(ConfigDict):
             ConfigValue(domain=In(SolutionStatus), default=SolutionStatus.noSolution),
         )
         self.incumbent_objective: Optional[float] = self.declare(
-            'incumbent_objective', ConfigValue(domain=float)
+            'incumbent_objective', ConfigValue(domain=float, default=None)
         )
         self.objective_bound: Optional[float] = self.declare(
-            'objective_bound', ConfigValue(domain=float)
+            'objective_bound', ConfigValue(domain=float, default=None)
         )
         self.solver_name: Optional[str] = self.declare(
             'solver_name', ConfigValue(domain=str)
@@ -211,7 +218,7 @@ class Results(ConfigDict):
             'solver_version', ConfigValue(domain=tuple)
         )
         self.iteration_count: Optional[int] = self.declare(
-            'iteration_count', ConfigValue(domain=NonNegativeInt)
+            'iteration_count', ConfigValue(domain=NonNegativeInt, default=None)
         )
         self.timing_info: ConfigDict = self.declare('timing_info', ConfigDict())
 
@@ -227,6 +234,10 @@ class Results(ConfigDict):
         self.extra_info: ConfigDict = self.declare(
             'extra_info', ConfigDict(implicit=True)
         )
+        self.solver_message: Optional[str] = self.declare(
+            'solver_message',
+            ConfigValue(domain=str, default=None),
+        )
 
     def __str__(self):
         s = ''
@@ -241,98 +252,175 @@ class ResultsReader:
     pass
 
 
-def parse_sol_file(sol_file, nl_info):
-    # The original reader for sol files is in pyomo.opt.plugins.sol.
-    # Per my original complaint, it has "magic numbers" that I just don't
-    # know how to test. It's apparently less fragile than that in APPSI.
-    # NOTE: The Results object now also holds the solution loader, so we do
-    # not need pass in a solution like we did previously.
-    # nl_info is an NLWriterInfo object that has vars, cons, etc.
-    results = Results()
+class SolFileData(object):
+    def __init__(self) -> None:
+        self.primals: Dict[int, Tuple[_GeneralVarData, float]] = dict()
+        self.duals: Dict[_ConstraintData, float] = dict()
+        self.var_suffixes: Dict[str, Dict[int, Tuple[_GeneralVarData, Any]]] = dict()
+        self.con_suffixes: Dict[str, Dict[_ConstraintData, Any]] = dict()
+        self.obj_suffixes: Dict[str, Dict[int, Tuple[_ObjectiveData, Any]]] = dict()
+        self.problem_suffixes: Dict[str, List[Any]] = dict()
 
-    # For backwards compatibility and general safety, we will parse all
-    # lines until "Options" appears. Anything before "Options" we will
-    # consider to be the solver message.
-    message = []
-    for line in sol_file:
+
+def parse_sol_file(sol_file: io.TextIOBase, nl_info: NLWriterInfo, suffixes_to_read: Sequence[str]) -> Tuple[Results, SolFileData]:
+    suffixes_to_read = set(suffixes_to_read)
+    res = Results()
+    sol_data = SolFileData()
+
+    fin = sol_file
+    #
+    # Some solvers (minto) do not write a message.  We will assume
+    # all non-blank lines up the 'Options' line is the message.
+    msg = []
+    while True:
+        line = fin.readline()
         if not line:
+            # EOF
             break
         line = line.strip()
-        if "Options" in line:
+        if line == 'Options':
             break
-        message.append(line)
-    message = '\n'.join(message)
-    # Once "Options" appears, we must now read the content under it.
-    model_objects = []
-    if "Options" in line:
-        line = sol_file.readline()
-        number_of_options = int(line)
-        need_tolerance = False
-        if number_of_options > 4: # MRM: Entirely unclear why this is necessary, or if it even is
-            number_of_options -= 2
-            need_tolerance = True
-        for i in range(number_of_options + 4):
-            line = sol_file.readline()
-            model_objects.append(int(line))
-        if need_tolerance: # MRM: Entirely unclear why this is necessary, or if it even is
-            line = sol_file.readline()
-            model_objects.append(float(line))
+        if line:
+            msg.append(line)
+    msg = '\n'.join(msg)
+    z = []
+    if line[:7] == "Options":
+        line = fin.readline()
+        nopts = int(line)
+        need_vbtol = False
+        if nopts > 4:  # WEH - when is this true?
+            nopts -= 2
+            need_vbtol = True
+        for i in range(nopts + 4):
+            line = fin.readline()
+            z += [int(line)]
+        if need_vbtol:  # WEH - when is this true?
+            line = fin.readline()
+            z += [float(line)]
     else:
-        raise SolverSystemError("ERROR READING `sol` FILE. No 'Options' line found.")
-    # Identify the total number of variables and constraints
-    number_of_cons = model_objects[number_of_options + 1]
-    number_of_vars = model_objects[number_of_options + 3]
-    assert number_of_cons == len(nl_info.constraints)
-    assert number_of_vars == len(nl_info.variables)
+        raise ValueError("no Options line found")
+    n = z[nopts + 3]  # variables
+    m = z[nopts + 1]  # constraints
+    x = []
+    y = []
+    i = 0
+    while i < m:
+        line = fin.readline()
+        y.append(float(line))
+        i += 1
+    i = 0
+    while i < n:
+        line = fin.readline()
+        x.append(float(line))
+        i += 1
+    objno = [0, 0]
+    line = fin.readline()
+    if line:  # WEH - when is this true?
+        if line[:5] != "objno":  # pragma:nocover
+            raise ValueError("expected 'objno', found '%s'" % (line))
+        t = line.split()
+        if len(t) != 3:
+            raise ValueError(
+                "expected two numbers in objno line, but found '%s'" % (line)
+            )
+        objno = [int(t[1]), int(t[2])]
+    res.solver_message = msg.strip().replace("\n", "; ")
+    res.solution_status = SolutionStatus.noSolution
+    res.termination_condition = TerminationCondition.unknown
+    if (objno[1] >= 0) and (objno[1] <= 99):
+        res.solution_status = SolutionStatus.optimal
+        res.termination_condition = TerminationCondition.convergenceCriteriaSatisfied
+    elif (objno[1] >= 100) and (objno[1] <= 199):
+        res.solution_status = SolutionStatus.feasible
+        res.termination_condition = TerminationCondition.error
+    elif (objno[1] >= 200) and (objno[1] <= 299):
+        res.solution_status = SolutionStatus.infeasible
+        # TODO: this is solver dependent
+        res.termination_condition = TerminationCondition.locallyInfeasible
+    elif (objno[1] >= 300) and (objno[1] <= 399):
+        res.solution_status = SolutionStatus.noSolution
+        res.termination_condition = TerminationCondition.unbounded
+    elif (objno[1] >= 400) and (objno[1] <= 499):
+        # TODO: this is solver dependent
+        res.solution_status = SolutionStatus.infeasible
+        res.termination_condition = TerminationCondition.iterationLimit
+    elif (objno[1] >= 500) and (objno[1] <= 599):
+        res.solution_status = SolutionStatus.noSolution
+        res.termination_condition = TerminationCondition.error
+    if res.solution_status != SolutionStatus.noSolution:
+        for v, val in zip(nl_info.variables, x):
+            sol_data[id(v)] = (v, val)
+        if "dual" in suffixes_to_read:
+            for c, val in zip(nl_info.constraints, y):
+                sol_data[c] = val
+        ### Read suffixes ###
+        line = fin.readline()
+        while line:
+            line = line.strip()
+            if line == "":
+                continue
+            line = line.split()
+            # Some sort of garbage we tag onto the solver message, assuming we are past the suffixes
+            if line[0] != 'suffix':
+                # We assume this is the start of a
+                # section like kestrel_option, which
+                # comes after all suffixes.
+                remaining = ""
+                line = fin.readline()
+                while line:
+                    remaining += line.strip() + "; "
+                    line = fin.readline()
+                res.solver_message += remaining
+                break
+            unmasked_kind = int(line[1])
+            kind = unmasked_kind & 3  # 0-var, 1-con, 2-obj, 3-prob
+            convert_function = int
+            if (unmasked_kind & 4) == 4:
+                convert_function = float
+            nvalues = int(line[2])
+            # namelen = int(line[3])
+            # tablen = int(line[4])
+            tabline = int(line[5])
+            suffix_name = fin.readline().strip()
+            if suffix_name in suffixes_to_read:
+                # ignore translation of the table number to string value for now,
+                # this information can be obtained from the solver documentation
+                for n in range(tabline):
+                    fin.readline()
+                if kind == 0:  # Var
+                    sol_data.var_suffixes[suffix_name] = dict()
+                    for cnt in range(nvalues):
+                        suf_line = fin.readline().split()
+                        var_ndx = int(suf_line[0])
+                        var = nl_info.variables[var_ndx]
+                        sol_data.var_suffixes[suffix_name][id(var)] = (var, convert_function(suf_line[1]))
+                elif kind == 1:  # Con
+                    sol_data.con_suffixes[suffix_name] = dict()
+                    for cnt in range(nvalues):
+                        suf_line = fin.readline().split()
+                        con_ndx = int(suf_line[0])
+                        con = nl_info.constraints[con_ndx]
+                        sol_data.con_suffixes[suffix_name][con] = convert_function(suf_line[1])
+                elif kind == 2:  # Obj
+                    sol_data.obj_suffixes[suffix_name] = dict()
+                    for cnt in range(nvalues):
+                        suf_line = fin.readline().split()
+                        obj_ndx = int(suf_line[0])
+                        obj = nl_info.objectives[obj_ndx]
+                        sol_data.obj_suffixes[suffix_name][id(obj)] = (obj, convert_function(suf_line[1]))
+                elif kind == 3:  # Prob
+                    sol_data.problem_suffixes[suffix_name] = list()
+                    for cnt in range(nvalues):
+                        suf_line = fin.readline().split()
+                        sol_data.problem_suffixes[suffix_name].append(convert_function(suf_line[1]))
+            else:
+                # do not store the suffix in the solution object
+                for cnt in range(nvalues):
+                    fin.readline()
+            line = fin.readline()
 
-    duals = [float(sol_file.readline()) for i in range(number_of_cons)]
-    variable_vals = [float(sol_file.readline()) for i in range(number_of_vars)]
+        return res, sol_data
 
-    # Parse the exit code line and capture it
-    exit_code = [0, 0]
-    line = sol_file.readline()
-    if line and ('objno' in line):
-        exit_code_line = line.split()
-        if (len(exit_code_line) != 3):
-            raise SolverSystemError(f"ERROR READING `sol` FILE. Expected two numbers in `objno` line; received {line}.")
-        exit_code = [int(exit_code_line[1]), int(exit_code_line[2])]
-    else:
-        raise SolverSystemError(f"ERROR READING `sol` FILE. Expected `objno`; received {line}.")
-    results.extra_info.solver_message = message.strip().replace('\n', '; ')
-    # Not sure if next two lines are needed
-    # if isinstance(res.solver.message, str):
-    #     res.solver.message = res.solver.message.replace(':', '\\x3a')
-    if (exit_code[1] >= 0) and (exit_code[1] <= 99):
-        results.termination_condition = TerminationCondition.convergenceCriteriaSatisfied
-        results.solution_status = SolutionStatus.optimal
-    elif (exit_code[1] >= 100) and (exit_code[1] <= 199):
-        exit_code_message = "Optimal solution indicated, but ERROR LIKELY!"
-        results.termination_condition = TerminationCondition.convergenceCriteriaSatisfied
-        results.solution_status = SolutionStatus.optimal
-    elif (exit_code[1] >= 200) and (exit_code[1] <= 299):
-        exit_code_message = "INFEASIBLE SOLUTION: constraints cannot be satisfied!"
-        results.termination_condition = TerminationCondition.locallyInfeasible
-        results.solution_status = SolutionStatus.infeasible
-    elif (exit_code[1] >= 300) and (exit_code[1] <= 399):
-        exit_code_message = "UNBOUNDED PROBLEM: the objective can be improved without limit!"
-        results.termination_condition = TerminationCondition.unbounded
-        results.solution_status = SolutionStatus.infeasible
-    elif (exit_code[1] >= 400) and (exit_code[1] <= 499):
-        exit_code_message = ("EXCEEDED MAXIMUM NUMBER OF ITERATIONS: the solver "
-        "was stopped by a limit that you set!")
-        results.solver.termination_condition = TerminationCondition.iterationLimit
-    elif (exit_code[1] >= 500) and (exit_code[1] <= 599):
-        exit_code_message = (
-            "FAILURE: the solver stopped by an error condition "
-            "in the solver routines!"
-        )
-        results.solver.termination_condition = TerminationCondition.error
-
-    if results.extra_info.solver_message:
-        results.extra_info.solver_message += '; ' + exit_code_message
-    else:
-        results.extra_info.solver_message = exit_code_message
-    return results
 
 def parse_yaml():
     pass
