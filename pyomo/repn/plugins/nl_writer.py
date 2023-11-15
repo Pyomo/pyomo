@@ -1703,20 +1703,25 @@ class _NLWriter_impl(object):
                 expr_info, lb = info
                 _id, coef = expr_info.linear.popitem()
                 id2, coef2 = expr_info.linear.popitem()
-                # In an attempt to improve numerical stability, we will
-                # solve for (and substitute out) the variable with the
-                # coefficient closer to +/-1)
-                print(coef, var_map[_id], coef2, var_map[id2])
-                print(abs(_log10(abs(coef2))), abs(_log10(abs(coef))))
-                print(abs(coef2), abs(coef))
-                # if abs(coef2) < abs(coef):
-                log_coef = abs(_log10(abs(coef)))
-                log_coef2 = abs(_log10(abs(coef2)))
-                if log_coef2 < log_coef or (
-                    log_coef2 == log_coef and abs(coef2) - abs(coef)
-                ):
-                    _id, id2 = id2, _id
-                    coef, coef2 = coef2, coef
+                #
+                id2_isdiscrete = var_map[id2].domain.isdiscrete()
+                if var_map[_id].domain.isdiscrete() ^ id2_isdiscrete:
+                    # if only one variable is discrete, then we need to
+                    # substiitute out the other
+                    if id2_isdiscrete:
+                        _id, id2 = id2, _id
+                        coef, coef2 = coef2, coef
+                else:
+                    # In an attempt to improve numerical stability, we will
+                    # solve for (and substitute out) the variable with the
+                    # coefficient closer to +/-1)
+                    log_coef = abs(_log10(abs(coef)))
+                    log_coef2 = abs(_log10(abs(coef2)))
+                    if log_coef2 < log_coef or (
+                        log_coef2 == log_coef and abs(coef2) - abs(coef)
+                    ):
+                        _id, id2 = id2, _id
+                        coef, coef2 = coef2, coef
                 # substituting _id with a*x + b
                 a = -coef2 / coef
                 x = id2
