@@ -587,7 +587,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
         _id = id(child)
         if _id not in visitor.var_map:
             if child.fixed:
-                return False, (_CONSTANT, visitor.handle_constant(child.value, child))
+                return False, (_CONSTANT, visitor.check_constant(child.value, child))
             visitor.var_map[_id] = child
             visitor.var_order[_id] = len(visitor.var_order)
         ans = visitor.Result()
@@ -603,7 +603,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
         arg1, arg2 = child._args_
         if arg1.__class__ not in native_types:
             try:
-                arg1 = visitor.handle_constant(visitor.evaluate(arg1), arg1)
+                arg1 = visitor.check_constant(visitor.evaluate(arg1), arg1)
             except (ValueError, ArithmeticError):
                 return True, None
 
@@ -616,7 +616,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
             if arg2.fixed:
                 return False, (
                     _CONSTANT,
-                    arg1 * visitor.handle_constant(arg2.value, arg2),
+                    arg1 * visitor.check_constant(arg2.value, arg2),
                 )
             visitor.var_map[_id] = arg2
             visitor.var_order[_id] = len(visitor.var_order)
@@ -624,7 +624,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
         # Trap multiplication by 0 and nan.
         if not arg1:
             if arg2.fixed:
-                arg2 = visitor.handle_constant(arg2.value, arg2)
+                arg2 = visitor.check_constant(arg2.value, arg2)
                 if arg2 != arg2:
                     deprecation_warning(
                         f"Encountered {arg1}*{str(arg2.value)} in expression "
@@ -652,14 +652,14 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                 arg1, arg2 = arg._args_
                 if arg1.__class__ not in native_types:
                     try:
-                        arg1 = visitor.handle_constant(visitor.evaluate(arg1), arg1)
+                        arg1 = visitor.check_constant(visitor.evaluate(arg1), arg1)
                     except (ValueError, ArithmeticError):
                         return True, None
 
                 # Trap multiplication by 0 and nan.
                 if not arg1:
                     if arg2.fixed:
-                        arg2 = visitor.handle_constant(arg2.value, arg2)
+                        arg2 = visitor.check_constant(arg2.value, arg2)
                         if arg2 != arg2:
                             deprecation_warning(
                                 f"Encountered {arg1}*{str(arg2.value)} in expression "
@@ -673,7 +673,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                 _id = id(arg2)
                 if _id not in var_map:
                     if arg2.fixed:
-                        const += arg1 * visitor.handle_constant(arg2.value, arg2)
+                        const += arg1 * visitor.check_constant(arg2.value, arg2)
                         continue
                     var_map[_id] = arg2
                     var_order[_id] = next_i
@@ -687,7 +687,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                 const += arg
             else:
                 try:
-                    const += visitor.handle_constant(visitor.evaluate(arg), arg)
+                    const += visitor.check_constant(visitor.evaluate(arg), arg)
                 except (ValueError, ArithmeticError):
                     return True, None
         if linear:
@@ -713,7 +713,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
         ans = visitor.Result()
         if all(is_fixed(arg) for arg in child.args):
             try:
-                ans.constant = visitor.handle_constant(visitor.evaluate(child), child)
+                ans.constant = visitor.check_constant(visitor.evaluate(child), child)
                 return False, (_CONSTANT, ans)
             except:
                 pass
@@ -752,7 +752,7 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
         self._eval_expr_visitor = _EvaluationVisitor(True)
         self.evaluate = self._eval_expr_visitor.dfs_postorder_stack
 
-    def handle_constant(self, ans, obj):
+    def check_constant(self, ans, obj):
         if ans.__class__ not in native_numeric_types:
             # None can be returned from uninitialized Var/Param objects
             if ans is None:
