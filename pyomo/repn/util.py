@@ -336,14 +336,14 @@ class BeforeChildDispatcher(collections.defaultdict):
         try:
             return False, (
                 _CONSTANT,
-                visitor.handle_constant(visitor.evaluate(child), child),
+                visitor.check_constant(visitor.evaluate(child), child),
             )
         except (ValueError, ArithmeticError):
             return True, None
 
     @staticmethod
     def _before_param(visitor, child):
-        return False, (_CONSTANT, visitor.handle_constant(child.value, child))
+        return False, (_CONSTANT, visitor.check_constant(child.value, child))
 
     #
     # The following methods must be defined by derivative classes (along
