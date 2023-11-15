@@ -1715,10 +1715,10 @@ class _NLWriter_impl(object):
                     # In an attempt to improve numerical stability, we will
                     # solve for (and substitute out) the variable with the
                     # coefficient closer to +/-1)
-                    log_coef = abs(_log10(abs(coef)))
-                    log_coef2 = abs(_log10(abs(coef2)))
-                    if log_coef2 < log_coef or (
-                        log_coef2 == log_coef and abs(coef2) - abs(coef)
+                    log_coef = _log10(abs(coef))
+                    log_coef2 = _log10(abs(coef2))
+                    if abs(log_coef2) < abs(log_coef) or (
+                        log_coef2 == -log_coef and log_coef2 < log_coef
                     ):
                         _id, id2 = id2, _id
                         coef, coef2 = coef2, coef
