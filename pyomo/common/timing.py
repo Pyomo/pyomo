@@ -44,30 +44,59 @@ _construction_logger = logging.getLogger('pyomo.common.timing.construction')
 _transform_logger = logging.getLogger('pyomo.common.timing.transformation')
 
 
-def report_timing(stream=True, level=logging.INFO):
-    """Set reporting of Pyomo timing information.
+class report_timing(object):
+    def __init__(self, stream=True, level=logging.INFO):
+        """Set reporting of Pyomo timing information.
 
-    Parameters
-    ----------
-    stream: bool, TextIOBase
-        The destination stream to emit timing information.  If ``True``,
-        defaults to ``sys.stdout``.  If ``False`` or ``None``, disables
-        reporting of timing information.
-    level: int
-        The logging level for the timing logger
-    """
-    if stream:
-        _logger.setLevel(level)
-        if stream is True:
-            stream = sys.stdout
-        handler = logging.StreamHandler(stream)
-        handler.setFormatter(logging.Formatter("      %(message)s"))
-        _logger.addHandler(handler)
-        return handler
-    else:
-        _logger.setLevel(logging.WARNING)
-        for h in _logger.handlers:
-            _logger.removeHandler(h)
+        For historical reasons, this class may be used as a function
+        (the reporting logger is configured as part of the instance
+        initializer).  However, the preferred usage is as a context
+        manager (thereby ensuring that the timing logger is restored
+        upon exit).
+
+        Parameters
+        ----------
+        stream: bool, TextIOBase
+
+            The destination stream to emit timing information.  If
+            ``True``, defaults to ``sys.stdout``.  If ``False`` or
+            ``None``, disables reporting of timing information.
+
+        level: int
+
+            The logging level for the timing logger
+
+        """
+        self._old_level = _logger.level
+        # For historical reasons (because report_timing() used to be a
+        # function), we will do what you think should be done in
+        # __enter__ here in __init__.
+        if stream:
+            _logger.setLevel(level)
+            if stream is True:
+                stream = sys.stdout
+            self._handler = logging.StreamHandler(stream)
+            self._handler.setFormatter(logging.Formatter("      %(message)s"))
+            _logger.addHandler(self._handler)
+        else:
+            self._handler = list(_logger.handlers)
+            _logger.setLevel(logging.WARNING)
+            for h in list(_logger.handlers):
+                _logger.removeHandler(h)
+
+    def reset(self):
+        _logger.setLevel(self._old_level)
+        if type(self._handler) is list:
+            for h in self._handler:
+                _logger.addHandler(h)
+        else:
+            _logger.removeHandler(self._handler)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, et, ev, tb):
+        self.reset()
 
 
 class GeneralTimer(object):
