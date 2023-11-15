@@ -9,12 +9,14 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import ctypes
 import logging
 import os
 from collections import deque, defaultdict, namedtuple
-from itertools import filterfalse, product
-from operator import itemgetter, attrgetter, setitem
 from contextlib import nullcontext
+from itertools import filterfalse, product
+from math import log10 as _log10
+from operator import itemgetter, attrgetter, setitem
 
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.config import (
@@ -307,7 +309,7 @@ class NLWriter(object):
     CONFIG.declare(
         'linear_presolve',
         ConfigValue(
-            default=False,
+            default=True,
             domain=bool,
             description='Perform linear presolve',
             doc="""
@@ -1712,12 +1714,25 @@ class _NLWriter_impl(object):
                 expr_info, lb = info
                 _id, coef = expr_info.linear.popitem()
                 id2, coef2 = expr_info.linear.popitem()
-                # For no particularly good reason, we will solve for
-                # (and substitute out) the variable with the smaller
-                # magnitude)
-                if abs(coef2) < abs(coef):
-                    _id, id2 = id2, _id
-                    coef, coef2 = coef2, coef
+                #
+                id2_isdiscrete = var_map[id2].domain.isdiscrete()
+                if var_map[_id].domain.isdiscrete() ^ id2_isdiscrete:
+                    # if only one variable is discrete, then we need to
+                    # substiitute out the other
+                    if id2_isdiscrete:
+                        _id, id2 = id2, _id
+                        coef, coef2 = coef2, coef
+                else:
+                    # In an attempt to improve numerical stability, we will
+                    # solve for (and substitute out) the variable with the
+                    # coefficient closer to +/-1)
+                    log_coef = _log10(abs(coef))
+                    log_coef2 = _log10(abs(coef2))
+                    if abs(log_coef2) < abs(log_coef) or (
+                        log_coef2 == -log_coef and log_coef2 < log_coef
+                    ):
+                        _id, id2 = id2, _id
+                        coef, coef2 = coef2, coef
                 # substituting _id with a*x + b
                 a = -coef2 / coef
                 x = id2
@@ -1746,7 +1761,7 @@ class _NLWriter_impl(object):
                 if x_ub is None or (ub is not None and ub < x_ub):
                     x_ub = ub
                 var_bounds[x] = x_lb, x_ub
-                if x_lb == x_ub:
+                if x_lb == x_ub and x_lb is not None:
                     fixed_vars.append(x)
                 eliminated_cons.add(con_id)
             else:
@@ -1896,6 +1911,13 @@ class AMPLRepn(object):
             and self.linear == other.linear
             and self.nonlinear == other.nonlinear
             and self.named_exprs == other.named_exprs
+        )
+
+    def __hash__(self):
+        # Approximation of the Python default object hash
+        # (4 LSB are rolled to the MSB to reduce hash collisions)
+        return id(self) // 16 + (
+            (id(self) & 15) << 8 * ctypes.sizeof(ctypes.c_void_p) - 4
         )
 
     def duplicate(self):

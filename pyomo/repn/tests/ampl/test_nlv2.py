@@ -1034,7 +1034,7 @@ class Test_NLWriter(unittest.TestCase):
         m.p = Param(initialize=5, mutable=True)
         m.o = Objective(expr=1)
         m.c = Constraint(
-            expr=LinearExpression([m.p**2, 5 * m.x[1], 10 * m.x[2]]) == 0
+            expr=LinearExpression([m.p**2, 5 * m.x[1], 10 * m.x[2]]) <= 0
         )
 
         OUT = io.StringIO()
@@ -1042,7 +1042,7 @@ class Test_NLWriter(unittest.TestCase):
         self.assertEqual(
             *nl_diff(
                 """g3 1 1 0	# problem unknown
- 2 1 1 0 1 	# vars, constraints, objectives, ranges, eqns
+ 2 1 1 0 0 	# vars, constraints, objectives, ranges, eqns
  0 0 0 0 0 0	# nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
  0 0	# network constraints: nonlinear, linear
  0 0 0 	# nonlinear vars in constraints, objectives, both
@@ -1057,7 +1057,7 @@ O0 0
 n1.0
 x0
 r
-4 -25
+1 -25
 b
 3
 3
@@ -1547,7 +1547,9 @@ G0 1
 
         OUT = io.StringIO()
         with LoggingIntercept() as LOG:
-            nlinfo = nl_writer.NLWriter().write(m, OUT, scale_model=False)
+            nlinfo = nl_writer.NLWriter().write(
+                m, OUT, scale_model=False, linear_presolve=False
+            )
         self.assertEqual(LOG.getvalue(), "")
 
         nl1 = OUT.getvalue()
@@ -1629,7 +1631,9 @@ G0 3
 
         OUT = io.StringIO()
         with LoggingIntercept() as LOG:
-            nlinfo = nl_writer.NLWriter().write(m, OUT, scale_model=True)
+            nlinfo = nl_writer.NLWriter().write(
+                m, OUT, scale_model=True, linear_presolve=False
+            )
         self.assertEqual(LOG.getvalue(), "")
 
         nl2 = OUT.getvalue()

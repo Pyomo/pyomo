@@ -543,7 +543,7 @@ class SuffixFinder(object):
         self.name = name
         self.default = default
         self.all_suffixes = []
-        self._suffixes_by_block = ComponentMap({None: []})
+        self._suffixes_by_block = {None: []}
 
     def find(self, component_data):
         """Find suffix value for a given component data object in model tree
