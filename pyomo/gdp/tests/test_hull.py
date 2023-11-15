@@ -406,7 +406,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertRaisesRegex(
             GDP_Error,
             "Cannot do hull reformulation for Disjunction "
-            "'disjunction' with OR constraint.  Must be an XOR!*",
+            "'disjunction' with OR constraint. Must be an XOR!*",
             TransformationFactory('gdp.hull').apply_to,
             m,
         )
@@ -1572,25 +1572,18 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         all_cons = list(m.component_data_objects(Constraint, active=True,
                                                  descend_into=Block))
         num_cons = len(all_cons)
-        # TODO: I shouldn't have d1.binary_indicator_var in the local list
-        # above, but I think if I do it should be ignored when it doesn't appear
-        # in any Disjuncts...
 
-        # TODO: We get duplicate bounds constraints for inner disaggregated Vars
-        # because we declare bounds constraints for local vars every time. We
-        # should actually track them separately so that we don't duplicate
-        # bounds constraints over and over again.
         for idx, cons in enumerate(all_cons):
             print(idx)
             print(cons.name)
             print(cons.expr)
             print("")
         # 2 disaggregation constraints for x 0,3
-        # + 4 bounds constraints for x 6,8,9,13,  These are dumb: 10,14,16
+        # + 6 bounds constraints for x 6,8,9,13,14,16  These are dumb: 10,14,16
         # + 2 bounds constraints for inner indicator vars 11, 12
         # + 2 exactly-one constraints 1,4
         # + 4 transformed constraints 2,5,7,15
-        self.assertEqual(num_cons, 14)
+        self.assertEqual(num_cons, 16)
 
     def check_transformed_model_nestedDisjuncts(self, m, d3, d4):
         hull = TransformationFactory('gdp.hull')

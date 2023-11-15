@@ -334,7 +334,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         if not obj.xor:
             raise GDP_Error(
                 "Cannot do hull reformulation for "
-                "Disjunction '%s' with OR constraint.  "
+                "Disjunction '%s' with OR constraint. "
                 "Must be an XOR!" % obj.name
             )
         # collect the Disjuncts we are going to transform now because we will
@@ -395,6 +395,11 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         # so they will not be re-disaggregated.
         vars_to_disaggregate = {disj: ComponentSet() for disj in obj.disjuncts}
         all_vars_to_disaggregate = ComponentSet()
+        # We will ignore variables declared as local in a Disjunct that don't
+        # actually appear in any Constraints on that Disjunct, but in order to
+        # do this, we will explicitly collect the set of local_vars in this
+        # loop.
+        local_vars = defaultdict(lambda: ComponentSet())
         for var in var_order:
             disjuncts = disjuncts_var_appears_in[var]
             # clearly not local if used in more than one disjunct
@@ -411,7 +416,9 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             else: # disjuncts is a set of length 1
                 disjunct = next(iter(disjuncts))
                 if disjunct in local_vars_by_disjunct:
-                    if var not in local_vars_by_disjunct[disjunct]:
+                    if var in local_vars_by_disjunct[disjunct]:
+                        local_vars[disjunct].add(var)
+                    else:
                         # It's not declared local to this Disjunct, so we
                         # disaggregate
                         vars_to_disaggregate[disjunct].add(var)
@@ -424,6 +431,9 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
         # Now that we know who we need to disaggregate, we will do it
         # while we also transform the disjuncts.
+
+        # Get the list of local variables for the parent Disjunct so that we can
+        # add the disaggregated variables we're about to make to it:
         parent_local_var_list = self._get_local_var_list(parent_disjunct)
         or_expr = 0
         for disjunct in obj.disjuncts:
@@ -433,7 +443,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                     disjunct,
                     transBlock,
                     vars_to_disaggregate[disjunct],
-                    local_vars_by_disjunct.get(disjunct, []),
+                    local_vars[disjunct],
                     parent_local_var_list,
                     local_vars_by_disjunct[parent_disjunct]
                 )
@@ -578,12 +588,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             )
 
         for var in local_vars:
-            if var in vars_to_disaggregate:
-                logger.warning(
-                    "Var '%s' was declared as a local Var for Disjunct '%s', "
-                    "but it appeared in multiple Disjuncts, so it will be "
-                    "disaggregated." % (var.name, obj.name))
-                continue
             # we don't need to disaggregate, i.e., we can use this Var, but we
             # do need to set up its bounds constraints.
 
