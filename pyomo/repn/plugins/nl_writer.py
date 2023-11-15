@@ -308,7 +308,7 @@ class NLWriter(object):
     CONFIG.declare(
         'linear_presolve',
         ConfigValue(
-            default=False,
+            default=True,
             domain=bool,
             description='Perform linear presolve',
             doc="""
