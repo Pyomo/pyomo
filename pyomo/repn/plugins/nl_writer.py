@@ -12,9 +12,10 @@
 import logging
 import os
 from collections import deque, defaultdict, namedtuple
-from itertools import filterfalse, product
-from operator import itemgetter, attrgetter, setitem
 from contextlib import nullcontext
+from itertools import filterfalse, product
+from math import log10 as _log10
+from operator import itemgetter, attrgetter, setitem
 
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.config import (
@@ -1701,10 +1702,18 @@ class _NLWriter_impl(object):
                 expr_info, lb = info
                 _id, coef = expr_info.linear.popitem()
                 id2, coef2 = expr_info.linear.popitem()
-                # For no particularly good reason, we will solve for
-                # (and substitute out) the variable with the smaller
-                # magnitude)
-                if abs(coef2) < abs(coef):
+                # In an attempt to improve numerical stability, we will
+                # solve for (and substitute out) the variable with the
+                # coefficient closer to +/-1)
+                print(coef, var_map[_id], coef2, var_map[id2])
+                print(abs(_log10(abs(coef2))), abs(_log10(abs(coef))))
+                print(abs(coef2), abs(coef))
+                # if abs(coef2) < abs(coef):
+                log_coef = abs(_log10(abs(coef)))
+                log_coef2 = abs(_log10(abs(coef2)))
+                if log_coef2 < log_coef or (
+                    log_coef2 == log_coef and abs(coef2) - abs(coef)
+                ):
                     _id, id2 = id2, _id
                     coef, coef2 = coef2, coef
                 # substituting _id with a*x + b
