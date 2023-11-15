@@ -196,7 +196,7 @@ def add_oa_cuts_for_grey_box(
             .evaluate_jacobian_outputs()
             .toarray()
         )
-        # Enumerate over values works well now. However, it might be stable if the values() method changes. 
+        # Enumerate over values works well now. However, it might be stable if the values() method changes.
         for index, output in enumerate(target_model_grey_box.outputs.values()):
             dual_value = jacobians_model.dual[jacobian_model_grey_box][
                 output.name.replace("outputs", "output_constraints")
