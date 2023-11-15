@@ -1346,9 +1346,9 @@ class _NLWriter_impl(object):
 
         # Generate the return information
         info = NLWriterInfo(
-            variables,
-            constraints,
-            objectives,
+            [i[0] for i in variables],
+            [i[0] for i in constraints],
+            [i[0] for i in objectives],
             sorted(amplfunc_libraries),
             row_labels,
             col_labels,

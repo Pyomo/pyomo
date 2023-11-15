@@ -112,7 +112,7 @@ class TerminationCondition(enum.Enum):
     unknown = 42
 
 
-class SolutionStatus(enum.IntEnum):
+class SolutionStatus(enum.Enum):
     """
     An enumeration for interpreting the result of a termination. This describes the designated
     status by the solver to be loaded back into the model.
@@ -349,10 +349,10 @@ def parse_sol_file(sol_file: io.TextIOBase, nl_info: NLWriterInfo, suffixes_to_r
         res.termination_condition = TerminationCondition.error
     if res.solution_status != SolutionStatus.noSolution:
         for v, val in zip(nl_info.variables, x):
-            sol_data[id(v)] = (v, val)
+            sol_data.primals[id(v)] = (v, val)
         if "dual" in suffixes_to_read:
             for c, val in zip(nl_info.constraints, y):
-                sol_data[c] = val
+                sol_data.duals[c] = val
         ### Read suffixes ###
         line = fin.readline()
         while line:

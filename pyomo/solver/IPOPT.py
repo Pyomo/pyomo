@@ -30,6 +30,7 @@ from pyomo.common.tee import TeeStream
 from pyomo.common.log import LogStream
 from pyomo.core.expr.visitor import replace_expressions
 from pyomo.core.expr.numvalue import value
+from pyomo.core.base.suffix import Suffix
 
 import logging
 
@@ -139,7 +140,7 @@ class IPOPT(SolverBase):
     CONFIG = IPOPTConfig()
 
     def __init__(self, **kwds):
-        self.config = self.CONFIG(kwds)
+        self._config = self.CONFIG(kwds)
 
     def available(self):
         if self.config.executable.path() is None:
@@ -161,11 +162,11 @@ class IPOPT(SolverBase):
 
     @property
     def config(self):
-        return self.config
+        return self._config
 
     @config.setter
     def config(self, val):
-        self.config = val
+        self._config = val
 
     def _write_options_file(self, ostream: io.TextIOBase, options: Mapping):
         f = ostream
@@ -228,9 +229,9 @@ class IPOPT(SolverBase):
             if os.path.exists(basename + '.nl'):
                 raise RuntimeError(f"NL file with the same name {basename + '.nl'} already exists!")
             with (
-                open(basename + '.nl') as nl_file, 
-                open(basename + '.row') as row_file, 
-                open(basename + '.col') as col_file,
+                open(basename + '.nl', 'w') as nl_file, 
+                open(basename + '.row', 'w') as row_file, 
+                open(basename + '.col', 'w') as col_file,
             ):
                 self.info = nl_writer.write(
                     model,
@@ -239,7 +240,7 @@ class IPOPT(SolverBase):
                     col_file,
                     symbolic_solver_labels=config.symbolic_solver_labels,
                 )
-            with open(basename + '.opt') as opt_file:
+            with open(basename + '.opt', 'w') as opt_file:
                 self._write_options_file(ostream=opt_file, options=config.solver_options)
             # Call IPOPT - passing the files via the subprocess
             cmd = self._create_command_line(basename=basename, config=config)
@@ -263,16 +264,16 @@ class IPOPT(SolverBase):
                     cmd, timeout=timeout, env=env, universal_newlines=True, stdout=t.STDOUT, stderr=t.STDERR,
                 )
 
-        if process.returncode != 0:
-            results = Results()
-            results.termination_condition = TerminationCondition.error
-            results.solution_status = SolutionStatus.noSolution
-            results.solution_loader = SolutionLoader(None, None, None, None)
-        else:
-            # TODO: Make a context manager out of this and open the file
-            # to pass to the results, instead of doing this thing.
-            with open(basename + '.sol') as sol_file:
-                results = self._parse_solution(sol_file, self.info)
+            if process.returncode != 0:
+                results = Results()
+                results.termination_condition = TerminationCondition.error
+                results.solution_status = SolutionStatus.noSolution
+                results.solution_loader = SolutionLoader(None, None, None, None)
+            else:
+                # TODO: Make a context manager out of this and open the file
+                # to pass to the results, instead of doing this thing.
+                with open(basename + '.sol', 'r') as sol_file:
+                    results = self._parse_solution(sol_file, self.info)
                 
         if config.raise_exception_on_nonoptimal_result and results.solution_status != SolutionStatus.optimal:
             raise RuntimeError('Solver did not find the optimal solution. Set opt.config.raise_exception_on_nonoptimal_result = False to bypass this error.')
@@ -287,6 +288,10 @@ class IPOPT(SolverBase):
         
         if config.load_solution:
             results.solution_loader.load_vars()
+            if hasattr(model, 'dual') and isinstance(model.dual, Suffix) and model.dual.import_enabled():
+                model.dual.update(results.solution_loader.get_duals())
+            if hasattr(model, 'rc') and isinstance(model.rc, Suffix) and model.rc.import_enabled():
+                model.rc.update(results.solution_loader.get_reduced_costs())
 
         if results.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}:
             if config.load_solution:
