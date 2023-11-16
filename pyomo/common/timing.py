@@ -223,19 +223,14 @@ class TransformationTimer(object):
 #
 # Setup the timer
 #
-# TODO: Remove this bit for Pyomo 6.0 - we won't care about older versions
-if sys.version_info >= (3, 3):
-    # perf_counter is guaranteed to be monotonic and the most accurate timer
-    default_timer = time.perf_counter
-elif sys.platform.startswith('win'):
-    # On old Pythons, clock() is more accurate than time() on Windows
-    # (.35us vs 15ms), but time() is more accurate than clock() on Linux
-    # (1ns vs 1us).  It is unfortunate that time() is not monotonic, but
-    # since the TicTocTimer is used for (potentially very accurate)
-    # timers, we will sacrifice monotonicity on Linux for resolution.
-    default_timer = time.clock
-else:
-    default_timer = time.time
+# perf_counter is guaranteed to be monotonic and the most accurate
+# timer.  It became available in Python 3.3.  Prior to that, clock() was
+# more accurate than time() on Windows (.35us vs 15ms), but time() was
+# more accurate than clock() on Linux (1ns vs 1us).  It is unfortunate
+# that time() is not monotonic, but since the TicTocTimer is used for
+# (potentially very accurate) timers, we will sacrifice monotonicity on
+# Linux for resolution.
+default_timer = time.perf_counter
 
 
 class TicTocTimer(object):
