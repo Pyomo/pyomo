@@ -721,7 +721,7 @@ class TestRepnUtils(unittest.TestCase):
                 return child
 
         class VisitorTester(object):
-            def handle_constant(self, value, node):
+            def check_constant(self, value, node):
                 return value
 
             def evaluate(self, node):
