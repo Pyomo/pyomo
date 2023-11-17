@@ -427,7 +427,7 @@ def setup_pyros_logger(name=DEFAULT_LOGGER_NAME):
     # default logger: INFO level, with preformatted messages
     current_logger_class = logging.getLoggerClass()
     logging.setLoggerClass(PreformattedLogger)
-    logger = logging.getLogger(DEFAULT_LOGGER_NAME)
+    logger = logging.getLogger(name=name)
     logger.setLevel(logging.INFO)
     logging.setLoggerClass(current_logger_class)
 
