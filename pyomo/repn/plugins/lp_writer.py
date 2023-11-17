@@ -310,12 +310,13 @@ class _LPWriter_impl(object):
         _qp = self.config.allow_quadratic_objective
         _qc = self.config.allow_quadratic_constraint
         objective_visitor = (QuadraticRepnVisitor if _qp else LinearRepnVisitor)(
-            {}, var_map, self.var_order
+            {}, var_map, self.var_order, sorter
         )
         constraint_visitor = (QuadraticRepnVisitor if _qc else LinearRepnVisitor)(
             objective_visitor.subexpression_cache if _qp == _qc else {},
             var_map,
             self.var_order,
+            sorter,
         )
 
         timer.toc('Initialized column order', level=logging.DEBUG)

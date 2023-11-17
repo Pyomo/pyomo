@@ -65,6 +65,7 @@ class INFO(object):
             self.used_named_expressions,
             self.symbolic_solver_labels,
             True,
+            None,
         )
 
     def __enter__(self):

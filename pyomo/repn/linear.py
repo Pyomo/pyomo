@@ -583,13 +583,30 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
         self[SumExpression] = self._before_general_expression
 
     @staticmethod
+    def _record_var(visitor, var):
+        # We always add all indices to the var_map at once so that
+        # we can honor deterministic ordering of unordered sets
+        # (because the user could have iterated over an unordered
+        # set when constructing an expression, thereby altering the
+        # order in which we would see the variables)
+        vm = visitor.var_map
+        vo = visitor.var_order
+        l = len(vo)
+        for v in var.values(visitor.sorter):
+            if v.fixed:
+                continue
+            vid = id(v)
+            vm[vid] = v
+            vo[vid] = l
+            l += 1
+
+    @staticmethod
     def _before_var(visitor, child):
         _id = id(child)
         if _id not in visitor.var_map:
             if child.fixed:
                 return False, (_CONSTANT, visitor.check_constant(child.value, child))
-            visitor.var_map[_id] = child
-            visitor.var_order[_id] = len(visitor.var_order)
+            LinearBeforeChildDispatcher._record_var(visitor, child.parent_component())
         ans = visitor.Result()
         ans.linear[_id] = 1
         return False, (_LINEAR, ans)
@@ -618,8 +635,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                     _CONSTANT,
                     arg1 * visitor.check_constant(arg2.value, arg2),
                 )
-            visitor.var_map[_id] = arg2
-            visitor.var_order[_id] = len(visitor.var_order)
+            LinearBeforeChildDispatcher._record_var(visitor, arg2.parent_component())
 
         # Trap multiplication by 0 and nan.
         if not arg1:
@@ -643,7 +659,6 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
     def _before_linear(visitor, child):
         var_map = visitor.var_map
         var_order = visitor.var_order
-        next_i = len(var_order)
         ans = visitor.Result()
         const = 0
         linear = ans.linear
@@ -675,9 +690,9 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                     if arg2.fixed:
                         const += arg1 * visitor.check_constant(arg2.value, arg2)
                         continue
-                    var_map[_id] = arg2
-                    var_order[_id] = next_i
-                    next_i += 1
+                    LinearBeforeChildDispatcher._record_var(
+                        visitor, arg2.parent_component()
+                    )
                     linear[_id] = arg1
                 elif _id in linear:
                     linear[_id] += arg1
@@ -744,11 +759,12 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
     expand_nonlinear_products = False
     max_exponential_expansion = 1
 
-    def __init__(self, subexpression_cache, var_map, var_order):
+    def __init__(self, subexpression_cache, var_map, var_order, sorter):
         super().__init__()
         self.subexpression_cache = subexpression_cache
         self.var_map = var_map
         self.var_order = var_order
+        self.sorter = sorter
         self._eval_expr_visitor = _EvaluationVisitor(True)
         self.evaluate = self._eval_expr_visitor.dfs_postorder_stack
 
