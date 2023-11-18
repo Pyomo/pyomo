@@ -70,6 +70,21 @@ def dulmage_mendelsohn(matrix_or_graph, top_nodes=None, matching=None):
     - **overconstrained** - The columns matched with *possibly* unmatched
       rows (unmatched and overconstrained rows)
 
+    While the Dulmage-Mendelsohn decomposition does not specify an order within
+    any of these subsets, the order returned by this function preserves the
+    maximum matching that is used to compute the decomposition. That is, zipping
+    "corresponding" row and column subsets yields pairs in this maximum matching.
+    For example:
+
+    >>> row_dmpartition, col_dmpartition = dulmage_mendelsohn(matrix)
+    >>> rdmp = row_dmpartition
+    >>> cdmp = col_dmpartition
+    >>> matching = list(zip(
+    ...     rdmp.underconstrained + rdmp.square + rdmp.overconstrained,
+    ...     cdmp.underconstrained + cdmp.square + cdmp.overconstrained,
+    ... ))
+    >>> # matching is a valid maximum matching of rows and columns of the matrix!
+
     Parameters
     ----------
     matrix_or_graph: ``scipy.sparse.coo_matrix`` or ``networkx.Graph``

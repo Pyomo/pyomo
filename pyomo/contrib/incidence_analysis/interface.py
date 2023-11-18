@@ -743,6 +743,22 @@ class IncidenceGraphInterface(object):
         - **unmatched** - Constraints that were not matched in a particular
           maximum cardinality matching
 
+        While the Dulmage-Mendelsohn decomposition does not specify an order
+        within any of these subsets, the order returned by this function
+        preserves the maximum matching that is used to compute the decomposition.
+        That is, zipping "corresponding" variable and constraint subsets yields
+        pairs in this maximum matching. For example:
+
+        >>> igraph = IncidenceGraphInterface(model)
+        >>> var_dmpartition, con_dmpartition = igraph.dulmage_mendelsohn()
+        >>> vdmp = var_dmpartition
+        >>> cdmp = con_dmpartition
+        >>> matching = list(zip(
+        ...     vdmp.underconstrained + vdmp.square + vdmp.overconstrained,
+        ...     cdmp.underconstrained + cdmp.square + cdmp.overconstrained,
+        >>> ))
+        >>> # matching is a valid maximum matching of variables and constraints!
+
         Returns
         -------
         var_partition: ``ColPartition`` named tuple
