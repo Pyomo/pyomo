@@ -749,15 +749,18 @@ class IncidenceGraphInterface(object):
         That is, zipping "corresponding" variable and constraint subsets yields
         pairs in this maximum matching. For example:
 
-        >>> igraph = IncidenceGraphInterface(model)
-        >>> var_dmpartition, con_dmpartition = igraph.dulmage_mendelsohn()
-        >>> vdmp = var_dmpartition
-        >>> cdmp = con_dmpartition
-        >>> matching = list(zip(
-        ...     vdmp.underconstrained + vdmp.square + vdmp.overconstrained,
-        ...     cdmp.underconstrained + cdmp.square + cdmp.overconstrained,
-        >>> ))
-        >>> # matching is a valid maximum matching of variables and constraints!
+        .. doctest::
+           :skipif: True
+
+           >>> igraph = IncidenceGraphInterface(model)
+           >>> var_dmpartition, con_dmpartition = igraph.dulmage_mendelsohn()
+           >>> vdmp = var_dmpartition
+           >>> cdmp = con_dmpartition
+           >>> matching = list(zip(
+           ...     vdmp.underconstrained + vdmp.square + vdmp.overconstrained,
+           ...     cdmp.underconstrained + cdmp.square + cdmp.overconstrained,
+           >>> ))
+           >>> # matching is a valid maximum matching of variables and constraints!
 
         Returns
         -------

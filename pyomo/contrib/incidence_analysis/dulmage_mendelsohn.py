@@ -76,14 +76,17 @@ def dulmage_mendelsohn(matrix_or_graph, top_nodes=None, matching=None):
     "corresponding" row and column subsets yields pairs in this maximum matching.
     For example:
 
-    >>> row_dmpartition, col_dmpartition = dulmage_mendelsohn(matrix)
-    >>> rdmp = row_dmpartition
-    >>> cdmp = col_dmpartition
-    >>> matching = list(zip(
-    ...     rdmp.underconstrained + rdmp.square + rdmp.overconstrained,
-    ...     cdmp.underconstrained + cdmp.square + cdmp.overconstrained,
-    ... ))
-    >>> # matching is a valid maximum matching of rows and columns of the matrix!
+    .. doctest::
+       :skipif: True
+
+       >>> row_dmpartition, col_dmpartition = dulmage_mendelsohn(matrix)
+       >>> rdmp = row_dmpartition
+       >>> cdmp = col_dmpartition
+       >>> matching = list(zip(
+       ...     rdmp.underconstrained + rdmp.square + rdmp.overconstrained,
+       ...     cdmp.underconstrained + cdmp.square + cdmp.overconstrained,
+       ... ))
+       >>> # matching is a valid maximum matching of rows and columns of the matrix!
 
     Parameters
     ----------
