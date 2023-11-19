@@ -136,7 +136,7 @@ class TestGasExpansionDMMatrixInterface(unittest.TestCase):
         self.assertEqual(len(set(rmatch)), len(rmatch))
         self.assertEqual(len(set(cmatch)), len(cmatch))
         entry_set = set(zip(imat.row, imat.col))
-        for (i, j) in matching:
+        for i, j in matching:
             # Assert that each pair in the matching is a valid entry
             # in the matrix
             self.assertIn((i, j), entry_set)
