@@ -146,7 +146,7 @@ class IPOPT(SolverBase):
     CONFIG = IPOPTConfig()
 
     def __init__(self, **kwds):
-        self.config = self.CONFIG(kwds)
+        self._config = self.CONFIG(kwds)
 
     def available(self):
         if self.config.executable.path() is None:
@@ -168,11 +168,11 @@ class IPOPT(SolverBase):
 
     @property
     def config(self):
-        return self.config
+        return self._config
 
     @config.setter
     def config(self, val):
-        self.config = val
+        self._config = val
 
     def _write_options_file(self, ostream: io.TextIOBase, options: Mapping):
         f = ostream

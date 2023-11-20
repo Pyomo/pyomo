@@ -262,13 +262,12 @@ def parse_sol_file(
     sol_file: io.TextIOBase, nl_info: NLWriterInfo, suffixes_to_read: Sequence[str]
 ) -> Tuple[Results, SolFileData]:
     suffixes_to_read = set(suffixes_to_read)
-    res = Results()
     sol_data = SolFileData()
 
     #
     # Some solvers (minto) do not write a message.  We will assume
     # all non-blank lines up the 'Options' line is the message.
-    results = Results()
+    result = Results()
 
     # For backwards compatibility and general safety, we will parse all
     # lines until "Options" appears. Anything before "Options" we will
@@ -326,26 +325,26 @@ def parse_sol_file(
         raise SolverSystemError(
             f"ERROR READING `sol` FILE. Expected `objno`; received {line}."
         )
-    results.extra_info.solver_message = message.strip().replace('\n', '; ')
+    result.extra_info.solver_message = message.strip().replace('\n', '; ')
     if (exit_code[1] >= 0) and (exit_code[1] <= 99):
-        res.solution_status = SolutionStatus.optimal
-        res.termination_condition = TerminationCondition.convergenceCriteriaSatisfied
+        result.solution_status = SolutionStatus.optimal
+        result.termination_condition = TerminationCondition.convergenceCriteriaSatisfied
     elif (exit_code[1] >= 100) and (exit_code[1] <= 199):
         exit_code_message = "Optimal solution indicated, but ERROR LIKELY!"
-        res.solution_status = SolutionStatus.feasible
-        res.termination_condition = TerminationCondition.error
+        result.solution_status = SolutionStatus.feasible
+        result.termination_condition = TerminationCondition.error
     elif (exit_code[1] >= 200) and (exit_code[1] <= 299):
         exit_code_message = "INFEASIBLE SOLUTION: constraints cannot be satisfied!"
-        res.solution_status = SolutionStatus.infeasible
+        result.solution_status = SolutionStatus.infeasible
         # TODO: this is solver dependent
         # But this was the way in the previous version - and has been fine thus far?
-        res.termination_condition = TerminationCondition.locallyInfeasible
+        result.termination_condition = TerminationCondition.locallyInfeasible
     elif (exit_code[1] >= 300) and (exit_code[1] <= 399):
         exit_code_message = (
             "UNBOUNDED PROBLEM: the objective can be improved without limit!"
         )
-        res.solution_status = SolutionStatus.noSolution
-        res.termination_condition = TerminationCondition.unbounded
+        result.solution_status = SolutionStatus.noSolution
+        result.termination_condition = TerminationCondition.unbounded
     elif (exit_code[1] >= 400) and (exit_code[1] <= 499):
         exit_code_message = (
             "EXCEEDED MAXIMUM NUMBER OF ITERATIONS: the solver "
@@ -353,21 +352,21 @@ def parse_sol_file(
         )
         # TODO: this is solver dependent
         # But this was the way in the previous version - and has been fine thus far?
-        res.solution_status = SolutionStatus.infeasible
-        res.termination_condition = TerminationCondition.iterationLimit
+        result.solution_status = SolutionStatus.infeasible
+        result.termination_condition = TerminationCondition.iterationLimit
     elif (exit_code[1] >= 500) and (exit_code[1] <= 599):
         exit_code_message = (
             "FAILURE: the solver stopped by an error condition "
             "in the solver routines!"
         )
-        res.termination_condition = TerminationCondition.error
+        result.termination_condition = TerminationCondition.error
 
-    if results.extra_info.solver_message:
-        results.extra_info.solver_message += '; ' + exit_code_message
+    if result.extra_info.solver_message:
+        result.extra_info.solver_message += '; ' + exit_code_message
     else:
-        results.extra_info.solver_message = exit_code_message
+        result.extra_info.solver_message = exit_code_message
 
-    if res.solution_status != SolutionStatus.noSolution:
+    if result.solution_status != SolutionStatus.noSolution:
         for v, val in zip(nl_info.variables, variable_vals):
             sol_data.primals[id(v)] = (v, val)
         if "dual" in suffixes_to_read:
@@ -390,7 +389,7 @@ def parse_sol_file(
                 while line:
                     remaining += line.strip() + "; "
                     line = sol_file.readline()
-                res.solver_message += remaining
+                result.solver_message += remaining
                 break
             unmasked_kind = int(line[1])
             kind = unmasked_kind & 3  # 0-var, 1-con, 2-obj, 3-prob
@@ -449,7 +448,7 @@ def parse_sol_file(
                     sol_file.readline()
             line = sol_file.readline()
 
-        return res, sol_data
+        return result, sol_data
 
 
 def parse_yaml():
