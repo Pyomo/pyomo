@@ -10,10 +10,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from __future__ import division
-
 import types
-from itertools import islice
+from itertools import combinations, islice
 
 import logging
 import traceback
@@ -37,6 +35,7 @@ from .numvalue import (
 from .base import ExpressionBase
 from .boolean_value import BooleanValue, BooleanConstant
 from .expr_common import _and, _or, _equiv, _inv, _xor, _impl, ExpressionType
+from .numeric_expr import NumericExpression
 
 import operator
 
@@ -238,6 +237,26 @@ def atleast(n, *args):
     """
     result = AtLeastExpression([n] + list(_flattened(args)))
     return result
+
+
+def all_different(*args):
+    """Creates a new AllDifferentExpression
+
+    Requires all of the arguments to take on a different value
+
+    Usage: all_different(m.X1, m.X2, ...)
+    """
+    return AllDifferentExpression(list(_flattened(args)))
+
+
+def count_if(*args):
+    """Creates a new CountIfExpression
+
+    Counts the number of True-valued arguments
+
+    Usage: count_if(m.Y1, m.Y2, ...)
+    """
+    return CountIfExpression(list(_flattened(args)))
 
 
 class UnaryBooleanExpression(BooleanExpression):
@@ -511,5 +530,53 @@ class AtLeastExpression(NaryBooleanExpression):
     def _apply_operation(self, result):
         return sum(result[1:]) >= result[0]
 
+
+class AllDifferentExpression(NaryBooleanExpression):
+    """
+    Logical expression that all of the N child statements have different values.
+    All arguments are expected to be discrete-valued.
+    """
+    __slots__ = ()
+
+    PRECEDENCE = 9 # TODO: maybe?
+
+    def getname(self, *arg, **kwd):
+        return 'all_different'
+
+    def _to_string(self, values, verbose, smap):
+        return "all_different(%s)" % (", ".join(values))
+
+    def _apply_operation(self, result):
+        for val1, val2 in combinations(result, 2):
+            if val1 == val2:
+                return False
+        return True
+
+class CountIfExpression(NumericExpression):
+    """
+    Logical expression that returns the number of True child statements.
+    All arguments are expected to be Boolean-valued.
+    """
+    __slots__ = ()
+    PRECEDENCE = 10 # TODO: maybe?
+
+    def __init__(self, args):
+        # require a list, a la SumExpression
+        if args.__class__ is not list:
+            args = list(args)
+        self._args_ = args
+
+    # NumericExpression assumes binary operator, so we have to override.
+    def nargs(self):
+        return len(self._args_)
+
+    def getname(self, *arg, **kwd):
+        return 'count_if'
+
+    def _to_string(self, values, verbose, smap):
+        return "count_if(%s)" % (", ".join(values))
+
+    def _apply_operation(self, result):
+        return sum(r for r in result)
 
 special_boolean_atom_types = {ExactlyExpression, AtMostExpression, AtLeastExpression}
