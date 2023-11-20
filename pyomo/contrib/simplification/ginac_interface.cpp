@@ -1,5 +1,11 @@
 #include "ginac_interface.hpp"
 
+
+bool is_integer(double x) {
+  return std::floor(x) == x;
+}
+
+
 ex ginac_expr_from_pyomo_node(
   py::handle expr, 
   std::unordered_map<long, ex> &leaf_map, 
@@ -13,7 +19,13 @@ ex ginac_expr_from_pyomo_node(
 
   switch (tmp_type) {
   case py_float: {
-    res = numeric(expr.cast<double>());
+    double val = expr.cast<double>();
+    if (is_integer(val)) {
+      res = numeric(expr.cast<long>());
+    }
+    else {
+      res = numeric(val);
+    }
     break;
   }
   case var: {
@@ -278,13 +290,9 @@ PYBIND11_MODULE(ginac_interface, m) {
   py::class_<PyomoExprTypes>(m, "PyomoExprTypes").def(py::init<>());
   py::class_<ex>(m, "ginac_expression")
     .def("expand", [](ex &ge) {
-      // exmap m;
-      // ex q;
-      // q = ge.to_polynomial(m).normal();
-      // return q.subs(m);
-      // return factor(ge.normal());
       return ge.expand();
     })
+    .def("normal", &ex::normal)
     .def("__str__", [](ex &ge) {
 	std::ostringstream stream;
 	stream << ge;
