@@ -536,9 +536,10 @@ class AllDifferentExpression(NaryBooleanExpression):
     Logical expression that all of the N child statements have different values.
     All arguments are expected to be discrete-valued.
     """
+
     __slots__ = ()
 
-    PRECEDENCE = 9 # TODO: maybe?
+    PRECEDENCE = 9  # TODO: maybe?
 
     def getname(self, *arg, **kwd):
         return 'all_different'
@@ -552,13 +553,15 @@ class AllDifferentExpression(NaryBooleanExpression):
                 return False
         return True
 
+
 class CountIfExpression(NumericExpression):
     """
     Logical expression that returns the number of True child statements.
     All arguments are expected to be Boolean-valued.
     """
+
     __slots__ = ()
-    PRECEDENCE = 10 # TODO: maybe?
+    PRECEDENCE = 10  # TODO: maybe?
 
     def __init__(self, args):
         # require a list, a la SumExpression
@@ -578,5 +581,6 @@ class CountIfExpression(NumericExpression):
 
     def _apply_operation(self, result):
         return sum(r for r in result)
+
 
 special_boolean_atom_types = {ExactlyExpression, AtMostExpression, AtLeastExpression}

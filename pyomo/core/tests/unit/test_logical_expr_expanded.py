@@ -42,7 +42,7 @@ from pyomo.environ import (
     lnot,
     xor,
     Var,
-    Integers
+    Integers,
 )
 
 
@@ -263,16 +263,16 @@ class TestLogicalClasses(unittest.TestCase):
             for ntrue in range(nargs + 1):
                 m.Y.set_values(dict(enumerate(truth_combination, 1)))
                 correct_value = sum(truth_combination)
-                self.assertEqual(
-                    value(count_if(*(m.Y[i] for i in m.s))), correct_value
-                )
+                self.assertEqual(value(count_if(*(m.Y[i] for i in m.s))), correct_value)
                 self.assertEqual(value(count_if(m.Y)), correct_value)
         m.x = 2
-        self.assertEqual(value(count_if([m.Y[i] for i in m.s] + [m.x == 3,])),
-                         correct_value)
+        self.assertEqual(
+            value(count_if([m.Y[i] for i in m.s] + [m.x == 3])), correct_value
+        )
         m.x = 3
-        self.assertEqual(value(count_if([m.Y[i] for i in m.s] + [m.x == 3,])),
-                         correct_value + 1)
+        self.assertEqual(
+            value(count_if([m.Y[i] for i in m.s] + [m.x == 3])), correct_value + 1
+        )
 
     def test_to_string(self):
         m = ConcreteModel()
