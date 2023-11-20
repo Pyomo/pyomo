@@ -183,9 +183,9 @@ class IPOPT(SolverBase):
     def _create_command_line(self, basename: str, config: IPOPTConfig):
         cmd = [
             str(config.executable),
-            os.path.join(basename, '.nl'),
+            basename + '.nl',
             '-AMPL',
-            'option_file_name=' + os.path.join(basename, '.opt'),
+            'option_file_name=' + basename + '.opt',
         ]
         if 'option_file_name' in config.solver_options:
             raise ValueError(
@@ -232,15 +232,14 @@ class IPOPT(SolverBase):
             if not os.path.exists(dname):
                 os.mkdir(dname)
             basename = os.path.join(dname, model.name)
-            if os.path.exists(os.path.join(basename, '.nl')):
+            if os.path.exists(basename + '.nl'):
                 raise RuntimeError(
                     f"NL file with the same name {basename + '.nl'} already exists!"
                 )
-            print(basename, os.path.join(basename, '.nl'))
             with (
-                open(os.path.join(basename, '.nl'), 'w') as nl_file,
-                open(os.path.join(basename, '.row'), 'w') as row_file,
-                open(os.path.join(basename, '.col'), 'w') as col_file,
+                open(basename + '.nl', 'w') as nl_file,
+                open(basename + '.row', 'w') as row_file,
+                open(basename + '.col', 'w') as col_file,
             ):
                 self.info = nl_writer.write(
                     model,
@@ -249,7 +248,7 @@ class IPOPT(SolverBase):
                     col_file,
                     symbolic_solver_labels=config.symbolic_solver_labels,
                 )
-            with open(os.path.join(basename, '.opt'), 'w') as opt_file:
+            with open(basename + '.opt', 'w') as opt_file:
                 self._write_options_file(
                     ostream=opt_file, options=config.solver_options
                 )
@@ -289,7 +288,7 @@ class IPOPT(SolverBase):
             else:
                 # TODO: Make a context manager out of this and open the file
                 # to pass to the results, instead of doing this thing.
-                with open(os.path.join(basename, '.sol'), 'r') as sol_file:
+                with open(basename + '.sol', 'r') as sol_file:
                     results = self._parse_solution(sol_file, self.info)
 
         if (
