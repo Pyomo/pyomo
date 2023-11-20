@@ -236,11 +236,7 @@ class IPOPT(SolverBase):
                 raise RuntimeError(
                     f"NL file with the same name {basename + '.nl'} already exists!"
                 )
-            with (
-                open(basename + '.nl', 'w') as nl_file,
-                open(basename + '.row', 'w') as row_file,
-                open(basename + '.col', 'w') as col_file,
-            ):
+            with open(basename + '.nl', 'w') as nl_file, open(basename + '.row', 'w') as row_file, open(basename + '.col', 'w') as col_file:
                 self.info = nl_writer.write(
                     model,
                     nl_file,
