@@ -141,7 +141,7 @@ ipopt_command_line_options = {
 }
 
 
-@SolverFactory.register('ipopt', doc='The IPOPT NLP solver (new interface)')
+@SolverFactory.register('ipopt_v2', doc='The IPOPT NLP solver (new interface)')
 class IPOPT(SolverBase):
     CONFIG = IPOPTConfig()
 

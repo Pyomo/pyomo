@@ -11,7 +11,7 @@ class TestIpoptPersistent(unittest.TestCase):
         if not DLL:
             self.skipTest('Could not find the amplgls.dll library')
 
-        opt = pe.SolverFactory('appsi_ipopt')
+        opt = pe.SolverFactory('ipopt_v2')
         if not opt.available(exception_flag=False):
             raise unittest.SkipTest
 
@@ -31,7 +31,7 @@ class TestIpoptPersistent(unittest.TestCase):
         if not DLL:
             self.skipTest('Could not find the amplgls.dll library')
 
-        opt = pe.SolverFactory('appsi_ipopt')
+        opt = pe.SolverFactory('ipopt_v2')
         if not opt.available(exception_flag=False):
             raise unittest.SkipTest
 

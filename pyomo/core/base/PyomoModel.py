@@ -40,6 +40,7 @@ from pyomo.dataportal.DataPortal import DataPortal
 
 from pyomo.opt.results import SolverResults, Solution, SolverStatus, UndefinedData
 
+from contextlib import nullcontext
 from io import StringIO
 
 logger = logging.getLogger('pyomo.core')
@@ -691,9 +692,6 @@ arguments (which have been ignored):"""
         if self.is_constructed():
             return self.clone()
 
-        if report_timing:
-            timing.report_timing()
-
         if name is None:
             # Preserve only the local name (not the FQ name, as that may
             # have been quoted or otherwise escaped)
@@ -709,42 +707,44 @@ arguments (which have been ignored):"""
         if data is None:
             data = {}
 
-        #
-        # Clone the model and load the data
-        #
-        instance = self.clone()
+        reporting_context = timing.report_timing if report_timing else nullcontext
+        with reporting_context():
+            #
+            # Clone the model and load the data
+            #
+            instance = self.clone()
 
-        if name is not None:
-            instance._name = name
+            if name is not None:
+                instance._name = name
 
-        # If someone passed a rule for creating the instance, fire the
-        # rule before constructing the components.
-        if instance._rule is not None:
-            instance._rule(instance, next(iter(self.index_set())))
+            # If someone passed a rule for creating the instance, fire the
+            # rule before constructing the components.
+            if instance._rule is not None:
+                instance._rule(instance, next(iter(self.index_set())))
 
-        if namespaces:
-            _namespaces = list(namespaces)
-        else:
-            _namespaces = []
-        if namespace is not None:
-            _namespaces.append(namespace)
-        if None not in _namespaces:
-            _namespaces.append(None)
+            if namespaces:
+                _namespaces = list(namespaces)
+            else:
+                _namespaces = []
+            if namespace is not None:
+                _namespaces.append(namespace)
+            if None not in _namespaces:
+                _namespaces.append(None)
 
-        instance.load(data, namespaces=_namespaces, profile_memory=profile_memory)
+            instance.load(data, namespaces=_namespaces, profile_memory=profile_memory)
 
-        #
-        # Indicate that the model is concrete/constructed
-        #
-        instance._constructed = True
-        #
-        # Change this class from "Abstract" to "Concrete".  It is
-        # absolutely crazy that this is allowed in Python, but since the
-        # AbstractModel and ConcreteModel are basically identical, we
-        # can "reassign" the new concrete instance to be an instance of
-        # ConcreteModel
-        #
-        instance.__class__ = ConcreteModel
+            #
+            # Indicate that the model is concrete/constructed
+            #
+            instance._constructed = True
+            #
+            # Change this class from "Abstract" to "Concrete".  It is
+            # absolutely crazy that this is allowed in Python, but since the
+            # AbstractModel and ConcreteModel are basically identical, we
+            # can "reassign" the new concrete instance to be an instance of
+            # ConcreteModel
+            #
+            instance.__class__ = ConcreteModel
         return instance
 
     @deprecated(

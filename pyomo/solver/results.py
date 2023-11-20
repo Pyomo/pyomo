@@ -268,94 +268,104 @@ def parse_sol_file(
     res = Results()
     sol_data = SolFileData()
 
-    fin = sol_file
     #
     # Some solvers (minto) do not write a message.  We will assume
     # all non-blank lines up the 'Options' line is the message.
-    msg = []
-    while True:
-        line = fin.readline()
+    results = Results()
+
+    # For backwards compatibility and general safety, we will parse all
+    # lines until "Options" appears. Anything before "Options" we will
+    # consider to be the solver message.
+    message = []
+    for line in sol_file:
         if not line:
-            # EOF
             break
         line = line.strip()
-        if line == 'Options':
+        if "Options" in line:
             break
-        if line:
-            msg.append(line)
-    msg = '\n'.join(msg)
-    z = []
-    if line[:7] == "Options":
-        line = fin.readline()
-        nopts = int(line)
-        need_vbtol = False
-        if nopts > 4:  # WEH - when is this true?
-            nopts -= 2
-            need_vbtol = True
-        for i in range(nopts + 4):
-            line = fin.readline()
-            z += [int(line)]
-        if need_vbtol:  # WEH - when is this true?
-            line = fin.readline()
-            z += [float(line)]
+        message.append(line)
+    message = '\n'.join(message)
+    # Once "Options" appears, we must now read the content under it.
+    model_objects = []
+    if "Options" in line:
+        line = sol_file.readline()
+        number_of_options = int(line)
+        need_tolerance = False
+        if number_of_options > 4: # MRM: Entirely unclear why this is necessary, or if it even is
+            number_of_options -= 2
+            need_tolerance = True
+        for i in range(number_of_options + 4):
+            line = sol_file.readline()
+            model_objects.append(int(line))
+        if need_tolerance: # MRM: Entirely unclear why this is necessary, or if it even is
+            line = sol_file.readline()
+            model_objects.append(float(line))
     else:
-        raise ValueError("no Options line found")
-    n = z[nopts + 3]  # variables
-    m = z[nopts + 1]  # constraints
-    x = []
-    y = []
-    i = 0
-    while i < m:
-        line = fin.readline()
-        y.append(float(line))
-        i += 1
-    i = 0
-    while i < n:
-        line = fin.readline()
-        x.append(float(line))
-        i += 1
-    objno = [0, 0]
-    line = fin.readline()
-    if line:  # WEH - when is this true?
-        if line[:5] != "objno":  # pragma:nocover
-            raise ValueError("expected 'objno', found '%s'" % (line))
-        t = line.split()
-        if len(t) != 3:
-            raise ValueError(
-                "expected two numbers in objno line, but found '%s'" % (line)
-            )
-        objno = [int(t[1]), int(t[2])]
-    res.solver_message = msg.strip().replace("\n", "; ")
-    res.solution_status = SolutionStatus.noSolution
-    res.termination_condition = TerminationCondition.unknown
-    if (objno[1] >= 0) and (objno[1] <= 99):
+        raise SolverSystemError("ERROR READING `sol` FILE. No 'Options' line found.")
+    # Identify the total number of variables and constraints
+    number_of_cons = model_objects[number_of_options + 1]
+    number_of_vars = model_objects[number_of_options + 3]
+    assert number_of_cons == len(nl_info.constraints)
+    assert number_of_vars == len(nl_info.variables)
+
+    duals = [float(sol_file.readline()) for i in range(number_of_cons)]
+    variable_vals = [float(sol_file.readline()) for i in range(number_of_vars)]
+
+    # Parse the exit code line and capture it
+    exit_code = [0, 0]
+    line = sol_file.readline()
+    if line and ('objno' in line):
+        exit_code_line = line.split()
+        if (len(exit_code_line) != 3):
+            raise SolverSystemError(f"ERROR READING `sol` FILE. Expected two numbers in `objno` line; received {line}.")
+        exit_code = [int(exit_code_line[1]), int(exit_code_line[2])]
+    else:
+        raise SolverSystemError(f"ERROR READING `sol` FILE. Expected `objno`; received {line}.")
+    results.extra_info.solver_message = message.strip().replace('\n', '; ')
+    if (exit_code[1] >= 0) and (exit_code[1] <= 99):
         res.solution_status = SolutionStatus.optimal
         res.termination_condition = TerminationCondition.convergenceCriteriaSatisfied
-    elif (objno[1] >= 100) and (objno[1] <= 199):
+    elif (exit_code[1] >= 100) and (exit_code[1] <= 199):
+        exit_code_message = "Optimal solution indicated, but ERROR LIKELY!"
         res.solution_status = SolutionStatus.feasible
         res.termination_condition = TerminationCondition.error
-    elif (objno[1] >= 200) and (objno[1] <= 299):
+    elif (exit_code[1] >= 200) and (exit_code[1] <= 299):
+        exit_code_message = "INFEASIBLE SOLUTION: constraints cannot be satisfied!"
         res.solution_status = SolutionStatus.infeasible
         # TODO: this is solver dependent
+        # But this was the way in the previous version - and has been fine thus far?
         res.termination_condition = TerminationCondition.locallyInfeasible
-    elif (objno[1] >= 300) and (objno[1] <= 399):
+    elif (exit_code[1] >= 300) and (exit_code[1] <= 399):
+        exit_code_message = "UNBOUNDED PROBLEM: the objective can be improved without limit!"
         res.solution_status = SolutionStatus.noSolution
         res.termination_condition = TerminationCondition.unbounded
-    elif (objno[1] >= 400) and (objno[1] <= 499):
+    elif (exit_code[1] >= 400) and (exit_code[1] <= 499):
+        exit_code_message = ("EXCEEDED MAXIMUM NUMBER OF ITERATIONS: the solver "
+        "was stopped by a limit that you set!")
         # TODO: this is solver dependent
+        # But this was the way in the previous version - and has been fine thus far?
         res.solution_status = SolutionStatus.infeasible
         res.termination_condition = TerminationCondition.iterationLimit
-    elif (objno[1] >= 500) and (objno[1] <= 599):
-        res.solution_status = SolutionStatus.noSolution
+    elif (exit_code[1] >= 500) and (exit_code[1] <= 599):
+        exit_code_message = (
+            "FAILURE: the solver stopped by an error condition "
+            "in the solver routines!"
+        )
         res.termination_condition = TerminationCondition.error
+
+    if results.extra_info.solver_message:
+        results.extra_info.solver_message += '; ' + exit_code_message
+    else:
+        results.extra_info.solver_message = exit_code_message
+
     if res.solution_status != SolutionStatus.noSolution:
-        for v, val in zip(nl_info.variables, x):
+        for v, val in zip(nl_info.variables, variable_vals):
             sol_data.primals[id(v)] = (v, val)
         if "dual" in suffixes_to_read:
-            for c, val in zip(nl_info.constraints, y):
+            for c, val in zip(nl_info.constraints, duals):
                 sol_data.duals[c] = val
         ### Read suffixes ###
-        line = fin.readline()
+        line = sol_file.readline()
         while line:
             line = line.strip()
             if line == "":
@@ -367,10 +377,10 @@ def parse_sol_file(
                 # section like kestrel_option, which
                 # comes after all suffixes.
                 remaining = ""
-                line = fin.readline()
+                line = sol_file.readline()
                 while line:
                     remaining += line.strip() + "; "
-                    line = fin.readline()
+                    line = sol_file.readline()
                 res.solver_message += remaining
                 break
             unmasked_kind = int(line[1])
@@ -382,16 +392,16 @@ def parse_sol_file(
             # namelen = int(line[3])
             # tablen = int(line[4])
             tabline = int(line[5])
-            suffix_name = fin.readline().strip()
+            suffix_name = sol_file.readline().strip()
             if suffix_name in suffixes_to_read:
                 # ignore translation of the table number to string value for now,
                 # this information can be obtained from the solver documentation
                 for n in range(tabline):
-                    fin.readline()
+                    sol_file.readline()
                 if kind == 0:  # Var
                     sol_data.var_suffixes[suffix_name] = dict()
                     for cnt in range(nvalues):
-                        suf_line = fin.readline().split()
+                        suf_line = sol_file.readline().split()
                         var_ndx = int(suf_line[0])
                         var = nl_info.variables[var_ndx]
                         sol_data.var_suffixes[suffix_name][id(var)] = (
@@ -401,7 +411,7 @@ def parse_sol_file(
                 elif kind == 1:  # Con
                     sol_data.con_suffixes[suffix_name] = dict()
                     for cnt in range(nvalues):
-                        suf_line = fin.readline().split()
+                        suf_line = sol_file.readline().split()
                         con_ndx = int(suf_line[0])
                         con = nl_info.constraints[con_ndx]
                         sol_data.con_suffixes[suffix_name][con] = convert_function(
@@ -410,7 +420,7 @@ def parse_sol_file(
                 elif kind == 2:  # Obj
                     sol_data.obj_suffixes[suffix_name] = dict()
                     for cnt in range(nvalues):
-                        suf_line = fin.readline().split()
+                        suf_line = sol_file.readline().split()
                         obj_ndx = int(suf_line[0])
                         obj = nl_info.objectives[obj_ndx]
                         sol_data.obj_suffixes[suffix_name][id(obj)] = (
@@ -420,15 +430,15 @@ def parse_sol_file(
                 elif kind == 3:  # Prob
                     sol_data.problem_suffixes[suffix_name] = list()
                     for cnt in range(nvalues):
-                        suf_line = fin.readline().split()
+                        suf_line = sol_file.readline().split()
                         sol_data.problem_suffixes[suffix_name].append(
                             convert_function(suf_line[1])
                         )
             else:
                 # do not store the suffix in the solution object
                 for cnt in range(nvalues):
-                    fin.readline()
-            line = fin.readline()
+                    sol_file.readline()
+            line = sol_file.readline()
 
         return res, sol_data
 
