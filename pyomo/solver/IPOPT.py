@@ -146,7 +146,7 @@ class IPOPT(SolverBase):
     CONFIG = IPOPTConfig()
 
     def __init__(self, **kwds):
-        self._config = self.CONFIG(kwds)
+        self.config = self.CONFIG(kwds)
 
     def available(self):
         if self.config.executable.path() is None:
@@ -168,11 +168,11 @@ class IPOPT(SolverBase):
 
     @property
     def config(self):
-        return self._config
+        return self.config
 
     @config.setter
     def config(self, val):
-        self._config = val
+        self.config = val
 
     def _write_options_file(self, ostream: io.TextIOBase, options: Mapping):
         f = ostream
@@ -284,7 +284,6 @@ class IPOPT(SolverBase):
             if process.returncode != 0:
                 results = Results()
                 results.termination_condition = TerminationCondition.error
-                results.solution_status = SolutionStatus.noSolution
                 results.solution_loader = SolutionLoader(None, None, None, None)
             else:
                 # TODO: Make a context manager out of this and open the file

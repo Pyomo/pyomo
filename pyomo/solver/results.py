@@ -234,9 +234,6 @@ class Results(ConfigDict):
         self.extra_info: ConfigDict = self.declare(
             'extra_info', ConfigDict(implicit=True)
         )
-        self.solver_message: Optional[str] = self.declare(
-            'solver_message', ConfigValue(domain=str, default=None)
-        )
 
     def __str__(self):
         s = ''
@@ -251,7 +248,7 @@ class ResultsReader:
     pass
 
 
-class SolFileData(object):
+class SolFileData:
     def __init__(self) -> None:
         self.primals: Dict[int, Tuple[_GeneralVarData, float]] = dict()
         self.duals: Dict[_ConstraintData, float] = dict()
