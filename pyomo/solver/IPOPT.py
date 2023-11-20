@@ -23,7 +23,13 @@ from pyomo.repn.plugins.nl_writer import NLWriter, NLWriterInfo
 from pyomo.solver.base import SolverBase
 from pyomo.solver.config import SolverConfig
 from pyomo.solver.factory import SolverFactory
-from pyomo.solver.results import Results, TerminationCondition, SolutionStatus, SolFileData, parse_sol_file
+from pyomo.solver.results import (
+    Results,
+    TerminationCondition,
+    SolutionStatus,
+    SolFileData,
+    parse_sol_file,
+)
 from pyomo.solver.solution import SolutionLoaderBase, SolutionLoader
 from pyomo.solver.util import SolverSystemError
 from pyomo.common.tee import TeeStream
@@ -65,10 +71,10 @@ class IPOPTConfig(SolverConfig):
         )
         self.solver_output_logger = self.declare(
             'solver_output_logger', ConfigValue(default=logger)
-            )
+        )
         self.log_level = self.declare(
             'log_level', ConfigValue(domain=NonNegativeInt, default=logging.INFO)
-            )
+        )
 
 
 class IPOPTSolutionLoader(SolutionLoaderBase):
@@ -227,10 +233,12 @@ class IPOPT(SolverBase):
                 os.mkdir(dname)
             basename = os.path.join(dname, model.name)
             if os.path.exists(basename + '.nl'):
-                raise RuntimeError(f"NL file with the same name {basename + '.nl'} already exists!")
+                raise RuntimeError(
+                    f"NL file with the same name {basename + '.nl'} already exists!"
+                )
             with (
-                open(basename + '.nl', 'w') as nl_file, 
-                open(basename + '.row', 'w') as row_file, 
+                open(basename + '.nl', 'w') as nl_file,
+                open(basename + '.row', 'w') as row_file,
                 open(basename + '.col', 'w') as col_file,
             ):
                 self.info = nl_writer.write(
@@ -241,14 +249,18 @@ class IPOPT(SolverBase):
                     symbolic_solver_labels=config.symbolic_solver_labels,
                 )
             with open(basename + '.opt', 'w') as opt_file:
-                self._write_options_file(ostream=opt_file, options=config.solver_options)
+                self._write_options_file(
+                    ostream=opt_file, options=config.solver_options
+                )
             # Call IPOPT - passing the files via the subprocess
             cmd = self._create_command_line(basename=basename, config=config)
 
             # this seems silly, but we have to give the subprocess slightly longer to finish than
             # ipopt
             if config.time_limit is not None:
-                timeout = config.time_limit + min(max(1.0, 0.01 * config.time_limit), 100)
+                timeout = config.time_limit + min(
+                    max(1.0, 0.01 * config.time_limit), 100
+                )
             else:
                 timeout = None
 
@@ -261,7 +273,12 @@ class IPOPT(SolverBase):
                 ostreams.append(sys.stdout)
             with TeeStream(*ostreams) as t:
                 process = subprocess.run(
-                    cmd, timeout=timeout, env=env, universal_newlines=True, stdout=t.STDOUT, stderr=t.STDERR,
+                    cmd,
+                    timeout=timeout,
+                    env=env,
+                    universal_newlines=True,
+                    stdout=t.STDOUT,
+                    stderr=t.STDERR,
                 )
 
             if process.returncode != 0:
@@ -274,23 +291,39 @@ class IPOPT(SolverBase):
                 # to pass to the results, instead of doing this thing.
                 with open(basename + '.sol', 'r') as sol_file:
                     results = self._parse_solution(sol_file, self.info)
-                
-        if config.raise_exception_on_nonoptimal_result and results.solution_status != SolutionStatus.optimal:
-            raise RuntimeError('Solver did not find the optimal solution. Set opt.config.raise_exception_on_nonoptimal_result = False to bypass this error.')
+
+        if (
+            config.raise_exception_on_nonoptimal_result
+            and results.solution_status != SolutionStatus.optimal
+        ):
+            raise RuntimeError(
+                'Solver did not find the optimal solution. Set opt.config.raise_exception_on_nonoptimal_result = False to bypass this error.'
+            )
 
         results.solver_name = 'ipopt'
         results.solver_version = self.version()
-        if config.load_solution and results.solution_status == SolutionStatus.noSolution:
+        if (
+            config.load_solution
+            and results.solution_status == SolutionStatus.noSolution
+        ):
             raise RuntimeError(
                 'A feasible solution was not found, so no solution can be loaded.'
                 'Please set config.load_solution=False to bypass this error.'
             )
-        
+
         if config.load_solution:
             results.solution_loader.load_vars()
-            if hasattr(model, 'dual') and isinstance(model.dual, Suffix) and model.dual.import_enabled():
+            if (
+                hasattr(model, 'dual')
+                and isinstance(model.dual, Suffix)
+                and model.dual.import_enabled()
+            ):
                 model.dual.update(results.solution_loader.get_duals())
-            if hasattr(model, 'rc') and isinstance(model.rc, Suffix) and model.rc.import_enabled():
+            if (
+                hasattr(model, 'rc')
+                and isinstance(model.rc, Suffix)
+                and model.rc.import_enabled()
+            ):
                 model.rc.update(results.solution_loader.get_reduced_costs())
 
         if results.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}:
@@ -300,7 +333,8 @@ class IPOPT(SolverBase):
                 results.incumbent_objective = replace_expressions(
                     self.info.objectives[0].expr,
                     substitution_map={
-                        id(v): val for v, val in results.solution_loader.get_primals().items()
+                        id(v): val
+                        for v, val in results.solution_loader.get_primals().items()
                     },
                     descend_into_named_expressions=True,
                     remove_named_expressions=True,
@@ -308,10 +342,11 @@ class IPOPT(SolverBase):
 
         return results
 
-
     def _parse_solution(self, instream: io.TextIOBase, nl_info: NLWriterInfo):
         suffixes_to_read = ['dual', 'ipopt_zL_out', 'ipopt_zU_out']
-        res, sol_data = parse_sol_file(sol_file=instream, nl_info=nl_info, suffixes_to_read=suffixes_to_read)
+        res, sol_data = parse_sol_file(
+            sol_file=instream, nl_info=nl_info, suffixes_to_read=suffixes_to_read
+        )
 
         if res.solution_status == SolutionStatus.noSolution:
             res.solution_loader = SolutionLoader(None, None, None, None)

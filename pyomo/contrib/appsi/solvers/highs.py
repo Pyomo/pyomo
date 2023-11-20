@@ -343,7 +343,6 @@ class Highs(PersistentSolverUtils, PersistentSolverBase):
                 f'({self.available()}).'
             )
 
-
         ostreams = [
             LogStream(
                 level=self.config.log_level, logger=self.config.solver_output_logger

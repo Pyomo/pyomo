@@ -235,8 +235,7 @@ class Results(ConfigDict):
             'extra_info', ConfigDict(implicit=True)
         )
         self.solver_message: Optional[str] = self.declare(
-            'solver_message',
-            ConfigValue(domain=str, default=None),
+            'solver_message', ConfigValue(domain=str, default=None)
         )
 
     def __str__(self):
@@ -262,7 +261,9 @@ class SolFileData(object):
         self.problem_suffixes: Dict[str, List[Any]] = dict()
 
 
-def parse_sol_file(sol_file: io.TextIOBase, nl_info: NLWriterInfo, suffixes_to_read: Sequence[str]) -> Tuple[Results, SolFileData]:
+def parse_sol_file(
+    sol_file: io.TextIOBase, nl_info: NLWriterInfo, suffixes_to_read: Sequence[str]
+) -> Tuple[Results, SolFileData]:
     suffixes_to_read = set(suffixes_to_read)
     res = Results()
     sol_data = SolFileData()
@@ -393,26 +394,36 @@ def parse_sol_file(sol_file: io.TextIOBase, nl_info: NLWriterInfo, suffixes_to_r
                         suf_line = fin.readline().split()
                         var_ndx = int(suf_line[0])
                         var = nl_info.variables[var_ndx]
-                        sol_data.var_suffixes[suffix_name][id(var)] = (var, convert_function(suf_line[1]))
+                        sol_data.var_suffixes[suffix_name][id(var)] = (
+                            var,
+                            convert_function(suf_line[1]),
+                        )
                 elif kind == 1:  # Con
                     sol_data.con_suffixes[suffix_name] = dict()
                     for cnt in range(nvalues):
                         suf_line = fin.readline().split()
                         con_ndx = int(suf_line[0])
                         con = nl_info.constraints[con_ndx]
-                        sol_data.con_suffixes[suffix_name][con] = convert_function(suf_line[1])
+                        sol_data.con_suffixes[suffix_name][con] = convert_function(
+                            suf_line[1]
+                        )
                 elif kind == 2:  # Obj
                     sol_data.obj_suffixes[suffix_name] = dict()
                     for cnt in range(nvalues):
                         suf_line = fin.readline().split()
                         obj_ndx = int(suf_line[0])
                         obj = nl_info.objectives[obj_ndx]
-                        sol_data.obj_suffixes[suffix_name][id(obj)] = (obj, convert_function(suf_line[1]))
+                        sol_data.obj_suffixes[suffix_name][id(obj)] = (
+                            obj,
+                            convert_function(suf_line[1]),
+                        )
                 elif kind == 3:  # Prob
                     sol_data.problem_suffixes[suffix_name] = list()
                     for cnt in range(nvalues):
                         suf_line = fin.readline().split()
-                        sol_data.problem_suffixes[suffix_name].append(convert_function(suf_line[1]))
+                        sol_data.problem_suffixes[suffix_name].append(
+                            convert_function(suf_line[1])
+                        )
             else:
                 # do not store the suffix in the solution object
                 for cnt in range(nvalues):

@@ -1335,7 +1335,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(res.incumbent_objective, 3)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
-    def test_bug_2(self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars):
+    def test_bug_2(
+        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
+    ):
         """
         This test is for a bug where an objective containing a fixed variable does
         not get updated properly when the variable is unfixed.
