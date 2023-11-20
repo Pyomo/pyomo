@@ -156,10 +156,35 @@ public:
       py::module_::import("pyomo.dae.integral").attr("Integral");
   py::object _PyomoUnit =
       py::module_::import("pyomo.core.base.units_container").attr("_PyomoUnit");
+  py::object exp = numeric_expr.attr("exp");
+  py::object log = numeric_expr.attr("log");
+  py::object sin = numeric_expr.attr("sin");
+  py::object cos = numeric_expr.attr("cos");
+  py::object tan = numeric_expr.attr("tan");
+  py::object asin = numeric_expr.attr("asin");
+  py::object acos = numeric_expr.attr("acos");
+  py::object atan = numeric_expr.attr("atan");
+  py::object sqrt = numeric_expr.attr("sqrt");
   py::object builtins = py::module_::import("builtins");
   py::object id = builtins.attr("id");
   py::object len = builtins.attr("len");
   py::dict expr_type_map;
 };
 
-ex ginac_expr_from_pyomo_expr(py::handle expr, PyomoExprTypes &expr_types);
+ex pyomo_to_ginac(py::handle expr, PyomoExprTypes &expr_types);
+
+
+class GinacInterface {
+    public:
+    std::unordered_map<long, ex> leaf_map;
+    std::unordered_map<ex, py::object> ginac_pyomo_map;
+    PyomoExprTypes expr_types;
+    bool symbolic_solver_labels = false;
+
+    GinacInterface() = default;
+    GinacInterface(bool _symbolic_solver_labels) : symbolic_solver_labels(_symbolic_solver_labels) {}
+    ~GinacInterface() = default;
+
+    ex to_ginac(py::handle expr);
+    py::object from_ginac(ex &ginac_expr);
+};
