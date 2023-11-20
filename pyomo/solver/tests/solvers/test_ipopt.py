@@ -39,7 +39,7 @@ class TestIPOPT(unittest.TestCase):
         self.assertIsInstance(config.executable, ExecutableData)
 
         # Test custom initialization
-        solver = SolverFactory('ipopt', save_solver_io=True)
+        solver = SolverFactory('ipopt_v2', save_solver_io=True)
         self.assertTrue(solver.config.save_solver_io)
         self.assertFalse(solver.config.tee)
 
