@@ -291,13 +291,17 @@ def parse_sol_file(
         line = sol_file.readline()
         number_of_options = int(line)
         need_tolerance = False
-        if number_of_options > 4: # MRM: Entirely unclear why this is necessary, or if it even is
+        if (
+            number_of_options > 4
+        ):  # MRM: Entirely unclear why this is necessary, or if it even is
             number_of_options -= 2
             need_tolerance = True
         for i in range(number_of_options + 4):
             line = sol_file.readline()
             model_objects.append(int(line))
-        if need_tolerance: # MRM: Entirely unclear why this is necessary, or if it even is
+        if (
+            need_tolerance
+        ):  # MRM: Entirely unclear why this is necessary, or if it even is
             line = sol_file.readline()
             model_objects.append(float(line))
     else:
@@ -316,11 +320,15 @@ def parse_sol_file(
     line = sol_file.readline()
     if line and ('objno' in line):
         exit_code_line = line.split()
-        if (len(exit_code_line) != 3):
-            raise SolverSystemError(f"ERROR READING `sol` FILE. Expected two numbers in `objno` line; received {line}.")
+        if len(exit_code_line) != 3:
+            raise SolverSystemError(
+                f"ERROR READING `sol` FILE. Expected two numbers in `objno` line; received {line}."
+            )
         exit_code = [int(exit_code_line[1]), int(exit_code_line[2])]
     else:
-        raise SolverSystemError(f"ERROR READING `sol` FILE. Expected `objno`; received {line}.")
+        raise SolverSystemError(
+            f"ERROR READING `sol` FILE. Expected `objno`; received {line}."
+        )
     results.extra_info.solver_message = message.strip().replace('\n', '; ')
     if (exit_code[1] >= 0) and (exit_code[1] <= 99):
         res.solution_status = SolutionStatus.optimal
@@ -336,12 +344,16 @@ def parse_sol_file(
         # But this was the way in the previous version - and has been fine thus far?
         res.termination_condition = TerminationCondition.locallyInfeasible
     elif (exit_code[1] >= 300) and (exit_code[1] <= 399):
-        exit_code_message = "UNBOUNDED PROBLEM: the objective can be improved without limit!"
+        exit_code_message = (
+            "UNBOUNDED PROBLEM: the objective can be improved without limit!"
+        )
         res.solution_status = SolutionStatus.noSolution
         res.termination_condition = TerminationCondition.unbounded
     elif (exit_code[1] >= 400) and (exit_code[1] <= 499):
-        exit_code_message = ("EXCEEDED MAXIMUM NUMBER OF ITERATIONS: the solver "
-        "was stopped by a limit that you set!")
+        exit_code_message = (
+            "EXCEEDED MAXIMUM NUMBER OF ITERATIONS: the solver "
+            "was stopped by a limit that you set!"
+        )
         # TODO: this is solver dependent
         # But this was the way in the previous version - and has been fine thus far?
         res.solution_status = SolutionStatus.infeasible
