@@ -864,7 +864,7 @@ class _MindtPyAlgorithm(object):
             results = self.nlp_opt.solve(
                 self.rnlp,
                 tee=config.nlp_solver_tee,
-                load_solutions=config.load_solutions,
+                load_solutions=self.load_solutions,
                 **nlp_args,
             )
             if len(results.solution) > 0:
