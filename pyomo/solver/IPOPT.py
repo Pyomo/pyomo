@@ -19,8 +19,9 @@ from pyomo.common import Executable
 from pyomo.common.config import ConfigValue, NonNegativeInt
 from pyomo.common.errors import PyomoException
 from pyomo.common.tempfiles import TempfileManager
+from pyomo.core.base.label import NumericLabeler
 from pyomo.repn.plugins.nl_writer import NLWriter, NLWriterInfo
-from pyomo.solver.base import SolverBase
+from pyomo.solver.base import SolverBase, SymbolMap
 from pyomo.solver.config import SolverConfig
 from pyomo.solver.factory import SolverFactory
 from pyomo.solver.results import (
@@ -153,7 +154,8 @@ class IPOPT(SolverBase):
 
     def __init__(self, **kwds):
         self._config = self.CONFIG(kwds)
-        self.ipopt_options = ipopt_command_line_options
+        self._writer = NLWriter()
+        self.ipopt_options = self._config.solver_options
 
     def available(self):
         if self.config.executable.path() is None:
@@ -181,6 +183,10 @@ class IPOPT(SolverBase):
     def config(self, val):
         self._config = val
 
+    @property
+    def symbol_map(self):
+        return self._symbol_map
+
     def _write_options_file(self, ostream: io.TextIOBase, options: Mapping):
         f = ostream
         for k, val in options.items():
@@ -199,10 +205,10 @@ class IPOPT(SolverBase):
                 'Use IPOPT.config.temp_dir to specify the name of the options file. '
                 'Do not use IPOPT.config.solver_options["option_file_name"].'
             )
-        ipopt_options = dict(config.solver_options)
-        if config.time_limit is not None and 'max_cpu_time' not in ipopt_options:
-            ipopt_options['max_cpu_time'] = config.time_limit
-        for k, v in ipopt_options.items():
+        self.ipopt_options = dict(config.solver_options)
+        if config.time_limit is not None and 'max_cpu_time' not in self.ipopt_options:
+            self.ipopt_options['max_cpu_time'] = config.time_limit
+        for k, v in self.ipopt_options.items():
             cmd.append(str(k) + '=' + str(v))
 
         return cmd
@@ -223,8 +229,6 @@ class IPOPT(SolverBase):
                     None, (env.get('AMPLFUNC', None), env.get('PYOMO_AMPLFUNC', None))
                 )
             )
-        # Write the model to an nl file
-        nl_writer = NLWriter()
         # Need to add check for symbolic_solver_labels; may need to generate up
         # to three files for nl, row, col, if ssl == True
         # What we have here may or may not work with IPOPT; will find out when
@@ -244,13 +248,19 @@ class IPOPT(SolverBase):
             with open(basename + '.nl', 'w') as nl_file, open(
                 basename + '.row', 'w'
             ) as row_file, open(basename + '.col', 'w') as col_file:
-                self.info = nl_writer.write(
+                self.info = self._writer.write(
                     model,
                     nl_file,
                     row_file,
                     col_file,
                     symbolic_solver_labels=config.symbolic_solver_labels,
                 )
+            symbol_map = self._symbol_map = SymbolMap()
+            labeler = NumericLabeler('component')
+            for v in self.info.variables:
+                symbol_map.getSymbol(v, labeler)
+            for c in self.info.constraints:
+                symbol_map.getSymbol(c, labeler)
             with open(basename + '.opt', 'w') as opt_file:
                 self._write_options_file(
                     ostream=opt_file, options=config.solver_options
