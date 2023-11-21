@@ -257,8 +257,7 @@ _bullet_re = re.compile(
     r'|(?:\[\s*[A-Za-z0-9\.]+\s*\] +)'  # [PASS]|[FAIL]|[ OK ]
 )
 _verbatim_line_start = re.compile(
-    r'(\| )'
-    r'|(\+((-{3,})|(={3,}))\+)'  # line blocks  # grid table
+    r'(\| )' r'|(\+((-{3,})|(={3,}))\+)'  # line blocks  # grid table
 )
 _verbatim_line = re.compile(
     r'(={3,}[ =]+)'  # simple tables, ======== sections

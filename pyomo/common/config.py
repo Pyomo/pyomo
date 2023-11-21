@@ -1102,7 +1102,9 @@ def _value2string(prefix, value, obj):
         try:
             _data = value._data if value is obj else value
             if getattr(builtins, _data.__class__.__name__, None) is not None:
-                _str += _dump(_data, default_flow_style=True, allow_unicode=True).rstrip()
+                _str += _dump(
+                    _data, default_flow_style=True, allow_unicode=True
+                ).rstrip()
                 if _str.endswith("..."):
                     _str = _str[:-3].rstrip()
             else:
