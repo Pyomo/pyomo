@@ -326,6 +326,7 @@ def parse_sol_file(
             f"ERROR READING `sol` FILE. Expected `objno`; received {line}."
         )
     result.extra_info.solver_message = message.strip().replace('\n', '; ')
+    exit_code_message = ''
     if (exit_code[1] >= 0) and (exit_code[1] <= 99):
         result.solution_status = SolutionStatus.optimal
         result.termination_condition = TerminationCondition.convergenceCriteriaSatisfied
@@ -362,7 +363,8 @@ def parse_sol_file(
         result.termination_condition = TerminationCondition.error
 
     if result.extra_info.solver_message:
-        result.extra_info.solver_message += '; ' + exit_code_message
+        if exit_code_message:
+            result.extra_info.solver_message += '; ' + exit_code_message
     else:
         result.extra_info.solver_message = exit_code_message
 
