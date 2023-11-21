@@ -22,7 +22,12 @@ from pyomo.contrib.cp.repn.docplex_writer import docplex_available, LogicalToDoC
 from pyomo.core.base.range import NumericRange
 from pyomo.core.expr.numeric_expr import MinExpression, MaxExpression
 from pyomo.core.expr.logical_expr import (
-    equivalent, exactly, atleast, atmost, all_different, count_if
+    equivalent,
+    exactly,
+    atleast,
+    atmost,
+    all_different,
+    count_if,
 )
 from pyomo.core.expr.relational_expr import NotEqualExpression
 
@@ -417,9 +422,7 @@ class TestCPExpressionWalker_LogicalExpressions(CommonTest):
             self.assertIn(id(m.a[i]), visitor.var_map)
             a[i] = visitor.var_map[id(m.a[i])]
 
-        self.assertTrue(
-            expr[1].equals(cp.all_diff(a[i] for i in m.I))
-        )
+        self.assertTrue(expr[1].equals(cp.all_diff(a[i] for i in m.I)))
 
     def test_Boolean_args_in_all_diff_expression(self):
         m = self.get_model()
@@ -435,9 +438,7 @@ class TestCPExpressionWalker_LogicalExpressions(CommonTest):
         self.assertIn(id(m.b), visitor.var_map)
         b = visitor.var_map[id(m.b)]
 
-        self.assertTrue(
-            expr[1].equals(cp.all_diff(a0 == 13, b))
-        )
+        self.assertTrue(expr[1].equals(cp.all_diff(a0 == 13, b)))
 
     def test_count_if_expression(self):
         m = self.get_model()
@@ -453,9 +454,7 @@ class TestCPExpressionWalker_LogicalExpressions(CommonTest):
             self.assertIn(id(m.a[i]), visitor.var_map)
             a[i] = visitor.var_map[id(m.a[i])]
 
-        self.assertTrue(
-            expr[1].equals(cp.count((a[i] == i for i in m.I), 1) == 5)
-        )
+        self.assertTrue(expr[1].equals(cp.count((a[i] == i for i in m.I), 1) == 5))
 
     def test_interval_var_is_present(self):
         m = self.get_model()

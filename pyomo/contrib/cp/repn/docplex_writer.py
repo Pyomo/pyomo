@@ -806,17 +806,11 @@ def _handle_at_least_node(visitor, node, *args):
 
 
 def _handle_all_diff_node(visitor, node, *args):
-    return (
-        _GENERAL,
-        cp.all_diff(_get_int_valued_expr(arg) for arg in args),
-    )
+    return (_GENERAL, cp.all_diff(_get_int_valued_expr(arg) for arg in args))
 
 
 def _handle_count_if_node(visitor, node, *args):
-    return (
-        _GENERAL,
-        cp.count((_get_bool_valued_expr(arg) for arg in args), 1),
-    )
+    return (_GENERAL, cp.count((_get_bool_valued_expr(arg) for arg in args), 1))
 
 
 ## CallExpression handllers
