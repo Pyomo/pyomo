@@ -44,30 +44,59 @@ _construction_logger = logging.getLogger('pyomo.common.timing.construction')
 _transform_logger = logging.getLogger('pyomo.common.timing.transformation')
 
 
-def report_timing(stream=True, level=logging.INFO):
-    """Set reporting of Pyomo timing information.
+class report_timing(object):
+    def __init__(self, stream=True, level=logging.INFO):
+        """Set reporting of Pyomo timing information.
 
-    Parameters
-    ----------
-    stream: bool, TextIOBase
-        The destination stream to emit timing information.  If ``True``,
-        defaults to ``sys.stdout``.  If ``False`` or ``None``, disables
-        reporting of timing information.
-    level: int
-        The logging level for the timing logger
-    """
-    if stream:
-        _logger.setLevel(level)
-        if stream is True:
-            stream = sys.stdout
-        handler = logging.StreamHandler(stream)
-        handler.setFormatter(logging.Formatter("      %(message)s"))
-        _logger.addHandler(handler)
-        return handler
-    else:
-        _logger.setLevel(logging.WARNING)
-        for h in _logger.handlers:
-            _logger.removeHandler(h)
+        For historical reasons, this class may be used as a function
+        (the reporting logger is configured as part of the instance
+        initializer).  However, the preferred usage is as a context
+        manager (thereby ensuring that the timing logger is restored
+        upon exit).
+
+        Parameters
+        ----------
+        stream: bool, TextIOBase
+
+            The destination stream to emit timing information.  If
+            ``True``, defaults to ``sys.stdout``.  If ``False`` or
+            ``None``, disables reporting of timing information.
+
+        level: int
+
+            The logging level for the timing logger
+
+        """
+        self._old_level = _logger.level
+        # For historical reasons (because report_timing() used to be a
+        # function), we will do what you think should be done in
+        # __enter__ here in __init__.
+        if stream:
+            _logger.setLevel(level)
+            if stream is True:
+                stream = sys.stdout
+            self._handler = logging.StreamHandler(stream)
+            self._handler.setFormatter(logging.Formatter("      %(message)s"))
+            _logger.addHandler(self._handler)
+        else:
+            self._handler = list(_logger.handlers)
+            _logger.setLevel(logging.WARNING)
+            for h in list(_logger.handlers):
+                _logger.removeHandler(h)
+
+    def reset(self):
+        _logger.setLevel(self._old_level)
+        if type(self._handler) is list:
+            for h in self._handler:
+                _logger.addHandler(h)
+        else:
+            _logger.removeHandler(self._handler)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, et, ev, tb):
+        self.reset()
 
 
 class GeneralTimer(object):
@@ -194,19 +223,14 @@ class TransformationTimer(object):
 #
 # Setup the timer
 #
-# TODO: Remove this bit for Pyomo 6.0 - we won't care about older versions
-if sys.version_info >= (3, 3):
-    # perf_counter is guaranteed to be monotonic and the most accurate timer
-    default_timer = time.perf_counter
-elif sys.platform.startswith('win'):
-    # On old Pythons, clock() is more accurate than time() on Windows
-    # (.35us vs 15ms), but time() is more accurate than clock() on Linux
-    # (1ns vs 1us).  It is unfortunate that time() is not monotonic, but
-    # since the TicTocTimer is used for (potentially very accurate)
-    # timers, we will sacrifice monotonicity on Linux for resolution.
-    default_timer = time.clock
-else:
-    default_timer = time.time
+# perf_counter is guaranteed to be monotonic and the most accurate
+# timer.  It became available in Python 3.3.  Prior to that, clock() was
+# more accurate than time() on Windows (.35us vs 15ms), but time() was
+# more accurate than clock() on Linux (1ns vs 1us).  It is unfortunate
+# that time() is not monotonic, but since the TicTocTimer is used for
+# (potentially very accurate) timers, we will sacrifice monotonicity on
+# Linux for resolution.
+default_timer = time.perf_counter
 
 
 class TicTocTimer(object):
