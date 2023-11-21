@@ -55,7 +55,7 @@ def _get_bound(exp):
 
 @WriterFactory.register('mps', 'Generate the corresponding MPS file')
 class ProblemWriter_mps(AbstractProblemWriter):
-    def __init__(self):
+    def __init__(self, int_marker=False):
         AbstractProblemWriter.__init__(self, ProblemFormat.mps)
 
         # the MPS writer is responsible for tracking which variables are
@@ -77,6 +77,8 @@ class ProblemWriter_mps(AbstractProblemWriter):
         #               and you will need to go add extra logic to output
         #               the number's sign.
         self._precision_string = '.17g'
+
+        self._int_marker = int_marker
 
     def __call__(self, model, output_filename, solver_capability, io_options):
         # Make sure not to modify the user's dictionary,
@@ -515,10 +517,27 @@ class ProblemWriter_mps(AbstractProblemWriter):
         column_template = "     %s %s %" + self._precision_string + "\n"
         output_file.write("COLUMNS\n")
         cnt = 0
+        in_integer_section = False
+        mark_cnt = 0
         for vardata in variable_list:
             col_entries = column_data[variable_to_column[vardata]]
             cnt += 1
             if len(col_entries) > 0:
+                if self._int_marker:
+                    if vardata.is_integer():
+                        if not in_integer_section:
+                            output_file.write(
+                                f"     MARK{mark_cnt:04d} 'MARKER' 'INTORG'\n"
+                            )
+                            in_integer_section = True
+                            mark_cnt += 1
+                    elif in_integer_section:  # and not vardata.is_integer()
+                        output_file.write(
+                            f"     MARK{mark_cnt:04d} 'MARKER' 'INTEND'\n"
+                        )
+                        in_integer_section = False
+                        mark_cnt += 1
+
                 var_label = variable_symbol_dictionary[id(vardata)]
                 for i, (row_label, coef) in enumerate(col_entries):
                     output_file.write(
@@ -535,6 +554,9 @@ class ProblemWriter_mps(AbstractProblemWriter):
                 #   doing it this way so that it will work for both
                 var_label = variable_symbol_dictionary[id(vardata)]
                 output_file.write(column_template % (var_label, objective_label, 0))
+
+        if self._int_marker and in_integer_section:
+            output_file.write(f"     MARK{mark_cnt:04d} 'MARKER' 'INTEND'\n")
 
         assert cnt == len(column_data) - 1
         if len(column_data[-1]) > 0:

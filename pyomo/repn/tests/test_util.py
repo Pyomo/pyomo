@@ -18,6 +18,13 @@ from io import StringIO
 from pyomo.common.collections import ComponentMap
 from pyomo.common.errors import DeveloperError, InvalidValueError
 from pyomo.common.log import LoggingIntercept
+from pyomo.core.expr import (
+    ProductExpression,
+    NPV_ProductExpression,
+    SumExpression,
+    DivisionExpression,
+    NPV_DivisionExpression,
+)
 from pyomo.environ import (
     ConcreteModel,
     Block,
@@ -32,6 +39,9 @@ from pyomo.environ import (
 )
 import pyomo.repn.util
 from pyomo.repn.util import (
+    _CONSTANT,
+    BeforeChildDispatcher,
+    ExitNodeDispatcher,
     FileDeterminism,
     FileDeterminism_to_SortComponents,
     InvalidNumber,
@@ -636,6 +646,179 @@ class TestRepnUtils(unittest.TestCase):
         )
         # verify no side effects
         self.assertEqual(MockConfig.row_order, ref)
+
+    def test_ExitNodeDispatcher_registration(self):
+        end = ExitNodeDispatcher(
+            {
+                ProductExpression: lambda v, n, d1, d2: d1 * d2,
+                Expression: lambda v, n, d: d,
+            }
+        )
+        self.assertEqual(len(end), 2)
+
+        node = ProductExpression((3, 4))
+        self.assertEqual(end[node.__class__](None, node, *node.args), 12)
+        self.assertEqual(len(end), 2)
+
+        node = Expression(initialize=5)
+        node.construct()
+        self.assertEqual(end[node.__class__](None, node, *node.args), 5)
+        self.assertEqual(len(end), 3)
+        self.assertIn(node.__class__, end)
+
+        node = NPV_ProductExpression((6, 7))
+        self.assertEqual(end[node.__class__](None, node, *node.args), 42)
+        self.assertEqual(len(end), 4)
+        self.assertIn(NPV_ProductExpression, end)
+
+        class NewProductExpression(ProductExpression):
+            pass
+
+        node = NewProductExpression((6, 7))
+        with self.assertRaisesRegex(
+            DeveloperError, r".*Unexpected expression node type 'NewProductExpression'"
+        ):
+            end[node.__class__](None, node, *node.args)
+        self.assertEqual(len(end), 4)
+
+        end[SumExpression, 2] = lambda v, n, *d: 2 * sum(d)
+        self.assertEqual(len(end), 5)
+
+        node = SumExpression((1, 2, 3))
+        self.assertEqual(end[node.__class__, 2](None, node, *node.args), 12)
+        self.assertEqual(len(end), 5)
+
+        with self.assertRaisesRegex(
+            DeveloperError,
+            r"(?s)Base expression key '\(<class.*"
+            r"'pyomo.core.expr.numeric_expr.SumExpression'>, 3\)' not found when.*"
+            r"inserting dispatcher for node 'SumExpression' while walking.*"
+            r"expression tree.",
+        ):
+            end[node.__class__, 3](None, node, *node.args)
+        self.assertEqual(len(end), 5)
+
+        end[SumExpression] = lambda v, n, *d: sum(d)
+        self.assertEqual(len(end), 6)
+        self.assertIn(SumExpression, end)
+
+        self.assertEqual(end[node.__class__, 1](None, node, *node.args), 6)
+        self.assertEqual(len(end), 7)
+        self.assertIn((SumExpression, 1), end)
+
+        self.assertEqual(end[node.__class__, 3, 4, 5, 6](None, node, *node.args), 6)
+        self.assertEqual(len(end), 7)
+        self.assertNotIn((SumExpression, 3, 4, 5, 6), end)
+
+    def test_BeforeChildDispatcher_registration(self):
+        class BeforeChildDispatcherTester(BeforeChildDispatcher):
+            @staticmethod
+            def _before_var(visitor, child):
+                return child
+
+            @staticmethod
+            def _before_named_expression(visitor, child):
+                return child
+
+        class VisitorTester(object):
+            def check_constant(self, value, node):
+                return value
+
+            def evaluate(self, node):
+                return node()
+
+        visitor = VisitorTester()
+
+        bcd = BeforeChildDispatcherTester()
+        self.assertEqual(len(bcd), 0)
+
+        node = 5
+        self.assertEqual(bcd[node.__class__](None, node), (False, (_CONSTANT, 5)))
+        self.assertIs(bcd[int], bcd._before_native)
+        self.assertEqual(len(bcd), 1)
+
+        node = 'string'
+        ans = bcd[node.__class__](None, node)
+        self.assertEqual(ans, (False, (_CONSTANT, InvalidNumber(node))))
+        self.assertEqual(
+            ''.join(ans[1][1].causes),
+            "'string' (<class 'str'>) is not a valid numeric type",
+        )
+        self.assertIs(bcd[str], bcd._before_string)
+        self.assertEqual(len(bcd), 2)
+
+        node = True
+        ans = bcd[node.__class__](None, node)
+        self.assertEqual(ans, (False, (_CONSTANT, InvalidNumber(node))))
+        self.assertEqual(
+            ''.join(ans[1][1].causes),
+            "True (<class 'bool'>) is not a valid numeric type",
+        )
+        self.assertIs(bcd[bool], bcd._before_invalid)
+        self.assertEqual(len(bcd), 3)
+
+        node = 1j
+        ans = bcd[node.__class__](None, node)
+        self.assertEqual(ans, (False, (_CONSTANT, InvalidNumber(node))))
+        self.assertEqual(
+            ''.join(ans[1][1].causes), "Complex number returned from expression"
+        )
+        self.assertIs(bcd[complex], bcd._before_complex)
+        self.assertEqual(len(bcd), 4)
+
+        class new_int(int):
+            pass
+
+        node = new_int(5)
+        self.assertEqual(bcd[node.__class__](None, node), (False, (_CONSTANT, 5)))
+        self.assertIs(bcd[new_int], bcd._before_native)
+        self.assertEqual(len(bcd), 5)
+
+        node = []
+        ans = bcd[node.__class__](None, node)
+        self.assertEqual(ans, (False, (_CONSTANT, InvalidNumber([]))))
+        self.assertEqual(
+            ''.join(ans[1][1].causes), "[] (<class 'list'>) is not a valid numeric type"
+        )
+        self.assertIs(bcd[list], bcd._before_invalid)
+        self.assertEqual(len(bcd), 6)
+
+        node = Var(initialize=7)
+        node.construct()
+        self.assertIs(bcd[node.__class__](None, node), node)
+        self.assertIs(bcd[node.__class__], bcd._before_var)
+        self.assertEqual(len(bcd), 7)
+
+        node = Param(initialize=8)
+        node.construct()
+        self.assertEqual(bcd[node.__class__](visitor, node), (False, (_CONSTANT, 8)))
+        self.assertIs(bcd[node.__class__], bcd._before_param)
+        self.assertEqual(len(bcd), 8)
+
+        node = Expression(initialize=9)
+        node.construct()
+        self.assertIs(bcd[node.__class__](None, node), node)
+        self.assertIs(bcd[node.__class__], bcd._before_named_expression)
+        self.assertEqual(len(bcd), 9)
+
+        node = SumExpression((3, 5))
+        self.assertEqual(bcd[node.__class__](None, node), (True, None))
+        self.assertIs(bcd[node.__class__], bcd._before_general_expression)
+        self.assertEqual(len(bcd), 10)
+
+        node = NPV_ProductExpression((3, 5))
+        self.assertEqual(bcd[node.__class__](visitor, node), (False, (_CONSTANT, 15)))
+        self.assertEqual(len(bcd), 12)
+        self.assertIs(bcd[NPV_ProductExpression], bcd._before_npv)
+        self.assertIs(bcd[ProductExpression], bcd._before_general_expression)
+        self.assertEqual(len(bcd), 12)
+
+        node = NPV_DivisionExpression((3, 0))
+        self.assertEqual(bcd[node.__class__](visitor, node), (True, None))
+        self.assertEqual(len(bcd), 14)
+        self.assertIs(bcd[NPV_DivisionExpression], bcd._before_npv)
+        self.assertIs(bcd[DivisionExpression], bcd._before_general_expression)
+        self.assertEqual(len(bcd), 14)
 
 
 if __name__ == "__main__":

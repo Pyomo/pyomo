@@ -36,12 +36,17 @@ from pyomo.environ import (
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.tests.common_tests import (
     check_linear_coef,
+    check_nested_disjuncts_in_flat_gdp,
     check_obj_in_active_tree,
     check_pprint_equal,
 )
+from pyomo.gdp.tests.models import make_indexed_equality_model
 from pyomo.repn import generate_standard_repn
 
-gurobi_available = SolverFactory('gurobi').available()
+gurobi_available = (
+    SolverFactory('gurobi').available(exception_flag=False)
+    and SolverFactory('gurobi').license_is_valid()
+)
 exdir = normpath(join(PYOMO_ROOT_DIR, 'examples', 'gdp'))
 
 
@@ -860,3 +865,68 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         self.check_traditionally_bigmed_constraints(
             m, mbm, {m.d1: (-1050, 1050), m.d2: (-2000, 1200), m.d3: (-4000, 4000)}
         )
+
+
+@unittest.skipUnless(gurobi_available, "Gurobi is not available")
+class NestedDisjunctsInFlatGDP(unittest.TestCase):
+    """
+    This class tests the fix for #2702
+    """
+
+    def test_declare_disjuncts_in_disjunction_rule(self):
+        check_nested_disjuncts_in_flat_gdp(self, 'bigm')
+
+
+@unittest.skipUnless(gurobi_available, "Gurobi is not available")
+class IndexedDisjunction(unittest.TestCase):
+    def test_two_term_indexed_disjunction(self):
+        """
+        This test checks that we don't do anything silly with transformation Blocks in
+        the case that the Disjunction is indexed.
+        """
+        m = make_indexed_equality_model()
+
+        mbm = TransformationFactory('gdp.mbigm')
+        mbm.apply_to(m)
+
+        cons = mbm.get_transformed_constraints(m.d[1].disjuncts[0].constraint[1])
+        self.assertEqual(len(cons), 2)
+        assertExpressionsEqual(
+            self,
+            cons[0].expr,
+            m.x[1]
+            >= m.d[1].disjuncts[0].binary_indicator_var
+            + 2.0 * m.d[1].disjuncts[1].binary_indicator_var,
+        )
+        assertExpressionsEqual(
+            self,
+            cons[1].expr,
+            m.x[1]
+            <= m.d[1].disjuncts[0].binary_indicator_var
+            + 2.0 * m.d[1].disjuncts[1].binary_indicator_var,
+        )
+        cons_again = mbm.get_transformed_constraints(m.d[1].disjuncts[1].constraint[1])
+        self.assertEqual(len(cons_again), 2)
+        self.assertIs(cons_again[0], cons[0])
+        self.assertIs(cons_again[1], cons[1])
+
+        cons = mbm.get_transformed_constraints(m.d[2].disjuncts[0].constraint[1])
+        self.assertEqual(len(cons), 2)
+        assertExpressionsEqual(
+            self,
+            cons[0].expr,
+            m.x[2]
+            >= m.d[2].disjuncts[0].binary_indicator_var
+            + 2.0 * m.d[2].disjuncts[1].binary_indicator_var,
+        )
+        assertExpressionsEqual(
+            self,
+            cons[1].expr,
+            m.x[2]
+            <= m.d[2].disjuncts[0].binary_indicator_var
+            + 2.0 * m.d[2].disjuncts[1].binary_indicator_var,
+        )
+        cons_again = mbm.get_transformed_constraints(m.d[2].disjuncts[1].constraint[1])
+        self.assertEqual(len(cons_again), 2)
+        self.assertIs(cons_again[0], cons[0])
+        self.assertIs(cons_again[1], cons[1])

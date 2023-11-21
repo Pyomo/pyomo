@@ -9,7 +9,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import collections
 import enum
+import functools
 import itertools
 import logging
 import operator
@@ -18,6 +20,12 @@ import sys
 from pyomo.common.collections import Sequence, ComponentMap
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.errors import DeveloperError, InvalidValueError
+from pyomo.common.numeric_types import (
+    check_if_numeric_type,
+    native_types,
+    native_numeric_types,
+    native_complex_types,
+)
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.base import (
     Var,
@@ -26,11 +34,13 @@ from pyomo.core.base import (
     Objective,
     Block,
     Constraint,
+    Expression,
     Suffix,
     SortComponents,
 )
 from pyomo.core.base.component import ActiveComponent
-from pyomo.core.expr.numvalue import native_numeric_types, is_fixed, value
+from pyomo.core.base.expression import _ExpressionData
+from pyomo.core.expr.numvalue import is_fixed, value
 import pyomo.core.expr as EXPR
 import pyomo.core.kernel as kernel
 
@@ -43,6 +53,11 @@ sum_like_expression_types = {
     EXPR.LinearExpression,
     EXPR.NPV_SumExpression,
 }
+_named_subexpression_types = (
+    _ExpressionData,
+    kernel.expression.expression,
+    kernel.objective.objective,
+)
 
 HALT_ON_EVALUATION_ERROR = False
 nan = float('nan')
@@ -80,9 +95,8 @@ class FileDeterminism(enum.IntEnum):
         return enum.Enum.__str__(self)
 
     def __format__(self, spec):
-        # This cannot just call Enum.__format__ because that returns the
-        # numeric value in Python 3.7
-        return str(self).__format__(spec)
+        # Removal of Python 3.7 support allows us to use Enum.__format__
+        return enum.Enum.__format__(self, spec)
 
     @classmethod
     def _missing_(cls, value):
@@ -220,6 +234,195 @@ class InvalidNumber(PyomoObject):
 
     def __rpow__(self, other):
         return self._op(operator.pow, other, self)
+
+
+_CONSTANT = ExprType.CONSTANT
+
+
+class BeforeChildDispatcher(collections.defaultdict):
+    """Dispatcher for handling the :py:class:`StreamBasedExpressionVisitor`
+    `beforeChild` callback
+
+    This dispatcher implements a specialization of :py:`defaultdict`
+    that supports automatic type registration.  Any missing types will
+    return the :py:meth:`register_dispatcher` method, which (when called
+    as a callback) will interrogate the type, identify the appropriate
+    callback, add the callback to the dict, and return the result of
+    calling the callback.  As the callback is added to the dict, no type
+    will incur the overhead of `register_dispatcher` more than once.
+
+    Note that all dispatchers are implemented as `staticmethod`
+    functions to avoid the (unnecessary) overhead of binding to the
+    dispatcher object.
+
+    """
+
+    __slots__ = ()
+
+    def __missing__(self, key):
+        return self.register_dispatcher
+
+    def register_dispatcher(self, visitor, child):
+        child_type = type(child)
+        if child_type in native_numeric_types:
+            self[child_type] = self._before_native
+        elif issubclass(child_type, str):
+            self[child_type] = self._before_string
+        elif child_type in native_types:
+            if issubclass(child_type, tuple(native_complex_types)):
+                self[child_type] = self._before_complex
+            else:
+                self[child_type] = self._before_invalid
+        elif not hasattr(child, 'is_expression_type'):
+            if check_if_numeric_type(child):
+                self[child_type] = self._before_native
+            else:
+                self[child_type] = self._before_invalid
+        elif not child.is_expression_type():
+            if child.is_potentially_variable():
+                self[child_type] = self._before_var
+            else:
+                self[child_type] = self._before_param
+        elif not child.is_potentially_variable():
+            self[child_type] = self._before_npv
+            pv_base_type = child.potentially_variable_base_class()
+            if pv_base_type not in self:
+                try:
+                    child.__class__ = pv_base_type
+                    self.register_dispatcher(visitor, child)
+                finally:
+                    child.__class__ = child_type
+        elif (
+            issubclass(child_type, _named_subexpression_types)
+            or child_type is kernel.expression.noclone
+        ):
+            self[child_type] = self._before_named_expression
+        else:
+            self[child_type] = self._before_general_expression
+        return self[child_type](visitor, child)
+
+    @staticmethod
+    def _before_general_expression(visitor, child):
+        return True, None
+
+    @staticmethod
+    def _before_native(visitor, child):
+        return False, (_CONSTANT, child)
+
+    @staticmethod
+    def _before_complex(visitor, child):
+        return False, (_CONSTANT, complex_number_error(child, visitor, child))
+
+    @staticmethod
+    def _before_invalid(visitor, child):
+        return False, (
+            _CONSTANT,
+            InvalidNumber(
+                child, f"{child!r} ({type(child)}) is not a valid numeric type"
+            ),
+        )
+
+    @staticmethod
+    def _before_string(visitor, child):
+        return False, (
+            _CONSTANT,
+            InvalidNumber(
+                child, f"{child!r} ({type(child)}) is not a valid numeric type"
+            ),
+        )
+
+    @staticmethod
+    def _before_npv(visitor, child):
+        try:
+            return False, (
+                _CONSTANT,
+                visitor.check_constant(visitor.evaluate(child), child),
+            )
+        except (ValueError, ArithmeticError):
+            return True, None
+
+    @staticmethod
+    def _before_param(visitor, child):
+        return False, (_CONSTANT, visitor.check_constant(child.value, child))
+
+    #
+    # The following methods must be defined by derivative classes (along
+    # with any other special-case handling they want to implement;
+    # usually including handling for Monomial, Linear, and
+    # ExternalFunction
+    #
+
+    # @staticmethod
+    # def _before_var(visitor, child):
+    #     pass
+
+    # @staticmethod
+    # def _before_named_expression(visitor, child):
+    #     pass
+
+
+class ExitNodeDispatcher(collections.defaultdict):
+    """Dispatcher for handling the :py:class:`StreamBasedExpressionVisitor`
+    `exitNode` callback
+
+    This dispatcher implements a specialization of :py:`defaultdict`
+    that supports automatic type registration.  Any missing types will
+    return the :py:meth:`register_dispatcher` method, which (when called
+    as a callback) will interrogate the type, identify the appropriate
+    callback, add the callback to the dict, and return the result of
+    calling the callback.  As the callback is added to the dict, no type
+    will incur the overhead of `register_dispatcher` more than once.
+
+    Note that in this case, the client is expected to register all
+    non-NPV expression types.  The auto-registration is designed to only
+    handle two cases:
+    - Auto-detection of user-defined Named Expression types
+    - Automatic mappimg of NPV expressions to their equivalent non-NPV handlers
+
+    """
+
+    __slots__ = ()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(None, *args, **kwargs)
+
+    def __missing__(self, key):
+        return functools.partial(self.register_dispatcher, key=key)
+
+    def register_dispatcher(self, visitor, node, *data, key=None):
+        if (
+            isinstance(node, _named_subexpression_types)
+            or type(node) is kernel.expression.noclone
+        ):
+            base_type = Expression
+        elif not node.is_potentially_variable():
+            base_type = node.potentially_variable_base_class()
+        else:
+            base_type = node.__class__
+        if isinstance(key, tuple):
+            base_key = (base_type,) + key[1:]
+            # Only cache handlers for unary, binary and ternary operators
+            cache = len(key) <= 4
+        else:
+            base_key = base_type
+            cache = True
+        if base_key in self:
+            fcn = self[base_key]
+        elif base_type in self:
+            fcn = self[base_type]
+        elif any((k[0] if k.__class__ is tuple else k) is base_type for k in self):
+            raise DeveloperError(
+                f"Base expression key '{base_key}' not found when inserting dispatcher"
+                f" for node '{type(node).__name__}' while walking expression tree."
+            )
+        else:
+            raise DeveloperError(
+                f"Unexpected expression node type '{type(node).__name__}' "
+                "found while walking expression tree."
+            )
+        if cache:
+            self[key] = fcn
+        return fcn(visitor, node, *data)
 
 
 def apply_node_operation(node, args):

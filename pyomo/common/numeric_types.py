@@ -41,9 +41,14 @@ nonpyomo_leaf_types = set()
 #: Python set used to identify numeric constants.  This set includes
 #: native Python types as well as numeric types from Python packages
 #: like numpy, which may be registered by users.
-native_numeric_types = {int, float, complex}
+#:
+#: Note that :data:`native_numeric_types` does NOT include
+#: :py:`complex`, as that is not a valid constant in Pyomo numeric
+#: expressions.
+native_numeric_types = {int, float}
 native_integer_types = {int}
 native_logical_types = {bool}
+native_complex_types = {complex}
 pyomo_constant_types = set()  # includes NumericConstant
 
 _native_boolean_types = {int, bool, str, bytes}
@@ -64,34 +69,53 @@ relocated_module_attribute(
 #: like numpy.
 #:
 #: :data:`native_types` = :data:`native_numeric_types <pyomo.core.expr.numvalue.native_numeric_types>` + { str }
-native_types = set([bool, str, type(None), slice, bytes])
+native_types = {bool, str, type(None), slice, bytes}
 native_types.update(native_numeric_types)
 native_types.update(native_integer_types)
-native_types.update(_native_boolean_types)
+native_types.update(native_complex_types)
 native_types.update(native_logical_types)
+native_types.update(_native_boolean_types)
 
 nonpyomo_leaf_types.update(native_types)
 
 
-def RegisterNumericType(new_type):
-    """
-    A utility function for updating the set of types that are
-    recognized to handle numeric values.
+def RegisterNumericType(new_type: type):
+    """Register the specified type as a "numeric type".
 
-    The argument should be a class (e.g, numpy.float64).
+    A utility function for registering new types as "native numeric
+    types" that can be leaf nodes in Pyomo numeric expressions.  The
+    type should be compatible with :py:class:`float` (that is, store a
+    scalar and be castable to a Python float).
+
+    Parameters
+    ----------
+    new_type: type
+        The new numeric type (e.g, numpy.float64)
+
     """
     native_numeric_types.add(new_type)
     native_types.add(new_type)
     nonpyomo_leaf_types.add(new_type)
 
 
-def RegisterIntegerType(new_type):
-    """
-    A utility function for updating the set of types that are
-    recognized to handle integer values. This also registers the type
-    as numeric but does not register it as boolean.
+def RegisterIntegerType(new_type: type):
+    """Register the specified type as an "integer type".
 
-    The argument should be a class (e.g., numpy.int64).
+    A utility function for registering new types as "native integer
+    types".  Integer types can be leaf nodes in Pyomo numeric
+    expressions.  The type should be compatible with :py:class:`float`
+    (that is, store a scalar and be castable to a Python float).
+
+    Registering a type as an integer type implies
+    :py:func:`RegisterNumericType`.
+
+    Note that integer types are NOT registered as logical / Boolean types.
+
+    Parameters
+    ----------
+    new_type: type
+        The new integer type (e.g, numpy.int64)
+
     """
     native_numeric_types.add(new_type)
     native_integer_types.add(new_type)
@@ -104,26 +128,64 @@ def RegisterIntegerType(new_type):
     "is deprecated.  Users likely should use RegisterLogicalType.",
     version='6.6.0',
 )
-def RegisterBooleanType(new_type):
-    """
-    A utility function for updating the set of types that are
-    recognized as handling boolean values. This function does not
-    register the type of integer or numeric.
+def RegisterBooleanType(new_type: type):
+    """Register the specified type as a "logical type".
 
-    The argument should be a class (e.g., numpy.bool_).
+    A utility function for registering new types as "native logical
+    types".  Logical types can be leaf nodes in Pyomo logical
+    expressions.  The type should be compatible with :py:class:`bool`
+    (that is, store a scalar and be castable to a Python bool).
+
+    Note that logical types are NOT registered as numeric types.
+
+    Parameters
+    ----------
+    new_type: type
+        The new logical type (e.g, numpy.bool_)
+
     """
     _native_boolean_types.add(new_type)
     native_types.add(new_type)
     nonpyomo_leaf_types.add(new_type)
 
 
-def RegisterLogicalType(new_type):
-    """
-    A utility function for updating the set of types that are
-    recognized as handling boolean values. This function does not
-    register the type of integer or numeric.
+def RegisterComplexType(new_type: type):
+    """Register the specified type as an "complex type".
 
-    The argument should be a class (e.g., numpy.bool_).
+    A utility function for registering new types as "native complex
+    types".  Complex types can NOT be leaf nodes in Pyomo numeric
+    expressions.  The type should be compatible with :py:class:`complex`
+    (that is, store a scalar complex value and be castable to a Python
+    complex).
+
+    Note that complex types are NOT registered as logical or numeric types.
+
+    Parameters
+    ----------
+    new_type: type
+        The new complex type (e.g, numpy.complex128)
+
+    """
+    native_types.add(new_type)
+    native_complex_types.add(new_type)
+    nonpyomo_leaf_types.add(new_type)
+
+
+def RegisterLogicalType(new_type: type):
+    """Register the specified type as a "logical type".
+
+    A utility function for registering new types as "native logical
+    types".  Logical types can be leaf nodes in Pyomo logical
+    expressions.  The type should be compatible with :py:class:`bool`
+    (that is, store a scalar and be castable to a Python bool).
+
+    Note that logical types are NOT registered as numeric types.
+
+    Parameters
+    ----------
+    new_type: type
+        The new logical type (e.g, numpy.bool_)
+
     """
     _native_boolean_types.add(new_type)
     native_logical_types.add(new_type)
@@ -135,8 +197,9 @@ def check_if_numeric_type(obj):
     """Test if the argument behaves like a numeric type.
 
     We check for "numeric types" by checking if we can add zero to it
-    without changing the object's type.  If that works, then we register
-    the type in native_numeric_types.
+    without changing the object's type, and that the object compares to
+    0 in a meaningful way.  If that works, then we register the type in
+    :py:attr:`native_numeric_types`.
 
     """
     obj_class = obj.__class__
@@ -181,25 +244,25 @@ numeric types using RegisterNumericType() or RegisterIntegerType()."""
 
 def value(obj, exception=True):
     """
-        A utility function that returns the value of a Pyomo object or
-        expression.
+    A utility function that returns the value of a Pyomo object or
+    expression.
 
-        Args:
-            obj: The argument to evaluate. If it is None, a
-                string, or any other primitive numeric type,
-                then this function simply returns the argument.
-                Otherwise, if the argument is a NumericValue
-                then the __call__ method is executed.
-            exception (bool): If :const:`True`, then an exception should
-                be raised when instances of NumericValue fail to
-    s            evaluate due to one or more objects not being
-                initialized to a numeric value (e.g, one or more
-                variables in an algebraic expression having the
-                value None). If :const:`False`, then the function
-                returns :const:`None` when an exception occurs.
-                Default is True.
+    Args:
+        obj: The argument to evaluate. If it is None, a
+            string, or any other primitive numeric type,
+            then this function simply returns the argument.
+            Otherwise, if the argument is a NumericValue
+            then the __call__ method is executed.
+        exception (bool): If :const:`True`, then an exception should
+            be raised when instances of NumericValue fail to
+            evaluate due to one or more objects not being
+            initialized to a numeric value (e.g, one or more
+            variables in an algebraic expression having the
+            value None). If :const:`False`, then the function
+            returns :const:`None` when an exception occurs.
+            Default is True.
 
-        Returns: A numeric value or None.
+    Returns: A numeric value or None.
     """
     if obj.__class__ in native_types:
         return obj
