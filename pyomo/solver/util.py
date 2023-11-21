@@ -20,18 +20,10 @@ from pyomo.core.base.var import _GeneralVarData, Var
 from pyomo.core.base.param import _ParamData, Param
 from pyomo.core.base.objective import Objective, _GeneralObjectiveData
 from pyomo.common.collections import ComponentMap
-from pyomo.common.errors import PyomoException
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.expr.numvalue import NumericConstant
 from pyomo.solver.config import UpdateConfig
-
-
-class SolverSystemError(PyomoException):
-    """
-    General exception to catch solver system errors
-    """
-
-    pass
+from pyomo.solver.results import TerminationCondition, SolutionStatus
 
 
 def get_objective(block):
@@ -43,6 +35,47 @@ def get_objective(block):
             raise ValueError('Multiple active objectives found')
         obj = o
     return obj
+
+
+def check_optimal_termination(results):
+    """
+    This function returns True if the termination condition for the solver
+    is 'optimal', 'locallyOptimal', or 'globallyOptimal', and the status is 'ok'
+
+    Parameters
+    ----------
+    results : Pyomo Results object returned from solver.solve
+
+    Returns
+    -------
+    `bool`
+    """
+    if results.solution_status == SolutionStatus.optimal and (
+        results.termination_condition
+        == TerminationCondition.convergenceCriteriaSatisfied
+    ):
+        return True
+    return False
+
+
+def assert_optimal_termination(results):
+    """
+    This function checks if the termination condition for the solver
+    is 'optimal', 'locallyOptimal', or 'globallyOptimal', and the status is 'ok'
+    and it raises a RuntimeError exception if this is not true.
+
+    Parameters
+    ----------
+    results : Pyomo Results object returned from solver.solve
+    """
+    if not check_optimal_termination(results):
+        msg = (
+            'Solver failed to return an optimal solution. '
+            'Solution status: {}, Termination condition: {}'.format(
+                results.solution_status, results.termination_condition
+            )
+        )
+        raise RuntimeError(msg)
 
 
 class _VarAndNamedExprCollector(ExpressionValueVisitor):

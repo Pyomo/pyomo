@@ -76,7 +76,8 @@ class SolverBase(abc.ABC):
         timer: HierarchicalTimer
             An option timer for reporting timing
         **kwargs
-            Additional keyword arguments (including solver_options - passthrough options; delivered directly to the solver (with no validation))
+            Additional keyword arguments (including solver_options - passthrough
+            options; delivered directly to the solver (with no validation))
 
         Returns
         -------

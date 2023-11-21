@@ -10,8 +10,11 @@
 #  ___________________________________________________________________________
 
 
-from .factory import SolverFactory
+from pyomo.opt.base.solvers import SolverFactory
+from .IPOPT import IPOPT
 
 
 def load():
-    pass
+    SolverFactory.register(name='ipopt_v2', doc='The IPOPT NLP solver (new interface)')(
+        IPOPT
+    )

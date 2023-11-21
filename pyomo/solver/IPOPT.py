@@ -17,21 +17,19 @@ from typing import Mapping
 
 from pyomo.common import Executable
 from pyomo.common.config import ConfigValue, NonNegativeInt
+from pyomo.common.errors import PyomoException
 from pyomo.common.tempfiles import TempfileManager
-from pyomo.opt import WriterFactory
 from pyomo.repn.plugins.nl_writer import NLWriter, NLWriterInfo
 from pyomo.solver.base import SolverBase
 from pyomo.solver.config import SolverConfig
-from pyomo.solver.factory import SolverFactory
+from pyomo.opt.base.solvers import SolverFactory
 from pyomo.solver.results import (
     Results,
     TerminationCondition,
     SolutionStatus,
-    SolFileData,
     parse_sol_file,
 )
 from pyomo.solver.solution import SolutionLoaderBase, SolutionLoader
-from pyomo.solver.util import SolverSystemError
 from pyomo.common.tee import TeeStream
 from pyomo.common.log import LogStream
 from pyomo.core.expr.visitor import replace_expressions
@@ -41,6 +39,14 @@ from pyomo.core.base.suffix import Suffix
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+class SolverError(PyomoException):
+    """
+    General exception to catch solver system errors
+    """
+
+    pass
 
 
 class IPOPTConfig(SolverConfig):
@@ -204,9 +210,7 @@ class IPOPT(SolverBase):
         # Check if solver is available
         avail = self.available()
         if not avail:
-            raise SolverSystemError(
-                f'Solver {self.__class__} is not available ({avail}).'
-            )
+            raise SolverError(f'Solver {self.__class__} is not available ({avail}).')
         # Update configuration options, based on keywords passed to solve
         config: IPOPTConfig = self.config(kwds.pop('options', {}))
         config.set_value(kwds)

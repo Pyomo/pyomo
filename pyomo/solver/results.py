@@ -10,7 +10,6 @@
 #  ___________________________________________________________________________
 
 import enum
-import re
 from typing import Optional, Tuple, Dict, Any, Sequence, List
 from datetime import datetime
 import io
@@ -23,7 +22,7 @@ from pyomo.common.config import (
     In,
     NonNegativeFloat,
 )
-from pyomo.common.collections import ComponentMap
+from pyomo.common.errors import PyomoException
 from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.base.constraint import _ConstraintData
 from pyomo.core.base.objective import _ObjectiveData
@@ -33,8 +32,15 @@ from pyomo.opt.results.solver import (
     SolverStatus as LegacySolverStatus,
 )
 from pyomo.solver.solution import SolutionLoaderBase
-from pyomo.solver.util import SolverSystemError
 from pyomo.repn.plugins.nl_writer import NLWriterInfo
+
+
+class SolverResultsError(PyomoException):
+    """
+    General exception to catch solver system errors
+    """
+
+    pass
 
 
 class TerminationCondition(enum.Enum):
@@ -301,7 +307,7 @@ def parse_sol_file(
             line = sol_file.readline()
             model_objects.append(float(line))
     else:
-        raise SolverSystemError("ERROR READING `sol` FILE. No 'Options' line found.")
+        raise SolverResultsError("ERROR READING `sol` FILE. No 'Options' line found.")
     # Identify the total number of variables and constraints
     number_of_cons = model_objects[number_of_options + 1]
     number_of_vars = model_objects[number_of_options + 3]
@@ -317,12 +323,12 @@ def parse_sol_file(
     if line and ('objno' in line):
         exit_code_line = line.split()
         if len(exit_code_line) != 3:
-            raise SolverSystemError(
+            raise SolverResultsError(
                 f"ERROR READING `sol` FILE. Expected two numbers in `objno` line; received {line}."
             )
         exit_code = [int(exit_code_line[1]), int(exit_code_line[2])]
     else:
-        raise SolverSystemError(
+        raise SolverResultsError(
             f"ERROR READING `sol` FILE. Expected `objno`; received {line}."
         )
     result.extra_info.solver_message = message.strip().replace('\n', '; ')
