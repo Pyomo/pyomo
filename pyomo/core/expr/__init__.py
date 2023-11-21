@@ -70,6 +70,8 @@ from .logical_expr import (
     ExactlyExpression,
     AtMostExpression,
     AtLeastExpression,
+    AllDifferentExpression,
+    CountIfExpression,
     #
     land,
     lnot,

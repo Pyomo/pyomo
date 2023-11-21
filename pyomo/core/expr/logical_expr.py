@@ -580,7 +580,7 @@ class CountIfExpression(NumericExpression):
         return "count_if(%s)" % (", ".join(values))
 
     def _apply_operation(self, result):
-        return sum(r for r in result)
+        return sum(value(r) for r in result)
 
 
 special_boolean_atom_types = {ExactlyExpression, AtMostExpression, AtLeastExpression}
