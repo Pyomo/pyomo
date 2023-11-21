@@ -37,6 +37,16 @@ from pyomo.solver.results import (
 
 
 class SolverBase(abc.ABC):
+    #
+    # Support "with" statements. Forgetting to call deactivate
+    # on Plugins is a common source of memory leaks
+    #
+    def __enter__(self):
+        return self
+
+    def __exit__(self, t, v, traceback):
+        pass
+
     class Availability(enum.IntEnum):
         FullLicense = 2
         LimitedLicense = 1

@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+
 from pyomo.opt.base import SolverFactory as LegacySolverFactory
 from pyomo.common.factory import Factory
 from pyomo.solver.base import LegacySolverInterface
@@ -20,10 +21,10 @@ class SolverFactoryClass(Factory):
             self._cls[name] = cls
             self._doc[name] = doc
 
-            # class LegacySolver(LegacySolverInterface, cls):
-            #     pass
+            class LegacySolver(LegacySolverInterface, cls):
+                pass
 
-            # LegacySolverFactory.register(name, doc)(LegacySolver)
+            LegacySolverFactory.register(name, doc)(LegacySolver)
 
             return cls
 

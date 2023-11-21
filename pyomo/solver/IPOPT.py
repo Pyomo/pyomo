@@ -13,7 +13,7 @@ import os
 import subprocess
 import io
 import sys
-from typing import Mapping
+from typing import Mapping, Dict
 
 from pyomo.common import Executable
 from pyomo.common.config import ConfigValue, NonNegativeInt
@@ -153,6 +153,7 @@ class IPOPT(SolverBase):
 
     def __init__(self, **kwds):
         self._config = self.CONFIG(kwds)
+        self.ipopt_options = ipopt_command_line_options
 
     def available(self):
         if self.config.executable.path() is None:
