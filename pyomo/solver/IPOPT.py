@@ -22,7 +22,7 @@ from pyomo.common.tempfiles import TempfileManager
 from pyomo.repn.plugins.nl_writer import NLWriter, NLWriterInfo
 from pyomo.solver.base import SolverBase
 from pyomo.solver.config import SolverConfig
-from pyomo.opt.base.solvers import SolverFactory
+from pyomo.solver.factory import SolverFactory
 from pyomo.solver.results import (
     Results,
     TerminationCondition,

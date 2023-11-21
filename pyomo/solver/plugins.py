@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 
-from pyomo.opt.base.solvers import SolverFactory
+from .factory import SolverFactory
 from .IPOPT import IPOPT
 
 

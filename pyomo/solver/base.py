@@ -21,7 +21,6 @@ from pyomo.core.base.block import _BlockData
 from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.errors import ApplicationError
-
 from pyomo.opt.results.results_ import SolverResults as LegacySolverResults
 from pyomo.opt.results.solution import Solution as LegacySolution
 from pyomo.core.kernel.objective import minimize
