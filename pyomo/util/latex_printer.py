@@ -62,6 +62,7 @@ from pyomo.core.expr.numeric_expr import NPV_SumExpression, NPV_DivisionExpressi
 from pyomo.core.base.block import IndexedBlock
 
 from pyomo.core.base.external import _PythonCallbackFunctionID
+from pyomo.core.base.enums import SortComponents
 
 from pyomo.core.base.block import _BlockData
 
@@ -72,6 +73,8 @@ from pyomo.common import DeveloperError
 _CONSTANT = ExprType.CONSTANT
 _MONOMIAL = ExprType.MONOMIAL
 _GENERAL = ExprType.GENERAL
+
+from pyomo.common.errors import InfeasibleConstraintException
 
 from pyomo.common.dependencies import numpy, numpy_available
 
@@ -122,39 +125,8 @@ def indexCorrector(ixs, base):
 
 
 def alphabetStringGenerator(num, indexMode=False):
-    if indexMode:
-        alphabet = ['.', 'i', 'j', 'k', 'm', 'n', 'p', 'q', 'r']
+    alphabet = ['.', 'i', 'j', 'k', 'm', 'n', 'p', 'q', 'r']
 
-    else:
-        alphabet = [
-            '.',
-            'a',
-            'b',
-            'c',
-            'd',
-            'e',
-            'f',
-            'g',
-            'h',
-            'i',
-            'j',
-            'k',
-            'l',
-            'm',
-            'n',
-            'o',
-            'p',
-            'q',
-            'r',
-            's',
-            't',
-            'u',
-            'v',
-            'w',
-            'x',
-            'y',
-            'z',
-        ]
     ixs = decoder(num + 1, len(alphabet) - 1)
     pstr = ''
     ixs = indexCorrector(ixs, len(alphabet) - 1)
@@ -304,7 +276,8 @@ def handle_exprif_node(visitor, node, arg1, arg2, arg3):
 
 def handle_external_function_node(visitor, node, *args):
     pstr = ''
-    pstr += 'f('
+    visitor.externalFunctionCounter += 1
+    pstr += 'f\\_' + str(visitor.externalFunctionCounter) + '('
     for i in range(0, len(args) - 1):
         pstr += args[i]
         if i <= len(args) - 3:
@@ -332,7 +305,7 @@ def handle_indexTemplate_node(visitor, node, *args):
     )
 
 
-def handle_numericGIE_node(visitor, node, *args):
+def handle_numericGetItemExpression_node(visitor, node, *args):
     joinedName = args[0]
 
     pstr = ''
@@ -367,20 +340,6 @@ def handle_str_node(visitor, node):
     return node.replace('_', '\\_')
 
 
-def handle_npv_numericGetItemExpression_node(visitor, node, *args):
-    joinedName = args[0]
-
-    pstr = ''
-    pstr += joinedName + '_{'
-    for i in range(1, len(args)):
-        pstr += args[i]
-        if i <= len(args) - 2:
-            pstr += ','
-        else:
-            pstr += '}'
-    return pstr
-
-
 def handle_npv_structuralGetItemExpression_node(visitor, node, *args):
     joinedName = args[0]
 
@@ -406,6 +365,7 @@ def handle_numericGetAttrExpression_node(visitor, node, *args):
 class _LatexVisitor(StreamBasedExpressionVisitor):
     def __init__(self):
         super().__init__()
+        self.externalFunctionCounter = 0
 
         self._operator_handles = {
             ScalarVar: handle_var_node,
@@ -436,12 +396,12 @@ class _LatexVisitor(StreamBasedExpressionVisitor):
             MonomialTermExpression: handle_monomialTermExpression_node,
             IndexedVar: handle_var_node,
             IndexTemplate: handle_indexTemplate_node,
-            Numeric_GetItemExpression: handle_numericGIE_node,
+            Numeric_GetItemExpression: handle_numericGetItemExpression_node,
             TemplateSumExpression: handle_templateSumExpression_node,
             ScalarParam: handle_param_node,
             _ParamData: handle_param_node,
             IndexedParam: handle_param_node,
-            NPV_Numeric_GetItemExpression: handle_npv_numericGetItemExpression_node,
+            NPV_Numeric_GetItemExpression: handle_numericGetItemExpression_node,
             IndexedBlock: handle_indexedBlock_node,
             NPV_Structural_GetItemExpression: handle_npv_structuralGetItemExpression_node,
             str: handle_str_node,
@@ -474,7 +434,7 @@ def analyze_variable(vr):
         'NonPositiveIntegers': '\\mathds{Z}_{\\leq 0}',
         'NegativeIntegers': '\\mathds{Z}_{< 0}',
         'NonNegativeIntegers': '\\mathds{Z}_{\\geq 0}',
-        'Boolean': '\\left\\{ 0 , 1 \\right \\}',
+        'Boolean': '\\left\\{ \\text{True} , \\text{False} \\right \\}',
         'Binary': '\\left\\{ 0 , 1 \\right \\}',
         # 'Any': None,
         # 'AnyWithNone': None,
@@ -502,17 +462,14 @@ def analyze_variable(vr):
             upperBound = ''
 
     elif domainName in ['PositiveReals', 'PositiveIntegers']:
-        # if lowerBoundValue is not None:
         if lowerBoundValue > 0:
             lowerBound = str(lowerBoundValue) + ' \\leq '
         else:
             lowerBound = ' 0 < '
-        # else:
-        #     lowerBound = ' 0 < '
 
         if upperBoundValue is not None:
             if upperBoundValue <= 0:
-                raise ValueError(
+                raise InfeasibleConstraintException(
                     'Formulation is infeasible due to bounds on variable %s' % (vr.name)
                 )
             else:
@@ -523,7 +480,7 @@ def analyze_variable(vr):
     elif domainName in ['NonPositiveReals', 'NonPositiveIntegers']:
         if lowerBoundValue is not None:
             if lowerBoundValue > 0:
-                raise ValueError(
+                raise InfeasibleConstraintException(
                     'Formulation is infeasible due to bounds on variable %s' % (vr.name)
                 )
             elif lowerBoundValue == 0:
@@ -533,18 +490,15 @@ def analyze_variable(vr):
         else:
             lowerBound = ''
 
-        # if upperBoundValue is not None:
         if upperBoundValue >= 0:
             upperBound = ' \\leq 0 '
         else:
             upperBound = ' \\leq ' + str(upperBoundValue)
-        # else:
-        #     upperBound = ' \\leq 0 '
 
     elif domainName in ['NegativeReals', 'NegativeIntegers']:
         if lowerBoundValue is not None:
             if lowerBoundValue >= 0:
-                raise ValueError(
+                raise InfeasibleConstraintException(
                     'Formulation is infeasible due to bounds on variable %s' % (vr.name)
                 )
             else:
@@ -552,26 +506,20 @@ def analyze_variable(vr):
         else:
             lowerBound = ''
 
-        # if upperBoundValue is not None:
         if upperBoundValue >= 0:
             upperBound = ' < 0 '
         else:
             upperBound = ' \\leq ' + str(upperBoundValue)
-        # else:
-        #     upperBound = ' < 0 '
 
     elif domainName in ['NonNegativeReals', 'NonNegativeIntegers']:
-        # if lowerBoundValue is not None:
         if lowerBoundValue > 0:
             lowerBound = str(lowerBoundValue) + ' \\leq '
         else:
             lowerBound = ' 0 \\leq '
-        # else:
-        #     lowerBound = ' 0 \\leq '
 
         if upperBoundValue is not None:
             if upperBoundValue < 0:
-                raise ValueError(
+                raise InfeasibleConstraintException(
                     'Formulation is infeasible due to bounds on variable %s' % (vr.name)
                 )
             elif upperBoundValue == 0:
@@ -586,9 +534,8 @@ def analyze_variable(vr):
         upperBound = ''
 
     elif domainName in ['UnitInterval', 'PercentFraction']:
-        # if lowerBoundValue is not None:
         if lowerBoundValue > 1:
-            raise ValueError(
+            raise InfeasibleConstraintException(
                 'Formulation is infeasible due to bounds on variable %s' % (vr.name)
             )
         elif lowerBoundValue == 1:
@@ -597,12 +544,9 @@ def analyze_variable(vr):
             lowerBound = str(lowerBoundValue) + ' \\leq '
         else:
             lowerBound = ' 0 \\leq '
-        # else:
-        #     lowerBound = ' 0 \\leq '
 
-        # if upperBoundValue is not None:
         if upperBoundValue < 0:
-            raise ValueError(
+            raise InfeasibleConstraintException(
                 'Formulation is infeasible due to bounds on variable %s' % (vr.name)
             )
         elif upperBoundValue == 0:
@@ -611,8 +555,6 @@ def analyze_variable(vr):
             upperBound = ' \\leq ' + str(upperBoundValue)
         else:
             upperBound = ' \\leq 1 '
-        # else:
-        #     upperBound = ' \\leq 1 '
 
     else:
         raise DeveloperError(
@@ -640,10 +582,7 @@ def latex_printer(
     latex_component_map=None,
     write_object=None,
     use_equation_environment=False,
-    split_continuous_sets=False,
-    use_short_descriptors=False,
-    fontsize=None,
-    paper_dimensions=None,
+    explicit_set_summation=False,
     throw_templatization_error=False,
 ):
     """This function produces a string that can be rendered as LaTeX
@@ -668,27 +607,10 @@ def latex_printer(
          LaTeX equation.  If True, then the align environment is used in LaTeX and
          each constraint and objective will be given an individual equation number
 
-    split_continuous_sets: bool
+    explicit_set_summation: bool
         If False, all sums will be done over 'index in set' or similar.  If True,
         sums will be done over 'i=1' to 'N' or similar if the set is a continuous
         set
-
-    use_short_descriptors: bool
-        If False, will print full 'minimize' and 'subject to' etc.  If true, uses
-        'min' and 's.t.' instead
-
-    fontsize: str or int
-        Sets the font size of the latex output when writing to a file.  Can take
-        in any of the latex font size keywords ['tiny', 'scriptsize',
-        'footnotesize', 'small', 'normalsize', 'large', 'Large', 'LARGE', huge',
-        'Huge'], or an integer referenced off of 'normalsize' (ex: small is -1,
-        Large is +2)
-
-    paper_dimensions: dict
-        A dictionary that controls the paper margins and size.  Keys are:
-        [ 'height', 'width', 'margin_left', 'margin_right', 'margin_top',
-        'margin_bottom' ].  Default is standard 8.5x11 with one inch margins.
-        Values are in inches
 
     throw_templatization_error: bool
         Option to throw an error on templatization failure rather than
@@ -708,6 +630,14 @@ def latex_printer(
     # these objects require a slight modification of behavior
     # isSingle==False means a model or block
 
+    use_short_descriptors = True
+
+    # Cody's backdoor because he got outvoted
+    if latex_component_map is not None:
+        if 'use_short_descriptors' in list(latex_component_map.keys()):
+            if latex_component_map['use_short_descriptors'] == False:
+                use_short_descriptors = False
+
     if latex_component_map is None:
         latex_component_map = ComponentMap()
         existing_components = ComponentSet([])
@@ -715,78 +645,6 @@ def latex_printer(
         existing_components = ComponentSet(list(latex_component_map.keys()))
 
     isSingle = False
-
-    fontSizes = [
-        '\\tiny',
-        '\\scriptsize',
-        '\\footnotesize',
-        '\\small',
-        '\\normalsize',
-        '\\large',
-        '\\Large',
-        '\\LARGE',
-        '\\huge',
-        '\\Huge',
-    ]
-    fontSizes_noSlash = [
-        'tiny',
-        'scriptsize',
-        'footnotesize',
-        'small',
-        'normalsize',
-        'large',
-        'Large',
-        'LARGE',
-        'huge',
-        'Huge',
-    ]
-    fontsizes_ints = [-4, -3, -2, -1, 0, 1, 2, 3, 4, 5]
-
-    if fontsize is None:
-        fontsize = '\\normalsize'
-
-    elif fontsize in fontSizes:
-        # no editing needed
-        pass
-    elif fontsize in fontSizes_noSlash:
-        fontsize = '\\' + fontsize
-    elif fontsize in fontsizes_ints:
-        fontsize = fontSizes[fontsizes_ints.index(fontsize)]
-    else:
-        raise ValueError('passed an invalid font size option %s' % (fontsize))
-
-    paper_dimensions_used = {}
-    paper_dimensions_used['height'] = 11.0
-    paper_dimensions_used['width'] = 8.5
-    paper_dimensions_used['margin_left'] = 1.0
-    paper_dimensions_used['margin_right'] = 1.0
-    paper_dimensions_used['margin_top'] = 1.0
-    paper_dimensions_used['margin_bottom'] = 1.0
-
-    if paper_dimensions is not None:
-        for ky in [
-            'height',
-            'width',
-            'margin_left',
-            'margin_right',
-            'margin_top',
-            'margin_bottom',
-        ]:
-            if ky in paper_dimensions.keys():
-                paper_dimensions_used[ky] = paper_dimensions[ky]
-
-    if paper_dimensions_used['height'] >= 225:
-        raise ValueError('Paper height exceeds maximum dimension of 225')
-    if paper_dimensions_used['width'] >= 225:
-        raise ValueError('Paper width exceeds maximum dimension of 225')
-    if paper_dimensions_used['margin_left'] < 0.0:
-        raise ValueError('Paper margin_left must be greater than or equal to zero')
-    if paper_dimensions_used['margin_right'] < 0.0:
-        raise ValueError('Paper margin_right must be greater than or equal to zero')
-    if paper_dimensions_used['margin_top'] < 0.0:
-        raise ValueError('Paper margin_top must be greater than or equal to zero')
-    if paper_dimensions_used['margin_bottom'] < 0.0:
-        raise ValueError('Paper margin_bottom must be greater than or equal to zero')
 
     if isinstance(pyomo_component, pyo.Objective):
         objectives = [pyomo_component]
@@ -824,13 +682,19 @@ def latex_printer(
         objectives = [
             obj
             for obj in pyomo_component.component_data_objects(
-                pyo.Objective, descend_into=True, active=True
+                pyo.Objective,
+                descend_into=True,
+                active=True,
+                sort=SortComponents.deterministic,
             )
         ]
         constraints = [
             con
             for con in pyomo_component.component_objects(
-                pyo.Constraint, descend_into=True, active=True
+                pyo.Constraint,
+                descend_into=True,
+                active=True,
+                sort=SortComponents.deterministic,
             )
         ]
         expressions = []
@@ -875,21 +739,30 @@ def latex_printer(
         variableList = [
             vr
             for vr in pyomo_component.component_objects(
-                pyo.Var, descend_into=True, active=True
+                pyo.Var,
+                descend_into=True,
+                active=True,
+                sort=SortComponents.deterministic,
             )
         ]
 
         parameterList = [
             pm
             for pm in pyomo_component.component_objects(
-                pyo.Param, descend_into=True, active=True
+                pyo.Param,
+                descend_into=True,
+                active=True,
+                sort=SortComponents.deterministic,
             )
         ]
 
         setList = [
             st
             for st in pyomo_component.component_objects(
-                pyo.Set, descend_into=True, active=True
+                pyo.Set,
+                descend_into=True,
+                active=True,
+                sort=SortComponents.deterministic,
             )
         ]
 
@@ -913,8 +786,7 @@ def latex_printer(
 
     variableMap = ComponentMap()
     vrIdx = 0
-    for i in range(0, len(variableList)):
-        vr = variableList[i]
+    for vr in variableList:
         vrIdx += 1
         if isinstance(vr, ScalarVar):
             variableMap[vr] = 'x_' + str(vrIdx)
@@ -931,8 +803,7 @@ def latex_printer(
 
     parameterMap = ComponentMap()
     pmIdx = 0
-    for i in range(0, len(parameterList)):
-        vr = parameterList[i]
+    for vr in parameterList:
         pmIdx += 1
         if isinstance(vr, ScalarParam):
             parameterMap[vr] = 'p_' + str(pmIdx)
@@ -975,12 +846,13 @@ def latex_printer(
         except:
             if throw_templatization_error:
                 raise RuntimeError(
-                    "An objective has been constructed that cannot be templatized"
+                    "An objective named '%s' has been constructed that cannot be templatized"
+                    % (obj.__str__())
                 )
             else:
                 obj_template = obj
 
-        if obj.sense == 1:
+        if obj.sense == pyo.minimize:  # or == 1
             pstr += ' ' * tbSpc + '& %s \n' % (descriptorDict['minimize'])
         else:
             pstr += ' ' * tbSpc + '& %s \n' % (descriptorDict['maximize'])
@@ -1010,7 +882,7 @@ def latex_printer(
 
         # The double '& &' renders better for some reason
 
-        for i in range(0, len(constraints)):
+        for i, con in enumerate(constraints):
             if not isSingle:
                 if i == 0:
                     algn = '& &'
@@ -1025,14 +897,14 @@ def latex_printer(
                 tail = '\n'
 
             # grab the constraint and templatize
-            con = constraints[i]
             try:
                 con_template, indices = templatize_fcn(con)
                 con_template_list = [con_template]
             except:
                 if throw_templatization_error:
                     raise RuntimeError(
-                        "A constraint has been constructed that cannot be templatized"
+                        "A constraint named '%s' has been constructed that cannot be templatized"
+                        % (con.__str__())
                     )
                 else:
                     con_template_list = [c.expr for c in con.values()]
@@ -1127,14 +999,11 @@ def latex_printer(
                     'Variable is not a variable.  Should not happen.  Contact developers'
                 )
 
-        # print(varBoundData)
-
         # print the accumulated data to the string
         bstr = ''
         appendBoundString = False
         useThreeAlgn = False
-        for i in range(0, len(varBoundData)):
-            vbd = varBoundData[i]
+        for i, vbd in enumerate(varBoundData):
             if (
                 vbd['lowerBound'] == ''
                 and vbd['upperBound'] == ''
@@ -1244,7 +1113,7 @@ def latex_printer(
                 ] = r'sum_{__S_PLACEHOLDER_8675309_GROUP_([0-9*])_%s__}' % (ky)
                 # setInfo[ky]['idxRegEx'] = r'__I_PLACEHOLDER_8675309_GROUP_[0-9*]_%s__'%(ky)
 
-            if split_continuous_sets:
+            if explicit_set_summation:
                 for ky, vl in setInfo.items():
                     st = vl['setObject']
                     stData = st.data()
@@ -1258,7 +1127,7 @@ def latex_printer(
             # replace the sets
             for ky, vl in setInfo.items():
                 # if the set is continuous and the flag has been set
-                if split_continuous_sets and setInfo[ky]['continuous']:
+                if explicit_set_summation and setInfo[ky]['continuous']:
                     st = setInfo[ky]['setObject']
                     stData = st.data()
                     bgn = stData[0]
@@ -1320,7 +1189,7 @@ def latex_printer(
                             ln = ln.replace(
                                 '__I_PLACEHOLDER_8675309_GROUP_%s_%s__'
                                 % (vl['indices'][i], ky),
-                                alphabetStringGenerator(indexCounter, True),
+                                alphabetStringGenerator(indexCounter),
                             )
                             indexCounter += 1
                 else:
@@ -1328,7 +1197,7 @@ def latex_printer(
                         ln = ln.replace(
                             '__I_PLACEHOLDER_8675309_GROUP_%s_%s__'
                             % (vl['indices'][i], ky),
-                            alphabetStringGenerator(indexCounter, True),
+                            alphabetStringGenerator(indexCounter),
                         )
                         indexCounter += 1
 
@@ -1336,17 +1205,13 @@ def latex_printer(
 
     pstr = '\n'.join(latexLines)
 
-    vrIdx = 0
     new_variableMap = ComponentMap()
-    for i in range(0, len(variableList)):
-        vr = variableList[i]
-        vrIdx += 1
+    for i, vr in enumerate(variableList):
         if isinstance(vr, ScalarVar):
             new_variableMap[vr] = vr.name
         elif isinstance(vr, IndexedVar):
             new_variableMap[vr] = vr.name
             for sd in vr.index_set().data():
-                # vrIdx += 1
                 sdString = str(sd)
                 if sdString[0] == '(':
                     sdString = sdString[1:]
@@ -1358,17 +1223,14 @@ def latex_printer(
                 'Variable is not a variable.  Should not happen.  Contact developers'
             )
 
-    pmIdx = 0
     new_parameterMap = ComponentMap()
-    for i in range(0, len(parameterList)):
+    for i, pm in enumerate(parameterList):
         pm = parameterList[i]
-        pmIdx += 1
         if isinstance(pm, ScalarParam):
             new_parameterMap[pm] = pm.name
         elif isinstance(pm, IndexedParam):
             new_parameterMap[pm] = pm.name
             for sd in pm.index_set().data():
-                # pmIdx += 1
                 sdString = str(sd)
                 if sdString[0] == '(':
                     sdString = sdString[1:]
@@ -1451,20 +1313,10 @@ def latex_printer(
         fstr += '\\usepackage{amsmath} \n'
         fstr += '\\usepackage{amssymb} \n'
         fstr += '\\usepackage{dsfont} \n'
-        fstr += (
-            '\\usepackage[paperheight=%.4fin, paperwidth=%.4fin, left=%.4fin, right=%.4fin, top=%.4fin, bottom=%.4fin]{geometry} \n'
-            % (
-                paper_dimensions_used['height'],
-                paper_dimensions_used['width'],
-                paper_dimensions_used['margin_left'],
-                paper_dimensions_used['margin_right'],
-                paper_dimensions_used['margin_top'],
-                paper_dimensions_used['margin_bottom'],
-            )
-        )
+        fstr += '\\usepackage[paperheight=11in, paperwidth=8.5in, left=1in, right=1in, top=1in, bottom=1in]{geometry} \n'
         fstr += '\\allowdisplaybreaks \n'
         fstr += '\\begin{document} \n'
-        fstr += fontsize + ' \n'
+        fstr += '\\normalsize \n'
         fstr += pstr + '\n'
         fstr += '\\end{document} \n'
 

@@ -3,9 +3,9 @@ Latex Printing
 
 Pyomo models can be printed to a LaTeX compatible format using the ``pyomo.util.latex_printer`` function:
 
-.. py:function:: latex_printer(pyomo_component, latex_component_map=None, write_object=None, use_equation_environment=False, split_continuous_sets=False, use_short_descriptors=False, fontsize = None, paper_dimensions=None)
+.. py:function:: latex_printer(pyomo_component, latex_component_map=None, write_object=None, use_equation_environment=False, explicit_set_summation=False, use_short_descriptors=False, fontsize = None, paper_dimensions=None)
 
-    Prints a pyomo element (Block, Model, Objective, Constraint, or Expression) to a LaTeX compatible string
+    Prints a pyomo component (Block, Model, Objective, Constraint, or Expression) to a LaTeX compatible string
 
    :param pyomo_component: The Pyomo component to be printed
    :type pyomo_component: _BlockData or Model or Objective or Constraint or Expression
@@ -13,16 +13,10 @@ Pyomo models can be printed to a LaTeX compatible format using the ``pyomo.util.
    :type latex_component_map: pyomo.common.collections.component_map.ComponentMap
    :param write_object: The object to print the latex string to.  Can be an open file object, string I/O object, or a string for a filename to write to
    :type write_object: io.TextIOWrapper or io.StringIO or str
-   :param use_equation_environment: If False, the equation/aligned construction is used to create a single LaTeX equation.  If True, then the align environment is used in LaTeX and each constraint and objective will be given an individual equation number
+   :param use_equation_environment: LaTeX can render as either a single equation object or as an aligned environment, that in essence treats each objective and constraint as individual numbered equations.  If False, then the align environment is used in LaTeX and each constraint and objective will be given an individual equation number.  If True, the equation/aligned construction is used to create a single LaTeX equation for the entire model.  The align environment (ie, flag==False which is the default) is preferred because it allows for page breaks in large models.
    :type use_equation_environment: bool
-   :param split_continuous_sets: If False, all sums will be done over 'index in set' or similar.  If True, sums will be done over 'i=1' to 'N' or similar if the set is a continuous set
-   :type split_continuous_sets: bool
-   :param use_short_descriptors: If False, will print full 'minimize' and 'subject to' etc.  If true, uses 'min' and 's.t.' instead
-   :type use_short_descriptors: bool 
-   :param fontsize: Sets the font size of the latex output when writing to a file.  Can take in any of the latex font size keywords ['tiny', 'scriptsize', 'footnotesize', 'small', 'normalsize', 'large', 'Large', 'LARGE', 'huge', 'Huge'], or an integer referenced off of 'normalsize' (ex: small is -1, Large is +2)
-   :type fontsize: str or int
-   :param paper_dimensions: A dictionary that controls the paper margins and size.  Keys are: [ 'height', 'width', 'margin_left', 'margin_right', 'margin_top', 'margin_bottom' ].  Default is standard 8.5x11 with one inch margins.  Values are in inches 
-   :type paper_dimensions: dict
+   :param explicit_set_summation: If False, all sums will be done over 'index in set' or similar.  If True, sums that have a contiguous set (ex: [1,2,3,4,5...]) will be done over 'i=1' to 'N' or similar 
+   :type explicit_set_summation: bool
    :param throw_templatization_error: Option to throw an error on templatization failure rather than printing each constraint individually, useful for very large models
    :type throw_templatization_error: bool
 
@@ -76,8 +70,8 @@ A Constraint
 
     >>> pstr = latex_printer(m.constraint_1)
 
-A Constraint with a Set
-+++++++++++++++++++++++
+A Constraint with Set Summation
++++++++++++++++++++++++++++++++
 
 .. doctest::
 
@@ -93,8 +87,8 @@ A Constraint with a Set
 
     >>> pstr = latex_printer(m.constraint)
 
-Using a ComponentMap
-++++++++++++++++++++
+Using a ComponentMap to Specify Names
++++++++++++++++++++++++++++++++++++++
 
 .. doctest::
 

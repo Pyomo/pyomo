@@ -227,9 +227,9 @@ class TestLatexPrinter(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x + y + z & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} + y^{2} - z^{2} \leq c & \label{con:basicFormulation_constraint_1} 
         \end{align} 
         """
@@ -258,21 +258,13 @@ class TestLatexPrinter(unittest.TestCase):
         )
         self.assertEqual('\n' + pstr + '\n', bstr)
 
-    def test_latexPrinter_checkAlphabetFunction(self):
-        from pyomo.util.latex_printer import alphabetStringGenerator
-
-        self.assertEqual('z', alphabetStringGenerator(25))
-        self.assertEqual('aa', alphabetStringGenerator(26))
-        self.assertEqual('alm', alphabetStringGenerator(1000))
-        self.assertEqual('iqni', alphabetStringGenerator(1000, True))
-
     def test_latexPrinter_objective(self):
         m = generate_model()
         pstr = latex_printer(m.objective_1)
         bstr = dedent(
             r"""
         \begin{equation} 
-            & \text{minimize} 
+            & \min 
             & & x + y + z 
         \end{equation} 
         """
@@ -283,7 +275,7 @@ class TestLatexPrinter(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{equation} 
-            & \text{maximize} 
+            & \max 
             & & x + y + z 
         \end{equation} 
         """
@@ -420,7 +412,7 @@ class TestLatexPrinter(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{equation} 
-             x + f(x,y) = 2 
+             x + f\_1(x,y) = 2 
         \end{equation} 
         """
         )
@@ -492,208 +484,6 @@ class TestLatexPrinter(unittest.TestCase):
             ValueError, latex_printer, **{'pyomo_component': m, 'write_object': 2.0}
         )
 
-    def test_latexPrinter_fontSizes_1(self):
-        m = generate_simple_model()
-        strio = io.StringIO('')
-        tsh = latex_printer(m, write_object=strio, fontsize='\\normalsize')
-        strio.seek(0)
-        pstr = strio.read()
-
-        bstr = dedent(
-            r"""
-        \documentclass{article} 
-        \usepackage{amsmath} 
-        \usepackage{amssymb} 
-        \usepackage{dsfont} 
-        \usepackage[paperheight=11.0000in, paperwidth=8.5000in, left=1.0000in, right=1.0000in, top=1.0000in, bottom=1.0000in]{geometry} 
-        \allowdisplaybreaks 
-        \begin{document} 
-        \normalsize 
-        \begin{align} 
-            & \text{minimize} 
-            & & x + y & \label{obj:basicFormulation_objective_1} \\ 
-            & \text{subject to} 
-            & & x^{2} + y^{2} \leq 1 & \label{con:basicFormulation_constraint_1} \\ 
-            &&& 0 \leq x & \label{con:basicFormulation_constraint_2} \\ 
-            &&&  \left( x + y \right)  \sum_{ i \in I  } v_{i} + u_{i,j}^{2} \leq 0 &  \qquad \forall j \in I \label{con:basicFormulation_constraint_7} \\ 
-            &&& \sum_{ i \in K  } p_{i} = 1 & \label{con:basicFormulation_constraint_8} 
-        \end{align} 
-        \end{document} 
-        """
-        )
-        strio.close()
-        self.assertEqual('\n' + pstr, bstr)
-
-    def test_latexPrinter_fontSizes_2(self):
-        m = generate_simple_model()
-        strio = io.StringIO('')
-        tsh = latex_printer(m, write_object=strio, fontsize='normalsize')
-        strio.seek(0)
-        pstr = strio.read()
-
-        bstr = dedent(
-            r"""
-        \documentclass{article} 
-        \usepackage{amsmath} 
-        \usepackage{amssymb} 
-        \usepackage{dsfont} 
-        \usepackage[paperheight=11.0000in, paperwidth=8.5000in, left=1.0000in, right=1.0000in, top=1.0000in, bottom=1.0000in]{geometry} 
-        \allowdisplaybreaks 
-        \begin{document} 
-        \normalsize 
-        \begin{align} 
-            & \text{minimize} 
-            & & x + y & \label{obj:basicFormulation_objective_1} \\ 
-            & \text{subject to} 
-            & & x^{2} + y^{2} \leq 1 & \label{con:basicFormulation_constraint_1} \\ 
-            &&& 0 \leq x & \label{con:basicFormulation_constraint_2} \\ 
-            &&&  \left( x + y \right)  \sum_{ i \in I  } v_{i} + u_{i,j}^{2} \leq 0 &  \qquad \forall j \in I \label{con:basicFormulation_constraint_7} \\ 
-            &&& \sum_{ i \in K  } p_{i} = 1 & \label{con:basicFormulation_constraint_8} 
-        \end{align} 
-        \end{document} 
-        """
-        )
-        strio.close()
-        self.assertEqual('\n' + pstr, bstr)
-
-    def test_latexPrinter_fontSizes_3(self):
-        m = generate_simple_model()
-        strio = io.StringIO('')
-        tsh = latex_printer(m, write_object=strio, fontsize=0)
-        strio.seek(0)
-        pstr = strio.read()
-
-        bstr = dedent(
-            r"""
-        \documentclass{article} 
-        \usepackage{amsmath} 
-        \usepackage{amssymb} 
-        \usepackage{dsfont} 
-        \usepackage[paperheight=11.0000in, paperwidth=8.5000in, left=1.0000in, right=1.0000in, top=1.0000in, bottom=1.0000in]{geometry} 
-        \allowdisplaybreaks 
-        \begin{document} 
-        \normalsize 
-        \begin{align} 
-            & \text{minimize} 
-            & & x + y & \label{obj:basicFormulation_objective_1} \\ 
-            & \text{subject to} 
-            & & x^{2} + y^{2} \leq 1 & \label{con:basicFormulation_constraint_1} \\ 
-            &&& 0 \leq x & \label{con:basicFormulation_constraint_2} \\ 
-            &&&  \left( x + y \right)  \sum_{ i \in I  } v_{i} + u_{i,j}^{2} \leq 0 &  \qquad \forall j \in I \label{con:basicFormulation_constraint_7} \\ 
-            &&& \sum_{ i \in K  } p_{i} = 1 & \label{con:basicFormulation_constraint_8} 
-        \end{align} 
-        \end{document} 
-        """
-        )
-        strio.close()
-        self.assertEqual('\n' + pstr, bstr)
-
-    def test_latexPrinter_fontSizes_4(self):
-        m = generate_simple_model()
-        strio = io.StringIO('')
-        self.assertRaises(
-            ValueError,
-            latex_printer,
-            **{'pyomo_component': m, 'write_object': strio, 'fontsize': -10}
-        )
-        strio.close()
-
-    def test_latexPrinter_paperDims(self):
-        m = generate_simple_model()
-        strio = io.StringIO('')
-        pdms = {}
-        pdms['height'] = 13.0
-        pdms['width'] = 10.5
-        pdms['margin_left'] = 2.0
-        pdms['margin_right'] = 2.0
-        pdms['margin_top'] = 2.0
-        pdms['margin_bottom'] = 2.0
-        tsh = latex_printer(m, write_object=strio, paper_dimensions=pdms)
-        strio.seek(0)
-        pstr = strio.read()
-
-        bstr = dedent(
-            r"""
-        \documentclass{article} 
-        \usepackage{amsmath} 
-        \usepackage{amssymb} 
-        \usepackage{dsfont} 
-        \usepackage[paperheight=13.0000in, paperwidth=10.5000in, left=2.0000in, right=2.0000in, top=2.0000in, bottom=2.0000in]{geometry} 
-        \allowdisplaybreaks 
-        \begin{document} 
-        \normalsize 
-        \begin{align} 
-            & \text{minimize} 
-            & & x + y & \label{obj:basicFormulation_objective_1} \\ 
-            & \text{subject to} 
-            & & x^{2} + y^{2} \leq 1 & \label{con:basicFormulation_constraint_1} \\ 
-            &&& 0 \leq x & \label{con:basicFormulation_constraint_2} \\ 
-            &&&  \left( x + y \right)  \sum_{ i \in I  } v_{i} + u_{i,j}^{2} \leq 0 &  \qquad \forall j \in I \label{con:basicFormulation_constraint_7} \\ 
-            &&& \sum_{ i \in K  } p_{i} = 1 & \label{con:basicFormulation_constraint_8} 
-        \end{align} 
-        \end{document} 
-        """
-        )
-        strio.close()
-        self.assertEqual('\n' + pstr, bstr)
-
-        strio = io.StringIO('')
-        self.assertRaises(
-            ValueError,
-            latex_printer,
-            **{
-                'pyomo_component': m,
-                'write_object': strio,
-                'paper_dimensions': {'height': 230},
-            }
-        )
-        self.assertRaises(
-            ValueError,
-            latex_printer,
-            **{
-                'pyomo_component': m,
-                'write_object': strio,
-                'paper_dimensions': {'width': 230},
-            }
-        )
-        self.assertRaises(
-            ValueError,
-            latex_printer,
-            **{
-                'pyomo_component': m,
-                'write_object': strio,
-                'paper_dimensions': {'margin_left': -1},
-            }
-        )
-        self.assertRaises(
-            ValueError,
-            latex_printer,
-            **{
-                'pyomo_component': m,
-                'write_object': strio,
-                'paper_dimensions': {'margin_right': -1},
-            }
-        )
-        self.assertRaises(
-            ValueError,
-            latex_printer,
-            **{
-                'pyomo_component': m,
-                'write_object': strio,
-                'paper_dimensions': {'margin_top': -1},
-            }
-        )
-        self.assertRaises(
-            ValueError,
-            latex_printer,
-            **{
-                'pyomo_component': m,
-                'write_object': strio,
-                'paper_dimensions': {'margin_bottom': -1},
-            }
-        )
-        strio.close()
-
     def test_latexPrinter_overwriteError(self):
         m = pyo.ConcreteModel(name='basicFormulation')
         m.I = pyo.Set(initialize=[1, 2, 3, 4, 5])
@@ -733,9 +523,9 @@ class TestLatexPrinter(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & \sum_{ i \in I  } \sum_{ j \in I  } c_{i,j} x_{i,j} & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & \sum_{ i \in I  } \sum_{ j \in I  } x_{i,j}^{2} \leq 1 & \label{con:basicFormulation_constraint_1} 
         \end{align} 
         """
@@ -759,19 +549,19 @@ class TestLatexPrinter(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x + y + z & \label{obj:basicFormulation_objective_1} \\ 
-            & \text{minimize} 
+            & \min 
             & &  \left( x + y \right)  \sum_{ i \in J  } w_{i} & \label{obj:basicFormulation_objective_2} \\ 
-            & \text{maximize} 
+            & \max 
             & & x + y + z & \label{obj:basicFormulation_objective_3} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} + y^{-2} - x y z + 1 = 2 & \label{con:basicFormulation_constraint_1} \\ 
             &&&  \left| \frac{x}{z^{-2}} \right|   \left( x + y \right)  \leq 2 & \label{con:basicFormulation_constraint_2} \\ 
             &&& \sqrt { \frac{x}{z^{-2}} } \leq 2 & \label{con:basicFormulation_constraint_3} \\ 
             &&& 1 \leq x \leq 2 & \label{con:basicFormulation_constraint_4} \\ 
             &&& f_{\text{exprIf}}(x \leq 1,z,y) \leq 1 & \label{con:basicFormulation_constraint_5} \\ 
-            &&& x + f(x,y) = 2 & \label{con:basicFormulation_constraint_6} \\ 
+            &&& x + f\_1(x,y) = 2 & \label{con:basicFormulation_constraint_6} \\ 
             &&&  \left( x + y \right)  \sum_{ i \in I  } v_{i} + u_{i,j}^{2} \leq 0 &  \qquad \forall j \in I \label{con:basicFormulation_constraint_7} \\ 
             &&& \sum_{ i \in K  } p_{i} = 1 & \label{con:basicFormulation_constraint_8} 
         \end{align} 
@@ -789,7 +579,7 @@ class TestLatexPrinter(unittest.TestCase):
             return sum(m.v[i] for i in m.I) <= 0
 
         m.constraint = pyo.Constraint(rule=ruleMaker)
-        pstr = latex_printer(m.constraint, split_continuous_sets=True)
+        pstr = latex_printer(m.constraint, explicit_set_summation=True)
 
         bstr = dedent(
             r"""
@@ -809,7 +599,7 @@ class TestLatexPrinter(unittest.TestCase):
             return sum(m.v[i] for i in m.I) <= 0
 
         m.constraint = pyo.Constraint(rule=ruleMaker)
-        pstr = latex_printer(m.constraint, split_continuous_sets=True)
+        pstr = latex_printer(m.constraint, explicit_set_summation=True)
 
         bstr = dedent(
             r"""
@@ -856,9 +646,9 @@ class TestLatexPrinter(unittest.TestCase):
             r"""
         \begin{equation} 
             \begin{aligned} 
-                & \text{minimize} 
+                & \min 
                 & & x + y + z \\ 
-                & \text{subject to} 
+                & \text{s.t.} 
                 & & x^{2} + y^{2} - z^{2} \leq c 
             \end{aligned} 
             \label{basicFormulation} 
@@ -881,9 +671,9 @@ class TestLatexPrinter(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x + y + z + u + v + w & \label{obj:basicFormulation_objective} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & -10 \leq x \leq 10 & \qquad \in \mathds{Z} \label{con:basicFormulation_x_bound} \\ 
             &&& y & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_y_bound} \\ 
             &&&  0 < z \leq 10 & \qquad \in \mathds{R}_{> 0} \label{con:basicFormulation_z_bound} \\ 
@@ -911,9 +701,9 @@ class TestLatexPrinter(unittest.TestCase):
             r"""
         \begin{equation} 
             \begin{aligned} 
-                & \text{minimize} 
+                & \min 
                 & & x + y + z + u + v + w \\ 
-                & \text{with bounds} 
+                & \text{w.b.} 
                 & & -10 \leq x \leq 10 \qquad \in \mathds{Z}\\ 
                 &&& y \qquad \in \left\{ 0 , 1 \right \}\\ 
                 &&&  0 < z \leq 10 \qquad \in \mathds{R}_{> 0}\\ 
@@ -927,28 +717,6 @@ class TestLatexPrinter(unittest.TestCase):
         )
 
         self.assertEqual("\n" + pstr + "\n", bstr)
-
-    def test_latexPrinter_shortDescriptors(self):
-        m = pyo.ConcreteModel(name='basicFormulation')
-        m.x = pyo.Var()
-        m.y = pyo.Var()
-        m.z = pyo.Var()
-        m.c = pyo.Param(initialize=1.0, mutable=True)
-        m.objective = pyo.Objective(expr=m.x + m.y + m.z)
-        m.constraint_1 = pyo.Constraint(expr=m.x**2 + m.y**2.0 - m.z**2.0 <= m.c)
-        pstr = latex_printer(m, use_short_descriptors=True)
-
-        bstr = dedent(
-            r"""
-        \begin{align} 
-            & \min 
-            & & x + y + z & \label{obj:basicFormulation_objective} \\ 
-            & \text{s.t.} 
-            & & x^{2} + y^{2} - z^{2} \leq c & \label{con:basicFormulation_constraint_1} 
-        \end{align} 
-        """
-        )
-        self.assertEqual('\n' + pstr + '\n', bstr)
 
     def test_latexPrinter_indexedParamSingle(self):
         m = pyo.ConcreteModel(name='basicFormulation')
@@ -1003,14 +771,14 @@ class TestLatexPrinter(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & \sum_{ i \in I  } c_{i} x_{i} & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x[2] \leq 1 & \label{con:basicFormulation_constraint_1} \\ 
             & & x[3] \leq 1 & \label{con:basicFormulation_constraint_1} \\ 
             & & x[4] \leq 1 & \label{con:basicFormulation_constraint_1} \\ 
             & & x[5] \leq 1 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & -10 \leq x \leq 10 & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """

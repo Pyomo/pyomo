@@ -38,6 +38,8 @@ from pyomo.environ import (
     # IntegerInterval,
 )
 
+from pyomo.common.errors import InfeasibleConstraintException
+
 
 class TestLatexPrinterVariableTypes(unittest.TestCase):
     def test_latexPrinter_variableType_Reals_1(self):
@@ -50,9 +52,9 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} 
         \end{align} 
         """
@@ -70,9 +72,9 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} 
         \end{align} 
         """
@@ -90,11 +92,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & -10 \leq x \leq 10 & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -112,11 +114,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & -10 \leq x \leq 0 & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -134,11 +136,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & -10 \leq x \leq -2 & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -156,11 +158,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & 0 \leq x \leq 0 & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -178,11 +180,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & 0 \leq x \leq 10 & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -200,11 +202,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & 2 \leq x \leq 10 & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -222,11 +224,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & 0 \leq x \leq 1 & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -244,11 +246,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & 1 \leq x \leq 10 & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -266,11 +268,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & 0.25 \leq x \leq 0.75 & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -288,11 +290,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 < x & \qquad \in \mathds{R}_{> 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -310,11 +312,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 < x & \qquad \in \mathds{R}_{> 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -332,11 +334,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 < x \leq 10 & \qquad \in \mathds{R}_{> 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -349,21 +351,27 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.x = pyo.Var(domain=PositiveReals, bounds=(-10, 0))
         m.objective = pyo.Objective(expr=m.x)
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
-        self.assertRaises(ValueError, latex_printer, **{'pyomo_component': m})
+        self.assertRaises(
+            InfeasibleConstraintException, latex_printer, **{'pyomo_component': m}
+        )
 
     def test_latexPrinter_variableType_PositiveReals_5(self):
         m = pyo.ConcreteModel(name='basicFormulation')
         m.x = pyo.Var(domain=PositiveReals, bounds=(-10, -2))
         m.objective = pyo.Objective(expr=m.x)
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
-        self.assertRaises(ValueError, latex_printer, **{'pyomo_component': m})
+        self.assertRaises(
+            InfeasibleConstraintException, latex_printer, **{'pyomo_component': m}
+        )
 
     def test_latexPrinter_variableType_PositiveReals_6(self):
         m = pyo.ConcreteModel(name='basicFormulation')
         m.x = pyo.Var(domain=PositiveReals, bounds=(0, 0))
         m.objective = pyo.Objective(expr=m.x)
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
-        self.assertRaises(ValueError, latex_printer, **{'pyomo_component': m})
+        self.assertRaises(
+            InfeasibleConstraintException, latex_printer, **{'pyomo_component': m}
+        )
 
     def test_latexPrinter_variableType_PositiveReals_7(self):
         m = pyo.ConcreteModel(name='basicFormulation')
@@ -375,11 +383,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 < x \leq 10 & \qquad \in \mathds{R}_{> 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -397,11 +405,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & 2 \leq x \leq 10 & \qquad \in \mathds{R}_{> 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -419,11 +427,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 < x \leq 1 & \qquad \in \mathds{R}_{> 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -441,11 +449,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & 1 \leq x \leq 10 & \qquad \in \mathds{R}_{> 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -463,11 +471,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & 0.25 \leq x \leq 0.75 & \qquad \in \mathds{R}_{> 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -485,11 +493,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & x \leq 0  & \qquad \in \mathds{R}_{\leq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -507,11 +515,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & x \leq 0  & \qquad \in \mathds{R}_{\leq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -529,11 +537,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & -10 \leq x \leq 0  & \qquad \in \mathds{R}_{\leq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -551,11 +559,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & -10 \leq x \leq 0  & \qquad \in \mathds{R}_{\leq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -573,11 +581,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & -10 \leq x \leq -2 & \qquad \in \mathds{R}_{\leq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -595,11 +603,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 = x \leq 0  & \qquad \in \mathds{R}_{\leq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -617,11 +625,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 = x \leq 0  & \qquad \in \mathds{R}_{\leq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -634,7 +642,9 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.x = pyo.Var(domain=NonPositiveReals, bounds=(2, 10))
         m.objective = pyo.Objective(expr=m.x)
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
-        self.assertRaises(ValueError, latex_printer, **{'pyomo_component': m})
+        self.assertRaises(
+            InfeasibleConstraintException, latex_printer, **{'pyomo_component': m}
+        )
 
     def test_latexPrinter_variableType_NonPositiveReals_9(self):
         m = pyo.ConcreteModel(name='basicFormulation')
@@ -646,11 +656,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 = x \leq 0  & \qquad \in \mathds{R}_{\leq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -663,14 +673,18 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.x = pyo.Var(domain=NonPositiveReals, bounds=(1, 10))
         m.objective = pyo.Objective(expr=m.x)
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
-        self.assertRaises(ValueError, latex_printer, **{'pyomo_component': m})
+        self.assertRaises(
+            InfeasibleConstraintException, latex_printer, **{'pyomo_component': m}
+        )
 
     def test_latexPrinter_variableType_NonPositiveReals_11(self):
         m = pyo.ConcreteModel(name='basicFormulation')
         m.x = pyo.Var(domain=NonPositiveReals, bounds=(0.25, 0.75))
         m.objective = pyo.Objective(expr=m.x)
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
-        self.assertRaises(ValueError, latex_printer, **{'pyomo_component': m})
+        self.assertRaises(
+            InfeasibleConstraintException, latex_printer, **{'pyomo_component': m}
+        )
 
     def test_latexPrinter_variableType_NegativeReals_1(self):
         m = pyo.ConcreteModel(name='basicFormulation')
@@ -682,11 +696,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & x < 0  & \qquad \in \mathds{R}_{< 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -704,11 +718,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & x < 0  & \qquad \in \mathds{R}_{< 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -726,11 +740,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & -10 \leq x < 0  & \qquad \in \mathds{R}_{< 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -748,11 +762,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & -10 \leq x < 0  & \qquad \in \mathds{R}_{< 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -770,11 +784,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & -10 \leq x \leq -2 & \qquad \in \mathds{R}_{< 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -787,42 +801,54 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.x = pyo.Var(domain=NegativeReals, bounds=(0, 0))
         m.objective = pyo.Objective(expr=m.x)
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
-        self.assertRaises(ValueError, latex_printer, **{'pyomo_component': m})
+        self.assertRaises(
+            InfeasibleConstraintException, latex_printer, **{'pyomo_component': m}
+        )
 
     def test_latexPrinter_variableType_NegativeReals_7(self):
         m = pyo.ConcreteModel(name='basicFormulation')
         m.x = pyo.Var(domain=NegativeReals, bounds=(0, 10))
         m.objective = pyo.Objective(expr=m.x)
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
-        self.assertRaises(ValueError, latex_printer, **{'pyomo_component': m})
+        self.assertRaises(
+            InfeasibleConstraintException, latex_printer, **{'pyomo_component': m}
+        )
 
     def test_latexPrinter_variableType_NegativeReals_8(self):
         m = pyo.ConcreteModel(name='basicFormulation')
         m.x = pyo.Var(domain=NegativeReals, bounds=(2, 10))
         m.objective = pyo.Objective(expr=m.x)
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
-        self.assertRaises(ValueError, latex_printer, **{'pyomo_component': m})
+        self.assertRaises(
+            InfeasibleConstraintException, latex_printer, **{'pyomo_component': m}
+        )
 
     def test_latexPrinter_variableType_NegativeReals_9(self):
         m = pyo.ConcreteModel(name='basicFormulation')
         m.x = pyo.Var(domain=NegativeReals, bounds=(0, 1))
         m.objective = pyo.Objective(expr=m.x)
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
-        self.assertRaises(ValueError, latex_printer, **{'pyomo_component': m})
+        self.assertRaises(
+            InfeasibleConstraintException, latex_printer, **{'pyomo_component': m}
+        )
 
     def test_latexPrinter_variableType_NegativeReals_10(self):
         m = pyo.ConcreteModel(name='basicFormulation')
         m.x = pyo.Var(domain=NegativeReals, bounds=(1, 10))
         m.objective = pyo.Objective(expr=m.x)
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
-        self.assertRaises(ValueError, latex_printer, **{'pyomo_component': m})
+        self.assertRaises(
+            InfeasibleConstraintException, latex_printer, **{'pyomo_component': m}
+        )
 
     def test_latexPrinter_variableType_NegativeReals_11(self):
         m = pyo.ConcreteModel(name='basicFormulation')
         m.x = pyo.Var(domain=NegativeReals, bounds=(0.25, 0.75))
         m.objective = pyo.Objective(expr=m.x)
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
-        self.assertRaises(ValueError, latex_printer, **{'pyomo_component': m})
+        self.assertRaises(
+            InfeasibleConstraintException, latex_printer, **{'pyomo_component': m}
+        )
 
     def test_latexPrinter_variableType_NonNegativeReals_1(self):
         m = pyo.ConcreteModel(name='basicFormulation')
@@ -834,11 +860,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 \leq x & \qquad \in \mathds{R}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -856,11 +882,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 \leq x & \qquad \in \mathds{R}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -878,11 +904,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 \leq x \leq 10 & \qquad \in \mathds{R}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -900,11 +926,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 \leq x = 0  & \qquad \in \mathds{R}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -917,7 +943,9 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.x = pyo.Var(domain=NonNegativeReals, bounds=(-10, -2))
         m.objective = pyo.Objective(expr=m.x)
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
-        self.assertRaises(ValueError, latex_printer, **{'pyomo_component': m})
+        self.assertRaises(
+            InfeasibleConstraintException, latex_printer, **{'pyomo_component': m}
+        )
 
     def test_latexPrinter_variableType_NonNegativeReals_6(self):
         m = pyo.ConcreteModel(name='basicFormulation')
@@ -929,11 +957,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 \leq x = 0  & \qquad \in \mathds{R}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -951,11 +979,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 \leq x \leq 10 & \qquad \in \mathds{R}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -973,11 +1001,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & 2 \leq x \leq 10 & \qquad \in \mathds{R}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -995,11 +1023,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 \leq x \leq 1 & \qquad \in \mathds{R}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1017,11 +1045,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & 1 \leq x \leq 10 & \qquad \in \mathds{R}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1039,11 +1067,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & 0.25 \leq x \leq 0.75 & \qquad \in \mathds{R}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1061,11 +1089,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & x & \qquad \in \mathds{Z} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1083,11 +1111,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & x & \qquad \in \mathds{Z} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1105,11 +1133,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & -10 \leq x \leq 10 & \qquad \in \mathds{Z} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1127,11 +1155,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & -10 \leq x \leq 0 & \qquad \in \mathds{Z} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1149,11 +1177,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & -10 \leq x \leq -2 & \qquad \in \mathds{Z} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1171,11 +1199,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & 0 \leq x \leq 0 & \qquad \in \mathds{Z} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1193,11 +1221,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & 0 \leq x \leq 10 & \qquad \in \mathds{Z} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1215,11 +1243,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & 2 \leq x \leq 10 & \qquad \in \mathds{Z} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1237,11 +1265,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & 0 \leq x \leq 1 & \qquad \in \mathds{Z} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1259,11 +1287,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & 1 \leq x \leq 10 & \qquad \in \mathds{Z} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1281,11 +1309,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & 0.25 \leq x \leq 0.75 & \qquad \in \mathds{Z} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1303,11 +1331,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & 1 \leq x & \qquad \in \mathds{Z}_{> 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1325,11 +1353,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & 1 \leq x & \qquad \in \mathds{Z}_{> 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1347,11 +1375,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & 1 \leq x \leq 10 & \qquad \in \mathds{Z}_{> 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1364,21 +1392,27 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.x = pyo.Var(domain=PositiveIntegers, bounds=(-10, 0))
         m.objective = pyo.Objective(expr=m.x)
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
-        self.assertRaises(ValueError, latex_printer, **{'pyomo_component': m})
+        self.assertRaises(
+            InfeasibleConstraintException, latex_printer, **{'pyomo_component': m}
+        )
 
     def test_latexPrinter_variableType_PositiveIntegers_5(self):
         m = pyo.ConcreteModel(name='basicFormulation')
         m.x = pyo.Var(domain=PositiveIntegers, bounds=(-10, -2))
         m.objective = pyo.Objective(expr=m.x)
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
-        self.assertRaises(ValueError, latex_printer, **{'pyomo_component': m})
+        self.assertRaises(
+            InfeasibleConstraintException, latex_printer, **{'pyomo_component': m}
+        )
 
     def test_latexPrinter_variableType_PositiveIntegers_6(self):
         m = pyo.ConcreteModel(name='basicFormulation')
         m.x = pyo.Var(domain=PositiveIntegers, bounds=(0, 0))
         m.objective = pyo.Objective(expr=m.x)
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
-        self.assertRaises(ValueError, latex_printer, **{'pyomo_component': m})
+        self.assertRaises(
+            InfeasibleConstraintException, latex_printer, **{'pyomo_component': m}
+        )
 
     def test_latexPrinter_variableType_PositiveIntegers_7(self):
         m = pyo.ConcreteModel(name='basicFormulation')
@@ -1390,11 +1424,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & 1 \leq x \leq 10 & \qquad \in \mathds{Z}_{> 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1412,11 +1446,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & 2 \leq x \leq 10 & \qquad \in \mathds{Z}_{> 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1434,11 +1468,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & 1 \leq x \leq 1 & \qquad \in \mathds{Z}_{> 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1456,11 +1490,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & 1 \leq x \leq 10 & \qquad \in \mathds{Z}_{> 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1478,11 +1512,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & 1 \leq x \leq 0.75 & \qquad \in \mathds{Z}_{> 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1500,11 +1534,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & x \leq 0  & \qquad \in \mathds{Z}_{\leq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1522,11 +1556,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & x \leq 0  & \qquad \in \mathds{Z}_{\leq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1544,11 +1578,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & -10 \leq x \leq 0  & \qquad \in \mathds{Z}_{\leq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1566,11 +1600,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & -10 \leq x \leq 0  & \qquad \in \mathds{Z}_{\leq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1588,11 +1622,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & -10 \leq x \leq -2 & \qquad \in \mathds{Z}_{\leq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1610,11 +1644,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 = x \leq 0  & \qquad \in \mathds{Z}_{\leq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1632,11 +1666,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 = x \leq 0  & \qquad \in \mathds{Z}_{\leq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1649,7 +1683,9 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.x = pyo.Var(domain=NonPositiveIntegers, bounds=(2, 10))
         m.objective = pyo.Objective(expr=m.x)
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
-        self.assertRaises(ValueError, latex_printer, **{'pyomo_component': m})
+        self.assertRaises(
+            InfeasibleConstraintException, latex_printer, **{'pyomo_component': m}
+        )
 
     def test_latexPrinter_variableType_NonPositiveIntegers_9(self):
         m = pyo.ConcreteModel(name='basicFormulation')
@@ -1661,11 +1697,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 = x \leq 0  & \qquad \in \mathds{Z}_{\leq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1678,14 +1714,18 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.x = pyo.Var(domain=NonPositiveIntegers, bounds=(1, 10))
         m.objective = pyo.Objective(expr=m.x)
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
-        self.assertRaises(ValueError, latex_printer, **{'pyomo_component': m})
+        self.assertRaises(
+            InfeasibleConstraintException, latex_printer, **{'pyomo_component': m}
+        )
 
     def test_latexPrinter_variableType_NonPositiveIntegers_11(self):
         m = pyo.ConcreteModel(name='basicFormulation')
         m.x = pyo.Var(domain=NonPositiveIntegers, bounds=(0.25, 0.75))
         m.objective = pyo.Objective(expr=m.x)
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
-        self.assertRaises(ValueError, latex_printer, **{'pyomo_component': m})
+        self.assertRaises(
+            InfeasibleConstraintException, latex_printer, **{'pyomo_component': m}
+        )
 
     def test_latexPrinter_variableType_NegativeIntegers_1(self):
         m = pyo.ConcreteModel(name='basicFormulation')
@@ -1697,11 +1737,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & x \leq -1 & \qquad \in \mathds{Z}_{< 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1719,11 +1759,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & x \leq -1 & \qquad \in \mathds{Z}_{< 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1741,11 +1781,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & -10 \leq x \leq -1 & \qquad \in \mathds{Z}_{< 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1763,11 +1803,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & -10 \leq x \leq -1 & \qquad \in \mathds{Z}_{< 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1785,11 +1825,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & -10 \leq x \leq -2 & \qquad \in \mathds{Z}_{< 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1802,42 +1842,54 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.x = pyo.Var(domain=NegativeIntegers, bounds=(0, 0))
         m.objective = pyo.Objective(expr=m.x)
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
-        self.assertRaises(ValueError, latex_printer, **{'pyomo_component': m})
+        self.assertRaises(
+            InfeasibleConstraintException, latex_printer, **{'pyomo_component': m}
+        )
 
     def test_latexPrinter_variableType_NegativeIntegers_7(self):
         m = pyo.ConcreteModel(name='basicFormulation')
         m.x = pyo.Var(domain=NegativeIntegers, bounds=(0, 10))
         m.objective = pyo.Objective(expr=m.x)
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
-        self.assertRaises(ValueError, latex_printer, **{'pyomo_component': m})
+        self.assertRaises(
+            InfeasibleConstraintException, latex_printer, **{'pyomo_component': m}
+        )
 
     def test_latexPrinter_variableType_NegativeIntegers_8(self):
         m = pyo.ConcreteModel(name='basicFormulation')
         m.x = pyo.Var(domain=NegativeIntegers, bounds=(2, 10))
         m.objective = pyo.Objective(expr=m.x)
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
-        self.assertRaises(ValueError, latex_printer, **{'pyomo_component': m})
+        self.assertRaises(
+            InfeasibleConstraintException, latex_printer, **{'pyomo_component': m}
+        )
 
     def test_latexPrinter_variableType_NegativeIntegers_9(self):
         m = pyo.ConcreteModel(name='basicFormulation')
         m.x = pyo.Var(domain=NegativeIntegers, bounds=(0, 1))
         m.objective = pyo.Objective(expr=m.x)
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
-        self.assertRaises(ValueError, latex_printer, **{'pyomo_component': m})
+        self.assertRaises(
+            InfeasibleConstraintException, latex_printer, **{'pyomo_component': m}
+        )
 
     def test_latexPrinter_variableType_NegativeIntegers_10(self):
         m = pyo.ConcreteModel(name='basicFormulation')
         m.x = pyo.Var(domain=NegativeIntegers, bounds=(1, 10))
         m.objective = pyo.Objective(expr=m.x)
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
-        self.assertRaises(ValueError, latex_printer, **{'pyomo_component': m})
+        self.assertRaises(
+            InfeasibleConstraintException, latex_printer, **{'pyomo_component': m}
+        )
 
     def test_latexPrinter_variableType_NegativeIntegers_11(self):
         m = pyo.ConcreteModel(name='basicFormulation')
         m.x = pyo.Var(domain=NegativeIntegers, bounds=(0.25, 0.75))
         m.objective = pyo.Objective(expr=m.x)
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
-        self.assertRaises(ValueError, latex_printer, **{'pyomo_component': m})
+        self.assertRaises(
+            InfeasibleConstraintException, latex_printer, **{'pyomo_component': m}
+        )
 
     def test_latexPrinter_variableType_NonNegativeIntegers_1(self):
         m = pyo.ConcreteModel(name='basicFormulation')
@@ -1849,11 +1901,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 \leq x & \qquad \in \mathds{Z}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1871,11 +1923,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 \leq x & \qquad \in \mathds{Z}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1893,11 +1945,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 \leq x \leq 10 & \qquad \in \mathds{Z}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1915,11 +1967,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 \leq x = 0  & \qquad \in \mathds{Z}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1932,7 +1984,9 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.x = pyo.Var(domain=NonNegativeIntegers, bounds=(-10, -2))
         m.objective = pyo.Objective(expr=m.x)
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
-        self.assertRaises(ValueError, latex_printer, **{'pyomo_component': m})
+        self.assertRaises(
+            InfeasibleConstraintException, latex_printer, **{'pyomo_component': m}
+        )
 
     def test_latexPrinter_variableType_NonNegativeIntegers_6(self):
         m = pyo.ConcreteModel(name='basicFormulation')
@@ -1944,11 +1998,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 \leq x = 0  & \qquad \in \mathds{Z}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1966,11 +2020,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 \leq x \leq 10 & \qquad \in \mathds{Z}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -1988,11 +2042,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & 2 \leq x \leq 10 & \qquad \in \mathds{Z}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2010,11 +2064,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 \leq x \leq 1 & \qquad \in \mathds{Z}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2032,11 +2086,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & 1 \leq x \leq 10 & \qquad \in \mathds{Z}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2054,11 +2108,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & 0.25 \leq x \leq 0.75 & \qquad \in \mathds{Z}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2076,12 +2130,12 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
-            & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
+            & \text{w.b.} 
+            & & x & \qquad \in \left\{ \text{True} , \text{False} \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
         )
@@ -2098,12 +2152,12 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
-            & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
+            & \text{w.b.} 
+            & & x & \qquad \in \left\{ \text{True} , \text{False} \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
         )
@@ -2120,12 +2174,12 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
-            & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
+            & \text{w.b.} 
+            & & x & \qquad \in \left\{ \text{True} , \text{False} \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
         )
@@ -2142,12 +2196,12 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
-            & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
+            & \text{w.b.} 
+            & & x & \qquad \in \left\{ \text{True} , \text{False} \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
         )
@@ -2164,12 +2218,12 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
-            & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
+            & \text{w.b.} 
+            & & x & \qquad \in \left\{ \text{True} , \text{False} \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
         )
@@ -2186,12 +2240,12 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
-            & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
+            & \text{w.b.} 
+            & & x & \qquad \in \left\{ \text{True} , \text{False} \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
         )
@@ -2208,12 +2262,12 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
-            & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
+            & \text{w.b.} 
+            & & x & \qquad \in \left\{ \text{True} , \text{False} \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
         )
@@ -2230,12 +2284,12 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
-            & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
+            & \text{w.b.} 
+            & & x & \qquad \in \left\{ \text{True} , \text{False} \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
         )
@@ -2252,12 +2306,12 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
-            & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
+            & \text{w.b.} 
+            & & x & \qquad \in \left\{ \text{True} , \text{False} \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
         )
@@ -2274,12 +2328,12 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
-            & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
+            & \text{w.b.} 
+            & & x & \qquad \in \left\{ \text{True} , \text{False} \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
         )
@@ -2296,12 +2350,12 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
-            & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
+            & \text{w.b.} 
+            & & x & \qquad \in \left\{ \text{True} , \text{False} \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
         )
@@ -2318,11 +2372,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2340,11 +2394,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2362,11 +2416,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2384,11 +2438,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2406,11 +2460,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2428,11 +2482,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2450,11 +2504,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2472,11 +2526,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2494,11 +2548,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2516,11 +2570,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2538,11 +2592,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2560,11 +2614,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & x & \qquad \in \varnothing \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2582,11 +2636,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & x & \qquad \in \varnothing \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2604,11 +2658,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & x & \qquad \in \varnothing \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2626,11 +2680,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & x & \qquad \in \varnothing \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2648,11 +2702,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & x & \qquad \in \varnothing \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2670,11 +2724,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & x & \qquad \in \varnothing \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2692,11 +2746,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & x & \qquad \in \varnothing \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2714,11 +2768,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & x & \qquad \in \varnothing \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2736,11 +2790,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & x & \qquad \in \varnothing \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2758,11 +2812,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & x & \qquad \in \varnothing \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2780,11 +2834,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & x & \qquad \in \varnothing \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2802,11 +2856,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 \leq x \leq 1  & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2824,11 +2878,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 \leq x \leq 1  & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2846,11 +2900,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 \leq x \leq 1  & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2868,11 +2922,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 \leq x = 0  & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2885,7 +2939,9 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.x = pyo.Var(domain=UnitInterval, bounds=(-10, -2))
         m.objective = pyo.Objective(expr=m.x)
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
-        self.assertRaises(ValueError, latex_printer, **{'pyomo_component': m})
+        self.assertRaises(
+            InfeasibleConstraintException, latex_printer, **{'pyomo_component': m}
+        )
 
     def test_latexPrinter_variableType_UnitInterval_6(self):
         m = pyo.ConcreteModel(name='basicFormulation')
@@ -2897,11 +2953,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 \leq x = 0  & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2919,11 +2975,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 \leq x \leq 1  & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2936,7 +2992,9 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.x = pyo.Var(domain=UnitInterval, bounds=(2, 10))
         m.objective = pyo.Objective(expr=m.x)
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
-        self.assertRaises(ValueError, latex_printer, **{'pyomo_component': m})
+        self.assertRaises(
+            InfeasibleConstraintException, latex_printer, **{'pyomo_component': m}
+        )
 
     def test_latexPrinter_variableType_UnitInterval_9(self):
         m = pyo.ConcreteModel(name='basicFormulation')
@@ -2948,11 +3006,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 \leq x \leq 1  & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2970,11 +3028,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  = 1 x \leq 1  & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -2992,11 +3050,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & 0.25 \leq x \leq 0.75 & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -3014,11 +3072,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 \leq x \leq 1  & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -3036,11 +3094,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 \leq x \leq 1  & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -3058,11 +3116,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 \leq x \leq 1  & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -3080,11 +3138,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 \leq x = 0  & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -3097,7 +3155,9 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.x = pyo.Var(domain=PercentFraction, bounds=(-10, -2))
         m.objective = pyo.Objective(expr=m.x)
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
-        self.assertRaises(ValueError, latex_printer, **{'pyomo_component': m})
+        self.assertRaises(
+            InfeasibleConstraintException, latex_printer, **{'pyomo_component': m}
+        )
 
     def test_latexPrinter_variableType_PercentFraction_6(self):
         m = pyo.ConcreteModel(name='basicFormulation')
@@ -3109,11 +3169,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 \leq x = 0  & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -3131,11 +3191,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 \leq x \leq 1  & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -3148,7 +3208,9 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.x = pyo.Var(domain=PercentFraction, bounds=(2, 10))
         m.objective = pyo.Objective(expr=m.x)
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
-        self.assertRaises(ValueError, latex_printer, **{'pyomo_component': m})
+        self.assertRaises(
+            InfeasibleConstraintException, latex_printer, **{'pyomo_component': m}
+        )
 
     def test_latexPrinter_variableType_PercentFraction_9(self):
         m = pyo.ConcreteModel(name='basicFormulation')
@@ -3160,11 +3222,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  0 \leq x \leq 1  & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -3182,11 +3244,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & &  = 1 x \leq 1  & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
@@ -3204,11 +3266,11 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         bstr = dedent(
             r"""
         \begin{align} 
-            & \text{minimize} 
+            & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
-            & \text{subject to} 
+            & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} \\ 
-            & \text{with bounds} 
+            & \text{w.b.} 
             & & 0.25 \leq x \leq 0.75 & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
         """
