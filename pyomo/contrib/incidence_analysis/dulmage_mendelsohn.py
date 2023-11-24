@@ -77,7 +77,16 @@ def dulmage_mendelsohn(matrix_or_graph, top_nodes=None, matching=None):
     For example:
 
     .. doctest::
-       :skipif: True
+       :hide:
+       :skipif: not (networkx_available and scipy_available)
+
+       >>> # Hidden code block to make the following example runnable
+       >>> import scipy.sparse as sps
+       >>> from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import dulmage_mendelsohn
+       >>> matrix = sps.identity(3)
+
+    .. doctest::
+       :skipif: not (networkx_available and scipy_available)
 
        >>> row_dmpartition, col_dmpartition = dulmage_mendelsohn(matrix)
        >>> rdmp = row_dmpartition
