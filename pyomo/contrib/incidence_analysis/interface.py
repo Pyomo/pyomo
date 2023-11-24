@@ -770,7 +770,7 @@ class IncidenceGraphInterface(object):
            >>> matching = list(zip(
            ...     vdmp.underconstrained + vdmp.square + vdmp.overconstrained,
            ...     cdmp.underconstrained + cdmp.square + cdmp.overconstrained,
-           >>> ))
+           ... ))
            >>> # matching is a valid maximum matching of variables and constraints!
 
         Returns
