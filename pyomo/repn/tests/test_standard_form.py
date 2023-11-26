@@ -134,6 +134,7 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
         m.e = pyo.Constraint(expr=pyo.inequality(-2, m.y[0] + 1 + 6 * m.y[1], 7))
         m.f = pyo.Constraint(expr=m.x + m.y[0] + 2 == 10)
         m.o = pyo.Objective([1, 3], rule=lambda m, i: m.x + i * 5 * m.y[i])
+        m.o[1].sense = pyo.maximize
 
         col_order = [m.x, m.y[0], m.y[1], m.y[3]]
 
@@ -160,7 +161,7 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
         )
         self.assertTrue(np.all(repn.A == ref))
         self.assertTrue(np.all(repn.b == np.array([-3, 5, 6, 3, 8, -8])))
-        self.assertTrue(np.all(repn.c == np.array([[1, 0, 5, 0], [1, 0, 0, 15]])))
+        self.assertTrue(np.all(repn.c == np.array([[-1, 0, -5, 0], [1, 0, 0, 15]])))
         self._verify_solution(soln, repn, False)
 
         repn = LinearStandardFormCompiler().write(
@@ -187,7 +188,7 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
         self.assertTrue(np.all(repn.A == ref))
         self.assertTrue(np.all(repn.b == np.array([-3, 5, 6, 3, 8, -8])))
         self.assertTrue(
-            np.all(repn.c == np.array([[-1, 1, 0, -5, 5, 0], [-1, 1, 0, 0, 0, -15]]))
+            np.all(repn.c == np.array([[1, -1, 0, 5, -5, 0], [-1, 1, 0, 0, 0, -15]]))
         )
         self._verify_solution(soln, repn, False)
 
@@ -215,7 +216,9 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
         self.assertTrue(np.all(repn.A == ref))
         self.assertTrue(np.all(repn.b == np.array([3, 5, -3, 8])))
         self.assertTrue(
-            np.all(repn.c == np.array([[1, 0, 5, 0, 0, 0, 0], [1, 0, 0, 15, 0, 0, 0]]))
+            np.all(
+                repn.c == np.array([[-1, 0, -5, 0, 0, 0, 0], [1, 0, 0, 15, 0, 0, 0]])
+            )
         )
         self._verify_solution(soln, repn, True)
 
@@ -262,6 +265,6 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
         )
         self.assertTrue(np.all(repn.A == ref))
         self.assertTrue(np.all(repn.b == np.array([3, 5, -3, 8])))
-        ref = np.array([[-1, 1, 0, -5, 5, 0, 0, 0, 0], [-1, 1, 0, 0, 0, -15, 0, 0, 0]])
+        ref = np.array([[1, -1, 0, 5, -5, 0, 0, 0, 0], [-1, 1, 0, 0, 0, -15, 0, 0, 0]])
         self.assertTrue(np.all(repn.c == ref))
         self._verify_solution(soln, repn, True)

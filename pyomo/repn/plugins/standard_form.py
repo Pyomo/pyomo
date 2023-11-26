@@ -33,7 +33,7 @@ from pyomo.core.base import (
     SortComponents,
     Suffix,
     SymbolMap,
-    minimize,
+    maximize,
 )
 from pyomo.opt import WriterFactory
 from pyomo.repn.linear import LinearRepnVisitor
@@ -317,9 +317,14 @@ class _LinearStandardFormCompiler_impl(object):
                     f"Model objective ({obj.name}) contains nonlinear terms that "
                     "cannot be compiled to standard (linear) form."
                 )
-            obj_data.extend(repn.linear.values())
-            obj_index.extend(map(var_order.__getitem__, repn.linear))
-            obj_index_ptr.append(len(obj_index))
+            N = len(repn.linear)
+            obj_data.append(np.fromiter(repn.linear.values(), float, N))
+            if obj.sense == maximize:
+                obj_data[-1] *= -1
+            obj_index.append(
+                np.fromiter(map(var_order.__getitem__, repn.linear), float, N)
+            )
+            obj_index_ptr.append(obj_index_ptr[-1] + N)
             if with_debug_timing:
                 timer.toc('Objective %s', obj, level=logging.DEBUG)
 
@@ -421,7 +426,8 @@ class _LinearStandardFormCompiler_impl(object):
         columns = list(var_map.values())
         # Convert the compiled data to scipy sparse matricies
         c = scipy.sparse.csr_array(
-            (obj_data, obj_index, obj_index_ptr), [len(obj_index_ptr) - 1, len(columns)]
+            (np.concatenate(obj_data), np.concatenate(obj_index), obj_index_ptr),
+            [len(obj_index_ptr) - 1, len(columns)],
         ).tocsc()
         A = scipy.sparse.csr_array(
             (np.concatenate(con_data), np.concatenate(con_index), con_index_ptr),
