@@ -393,22 +393,25 @@ class _LinearStandardFormCompiler_impl(object):
                 con_index.append(np.array(_index))
                 con_index_ptr.append(con_index_ptr[-1] + len(_index))
             else:
+                N = len(repn.linear)
                 if ub is not None:
                     rows.append(RowEntry(con, 1))
                     rhs.append(ub - offset)
-                    con_data.append(np.array(list(repn.linear.values())))
+                    con_data.append(np.fromiter(repn.linear.values(), float, N))
                     con_index.append(
-                        np.array(list(map(var_order.__getitem__, repn.linear)))
+                        np.fromiter(map(var_order.__getitem__, repn.linear), float, N)
                     )
-                    con_index_ptr.append(con_index_ptr[-1] + len(con_index[-1]))
+                    con_index_ptr.append(con_index_ptr[-1] + N)
                 if lb is not None:
                     rows.append(RowEntry(con, -1))
                     rhs.append(offset - lb)
-                    con_data.append(np.array(list(map(neg, repn.linear.values()))))
-                    con_index.append(
-                        np.array(list(map(var_order.__getitem__, repn.linear)))
+                    con_data.append(
+                        np.fromiter(map(neg, repn.linear.values()), float, N)
                     )
-                    con_index_ptr.append(con_index_ptr[-1] + len(con_index[-1]))
+                    con_index.append(
+                        np.fromiter(map(var_order.__getitem__, repn.linear), float, N)
+                    )
+                    con_index_ptr.append(con_index_ptr[-1] + N)
 
         if with_debug_timing:
             # report the last constraint
