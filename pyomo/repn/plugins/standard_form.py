@@ -30,23 +30,18 @@ from pyomo.core.base import (
     Var,
     Param,
     Expression,
-    SOSConstraint,
     SortComponents,
     Suffix,
     SymbolMap,
     minimize,
 )
-from pyomo.core.base.component import ActiveComponent
-from pyomo.core.base.label import LPFileLabeler, NumericLabeler
 from pyomo.opt import WriterFactory
 from pyomo.repn.linear import LinearRepnVisitor
-from pyomo.repn.quadratic import QuadraticRepnVisitor
 from pyomo.repn.util import (
     FileDeterminism,
     FileDeterminism_to_SortComponents,
     categorize_valid_components,
     initialize_var_map_from_column_order,
-    int_float,
     ordered_active_constraints,
 )
 
@@ -56,9 +51,6 @@ from pyomo.core.base import Set, RangeSet, ExternalFunction
 from pyomo.network import Port
 
 logger = logging.getLogger(__name__)
-inf = float('inf')
-neg_inf = float('-inf')
-
 
 RowEntry = collections.namedtuple('RowEntry', ['constraint', 'bound_type'])
 
