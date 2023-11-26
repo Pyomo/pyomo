@@ -20,11 +20,10 @@ from pyomo.repn.plugins.standard_form import LinearStandardFormCompiler
 
 for sol in ['glpk', 'cbc', 'gurobi', 'cplex', 'xpress']:
     linear_solver = pyo.SolverFactory(sol)
-    if linear_solver.available():
+    if linear_solver.available(exception_flag=False):
         break
 else:
     linear_solver = None
-
 
 @unittest.skipUnless(
     scipy_available & numpy_available, "standard_form requires scipy and numpy"
@@ -113,7 +112,7 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
         test_model = pyo.ConcreteModel()
         test_model.o = pyo.Objective(expr=repn.c[[1], :].todense()[0] @ x)
         test_model.c = pyo.Constraint(range(len(repn.b)), rule=c_rule)
-        pyo.SolverFactory('glpk').solve(test_model, tee=True)
+        linear_solver.solve(test_model, tee=True)
 
         # Propagate any solution back to the original variables
         for v, expr in repn.eliminated_vars:
@@ -139,7 +138,7 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
         col_order = [m.x, m.y[0], m.y[1], m.y[3]]
 
         m.o[1].deactivate()
-        pyo.SolverFactory('glpk').solve(m)
+        linear_solver.solve(m)
         m.o[1].activate()
         soln = [(v, v.value) for v in col_order]
 
