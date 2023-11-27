@@ -108,6 +108,31 @@ class TestDisjunction(unittest.TestCase):
         self.assertEqual(len(disjuncts[0].parent_component().name), 11)
         self.assertEqual(disjuncts[0].name, "f_disjuncts[0]")
 
+    def test_construct_invalid_component(self):
+        m = ConcreteModel()
+        m.d = Disjunct([1, 2])
+        with self.assertRaisesRegex(
+            ValueError,
+            "Unexpected term for Disjunction 'dd'.\n    "
+            "Expected a Disjunct object, relational expression, or iterable of\n"
+            "    relational expressions but got 'IndexedDisjunct'",
+        ):
+            m.dd = Disjunction(expr=[m.d])
+        with self.assertRaisesRegex(
+            ValueError,
+            "Unexpected term for Disjunction 'ee'.\n    "
+            "Expected a Disjunct object, relational expression, or iterable of\n"
+            "    relational expressions but got 'str' in 'list'",
+        ):
+            m.ee = Disjunction(expr=[['a']])
+        with self.assertRaisesRegex(
+            ValueError,
+            "Unexpected term for Disjunction 'ff'.\n    "
+            "Expected a Disjunct object, relational expression, or iterable of\n"
+            "    relational expressions but got 'str'",
+        ):
+            m.ff = Disjunction(expr=['a'])
+
 
 class TestDisjunct(unittest.TestCase):
     def test_deactivate(self):
