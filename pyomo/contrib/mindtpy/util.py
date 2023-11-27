@@ -1010,4 +1010,5 @@ def copy_var_list_values(
         elif abs(var_val) <= config.zero_tolerance and 0 in v_to.domain:
             v_to.set_value(0)
         else:
-            raise ValueError("copy_var_list_values failed.")
+            raise ValueError("copy_var_list_values failed with variable {}, value = {} and rounded value = {}"
+                             "".format(v_to.name, var_val, rounded_val))
