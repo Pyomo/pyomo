@@ -106,7 +106,7 @@ def indexCorrector(ixs, base):
     return ixs
 
 
-def alphabetStringGenerator(num, indexMode=False):
+def alphabetStringGenerator(num):
     alphabet = ['.', 'i', 'j', 'k', 'm', 'n', 'p', 'q', 'r']
 
     ixs = decoder(num + 1, len(alphabet) - 1)
@@ -230,7 +230,7 @@ def handle_monomialTermExpression_node(visitor, node, arg1, arg2):
 
 
 def handle_named_expression_node(visitor, node, arg1):
-    # needed to preserve consistencency with the exitNode function call
+    # needed to preserve consistency with the exitNode function call
     # prevents the need to type check in the exitNode function
     return arg1
 
@@ -539,8 +539,8 @@ def analyze_variable(vr):
             upperBound = ' \\leq 1 '
 
     else:
-        raise DeveloperError(
-            'Invalid domain somehow encountered, contact the developers'
+        raise NotImplementedError(
+            'Invalid domain encountered, will be supported in a future update'
         )
 
     varBoundData = {
@@ -562,14 +562,14 @@ def multiple_replace(pstr, rep_dict):
 def latex_printer(
     pyomo_component,
     latex_component_map=None,
-    write_object=None,
+    ostream=None,
     use_equation_environment=False,
     explicit_set_summation=False,
     throw_templatization_error=False,
 ):
     """This function produces a string that can be rendered as LaTeX
 
-    As described, this function produces a string that can be rendered as LaTeX
+    Prints a Pyomo component (Block, Model, Objective, Constraint, or Expression) to a LaTeX compatible string
 
     Parameters
     ----------
@@ -577,11 +577,11 @@ def latex_printer(
         The Pyomo component to be printed
 
     latex_component_map: pyomo.common.collections.component_map.ComponentMap
-        A map keyed by Pyomo component, values become the latex representation in
+        A map keyed by Pyomo component, values become the LaTeX representation in
         the printer
 
-    write_object: io.TextIOWrapper or io.StringIO or str
-        The object to print the latex string to.  Can be an open file object,
+    ostream: io.TextIOWrapper or io.StringIO or str
+        The object to print the LaTeX string to.  Can be an open file object,
         string I/O object, or a string for a filename to write to
 
     use_equation_environment: bool
@@ -1289,7 +1289,7 @@ def latex_printer(
 
     pstr = '\n'.join(finalLines)
 
-    if write_object is not None:
+    if ostream is not None:
         fstr = ''
         fstr += '\\documentclass{article} \n'
         fstr += '\\usepackage{amsmath} \n'
@@ -1303,15 +1303,15 @@ def latex_printer(
         fstr += '\\end{document} \n'
 
         # optional write to output file
-        if isinstance(write_object, (io.TextIOWrapper, io.StringIO)):
-            write_object.write(fstr)
-        elif isinstance(write_object, str):
-            f = open(write_object, 'w')
+        if isinstance(ostream, (io.TextIOWrapper, io.StringIO)):
+            ostream.write(fstr)
+        elif isinstance(ostream, str):
+            f = open(ostream, 'w')
             f.write(fstr)
             f.close()
         else:
             raise ValueError(
-                'Invalid type %s encountered when parsing the write_object.  Must be a StringIO, FileIO, or valid filename string'
+                'Invalid type %s encountered when parsing the ostream.  Must be a StringIO, FileIO, or valid filename string'
             )
 
     # return the latex string

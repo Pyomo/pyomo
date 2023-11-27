@@ -446,7 +446,7 @@ class TestLatexPrinter(unittest.TestCase):
 
         with TempfileManager.new_context() as tempfile:
             fd, fname = tempfile.mkstemp()
-            pstr = latex_printer(m, write_object=fname)
+            pstr = latex_printer(m, ostream=fname)
 
             f = open(fname)
             bstr = f.read()
@@ -468,7 +468,7 @@ class TestLatexPrinter(unittest.TestCase):
 
         with TempfileManager.new_context() as tempfile:
             fd, fname = tempfile.mkstemp()
-            pstr = latex_printer(m, write_object=fname)
+            pstr = latex_printer(m, ostream=fname)
 
             f = open(fname)
             bstr = f.read()
@@ -481,7 +481,7 @@ class TestLatexPrinter(unittest.TestCase):
             self.assertEqual(pstr + '\n', bstr)
 
         self.assertRaises(
-            ValueError, latex_printer, **{'pyomo_component': m, 'write_object': 2.0}
+            ValueError, latex_printer, **{'pyomo_component': m, 'ostream': 2.0}
         )
 
     def test_latexPrinter_overwriteError(self):
