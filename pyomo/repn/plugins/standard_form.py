@@ -11,7 +11,7 @@
 
 import collections
 import logging
-from operator import attrgetter, neg
+from operator import attrgetter
 
 from pyomo.common.config import (
     ConfigBlock,
@@ -399,23 +399,19 @@ class _LinearStandardFormCompiler_impl(object):
                 con_index_ptr.append(con_index_ptr[-1] + len(_index))
             else:
                 N = len(repn.linear)
+                _data = np.fromiter(repn.linear.values(), float, N)
+                _index = np.fromiter(map(var_order.__getitem__, repn.linear), float, N)
                 if ub is not None:
                     rows.append(RowEntry(con, 1))
                     rhs.append(ub - offset)
-                    con_data.append(np.fromiter(repn.linear.values(), float, N))
-                    con_index.append(
-                        np.fromiter(map(var_order.__getitem__, repn.linear), float, N)
-                    )
+                    con_data.append(_data)
+                    con_index.append(_index)
                     con_index_ptr.append(con_index_ptr[-1] + N)
                 if lb is not None:
                     rows.append(RowEntry(con, -1))
                     rhs.append(offset - lb)
-                    con_data.append(
-                        np.fromiter(map(neg, repn.linear.values()), float, N)
-                    )
-                    con_index.append(
-                        np.fromiter(map(var_order.__getitem__, repn.linear), float, N)
-                    )
+                    con_data.append(-_data)
+                    con_index.append(_index)
                     con_index_ptr.append(con_index_ptr[-1] + N)
 
         if with_debug_timing:
