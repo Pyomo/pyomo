@@ -52,7 +52,12 @@ class MindtPy_FP_Solver(_MindtPyAlgorithm):
         )
 
     def add_cuts(
-        self, dual_values, linearize_active=True, linearize_violated=True, cb_opt=None
+        self,
+        dual_values,
+        linearize_active=True,
+        linearize_violated=True,
+        cb_opt=None,
+        nlp=None,
     ):
         add_oa_cuts(
             self.mip,
