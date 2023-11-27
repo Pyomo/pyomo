@@ -397,7 +397,7 @@ def parse_sol_file(
                 while line:
                     remaining += line.strip() + "; "
                     line = sol_file.readline()
-                result.solver_message += remaining
+                result.extra_info.solver_message += remaining
                 break
             unmasked_kind = int(line[1])
             kind = unmasked_kind & 3  # 0-var, 1-con, 2-obj, 3-prob

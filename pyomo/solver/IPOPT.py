@@ -13,7 +13,7 @@ import os
 import subprocess
 import io
 import sys
-from typing import Mapping, Dict
+from typing import Mapping
 
 from pyomo.common import Executable
 from pyomo.common.config import ConfigValue, NonNegativeInt

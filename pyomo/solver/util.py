@@ -38,6 +38,8 @@ def get_objective(block):
 
 
 def check_optimal_termination(results):
+    # TODO: Make work for legacy and new results objects.
+    # Look at the original version of this function to make that happen.
     """
     This function returns True if the termination condition for the solver
     is 'optimal', 'locallyOptimal', or 'globallyOptimal', and the status is 'ok'
