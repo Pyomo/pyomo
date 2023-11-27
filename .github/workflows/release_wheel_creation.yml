@@ -25,7 +25,7 @@ jobs:
       matrix:
         os: [ubuntu-22.04, windows-latest, macos-latest]
         arch: [all]
-        wheel-version: ['cp38*', 'cp39*', 'cp310*', 'cp311*']
+        wheel-version: ['cp38*', 'cp39*', 'cp310*', 'cp311*', 'cp312*']
     steps:
       - uses: actions/checkout@v4
       - name: Build wheels
@@ -53,7 +53,7 @@ jobs:
       matrix:
         os: [ubuntu-22.04]
         arch: [all]
-        wheel-version: ['cp38*', 'cp39*', 'cp310*', 'cp311*']
+        wheel-version: ['cp38*', 'cp39*', 'cp310*', 'cp311*', 'cp312*']
     steps:
       - uses: actions/checkout@v4
       - name: Set up QEMU
