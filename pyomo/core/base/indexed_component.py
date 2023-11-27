@@ -836,7 +836,7 @@ You can silence this warning by one of three ways:
         # already trapped unhashable objects.  Unfortunately, Python
         # 3.12 made slices hashable.  This means that slices will get
         # here and potentially be looked up in the index_set.  This will
-        # cause problems with Any, where Any will hapilly return the
+        # cause problems with Any, where Any will happily return the
         # index as a valid set.  We will only validate the index for
         # non-Any sets.  Any will pass through so that normalize_index
         # can be called (which can generate the TypeError for slices)
