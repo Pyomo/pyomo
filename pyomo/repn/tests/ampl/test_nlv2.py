@@ -953,6 +953,14 @@ class Test_NLWriter(unittest.TestCase):
             "keys that are not exported as part of the NL file.  Skipping.\n",
             LOG.getvalue(),
         )
+        with LoggingIntercept(level=logging.DEBUG) as LOG:
+            nl_writer.NLWriter().write(m, OUT)
+        self.assertEqual(
+            "model contains export suffix 'junk' that contains 1 component "
+            "keys that are not exported as part of the NL file.  Skipping.\n"
+            "Skipped component keys:\n\ty\n",
+            LOG.getvalue(),
+        )
 
         m.junk[m.z] = 1
         with LoggingIntercept() as LOG:
@@ -960,6 +968,14 @@ class Test_NLWriter(unittest.TestCase):
         self.assertEqual(
             "model contains export suffix 'junk' that contains 3 component "
             "keys that are not exported as part of the NL file.  Skipping.\n",
+            LOG.getvalue(),
+        )
+        with LoggingIntercept(level=logging.DEBUG) as LOG:
+            nl_writer.NLWriter().write(m, OUT)
+        self.assertEqual(
+            "model contains export suffix 'junk' that contains 3 component "
+            "keys that are not exported as part of the NL file.  Skipping.\n"
+            "Skipped component keys:\n\ty\n\tz[1]\n\tz[3]\n",
             LOG.getvalue(),
         )
 
@@ -990,6 +1006,17 @@ class Test_NLWriter(unittest.TestCase):
             "model contains export suffix 'junk' that contains 1 "
             "keys that are not Var, Constraint, Objective, or the model.  "
             "Skipping.\n",
+            LOG.getvalue(),
+        )
+        with LoggingIntercept(level=logging.DEBUG) as LOG:
+            nl_writer.NLWriter().write(m, OUT)
+        self.assertEqual(
+            "model contains export suffix 'junk' that contains 6 component "
+            "keys that are not exported as part of the NL file.  Skipping.\n"
+            "Skipped component keys:\n\tc\n\td[1]\n\td[3]\n\ty\n\tz[1]\n\tz[3]\n"
+            "model contains export suffix 'junk' that contains 1 keys that "
+            "are not Var, Constraint, Objective, or the model.  Skipping.\n"
+            "Skipped component keys:\n\t5\n",
             LOG.getvalue(),
         )
 
