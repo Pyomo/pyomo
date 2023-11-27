@@ -16,7 +16,7 @@ import pyomo.common.unittest as unittest
 import pyomo.contrib.parmest.parmest as parmest
 from pyomo.opt import SolverFactory
 
-ipopt_available = SolverFactory('ipopt').available()
+ipopt_available = SolverFactory("ipopt").available()
 
 
 @unittest.skipIf(
@@ -45,13 +45,13 @@ class TestUtils(unittest.TestCase):
                 [1.10, 10000, 3535.1, 1064.8, 1613.3, 1893.4],
                 [1.15, 10000, 3609.1, 1067.8, 1547.5, 1887.8],
             ],
-            columns=['sv', 'caf', 'ca', 'cb', 'cc', 'cd'],
+            columns=["sv", "caf", "ca", "cb", "cc", "cd"],
         )
 
-        theta_names = ['k1', 'k2', 'k3']
+        theta_names = ["k1", "k2", "k3"]
 
         instance = reactor_design_model(data.loc[0])
-        solver = pyo.SolverFactory('ipopt')
+        solver = pyo.SolverFactory("ipopt")
         solver.solve(instance)
 
         instance_vars = parmest.utils.convert_params_to_vars(

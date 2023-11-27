@@ -148,6 +148,17 @@ class TestIncidenceStandardRepn(unittest.TestCase, _TestIncidence):
         variables = self._get_incident_variables(expr)
         self.assertEqual(ComponentSet(variables), ComponentSet([m.x[1], m.x[2]]))
 
+    def test_fixed_zero_coefficient_linear_only(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3])
+        expr = m.x[1] * m.x[2] + 2 * m.x[3]
+        m.x[2].fix(0)
+        variables = get_incident_variables(
+            expr, method=IncidenceMethod.standard_repn, linear_only=True
+        )
+        self.assertEqual(len(variables), 1)
+        self.assertIs(variables[0], m.x[3])
+
     def test_fixed_none_linear_coefficient(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])

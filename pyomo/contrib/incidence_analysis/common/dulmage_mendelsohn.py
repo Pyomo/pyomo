@@ -90,7 +90,7 @@ def dulmage_mendelsohn(bg, top_nodes=None, matching=None):
     _filter.update(b_unmatched)
     _filter.update(b_matched_with_reachable)
     t_other = [t for t in top_nodes if t not in _filter]
-    b_other = [b for b in bot_nodes if b not in _filter]
+    b_other = [matching[t] for t in t_other]
 
     return (
         (t_unmatched, t_reachable, t_matched_with_reachable, t_other),
