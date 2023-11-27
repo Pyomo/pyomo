@@ -76,40 +76,22 @@ _GENERAL = ExprType.GENERAL
 
 from pyomo.common.errors import InfeasibleConstraintException
 
-from pyomo.common.dependencies import numpy, numpy_available
-
-if numpy_available:
-    import numpy as np
+from pyomo.common.dependencies import numpy as np, numpy_available
 
 
 def decoder(num, base):
-    # Needed in the general case, but not as implemented
-    # if isinstance(base, float):
-    #     if not base.is_integer():
-    #         raise ValueError('Invalid base')
-    #     else:
-    #         base = int(base)
-
-    # Needed in the general case, but not as implemented
-    # if base <= 1:
-    #     raise ValueError('Invalid base')
-
-    # Needed in the general case, but not as implemented
-    # if num == 0:
-    #     numDigs = 1
-    # else:
-    numDigs = math.ceil(math.log(num, base))
-    if math.log(num, base).is_integer():
-        numDigs += 1
-
-    digs = [0.0 for i in range(0, numDigs)]
-    rem = num
-    for i in range(0, numDigs):
-        ix = numDigs - i - 1
-        dg = math.floor(rem / base**ix)
-        rem = rem % base**ix
-        digs[i] = dg
-    return digs
+    if int(num) != abs(num):
+        # Requiring an integer is nice, but not strictly necessary;
+        # the algorithm works for floating point
+        raise ValueError("num should be a nonnegative integer")
+    if int(base) != abs(base) or not base:
+        raise ValueError("base should be a positive integer")
+    ans = []
+    while 1:
+        ans.append(num % base)
+        num //= base
+        if not num:
+            return list(reversed(ans))
 
 
 def indexCorrector(ixs, base):
@@ -337,7 +319,7 @@ def handle_param_node(visitor, node):
 
 
 def handle_str_node(visitor, node):
-    return node.replace('_', '\\_')
+    return "\\mathtt{'" + node.replace('_', '\\_') + "'}"
 
 
 def handle_npv_structuralGetItemExpression_node(visitor, node, *args):

@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
-from pyomo.util.latex_printer import latex_printer
+from pyomo.contrib.latex_printer import latex_printer
 import pyomo.environ as pyo
 from textwrap import dedent
 from pyomo.common.tempfiles import TempfileManager

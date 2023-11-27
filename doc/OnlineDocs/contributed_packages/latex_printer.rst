@@ -1,28 +1,9 @@
 Latex Printing
 ==============
 
-Pyomo models can be printed to a LaTeX compatible format using the ``pyomo.util.latex_printer`` function:
+Pyomo models can be printed to a LaTeX compatible format using the ``pyomo.contrib.latex_printer.latex_printer`` function:
 
-.. py:function:: latex_printer(pyomo_component, latex_component_map=None, write_object=None, use_equation_environment=False, explicit_set_summation=False, use_short_descriptors=False, fontsize = None, paper_dimensions=None)
-
-    Prints a pyomo component (Block, Model, Objective, Constraint, or Expression) to a LaTeX compatible string
-
-   :param pyomo_component: The Pyomo component to be printed
-   :type pyomo_component: _BlockData or Model or Objective or Constraint or Expression
-   :param latex_component_map: A map keyed by Pyomo component, values become the latex representation in the printer
-   :type latex_component_map: pyomo.common.collections.component_map.ComponentMap
-   :param write_object: The object to print the latex string to.  Can be an open file object, string I/O object, or a string for a filename to write to
-   :type write_object: io.TextIOWrapper or io.StringIO or str
-   :param use_equation_environment: LaTeX can render as either a single equation object or as an aligned environment, that in essence treats each objective and constraint as individual numbered equations.  If False, then the align environment is used in LaTeX and each constraint and objective will be given an individual equation number.  If True, the equation/aligned construction is used to create a single LaTeX equation for the entire model.  The align environment (ie, flag==False which is the default) is preferred because it allows for page breaks in large models.
-   :type use_equation_environment: bool
-   :param explicit_set_summation: If False, all sums will be done over 'index in set' or similar.  If True, sums that have a contiguous set (ex: [1,2,3,4,5...]) will be done over 'i=1' to 'N' or similar 
-   :type explicit_set_summation: bool
-   :param throw_templatization_error: Option to throw an error on templatization failure rather than printing each constraint individually, useful for very large models
-   :type throw_templatization_error: bool
-
-
-   :return: A LaTeX style string that represents the passed in pyomoElement
-   :rtype: str
+.. autofunction::  pyomo.contrib.latex_printer.latex_printer.latex_printer
 
 .. note::
 
@@ -41,7 +22,7 @@ A Model
 .. doctest::
 
     >>> import pyomo.environ as pyo
-    >>> from pyomo.util.latex_printer import latex_printer
+    >>> from pyomo.contrib.latex_printer import latex_printer
 
     >>> m = pyo.ConcreteModel(name = 'basicFormulation')
     >>> m.x = pyo.Var()
@@ -60,7 +41,7 @@ A Constraint
 .. doctest::
 
     >>> import pyomo.environ as pyo
-    >>> from pyomo.util.latex_printer import latex_printer
+    >>> from pyomo.contrib.latex_printer import latex_printer
 
     >>> m = pyo.ConcreteModel(name = 'basicFormulation')
     >>> m.x = pyo.Var()
@@ -76,7 +57,7 @@ A Constraint with Set Summation
 .. doctest::
 
     >>> import pyomo.environ as pyo
-    >>> from pyomo.util.latex_printer import latex_printer
+    >>> from pyomo.contrib.latex_printer import latex_printer
     >>> m = pyo.ConcreteModel(name='basicFormulation')
     >>> m.I = pyo.Set(initialize=[1, 2, 3, 4, 5])
     >>> m.v = pyo.Var(m.I)
@@ -93,7 +74,7 @@ Using a ComponentMap to Specify Names
 .. doctest::
 
     >>> import pyomo.environ as pyo
-    >>> from pyomo.util.latex_printer import latex_printer
+    >>> from pyomo.contrib.latex_printer import latex_printer
     >>> from pyomo.common.collections.component_map import ComponentMap
 
     >>> m = pyo.ConcreteModel(name='basicFormulation')
@@ -117,7 +98,7 @@ An Expression
 .. doctest::
 
     >>> import pyomo.environ as pyo
-    >>> from pyomo.util.latex_printer import latex_printer
+    >>> from pyomo.contrib.latex_printer import latex_printer
 
     >>> m = pyo.ConcreteModel(name = 'basicFormulation')
     >>> m.x = pyo.Var()
@@ -134,7 +115,7 @@ A Simple Expression
 .. doctest::
 
     >>> import pyomo.environ as pyo
-    >>> from pyomo.util.latex_printer import latex_printer
+    >>> from pyomo.contrib.latex_printer import latex_printer
 
     >>> m = pyo.ConcreteModel(name = 'basicFormulation')
     >>> m.x = pyo.Var()
