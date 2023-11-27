@@ -426,6 +426,35 @@ def test_solver_cases(*args):
             import_suffixes=['dual'],
         )
 
+        #
+        # COPT
+        #
+        _copt_capabilities = set(
+            [
+                'linear',
+                'integer',
+                'quadratic_objective',
+                'quadratic_constraint',
+                'sos1',
+                'sos2',
+            ]
+        )
+
+        # TODO: Enable 'dual' suffix tests when duals for quad rows available too
+        _test_solver_cases['copt_direct', 'python'] = initialize(
+            name='copt_direct',
+            io='python',
+            capabilities=_copt_capabilities,
+            import_suffixes=['slack', 'rc'],
+        )
+
+        _test_solver_cases['copt_persistent', 'python'] = initialize(
+            name='copt_persistent',
+            io='python',
+            capabilities=_copt_capabilities,
+            import_suffixes=['slack', 'rc'],
+        )
+
         logging.disable(logging.NOTSET)
 
         #

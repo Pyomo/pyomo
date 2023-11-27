@@ -30,3 +30,6 @@ import pyomo.solvers.plugins.solvers.mosek_direct
 import pyomo.solvers.plugins.solvers.mosek_persistent
 import pyomo.solvers.plugins.solvers.xpress_direct
 import pyomo.solvers.plugins.solvers.xpress_persistent
+import pyomo.solvers.plugins.solvers.COPT
+import pyomo.solvers.plugins.solvers.copt_direct
+import pyomo.solvers.plugins.solvers.copt_persistent

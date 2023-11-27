@@ -44,10 +44,18 @@ class TestIIS(unittest.TestCase):
         _test_iis("xpress")
 
     @unittest.skipUnless(
+        pyo.SolverFactory("copt_persistent").available(exception_flag=False),
+        "COPT not available",
+    )
+    def test_write_iis_copt(self):
+        _test_iis("copt")
+
+    @unittest.skipUnless(
         (
             pyo.SolverFactory("cplex_persistent").available(exception_flag=False)
             or pyo.SolverFactory("gurobi_persistent").available(exception_flag=False)
             or pyo.SolverFactory("xpress_persistent").available(exception_flag=False)
+            or pyo.SolverFactory("copt_persistent").available(exception_flag=False)
         ),
         "Persistent solver not available",
     )
@@ -76,10 +84,18 @@ class TestIIS(unittest.TestCase):
         self._assert_raises_unavailable_solver("xpress")
 
     @unittest.skipIf(
+        pyo.SolverFactory("copt_persistent").available(exception_flag=False),
+        "COPT available",
+    )
+    def test_exception_copt_not_available(self):
+        self._assert_raises_unavailable_solver("copt")
+
+    @unittest.skipIf(
         (
             pyo.SolverFactory("cplex_persistent").available(exception_flag=False)
             or pyo.SolverFactory("gurobi_persistent").available(exception_flag=False)
             or pyo.SolverFactory("xpress_persistent").available(exception_flag=False)
+            or pyo.SolverFactory("copt_persistent").available(exception_flag=False)
         ),
         "Persistent solver available",
     )
