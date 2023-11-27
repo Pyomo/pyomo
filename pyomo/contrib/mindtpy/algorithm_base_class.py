@@ -857,7 +857,7 @@ class _MindtPyAlgorithm(object):
             not in self.mip_objective_polynomial_degree
         ):
             config.logger.info(
-                'Initial relaxed NLP problem is infeasible. This might be related to partition_obj_nonlinear_terms. Try to solve it again without partitioning nonlinear objective function.'
+                'Initial relaxed NLP problem is infeasible. This might be related to partition_obj_nonlinear_terms. Trying to solve it again without partitioning nonlinear objective function.'
             )
             self.rnlp.MindtPy_utils.objective.deactivate()
             self.rnlp.MindtPy_utils.objective_list[0].activate()
