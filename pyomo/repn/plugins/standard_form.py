@@ -81,13 +81,13 @@ class LinearStandardFormInfo(object):
         The list of Pyomo constraint objects corresponding to the rows
         in `A`.  Each element in the list is a 2-tuple of
         (_ConstraintData, row_multiplier).  The `row_multiplier` will be
-        +/- 1 (indicating if the row was multiplied by -1 (corresponding
-        to a constraint lower bound or +1 (upper bound).
+        +/- 1 indicating if the row was multiplied by -1 (corresponding
+        to a constraint lower bound) or +1 (upper bound).
 
     columns : List[_VarData]
 
         The list of Pyomo variable objects corresponding to columns in
-        the `A` and `c` matricies.
+        the `A` and `c` matrices.
 
     eliminated_vars: List[Tuple[_VarData, NumericExpression]]
 
@@ -144,7 +144,7 @@ class LinearStandardFormCompiler(object):
         ConfigValue(
             default=False,
             domain=bool,
-            description='Print timing after writing each section of the LP file',
+            description='Print timing after each stage of the compilation process',
         ),
     )
     CONFIG.declare(
@@ -155,7 +155,7 @@ class LinearStandardFormCompiler(object):
             description='How much effort to ensure result is deterministic',
             doc="""
             How much effort do we want to put into ensuring the
-            resulting matricies are produced deterministically:
+            resulting matrices are produced deterministically:
                 NONE (0) : None
                 ORDERED (10): rely on underlying component ordering (default)
                 SORT_INDICES (20) : sort keys of indexed components
@@ -169,8 +169,9 @@ class LinearStandardFormCompiler(object):
             default=None,
             description='Preferred constraint ordering',
             doc="""
-            List of constraints in the order that they should appear in the
-            LP file.  Unspecified constraints will appear at the end.""",
+            List of constraints in the order that they should appear in
+            the resulting `A` matrix.  Unspecified constraints will
+            appear at the end.""",
         ),
     )
     CONFIG.declare(
@@ -180,10 +181,8 @@ class LinearStandardFormCompiler(object):
             description='Preferred variable ordering',
             doc="""
             List of variables in the order that they should appear in
-            the LP file.  Note that this is only a suggestion, as the LP
-            file format is row-major and the columns are inferred from
-            the order in which variables appear in the objective
-            followed by each constraint.""",
+            the compiled representation.  Unspecified variables will be
+            appended to the end of this list.""",
         ),
     )
 
@@ -251,7 +250,8 @@ class _LinearStandardFormCompiler_impl(object):
         if unknown:
             raise ValueError(
                 "The model ('%s') contains the following active components "
-                "that the LP compiler does not know how to process:\n\t%s"
+                "that the Linear Standard Form compiler does not know how to "
+                "process:\n\t%s"
                 % (
                     model.name,
                     "\n\t".join(
@@ -420,7 +420,7 @@ class _LinearStandardFormCompiler_impl(object):
 
         # Get the variable list
         columns = list(var_map.values())
-        # Convert the compiled data to scipy sparse matricies
+        # Convert the compiled data to scipy sparse matrices
         c = scipy.sparse.csr_array(
             (np.concatenate(obj_data), np.concatenate(obj_index), obj_index_ptr),
             [len(obj_index_ptr) - 1, len(columns)],
@@ -430,8 +430,8 @@ class _LinearStandardFormCompiler_impl(object):
             [len(rows), len(columns)],
         ).tocsc()
 
-        # Some variables in the var_map may not actually have been
-        # written out to the LP file (e.g., added from col_order, or
+        # Some variables in the var_map may not actually appear in the
+        # objective or constraints (e.g., added from col_order, or
         # multiplied by 0 in the expressions).  The easiest way to check
         # for empty columns is to convert from CSR to CSC and then look
         # at the index pointer list (an O(num_var) operation).
