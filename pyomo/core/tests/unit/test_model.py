@@ -26,7 +26,7 @@ import pyomo.common.unittest as unittest
 
 from pyomo.common.dependencies import yaml_available
 from pyomo.common.tempfiles import TempfileManager
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.environ import (
     RangeSet,
     ConcreteModel,

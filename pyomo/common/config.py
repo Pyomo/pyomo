@@ -1293,7 +1293,7 @@ def _formatter_str_to_item_callback(pattern, formatter):
         if not _doc:
             return ''
         wraplines = '\n ' not in _doc
-        _doc = _item_body_formatter(_doc).strip()
+        _doc = _item_body_formatter(_doc).rstrip()
         if not _doc:
             return ''
         _indent = indent + ' ' * self.indent_spacing
@@ -1302,8 +1302,10 @@ def _formatter_str_to_item_callback(pattern, formatter):
                 _doc, self.width, initial_indent=_indent, subsequent_indent=_indent
             )
             self.out.write(('\n'.join(doc_lines)).rstrip() + '\n')
+        elif _doc.lstrip() == _doc:
+            self.out.write(_indent + _doc + '\n')
         else:
-            self.out.write(_doc.rstrip() + '\n')
+            self.out.write(_doc + '\n')
 
     return types.MethodType(_item_body_cb, formatter)
 
@@ -1443,7 +1445,7 @@ ConfigFormatter.formats = {
 @deprecated(
     "add_docstring_list is deprecated.  Please use the "
     "@document_kwargs_from_configdict() decorator.",
-    version='6.5.1.dev0',
+    version='6.6.0',
 )
 def add_docstring_list(docstring, configdict, indent_by=4):
     """Returns the docstring with a formatted configuration arguments listing."""
@@ -2010,17 +2012,17 @@ class ConfigBase(object):
                     f"Overriding '{name}' by passing strings to "
                     "generate_documentation is deprecated.  Create an instance of a "
                     "StringConfigFormatter and pass it as the 'format' argument.",
-                    version='6.5.1.dev0',
+                    version='6.6.0',
                 )
                 setattr(
                     formatter, "_" + name, _formatter_str_to_callback(arg, formatter)
                 )
         if item_body is not None:
             deprecation_warning(
-                f"Overriding 'item_body' by passing strings to "
+                "Overriding 'item_body' by passing strings to "
                 "generate_documentation is deprecated.  Create an instance of a "
                 "StringConfigFormatter and pass it as the 'format' argument.",
-                version='6.5.1.dev0',
+                version='6.6.0',
             )
             setattr(
                 formatter,

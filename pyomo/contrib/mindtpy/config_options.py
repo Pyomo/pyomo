@@ -508,7 +508,7 @@ def _add_subsolver_configs(CONFIG):
         'nlp_solver',
         ConfigValue(
             default='ipopt',
-            domain=In(['ipopt', 'appsi_ipopt', 'gams', 'baron']),
+            domain=In(['ipopt', 'appsi_ipopt', 'gams', 'baron', 'cyipopt']),
             description='NLP subsolver name',
             doc='Which NLP subsolver is going to be used for solving the nonlinear'
             'subproblems.',
@@ -538,6 +538,7 @@ def _add_subsolver_configs(CONFIG):
                     'cplex_persistent',
                     'appsi_cplex',
                     'appsi_gurobi',
+                    # 'appsi_highs', TODO: feasibility pump now fails with appsi_highs #2951
                 ]
             ),
             description='MIP subsolver name',
@@ -619,6 +620,7 @@ def _add_subsolver_configs(CONFIG):
                     'cplex_persistent',
                     'appsi_cplex',
                     'appsi_gurobi',
+                    # 'appsi_highs',
                 ]
             ),
             description='MIP subsolver for regularization problem',
@@ -838,22 +840,6 @@ def _add_roa_configs(CONFIG):
             default=10,
             domain=PositiveInt,
             description='The solution limit for the regularization problem since it does not need to be solved to optimality.',
-        ),
-    )
-    CONFIG.declare(
-        'reduce_level_coef',
-        ConfigValue(
-            default=False,
-            description='Whether to reduce level coefficient in ROA single tree when regularization problem is infeasible.',
-            domain=bool,
-        ),
-    )
-    CONFIG.declare(
-        'use_bb_tree_incumbent',
-        ConfigValue(
-            default=False,
-            description='Whether to use the incumbent solution of branch & bound tree in ROA single tree when regularization problem is infeasible.',
-            domain=bool,
         ),
     )
     CONFIG.declare(

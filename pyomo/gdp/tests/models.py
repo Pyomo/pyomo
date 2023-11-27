@@ -11,12 +11,14 @@ from pyomo.core import (
     Any,
     Expression,
     maximize,
+    minimize,
+    NonNegativeReals,
     TransformationFactory,
     BooleanVar,
     LogicalConstraint,
     exactly,
 )
-from pyomo.core.expr.current import sqrt
+from pyomo.core.expr import sqrt
 from pyomo.gdp import Disjunct, Disjunction
 
 import pyomo.network as ntwk
@@ -1135,5 +1137,71 @@ def makeBooleanVarsOnDisjuncts():
     m.p = LogicalConstraint(expr=m.d[1].indicator_var.implies(m.d[4].indicator_var))
     # Use the logical stuff to make choosing d1 and d4 infeasible:
     m.bwahaha = LogicalConstraint(expr=m.d[1].Y[1].xor(m.d[1].Y[2]))
+
+    return m
+
+
+def make_non_nested_model_declaring_Disjuncts_on_each_other():
+    """
+    T = {1, 2, ..., 10}
+
+    min  sum(x_t + y_t for t in T)
+
+    s.t. 1 <= x_t <= 10, for all t in T
+         1 <= y_t <= 100, for all t in T
+
+         [y_t = 100] v [y_t = 1000], for all t in T
+         [x_t = 2] v [y_t = 10], for all t in T.
+
+
+    We can't choose y_t = 10 because then the first Disjunction is infeasible.
+    so in the optimal solution we choose x_t = 2 and y_t = 100 for all t in T.
+    That gives us an optimal value of (100 + 2)*10 = 1020.
+    """
+    model = ConcreteModel()
+    model.T = RangeSet(10)
+    model.x = Var(model.T, bounds=(1, 10))
+    model.y = Var(model.T, bounds=(1, 100))
+
+    def _op_mode_sub(m, t):
+        m.disj1[t].c1 = Constraint(expr=m.x[t] == 2)
+        m.disj1[t].sub1 = Disjunct()
+        m.disj1[t].sub1.c1 = Constraint(expr=m.y[t] == 100)
+        m.disj1[t].sub2 = Disjunct()
+        m.disj1[t].sub2.c1 = Constraint(expr=m.y[t] == 1000)
+        return [m.disj1[t].sub1, m.disj1[t].sub2]
+
+    def _op_mode(m, t):
+        m.disj2[t].c1 = Constraint(expr=m.y[t] == 10)
+        return [m.disj1[t], m.disj2[t]]
+
+    model.disj1 = Disjunct(model.T)
+    model.disj2 = Disjunct(model.T)
+    model.disjunction1sub = Disjunction(model.T, rule=_op_mode_sub)
+    model.disjunction1 = Disjunction(model.T, rule=_op_mode)
+
+    def obj_rule(m, t):
+        return sum(m.x[t] + m.y[t] for t in m.T)
+
+    model.obj = Objective(rule=obj_rule)
+
+    return model
+
+
+def make_indexed_equality_model():
+    """
+    min  x_1 + x_2
+    s.t. [x_1 = 1] v [x_1 = 2]
+         [x_2 = 1] v [x_2 = 2]
+    """
+
+    def disj_rule(m, t):
+        return [[m.x[t] == 1], [m.x[t] == 2]]
+
+    m = ConcreteModel()
+    m.T = RangeSet(2)
+    m.x = Var(m.T, within=NonNegativeReals, bounds=(0, 5))
+    m.d = Disjunction(m.T, rule=disj_rule)
+    m.obj = Objective(expr=m.x[1] + m.x[2], sense=minimize)
 
     return m

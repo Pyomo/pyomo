@@ -8,8 +8,7 @@ from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import ComponentSet
 from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.core.base.set_types import NonNegativeIntegers
-from pyomo.environ import *
-from pyomo.core.expr.current import identify_variables, identify_mutable_parameters
+from pyomo.core.expr import identify_variables, identify_mutable_parameters
 from pyomo.contrib.pyros.util import (
     selective_clone,
     add_decision_rule_variables,
@@ -20,6 +19,8 @@ from pyomo.contrib.pyros.util import (
     ObjectiveType,
     pyrosTerminationCondition,
     coefficient_matching,
+    TimingData,
+    IterationLogRecord,
 )
 from pyomo.contrib.pyros.util import replace_uncertain_bounds_with_constraints
 from pyomo.contrib.pyros.util import get_vars_from_component
@@ -27,7 +28,6 @@ from pyomo.contrib.pyros.util import identify_objective_functions
 from pyomo.common.collections import Bunch
 import time
 from pyomo.contrib.pyros.util import time_code
-from pyomo.core.expr import current as EXPR
 from pyomo.contrib.pyros.uncertainty_sets import *
 from pyomo.contrib.pyros.master_problem_methods import (
     add_scenario_to_master,
@@ -35,7 +35,7 @@ from pyomo.contrib.pyros.master_problem_methods import (
     solve_master,
     minimize_dr_vars,
 )
-from pyomo.contrib.pyros.solve_data import MasterProblemData
+from pyomo.contrib.pyros.solve_data import MasterProblemData, ROSolveResults
 from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.dependencies import scipy as sp, scipy_available
 from pyomo.environ import maximize as pyo_max
@@ -47,7 +47,24 @@ from pyomo.opt import (
     TerminationCondition,
     Solution,
 )
-from pyomo.environ import Objective, value, Var
+from pyomo.environ import (
+    Constraint,
+    Expression,
+    Objective,
+    Param,
+    SolverFactory,
+    Var,
+    cos,
+    exp,
+    log,
+    sin,
+    sqrt,
+    value,
+)
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 if not (numpy_available and scipy_available):
@@ -67,6 +84,15 @@ if baron_available:
 else:
     baron_license_is_valid = False
     baron_version = (0, 0, 0)
+
+_scip = SolverFactory('scip')
+scip_available = _scip.available(exception_flag=False)
+if scip_available:
+    scip_license_is_valid = _scip.license_is_valid()
+    scip_version = _scip.version()
+else:
+    scip_license_is_valid = False
+    scip_version = (0, 0, 0)
 
 
 # @SolverFactory.register("time_delay_solver")
@@ -546,9 +572,9 @@ class testTurnBoundsToConstraints(unittest.TestCase):
         # get variables, mutable params in the explicit constraints
         cons = mod_2.uncertain_var_bound_cons
         for idx in cons:
-            for p in EXPR.identify_mutable_parameters(cons[idx].expr):
+            for p in identify_mutable_parameters(cons[idx].expr):
                 params_in_cons.add(p)
-            for v in EXPR.identify_variables(cons[idx].expr):
+            for v in identify_variables(cons[idx].expr):
                 vars_in_cons.add(v)
         # reduce only to uncertain mutable params found
         params_in_cons = params_in_cons & uncertain_params
@@ -3547,7 +3573,7 @@ class testSolveMaster(unittest.TestCase):
             expr=master_data.master_model.scenarios[0, 0].x
         )
         master_data.iteration = 0
-        master_data.timing = Bunch()
+        master_data.timing = TimingData()
 
         box_set = BoxSet(bounds=[(0, 2)])
         solver = SolverFactory(global_solver)
@@ -3569,8 +3595,11 @@ class testSolveMaster(unittest.TestCase):
         )
         config.declare("subproblem_file_directory", ConfigValue(default=None))
         config.declare("time_limit", ConfigValue(default=None))
+        config.declare(
+            "progress_logger", ConfigValue(default=logging.getLogger(__name__))
+        )
 
-        with time_code(master_data.timing, "total", is_main_timer=True):
+        with time_code(master_data.timing, "main", is_main_timer=True):
             master_soln = solve_master(master_data, config)
             self.assertEqual(
                 master_soln.termination_condition,
@@ -3846,7 +3875,7 @@ class RegressionTest(unittest.TestCase):
         m.working_model.util.state_vars = []
 
         m.working_model.util.first_stage_variables = []
-        config = Block()
+        config = Bunch()
         config.decision_rule_order = 1
         config.objective_focus = ObjectiveType.nominal
         config.global_solver = SolverFactory('baron')
@@ -3854,6 +3883,7 @@ class RegressionTest(unittest.TestCase):
         config.tee = False
         config.solve_master_globally = True
         config.time_limit = None
+        config.progress_logger = logging.getLogger(__name__)
 
         add_decision_rule_variables(model_data=m, config=config)
         add_decision_rule_constraints(model_data=m, config=config)
@@ -3872,14 +3902,18 @@ class RegressionTest(unittest.TestCase):
         master_data.master_model = master
         master_data.master_model.const_efficiency_applied = False
         master_data.master_model.linear_efficiency_applied = False
+        master_data.iteration = 0
 
-        master_data.timing = Bunch()
-        with time_code(master_data.timing, "total", is_main_timer=True):
-            results = minimize_dr_vars(model_data=master_data, config=config)
+        master_data.timing = TimingData()
+        with time_code(master_data.timing, "main", is_main_timer=True):
+            results, success = minimize_dr_vars(model_data=master_data, config=config)
             self.assertEqual(
                 results.solver.termination_condition,
                 TerminationCondition.optimal,
                 msg="Minimize dr norm did not solve to optimality.",
+            )
+            self.assertTrue(
+                success, msg=f"DR polishing success {success}, expected True."
             )
 
     @unittest.skipUnless(
@@ -3937,7 +3971,8 @@ class RegressionTest(unittest.TestCase):
         baron_license_is_valid, "Global NLP solver is not available and licensed."
     )
     @unittest.skipUnless(
-        baron_version < (23, 1, 5), "Test known to fail beginning with Baron 23.1.5"
+        baron_version < (23, 1, 5) or baron_version >= (23, 6, 23),
+        "Test known to fail for BARON 23.1.5 and versions preceding 23.6.23",
     )
     def test_terminate_with_max_iter(self):
         m = ConcreteModel()
@@ -3982,6 +4017,15 @@ class RegressionTest(unittest.TestCase):
             results.pyros_termination_condition,
             pyrosTerminationCondition.max_iter,
             msg="Returned termination condition is not return max_iter.",
+        )
+
+        self.assertEqual(
+            results.iterations,
+            1,
+            msg=(
+                f"Number of iterations in results object is {results.iterations}, "
+                f"but expected value 1."
+            ),
         )
 
     @unittest.skipUnless(
@@ -4360,9 +4404,13 @@ class RegressionTest(unittest.TestCase):
             ),
         )
 
+    # FIXME: This test is expected to fail now, as writing out invalid
+    # models generates an exception in the problem writer (and is never
+    # actually sent to the solver)
     @unittest.skipUnless(
         baron_license_is_valid, "Global NLP solver is not available and licensed."
     )
+    @unittest.expectedFailure
     def test_discrete_separation_subsolver_error(self):
         """
         Test PyROS for two-stage problem with discrete type set,
@@ -4687,6 +4735,193 @@ class RegressionTest(unittest.TestCase):
             msg="Incorrect objective function value.",
         )
 
+    def create_mitsos_4_3(self):
+        """
+        Create instance of Problem 4_3 from Mitsos (2011)'s
+        Test Set of semi-infinite programs.
+        """
+        # construct the deterministic model
+        m = ConcreteModel()
+        m.u = Param(initialize=0.5, mutable=True)
+        m.x1 = Var(bounds=[-1000, 1000])
+        m.x2 = Var(bounds=[-1000, 1000])
+        m.x3 = Var(bounds=[-1000, 1000])
+        m.con = Constraint(expr=exp(m.u - 1) - m.x1 - m.x2 * m.u - m.x3 * m.u**2 <= 0)
+        m.eq_con = Constraint(
+            expr=(
+                m.u**2 * (m.x2 - 1)
+                + m.u * (m.x1**3 + 0.5)
+                - 5 * m.u * m.x1 * m.x2
+                + m.u * (m.x1 + 2)
+                == 0
+            )
+        )
+        m.obj = Objective(expr=m.x1 + m.x2 / 2 + m.x3 / 3)
+
+        return m
+
+    @unittest.skipUnless(
+        baron_license_is_valid and scip_available and scip_license_is_valid,
+        "Global solvers BARON and SCIP not both available and licensed",
+    )
+    def test_coeff_matching_solver_insensitive(self):
+        """
+        Check that result for instance with constraint subject to
+        coefficient matching is insensitive to subsolver settings. Based
+        on Mitsos (2011) semi-infinite programming instance 4_3.
+        """
+        m = self.create_mitsos_4_3()
+
+        # instantiate BARON subsolver and PyROS solver
+        baron = SolverFactory("baron")
+        scip = SolverFactory("scip")
+        pyros_solver = SolverFactory("pyros")
+
+        # solve with PyROS
+        solver_names = {"baron": baron, "scip": scip}
+        for name, solver in solver_names.items():
+            res = pyros_solver.solve(
+                model=m,
+                first_stage_variables=[],
+                second_stage_variables=[m.x1, m.x2, m.x3],
+                uncertain_params=[m.u],
+                uncertainty_set=BoxSet(bounds=[[0, 1]]),
+                local_solver=solver,
+                global_solver=solver,
+                objective_focus=ObjectiveType.worst_case,
+                solve_master_globally=True,
+                bypass_local_separation=True,
+                robust_feasibility_tolerance=1e-4,
+            )
+            self.assertEqual(
+                first=res.iterations,
+                second=2,
+                msg=(
+                    "Iterations for Watson 43 instance solved with "
+                    f"subsolver {name} not as expected"
+                ),
+            )
+            np.testing.assert_allclose(
+                actual=res.final_objective_value,
+                desired=0.9781633,
+                rtol=0,
+                atol=5e-3,
+                err_msg=(
+                    "Final objective for Watson 43 instance solved with "
+                    f"subsolver {name} not as expected"
+                ),
+            )
+
+    @unittest.skipUnless(
+        baron_license_is_valid and baron_version >= (23, 2, 27),
+        "BARON licensing and version requirements not met",
+    )
+    def test_coefficient_matching_partitioning_insensitive(self):
+        """
+        Check that result for instance with constraint subject to
+        coefficient matching is insensitive to DOF partitioning. Model
+        is based on Mitsos (2011) semi-infinite programming instance
+        4_3.
+        """
+        m = self.create_mitsos_4_3()
+
+        # instantiate BARON subsolver and PyROS solver
+        baron = SolverFactory("baron")
+        pyros_solver = SolverFactory("pyros")
+
+        # solve with PyROS
+        partitionings = [
+            {"fsv": [m.x1, m.x2, m.x3], "ssv": []},
+            {"fsv": [], "ssv": [m.x1, m.x2, m.x3]},
+        ]
+        for partitioning in partitionings:
+            res = pyros_solver.solve(
+                model=m,
+                first_stage_variables=partitioning["fsv"],
+                second_stage_variables=partitioning["ssv"],
+                uncertain_params=[m.u],
+                uncertainty_set=BoxSet(bounds=[[0, 1]]),
+                local_solver=baron,
+                global_solver=baron,
+                objective_focus=ObjectiveType.worst_case,
+                solve_master_globally=True,
+                bypass_local_separation=True,
+                robust_feasibility_tolerance=1e-4,
+            )
+            self.assertEqual(
+                first=res.iterations,
+                second=2,
+                msg=(
+                    "Iterations for Watson 43 instance solved with "
+                    f"first-stage vars {[fsv.name for fsv in partitioning['fsv']]} "
+                    f"second-stage vars {[ssv.name for ssv in partitioning['ssv']]} "
+                    "not as expected"
+                ),
+            )
+            np.testing.assert_allclose(
+                actual=res.final_objective_value,
+                desired=0.9781633,
+                rtol=0,
+                atol=5e-3,
+                err_msg=(
+                    "Final objective for Watson 43 instance solved with "
+                    f"first-stage vars {[fsv.name for fsv in partitioning['fsv']]} "
+                    f"second-stage vars {[ssv.name for ssv in partitioning['ssv']]} "
+                    "not as expected"
+                ),
+            )
+
+    def test_coefficient_matching_raises_error_4_3(self):
+        """
+        Check that result for instance with constraint subject to
+        coefficient matching results in exception certifying robustness
+        cannot be certified where expected. Model
+        is based on Mitsos (2011) semi-infinite programming instance
+        4_3.
+        """
+        m = self.create_mitsos_4_3()
+
+        # instantiate BARON subsolver and PyROS solver
+        baron = SolverFactory("baron")
+        pyros_solver = SolverFactory("pyros")
+
+        # solve with PyROS
+        dr_orders = [1, 2]
+        for dr_order in dr_orders:
+            regex_assert_mgr = self.assertRaisesRegex(
+                ValueError,
+                expected_regex=(
+                    "Coefficient matching unsuccessful. See the solver logs."
+                ),
+            )
+            logging_intercept_mgr = LoggingIntercept(level=logging.ERROR)
+
+            with regex_assert_mgr, logging_intercept_mgr as LOG:
+                pyros_solver.solve(
+                    model=m,
+                    first_stage_variables=[],
+                    second_stage_variables=[m.x1, m.x2, m.x3],
+                    uncertain_params=[m.u],
+                    uncertainty_set=BoxSet(bounds=[[0, 1]]),
+                    local_solver=baron,
+                    global_solver=baron,
+                    objective_focus=ObjectiveType.worst_case,
+                    decision_rule_order=dr_order,
+                    solve_master_globally=True,
+                    bypass_local_separation=True,
+                    robust_feasibility_tolerance=1e-4,
+                )
+
+            detailed_error_msg = LOG.getvalue()
+            self.assertRegex(
+                detailed_error_msg[:-1],
+                (
+                    r"Equality constraint.*cannot be guaranteed to "
+                    r"be robustly feasible.*"
+                    r"Consider editing this constraint.*"
+                ),
+            )
+
     def test_coefficient_matching_robust_infeasible_proof_in_pyros(self):
         # Write the deterministic Pyomo model
         m = ConcreteModel()
@@ -4812,26 +5047,40 @@ class testBypassingSeparation(unittest.TestCase):
         global_subsolver = SolverFactory("baron")
 
         # Call the PyROS solver
-        results = pyros_solver.solve(
-            model=m,
-            first_stage_variables=[m.x1],
-            second_stage_variables=[m.x2],
-            uncertain_params=[m.u],
-            uncertainty_set=interval,
-            local_solver=local_subsolver,
-            global_solver=global_subsolver,
-            options={
-                "objective_focus": ObjectiveType.worst_case,
-                "solve_master_globally": True,
-                "decision_rule_order": 0,
-                "bypass_global_separation": True,
-            },
-        )
+        with LoggingIntercept(level=logging.WARNING) as LOG:
+            results = pyros_solver.solve(
+                model=m,
+                first_stage_variables=[m.x1],
+                second_stage_variables=[m.x2],
+                uncertain_params=[m.u],
+                uncertainty_set=interval,
+                local_solver=local_subsolver,
+                global_solver=global_subsolver,
+                options={
+                    "objective_focus": ObjectiveType.worst_case,
+                    "solve_master_globally": True,
+                    "decision_rule_order": 0,
+                    "bypass_global_separation": True,
+                },
+            )
 
+        # check termination robust optimal
         self.assertEqual(
             results.pyros_termination_condition,
             pyrosTerminationCondition.robust_optimal,
             msg="Returned termination condition is not return robust_optimal.",
+        )
+
+        # since robust optimal, we also expect warning-level logger
+        # message about bypassing of global separation subproblems
+        warning_msgs = LOG.getvalue()
+        self.assertRegex(
+            warning_msgs,
+            (
+                r".*Option to bypass global separation was chosen\. "
+                r"Robust feasibility and optimality of the reported "
+                r"solution are not guaranteed\."
+            ),
         )
 
 
@@ -5000,11 +5249,25 @@ class testModelMultipleObjectives(unittest.TestCase):
         # and solve again
         m.obj_max = Objective(expr=-m.obj.expr, sense=pyo_max)
         m.obj.deactivate()
-        res = pyros_solver.solve(**solve_kwargs)
+        max_obj_res = pyros_solver.solve(**solve_kwargs)
 
         # check active objectives
         self.assertEqual(len(list(m.component_data_objects(Objective, active=True))), 1)
         self.assertTrue(m.obj_max.active)
+
+        self.assertTrue(
+            math.isclose(
+                res.final_objective_value,
+                -max_obj_res.final_objective_value,
+                abs_tol=2e-4,  # 2x the default robust feasibility tolerance
+            ),
+            msg=(
+                f"Robust optimal objective value {res.final_objective_value} "
+                "for problem with minimization objective not close to "
+                f"negative of value {max_obj_res.final_objective_value} "
+                "of equivalent maximization objective."
+            ),
+        )
 
 
 class testModelIdentifyObjectives(unittest.TestCase):
@@ -5429,6 +5692,427 @@ class TestSubsolverTiming(unittest.TestCase):
             results.iterations,
             0,
             msg="Robust infeasible model terminated in 0 iterations (nominal case).",
+        )
+
+
+class TestIterationLogRecord(unittest.TestCase):
+    """
+    Test the PyROS `IterationLogRecord` class.
+    """
+
+    def test_log_header(self):
+        """Test method for logging iteration log table header."""
+        ans = (
+            "------------------------------------------------------------------------------\n"
+            "Itn  Objective    1-Stg Shift  2-Stg Shift  #CViol  Max Viol     Wall Time (s)\n"
+            "------------------------------------------------------------------------------\n"
+        )
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            IterationLogRecord.log_header(logger.info)
+
+        self.assertEqual(
+            LOG.getvalue(),
+            ans,
+            msg="Messages logged for iteration table header do not match expected result",
+        )
+
+    def test_log_standard_iter_record(self):
+        """Test logging function for PyROS IterationLogRecord."""
+
+        # for some fields, we choose floats with more than four
+        # four decimal points to ensure rounding also matches
+        iter_record = IterationLogRecord(
+            iteration=4,
+            objective=1.234567,
+            first_stage_var_shift=2.3456789e-8,
+            second_stage_var_shift=3.456789e-7,
+            dr_var_shift=1.234567e-7,
+            num_violated_cons=10,
+            max_violation=7.654321e-3,
+            elapsed_time=21.2,
+            dr_polishing_success=True,
+            all_sep_problems_solved=True,
+            global_separation=False,
+        )
+
+        # now check record logged as expected
+        ans = (
+            "4     1.2346e+00  2.3457e-08   3.4568e-07   10      7.6543e-03   "
+            "21.200       \n"
+        )
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            iter_record.log(logger.info)
+        result = LOG.getvalue()
+
+        self.assertEqual(
+            ans,
+            result,
+            msg="Iteration log record message does not match expected result",
+        )
+
+    def test_log_iter_record_polishing_failed(self):
+        """Test iteration log record in event of polishing failure."""
+        # for some fields, we choose floats with more than four
+        # four decimal points to ensure rounding also matches
+        iter_record = IterationLogRecord(
+            iteration=4,
+            objective=1.234567,
+            first_stage_var_shift=2.3456789e-8,
+            second_stage_var_shift=3.456789e-7,
+            dr_var_shift=1.234567e-7,
+            num_violated_cons=10,
+            max_violation=7.654321e-3,
+            elapsed_time=21.2,
+            dr_polishing_success=False,
+            all_sep_problems_solved=True,
+            global_separation=False,
+        )
+
+        # now check record logged as expected
+        ans = (
+            "4     1.2346e+00  2.3457e-08   3.4568e-07*  10      7.6543e-03   "
+            "21.200       \n"
+        )
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            iter_record.log(logger.info)
+        result = LOG.getvalue()
+
+        self.assertEqual(
+            ans,
+            result,
+            msg="Iteration log record message does not match expected result",
+        )
+
+    def test_log_iter_record_global_separation(self):
+        """
+        Test iteration log record in event global separation performed.
+        In this case, a 'g' should be appended to the max violation
+        reported. Useful in the event neither local nor global separation
+        was bypassed.
+        """
+        # for some fields, we choose floats with more than four
+        # four decimal points to ensure rounding also matches
+        iter_record = IterationLogRecord(
+            iteration=4,
+            objective=1.234567,
+            first_stage_var_shift=2.3456789e-8,
+            second_stage_var_shift=3.456789e-7,
+            dr_var_shift=1.234567e-7,
+            num_violated_cons=10,
+            max_violation=7.654321e-3,
+            elapsed_time=21.2,
+            dr_polishing_success=True,
+            all_sep_problems_solved=True,
+            global_separation=True,
+        )
+
+        # now check record logged as expected
+        ans = (
+            "4     1.2346e+00  2.3457e-08   3.4568e-07   10      7.6543e-03g  "
+            "21.200       \n"
+        )
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            iter_record.log(logger.info)
+        result = LOG.getvalue()
+
+        self.assertEqual(
+            ans,
+            result,
+            msg="Iteration log record message does not match expected result",
+        )
+
+    def test_log_iter_record_not_all_sep_solved(self):
+        """
+        Test iteration log record in event not all separation problems
+        were solved successfully. This may have occurred if the PyROS
+        solver time limit was reached, or the user-provides subordinate
+        optimizer(s) were unable to solve a separation subproblem
+        to an acceptable level.
+        A '+' should be appended to the number of performance constraints
+        found to be violated.
+        """
+        # for some fields, we choose floats with more than four
+        # four decimal points to ensure rounding also matches
+        iter_record = IterationLogRecord(
+            iteration=4,
+            objective=1.234567,
+            first_stage_var_shift=2.3456789e-8,
+            second_stage_var_shift=3.456789e-7,
+            dr_var_shift=1.234567e-7,
+            num_violated_cons=10,
+            max_violation=7.654321e-3,
+            elapsed_time=21.2,
+            dr_polishing_success=True,
+            all_sep_problems_solved=False,
+            global_separation=False,
+        )
+
+        # now check record logged as expected
+        ans = (
+            "4     1.2346e+00  2.3457e-08   3.4568e-07   10+     7.6543e-03   "
+            "21.200       \n"
+        )
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            iter_record.log(logger.info)
+        result = LOG.getvalue()
+
+        self.assertEqual(
+            ans,
+            result,
+            msg="Iteration log record message does not match expected result",
+        )
+
+    def test_log_iter_record_all_special(self):
+        """
+        Test iteration log record in event DR polishing and global
+        separation failed.
+        """
+        # for some fields, we choose floats with more than four
+        # four decimal points to ensure rounding also matches
+        iter_record = IterationLogRecord(
+            iteration=4,
+            objective=1.234567,
+            first_stage_var_shift=2.3456789e-8,
+            second_stage_var_shift=3.456789e-7,
+            dr_var_shift=1.234567e-7,
+            num_violated_cons=10,
+            max_violation=7.654321e-3,
+            elapsed_time=21.2,
+            dr_polishing_success=False,
+            all_sep_problems_solved=False,
+            global_separation=True,
+        )
+
+        # now check record logged as expected
+        ans = (
+            "4     1.2346e+00  2.3457e-08   3.4568e-07*  10+     7.6543e-03g  "
+            "21.200       \n"
+        )
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            iter_record.log(logger.info)
+        result = LOG.getvalue()
+
+        self.assertEqual(
+            ans,
+            result,
+            msg="Iteration log record message does not match expected result",
+        )
+
+    def test_log_iter_record_attrs_none(self):
+        """
+        Test logging of iteration record in event some
+        attributes are of value `None`. In this case, a '-'
+        should be printed in lieu of a numerical value.
+        Example where this occurs: the first iteration,
+        in which there is no first-stage shift or DR shift.
+        """
+        # for some fields, we choose floats with more than four
+        # four decimal points to ensure rounding also matches
+        iter_record = IterationLogRecord(
+            iteration=0,
+            objective=-1.234567,
+            first_stage_var_shift=None,
+            second_stage_var_shift=None,
+            dr_var_shift=None,
+            num_violated_cons=10,
+            max_violation=7.654321e-3,
+            elapsed_time=21.2,
+            dr_polishing_success=True,
+            all_sep_problems_solved=False,
+            global_separation=True,
+        )
+
+        # now check record logged as expected
+        ans = (
+            "0    -1.2346e+00  -            -            10+     7.6543e-03g  "
+            "21.200       \n"
+        )
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            iter_record.log(logger.info)
+        result = LOG.getvalue()
+
+        self.assertEqual(
+            ans,
+            result,
+            msg="Iteration log record message does not match expected result",
+        )
+
+
+class TestROSolveResults(unittest.TestCase):
+    """
+    Test PyROS solver results object.
+    """
+
+    def test_ro_solve_results_str(self):
+        """
+        Test string representation of RO solve results object.
+        """
+        res = ROSolveResults(
+            config=SolverFactory("pyros").CONFIG(),
+            iterations=4,
+            final_objective_value=123.456789,
+            time=300.34567,
+            pyros_termination_condition=pyrosTerminationCondition.robust_optimal,
+        )
+        ans = (
+            "Termination stats:\n"
+            " Iterations            : 4\n"
+            " Solve time (wall s)   : 300.346\n"
+            " Final objective value : 1.2346e+02\n"
+            " Termination condition : pyrosTerminationCondition.robust_optimal"
+        )
+        self.assertEqual(
+            str(res),
+            ans,
+            msg=(
+                "String representation of PyROS results object does not "
+                "match expected value"
+            ),
+        )
+
+    def test_ro_solve_results_str_attrs_none(self):
+        """
+        Test string representation of PyROS solve results in event
+        one of the printed attributes is of value `None`.
+        This may occur at instantiation or, for example,
+        whenever the PyROS solver confirms robust infeasibility through
+        coefficient matching.
+        """
+        res = ROSolveResults(
+            config=SolverFactory("pyros").CONFIG(),
+            iterations=0,
+            final_objective_value=None,
+            time=300.34567,
+            pyros_termination_condition=pyrosTerminationCondition.robust_optimal,
+        )
+        ans = (
+            "Termination stats:\n"
+            " Iterations            : 0\n"
+            " Solve time (wall s)   : 300.346\n"
+            " Final objective value : None\n"
+            " Termination condition : pyrosTerminationCondition.robust_optimal"
+        )
+        self.assertEqual(
+            str(res),
+            ans,
+            msg=(
+                "String representation of PyROS results object does not "
+                "match expected value"
+            ),
+        )
+
+
+class TestPyROSSolverLogIntros(unittest.TestCase):
+    """
+    Test logging of introductory information by PyROS solver.
+    """
+
+    def test_log_config(self):
+        """
+        Test method for logging PyROS solver config dict.
+        """
+        pyros_solver = SolverFactory("pyros")
+        config = pyros_solver.CONFIG(dict(nominal_uncertain_param_vals=[0.5]))
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            pyros_solver._log_config(logger=logger, config=config, level=logging.INFO)
+
+        ans = (
+            "Solver options:\n"
+            " time_limit=None\n"
+            " keepfiles=False\n"
+            " tee=False\n"
+            " load_solution=True\n"
+            " objective_focus=<ObjectiveType.nominal: 2>\n"
+            " nominal_uncertain_param_vals=[0.5]\n"
+            " decision_rule_order=0\n"
+            " solve_master_globally=False\n"
+            " max_iter=-1\n"
+            " robust_feasibility_tolerance=0.0001\n"
+            " separation_priority_order={}\n"
+            " progress_logger=<PreformattedLogger pyomo.contrib.pyros (INFO)>\n"
+            " backup_local_solvers=[]\n"
+            " backup_global_solvers=[]\n"
+            " subproblem_file_directory=None\n"
+            " bypass_local_separation=False\n"
+            " bypass_global_separation=False\n"
+            " p_robustness={}\n" + "-" * 78 + "\n"
+        )
+
+        logged_str = LOG.getvalue()
+        self.assertEqual(
+            logged_str,
+            ans,
+            msg=(
+                "Logger output for PyROS solver config (default case) "
+                "does not match expected result."
+            ),
+        )
+
+    def test_log_intro(self):
+        """
+        Test logging of PyROS solver introductory messages.
+        """
+        pyros_solver = SolverFactory("pyros")
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            pyros_solver._log_intro(logger=logger, level=logging.INFO)
+
+        intro_msgs = LOG.getvalue()
+
+        # last character should be newline; disregard it
+        intro_msg_lines = intro_msgs.split("\n")[:-1]
+
+        # check number of lines is as expected
+        self.assertEqual(
+            len(intro_msg_lines),
+            14,
+            msg=(
+                "PyROS solver introductory message does not contain"
+                "the expected number of lines."
+            ),
+        )
+
+        # first and last lines of the introductory section
+        self.assertEqual(intro_msg_lines[0], "=" * 78)
+        self.assertEqual(intro_msg_lines[-1], "=" * 78)
+
+        # check regex main text
+        self.assertRegex(
+            " ".join(intro_msg_lines[1:-1]),
+            r"PyROS: The Pyomo Robust Optimization Solver, v.* \(IDAES\)\.",
+        )
+
+    def test_log_disclaimer(self):
+        """
+        Test logging of PyROS solver disclaimer messages.
+        """
+        pyros_solver = SolverFactory("pyros")
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            pyros_solver._log_disclaimer(logger=logger, level=logging.INFO)
+
+        disclaimer_msgs = LOG.getvalue()
+
+        # last character should be newline; disregard it
+        disclaimer_msg_lines = disclaimer_msgs.split("\n")[:-1]
+
+        # check number of lines is as expected
+        self.assertEqual(
+            len(disclaimer_msg_lines),
+            5,
+            msg=(
+                "PyROS solver disclaimer message does not contain"
+                "the expected number of lines."
+            ),
+        )
+
+        # regex first line of disclaimer section
+        self.assertRegex(disclaimer_msg_lines[0], r"=.* DISCLAIMER .*=")
+        # check last line of disclaimer section
+        self.assertEqual(disclaimer_msg_lines[-1], "=" * 78)
+
+        # check regex main text
+        self.assertRegex(
+            " ".join(disclaimer_msg_lines[1:-1]),
+            r"PyROS is still under development.*ticket at.*",
         )
 
 

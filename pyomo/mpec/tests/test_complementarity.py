@@ -37,7 +37,7 @@ from pyomo.gdp import Disjunct, Disjunction
 from pyomo.mpec import Complementarity, complements, ComplementarityList
 from pyomo.opt import ProblemFormat
 from pyomo.repn.plugins.nl_writer import FileDeterminism
-from pyomo.repn.tests.ampl.nl_diff import load_and_compare_nl_baseline
+from pyomo.repn.tests.nl_diff import load_and_compare_nl_baseline
 
 currdir = this_file_dir()
 

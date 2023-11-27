@@ -9,14 +9,16 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import enum
+import ctypes
 import logging
 import os
-import sys
-from collections import deque
+from collections import deque, defaultdict, namedtuple
+from contextlib import nullcontext
+from itertools import filterfalse, product
+from math import log10 as _log10
 from operator import itemgetter, attrgetter, setitem
 
-from pyomo.common.backports import nullcontext
+from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.config import (
     ConfigBlock,
     ConfigValue,
@@ -24,11 +26,17 @@ from pyomo.common.config import (
     document_kwargs_from_configdict,
 )
 from pyomo.common.deprecation import deprecation_warning
-from pyomo.common.errors import DeveloperError
+from pyomo.common.errors import DeveloperError, InfeasibleConstraintException
 from pyomo.common.gc_manager import PauseGC
+from pyomo.common.numeric_types import (
+    native_complex_types,
+    native_numeric_types,
+    native_types,
+    value,
+)
 from pyomo.common.timing import TicTocTimer
 
-from pyomo.core.expr.current import (
+from pyomo.core.expr import (
     NegationExpression,
     ProductExpression,
     DivisionExpression,
@@ -43,11 +51,8 @@ from pyomo.core.expr.current import (
     RangedExpression,
     Expr_ifExpression,
     ExternalFunctionExpression,
-    native_types,
-    native_numeric_types,
-    value,
 )
-from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
+from pyomo.core.expr.visitor import StreamBasedExpressionVisitor, _EvaluationVisitor
 from pyomo.core.base import (
     Block,
     Objective,
@@ -63,14 +68,36 @@ from pyomo.core.base import (
     SortComponents,
     minimize,
 )
-from pyomo.core.base.block import SortComponents
 from pyomo.core.base.component import ActiveComponent
+from pyomo.core.base.constraint import _ConstraintData
 from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
-from pyomo.core.base.objective import ScalarObjective, _GeneralObjectiveData
+from pyomo.core.base.objective import (
+    ScalarObjective,
+    _GeneralObjectiveData,
+    _ObjectiveData,
+)
+from pyomo.core.base.suffix import SuffixFinder
+from pyomo.core.base.var import _VarData
 import pyomo.core.kernel as kernel
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.opt import WriterFactory
 
+from pyomo.repn.util import (
+    BeforeChildDispatcher,
+    ExitNodeDispatcher,
+    ExprType,
+    FileDeterminism,
+    FileDeterminism_to_SortComponents,
+    InvalidNumber,
+    apply_node_operation,
+    categorize_valid_components,
+    complex_number_error,
+    initialize_var_map_from_column_order,
+    int_float,
+    ordered_active_constraints,
+    nan,
+    sum_like_expression_types,
+)
 from pyomo.repn.plugins.ampl.ampl_ import set_pyomo_amplfunc_env
 
 ### FIXME: Remove the following as soon as non-active components no
@@ -86,21 +113,14 @@ logger = logging.getLogger(__name__)
 TOL = 1e-8
 inf = float('inf')
 minus_inf = -inf
-nan = float('nan')
 
-HALT_ON_EVALUATION_ERROR = False
+_CONSTANT = ExprType.CONSTANT
+_MONOMIAL = ExprType.MONOMIAL
+_GENERAL = ExprType.GENERAL
 
-
-class _CONSTANT(object):
-    pass
-
-
-class _MONOMIAL(object):
-    pass
-
-
-class _GENERAL(object):
-    pass
+ScalingFactors = namedtuple(
+    'ScalingFactors', ['variables', 'constraints', 'objectives']
+)
 
 
 # TODO: make a proper base class
@@ -142,83 +162,42 @@ class NLWriterInfo(object):
         file in the same order as the :py:attr:`variables` and generated
         .col file.
 
+    eliminated_vars: List[Tuple[_VarData, NumericExpression]]
+
+        The list of variables in the model that were eliminated by the
+        presolve.  each entry is a 2-tuple of (:py:class:`_VarData`,
+        :py:class`NumericExpression`|`float`).  the list is ordered in
+        the necessary order for correct evaluation (i.e., all variables
+        appearing in the expression must either have been sent to the
+        solver, or appear *earlier* in this list.
+
+    scaling: ScalingFactors or None
+
+        namedtuple holding 3 lists of (variables, constraints, objectives)
+        scaling factors in the same order (and size) as the `variables`,
+        `constraints`, and `objectives` attributes above.
+
     """
 
-    def __init__(self, var, con, obj, extlib, row_lbl, col_lbl):
+    def __init__(
+        self,
+        var,
+        con,
+        obj,
+        external_libs,
+        row_labels,
+        col_labels,
+        eliminated_vars,
+        scaling,
+    ):
         self.variables = var
         self.constraints = con
         self.objectives = obj
-        self.external_function_libraries = extlib
-        self.row_labels = row_lbl
-        self.column_labels = col_lbl
-
-
-class FileDeterminism(enum.IntEnum):
-    NONE = 0
-    DEPRECATED_KEYS = 1
-    DEPRECATED_KEYS_AND_NAMES = 2
-    ORDERED = 10
-    SORT_INDICES = 20
-    SORT_SYMBOLS = 30
-
-
-def _activate_nl_writer_version(n):
-    """DEBUGGING TOOL to switch the "default" NL writer"""
-    doc = WriterFactory.doc('nl')
-    WriterFactory.unregister('nl')
-    WriterFactory.register('nl', doc)(WriterFactory.get_class(f'nl_v{n}'))
-
-
-def _apply_node_operation(node, args):
-    try:
-        tmp = (_CONSTANT, node._apply_operation(args))
-        if tmp[1].__class__ is complex:
-            raise ValueError('Pyomo does not support complex numbers')
-        return tmp
-    except:
-        logger.warning(
-            "Exception encountered evaluating expression "
-            "'%s(%s)'\n\tmessage: %s\n\texpression: %s"
-            % (node.name, ", ".join(map(str, args)), str(sys.exc_info()[1]), node)
-        )
-        if HALT_ON_EVALUATION_ERROR:
-            raise
-        return (_CONSTANT, nan)
-
-
-def categorize_valid_components(
-    model, active=True, sort=None, valid=set(), targets=set()
-):
-    assert active in (True, None)
-    unrecognized = {}
-    component_map = {k: [] for k in targets}
-    for block in model.block_data_objects(active=active, descend_into=True, sort=sort):
-        local_ctypes = block.collect_ctypes(active=None, descend_into=False)
-        for ctype in local_ctypes:
-            if ctype in kernel.base._kernel_ctype_backmap:
-                ctype = kernel.base._kernel_ctype_backmap[ctype]
-            if ctype in targets:
-                component_map[ctype].append(block)
-                continue
-            if ctype in valid:
-                continue
-            # TODO: we should rethink the definition of "active" for
-            # Components that are not subclasses of ActiveComponent
-            if not issubclass(ctype, ActiveComponent) and not issubclass(
-                ctype, kernel.base.ICategorizedObject
-            ):
-                continue
-            if ctype not in unrecognized:
-                unrecognized[ctype] = []
-            unrecognized[ctype].extend(
-                block.component_data_objects(
-                    ctype=ctype,
-                    active=active,
-                    descend_into=False,
-                    sort=SortComponents.unsorted,
-                )
-            )
-    return component_map, {k: v for k, v in unrecognized.items() if v}
+        self.external_function_libraries = external_libs
+        self.row_labels = row_labels
+        self.column_labels = col_labels
+        self.eliminated_vars = eliminated_vars
+        self.scaling = scaling
 
 
 @WriterFactory.register('nl_v2', 'Generate the corresponding AMPL NL file (version 2).')
@@ -262,6 +241,18 @@ class NLWriter(object):
             default=False,
             domain=bool,
             description='Write the corresponding .row and .col files',
+        ),
+    )
+    CONFIG.declare(
+        'scale_model',
+        ConfigValue(
+            default=True,
+            domain=bool,
+            description="Write variables and constraints in scaled space",
+            doc="""
+            If True, then the writer will output the model constraints and
+            variables in 'scaled space' using the scaling from the
+            'scaling_factor' Suffix, if provided.""",
         ),
     )
     CONFIG.declare(
@@ -315,6 +306,17 @@ class NLWriter(object):
         variables'.""",
         ),
     )
+    CONFIG.declare(
+        'linear_presolve',
+        ConfigValue(
+            default=True,
+            domain=bool,
+            description='Perform linear presolve',
+            doc="""
+        If True, we will perform a basic linear presolve by performing
+        variable elimination (without fill-in).""",
+        ),
+    )
 
     def __init__(self):
         self.config = self.CONFIG()
@@ -327,6 +329,15 @@ class NLWriter(object):
         col_fname = filename_base + '.col'
 
         config = self.config(io_options)
+
+        # There is no (convenient) way to pass the scaling factors or
+        # information about presolved variables back to the solver
+        # through the old "call" interface (since solvers that used that
+        # interface predated scaling / presolve).  We will play it safe
+        # and disable scaling / presolve when called through this API
+        config.scale_model = False
+        config.linear_presolve = False
+
         if config.symbolic_solver_labels:
             _open = lambda fname: open(fname, 'w')
         else:
@@ -384,114 +395,122 @@ class NLWriter(object):
         # Now that the row/column ordering is resolved, create the labels
         symbol_map = SymbolMap()
         symbol_map.addSymbols(
-            (info[0], f"v{idx}") for idx, info in enumerate(info.variables)
+            (info, f"v{idx}") for idx, info in enumerate(info.variables)
         )
         symbol_map.addSymbols(
-            (info[0], f"c{idx}") for idx, info in enumerate(info.constraints)
+            (info, f"c{idx}") for idx, info in enumerate(info.constraints)
         )
         symbol_map.addSymbols(
-            (info[0], f"o{idx}") for idx, info in enumerate(info.objectives)
+            (info, f"o{idx}") for idx, info in enumerate(info.objectives)
         )
         return symbol_map
 
 
-def _RANGE_TYPE(lb, ub):
-    if lb == ub:
-        if lb is None:
-            return 3  # -inf <= c <= inf
-        else:
-            return 4  # L == c == U
-    elif lb is None:
-        return 1  # c <= U
-    elif ub is None:
-        return 2  # L <= c
-    else:
-        return 0  # L <= c <= U
-
-
 class _SuffixData(object):
-    def __init__(self, name, column_order, row_order, obj_order, model_id):
-        self._name = name
-        self._column_order = column_order
-        self._row_order = row_order
-        self._obj_order = obj_order
-        self._model_id = model_id
+    def __init__(self, name):
+        self.name = name
         self.obj = {}
         self.con = {}
         self.var = {}
         self.prob = {}
         self.datatype = set()
+        self.values = ComponentMap()
 
     def update(self, suffix):
-        missing_component = missing_other = 0
         self.datatype.add(suffix.datatype)
-        for item in suffix.items():
-            missing = self._store(*item)
-            if missing:
-                if missing > 0:
-                    missing_component += missing
-                else:
-                    missing_other -= missing
-        if missing_component:
-            logger.warning(
-                f"model contains export suffix '{suffix.name}' that "
-                f"contains {missing_component} component keys that are "
-                "not exported as part of the NL file.  "
-                "Skipping."
-            )
-        if missing_other:
-            logger.warning(
-                f"model contains export suffix '{suffix.name}' that "
-                f"contains {missing_other} keys that are not "
-                "Var, Constraint, Objective, or the model.  Skipping."
-            )
+        self.values.update(suffix)
 
     def store(self, obj, val):
-        missing = self._store(obj, val)
-        if not missing:
-            return
-        if missing == 1:
+        self.values[obj] = val
+
+    def compile(self, column_order, row_order, obj_order, model_id):
+        missing_component_data = ComponentSet()
+        unknown_data = ComponentSet()
+        queue = [self.values.items()]
+        while queue:
+            for obj, val in queue.pop(0):
+                if val.__class__ not in int_float:
+                    # [JDS] I am not entirely sure why, but we have
+                    # historically supported suffix values that hold
+                    # dictionaries that map arbitrary component data
+                    # objects to values.  We will preserve that behavior
+                    # here.  This behavior is exercised by a
+                    # ExternalGreyBox test.
+                    if isinstance(val, dict):
+                        queue.append(val.items())
+                        continue
+                    val = float(val)
+                _id = id(obj)
+                if _id in column_order:
+                    self.var[column_order[_id]] = val
+                elif _id in row_order:
+                    self.con[row_order[_id]] = val
+                elif _id in obj_order:
+                    self.obj[obj_order[_id]] = val
+                elif _id == model_id:
+                    self.prob[0] = val
+                elif isinstance(obj, (_VarData, _ConstraintData, _ObjectiveData)):
+                    missing_component_data.add(obj)
+                elif isinstance(obj, (Var, Constraint, Objective)):
+                    # Expand this indexed component to store the
+                    # individual ComponentDatas, but ONLY if the
+                    # component data is not in the original dictionary
+                    # of values that we extracted from the Suffixes
+                    queue.append(
+                        product(
+                            filterfalse(self.values.__contains__, obj.values()), (val,)
+                        )
+                    )
+                else:
+                    unknown_data.add(obj)
+        if missing_component_data:
             logger.warning(
-                f"model contains export suffix '{self._name}' with "
-                f"{obj.ctype.__name__} key '{obj.name}', but that "
-                "object is not exported as part of the NL file.  "
-                "Skipping."
-            )
-        elif missing > 1:
-            logger.warning(
-                f"model contains export suffix '{self._name}' with "
-                f"{obj.ctype.__name__} key '{obj.name}', but that "
-                "object contained {missing} data objects that are "
+                f"model contains export suffix '{self.name}' that "
+                f"contains {len(missing_component_data)} component keys that are "
                 "not exported as part of the NL file.  "
                 "Skipping."
             )
-        else:
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(
+                    "Skipped component keys:\n\t"
+                    + "\n\t".join(sorted(map(str, missing_component_data)))
+                )
+        if unknown_data:
             logger.warning(
-                f"model contains export suffix '{self._name}' with "
-                f"{obj.__class__.__name__} key '{obj}' that is not "
-                "a Var, Constraint, Objective, or the model.  Skipping."
+                f"model contains export suffix '{self.name}' that "
+                f"contains {len(unknown_data)} keys that are not "
+                "Var, Constraint, Objective, or the model.  Skipping."
             )
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(
+                    "Skipped component keys:\n\t"
+                    + "\n\t".join(sorted(map(str, unknown_data)))
+                )
 
-    def _store(self, obj, val):
-        missing_ct = 0
+
+class CachingNumericSuffixFinder(SuffixFinder):
+    scale = True
+
+    def __init__(self, name, default=None):
+        super().__init__(name, default)
+        self.suffix_cache = {}
+
+    def __call__(self, obj):
         _id = id(obj)
-        if _id in self._column_order:
-            self.var[self._column_order[_id]] = val
-        elif _id in self._row_order:
-            self.con[self._row_order[_id]] = val
-        elif _id in self._obj_order:
-            self.obj[self._obj_order[_id]] = val
-        elif _id == self._model_id:
-            self.prob[0] = val
-        elif isinstance(obj, PyomoObject):
-            if obj.is_indexed():
-                for o in obj.values():
-                    missing_ct += self._store(o, val)
-            else:
-                missing_ct = 1
-        else:
-            missing_ct = -1
-        return missing_ct
+        if _id in self.suffix_cache:
+            return self.suffix_cache[_id]
+        ans = self.find(obj)
+        if ans.__class__ not in int_float:
+            ans = float(ans)
+        self.suffix_cache[_id] = ans
+        return ans
+
+
+class _NoScalingFactor(object):
+    scale = False
+
+    def __call__(self, obj):
+        return 1
 
 
 class _NLWriter_impl(object):
@@ -523,19 +542,6 @@ class _NLWriter_impl(object):
         self.next_V_line_id = 0
         self.pause_gc = None
 
-        if config.file_determinism in (
-            FileDeterminism.DEPRECATED_KEYS,
-            FileDeterminism.DEPRECATED_KEYS_AND_NAMES,
-        ):
-            old = config.file_determinism
-            config.file_determinism = 10 * (old + 1)
-            new = config.file_determinism
-            deprecation_warning(
-                f'{str(old)} ({int(old)}) is deprecated.  '
-                f'Please use {str(new)} ({int(new)})',
-                version='6.5.0',
-            )
-
     def __enter__(self):
         assert AMPLRepn.ActiveVisitor is None
         AMPLRepn.ActiveVisitor = self.visitor
@@ -555,12 +561,7 @@ class _NLWriter_impl(object):
             timing_logger.isEnabledFor(logging.DEBUG) and timing_logger.hasHandlers()
         )
 
-        sorter = SortComponents.unsorted
-        if self.config.file_determinism >= FileDeterminism.SORT_INDICES:
-            sorter = sorter | SortComponents.indices
-            if self.config.file_determinism >= FileDeterminism.SORT_SYMBOLS:
-                sorter = sorter | SortComponents.alphabetical
-
+        sorter = FileDeterminism_to_SortComponents(self.config.file_determinism)
         component_map, unknown = categorize_valid_components(
             model,
             active=True,
@@ -572,10 +573,8 @@ class _NLWriter_impl(object):
                 Var,
                 Param,
                 Expression,
-                ExternalFunction,
-                Suffix,
-                SOSConstraint,
                 # FIXME: Non-active components should not report as Active
+                ExternalFunction,
                 Set,
                 RangeSet,
                 Port,
@@ -600,32 +599,51 @@ class _NLWriter_impl(object):
         symbolic_solver_labels = self.symbolic_solver_labels
         visitor = self.visitor
         ostream = self.ostream
-        var_map = self.var_map
+        linear_presolve = self.config.linear_presolve
 
-        if self.config.column_order == True:
-            self.config.column_order = list(
-                model.component_data_objects(Var, descend_into=True, sort=sorter)
-            )
-        elif self.config.file_determinism > FileDeterminism.ORDERED:
-            # We will pre-gather the variables so that their order
-            # matches the file_determinism flag.  This is a little
-            # cumbersome, but is implemented this way for consistency
-            # with the original NL writer.
-            if self.config.column_order is None:
-                self.config.column_order = []
-            self.config.column_order.extend(
-                model.component_data_objects(Var, descend_into=True, sort=sorter)
-            )
-        if self.config.column_order is not None:
-            # Note that Vars that appear twice (e.g., through a
-            # Reference) will be sorted with the FIRST occurrence.
-            for var in self.config.column_order:
-                if var.is_indexed():
-                    for _v in var.values():
-                        if not _v.fixed:
-                            var_map[id(_v)] = _v
-                elif not var.fixed:
-                    var_map[id(var)] = var
+        var_map = self.var_map
+        initialize_var_map_from_column_order(model, self.config, var_map)
+        timer.toc('Initialized column order', level=logging.DEBUG)
+
+        # Collect all defined EXPORT suffixes on the model
+        suffix_data = {}
+        if component_map[Suffix]:
+            # Note: reverse the block list so that higher-level Suffix
+            # components override lower level ones.
+            for block in reversed(component_map[Suffix]):
+                for suffix in block.component_objects(
+                    Suffix, active=True, descend_into=False, sort=sorter
+                ):
+                    if not suffix.export_enabled() or not suffix:
+                        continue
+                    name = suffix.local_name
+                    if name not in suffix_data:
+                        suffix_data[name] = _SuffixData(name)
+                    suffix_data[name].update(suffix)
+        #
+        # Data structures to support variable/constraint scaling
+        #
+        if self.config.scale_model and 'scaling_factor' in suffix_data:
+            scaling_factor = CachingNumericSuffixFinder('scaling_factor', 1)
+            scaling_cache = scaling_factor.suffix_cache
+            del suffix_data['scaling_factor']
+        else:
+            scaling_factor = _NoScalingFactor()
+        scale_model = scaling_factor.scale
+
+        timer.toc("Collected suffixes", level=logging.DEBUG)
+
+        #
+        # Data structures to support presolve
+        #
+        # lcon_by_linear_nnz stores all linear constraints grouped by the NNZ
+        # in the linear portion of the expression.  The value is another
+        # dict mapping id(con) to constraint info
+        lcon_by_linear_nnz = defaultdict(dict)
+        # comp_by_linear_var maps id(var) to lists of constraint /
+        # object infos that have that var in the linear portion of the
+        # expression
+        comp_by_linear_var = defaultdict(list)
 
         #
         # Tabulate the model expressions
@@ -635,18 +653,27 @@ class _NLWriter_impl(object):
         last_parent = None
         for obj in model.component_data_objects(Objective, active=True, sort=sorter):
             if with_debug_timing and obj.parent_component() is not last_parent:
-                timer.toc('Objective %s', last_parent, level=logging.DEBUG)
+                if last_parent is None:
+                    timer.toc(None)
+                else:
+                    timer.toc('Objective %s', last_parent, level=logging.DEBUG)
                 last_parent = obj.parent_component()
-            expr = visitor.walk_expression((obj.expr, obj, 1))
-            if expr.named_exprs:
-                self._record_named_expression_usage(expr.named_exprs, obj, 1)
-            if expr.nonlinear:
-                objectives.append((obj, expr))
+            expr_info = visitor.walk_expression((obj.expr, obj, 1, scaling_factor(obj)))
+            if expr_info.named_exprs:
+                self._record_named_expression_usage(expr_info.named_exprs, obj, 1)
+            if expr_info.nonlinear:
+                objectives.append((obj, expr_info))
             else:
-                linear_objs.append((obj, expr))
+                linear_objs.append((obj, expr_info))
+            if linear_presolve:
+                obj_id = id(obj)
+                for _id in expr_info.linear:
+                    comp_by_linear_var[_id].append((obj_id, expr_info))
         if with_debug_timing:
             # report the last objective
             timer.toc('Objective %s', last_parent, level=logging.DEBUG)
+        else:
+            timer.toc('Processed %s objectives', len(objectives))
 
         # Order the objectives, moving all nonlinear objectives to
         # the beginning
@@ -665,104 +692,86 @@ class _NLWriter_impl(object):
         # required for solvers like PATH.
         n_complementarity_range = 0
         n_complementarity_nz_var_lb = 0
-        for con in model.component_data_objects(Constraint, active=True, sort=sorter):
+        #
+        last_parent = None
+        for con in ordered_active_constraints(model, self.config):
             if with_debug_timing and con.parent_component() is not last_parent:
-                timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
-                last_parent = con.parent_component()
-            expr = visitor.walk_expression((con.body, con, 0))
-            if expr.named_exprs:
-                self._record_named_expression_usage(expr.named_exprs, con, 0)
-            lb = con.lb
-            if lb == minus_inf:
-                lb = None
-            elif lb is not None:
-                lb = repr(lb - expr.const)
-            ub = con.ub
-            if ub == inf:
-                ub = None
-            elif ub is not None:
-                ub = repr(ub - expr.const)
-            _type = _RANGE_TYPE(lb, ub)
-            if _type == 4:
-                n_equality += 1
-            elif _type == 0:
-                n_ranges += 1
-            elif _type == 3:  # and self.config.skip_trivial_constraints:
-                continue
-                pass
-            # FIXME: this is a HACK to be compatible with the NLv1
-            # writer.  In the future, this writer should be expanded to
-            # look for and process Complementarity components (assuming
-            # that they are in an acceptable form).
-            if hasattr(con, '_complementarity'):
-                _type = 5
-                # we are going to pass the complementarity type and the
-                # corresponding variable id() as the "lb" and "ub" for
-                # the range.
-                lb = con._complementarity
-                ub = con._vid
-                if expr.nonlinear:
-                    n_complementarity_nonlin += 1
+                if last_parent is None:
+                    timer.toc(None)
                 else:
-                    n_complementarity_lin += 1
-            if expr.nonlinear:
-                constraints.append((con, expr, _type, lb, ub))
-            elif expr.linear:
-                linear_cons.append((con, expr, _type, lb, ub))
+                    timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
+                last_parent = con.parent_component()
+            scale = scaling_factor(con)
+            expr_info = visitor.walk_expression((con.body, con, 0, scale))
+            if expr_info.named_exprs:
+                self._record_named_expression_usage(expr_info.named_exprs, con, 0)
+
+            # Note: Constraint.lb/ub guarantee a return value that is
+            # either a (finite) native_numeric_type, or None
+            lb = con.lb
+            ub = con.ub
+            if lb is None and ub is None:  # and self.config.skip_trivial_constraints:
+                continue
+            if scale != 1:
+                if lb is not None:
+                    lb = lb * scale
+                if ub is not None:
+                    ub = ub * scale
+                if scale < 0:
+                    lb, ub = ub, lb
+            if expr_info.nonlinear:
+                constraints.append((con, expr_info, lb, ub))
+            elif expr_info.linear:
+                linear_cons.append((con, expr_info, lb, ub))
             elif not self.config.skip_trivial_constraints:
-                linear_cons.append((con, expr, _type, lb, ub))
+                linear_cons.append((con, expr_info, lb, ub))
             else:  # constant constraint and skip_trivial_constraints
-                #
-                # TODO: skip_trivial_constraints should be an
-                # enum that also accepts "Exception" so that
-                # solvers can be (easily) notified of infeasible
-                # trivial constraints.
-                if (lb is not None and float(lb) > TOL) or (
-                    ub is not None and float(ub) < -TOL
+                c = expr_info.const
+                if (lb is not None and lb - c > TOL) or (
+                    ub is not None and ub - c < -TOL
                 ):
-                    logger.warning(
+                    raise InfeasibleConstraintException(
                         "model contains a trivially infeasible "
-                        f"constraint {con.name}, but "
-                        "skip_trivial_constraints==True and the "
-                        "constraint is being omitted from the NL "
-                        "file.  Solving the model may incorrectly "
-                        "report a feasible solution."
+                        f"constraint '{con.name}' (fixed body value "
+                        f"{c} outside bounds [{lb}, {ub}])."
                     )
+            if linear_presolve:
+                con_id = id(con)
+                if not expr_info.nonlinear and lb == ub and lb is not None:
+                    lcon_by_linear_nnz[len(expr_info.linear)][con_id] = expr_info, lb
+                for _id in expr_info.linear:
+                    comp_by_linear_var[_id].append((con_id, expr_info))
         if with_debug_timing:
             # report the last constraint
             timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
-
-        if self.config.row_order:
-            # Note: this relies on two things: 1) dict are ordered, and
-            # 2) updating an entry in a dict does not change its
-            # ordering.
-            row_order = {}
-            for con in self.config.row_order:
-                if con.is_indexed():
-                    for c in con.values():
-                        row_order[id(c)] = c
-                else:
-                    row_order[id(con)] = con
-            for c in constraints:
-                row_order[id(c)] = c
-            for c in linear_cons:
-                row_order[id(c)] = c
-            # map the implicit dict ordering to an explicit 0..n ordering
-            row_order = {_id: i for i, _id in enumerate(row_order.keys())}
-            constraints.sort(key=itemgetter(row_order))
-            linear_cons.sort(key=itemgetter(row_order))
         else:
-            row_order = {}
+            timer.toc('Processed %s constraints', len(constraints))
+
+        # This may fetch more bounds than needed, but only in the cases
+        # where variables were completely eliminated while walking the
+        # expressions, or when users provide superfluous variables in
+        # the column ordering.
+        var_bounds = {_id: v.bounds for _id, v in var_map.items()}
+
+        eliminated_cons, eliminated_vars = self._linear_presolve(
+            comp_by_linear_var, lcon_by_linear_nnz, var_bounds
+        )
+        del comp_by_linear_var
+        del lcon_by_linear_nnz
 
         # Order the constraints, moving all nonlinear constraints to
         # the beginning
         n_nonlinear_cons = len(constraints)
-        constraints.extend(linear_cons)
+        if eliminated_cons:
+            _removed = eliminated_cons.__contains__
+            constraints.extend(filterfalse(lambda c: _removed(id(c[0])), linear_cons))
+        else:
+            constraints.extend(linear_cons)
         n_cons = len(constraints)
 
         #
-        # Collect constraints and objectives into the groupings
-        # necessary for AMPL
+        # Collect variables from constraints and objectives into the
+        # groupings necessary for AMPL
         #
         # For efficiency, we will do everything with ids (and not the
         # var objects themselves)
@@ -773,12 +782,21 @@ class _NLWriter_impl(object):
             filter(self.used_named_expressions.__contains__, self.subexpression_order)
         )
 
-        # linear contribution by (constraint, objective) component.
+        # linear contribution by (constraint, objective, variable) component.
         # Keys are component id(), Values are dicts mapping variable
         # id() to linear coefficient.  All nonzeros in the component
         # (variables appearing in the linear and/or nonlinear
         # subexpressions) will appear in the dict.
-        linear_by_comp = {}
+        #
+        # We initialize the map with any variables eliminated from
+        # (presolved out of) the model (necessary so that
+        # _categorize_vars will map eliminated vars to the current
+        # vars).  Note that at the moment, we only consider linear
+        # equality constraints in the presolve.  If that ever changes
+        # (e.g., to support eliminating variables appearing linearly in
+        # nonlinear equality constraints), then this logic will need to
+        # be revisited.
+        linear_by_comp = {_id: info.linear for _id, info in eliminated_vars.items()}
 
         # We need to categorize the named subexpressions first so that
         # we know their linear / nonlinear vars when we encounter them
@@ -805,6 +823,7 @@ class _NLWriter_impl(object):
                     _id = id(_v)
                     if _id not in var_map:
                         var_map[_id] = _v
+                        var_bounds[_id] = _v.bounds
                     con_vars_nonlinear.add(_id)
 
         con_nnz = sum(con_nnz_by_var.values())
@@ -816,7 +835,7 @@ class _NLWriter_impl(object):
         # variable order because the SOS constraint *could* reference a
         # variable not yet seen in the model.
         for block in component_map[SOSConstraint]:
-            for sos in block.component_objects(
+            for sos in block.component_data_objects(
                 SOSConstraint, active=True, descend_into=False, sort=sorter
             ):
                 for v in sos.variables:
@@ -916,8 +935,8 @@ class _NLWriter_impl(object):
             linear_binary_vars = linear_integer_vars = set()
         assert len(variables) == n_vars
         timer.toc(
-            'Set row / column ordering: %s variables [%s, %s, %s R/B/Z], '
-            '%s constraints [%s, %s L/NL]',
+            'Set row / column ordering: %s var [%s, %s, %s R/B/Z], '
+            '%s con [%s, %s L/NL]',
             n_vars,
             len(continuous_vars),
             len(binary_vars),
@@ -928,7 +947,7 @@ class _NLWriter_impl(object):
             level=logging.DEBUG,
         )
 
-        # Fill in the variable list and update the new column order.
+        # Update the column order (based on our reordering of the variables above).
         #
         # Note that as we allow var_map to contain "known" variables
         # that are not needed in the NL file (and column_order was
@@ -936,50 +955,9 @@ class _NLWriter_impl(object):
         # column_order to *just* contain the variables that we are
         # sending to the NL.
         self.column_order = column_order = {_id: i for i, _id in enumerate(variables)}
-        for idx, _id in enumerate(variables):
-            v = var_map[_id]
-            lb, ub = v.bounds
-            if lb == minus_inf:
-                lb = None
-            elif lb is not None:
-                lb = repr(lb)
-            if ub == inf:
-                ub = None
-            elif ub is not None:
-                ub = repr(ub)
-            variables[idx] = (v, _id, _RANGE_TYPE(lb, ub), lb, ub)
-        timer.toc("Computed variable bounds", level=logging.DEBUG)
-
-        # Collect all defined EXPORT suffixes on the model
-        suffix_data = {}
-        if component_map[Suffix]:
-            if not row_order:
-                row_order = {id(con[0]): i for i, con in enumerate(constraints)}
-            obj_order = {id(obj[0]): i for i, obj in enumerate(objectives)}
-            model_id = id(model)
-            # Note: reverse the block list so that higher-level Suffix
-            # components override lower level ones.
-            for block in reversed(component_map[Suffix]):
-                for suffix in block.component_objects(
-                    Suffix, active=True, descend_into=False, sort=sorter
-                ):
-                    if not (suffix.direction & Suffix.EXPORT):
-                        continue
-                    name = suffix.local_name
-                    if name not in suffix_data:
-                        suffix_data[name] = _SuffixData(
-                            name, column_order, row_order, obj_order, model_id
-                        )
-                    suffix_data[name].update(suffix)
-            timer.toc("Collected suffixes", level=logging.DEBUG)
 
         # Collect all defined SOSConstraints on the model
         if component_map[SOSConstraint]:
-            if not row_order:
-                row_order = {id(con[0]): i for i, con in enumerate(constraints)}
-            if not component_map[Suffix]:
-                obj_order = {id(obj[0]): i for i, obj in enumerate(objectives)}
-                model_id = id(model)
             for name in ('sosno', 'ref'):
                 # I am choosing not to allow a user to mix the use of the Pyomo
                 # SOSConstraint component and manual sosno declarations within
@@ -1000,9 +978,7 @@ class _NLWriter_impl(object):
                         "model. To avoid this error please use only one of "
                         "these methods to define special ordered sets."
                     )
-                suffix_data[name] = _SuffixData(
-                    name, column_order, row_order, obj_order, model_id
-                )
+                suffix_data[name] = _SuffixData(name)
                 suffix_data[name].datatype.add(Suffix.INT)
             sos_id = 0
             sosno = suffix_data['sosno']
@@ -1031,17 +1007,22 @@ class _NLWriter_impl(object):
                         sosno.store(v, tag)
                         ref.store(v, r)
 
+        if suffix_data:
+            row_order = {id(con[0]): i for i, con in enumerate(constraints)}
+            obj_order = {id(obj[0]): i for i, obj in enumerate(objectives)}
+            model_id = id(model)
+
         if symbolic_solver_labels:
             labeler = NameLabeler()
             row_labels = [labeler(info[0]) for info in constraints] + [
                 labeler(info[0]) for info in objectives
             ]
             row_comments = [f'\t#{lbl}' for lbl in row_labels]
-            col_labels = [labeler(info[0]) for info in variables]
+            col_labels = [labeler(var_map[_id]) for _id in variables]
             col_comments = [f'\t#{lbl}' for lbl in col_labels]
             self.var_id_to_nl = {
-                info[1]: f'{var_idx}{col_comments[var_idx]}'
-                for var_idx, info in enumerate(variables)
+                _id: f'v{var_idx}{col_comments[var_idx]}'
+                for var_idx, _id in enumerate(variables)
             }
             # Write out the .row and .col data
             if self.rowstream is not None:
@@ -1054,8 +1035,76 @@ class _NLWriter_impl(object):
             row_labels = row_comments = [''] * (n_cons + n_objs)
             col_labels = col_comments = [''] * len(variables)
             self.var_id_to_nl = {
-                info[1]: var_idx for var_idx, info in enumerate(variables)
+                _id: f"v{var_idx}" for var_idx, _id in enumerate(variables)
             }
+
+        _vmap = self.var_id_to_nl
+        if scale_model:
+            template = self.template
+            objective_scaling = [scaling_cache[id(info[0])] for info in objectives]
+            constraint_scaling = [scaling_cache[id(info[0])] for info in constraints]
+            variable_scaling = [scaling_factor(var_map[_id]) for _id in variables]
+            for _id, scale in zip(variables, variable_scaling):
+                if scale == 1:
+                    continue
+                # Update var_bounds to be scaled bounds
+                if scale < 0:
+                    # Note: reverse bounds for negative scaling factors
+                    ub, lb = var_bounds[_id]
+                else:
+                    lb, ub = var_bounds[_id]
+                if lb is not None:
+                    lb *= scale
+                if ub is not None:
+                    ub *= scale
+                var_bounds[_id] = lb, ub
+                # Update _vmap to output scaled variables in NL expressions
+                _vmap[_id] = (
+                    template.division + _vmap[_id] + '\n' + template.const % scale
+                ).rstrip()
+
+        # Update any eliminated variables to point to the (potentially
+        # scaled) substituted variables
+        for _id, expr_info in eliminated_vars.items():
+            nl, args, _ = expr_info.compile_repn(visitor)
+            _vmap[_id] = nl.rstrip() % tuple(_vmap[_id] for _id in args)
+
+        r_lines = [None] * n_cons
+        for idx, (con, expr_info, lb, ub) in enumerate(constraints):
+            if lb == ub:  # TBD: should this be within tolerance?
+                if lb is None:
+                    # type = 3  # -inf <= c <= inf
+                    r_lines[idx] = "3"
+                else:
+                    # _type = 4  # L == c == U
+                    r_lines[idx] = f"4 {lb - expr_info.const!r}"
+                    n_equality += 1
+            elif lb is None:
+                # _type = 1  # c <= U
+                r_lines[idx] = f"1 {ub - expr_info.const!r}"
+            elif ub is None:
+                # _type = 2  # L <= c
+                r_lines[idx] = f"2 {lb - expr_info.const!r}"
+            else:
+                # _type = 0  # L <= c <= U
+                r_lines[idx] = f"0 {lb - expr_info.const!r} {ub - expr_info.const!r}"
+                n_ranges += 1
+            expr_info.const = 0
+            # FIXME: this is a HACK to be compatible with the NLv1
+            # writer.  In the future, this writer should be expanded to
+            # look for and process Complementarity components (assuming
+            # that they are in an acceptable form).
+            if hasattr(con, '_complementarity'):
+                # _type = 5
+                r_lines[idx] = f"5 {con._complementarity} {1+column_order[con._vid]}"
+                if expr_info.nonlinear:
+                    n_complementarity_nonlin += 1
+                else:
+                    n_complementarity_lin += 1
+        if symbolic_solver_labels:
+            for idx in range(len(constraints)):
+                r_lines[idx] += row_comments[idx]
+
         timer.toc("Generated row/col labels & comments", level=logging.DEBUG)
 
         #
@@ -1227,6 +1276,7 @@ class _NLWriter_impl(object):
         for name, data in suffix_data.items():
             if name == 'dual':
                 continue
+            data.compile(column_order, row_order, obj_order, model_id)
             if len(data.datatype) > 1:
                 raise ValueError(
                     "The NL file writer found multiple active export "
@@ -1250,6 +1300,7 @@ class _NLWriter_impl(object):
                 if not _vals:
                     continue
                 ostream.write(f"S{_field|_float} {len(_vals)} {name}\n")
+                # Note: _SuffixData.compile() guarantees the value is int/float
                 ostream.write(
                     ''.join(f"{_id} {_vals[_id]!r}\n" for _id in sorted(_vals))
                 )
@@ -1294,12 +1345,18 @@ class _NLWriter_impl(object):
                 # constraints at the end (as their nonlinear expressions
                 # are the constant 0).
                 _expr = self.template.const % 0
-                ostream.write(
-                    _expr.join(
-                        f'C{i}{row_comments[i]}\n'
-                        for i in range(row_idx, len(constraints))
+                if symbolic_solver_labels:
+                    ostream.write(
+                        _expr.join(
+                            f'C{i}{row_comments[i]}\n'
+                            for i in range(row_idx, len(constraints))
+                        )
                     )
-                )
+                else:
+                    ostream.write(
+                        _expr.join(f'C{i}\n' for i in range(row_idx, len(constraints)))
+                    )
+
                 # We know that there is at least one linear expression
                 # (row_idx), so we can unconditionally emit the last "0
                 # expression":
@@ -1330,32 +1387,57 @@ class _NLWriter_impl(object):
         # "d" lines (dual initialization)
         #
         if 'dual' in suffix_data:
-            _data = suffix_data['dual']
-            if _data.var:
+            data = suffix_data['dual']
+            data.compile(column_order, row_order, obj_order, model_id)
+            if scale_model:
+                if objectives:
+                    if len(objectives) > 1:
+                        logger.warning(
+                            "Scaling model with dual suffixes and multiple "
+                            "objectives.  Assuming that the duals are computed "
+                            "against the first objective."
+                        )
+                    _obj_scale = objective_scaling[0]
+                else:
+                    _obj_scale = 1
+                for i in data.con:
+                    data.con[i] *= _obj_scale / constraint_scaling[i]
+            if data.var:
                 logger.warning("ignoring 'dual' suffix for Var types")
-            if _data.obj:
+            if data.obj:
                 logger.warning("ignoring 'dual' suffix for Objective types")
-            if _data.prob:
+            if data.prob:
                 logger.warning("ignoring 'dual' suffix for Model")
-            if _data.con:
-                ostream.write(f"d{len(_data.con)}\n")
+            if data.con:
+                ostream.write(f"d{len(data.con)}\n")
+                # Note: _SuffixData.compile() guarantees the value is int/float
                 ostream.write(
-                    ''.join(f"{_id} {_data.con[_id]!r}\n" for _id in sorted(_data.con))
+                    ''.join(f"{_id} {data.con[_id]!r}\n" for _id in sorted(data.con))
                 )
 
         #
         # "x" lines (variable initialization)
         #
         _init_lines = [
-            f'{var_idx} {info[0].value!r}{col_comments[var_idx]}\n'
-            for var_idx, info in enumerate(variables)
-            if info[0].value is not None
+            (var_idx, val if val.__class__ in int_float else float(val))
+            for var_idx, val in enumerate(var_map[_id].value for _id in variables)
+            if val is not None
         ]
+        if scale_model:
+            _init_lines = [
+                (var_idx, val * variable_scaling[var_idx])
+                for var_idx, val in _init_lines
+            ]
         ostream.write(
             'x%d%s\n'
             % (len(_init_lines), "\t# initial guess" if symbolic_solver_labels else '')
         )
-        ostream.write(''.join(_init_lines))
+        ostream.write(
+            ''.join(
+                f'{var_idx} {val!r}{col_comments[var_idx]}\n'
+                for var_idx, val in _init_lines
+            )
+        )
 
         #
         # "r" lines (constraint bounds)
@@ -1368,23 +1450,9 @@ class _NLWriter_impl(object):
                 else '',
             )
         )
-        for row_idx, info in enumerate(constraints):
-            i = info[2]
-            if i == 4:  # ==
-                ostream.write(f"4 {info[3]}{row_comments[row_idx]}\n")
-            elif i == 1:  # body <= ub
-                ostream.write(f"1 {info[4]}{row_comments[row_idx]}\n")
-            elif i == 2:  # lb <= body
-                ostream.write(f"2 {info[3]}{row_comments[row_idx]}\n")
-            elif i == 0:  # lb <= body <= ub
-                ostream.write(f"0 {info[3]} {info[4]}{row_comments[row_idx]}\n")
-            elif i == 5:  # complementarity
-                ostream.write(
-                    f"5 {info[3]} {1+column_order[info[4]]}"
-                    f"{row_comments[row_idx]}\n"
-                )
-            else:  # i == 3; unbounded
-                ostream.write(f"3{row_comments[row_idx]}\n")
+        ostream.write("\n".join(r_lines))
+        if r_lines:
+            ostream.write("\n")
 
         #
         # "b" lines (variable bounds)
@@ -1397,20 +1465,19 @@ class _NLWriter_impl(object):
                 else '',
             )
         )
-        for var_idx, info in enumerate(variables):
-            # _bound_writer[info[2]](info, col_comments[var_idx])
-            ###
-            i = info[2]
-            if i == 0:  # lb <= body <= ub
-                ostream.write(f"0 {info[3]} {info[4]}{col_comments[var_idx]}\n")
-            elif i == 2:  # lb <= body
-                ostream.write(f"2 {info[3]}{col_comments[var_idx]}\n")
-            elif i == 1:  # body <= ub
-                ostream.write(f"1 {info[4]}{col_comments[var_idx]}\n")
-            elif i == 4:  # ==
-                ostream.write(f"4 {info[3]}{col_comments[var_idx]}\n")
-            else:  # i == 3; unbounded
-                ostream.write(f"3{col_comments[var_idx]}\n")
+        for var_idx, _id in enumerate(variables):
+            lb, ub = var_bounds[_id]
+            if lb == ub:
+                if lb is None:  # unbounded
+                    ostream.write(f"3{col_comments[var_idx]}\n")
+                else:  # ==
+                    ostream.write(f"4 {lb!r}{col_comments[var_idx]}\n")
+            elif lb is None:  # var <= ub
+                ostream.write(f"1 {ub!r}{col_comments[var_idx]}\n")
+            elif ub is None:  # lb <= body
+                ostream.write(f"2 {lb!r}{col_comments[var_idx]}\n")
+            else:  # lb <= body <= ub
+                ostream.write(f"0 {lb!r} {ub!r}{col_comments[var_idx]}\n")
 
         #
         # "k" lines (column offsets in Jacobian NNZ)
@@ -1425,8 +1492,8 @@ class _NLWriter_impl(object):
             )
         )
         ktot = 0
-        for var_idx, info in enumerate(variables[:-1]):
-            ktot += con_nnz_by_var.get(info[1], 0)
+        for var_idx, _id in enumerate(variables[:-1]):
+            ktot += con_nnz_by_var.get(_id, 0)
             ostream.write(f"{ktot}\n")
 
         #
@@ -1435,11 +1502,14 @@ class _NLWriter_impl(object):
         for row_idx, info in enumerate(constraints):
             linear = info[1].linear
             # ASL will fail on "J<N> 0", so if there are no coefficients
-            # (i.e., a constant objective), then skip this entry
+            # (e.g., a nonlinear-only constraint), then skip this entry
             if not linear:
                 continue
+            if scale_model:
+                for _id, val in linear.items():
+                    linear[_id] /= scaling_cache[_id]
             ostream.write(f'J{row_idx} {len(linear)}{row_comments[row_idx]}\n')
-            for _id in sorted(linear.keys(), key=column_order.__getitem__):
+            for _id in sorted(linear, key=column_order.__getitem__):
                 ostream.write(f'{column_order[_id]} {linear[_id]!r}\n')
 
         #
@@ -1448,21 +1518,38 @@ class _NLWriter_impl(object):
         for obj_idx, info in enumerate(objectives):
             linear = info[1].linear
             # ASL will fail on "G<N> 0", so if there are no coefficients
-            # (i.e., a constant objective), then skip this entry
+            # (e.g., a constant objective), then skip this entry
             if not linear:
                 continue
+            if scale_model:
+                for _id, val in linear.items():
+                    linear[_id] /= scaling_cache[_id]
             ostream.write(f'G{obj_idx} {len(linear)}{row_comments[obj_idx + n_cons]}\n')
-            for _id in sorted(linear.keys(), key=column_order.__getitem__):
+            for _id in sorted(linear, key=column_order.__getitem__):
                 ostream.write(f'{column_order[_id]} {linear[_id]!r}\n')
 
         # Generate the return information
+        eliminated_vars = [
+            (var_map[_id], expr_info) for _id, expr_info in eliminated_vars.items()
+        ]
+        eliminated_vars.reverse()
+        if scale_model:
+            scaling = ScalingFactors(
+                variables=variable_scaling,
+                constraints=constraint_scaling,
+                objectives=objective_scaling,
+            )
+        else:
+            scaling = None
         info = NLWriterInfo(
-            variables,
-            constraints,
-            objectives,
-            sorted(amplfunc_libraries),
-            row_labels,
-            col_labels,
+            var=[var_map[_id] for _id in variables],
+            con=[info[0] for info in constraints],
+            obj=[info[0] for info in objectives],
+            external_libs=sorted(amplfunc_libraries),
+            row_labels=row_labels,
+            col_labels=col_labels,
+            eliminated_vars=eliminated_vars,
+            scaling=scaling,
         )
         timer.toc("Wrote NL stream", level=logging.DEBUG)
         timer.toc("Generated NL representation", delta=False)
@@ -1528,8 +1615,10 @@ class _NLWriter_impl(object):
             if expr_info.nonlinear:
                 nonlinear_vars = set()
                 for _id in expr_info.nonlinear[1]:
+                    if _id in nonlinear_vars:
+                        continue
                     if _id in linear_by_comp:
-                        nonlinear_vars.update(linear_by_comp[_id].keys())
+                        nonlinear_vars.update(linear_by_comp[_id])
                     else:
                         nonlinear_vars.add(_id)
                 # Recreate nz if this component has both linear and
@@ -1537,7 +1626,7 @@ class _NLWriter_impl(object):
                 if expr_info.linear:
                     # Ensure any variables that only appear nonlinearly
                     # in the expression have 0's in the linear dict
-                    for i in nonlinear_vars - linear_vars:
+                    for i in filterfalse(linear_vars.__contains__, nonlinear_vars):
                         expr_info.linear[i] = 0
                 else:
                     # All variables are nonlinear; generate the linear
@@ -1590,6 +1679,143 @@ class _NLWriter_impl(object):
                 n_subexpressions[0] += 1
         return n_subexpressions
 
+    def _linear_presolve(self, comp_by_linear_var, lcon_by_linear_nnz, var_bounds):
+        eliminated_vars = {}
+        eliminated_cons = set()
+        if not self.config.linear_presolve:
+            return eliminated_cons, eliminated_vars
+
+        fixed_vars = [
+            _id for _id, (lb, ub) in var_bounds.items() if lb == ub and lb is not None
+        ]
+        var_map = self.var_map
+        substitutions_by_linear_var = defaultdict(set)
+        template = self.template
+        one_var = lcon_by_linear_nnz[1]
+        two_var = lcon_by_linear_nnz[2]
+        while 1:
+            if fixed_vars:
+                _id = fixed_vars.pop()
+                a = x = None
+                b, _ = var_bounds[_id]
+                logger.debug("NL presolve: bounds fixed %s := %s", var_map[_id], b)
+                eliminated_vars[_id] = AMPLRepn(b, {}, None)
+            elif one_var:
+                con_id, info = one_var.popitem()
+                expr_info, lb = info
+                _id, coef = expr_info.linear.popitem()
+                # substituting _id with a*x + b
+                a = x = None
+                b = expr_info.const = (lb - expr_info.const) / coef
+                logger.debug("NL presolve: substituting %s := %s", var_map[_id], b)
+                eliminated_vars[_id] = expr_info
+                lb, ub = var_bounds[_id]
+                if (lb is not None and lb - b > TOL) or (
+                    ub is not None and ub - b < -TOL
+                ):
+                    raise InfeasibleConstraintException(
+                        "model contains a trivially infeasible variable "
+                        f"'{var_map[_id].name}' (presolved to a value of "
+                        f"{b} outside bounds [{lb}, {ub}])."
+                    )
+                eliminated_cons.add(con_id)
+            elif two_var:
+                con_id, info = two_var.popitem()
+                expr_info, lb = info
+                _id, coef = expr_info.linear.popitem()
+                id2, coef2 = expr_info.linear.popitem()
+                #
+                id2_isdiscrete = var_map[id2].domain.isdiscrete()
+                if var_map[_id].domain.isdiscrete() ^ id2_isdiscrete:
+                    # if only one variable is discrete, then we need to
+                    # substiitute out the other
+                    if id2_isdiscrete:
+                        _id, id2 = id2, _id
+                        coef, coef2 = coef2, coef
+                else:
+                    # In an attempt to improve numerical stability, we will
+                    # solve for (and substitute out) the variable with the
+                    # coefficient closer to +/-1)
+                    log_coef = _log10(abs(coef))
+                    log_coef2 = _log10(abs(coef2))
+                    if abs(log_coef2) < abs(log_coef) or (
+                        log_coef2 == -log_coef and log_coef2 < log_coef
+                    ):
+                        _id, id2 = id2, _id
+                        coef, coef2 = coef2, coef
+                # substituting _id with a*x + b
+                a = -coef2 / coef
+                x = id2
+                b = expr_info.const = (lb - expr_info.const) / coef
+                expr_info.linear[x] = a
+                substitutions_by_linear_var[x].add(_id)
+                eliminated_vars[_id] = expr_info
+                logger.debug(
+                    "NL presolve: substituting %s := %s*%s + %s",
+                    var_map[_id],
+                    a,
+                    var_map[x],
+                    b,
+                )
+                # Tighten variable bounds
+                x_lb, x_ub = var_bounds[x]
+                lb, ub = var_bounds[_id]
+                if lb is not None:
+                    lb = (lb - b) / a
+                if ub is not None:
+                    ub = (ub - b) / a
+                if a < 0:
+                    lb, ub = ub, lb
+                if x_lb is None or (lb is not None and lb > x_lb):
+                    x_lb = lb
+                if x_ub is None or (ub is not None and ub < x_ub):
+                    x_ub = ub
+                var_bounds[x] = x_lb, x_ub
+                if x_lb == x_ub and x_lb is not None:
+                    fixed_vars.append(x)
+                eliminated_cons.add(con_id)
+            else:
+                return eliminated_cons, eliminated_vars
+            for con_id, expr_info in comp_by_linear_var[_id]:
+                # Note that if we were aggregating (i.e., _id was
+                # from two_var), then one of these info's will be
+                # for the constraint we just eliminated.  In this
+                # case, _id will no longer be in expr_info.linear - so c
+                # will be 0 - thereby preventing us from re-updating
+                # the expression.  We still want it to persist so
+                # that if later substitutions replace x with
+                # something else, then the expr_info gets updated
+                # appropriately (that expr_info is persisting in the
+                # eliminated_vars dict - and we will use that to
+                # update other linear expressions later.)
+                c = expr_info.linear.pop(_id, 0)
+                expr_info.const += c * b
+                if x in expr_info.linear:
+                    expr_info.linear[x] += c * a
+                elif a:
+                    expr_info.linear[x] = c * a
+                    # replacing _id with x... NNZ is not changing,
+                    # but we need to remember that x is now part of
+                    # this constraint
+                    comp_by_linear_var[x].append((con_id, expr_info))
+                    continue
+                # NNZ has been reduced by 1
+                nnz = len(expr_info.linear)
+                _old = lcon_by_linear_nnz[nnz + 1]
+                if con_id in _old:
+                    lcon_by_linear_nnz[nnz][con_id] = _old.pop(con_id)
+            # If variables were replaced by the variable that
+            # we are currently eliminating, then we need to update
+            # the representation of those variables
+            for resubst in substitutions_by_linear_var.pop(_id, ()):
+                expr_info = eliminated_vars[resubst]
+                c = expr_info.linear.pop(_id, 0)
+                expr_info.const += c * b
+                if x in expr_info.linear:
+                    expr_info.linear[x] += c * a
+                elif a:
+                    expr_info.linear[x] = c * a
+
     def _record_named_expression_usage(self, named_exprs, src, comp_type):
         self.used_named_expressions.update(named_exprs)
         src = id(src)
@@ -1605,12 +1831,15 @@ class _NLWriter_impl(object):
         # compiled before this point).  Omitting the assertion for
         # efficiency.
         # assert repn.mult == 1
+        #
+        # Note that repn.const should always be a int/float (it has
+        # already been compiled)
         if repn.nonlinear:
             nl, args = repn.nonlinear
             if include_const and repn.const:
                 # Add the constant to the NL expression.  AMPL adds the
                 # constant as the second argument, so we will too.
-                nl = self.template.binary_sum + nl + (self.template.const % repn.const)
+                nl = self.template.binary_sum + nl + self.template.const % repn.const
             self.ostream.write(nl % tuple(map(self.var_id_to_nl.__getitem__, args)))
         elif include_const:
             self.ostream.write(self.template.const % repn.const)
@@ -1625,7 +1854,7 @@ class _NLWriter_impl(object):
             lbl = '\t#%s' % info[0].name
         else:
             lbl = ''
-        self.var_id_to_nl[expr_id] = f"{self.next_V_line_id}{lbl}"
+        self.var_id_to_nl[expr_id] = f"v{self.next_V_line_id}{lbl}"
         # Do NOT write out 0 coefficients here: doing so fouls up the
         # ASL's logic for calculating derivatives, leading to 'nan' in
         # the Hessian results.
@@ -1683,6 +1912,23 @@ class AMPLRepn(object):
 
     def __repr__(self):
         return str(self)
+
+    def __eq__(self, other):
+        return other.__class__ is AMPLRepn and (
+            self.nl == other.nl
+            and self.mult == other.mult
+            and self.const == other.const
+            and self.linear == other.linear
+            and self.nonlinear == other.nonlinear
+            and self.named_exprs == other.named_exprs
+        )
+
+    def __hash__(self):
+        # Approximation of the Python default object hash
+        # (4 LSB are rolled to the MSB to reduce hash collisions)
+        return id(self) // 16 + (
+            (id(self) & 15) << 8 * ctypes.sizeof(ctypes.c_void_p) - 4
+        )
 
     def duplicate(self):
         ans = self.__class__.__new__(self.__class__)
@@ -1918,7 +2164,7 @@ class text_nl_debug_template(object):
     less_equal = 'o23\t# le\n'
     equality = 'o24\t# eq\n'
     external_fcn = 'f%d %d%s\n'
-    var = 'v%s\n'
+    var = '%s\n'  # NOTE: to support scaling, we do NOT include the 'v' here
     const = 'n%r\n'
     string = 'h%d:%s\n'
     monomial = product + const + var.replace('%', '%%')
@@ -1990,7 +2236,7 @@ def handle_product_node(visitor, node, arg1, arg2):
                 _prod = mult * arg2[1]
                 if _prod:
                     deprecation_warning(
-                        f"Encountered {mult}*{arg2[1]} in expression tree.  "
+                        f"Encountered {mult}*{str(arg2[1])} in expression tree.  "
                         "Mapping the NaN result to 0 for compatibility "
                         "with the nl_v1 writer.  In the future, this NaN "
                         "will be preserved/emitted to comply with IEEE-754.",
@@ -2019,7 +2265,7 @@ def handle_product_node(visitor, node, arg1, arg2):
                 _prod = mult * arg2[1]
                 if _prod:
                     deprecation_warning(
-                        f"Encountered {mult}*{arg2[1]} in expression tree.  "
+                        f"Encountered {str(mult)}*{arg2[1]} in expression tree.  "
                         "Mapping the NaN result to 0 for compatibility "
                         "with the nl_v1 writer.  In the future, this NaN "
                         "will be preserved/emitted to comply with IEEE-754.",
@@ -2041,20 +2287,20 @@ def handle_division_node(visitor, node, arg1, arg2):
         if div == 1:
             return arg1
         if arg1[0] is _MONOMIAL:
-            tmp = _apply_node_operation(node, (arg1[2], div))
-            if tmp[1] != tmp[1]:
+            tmp = apply_node_operation(node, (arg1[2], div))
+            if tmp != tmp:
                 # This catches if the coefficient division results in nan
-                return tmp
-            return (_MONOMIAL, arg1[1], tmp[1])
+                return _CONSTANT, tmp
+            return (_MONOMIAL, arg1[1], tmp)
         elif arg1[0] is _GENERAL:
-            tmp = _apply_node_operation(node, (arg1[1].mult, div))[1]
+            tmp = apply_node_operation(node, (arg1[1].mult, div))
             if tmp != tmp:
                 # This catches if the multiplier division results in nan
                 return _CONSTANT, tmp
             arg1[1].mult = tmp
             return arg1
         elif arg1[0] is _CONSTANT:
-            return _apply_node_operation(node, (arg1[1], div))
+            return _CONSTANT, apply_node_operation(node, (arg1[1], div))
     elif arg1[0] is _CONSTANT and not arg1[1]:
         return _CONSTANT, 0
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
@@ -2067,7 +2313,10 @@ def handle_division_node(visitor, node, arg1, arg2):
 def handle_pow_node(visitor, node, arg1, arg2):
     if arg2[0] is _CONSTANT:
         if arg1[0] is _CONSTANT:
-            return _apply_node_operation(node, (arg1[1], arg2[1]))
+            ans = apply_node_operation(node, (arg1[1], arg2[1]))
+            if ans.__class__ in native_complex_types:
+                ans = complex_number_error(ans, visitor, node)
+            return _CONSTANT, ans
         elif not arg2[1]:
             return _CONSTANT, 1
         elif arg2[1] == 1:
@@ -2086,7 +2335,7 @@ def handle_abs_node(visitor, node, arg1):
 
 def handle_unary_node(visitor, node, arg1):
     if arg1[0] is _CONSTANT:
-        return _apply_node_operation(node, (arg1[1],))
+        return _CONSTANT, apply_node_operation(node, (arg1[1],))
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.unary[node.name]
     )
@@ -2283,7 +2532,7 @@ def handle_external_function_node(visitor, node, *args):
         for arg in args
     ):
         arg_list = [arg[1] if arg[0] is _CONSTANT else arg[1].const for arg in args]
-        return _apply_node_operation(node, arg_list)
+        return _CONSTANT, apply_node_operation(node, arg_list)
     if func in visitor.external_functions:
         if node._fcn._library != visitor.external_functions[func][1]._library:
             raise RuntimeError(
@@ -2312,201 +2561,171 @@ def handle_external_function_node(visitor, node, *args):
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 
-_operator_handles = {
-    NegationExpression: handle_negation_node,
-    ProductExpression: handle_product_node,
-    DivisionExpression: handle_division_node,
-    PowExpression: handle_pow_node,
-    AbsExpression: handle_abs_node,
-    UnaryFunctionExpression: handle_unary_node,
-    Expr_ifExpression: handle_exprif_node,
-    EqualityExpression: handle_equality_node,
-    InequalityExpression: handle_inequality_node,
-    RangedExpression: handle_ranged_inequality_node,
-    _GeneralExpressionData: handle_named_expression_node,
-    ScalarExpression: handle_named_expression_node,
-    kernel.expression.expression: handle_named_expression_node,
-    kernel.expression.noclone: handle_named_expression_node,
-    # Note: objectives are special named expressions
-    _GeneralObjectiveData: handle_named_expression_node,
-    ScalarObjective: handle_named_expression_node,
-    kernel.objective.objective: handle_named_expression_node,
-    ExternalFunctionExpression: handle_external_function_node,
-    # These are handled explicitly in beforeChild():
-    # LinearExpression: handle_linear_expression,
-    # SumExpression: handle_sum_expression,
-    #
-    # Note: MonomialTermExpression is only hit when processing NPV
-    # subexpressions that raise errors (e.g., log(0) * m.x), so no
-    # special processing is needed [it is just a product expression]
-    MonomialTermExpression: handle_product_node,
-}
-
-
-def _before_native(visitor, child):
-    return False, (_CONSTANT, child)
-
-
-def _before_string(visitor, child):
-    visitor.encountered_string_arguments = True
-    ans = AMPLRepn(child, None, None)
-    ans.nl = (visitor.template.string % (len(child), child), ())
-    return False, (_GENERAL, ans)
-
-
-def _before_var(visitor, child):
-    _id = id(child)
-    if _id not in visitor.var_map:
-        if child.fixed:
-            return False, (_CONSTANT, child())
-        visitor.var_map[_id] = child
-    return False, (_MONOMIAL, _id, 1)
-
-
-def _before_npv(visitor, child):
-    # TBD: It might be more efficient to cache the value of NPV
-    # expressions to avoid duplicate evaluations.  However, current
-    # examples do not benefit from this cache.
-    #
-    # _id = id(child)
-    # if _id in visitor.value_cache:
-    #     child = visitor.value_cache[_id]
-    # else:
-    #     child = visitor.value_cache[_id] = child()
-    # return False, (_CONSTANT, child)
-    try:
-        tmp = False, (_CONSTANT, child())
-        if tmp[1][1].__class__ is complex:
-            return True, None
-        return tmp
-    except:
-        # If there was an exception evaluating the subexpression, then
-        # we need to descend into it (in case there is something like 0 *
-        # nan that we need to map to 0)
-        return True, None
-
-
-def _before_monomial(visitor, child):
-    #
-    # The following are performance optimizations for common
-    # situations (Monomial terms and Linear expressions)
-    #
-    arg1, arg2 = child._args_
-    if arg1.__class__ not in native_types:
-        # TBD: It might be more efficient to cache the value of NPV
-        # expressions to avoid duplicate evaluations.  However, current
-        # examples do not benefit from this cache.
+_operator_handles = ExitNodeDispatcher(
+    {
+        NegationExpression: handle_negation_node,
+        ProductExpression: handle_product_node,
+        DivisionExpression: handle_division_node,
+        PowExpression: handle_pow_node,
+        AbsExpression: handle_abs_node,
+        UnaryFunctionExpression: handle_unary_node,
+        Expr_ifExpression: handle_exprif_node,
+        EqualityExpression: handle_equality_node,
+        InequalityExpression: handle_inequality_node,
+        RangedExpression: handle_ranged_inequality_node,
+        Expression: handle_named_expression_node,
+        ExternalFunctionExpression: handle_external_function_node,
+        # These are handled explicitly in beforeChild():
+        # LinearExpression: handle_linear_expression,
+        # SumExpression: handle_sum_expression,
         #
-        # _id = id(arg1)
-        # if _id in visitor.value_cache:
-        #     arg1 = visitor.value_cache[_id]
-        # else:
-        #     arg1 = visitor.value_cache[_id] = arg1()
-        try:
-            arg1 = arg1()
-        except:
-            # If there was an exception evaluating the subexpression,
-            # then we need to descend into it (in case there is something
-            # like 0 * nan that we need to map to 0)
+        # Note: MonomialTermExpression is only hit when processing NPV
+        # subexpressions that raise errors (e.g., log(0) * m.x), so no
+        # special processing is needed [it is just a product expression]
+        MonomialTermExpression: handle_product_node,
+    }
+)
+
+
+class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
+    __slots__ = ()
+
+    def __init__(self):
+        # Special linear / summation expressions
+        self[MonomialTermExpression] = self._before_monomial
+        self[LinearExpression] = self._before_linear
+        self[SumExpression] = self._before_general_expression
+
+    @staticmethod
+    def _before_string(visitor, child):
+        visitor.encountered_string_arguments = True
+        ans = AMPLRepn(child, None, None)
+        ans.nl = (visitor.template.string % (len(child), child), ())
+        return False, (_GENERAL, ans)
+
+    @staticmethod
+    def _before_var(visitor, child):
+        _id = id(child)
+        if _id not in visitor.var_map:
+            if child.fixed:
+                if _id not in visitor.fixed_vars:
+                    visitor.cache_fixed_var(_id, child)
+                return False, (_CONSTANT, visitor.fixed_vars[_id])
+            visitor.var_map[_id] = child
+        return False, (_MONOMIAL, _id, 1)
+
+    @staticmethod
+    def _before_monomial(visitor, child):
+        #
+        # The following are performance optimizations for common
+        # situations (Monomial terms and Linear expressions)
+        #
+        arg1, arg2 = child._args_
+        if arg1.__class__ not in native_types:
+            try:
+                arg1 = visitor.check_constant(visitor.evaluate(arg1), arg1)
+            except (ValueError, ArithmeticError):
+                return True, None
+
+        # Trap multiplication by 0 and nan.
+        if not arg1:
+            if arg2.fixed:
+                _id = id(arg2)
+                if _id not in visitor.fixed_vars:
+                    visitor.cache_fixed_var(id(arg2), arg2)
+                arg2 = visitor.fixed_vars[_id]
+                if arg2 != arg2:
+                    deprecation_warning(
+                        f"Encountered {arg1}*{arg2} in expression tree.  "
+                        "Mapping the NaN result to 0 for compatibility "
+                        "with the nl_v1 writer.  In the future, this NaN "
+                        "will be preserved/emitted to comply with IEEE-754.",
+                        version='6.4.3',
+                    )
+            return False, (_CONSTANT, arg1)
+
+        _id = id(arg2)
+        if _id not in visitor.var_map:
+            if arg2.fixed:
+                if _id not in visitor.fixed_vars:
+                    visitor.cache_fixed_var(_id, arg2)
+                return False, (_CONSTANT, arg1 * visitor.fixed_vars[_id])
+            visitor.var_map[_id] = arg2
+        return False, (_MONOMIAL, _id, arg1)
+
+    @staticmethod
+    def _before_linear(visitor, child):
+        # Because we are going to modify the LinearExpression in this
+        # walker, we need to make a copy of the arg list from the original
+        # expression tree.
+        var_map = visitor.var_map
+        const = 0
+        linear = {}
+        for arg in child.args:
+            if arg.__class__ is MonomialTermExpression:
+                arg1, arg2 = arg._args_
+                if arg1.__class__ not in native_types:
+                    try:
+                        arg1 = visitor.check_constant(visitor.evaluate(arg1), arg1)
+                    except (ValueError, ArithmeticError):
+                        return True, None
+
+                # Trap multiplication by 0 and nan.
+                if not arg1:
+                    if arg2.fixed:
+                        arg2 = visitor.check_constant(arg2.value, arg2)
+                        if arg2 != arg2:
+                            deprecation_warning(
+                                f"Encountered {arg1}*{str(arg2.value)} in expression "
+                                "tree.  Mapping the NaN result to 0 for compatibility "
+                                "with the nl_v1 writer.  In the future, this NaN "
+                                "will be preserved/emitted to comply with IEEE-754.",
+                                version='6.4.3',
+                            )
+                    continue
+
+                _id = id(arg2)
+                if _id not in var_map:
+                    if arg2.fixed:
+                        if _id not in visitor.fixed_vars:
+                            visitor.cache_fixed_var(_id, arg2)
+                        const += arg1 * visitor.fixed_vars[_id]
+                        continue
+                    var_map[_id] = arg2
+                    linear[_id] = arg1
+                elif _id in linear:
+                    linear[_id] += arg1
+                else:
+                    linear[_id] = arg1
+            elif arg.__class__ in native_types:
+                const += arg
+            else:
+                try:
+                    const += visitor.check_constant(visitor.evaluate(arg), arg)
+                except (ValueError, ArithmeticError):
+                    return True, None
+
+        if linear:
+            return False, (_GENERAL, AMPLRepn(const, linear, None))
+        else:
+            return False, (_CONSTANT, const)
+
+    @staticmethod
+    def _before_named_expression(visitor, child):
+        _id = id(child)
+        if _id in visitor.subexpression_cache:
+            obj, repn, info = visitor.subexpression_cache[_id]
+            if info[2]:
+                if repn.linear:
+                    return False, (_MONOMIAL, next(iter(repn.linear)), 1)
+                else:
+                    return False, (_CONSTANT, repn.const)
+            return False, (_GENERAL, repn.duplicate())
+        else:
             return True, None
 
-    if arg2.fixed:
-        arg2 = arg2.value
-        _prod = arg1 * arg2
-        if not (arg1 and arg2) and _prod:
-            deprecation_warning(
-                f"Encountered {arg1}*{arg2} in expression tree.  "
-                "Mapping the NaN result to 0 for compatibility "
-                "with the nl_v1 writer.  In the future, this NaN "
-                "will be preserved/emitted to comply with IEEE-754.",
-                version='6.4.3',
-            )
-            _prod = 0
-        return (_CONSTANT, _prod)
 
-    # Trap multiplication by 0.
-    if not arg1:
-        return False, (_CONSTANT, 0)
-    _id = id(arg2)
-    if _id not in visitor.var_map:
-        visitor.var_map[_id] = arg2
-    return False, (_MONOMIAL, _id, arg1)
-
-
-def _before_linear(visitor, child):
-    # Because we are going to modify the LinearExpression in this
-    # walker, we need to make a copy of the arg list from the original
-    # expression tree.
-    var_map = visitor.var_map
-    const = 0
-    linear = {}
-    for arg in child.args:
-        if arg.__class__ is MonomialTermExpression:
-            c, v = arg.args
-            if c.__class__ not in native_types:
-                c = c()
-            if v.fixed:
-                const += c * v.value
-            elif c:
-                _id = id(v)
-                if _id not in var_map:
-                    var_map[_id] = v
-                if _id in linear:
-                    linear[_id] += c
-                else:
-                    linear[_id] = c
-        elif arg.__class__ in native_types:
-            const += arg
-        else:
-            const += arg()
-    if linear:
-        return False, (_GENERAL, AMPLRepn(const, linear, None))
-    else:
-        return False, (_CONSTANT, const)
-
-
-def _before_named_expression(visitor, child):
-    _id = id(child)
-    if _id in visitor.subexpression_cache:
-        obj, repn, info = visitor.subexpression_cache[_id]
-        if info[2]:
-            if repn.linear:
-                return False, (_MONOMIAL, next(iter(repn.linear)), 1)
-            else:
-                return False, (_CONSTANT, repn.const)
-        return False, (_GENERAL, repn.duplicate())
-    else:
-        return True, None
-
-
-def _before_general_expression(visitor, child):
-    return True, None
-
-
-# Register an initial set of known expression types with the "before
-# child" expression handler lookup table.
-_before_child_handlers = {_type: _before_native for _type in native_numeric_types}
-for _type in native_types:
-    if issubclass(_type, str):
-        _before_child_handlers[_type] = _before_string
-# general operators
-for _type in _operator_handles:
-    _before_child_handlers[_type] = _before_general_expression
-# named subexpressions
-for _type in (
-    _GeneralExpressionData,
-    ScalarExpression,
-    kernel.expression.expression,
-    kernel.expression.noclone,
-    _GeneralObjectiveData,
-    ScalarObjective,
-    kernel.objective.objective,
-):
-    _before_child_handlers[_type] = _before_named_expression
-# Special linear / summation expressions
-_before_child_handlers[MonomialTermExpression] = _before_monomial
-_before_child_handlers[LinearExpression] = _before_linear
-_before_child_handlers[SumExpression] = _before_general_expression
+_before_child_handlers = AMPLBeforeChildDispatcher()
 
 
 class AMPLRepnVisitor(StreamBasedExpressionVisitor):
@@ -2532,10 +2751,55 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         self.symbolic_solver_labels = symbolic_solver_labels
         self.use_named_exprs = use_named_exprs
         self.encountered_string_arguments = False
-        # self.value_cache = {}
+        self.fixed_vars = {}
+        self._eval_expr_visitor = _EvaluationVisitor(True)
+        self.evaluate = self._eval_expr_visitor.dfs_postorder_stack
+
+    def check_constant(self, ans, obj):
+        if ans.__class__ not in native_numeric_types:
+            # None can be returned from uninitialized Var/Param objects
+            if ans is None:
+                return InvalidNumber(
+                    None, f"'{obj}' evaluated to a nonnumeric value '{ans}'"
+                )
+            if ans.__class__ is InvalidNumber:
+                return ans
+            elif ans.__class__ in native_complex_types:
+                return complex_number_error(ans, self, obj)
+            else:
+                # It is possible to get other non-numeric types.  Most
+                # common are bool and 1-element numpy.array().  We will
+                # attempt to convert the value to a float before
+                # proceeding.
+                #
+                # TODO: we should check bool and warn/error (while bool is
+                # convertible to float in Python, they have very
+                # different semantic meanings in Pyomo).
+                try:
+                    ans = float(ans)
+                except:
+                    return InvalidNumber(
+                        ans, f"'{obj}' evaluated to a nonnumeric value '{ans}'"
+                    )
+        if ans != ans:
+            return InvalidNumber(
+                nan, f"'{obj}' evaluated to a nonnumeric value '{ans}'"
+            )
+        return ans
+
+    def cache_fixed_var(self, _id, child):
+        val = self.check_constant(child.value, child)
+        lb, ub = child.bounds
+        if (lb is not None and lb - val > TOL) or (ub is not None and ub - val < -TOL):
+            raise InfeasibleConstraintException(
+                "model contains a trivially infeasible "
+                f"variable '{child.name}' (fixed value "
+                f"{val} outside bounds [{lb}, {ub}])."
+            )
+        self.fixed_vars[_id] = self.check_constant(child.value, child)
 
     def initializeWalker(self, expr):
-        expr, src, src_idx = expr
+        expr, src, src_idx, self.expression_scaling_factor = expr
         self.active_expression_source = (src_idx, id(src))
         walk, result = self.beforeChild(None, expr, 0)
         if not walk:
@@ -2543,16 +2807,12 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         return True, expr
 
     def beforeChild(self, node, child, child_idx):
-        try:
-            return _before_child_handlers[child.__class__](self, child)
-        except KeyError:
-            self._register_new_before_child_processor(child)
         return _before_child_handlers[child.__class__](self, child)
 
     def enterNode(self, node):
         # SumExpression are potentially large nary operators.  Directly
         # populate the result
-        if node.__class__ is SumExpression:
+        if node.__class__ in sum_like_expression_types:
             data = AMPLRepn(0, {}, None)
             data.nonlinear = []
             return node.args, data
@@ -2573,6 +2833,9 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
 
     def finalizeResult(self, result):
         ans = node_result_to_amplrepn(result)
+
+        # Multiply the expression by the scaling factor provided by the caller
+        ans.mult *= self.expression_scaling_factor
 
         # If this was a nonlinear named expression, and that expression
         # has no linear portion, then we will directly use this as a
@@ -2605,7 +2868,6 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
                 # variables are not accidentally re-characterized as
                 # nonlinear.
                 pass
-                # ans.nonlinear = orig.nonlinear
             ans.nl = None
 
         if ans.nonlinear.__class__ is list:
@@ -2613,8 +2875,8 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
 
         if not ans.linear:
             ans.linear = {}
-        linear = ans.linear
         if ans.mult != 1:
+            linear = ans.linear
             mult, ans.mult = ans.mult, 1
             ans.const *= mult
             if linear:
@@ -2629,39 +2891,3 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         #
         self.active_expression_source = None
         return ans
-
-    def _register_new_before_child_processor(self, child):
-        handlers = _before_child_handlers
-        child_type = child.__class__
-        if child_type in native_numeric_types:
-            handlers[child_type] = _before_native
-        elif issubclass(child_type, str):
-            handlers[child_type] = _before_string
-        elif child_type in native_types:
-            handlers[child_type] = _before_native
-        elif not child.is_expression_type():
-            if child.is_potentially_variable():
-                handlers[child_type] = _before_var
-            else:
-                handlers[child_type] = _before_npv
-        elif not child.is_potentially_variable():
-            handlers[child_type] = _before_npv
-            # If we descend into the named expression (because of an
-            # evaluation error), then on the way back out, we will use
-            # the potentially variable handler to process the result.
-            pv_base_type = child.potentially_variable_base_class()
-            if pv_base_type not in handlers:
-                try:
-                    child.__class__ = pv_base_type
-                    _register_new_before_child_processor(self, child)
-                finally:
-                    child.__class__ = child_type
-            if pv_base_type in _operator_handles:
-                _operator_handles[child_type] = _operator_handles[pv_base_type]
-        elif id(child) in self.subexpression_cache or issubclass(
-            child_type, _GeneralExpressionData
-        ):
-            handlers[child_type] = _before_named_expression
-            _operator_handles[child_type] = handle_named_expression_node
-        else:
-            handlers[child_type] = _before_general_expression

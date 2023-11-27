@@ -16,7 +16,7 @@ from pyomo.core import ConstraintList
 from pyomo.opt import SolverFactory
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_OA_config
 from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
-from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts
+from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts, add_oa_cuts_for_grey_box
 
 
 @SolverFactory.register(
@@ -29,20 +29,12 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
     The MindtPy (Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo) solver
     applies a variety of decomposition-based approaches to solve Mixed-Integer
     Nonlinear Programming (MINLP) problems.
-    These approaches include:
+    This class includes:
 
     - Outer approximation (OA)
-    - Global outer approximation (GOA)
     - Regularized outer approximation (ROA)
     - LP/NLP based branch-and-bound (LP/NLP)
-    - Global LP/NLP based branch-and-bound (GLP/NLP)
     - Regularized LP/NLP based branch-and-bound (RLP/NLP)
-    - Feasibility pump (FP)
-
-    This solver implementation has been developed by David Bernal <https://github.com/bernalde>
-    and Zedong Peng <https://github.com/ZedongPeng> as part of research efforts at the Grossmann
-    Research Group (http://egon.cheme.cmu.edu/) at the Department of Chemical Engineering at
-    Carnegie Mellon University.
     """
 
     CONFIG = _get_MindtPy_OA_config()
@@ -62,9 +54,6 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
                 config.logger.info('Set regularization_mip_threads equal to threads')
             if config.single_tree:
                 config.add_cuts_at_incumbent = True
-                # if no method is activated by users, we will use use_bb_tree_incumbent by default
-                if not (config.reduce_level_coef or config.use_bb_tree_incumbent):
-                    config.use_bb_tree_incumbent = True
             if config.mip_regularization_solver is None:
                 config.mip_regularization_solver = config.mip_solver
         if config.single_tree:
@@ -113,7 +102,12 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
         )
 
     def add_cuts(
-        self, dual_values, linearize_active=True, linearize_violated=True, cb_opt=None
+        self,
+        dual_values,
+        linearize_active=True,
+        linearize_violated=True,
+        cb_opt=None,
+        nlp=None,
     ):
         add_oa_cuts(
             self.mip,
@@ -128,6 +122,10 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
             linearize_active,
             linearize_violated,
         )
+        if len(self.mip.MindtPy_utils.grey_box_list) > 0:
+            add_oa_cuts_for_grey_box(
+                self.mip, nlp, self.config, self.objective_sense, self.mip_iter, cb_opt
+            )
 
     def deactivate_no_good_cuts_when_fixing_bound(self, no_good_cuts):
         # Only deactivate the last OA cuts may not be correct.
@@ -146,18 +144,9 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
         # In ROA and RLP/NLP, since the distance calculation does not include these epigraph slack variables, they should not be added to the variable list. (update_var_con_list = False)
         # In the process_objective function, once the objective function has been reformulated as epigraph constraint, the variable/constraint/objective lists will not be updated only if the MINLP has a linear objective function and regularization is activated at the same time.
         # This is because the epigraph constraint is very "flat" for branching rules. The original objective function will be used for the main problem and epigraph reformulation will be used for the projection problem.
-        # TODO: The logic here is too complicated, can we simplify it?
         MindtPy = self.working_model.MindtPy_utils
         config = self.config
-        self.process_objective(
-            self.config,
-            move_objective=config.move_objective,
-            use_mcpp=config.use_mcpp,
-            update_var_con_list=config.add_regularization is None,
-            partition_nonlinear_terms=config.partition_obj_nonlinear_terms,
-            obj_handleable_polynomial_degree=self.mip_objective_polynomial_degree,
-            constr_handleable_polynomial_degree=self.mip_constraint_polynomial_degree,
-        )
+        self.process_objective(update_var_con_list=config.add_regularization is None)
         # The epigraph constraint is very "flat" for branching rules.
         # If ROA/RLP-NLP is activated and the original objective function is linear, we will use the original objective for the main mip.
         if (

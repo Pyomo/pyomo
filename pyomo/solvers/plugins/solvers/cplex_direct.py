@@ -596,8 +596,13 @@ class CPLEXDirect(DirectSolver):
         cplex_expr, referenced_vars = self._get_expr_from_pyomo_expr(
             obj.expr, self._max_obj_degree
         )
-        for i in range(len(cplex_expr.q_coefficients)):
-            cplex_expr.q_coefficients[i] *= 2
+        # CPLEX actually uses x'Qx/2 in the objective, as the
+        # off-diagonal entries appear in both the lower triangle and the
+        # upper triangle (i.e., c*x1*x2 and c*x2*x1).  However, since
+        # the diagonal entries only appear once, we need to double them.
+        for i, v1 in enumerate(cplex_expr.q_variables1):
+            if v1 == cplex_expr.q_variables2[i]:
+                cplex_expr.q_coefficients[i] *= 2
 
         for var in referenced_vars:
             self._referenced_variables[var] += 1

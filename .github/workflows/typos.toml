@@ -28,4 +28,16 @@ ba = "ba"
 complimentarity = "complimentarity"
 # Ignore from "number of inputs" from core
 nin = "nin"
+# sisser CUTEr instance
+sisser = "sisser"
+# LAF
+LAF = "LAF"
+# caf
+caf = "caf"
+# WRONLY
+WRONLY = "WRONLY"
+# Ignore the name Hax
+Hax = "Hax"
+# Big Sur
+Sur = "Sur"
 # AS NEEDED: Add More Words Below

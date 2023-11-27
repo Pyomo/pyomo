@@ -928,7 +928,7 @@ Notes:
 
 
 class PersistentBase(abc.ABC):
-    def __init__(self, only_child_vars=True):
+    def __init__(self, only_child_vars=False):
         self._model = None
         self._active_constraints = dict()  # maps constraint to (lower, body, upper)
         self._vars = dict()  # maps var id to (var, lb, ub, fixed, domain, value)
@@ -1396,9 +1396,6 @@ class PersistentBase(abc.ABC):
         self.remove_constraints(old_cons)
         self.remove_sos_constraints(old_sos)
         timer.stop('cons')
-        timer.start('vars')
-        self.remove_variables(old_vars)
-        timer.stop('vars')
         timer.start('params')
         self.remove_params(old_params)
 
@@ -1471,17 +1468,17 @@ class PersistentBase(abc.ABC):
             vars_to_update = list()
             for v in vars_to_check:
                 _v, lb, ub, fixed, domain_interval, value = self._vars[id(v)]
-                if lb is not v._lb:
-                    vars_to_update.append(v)
-                elif ub is not v._ub:
-                    vars_to_update.append(v)
-                elif (fixed is not v.fixed) or (fixed and (value != v.value)):
+                if (fixed != v.fixed) or (fixed and (value != v.value)):
                     vars_to_update.append(v)
                     if self.update_config.treat_fixed_vars_as_params:
                         for c in self._referenced_variables[id(v)][0]:
                             cons_to_remove_and_add[c] = None
                         if self._referenced_variables[id(v)][2] is not None:
                             need_to_set_objective = True
+                elif lb is not v._lb:
+                    vars_to_update.append(v)
+                elif ub is not v._ub:
+                    vars_to_update.append(v)
                 elif domain_interval != v.domain.get_interval():
                     vars_to_update.append(v)
             self.update_variables(vars_to_update)
@@ -1524,6 +1521,11 @@ class PersistentBase(abc.ABC):
         if need_to_set_objective:
             self.set_objective(pyomo_obj)
         timer.stop('objective')
+        # this has to be done after the objective and constraints in case the
+        # old objective/constraints use old variables
+        timer.start('vars')
+        self.remove_variables(old_vars)
+        timer.stop('vars')
 
     def add_column(
         self,

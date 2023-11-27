@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 # -*- coding: utf-8 -*-
 """Transformation to fix and enforce disjunct True/False status."""
 
@@ -13,18 +24,21 @@ from pyomo.core.base.block import Block
 from pyomo.core.expr.numvalue import value
 from pyomo.gdp import GDP_Error
 from pyomo.gdp.disjunct import Disjunct, Disjunction
+from pyomo.gdp.plugins.bigm import BigM_Transformation
 
 logger = logging.getLogger('pyomo.gdp.fix_disjuncts')
 
 
-def _is_transformation(transformation_name):
-    xform = TransformationFactory(transformation_name)
+def _transformation_name_or_object(transformation_name_or_object):
+    if isinstance(transformation_name_or_object, Transformation):
+        return transformation_name_or_object
+    xform = TransformationFactory(transformation_name_or_object)
     if xform is None:
         raise ValueError(
             "Expected valid name for a registered Pyomo transformation. "
-            "\n\tRecieved: %s" % transformation_name
+            "\n\tRecieved: %s" % transformation_name_or_object
         )
-    return transformation_name
+    return xform
 
 
 @TransformationFactory.register(
@@ -53,8 +67,8 @@ class GDP_Disjunct_Fixer(Transformation):
     CONFIG.declare(
         "GDP_to_MIP_transformation",
         ConfigValue(
-            default='gdp.bigm',
-            domain=_is_transformation,
+            default=BigM_Transformation(),
+            domain=_transformation_name_or_object,
             description="The name of the transformation to call after the "
             "'logical_to_disjunctive' transformation in order to finish "
             "transforming to a MI(N)LP.",
@@ -87,7 +101,7 @@ class GDP_Disjunct_Fixer(Transformation):
         # Transform any remaining logical stuff
         TransformationFactory('contrib.logical_to_disjunctive').apply_to(model)
         # Transform anything disjunctive that the above created:
-        TransformationFactory(config.GDP_to_MIP_transformation).apply_to(model)
+        config.GDP_to_MIP_transformation.apply_to(model)
 
     def _transformContainer(self, obj):
         """Find all disjuncts in the container and transform them."""

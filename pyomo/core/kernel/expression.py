@@ -9,8 +9,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.deprecation import deprecated
 from pyomo.common.modeling import NOTSET
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.core.kernel.base import ICategorizedObject, _abstract_readwrite_property
 from pyomo.core.kernel.container_utils import define_simple_containers
 from pyomo.core.expr.numvalue import (
@@ -35,7 +36,7 @@ class IIdentityExpression(NumericValue):
 
     PRECEDENCE = 0
 
-    ASSOCIATIVITY = EXPR.common.OperatorAssociativity.NON_ASSOCIATIVE
+    ASSOCIATIVITY = EXPR.OperatorAssociativity.NON_ASSOCIATIVE
 
     @property
     def expr(self):
@@ -160,70 +161,23 @@ class IIdentityExpression(NumericValue):
         raise NotImplementedError  # pragma:nocover
 
 
-class noclone(IIdentityExpression):
-    """
-    A helper factory class for creating an expression with
-    cloning disabled. This allows the expression to be used
-    in two or more parent expressions without causing a copy
-    to be generated. If it is initialized with a value that
-    is not an instance of NumericValue, that value is simply
-    returned.
-    """
-
-    __slots__ = ("_expr",)
-
-    def __new__(cls, expr=NOTSET):
-        if expr is NOTSET or isinstance(expr, NumericValue):
-            if not is_potentially_variable(expr):
-                return super().__new__(npv_noclone)
-            else:
-                return super().__new__(cls)
-        else:
+@deprecated(
+    "noclone() is deprecated and can be omitted: "
+    "Pyomo expressions natively support shared subexpressions.",
+    version='6.6.2',
+)
+def noclone(expr):
+    try:
+        if expr.is_potentially_variable():
+            return expression(expr)
+    except AttributeError:
+        pass
+    try:
+        if is_constant(expr):
             return expr
-
-    def __init__(self, expr):
-        self._expr = expr
-
-    def __getnewargs__(self):
-        return (self._expr,)
-
-    def __getstate__(self):
-        return (self._expr,)
-
-    def __setstate__(self, state):
-        assert len(state) == 1
-        self._expr = state[0]
-
-    def __str__(self):
-        return "{%s}" % EXPR.expression_to_string(self)
-
-    #
-    # Override some of the NumericValue methods implemented
-    # by the base class
-    #
-
-    def is_constant(self):
-        """A boolean indicating whether this expression is constant."""
-        return is_constant(self._expr)
-
-    def is_potentially_variable(self):
-        """A boolean indicating whether this expression can
-        reference variables."""
-        return True
-
-    def clone(self):
-        """Return a clone of this expression (no-op)."""
-        return self
-
-
-class npv_noclone(noclone):
-    def is_potentially_variable(self):
-        """A boolean indicating whether this expression can
-        reference variables."""
-        return False
-
-    def potentially_variable_base_class(self):
-        return noclone
+    except:
+        return expr
+    return data_expression(expr)
 
 
 class IExpression(ICategorizedObject, IIdentityExpression):

@@ -11,8 +11,6 @@
 #
 """Testing for deprecated function."""
 import sys
-import types
-import weakref
 
 import pyomo.common.unittest as unittest
 
@@ -59,7 +57,7 @@ class TestDeprecated(unittest.TestCase):
 
     def test_no_version_exception(self):
         with self.assertRaisesRegex(
-            DeveloperError, "@deprecated\(\): missing 'version' argument"
+            DeveloperError, r"@deprecated\(\): missing 'version' argument"
         ):
 
             @deprecated()
@@ -67,7 +65,7 @@ class TestDeprecated(unittest.TestCase):
                 pass
 
         with self.assertRaisesRegex(
-            DeveloperError, "@deprecated\(\): missing 'version' argument"
+            DeveloperError, r"@deprecated\(\): missing 'version' argument"
         ):
 
             @deprecated()
@@ -262,7 +260,7 @@ class TestDeprecated(unittest.TestCase):
         self.assertIs(type(foo), type)
         self.assertRegex(
             foo.__doc__,
-            r'.. deprecated:: test\n' r'   This class \(.*\.foo\) has been deprecated',
+            r'.. deprecated:: test\n   This class \(.*\.foo\) has been deprecated',
         )
 
         # Test the default argument
@@ -368,10 +366,6 @@ class TestRelocated(unittest.TestCase):
 
         from pyomo.common.tests import relocated
 
-        if sys.version_info < (3, 5):
-            # Make sure that the module is only wrapped once
-            self.assertIs(type(relocated._wrapped_module), types.ModuleType)
-
         self.assertNotIn('Foo', dir(relocated))
         self.assertNotIn('Foo_2', dir(relocated))
 
@@ -414,8 +408,7 @@ class TestRelocated(unittest.TestCase):
             "(?:'module' object) has no attribute 'Baz'",
         ):
             relocated.Baz.data
-        if sys.version_info[:2] >= (3, 7):
-            self.assertEqual(relocated.Foo_3, '_3')
+        self.assertEqual(relocated.Foo_3, '_3')
 
         with self.assertRaisesRegex(
             AttributeError,

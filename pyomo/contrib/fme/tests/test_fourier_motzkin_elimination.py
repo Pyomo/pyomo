@@ -32,7 +32,7 @@ from pyomo.core import (
     Objective,
 )
 from pyomo.core.base import TransformationFactory
-from pyomo.core.expr.current import log
+from pyomo.core.expr import log
 from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.gdp import Disjunction, Disjunct
 from pyomo.repn.standard_repn import generate_standard_repn
@@ -771,7 +771,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
     def test_numerical_instability_almost_canceling(self):
         # It's possible that we get almost-but-not-quite zero on the variable
         # being eliminated when we are doing this with floating point
-        # arithmetic. This can get ugly later becuase it might get muliplied by
+        # arithmetic. This can get ugly later because it might get muliplied by
         # a large number later and start to "reappear"
         m = ConcreteModel()
         m.x = Var()

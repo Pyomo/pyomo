@@ -22,12 +22,12 @@ where m_{i,j} are sparse matrices
 
 """
 from __future__ import annotations
+from pyomo.common.dependencies import mpi4py
 from .mpi_block_vector import MPIBlockVector
 from .block_vector import BlockVector
 from .block_matrix import BlockMatrix, NotFullyDefinedBlockMatrixError
 from .block_matrix import assert_block_structure as block_matrix_assert_block_structure
 from .base_block import BaseBlockMatrix
-from mpi4py import MPI
 import numpy as np
 from scipy.sparse import coo_matrix
 import operator
@@ -145,7 +145,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
             if not self._block_matrix.is_empty_block(i, j):
                 local_nnz += self._block_matrix.get_block(i, j).nnz
 
-        return self._mpiw.allreduce(local_nnz, op=MPI.SUM)
+        return self._mpiw.allreduce(local_nnz, op=mpi4py.MPI.SUM)
 
     @property
     def owned_blocks(self):
@@ -197,13 +197,13 @@ class MPIBlockMatrix(BaseBlockMatrix):
     def is_row_size_defined(self, row, this_process_only=True):
         res = self._block_matrix.is_row_size_defined(row)
         if not this_process_only:
-            res = self.mpi_comm.allreduce(res, op=MPI.LOR)
+            res = self.mpi_comm.allreduce(res, op=mpi4py.MPI.LOR)
         return bool(res)
 
     def is_col_size_defined(self, col, this_process_only=True):
         res = self._block_matrix.is_col_size_defined(col)
         if not this_process_only:
-            res = self.mpi_comm.allreduce(res, op=MPI.LOR)
+            res = self.mpi_comm.allreduce(res, op=mpi4py.MPI.LOR)
         return bool(res)
 
     def get_block_mask(self, copy=True):
@@ -356,7 +356,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
         """
         res = self._block_matrix.is_empty_block(idx, jdx)
         if not this_process_only:
-            res = self.mpi_comm.allreduce(res, op=MPI.LAND)
+            res = self.mpi_comm.allreduce(res, op=mpi4py.MPI.LAND)
         return bool(res)
 
     # Note: this requires communication

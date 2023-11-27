@@ -17,7 +17,7 @@ not used in any expressions and it does not care if the Vars it finds are
 actually in the subtree or not.
 """
 from pyomo.core import Block
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 
 
 def get_vars_from_components(

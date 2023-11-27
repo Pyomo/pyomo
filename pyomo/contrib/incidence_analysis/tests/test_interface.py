@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.environ as pyo
+from pyomo.core.expr.visitor import identify_variables
 from pyomo.common.dependencies import (
     networkx_available,
     plotly_available,
@@ -1322,6 +1323,22 @@ class TestDulmageMendelsohnInterface(unittest.TestCase):
         self.assertEqual(N_new, N - len(cons_to_remove))
         self.assertEqual(M_new, M - len(vars_to_remove))
 
+    def test_recover_matching_from_dulmage_mendelsohn(self):
+        m = make_degenerate_solid_phase_model()
+        igraph = IncidenceGraphInterface(m)
+        vdmp, cdmp = igraph.dulmage_mendelsohn()
+        vmatch = vdmp.underconstrained + vdmp.square + vdmp.overconstrained
+        cmatch = cdmp.underconstrained + cdmp.square + cdmp.overconstrained
+        # Assert no duplicates in matched variables and constraints
+        self.assertEqual(len(ComponentSet(vmatch)), len(vmatch))
+        self.assertEqual(len(ComponentSet(cmatch)), len(cmatch))
+        matching = list(zip(vmatch, cmatch))
+        # Assert each matched pair contains a variable that participates
+        # in the constraint.
+        for var, con in matching:
+            var_in_con = ComponentSet(igraph.get_adjacent_to(con))
+            self.assertIn(var, var_in_con)
+
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 class TestConnectedComponents(unittest.TestCase):
@@ -1420,7 +1437,8 @@ class TestExceptions(unittest.TestCase):
         m.v2.fix(2.0)
         m._obj = pyo.Objective(expr=0.0)
         nlp = PyomoNLP(m)
-        with self.assertRaisesRegex(ValueError, "fixed variables"):
+        msg = "generation options.*are not supported"
+        with self.assertRaisesRegex(ValueError, msg):
             igraph = IncidenceGraphInterface(nlp, include_fixed=True)
 
     @unittest.skipUnless(scipy_available, "scipy is not available.")
@@ -1683,6 +1701,13 @@ class TestGetAdjacent(unittest.TestCase):
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 class TestInterface(unittest.TestCase):
+    def test_assumed_constraint_behavior(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3])
+        m.con = pyo.Constraint(expr=m.x[1] == m.x[2] - pyo.exp(m.x[3]))
+        var_set = ComponentSet(identify_variables(m.con.body))
+        self.assertEqual(var_set, ComponentSet(m.x[:]))
+
     def test_subgraph_with_fewer_var_or_con(self):
         m = pyo.ConcreteModel()
         m.I = pyo.Set(initialize=[1, 2])
@@ -1721,6 +1746,50 @@ class TestInterface(unittest.TestCase):
         m.y.fix()
         igraph = IncidenceGraphInterface(m, include_inequality=True, include_fixed=True)
         igraph.plot(title='test plot', show=False)
+
+    def test_zero_coeff(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3])
+        m.eq1 = pyo.Constraint(expr=m.x[1] + 0 * m.x[2] == 2)
+        m.eq2 = pyo.Constraint(expr=m.x[1] ** 2 == 1)
+        m.eq3 = pyo.Constraint(expr=m.x[2] * m.x[3] - m.x[1] == 1)
+
+        igraph = IncidenceGraphInterface(m)
+        var_dmp, con_dmp = igraph.dulmage_mendelsohn()
+
+        # Because 0*m.x[2] does not appear in the incidence graph, we correctly
+        # identify that the system is structurally singular
+        self.assertGreater(len(var_dmp.unmatched), 0)
+
+    def test_var_minus_itself(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3])
+        m.eq1 = pyo.Constraint(expr=m.x[1] + m.x[2] - m.x[2] == 2)
+        m.eq2 = pyo.Constraint(expr=m.x[1] ** 2 == 1)
+        m.eq3 = pyo.Constraint(expr=m.x[2] * m.x[3] - m.x[1] == 1)
+
+        igraph = IncidenceGraphInterface(m)
+        var_dmp, con_dmp = igraph.dulmage_mendelsohn()
+
+        # m.x[2] - m.x[2] is correctly ignored by generate_standard_repn,
+        # so we correctly identify that the system is structurally singular
+        self.assertGreater(len(var_dmp.unmatched), 0)
+
+    def test_linear_only(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3])
+        m.eq1 = pyo.Constraint(expr=m.x[1] ** 2 + m.x[2] ** 2 + m.x[3] ** 2 == 1)
+        m.eq2 = pyo.Constraint(expr=m.x[2] + pyo.sqrt(m.x[1]) + pyo.exp(m.x[3]) == 1)
+        m.eq3 = pyo.Constraint(expr=m.x[3] + m.x[1] ** 3 + m.x[2] == 1)
+
+        igraph = IncidenceGraphInterface(m, linear_only=True)
+        self.assertEqual(igraph.n_edges, 3)
+        self.assertEqual(ComponentSet(igraph.variables), ComponentSet([m.x[2], m.x[3]]))
+
+        matching = igraph.maximum_matching()
+        self.assertEqual(len(matching), 2)
+        self.assertIs(matching[m.eq2], m.x[2])
+        self.assertIs(matching[m.eq3], m.x[3])
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")

@@ -91,6 +91,13 @@ class ComponentMap(AutoSlots.Mixin, collections_MutableMapping):
     # Overload MutableMapping default implementations
     #
 
+    # We want a specialization of update() to avoid unnecessary calls to
+    # id() when copying / merging ComponentMaps
+    def update(self, *args, **kwargs):
+        if len(args) == 1 and not kwargs and isinstance(args[0], ComponentMap):
+            return self._dict.update(args[0]._dict)
+        return super().update(*args, **kwargs)
+
     # We want to avoid generating Pyomo expressions due to
     # comparison of values, so we convert both objects to a
     # plain dictionary mapping key->(type(val), id(val)) and

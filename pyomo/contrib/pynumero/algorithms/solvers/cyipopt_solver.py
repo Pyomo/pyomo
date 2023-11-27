@@ -47,17 +47,17 @@ cyipopt_interface, _ = attempt_import(
 relocated_module_attribute(
     "cyipopt_available",
     "pyomo.contrib.pynumero.interfaces.cyipopt_interface.cyipopt_available",
-    "6.5.1.dev0",
+    "6.6.0",
 )
 relocated_module_attribute(
     "CyIpoptProblemInterface",
     "pyomo.contrib.pynumero.interfaces.cyipopt_interface.CyIpoptProblemInterface",
-    "6.5.1.dev0",
+    "6.6.0",
 )
 relocated_module_attribute(
     "CyIpoptNLP",
     "pyomo.contrib.pynumero.interfaces.cyipopt_interface.CyIpoptNLP",
-    "6.5.1.dev0",
+    "6.6.0",
 )
 
 from pyomo.common.config import ConfigBlock, ConfigValue
@@ -289,6 +289,13 @@ class PyomoCyIpoptSolver(object):
             description="Set the function that will be called each iteration.",
         ),
     )
+    CONFIG.declare(
+        "halt_on_evaluation_error",
+        ConfigValue(
+            default=None,
+            description="Whether to halt if a function or derivative evaluation fails",
+        ),
+    )
 
     def __init__(self, **kwds):
         """Create an instance of the CyIpoptSolver. You must
@@ -332,7 +339,9 @@ class PyomoCyIpoptSolver(object):
             nlp = pyomo_nlp.PyomoNLP(model)
 
         problem = cyipopt_interface.CyIpoptNLP(
-            nlp, intermediate_callback=config.intermediate_callback
+            nlp,
+            intermediate_callback=config.intermediate_callback,
+            halt_on_evaluation_error=config.halt_on_evaluation_error,
         )
         ng = len(problem.g_lb())
         nx = len(problem.x_lb())

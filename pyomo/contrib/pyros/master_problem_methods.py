@@ -22,7 +22,6 @@ from pyomo.contrib.pyros.util import (
     adjust_solver_time_settings,
     revert_solver_max_time_adjustment,
     get_main_elapsed_time,
-    output_logger,
 )
 from pyomo.contrib.pyros.solve_data import MasterProblemData, MasterResult
 from pyomo.opt.results import check_optimal_termination
@@ -236,14 +235,24 @@ def solve_master_feasibility_problem(model_data, config):
     """
     model = construct_master_feasibility_problem(model_data, config)
 
+    active_obj = next(model.component_data_objects(Objective, active=True))
+
+    config.progress_logger.debug("Solving master feasibility problem")
+    config.progress_logger.debug(
+        f" Initial objective (total slack): {value(active_obj)}"
+    )
+
     if config.solve_master_globally:
         solver = config.global_solver
     else:
         solver = config.local_solver
 
+    timer = TicTocTimer()
     orig_setting, custom_setting_present = adjust_solver_time_settings(
         model_data.timing, solver, config
     )
+    model_data.timing.start_timer("main.master_feasibility")
+    timer.tic(msg=None)
     try:
         results = solver.solve(model, tee=config.tee, load_solutions=False)
     except ApplicationError:
@@ -251,11 +260,14 @@ def solve_master_feasibility_problem(model_data, config):
         # (such as segmentation faults, function evaluation
         # errors, etc.)
         config.progress_logger.error(
-            f"Solver {repr(solver)} encountered exception attempting to "
-            "optimize master feasibility problem in iteration "
-            f"{model_data.iteration}"
+            f"Optimizer {repr(solver)} encountered exception "
+            "attempting to solve master feasibility problem in iteration "
+            f"{model_data.iteration}."
         )
         raise
+    else:
+        setattr(results.solver, TIC_TOC_SOLVE_TIME_ATTR, timer.toc(msg=None))
+        model_data.timing.stop_timer("main.master_feasibility")
     finally:
         revert_solver_max_time_adjustment(
             solver, orig_setting, custom_setting_present, config
@@ -269,6 +281,24 @@ def solve_master_feasibility_problem(model_data, config):
     }
     if results.solver.termination_condition in feasible_terminations:
         model.solutions.load_from(results)
+        config.progress_logger.debug(
+            f" Final objective (total slack): {value(active_obj)}"
+        )
+        config.progress_logger.debug(
+            f" Termination condition: {results.solver.termination_condition}"
+        )
+        config.progress_logger.debug(
+            f" Solve time: {getattr(results.solver, TIC_TOC_SOLVE_TIME_ATTR)}s"
+        )
+    else:
+        config.progress_logger.warning(
+            "Could not successfully solve master feasibility problem "
+            f"of iteration {model_data.iteration} with primary subordinate "
+            f"{'global' if config.solve_master_globally else 'local'} solver "
+            "to acceptable level. "
+            f"Termination stats:\n{results.solver}\n"
+            "Maintaining unoptimized point for master problem initialization."
+        )
 
     # load master feasibility point to master model
     for master_var, feas_var in model_data.feasibility_problem_varmap:
@@ -294,6 +324,9 @@ def minimize_dr_vars(model_data, config):
     -------
     results : SolverResults
         Subordinate solver results for the polishing problem.
+    polishing_successful : bool
+        True if polishing model was solved to acceptable level,
+        False otherwise.
     """
     # config.progress_logger.info("Executing decision rule variable polishing solve.")
     model = model_data.master_model
@@ -463,11 +496,21 @@ def minimize_dr_vars(model_data, config):
     else:
         solver = config.local_solver
 
+    config.progress_logger.debug("Solving DR polishing problem")
+
+    # NOTE: this objective evalaution may not be accurate, due
+    #       to the current initialization scheme for the auxiliary
+    #       variables. new initialization will be implemented in the
+    #       near future.
+    polishing_obj = polishing_model.scenarios[0, 0].polishing_obj
+    config.progress_logger.debug(f" Initial DR norm: {value(polishing_obj)}")
+
     # === Solve the polishing model
     timer = TicTocTimer()
     orig_setting, custom_setting_present = adjust_solver_time_settings(
         model_data.timing, solver, config
     )
+    model_data.timing.start_timer("main.dr_polishing")
     timer.tic(msg=None)
     try:
         results = solver.solve(polishing_model, tee=config.tee, load_solutions=False)
@@ -480,16 +523,35 @@ def minimize_dr_vars(model_data, config):
         raise
     else:
         setattr(results.solver, TIC_TOC_SOLVE_TIME_ATTR, timer.toc(msg=None))
+        model_data.timing.stop_timer("main.dr_polishing")
     finally:
         revert_solver_max_time_adjustment(
             solver, orig_setting, custom_setting_present, config
         )
 
+    # interested in the time and termination status for debugging
+    # purposes
+    config.progress_logger.debug(" Done solving DR polishing problem")
+    config.progress_logger.debug(
+        f"  Solve time: {getattr(results.solver, TIC_TOC_SOLVE_TIME_ATTR)} s"
+    )
+    config.progress_logger.debug(
+        f"  Termination status: {results.solver.termination_condition} "
+    )
+
     # === Process solution by termination condition
     acceptable = {tc.globallyOptimal, tc.optimal, tc.locallyOptimal, tc.feasible}
     if results.solver.termination_condition not in acceptable:
         # continue with "unpolished" master model solution
-        return results
+        config.progress_logger.warning(
+            "Could not successfully solve DR polishing problem "
+            f"of iteration {model_data.iteration} with primary subordinate "
+            f"{'global' if config.solve_master_globally else 'local'} solver "
+            "to acceptable level. "
+            f"Termination stats:\n{results.solver}\n"
+            "Maintaining unpolished master problem solution."
+        )
+        return results, False
 
     # update master model second-stage, state, and decision rule
     # variables to polishing model solution
@@ -516,7 +578,34 @@ def minimize_dr_vars(model_data, config):
             for mvar, pvar in zip(master_dr.values(), polish_dr.values()):
                 mvar.set_value(value(pvar), skip_validation=True)
 
-    return results
+    config.progress_logger.debug(f" Optimized DR norm: {value(polishing_obj)}")
+    config.progress_logger.debug(" Polished Master objective:")
+
+    # print master solution
+    if config.objective_focus == ObjectiveType.worst_case:
+        worst_blk_idx = max(
+            model_data.master_model.scenarios.keys(),
+            key=lambda idx: value(
+                model_data.master_model.scenarios[idx].second_stage_objective
+            ),
+        )
+    else:
+        worst_blk_idx = (0, 0)
+
+    # debugging: summarize objective breakdown
+    worst_master_blk = model_data.master_model.scenarios[worst_blk_idx]
+    config.progress_logger.debug(
+        "  First-stage objective: " f"{value(worst_master_blk.first_stage_objective)}"
+    )
+    config.progress_logger.debug(
+        "  Second-stage objective: " f"{value(worst_master_blk.second_stage_objective)}"
+    )
+    polished_master_obj = value(
+        worst_master_blk.first_stage_objective + worst_master_blk.second_stage_objective
+    )
+    config.progress_logger.debug(f"  Objective: {polished_master_obj}")
+
+    return results, True
 
 
 def add_p_robust_constraint(model_data, config):
@@ -624,18 +713,27 @@ def solver_call_master(model_data, config, solver, solve_data):
     solver_term_cond_dict = {}
 
     if config.solve_master_globally:
-        backup_solvers = deepcopy(config.backup_global_solvers)
+        solvers = [solver] + config.backup_global_solvers
     else:
-        backup_solvers = deepcopy(config.backup_local_solvers)
-    backup_solvers.insert(0, solver)
+        solvers = [solver] + config.backup_local_solvers
 
     higher_order_decision_rule_efficiency(config, model_data)
 
+    solve_mode = "global" if config.solve_master_globally else "local"
+    config.progress_logger.debug("Solving master problem")
+
     timer = TicTocTimer()
-    for opt in backup_solvers:
+    for idx, opt in enumerate(solvers):
+        if idx > 0:
+            config.progress_logger.warning(
+                f"Invoking backup solver {opt!r} "
+                f"(solver {idx + 1} of {len(solvers)}) for "
+                f"master problem of iteration {model_data.iteration}."
+            )
         orig_setting, custom_setting_present = adjust_solver_time_settings(
             model_data.timing, opt, config
         )
+        model_data.timing.start_timer("main.master")
         timer.tic(msg=None)
         try:
             results = opt.solve(
@@ -649,12 +747,14 @@ def solver_call_master(model_data, config, solver, solve_data):
             # (such as segmentation faults, function evaluation
             # errors, etc.)
             config.progress_logger.error(
-                f"Solver {repr(opt)} encountered exception attempting to "
-                f"optimize master problem in iteration {model_data.iteration}"
+                f"Optimizer {repr(opt)} ({idx + 1} of {len(solvers)}) "
+                "encountered exception attempting to "
+                f"solve master problem in iteration {model_data.iteration}"
             )
             raise
         else:
             setattr(results.solver, TIC_TOC_SOLVE_TIME_ATTR, timer.toc(msg=None))
+            model_data.timing.stop_timer("main.master")
         finally:
             revert_solver_max_time_adjustment(
                 solver, orig_setting, custom_setting_present, config
@@ -711,6 +811,25 @@ def solver_call_master(model_data, config, solver, solve_data):
                 nlp_model.scenarios[0, 0].first_stage_objective
             )
 
+            # debugging: log breakdown of master objective
+            config.progress_logger.debug(" Optimized master objective breakdown:")
+            config.progress_logger.debug(
+                f"  First-stage objective: {master_soln.first_stage_objective}"
+            )
+            config.progress_logger.debug(
+                f"  Second-stage objective: {master_soln.second_stage_objective}"
+            )
+            master_obj = (
+                master_soln.first_stage_objective + master_soln.second_stage_objective
+            )
+            config.progress_logger.debug(f"  Objective: {master_obj}")
+            config.progress_logger.debug(
+                f" Termination condition: {results.solver.termination_condition}"
+            )
+            config.progress_logger.debug(
+                f" Solve time: {getattr(results.solver, TIC_TOC_SOLVE_TIME_ATTR)}s"
+            )
+
             master_soln.nominal_block = nlp_model.scenarios[0, 0]
             master_soln.results = results
             master_soln.master_model = nlp_model
@@ -727,7 +846,6 @@ def solver_call_master(model_data, config, solver, solve_data):
                 master_soln.pyros_termination_condition = (
                     pyrosTerminationCondition.time_out
                 )
-                output_logger(config=config, time_out=True, elapsed=elapsed)
 
         if not try_backup:
             return master_soln
@@ -738,8 +856,9 @@ def solver_call_master(model_data, config, solver, solve_data):
     # NOTE: subproblem is written with variables set to their
     #       initial values (not the final subsolver iterate)
     save_dir = config.subproblem_file_directory
+    serialization_msg = ""
     if save_dir and config.keepfiles:
-        name = os.path.join(
+        output_problem_path = os.path.join(
             save_dir,
             (
                 config.uncertainty_set.type
@@ -750,15 +869,37 @@ def solver_call_master(model_data, config, solver, solve_data):
                 + ".bar"
             ),
         )
-        nlp_model.write(name, io_options={'symbolic_solver_labels': True})
-        output_logger(
-            config=config,
-            master_error=True,
-            status_dict=solver_term_cond_dict,
-            filename=name,
-            iteration=model_data.iteration,
+        nlp_model.write(
+            output_problem_path, io_options={'symbolic_solver_labels': True}
         )
+        serialization_msg = (
+            " For debugging, problem has been serialized to the file "
+            f"{output_problem_path!r}."
+        )
+
+    deterministic_model_qual = (
+        " (i.e., the deterministic model)" if model_data.iteration == 0 else ""
+    )
+    deterministic_msg = (
+        (
+            " Please ensure your deterministic model "
+            f"is solvable by at least one of the subordinate {solve_mode} "
+            "optimizers provided."
+        )
+        if model_data.iteration == 0
+        else ""
+    )
     master_soln.pyros_termination_condition = pyrosTerminationCondition.subsolver_error
+    config.progress_logger.warning(
+        f"Could not successfully solve master problem of iteration "
+        f"{model_data.iteration}{deterministic_model_qual} with any of the "
+        f"provided subordinate {solve_mode} optimizers. "
+        f"(Termination statuses: "
+        f"{[term_cond for term_cond in solver_term_cond_dict.values()]}.)"
+        f"{deterministic_msg}"
+        f"{serialization_msg}"
+    )
+
     return master_soln
 
 
@@ -794,10 +935,6 @@ def solve_master(model_data, config):
                     None,
                     pyrosTerminationCondition.time_out,
                 )
-
-                # log time out message
-                output_logger(config=config, time_out=True, elapsed=elapsed)
-
                 return master_soln
 
     solver = (

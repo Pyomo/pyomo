@@ -19,10 +19,13 @@ currdir = dirname(abspath(__file__)) + os.sep
 
 from pyomo.common import DeveloperError
 import pyomo.common.unittest as unittest
+from pyomo.common.log import LoggingIntercept
 
 from pyomo.environ import ConcreteModel, Var, Param, Set, value, Integers
+from pyomo.core.base.set import FiniteSetOf, OrderedSetOf
 from pyomo.core.base.indexed_component import normalize_index
-from pyomo.core.expr.current import GetItemExpression
+from pyomo.core.expr import GetItemExpression
+from pyomo.core import SortComponents
 
 
 class TestSimpleVar(unittest.TestCase):
@@ -288,6 +291,119 @@ class TestIndexedComponent(unittest.TestCase):
         self.assertEqual(
             list(zip(ordered_keys, [10, 20, 1, 30, 1])), list(m.P.items(True))
         )
+
+    def test_ordered_keys_deprecation(self):
+        m = ConcreteModel()
+        unordered = [1, 3, 2]
+        ordered = [1, 2, 3]
+        m.I = FiniteSetOf(unordered)
+        m.x = Var(m.I)
+        self.assertEqual(list(m.x.keys()), unordered)
+        self.assertEqual(list(m.x.keys(SortComponents.ORDERED_INDICES)), ordered)
+        with LoggingIntercept() as LOG:
+            self.assertEqual(list(m.x.keys(True)), ordered)
+        self.assertEqual(LOG.getvalue(), "")
+        with LoggingIntercept() as LOG:
+            self.assertEqual(list(m.x.keys(ordered=True)), ordered)
+        self.assertIn('keys(ordered=True) is deprecated', LOG.getvalue())
+        with LoggingIntercept() as LOG:
+            self.assertEqual(list(m.x.keys(ordered=False)), unordered)
+        self.assertIn('keys(ordered=False) is deprecated', LOG.getvalue())
+
+        m = ConcreteModel()
+        unordered = [1, 3, 2]
+        ordered = [1, 2, 3]
+        m.I = OrderedSetOf(unordered)
+        m.x = Var(m.I)
+        self.assertEqual(list(m.x.keys()), unordered)
+        self.assertEqual(list(m.x.keys(SortComponents.ORDERED_INDICES)), unordered)
+        with LoggingIntercept() as LOG:
+            self.assertEqual(list(m.x.keys(True)), ordered)
+        self.assertEqual(LOG.getvalue(), "")
+        with LoggingIntercept() as LOG:
+            self.assertEqual(list(m.x.keys(ordered=True)), unordered)
+        self.assertIn('keys(ordered=True) is deprecated', LOG.getvalue())
+        with LoggingIntercept() as LOG:
+            self.assertEqual(list(m.x.keys(ordered=False)), unordered)
+        self.assertIn('keys(ordered=False) is deprecated', LOG.getvalue())
+
+    def test_ordered_values_deprecation(self):
+        m = ConcreteModel()
+        unordered = [1, 3, 2]
+        ordered = [1, 2, 3]
+        m.I = FiniteSetOf(unordered)
+        m.x = Var(m.I)
+        unordered = [m.x[i] for i in unordered]
+        ordered = [m.x[i] for i in ordered]
+        self.assertEqual(list(m.x.values()), unordered)
+        self.assertEqual(list(m.x.values(SortComponents.ORDERED_INDICES)), ordered)
+        with LoggingIntercept() as LOG:
+            self.assertEqual(list(m.x.values(True)), ordered)
+        self.assertEqual(LOG.getvalue(), "")
+        with LoggingIntercept() as LOG:
+            self.assertEqual(list(m.x.values(ordered=True)), ordered)
+        self.assertIn('values(ordered=True) is deprecated', LOG.getvalue())
+        with LoggingIntercept() as LOG:
+            self.assertEqual(list(m.x.values(ordered=False)), unordered)
+        self.assertIn('values(ordered=False) is deprecated', LOG.getvalue())
+
+        m = ConcreteModel()
+        unordered = [1, 3, 2]
+        ordered = [1, 2, 3]
+        m.I = OrderedSetOf(unordered)
+        m.x = Var(m.I)
+        unordered = [m.x[i] for i in unordered]
+        ordered = [m.x[i] for i in ordered]
+        self.assertEqual(list(m.x.values()), unordered)
+        self.assertEqual(list(m.x.values(SortComponents.ORDERED_INDICES)), unordered)
+        with LoggingIntercept() as LOG:
+            self.assertEqual(list(m.x.values(True)), ordered)
+        self.assertEqual(LOG.getvalue(), "")
+        with LoggingIntercept() as LOG:
+            self.assertEqual(list(m.x.values(ordered=True)), unordered)
+        self.assertIn('values(ordered=True) is deprecated', LOG.getvalue())
+        with LoggingIntercept() as LOG:
+            self.assertEqual(list(m.x.values(ordered=False)), unordered)
+        self.assertIn('values(ordered=False) is deprecated', LOG.getvalue())
+
+    def test_ordered_items_deprecation(self):
+        m = ConcreteModel()
+        unordered = [1, 3, 2]
+        ordered = [1, 2, 3]
+        m.I = FiniteSetOf(unordered)
+        m.x = Var(m.I)
+        unordered = [(i, m.x[i]) for i in unordered]
+        ordered = [(i, m.x[i]) for i in ordered]
+        self.assertEqual(list(m.x.items()), unordered)
+        self.assertEqual(list(m.x.items(SortComponents.ORDERED_INDICES)), ordered)
+        with LoggingIntercept() as LOG:
+            self.assertEqual(list(m.x.items(True)), ordered)
+        self.assertEqual(LOG.getvalue(), "")
+        with LoggingIntercept() as LOG:
+            self.assertEqual(list(m.x.items(ordered=True)), ordered)
+        self.assertIn('items(ordered=True) is deprecated', LOG.getvalue())
+        with LoggingIntercept() as LOG:
+            self.assertEqual(list(m.x.items(ordered=False)), unordered)
+        self.assertIn('items(ordered=False) is deprecated', LOG.getvalue())
+
+        m = ConcreteModel()
+        unordered = [1, 3, 2]
+        ordered = [1, 2, 3]
+        m.I = OrderedSetOf(unordered)
+        m.x = Var(m.I)
+        unordered = [(i, m.x[i]) for i in unordered]
+        ordered = [(i, m.x[i]) for i in ordered]
+        self.assertEqual(list(m.x.items()), unordered)
+        self.assertEqual(list(m.x.items(SortComponents.ORDERED_INDICES)), unordered)
+        with LoggingIntercept() as LOG:
+            self.assertEqual(list(m.x.items(True)), ordered)
+        self.assertEqual(LOG.getvalue(), "")
+        with LoggingIntercept() as LOG:
+            self.assertEqual(list(m.x.items(ordered=True)), unordered)
+        self.assertIn('items(ordered=True) is deprecated', LOG.getvalue())
+        with LoggingIntercept() as LOG:
+            self.assertEqual(list(m.x.items(ordered=False)), unordered)
+        self.assertIn('items(ordered=False) is deprecated', LOG.getvalue())
 
     def test_index_attribute_out_of_sync(self):
         m = ConcreteModel()

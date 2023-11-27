@@ -389,10 +389,6 @@ def relocated_module_attribute(
     object from the new location (on request), as well as emitting the
     deprecation warning.
 
-    It contains backports of the __getattr__ functionality for earlier
-    versions of Python (although the implementation for 3.5+ is more
-    efficient that the implementation for 2.7+)
-
     Parameters
     ----------
     local: str

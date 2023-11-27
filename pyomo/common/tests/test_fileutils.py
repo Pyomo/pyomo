@@ -229,10 +229,6 @@ class TestFileUtils(unittest.TestCase):
             os.path.join(subdir, subdir_name),
         )
 
-    @unittest.skipIf(
-        sys.version_info[:2] < (3, 8) and platform.mac_ver()[0].startswith('10.16'),
-        "find_library has known bugs in Big Sur for Python<3.8",
-    )
     def test_find_library_system(self):
         # Find a system library (before we muck with the PATH)
         _args = {'cwd': False, 'include_PATH': False, 'pathlist': []}

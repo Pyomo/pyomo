@@ -468,6 +468,21 @@ class TestTemporarySubsystemManager(unittest.TestCase):
         # Test that we have properly unfixed variables
         self.assertFalse(any(var.fixed for var in m.component_data_objects(pyo.Var)))
 
+    def test_to_unfix(self):
+        m = _make_simple_model()
+        m.v1.fix()
+        m.v3.fix()
+        with TemporarySubsystemManager(to_unfix=[m.v3]):
+            self.assertTrue(m.v1.fixed)
+            self.assertFalse(m.v2.fixed)
+            self.assertFalse(m.v3.fixed)
+            self.assertFalse(m.v4.fixed)
+
+        self.assertTrue(m.v1.fixed)
+        self.assertFalse(m.v2.fixed)
+        self.assertTrue(m.v3.fixed)
+        self.assertFalse(m.v4.fixed)
+
 
 class TestParamSweeper(unittest.TestCase):
     def test_set_values(self):

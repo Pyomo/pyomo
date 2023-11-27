@@ -11,8 +11,8 @@
 
 import abc
 import logging
-import numpy as np
 from scipy.sparse import coo_matrix
+from pyomo.common.dependencies import numpy as np
 
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
@@ -33,7 +33,7 @@ logger = logging.getLogger('pyomo.contrib.pynumero')
 This module is used for interfacing an external model as
 a block in a Pyomo model.
 
-An ExternalGreyBoxModel is model is a model that does not
+An ExternalGreyBoxModel is a model that does not
 provide constraints explicitly as algebraic expressions, but
 instead provides a set of methods that can compute the residuals
 of the constraints (or outputs) and their derivatives.

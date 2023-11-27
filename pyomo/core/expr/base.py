@@ -11,16 +11,12 @@
 
 import enum
 
+from pyomo.common.dependencies import attempt_import
 from pyomo.common.numeric_types import native_types
 from pyomo.core.pyomoobject import PyomoObject
-from . import expr_common as common
-from .visitor import (
-    expression_to_string,
-    evaluate_expression,
-    clone_expression,
-    _expression_is_fixed,
-    sizeof_expression,
-)
+from pyomo.core.expr.expr_common import OperatorAssociativity
+
+visitor, _ = attempt_import('pyomo.core.expr.visitor')
 
 
 class ExpressionBase(PyomoObject):
@@ -44,7 +40,7 @@ class ExpressionBase(PyomoObject):
     interpreted as "not associative" (implying any arguments that
     are at this operator's PRECEDENCE will be enclosed in parens).
     """
-    ASSOCIATIVITY = common.OperatorAssociativity.LEFT_TO_RIGHT
+    ASSOCIATIVITY = OperatorAssociativity.LEFT_TO_RIGHT
 
     def nargs(self):
         """Returns the number of child nodes.
@@ -119,7 +115,7 @@ class ExpressionBase(PyomoObject):
         The value of the expression or :const:`None`.
 
         """
-        return evaluate_expression(self, exception)
+        return visitor.evaluate_expression(self, exception)
 
     def __str__(self):
         """Returns a string description of the expression.
@@ -137,7 +133,7 @@ class ExpressionBase(PyomoObject):
         -------
         str
         """
-        return expression_to_string(self)
+        return visitor.expression_to_string(self)
 
     def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
         """Return a string representation of the expression tree.
@@ -168,7 +164,7 @@ class ExpressionBase(PyomoObject):
             A string representation for the expression tree.
 
         """
-        return expression_to_string(
+        return visitor.expression_to_string(
             self,
             verbose=verbose,
             labeler=labeler,
@@ -240,7 +236,7 @@ class ExpressionBase(PyomoObject):
         Returns:
             A new expression tree.
         """
-        return clone_expression(self, substitute=substitute)
+        return visitor.clone_expression(self, substitute=substitute)
 
     def create_node_with_local_data(self, args, classtype=None):
         """
@@ -287,7 +283,7 @@ class ExpressionBase(PyomoObject):
         Returns:
             A boolean.
         """
-        return _expression_is_fixed(self)
+        return visitor._expression_is_fixed(self)
 
     def _is_fixed(self, values):
         """
@@ -362,7 +358,7 @@ class ExpressionBase(PyomoObject):
             A nonnegative integer that is the number of interior and leaf
             nodes in the expression tree.
         """
-        return sizeof_expression(self)
+        return visitor.sizeof_expression(self)
 
     def _apply_operation(self, result):  # pragma: no cover
         """

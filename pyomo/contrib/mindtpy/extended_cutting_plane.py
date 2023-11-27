@@ -24,82 +24,55 @@ from pyomo.opt import TerminationCondition as tc
 @SolverFactory.register(
     'mindtpy.ecp', doc='MindtPy: Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo'
 )
-class MindtPy_OA_Solver(_MindtPyAlgorithm):
+class MindtPy_ECP_Solver(_MindtPyAlgorithm):
     """
     Decomposition solver for Mixed-Integer Nonlinear Programming (MINLP) problems.
 
     The MindtPy (Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo) solver
     applies a variety of decomposition-based approaches to solve Mixed-Integer
     Nonlinear Programming (MINLP) problems.
-    These approaches include:
+    This class includes:
 
-    - Outer approximation (OA)
-    - Global outer approximation (GOA)
-    - Regularized outer approximation (ROA)
-    - LP/NLP based branch-and-bound (LP/NLP)
-    - Global LP/NLP based branch-and-bound (GLP/NLP)
-    - Regularized LP/NLP based branch-and-bound (RLP/NLP)
-    - Feasibility pump (FP)
-
-    This solver implementation has been developed by David Bernal <https://github.com/bernalde>
-    and Zedong Peng <https://github.com/ZedongPeng> as part of research efforts at the Grossmann
-    Research Group (http://egon.cheme.cmu.edu/) at the Department of Chemical Engineering at
-    Carnegie Mellon University.
+    - Extended Cutting Plane (ECP)
     """
 
     CONFIG = _get_MindtPy_ECP_config()
 
-    def MindtPy_iteration_loop(self, config):
+    def MindtPy_iteration_loop(self):
         """Main loop for MindtPy Algorithms.
 
-        This is the outermost function for the Extended Cutting Plane algorithm in this package; this function controls the progression of
+        This is the outermost function for the Extended Cutting Plane algorithm in this package; this function controls the progress of
         solving the model.
-
-        Parameters
-        ----------
-        config : ConfigBlock
-            The specific configurations for MindtPy.
 
         Raises
         ------
         ValueError
             The strategy value is not correct or not included.
         """
-        while self.mip_iter < config.iteration_limit:
-            # solve MILP main problem
-            main_mip, main_mip_results = self.solve_main(config)
-            if main_mip_results is not None:
-                if not config.single_tree:
-                    if main_mip_results.solver.termination_condition is tc.optimal:
-                        self.handle_main_optimal(main_mip, config)
-                    elif main_mip_results.solver.termination_condition is tc.infeasible:
-                        self.handle_main_infeasible(main_mip, config)
-                        self.last_iter_cuts = True
-                        break
-                    else:
-                        self.handle_main_other_conditions(
-                            main_mip, main_mip_results, config
-                        )
-                    # Call the MILP post-solve callback
-                    with time_code(self.timing, 'Call after main solve'):
-                        config.call_after_main_solve(main_mip)
-            else:
-                config.logger.info('Algorithm should terminate here.')
+        while self.mip_iter < self.config.iteration_limit:
+            # solve MIP main problem
+            main_mip, main_mip_results = self.solve_main()
+
+            if self.handle_main_mip_termination(main_mip, main_mip_results):
                 break
 
-            if self.algorithm_should_terminate(config):
+            # Call the MIP post-solve callback
+            with time_code(self.timing, 'Call after main solve'):
+                self.config.call_after_main_solve(main_mip)
+
+            if self.algorithm_should_terminate():
                 self.last_iter_cuts = False
                 break
 
-            add_ecp_cuts(self.mip, self.jacobians, config, self.timing)
+            add_ecp_cuts(self.mip, self.jacobians, self.config, self.timing)
 
         # if add_no_good_cuts is True, the bound obtained in the last iteration is no reliable.
         # we correct it after the iteration.
         if (
-            config.add_no_good_cuts or config.use_tabu_list
+            self.config.add_no_good_cuts or self.config.use_tabu_list
         ) and not self.should_terminate:
-            self.fix_dual_bound(config, self.last_iter_cuts)
-        config.logger.info(
+            self.fix_dual_bound(self.last_iter_cuts)
+        self.config.logger.info(
             ' ==============================================================================================='
         )
 
@@ -118,33 +91,23 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
             doc='Extended Cutting Planes'
         )
 
-    def init_rNLP(self, config):
+    def init_rNLP(self):
         """Initialize the problem by solving the relaxed NLP and then store the optimal variable
         values obtained from solving the rNLP.
-
-        Parameters
-        ----------
-        config : ConfigBlock
-            The specific configurations for MindtPy.
 
         Raises
         ------
         ValueError
             MindtPy unable to handle the termination condition of the relaxed NLP.
         """
-        super().init_rNLP(config, add_oa_cuts=False)
+        super().init_rNLP(add_oa_cuts=False)
 
-    def algorithm_should_terminate(self, config):
+    def algorithm_should_terminate(self):
         """Checks if the algorithm should terminate at the given point.
 
         This function determines whether the algorithm should terminate based on the solver options and progress.
         (Sets the self.results.solver.termination_condition to the appropriate condition, i.e. optimal,
         maxIterations, maxTimeLimit).
-
-        Parameters
-        ----------
-        config : ConfigBlock
-            The specific configurations for MindtPy.
 
         Returns
         -------
@@ -175,8 +138,9 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
             if nlc.has_lb():
                 try:
                     lower_slack = nlc.lslack()
-                except (ValueError, OverflowError):
+                except (ValueError, OverflowError) as e:
                     # Set lower_slack (upper_slack below) less than -config.ecp_tolerance in this case.
+                    config.logger.error(e)
                     lower_slack = -10 * config.ecp_tolerance
                 if lower_slack < -config.ecp_tolerance:
                     config.logger.debug(
@@ -188,7 +152,8 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
             if nlc.has_ub():
                 try:
                     upper_slack = nlc.uslack()
-                except (ValueError, OverflowError):
+                except (ValueError, OverflowError) as e:
+                    config.logger.error(e)
                     upper_slack = -10 * config.ecp_tolerance
                 if upper_slack < -config.ecp_tolerance:
                     config.logger.debug(

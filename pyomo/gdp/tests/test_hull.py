@@ -38,7 +38,7 @@ from pyomo.core.expr.compare import (
     assertExpressionsEqual,
     assertExpressionsStructurallyEqual,
 )
-import pyomo.core.expr.current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.core.base import constraint
 from pyomo.repn import generate_standard_repn
 
@@ -56,6 +56,11 @@ from filecmp import cmp
 
 EPS = TransformationFactory('gdp.hull').CONFIG.EPS
 linear_solvers = ct.linear_solvers
+
+gurobi_available = (
+    SolverFactory('gurobi').available(exception_flag=False)
+    and SolverFactory('gurobi').license_is_valid()
+)
 
 
 class CommonTests:
@@ -1750,6 +1755,83 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         self.assertEqual(value(hull.get_disaggregated_var(m.x, m.d3)), 1.2)
         self.assertEqual(value(hull.get_disaggregated_var(m.x, m.d4)), 0)
 
+    def test_nested_with_local_vars(self):
+        m = ConcreteModel()
+
+        m.x = Var(bounds=(0, 10))
+        m.S = RangeSet(2)
+
+        @m.Disjunct()
+        def d_l(d):
+            d.lambdas = Var(m.S, bounds=(0, 1))
+            d.LocalVars = Suffix(direction=Suffix.LOCAL)
+            d.LocalVars[d] = list(d.lambdas.values())
+            d.c1 = Constraint(expr=d.lambdas[1] + d.lambdas[2] == 1)
+            d.c2 = Constraint(expr=m.x == 2 * d.lambdas[1] + 3 * d.lambdas[2])
+
+        @m.Disjunct()
+        def d_r(d):
+            @d.Disjunct()
+            def d_l(e):
+                e.lambdas = Var(m.S, bounds=(0, 1))
+                e.LocalVars = Suffix(direction=Suffix.LOCAL)
+                e.LocalVars[e] = list(e.lambdas.values())
+                e.c1 = Constraint(expr=e.lambdas[1] + e.lambdas[2] == 1)
+                e.c2 = Constraint(expr=m.x == 2 * e.lambdas[1] + 3 * e.lambdas[2])
+
+            @d.Disjunct()
+            def d_r(e):
+                e.lambdas = Var(m.S, bounds=(0, 1))
+                e.LocalVars = Suffix(direction=Suffix.LOCAL)
+                e.LocalVars[e] = list(e.lambdas.values())
+                e.c1 = Constraint(expr=e.lambdas[1] + e.lambdas[2] == 1)
+                e.c2 = Constraint(expr=m.x == 2 * e.lambdas[1] + 3 * e.lambdas[2])
+
+            d.inner_disj = Disjunction(expr=[d.d_l, d.d_r])
+
+        m.disj = Disjunction(expr=[m.d_l, m.d_r])
+        m.obj = Objective(expr=m.x)
+
+        hull = TransformationFactory('gdp.hull')
+        hull.apply_to(m)
+
+        x1 = hull.get_disaggregated_var(m.x, m.d_l)
+        x2 = hull.get_disaggregated_var(m.x, m.d_r)
+        x3 = hull.get_disaggregated_var(m.x, m.d_r.d_l)
+        x4 = hull.get_disaggregated_var(m.x, m.d_r.d_r)
+
+        for d, x in [(m.d_l, x1), (m.d_r.d_l, x3), (m.d_r.d_r, x4)]:
+            lambda1 = hull.get_disaggregated_var(d.lambdas[1], d)
+            self.assertIs(lambda1, d.lambdas[1])
+            lambda2 = hull.get_disaggregated_var(d.lambdas[2], d)
+            self.assertIs(lambda2, d.lambdas[2])
+
+            cons = hull.get_transformed_constraints(d.c1)
+            self.assertEqual(len(cons), 1)
+            convex_combo = cons[0]
+            assertExpressionsEqual(
+                self,
+                convex_combo.expr,
+                lambda1 + lambda2 - (1 - d.indicator_var.get_associated_binary()) * 0.0
+                == d.indicator_var.get_associated_binary(),
+            )
+            cons = hull.get_transformed_constraints(d.c2)
+            self.assertEqual(len(cons), 1)
+            get_x = cons[0]
+            assertExpressionsEqual(
+                self,
+                get_x.expr,
+                x
+                - (2 * lambda1 + 3 * lambda2)
+                - (1 - d.indicator_var.get_associated_binary()) * 0.0
+                == 0.0 * d.indicator_var.get_associated_binary(),
+            )
+
+        cons = hull.get_disaggregation_constraint(m.x, m.disj)
+        assertExpressionsEqual(self, cons.expr, m.x == x1 + x2)
+        cons = hull.get_disaggregation_constraint(m.x, m.d_r.inner_disj)
+        assertExpressionsEqual(self, cons.expr, x2 == x3 + x4)
+
 
 class TestSpecialCases(unittest.TestCase):
     def test_local_vars(self):
@@ -2571,9 +2653,22 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
         )
         assertExpressionsStructurallyEqual(self, simplified, z3d - z2d)
 
-        # hull transformation of z3 >= 1
+        # hull transformation of 1 - z3 <= 2 - (z1 + z2)
         cons = hull.get_transformed_constraints(
             m.d[4]._logical_to_disjunctive.transformed_constraints[9]
+        )
+        self.assertEqual(len(cons), 1)
+        cons = cons[0]
+        assertExpressionsStructurallyEqual(
+            self,
+            cons.expr,
+            1 - z3d - (2 - (z1d + z2d)) - (1 - m.d[4].binary_indicator_var) * (-1)
+            <= 0 * m.d[4].binary_indicator_var,
+        )
+
+        # hull transformation of z3 >= 1
+        cons = hull.get_transformed_constraints(
+            m.d[4]._logical_to_disjunctive.transformed_constraints[10]
         )
         self.assertEqual(len(cons), 1)
         cons = cons[0]
@@ -2605,3 +2700,13 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
     @unittest.skipIf(not dill_available, "Dill is not available")
     def test_dill_pickle(self):
         ct.check_transformed_model_pickles_with_dill(self, 'hull')
+
+
+@unittest.skipUnless(gurobi_available, "Gurobi is not available")
+class NestedDisjunctsInFlatGDP(unittest.TestCase):
+    """
+    This class tests the fix for #2702
+    """
+
+    def test_declare_disjuncts_in_disjunction_rule(self):
+        ct.check_nested_disjuncts_in_flat_gdp(self, 'hull')

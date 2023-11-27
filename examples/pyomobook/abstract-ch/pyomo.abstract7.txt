@@ -61,9 +61,9 @@ Problem:
   Lower bound: 0.8
   Upper bound: 0.8
   Number of objectives: 1
-  Number of constraints: 3
-  Number of variables: 2
-  Number of nonzeros: 3
+  Number of constraints: 2
+  Number of variables: 1
+  Number of nonzeros: 2
   Sense: minimize
 Solver: 
 - Status: ok

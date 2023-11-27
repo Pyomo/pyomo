@@ -30,7 +30,7 @@ from pyomo.core.expr.numeric_expr import (
     nonlinear_expression,
     NPV_SumExpression,
 )
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.core.base.var import Var
 from pyomo.core.base.expression import Expression
 from pyomo.core.base.component import _ComponentBase
@@ -94,7 +94,7 @@ def quicksum(args, start=0, linear=None):
     if linear is not None:
         deprecation_warning(
             "The quicksum(linear=...) argument is deprecated and ignored.",
-            version='6.5.1.dev0',
+            version='6.6.0',
         )
 
     #

@@ -8,3 +8,4 @@ Advanced Topics
    units_container.rst
    linearexpression.rst
    flattener/index.rst
+   sos_constraints.rst

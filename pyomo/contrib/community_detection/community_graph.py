@@ -2,7 +2,7 @@
 
 from pyomo.common.dependencies import networkx as nx
 from pyomo.core import Constraint, Objective, Var, ComponentMap, SortComponents
-from pyomo.core.expr.current import identify_variables
+from pyomo.core.expr import identify_variables
 from pyomo.contrib.community_detection.event_log import _event_log
 
 
