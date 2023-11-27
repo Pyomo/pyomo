@@ -470,12 +470,22 @@ class _SuffixData(object):
                 "not exported as part of the NL file.  "
                 "Skipping."
             )
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(
+                    "Skipped component keys:\n\t"
+                    + "\n\t".join(sorted(map(str, missing_component_data)))
+                )
         if unknown_data:
             logger.warning(
                 f"model contains export suffix '{self.name}' that "
                 f"contains {len(unknown_data)} keys that are not "
                 "Var, Constraint, Objective, or the model.  Skipping."
             )
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(
+                    "Skipped component keys:\n\t"
+                    + "\n\t".join(sorted(map(str, unknown_data)))
+                )
 
 
 class CachingNumericSuffixFinder(SuffixFinder):
