@@ -16,12 +16,11 @@ from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 from pyomo.repn import generate_standard_repn
 import pyomo.core.expr as EXPR
 from math import copysign
-from pyomo.contrib.mindtpy.util import get_integer_solution, copy_var_list_values
+from pyomo.contrib.mindtpy.util import get_integer_solution, copy_var_list_values, copy_var_value
 from pyomo.contrib.gdpopt.util import get_main_elapsed_time, time_code
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core import minimize, value
 from pyomo.core.expr import identify_variables
-import math
 
 cplex, cplex_available = attempt_import('cplex')
 
@@ -35,7 +34,6 @@ class LazyOACallback_cplex(
         self, opt, from_list, to_list, config, skip_stale=False, skip_fixed=True
     ):
         """This function copies variable values from one list to another.
-
         Rounds to Binary/Integer if necessary.
         Sets to zero for NonNegativeReals if necessary.
 
@@ -44,17 +42,15 @@ class LazyOACallback_cplex(
         opt : SolverFactory
             The cplex_persistent solver.
         from_list : list
-            The variables that provides the values to copy from.
+            The variable list that provides the values to copy from.
         to_list : list
-            The variables that need to set value.
+            The variable list that needs to set value.
         config : ConfigBlock
             The specific configurations for MindtPy.
         skip_stale : bool, optional
             Whether to skip the stale variables, by default False.
         skip_fixed : bool, optional
             Whether to skip the fixed variables, by default True.
-        ignore_integrality : bool, optional
-            Whether to ignore the integrality of integer variables, by default False.
         """
         for v_from, v_to in zip(from_list, to_list):
             if skip_stale and v_from.stale:
@@ -62,48 +58,7 @@ class LazyOACallback_cplex(
             if skip_fixed and v_to.is_fixed():
                 continue  # Skip fixed variables.
             v_val = self.get_values(opt._pyomo_var_to_solver_var_map[v_from])
-            rounded_val = int(round(v_val))
-            # We don't want to trigger the reset of the global stale
-            # indicator, so we will set this variable to be "stale",
-            # knowing that set_value will switch it back to "not
-            # stale"
-            v_to.stale = True
-            # NOTE: PEP 2180 changes the var behavior so that domain
-            # / bounds violations no longer generate exceptions (and
-            # instead log warnings).  This means that the following
-            # will always succeed and the ValueError should never be
-            # raised.
-            if (
-                v_val in v_to.domain
-                and not ((v_to.has_lb() and v_val < v_to.lb))
-                and not ((v_to.has_ub() and v_val > v_to.ub))
-            ):
-                v_to.set_value(v_val)
-            # Snap the value to the bounds
-            # TODO: check the performance of
-            # v_to.lb - v_val <= config.variable_tolerance
-            elif (
-                v_to.has_lb()
-                and v_val < v_to.lb
-                # and v_to.lb - v_val <= config.variable_tolerance
-            ):
-                v_to.set_value(v_to.lb)
-            elif (
-                v_to.has_ub()
-                and v_val > v_to.ub
-                # and v_val - v_to.ub <= config.variable_tolerance
-            ):
-                v_to.set_value(v_to.ub)
-            # ... or the nearest integer
-            elif (
-                v_to.is_integer()
-                and math.fabs(v_val - rounded_val) <= config.integer_tolerance
-            ):  # and rounded_val in v_to.domain:
-                v_to.set_value(rounded_val)
-            elif abs(v_val) <= config.zero_tolerance and 0 in v_to.domain:
-                v_to.set_value(0)
-            else:
-                raise ValueError('copy_lazy_var_list_values failed.')
+            copy_var_value(v_from, v_to, v_val, config, ignore_integrality=False)
 
     def add_lazy_oa_cuts(
         self,

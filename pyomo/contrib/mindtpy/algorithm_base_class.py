@@ -1853,7 +1853,6 @@ class _MindtPyAlgorithm(object):
                     f"Integer variable {var.name} not initialized.  "
                     "Setting it to its lower bound"
                 )
-                # nlp_var.bounds[0]
                 var.set_value(var.lb, skip_validation=True)
         # warm start for the nlp subproblem
         copy_var_list_values(

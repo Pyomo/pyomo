@@ -693,37 +693,7 @@ def copy_var_list_values_from_solution_pool(
         elif config.mip_solver == 'gurobi_persistent':
             solver_model.setParam(gurobipy.GRB.Param.SolutionNumber, solution_name)
             var_val = var_map[v_from].Xn
-        # We don't want to trigger the reset of the global stale
-        # indicator, so we will set this variable to be "stale",
-        # knowing that set_value will switch it back to "not
-        # stale"
-        v_to.stale = True
-        rounded_val = int(round(var_val))
-        # NOTE: PEP 2180 changes the var behavior so that domain /
-        # bounds violations no longer generate exceptions (and
-        # instead log warnings).  This means that the following will
-        # always succeed and the ValueError should never be raised.
-        if (
-            var_val in v_to.domain
-            and not ((v_to.has_lb() and var_val < v_to.lb))
-            and not ((v_to.has_ub() and var_val > v_to.ub))
-        ):
-            v_to.set_value(var_val, skip_validation=True)
-        elif v_to.has_lb() and var_val < v_to.lb:
-            v_to.set_value(v_to.lb)
-        elif v_to.has_ub() and var_val > v_to.ub:
-            v_to.set_value(v_to.ub)
-        # Check to see if this is just a tolerance issue
-        elif ignore_integrality and v_to.is_integer():
-            v_to.set_value(var_val, skip_validation=True)
-        elif v_to.is_integer() and (
-            abs(var_val - rounded_val) <= config.integer_tolerance
-        ):
-            v_to.set_value(rounded_val, skip_validation=True)
-        elif abs(var_val) <= config.zero_tolerance and 0 in v_to.domain:
-            v_to.set_value(0, skip_validation=True)
-        else:
-            raise ValueError("copy_var_list_values_from_solution_pool failed.")
+        copy_var_value(v_from, v_to, var_val, config, ignore_integrality)
 
 
 class GurobiPersistent4MindtPy(GurobiPersistent):
@@ -983,6 +953,19 @@ def copy_var_list_values(
     """Copy variable values from one list to another.
     Rounds to Binary/Integer if necessary
     Sets to zero for NonNegativeReals if necessary
+
+    from_list : list
+        The variables that provides the values to copy from.
+    to_list : list
+        The variables that need to set value.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
+    skip_stale : bool, optional
+        Whether to skip the stale variables, by default False.
+    skip_fixed : bool, optional
+        Whether to skip the fixed variables, by default True.
+    ignore_integrality : bool, optional
+        Whether to ignore the integrality of integer variables, by default False.
     """
     for v_from, v_to in zip(from_list, to_list):
         if skip_stale and v_from.stale:
@@ -990,25 +973,59 @@ def copy_var_list_values(
         if skip_fixed and v_to.is_fixed():
             continue  # Skip fixed variables.
         var_val = value(v_from, exception=False)
-        rounded_val = int(round(var_val))
-        if (
-            var_val in v_to.domain
-            and not ((v_to.has_lb() and var_val < v_to.lb))
-            and not ((v_to.has_ub() and var_val > v_to.ub))
+        copy_var_value(v_from, v_to, var_val, config, ignore_integrality)
+
+
+def copy_var_value(v_from, v_to, var_val, config, ignore_integrality):
+    """This function copies variable value from one to another.
+    Rounds to Binary/Integer if necessary.
+    Sets to zero for NonNegativeReals if necessary.
+
+    NOTE: PEP 2180 changes the var behavior so that domain /
+    bounds violations no longer generate exceptions (and
+    instead log warnings).  This means that the following will
+    always succeed and the ValueError should never be raised.
+
+    Parameters
+    ----------
+    v_from : Var
+        The variable that provides the values to copy from.
+    v_to : Var
+        The variable that needs to set value.
+    var_val : float
+        The value of v_to variable.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
+    ignore_integrality : bool, optional
+        Whether to ignore the integrality of integer variables, by default False.
+
+    Raises
+    ------
+    ValueError
+        Cannot successfully set the value to variable v_to.
+    """
+    # We don't want to trigger the reset of the global stale
+    # indicator, so we will set this variable to be "stale",
+    # knowing that set_value will switch it back to "not stale".
+    v_to.stale = True
+    rounded_val = int(round(var_val))
+    if (var_val in v_to.domain
+        and not ((v_to.has_lb() and var_val < v_to.lb))
+        and not ((v_to.has_ub() and var_val > v_to.ub))
         ):
-            v_to.set_value(value(v_from, exception=False))
-        elif v_to.has_lb() and var_val < v_to.lb:
-            v_to.set_value(v_to.lb)
-        elif v_to.has_ub() and var_val > v_to.ub:
-            v_to.set_value(v_to.ub)
-        elif ignore_integrality and v_to.is_integer():
-            v_to.set_value(value(v_from, exception=False), skip_validation=True)
-        elif v_to.is_integer() and (
-            math.fabs(var_val - rounded_val) <= config.integer_tolerance
-        ):
-            v_to.set_value(rounded_val)
-        elif abs(var_val) <= config.zero_tolerance and 0 in v_to.domain:
-            v_to.set_value(0)
-        else:
-            raise ValueError("copy_var_list_values failed with variable {}, value = {} and rounded value = {}"
-                             "".format(v_to.name, var_val, rounded_val))
+        v_to.set_value(var_val)
+    elif v_to.has_lb() and var_val < v_to.lb:
+        v_to.set_value(v_to.lb)
+    elif v_to.has_ub() and var_val > v_to.ub:
+        v_to.set_value(v_to.ub)
+    elif ignore_integrality and v_to.is_integer():
+        v_to.set_value(var_val, skip_validation=True)
+    elif v_to.is_integer() and (
+        math.fabs(var_val - rounded_val) <= config.integer_tolerance
+    ):
+        v_to.set_value(rounded_val)
+    elif abs(var_val) <= config.zero_tolerance and 0 in v_to.domain:
+        v_to.set_value(0)
+    else:
+        raise ValueError("copy_var_list_values failed with variable {}, value = {} and rounded value = {}"
+                            "".format(v_to.name, var_val, rounded_val))
