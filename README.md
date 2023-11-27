@@ -51,7 +51,7 @@ Pyomo is available under the BSD License - see the
 
 Pyomo is currently tested with the following Python implementations:
 
-* CPython: 3.8, 3.9, 3.10, 3.11
+* CPython: 3.8, 3.9, 3.10, 3.11, 3.12
 * PyPy: 3.9
 
 _Testing and support policy_:
