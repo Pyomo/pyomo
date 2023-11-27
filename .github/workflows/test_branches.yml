@@ -78,7 +78,7 @@ jobs:
           PACKAGES: glpk
 
         - os: ubuntu-latest
-          python: 3.9
+          python: '3.11'
           other: /conda
           skip_doctest: 1
           TARGET: linux
@@ -86,7 +86,7 @@ jobs:
           PACKAGES:
 
         - os: ubuntu-latest
-          python: 3.8
+          python: 3.9
           other: /mpi
           mpi: 3
           skip_doctest: 1

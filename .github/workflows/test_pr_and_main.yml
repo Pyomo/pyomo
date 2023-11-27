@@ -79,7 +79,7 @@ jobs:
           PACKAGES: glpk
 
         - os: ubuntu-latest
-          python: 3.9
+          python: '3.11'
           other: /conda
           skip_doctest: 1
           TARGET: linux
@@ -96,7 +96,7 @@ jobs:
           PACKAGES: mpi4py
 
         - os: ubuntu-latest
-          python: 3.11
+          python: '3.11'
           other: /singletest
           category: "-m 'neos or importtest'"
           skip_doctest: 1
