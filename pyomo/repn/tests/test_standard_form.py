@@ -25,6 +25,7 @@ for sol in ['glpk', 'cbc', 'gurobi', 'cplex', 'xpress']:
 else:
     linear_solver = None
 
+
 @unittest.skipUnless(
     scipy_available & numpy_available, "standard_form requires scipy and numpy"
 )
