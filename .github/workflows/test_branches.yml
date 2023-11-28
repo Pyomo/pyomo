@@ -331,7 +331,7 @@ jobs:
         if test -z "${{matrix.slim}}"; then
             PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
             echo "Installing for $PYVER"
-            for PKG in 'cplex>=12.10' docplex gurobi xpress cyipopt pymumps scip; do
+            for PKG in 'cplex>=12.10' docplex 'gurobi=10.0.3' xpress cyipopt pymumps scip; do
                 echo ""
                 echo "*** Install $PKG ***"
                 # conda can literally take an hour to determine that a
