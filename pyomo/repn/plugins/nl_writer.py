@@ -165,9 +165,9 @@ class NLWriterInfo(object):
     eliminated_vars: List[Tuple[_VarData, NumericExpression]]
 
         The list of variables in the model that were eliminated by the
-        presolve.  each entry is a 2-tuple of (:py:class:`_VarData`,
-        :py:class`NumericExpression`|`float`).  the list is ordered in
-        the necessary order for correct evaluation (i.e., all variables
+        presolve.  Each entry is a 2-tuple of (:py:class:`_VarData`,
+        :py:class`NumericExpression`|`float`).  The list is in the
+        necessary order for correct evaluation (i.e., all variables
         appearing in the expression must either have been sent to the
         solver, or appear *earlier* in this list.
 
@@ -470,12 +470,22 @@ class _SuffixData(object):
                 "not exported as part of the NL file.  "
                 "Skipping."
             )
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(
+                    "Skipped component keys:\n\t"
+                    + "\n\t".join(sorted(map(str, missing_component_data)))
+                )
         if unknown_data:
             logger.warning(
                 f"model contains export suffix '{self.name}' that "
                 f"contains {len(unknown_data)} keys that are not "
                 "Var, Constraint, Objective, or the model.  Skipping."
             )
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(
+                    "Skipped component keys:\n\t"
+                    + "\n\t".join(sorted(map(str, unknown_data)))
+                )
 
 
 class CachingNumericSuffixFinder(SuffixFinder):
@@ -612,8 +622,6 @@ class _NLWriter_impl(object):
                     if name not in suffix_data:
                         suffix_data[name] = _SuffixData(name)
                     suffix_data[name].update(suffix)
-            timer.toc("Collected suffixes", level=logging.DEBUG)
-
         #
         # Data structures to support variable/constraint scaling
         #
@@ -624,6 +632,8 @@ class _NLWriter_impl(object):
         else:
             scaling_factor = _NoScalingFactor()
         scale_model = scaling_factor.scale
+
+        timer.toc("Collected suffixes", level=logging.DEBUG)
 
         #
         # Data structures to support presolve
@@ -645,7 +655,10 @@ class _NLWriter_impl(object):
         last_parent = None
         for obj in model.component_data_objects(Objective, active=True, sort=sorter):
             if with_debug_timing and obj.parent_component() is not last_parent:
-                timer.toc('Objective %s', last_parent, level=logging.DEBUG)
+                if last_parent is None:
+                    timer.toc(None)
+                else:
+                    timer.toc('Objective %s', last_parent, level=logging.DEBUG)
                 last_parent = obj.parent_component()
             expr_info = visitor.walk_expression((obj.expr, obj, 1, scaling_factor(obj)))
             if expr_info.named_exprs:
@@ -661,6 +674,8 @@ class _NLWriter_impl(object):
         if with_debug_timing:
             # report the last objective
             timer.toc('Objective %s', last_parent, level=logging.DEBUG)
+        else:
+            timer.toc('Processed %s objectives', len(objectives))
 
         # Order the objectives, moving all nonlinear objectives to
         # the beginning
@@ -680,9 +695,13 @@ class _NLWriter_impl(object):
         n_complementarity_range = 0
         n_complementarity_nz_var_lb = 0
         #
+        last_parent = None
         for con in ordered_active_constraints(model, self.config):
             if with_debug_timing and con.parent_component() is not last_parent:
-                timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
+                if last_parent is None:
+                    timer.toc(None)
+                else:
+                    timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
                 last_parent = con.parent_component()
             scale = scaling_factor(con)
             expr_info = visitor.walk_expression((con.body, con, 0, scale))
@@ -727,6 +746,8 @@ class _NLWriter_impl(object):
         if with_debug_timing:
             # report the last constraint
             timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
+        else:
+            timer.toc('Processed %s constraints', len(constraints))
 
         # This may fetch more bounds than needed, but only in the cases
         # where variables were completely eliminated while walking the
@@ -920,8 +941,8 @@ class _NLWriter_impl(object):
             linear_binary_vars = linear_integer_vars = set()
         assert len(variables) == n_vars
         timer.toc(
-            'Set row / column ordering: %s variables [%s, %s, %s R/B/Z], '
-            '%s constraints [%s, %s L/NL]',
+            'Set row / column ordering: %s var [%s, %s, %s R/B/Z], '
+            '%s con [%s, %s L/NL]',
             n_vars,
             len(continuous_vars),
             len(binary_vars),

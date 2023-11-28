@@ -5704,7 +5704,7 @@ class TestIterationLogRecord(unittest.TestCase):
         """Test method for logging iteration log table header."""
         ans = (
             "------------------------------------------------------------------------------\n"
-            "Itn  Objective    1-Stg Shift  DR Shift     #CViol  Max Viol     Wall Time (s)\n"
+            "Itn  Objective    1-Stg Shift  2-Stg Shift  #CViol  Max Viol     Wall Time (s)\n"
             "------------------------------------------------------------------------------\n"
         )
         with LoggingIntercept(level=logging.INFO) as LOG:
@@ -5725,7 +5725,8 @@ class TestIterationLogRecord(unittest.TestCase):
             iteration=4,
             objective=1.234567,
             first_stage_var_shift=2.3456789e-8,
-            dr_var_shift=3.456789e-7,
+            second_stage_var_shift=3.456789e-7,
+            dr_var_shift=1.234567e-7,
             num_violated_cons=10,
             max_violation=7.654321e-3,
             elapsed_time=21.2,
@@ -5757,7 +5758,8 @@ class TestIterationLogRecord(unittest.TestCase):
             iteration=4,
             objective=1.234567,
             first_stage_var_shift=2.3456789e-8,
-            dr_var_shift=3.456789e-7,
+            second_stage_var_shift=3.456789e-7,
+            dr_var_shift=1.234567e-7,
             num_violated_cons=10,
             max_violation=7.654321e-3,
             elapsed_time=21.2,
@@ -5794,7 +5796,8 @@ class TestIterationLogRecord(unittest.TestCase):
             iteration=4,
             objective=1.234567,
             first_stage_var_shift=2.3456789e-8,
-            dr_var_shift=3.456789e-7,
+            second_stage_var_shift=3.456789e-7,
+            dr_var_shift=1.234567e-7,
             num_violated_cons=10,
             max_violation=7.654321e-3,
             elapsed_time=21.2,
@@ -5834,7 +5837,8 @@ class TestIterationLogRecord(unittest.TestCase):
             iteration=4,
             objective=1.234567,
             first_stage_var_shift=2.3456789e-8,
-            dr_var_shift=3.456789e-7,
+            second_stage_var_shift=3.456789e-7,
+            dr_var_shift=1.234567e-7,
             num_violated_cons=10,
             max_violation=7.654321e-3,
             elapsed_time=21.2,
@@ -5869,7 +5873,8 @@ class TestIterationLogRecord(unittest.TestCase):
             iteration=4,
             objective=1.234567,
             first_stage_var_shift=2.3456789e-8,
-            dr_var_shift=3.456789e-7,
+            second_stage_var_shift=3.456789e-7,
+            dr_var_shift=1.234567e-7,
             num_violated_cons=10,
             max_violation=7.654321e-3,
             elapsed_time=21.2,
@@ -5907,6 +5912,7 @@ class TestIterationLogRecord(unittest.TestCase):
             iteration=0,
             objective=-1.234567,
             first_stage_var_shift=None,
+            second_stage_var_shift=None,
             dr_var_shift=None,
             num_violated_cons=10,
             max_violation=7.654321e-3,

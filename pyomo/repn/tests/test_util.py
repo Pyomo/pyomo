@@ -100,7 +100,7 @@ class TestRepnUtils(unittest.TestCase):
         # Depending on the platform, np.longdouble may or may not have
         # higher precision than float:
         if f == float(f):
-            test = self.assertNotRegexpMatches
+            test = self.assertNotRegex
         else:
             test = self.assertRegex
         test(

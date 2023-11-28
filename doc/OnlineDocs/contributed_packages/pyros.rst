@@ -912,16 +912,16 @@ Observe that the log contains the following information:
          First-stage inequalities (incl. certain var bounds) : 10
          Performance constraints (incl. var bounds) : 47
    ------------------------------------------------------------------------------
-   Itn  Objective    1-Stg Shift  DR Shift     #CViol  Max Viol     Wall Time (s)
+   Itn  Objective    1-Stg Shift  2-Stg Shift  #CViol  Max Viol     Wall Time (s)
    ------------------------------------------------------------------------------
-   0     3.5838e+07  -            -            5       1.8832e+04   1.198        
-   1     3.5838e+07  7.4506e-09   1.6105e+03   7       3.7766e+04   2.893        
-   2     3.6116e+07  2.7803e+05   1.2918e+03   8       1.3466e+06   4.732        
-   3     3.6285e+07  1.6957e+05   5.8386e+03   6       4.8734e+03   6.740        
-   4     3.6285e+07  1.4901e-08   3.3097e+03   1       3.5036e+01   9.099        
-   5     3.6285e+07  2.9786e-10   3.3597e+03   6       2.9103e+00   11.588       
-   6     3.6285e+07  7.4506e-07   8.7228e+02   5       4.1726e-01   14.360       
-   7     3.6285e+07  7.4506e-07   8.1995e+02   0       9.3279e-10g  21.597       
+   0     3.5838e+07  -            -            5       1.8832e+04   1.555        
+   1     3.5838e+07  2.2045e-12   2.7854e-12   7       3.7766e+04   2.991        
+   2     3.6116e+07  1.2324e-01   3.9256e-01   8       1.3466e+06   4.881        
+   3     3.6285e+07  5.1968e-01   4.5604e-01   6       4.8734e+03   6.908        
+   4     3.6285e+07  2.6524e-13   1.3909e-13   1       3.5036e+01   9.176        
+   5     3.6285e+07  2.0167e-13   5.4357e-02   6       2.9103e+00   11.457       
+   6     3.6285e+07  2.2335e-12   1.2150e-01   5       4.1726e-01   13.868       
+   7     3.6285e+07  2.2340e-12   1.1422e-01   0       9.3279e-10g  20.917       
    ------------------------------------------------------------------------------
    Robust optimal solution identified.
    ------------------------------------------------------------------------------
@@ -929,22 +929,22 @@ Observe that the log contains the following information:
 
    Identifier                ncalls   cumtime   percall      %
    -----------------------------------------------------------
-   main                           1    21.598    21.598  100.0
+   main                           1    20.918    20.918  100.0
         ------------------------------------------------------
-        dr_polishing              7     1.502     0.215    7.0
-        global_separation        47     1.300     0.028    6.0
-        local_separation        376     9.779     0.026   45.3
-        master                    8     5.385     0.673   24.9
-        master_feasibility        7     0.531     0.076    2.5
-        preprocessing             1     0.175     0.175    0.8
-        other                   n/a     2.926       n/a   13.5
+        dr_polishing              7     1.472     0.210    7.0
+        global_separation        47     1.239     0.026    5.9
+        local_separation        376     9.244     0.025   44.2
+        master                    8     5.259     0.657   25.1
+        master_feasibility        7     0.486     0.069    2.3
+        preprocessing             1     0.403     0.403    1.9
+        other                   n/a     2.815       n/a   13.5
         ======================================================
    ===========================================================
 
    ------------------------------------------------------------------------------
    Termination stats:
     Iterations            : 8
-    Solve time (wall s)   : 21.598
+    Solve time (wall s)   : 20.918
     Final objective value : 3.6285e+07
     Termination condition : pyrosTerminationCondition.robust_optimal
    ------------------------------------------------------------------------------
@@ -983,7 +983,7 @@ The constituent columns are defined in the
        A dash ("-") is produced in lieu of a value if the master
        problem of the current iteration is not solved successfully.
    * - 1-Stg Shift
-     - Infinity norm of the difference between the first-stage
+     - Infinity norm of the relative difference between the first-stage
        variable vectors of the master solutions of the current
        and previous iterations. Expect this value to trend
        downward as the iteration number increases.
@@ -991,16 +991,15 @@ The constituent columns are defined in the
        if the current iteration number is 0,
        there are no first-stage variables,
        or the master problem of the current iteration is not solved successfully.
-   * - DR Shift
-     - Infinity norm of the difference between the decision rule
-       variable vectors of the master solutions of the current
-       and previous iterations.
-       Expect this value to trend downward as the iteration number increases.
-       An asterisk ("*") is appended to this value if the decision rules are
-       not successfully polished.
+   * - 2-Stg Shift
+     - Infinity norm of the relative difference between the second-stage
+       variable vectors (evaluated subject to the nominal uncertain
+       parameter realization) of the master solutions of the current
+       and previous iterations. Expect this value to trend
+       downward as the iteration number increases.
        A dash ("-") is produced in lieu of a value
        if the current iteration number is 0,
-       there are no decision rule variables,
+       there are no second-stage variables,
        or the master problem of the current iteration is not solved successfully.
    * - #CViol
      - Number of performance constraints found to be violated during

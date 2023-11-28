@@ -14,6 +14,7 @@ from pyomo.common.tee import capture_output
 
 import gc
 from io import StringIO
+from itertools import zip_longest
 import logging
 import sys
 import time
@@ -26,7 +27,14 @@ from pyomo.common.timing import (
     TicTocTimer,
     HierarchicalTimer,
 )
-from pyomo.environ import ConcreteModel, RangeSet, Var, Any, TransformationFactory
+from pyomo.environ import (
+    AbstractModel,
+    ConcreteModel,
+    RangeSet,
+    Var,
+    Any,
+    TransformationFactory,
+)
 from pyomo.core.base.var import _VarData
 
 
@@ -131,6 +139,48 @@ class TestTiming(unittest.TestCase):
             for l, r in zip(result.splitlines(), ref.splitlines()):
                 self.assertRegex(str(l.strip()), str(r.strip()))
             self.assertEqual(buf.getvalue().strip(), "")
+
+    def test_report_timing_context_manager(self):
+        ref = r"""
+           (0(\.\d+)?) seconds to construct Var x; 2 indices total
+           (0(\.\d+)?) seconds to construct Var y; 0 indices total
+           (0(\.\d+)?) seconds to construct Suffix Suffix
+           (0(\.\d+)?) seconds to apply Transformation RelaxIntegerVars \(in-place\)
+           """.strip()
+
+        xfrm = TransformationFactory('core.relax_integer_vars')
+
+        model = AbstractModel()
+        model.r = RangeSet(2)
+        model.x = Var(model.r)
+        model.y = Var(Any, dense=False)
+
+        OS = StringIO()
+
+        with report_timing(False):
+            with report_timing(OS):
+                with report_timing(False):
+                    # Active reporting is False: nothing should be emitted
+                    with capture_output() as OUT:
+                        m = model.create_instance()
+                        xfrm.apply_to(m)
+                    self.assertEqual(OUT.getvalue(), "")
+                    self.assertEqual(OS.getvalue(), "")
+                # Active reporting: we should log the timing
+                with capture_output() as OUT:
+                    m = model.create_instance()
+                    xfrm.apply_to(m)
+                self.assertEqual(OUT.getvalue(), "")
+                result = OS.getvalue().strip()
+                self.maxDiff = None
+                for l, r in zip_longest(result.splitlines(), ref.splitlines()):
+                    self.assertRegex(str(l.strip()), str(r.strip()))
+            # Active reporting is False: the previous log should not have changed
+            with capture_output() as OUT:
+                m = model.create_instance()
+                xfrm.apply_to(m)
+            self.assertEqual(OUT.getvalue(), "")
+            self.assertEqual(result, OS.getvalue().strip())
 
     def test_TicTocTimer_tictoc(self):
         SLEEP = 0.1
