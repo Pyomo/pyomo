@@ -32,6 +32,7 @@ Pyomo 6.7.0   (28 Nov 2023)
   - LP writer: warn user for ignored suffixes (#2982)
   - Update handling of `0*` in linear, quadratic walkers (#2981)
 - Testing
+  - Pin `gurobipy` version for testing to 10.0.3 (#3053)
   - Update Performance Plot URL (#3033)
   - Track change in Black rules (#3021)
   - Resolve build infrastructure errors (with mpi4py, gams, networkx) (#3018)
