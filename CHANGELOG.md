@@ -3,10 +3,11 @@ Pyomo CHANGELOG
 
 
 -------------------------------------------------------------------------------
-Pyomo 6.7.0   (27 Nov 2023)
+Pyomo 6.7.0   (28 Nov 2023)
 -------------------------------------------------------------------------------
 
 - General
+  - Add Python 3.12 Support (#3050)
   - Log which suffix values were skipped at the DEBUG level (#3043)
   - Update report_timing() to support context manager API (#3039)
   - Update Performance Plot URL (#3033)
@@ -19,15 +20,17 @@ Pyomo 6.7.0   (27 Nov 2023)
   - LINTING: New Version of `crate-ci/typos` (#2987)
   - Minor typo / formatting fixes (#2975)
 - Core
-  - Fix exception due to interaction among Gurobi, Pint, Dask, and Threading (#3026)
-  - Fix differentiation of `Expressions` containing `native_numeric_types` (#3017)
+  - Fix exception from interaction of Gurobi, Pint, Dask, and Threading (#3026)
+  - Fix differentiation of `Expressions` with `native_numeric_types` (#3017)
   - Warn for explicit declaration of immutable params with units (#3004)
-  - Use `SetInitializer` for initializing `Param` domains; reinitializing `IndexedVar` domains (#3001)
+  - Use `SetInitializer` for initializing `Param` domains; reinitializing
+    `IndexedVar` domains (#3001)
   - Ensure templatize_constraint returns an expression (#2983)
   - Prevent multiple applications of the scaling transform (#2979)
 - Solver Interfaces
+  - Add "writer" for converting linear models to standard matrix form (#3046)
   - NLv2: add linear presolve and general problem scaling support (#3037)
-  - Adjusting mps writer to the correct structure regarding integer variables declaration (#2946)
+  - Adjust mps writer format for integer variable declaration (#2946)
   - Fix scip results processing (#3023)
   - Fix quadratic objective off-diagonal-terms in cplex_direct interface (#3025)
   - Consolidate walker logic in LP/NL representations (#3015)
@@ -48,10 +51,11 @@ Pyomo 6.7.0   (27 Nov 2023)
 - Contributed Packages
   - APPSI: Add interface to WNTR (#2902)
   - APPSI: Capture HiGHS output when initializing model (#3005)
-  - APPSI: Fix auto-update when unfixing a variable and changing its bound (#2996)
+  - APPSI: Fix auto-update when unfixing variable and changing bounds (#2996)
   - APPSI: Fix reference bug in HiGHS interface (#2995)
-  - FBBT: Adding new walker for compute_bounds_on_expr (#3027)
-  - incidence_analysis: Fix bugs related to subset ordering and zero coefficients  (#3041)
+  - FBBT: Add new walker for compute_bounds_on_expr (#3027)
+  - incidence_analysis: Fix bugs with subset ordering and zero coefficients
+    (#3041)
   - incidence_analysis: Update paper reference (#2969)
   - latex_printer: Add contrib.latex_printer package (#2984)
   - MindtPy: Add support for GreyBox models (#2988)
