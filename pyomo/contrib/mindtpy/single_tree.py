@@ -900,9 +900,10 @@ def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, mindtpy_solver, config):
                 # Your callback should be prepared to cut off solutions that violate any of your lazy constraints, including those that have already been added. Node solutions will usually respect previously added lazy constraints, but not always.
                 # https://www.gurobi.com/documentation/current/refman/cs_cb_addlazy.html
                 # If this happens, MindtPy will look for the index of corresponding cuts, instead of solving the fixed-NLP again.
-                for ind in mindtpy_solver.int_sol_2_cuts_ind[
+                begin_index, end_index = mindtpy_solver.int_sol_2_cuts_ind[
                     mindtpy_solver.curr_int_sol
-                ]:
+                ]
+                for ind in range(begin_index, end_index + 1):
                     cb_opt.cbLazy(mindtpy_solver.mip.MindtPy_utils.cuts.oa_cuts[ind])
                 return
         else:
@@ -917,11 +918,10 @@ def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, mindtpy_solver, config):
         mindtpy_solver.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result, cb_opt)
         if config.strategy == 'OA':
             # store the cut index corresponding to current integer solution.
-            mindtpy_solver.int_sol_2_cuts_ind[mindtpy_solver.curr_int_sol] = list(
-                range(
-                    cut_ind + 1, len(mindtpy_solver.mip.MindtPy_utils.cuts.oa_cuts) + 1
-                )
-            )
+            mindtpy_solver.int_sol_2_cuts_ind[mindtpy_solver.curr_int_sol] = [
+                cut_ind + 1,
+                len(mindtpy_solver.mip.MindtPy_utils.cuts.oa_cuts),
+            ]
 
 
 def handle_lazy_main_feasible_solution_gurobi(cb_m, cb_opt, mindtpy_solver, config):
