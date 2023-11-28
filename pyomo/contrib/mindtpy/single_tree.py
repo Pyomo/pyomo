@@ -19,7 +19,7 @@ from math import copysign
 from pyomo.contrib.mindtpy.util import (
     get_integer_solution,
     copy_var_list_values,
-    copy_var_value,
+    set_var_value,
 )
 from pyomo.contrib.gdpopt.util import get_main_elapsed_time, time_code
 from pyomo.opt import TerminationCondition as tc
@@ -62,7 +62,13 @@ class LazyOACallback_cplex(
             if skip_fixed and v_to.is_fixed():
                 continue  # Skip fixed variables.
             v_val = self.get_values(opt._pyomo_var_to_solver_var_map[v_from])
-            copy_var_value(v_from, v_to, v_val, config, ignore_integrality=False)
+            set_var_value(
+                v_to,
+                v_val,
+                config.integer_tolerance,
+                config.zero_tolerance,
+                ignore_integrality=False,
+            )
 
     def add_lazy_oa_cuts(
         self,
