@@ -1684,7 +1684,7 @@ class _MindtPyAlgorithm(object):
                         'No integer solution is found, so the CPLEX solver will report an error status. '
                     )
             # Value error will be raised if the MIP problem is unbounded and appsi solver is used when loading solutions. Although the problem is unbounded, a valid result is provided and we do not return None to let the algorithm continue.
-            if 'main_mip_results' in dir():
+            if 'main_mip_results' in locals():
                 return self.mip, main_mip_results
             else:
                 return None, None
