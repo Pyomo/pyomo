@@ -11,6 +11,4 @@
 
 from pyomo.common.deprecation import relocated_module_attribute
 
-relocated_module_attribute(
-    'nullcontext', 'contextlib.nullcontext', version='6.7.0'
-)
+relocated_module_attribute('nullcontext', 'contextlib.nullcontext', version='6.7.0')
