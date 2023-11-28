@@ -165,9 +165,9 @@ class NLWriterInfo(object):
     eliminated_vars: List[Tuple[_VarData, NumericExpression]]
 
         The list of variables in the model that were eliminated by the
-        presolve.  each entry is a 2-tuple of (:py:class:`_VarData`,
-        :py:class`NumericExpression`|`float`).  the list is ordered in
-        the necessary order for correct evaluation (i.e., all variables
+        presolve.  Each entry is a 2-tuple of (:py:class:`_VarData`,
+        :py:class`NumericExpression`|`float`).  The list is in the
+        necessary order for correct evaluation (i.e., all variables
         appearing in the expression must either have been sent to the
         solver, or appear *earlier* in this list.
 

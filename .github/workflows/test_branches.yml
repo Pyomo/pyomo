@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
@@ -56,13 +56,13 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python: ['3.11']
+        python: ['3.12']
         other: [""]
         category: [""]
 
         include:
         - os: ubuntu-latest
-          python: '3.11'
+          python: '3.12'
           TARGET: linux
           PYENV: pip
 
@@ -78,7 +78,7 @@ jobs:
           PACKAGES: glpk
 
         - os: ubuntu-latest
-          python: 3.9
+          python: '3.11'
           other: /conda
           skip_doctest: 1
           TARGET: linux
@@ -86,7 +86,7 @@ jobs:
           PACKAGES:
 
         - os: ubuntu-latest
-          python: 3.8
+          python: 3.9
           other: /mpi
           mpi: 3
           skip_doctest: 1
@@ -112,7 +112,7 @@ jobs:
 
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Configure job parameters
       run: |
@@ -235,6 +235,7 @@ jobs:
       run: |
         python -c 'import sys;print(sys.executable)'
         python -m pip install --cache-dir cache/pip --upgrade pip
+        python -m pip install --cache-dir cache/pip setuptools
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "$EXTRAS" | tail -1`
         PACKAGES="${PYTHON_CORE_PKGS} ${PYTHON_PACKAGES} ${PYOMO_DEPENDENCIES} "
@@ -666,7 +667,7 @@ jobs:
     timeout-minutes: 10
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Set up Python 3.8
       uses: actions/setup-python@v4
@@ -721,7 +722,7 @@ jobs:
 
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       # We need the source for .codecov.yml and running "coverage xml"
 
     #- name: Pip package cache
