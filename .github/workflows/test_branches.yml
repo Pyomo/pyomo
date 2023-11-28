@@ -255,7 +255,7 @@ jobs:
             python -m pip install --cache-dir cache/pip cplex docplex \
                 || echo "WARNING: CPLEX Community Edition is not available"
             python -m pip install --cache-dir cache/pip \
-                -i https://pypi.gurobi.com gurobipy \
+                -i https://pypi.gurobi.com gurobipy==10.0.3 \
                 || echo "WARNING: Gurobi is not available"
             python -m pip install --cache-dir cache/pip xpress \
                 || echo "WARNING: Xpress Community Edition is not available"
