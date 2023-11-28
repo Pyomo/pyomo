@@ -140,7 +140,7 @@ class MindtPy_ECP_Solver(_MindtPyAlgorithm):
                     lower_slack = nlc.lslack()
                 except (ValueError, OverflowError) as e:
                     # Set lower_slack (upper_slack below) less than -config.ecp_tolerance in this case.
-                    config.logger.error(e)
+                    config.logger.error(e, exc_info=True)
                     lower_slack = -10 * config.ecp_tolerance
                 if lower_slack < -config.ecp_tolerance:
                     config.logger.debug(
@@ -153,7 +153,7 @@ class MindtPy_ECP_Solver(_MindtPyAlgorithm):
                 try:
                     upper_slack = nlc.uslack()
                 except (ValueError, OverflowError) as e:
-                    config.logger.error(e)
+                    config.logger.error(e, exc_info=True)
                     upper_slack = -10 * config.ecp_tolerance
                 if upper_slack < -config.ecp_tolerance:
                     config.logger.debug(

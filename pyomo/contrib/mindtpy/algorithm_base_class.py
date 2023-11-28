@@ -802,7 +802,7 @@ class _MindtPyAlgorithm(object):
             try:
                 self.curr_int_sol = get_integer_solution(self.working_model)
             except TypeError as e:
-                config.logger.error(e)
+                config.logger.error(e, exc_info=True)
                 raise ValueError(
                     'The initial integer combination is not provided or not complete. '
                     'Please provide the complete integer combination or use other initialization strategy.'
@@ -1083,7 +1083,7 @@ class _MindtPyAlgorithm(object):
                         0, c_geq * (rhs - value(c.body))
                     )
                 except (ValueError, OverflowError) as e:
-                    config.logger.error(e)
+                    config.logger.error(e, exc_info=True)
                     self.fixed_nlp.tmp_duals[c] = None
                     evaluation_error = True
             if evaluation_error:
@@ -1100,8 +1100,9 @@ class _MindtPyAlgorithm(object):
                 tolerance=config.constraint_tolerance,
             )
         except InfeasibleConstraintException as e:
+            config.logger.error(e, exc_info=True)
             config.logger.error(
-                str(e) + '\nInfeasibility detected in deactivate_trivial_constraints.'
+                'Infeasibility detected in deactivate_trivial_constraints.'
             )
             results = SolverResults()
             results.solver.termination_condition = tc.infeasible
@@ -1401,7 +1402,7 @@ class _MindtPyAlgorithm(object):
                     if len(feas_soln.solution) > 0:
                         feas_subproblem.solutions.load_from(feas_soln)
             except (ValueError, OverflowError) as e:
-                config.logger.error(e)
+                config.logger.error(e, exc_info=True)
                 for nlp_var, orig_val in zip(
                     MindtPy.variable_list, self.initial_var_values
                 ):
@@ -1542,8 +1543,9 @@ class _MindtPyAlgorithm(object):
             try:
                 self.dual_bound = self.stored_bound[self.primal_bound]
             except KeyError as e:
+                config.logger.error(e, exc_info=True)
                 config.logger.error(
-                    str(e) + '\nNo stored bound found. Bound fix failed.'
+                    'No stored bound found. Bound fix failed.'
                 )
         else:
             config.logger.info(
@@ -1670,7 +1672,7 @@ class _MindtPyAlgorithm(object):
             if len(main_mip_results.solution) > 0:
                 self.mip.solutions.load_from(main_mip_results)
         except (ValueError, AttributeError, RuntimeError) as e:
-            config.logger.error(e)
+            config.logger.error(e, exc_info=True)
             if config.single_tree:
                 config.logger.warning('Single tree terminate.')
                 if get_main_elapsed_time(self.timing) >= config.time_limit:
@@ -2369,8 +2371,9 @@ class _MindtPyAlgorithm(object):
                 tolerance=config.constraint_tolerance,
             )
         except InfeasibleConstraintException as e:
+            config.logger.error(e, exc_info=True)
             config.logger.error(
-                str(e) + '\nInfeasibility detected in deactivate_trivial_constraints.'
+                'Infeasibility detected in deactivate_trivial_constraints.'
             )
             results = SolverResults()
             results.solver.termination_condition = tc.infeasible

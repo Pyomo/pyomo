@@ -271,8 +271,9 @@ def add_ecp_cuts(
                 try:
                     upper_slack = constr.uslack()
                 except (ValueError, OverflowError) as e:
+                    config.logger.error(e, exc_info=True)
                     config.logger.error(
-                        str(e) + '\nConstraint {} has caused either a '
+                        'Constraint {} has caused either a '
                         'ValueError or OverflowError.'
                         '\n'.format(constr)
                     )
@@ -300,8 +301,9 @@ def add_ecp_cuts(
                 try:
                     lower_slack = constr.lslack()
                 except (ValueError, OverflowError) as e:
+                    config.logger.error(e, exc_info=True)
                     config.logger.error(
-                        str(e) + '\nConstraint {} has caused either a '
+                        'Constraint {} has caused either a '
                         'ValueError or OverflowError.'
                         '\n'.format(constr)
                     )
@@ -424,9 +426,10 @@ def add_affine_cuts(target_model, config, timing):
             try:
                 mc_eqn = mc(constr.body)
             except MCPP_Error as e:
+                config.logger.error(e, exc_info=True)
                 config.logger.error(
-                    '\nSkipping constraint %s due to MCPP error %s'
-                    % (constr.name, str(e))
+                    'Skipping constraint %s due to MCPP error'
+                    % (constr.name)
                 )
                 continue  # skip to the next constraint
 

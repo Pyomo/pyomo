@@ -259,9 +259,10 @@ class LazyOACallback_cplex(
                 try:
                     mc_eqn = mc(constr.body)
                 except MCPP_Error as e:
+                    config.logger.error(e, exc_info=True)
                     config.logger.debug(
-                        'Skipping constraint %s due to MCPP error %s'
-                        % (constr.name, str(e))
+                        'Skipping constraint %s due to MCPP error'
+                        % (constr.name)
                     )
                     continue  # skip to the next constraint
                 # TODO: check if the value of ccSlope and cvSlope is not Nan or inf. If so, we skip this.
@@ -696,9 +697,9 @@ class LazyOACallback_cplex(
                         mindtpy_solver.mip, None, mindtpy_solver, config, opt
                     )
                 except ValueError as e:
+                    config.logger.error(e, exc_info=True)
                     config.logger.error(
-                        str(e)
-                        + "\nUsually this error is caused by the MIP start solution causing a math domain error. "
+                        "Usually this error is caused by the MIP start solution causing a math domain error. "
                         "We will skip it."
                     )
                     return
