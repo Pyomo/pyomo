@@ -2610,7 +2610,13 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
         # set when constructing an expression, thereby altering the
         # order in which we would see the variables)
         vm = visitor.var_map
-        for v in var.values(visitor.sorter):
+        try:
+            _iter = var.parent_component().values(visitor.sorter)
+        except AttributeError:
+            # Note that this only works for the AML, as kernel does not
+            # provide a parent_component()
+            _iter = (var,)
+        for v in _iter:
             if v.fixed:
                 continue
             vm[id(v)] = v
@@ -2630,7 +2636,7 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
                 if _id not in visitor.fixed_vars:
                     visitor.cache_fixed_var(_id, child)
                 return False, (_CONSTANT, visitor.fixed_vars[_id])
-            _before_child_handlers._record_var(visitor, child.parent_component())
+            _before_child_handlers._record_var(visitor, child)
         return False, (_MONOMIAL, _id, 1)
 
     @staticmethod
@@ -2669,7 +2675,7 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
                 if _id not in visitor.fixed_vars:
                     visitor.cache_fixed_var(_id, arg2)
                 return False, (_CONSTANT, arg1 * visitor.fixed_vars[_id])
-            _before_child_handlers._record_var(visitor, arg2.parent_component())
+            _before_child_handlers._record_var(visitor, arg2)
         return False, (_MONOMIAL, _id, arg1)
 
     @staticmethod
@@ -2710,7 +2716,7 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
                             visitor.cache_fixed_var(_id, arg2)
                         const += arg1 * visitor.fixed_vars[_id]
                         continue
-                    _before_child_handlers._record_var(visitor, arg2.parent_component())
+                    _before_child_handlers._record_var(visitor, arg2)
                     linear[_id] = arg1
                 elif _id in linear:
                     linear[_id] += arg1

@@ -592,7 +592,13 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
         vm = visitor.var_map
         vo = visitor.var_order
         l = len(vo)
-        for v in var.values(visitor.sorter):
+        try:
+            _iter = var.parent_component().values(visitor.sorter)
+        except AttributeError:
+            # Note that this only works for the AML, as kernel does not
+            # provide a parent_component()
+            _iter = (var,)
+        for v in _iter:
             if v.fixed:
                 continue
             vid = id(v)
@@ -606,7 +612,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
         if _id not in visitor.var_map:
             if child.fixed:
                 return False, (_CONSTANT, visitor.check_constant(child.value, child))
-            LinearBeforeChildDispatcher._record_var(visitor, child.parent_component())
+            LinearBeforeChildDispatcher._record_var(visitor, child)
         ans = visitor.Result()
         ans.linear[_id] = 1
         return False, (_LINEAR, ans)
@@ -635,7 +641,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                     _CONSTANT,
                     arg1 * visitor.check_constant(arg2.value, arg2),
                 )
-            LinearBeforeChildDispatcher._record_var(visitor, arg2.parent_component())
+            LinearBeforeChildDispatcher._record_var(visitor, arg2)
 
         # Trap multiplication by 0 and nan.
         if not arg1:
@@ -691,7 +697,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                         const += arg1 * visitor.check_constant(arg2.value, arg2)
                         continue
                     LinearBeforeChildDispatcher._record_var(
-                        visitor, arg2.parent_component()
+                        visitor, arg2
                     )
                     linear[_id] = arg1
                 elif _id in linear:
