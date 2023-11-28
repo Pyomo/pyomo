@@ -696,9 +696,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                     if arg2.fixed:
                         const += arg1 * visitor.check_constant(arg2.value, arg2)
                         continue
-                    LinearBeforeChildDispatcher._record_var(
-                        visitor, arg2
-                    )
+                    LinearBeforeChildDispatcher._record_var(visitor, arg2)
                     linear[_id] = arg1
                 elif _id in linear:
                     linear[_id] += arg1
