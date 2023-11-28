@@ -1544,9 +1544,7 @@ class _MindtPyAlgorithm(object):
                 self.dual_bound = self.stored_bound[self.primal_bound]
             except KeyError as e:
                 config.logger.error(e, exc_info=True)
-                config.logger.error(
-                    'No stored bound found. Bound fix failed.'
-                )
+                config.logger.error('No stored bound found. Bound fix failed.')
         else:
             config.logger.info(
                 'Solve the main problem without the last no_good cut to fix the bound.'

@@ -16,7 +16,11 @@ from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 from pyomo.repn import generate_standard_repn
 import pyomo.core.expr as EXPR
 from math import copysign
-from pyomo.contrib.mindtpy.util import get_integer_solution, copy_var_list_values, copy_var_value
+from pyomo.contrib.mindtpy.util import (
+    get_integer_solution,
+    copy_var_list_values,
+    copy_var_value,
+)
 from pyomo.contrib.gdpopt.util import get_main_elapsed_time, time_code
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core import minimize, value
@@ -261,8 +265,7 @@ class LazyOACallback_cplex(
                 except MCPP_Error as e:
                     config.logger.error(e, exc_info=True)
                     config.logger.debug(
-                        'Skipping constraint %s due to MCPP error'
-                        % (constr.name)
+                        'Skipping constraint %s due to MCPP error' % (constr.name)
                     )
                     continue  # skip to the next constraint
                 # TODO: check if the value of ccSlope and cvSlope is not Nan or inf. If so, we skip this.

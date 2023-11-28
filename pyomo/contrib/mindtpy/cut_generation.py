@@ -428,8 +428,7 @@ def add_affine_cuts(target_model, config, timing):
             except MCPP_Error as e:
                 config.logger.error(e, exc_info=True)
                 config.logger.error(
-                    'Skipping constraint %s due to MCPP error'
-                    % (constr.name)
+                    'Skipping constraint %s due to MCPP error' % (constr.name)
                 )
                 continue  # skip to the next constraint
 

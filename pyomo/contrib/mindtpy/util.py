@@ -1009,10 +1009,11 @@ def copy_var_value(v_from, v_to, var_val, config, ignore_integrality):
     # knowing that set_value will switch it back to "not stale".
     v_to.stale = True
     rounded_val = int(round(var_val))
-    if (var_val in v_to.domain
+    if (
+        var_val in v_to.domain
         and not ((v_to.has_lb() and var_val < v_to.lb))
         and not ((v_to.has_ub() and var_val > v_to.ub))
-        ):
+    ):
         v_to.set_value(var_val)
     elif v_to.has_lb() and var_val < v_to.lb:
         v_to.set_value(v_to.lb)
@@ -1027,5 +1028,7 @@ def copy_var_value(v_from, v_to, var_val, config, ignore_integrality):
     elif abs(var_val) <= config.zero_tolerance and 0 in v_to.domain:
         v_to.set_value(0)
     else:
-        raise ValueError("copy_var_list_values failed with variable {}, value = {} and rounded value = {}"
-                            "".format(v_to.name, var_val, rounded_val))
+        raise ValueError(
+            "copy_var_list_values failed with variable {}, value = {} and rounded value = {}"
+            "".format(v_to.name, var_val, rounded_val)
+        )
