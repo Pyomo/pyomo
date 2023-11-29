@@ -995,11 +995,6 @@ def set_var_valid_value(
     Rounds to Binary/Integer if necessary.
     Sets to zero for NonNegativeReals if necessary.
 
-    NOTE: PEP 2180 changes the var behavior so that domain /
-    bounds violations no longer generate exceptions (and
-    instead log warnings).  This means that the following will
-    always succeed and the ValueError should never be raised.
-
     Parameters
     ----------
     var : Var
@@ -1018,6 +1013,11 @@ def set_var_valid_value(
     ValueError
         Cannot successfully set the value to the variable.
     """
+    # NOTE: PEP 2180 changes the var behavior so that domain
+    # bounds violations no longer generate exceptions (and
+    # instead log warnings).  This means that the set_value method
+    # will always succeed and the ValueError should never be raised.
+
     # We don't want to trigger the reset of the global stale
     # indicator, so we will set this variable to be "stale",
     # knowing that set_value will switch it back to "not stale".
