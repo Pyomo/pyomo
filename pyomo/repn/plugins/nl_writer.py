@@ -1685,6 +1685,15 @@ class _NLWriter_impl(object):
         if not self.config.linear_presolve:
             return eliminated_cons, eliminated_vars
 
+        # We need to record all named expressions with linear components
+        # so that any eliminated variables are removed from them.
+        for expr, info, _ in self.subexpression_cache.values():
+            if not info.linear:
+                continue
+            expr_id = id(expr)
+            for _id in info.linear:
+                comp_by_linear_var[_id].append((expr_id, info))
+
         fixed_vars = [
             _id for _id, (lb, ub) in var_bounds.items() if lb == ub and lb is not None
         ]
