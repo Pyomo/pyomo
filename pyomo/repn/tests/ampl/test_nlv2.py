@@ -1565,18 +1565,17 @@ G0 1
         m.eq = pyo.Constraint(pyo.Integers)
         m.eq[1] = m.x[1] == 7
         m.eq[2] = m.x[3] == 0.1 * m.subexpr[1] * m.x[2]
-        m.obj = pyo.Objective(expr=m.x[1]**2 + m.x[2]**2 + m.x[3]**3)
+        m.obj = pyo.Objective(expr=m.x[1] ** 2 + m.x[2] ** 2 + m.x[3] ** 3)
 
         OUT = io.StringIO()
         with LoggingIntercept() as LOG:
-            nlinfo = nl_writer.NLWriter().write(m, OUT, symbolic_solver_labels=True, linear_presolve=True)
+            nlinfo = nl_writer.NLWriter().write(
+                m, OUT, symbolic_solver_labels=True, linear_presolve=True
+            )
         self.assertEqual(LOG.getvalue(), "")
 
         self.assertEqual(
-            nlinfo.eliminated_vars,
-            [
-                (m.x[1], nl_writer.AMPLRepn(7, {}, None)),
-            ],
+            nlinfo.eliminated_vars, [(m.x[1], nl_writer.AMPLRepn(7, {}, None))]
         )
 
         self.assertEqual(
@@ -1633,7 +1632,6 @@ G0 2	#obj
                 OUT.getvalue(),
             )
         )
-
 
     def test_scaling(self):
         m = pyo.ConcreteModel()
