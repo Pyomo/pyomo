@@ -1480,7 +1480,6 @@ G0 1
         # Note: bounds on x[1] are:
         #   min(22/3, 82/17, 23/4, -39/-6) == 4.823529411764706
         #   max(2/3, 62/17, 3/4, -19/-6) == 3.6470588235294117
-        print(OUT.getvalue())
         self.assertEqual(
             *nl_diff(
                 """g3 1 1 0	# problem unknown
@@ -1743,7 +1742,7 @@ G0 3
         self.assertEqual(LOG.getvalue(), "")
 
         nl2 = OUT.getvalue()
-        print(nl2)
+
         self.assertEqual(
             *nl_diff(
                 """g3 1 1 0	# problem unknown
@@ -1837,7 +1836,7 @@ G0 3
 
         OUT = io.StringIO()
         nl_writer.NLWriter().write(m, OUT, symbolic_solver_labels=True)
-        print(OUT.getvalue())
+
         self.assertEqual(
             *nl_diff(
                 """g3 1 1 0	# problem unknown
