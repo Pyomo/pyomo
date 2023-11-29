@@ -989,9 +989,9 @@ def copy_var_list_values(
 
 
 def set_var_valid_value(
-    v_to, var_val, integer_tolerance, zero_tolerance, ignore_integrality
+    var, var_val, integer_tolerance, zero_tolerance, ignore_integrality
 ):
-    """This function copies variable value from one to another.
+    """This function tries to set a valid value for variable with the given input.
     Rounds to Binary/Integer if necessary.
     Sets to zero for NonNegativeReals if necessary.
 
@@ -1002,10 +1002,10 @@ def set_var_valid_value(
 
     Parameters
     ----------
-    v_to : Var
+    var : Var
         The variable that needs to set value.
     var_val : float
-        The desired value to set for Var v_to.
+        The desired value to set for var.
     integer_tolerance: float
         Tolerance on integral values.
     zero_tolerance: float
@@ -1016,31 +1016,31 @@ def set_var_valid_value(
     Raises
     ------
     ValueError
-        Cannot successfully set the value to variable v_to.
+        Cannot successfully set the value to the variable.
     """
     # We don't want to trigger the reset of the global stale
     # indicator, so we will set this variable to be "stale",
     # knowing that set_value will switch it back to "not stale".
-    v_to.stale = True
+    var.stale = True
     rounded_val = int(round(var_val))
     if (
-        var_val in v_to.domain
-        and not ((v_to.has_lb() and var_val < v_to.lb))
-        and not ((v_to.has_ub() and var_val > v_to.ub))
+        var_val in var.domain
+        and not ((var.has_lb() and var_val < var.lb))
+        and not ((var.has_ub() and var_val > var.ub))
     ):
-        v_to.set_value(var_val)
-    elif v_to.has_lb() and var_val < v_to.lb:
-        v_to.set_value(v_to.lb)
-    elif v_to.has_ub() and var_val > v_to.ub:
-        v_to.set_value(v_to.ub)
-    elif ignore_integrality and v_to.is_integer():
-        v_to.set_value(var_val, skip_validation=True)
-    elif v_to.is_integer() and (math.fabs(var_val - rounded_val) <= integer_tolerance):
-        v_to.set_value(rounded_val)
-    elif abs(var_val) <= zero_tolerance and 0 in v_to.domain:
-        v_to.set_value(0)
+        var.set_value(var_val)
+    elif var.has_lb() and var_val < var.lb:
+        var.set_value(var.lb)
+    elif var.has_ub() and var_val > var.ub:
+        var.set_value(var.ub)
+    elif ignore_integrality and var.is_integer():
+        var.set_value(var_val, skip_validation=True)
+    elif var.is_integer() and (math.fabs(var_val - rounded_val) <= integer_tolerance):
+        var.set_value(rounded_val)
+    elif abs(var_val) <= zero_tolerance and 0 in var.domain:
+        var.set_value(0)
     else:
         raise ValueError(
             "copy_var_list_values failed with variable {}, value = {} and rounded value = {}"
-            "".format(v_to.name, var_val, rounded_val)
+            "".format(var.name, var_val, rounded_val)
         )
