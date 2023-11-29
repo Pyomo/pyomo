@@ -693,7 +693,7 @@ def copy_var_list_values_from_solution_pool(
         elif config.mip_solver == 'gurobi_persistent':
             solver_model.setParam(gurobipy.GRB.Param.SolutionNumber, solution_name)
             var_val = var_map[v_from].Xn
-        set_var_value(
+        set_var_valid_value(
             v_to,
             var_val,
             config.integer_tolerance,
@@ -979,7 +979,7 @@ def copy_var_list_values(
         if skip_fixed and v_to.is_fixed():
             continue  # Skip fixed variables.
         var_val = value(v_from, exception=False)
-        set_var_value(
+        set_var_valid_value(
             v_to,
             var_val,
             config.integer_tolerance,
@@ -988,7 +988,9 @@ def copy_var_list_values(
         )
 
 
-def set_var_value(v_to, var_val, integer_tolerance, zero_tolerance, ignore_integrality):
+def set_var_valid_value(
+    v_to, var_val, integer_tolerance, zero_tolerance, ignore_integrality
+):
     """This function copies variable value from one to another.
     Rounds to Binary/Integer if necessary.
     Sets to zero for NonNegativeReals if necessary.
