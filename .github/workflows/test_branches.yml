@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
@@ -56,13 +56,13 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python: ['3.11']
+        python: ['3.12']
         other: [""]
         category: [""]
 
         include:
         - os: ubuntu-latest
-          python: '3.11'
+          python: '3.12'
           TARGET: linux
           PYENV: pip
 
@@ -78,7 +78,7 @@ jobs:
           PACKAGES: glpk
 
         - os: ubuntu-latest
-          python: 3.9
+          python: '3.11'
           other: /conda
           skip_doctest: 1
           TARGET: linux
@@ -86,7 +86,7 @@ jobs:
           PACKAGES:
 
         - os: ubuntu-latest
-          python: 3.8
+          python: 3.9
           other: /mpi
           mpi: 3
           skip_doctest: 1
@@ -112,7 +112,7 @@ jobs:
 
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Configure job parameters
       run: |
@@ -235,6 +235,7 @@ jobs:
       run: |
         python -c 'import sys;print(sys.executable)'
         python -m pip install --cache-dir cache/pip --upgrade pip
+        python -m pip install --cache-dir cache/pip setuptools
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "$EXTRAS" | tail -1`
         PACKAGES="${PYTHON_CORE_PKGS} ${PYTHON_PACKAGES} ${PYOMO_DEPENDENCIES} "
@@ -254,10 +255,16 @@ jobs:
             python -m pip install --cache-dir cache/pip cplex docplex \
                 || echo "WARNING: CPLEX Community Edition is not available"
             python -m pip install --cache-dir cache/pip \
-                -i https://pypi.gurobi.com gurobipy \
+                -i https://pypi.gurobi.com gurobipy==10.0.3 \
                 || echo "WARNING: Gurobi is not available"
             python -m pip install --cache-dir cache/pip xpress \
                 || echo "WARNING: Xpress Community Edition is not available"
+            if [[ ${{matrix.python}} == pypy* ]]; then
+                echo "skipping wntr for pypy"
+            else
+                python -m pip install wntr \
+                    || echo "WARNING: WNTR is not available"
+            fi
         fi
         python -c 'import sys; print("PYTHON_EXE=%s" \
             % (sys.executable,))' >> $GITHUB_ENV
@@ -324,7 +331,7 @@ jobs:
         if test -z "${{matrix.slim}}"; then
             PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
             echo "Installing for $PYVER"
-            for PKG in 'cplex>=12.10' docplex gurobi xpress cyipopt pymumps scip; do
+            for PKG in 'cplex>=12.10' docplex 'gurobi=10.0.3' xpress cyipopt pymumps scip; do
                 echo ""
                 echo "*** Install $PKG ***"
                 # conda can literally take an hour to determine that a
@@ -660,7 +667,7 @@ jobs:
     timeout-minutes: 10
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Set up Python 3.8
       uses: actions/setup-python@v4
@@ -715,7 +722,7 @@ jobs:
 
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       # We need the source for .codecov.yml and running "coverage xml"
 
     #- name: Pip package cache

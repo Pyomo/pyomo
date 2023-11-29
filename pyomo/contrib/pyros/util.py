@@ -427,7 +427,7 @@ def setup_pyros_logger(name=DEFAULT_LOGGER_NAME):
     # default logger: INFO level, with preformatted messages
     current_logger_class = logging.getLoggerClass()
     logging.setLoggerClass(PreformattedLogger)
-    logger = logging.getLogger(DEFAULT_LOGGER_NAME)
+    logger = logging.getLogger(name=name)
     logger.setLevel(logging.INFO)
     logging.setLoggerClass(current_logger_class)
 
@@ -1648,7 +1648,7 @@ class IterationLogRecord:
     first_stage_var_shift : float or None, optional
         Infinity norm of the difference between first-stage
         variable vectors for the current and previous iterations.
-    dr_var_shift : float or None, optional
+    second_stage_var_shift : float or None, optional
         Infinity norm of the difference between decision rule
         variable vectors for the current and previous iterations.
     dr_polishing_success : bool or None, optional
@@ -1680,13 +1680,18 @@ class IterationLogRecord:
         then this is the negative of the objective value
         of the original model.
     first_stage_var_shift : float or None
-        Infinity norm of the difference between first-stage
+        Infinity norm of the relative difference between first-stage
         variable vectors for the current and previous iterations.
+    second_stage_var_shift : float or None
+        Infinity norm of the relative difference between second-stage
+        variable vectors (evaluated subject to the nominal uncertain
+        parameter realization) for the current and previous iterations.
     dr_var_shift : float or None
-        Infinity norm of the difference between decision rule
+        Infinity norm of the relative difference between decision rule
         variable vectors for the current and previous iterations.
+        NOTE: This value is not reported in log messages.
     dr_polishing_success : bool or None
-        True if DR polishing solved successfully, False otherwise.
+        True if DR polishing was solved successfully, False otherwise.
     num_violated_cons : int or None
         Number of performance constraints found to be violated
         during separation step.
@@ -1710,6 +1715,7 @@ class IterationLogRecord:
         "iteration": 5,
         "objective": 13,
         "first_stage_var_shift": 13,
+        "second_stage_var_shift": 13,
         "dr_var_shift": 13,
         "num_violated_cons": 8,
         "max_violation": 13,
@@ -1719,6 +1725,7 @@ class IterationLogRecord:
         "iteration": "Itn",
         "objective": "Objective",
         "first_stage_var_shift": "1-Stg Shift",
+        "second_stage_var_shift": "2-Stg Shift",
         "dr_var_shift": "DR Shift",
         "num_violated_cons": "#CViol",
         "max_violation": "Max Viol",
@@ -1730,6 +1737,7 @@ class IterationLogRecord:
         iteration,
         objective,
         first_stage_var_shift,
+        second_stage_var_shift,
         dr_var_shift,
         dr_polishing_success,
         num_violated_cons,
@@ -1742,6 +1750,7 @@ class IterationLogRecord:
         self.iteration = iteration
         self.objective = objective
         self.first_stage_var_shift = first_stage_var_shift
+        self.second_stage_var_shift = second_stage_var_shift
         self.dr_var_shift = dr_var_shift
         self.dr_polishing_success = dr_polishing_success
         self.num_violated_cons = num_violated_cons
@@ -1756,7 +1765,8 @@ class IterationLogRecord:
             "iteration",
             "objective",
             "first_stage_var_shift",
-            "dr_var_shift",
+            "second_stage_var_shift",
+            # "dr_var_shift",
             "num_violated_cons",
             "max_violation",
             "elapsed_time",
@@ -1774,6 +1784,7 @@ class IterationLogRecord:
                 "iteration": "f'{attr_val:d}'",
                 "objective": "f'{attr_val: .4e}'",
                 "first_stage_var_shift": "f'{attr_val:.4e}'",
+                "second_stage_var_shift": "f'{attr_val:.4e}'",
                 "dr_var_shift": "f'{attr_val:.4e}'",
                 "num_violated_cons": "f'{attr_val:d}'",
                 "max_violation": "f'{attr_val:.4e}'",
@@ -1781,7 +1792,7 @@ class IterationLogRecord:
             }
 
             # qualifier for DR polishing and separation columns
-            if attr_name == "dr_var_shift":
+            if attr_name in ["second_stage_var_shift", "dr_var_shift"]:
                 qual = "*" if not self.dr_polishing_success else ""
             elif attr_name == "num_violated_cons":
                 qual = "+" if not self.all_sep_problems_solved else ""
@@ -1807,6 +1818,7 @@ class IterationLogRecord:
         return "".join(
             f"{header_names_dict[attr]:<{fmt_lengths_dict[attr]}s}"
             for attr in fmt_lengths_dict
+            if attr != "dr_var_shift"
         )
 
     @staticmethod

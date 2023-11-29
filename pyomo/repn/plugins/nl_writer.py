@@ -165,9 +165,9 @@ class NLWriterInfo(object):
     eliminated_vars: List[Tuple[_VarData, NumericExpression]]
 
         The list of variables in the model that were eliminated by the
-        presolve.  each entry is a 2-tuple of (:py:class:`_VarData`,
-        :py:class`NumericExpression`|`float`).  the list is ordered in
-        the necessary order for correct evaluation (i.e., all variables
+        presolve.  Each entry is a 2-tuple of (:py:class:`_VarData`,
+        :py:class`NumericExpression`|`float`).  The list is in the
+        necessary order for correct evaluation (i.e., all variables
         appearing in the expression must either have been sent to the
         solver, or appear *earlier* in this list.
 
@@ -470,12 +470,22 @@ class _SuffixData(object):
                 "not exported as part of the NL file.  "
                 "Skipping."
             )
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(
+                    "Skipped component keys:\n\t"
+                    + "\n\t".join(sorted(map(str, missing_component_data)))
+                )
         if unknown_data:
             logger.warning(
                 f"model contains export suffix '{self.name}' that "
                 f"contains {len(unknown_data)} keys that are not "
                 "Var, Constraint, Objective, or the model.  Skipping."
             )
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(
+                    "Skipped component keys:\n\t"
+                    + "\n\t".join(sorted(map(str, unknown_data)))
+                )
 
 
 class CachingNumericSuffixFinder(SuffixFinder):

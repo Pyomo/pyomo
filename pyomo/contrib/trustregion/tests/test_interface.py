@@ -107,7 +107,7 @@ class TestTrustRegionInterface(unittest.TestCase):
         expr = self.interface.model.c1.expr
         new_expr = self.interface.replaceEF(expr)
         self.assertIsNot(expr, new_expr)
-        self.assertEquals(
+        self.assertEqual(
             str(new_expr),
             'x[0]*z[0]**2 + trf_data.ef_outputs[1]  ==  2.8284271247461903',
         )
@@ -382,17 +382,17 @@ class TestTrustRegionInterface(unittest.TestCase):
         self.interface.data.value_of_ef_inputs[...] = 0
         # Run the solve
         objective, step_norm, feasibility = self.interface.solveModel()
-        self.assertEqual(objective, 5.150744273013601)
-        self.assertEqual(step_norm, 3.393437471478297)
-        self.assertEqual(feasibility, 0.09569982275514467)
+        self.assertAlmostEqual(objective, 5.150744273013601)
+        self.assertAlmostEqual(step_norm, 3.393437471478297)
+        self.assertAlmostEqual(feasibility, 0.09569982275514467)
         self.interface.data.basis_constraint.deactivate()
         # Change the constraint and update the surrogate model
         self.interface.updateSurrogateModel()
         self.interface.data.sm_constraint_basis.activate()
         objective, step_norm, feasibility = self.interface.solveModel()
-        self.assertEqual(objective, 5.15065981284333)
-        self.assertEqual(step_norm, 0.0017225116628372117)
-        self.assertEqual(feasibility, 0.00014665023773349772)
+        self.assertAlmostEqual(objective, 5.15065981284333)
+        self.assertAlmostEqual(step_norm, 0.0017225116628372117)
+        self.assertAlmostEqual(feasibility, 0.00014665023773349772)
 
     @unittest.skipIf(
         not SolverFactory('ipopt').available(False), "The IPOPT solver is not available"
@@ -407,8 +407,8 @@ class TestTrustRegionInterface(unittest.TestCase):
             self.assertEqual(
                 self.interface.initial_decision_bounds[var.name], [var.lb, var.ub]
             )
-        self.assertEqual(objective, 5.150744273013601)
-        self.assertEqual(feasibility, 0.09569982275514467)
+        self.assertAlmostEqual(objective, 5.150744273013601)
+        self.assertAlmostEqual(feasibility, 0.09569982275514467)
         self.assertTrue(self.interface.data.sm_constraint_basis.active)
         self.assertFalse(self.interface.data.basis_constraint.active)
 
