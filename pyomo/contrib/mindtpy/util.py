@@ -1003,7 +1003,7 @@ def set_var_value(v_to, var_val, integer_tolerance, zero_tolerance, ignore_integ
     v_to : Var
         The variable that needs to set value.
     var_val : float
-        The value of v_to variable.
+        The desired value to set for Var v_to.
     integer_tolerance: float
         Tolerance on integral values.
     zero_tolerance: float
