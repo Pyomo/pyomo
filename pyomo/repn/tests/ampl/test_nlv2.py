@@ -1055,40 +1055,6 @@ class Test_NLWriter(unittest.TestCase):
             re.sub(r'\d\.\d\d\]', '#.##]', LOG.getvalue()),
         )
 
-    def test_log_timing(self):
-        # This tests an error possibly reported by #2810
-        m = ConcreteModel()
-        m.x = Var(range(6))
-        m.x[0].domain = pyo.Binary
-        m.x[1].domain = pyo.Integers
-        m.x[2].domain = pyo.Integers
-        m.p = Param(initialize=5, mutable=True)
-        m.o1 = Objective([1, 2], rule=lambda m, i: 1)
-        m.o2 = Objective(expr=m.x[1] * m.x[2])
-        m.c1 = Constraint([1, 2], rule=lambda m, i: sum(m.x.values()) == 1)
-        m.c2 = Constraint(expr=m.p * m.x[1] ** 2 + m.x[2] ** 3 <= 100)
-
-        self.maxDiff = None
-        OUT = io.StringIO()
-        with capture_output() as LOG:
-            with report_timing(level=logging.DEBUG):
-                nl_writer.NLWriter().write(m, OUT)
-        self.assertEqual(
-            """      [+   #.##] Initialized column order
-      [+   #.##] Collected suffixes
-      [+   #.##] Objective o1
-      [+   #.##] Objective o2
-      [+   #.##] Constraint c1
-      [+   #.##] Constraint c2
-      [+   #.##] Categorized model variables: 14 nnz
-      [+   #.##] Set row / column ordering: 6 var [3, 1, 2 R/B/Z], 3 con [2, 1 L/NL]
-      [+   #.##] Generated row/col labels & comments
-      [+   #.##] Wrote NL stream
-      [    #.##] Generated NL representation
-""",
-            re.sub(r'\d\.\d\d\]', '#.##]', LOG.getvalue()),
-        )
-
     def test_linear_constraint_npv_const(self):
         # This tests an error possibly reported by #2810
         m = ConcreteModel()
