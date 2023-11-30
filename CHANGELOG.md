@@ -3,7 +3,7 @@ Pyomo CHANGELOG
 
 
 -------------------------------------------------------------------------------
-Pyomo 6.7.0   (28 Nov 2023)
+Pyomo 6.7.0   (29 Nov 2023)
 -------------------------------------------------------------------------------
 
 - General
@@ -23,6 +23,8 @@ Pyomo 6.7.0   (28 Nov 2023)
   - Ensure templatize_constraint returns an expression (#2983)
   - Prevent multiple applications of the scaling transform (#2979)
 - Solver Interfaces
+  - Remove presolve-eliminated variables from named expressions (#3056)
+  - Improve writer determinism (#3054)
   - Add "writer" for converting linear models to standard matrix form (#3046)
   - NLv2: add linear presolve and general problem scaling support (#3037)
   - Adjust mps writer format for integer variable declaration (#2946)
