@@ -4,12 +4,14 @@ Pyomo is a collection of Python software packages that supports a
 diverse set of optimization capabilities for formulating and analyzing
 optimization models.
 
-The following are highlights of the 6.7 minor release series:
+The following are highlights of the 6.7 release series:
 
  - Added support for Python 3.12
  - Removed support for Python 3.7
+ - New writer for converting linear models to matrix form
  - New packages:
     - latex_printer (print Pyomo models to a LaTeX compatible format)
+ - ...and of course numerous minor bug fixes and performance enhancements
 
 A full list of updates and changes is available in the
 [`CHANGELOG.md`](https://github.com/Pyomo/pyomo/blob/main/CHANGELOG.md).
