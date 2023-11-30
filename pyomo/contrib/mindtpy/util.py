@@ -724,25 +724,6 @@ class GurobiPersistent4MindtPy(GurobiPersistent):
         return f
 
 
-def set_up_logger(config):
-    """Set up the formatter and handler for logger.
-
-    Parameters
-    ----------
-    config : ConfigBlock
-        The specific configurations for MindtPy.
-    """
-    config.logger.handlers.clear()
-    config.logger.propagate = False
-    ch = logging.StreamHandler()
-    ch.setLevel(config.logging_level)
-    # create formatter and add it to the handlers
-    formatter = logging.Formatter('%(message)s')
-    ch.setFormatter(formatter)
-    # add the handlers to logger
-    config.logger.addHandler(ch)
-
-
 def epigraph_reformulation(exp, slack_var_list, constraint_list, use_mcpp, sense):
     """Epigraph reformulation.
 
