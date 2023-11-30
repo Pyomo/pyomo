@@ -69,6 +69,7 @@ class INFO(object):
             self.used_named_expressions,
             self.symbolic_solver_labels,
             True,
+            None,
         )
 
     def __enter__(self):
@@ -1514,7 +1515,6 @@ G0 1
         # Note: bounds on x[1] are:
         #   min(22/3, 82/17, 23/4, -39/-6) == 4.823529411764706
         #   max(2/3, 62/17, 3/4, -19/-6) == 3.6470588235294117
-        print(OUT.getvalue())
         self.assertEqual(
             *nl_diff(
                 """g3 1 1 0	# problem unknown
@@ -1590,6 +1590,83 @@ G0 1
             with LoggingIntercept() as LOG:
                 nlinfo = nl_writer.NLWriter().write(m, OUT, linear_presolve=True)
         self.assertEqual(LOG.getvalue(), "")
+
+    def test_presolve_named_expressions(self):
+        # Test from #3055
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3], initialize=1, bounds=(0, 10))
+        m.subexpr = pyo.Expression(pyo.Integers)
+        m.subexpr[1] = m.x[1] + m.x[2]
+        m.eq = pyo.Constraint(pyo.Integers)
+        m.eq[1] = m.x[1] == 7
+        m.eq[2] = m.x[3] == 0.1 * m.subexpr[1] * m.x[2]
+        m.obj = pyo.Objective(expr=m.x[1] ** 2 + m.x[2] ** 2 + m.x[3] ** 3)
+
+        OUT = io.StringIO()
+        with LoggingIntercept() as LOG:
+            nlinfo = nl_writer.NLWriter().write(
+                m, OUT, symbolic_solver_labels=True, linear_presolve=True
+            )
+        self.assertEqual(LOG.getvalue(), "")
+
+        self.assertEqual(
+            nlinfo.eliminated_vars, [(m.x[1], nl_writer.AMPLRepn(7, {}, None))]
+        )
+
+        self.assertEqual(
+            *nl_diff(
+                """g3 1 1 0	# problem unknown
+ 2 1 1 0 1 	# vars, constraints, objectives, ranges, eqns
+ 1 1 0 0 0 0	# nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0	# network constraints: nonlinear, linear
+ 1 2 1 	# nonlinear vars in constraints, objectives, both
+ 0 0 0 1	# linear network variables; functions; arith, flags
+ 0 0 0 0 0 	# discrete variables: binary, integer, nonlinear (b,c,o)
+ 2 2 	# nonzeros in Jacobian, obj. gradient
+ 5 4	# max name lengths: constraints, variables
+ 0 0 0 1 0	# common exprs: b,c,o,c1,o1
+V2 1 1	#subexpr[1]
+0 1
+n7.0
+C0	#eq[2]
+o16	#-
+o2	#*
+o2	#*
+n0.1
+v2	#subexpr[1]
+v0	#x[2]
+O0 0	#obj
+o54	# sumlist
+3	# (n)
+o5	#^
+n7.0
+n2
+o5	#^
+v0	#x[2]
+n2
+o5	#^
+v1	#x[3]
+n3
+x2	# initial guess
+0 1	#x[2]
+1 1	#x[3]
+r	#1 ranges (rhs's)
+4 0	#eq[2]
+b	#2 bounds (on variables)
+0 0 10	#x[2]
+0 0 10	#x[3]
+k1	#intermediate Jacobian column lengths
+1
+J0 2	#eq[2]
+0 0
+1 1
+G0 2	#obj
+0 0
+1 0
+""",
+                OUT.getvalue(),
+            )
+        )
 
     def test_scaling(self):
         m = pyo.ConcreteModel()
@@ -1698,7 +1775,7 @@ G0 3
         self.assertEqual(LOG.getvalue(), "")
 
         nl2 = OUT.getvalue()
-        print(nl2)
+
         self.assertEqual(
             *nl_diff(
                 """g3 1 1 0	# problem unknown
@@ -1792,7 +1869,7 @@ G0 3
 
         OUT = io.StringIO()
         nl_writer.NLWriter().write(m, OUT, symbolic_solver_labels=True)
-        print(OUT.getvalue())
+
         self.assertEqual(
             *nl_diff(
                 """g3 1 1 0	# problem unknown

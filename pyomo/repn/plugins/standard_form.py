@@ -265,7 +265,7 @@ class _LinearStandardFormCompiler_impl(object):
         initialize_var_map_from_column_order(model, self.config, var_map)
         var_order = {_id: i for i, _id in enumerate(var_map)}
 
-        visitor = LinearRepnVisitor({}, var_map, var_order)
+        visitor = LinearRepnVisitor({}, var_map, var_order, sorter)
 
         timer.toc('Initialized column order', level=logging.DEBUG)
 
