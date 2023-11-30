@@ -57,9 +57,9 @@ c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(5)_:
 -1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(5)_disaggregatedVars__t(A)_
 = 0
 
-c_e__pyomo_gdp_hull_reformulation_disj_xor(B_C_2)_:
-+1 NoClash(B_C_2_0)_binary_indicator_var
-+1 NoClash(B_C_2_1)_binary_indicator_var
+c_e__pyomo_gdp_hull_reformulation_disj_xor(A_B_3)_:
++1 NoClash(A_B_3_0)_binary_indicator_var
++1 NoClash(A_B_3_1)_binary_indicator_var
 = 1
 
 c_e__pyomo_gdp_hull_reformulation_disj_xor(A_C_1)_:
@@ -67,9 +67,9 @@ c_e__pyomo_gdp_hull_reformulation_disj_xor(A_C_1)_:
 +1 NoClash(A_C_1_1)_binary_indicator_var
 = 1
 
-c_e__pyomo_gdp_hull_reformulation_disj_xor(A_B_3)_:
-+1 NoClash(A_B_3_0)_binary_indicator_var
-+1 NoClash(A_B_3_1)_binary_indicator_var
+c_e__pyomo_gdp_hull_reformulation_disj_xor(B_C_2)_:
++1 NoClash(B_C_2_0)_binary_indicator_var
++1 NoClash(B_C_2_1)_binary_indicator_var
 = 1
 
 c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(0)_transformedConstraints(c_0_ub)_:
@@ -184,17 +184,17 @@ bounds
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(5)_disaggregatedVars__t(B)_ <= 19
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(4)_disaggregatedVars__t(A)_ <= 19
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(5)_disaggregatedVars__t(A)_ <= 19
-   0 <= NoClash(B_C_2_0)_binary_indicator_var <= 1
-   0 <= NoClash(B_C_2_1)_binary_indicator_var <= 1
-   0 <= NoClash(A_C_1_0)_binary_indicator_var <= 1
-   0 <= NoClash(A_C_1_1)_binary_indicator_var <= 1
    0 <= NoClash(A_B_3_0)_binary_indicator_var <= 1
    0 <= NoClash(A_B_3_1)_binary_indicator_var <= 1
+   0 <= NoClash(A_C_1_0)_binary_indicator_var <= 1
+   0 <= NoClash(A_C_1_1)_binary_indicator_var <= 1
+   0 <= NoClash(B_C_2_0)_binary_indicator_var <= 1
+   0 <= NoClash(B_C_2_1)_binary_indicator_var <= 1
 binary
-  NoClash(B_C_2_0)_binary_indicator_var
-  NoClash(B_C_2_1)_binary_indicator_var
-  NoClash(A_C_1_0)_binary_indicator_var
-  NoClash(A_C_1_1)_binary_indicator_var
   NoClash(A_B_3_0)_binary_indicator_var
   NoClash(A_B_3_1)_binary_indicator_var
+  NoClash(A_C_1_0)_binary_indicator_var
+  NoClash(A_C_1_1)_binary_indicator_var
+  NoClash(B_C_2_0)_binary_indicator_var
+  NoClash(B_C_2_1)_binary_indicator_var
 end
