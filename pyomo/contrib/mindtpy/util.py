@@ -134,12 +134,12 @@ def add_var_bound(model, config):
         for var in EXPR.identify_variables(c.body):
             if var.has_lb() and var.has_ub():
                 continue
-            elif not var.has_lb():
+            if not var.has_lb():
                 if var.is_integer():
                     var.setlb(-config.integer_var_bound - 1)
                 else:
                     var.setlb(-config.continuous_var_bound - 1)
-            elif not var.has_ub():
+            if not var.has_ub():
                 if var.is_integer():
                     var.setub(config.integer_var_bound)
                 else:
