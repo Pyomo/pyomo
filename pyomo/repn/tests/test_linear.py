@@ -40,9 +40,10 @@ class VisitorConfig(object):
         self.subexpr = {}
         self.var_map = {}
         self.var_order = {}
+        self.sorter = None
 
     def __iter__(self):
-        return iter((self.subexpr, self.var_map, self.var_order))
+        return iter((self.subexpr, self.var_map, self.var_order, self.sorter))
 
 
 def sum_sq(args, fixed, fgh):
@@ -576,8 +577,10 @@ class TestLinear(unittest.TestCase):
         cfg = VisitorConfig()
         repn = LinearRepnVisitor(*cfg).walk_expression(e)
         self.assertEqual(cfg.subexpr, {})
-        self.assertEqual(cfg.var_map, {id(m.x[0]): m.x[0]})
-        self.assertEqual(cfg.var_order, {id(m.x[0]): 0})
+        self.assertEqual(
+            cfg.var_map, {id(m.x[0]): m.x[0], id(m.x[1]): m.x[1], id(m.x[2]): m.x[2]}
+        )
+        self.assertEqual(cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1, id(m.x[2]): 2})
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 0)
         self.assertEqual(repn.linear, {id(m.x[0]): 1})
@@ -588,8 +591,10 @@ class TestLinear(unittest.TestCase):
         cfg = VisitorConfig()
         repn = LinearRepnVisitor(*cfg).walk_expression(e)
         self.assertEqual(cfg.subexpr, {})
-        self.assertEqual(cfg.var_map, {id(m.x[0]): m.x[0]})
-        self.assertEqual(cfg.var_order, {id(m.x[0]): 0})
+        self.assertEqual(
+            cfg.var_map, {id(m.x[0]): m.x[0], id(m.x[1]): m.x[1], id(m.x[2]): m.x[2]}
+        )
+        self.assertEqual(cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1, id(m.x[2]): 2})
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 0)
         self.assertEqual(repn.linear, {id(m.x[0]): 3})
@@ -600,8 +605,10 @@ class TestLinear(unittest.TestCase):
         cfg = VisitorConfig()
         repn = LinearRepnVisitor(*cfg).walk_expression(e)
         self.assertEqual(cfg.subexpr, {})
-        self.assertEqual(cfg.var_map, {id(m.x[0]): m.x[0], id(m.x[1]): m.x[1]})
-        self.assertEqual(cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1})
+        self.assertEqual(
+            cfg.var_map, {id(m.x[0]): m.x[0], id(m.x[1]): m.x[1], id(m.x[2]): m.x[2]}
+        )
+        self.assertEqual(cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1, id(m.x[2]): 2})
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 0)
         self.assertEqual(repn.linear, {id(m.x[0]): 3, id(m.x[1]): 4})
@@ -612,8 +619,10 @@ class TestLinear(unittest.TestCase):
         cfg = VisitorConfig()
         repn = LinearRepnVisitor(*cfg).walk_expression(e)
         self.assertEqual(cfg.subexpr, {})
-        self.assertEqual(cfg.var_map, {id(m.x[0]): m.x[0], id(m.x[1]): m.x[1]})
-        self.assertEqual(cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1})
+        self.assertEqual(
+            cfg.var_map, {id(m.x[0]): m.x[0], id(m.x[1]): m.x[1], id(m.x[2]): m.x[2]}
+        )
+        self.assertEqual(cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1, id(m.x[2]): 2})
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 0)
         self.assertEqual(repn.linear, {id(m.x[0]): 3, id(m.x[1]): 6})
@@ -624,8 +633,10 @@ class TestLinear(unittest.TestCase):
         cfg = VisitorConfig()
         repn = LinearRepnVisitor(*cfg).walk_expression(e)
         self.assertEqual(cfg.subexpr, {})
-        self.assertEqual(cfg.var_map, {id(m.x[0]): m.x[0], id(m.x[1]): m.x[1]})
-        self.assertEqual(cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1})
+        self.assertEqual(
+            cfg.var_map, {id(m.x[0]): m.x[0], id(m.x[1]): m.x[1], id(m.x[2]): m.x[2]}
+        )
+        self.assertEqual(cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1, id(m.x[2]): 2})
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 10)
         self.assertEqual(repn.linear, {id(m.x[0]): 3, id(m.x[1]): 6})
@@ -636,8 +647,10 @@ class TestLinear(unittest.TestCase):
         cfg = VisitorConfig()
         repn = LinearRepnVisitor(*cfg).walk_expression(e)
         self.assertEqual(cfg.subexpr, {})
-        self.assertEqual(cfg.var_map, {id(m.x[0]): m.x[0], id(m.x[1]): m.x[1]})
-        self.assertEqual(cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1})
+        self.assertEqual(
+            cfg.var_map, {id(m.x[0]): m.x[0], id(m.x[1]): m.x[1], id(m.x[2]): m.x[2]}
+        )
+        self.assertEqual(cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1, id(m.x[2]): 2})
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 50)
         self.assertEqual(repn.linear, {id(m.x[0]): 3, id(m.x[1]): 6})
@@ -648,8 +661,10 @@ class TestLinear(unittest.TestCase):
         cfg = VisitorConfig()
         repn = LinearRepnVisitor(*cfg).walk_expression(e)
         self.assertEqual(cfg.subexpr, {})
-        self.assertEqual(cfg.var_map, {id(m.x[0]): m.x[0], id(m.x[1]): m.x[1]})
-        self.assertEqual(cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1})
+        self.assertEqual(
+            cfg.var_map, {id(m.x[0]): m.x[0], id(m.x[1]): m.x[1], id(m.x[2]): m.x[2]}
+        )
+        self.assertEqual(cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1, id(m.x[2]): 2})
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 0)
         self.assertStructuredAlmostEqual(
@@ -663,8 +678,10 @@ class TestLinear(unittest.TestCase):
         cfg = VisitorConfig()
         repn = LinearRepnVisitor(*cfg).walk_expression(e)
         self.assertEqual(cfg.subexpr, {})
-        self.assertEqual(cfg.var_map, {id(m.x[0]): m.x[0], id(m.x[1]): m.x[1]})
-        self.assertEqual(cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1})
+        self.assertEqual(
+            cfg.var_map, {id(m.x[0]): m.x[0], id(m.x[1]): m.x[1], id(m.x[2]): m.x[2]}
+        )
+        self.assertEqual(cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1, id(m.x[2]): 2})
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 10)
         self.assertStructuredAlmostEqual(
@@ -677,8 +694,8 @@ class TestLinear(unittest.TestCase):
         cfg = VisitorConfig()
         repn = LinearRepnVisitor(*cfg).walk_expression(e)
         self.assertEqual(cfg.subexpr, {})
-        self.assertEqual(cfg.var_map, {id(m.x[1]): m.x[1]})
-        self.assertEqual(cfg.var_order, {id(m.x[1]): 0})
+        self.assertEqual(cfg.var_map, {id(m.x[1]): m.x[1], id(m.x[2]): m.x[2]})
+        self.assertEqual(cfg.var_order, {id(m.x[1]): 0, id(m.x[2]): 1})
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 40)
         self.assertStructuredAlmostEqual(repn.linear, {id(m.x[1]): InvalidNumber(nan)})
