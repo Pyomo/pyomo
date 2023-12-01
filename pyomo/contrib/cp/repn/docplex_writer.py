@@ -1005,6 +1005,9 @@ def collect_valid_components(model, active=True, sort=None, valid=set(), targets
     unrecognized = {}
     components = {k: [] for k in targets}
     for obj in model.component_data_objects(active=True, descend_into=True, sort=sort):
+        # HACK around #3045
+        if not hasattr(obj, 'ctype'):
+            continue
         ctype = obj.ctype
         if ctype in components:
             components[ctype].append(obj)
