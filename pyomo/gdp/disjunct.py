@@ -564,16 +564,18 @@ class _DisjunctionData(ActiveComponentData):
             # IndexedDisjunct indexed by Any which has already been transformed,
             # the new Disjuncts are Blocks already. This catches them for who
             # they are anyway.
-            if isinstance(e, _DisjunctData):
-                self.disjuncts.append(e)
-                continue
-            # The user was lazy and gave us a single constraint
-            # expression or an iterable of expressions
-            expressions = []
-            if hasattr(e, '__iter__'):
+            if hasattr(e, 'is_component_type') and e.is_component_type():
+                if e.ctype == Disjunct and not e.is_indexed():
+                    self.disjuncts.append(e)
+                    continue
+                e_iter = [e]
+            elif hasattr(e, '__iter__'):
                 e_iter = e
             else:
                 e_iter = [e]
+            # The user was lazy and gave us a single constraint
+            # expression or an iterable of expressions
+            expressions = []
             for _tmpe in e_iter:
                 try:
                     if _tmpe.is_expression_type():
@@ -581,13 +583,12 @@ class _DisjunctionData(ActiveComponentData):
                         continue
                 except AttributeError:
                     pass
-                msg = "\n\tin %s" % (type(e),) if e_iter is e else ""
+                msg = " in '%s'" % (type(e).__name__,) if e_iter is e else ""
                 raise ValueError(
-                    "Unexpected term for Disjunction %s.\n"
-                    "\tExpected a Disjunct object, relational expression, "
-                    "or iterable of\n"
-                    "\trelational expressions but got %s%s"
-                    % (self.name, type(_tmpe), msg)
+                    "Unexpected term for Disjunction '%s'.\n"
+                    "    Expected a Disjunct object, relational expression, "
+                    "or iterable of\n    relational expressions but got '%s'%s"
+                    % (self.name, type(_tmpe).__name__, msg)
                 )
 
             comp = self.parent_component()
