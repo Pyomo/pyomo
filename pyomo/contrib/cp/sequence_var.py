@@ -122,6 +122,21 @@ class SequenceVar(ActiveIndexedComponent):
             )
             raise
 
+    def _pprint(self):
+        """Print component information."""
+        headers = [
+            ("Size", len(self)),
+            ("Index", self._index_set if self.is_indexed() else None),
+        ]
+        return (
+            headers,
+            self._data.items(),
+            ("IntervalVars",),
+            lambda k, v: [
+                '[' + ', '.join(iv.name for iv in v.interval_vars) + ']',
+            ]
+        )
+
 class ScalarSequenceVar(_SequenceVarData, SequenceVar):
     def __init__(self, *args, **kwds):
         _SequenceVarData.__init__(self, component=self)
