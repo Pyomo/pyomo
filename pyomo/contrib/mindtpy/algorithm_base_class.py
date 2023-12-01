@@ -125,6 +125,9 @@ class _MindtPyAlgorithm(object):
         self.log_formatter = (
             ' {:>9}   {:>15}   {:>15g}   {:>12g}   {:>12g}   {:>7.2%}   {:>7.2f}'
         )
+        self.termination_condition_log_formatter = (
+            ' {:>9}   {:>15}   {:>15}   {:>12g}   {:>12g}   {:>7.2%}   {:>7.2f}'
+        )
         self.fixed_nlp_log_formatter = (
             '{:1}{:>9}   {:>15}   {:>15g}   {:>12g}   {:>12g}   {:>7.2%}   {:>7.2f}'
         )
@@ -1919,11 +1922,6 @@ class _MindtPyAlgorithm(object):
         """
         # If we have found a valid feasible solution, we take that. If not, we can at least use the dual bound.
         MindtPy = main_mip.MindtPy_utils
-        self.config.logger.info(
-            'Unable to optimize MILP main problem '
-            'within time limit. '
-            'Using current solver feasible solution.'
-        )
         copy_var_list_values(
             main_mip.MindtPy_utils.variable_list,
             self.fixed_nlp.MindtPy_utils.variable_list,
@@ -1932,10 +1930,10 @@ class _MindtPyAlgorithm(object):
         )
         self.update_suboptimal_dual_bound(main_mip_results)
         self.config.logger.info(
-            self.log_formatter.format(
+            self.termination_condition_log_formatter.format(
                 self.mip_iter,
                 'MILP',
-                value(MindtPy.mip_obj.expr),
+                'maxTimeLimit',
                 self.primal_bound,
                 self.dual_bound,
                 self.rel_gap,
@@ -1962,8 +1960,18 @@ class _MindtPyAlgorithm(object):
         # to the constraints, and deactivated for the linear main problem.
         config = self.config
         MindtPy = main_mip.MindtPy_utils
+        config.logger.info(
+            self.termination_condition_log_formatter.format(
+                self.mip_iter,
+                'MILP',
+                'Unbounded',
+                self.primal_bound,
+                self.dual_bound,
+                self.rel_gap,
+                get_main_elapsed_time(self.timing),
+            )
+        )
         config.logger.warning(
-            'main MILP was unbounded. '
             'Resolving with arbitrary bound values of (-{0:.10g}, {0:.10g}) on the objective. '
             'You can change this bound with the option obj_bound.'.format(
                 config.obj_bound
