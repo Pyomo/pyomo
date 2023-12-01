@@ -557,9 +557,14 @@ class NumericRange(object):
                             NumericRange(t.start, start, 0, (t.closed[0], False))
                         )
                     if s.step:  # i.e., not a single point
-                        for i in range(int(start // s.step), int(end // s.step)):
+                        for i in range(int((end - start) // s.step)):
                             _new_subranges.append(
-                                NumericRange(i * s.step, (i + 1) * s.step, 0, '()')
+                                NumericRange(
+                                    start + i * s.step,
+                                    start + (i + 1) * s.step,
+                                    0,
+                                    '()',
+                                )
                             )
                     if t.end > end:
                         _new_subranges.append(
@@ -605,7 +610,7 @@ class NumericRange(object):
                         )
                     elif t_max == s_max and t_c[1] and not s_c[1]:
                         _new_subranges.append(NumericRange(t_max, t_max, 0))
-                _this = _new_subranges
+            _this = _new_subranges
         return _this
 
     def range_intersection(self, other_ranges):
