@@ -1530,8 +1530,8 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertEqual(i[-1], 0)
         with self.assertRaisesRegex(
             IndexError,
-            "valid index values for Sets are "
-            r"\[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]",
+            "Accessing Pyomo Sets by position is 1-based: valid Set positional "
+            r"index values are \[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]",
         ):
             i[0]
         with self.assertRaisesRegex(IndexError, "OrderedSetOf index out of range"):
@@ -1589,8 +1589,8 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertEqual(i[-1], 0)
         with self.assertRaisesRegex(
             IndexError,
-            "valid index values for Sets are "
-            r"\[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]",
+            "Accessing Pyomo Sets by position is 1-based: valid Set positional "
+            r"index values are \[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]",
         ):
             i[0]
         with self.assertRaisesRegex(IndexError, "OrderedSetOf index out of range"):
@@ -1752,8 +1752,8 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
             self.assertEqual(r[i + 1], v)
         with self.assertRaisesRegex(
             IndexError,
-            "valid index values for Sets are "
-            r"\[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]",
+            "Accessing Pyomo Sets by position is 1-based: valid Set positional "
+            r"index values are \[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]",
         ):
             r[0]
         with self.assertRaisesRegex(
@@ -1769,8 +1769,8 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
             self.assertEqual(r[i + 1], v)
         with self.assertRaisesRegex(
             IndexError,
-            "valid index values for Sets are "
-            r"\[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]",
+            "Accessing Pyomo Sets by position is 1-based: valid Set positional "
+            r"index values are \[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]",
         ):
             r[0]
         with self.assertRaisesRegex(
@@ -4191,10 +4191,10 @@ class TestSet(unittest.TestCase):
         m.I = [1, 3, 2]
         self.assertEqual(m.I[2], 3)
         with self.assertRaisesRegex(
-            IndexError, "I indices must be integers, not float"
+            IndexError, "Set 'I' positional indices must be integers, not float"
         ):
             m.I[2.5]
-        with self.assertRaisesRegex(IndexError, "I indices must be integers, not str"):
+        with self.assertRaisesRegex(IndexError, "Set 'I' positional indices must be integers, not str"):
             m.I['a']
 
     def test_add_filter_validate(self):

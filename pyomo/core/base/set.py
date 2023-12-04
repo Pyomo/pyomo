@@ -1584,28 +1584,26 @@ class _OrderedSetMixin(object):
         # implementation does not guarantee that the index is valid (it
         # could be outside of abs(i) <= len(self)).
         try:
-            if item != int(item):
-                raise IndexError(
-                    "%s indices must be integers, not %s"
-                    % (self.name, type(item).__name__)
-                )
-            item = int(item)
+            _item = int(item)
+            if item != _item:
+                raise IndexError()
         except:
             raise IndexError(
-                "%s indices must be integers, not %s" % (self.name, type(item).__name__)
-            )
+                f"Set '{self.name}' positional indices must be integers, "
+                f"not {type(item).__name__}"
+            ) from None
 
-        if item >= 1:
-            return item - 1
-        elif item < 0:
-            item += len(self)
-            if item < 0:
-                raise IndexError("%s index out of range" % (self.name,))
-            return item
+        if _item >= 1:
+            return _item - 1
+        elif _item < 0:
+            _item += len(self)
+            if _item < 0:
+                raise IndexError(f"{self.name} index out of range")
+            return _item
         else:
             raise IndexError(
-                "Pyomo Sets are 1-indexed: valid index values for Sets are "
-                "[1 .. len(Set)] or [-1 .. -len(Set)]"
+                "Accessing Pyomo Sets by position is 1-based: valid Set positional "
+                "index values are [1 .. len(Set)] or [-1 .. -len(Set)]"
             )
 
 
