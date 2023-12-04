@@ -1,7 +1,7 @@
 from pyomo.solver.base import PersistentSolverBase
 from pyomo.solver.util import PersistentSolverUtils
 from pyomo.solver.config import SolverConfig
-from pyomo.solver.results import Results, TerminationCondition
+from pyomo.solver.results import Results, TerminationCondition, SolutionStatus
 from pyomo.solver.solution import PersistentSolutionLoader
 from pyomo.core.expr.numeric_expr import (
     ProductExpression,
@@ -122,7 +122,7 @@ class Wntr(PersistentSolverUtils, PersistentSolverBase):
         options.update(self.wntr_options)
         opt = wntr.sim.solvers.NewtonSolver(options)
 
-        if self.config.stream_solver:
+        if self.config.tee:
             ostream = sys.stdout
         else:
             ostream = None
@@ -139,13 +139,12 @@ class Wntr(PersistentSolverUtils, PersistentSolverBase):
         tf = time.time()
 
         results = WntrResults(self)
-        results.wallclock_time = tf - t0
+        results.timing_info.wall_time = tf - t0
         if status == wntr.sim.solvers.SolverStatus.converged:
-            results.termination_condition = TerminationCondition.optimal
+            results.termination_condition = TerminationCondition.convergenceCriteriaSatisfied
+            results.solution_status = SolutionStatus.optimal
         else:
             results.termination_condition = TerminationCondition.error
-        results.best_feasible_objective = None
-        results.best_objective_bound = None
 
         if self.config.load_solution:
             if status == wntr.sim.solvers.SolverStatus.converged:
@@ -157,7 +156,7 @@ class Wntr(PersistentSolverUtils, PersistentSolverBase):
                     'A feasible solution was not found, so no solution can be loaded.'
                     'Please set opt.config.load_solution=False and check '
                     'results.termination_condition and '
-                    'results.best_feasible_objective before loading a solution.'
+                    'results.incumbent_objective before loading a solution.'
                 )
         return results
 
