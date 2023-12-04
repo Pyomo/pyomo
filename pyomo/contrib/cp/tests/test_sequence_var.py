@@ -25,6 +25,15 @@ class TestScalarSequenceVar(unittest.TestCase):
         self.assertIsInstance(m.i.interval_vars, list)
         self.assertEqual(len(m.i.interval_vars), 0)
 
+        m.iv1 = IntervalVar()
+        m.iv2 = IntervalVar()
+        m.i.set_value(expr=[m.iv1, m.iv2])
+
+        self.assertIsInstance(m.i.interval_vars, list)
+        self.assertEqual(len(m.i.interval_vars), 2)
+        self.assertIs(m.i.interval_vars[0], m.iv1)
+        self.assertIs(m.i.interval_vars[1], m.iv2)
+
     def get_model(self):
         m = ConcreteModel()
         m.S = Set(initialize=range(3))
@@ -52,6 +61,27 @@ seq : Size=1, Index=None
             """.strip()
         )
 
+    def test_interval_vars_not_a_list(self):
+        m = self.get_model()
+
+        with self.assertRaisesRegex(
+                ValueError,
+                "'expr' for SequenceVar must be a list of IntervalVars. " 
+                "Encountered type '<class 'int'>' constructing 'seq2'"
+        ):
+            m.seq2 = SequenceVar(expr=1)
+
+    def test_interval_vars_list_includes_things_that_are_not_interval_vars(self):
+        m = self.get_model()
+
+        with self.assertRaisesRegex(
+                ValueError,
+                "The SequenceVar 'expr' argument must be a list of "
+                "IntervalVars. The 'expr' for SequenceVar 'seq2' included "
+                "an object of type '<class 'int'>'"
+        ):
+            m.seq2 = SequenceVar(expr=m.i)
+
 class TestIndexedSequenceVar(unittest.TestCase):
     def test_initialize_with_not_data(self):
         m = ConcreteModel()
@@ -61,6 +91,16 @@ class TestIndexedSequenceVar(unittest.TestCase):
         for j in [1, 2]:
             self.assertIsInstance(m.i[j].interval_vars, list)
             self.assertEqual(len(m.i[j].interval_vars), 0)
+
+        m.iv = IntervalVar()
+        m.iv2 = IntervalVar([0, 1])
+        m.i[2] = [m.iv] + [m.iv2[i] for i in [0, 1]]
+
+        self.assertEqual(len(m.i[2].interval_vars), 3)
+        self.assertEqual(len(m.i[1].interval_vars), 0)
+        self.assertIs(m.i[2].interval_vars[0], m.iv)
+        for i in [0, 1]:
+            self.assertIs(m.i[2].interval_vars[i + 1], m.iv2[i])
 
     def make_model(self):
         m = ConcreteModel()

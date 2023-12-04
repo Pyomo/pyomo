@@ -42,7 +42,7 @@ class _SequenceVarData(ActiveComponentData):
     def set_value(self, expr):
         # We'll demand expr be a list for now--it needs to be ordered so this
         # doesn't seem like too much to ask
-        if expr.__class__ is not list:
+        if not hasattr(expr, '__iter__'):
             raise ValueError(
                 "'expr' for SequenceVar must be a list of IntervalVars. "
                 "Encountered type '%s' constructing '%s'" % (type(expr),
@@ -88,9 +88,9 @@ class SequenceVar(ActiveIndexedComponent):
         obj._index = index
 
         if self._init_rule is not None:
-            obj.interval_vars = self._init_rule(parent, index)
+            obj.set_value(self._init_rule(parent, index))
         if self._init_expr is not None:
-            obj.interval_vars = self._init_expr
+            obj.set_value(self._init_expr)
 
         return obj
 
