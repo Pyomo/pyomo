@@ -2021,7 +2021,7 @@ class Set(IndexedComponent):
         filter=None,
         validate=None,
         name=None,
-        doc=None
+        doc=None,
     ):
         ...
 
@@ -2859,7 +2859,7 @@ class RangeSet(Component):
         filter=None,
         validate=None,
         name=None,
-        doc=None
+        doc=None,
     ):
         ...
 
@@ -2876,7 +2876,7 @@ class RangeSet(Component):
         filter=None,
         validate=None,
         name=None,
-        doc=None
+        doc=None,
     ):
         ...
 
@@ -2890,7 +2890,7 @@ class RangeSet(Component):
         filter=None,
         validate=None,
         name=None,
-        doc=None
+        doc=None,
     ):
         ...
 

@@ -4194,7 +4194,9 @@ class TestSet(unittest.TestCase):
             IndexError, "Set 'I' positional indices must be integers, not float"
         ):
             m.I[2.5]
-        with self.assertRaisesRegex(IndexError, "Set 'I' positional indices must be integers, not str"):
+        with self.assertRaisesRegex(
+            IndexError, "Set 'I' positional indices must be integers, not str"
+        ):
             m.I['a']
 
     def test_add_filter_validate(self):

@@ -3396,7 +3396,7 @@ class TestSetErrors(PyomoModel):
             a[0]
         a.construct()
         with self.assertRaisesRegex(
-                IndexError, "Accessing Pyomo Sets by position is 1-based"
+            IndexError, "Accessing Pyomo Sets by position is 1-based"
         ):
             a[0]
         self.assertEqual(a[1], 2)
