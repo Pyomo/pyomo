@@ -2663,12 +2663,16 @@ A : Size=1, Index=None, Ordered=True
 
         self.assertEqual(
             list(x.ranges()),
-            list(RangeSet(ranges=[
-                NR(0, 1, 0, (True, False)),
-                NR(1, 3, 0, (False, False)),
-                NR(3, 5, 0, (False, False)),
-                NR(5, 6, 0, (False, True)),
-            ]).ranges()),
+            list(
+                RangeSet(
+                    ranges=[
+                        NR(0, 1, 0, (True, False)),
+                        NR(1, 3, 0, (False, False)),
+                        NR(3, 5, 0, (False, False)),
+                        NR(5, 6, 0, (False, True)),
+                    ]
+                ).ranges()
+            ),
         )
 
 
