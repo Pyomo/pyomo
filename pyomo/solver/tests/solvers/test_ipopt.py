@@ -13,12 +13,12 @@
 import pyomo.environ as pyo
 from pyomo.common.fileutils import ExecutableData
 from pyomo.common.config import ConfigDict
-from pyomo.solver.IPOPT import IPOPTConfig
+from pyomo.solver.ipopt import ipoptConfig
 from pyomo.solver.factory import SolverFactory
 from pyomo.common import unittest
 
 
-class TestIPOPT(unittest.TestCase):
+class TestIpopt(unittest.TestCase):
     def create_model(self):
         model = pyo.ConcreteModel()
         model.x = pyo.Var(initialize=1.5)
@@ -30,9 +30,9 @@ class TestIPOPT(unittest.TestCase):
         model.obj = pyo.Objective(rule=rosenbrock, sense=pyo.minimize)
         return model
 
-    def test_IPOPT_config(self):
+    def test_ipopt_config(self):
         # Test default initialization
-        config = IPOPTConfig()
+        config = ipoptConfig()
         self.assertTrue(config.load_solution)
         self.assertIsInstance(config.solver_options, ConfigDict)
         print(type(config.executable))
