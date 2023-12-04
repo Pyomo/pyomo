@@ -11,6 +11,7 @@
 
 import os
 import subprocess
+import datetime
 import io
 import sys
 from typing import Mapping
@@ -50,7 +51,7 @@ class SolverError(PyomoException):
     pass
 
 
-class IPOPTConfig(SolverConfig):
+class ipoptConfig(SolverConfig):
     def __init__(
         self,
         description=None,
@@ -84,7 +85,7 @@ class IPOPTConfig(SolverConfig):
         )
 
 
-class IPOPTSolutionLoader(SolutionLoaderBase):
+class ipoptSolutionLoader(SolutionLoaderBase):
     pass
 
 
@@ -148,9 +149,9 @@ ipopt_command_line_options = {
 }
 
 
-@SolverFactory.register('ipopt_v2', doc='The IPOPT NLP solver (new interface)')
-class IPOPT(SolverBase):
-    CONFIG = IPOPTConfig()
+@SolverFactory.register('ipopt_v2', doc='The ipopt NLP solver (new interface)')
+class ipopt(SolverBase):
+    CONFIG = ipoptConfig()
 
     def __init__(self, **kwds):
         self._config = self.CONFIG(kwds)
@@ -193,7 +194,7 @@ class IPOPT(SolverBase):
             if k not in ipopt_command_line_options:
                 f.write(str(k) + ' ' + str(val) + '\n')
 
-    def _create_command_line(self, basename: str, config: IPOPTConfig):
+    def _create_command_line(self, basename: str, config: ipoptConfig):
         cmd = [
             str(config.executable),
             basename + '.nl',
@@ -202,8 +203,8 @@ class IPOPT(SolverBase):
         ]
         if 'option_file_name' in config.solver_options:
             raise ValueError(
-                'Use IPOPT.config.temp_dir to specify the name of the options file. '
-                'Do not use IPOPT.config.solver_options["option_file_name"].'
+                'Use ipopt.config.temp_dir to specify the name of the options file. '
+                'Do not use ipopt.config.solver_options["option_file_name"].'
             )
         self.ipopt_options = dict(config.solver_options)
         if config.time_limit is not None and 'max_cpu_time' not in self.ipopt_options:
@@ -214,25 +215,15 @@ class IPOPT(SolverBase):
         return cmd
 
     def solve(self, model, **kwds):
+        # Begin time tracking
+        start_timestamp = datetime.datetime.now(datetime.timezone.utc)
         # Check if solver is available
         avail = self.available()
         if not avail:
             raise SolverError(f'Solver {self.__class__} is not available ({avail}).')
         # Update configuration options, based on keywords passed to solve
-        config: IPOPTConfig = self.config(kwds.pop('options', {}))
+        config: ipoptConfig = self.config(kwds.pop('options', {}))
         config.set_value(kwds)
-        # Get a copy of the environment to pass to the subprocess
-        env = os.environ.copy()
-        if 'PYOMO_AMPLFUNC' in env:
-            env['AMPLFUNC'] = "\n".join(
-                filter(
-                    None, (env.get('AMPLFUNC', None), env.get('PYOMO_AMPLFUNC', None))
-                )
-            )
-        # Need to add check for symbolic_solver_labels; may need to generate up
-        # to three files for nl, row, col, if ssl == True
-        # What we have here may or may not work with IPOPT; will find out when
-        # we try to run it.
         with TempfileManager.new_context() as tempfile:
             if config.temp_dir is None:
                 dname = tempfile.mkdtemp()
@@ -248,24 +239,30 @@ class IPOPT(SolverBase):
             with open(basename + '.nl', 'w') as nl_file, open(
                 basename + '.row', 'w'
             ) as row_file, open(basename + '.col', 'w') as col_file:
-                self.info = self._writer.write(
+                nl_info = self._writer.write(
                     model,
                     nl_file,
                     row_file,
                     col_file,
                     symbolic_solver_labels=config.symbolic_solver_labels,
                 )
+            # Get a copy of the environment to pass to the subprocess
+            env = os.environ.copy()
+            if nl_info.external_function_libraries:
+                if env.get('AMPLFUNC'):
+                    nl_info.external_function_libraries.append(env.get('AMPLFUNC'))
+                env['AMPLFUNC'] = "\n".join(nl_info.external_function_libraries)
             symbol_map = self._symbol_map = SymbolMap()
             labeler = NumericLabeler('component')
-            for v in self.info.variables:
+            for v in nl_info.variables:
                 symbol_map.getSymbol(v, labeler)
-            for c in self.info.constraints:
+            for c in nl_info.constraints:
                 symbol_map.getSymbol(c, labeler)
             with open(basename + '.opt', 'w') as opt_file:
                 self._write_options_file(
                     ostream=opt_file, options=config.solver_options
                 )
-            # Call IPOPT - passing the files via the subprocess
+            # Call ipopt - passing the files via the subprocess
             cmd = self._create_command_line(basename=basename, config=config)
 
             # this seems silly, but we have to give the subprocess slightly longer to finish than
@@ -277,13 +274,15 @@ class IPOPT(SolverBase):
             else:
                 timeout = None
 
-            ostreams = [
-                LogStream(
-                    level=self.config.log_level, logger=self.config.solver_output_logger
-                )
-            ]
-            if self.config.tee:
+            ostreams = [io.StringIO()]
+            if config.tee:
                 ostreams.append(sys.stdout)
+            else:
+                ostreams.append(
+                    LogStream(
+                        level=config.log_level, logger=config.solver_output_logger
+                    )
+                )
             with TeeStream(*ostreams) as t:
                 process = subprocess.run(
                     cmd,
@@ -293,16 +292,19 @@ class IPOPT(SolverBase):
                     stdout=t.STDOUT,
                     stderr=t.STDERR,
                 )
+                # This is the stuff we need to parse to get the iterations
+                # and time
+                iters, solver_time = self._parse_ipopt_output(ostreams[0])
 
             if process.returncode != 0:
                 results = Results()
                 results.termination_condition = TerminationCondition.error
                 results.solution_loader = SolutionLoader(None, None, None, None)
             else:
-                # TODO: Make a context manager out of this and open the file
-                # to pass to the results, instead of doing this thing.
                 with open(basename + '.sol', 'r') as sol_file:
-                    results = self._parse_solution(sol_file, self.info)
+                    results = self._parse_solution(sol_file, nl_info)
+                results.iteration_count = iters
+                results.timing_info.solver_wall_time = solver_time
 
         if (
             config.raise_exception_on_nonoptimal_result
@@ -340,10 +342,10 @@ class IPOPT(SolverBase):
 
         if results.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}:
             if config.load_solution:
-                results.incumbent_objective = value(self.info.objectives[0])
+                results.incumbent_objective = value(nl_info.objectives[0])
             else:
                 results.incumbent_objective = replace_expressions(
-                    self.info.objectives[0].expr,
+                    nl_info.objectives[0].expr,
                     substitution_map={
                         id(v): val
                         for v, val in results.solution_loader.get_primals().items()
@@ -352,7 +354,42 @@ class IPOPT(SolverBase):
                     remove_named_expressions=True,
                 )
 
+        # Capture/record end-time / wall-time
+        end_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        results.timing_info.start_timestamp = start_timestamp
+        results.timing_info.wall_time = (
+            end_timestamp - start_timestamp
+        ).total_seconds()
         return results
+
+    def _parse_ipopt_output(self, stream: io.StringIO):
+        """
+        Parse an IPOPT output file and return:
+
+        * number of iterations
+        * time in IPOPT
+
+        """
+
+        iters = None
+        time = None
+        # parse the output stream to get the iteration count and solver time
+        for line in stream.getvalue().splitlines():
+            if line.startswith("Number of Iterations....:"):
+                tokens = line.split()
+                iters = int(tokens[3])
+            elif line.startswith(
+                "Total CPU secs in IPOPT (w/o function evaluations)   ="
+            ):
+                tokens = line.split()
+                time = float(tokens[9])
+            elif line.startswith(
+                "Total CPU secs in NLP function evaluations           ="
+            ):
+                tokens = line.split()
+                time += float(tokens[8])
+
+        return iters, time
 
     def _parse_solution(self, instream: io.TextIOBase, nl_info: NLWriterInfo):
         suffixes_to_read = ['dual', 'ipopt_zL_out', 'ipopt_zU_out']

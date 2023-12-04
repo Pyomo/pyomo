@@ -228,9 +228,11 @@ class Results(ConfigDict):
         )
         self.timing_info: ConfigDict = self.declare('timing_info', ConfigDict())
 
-        self.timing_info.start_time: datetime = self.timing_info.declare(
-            'start_time', ConfigValue(domain=Datetime)
+        self.timing_info.start_timestamp: datetime = self.timing_info.declare(
+            'start_timestamp', ConfigValue(domain=Datetime)
         )
+        # wall_time is the actual standard (until Michael complains) that is
+        # required for everyone. This is from entry->exit of the solve method.
         self.timing_info.wall_time: Optional[float] = self.timing_info.declare(
             'wall_time', ConfigValue(domain=NonNegativeFloat)
         )
