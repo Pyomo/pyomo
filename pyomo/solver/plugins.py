@@ -11,10 +11,10 @@
 
 
 from .factory import SolverFactory
-from .IPOPT import IPOPT
+from .ipopt import ipopt
 
 
 def load():
     SolverFactory.register(name='ipopt_v2', doc='The IPOPT NLP solver (new interface)')(
-        IPOPT
+        ipopt
     )
