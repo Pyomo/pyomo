@@ -1,6 +1,6 @@
 from pyomo.solver.base import PersistentSolverBase
 from pyomo.solver.util import PersistentSolverUtils
-from pyomo.solver.config import SolverConfig, ConfigValue
+from pyomo.solver.config import SolverConfig
 from pyomo.solver.results import Results, TerminationCondition
 from pyomo.solver.solution import PersistentSolutionLoader
 from pyomo.core.expr.numeric_expr import (
@@ -33,7 +33,6 @@ from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
 from pyomo.common.dependencies import attempt_import
 from pyomo.core.staleflag import StaleFlagManager
-from pyomo.contrib.appsi.cmodel import cmodel, cmodel_available
 
 wntr, wntr_available = attempt_import('wntr')
 import logging
@@ -209,8 +208,6 @@ class Wntr(PersistentSolverUtils, PersistentSolverBase):
             )
         self._reinit()
         self._model = model
-        if self.use_extensions and cmodel_available:
-            self._expr_types = cmodel.PyomoExprTypes()
 
         if self.config.symbolic_solver_labels:
             self._labeler = TextLabeler()
