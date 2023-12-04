@@ -1,11 +1,8 @@
-from pyomo.contrib.appsi.base import (
-    PersistentBase,
-    PersistentSolver,
-    SolverConfig,
-    Results,
-    TerminationCondition,
-    PersistentSolutionLoader,
-)
+from pyomo.solver.base import PersistentSolverBase
+from pyomo.solver.util import PersistentSolverUtils
+from pyomo.solver.config import SolverConfig, ConfigValue
+from pyomo.solver.results import Results, TerminationCondition
+from pyomo.solver.solution import PersistentSolutionLoader
 from pyomo.core.expr.numeric_expr import (
     ProductExpression,
     DivisionExpression,
@@ -73,7 +70,7 @@ class WntrResults(Results):
         self.solution_loader = PersistentSolutionLoader(solver=solver)
 
 
-class Wntr(PersistentBase, PersistentSolver):
+class Wntr(PersistentSolverUtils, PersistentSolverBase):
     def __init__(self, only_child_vars=True):
         super().__init__(only_child_vars=only_child_vars)
         self._config = WntrConfig()

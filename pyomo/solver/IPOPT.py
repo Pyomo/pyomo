@@ -21,7 +21,7 @@ from pyomo.common.config import ConfigValue, NonNegativeInt
 from pyomo.common.errors import PyomoException
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.base.label import NumericLabeler
-from pyomo.repn.plugins.nl_writer import NLWriter, NLWriterInfo
+from pyomo.repn.plugins.nl_writer import NLWriter, NLWriterInfo, AMPLRepn
 from pyomo.solver.base import SolverBase, SymbolMap
 from pyomo.solver.config import SolverConfig
 from pyomo.solver.factory import SolverFactory
@@ -156,6 +156,8 @@ class ipopt(SolverBase):
     def __init__(self, **kwds):
         self._config = self.CONFIG(kwds)
         self._writer = NLWriter()
+        self._writer.config.skip_trivial_constraints = True
+        self._writer.config.linear_presolve = True
         self.ipopt_options = self._config.solver_options
 
     def available(self):
@@ -413,6 +415,14 @@ class ipopt(SolverBase):
                     if abs(zu) > abs(rc[v_id][1]):
                         rc[v_id] = (v, zu)
 
+            if len(nl_info.eliminated_vars) > 0:
+                sub_map = {k: v[1] for k, v in sol_data.primals.items()}
+                for v, v_expr in nl_info.eliminated_vars:
+                    val = evaluate_ampl_repn(v_expr, sub_map)
+                    v_id = id(v)
+                    sub_map[v_id] = val
+                    sol_data.primals[v_id] = (v, val)
+
             res.solution_loader = SolutionLoader(
                 primals=sol_data.primals,
                 duals=sol_data.duals,
@@ -421,3 +431,14 @@ class ipopt(SolverBase):
             )
 
         return res
+
+
+def evaluate_ampl_repn(repn: AMPLRepn, sub_map):
+    assert not repn.nonlinear
+    assert repn.nl is None
+    val = repn.const
+    if repn.linear is not None:
+        for v_id, v_coef in repn.linear.items():
+            val += v_coef * sub_map[v_id]
+    val *= repn.mult
+    return val
