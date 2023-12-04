@@ -1681,7 +1681,7 @@ class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
         try:
             return self._ordered_values[i]
         except IndexError:
-            raise IndexError("%s index out of range" % (self.name))
+            raise IndexError(f"{self.name} index out of range") from None
 
     def ord(self, item):
         """
@@ -2543,7 +2543,7 @@ class OrderedSetOf(_ScalarOrderedSetMixin, _OrderedSetMixin, FiniteSetOf):
         try:
             return self._ref[i]
         except IndexError:
-            raise IndexError("%s index out of range" % (self.name))
+            raise IndexError(f"{self.name} index out of range") from None
 
     def ord(self, item):
         # The bulk of single-value set members are stored as scalars.
@@ -2684,7 +2684,7 @@ class _FiniteRangeSetData(
                 if not idx:
                     return ans
                 idx -= 1
-        raise IndexError("%s index out of range" % (self.name,))
+        raise IndexError(f"{self.name} index out of range")
 
     def ord(self, item):
         if len(self._ranges) == 1:
@@ -3503,7 +3503,7 @@ class SetUnion_OrderedSet(_ScalarOrderedSetMixin, _OrderedSetMixin, SetUnion_Fin
                     if val not in self._sets[0]:
                         idx -= 1
             except StopIteration:
-                raise IndexError("%s index out of range" % (self.name,))
+                raise IndexError(f"{self.name} index out of range") from None
             return val
 
     def ord(self, item):
@@ -3640,7 +3640,7 @@ class SetIntersection_OrderedSet(
                 idx -= 1
             return next(_iter)
         except StopIteration:
-            raise IndexError("%s index out of range" % (self.name,))
+            raise IndexError(f"{self.name} index out of range") from None
 
     def ord(self, item):
         """
@@ -3734,7 +3734,7 @@ class SetDifference_OrderedSet(
                 idx -= 1
             return next(_iter)
         except StopIteration:
-            raise IndexError("%s index out of range" % (self.name,))
+            raise IndexError(f"{self.name} index out of range") from None
 
     def ord(self, item):
         """
@@ -3844,7 +3844,7 @@ class SetSymmetricDifference_OrderedSet(
                 idx -= 1
             return next(_iter)
         except StopIteration:
-            raise IndexError("%s index out of range" % (self.name,))
+            raise IndexError(f"{self.name} index out of range") from None
 
     def ord(self, item):
         """
@@ -4126,7 +4126,7 @@ class SetProduct_OrderedSet(
             i -= 1
             _ord[i], _idx = _idx % _ord[i], _idx // _ord[i]
         if _idx:
-            raise IndexError("%s index out of range" % (self.name,))
+            raise IndexError(f"{self.name} index out of range")
         ans = tuple(s.at(i + 1) for s, i in zip(self._sets, _ord))
         if FLATTEN_CROSS_PRODUCT and normalize_index.flatten and self.dimen != len(ans):
             return self._flatten_product(ans)
