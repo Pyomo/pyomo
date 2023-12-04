@@ -141,7 +141,9 @@ class Wntr(PersistentSolverUtils, PersistentSolverBase):
         results = WntrResults(self)
         results.timing_info.wall_time = tf - t0
         if status == wntr.sim.solvers.SolverStatus.converged:
-            results.termination_condition = TerminationCondition.convergenceCriteriaSatisfied
+            results.termination_condition = (
+                TerminationCondition.convergenceCriteriaSatisfied
+            )
             results.solution_status = SolutionStatus.optimal
         else:
             results.termination_condition = TerminationCondition.error
