@@ -352,7 +352,7 @@ def minimize_dr_vars(model_data, config):
     nom_block = polishing_model.scenarios[0, 0]
     if config.objective_focus == ObjectiveType.nominal:
         obj_val = value(
-            this_iter.second_stage_objective + this_iter.first_stage_objective
+            nom_block.second_stage_objective + nom_block.first_stage_objective
         )
         polishing_model.scenarios[0, 0].polishing_constraint = Constraint(
             expr=obj_val
