@@ -18,6 +18,15 @@ from pyomo.solver.factory import SolverFactory
 from pyomo.common import unittest
 
 
+"""
+TODO:
+    - Test unique configuration options
+    - Test unique results options
+    - Ensure that `*.opt` file is only created when needed
+    - Ensure options are correctly parsing to env or opt file
+    - Failures at appropriate times
+"""
+
 class TestIpopt(unittest.TestCase):
     def create_model(self):
         model = pyo.ConcreteModel()

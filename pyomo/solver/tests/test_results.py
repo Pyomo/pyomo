@@ -101,7 +101,6 @@ class TestResults(unittest.TestCase):
         self.assertIsInstance(res.extra_info, ConfigDict)
         self.assertIsNone(res.timing_info.start_timestamp)
         self.assertIsNone(res.timing_info.wall_time)
-        self.assertIsNone(res.timing_info.solver_wall_time)
         res.solution_loader = solution.SolutionLoader(None, None, None, None)
 
         with self.assertRaisesRegex(

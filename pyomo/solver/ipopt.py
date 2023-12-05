@@ -186,6 +186,7 @@ class ipopt(SolverBase):
         self._config = self.CONFIG(kwds)
         self._writer = NLWriter()
         self._writer.config.skip_trivial_constraints = True
+        # TODO: Make this an option; not always turned on
         self._writer.config.linear_presolve = True
         self.ipopt_options = self._config.solver_options
 
