@@ -27,6 +27,7 @@ TODO:
     - Failures at appropriate times
 """
 
+
 class TestIpopt(unittest.TestCase):
     def create_model(self):
         model = pyo.ConcreteModel()
