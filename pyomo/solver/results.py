@@ -231,13 +231,8 @@ class Results(ConfigDict):
         self.timing_info.start_timestamp: datetime = self.timing_info.declare(
             'start_timestamp', ConfigValue(domain=Datetime)
         )
-        # wall_time is the actual standard (until Michael complains) that is
-        # required for everyone. This is from entry->exit of the solve method.
         self.timing_info.wall_time: Optional[float] = self.timing_info.declare(
             'wall_time', ConfigValue(domain=NonNegativeFloat)
-        )
-        self.timing_info.solver_wall_time: Optional[float] = self.timing_info.declare(
-            'solver_wall_time', ConfigValue(domain=NonNegativeFloat)
         )
         self.extra_info: ConfigDict = self.declare(
             'extra_info', ConfigDict(implicit=True)
@@ -267,7 +262,10 @@ class SolFileData:
 
 
 def parse_sol_file(
-    sol_file: io.TextIOBase, nl_info: NLWriterInfo, suffixes_to_read: Sequence[str]
+    sol_file: io.TextIOBase,
+    nl_info: NLWriterInfo,
+    suffixes_to_read: Sequence[str],
+    result: Results,
 ) -> Tuple[Results, SolFileData]:
     suffixes_to_read = set(suffixes_to_read)
     sol_data = SolFileData()
@@ -275,8 +273,6 @@ def parse_sol_file(
     #
     # Some solvers (minto) do not write a message.  We will assume
     # all non-blank lines up the 'Options' line is the message.
-    result = Results()
-
     # For backwards compatibility and general safety, we will parse all
     # lines until "Options" appears. Anything before "Options" we will
     # consider to be the solver message.

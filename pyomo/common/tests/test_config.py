@@ -1473,7 +1473,7 @@ scenarios[1].detection""",
         self.config.add("bar", ConfigDict(implicit=True)).add("baz", ConfigDict())
         test = _display(self.config, 'userdata')
         sys.stdout.write(test)
-        self.assertEqual(yaml_load(test), {'bar': {'baz': None}, foo: 0})
+        self.assertEqual(yaml_load(test), {'bar': {'baz': None}, 'foo': 0})
 
     @unittest.skipIf(not yaml_available, "Test requires PyYAML")
     def test_parseDisplay_userdata_add_block(self):
