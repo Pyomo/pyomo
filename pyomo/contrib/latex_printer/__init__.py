@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2023
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -9,6 +9,14 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.deprecation import relocated_module_attribute
+# Recommended just to build all of the appropriate things
+import pyomo.environ
 
-relocated_module_attribute('nullcontext', 'contextlib.nullcontext', version='6.7.0')
+# Remove one layer of .latex_printer
+# import statemnt is now:
+#   from pyomo.contrib.latex_printer import latex_printer
+try:
+    from pyomo.contrib.latex_printer.latex_printer import latex_printer
+except:
+    pass
+    # in this case, the dependencies are not installed, nothing will work

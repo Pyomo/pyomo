@@ -17,7 +17,7 @@ import logging
 import operator
 import sys
 
-from pyomo.common.collections import Sequence, ComponentMap
+from pyomo.common.collections import Sequence, ComponentMap, ComponentSet
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.errors import DeveloperError, InvalidValueError
 from pyomo.common.numeric_types import (
@@ -544,12 +544,13 @@ def categorize_valid_components(
 
 
 def FileDeterminism_to_SortComponents(file_determinism):
-    sorter = SortComponents.unsorted
+    if file_determinism >= FileDeterminism.SORT_SYMBOLS:
+        return SortComponents.ALPHABETICAL | SortComponents.SORTED_INDICES
     if file_determinism >= FileDeterminism.SORT_INDICES:
-        sorter = sorter | SortComponents.indices
-        if file_determinism >= FileDeterminism.SORT_SYMBOLS:
-            sorter = sorter | SortComponents.alphabetical
-    return sorter
+        return SortComponents.SORTED_INDICES
+    if file_determinism >= FileDeterminism.ORDERED:
+        return SortComponents.ORDERED_INDICES
+    return SortComponents.UNSORTED
 
 
 def initialize_var_map_from_column_order(model, config, var_map):
@@ -581,13 +582,33 @@ def initialize_var_map_from_column_order(model, config, var_map):
     if column_order is not None:
         # Note that Vars that appear twice (e.g., through a
         # Reference) will be sorted with the FIRST occurrence.
+        fill_in = ComponentSet()
         for var in column_order:
             if var.is_indexed():
                 for _v in var.values(sorter):
                     if not _v.fixed:
                         var_map[id(_v)] = _v
             elif not var.fixed:
+                pc = var.parent_component()
+                if pc is not var and pc not in fill_in:
+                    # For any VarData in an IndexedVar, remember the
+                    # IndexedVar so that after all the VarData that the
+                    # user has specified in the column ordering have
+                    # been processed (and added to the var_map) we can
+                    # go back and fill in any missing VarData from that
+                    # IndexedVar.  This is needed because later when
+                    # walking expressions we assume that any VarData
+                    # that is not in the var_map will be the first
+                    # VarData from its Var container (indexed or scalar).
+                    fill_in.add(pc)
                 var_map[id(var)] = var
+        # Note that ComponentSet iteration is deterministic, and
+        # re-inserting _v into the var_map will not change the ordering
+        # for any pre-existing variables
+        for pc in fill_in:
+            for _v in pc.values(sorter):
+                if not _v.fixed:
+                    var_map[id(_v)] = _v
     return var_map
 
 

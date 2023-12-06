@@ -13,8 +13,10 @@
 import pyomo.common.unittest as unittest
 
 import io
+import logging
 import math
 import os
+import re
 
 import pyomo.repn.util as repn_util
 import pyomo.repn.plugins.nl_writer as nl_writer
@@ -23,7 +25,9 @@ from pyomo.repn.tests.nl_diff import nl_diff
 
 from pyomo.common.dependencies import numpy, numpy_available
 from pyomo.common.log import LoggingIntercept
+from pyomo.common.tee import capture_output
 from pyomo.common.tempfiles import TempfileManager
+from pyomo.common.timing import report_timing
 from pyomo.core.expr import Expr_if, inequality, LinearExpression
 from pyomo.core.base.expression import ScalarExpression
 from pyomo.environ import (
@@ -65,6 +69,7 @@ class INFO(object):
             self.used_named_expressions,
             self.symbolic_solver_labels,
             True,
+            None,
         )
 
     def __enter__(self):
@@ -949,6 +954,14 @@ class Test_NLWriter(unittest.TestCase):
             "keys that are not exported as part of the NL file.  Skipping.\n",
             LOG.getvalue(),
         )
+        with LoggingIntercept(level=logging.DEBUG) as LOG:
+            nl_writer.NLWriter().write(m, OUT)
+        self.assertEqual(
+            "model contains export suffix 'junk' that contains 1 component "
+            "keys that are not exported as part of the NL file.  Skipping.\n"
+            "Skipped component keys:\n\ty\n",
+            LOG.getvalue(),
+        )
 
         m.junk[m.z] = 1
         with LoggingIntercept() as LOG:
@@ -956,6 +969,14 @@ class Test_NLWriter(unittest.TestCase):
         self.assertEqual(
             "model contains export suffix 'junk' that contains 3 component "
             "keys that are not exported as part of the NL file.  Skipping.\n",
+            LOG.getvalue(),
+        )
+        with LoggingIntercept(level=logging.DEBUG) as LOG:
+            nl_writer.NLWriter().write(m, OUT)
+        self.assertEqual(
+            "model contains export suffix 'junk' that contains 3 component "
+            "keys that are not exported as part of the NL file.  Skipping.\n"
+            "Skipped component keys:\n\ty\n\tz[1]\n\tz[3]\n",
             LOG.getvalue(),
         )
 
@@ -987,6 +1008,51 @@ class Test_NLWriter(unittest.TestCase):
             "keys that are not Var, Constraint, Objective, or the model.  "
             "Skipping.\n",
             LOG.getvalue(),
+        )
+        with LoggingIntercept(level=logging.DEBUG) as LOG:
+            nl_writer.NLWriter().write(m, OUT)
+        self.assertEqual(
+            "model contains export suffix 'junk' that contains 6 component "
+            "keys that are not exported as part of the NL file.  Skipping.\n"
+            "Skipped component keys:\n\tc\n\td[1]\n\td[3]\n\ty\n\tz[1]\n\tz[3]\n"
+            "model contains export suffix 'junk' that contains 1 keys that "
+            "are not Var, Constraint, Objective, or the model.  Skipping.\n"
+            "Skipped component keys:\n\t5\n",
+            LOG.getvalue(),
+        )
+
+    def test_log_timing(self):
+        # This tests an error possibly reported by #2810
+        m = ConcreteModel()
+        m.x = Var(range(6))
+        m.x[0].domain = pyo.Binary
+        m.x[1].domain = pyo.Integers
+        m.x[2].domain = pyo.Integers
+        m.p = Param(initialize=5, mutable=True)
+        m.o1 = Objective([1, 2], rule=lambda m, i: 1)
+        m.o2 = Objective(expr=m.x[1] * m.x[2])
+        m.c1 = Constraint([1, 2], rule=lambda m, i: sum(m.x.values()) == 1)
+        m.c2 = Constraint(expr=m.p * m.x[1] ** 2 + m.x[2] ** 3 <= 100)
+
+        self.maxDiff = None
+        OUT = io.StringIO()
+        with capture_output() as LOG:
+            with report_timing(level=logging.DEBUG):
+                nl_writer.NLWriter().write(m, OUT)
+        self.assertEqual(
+            """      [+   #.##] Initialized column order
+      [+   #.##] Collected suffixes
+      [+   #.##] Objective o1
+      [+   #.##] Objective o2
+      [+   #.##] Constraint c1
+      [+   #.##] Constraint c2
+      [+   #.##] Categorized model variables: 14 nnz
+      [+   #.##] Set row / column ordering: 6 var [3, 1, 2 R/B/Z], 3 con [2, 1 L/NL]
+      [+   #.##] Generated row/col labels & comments
+      [+   #.##] Wrote NL stream
+      [    #.##] Generated NL representation
+""",
+            re.sub(r'\d\.\d\d\]', '#.##]', LOG.getvalue()),
         )
 
     def test_linear_constraint_npv_const(self):
@@ -1415,7 +1481,6 @@ G0 1
         # Note: bounds on x[1] are:
         #   min(22/3, 82/17, 23/4, -39/-6) == 4.823529411764706
         #   max(2/3, 62/17, 3/4, -19/-6) == 3.6470588235294117
-        print(OUT.getvalue())
         self.assertEqual(
             *nl_diff(
                 """g3 1 1 0	# problem unknown
@@ -1491,6 +1556,83 @@ G0 1
             with LoggingIntercept() as LOG:
                 nlinfo = nl_writer.NLWriter().write(m, OUT, linear_presolve=True)
         self.assertEqual(LOG.getvalue(), "")
+
+    def test_presolve_named_expressions(self):
+        # Test from #3055
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3], initialize=1, bounds=(0, 10))
+        m.subexpr = pyo.Expression(pyo.Integers)
+        m.subexpr[1] = m.x[1] + m.x[2]
+        m.eq = pyo.Constraint(pyo.Integers)
+        m.eq[1] = m.x[1] == 7
+        m.eq[2] = m.x[3] == 0.1 * m.subexpr[1] * m.x[2]
+        m.obj = pyo.Objective(expr=m.x[1] ** 2 + m.x[2] ** 2 + m.x[3] ** 3)
+
+        OUT = io.StringIO()
+        with LoggingIntercept() as LOG:
+            nlinfo = nl_writer.NLWriter().write(
+                m, OUT, symbolic_solver_labels=True, linear_presolve=True
+            )
+        self.assertEqual(LOG.getvalue(), "")
+
+        self.assertEqual(
+            nlinfo.eliminated_vars, [(m.x[1], nl_writer.AMPLRepn(7, {}, None))]
+        )
+
+        self.assertEqual(
+            *nl_diff(
+                """g3 1 1 0	# problem unknown
+ 2 1 1 0 1 	# vars, constraints, objectives, ranges, eqns
+ 1 1 0 0 0 0	# nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0	# network constraints: nonlinear, linear
+ 1 2 1 	# nonlinear vars in constraints, objectives, both
+ 0 0 0 1	# linear network variables; functions; arith, flags
+ 0 0 0 0 0 	# discrete variables: binary, integer, nonlinear (b,c,o)
+ 2 2 	# nonzeros in Jacobian, obj. gradient
+ 5 4	# max name lengths: constraints, variables
+ 0 0 0 1 0	# common exprs: b,c,o,c1,o1
+V2 1 1	#subexpr[1]
+0 1
+n7.0
+C0	#eq[2]
+o16	#-
+o2	#*
+o2	#*
+n0.1
+v2	#subexpr[1]
+v0	#x[2]
+O0 0	#obj
+o54	# sumlist
+3	# (n)
+o5	#^
+n7.0
+n2
+o5	#^
+v0	#x[2]
+n2
+o5	#^
+v1	#x[3]
+n3
+x2	# initial guess
+0 1	#x[2]
+1 1	#x[3]
+r	#1 ranges (rhs's)
+4 0	#eq[2]
+b	#2 bounds (on variables)
+0 0 10	#x[2]
+0 0 10	#x[3]
+k1	#intermediate Jacobian column lengths
+1
+J0 2	#eq[2]
+0 0
+1 1
+G0 2	#obj
+0 0
+1 0
+""",
+                OUT.getvalue(),
+            )
+        )
 
     def test_scaling(self):
         m = pyo.ConcreteModel()
@@ -1599,7 +1741,7 @@ G0 3
         self.assertEqual(LOG.getvalue(), "")
 
         nl2 = OUT.getvalue()
-        print(nl2)
+
         self.assertEqual(
             *nl_diff(
                 """g3 1 1 0	# problem unknown
@@ -1693,7 +1835,7 @@ G0 3
 
         OUT = io.StringIO()
         nl_writer.NLWriter().write(m, OUT, symbolic_solver_labels=True)
-        print(OUT.getvalue())
+
         self.assertEqual(
             *nl_diff(
                 """g3 1 1 0	# problem unknown
