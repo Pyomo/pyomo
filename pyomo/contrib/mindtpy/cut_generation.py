@@ -210,8 +210,8 @@ def add_oa_cuts_for_grey_box(
                             target_model_grey_box.inputs.values()
                         )
                     )
+                    - (output - value(output))
                 )
-                - (output - value(output))
                 - (slack_var if config.add_slack else 0)
                 <= 0
             )
