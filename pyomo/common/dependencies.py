@@ -826,6 +826,17 @@ def _finalize_numpy(np, available):
         numeric_types.RegisterComplexType(t)
 
 
+def _pyutilib_importer():
+    # On newer Pythons, PyUtilib import will fail, but only if a
+    # second-level module is imported.  We will arbirtarily choose to
+    # check pyutilib.component (as that is the path exercised by the
+    # pyomo.common.tempfiles deprecation path)
+    import pyutilib
+    import pyutilib.component
+
+    return pyutilib
+
+
 dill, dill_available = attempt_import('dill')
 mpi4py, mpi4py_available = attempt_import('mpi4py')
 networkx, networkx_available = attempt_import('networkx')
@@ -833,7 +844,7 @@ numpy, numpy_available = attempt_import('numpy', callback=_finalize_numpy)
 pandas, pandas_available = attempt_import('pandas')
 plotly, plotly_available = attempt_import('plotly')
 pympler, pympler_available = attempt_import('pympler', callback=_finalize_pympler)
-pyutilib, pyutilib_available = attempt_import('pyutilib')
+pyutilib, pyutilib_available = attempt_import('pyutilib', importer=_pyutilib_importer)
 scipy, scipy_available = attempt_import(
     'scipy',
     callback=_finalize_scipy,
