@@ -23,14 +23,14 @@ import logging
 import shutil
 import weakref
 
-from pyomo.common.dependencies import pyutilib_available
+from pyomo.common.dependencies import attempt_import, pyutilib_available
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.errors import TempfileContextError
 from pyomo.common.multithread import MultiThreadWrapperWithMain
 
 deletion_errors_are_fatal = True
 logger = logging.getLogger(__name__)
-pyutilib_mngr = None
+pyutilib_tempfiles, _ = attempt_import('pyutilib.component.config.tempfiles')
 
 
 class TempfileManagerClass(object):
@@ -430,11 +430,7 @@ class TempfileContext:
         elif TempfileManager.main_thread.tempdir is not None:
             return TempfileManager.main_thread.tempdir
         elif pyutilib_available:
-            if pyutilib_mngr is None:
-                from pyutilib.component.config.tempfiles import (
-                    TempfileManager as pyutilib_mngr,
-                )
-            if pyutilib_mngr.tempdir is not None:
+            if pyutilib_tempfiles.TempfileManager.tempdir is not None:
                 deprecation_warning(
                     "The use of the PyUtilib TempfileManager.tempdir "
                     "to specify the default location for Pyomo "
@@ -443,7 +439,7 @@ class TempfileContext:
                     "pyomo.common.tempfiles",
                     version='5.7.2',
                 )
-                return pyutilib_mngr.tempdir
+                return pyutilib_tempfiles.TempfileManager.tempdir
         return None
 
     def _remove_filesystem_object(self, name):

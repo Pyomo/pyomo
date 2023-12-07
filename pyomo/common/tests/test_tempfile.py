@@ -529,8 +529,8 @@ class Test_TempfileManager(unittest.TestCase):
         self.TM.push()
         try:
             tmpdir = self.TM.create_tempdir()
-            _orig = pyutilib_mngr.tempdir
-            pyutilib_mngr.tempdir = tmpdir
+            _orig = tempfiles.pyutilib_tempfiles.TempfileManager.tempdir
+            tempfiles.pyutilib_tempfiles.TempfileManager.tempdir = tmpdir
             self.TM.tempdir = None
 
             with LoggingIntercept() as LOG:
@@ -552,7 +552,7 @@ class Test_TempfileManager(unittest.TestCase):
             )
         finally:
             self.TM.pop()
-            pyutilib_mngr.tempdir = _orig
+            tempfiles.pyutilib_tempfiles.TempfileManager.tempdir = _orig
 
     def test_context(self):
         with self.assertRaisesRegex(
