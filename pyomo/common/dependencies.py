@@ -828,7 +828,7 @@ def _finalize_numpy(np, available):
 
 def _pyutilib_importer():
     # On newer Pythons, PyUtilib import will fail, but only if a
-    # second-level module is imported.  We will arbirtarily choose to
+    # second-level module is imported.  We will arbitrarily choose to
     # check pyutilib.component (as that is the path exercised by the
     # pyomo.common.tempfiles deprecation path)
     import pyutilib
