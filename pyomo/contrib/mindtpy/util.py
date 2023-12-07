@@ -70,7 +70,7 @@ def calc_jacobians(model, differentiate_mode):
     return jacobians
 
 
-def initialize_feas_subproblem(m, config):
+def initialize_feas_subproblem(m, feasibility_norm):
     """Adds feasibility slack variables according to config.feasibility_norm (given an infeasible problem).
        Defines the objective function of the feasibility subproblem.
 
@@ -78,14 +78,14 @@ def initialize_feas_subproblem(m, config):
     ----------
     m : Pyomo model
         The feasbility NLP subproblem.
-    config : ConfigBlock
-        The specific configurations for MindtPy.
+    feasibility_norm : String
+        The norm used to generate the objective function.
     """
     MindtPy = m.MindtPy_utils
     # generate new constraints
     for i, constr in enumerate(MindtPy.nonlinear_constraint_list, 1):
         if constr.has_ub():
-            if config.feasibility_norm in {'L1', 'L2'}:
+            if feasibility_norm in {'L1', 'L2'}:
                 MindtPy.feas_opt.feas_constraints.add(
                     constr.body - constr.upper <= MindtPy.feas_opt.slack_var[i]
                 )
@@ -94,7 +94,7 @@ def initialize_feas_subproblem(m, config):
                     constr.body - constr.upper <= MindtPy.feas_opt.slack_var
                 )
         if constr.has_lb():
-            if config.feasibility_norm in {'L1', 'L2'}:
+            if feasibility_norm in {'L1', 'L2'}:
                 MindtPy.feas_opt.feas_constraints.add(
                     constr.body - constr.lower >= -MindtPy.feas_opt.slack_var[i]
                 )
@@ -103,11 +103,11 @@ def initialize_feas_subproblem(m, config):
                     constr.body - constr.lower >= -MindtPy.feas_opt.slack_var
                 )
     # Setup objective function for the feasibility subproblem.
-    if config.feasibility_norm == 'L1':
+    if feasibility_norm == 'L1':
         MindtPy.feas_obj = Objective(
             expr=sum(s for s in MindtPy.feas_opt.slack_var.values()), sense=minimize
         )
-    elif config.feasibility_norm == 'L2':
+    elif feasibility_norm == 'L2':
         MindtPy.feas_obj = Objective(
             expr=sum(s * s for s in MindtPy.feas_opt.slack_var.values()), sense=minimize
         )

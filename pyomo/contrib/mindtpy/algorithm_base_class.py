@@ -2629,7 +2629,7 @@ class _MindtPyAlgorithm(object):
 
         self.fixed_nlp = self.working_model.clone()
         TransformationFactory('core.fix_integer_vars').apply_to(self.fixed_nlp)
-        initialize_feas_subproblem(self.fixed_nlp, config)
+        initialize_feas_subproblem(self.fixed_nlp, config.feasibility_norm)
 
     def initialize_subsolvers(self):
         """Initialize and set options for MIP and NLP subsolvers."""
