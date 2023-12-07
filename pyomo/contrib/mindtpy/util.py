@@ -41,16 +41,16 @@ pyomo_nlp = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_nlp')[0]
 numpy = attempt_import('numpy')[0]
 
 
-def calc_jacobians(model, differentiate_mode):
+def calc_jacobians(constraint_list, differentiate_mode):
     """Generates a map of jacobians for the variables in the model.
 
     This function generates a map of jacobians corresponding to the variables in the
-    model.
+    constraint list.
 
     Parameters
     ----------
-    model : Pyomo model
-        Target model to calculate jacobian.
+    constraint_list : List
+        The list of constraints to calculate Jacobians.
     differentiate_mode : String
         The differentiate mode to calculate Jacobians.
     """
@@ -61,7 +61,7 @@ def calc_jacobians(model, differentiate_mode):
         mode = EXPR.differentiate.Modes.reverse_symbolic
     elif differentiate_mode == 'sympy':
         mode = EXPR.differentiate.Modes.sympy
-    for c in model.MindtPy_utils.nonlinear_constraint_list:
+    for c in constraint_list:
         vars_in_constr = list(EXPR.identify_variables(c.body))
         jac_list = EXPR.differentiate(c.body, wrt_list=vars_in_constr, mode=mode)
         jacobians[c] = ComponentMap(

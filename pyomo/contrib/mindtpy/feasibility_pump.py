@@ -47,7 +47,8 @@ class MindtPy_FP_Solver(_MindtPyAlgorithm):
         '''Deactivate the nonlinear constraints to create the MIP problem.'''
         super().initialize_mip_problem()
         self.jacobians = calc_jacobians(
-            self.mip, self.config.differentiate_mode
+            self.mip.MindtPy_utils.nonlinear_constraint_list,
+            self.config.differentiate_mode,
         )  # preload jacobians
         self.mip.MindtPy_utils.cuts.oa_cuts = ConstraintList(
             doc='Outer approximation cuts'
