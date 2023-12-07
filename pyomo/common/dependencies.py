@@ -831,10 +831,8 @@ def _pyutilib_importer():
     # second-level module is imported.  We will arbitrarily choose to
     # check pyutilib.component (as that is the path exercised by the
     # pyomo.common.tempfiles deprecation path)
-    import pyutilib
-    import pyutilib.component
-
-    return pyutilib
+    importlib.import_module('pyutilib.component')
+    return importlib.import_module('pyutilib')
 
 
 dill, dill_available = attempt_import('dill')
