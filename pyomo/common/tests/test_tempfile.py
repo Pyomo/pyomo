@@ -30,17 +30,13 @@ import pyomo.common.unittest as unittest
 
 import pyomo.common.tempfiles as tempfiles
 
+from pyomo.common.dependencies import pyutilib_available
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import (
     TempfileManager,
     TempfileManagerClass,
     TempfileContextError,
 )
-
-try:
-    from pyutilib.component.config.tempfiles import TempfileManager as pyutilib_mngr
-except ImportError:
-    pyutilib_mngr = None
 
 old_tempdir = TempfileManager.tempdir
 tempdir = None
@@ -528,7 +524,7 @@ class Test_TempfileManager(unittest.TestCase):
             f.close()
             os.remove(fname)
 
-    @unittest.skipIf(pyutilib_mngr is None, "deprecation test requires pyutilib")
+    @unittest.skipUnless(pyutilib_available, "deprecation test requires pyutilib")
     def test_deprecated_tempdir(self):
         self.TM.push()
         try:
