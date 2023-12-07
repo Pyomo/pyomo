@@ -3,6 +3,18 @@ PyROS CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+PyROS 1.2.8    12 Oct 2023
+-------------------------------------------------------------------------------
+- Refactor PyROS separation routine, fix scenario selection heuristic
+- Add efficiency for discrete uncertainty set separation
+- Fix coefficient matching routine
+- Fix subproblem timers and time accumulators
+- Update and document PyROS solver logging system
+- Fix iteration overcounting in event of `max_iter` termination status
+- Fixes to (assembly of) PyROS `ROSolveResults` object
+
+
+-------------------------------------------------------------------------------
 PyROS 1.2.7    26 Apr 2023
 -------------------------------------------------------------------------------
 - Refurbish separation problem routines and data structures

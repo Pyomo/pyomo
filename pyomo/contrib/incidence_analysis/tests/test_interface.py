@@ -1323,6 +1323,22 @@ class TestDulmageMendelsohnInterface(unittest.TestCase):
         self.assertEqual(N_new, N - len(cons_to_remove))
         self.assertEqual(M_new, M - len(vars_to_remove))
 
+    def test_recover_matching_from_dulmage_mendelsohn(self):
+        m = make_degenerate_solid_phase_model()
+        igraph = IncidenceGraphInterface(m)
+        vdmp, cdmp = igraph.dulmage_mendelsohn()
+        vmatch = vdmp.underconstrained + vdmp.square + vdmp.overconstrained
+        cmatch = cdmp.underconstrained + cdmp.square + cdmp.overconstrained
+        # Assert no duplicates in matched variables and constraints
+        self.assertEqual(len(ComponentSet(vmatch)), len(vmatch))
+        self.assertEqual(len(ComponentSet(cmatch)), len(cmatch))
+        matching = list(zip(vmatch, cmatch))
+        # Assert each matched pair contains a variable that participates
+        # in the constraint.
+        for var, con in matching:
+            var_in_con = ComponentSet(igraph.get_adjacent_to(con))
+            self.assertIn(var, var_in_con)
+
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 class TestConnectedComponents(unittest.TestCase):

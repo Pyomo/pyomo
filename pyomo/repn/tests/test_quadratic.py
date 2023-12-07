@@ -29,9 +29,10 @@ class VisitorConfig(object):
         self.subexpr = {}
         self.var_map = {}
         self.var_order = {}
+        self.sorter = None
 
     def __iter__(self):
-        return iter((self.subexpr, self.var_map, self.var_order))
+        return iter((self.subexpr, self.var_map, self.var_order, self.sorter))
 
 
 class TestQuadratic(unittest.TestCase):
