@@ -168,7 +168,6 @@ class TestPyomoEnviron(unittest.TestCase):
         }
         # Non-standard-library TPLs that Pyomo will load unconditionally
         ref.add('ply')
-        ref.add('pyutilib')
         if numpy_available:
             ref.add('numpy')
         diff = set(_[0] for _ in tpl_by_time[-5:]).difference(ref)
