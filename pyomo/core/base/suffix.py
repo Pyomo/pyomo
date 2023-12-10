@@ -36,102 +36,45 @@ logger = logging.getLogger('pyomo.core')
 #   - suffix_generator
 
 
-def active_export_suffix_generator(a_block, datatype=False):
-    if datatype is False:
-        for name, suffix in a_block.component_map(Suffix, active=True).items():
-            if suffix.export_enabled() is True:
-                yield name, suffix
-    else:
-        for name, suffix in a_block.component_map(Suffix, active=True).items():
-            if (suffix.export_enabled() is True) and (
-                suffix.get_datatype() is datatype
-            ):
-                yield name, suffix
+def suffix_generator(a_block, datatype=NOTSET, direction=NOTSET, active=None):
+    _iter = a_block.component_map(Suffix, active=active).items()
+    if direction is not NOTSET:
+        direction = _SuffixDirectionDomain(direction)
+        if not direction:
+            _iter = filter(lambda item: item[1].direction == direction, _iter)
+        else:
+            _iter = filter(lambda item: item[1].direction & direction, _iter)
+    if datatype is not NOTSET:
+        _iter = filter(lambda item: item[1].datatype == datatype, _iter)
+    return _iter
 
 
-def export_suffix_generator(a_block, datatype=False):
-    if datatype is False:
-        for name, suffix in a_block.component_map(Suffix).items():
-            if suffix.export_enabled() is True:
-                yield name, suffix
-    else:
-        for name, suffix in a_block.component_map(Suffix).items():
-            if (suffix.export_enabled() is True) and (
-                suffix.get_datatype() is datatype
-            ):
-                yield name, suffix
+def active_export_suffix_generator(a_block, datatype=NOTSET):
+    return suffix_generator(a_block, datatype, SuffixDirection.EXPORT, True)
 
 
-def active_import_suffix_generator(a_block, datatype=False):
-    if datatype is False:
-        for name, suffix in a_block.component_map(Suffix, active=True).items():
-            if suffix.import_enabled() is True:
-                yield name, suffix
-    else:
-        for name, suffix in a_block.component_map(Suffix, active=True).items():
-            if (suffix.import_enabled() is True) and (
-                suffix.get_datatype() is datatype
-            ):
-                yield name, suffix
+def export_suffix_generator(a_block, datatype=NOTSET):
+    return suffix_generator(a_block, datatype, SuffixDirection.EXPORT)
 
 
-def import_suffix_generator(a_block, datatype=False):
-    if datatype is False:
-        for name, suffix in a_block.component_map(Suffix).items():
-            if suffix.import_enabled() is True:
-                yield name, suffix
-    else:
-        for name, suffix in a_block.component_map(Suffix).items():
-            if (suffix.import_enabled() is True) and (
-                suffix.get_datatype() is datatype
-            ):
-                yield name, suffix
+def active_import_suffix_generator(a_block, datatype=NOTSET):
+    return suffix_generator(a_block, datatype, SuffixDirection.IMPORT, True)
 
 
-def active_local_suffix_generator(a_block, datatype=False):
-    if datatype is False:
-        for name, suffix in a_block.component_map(Suffix, active=True).items():
-            if suffix.get_direction() is Suffix.LOCAL:
-                yield name, suffix
-    else:
-        for name, suffix in a_block.component_map(Suffix, active=True).items():
-            if (suffix.get_direction() is Suffix.LOCAL) and (
-                suffix.get_datatype() is datatype
-            ):
-                yield name, suffix
+def import_suffix_generator(a_block, datatype=NOTSET):
+    return suffix_generator(a_block, datatype, SuffixDirection.IMPORT)
 
 
-def local_suffix_generator(a_block, datatype=False):
-    if datatype is False:
-        for name, suffix in a_block.component_map(Suffix).items():
-            if suffix.get_direction() is Suffix.LOCAL:
-                yield name, suffix
-    else:
-        for name, suffix in a_block.component_map(Suffix).items():
-            if (suffix.get_direction() is Suffix.LOCAL) and (
-                suffix.get_datatype() is datatype
-            ):
-                yield name, suffix
+def active_local_suffix_generator(a_block, datatype=NOTSET):
+    return suffix_generator(a_block, datatype, SuffixDirection.LOCAL, True)
 
 
-def active_suffix_generator(a_block, datatype=False):
-    if datatype is False:
-        for name, suffix in a_block.component_map(Suffix, active=True).items():
-            yield name, suffix
-    else:
-        for name, suffix in a_block.component_map(Suffix, active=True).items():
-            if suffix.get_datatype() is datatype:
-                yield name, suffix
+def local_suffix_generator(a_block, datatype=NOTSET):
+    return suffix_generator(a_block, datatype, SuffixDirection.LOCAL)
 
 
-def suffix_generator(a_block, datatype=False):
-    if datatype is False:
-        for name, suffix in a_block.component_map(Suffix).items():
-            yield name, suffix
-    else:
-        for name, suffix in a_block.component_map(Suffix).items():
-            if suffix.get_datatype() is datatype:
-                yield name, suffix
+def active_suffix_generator(a_block, datatype=NOTSET):
+    return suffix_generator(a_block, datatype, active=True)
 
 
 class SuffixDataType(enum.IntEnum):
