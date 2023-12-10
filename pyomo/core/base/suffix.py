@@ -377,16 +377,6 @@ class Suffix(ComponentMap, ActiveComponent):
         """
         return self._direction
 
-    def __str__(self):
-        """
-        Return a string representation of the suffix.  If the name
-        attribute is None, then return ''
-        """
-        name = self.name
-        if name is None:
-            return ''
-        return name
-
     def _pprint(self):
         return (
             [
