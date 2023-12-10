@@ -20,6 +20,7 @@ from os.path import abspath, dirname
 currdir = dirname(abspath(__file__)) + os.sep
 
 import pyomo.common.unittest as unittest
+from pyomo.common.log import LoggingIntercept
 from pyomo.core.base.suffix import (
     active_export_suffix_generator,
     export_suffix_generator,
@@ -860,6 +861,22 @@ class TestSuffixMethods(unittest.TestCase):
         model.junk.datatype = 0
         self.assertEqual(model.junk.datatype, Suffix.INT)
 
+        with LoggingIntercept() as LOG:
+            model.junk.set_datatype(None)
+        self.assertEqual(model.junk.datatype, None)
+        self.assertRegex(
+            LOG.getvalue().replace("\n", " "),
+            "^DEPRECATED: Suffix.set_datatype is replaced with the Suffix.datatype property",
+        )
+
+        model.junk.datatype = 'FLOAT'
+        with LoggingIntercept() as LOG:
+            self.assertEqual(model.junk.get_datatype(), Suffix.FLOAT)
+        self.assertRegex(
+            LOG.getvalue().replace("\n", " "),
+            "^DEPRECATED: Suffix.get_datatype is replaced with the Suffix.datatype property",
+        )
+
         with self.assertRaisesRegex(ValueError, "1.0 is not a valid SuffixDataType"):
             model.junk.datatype = 1.0
 
@@ -874,6 +891,22 @@ class TestSuffixMethods(unittest.TestCase):
         self.assertEqual(model.junk.direction, Suffix.IMPORT)
         model.junk.direction = Suffix.IMPORT_EXPORT
         self.assertEqual(model.junk.direction, Suffix.IMPORT_EXPORT)
+
+        with LoggingIntercept() as LOG:
+            model.junk.set_direction(None)
+        self.assertEqual(model.junk.direction, None)
+        self.assertRegex(
+            LOG.getvalue().replace("\n", " "),
+            "^DEPRECATED: Suffix.set_direction is replaced with the Suffix.direction property",
+        )
+
+        model.junk.direction = 'IMPORT'
+        with LoggingIntercept() as LOG:
+            self.assertEqual(model.junk.get_direction(), Suffix.IMPORT)
+        self.assertRegex(
+            LOG.getvalue().replace("\n", " "),
+            "^DEPRECATED: Suffix.get_direction is replaced with the Suffix.direction property",
+        )
 
         with self.assertRaisesRegex(ValueError, "'a' is not a valid SuffixDirection"):
             model.junk.direction = 'a'
