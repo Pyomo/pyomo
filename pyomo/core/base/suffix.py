@@ -289,24 +289,40 @@ class Suffix(ComponentMap, ActiveComponent):
         """
         self.clear()
 
+    @deprecated(
+        'Suffix.set_datatype is replaced with the Suffix.datatype property',
+        version='6.7.1.dev0',
+    )
     def set_datatype(self, datatype):
         """
         Set the suffix datatype.
         """
         self.datatype = datatype
 
+    @deprecated(
+        'Suffix.get_datatype is replaced with the Suffix.datatype property',
+        version='6.7.1.dev0',
+    )
     def get_datatype(self):
         """
         Return the suffix datatype.
         """
         return self.datatype
 
+    @deprecated(
+        'Suffix.set_direction is replaced with the Suffix.direction property',
+        version='6.7.1.dev0',
+    )
     def set_direction(self, direction):
         """
         Set the suffix direction.
         """
         self.direction = direction
 
+    @deprecated(
+        'Suffix.set_direction is replaced with the Suffix.direction property',
+        version='6.7.1.dev0',
+    )
     def get_direction(self):
         """
         Return the suffix direction.
