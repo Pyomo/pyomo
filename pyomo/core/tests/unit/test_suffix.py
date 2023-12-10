@@ -58,33 +58,39 @@ class TestSuffixMethods(unittest.TestCase):
     # test import_enabled
     def test_import_enabled(self):
         model = ConcreteModel()
+        model.test_implicit = Suffix()
+        self.assertFalse(model.test_implicit.import_enabled())
+
         model.test_local = Suffix(direction=Suffix.LOCAL)
-        self.assertTrue(model.test_local.import_enabled() is False)
+        self.assertFalse(model.test_local.import_enabled())
 
         model.test_out = Suffix(direction=Suffix.IMPORT)
-        self.assertTrue(model.test_out.import_enabled() is True)
+        self.assertTrue(model.test_out.import_enabled())
 
         model.test_in = Suffix(direction=Suffix.EXPORT)
-        self.assertTrue(model.test_in.import_enabled() is False)
+        self.assertFalse(model.test_in.import_enabled())
 
         model.test_inout = Suffix(direction=Suffix.IMPORT_EXPORT)
-        self.assertTrue(model.test_inout.import_enabled() is True)
+        self.assertTrue(model.test_inout.import_enabled())
 
     # test export_enabled
     def test_export_enabled(self):
         model = ConcreteModel()
 
+        model.test_implicit = Suffix()
+        self.assertFalse(model.test_implicit.export_enabled())
+
         model.test_local = Suffix(direction=Suffix.LOCAL)
-        self.assertTrue(model.test_local.export_enabled() is False)
+        self.assertFalse(model.test_local.export_enabled())
 
         model.test_out = Suffix(direction=Suffix.IMPORT)
-        self.assertTrue(model.test_out.export_enabled() is False)
+        self.assertFalse(model.test_out.export_enabled())
 
         model.test_in = Suffix(direction=Suffix.EXPORT)
-        self.assertTrue(model.test_in.export_enabled() is True)
+        self.assertTrue(model.test_in.export_enabled())
 
         model.test_inout = Suffix(direction=Suffix.IMPORT_EXPORT)
-        self.assertTrue(model.test_inout.export_enabled() is True)
+        self.assertTrue(model.test_inout.export_enabled())
 
     # test set_value and getValue
     # and if Var arrays are correctly expanded
