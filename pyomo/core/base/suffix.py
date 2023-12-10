@@ -183,6 +183,7 @@ class Suffix(ComponentMap, ActiveComponent):
         self._rule = Initializer(
             self._pop_from_kwargs('Suffix', kwargs, ('rule', 'initialize'), None),
             treat_sequences_as_mappings=False,
+            allow_generators=True,
         )
 
         # Initialize base classes
@@ -212,7 +213,7 @@ class Suffix(ComponentMap, ActiveComponent):
             if rule.contains_indices():
                 # The index is coming in externally; we need to validate it
                 for index in rule.indices():
-                    self[index] = rule(block, index)
+                    self.set_value(index, rule(block, index))
             else:
                 self.update_values(rule(block, None))
         timer.report()
