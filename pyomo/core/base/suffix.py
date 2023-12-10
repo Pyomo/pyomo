@@ -81,11 +81,37 @@ def active_suffix_generator(a_block, datatype=NOTSET):
 
 
 class SuffixDataType(enum.IntEnum):
+    """Suffix data types
+
+    AMPL only supports two data types for Suffixes: int and float.  The
+    numeric values here are specific to the NL file format and should
+    not be changed without checking/updating the NL writer.
+
+    """
+
     INT = 0
     FLOAT = 4
 
 
 class SuffixDirection(enum.IntEnum):
+    """Suffix data flow definition.
+
+    This identifies if the specific Suffix is to be sent to the solver,
+    read from the solver output, both, or neither:
+
+    - LOCAL: Suffix is local to Pyomo and should not be sent to or read
+      from the solver.
+
+    - EXPORT: Suffix should be sent tot he solver as supplemental model
+      information.
+
+    - IMPORT: Suffix values will be returned from the solver and should
+      be read from the solver output.
+
+    - IMPORT_EXPORT: The Suffix is both an EXPORT and IMPORT suffix.
+
+    """
+
     LOCAL = 0
     EXPORT = 1
     IMPORT = 2
@@ -108,6 +134,11 @@ class Suffix(ComponentMap, ActiveComponent):
         datatype    A variable type associated with all values of this
                         suffix.
     """
+
+    #
+    # The following local (class) aliases are provided for backwards
+    # compatibility
+    #
 
     # Suffix Directions:
     # - neither sent to solver or received from solver
