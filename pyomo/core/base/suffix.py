@@ -11,15 +11,18 @@
 
 __all__ = ('Suffix', 'active_export_suffix_generator', 'active_import_suffix_generator')
 
+import enum
 import logging
-from pyomo.common.pyomo_typing import overload
 
 from pyomo.common.collections import ComponentMap
+from pyomo.common.config import In
+from pyomo.common.deprecation import deprecated
 from pyomo.common.log import is_debug_set
+from pyomo.common.modeling import NOTSET
+from pyomo.common.pyomo_typing import overload
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.component import ActiveComponent, ModelComponentFactory
-
-from pyomo.common.deprecation import deprecated
+from pyomo.core.base.initializer import Initializer
 
 logger = logging.getLogger('pyomo.core')
 
@@ -132,31 +135,28 @@ class Suffix(ComponentMap, ActiveComponent):
     ):
         ...
 
-    def __init__(self, **kwds):
+    def __init__(self, **kwargs):
         # Suffix type information
         self._direction = None
         self._datatype = None
         self._rule = None
 
-        # The suffix direction
-        direction = kwds.pop('direction', Suffix.LOCAL)
+        # The suffix direction (note the setter performs error chrcking)
+        self.direction = kwargs.pop('direction', Suffix.LOCAL)
 
-        # The suffix datatype
-        datatype = kwds.pop('datatype', Suffix.FLOAT)
+        # The suffix datatype (note the setter performs error chrcking)
+        self.datatype = kwargs.pop('datatype', Suffix.FLOAT)
 
         # The suffix construction rule
         # TODO: deprecate the use of 'rule'
-        self._rule = kwds.pop('rule', None)
-        self._rule = kwds.pop('initialize', self._rule)
-
-        # Check that keyword values make sense (these function have
-        # internal error checking).
-        self.set_direction(direction)
-        self.set_datatype(datatype)
+        self._rule = Initializer(
+            self._pop_from_kwargs('Suffix', kwargs, ('rule', 'initialize'), None),
+            treat_sequences_as_mappings=False,
+        )
 
         # Initialize base classes
-        kwds.setdefault('ctype', Suffix)
-        ActiveComponent.__init__(self, **kwds)
+        kwargs.setdefault('ctype', Suffix)
+        ActiveComponent.__init__(self, **kwargs)
         ComponentMap.__init__(self)
 
         if self._rule is None:
@@ -176,7 +176,14 @@ class Suffix(ComponentMap, ActiveComponent):
         self._constructed = True
 
         if self._rule is not None:
-            self.update_values(self._rule(self._parent()))
+            rule = self._rule
+            block = self.parent_block()
+            if rule.contains_indices():
+                # The index is coming in externally; we need to validate it
+                for index in rule.indices():
+                    self[index] = rule(block, index)
+            else:
+                self.update_values(rule(block, None))
         timer.report()
 
     @property
