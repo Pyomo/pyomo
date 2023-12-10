@@ -262,13 +262,6 @@ class Suffix(ComponentMap, ActiveComponent):
             )
         self._direction = direction
 
-    @deprecated(
-        'Suffix.exportEnabled is replaced with Suffix.export_enabled.',
-        version='4.1.10486',
-    )
-    def exportEnabled(self):
-        return self.export_enabled()
-
     def export_enabled(self):
         """
         Returns True when this suffix is enabled for export to
@@ -276,26 +269,12 @@ class Suffix(ComponentMap, ActiveComponent):
         """
         return bool(self._direction & Suffix.EXPORT)
 
-    @deprecated(
-        'Suffix.importEnabled is replaced with Suffix.import_enabled.',
-        version='4.1.10486',
-    )
-    def importEnabled(self):
-        return self.import_enabled()
-
     def import_enabled(self):
         """
         Returns True when this suffix is enabled for import from
         solutions.
         """
         return bool(self._direction & Suffix.IMPORT)
-
-    @deprecated(
-        'Suffix.updateValues is replaced with Suffix.update_values.',
-        version='4.1.10486',
-    )
-    def updateValues(self, data, expand=True):
-        return self.update_values(data, expand)
 
     def update_values(self, data, expand=True):
         """
@@ -316,12 +295,6 @@ class Suffix(ComponentMap, ActiveComponent):
             # As implemented by MutableMapping
             self.update(data)
 
-    @deprecated(
-        'Suffix.setValue is replaced with Suffix.set_value.', version='4.1.10486'
-    )
-    def setValue(self, component, value, expand=True):
-        return self.set_value(component, value, expand)
-
     def set_value(self, component, value, expand=True):
         """
         Sets the value of this suffix on the specified component.
@@ -339,25 +312,12 @@ class Suffix(ComponentMap, ActiveComponent):
         else:
             self[component] = value
 
-    @deprecated(
-        'Suffix.setAllValues is replaced with Suffix.set_all_values.',
-        version='4.1.10486',
-    )
-    def setAllValues(self, value):
-        return self.set_all_values(value)
-
     def set_all_values(self, value):
         """
         Sets the value of this suffix on all components.
         """
         for ndx in self:
             self[ndx] = value
-
-    @deprecated(
-        'Suffix.clearValue is replaced with Suffix.clear_value.', version='4.1.10486'
-    )
-    def clearValue(self, component, expand=True):
-        return self.clear_value(component, expand)
 
     def clear_value(self, component, expand=True):
         """
@@ -375,24 +335,11 @@ class Suffix(ComponentMap, ActiveComponent):
             except KeyError:
                 pass
 
-    @deprecated(
-        'Suffix.clearAllValues is replaced with Suffix.clear_all_values.',
-        version='4.1.10486',
-    )
-    def clearAllValues(self):
-        return self.clear_all_values()
-
     def clear_all_values(self):
         """
         Clears all suffix data.
         """
         self.clear()
-
-    @deprecated(
-        'Suffix.setDatatype is replaced with Suffix.set_datatype.', version='4.1.10486'
-    )
-    def setDatatype(self, datatype):
-        return self.set_datatype(datatype)
 
     def set_datatype(self, datatype):
         """
@@ -406,24 +353,11 @@ class Suffix(ComponentMap, ActiveComponent):
             )
         self._datatype = datatype
 
-    @deprecated(
-        'Suffix.getDatatype is replaced with Suffix.get_datatype.', version='4.1.10486'
-    )
-    def getDatatype(self):
-        return self.get_datatype()
-
     def get_datatype(self):
         """
         Return the suffix datatype.
         """
         return self._datatype
-
-    @deprecated(
-        'Suffix.setDirection is replaced with Suffix.set_direction.',
-        version='4.1.10486',
-    )
-    def setDirection(self, direction):
-        return self.set_direction(direction)
 
     def set_direction(self, direction):
         """
@@ -436,13 +370,6 @@ class Suffix(ComponentMap, ActiveComponent):
                 % (list(self.SuffixDirectionToStr.values()), direction)
             )
         self._direction = direction
-
-    @deprecated(
-        'Suffix.getDirection is replaced with Suffix.get_direction.',
-        version='4.1.10486',
-    )
-    def getDirection(self):
-        return self.get_direction()
 
     def get_direction(self):
         """
@@ -470,33 +397,6 @@ class Suffix(ComponentMap, ActiveComponent):
             ("Value",),
             lambda k, v: [v],
         )
-
-    # TODO: delete
-    @deprecated(
-        'Suffix.getValue is replaced with the dict-interface method Suffix.get.',
-        version='4.1.10486',
-    )
-    def getValue(self, component, *args):
-        """
-        Returns the current value of this suffix for the specified
-        component.
-        """
-        # As implemented by MutableMapping
-        return self.get(component, *args)
-
-    # TODO: delete
-    @deprecated(
-        'Suffix.extractValues() is replaced with '
-        'the dict-interface method Suffix.items().',
-        version='4.1.10486',
-    )
-    def extractValues(self):
-        """
-        Extract all data stored on this Suffix into a list of
-        component, value tuples.
-        """
-        # As implemented by MutableMapping
-        return list(self.items())
 
     #
     # Override a few methods to make sure the ActiveComponent versions are
