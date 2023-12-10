@@ -134,6 +134,22 @@ def suffix_generator(a_block, datatype=False):
                 yield name, suffix
 
 
+class SuffixDataType(enum.IntEnum):
+    INT = 0
+    FLOAT = 4
+
+
+class SuffixDirection(enum.IntEnum):
+    LOCAL = 0
+    EXPORT = 1
+    IMPORT = 2
+    IMPORT_EXPORT = 3
+
+
+_SuffixDataTypeDomain = In(SuffixDataType)
+_SuffixDirectionDomain = In(SuffixDirection)
+
+
 @ModelComponentFactory.register("Declare a container for extraneous model data")
 class Suffix(ComponentMap, ActiveComponent):
     """A model suffix, representing extraneous model data"""
@@ -148,28 +164,17 @@ class Suffix(ComponentMap, ActiveComponent):
     """
 
     # Suffix Directions:
-    # If more directions are added be sure to update the error message
-    # in the setDirection method
-    # neither sent to solver or received from solver
-    LOCAL = 0
-    # sent to solver or other external location
-    EXPORT = 1
-    # obtained from solver or other external source
-    IMPORT = 2
-    IMPORT_EXPORT = 3  # both
+    # - neither sent to solver or received from solver
+    LOCAL = SuffixDirection.LOCAL
+    # - sent to solver or other external location
+    EXPORT = SuffixDirection.EXPORT
+    # - obtained from solver or other external source
+    IMPORT = SuffixDirection.IMPORT
+    # - both import and export
+    IMPORT_EXPORT = SuffixDirection.IMPORT_EXPORT
 
-    SuffixDirections = (LOCAL, EXPORT, IMPORT, IMPORT_EXPORT)
-    SuffixDirectionToStr = {
-        LOCAL: 'Suffix.LOCAL',
-        EXPORT: 'Suffix.EXPORT',
-        IMPORT: 'Suffix.IMPORT',
-        IMPORT_EXPORT: 'Suffix.IMPORT_EXPORT',
-    }
-    # Suffix Datatypes
-    FLOAT = 4
-    INT = 0
-    SuffixDatatypes = (FLOAT, INT, None)
-    SuffixDatatypeToStr = {FLOAT: 'Suffix.FLOAT', INT: 'Suffix.INT', None: str(None)}
+    FLOAT = SuffixDataType.FLOAT
+    INT = SuffixDataType.INT
 
     @overload
     def __init__(
@@ -239,11 +244,8 @@ class Suffix(ComponentMap, ActiveComponent):
     @datatype.setter
     def datatype(self, datatype):
         """Set the suffix datatype."""
-        if datatype not in self.SuffixDatatypeToStr:
-            raise ValueError(
-                "Suffix datatype must be one of: %s. \n"
-                "Value given: %s" % (list(self.SuffixDatatypeToStr.values()), datatype)
-            )
+        if datatype is not None:
+            datatype = _SuffixDataTypeDomain(datatype)
         self._datatype = datatype
 
     @property
@@ -254,12 +256,8 @@ class Suffix(ComponentMap, ActiveComponent):
     @direction.setter
     def direction(self, direction):
         """Set the suffix direction."""
-        if direction not in self.SuffixDirectionToStr:
-            raise ValueError(
-                "Suffix direction must be one of: %s. \n"
-                "Value given: %s"
-                % (list(self.SuffixDirectionToStr.values()), direction)
-            )
+        if direction is not None:
+            direction = _SuffixDirectionDomain(direction)
         self._direction = direction
 
     def export_enabled(self):
@@ -345,44 +343,29 @@ class Suffix(ComponentMap, ActiveComponent):
         """
         Set the suffix datatype.
         """
-        if datatype not in self.SuffixDatatypes:
-            raise ValueError(
-                "Suffix datatype must be one of: %s. \n"
-                "Value given: %s"
-                % (list(Suffix.SuffixDatatypeToStr.values()), datatype)
-            )
-        self._datatype = datatype
+        self.datatype = datatype
 
     def get_datatype(self):
         """
         Return the suffix datatype.
         """
-        return self._datatype
+        return self.datatype
 
     def set_direction(self, direction):
         """
         Set the suffix direction.
         """
-        if direction not in self.SuffixDirections:
-            raise ValueError(
-                "Suffix direction must be one of: %s. \n"
-                "Value given: %s"
-                % (list(self.SuffixDirectionToStr.values()), direction)
-            )
-        self._direction = direction
+        self.direction = direction
 
     def get_direction(self):
         """
         Return the suffix direction.
         """
-        return self._direction
+        return self.direction
 
     def _pprint(self):
         return (
-            [
-                ('Direction', self.SuffixDirectionToStr[self._direction]),
-                ('Datatype', self.SuffixDatatypeToStr[self._datatype]),
-            ],
+            [('Direction', str(self._direction)), ('Datatype', str(self._datatype))],
             ((str(k), v) for k, v in self._dict.values()),
             ("Value",),
             lambda k, v: [v],

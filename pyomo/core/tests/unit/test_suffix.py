@@ -55,19 +55,6 @@ def simple_obj_rule(model, i):
 
 
 class TestSuffixMethods(unittest.TestCase):
-    # test __init__
-    def test_init(self):
-        model = ConcreteModel()
-        # no keywords
-        model.junk = Suffix()
-        model.del_component('junk')
-
-        for direction, datatype in itertools.product(
-            Suffix.SuffixDirections, Suffix.SuffixDatatypes
-        ):
-            model.junk = Suffix(direction=direction, datatype=datatype)
-            model.del_component('junk')
-
     # test import_enabled
     def test_import_enabled(self):
         model = ConcreteModel()
@@ -853,45 +840,37 @@ class TestSuffixMethods(unittest.TestCase):
     def test_set_datatype_get_datatype(self):
         model = ConcreteModel()
         model.junk = Suffix(datatype=Suffix.FLOAT)
-        self.assertTrue(model.junk.get_datatype() is Suffix.FLOAT)
-        model.junk.set_datatype(Suffix.INT)
-        self.assertTrue(model.junk.get_datatype() is Suffix.INT)
-        model.junk.set_datatype(None)
-        self.assertTrue(model.junk.get_datatype() is None)
+        self.assertEqual(model.junk.datatype, Suffix.FLOAT)
+        model.junk.datatype = Suffix.INT
+        self.assertEqual(model.junk.datatype, Suffix.INT)
+        model.junk.datatype = None
+        self.assertEqual(model.junk.datatype, None)
+        model.junk.datatype = 'FLOAT'
+        self.assertEqual(model.junk.datatype, Suffix.FLOAT)
+        model.junk.datatype = 'INT'
+        self.assertEqual(model.junk.datatype, Suffix.INT)
+        model.junk.datatype = 4
+        self.assertEqual(model.junk.datatype, Suffix.FLOAT)
+        model.junk.datatype = 0
+        self.assertEqual(model.junk.datatype, Suffix.INT)
 
-    # test that calling set_datatype with a bad value fails
-    def test_set_datatype_badvalue(self):
-        model = ConcreteModel()
-        model.junk = Suffix()
-        try:
-            model.junk.set_datatype(1.0)
-        except ValueError:
-            pass
-        else:
-            self.fail("Calling set_datatype with a bad type should fail.")
+        with self.assertRaisesRegex(ValueError, "1.0 is not a valid SuffixDataType"):
+            model.junk.datatype = 1.0
 
     # test set_direction and get_direction
     def test_set_direction_get_direction(self):
         model = ConcreteModel()
         model.junk = Suffix(direction=Suffix.LOCAL)
-        self.assertTrue(model.junk.get_direction() is Suffix.LOCAL)
-        model.junk.set_direction(Suffix.EXPORT)
-        self.assertTrue(model.junk.get_direction() is Suffix.EXPORT)
-        model.junk.set_direction(Suffix.IMPORT)
-        self.assertTrue(model.junk.get_direction() is Suffix.IMPORT)
-        model.junk.set_direction(Suffix.IMPORT_EXPORT)
-        self.assertTrue(model.junk.get_direction() is Suffix.IMPORT_EXPORT)
+        self.assertEqual(model.junk.direction, Suffix.LOCAL)
+        model.junk.direction = Suffix.EXPORT
+        self.assertEqual(model.junk.direction, Suffix.EXPORT)
+        model.junk.direction = Suffix.IMPORT
+        self.assertEqual(model.junk.direction, Suffix.IMPORT)
+        model.junk.direction = Suffix.IMPORT_EXPORT
+        self.assertEqual(model.junk.direction, Suffix.IMPORT_EXPORT)
 
-    # test that calling set_direction with a bad value fails
-    def test_set_direction_badvalue(self):
-        model = ConcreteModel()
-        model.junk = Suffix()
-        try:
-            model.junk.set_direction('a')
-        except ValueError:
-            pass
-        else:
-            self.fail("Calling set_datatype with a bad type should fail.")
+        with self.assertRaisesRegex(ValueError, "'a' is not a valid SuffixDirection"):
+            model.junk.direction = 'a'
 
     # test __str__
     def test_str(self):
@@ -905,11 +884,11 @@ class TestSuffixMethods(unittest.TestCase):
         model.junk = Suffix(direction=Suffix.EXPORT)
         output = StringIO()
         model.junk.pprint(ostream=output)
-        model.junk.set_direction(Suffix.IMPORT)
+        model.junk.direction = Suffix.IMPORT
         model.junk.pprint(ostream=output)
-        model.junk.set_direction(Suffix.LOCAL)
+        model.junk.direction = Suffix.LOCAL
         model.junk.pprint(ostream=output)
-        model.junk.set_direction(Suffix.IMPORT_EXPORT)
+        model.junk.direction = Suffix.IMPORT_EXPORT
         model.junk.pprint(ostream=output)
         model.pprint(ostream=output)
 
