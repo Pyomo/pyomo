@@ -989,7 +989,7 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
 
                     return (
                         [dict(zip(inputNames, sips))],
-                        -self.availableDerivative - 1,
+                        # -self.availableDerivative - 1,
                         remainingKwargs,
                     )  # Mix of args and kwargs define inputs
             else:
@@ -1004,7 +1004,7 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
                     remainingKwargs['remainingArgs'] = args[len(inputNames) :]
                     return (
                         [dict(zip(inputNames, sips))],
-                        -self.availableDerivative - 1,
+                        # -self.availableDerivative - 1,
                         remainingKwargs,
                     )  # all inputs are in args
                 # except:
@@ -1015,12 +1015,12 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
                     if str(e) == 'Not enough inputs':
                         raise ValueError(e)
                     else:  # otherwise, proceed
-                        runCases, returnMode, extra_singleInput = self.parseInputs(
+                        runCases,  extra_singleInput = self.parseInputs(
                             args[0]
                         )
                         remainingKwargs = copy.deepcopy(kwargs)
                         remainingKwargs['remainingArgs'] = args[len(inputNames) :]
-                        return runCases, returnMode, remainingKwargs
+                        return runCases,  remainingKwargs
 
     # ---------------------------------------------------------------------------------------------------------------------
     # ---------------------------------------------------------------------------------------------------------------------

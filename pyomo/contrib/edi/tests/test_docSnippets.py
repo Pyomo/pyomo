@@ -780,7 +780,7 @@ class TestEDISnippets(unittest.TestCase):
 
             # standard function call is y(, dydx, ...) = self.BlackBox(**{'x1':x1, 'x2':x2, ...})
             def BlackBox(self, *args, **kwargs):
-                runCases, returnMode, extras = self.parseInputs(*args, **kwargs)
+                runCases, extras = self.parseInputs(*args, **kwargs)
                 x = [
                     self.pyomo_value(runCases[i]['x']) for i in range(0, len(runCases))
                 ]
@@ -804,6 +804,8 @@ class TestEDISnippets(unittest.TestCase):
                     v.append(yval * units.dimensionless)
                     dvdx.append(0.0 * units.dimensionless)
                     dvdy.append(1.0 * units.dimensionless)
+
+                returnMode = 1
 
                 if returnMode < 0:
                     returnMode = -1 * (returnMode + 1)
@@ -896,7 +898,7 @@ class TestEDISnippets(unittest.TestCase):
                 self.availableDerivative = 1
 
             def BlackBox(self, *args, **kwargs):
-                runCases, returnMode, extras = self.parseInputs(*args, **kwargs)
+                runCases, extras = self.parseInputs(*args, **kwargs)
 
                 x = np.array(
                     [pyo.value(runCases[i]['x']) for i in range(0, len(runCases))]
@@ -912,6 +914,8 @@ class TestEDISnippets(unittest.TestCase):
                 y = [yval * units.dimensionless for yval in y]
                 dydx = [dydx[i] * units.dimensionless for i in range(0, len(dydx))]
 
+                returnMode = 1
+                
                 if returnMode < 0:
                     returnMode = -1 * (returnMode + 1)
                     if returnMode == 0:
@@ -974,7 +978,7 @@ class TestEDISnippets(unittest.TestCase):
 
             # BEGIN: AdvancedRTC_Snippet_02
             def BlackBox(self, *args, **kwargs):
-                runCases, returnMode, extras = self.parseInputs(*args, **kwargs)
+                runCases, extras = self.parseInputs(*args, **kwargs)
                 # END: AdvancedRTC_Snippet_02
 
                 x = np.array(
@@ -990,6 +994,8 @@ class TestEDISnippets(unittest.TestCase):
 
                 y = [yval * units.dimensionless for yval in y]
                 dydx = [dydx[i] * units.dimensionless for i in range(0, len(dydx))]
+
+                returnMode = 1
 
                 if returnMode < 0:
                     returnMode = -1 * (returnMode + 1)
