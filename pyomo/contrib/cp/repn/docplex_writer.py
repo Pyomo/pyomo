@@ -30,7 +30,7 @@ from pyomo.contrib.cp.interval_var import (
     IntervalVarData,
     IndexedIntervalVar,
 )
-from pyomo.contrib.cp.sequence_var import(
+from pyomo.contrib.cp.sequence_var import (
     ScalarSequenceVar,
     IndexedSequenceVar,
     _SequenceVarData,
@@ -506,9 +506,12 @@ def _create_docplex_interval_var(visitor, interval_var):
 def _create_docplex_sequence_var(visitor, sequence_var):
     nm = sequence_var.name if visitor.symbolic_solver_labels else None
 
-    cpx_seq_var = cp.sequence_var(name=nm,
-                                  vars=[_get_docplex_interval_var(visitor, v)
-                                        for v in sequence_var.interval_vars])
+    cpx_seq_var = cp.sequence_var(
+        name=nm,
+        vars=[
+            _get_docplex_interval_var(visitor, v) for v in sequence_var.interval_vars
+        ],
+    )
     visitor.var_map[id(sequence_var)] = cpx_seq_var
     return cpx_seq_var
 
@@ -967,13 +970,15 @@ def _handle_last_in_sequence_expression_node(visitor, node, interval_var, seq_va
     return _GENERAL, cp.last(seq_var[1], interval_var[1])
 
 
-def _handle_before_in_sequence_expression_node(visitor, node, before_var,
-                                               after_var, seq_var):
+def _handle_before_in_sequence_expression_node(
+    visitor, node, before_var, after_var, seq_var
+):
     return _GENERAL, cp.before(seq_var[1], before_var[1], after_var[1])
 
 
-def _handle_predecessor_to_expression_node(visitor, node, before_var, after_var,
-                                           seq_var):
+def _handle_predecessor_to_expression_node(
+    visitor, node, before_var, after_var, seq_var
+):
     return _GENERAL, cp.previous(seq_var[1], before_var[1], after_var[1])
 
 

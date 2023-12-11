@@ -74,7 +74,7 @@ class TestSequenceVarExpressions(unittest.TestCase):
         self.assertIs(e.args[1], m.seq)
 
         self.assertEqual(str(e), "last_in(i[0], seq)")
-    
+
     def test_before_in_sequence(self):
         m = self.get_model()
         m.c = LogicalConstraint(expr=before_in_sequence(m.i[1], m.i[0], m.seq))
@@ -93,12 +93,12 @@ class TestSequenceVarExpressions(unittest.TestCase):
         m = self.get_model()
         m.c = LogicalConstraint(expr=predecessor_to(m.i[0], m.i[1], m.seq))
         e = m.c.expr
-        
+
         self.assertIsInstance(e, PredecessorToExpression)
         self.assertEqual(e.nargs(), 3)
         self.assertEqual(len(e.args), 3)
         self.assertIs(e.args[0], m.i[0])
         self.assertIs(e.args[1], m.i[1])
         self.assertIs(e.args[2], m.seq)
-        
+
         self.assertEqual(str(e), "predecessor_to(i[0], i[1], seq)")

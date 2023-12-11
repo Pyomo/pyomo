@@ -58,16 +58,16 @@ class TestScalarSequenceVar(unittest.TestCase):
 seq : Size=1, Index=None
     Key  : IntervalVars
     None : [i[0], i[1], i[2]]
-            """.strip()
+            """.strip(),
         )
 
     def test_interval_vars_not_a_list(self):
         m = self.get_model()
 
         with self.assertRaisesRegex(
-                ValueError,
-                "'expr' for SequenceVar must be a list of IntervalVars. " 
-                "Encountered type '<class 'int'>' constructing 'seq2'"
+            ValueError,
+            "'expr' for SequenceVar must be a list of IntervalVars. "
+            "Encountered type '<class 'int'>' constructing 'seq2'",
         ):
             m.seq2 = SequenceVar(expr=1)
 
@@ -75,12 +75,13 @@ seq : Size=1, Index=None
         m = self.get_model()
 
         with self.assertRaisesRegex(
-                ValueError,
-                "The SequenceVar 'expr' argument must be a list of "
-                "IntervalVars. The 'expr' for SequenceVar 'seq2' included "
-                "an object of type '<class 'int'>'"
+            ValueError,
+            "The SequenceVar 'expr' argument must be a list of "
+            "IntervalVars. The 'expr' for SequenceVar 'seq2' included "
+            "an object of type '<class 'int'>'",
         ):
             m.seq2 = SequenceVar(expr=m.i)
+
 
 class TestIndexedSequenceVar(unittest.TestCase):
     def test_initialize_with_not_data(self):
@@ -110,6 +111,7 @@ class TestIndexedSequenceVar(unittest.TestCase):
 
         def the_rule(m, j):
             return [m.i[j, k] for k in m.num]
+
         m.seq = SequenceVar(m.alph, rule=the_rule)
 
         return m
@@ -137,5 +139,5 @@ class TestIndexedSequenceVar(unittest.TestCase):
 seq : Size=2, Index=alph
     Key : IntervalVars
       a : [i[a,1], i[a,2]]
-      b : [i[b,1], i[b,2]]""".strip()
+      b : [i[b,1], i[b,2]]""".strip(),
         )

@@ -27,7 +27,9 @@ logger = logging.getLogger(__name__)
 
 class _SequenceVarData(ActiveComponentData):
     """This class defines the abstract interface for a single sequence variable."""
+
     __slots__ = ('interval_vars',)
+
     def __init__(self, component=None):
         # in-lining ActiveComponentData and ComponentData constructors, as is
         # traditional:
@@ -45,14 +47,15 @@ class _SequenceVarData(ActiveComponentData):
         if not hasattr(expr, '__iter__'):
             raise ValueError(
                 "'expr' for SequenceVar must be a list of IntervalVars. "
-                "Encountered type '%s' constructing '%s'" % (type(expr),
-                                                             self.name))
+                "Encountered type '%s' constructing '%s'" % (type(expr), self.name)
+            )
         for v in expr:
             if not hasattr(v, 'ctype') or v.ctype is not IntervalVar:
                 raise ValueError(
                     "The SequenceVar 'expr' argument must be a list of "
                     "IntervalVars. The 'expr' for SequenceVar '%s' included "
-                    "an object of type '%s'" % (self.name, type(v)))
+                    "an object of type '%s'" % (self.name, type(v))
+                )
             self.interval_vars.append(v)
 
 
@@ -101,7 +104,7 @@ class SequenceVar(ActiveIndexedComponent):
         if self._constructed:
             return
         self._constructed = True
-        
+
         if is_debug_set(logger):
             logger.debug("Constructing SequenceVar %s" % self.name)
 
@@ -132,10 +135,9 @@ class SequenceVar(ActiveIndexedComponent):
             headers,
             self._data.items(),
             ("IntervalVars",),
-            lambda k, v: [
-                '[' + ', '.join(iv.name for iv in v.interval_vars) + ']',
-            ]
+            lambda k, v: ['[' + ', '.join(iv.name for iv in v.interval_vars) + ']'],
         )
+
 
 class ScalarSequenceVar(_SequenceVarData, SequenceVar):
     def __init__(self, *args, **kwds):

@@ -14,8 +14,10 @@ from pyomo.core.expr.logical_expr import BooleanExpression
 # ESJ TODO: The naming in this file needs more thought, and it appears I do not
 # need the base class.
 
+
 class SequenceVarExpression(BooleanExpression):
     pass
+
 
 class NoOverlapExpression(SequenceVarExpression):
     """
@@ -25,6 +27,7 @@ class NoOverlapExpression(SequenceVarExpression):
     args:
         args (tuple): Child node of type SequenceVar
     """
+
     def nargs(self):
         return 1
 
@@ -41,6 +44,7 @@ class FirstInSequenceExpression(SequenceVarExpression):
         args (tuple): Child nodes, the first of type IntervalVar, the second of type
                       SequenceVar
     """
+
     def nargs(self):
         return 2
 
@@ -57,6 +61,7 @@ class LastInSequenceExpression(SequenceVarExpression):
         args (tuple): Child nodes, the first of type IntervalVar, the second of type
                       SequenceVar
     """
+
     def nargs(self):
         return 2
 
@@ -70,9 +75,10 @@ class BeforeInSequenceExpression(SequenceVarExpression):
     sequence specified by the given SequenceVar (if both are scheduled)
 
     args:
-        args (tuple): Child nodes, the IntervalVar that must be before, the 
+        args (tuple): Child nodes, the IntervalVar that must be before, the
                       IntervalVar that must be after, and the SequenceVar
     """
+
     def nargs(self):
         return 3
 
@@ -86,9 +92,10 @@ class PredecessorToExpression(SequenceVarExpression):
     in the sequence specified by the given SequenceVar (if both are scheduled)
 
     args:
-        args (tuple): Child nodes, the predecessor IntervalVar, the successor 
+        args (tuple): Child nodes, the predecessor IntervalVar, the successor
                       IntervalVar, and the SequenceVar
     """
+
     def nargs(self):
         return 3
 
@@ -120,7 +127,7 @@ def first_in_sequence(interval_var, sequence_var):
             if it is scheduled at all
         sequence_var (SequenceVar): The sequence of activities
     """
-    return FirstInSequenceExpression((interval_var, sequence_var,))
+    return FirstInSequenceExpression((interval_var, sequence_var))
 
 
 def last_in_sequence(interval_var, sequence_var):
@@ -136,24 +143,24 @@ def last_in_sequence(interval_var, sequence_var):
         sequence_var (SequenceVar): The sequence of activities
     """
 
-    return LastInSequenceExpression((interval_var, sequence_var,))
+    return LastInSequenceExpression((interval_var, sequence_var))
 
 
 def before_in_sequence(before_var, after_var, sequence_var):
     """
     Creates a new BeforeInSequenceExpression
 
-    Requires that 'before_var' be scheduled to start before 'after_var' in the 
+    Requires that 'before_var' be scheduled to start before 'after_var' in the
     sequence spcified bv 'sequence_var', if both are scheduled
 
     args:
-        before_var (IntervalVar): The activity that should be scheduled earlier in 
+        before_var (IntervalVar): The activity that should be scheduled earlier in
             the sequence
         after_var (IntervalVar): The activity that should be scheduled later in the
             sequence
         sequence_var (SequenceVar): The sequence of activities
     """
-    return BeforeInSequenceExpression((before_var, after_var, sequence_var,))
+    return BeforeInSequenceExpression((before_var, after_var, sequence_var))
 
 
 def predecessor_to(before_var, after_var, sequence_var):
@@ -170,4 +177,4 @@ def predecessor_to(before_var, after_var, sequence_var):
             successor
         sequence_var (SequenceVar): The sequence of activities
     """
-    return PredecessorToExpression((before_var, after_var, sequence_var,))
+    return PredecessorToExpression((before_var, after_var, sequence_var))
