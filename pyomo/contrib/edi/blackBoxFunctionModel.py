@@ -16,6 +16,8 @@
 #  ___________________________________________________________________________
 
 import copy
+import itertools
+from collections import namedtuple
 import pyomo
 import pyomo.environ as pyo
 from pyomo.environ import units as pyomo_units
@@ -134,7 +136,7 @@ class BlackBoxFunctionModel_Variable(object):
                         'A value of 1 is not valid for defining size.  Use fewer dimensions.'
                     )
                 sizeTemp.append(x)
-            self._size = val
+            self._size = sizeTemp
         else:
             if val is None:
                 self._size = 0  # set to scalar
@@ -278,6 +280,19 @@ class BBList(TypeCheckedList):
 
 
 errorString = 'This function is calling to the base class and has not been defined.'
+
+
+def toList(itm, keylist):
+    if isinstance(itm, (namedtuple, tuple, list)):
+        return list(itm)
+    elif isinstance(itm, dict):
+        retList = []
+        for ky in keylist:
+            if ky in itm.keys():
+                retList.append(itm[ky])
+        return retList
+    else:
+        return [itm]
 
 
 class BlackBoxFunctionModel(ExternalGreyBoxModel):
@@ -569,13 +584,214 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
 
                 ptr_row += ptr_row_step
 
-            self._cache['pyomo_jacobian'] = sps.coo_matrix(outputJacobian)
+            print(outputJacobian.dtype)
+            # print(sps.coo_matrix(outputJacobian))
+            # outputJacobian = np.zeros([3,1])
+            self._cache['pyomo_jacobian'] = sps.coo_matrix(outputJacobian, shape=outputJacobian.shape)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # ---------------------------------------------------------------------------------------------------------------------
     # These models must be defined in each individual model, just placeholders here
     def BlackBox(*args, **kwargs):
         raise AttributeError(errorString)
+
+    # ---------------------------------------------------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------------------------------------------------
+    # These functions wrap black box to provide more functionality
+
+    def BlackBox_Standardized(self, *args, **kwargs):
+        # --------
+        # Run
+        # --------
+        opt_raw = self.BlackBox(*args, **kwargs)
+
+        # --------
+        # Setup
+        # --------
+        outputNames = [o.name for o in self.outputs]
+        inputNames = [i.name for i in self.inputs]
+
+        returnTuple = namedtuple('returnTuple', ['values', 'first', 'second'])
+        optTuple = namedtuple('optTuple', outputNames)
+        iptTuple = namedtuple('iptTuple', inputNames)
+
+        structuredOutput = {}
+        structuredOutput['values'] = len(self.outputs) * [None]
+        structuredOutput['first'] = len(self.outputs) * [len(self.inputs) * [None]]
+        structuredOutput['second'] = len(self.outputs) * [
+            len(self.inputs) * [len(self.inputs) * [None]]
+        ]
+
+        opt = toList(opt_raw, ['values', 'first', 'second'])
+
+        # --------
+        # Values
+        # --------
+        # values will always come back as an appropriate list
+        opt_values = toList(opt[0])
+        for i in range(0, len(structuredOutput['values'])):
+            if self.outputs[i].size == 0:
+                structuredOutput['values'][i] = 0.0 * self.outputs[i].units
+            else:
+                currentSize = toList(self.outputs[i].size, [])
+                structuredOutput['values'][i] = (
+                    np.zeros(currentSize) * self.outputs[i].units
+                )
+
+        for i, vl in enumerate(opt_values):
+            if self.outputs[i].size == 0:
+                structuredOutput['values'][i] = opt_values[i].to(self.outputs[i].units)
+            else:
+                listOfIndices = list(
+                    itertools.product(*[range(0, n) for n in self.outputs[i].size])
+                )
+                for ix in listOfIndices:
+                    structuredOutput['values'][i][ix] = opt_values[i][
+                        ix
+                    ]  # unit conversion handled automatically by pint
+
+        # structuredOutput['values'] = opt_values
+
+        # --------
+        # First
+        # --------
+        # first orders will be [num] or [num, num, lst, num...] or [lst, lst, lst, lst...]
+        # should be [lst, lst, lst, lst...]
+        if len(opt) > 1:
+            opt_first = toList(opt[1], outputNames)
+            for i in range(0, len(structuredOutput['first'])):
+                currentSize_output = toList(self.outputs[i].size, [])
+                for j in range(0, len(structuredOutput['first'][i])):
+                    if self.outputs[i].size == 0 and self.inputs[j].size == 0:
+                        structuredOutput['values'][i][j] = (
+                            0.0 * self.outputs[i].units / self.inputs[j].units
+                        )
+                    elif self.outputs[i].size == 0:
+                        currentSize_input = toList(self.inputs[j].size, [])
+                        structuredOutput['values'][i][j] = (
+                            np.zeros(currentSize_input)
+                            * self.outputs[i].units
+                            / self.inputs[j].units
+                        )
+                    elif self.inputs[j].size == 0:
+                        structuredOutput['values'][i][j] = (
+                            np.zeros(currentSize_output)
+                            * self.outputs[i].units
+                            / self.inputs[j].units
+                        )
+                    else:
+                        currentSize_input = toList(self.inputs[j].size, [])
+                        structuredOutput['values'][i][j] = (
+                            np.zeros(currentSize_output + currentSize_input)
+                            * self.outputs[i].units
+                            / self.inputs[j].units
+                        )
+
+            for i, vl in enumerate(opt_first):
+                for j, vlj in enumerate(opt_first[i]):
+                    if self.outputs[i].size == 0 and self.inputs[j].size == 0:
+                        structuredOutput['first'][i][j] = opt_first[i][j].to(
+                            self.outputs[i].units / self.inputs[j].units
+                        )
+                    elif self.outputs[i].size == 0:
+                        listOfIndices = list(
+                            itertools.product(
+                                *[range(0, n) for n in self.inputs[j].size]
+                            )
+                        )
+                        for ix in listOfIndices:
+                            structuredOutput['first'][i][j][ix] = opt_first[i][j][
+                                ix
+                            ]  # unit conversion handled automatically by pint
+                    elif self.inputs[j].size == 0:
+                        listOfIndices = list(
+                            itertools.product(
+                                *[range(0, n) for n in self.outputs[i].size]
+                            )
+                        )
+                        for ix in listOfIndices:
+                            structuredOutput['first'][i][j][ix] = opt_first[i][j][
+                                ix
+                            ]  # unit conversion handled automatically by pint
+                    else:
+                        listOfIndices = list(
+                            itertools.product(
+                                *[
+                                    range(0, n)
+                                    for n in self.outputs[i].size + self.inputs[j].size
+                                ]
+                            )
+                        )
+                        for ix in listOfIndices:
+                            structuredOutput['first'][i][j][ix] = opt_first[i][j][
+                                ix
+                            ]  # unit conversion handled automatically by pint
+        else:
+            structuredOutput['first'] = None
+        # for i,vl in enumerate(opt_first):
+        #     opt_first[i] = toList(vl,inputNames)
+        # structuredOutput['first'] = opt_first
+
+        # --------
+        # Second
+        # --------
+        # if len(opt)>2:
+        #     opt_second = toList(opt[2],outputNames)
+        #     # Not implemented in this version
+        # else:
+        structuredOutput['second'] = None
+
+        # for i,vl in enumerate(opt_second):
+        #     opt_second[i] = toList(vl,inputNames)
+        #     for j, vlj in enumerate(opt_second[i]):
+        #         opt_second[i][j] = toList(vlj,inputNames)
+        # structuredOutput['second'] = opt_second
+
+        # --------
+        # Pack
+        # --------
+        for i in range(0, len(structuredOutput['second'])):
+            for j in range(0, len(structuredOutput['second'][i])):
+                structuredOutput['second'][i][j] = iptTuple(
+                    *structuredOutput['second'][i][j]
+                )
+
+        for i in range(0, len(structuredOutput['first'])):
+            structuredOutput['first'][i] = iptTuple(*structuredOutput['first'][i])
+            structuredOutput['second'][i] = iptTuple(*structuredOutput['second'][i])
+
+        structuredOutput['values'] = optTuple(*structuredOutput['values'])
+        structuredOutput['first'] = optTuple(*structuredOutput['first'])
+        structuredOutput['second'] = optTuple(*structuredOutput['second'])
+
+        return returnTuple(
+            structuredOutput['values'],
+            structuredOutput['first'],
+            structuredOutput['second'],
+        )
+
+    def MultiCase(self, *args, **kwargs):
+        runCases, extras = self.parseInputs(*args, **kwargs)
+
+        outputList = []
+        # values = []
+        # first = []
+        # second = []
+        for rc in runCases:
+            ipt = rc | extras
+            opt = self.BlackBox_Standardized(**ipt)
+            outputList.append(opt)
+            # values.append(opt[0])
+            # first.append(opt[1])
+            # second.append(opt[2])
+
+        # returnTuple = namedtuple('returnTuple', ['values','first','second'])
+        # return returnTuple(values, first, second)
+        return outputList
+
+    # ---------------------------------------------------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------------------------------------------------
+    # unit handling functions
 
     def convert(self, val, unts):
         try:
@@ -637,7 +853,7 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
                     rs = self.sanitizeInputs(inputData)
                     return (
                         [dict(zip(inputNames, [rs]))],
-                        -self.availableDerivative - 1,
+                        # -self.availableDerivative - 1,
                         {},
                     )  # one input being passed in
                 except:
@@ -673,7 +889,7 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
                             + "BlackBox(*[x1,x2,y]) or BlackBox({'x1':x1,'x2':x2,'y':y}) or simply BlackBox(x1, x2, y) to avoid processing singularities.  "
                             + "Best practice is BlackBox({'x1':x1,'x2':x2,'y':y})"
                         )
-                return dataRuns, self.availableDerivative, {}
+                return dataRuns, {}
 
             elif isinstance(inputData, dict):
                 if set(list(inputData.keys())) == set(inputNames):
@@ -685,7 +901,7 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
                             sips = [sips]
                         return (
                             [dict(zip(inputNames, sips))],
-                            -self.availableDerivative - 1,
+                            # -self.availableDerivative - 1,
                             {},
                         )  # the BlackBox(*{'x1':x1, 'x2':x2}) case, somewhat likely
 
@@ -698,7 +914,7 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
                         sips = self.sanitizeInputs(**inputData)
                         return (
                             [dict(zip(inputNames, sips))],
-                            -self.availableDerivative - 1,
+                            # -self.availableDerivative - 1,
                             {},
                         )  # the BlackBox(*{'x1':x1, 'x2':x2}) case where vectors for x1... are passed in (likely to fail on previous line)
                     else:
@@ -706,7 +922,7 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
                             sips = self.sanitizeInputs(**inputData)
                             return (
                                 [dict(zip(inputNames, sips))],
-                                -self.availableDerivative - 1,
+                                # -self.availableDerivative - 1,
                                 {},
                             )  # the BlackBox(*{'x1':x1, 'x2':x2}) case where vectors all inputs have same length intentionally (likely to fail on previous line)
                         except:
@@ -722,7 +938,7 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
                                 dataRuns.append(runDictS)
                             return (
                                 dataRuns,
-                                self.availableDerivative,
+                                # self.availableDerivative,
                                 {},
                             )  # the BlackBox({'x1':x1_vec, 'x2':x2_vec}) case, most likely
                 else:

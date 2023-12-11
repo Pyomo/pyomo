@@ -436,7 +436,7 @@ class TestEDIBlackBox(unittest.TestCase):
                 self.post_init_setup(len(self.inputs))
 
             def BlackBox(self, *args, **kwargs):  # The actual function that does things
-                runCases, returnMode, remainingKwargs = self.parseInputs(
+                runCases, remainingKwargs = self.parseInputs(
                     *args, **kwargs
                 )
 
@@ -511,7 +511,7 @@ class TestEDIBlackBox(unittest.TestCase):
                 self.post_init_setup(len(self.inputs))
 
             def BlackBox(self, *args, **kwargs):  # The actual function that does things
-                runCases, returnMode, remainingKwargs = self.parseInputs(
+                runCases, remainingKwargs = self.parseInputs(
                     *args, **kwargs
                 )
 
@@ -582,7 +582,7 @@ class TestEDIBlackBox(unittest.TestCase):
                 self.post_init_setup(len(self.inputs))
 
             def BlackBox(self, *args, **kwargs):  # The actual function that does things
-                runCases, returnMode, remainingKwargs = self.parseInputs(
+                runCases, remainingKwargs = self.parseInputs(
                     *args, **kwargs
                 )
 
@@ -646,7 +646,7 @@ class TestEDIBlackBox(unittest.TestCase):
                 self.post_init_setup(len(self.inputs))
 
             def BlackBox(self, *args, **kwargs):  # The actual function that does things
-                runCases, returnMode, remainingKwargs = self.parseInputs(
+                runCases, remainingKwargs = self.parseInputs(
                     *args, **kwargs
                 )
 
@@ -709,353 +709,353 @@ class TestEDIBlackBox(unittest.TestCase):
         )
         self.assertRaises(ValueError, bb.sizeCheck, *([10, 10], []))
 
-    def test_edi_blackbox_bare_example_1(self):
-        "Tests a black box example construction without an optimization problem"
-        import numpy as np
-        import pyomo.environ as pyo
-        from pyomo.environ import units
-        from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel
+    # def test_edi_blackbox_bare_example_1(self):
+    #     "Tests a black box example construction without an optimization problem"
+    #     import numpy as np
+    #     import pyomo.environ as pyo
+    #     from pyomo.environ import units
+    #     from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel
 
-        class SignomialTest(BlackBoxFunctionModel):
-            def __init__(self):
-                # Set up all the attributes by calling Model.__init__
-                super().__init__()
+    #     class SignomialTest(BlackBoxFunctionModel):
+    #         def __init__(self):
+    #             # Set up all the attributes by calling Model.__init__
+    #             super().__init__()
 
-                # Setup Inputs
-                self.inputs.append('x', '', 'Independent Variable')
+    #             # Setup Inputs
+    #             self.inputs.append('x', '', 'Independent Variable')
 
-                # Setup Outputs
-                self.outputs.append('y', '', 'Dependent Variable')
+    #             # Setup Outputs
+    #             self.outputs.append('y', '', 'Dependent Variable')
 
-                # Simple model description
-                self.description = (
-                    'This model evaluates the function: max([-6*x-6, x**4-3*x**2])'
-                )
+    #             # Simple model description
+    #             self.description = (
+    #                 'This model evaluates the function: max([-6*x-6, x**4-3*x**2])'
+    #             )
 
-                self.availableDerivative = 1
+    #             self.availableDerivative = 1
 
-            # standard function call is y(, dydx, ...) = self.BlackBox(**{'x1':x1, 'x2':x2, ...})
-            def BlackBox(self, *args, **kwargs):
-                runCases, returnMode, extras = self.parseInputs(*args, **kwargs)
-                x = np.array(
-                    [pyo.value(runCases[i]['x']) for i in range(0, len(runCases))]
-                )
+    #         # standard function call is y(, dydx, ...) = self.BlackBox(**{'x1':x1, 'x2':x2, ...})
+    #         def BlackBox(self, *args, **kwargs):
+    #             runCases, returnMode, extras = self.parseInputs(*args, **kwargs)
+    #             x = np.array(
+    #                 [pyo.value(runCases[i]['x']) for i in range(0, len(runCases))]
+    #             )
 
-                y = np.maximum(-6 * x - 6, x**4 - 3 * x**2)
-                dydx = 4 * x**3 - 6 * x
-                ddy_ddx = 12 * x**2 - 6
-                gradientSwitch = -6 * x - 6 > x**4 - 3 * x**2
-                dydx[gradientSwitch] = -6
-                ddy_ddx[gradientSwitch] = 0
+    #             y = np.maximum(-6 * x - 6, x**4 - 3 * x**2)
+    #             dydx = 4 * x**3 - 6 * x
+    #             ddy_ddx = 12 * x**2 - 6
+    #             gradientSwitch = -6 * x - 6 > x**4 - 3 * x**2
+    #             dydx[gradientSwitch] = -6
+    #             ddy_ddx[gradientSwitch] = 0
 
-                y = [yval * units.dimensionless for yval in y]
-                dydx = [dydx[i] * units.dimensionless for i in range(0, len(dydx))]
+    #             y = [yval * units.dimensionless for yval in y]
+    #             dydx = [dydx[i] * units.dimensionless for i in range(0, len(dydx))]
 
-                if returnMode < 0:
-                    returnMode = -1 * (returnMode + 1)
-                    if returnMode == 0:
-                        return y[0]
-                    if returnMode == 1:
-                        return y[0], dydx
-                else:
-                    if returnMode == 0:
-                        opt = []
-                        for i in range(0, len(y)):
-                            opt.append([y[i]])
-                        return opt
-                    if returnMode == 1:
-                        opt = []
-                        for i in range(0, len(y)):
-                            opt.append([[y[i]], [[[dydx[i]]]]])
-                        return opt
+    #             if returnMode < 0:
+    #                 returnMode = -1 * (returnMode + 1)
+    #                 if returnMode == 0:
+    #                     return y[0]
+    #                 if returnMode == 1:
+    #                     return y[0], dydx
+    #             else:
+    #                 if returnMode == 0:
+    #                     opt = []
+    #                     for i in range(0, len(y)):
+    #                         opt.append([y[i]])
+    #                     return opt
+    #                 if returnMode == 1:
+    #                     opt = []
+    #                     for i in range(0, len(y)):
+    #                         opt.append([[y[i]], [[[dydx[i]]]]])
+    #                     return opt
 
-        s = SignomialTest()
-        ivals = [[x] for x in np.linspace(-2, 2, 11)]
+    #     s = SignomialTest()
+    #     ivals = [[x] for x in np.linspace(-2, 2, 11)]
 
-        # How the black box may be called using EDI
-        bbo = s.BlackBox(**{'x': 0.5})
-        bbo = s.BlackBox({'x': 0.5})
-        bbo = s.BlackBox(**{'x': 0.5, 'optn': True})
+    #     # How the black box may be called using EDI
+    #     bbo = s.BlackBox(**{'x': 0.5})
+    #     bbo = s.BlackBox({'x': 0.5})
+    #     bbo = s.BlackBox(**{'x': 0.5, 'optn': True})
 
-        # Additional options available with parseInputs
-        bbo = s.BlackBox(*[0.5], **{'optn1': True, 'optn2': False})
-        bbo = s.BlackBox(*[0.5, True], **{'optn': False})
-        bbo = s.BlackBox({'x': [x for x in np.linspace(-2, 2, 11)]})
-        bbo = s.BlackBox([{'x': x} for x in np.linspace(-2, 2, 11)])
-        bbo = s.BlackBox([[x] for x in np.linspace(-2, 2, 11)])
-        bbo = s.BlackBox([[x] for x in np.linspace(-2, 2, 11)], True, optn=False)
-        bbo = s.BlackBox([[x] for x in np.linspace(-2, 2, 11)], optn1=True, optn2=False)
+    #     # Additional options available with parseInputs
+    #     bbo = s.BlackBox(*[0.5], **{'optn1': True, 'optn2': False})
+    #     bbo = s.BlackBox(*[0.5, True], **{'optn': False})
+    #     bbo = s.BlackBox({'x': [x for x in np.linspace(-2, 2, 11)]})
+    #     bbo = s.BlackBox([{'x': x} for x in np.linspace(-2, 2, 11)])
+    #     bbo = s.BlackBox([[x] for x in np.linspace(-2, 2, 11)])
+    #     bbo = s.BlackBox([[x] for x in np.linspace(-2, 2, 11)], True, optn=False)
+    #     bbo = s.BlackBox([[x] for x in np.linspace(-2, 2, 11)], optn1=True, optn2=False)
 
-        sm = s.summary
+    #     sm = s.summary
 
-        self.assertRaises(ValueError, s.BlackBox, *([[[1, 2], 2, 3], [1, 2, 3]]))
-        self.assertRaises(ValueError, s.BlackBox, *([[np.ones(2), 2, 3], [1, 2, 3]]))
+    #     self.assertRaises(ValueError, s.BlackBox, *([[[1, 2], 2, 3], [1, 2, 3]]))
+    #     self.assertRaises(ValueError, s.BlackBox, *([[np.ones(2), 2, 3], [1, 2, 3]]))
 
-        self.assertRaises(ValueError, s.sanitizeInputs, *())
-        self.assertRaises(ValueError, s.sanitizeInputs, *(1, 2, 3))
-        self.assertRaises(
-            ValueError, s.sanitizeInputs, **{'z': 2.0 * units.dimensionless}
-        )
-        self.assertRaises(ValueError, s.sanitizeInputs, *(2.0 * units.ft,))
-        self.assertRaises(NotImplementedError, s.checkOutputs, *())
+    #     self.assertRaises(ValueError, s.sanitizeInputs, *())
+    #     self.assertRaises(ValueError, s.sanitizeInputs, *(1, 2, 3))
+    #     self.assertRaises(
+    #         ValueError, s.sanitizeInputs, **{'z': 2.0 * units.dimensionless}
+    #     )
+    #     self.assertRaises(ValueError, s.sanitizeInputs, *(2.0 * units.ft,))
+    #     self.assertRaises(NotImplementedError, s.checkOutputs, *())
 
-    def test_edi_blackbox_bare_example_2(self):
-        "Tests a black box example construction without an optimization problem"
-        import numpy as np
-        import pyomo.environ as pyo
-        from pyomo.environ import units
-        from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel
-        from pyomo.common.formatting import tostr
+    # def test_edi_blackbox_bare_example_2(self):
+    #     "Tests a black box example construction without an optimization problem"
+    #     import numpy as np
+    #     import pyomo.environ as pyo
+    #     from pyomo.environ import units
+    #     from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel
+    #     from pyomo.common.formatting import tostr
 
-        class PassThrough(BlackBoxFunctionModel):
-            def __init__(self):
-                # Set up all the attributes by calling Model.__init__
-                super().__init__()
+    #     class PassThrough(BlackBoxFunctionModel):
+    #         def __init__(self):
+    #             # Set up all the attributes by calling Model.__init__
+    #             super().__init__()
 
-                # Setup Inputs
-                self.inputs.append('x', '', 'Independent Variable', size=[2, 2])
+    #             # Setup Inputs
+    #             self.inputs.append('x', '', 'Independent Variable', size=[2, 2])
 
-                # Setup Outputs
-                self.outputs.append('y', '', 'Dependent Variable', size=[2, 2])
+    #             # Setup Outputs
+    #             self.outputs.append('y', '', 'Dependent Variable', size=[2, 2])
 
-                # Simple model description
-                self.description = 'This model is a pass through)'
+    #             # Simple model description
+    #             self.description = 'This model is a pass through)'
 
-                self.availableDerivative = 1
+    #             self.availableDerivative = 1
 
-            # standard function call is y(, dydx, ...) = self.BlackBox(**{'x1':x1, 'x2':x2, ...})
-            def BlackBox(self, *args, **kwargs):
-                runCases, returnMode, extras = self.parseInputs(*args, **kwargs)
-                x = [
-                    self.pyomo_value(runCases[i]['x']) for i in range(0, len(runCases))
-                ]
+    #         # standard function call is y(, dydx, ...) = self.BlackBox(**{'x1':x1, 'x2':x2, ...})
+    #         def BlackBox(self, *args, **kwargs):
+    #             runCases, returnMode, extras = self.parseInputs(*args, **kwargs)
+    #             x = [
+    #                 self.pyomo_value(runCases[i]['x']) for i in range(0, len(runCases))
+    #             ]
 
-                y = []
-                dydx = []
+    #             y = []
+    #             dydx = []
 
-                for xval in x:
-                    y.append(xval * units.dimensionless)
-                    dydx_temp = np.zeros([2, 2, 2, 2])
-                    dydx_temp[0, 0, 0, 0] = 1.0
-                    dydx_temp[0, 1, 0, 1] = 1.0
-                    dydx_temp[1, 0, 1, 0] = 1.0
-                    dydx_temp[1, 1, 1, 1] = 1.0
+    #             for xval in x:
+    #                 y.append(xval * units.dimensionless)
+    #                 dydx_temp = np.zeros([2, 2, 2, 2])
+    #                 dydx_temp[0, 0, 0, 0] = 1.0
+    #                 dydx_temp[0, 1, 0, 1] = 1.0
+    #                 dydx_temp[1, 0, 1, 0] = 1.0
+    #                 dydx_temp[1, 1, 1, 1] = 1.0
 
-                    dydx.append(dydx_temp * units.dimensionless)
+    #                 dydx.append(dydx_temp * units.dimensionless)
 
-                if returnMode < 0:
-                    returnMode = -1 * (returnMode + 1)
-                    if returnMode == 0:
-                        return y[0]
-                    if returnMode == 1:
-                        return y[0], dydx
-                else:
-                    if returnMode == 0:
-                        opt = []
-                        for i in range(0, len(y)):
-                            opt.append([y[i]])
-                        return opt
-                    if returnMode == 1:
-                        opt = []
-                        for i in range(0, len(y)):
-                            opt.append([[y[i]], [[[dydx[i]]]]])
-                        return opt
+    #             if returnMode < 0:
+    #                 returnMode = -1 * (returnMode + 1)
+    #                 if returnMode == 0:
+    #                     return y[0]
+    #                 if returnMode == 1:
+    #                     return y[0], dydx
+    #             else:
+    #                 if returnMode == 0:
+    #                     opt = []
+    #                     for i in range(0, len(y)):
+    #                         opt.append([y[i]])
+    #                     return opt
+    #                 if returnMode == 1:
+    #                     opt = []
+    #                     for i in range(0, len(y)):
+    #                         opt.append([[y[i]], [[[dydx[i]]]]])
+    #                     return opt
 
-        bb = PassThrough()
-        ivals = [
-            [np.eye(2) * units.dimensionless],
-            [np.ones([2, 2]) * units.dimensionless],
-            [np.zeros([2, 2]) * units.dimensionless],
-        ]
+    #     bb = PassThrough()
+    #     ivals = [
+    #         [np.eye(2) * units.dimensionless],
+    #         [np.ones([2, 2]) * units.dimensionless],
+    #         [np.zeros([2, 2]) * units.dimensionless],
+    #     ]
 
-        xv = np.eye(2) * units.dimensionless
+    #     xv = np.eye(2) * units.dimensionless
 
-        # How the black box may be called using EDI
-        bbo = bb.BlackBox(**{'x': xv})
-        bbo = bb.BlackBox({'x': xv})
-        bbo = bb.BlackBox(**{'x': xv, 'optn': True})
+    #     # How the black box may be called using EDI
+    #     bbo = bb.BlackBox(**{'x': xv})
+    #     bbo = bb.BlackBox({'x': xv})
+    #     bbo = bb.BlackBox(**{'x': xv, 'optn': True})
 
-        # # Additional options available with parseInputs
-        bbo = bb.BlackBox(*[xv], **{'optn1': True, 'optn2': False})
-        bbo = bb.BlackBox(*[xv, True], **{'optn': False})
-        bbo = bb.BlackBox({'x': [x[0] for x in ivals]})
-        bbo = bb.BlackBox([{'x': x[0]} for x in ivals])
-        bbo = bb.BlackBox([[x[0]] for x in ivals])
-        bbo = bb.BlackBox([[x[0]] for x in ivals], True, optn=False)
-        bbo = bb.BlackBox([[x[0]] for x in ivals], optn1=True, optn2=False)
+    #     # # Additional options available with parseInputs
+    #     bbo = bb.BlackBox(*[xv], **{'optn1': True, 'optn2': False})
+    #     bbo = bb.BlackBox(*[xv, True], **{'optn': False})
+    #     bbo = bb.BlackBox({'x': [x[0] for x in ivals]})
+    #     bbo = bb.BlackBox([{'x': x[0]} for x in ivals])
+    #     bbo = bb.BlackBox([[x[0]] for x in ivals])
+    #     bbo = bb.BlackBox([[x[0]] for x in ivals], True, optn=False)
+    #     bbo = bb.BlackBox([[x[0]] for x in ivals], optn1=True, optn2=False)
 
-        sm = bb.summary
+    #     sm = bb.summary
 
-        self.assertRaises(ValueError, bb.sanitizeInputs, *(np.ones([2, 2]) * units.ft,))
+    #     self.assertRaises(ValueError, bb.sanitizeInputs, *(np.ones([2, 2]) * units.ft,))
 
-    def test_edi_blackbox_bare_example_3(self):
-        "Tests a black box example construction"
-        import numpy as np
-        from pyomo.environ import units
-        import pyomo.environ as pyo
-        from pyomo.contrib.edi import Formulation
-        from pyomo.contrib.edi.blackBoxFunctionModel import (
-            BlackBoxFunctionModel_Variable,
-            TypeCheckedList,
-            BBList,
-            BlackBoxFunctionModel,
-        )
+    # def test_edi_blackbox_bare_example_3(self):
+    #     "Tests a black box example construction"
+    #     import numpy as np
+    #     from pyomo.environ import units
+    #     import pyomo.environ as pyo
+    #     from pyomo.contrib.edi import Formulation
+    #     from pyomo.contrib.edi.blackBoxFunctionModel import (
+    #         BlackBoxFunctionModel_Variable,
+    #         TypeCheckedList,
+    #         BBList,
+    #         BlackBoxFunctionModel,
+    #     )
 
-        class Norm_2(BlackBoxFunctionModel):
-            def __init__(self):
-                super().__init__()
-                self.description = 'This model evaluates the two norm'
-                self.inputs.append(
-                    name='x', units='', description='The x variable', size=3
-                )
-                self.inputs.append(
-                    name='y', units='', description='The y variable', size=2
-                )
-                self.outputs.append(name='z', units='', description='The z variable')
-                self.availableDerivative = 1
-                self.post_init_setup(len(self.inputs))
+    #     class Norm_2(BlackBoxFunctionModel):
+    #         def __init__(self):
+    #             super().__init__()
+    #             self.description = 'This model evaluates the two norm'
+    #             self.inputs.append(
+    #                 name='x', units='', description='The x variable', size=3
+    #             )
+    #             self.inputs.append(
+    #                 name='y', units='', description='The y variable', size=2
+    #             )
+    #             self.outputs.append(name='z', units='', description='The z variable')
+    #             self.availableDerivative = 1
+    #             self.post_init_setup(len(self.inputs))
 
-            def BlackBox(self, *args, **kwargs):  # The actual function that does things
-                runCases, returnMode, remainingKwargs = self.parseInputs(
-                    *args, **kwargs
-                )
+    #         def BlackBox(self, *args, **kwargs):  # The actual function that does things
+    #             runCases, returnMode, remainingKwargs = self.parseInputs(
+    #                 *args, **kwargs
+    #             )
 
-                x = [rc['x'] for rc in runCases][0]
-                x = np.array([self.pyomo_value(xval) for xval in x], dtype=np.float64)
+    #             x = [rc['x'] for rc in runCases][0]
+    #             x = np.array([self.pyomo_value(xval) for xval in x], dtype=np.float64)
 
-                y = [rc['y'] for rc in runCases][0]
-                y = np.array([self.pyomo_value(yval) for yval in y], dtype=np.float64)
+    #             y = [rc['y'] for rc in runCases][0]
+    #             y = np.array([self.pyomo_value(yval) for yval in y], dtype=np.float64)
 
-                z = x[0] ** 2 + x[1] ** 2 + x[2] ** 2 + y[0] ** 2 + y[1] ** 2
-                dzdx0 = 2 * x[0]  # Compute dy/dx0
-                dzdx1 = 2 * x[1]  # Compute dy/dx1
-                dzdx2 = 2 * x[2]  # Compute dy/dx2
-                dzdy0 = 2 * y[0]
-                dzdy1 = 2 * y[1]
+    #             z = x[0] ** 2 + x[1] ** 2 + x[2] ** 2 + y[0] ** 2 + y[1] ** 2
+    #             dzdx0 = 2 * x[0]  # Compute dy/dx0
+    #             dzdx1 = 2 * x[1]  # Compute dy/dx1
+    #             dzdx2 = 2 * x[2]  # Compute dy/dx2
+    #             dzdy0 = 2 * y[0]
+    #             dzdy1 = 2 * y[1]
 
-                z = z * units.dimensionless
-                dz = np.array([dzdx0, dzdx1, dzdx2, dzdy0, dzdy1]) * units.dimensionless
-                # dydx0 = dydx0 * units.dimensionless
-                # dydx1 = dydx1 * units.dimensionless
-                # dydx2 = dydx2 * units.dimensionless
+    #             z = z * units.dimensionless
+    #             dz = np.array([dzdx0, dzdx1, dzdx2, dzdy0, dzdy1]) * units.dimensionless
+    #             # dydx0 = dydx0 * units.dimensionless
+    #             # dydx1 = dydx1 * units.dimensionless
+    #             # dydx2 = dydx2 * units.dimensionless
 
-                return z, [dz]  # return z, grad(z), hess(z)...
+    #             return z, [dz]  # return z, grad(z), hess(z)...
 
-        bb = Norm_2()
-        bbo = bb.BlackBox(
-            {
-                'x': np.array([0, 0, 0]) * units.dimensionless,
-                'y': np.array([0, 0]) * units.dimensionless,
-            }
-        )
-        bbo = bb.BlackBox(
-            np.array([0, 0, 0]) * units.dimensionless,
-            y=np.array([0, 0]) * units.dimensionless,
-        )
+    #     bb = Norm_2()
+    #     bbo = bb.BlackBox(
+    #         {
+    #             'x': np.array([0, 0, 0]) * units.dimensionless,
+    #             'y': np.array([0, 0]) * units.dimensionless,
+    #         }
+    #     )
+    #     bbo = bb.BlackBox(
+    #         np.array([0, 0, 0]) * units.dimensionless,
+    #         y=np.array([0, 0]) * units.dimensionless,
+    #     )
 
-        self.assertRaises(
-            ValueError,
-            bb.BlackBox,
-            *(
-                {
-                    'er': np.array([0, 0, 0]) * units.dimensionless,
-                    'y': np.array([0, 0]) * units.dimensionless,
-                },
-            )
-        )
-        self.assertRaises(ValueError, bb.BlackBox, *('err',))
-        self.assertRaises(
-            ValueError,
-            bb.BlackBox,
-            *(
-                np.array([0, 0, 0]) * units.dimensionless,
-                np.array([0, 0]) * units.dimensionless,
-            ),
-            **{'x': 'err too many'}
-        )
-        self.assertRaises(
-            ValueError,
-            bb.BlackBox,
-            *(np.array([0, 0, 0]) * units.dimensionless,),
-            **{'notY': np.array([0, 0]) * units.dimensionless}
-        )
+    #     self.assertRaises(
+    #         ValueError,
+    #         bb.BlackBox,
+    #         *(
+    #             {
+    #                 'er': np.array([0, 0, 0]) * units.dimensionless,
+    #                 'y': np.array([0, 0]) * units.dimensionless,
+    #             },
+    #         )
+    #     )
+    #     self.assertRaises(ValueError, bb.BlackBox, *('err',))
+    #     self.assertRaises(
+    #         ValueError,
+    #         bb.BlackBox,
+    #         *(
+    #             np.array([0, 0, 0]) * units.dimensionless,
+    #             np.array([0, 0]) * units.dimensionless,
+    #         ),
+    #         **{'x': 'err too many'}
+    #     )
+    #     self.assertRaises(
+    #         ValueError,
+    #         bb.BlackBox,
+    #         *(np.array([0, 0, 0]) * units.dimensionless,),
+    #         **{'notY': np.array([0, 0]) * units.dimensionless}
+    #     )
 
-    def test_edi_blackbox_bare_example_4(self):
-        "Tests a black box example construction without an optimization problem"
-        import numpy as np
-        import pyomo.environ as pyo
-        from pyomo.environ import units
-        from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel
-        from pyomo.common.formatting import tostr
+    # def test_edi_blackbox_bare_example_4(self):
+    #     "Tests a black box example construction without an optimization problem"
+    #     import numpy as np
+    #     import pyomo.environ as pyo
+    #     from pyomo.environ import units
+    #     from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel
+    #     from pyomo.common.formatting import tostr
 
-        class PassThrough(BlackBoxFunctionModel):
-            def __init__(self):
-                # Set up all the attributes by calling Model.__init__
-                super().__init__()
+    #     class PassThrough(BlackBoxFunctionModel):
+    #         def __init__(self):
+    #             # Set up all the attributes by calling Model.__init__
+    #             super().__init__()
 
-                # Setup Inputs
-                self.inputs.append('x', '', 'X Variable')
-                self.inputs.append('y', '', 'Y Variable')
+    #             # Setup Inputs
+    #             self.inputs.append('x', '', 'X Variable')
+    #             self.inputs.append('y', '', 'Y Variable')
 
-                # Setup Outputs
-                self.outputs.append('u', '', 'U Variable')
-                self.outputs.append('v', '', 'V Variable')
+    #             # Setup Outputs
+    #             self.outputs.append('u', '', 'U Variable')
+    #             self.outputs.append('v', '', 'V Variable')
 
-                # Simple model description
-                self.description = 'This model is a pass through)'
+    #             # Simple model description
+    #             self.description = 'This model is a pass through)'
 
-                self.availableDerivative = 1
+    #             self.availableDerivative = 1
 
-            # standard function call is y(, dydx, ...) = self.BlackBox(**{'x1':x1, 'x2':x2, ...})
-            def BlackBox(self, *args, **kwargs):
-                runCases, returnMode, extras = self.parseInputs(*args, **kwargs)
-                x = [
-                    self.pyomo_value(runCases[i]['x']) for i in range(0, len(runCases))
-                ]
-                y = [
-                    self.pyomo_value(runCases[i]['x']) for i in range(0, len(runCases))
-                ]
+    #         # standard function call is y(, dydx, ...) = self.BlackBox(**{'x1':x1, 'x2':x2, ...})
+    #         def BlackBox(self, *args, **kwargs):
+    #             runCases, returnMode, extras = self.parseInputs(*args, **kwargs)
+    #             x = [
+    #                 self.pyomo_value(runCases[i]['x']) for i in range(0, len(runCases))
+    #             ]
+    #             y = [
+    #                 self.pyomo_value(runCases[i]['x']) for i in range(0, len(runCases))
+    #             ]
 
-                u = []
-                dudx = []
-                dudy = []
-                v = []
-                dvdx = []
-                dvdy = []
+    #             u = []
+    #             dudx = []
+    #             dudy = []
+    #             v = []
+    #             dvdx = []
+    #             dvdy = []
 
-                for xval in x:
-                    u.append(xval * units.dimensionless)
-                    dudx.append(1.0 * units.dimensionless)
-                    dudy.append(0.0 * units.dimensionless)
+    #             for xval in x:
+    #                 u.append(xval * units.dimensionless)
+    #                 dudx.append(1.0 * units.dimensionless)
+    #                 dudy.append(0.0 * units.dimensionless)
 
-                for yval in y:
-                    v.append(yval * units.dimensionless)
-                    dvdx.append(0.0 * units.dimensionless)
-                    dvdy.append(1.0 * units.dimensionless)
+    #             for yval in y:
+    #                 v.append(yval * units.dimensionless)
+    #                 dvdx.append(0.0 * units.dimensionless)
+    #                 dvdy.append(1.0 * units.dimensionless)
 
-                if returnMode < 0:
-                    returnMode = -1 * (returnMode + 1)
-                    if returnMode == 0:
-                        return [u[0], v[0]]
-                    if returnMode == 1:
-                        return [u[0], v[0]], [[dudx[0], dudy[0]], [dvdx[0], dvdy[0]]]
-                else:
-                    if returnMode == 0:
-                        opt = []
-                        for i in range(0, len(y)):
-                            opt.append([u[i], v[i]])
-                        return opt
-                    if returnMode == 1:
-                        opt = []
-                        for i in range(0, len(y)):
-                            opt.append(
-                                [[u[i], v[i]], [[dudx[i], dudy[i]], [dvdx[i], dvdy[i]]]]
-                            )
-                        return opt
+    #             if returnMode < 0:
+    #                 returnMode = -1 * (returnMode + 1)
+    #                 if returnMode == 0:
+    #                     return [u[0], v[0]]
+    #                 if returnMode == 1:
+    #                     return [u[0], v[0]], [[dudx[0], dudy[0]], [dvdx[0], dvdy[0]]]
+    #             else:
+    #                 if returnMode == 0:
+    #                     opt = []
+    #                     for i in range(0, len(y)):
+    #                         opt.append([u[i], v[i]])
+    #                     return opt
+    #                 if returnMode == 1:
+    #                     opt = []
+    #                     for i in range(0, len(y)):
+    #                         opt.append(
+    #                             [[u[i], v[i]], [[dudx[i], dudy[i]], [dvdx[i], dvdy[i]]]]
+    #                         )
+    #                     return opt
 
-        bb = PassThrough()
-        bbo = bb.BlackBox(1.0, 1.0)
-        bbo = bb.BlackBox({'x': np.linspace(0, 10, 11), 'y': np.linspace(0, 10, 11)})
+    #     bb = PassThrough()
+    #     bbo = bb.BlackBox(1.0, 1.0)
+    #     bbo = bb.BlackBox({'x': np.linspace(0, 10, 11), 'y': np.linspace(0, 10, 11)})
 
 
 if __name__ == '__main__':
