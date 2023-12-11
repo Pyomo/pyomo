@@ -30,9 +30,21 @@ from pyomo.contrib.cp.interval_var import (
     IntervalVarData,
     IndexedIntervalVar,
 )
+from pyomo.contrib.cp.sequence_var import(
+    ScalarSequenceVar,
+    IndexedSequenceVar,
+    _SequenceVarData,
+)
 from pyomo.contrib.cp.scheduling_expr.precedence_expressions import (
     BeforeExpression,
     AtExpression,
+)
+from pyomo.contrib.cp.scheduling_expr.sequence_expressions import (
+    NoOverlapExpression,
+    FirstInSequenceExpression,
+    LastInSequenceExpression,
+    BeforeInSequenceExpression,
+    PredecessorToExpression,
 )
 from pyomo.contrib.cp.scheduling_expr.step_function_expressions import (
     AlwaysIn,
@@ -491,6 +503,16 @@ def _create_docplex_interval_var(visitor, interval_var):
     return cpx_interval_var
 
 
+def _create_docplex_sequence_var(visitor, sequence_var):
+    nm = sequence_var.name if visitor.symbolic_solver_labels else None
+
+    cpx_seq_var = cp.sequence_var(name=nm,
+                                  vars=[_get_docplex_interval_var(visitor, v)
+                                        for v in sequence_var.interval_vars])
+    visitor.var_map[id(sequence_var)] = cpx_seq_var
+    return cpx_seq_var
+
+
 def _get_docplex_interval_var(visitor, interval_var):
     # We might already have the interval_var and just need to retrieve it
     if id(interval_var) in visitor.var_map:
@@ -499,6 +521,37 @@ def _get_docplex_interval_var(visitor, interval_var):
         cpx_interval_var = _create_docplex_interval_var(visitor, interval_var)
         visitor.cpx.add(cpx_interval_var)
     return cpx_interval_var
+
+
+def _get_docplex_sequence_var(visitor, sequence_var):
+    if id(sequence_var) in visitor.var_map:
+        cpx_seq_var = visitor.var_map[id(sequence_var)]
+    else:
+        cpx_seq_var = _create_docplex_sequence_var(visitor, sequence_var)
+        visitor.cpx.add(cpx_seq_var)
+    return cpx_seq_var
+
+
+def _before_sequence_var(visitor, child):
+    _id = id(child)
+    if _id not in visitor.var_map:
+        cpx_seq_var = _get_docplex_sequence_var(visitor, child)
+        visitor.var_map[_id] = cpx_seq_var
+        visitor.pyomo_to_docplex[child] = cpx_seq_var
+
+    return False, (_GENERAL, visitor.var_map[_id])
+
+
+def _before_indexed_sequence_var(visitor, child):
+    # ESJ TODO: I'm not sure we can encounter an indexed sequence var in an
+    # expression right now?
+    cpx_vars = {}
+    for i, v in child.items():
+        cpx_sequence_var = _get_docplex_sequence_var(visitor, v)
+        visitor.var_map[id(v)] = cpx_sequence_var
+        visitor.pyomo_to_docplex[v] = cpx_sequence_var
+        cpx_vars[i] = cpx_sequence_var
+    return False, (_GENERAL, cpx_vars)
 
 
 def _before_interval_var(visitor, child):
@@ -902,6 +955,28 @@ def _handle_always_in_node(visitor, node, cumul_func, lb, ub, start, end):
     )
 
 
+def _handle_no_overlap_expression_node(visitor, node, seq_var):
+    return _GENERAL, cp.no_overlap(seq_var[1])
+
+
+def _handle_first_in_sequence_expression_node(visitor, node, interval_var, seq_var):
+    return _GENERAL, cp.first(seq_var[1], interval_var[1])
+
+
+def _handle_last_in_sequence_expression_node(visitor, node, interval_var, seq_var):
+    return _GENERAL, cp.last(seq_var[1], interval_var[1])
+
+
+def _handle_before_in_sequence_expression_node(visitor, node, before_var,
+                                               after_var, seq_var):
+    return _GENERAL, cp.before(seq_var[1], before_var[1], after_var[1])
+
+
+def _handle_predecessor_to_expression_node(visitor, node, before_var, after_var,
+                                           seq_var):
+    return _GENERAL, cp.previous(seq_var[1], before_var[1], after_var[1])
+
+
 class LogicalToDoCplex(StreamBasedExpressionVisitor):
     _operator_handles = {
         EXPR.GetItemExpression: _handle_getitem,
@@ -941,6 +1016,11 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         AlwaysIn: _handle_always_in_node,
         _GeneralExpressionData: _handle_named_expression_node,
         ScalarExpression: _handle_named_expression_node,
+        NoOverlapExpression: _handle_no_overlap_expression_node,
+        FirstInSequenceExpression: _handle_first_in_sequence_expression_node,
+        LastInSequenceExpression: _handle_last_in_sequence_expression_node,
+        BeforeInSequenceExpression: _handle_before_in_sequence_expression_node,
+        PredecessorToExpression: _handle_predecessor_to_expression_node,
     }
     _var_handles = {
         IntervalVarStartTime: _before_interval_var_start_time,
@@ -950,6 +1030,9 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         ScalarIntervalVar: _before_interval_var,
         IntervalVarData: _before_interval_var,
         IndexedIntervalVar: _before_indexed_interval_var,
+        ScalarSequenceVar: _before_sequence_var,
+        _SequenceVarData: _before_sequence_var,
+        IndexedSequenceVar: _before_indexed_sequence_var,
         ScalarVar: _before_var,
         _GeneralVarData: _before_var,
         IndexedVar: _before_indexed_var,

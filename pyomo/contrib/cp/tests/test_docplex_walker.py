@@ -11,7 +11,15 @@
 
 import pyomo.common.unittest as unittest
 
-from pyomo.contrib.cp import IntervalVar
+from pyomo.contrib.cp import (
+    IntervalVar,
+    SequenceVar,
+    no_overlap,
+    first_in_sequence,
+    last_in_sequence,
+    before_in_sequence,
+    predecessor_to,
+)
 from pyomo.contrib.cp.scheduling_expr.step_function_expressions import (
     AlwaysIn,
     Step,
@@ -767,6 +775,74 @@ class TestCPExpressionWalker_IntervalVars(CommonTest):
         self.assertFalse(i.is_optional())
         self.assertEqual(i.get_start(), (3, 3))
         self.assertEqual(i.get_end(), (6, 6))
+
+
+@unittest.skipIf(not docplex_available, "docplex is not available")
+class TestCPExpressionWalker_SequenceVars(CommonTest):
+    def get_model(self):
+        m = super().get_model()
+        m.seq = SequenceVar(expr=[m.i, m.i2[1], m.i2[2]])
+
+        return m
+
+    def check_scalar_sequence_var(self, m, visitor):
+        self.assertIn(id(m.seq), visitor.var_map)
+        seq = visitor.var_map[id(m.seq)]
+
+        i = visitor.var_map[id(m.i)]
+        i21 = visitor.var_map[id(m.i2[1])]
+        i22 = visitor.var_map[id(m.i2[2])]
+
+        ivs = seq.get_interval_variables()
+        self.assertEqual(len(ivs), 3)
+        self.assertIs(ivs[0], i)
+        self.assertIs(ivs[1], i21)
+        self.assertIs(ivs[2], i22)
+
+        return seq, i, i21, i22
+
+    def test_scalar_sequence_var(self):
+        m = self.get_model()
+
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.seq, m.seq, 0))
+        self.check_scalar_sequence_var(m, visitor)
+
+    def test_no_overlap(self):
+        m = self.get_model()
+        e = no_overlap(m.seq)
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((e, e, 0))
+
+        seq, i, i21, i22 = self.check_scalar_sequence_var(m, visitor)
+        self.assertTrue(expr[1].equals(cp.no_overlap(seq)))
+
+    def test_first_in_sequence(self):
+        m = self.get_model()
+        e = first_in_sequence(m.i2[1], m.seq)
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((e, e, 0))
+
+        seq, i, i21, i22 = self.check_scalar_sequence_var(m, visitor)
+        self.assertTrue(expr[1].equals(cp.first(seq, i21)))
+
+    def test_before_in_sequence(self):
+        m = self.get_model()
+        e = last_in_sequence(m.i, m.seq)
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((e, e, 0))
+
+        seq, i, i21, i22 = self.check_scalar_sequence_var(m, visitor)
+        self.assertTrue(expr[1].equals(cp.last(seq, i)))
+
+    def test_last_in_sequence(self):
+        m = self.get_model()
+        e = last_in_sequence(m.i2[1], m.seq)
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((e, e, 0))
+
+        seq, i, i21, i22 = self.check_scalar_sequence_var(m, visitor)
+        self.assertTrue(expr[1].equals(cp.last(seq, i21)))
 
 
 @unittest.skipIf(not docplex_available, "docplex is not available")
