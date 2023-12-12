@@ -63,6 +63,15 @@ class _TestIncidence(object):
         var_set = ComponentSet(variables)
         self.assertEqual(var_set, ComponentSet([m.x[1], m.x[3]]))
 
+    def test_incidence_with_named_expression(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3])
+        m.subexpr = pyo.Expression(pyo.Integers)
+        m.subexpr[1] = m.x[1] * pyo.exp(m.x[3])
+        expr = m.x[1] + m.x[1] * m.x[2] + m.subexpr[1]
+        variables = self._get_incident_variables(expr)
+        self.assertEqual(ComponentSet(variables), ComponentSet(m.x[:]))
+
 
 class _TestIncidenceLinearOnly(object):
     """Tests for methods that support linear_only"""
