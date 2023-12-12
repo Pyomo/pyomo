@@ -103,10 +103,11 @@ def _get_incident_via_ampl_repn(expr, linear_only):
         AMPLRepn.ActiveVisitor = None
 
     nonlinear_var_ids = [] if repn.nonlinear is None else repn.nonlinear[1]
-    nonlinear_vars =  [var_map[v_id] for v_id in nonlinear_var_ids]
+    nonlinear_vars = [var_map[v_id] for v_id in nonlinear_var_ids]
     nonlinear_vid_set = set(nonlinear_var_ids)
     linear_only_vars = [
-        var_map[v_id] for v_id, coef in repn.linear.items()
+        var_map[v_id]
+        for v_id, coef in repn.linear.items()
         if coef != 0.0 and v_id not in nonlinear_vid_set
     ]
     if linear_only:
@@ -163,9 +164,7 @@ def get_incident_variables(expr, **kwds):
             "linear_only=True is not supported when using identify_variables"
         )
     if include_fixed and method is IncidenceMethod.ampl_repn:
-        raise RuntimeError(
-            "include_fixed=True is not supported when using ampl_repn"
-        )
+        raise RuntimeError("include_fixed=True is not supported when using ampl_repn")
     if method is IncidenceMethod.identify_variables:
         return _get_incident_via_identify_variables(expr, include_fixed)
     elif method is IncidenceMethod.standard_repn:

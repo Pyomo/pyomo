@@ -90,6 +90,7 @@ class _TestIncidenceLinearOnly(object):
 
 class _TestIncidenceLinearCancellation(object):
     """Tests for methods that perform linear cancellation"""
+
     def _get_incident_variables(self, expr):
         raise NotImplementedError(
             "_TestIncidenceLinearCancellation should not be used directly"
