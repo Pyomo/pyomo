@@ -105,14 +105,14 @@ class TestIndexedSequenceVar(unittest.TestCase):
 
     def make_model(self):
         m = ConcreteModel()
-        m.alph = Set(initialize=['a', 'b'])
-        m.num = Set(initialize=[1, 2])
-        m.i = IntervalVar(m.alph, m.num)
+        m.alphabetic = Set(initialize=['a', 'b'])
+        m.numeric = Set(initialize=[1, 2])
+        m.i = IntervalVar(m.alphabetic, m.numeric)
 
         def the_rule(m, j):
-            return [m.i[j, k] for k in m.num]
+            return [m.i[j, k] for k in m.numeric]
 
-        m.seq = SequenceVar(m.alph, rule=the_rule)
+        m.seq = SequenceVar(m.alphabetic, rule=the_rule)
 
         return m
 
@@ -121,10 +121,10 @@ class TestIndexedSequenceVar(unittest.TestCase):
 
         self.assertIsInstance(m.seq, IndexedSequenceVar)
         self.assertEqual(len(m.seq), 2)
-        for j in m.alph:
+        for j in m.alphabetic:
             self.assertTrue(j in m.seq)
             self.assertEqual(len(m.seq[j].interval_vars), 2)
-            for k in m.num:
+            for k in m.numeric:
                 self.assertIs(m.seq[j].interval_vars[k - 1], m.i[j, k])
 
     def test_pprint(self):
@@ -136,7 +136,7 @@ class TestIndexedSequenceVar(unittest.TestCase):
         self.assertEqual(
             buf.getvalue().strip(),
             """
-seq : Size=2, Index=alph
+seq : Size=2, Index=alphabetic
     Key : IntervalVars
       a : [i[a,1], i[a,2]]
       b : [i[b,1], i[b,2]]""".strip(),
