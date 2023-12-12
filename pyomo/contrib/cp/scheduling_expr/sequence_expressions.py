@@ -151,7 +151,7 @@ def before_in_sequence(before_var, after_var, sequence_var):
     Creates a new BeforeInSequenceExpression
 
     Requires that 'before_var' be scheduled to start before 'after_var' in the
-    sequence spcified bv 'sequence_var', if both are scheduled
+    sequence specified bv 'sequence_var', if both are scheduled
 
     args:
         before_var (IntervalVar): The activity that should be scheduled earlier in
