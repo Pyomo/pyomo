@@ -83,7 +83,10 @@ def _get_incident_via_ampl_repn(expr, linear_only):
     var_map = {}
     used_named_expressions = set()
     symbolic_solver_labels = False
-    export_defined_variables = True
+    # TODO: Explore potential performance benefit of exporting defined variables.
+    # This likely only shows up if we can preserve the subexpression cache across
+    # multiple constraint expressions.
+    export_defined_variables = False
     sorter = FileDeterminism_to_SortComponents(FileDeterminism.ORDERED)
     visitor = AMPLRepnVisitor(
         text_nl_template,
