@@ -16,6 +16,8 @@ from contextlib import nullcontext
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.core.expr.numvalue import value as pyo_value
 from pyomo.repn import generate_standard_repn
+from pyomo.repn.nl_writer import AMPLRepnVisitor, AMPLRepn, text_nl_template
+from pyomo.repn.util import FileDeterminism, FileDeterminism_to_SortComponents
 from pyomo.util.subsystems import TemporarySubsystemManager
 from pyomo.contrib.incidence_analysis.config import IncidenceMethod, IncidenceConfig
 
@@ -72,6 +74,45 @@ def _get_incident_via_standard_repn(expr, include_fixed, linear_only):
                 id_set.add(v_id)
                 unique_variables.append(var)
         return unique_variables
+
+
+def _get_incident_via_amplrepn(expr, linear_only):
+    subexpression_cache = {}
+    subexpression_order = []
+    external_functions = {}
+    var_map = {}
+    used_named_expressions = set()
+    symbolic_solver_labels = False
+    export_defined_variabels = True
+    sorter = FileDeterminism_to_SortComponents(FileDeterminism.ORDERED)
+    visitor = AMPLRepnVisitor(
+        text_nl_template,
+        subexpression_cache,
+        subexpression_order,
+        external_functions,
+        var_map,
+        used_named_expressions,
+        symbolic_solver_labels,
+        export_defined_variables,
+        sorter,
+    )
+    AMPLRepn.ActiveVisitor = visitor
+    try:
+        repn = visitor.walk_expression((expr, None, 0, 1.0))
+    finally:
+        AMPLRepn.ActiveVisitor = None
+
+    nonlinear_vars =  [var_map[v_id] for v_id in repn.nonlinear[1]]
+    nonlinear_vid_set = set(repn.nonlinear[1])
+    linear_only_vars = [
+        var_map[v_id] for v_id, coef in repn.linear.items()
+        if coef != 0.0 and v_id not in nonlinear_vid_set
+    ]
+    if linear_only:
+        return linear_only_vars
+    else:
+        variables = linear_only_vars + nonlinear_vars
+        return variables
 
 
 def get_incident_variables(expr, **kwds):
