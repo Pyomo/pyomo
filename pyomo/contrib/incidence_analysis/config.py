@@ -24,6 +24,9 @@ class IncidenceMethod(enum.Enum):
     standard_repn = 1
     """Use ``pyomo.repn.standard_repn.generate_standard_repn``"""
 
+    ampl_repn = 2
+    """Use ``pyomo.repn.plugins.nl_writer.AMPLRepnVisitor``"""
+
 
 _include_fixed = ConfigValue(
     default=False,

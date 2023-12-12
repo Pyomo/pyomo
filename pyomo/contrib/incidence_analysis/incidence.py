@@ -16,7 +16,7 @@ from contextlib import nullcontext
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.core.expr.numvalue import value as pyo_value
 from pyomo.repn import generate_standard_repn
-from pyomo.repn.nl_writer import AMPLRepnVisitor, AMPLRepn, text_nl_template
+from pyomo.repn.plugins.nl_writer import AMPLRepnVisitor, AMPLRepn, text_nl_template
 from pyomo.repn.util import FileDeterminism, FileDeterminism_to_SortComponents
 from pyomo.util.subsystems import TemporarySubsystemManager
 from pyomo.contrib.incidence_analysis.config import IncidenceMethod, IncidenceConfig
@@ -76,14 +76,14 @@ def _get_incident_via_standard_repn(expr, include_fixed, linear_only):
         return unique_variables
 
 
-def _get_incident_via_amplrepn(expr, linear_only):
+def _get_incident_via_ampl_repn(expr, linear_only):
     subexpression_cache = {}
     subexpression_order = []
     external_functions = {}
     var_map = {}
     used_named_expressions = set()
     symbolic_solver_labels = False
-    export_defined_variabels = True
+    export_defined_variables = True
     sorter = FileDeterminism_to_SortComponents(FileDeterminism.ORDERED)
     visitor = AMPLRepnVisitor(
         text_nl_template,
@@ -102,8 +102,9 @@ def _get_incident_via_amplrepn(expr, linear_only):
     finally:
         AMPLRepn.ActiveVisitor = None
 
-    nonlinear_vars =  [var_map[v_id] for v_id in repn.nonlinear[1]]
-    nonlinear_vid_set = set(repn.nonlinear[1])
+    nonlinear_var_ids = [] if repn.nonlinear is None else repn.nonlinear[1]
+    nonlinear_vars =  [var_map[v_id] for v_id in nonlinear_var_ids]
+    nonlinear_vid_set = set(nonlinear_var_ids)
     linear_only_vars = [
         var_map[v_id] for v_id, coef in repn.linear.items()
         if coef != 0.0 and v_id not in nonlinear_vid_set
@@ -161,10 +162,16 @@ def get_incident_variables(expr, **kwds):
         raise RuntimeError(
             "linear_only=True is not supported when using identify_variables"
         )
+    if include_fixed and method is IncidenceMethod.ampl_repn:
+        raise RuntimeError(
+            "include_fixed=True is not supported when using ampl_repn"
+        )
     if method is IncidenceMethod.identify_variables:
         return _get_incident_via_identify_variables(expr, include_fixed)
     elif method is IncidenceMethod.standard_repn:
         return _get_incident_via_standard_repn(expr, include_fixed, linear_only)
+    elif method is IncidenceMethod.ampl_repn:
+        return _get_incident_via_ampl_repn(expr, linear_only)
     else:
         raise ValueError(
             f"Unrecognized value {method} for the method used to identify incident"
