@@ -65,6 +65,8 @@ class _TestIncidence(object):
 
 
 class _TestIncidenceLinearOnly(object):
+    """Tests for methods that support linear_only"""
+
     def _get_incident_variables(self, expr):
         raise NotImplementedError(
             "_TestIncidenceLinearOnly should not be used directly"
