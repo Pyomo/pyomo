@@ -135,7 +135,7 @@ class _TestIncidenceLinearCancellation(object):
         self.assertEqual(ComponentSet(variables), ComponentSet([m.x[1], m.x[2]]))
 
     # NOTE: This test assumes that all methods that support linear cancellation
-    # accept a linear_only argument. If this changes, this test wil need to be
+    # accept a linear_only argument. If this changes, this test will need to be
     # moved.
     def test_fixed_zero_coefficient_linear_only(self):
         m = pyo.ConcreteModel()
