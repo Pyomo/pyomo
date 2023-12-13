@@ -209,13 +209,15 @@ class Suffix(ComponentMap, ActiveComponent):
 
         if self._rule is not None:
             rule = self._rule
-            block = self.parent_block()
             if rule.contains_indices():
-                # The index is coming in externally; we need to validate it
+                # The rule contains explicit indices (e.g., is a dict).
+                # Iterate over the indices, expand them, and store the
+                # result
+                block = self.parent_block()
                 for index in rule.indices():
-                    self.set_value(index, rule(block, index))
+                    self.set_value(index, rule(block, index), expand=True)
             else:
-                self.update_values(rule(block, None))
+                self.update_values(rule(self.parent_block(), None), expand=True)
         timer.report()
 
     @property
@@ -303,15 +305,9 @@ class Suffix(ComponentMap, ActiveComponent):
         """
         if expand and component.is_indexed():
             for component_ in component.values():
-                try:
-                    del self[component_]
-                except KeyError:
-                    pass
+                self.pop(component_, None)
         else:
-            try:
-                del self[component]
-            except KeyError:
-                pass
+            self.pop(component, None)
 
     def clear_all_values(self):
         """
