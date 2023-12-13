@@ -194,12 +194,45 @@ def extract_bipartite_subgraph(graph, nodes0, nodes1):
 
 def _generate_variables_in_constraints(constraints, **kwds):
     config = IncidenceConfig(kwds)
-    known_vars = ComponentSet()
-    for con in constraints:
-        for var in get_incident_variables(con.body, **config):
-            if var not in known_vars:
-                known_vars.add(var)
-                yield var
+
+    if config.method == IncidenceMethod.ampl_repn:
+        subexpression_cache = {}
+        subexpression_order = []
+        external_functions = {}
+        var_map = {}
+        used_named_expressions = set()
+        symbolic_solver_labels = False
+        export_defined_variables = False
+        sorter = FileDeterminism_to_SortComponents(FileDeterminism.ORDERED)
+        visitor = AMPLRepnVisitor(
+            text_nl_template,
+            subexpression_cache,
+            subexpression_order,
+            external_functions,
+            var_map,
+            used_named_expressions,
+            symbolic_solver_labels,
+            export_defined_variables,
+            sorter,
+        )
+    else:
+        visitor = None
+
+    AMPLRepn.ActiveVisitor = visitor
+    try:
+        known_vars = ComponentSet()
+        for con in constraints:
+            for var in get_incident_variables(con.body, visitor=visitor, **config):
+                if var not in known_vars:
+                    known_vars.add(var)
+                    yield var
+    finally:
+        # NOTE: I believe this is only guaranteed to be called when the
+        # generator is garbage collected. This could lead to some nasty
+        # bug where ActiveVisitor is set for longer than we intend.
+        # TODO: Convert this into a function. (or yield from variables
+        # after this try/finally.
+        AMPLRepn.ActiveVisitor = None
 
 
 def get_structural_incidence_matrix(variables, constraints, **kwds):
