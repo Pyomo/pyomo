@@ -76,34 +76,38 @@ def _get_incident_via_standard_repn(expr, include_fixed, linear_only):
         return unique_variables
 
 
-def _get_incident_via_ampl_repn(expr, linear_only):
-    subexpression_cache = {}
-    subexpression_order = []
-    external_functions = {}
-    var_map = {}
-    used_named_expressions = set()
-    symbolic_solver_labels = False
-    # TODO: Explore potential performance benefit of exporting defined variables.
-    # This likely only shows up if we can preserve the subexpression cache across
-    # multiple constraint expressions.
-    export_defined_variables = False
-    sorter = FileDeterminism_to_SortComponents(FileDeterminism.ORDERED)
-    visitor = AMPLRepnVisitor(
-        text_nl_template,
-        subexpression_cache,
-        subexpression_order,
-        external_functions,
-        var_map,
-        used_named_expressions,
-        symbolic_solver_labels,
-        export_defined_variables,
-        sorter,
-    )
-    AMPLRepn.ActiveVisitor = visitor
-    try:
+def _get_incident_via_ampl_repn(expr, linear_only, visitor=None):
+    if visitor is None:
+        subexpression_cache = {}
+        subexpression_order = []
+        external_functions = {}
+        var_map = {}
+        used_named_expressions = set()
+        symbolic_solver_labels = False
+        # TODO: Explore potential performance benefit of exporting defined variables.
+        # This likely only shows up if we can preserve the subexpression cache across
+        # multiple constraint expressions.
+        export_defined_variables = False
+        sorter = FileDeterminism_to_SortComponents(FileDeterminism.ORDERED)
+        visitor = AMPLRepnVisitor(
+            text_nl_template,
+            subexpression_cache,
+            subexpression_order,
+            external_functions,
+            var_map,
+            used_named_expressions,
+            symbolic_solver_labels,
+            export_defined_variables,
+            sorter,
+        )
+        AMPLRepn.ActiveVisitor = visitor
+        try:
+            repn = visitor.walk_expression((expr, None, 0, 1.0))
+        finally:
+            AMPLRepn.ActiveVisitor = None
+    else:
+        var_map = visitor.var_map
         repn = visitor.walk_expression((expr, None, 0, 1.0))
-    finally:
-        AMPLRepn.ActiveVisitor = None
 
     nonlinear_var_ids = [] if repn.nonlinear is None else repn.nonlinear[1]
     nonlinear_vars = [var_map[v_id] for v_id in nonlinear_var_ids]
@@ -158,6 +162,7 @@ def get_incident_variables(expr, **kwds):
        ['x[1]', 'x[2]']
 
     """
+    visitor = kwds.pop("visitor", None)
     config = IncidenceConfig(kwds)
     method = config.method
     include_fixed = config.include_fixed
@@ -173,7 +178,7 @@ def get_incident_variables(expr, **kwds):
     elif method is IncidenceMethod.standard_repn:
         return _get_incident_via_standard_repn(expr, include_fixed, linear_only)
     elif method is IncidenceMethod.ampl_repn:
-        return _get_incident_via_ampl_repn(expr, linear_only)
+        return _get_incident_via_ampl_repn(expr, linear_only, visitor=visitor)
     else:
         raise ValueError(
             f"Unrecognized value {method} for the method used to identify incident"

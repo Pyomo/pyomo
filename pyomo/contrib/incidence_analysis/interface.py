@@ -29,7 +29,7 @@ from pyomo.common.dependencies import (
     plotly,
 )
 from pyomo.common.deprecation import deprecated
-from pyomo.contrib.incidence_analysis.config import IncidenceConfig
+from pyomo.contrib.incidence_analysis.config import IncidenceConfig, IncidenceMethod
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
 from pyomo.contrib.incidence_analysis.connected import get_independent_submatrices
 from pyomo.contrib.incidence_analysis.triangularize import (
@@ -45,6 +45,8 @@ from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import (
 )
 from pyomo.contrib.incidence_analysis.incidence import get_incident_variables
 from pyomo.contrib.pynumero.asl import AmplInterface
+from pyomo.repn.plugins.nl_writer import AMPLRepnVisitor, AMPLRepn, text_nl_template
+from pyomo.repn.util import FileDeterminism, FileDeterminism_to_SortComponents
 
 pyomo_nlp, pyomo_nlp_available = attempt_import(
     'pyomo.contrib.pynumero.interfaces.pyomo_nlp'
@@ -99,10 +101,37 @@ def get_bipartite_incidence_graph(variables, constraints, **kwds):
     graph.add_nodes_from(range(M), bipartite=0)
     graph.add_nodes_from(range(M, M + N), bipartite=1)
     var_node_map = ComponentMap((v, M + i) for i, v in enumerate(variables))
-    for i, con in enumerate(constraints):
-        for var in get_incident_variables(con.body, **config):
-            if var in var_node_map:
-                graph.add_edge(i, var_node_map[var])
+
+    if config.method == IncidenceMethod.ampl_repn:
+        subexpression_cache = {}
+        subexpression_order = []
+        external_functions = {}
+        used_named_expressions = set()
+        symbolic_solver_labels = False
+        export_defined_variables = False
+        sorter = FileDeterminism_to_SortComponents(FileDeterminism.ORDERED)
+        visitor = AMPLRepnVisitor(
+            text_nl_template,
+            subexpression_cache,
+            subexpression_order,
+            external_functions,
+            var_map,
+            used_named_expressions,
+            symbolic_solver_labels,
+            export_defined_variables,
+            sorter,
+        )
+    else:
+        visitor = None
+
+    AMPLRepn.ActiveVisitor = visitor
+    try:
+        for i, con in enumerate(constraints):
+            for var in get_incident_variables(con.body, visitor=visitor, **config):
+                if var in var_node_map:
+                    graph.add_edge(i, var_node_map[var])
+    finally:
+        AMPLRepn.ActiveVisitor = None
     return graph
 
 
