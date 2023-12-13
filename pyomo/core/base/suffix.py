@@ -378,18 +378,6 @@ class Suffix(ComponentMap, ActiveComponent):
     def __str__(self):
         return ActiveComponent.__str__(self)
 
-    #
-    # Override NotImplementedError messages on ComponentMap base class
-    #
-
-    def __eq__(self, other):
-        """Not implemented."""
-        raise NotImplementedError("Suffix components are not comparable")
-
-    def __ne__(self, other):
-        """Not implemented."""
-        raise NotImplementedError("Suffix components are not comparable")
-
 
 class SuffixFinder(object):
     def __init__(self, name, default=None):
