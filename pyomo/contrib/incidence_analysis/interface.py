@@ -106,6 +106,7 @@ def get_bipartite_incidence_graph(variables, constraints, **kwds):
         subexpression_cache = {}
         subexpression_order = []
         external_functions = {}
+        var_map = {}
         used_named_expressions = set()
         symbolic_solver_labels = False
         export_defined_variables = False
