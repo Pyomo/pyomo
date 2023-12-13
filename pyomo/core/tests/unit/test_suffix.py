@@ -14,6 +14,7 @@
 
 import os
 import itertools
+import logging
 import pickle
 from os.path import abspath, dirname
 
@@ -57,6 +58,23 @@ def simple_obj_rule(model, i):
 
 
 class TestSuffixMethods(unittest.TestCase):
+    def test_suffix_debug(self):
+        with LoggingIntercept(level=logging.DEBUG) as OUT:
+            m = ConcreteModel()
+            m.s = Suffix()
+            m.foo = Suffix(rule=[])
+        print(OUT.getvalue())
+        self.assertEqual(
+            OUT.getvalue(),
+            "Constructing ConcreteModel 'ConcreteModel', from data=None\n"
+            "Constructing Suffix 'Suffix'\n"
+            "Constructing Suffix 'foo' on [Model] from data=None\n"
+            "Constructing Suffix 'foo'\n"
+            "Constructed component ''[Model].foo'':\n"
+            "foo : Direction=LOCAL, Datatype=FLOAT\n"
+            "    Key : Value\n\n",
+        )
+
     def test_suffix_rule(self):
         m = ConcreteModel()
         m.I = Set(initialize=[1, 2, 3])
@@ -846,20 +864,33 @@ class TestSuffixMethods(unittest.TestCase):
         self.assertEqual(model.z[1].get_suffix_value(model.junk), 3.0)
 
     # test update_values
-    def test_update_values1(self):
+    def test_update_values(self):
         model = ConcreteModel()
         model.junk = Suffix()
         model.x = Var()
         model.y = Var()
-        model.z = Var()
+        model.z = Var([1, 2])
         model.junk.set_value(model.x, 0.0)
         self.assertEqual(model.junk.get(model.x), 0.0)
         self.assertEqual(model.junk.get(model.y), None)
         self.assertEqual(model.junk.get(model.z), None)
+        self.assertEqual(model.junk.get(model.z[1]), None)
+        self.assertEqual(model.junk.get(model.z[2]), None)
         model.junk.update_values([(model.x, 1.0), (model.y, 2.0), (model.z, 3.0)])
         self.assertEqual(model.junk.get(model.x), 1.0)
         self.assertEqual(model.junk.get(model.y), 2.0)
+        self.assertEqual(model.junk.get(model.z), None)
+        self.assertEqual(model.junk.get(model.z[1]), 3.0)
+        self.assertEqual(model.junk.get(model.z[2]), 3.0)
+        model.junk.clear()
+        model.junk.update_values(
+            [(model.x, 1.0), (model.y, 2.0), (model.z, 3.0)], expand=False
+        )
+        self.assertEqual(model.junk.get(model.x), 1.0)
+        self.assertEqual(model.junk.get(model.y), 2.0)
         self.assertEqual(model.junk.get(model.z), 3.0)
+        self.assertEqual(model.junk.get(model.z[1]), None)
+        self.assertEqual(model.junk.get(model.z[2]), None)
 
     # test clear_value
     def test_clear_value(self):
@@ -875,24 +906,64 @@ class TestSuffixMethods(unittest.TestCase):
         model.junk.set_value(model.z, 2.0)
         model.junk.set_value(model.z[1], 4.0)
 
-        self.assertTrue(model.junk.get(model.x) == -1.0)
-        self.assertTrue(model.junk.get(model.y) == None)
-        self.assertTrue(model.junk.get(model.y[1]) == -2.0)
+        self.assertEqual(model.junk.get(model.x), -1.0)
+        self.assertEqual(model.junk.get(model.y), None)
+        self.assertEqual(model.junk.get(model.y[1]), -2.0)
         self.assertEqual(model.junk.get(model.y[2]), 1.0)
         self.assertEqual(model.junk.get(model.z), None)
         self.assertEqual(model.junk.get(model.z[2]), 2.0)
         self.assertEqual(model.junk.get(model.z[1]), 4.0)
 
         model.junk.clear_value(model.y)
-        model.junk.clear_value(model.x)
-        model.junk.clear_value(model.z[1])
 
-        self.assertTrue(model.junk.get(model.x) is None)
-        self.assertTrue(model.junk.get(model.y) is None)
-        self.assertTrue(model.junk.get(model.y[1]) is None)
+        self.assertEqual(model.junk.get(model.x), -1.0)
+        self.assertEqual(model.junk.get(model.y), None)
+        self.assertEqual(model.junk.get(model.y[1]), None)
         self.assertEqual(model.junk.get(model.y[2]), None)
         self.assertEqual(model.junk.get(model.z), None)
         self.assertEqual(model.junk.get(model.z[2]), 2.0)
+        self.assertEqual(model.junk.get(model.z[1]), 4.0)
+
+        model.junk.clear_value(model.x)
+
+        self.assertEqual(model.junk.get(model.x), None)
+        self.assertEqual(model.junk.get(model.y), None)
+        self.assertEqual(model.junk.get(model.y[1]), None)
+        self.assertEqual(model.junk.get(model.y[2]), None)
+        self.assertEqual(model.junk.get(model.z), None)
+        self.assertEqual(model.junk.get(model.z[2]), 2.0)
+        self.assertEqual(model.junk.get(model.z[1]), 4.0)
+
+        # Clearing a scalar that is not there does not raise an error
+        model.junk.clear_value(model.x)
+
+        self.assertEqual(model.junk.get(model.x), None)
+        self.assertEqual(model.junk.get(model.y), None)
+        self.assertEqual(model.junk.get(model.y[1]), None)
+        self.assertEqual(model.junk.get(model.y[2]), None)
+        self.assertEqual(model.junk.get(model.z), None)
+        self.assertEqual(model.junk.get(model.z[2]), 2.0)
+        self.assertEqual(model.junk.get(model.z[1]), 4.0)
+
+        model.junk.clear_value(model.z[1])
+
+        self.assertEqual(model.junk.get(model.x), None)
+        self.assertEqual(model.junk.get(model.y), None)
+        self.assertEqual(model.junk.get(model.y[1]), None)
+        self.assertEqual(model.junk.get(model.y[2]), None)
+        self.assertEqual(model.junk.get(model.z), None)
+        self.assertEqual(model.junk.get(model.z[2]), 2.0)
+        self.assertEqual(model.junk.get(model.z[1]), None)
+
+        # Clearing an indexed component with missing indices does not raise an error
+        model.junk.clear_value(model.z)
+
+        self.assertEqual(model.junk.get(model.x), None)
+        self.assertEqual(model.junk.get(model.y), None)
+        self.assertEqual(model.junk.get(model.y[1]), None)
+        self.assertEqual(model.junk.get(model.y[2]), None)
+        self.assertEqual(model.junk.get(model.z), None)
+        self.assertEqual(model.junk.get(model.z[2]), None)
         self.assertEqual(model.junk.get(model.z[1]), None)
 
     # test clear_value no args
@@ -945,7 +1016,8 @@ class TestSuffixMethods(unittest.TestCase):
         self.assertEqual(model.junk.datatype, None)
         self.assertRegex(
             LOG.getvalue().replace("\n", " "),
-            "^DEPRECATED: Suffix.set_datatype is replaced with the Suffix.datatype property",
+            "^DEPRECATED: Suffix.set_datatype is replaced with the "
+            "Suffix.datatype property",
         )
 
         model.junk.datatype = 'FLOAT'
@@ -953,7 +1025,8 @@ class TestSuffixMethods(unittest.TestCase):
             self.assertEqual(model.junk.get_datatype(), Suffix.FLOAT)
         self.assertRegex(
             LOG.getvalue().replace("\n", " "),
-            "^DEPRECATED: Suffix.get_datatype is replaced with the Suffix.datatype property",
+            "^DEPRECATED: Suffix.get_datatype is replaced with the "
+            "Suffix.datatype property",
         )
 
         with self.assertRaisesRegex(ValueError, "1.0 is not a valid SuffixDataType"):
@@ -972,11 +1045,12 @@ class TestSuffixMethods(unittest.TestCase):
         self.assertEqual(model.junk.direction, Suffix.IMPORT_EXPORT)
 
         with LoggingIntercept() as LOG:
-            model.junk.set_direction(None)
-        self.assertEqual(model.junk.direction, None)
+            model.junk.set_direction(1)
+        self.assertEqual(model.junk.direction, Suffix.EXPORT)
         self.assertRegex(
             LOG.getvalue().replace("\n", " "),
-            "^DEPRECATED: Suffix.set_direction is replaced with the Suffix.direction property",
+            "^DEPRECATED: Suffix.set_direction is replaced with the "
+            "Suffix.direction property",
         )
 
         model.junk.direction = 'IMPORT'
@@ -984,11 +1058,15 @@ class TestSuffixMethods(unittest.TestCase):
             self.assertEqual(model.junk.get_direction(), Suffix.IMPORT)
         self.assertRegex(
             LOG.getvalue().replace("\n", " "),
-            "^DEPRECATED: Suffix.get_direction is replaced with the Suffix.direction property",
+            "^DEPRECATED: Suffix.get_direction is replaced with the "
+            "Suffix.direction property",
         )
 
         with self.assertRaisesRegex(ValueError, "'a' is not a valid SuffixDirection"):
             model.junk.direction = 'a'
+        # None is allowed for datatype, but not direction
+        with self.assertRaisesRegex(ValueError, "None is not a valid SuffixDirection"):
+            model.junk.direction = None
 
     # test __str__
     def test_str(self):
@@ -1002,13 +1080,44 @@ class TestSuffixMethods(unittest.TestCase):
         model.junk = Suffix(direction=Suffix.EXPORT)
         output = StringIO()
         model.junk.pprint(ostream=output)
+        self.assertEqual(
+            output.getvalue(),
+            "junk : Direction=EXPORT, Datatype=FLOAT\n    Key : Value\n",
+        )
         model.junk.direction = Suffix.IMPORT
+        output = StringIO()
         model.junk.pprint(ostream=output)
+        self.assertEqual(
+            output.getvalue(),
+            "junk : Direction=IMPORT, Datatype=FLOAT\n    Key : Value\n",
+        )
         model.junk.direction = Suffix.LOCAL
+        model.junk.datatype = None
+        output = StringIO()
         model.junk.pprint(ostream=output)
+        self.assertEqual(
+            output.getvalue(),
+            "junk : Direction=LOCAL, Datatype=None\n    Key : Value\n",
+        )
         model.junk.direction = Suffix.IMPORT_EXPORT
+        model.junk.datatype = Suffix.INT
+        output = StringIO()
         model.junk.pprint(ostream=output)
+        self.assertEqual(
+            output.getvalue(),
+            "junk : Direction=IMPORT_EXPORT, Datatype=INT\n    Key : Value\n",
+        )
+        output = StringIO()
         model.pprint(ostream=output)
+        self.assertEqual(
+            output.getvalue(),
+            """1 Suffix Declarations
+    junk : Direction=IMPORT_EXPORT, Datatype=INT
+        Key : Value
+
+1 Declarations: junk
+""",
+        )
 
     # test pprint(verbose=True)
     def test_pprint_verbose(self):
@@ -1026,7 +1135,16 @@ class TestSuffixMethods(unittest.TestCase):
 
         output = StringIO()
         model.junk.pprint(ostream=output, verbose=True)
-        model.pprint(ostream=output, verbose=True)
+        self.assertEqual(
+            output.getvalue(),
+            """junk : Direction=LOCAL, Datatype=FLOAT
+    Key    : Value
+    s.B[1] :   2.0
+    s.B[2] :   3.0
+    s.B[3] :   1.0
+       s.b :   3.0
+""",
+        )
 
     def test_active_export_suffix_generator(self):
         model = ConcreteModel()
