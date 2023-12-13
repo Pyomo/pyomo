@@ -110,12 +110,18 @@ def _get_incident_via_ampl_repn(expr, linear_only, visitor=None):
         repn = visitor.walk_expression((expr, None, 0, 1.0))
 
     nonlinear_var_ids = [] if repn.nonlinear is None else repn.nonlinear[1]
-    nonlinear_vars = [var_map[v_id] for v_id in nonlinear_var_ids]
-    nonlinear_vid_set = set(nonlinear_var_ids)
+    nonlinear_var_id_set = set()
+    unique_nonlinear_var_ids = []
+    for v_id in nonlinear_var_ids:
+        if v_id not in nonlinear_var_id_set:
+            nonlinear_var_id_set.add(v_id)
+            unique_nonlinear_var_ids.append(v_id)
+
+    nonlinear_vars = [var_map[v_id] for v_id in unique_nonlinear_var_ids]
     linear_only_vars = [
         var_map[v_id]
         for v_id, coef in repn.linear.items()
-        if coef != 0.0 and v_id not in nonlinear_vid_set
+        if coef != 0.0 and v_id not in nonlinear_var_id_set
     ]
     if linear_only:
         return linear_only_vars
