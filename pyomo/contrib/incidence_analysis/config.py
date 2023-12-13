@@ -24,6 +24,11 @@ class IncidenceMethod(enum.Enum):
     standard_repn = 1
     """Use ``pyomo.repn.standard_repn.generate_standard_repn``"""
 
+    standard_repn_compute_values = 2
+    """Use ``pyomo.repn.standard_repn.generate_standard_repn`` with
+    ``compute_values=True``
+    """
+
 
 _include_fixed = ConfigValue(
     default=False,

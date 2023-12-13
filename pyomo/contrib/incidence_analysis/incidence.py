@@ -29,7 +29,9 @@ def _get_incident_via_identify_variables(expr, include_fixed):
     return list(identify_variables(expr, include_fixed=include_fixed))
 
 
-def _get_incident_via_standard_repn(expr, include_fixed, linear_only):
+def _get_incident_via_standard_repn(
+    expr, include_fixed, linear_only, compute_values=False
+):
     if include_fixed:
         to_unfix = [
             var for var in identify_variables(expr, include_fixed=True) if var.fixed
@@ -39,7 +41,9 @@ def _get_incident_via_standard_repn(expr, include_fixed, linear_only):
         context = nullcontext()
 
     with context:
-        repn = generate_standard_repn(expr, compute_values=False, quadratic=False)
+        repn = generate_standard_repn(
+            expr, compute_values=compute_values, quadratic=False
+        )
 
     linear_vars = []
     # Check coefficients to make sure we don't include linear variables with
@@ -123,7 +127,13 @@ def get_incident_variables(expr, **kwds):
     if method is IncidenceMethod.identify_variables:
         return _get_incident_via_identify_variables(expr, include_fixed)
     elif method is IncidenceMethod.standard_repn:
-        return _get_incident_via_standard_repn(expr, include_fixed, linear_only)
+        return _get_incident_via_standard_repn(
+            expr, include_fixed, linear_only, compute_values=False
+        )
+    elif method is IncidenceMethod.standard_repn_compute_values:
+        return _get_incident_via_standard_repn(
+            expr, include_fixed, linear_only, compute_values=True
+        )
     else:
         raise ValueError(
             f"Unrecognized value {method} for the method used to identify incident"
