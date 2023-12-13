@@ -363,7 +363,10 @@ class Suffix(ComponentMap, ActiveComponent):
 
     def _pprint(self):
         return (
-            [('Direction', str(self._direction)), ('Datatype', str(self._datatype))],
+            [
+                ('Direction', str(self._direction.name)),
+                ('Datatype', str(self._datatype.name)),
+            ],
             ((str(k), v) for k, v in self._dict.values()),
             ("Value",),
             lambda k, v: [v],
