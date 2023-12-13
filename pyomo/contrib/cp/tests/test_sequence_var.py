@@ -141,3 +141,17 @@ seq : Size=2, Index=alphabetic
       a : [i[a,1], i[a,2]]
       b : [i[b,1], i[b,2]]""".strip(),
         )
+
+    def test_multidimensional_index(self):
+        m = self.make_model()
+        @m.SequenceVar(m.alphabetic, m.numeric)
+        def s(m, i, j):
+            return [m.i[i, j],]
+
+        self.assertIsInstance(m.s, IndexedSequenceVar)
+        self.assertEqual(len(m.s), 4)
+        for i in m.alphabetic:
+            for j in m.numeric:
+                self.assertTrue((i, j) in m.s)
+                self.assertEqual(len(m.s[i, j]), 1)
+                self.assertIs(m.s[i, j].interval_vars[0], m.i[i, j])
