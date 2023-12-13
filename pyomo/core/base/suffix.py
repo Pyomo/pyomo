@@ -136,8 +136,8 @@ class Suffix(ComponentMap, ActiveComponent):
     """
 
     #
-    # The following local (class) aliases are provided for backwards
-    # compatibility
+    # The following local (class) aliases are provided for convenience
+    # and backwards compatibility with The Book, 3rd ed
     #
 
     # Suffix Directions:
@@ -199,7 +199,7 @@ class Suffix(ComponentMap, ActiveComponent):
         Constructs this component, applying rule if it exists.
         """
         if is_debug_set(logger):
-            logger.debug("Constructing suffix %s", self.name)
+            logger.debug("Constructing Suffix '%s'", self.name)
 
         if self._constructed is True:
             return
