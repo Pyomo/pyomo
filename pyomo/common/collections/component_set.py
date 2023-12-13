@@ -104,11 +104,11 @@ class ComponentSet(collections_MutableSet):
     # plain dictionary mapping key->(type(val), id(val)) and
     # compare that instead.
     def __eq__(self, other):
-        if not isinstance(other, collections_Set):
+        if self is other:
+            return True
+        if not isinstance(other, collections_Set) or len(self) != len(other):
             return False
-        return set((type(val), id(val)) for val in self) == set(
-            (type(val), id(val)) for val in other
-        )
+        return all(id(key) in self._data for key in other)
 
     def __ne__(self, other):
         return not (self == other)

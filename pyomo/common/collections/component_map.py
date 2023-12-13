@@ -98,16 +98,25 @@ class ComponentMap(AutoSlots.Mixin, collections_MutableMapping):
             return self._dict.update(args[0]._dict)
         return super().update(*args, **kwargs)
 
-    # We want to avoid generating Pyomo expressions due to
-    # comparison of values, so we convert both objects to a
-    # plain dictionary mapping key->(type(val), id(val)) and
-    # compare that instead.
+    # We want to avoid generating Pyomo expressions due to comparing the
+    # keys, so look up each entry from other in this dict.
     def __eq__(self, other):
-        if not isinstance(other, collections_Mapping):
+        if self is other:
+            return True
+        if not isinstance(other, collections_Mapping) or len(self) != len(other):
             return False
-        return {(type(key), id(key)): val for key, val in self.items()} == {
-            (type(key), id(key)): val for key, val in other.items()
-        }
+        # Note we have already verified the dicts are the same size
+        for key, val in other.items():
+            other_id = id(key)
+            if other_id not in self._dict:
+                return False
+            self_val = self._dict[other_id][1]
+            # Note: check "is" first to help avoid creation of Pyomo
+            # expressions (for the case that the values contain the same
+            # pyomo component)
+            if self_val is not val and self_val != val:
+                return False
+        return True
 
     def __ne__(self, other):
         return not (self == other)
