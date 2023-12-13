@@ -238,9 +238,7 @@ class Suffix(ComponentMap, ActiveComponent):
     @direction.setter
     def direction(self, direction):
         """Set the suffix direction."""
-        if direction is not None:
-            direction = _SuffixDirectionDomain(direction)
-        self._direction = direction
+        self._direction = _SuffixDirectionDomain(direction)
 
     def export_enabled(self):
         """
@@ -365,7 +363,7 @@ class Suffix(ComponentMap, ActiveComponent):
         return (
             [
                 ('Direction', str(self._direction.name)),
-                ('Datatype', str(self._datatype.name)),
+                ('Datatype', getattr(self._datatype, 'name', 'None')),
             ],
             ((str(k), v) for k, v in self._dict.values()),
             ("Value",),
