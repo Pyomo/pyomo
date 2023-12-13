@@ -24,7 +24,12 @@ class IncidenceMethod(enum.Enum):
     standard_repn = 1
     """Use ``pyomo.repn.standard_repn.generate_standard_repn``"""
 
-    ampl_repn = 2
+    standard_repn_compute_values = 2
+    """Use ``pyomo.repn.standard_repn.generate_standard_repn`` with
+    ``compute_values=True``
+    """
+
+    ampl_repn = 3
     """Use ``pyomo.repn.plugins.nl_writer.AMPLRepnVisitor``"""
 
 
@@ -42,11 +47,10 @@ _include_fixed = ConfigValue(
 _linear_only = ConfigValue(
     default=False,
     domain=bool,
-    description="Identify variables that participate linearly",
+    description="Identify only variables that participate linearly",
     doc=(
         "Flag indicating whether only variables that participate linearly should"
-        " be included. Note that these are included even if they participate"
-        " nonlinearly as well."
+        " be included."
     ),
 )
 
@@ -64,8 +68,7 @@ IncidenceConfig = ConfigDict()
 - ``include_fixed`` -- Flag indicating whether fixed variables should be included
   in the incidence graph
 - ``linear_only`` -- Flag indicating whether only variables that participate linearly
-  should be included. Note that these are included even if they participate
-  nonlinearly as well
+  should be included.
 - ``method`` -- Method used to identify incident variables. Must be a value of the
   ``IncidenceMethod`` enum.
 

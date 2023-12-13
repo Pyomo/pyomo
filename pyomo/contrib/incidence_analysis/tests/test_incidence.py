@@ -56,7 +56,7 @@ class _TestIncidence(object):
 
     def test_incidence_with_fixed_variable(self):
         m = pyo.ConcreteModel()
-        m.x = pyo.Var([1, 2, 3])
+        m.x = pyo.Var([1, 2, 3], initialize=1.0)
         expr = m.x[1] + m.x[1] * m.x[2] + m.x[1] * pyo.exp(m.x[3])
         m.x[2].fix()
         variables = self._get_incident_variables(expr)
@@ -244,6 +244,17 @@ class TestIncidenceAmplRepn(
 ):
     def _get_incident_variables(self, expr, **kwds):
         method = IncidenceMethod.ampl_repn
+        return get_incident_variables(expr, method=method, **kwds)
+
+
+class TestIncidenceStandardRepnComputeValues(
+    unittest.TestCase,
+    _TestIncidence,
+    _TestIncidenceLinearOnly,
+    _TestIncidenceLinearCancellation,
+):
+    def _get_incident_variables(self, expr, **kwds):
+        method = IncidenceMethod.standard_repn_compute_values
         return get_incident_variables(expr, method=method, **kwds)
 
 
