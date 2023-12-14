@@ -1,4 +1,4 @@
-from pyomo.contrib.piecewise.transform.piecewise_to_gdp_transformation import (
+from pyomo.contrib.piecewise.transform.piecewise_linear_transformation_base import (
     PiecewiseLinearTransformationBase,
 )
 from pyomo.core import Constraint, Binary, Var, RangeSet

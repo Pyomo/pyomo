@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
-from pyomo.contrib.piecewise.transform.piecewise_to_gdp_transformation import (
+from pyomo.contrib.piecewise.transform.piecewise_linear_transformation_base import (
     PiecewiseLinearTransformationBase,
 )
 from pyomo.core import Constraint, NonNegativeIntegers, Var
