@@ -49,8 +49,24 @@ gurobi_available = (
 )
 exdir = normpath(join(PYOMO_ROOT_DIR, 'examples', 'gdp'))
 
+class CommonTests(unittest.TestCase):
+    def check_pretty_bound_constraints(self, cons, var, bounds, lb):
+        self.assertEqual(value(cons.upper), 0)
+        self.assertIsNone(cons.lower)
+        repn = generate_standard_repn(cons.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(len(repn.linear_vars), len(bounds) + 1)
+        self.assertEqual(repn.constant, 0)
+        if lb:
+            check_linear_coef(self, repn, var, -1)
+            for disj, bnd in bounds.items():
+                check_linear_coef(self, repn, disj.binary_indicator_var, bnd)
+        else:
+            check_linear_coef(self, repn, var, 1)
+            for disj, bnd in bounds.items():
+                check_linear_coef(self, repn, disj.binary_indicator_var, -bnd)
 
-class LinearModelDecisionTreeExample(unittest.TestCase):
+class LinearModelDecisionTreeExample(CommonTests):
     def make_model(self):
         m = ConcreteModel()
         m.x1 = Var(bounds=(-10, 10))
@@ -380,22 +396,6 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         check_linear_coef(self, repn, m.d2.binary_indicator_var, 1)
         check_linear_coef(self, repn, m.d3.binary_indicator_var, 1)
         check_obj_in_active_tree(self, xor)
-
-    def check_pretty_bound_constraints(self, cons, var, bounds, lb):
-        self.assertEqual(value(cons.upper), 0)
-        self.assertIsNone(cons.lower)
-        repn = generate_standard_repn(cons.body)
-        self.assertTrue(repn.is_linear())
-        self.assertEqual(len(repn.linear_vars), len(bounds) + 1)
-        self.assertEqual(repn.constant, 0)
-        if lb:
-            check_linear_coef(self, repn, var, -1)
-            for disj, bnd in bounds.items():
-                check_linear_coef(self, repn, disj.binary_indicator_var, bnd)
-        else:
-            check_linear_coef(self, repn, var, 1)
-            for disj, bnd in bounds.items():
-                check_linear_coef(self, repn, disj.binary_indicator_var, -bnd)
 
     def test_bounds_constraints_correct(self):
         m = self.make_model()
@@ -876,6 +876,29 @@ class NestedDisjunctsInFlatGDP(unittest.TestCase):
     def test_declare_disjuncts_in_disjunction_rule(self):
         check_nested_disjuncts_in_flat_gdp(self, 'bigm')
 
+class IndexedDisjunctiveConstraints(CommonTests):
+    def test_empty_constraint_container_on_Disjunct(self):
+        m = ConcreteModel()
+        m.d = Disjunct()
+        m.e = Disjunct()
+        m.d.c = Constraint(['s', 'i', 'l', 'L', 'y'])
+        m.x = Var(bounds=(2, 3))
+        m.e.c = Constraint(expr=m.x == 2.7)
+        m.disjunction = Disjunction(expr=[m.d, m.e])
+
+        mbm = TransformationFactory('gdp.mbigm')
+        mbm.apply_to(m)
+        
+        cons = mbm.get_transformed_constraints(m.e.c)
+        self.assertEqual(len(cons), 2)
+        self.check_pretty_bound_constraints(
+            cons[0], m.x, {m.d: 2, m.e: 2.7}, lb=True
+        
+        )
+        self.check_pretty_bound_constraints(
+            cons[1], m.x, {m.d: 3, m.e: 2.7}, lb=False
+        )
+        
 
 @unittest.skipUnless(gurobi_available, "Gurobi is not available")
 class IndexedDisjunction(unittest.TestCase):

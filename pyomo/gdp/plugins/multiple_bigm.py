@@ -426,8 +426,8 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                     constraintMap,
                 )
 
-        # deactivate now that we have transformed
-        c.deactivate()
+            # deactivate now that we have transformed
+            c.deactivate()
 
     def _transform_bound_constraints(self, active_disjuncts, transBlock, Ms):
         # first we're just going to find all of them
