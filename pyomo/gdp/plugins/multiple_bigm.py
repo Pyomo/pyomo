@@ -31,7 +31,6 @@ from pyomo.core import (
     NonNegativeIntegers,
     Objective,
     Param,
-    RangeSet,
     Set,
     SetOf,
     SortComponents,
