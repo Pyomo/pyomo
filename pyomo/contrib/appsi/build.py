@@ -9,7 +9,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import errno
 import shutil
+import stat
 import glob
 import os
 import sys
@@ -63,7 +65,7 @@ def get_appsi_extension(in_setup=False, appsi_root=None):
 
 def build_appsi(args=[]):
     print('\n\n**** Building APPSI ****')
-    from setuptools.dist import Distribution
+    from setuptools import Distribution
     from pybind11.setup_helpers import build_ext
     import pybind11.setup_helpers
     from pyomo.common.envvar import PYOMO_CONFIG_DIR
