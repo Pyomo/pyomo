@@ -34,7 +34,6 @@ from pyomo.core import (
     Set,
     SetOf,
     SortComponents,
-    Suffix,
     value,
     Var,
 )
@@ -200,7 +199,6 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
 
     def __init__(self):
         super().__init__(logger)
-        self.handlers[Suffix] = self._warn_for_active_suffix
         self._arg_list = {}
         self._set_up_expr_bound_visitor()
 
@@ -344,13 +342,6 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
 
         # deactivate disjunct so writers can be happy
         obj._deactivate_without_fixing_indicator()
-
-    def _warn_for_active_suffix(self, obj, disjunct, active_disjuncts, Ms):
-        raise GDP_Error(
-            "Found active Suffix '{0}' on Disjunct '{1}'. "
-            "The multiple bigM transformation does not currently "
-            "support Suffixes.".format(obj.name, disjunct.name)
-        )
 
     def _transform_constraint(self, obj, disjunct, active_disjuncts, Ms):
         # we will put a new transformed constraint on the relaxation block.
