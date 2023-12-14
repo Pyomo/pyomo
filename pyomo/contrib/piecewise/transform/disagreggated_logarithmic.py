@@ -53,19 +53,19 @@ class DisaggregatedLogarithmicInnerMIPTransformation(PiecewiseLinearTransformati
         pw_linear_func.map_transformation_var(pw_expr, substitute_var)
 
         # Bounds for the substitute_var that we will widen
-        self.substitute_var_lb = float("inf")
-        self.substitute_var_ub = -float("inf")
+        substitute_var_lb = float("inf")
+        substitute_var_ub = -float("inf")
 
         # Simplices are tuples of indices of points. Give them their own indices, too
         simplices = pw_linear_func._simplices
         num_simplices = len(simplices)
         transBlock.simplex_indices = RangeSet(0, num_simplices - 1)
-        # Assumption: the simplices are really simplices and all have the same number of points,
-        # which is dimension + 1
+        # Assumption: the simplices are really full-dimensional simplices and all have the 
+        # same number of points, which is dimension + 1
         transBlock.simplex_point_indices = RangeSet(0, dimension)
 
         # Enumeration of simplices: map from simplex number to simplex object
-        self.idx_to_simplex = {
+        idx_to_simplex = {
             k: v for k, v in zip(transBlock.simplex_indices, simplices)
         }
 
@@ -78,13 +78,13 @@ class DisaggregatedLogarithmicInnerMIPTransformation(PiecewiseLinearTransformati
         # the bounds here. All we need to do is go through the corners of each simplex.
         for P, linear_func in simplex_indices_and_lin_funcs:
             for v in transBlock.simplex_point_indices:
-                val = linear_func(*pw_linear_func._points[self.idx_to_simplex[P][v]])
-                if val < self.substitute_var_lb:
-                    self.substitute_var_lb = val
-                if val > self.substitute_var_ub:
-                    self.substitute_var_ub = val
-        transBlock.substitute_var.setlb(self.substitute_var_lb)
-        transBlock.substitute_var.setub(self.substitute_var_ub)
+                val = linear_func(*pw_linear_func._points[idx_to_simplex[P][v]])
+                if val < substitute_var_lb:
+                    substitute_var_lb = val
+                if val > substitute_var_ub:
+                    substitute_var_ub = val
+        transBlock.substitute_var.setlb(substitute_var_lb)
+        transBlock.substitute_var.setub(substitute_var_ub)
 
         log_dimension = ceil(log2(num_simplices))
         transBlock.log_simplex_indices = RangeSet(0, log_dimension - 1)
@@ -146,7 +146,7 @@ class DisaggregatedLogarithmicInnerMIPTransformation(PiecewiseLinearTransformati
         def x_constraint(b, i):
             return pw_expr.args[i] == sum(
                 transBlock.lambdas[P, v]
-                * pw_linear_func._points[self.idx_to_simplex[P][v]][i]
+                * pw_linear_func._points[idx_to_simplex[P][v]][i]
                 for P in transBlock.simplex_indices
                 for v in transBlock.simplex_point_indices
             )
@@ -157,7 +157,7 @@ class DisaggregatedLogarithmicInnerMIPTransformation(PiecewiseLinearTransformati
             == sum(
                 sum(
                     transBlock.lambdas[P, v]
-                    * linear_func(*pw_linear_func._points[self.idx_to_simplex[P][v]])
+                    * linear_func(*pw_linear_func._points[idx_to_simplex[P][v]])
                     for v in transBlock.simplex_point_indices
                 )
                 for (P, linear_func) in simplex_indices_and_lin_funcs
