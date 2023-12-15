@@ -102,6 +102,11 @@ def construct_master_feasibility_problem(model_data, config):
         Slack variable model.
     """
 
+    # clone master model. current state:
+    # - variables for all but newest block are set to values from
+    #   master solution from previous iteration
+    # - variables for newest block are set to values from separation
+    #   solution chosen in previous iteration
     model = model_data.master_model.clone()
 
     # obtain mapping from master problem to master feasibility
@@ -123,53 +128,26 @@ def construct_master_feasibility_problem(model_data, config):
         obj.deactivate()
     iteration = model_data.iteration
 
-    # first stage vars are already initialized appropriately.
-    # initialize second-stage DOF variables using DR equation expressions
-    if model.scenarios[iteration, 0].util.second_stage_variables:
-        for blk in model.scenarios[iteration, :]:
-            for eq in blk.util.decision_rule_eqns:
-                vars_in_dr_eq = ComponentSet(identify_variables(eq.body))
-                ssv_set = ComponentSet(blk.util.second_stage_variables)
-
-                # get second-stage var in DR eqn. should only be one var
-                ssv_in_dr_eq = [var for var in vars_in_dr_eq if var in ssv_set][0]
-
-                # update var value for initialization
-                # fine since DR eqns are f(d) - z == 0 (not z - f(d) == 0)
-                ssv_in_dr_eq.set_value(0)
-                ssv_in_dr_eq.set_value(value(eq.body))
-
-    # initialize state vars to previous master solution values
-    if iteration != 0:
-        stvar_map = get_state_vars(model, [iteration, iteration - 1])
-        for current, prev in zip(stvar_map[iteration], stvar_map[iteration - 1]):
-            current.set_value(value(prev))
-
-    # constraints to which slacks should be added
-    # (all the constraints for the current iteration, except the DR eqns)
+    # add slacks only to inequality constraints for the newest
+    # master block. these should be the only constraints which
+    # may have been violated by the previous master and separation
+    # solution(s)
     targets = []
     for blk in model.scenarios[iteration, :]:
-        if blk.util.second_stage_variables:
-            dr_eqs = blk.util.decision_rule_eqns
-        else:
-            dr_eqs = list()
+        targets.extend([
+            con
+            for con in blk.component_data_objects(
+                Constraint, active=True, descend_into=True
+            )
+            if not con.equality
+        ])
 
-        targets.extend(
-            [
-                con
-                for con in blk.component_data_objects(
-                    Constraint, active=True, descend_into=True
-                )
-                if con not in dr_eqs
-            ]
-        )
-
-    # retain original constraint exprs (for slack initialization and scaling)
+    # retain original constraint expressions
+    # (for slack initialization and scaling)
     pre_slack_con_exprs = ComponentMap((con, con.body - con.upper) for con in targets)
 
     # add slack variables and objective
-    # inequalities g(v) <= b become g(v) -- s^-<= b
-    # equalities h(v) == b become h(v) -- s^- + s^+ == b
+    # inequalities g(v) <= b become g(v) - s^- <= b
     TransformationFactory("core.add_slack_variables").apply_to(model, targets=targets)
     slack_vars = ComponentSet(
         model._core_add_slack_variables.component_data_objects(Var, descend_into=True)
@@ -177,8 +155,8 @@ def construct_master_feasibility_problem(model_data, config):
 
     # initialize and scale slack variables
     for con in pre_slack_con_exprs:
-        # obtain slack vars in updated constraints
-        # and their coefficients (+/-1) in the constraint expression
+        # get mapping from slack variables to their (linear)
+        # coefficients (+/-1) in the updated constraint expressions
         repn = generate_standard_repn(con.body)
         slack_var_coef_map = ComponentMap()
         for idx in range(len(repn.linear_vars)):
@@ -187,19 +165,19 @@ def construct_master_feasibility_problem(model_data, config):
                 slack_var_coef_map[var] = repn.linear_coefs[idx]
 
         slack_substitution_map = dict()
-
         for slack_var in slack_var_coef_map:
-            # coefficient determines whether the slack is a +ve or -ve slack
+            # coefficient determines whether the slack
+            # is a +ve or -ve slack
             if slack_var_coef_map[slack_var] == -1:
                 con_slack = max(0, value(pre_slack_con_exprs[con]))
             else:
                 con_slack = max(0, -value(pre_slack_con_exprs[con]))
 
-            # initialize slack var, evaluate scaling coefficient
-            scaling_coeff = 1
+            # initialize slack variable, evaluate scaling coefficient
             slack_var.set_value(con_slack)
+            scaling_coeff = 1
 
-            # update expression replacement map
+            # update expression replacement map for slack scaling
             slack_substitution_map[id(slack_var)] = scaling_coeff * slack_var
 
         # finally, scale slack(s)
