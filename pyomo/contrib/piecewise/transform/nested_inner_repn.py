@@ -14,7 +14,8 @@ from pyomo.common.errors import DeveloperError
     Represent a piecewise linear function by using a nested GDP to determine
     which polytope a point is in, then representing it as a convex combination
     of extreme points, with multipliers "local" to that particular polytope,
-    i.e., not shared with neighbors. This formulation has linearly many binaries.
+    i.e., not shared with neighbors. This formulation has linearly many Boolean
+    variables, though up to variable substitution, it has logarithmically many.
     """,
 )
 class NestedInnerRepresentationGDPTransformation(PiecewiseLinearTransformationBase):
@@ -24,8 +25,10 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearTransformationBa
     of extreme points, with multipliers "local" to that particular polytope,
     i.e., not shared with neighbors. This method of formulating the piecewise
     linear function imposes no restrictions on the family of polytopes. Note
-    that this is NOT a logarithmic formulation - it has linearly many binaries.
-    However, it is inspired by the disaggregated logarithmic formulation of [1].
+    that this is NOT a logarithmic formulation - it has linearly many Boolean 
+    variables.  However, it is inspired by the disaggregated logarithmic 
+    formulation of [1]. Up to variable substitution, the amount of Boolean
+    variables is logarithmic, as in [1].
 
     References
     ----------
@@ -47,14 +50,10 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearTransformationBa
             len(transformation_block.transformed_functions)
         ]
 
-        # these copy-pasted lines (from inner_representation_gdp) seem useful
-        # adding some of this stuff to self so I don't have to pass it around
-        self.pw_linear_func = pw_linear_func
-        self.dimension = pw_expr.nargs()
         substitute_var = transBlock.substitute_var = Var()
         pw_linear_func.map_transformation_var(pw_expr, substitute_var)
-        self.substitute_var_lb = float("inf")
-        self.substitute_var_ub = -float("inf")
+        substitute_var_lb = float("inf")
+        substitute_var_ub = -float("inf")
 
         choices = list(zip(pw_linear_func._simplices, pw_linear_func._linear_functions))
 
@@ -67,27 +66,27 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearTransformationBa
             transBlock.set_substitute = Constraint(
                 expr=substitute_var == linear_func_expr
             )
-            (self.substitute_var_lb, self.substitute_var_ub) = compute_bounds_on_expr(
+            (substitute_var_lb, substitute_var_ub) = compute_bounds_on_expr(
                 linear_func_expr
             )
         else:
             # Add the disjunction
             transBlock.disj = self._get_disjunction(
-                choices, transBlock, pw_expr, transBlock
+                choices, transBlock, pw_expr, pw_linear_func, transBlock
             )
 
         # Set bounds as determined when setting up the disjunction
-        if self.substitute_var_lb < float("inf"):
-            transBlock.substitute_var.setlb(self.substitute_var_lb)
-        if self.substitute_var_ub > -float("inf"):
-            transBlock.substitute_var.setub(self.substitute_var_ub)
+        if substitute_var_lb < float("inf"):
+            transBlock.substitute_var.setlb(substitute_var_lb)
+        if substitute_var_ub > -float("inf"):
+            transBlock.substitute_var.setub(substitute_var_ub)
 
         return substitute_var
 
     # Recursively form the Disjunctions and Disjuncts. This shouldn't blow up
     # the stack, since the whole point is that we'll only go logarithmically
     # many calls deep.
-    def _get_disjunction(self, choices, parent_block, pw_expr, root_block):
+    def _get_disjunction(self, choices, parent_block, pw_expr, pw_linear_func, root_block):
         size = len(choices)
 
         # Our base cases will be 3 and 2, since it would be silly to construct
@@ -103,13 +102,13 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearTransformationBa
             @parent_block.Disjunct()
             def d_l(b):
                 b.inner_disjunction_l = self._get_disjunction(
-                    choices_l, b, pw_expr, root_block
+                    choices_l, b, pw_expr, pw_linear_func, root_block
                 )
 
             @parent_block.Disjunct()
             def d_r(b):
                 b.inner_disjunction_r = self._get_disjunction(
-                    choices_r, b, pw_expr, root_block
+                    choices_r, b, pw_expr, pw_linear_func, root_block
                 )
 
             return Disjunction(expr=[parent_block.d_l, parent_block.d_r])
@@ -121,13 +120,13 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearTransformationBa
             def d_l(b):
                 simplex, linear_func = choices[0]
                 self._set_disjunct_block_constraints(
-                    b, simplex, linear_func, pw_expr, root_block
+                    b, simplex, linear_func, pw_expr, pw_linear_func, root_block
                 )
 
             @parent_block.Disjunct()
             def d_r(b):
                 b.inner_disjunction_r = self._get_disjunction(
-                    choices[1:], b, pw_expr, root_block
+                    choices[1:], b, pw_expr, pw_linear_func, root_block
                 )
 
             return Disjunction(expr=[parent_block.d_l, parent_block.d_r])
@@ -137,14 +136,14 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearTransformationBa
             def d_l(b):
                 simplex, linear_func = choices[0]
                 self._set_disjunct_block_constraints(
-                    b, simplex, linear_func, pw_expr, root_block
+                    b, simplex, linear_func, pw_expr, pw_linear_func, root_block
                 )
 
             @parent_block.Disjunct()
             def d_r(b):
                 simplex, linear_func = choices[1]
                 self._set_disjunct_block_constraints(
-                    b, simplex, linear_func, pw_expr, root_block
+                    b, simplex, linear_func, pw_expr, pw_linear_func, root_block
                 )
 
             return Disjunction(expr=[parent_block.d_l, parent_block.d_r])
@@ -155,7 +154,7 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearTransformationBa
             )
 
     def _set_disjunct_block_constraints(
-        self, b, simplex, linear_func, pw_expr, root_block
+        self, b, simplex, linear_func, pw_expr, pw_linear_func, root_block
     ):
         # Define the lambdas sparsely like in the normal inner repn,
         # only the first few will participate in constraints
@@ -164,7 +163,7 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearTransformationBa
         # Get the extreme points to add up
         extreme_pts = []
         for idx in simplex:
-            extreme_pts.append(self.pw_linear_func._points[idx])
+            extreme_pts.append(pw_linear_func._points[idx])
 
         # Constrain sum(lambda_i) = 1
         b.convex_combo = Constraint(
@@ -179,13 +178,13 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearTransformationBa
 
         # Widen the variable bounds to those of this linear func expression
         (lb, ub) = compute_bounds_on_expr(linear_func_expr)
-        if lb is not None and lb < self.substitute_var_lb:
-            self.substitute_var_lb = lb
-        if ub is not None and ub > self.substitute_var_ub:
-            self.substitute_var_ub = ub
+        if lb is not None and lb < substitute_var_lb:
+            substitute_var_lb = lb
+        if ub is not None and ub > substitute_var_ub:
+            substitute_var_ub = ub
 
         # Constrain x = \sum \lambda_i v_i
-        @b.Constraint(range(self.dimension))
+        @b.Constraint(range(pw_expr.nargs())) # dimension
         def linear_combo(d, i):
             return pw_expr.args[i] == sum(
                 d.lambdas[j] * pt[i] for j, pt in enumerate(extreme_pts)
