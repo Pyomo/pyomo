@@ -816,17 +816,28 @@ def solver_call_master(model_data, config, solver, solve_data):
             )
 
             # debugging: log breakdown of master objective
+            if config.objective_focus == ObjectiveType.worst_case:
+                eval_obj_blk_idx = max(
+                    nlp_model.scenarios.keys(),
+                    key=lambda idx: value(
+                        nlp_model.scenarios[idx].second_stage_objective
+                    ),
+                )
+            else:
+                eval_obj_blk_idx = (0, 0)
+
+            eval_obj_blk = nlp_model.scenarios[eval_obj_blk_idx]
             config.progress_logger.debug(" Optimized master objective breakdown:")
             config.progress_logger.debug(
-                f"  First-stage objective: {master_soln.first_stage_objective}"
+                f"  First-stage objective: {value(eval_obj_blk.first_stage_objective)}"
             )
             config.progress_logger.debug(
-                f"  Second-stage objective: {master_soln.second_stage_objective}"
+                f"  Second-stage objective: {value(eval_obj_blk.second_stage_objective)}"
             )
             master_obj = (
-                master_soln.first_stage_objective + master_soln.second_stage_objective
+                eval_obj_blk.first_stage_objective + eval_obj_blk.second_stage_objective
             )
-            config.progress_logger.debug(f"  Objective: {master_obj}")
+            config.progress_logger.debug(f"  Objective: {value(master_obj)}")
             config.progress_logger.debug(
                 f" Termination condition: {results.solver.termination_condition}"
             )
