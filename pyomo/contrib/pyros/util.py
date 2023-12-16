@@ -3,7 +3,7 @@ Utility functions for the PyROS solver
 '''
 import copy
 from enum import Enum, auto
-from pyomo.common.collections import ComponentSet
+from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.base import (
     Constraint,
@@ -17,6 +17,7 @@ from pyomo.core.base import (
     Block,
     Param,
 )
+from pyomo.core.util import prod
 from pyomo.core.base.var import IndexedVar
 from pyomo.core.base.set_types import Reals
 from pyomo.opt import TerminationCondition as tc
@@ -43,6 +44,7 @@ from pprint import pprint
 import math
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.log import Preformatted
+from scipy.special import comb
 
 
 # Tolerances used in the code
@@ -1275,97 +1277,59 @@ def selective_clone(block, first_stage_vars):
 
 
 def add_decision_rule_variables(model_data, config):
-    '''
-    Function to add decision rule (DR) variables to the working model. DR variables become first-stage design
-    variables which do not get copied at each iteration. Currently support static_approx (no DR), affine DR,
-    and quadratic DR.
-    :param model_data: the data container for the working model
-    :param config: the config block
-    :return:
-    '''
+    """
+    Add variables for polynomial decision rules to the working
+    model.
+
+    Parameters
+    ----------
+    model_data : ROSolveResults
+        Model data.
+    config : config_dict
+        PyROS solver options.
+
+    Note
+    ----
+    Decision rule variables are considered first-stage decision
+    variables which do not get copied at each iteration.
+    PyROS currently supports static (zeroth order),
+    affine (first-order), and quadratic DR.
+    """
     second_stage_variables = model_data.working_model.util.second_stage_variables
     first_stage_variables = model_data.working_model.util.first_stage_variables
-    uncertain_params = model_data.working_model.util.uncertain_params
     decision_rule_vars = []
+
+    # since DR expression is a general polynomial in the uncertain
+    # parameters, the exact number of DR variables per second-stage
+    # variable depends on DR order and uncertainty set dimension
     degree = config.decision_rule_order
-    bounds = (None, None)
-    if degree == 0:
-        for i in range(len(second_stage_variables)):
-            model_data.working_model.add_component(
-                "decision_rule_var_" + str(i),
-                Var(
-                    initialize=value(second_stage_variables[i], exception=False),
-                    bounds=bounds,
-                    domain=Reals,
-                ),
-            )
-            first_stage_variables.extend(
-                getattr(
-                    model_data.working_model, "decision_rule_var_" + str(i)
-                ).values()
-            )
-            decision_rule_vars.append(
-                getattr(model_data.working_model, "decision_rule_var_" + str(i))
-            )
-    elif degree == 1:
-        for i in range(len(second_stage_variables)):
-            index_set = list(range(len(uncertain_params) + 1))
-            model_data.working_model.add_component(
-                "decision_rule_var_" + str(i),
-                Var(index_set, initialize=0, bounds=bounds, domain=Reals),
-            )
-            # === For affine drs, the [0]th constant term is initialized to the control variable values, all other terms are initialized to 0
-            getattr(model_data.working_model, "decision_rule_var_" + str(i))[
-                0
-            ].set_value(
-                value(second_stage_variables[i], exception=False), skip_validation=True
-            )
-            first_stage_variables.extend(
-                list(
-                    getattr(
-                        model_data.working_model, "decision_rule_var_" + str(i)
-                    ).values()
-                )
-            )
-            decision_rule_vars.append(
-                getattr(model_data.working_model, "decision_rule_var_" + str(i))
-            )
-    elif degree == 2 or degree == 3 or degree == 4:
-        for i in range(len(second_stage_variables)):
-            num_vars = int(sp.special.comb(N=len(uncertain_params) + degree, k=degree))
-            dict_init = {}
-            for r in range(num_vars):
-                if r == 0:
-                    dict_init.update(
-                        {r: value(second_stage_variables[i], exception=False)}
-                    )
-                else:
-                    dict_init.update({r: 0})
-            model_data.working_model.add_component(
-                "decision_rule_var_" + str(i),
-                Var(
-                    list(range(num_vars)),
-                    initialize=dict_init,
-                    bounds=bounds,
-                    domain=Reals,
-                ),
-            )
-            first_stage_variables.extend(
-                list(
-                    getattr(
-                        model_data.working_model, "decision_rule_var_" + str(i)
-                    ).values()
-                )
-            )
-            decision_rule_vars.append(
-                getattr(model_data.working_model, "decision_rule_var_" + str(i))
-            )
-    else:
-        raise ValueError(
-            "Decision rule order "
-            + str(config.decision_rule_order)
-            + " is not yet supported. PyROS supports polynomials of degree 0 (static approximation), 1, 2."
+    num_uncertain_params = len(model_data.working_model.util.uncertain_params)
+    num_dr_vars = comb(
+        N=num_uncertain_params + degree,
+        k=degree,
+        exact=True,
+        repetition=False,
+    )
+
+    for idx, ss_var in enumerate(second_stage_variables):
+        # declare DR coefficients for current second-stage
+        # variable
+        indexed_dr_var = Var(
+            range(num_dr_vars),
+            initialize=0,
+            bounds=(None, None),
+            domain=Reals,
         )
+        model_data.working_model.add_component(
+            f"decision_rule_var_{idx}",
+            indexed_dr_var,
+        )
+        indexed_dr_var[0].set_value(value(ss_var, exception=False))
+
+        # update attributes
+        first_stage_variables.extend(indexed_dr_var.values())
+        decision_rule_vars.append(indexed_dr_var)
+
     model_data.working_model.util.decision_rule_vars = decision_rule_vars
 
 
@@ -1401,94 +1365,72 @@ def sort_partitioned_powers(powers_list):
 
 
 def add_decision_rule_constraints(model_data, config):
-    '''
-    Function to add the defining Constraint relationships for the decision rules to the working model.
-    :param model_data: model data container object
-    :param config: the config object
-    :return:
-    '''
+    """
+    Add decision rule equality constraints to the working model.
+
+    Parameters
+    ----------
+    model_data : ROSolveResults
+        Model data.
+    config : ConfigDict
+        PyROS solver options.
+    """
 
     second_stage_variables = model_data.working_model.util.second_stage_variables
     uncertain_params = model_data.working_model.util.uncertain_params
     decision_rule_eqns = []
+    decision_rule_vars_list = model_data.working_model.util.decision_rule_vars
     degree = config.decision_rule_order
-    if degree == 0:
-        for i in range(len(second_stage_variables)):
-            model_data.working_model.add_component(
-                "decision_rule_eqn_" + str(i),
-                Constraint(
-                    expr=getattr(
-                        model_data.working_model, "decision_rule_var_" + str(i)
-                    )
-                    == second_stage_variables[i]
-                ),
+
+    # keeping track of degree of monomial in which each
+    # DR coefficient participates will be useful for later
+    dr_var_to_exponent_map = ComponentMap()
+
+    # set up uncertain parameter combinations for
+    # construction of the monomials of the DR expressions
+    monomial_param_combos = []
+    for power in range(degree + 1):
+        power_combos = it.combinations_with_replacement(uncertain_params, power)
+        monomial_param_combos.extend(power_combos)
+
+    # now construct DR equations and declare them on the working model
+    second_stage_dr_var_zip = zip(
+        second_stage_variables,
+        decision_rule_vars_list,
+    )
+    for idx, (ss_var, indexed_dr_var) in enumerate(second_stage_dr_var_zip):
+        # for each DR equation, the number of coefficients should match
+        # the number of monomial terms exactly
+        if len(monomial_param_combos) != len(indexed_dr_var.index_set()):
+            raise ValueError(
+                f"Mismatch between number of DR coefficient variables "
+                "and number of DR monomials for equation of second-stage "
+                f"variable {ss_var.name!r} "
+                f"({len(indexed_dr_var.index_set())}!= {len(monomial_param_combos)})"
             )
-            decision_rule_eqns.append(
-                getattr(model_data.working_model, "decision_rule_eqn_" + str(i))
-            )
-    elif degree == 1:
-        for i in range(len(second_stage_variables)):
-            expr = 0
-            for j in range(
-                len(getattr(model_data.working_model, "decision_rule_var_" + str(i)))
-            ):
-                if j == 0:
-                    expr += getattr(
-                        model_data.working_model, "decision_rule_var_" + str(i)
-                    )[j]
-                else:
-                    expr += (
-                        getattr(
-                            model_data.working_model, "decision_rule_var_" + str(i)
-                        )[j]
-                        * uncertain_params[j - 1]
-                    )
-            model_data.working_model.add_component(
-                "decision_rule_eqn_" + str(i),
-                Constraint(expr=expr == second_stage_variables[i]),
-            )
-            decision_rule_eqns.append(
-                getattr(model_data.working_model, "decision_rule_eqn_" + str(i))
-            )
-    elif degree >= 2:
-        # Using bars and stars groupings of variable powers, construct x1^a * .... * xn^b terms for all c <= a+...+b = degree
-        all_powers = []
-        for n in range(1, degree + 1):
-            all_powers.append(
-                sort_partitioned_powers(
-                    list(partition_powers(n, len(uncertain_params)))
-                )
-            )
-        for i in range(len(second_stage_variables)):
-            Z = list(
-                z
-                for z in getattr(
-                    model_data.working_model, "decision_rule_var_" + str(i)
-                ).values()
-            )
-            e = Z.pop(0)
-            for degree_param_powers in all_powers:
-                for param_powers in degree_param_powers:
-                    product = 1
-                    for idx, power in enumerate(param_powers):
-                        if power == 0:
-                            pass
-                        else:
-                            product = product * uncertain_params[idx] ** power
-                    e += Z.pop(0) * product
-            model_data.working_model.add_component(
-                "decision_rule_eqn_" + str(i),
-                Constraint(expr=e == second_stage_variables[i]),
-            )
-            decision_rule_eqns.append(
-                getattr(model_data.working_model, "decision_rule_eqn_" + str(i))
-            )
-            if len(Z) != 0:
-                raise RuntimeError(
-                    "Construction of the decision rule functions did not work correctly! "
-                    "Did not use all coefficient terms."
-                )
+
+        # construct the DR polynomial
+        dr_expression = 0
+        for dr_var, param_combo in zip(indexed_dr_var.values(), monomial_param_combos):
+            dr_expression += dr_var * prod(param_combo)
+
+            # map decision rule var to degree (exponent) of the
+            # associated monomial with respect to the uncertain params
+            dr_var_to_exponent_map[dr_var] = len(param_combo)
+
+        # declare constraint on model
+        dr_eqn = Constraint(expr=dr_expression - ss_var == 0)
+        model_data.working_model.add_component(
+            f"decision_rule_eqn_{idx}",
+            dr_eqn,
+        )
+
+        # append to list of DR equality constraints
+        decision_rule_eqns.append(dr_eqn)
+
+    # finally, add attributes to util block
     model_data.working_model.util.decision_rule_eqns = decision_rule_eqns
+    model_data.working_model.util.dr_var_to_exponent_map = dr_var_to_exponent_map
 
 
 def identify_objective_functions(model, objective):

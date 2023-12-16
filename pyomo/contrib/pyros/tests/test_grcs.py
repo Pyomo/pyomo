@@ -243,79 +243,108 @@ class testAddDecisionRuleVars(unittest.TestCase):
     depends on the number of control variables in the model and the number of uncertain parameters in the model.
     '''
 
-    @unittest.skipIf(not scipy_available, 'Scipy is not available.')
-    def test_add_decision_rule_vars_positive_case(self):
-        '''
-        Testing whether the correct number of decision rule variables is created in each DR type case
-        '''
+    def make_simple_test_model(self):
+        """
+        Make simple test model for DR variable
+        declaration testing.
+        """
         m = ConcreteModel()
-        m.p1 = Param(initialize=0, mutable=True)
-        m.p2 = Param(initialize=0, mutable=True)
-        m.z1 = Var(initialize=0)
-        m.z2 = Var(initialize=0)
 
-        m.working_model = ConcreteModel()
-        m.working_model.util = Block()
+        # uncertain parameters
+        m.p = Param(range(3), initialize=0, mutable=True)
 
-        m.working_model.util.second_stage_variables = [m.z1, m.z2]
-        m.working_model.util.uncertain_params = [m.p1, m.p2]
-        m.working_model.util.first_stage_variables = []
+        # second-stage variables
+        m.z = Var([0, 1], initialize=0)
 
-        m.working_model.util.first_stage_variables = []
-        config = Block()
+        # util block
+        m.util = Block()
+        m.util.first_stage_variables = []
+        m.util.second_stage_variables = list(m.z.values())
+        m.util.uncertain_params = list(m.p.values())
+
+        return m
+
+    @unittest.skipIf(not scipy_available, 'Scipy is not available.')
+    def test_correct_num_dr_vars_static(self):
+        """
+        Test DR variable setup routines declare the correct
+        number of DR coefficient variables, static DR case.
+        """
+        model_data = ROSolveResults()
+        model_data.working_model = m = self.make_simple_test_model()
+
+        config = Bunch()
         config.decision_rule_order = 0
 
-        add_decision_rule_variables(model_data=m, config=config)
+        add_decision_rule_variables(model_data=model_data, config=config)
 
-        self.assertEqual(
-            len(m.working_model.util.first_stage_variables),
-            len(m.working_model.util.second_stage_variables),
-            msg="For static approximation decision rule the number of decision rule variables"
-            "added to the list of design variables should equal the number of control variables.",
-        )
+        for indexed_dr_var in m.util.decision_rule_vars:
+            self.assertEqual(
+                len(indexed_dr_var),
+                1,
+                msg=(
+                    "Number of decision rule coefficient variables "
+                    f"in indexed Var object {indexed_dr_var.name!r}"
+                    "does not match correct value."
+                ),
+            )
 
-        m.working_model.util.first_stage_variables = []
+    @unittest.skipIf(not scipy_available, 'Scipy is not available.')
+    def test_correct_num_dr_vars_affine(self):
+        """
+        Test DR variable setup routines declare the correct
+        number of DR coefficient variables, affine DR case.
+        """
+        model_data = ROSolveResults()
+        model_data.working_model = m = self.make_simple_test_model()
 
-        m.working_model.del_component(m.working_model.decision_rule_var_0)
-        m.working_model.del_component(m.working_model.decision_rule_var_1)
-
+        config = Bunch()
         config.decision_rule_order = 1
 
-        add_decision_rule_variables(m, config=config)
+        add_decision_rule_variables(model_data=model_data, config=config)
 
-        self.assertEqual(
-            len(m.working_model.util.first_stage_variables),
-            len(m.working_model.util.second_stage_variables)
-            * (1 + len(m.working_model.util.uncertain_params)),
-            msg="For affine decision rule the number of decision rule variables add to the "
-            "list of design variables should equal the number of control variables"
-            "multiplied by the number of uncertain parameters plus 1.",
-        )
+        for indexed_dr_var in m.util.decision_rule_vars:
+            self.assertEqual(
+                len(indexed_dr_var),
+                1 + len(m.util.uncertain_params),
+                msg=(
+                    "Number of decision rule coefficient variables "
+                    f"in indexed Var object {indexed_dr_var.name!r}"
+                    "does not match correct value."
+                ),
+            )
 
-        m.working_model.util.first_stage_variables = []
+    @unittest.skipIf(not scipy_available, 'Scipy is not available.')
+    def test_correct_num_dr_vars_quadratic(self):
+        """
+        Test DR variable setup routines declare the correct
+        number of DR coefficient variables, quadratic DR case.
+        """
+        model_data = ROSolveResults()
+        model_data.working_model = m = self.make_simple_test_model()
 
-        m.working_model.del_component(m.working_model.decision_rule_var_0)
-        m.working_model.del_component(m.working_model.decision_rule_var_1)
-        m.working_model.del_component(m.working_model.decision_rule_var_0_index)
-        m.working_model.del_component(m.working_model.decision_rule_var_1_index)
-
+        config = Bunch()
         config.decision_rule_order = 2
 
-        add_decision_rule_variables(m, config=config)
+        add_decision_rule_variables(model_data=model_data, config=config)
 
-        self.assertEqual(
-            len(m.working_model.util.first_stage_variables),
-            len(m.working_model.util.second_stage_variables)
-            * int(
-                2 * len(m.working_model.util.uncertain_params)
-                + sp.special.comb(N=len(m.working_model.util.uncertain_params), k=2)
-                + 1
-            ),
-            msg="For quadratic decision rule the number of decision rule variables add to the "
-            "list of design variables should equal the number of control variables"
-            "multiplied by 2 time the number of uncertain parameters plus all 2-combinations"
-            "of uncertain parameters plus 1.",
+        num_params = len(m.util.uncertain_params)
+        correct_num_dr_vars = (
+            1  # static term
+            + num_params  # affine terms
+            + sp.special.comb(num_params, 2, repetition=True, exact=True)
+            #   quadratic terms
         )
+        for indexed_dr_var in m.util.decision_rule_vars:
+            self.assertEqual(
+                len(indexed_dr_var),
+                correct_num_dr_vars,
+                msg=(
+                    "Number of decision rule coefficient variables "
+                    f"in indexed Var object {indexed_dr_var.name!r}"
+                    "does not match correct value."
+                ),
+            )
 
 
 class testAddDecisionRuleConstraints(unittest.TestCase):
@@ -325,92 +354,45 @@ class testAddDecisionRuleConstraints(unittest.TestCase):
     to the number of control variables. These constraints should reference the uncertain parameters and unique
     decision rule variables per control variable.
     '''
+    def test_num_dr_eqns_added_correct(self):
+        """
+        Check that number of DR equality constraints added
+        by constraint declaration routines matches the number
+        of second-stage variables in the model.
+        """
+        model_data = ROSolveResults()
+        model_data.working_model = m = ConcreteModel()
 
-    def test_correct_number_of_decision_rule_constraints(self):
-        '''
-        Number of decision rule constraints added to the model should equal number of control variables in
-        list "second_stage_variables".
-        '''
-        m = ConcreteModel()
+        # uncertain parameters
         m.p1 = Param(initialize=0, mutable=True)
         m.p2 = Param(initialize=0, mutable=True)
+
+        # second-stage variables
         m.z1 = Var(initialize=0)
         m.z2 = Var(initialize=0)
 
-        m.working_model = ConcreteModel()
-        m.working_model.util = Block()
+        # add util block
+        m.util = Block()
+        m.util.uncertain_params = [m.p1, m.p2]
+        m.util.second_stage_variables = [m.z1, m.z2]
 
         # === Decision rule vars have been added
-        m.working_model.decision_rule_var_0 = Var(initialize=0)
-        m.working_model.decision_rule_var_1 = Var(initialize=0)
+        m.decision_rule_var_0 = Var([0], initialize=0)
+        m.decision_rule_var_1 = Var([0], initialize=0)
+        m.util.decision_rule_vars = [
+            m.decision_rule_var_0,
+            m.decision_rule_var_1,
+        ]
 
-        m.working_model.util.second_stage_variables = [m.z1, m.z2]
-        m.working_model.util.uncertain_params = [m.p1, m.p2]
-
-        decision_rule_cons = []
-        config = Block()
+        # set up simple config-like object
+        config = Bunch()
         config.decision_rule_order = 0
 
-        add_decision_rule_constraints(model_data=m, config=config)
-
-        for c in m.working_model.component_data_objects(Constraint, descend_into=True):
-            if "decision_rule_eqn_" in c.name:
-                decision_rule_cons.append(c)
-                m.working_model.del_component(c)
+        add_decision_rule_constraints(model_data=model_data, config=config)
 
         self.assertEqual(
-            len(decision_rule_cons),
-            len(m.working_model.util.second_stage_variables),
-            msg="The number of decision rule constraints added to model should equal"
-            "the number of control variables in the model.",
-        )
-
-        decision_rule_cons = []
-        config.decision_rule_order = 1
-
-        # === Decision rule vars have been added
-        m.working_model.del_component(m.working_model.decision_rule_var_0)
-        m.working_model.del_component(m.working_model.decision_rule_var_1)
-
-        m.working_model.decision_rule_var_0 = Var([0, 1, 2], initialize=0)
-        m.working_model.decision_rule_var_1 = Var([0, 1, 2], initialize=0)
-
-        add_decision_rule_constraints(model_data=m, config=config)
-
-        for c in m.working_model.component_data_objects(Constraint, descend_into=True):
-            if "decision_rule_eqn_" in c.name:
-                decision_rule_cons.append(c)
-                m.working_model.del_component(c)
-
-        self.assertEqual(
-            len(decision_rule_cons),
-            len(m.working_model.util.second_stage_variables),
-            msg="The number of decision rule constraints added to model should equal"
-            "the number of control variables in the model.",
-        )
-
-        decision_rule_cons = []
-        config.decision_rule_order = 2
-
-        # === Decision rule vars have been added
-        m.working_model.del_component(m.working_model.decision_rule_var_0)
-        m.working_model.del_component(m.working_model.decision_rule_var_1)
-        m.working_model.del_component(m.working_model.decision_rule_var_0_index)
-        m.working_model.del_component(m.working_model.decision_rule_var_1_index)
-
-        m.working_model.decision_rule_var_0 = Var([0, 1, 2, 3, 4, 5], initialize=0)
-        m.working_model.decision_rule_var_1 = Var([0, 1, 2, 3, 4, 5], initialize=0)
-
-        add_decision_rule_constraints(model_data=m, config=config)
-
-        for c in m.working_model.component_data_objects(Constraint, descend_into=True):
-            if "decision_rule_eqn_" in c.name:
-                decision_rule_cons.append(c)
-                m.working_model.del_component(c)
-
-        self.assertEqual(
-            len(decision_rule_cons),
-            len(m.working_model.util.second_stage_variables),
+            len(m.util.decision_rule_eqns),
+            len(m.util.second_stage_variables),
             msg="The number of decision rule constraints added to model should equal"
             "the number of control variables in the model.",
         )
