@@ -5,7 +5,7 @@ One class per function being tested, minimum one test per class
 
 import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
-from pyomo.common.collections import ComponentSet
+from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.core.base.set_types import NonNegativeIntegers
 from pyomo.core.expr import identify_variables, identify_mutable_parameters
@@ -3553,6 +3553,9 @@ class testSolveMaster(unittest.TestCase):
         master_data.master_model.scenarios[0, 0].first_stage_objective = 0
         master_data.master_model.scenarios[0, 0].second_stage_objective = Expression(
             expr=master_data.master_model.scenarios[0, 0].x
+        )
+        master_data.master_model.scenarios[0, 0].util.dr_var_to_exponent_map = (
+            ComponentMap()
         )
         master_data.iteration = 0
         master_data.timing = TimingData()
