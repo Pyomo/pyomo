@@ -360,6 +360,7 @@ class testAddDecisionRuleConstraints(unittest.TestCase):
     decision rule variables.
     """
 
+    @unittest.skipIf(not scipy_available, 'Scipy is not available.')
     def test_num_dr_eqns_added_correct(self):
         """
         Check that number of DR equality constraints added
