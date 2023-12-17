@@ -891,7 +891,9 @@ def ROSolver_iterative_solve(model_data, config):
         # solution chosen by heuristic. consequently,
         # equality constraints should all be satisfied (up to tolerances).
         for var, val in separation_results.violating_separation_variable_values.items():
-            master_var = master_data.master_model.scenarios[k + 1, 0].find_component(var)
+            master_var = master_data.master_model.scenarios[k + 1, 0].find_component(
+                var
+            )
             master_var.set_value(val)
 
         k += 1

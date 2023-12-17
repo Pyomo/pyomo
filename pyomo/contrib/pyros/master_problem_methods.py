@@ -134,13 +134,15 @@ def construct_master_feasibility_problem(model_data, config):
     # solution(s)
     targets = []
     for blk in model.scenarios[iteration, :]:
-        targets.extend([
-            con
-            for con in blk.component_data_objects(
-                Constraint, active=True, descend_into=True
-            )
-            if not con.equality
-        ])
+        targets.extend(
+            [
+                con
+                for con in blk.component_data_objects(
+                    Constraint, active=True, descend_into=True
+                )
+                if not con.equality
+            ]
+        )
 
     # retain original constraint expressions
     # (for slack initialization and scaling)
@@ -336,7 +338,7 @@ def construct_dr_polishing_problem(model_data, config):
                 nominal_polishing_block.first_stage_objective
                 + nominal_polishing_block.second_stage_objective
                 <= optimal_master_obj_value
-            ),
+            )
         )
 
     # deactivate master problem objective
@@ -349,14 +351,10 @@ def construct_dr_polishing_problem(model_data, config):
         # these are meant to represent the absolute values
         # of the terms of DR polynomial
         indexed_polishing_var = Var(
-            list(indexed_dr_var.keys()),
-            domain=NonNegativeReals,
+            list(indexed_dr_var.keys()), domain=NonNegativeReals
         )
         nominal_polishing_block.add_component(
-            unique_component_name(
-                nominal_polishing_block,
-                f"dr_polishing_var_{idx}",
-            ),
+            unique_component_name(nominal_polishing_block, f"dr_polishing_var_{idx}"),
             indexed_polishing_var,
         )
         polishing_vars.append(indexed_polishing_var)
@@ -370,26 +368,16 @@ def construct_dr_polishing_problem(model_data, config):
     nominal_polishing_block.util.polishing_abs_val_ub_cons = all_ub_cons = []
     for idx, (dr_eq, indexed_polishing_var, ss_var) in enumerate(dr_eq_var_zip):
         # set up absolute value constraint components
-        polishing_absolute_value_lb_cons = Constraint(
-            indexed_polishing_var.index_set(),
-        )
-        polishing_absolute_value_ub_cons = Constraint(
-            indexed_polishing_var.index_set(),
-        )
+        polishing_absolute_value_lb_cons = Constraint(indexed_polishing_var.index_set())
+        polishing_absolute_value_ub_cons = Constraint(indexed_polishing_var.index_set())
 
         # add constraints to polishing model
         nominal_polishing_block.add_component(
-            unique_component_name(
-                polishing_model,
-                f"polishing_abs_val_lb_con_{idx}",
-            ),
+            unique_component_name(polishing_model, f"polishing_abs_val_lb_con_{idx}"),
             polishing_absolute_value_lb_cons,
         )
         nominal_polishing_block.add_component(
-            unique_component_name(
-                polishing_model,
-                f"polishing_abs_val_ub_con_{idx}",
-            ),
+            unique_component_name(polishing_model, f"polishing_abs_val_ub_con_{idx}"),
             polishing_absolute_value_ub_cons,
         )
 
@@ -431,10 +419,7 @@ def construct_dr_polishing_problem(model_data, config):
     # of DR monomials, or equivalently, sum of the polishing
     # variables.
     polishing_model.polishing_obj = Objective(
-        expr=sum(
-            sum(polishing_var.values())
-            for polishing_var in polishing_vars
-        )
+        expr=sum(sum(polishing_var.values()) for polishing_var in polishing_vars)
     )
 
     return polishing_model
@@ -461,8 +446,7 @@ def minimize_dr_vars(model_data, config):
     """
     # create polishing NLP
     polishing_model = construct_dr_polishing_problem(
-        model_data=model_data,
-        config=config,
+        model_data=model_data, config=config
     )
 
     if config.solve_master_globally:
@@ -569,16 +553,13 @@ def minimize_dr_vars(model_data, config):
     # debugging: summarize objective breakdown
     eval_obj_blk = model_data.master_model.scenarios[eval_obj_blk_idx]
     config.progress_logger.debug(
-        "  First-stage objective: "
-        f"{value(eval_obj_blk.first_stage_objective)}"
+        "  First-stage objective: " f"{value(eval_obj_blk.first_stage_objective)}"
     )
     config.progress_logger.debug(
-        "  Second-stage objective: "
-        f"{value(eval_obj_blk.second_stage_objective)}"
+        "  Second-stage objective: " f"{value(eval_obj_blk.second_stage_objective)}"
     )
     polished_master_obj = value(
-        eval_obj_blk.first_stage_objective
-        + eval_obj_blk.second_stage_objective
+        eval_obj_blk.first_stage_objective + eval_obj_blk.second_stage_objective
     )
     config.progress_logger.debug(f"  Objective: {polished_master_obj}")
 

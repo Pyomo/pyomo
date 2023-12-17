@@ -354,6 +354,7 @@ class testAddDecisionRuleConstraints(unittest.TestCase):
     to the number of control variables. These constraints should reference the uncertain parameters and unique
     decision rule variables per control variable.
     '''
+
     def test_num_dr_eqns_added_correct(self):
         """
         Check that number of DR equality constraints added
@@ -379,10 +380,7 @@ class testAddDecisionRuleConstraints(unittest.TestCase):
         # === Decision rule vars have been added
         m.decision_rule_var_0 = Var([0], initialize=0)
         m.decision_rule_var_1 = Var([0], initialize=0)
-        m.util.decision_rule_vars = [
-            m.decision_rule_var_0,
-            m.decision_rule_var_1,
-        ]
+        m.util.decision_rule_vars = [m.decision_rule_var_0, m.decision_rule_var_1]
 
         # set up simple config-like object
         config = Bunch()
@@ -3554,9 +3552,9 @@ class testSolveMaster(unittest.TestCase):
         master_data.master_model.scenarios[0, 0].second_stage_objective = Expression(
             expr=master_data.master_model.scenarios[0, 0].x
         )
-        master_data.master_model.scenarios[0, 0].util.dr_var_to_exponent_map = (
-            ComponentMap()
-        )
+        master_data.master_model.scenarios[
+            0, 0
+        ].util.dr_var_to_exponent_map = ComponentMap()
         master_data.iteration = 0
         master_data.timing = TimingData()
 

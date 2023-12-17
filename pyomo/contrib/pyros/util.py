@@ -1305,24 +1305,17 @@ def add_decision_rule_variables(model_data, config):
     degree = config.decision_rule_order
     num_uncertain_params = len(model_data.working_model.util.uncertain_params)
     num_dr_vars = comb(
-        N=num_uncertain_params + degree,
-        k=degree,
-        exact=True,
-        repetition=False,
+        N=num_uncertain_params + degree, k=degree, exact=True, repetition=False
     )
 
     for idx, ss_var in enumerate(second_stage_variables):
         # declare DR coefficients for current second-stage
         # variable
         indexed_dr_var = Var(
-            range(num_dr_vars),
-            initialize=0,
-            bounds=(None, None),
-            domain=Reals,
+            range(num_dr_vars), initialize=0, bounds=(None, None), domain=Reals
         )
         model_data.working_model.add_component(
-            f"decision_rule_var_{idx}",
-            indexed_dr_var,
+            f"decision_rule_var_{idx}", indexed_dr_var
         )
         indexed_dr_var[0].set_value(value(ss_var, exception=False))
 
@@ -1394,10 +1387,7 @@ def add_decision_rule_constraints(model_data, config):
         monomial_param_combos.extend(power_combos)
 
     # now construct DR equations and declare them on the working model
-    second_stage_dr_var_zip = zip(
-        second_stage_variables,
-        decision_rule_vars_list,
-    )
+    second_stage_dr_var_zip = zip(second_stage_variables, decision_rule_vars_list)
     for idx, (ss_var, indexed_dr_var) in enumerate(second_stage_dr_var_zip):
         # for each DR equation, the number of coefficients should match
         # the number of monomial terms exactly
@@ -1420,10 +1410,7 @@ def add_decision_rule_constraints(model_data, config):
 
         # declare constraint on model
         dr_eqn = Constraint(expr=dr_expression - ss_var == 0)
-        model_data.working_model.add_component(
-            f"decision_rule_eqn_{idx}",
-            dr_eqn,
-        )
+        model_data.working_model.add_component(f"decision_rule_eqn_{idx}", dr_eqn)
 
         # append to list of DR equality constraints
         decision_rule_eqns.append(dr_eqn)

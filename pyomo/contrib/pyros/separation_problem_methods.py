@@ -886,36 +886,29 @@ def initialize_separation(perf_con_to_maximize, model_data, config):
     This method assumes that the master model has only one block
     per iteration.
     """
+
     def eval_master_violation(block_idx):
         """
         Evaluate violation of `perf_con` by variables of
         specified master block.
         """
         new_con_map = (
-            model_data
-            .separation_model
-            .util
-            .map_new_constraint_list_to_original_con
+            model_data.separation_model.util.map_new_constraint_list_to_original_con
         )
         in_new_cons = perf_con_to_maximize in new_con_map
         if in_new_cons:
             sep_con = new_con_map[perf_con_to_maximize]
         else:
             sep_con = perf_con_to_maximize
-        master_con = (
-            model_data.master_model.scenarios[block_idx, 0].find_component(
-                sep_con,
-            )
+        master_con = model_data.master_model.scenarios[block_idx, 0].find_component(
+            sep_con
         )
         return value(master_con)
 
     # initialize from master block with max violation of the
     # performance constraint of interest. This gives the best known
     # feasible solution (for case of non-discrete uncertainty sets).
-    block_num = max(
-        range(model_data.iteration + 1),
-        key=eval_master_violation,
-    )
+    block_num = max(range(model_data.iteration + 1), key=eval_master_violation)
 
     master_blk = model_data.master_model.scenarios[block_num, 0]
     master_blks = list(model_data.master_model.scenarios.values())
