@@ -237,11 +237,14 @@ class testSelectiveClone(unittest.TestCase):
 
 
 class testAddDecisionRuleVars(unittest.TestCase):
-    '''
-    Testing the method to add decision rule variables to a Pyomo model. This function should add decision rule
-    variables to the list of first_stage_variables in a model object. The number of decision rule variables added
-    depends on the number of control variables in the model and the number of uncertain parameters in the model.
-    '''
+    """
+    Test method for adding decision rule variables to working model.
+    The number of decision rule variables per control variable
+    should depend on:
+
+    - the number of uncertain parameters in the model
+    - the decision rule order specified by the user.
+    """
 
     def make_simple_test_model(self):
         """
@@ -348,12 +351,14 @@ class testAddDecisionRuleVars(unittest.TestCase):
 
 
 class testAddDecisionRuleConstraints(unittest.TestCase):
-    '''
-    Testing the addition of decision rule constraints functionally relating second-stage (control) variables to
-    uncertain parameters and decision rule variables. This method should add constraints to the model object equal
-    to the number of control variables. These constraints should reference the uncertain parameters and unique
-    decision rule variables per control variable.
-    '''
+    """
+    Test method for adding decision rule equality constraints
+    to the working model. There should be as many decision
+    rule equality constraints as there are second-stage
+    variables, and each constraint should relate a second-stage
+    variable to the uncertain parameters and corresponding
+    decision rule variables.
+    """
 
     def test_num_dr_eqns_added_correct(self):
         """
