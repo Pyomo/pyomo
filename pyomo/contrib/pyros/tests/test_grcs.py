@@ -27,8 +27,21 @@ from pyomo.contrib.pyros.util import get_vars_from_component
 from pyomo.contrib.pyros.util import identify_objective_functions
 from pyomo.common.collections import Bunch
 import time
+import math
 from pyomo.contrib.pyros.util import time_code
-from pyomo.contrib.pyros.uncertainty_sets import *
+from pyomo.contrib.pyros.uncertainty_sets import (
+    UncertaintySet,
+    BoxSet,
+    CardinalitySet,
+    BudgetSet,
+    FactorModelSet,
+    PolyhedralSet,
+    EllipsoidalSet,
+    AxisAlignedEllipsoidalSet,
+    IntersectionSet,
+    DiscreteScenarioSet,
+    Geometry,
+)
 from pyomo.contrib.pyros.master_problem_methods import (
     add_scenario_to_master,
     initial_construct_master,
@@ -48,6 +61,11 @@ from pyomo.opt import (
     Solution,
 )
 from pyomo.environ import (
+    Reals,
+    Set,
+    Block,
+    ConstraintList,
+    ConcreteModel,
     Constraint,
     Expression,
     Objective,
@@ -60,6 +78,8 @@ from pyomo.environ import (
     sin,
     sqrt,
     value,
+    maximize,
+    minimize,
 )
 import logging
 
