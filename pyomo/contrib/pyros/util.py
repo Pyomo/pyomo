@@ -1394,8 +1394,8 @@ def add_decision_rule_constraints(model_data, config):
         if len(monomial_param_combos) != len(indexed_dr_var.index_set()):
             raise ValueError(
                 f"Mismatch between number of DR coefficient variables "
-                "and number of DR monomials for equation of second-stage "
-                f"variable {ss_var.name!r} "
+                f"and number of DR monomials for DR equation index {idx}, "
+                f"corresponding to second-stage variable {ss_var.name!r}. "
                 f"({len(indexed_dr_var.index_set())}!= {len(monomial_param_combos)})"
             )
 
