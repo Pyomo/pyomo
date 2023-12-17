@@ -292,6 +292,15 @@ class testAddDecisionRuleVars(unittest.TestCase):
                 ),
             )
 
+        self.assertEqual(
+            len(ComponentSet(m.util.decision_rule_vars)),
+            len(m.util.second_stage_variables),
+            msg=(
+                "Number of unique indexed DR variable components should equal "
+                "number of second-stage variables."
+            )
+        )
+
     @unittest.skipIf(not scipy_available, 'Scipy is not available.')
     def test_correct_num_dr_vars_affine(self):
         """
@@ -316,6 +325,15 @@ class testAddDecisionRuleVars(unittest.TestCase):
                     "does not match correct value."
                 ),
             )
+
+        self.assertEqual(
+            len(ComponentSet(m.util.decision_rule_vars)),
+            len(m.util.second_stage_variables),
+            msg=(
+                "Number of unique indexed DR variable components should equal "
+                "number of second-stage variables."
+            )
+        )
 
     @unittest.skipIf(not scipy_available, 'Scipy is not available.')
     def test_correct_num_dr_vars_quadratic(self):
@@ -349,6 +367,15 @@ class testAddDecisionRuleVars(unittest.TestCase):
                 ),
             )
 
+        self.assertEqual(
+            len(ComponentSet(m.util.decision_rule_vars)),
+            len(m.util.second_stage_variables),
+            msg=(
+                "Number of unique indexed DR variable components should equal "
+                "number of second-stage variables."
+            )
+        )
+
 
 class testAddDecisionRuleConstraints(unittest.TestCase):
     """
@@ -360,6 +387,26 @@ class testAddDecisionRuleConstraints(unittest.TestCase):
     decision rule variables.
     """
 
+    def make_simple_test_model(self):
+        """
+        Make simple model for DR constraint testing.
+        """
+        m = ConcreteModel()
+
+        # uncertain parameters
+        m.p = Param(range(3), initialize=0, mutable=True)
+
+        # second-stage variables
+        m.z = Var([0, 1], initialize=0)
+
+        # util block
+        m.util = Block()
+        m.util.first_stage_variables = []
+        m.util.second_stage_variables = list(m.z.values())
+        m.util.uncertain_params = list(m.p.values())
+
+        return m
+
     @unittest.skipIf(not scipy_available, 'Scipy is not available.')
     def test_num_dr_eqns_added_correct(self):
         """
@@ -368,20 +415,7 @@ class testAddDecisionRuleConstraints(unittest.TestCase):
         of second-stage variables in the model.
         """
         model_data = ROSolveResults()
-        model_data.working_model = m = ConcreteModel()
-
-        # uncertain parameters
-        m.p1 = Param(initialize=0, mutable=True)
-        m.p2 = Param(initialize=0, mutable=True)
-
-        # second-stage variables
-        m.z1 = Var(initialize=0)
-        m.z2 = Var(initialize=0)
-
-        # add util block
-        m.util = Block()
-        m.util.uncertain_params = [m.p1, m.p2]
-        m.util.second_stage_variables = [m.z1, m.z2]
+        model_data.working_model = m = self.make_simple_test_model()
 
         # === Decision rule vars have been added
         m.decision_rule_var_0 = Var([0], initialize=0)
