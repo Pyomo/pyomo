@@ -55,6 +55,7 @@ class InfeasibilityCallback(CyIpoptIntermediateCallbackBase):
         self._infeasibility_threshold = infeasibility_threshold
         self._n_residuals = n_residuals
         self._scaled = scaled
+        self._nlp = None
         self._variable_names = None
         self._constraint_names = None
 
@@ -136,10 +137,14 @@ class InfeasibilityCallback(CyIpoptIntermediateCallbackBase):
 
         threshold = self._infeasibility_threshold
 
-        if self._variable_names is None:
+        # TODO: Be more explicit about caching nlp-specific information
+        if self._variable_names is None or nlp is not self._nlp:
             self._variable_names = nlp.primals_names()
-        if self._constraint_names is None:
+        if self._constraint_names is None or nlp is not self._nlp:
             self._constraint_names = nlp.constraint_names()
+        if nlp is not self._nlp:
+            # Re-set if we're solving a new model.
+            self._nlp = nlp
 
         # Print new line to clearly separate this information from the
         # previous iteration.
