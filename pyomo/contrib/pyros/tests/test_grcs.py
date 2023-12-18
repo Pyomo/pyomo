@@ -324,7 +324,7 @@ class testAddDecisionRuleVars(unittest.TestCase):
             msg=(
                 "Number of unique indexed DR variable components should equal "
                 "number of second-stage variables."
-            )
+            ),
         )
 
     @unittest.skipIf(not scipy_available, 'Scipy is not available.')
@@ -358,7 +358,7 @@ class testAddDecisionRuleVars(unittest.TestCase):
             msg=(
                 "Number of unique indexed DR variable components should equal "
                 "number of second-stage variables."
-            )
+            ),
         )
 
     @unittest.skipIf(not scipy_available, 'Scipy is not available.')
@@ -399,7 +399,7 @@ class testAddDecisionRuleVars(unittest.TestCase):
             msg=(
                 "Number of unique indexed DR variable components should equal "
                 "number of second-stage variables."
-            )
+            ),
         )
 
 
@@ -555,9 +555,7 @@ class testAddDecisionRuleConstraints(unittest.TestCase):
             # these should comprise the DR polynomial expression
             dr_polynomial_terms = dr_eq_terms[:-1]
             dr_polynomial_zip = zip(
-                dr_polynomial_terms,
-                indexed_dr_var.values(),
-                dr_monomial_param_combos,
+                dr_polynomial_terms, indexed_dr_var.values(), dr_monomial_param_combos
             )
             for idx, (term, dr_var, param_combo) in enumerate(dr_polynomial_zip):
                 # term should be a monomial expression of form
@@ -570,7 +568,7 @@ class testAddDecisionRuleConstraints(unittest.TestCase):
                         f"Length of `args` attribute of term {str(term)} "
                         f"of DR equation {dr_eq.name!r} is not as expected. "
                         f"Args: {term.args}"
-                    )
+                    ),
                 )
 
                 # check that uncertain parameters participating in
