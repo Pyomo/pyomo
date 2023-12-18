@@ -68,7 +68,7 @@ class TestSuffixMethods(unittest.TestCase):
             OUT.getvalue(),
             "Constructing ConcreteModel 'ConcreteModel', from data=None\n"
             "Constructing Suffix 'Suffix'\n"
-            "Constructing Suffix 'foo' on [Model] from data=None\n"
+            "Constructing AbstractSuffix 'foo' on [Model] from data=None\n"
             "Constructing Suffix 'foo'\n"
             "Constructed component ''[Model].foo'':\n"
             "foo : Direction=LOCAL, Datatype=FLOAT\n"

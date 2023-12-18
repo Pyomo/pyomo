@@ -22,9 +22,22 @@ from pyomo.common.modeling import NOTSET
 from pyomo.common.pyomo_typing import overload
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.component import ActiveComponent, ModelComponentFactory
+from pyomo.core.base.disable_methods import disable_methods
 from pyomo.core.base.initializer import Initializer
 
 logger = logging.getLogger('pyomo.core')
+
+_SUFFIX_API = (
+    ('__contains__', 'test membership in'),
+    ('__iter__', 'iterate over'),
+    '__getitem__',
+    '__setitem__',
+    'set_value',
+    'set_all_values',
+    'clear_value',
+    'clear_all_values',
+    'update_values',
+)
 
 # A list of convenient suffix generators, including:
 #   - active_export_suffix_generator
@@ -153,6 +166,20 @@ class Suffix(ComponentMap, ActiveComponent):
     FLOAT = SuffixDataType.FLOAT
     INT = SuffixDataType.INT
 
+    def __new__(cls, *args, **kwargs):
+        if cls is not Suffix:
+            return super().__new__(cls)
+        return super().__new__(AbstractSuffix)
+
+    def __setstate__(self, state):
+        super().__setstate__(state)
+        # As the concrete class *is* the "Suffix" base class, the normal
+        # implementation of deepcopy (through get/setstate) will create
+        # the new Suffix, and __new__ will map it to AbstractSuffix.  We
+        # need to map constructed Suffixes back to Suffix:
+        if self._constructed and self.__class__ is AbstractSuffix:
+            self.__class__ = Suffix
+
     @overload
     def __init__(
         self,
@@ -162,7 +189,7 @@ class Suffix(ComponentMap, ActiveComponent):
         initialize=None,
         rule=None,
         name=None,
-        doc=None
+        doc=None,
     ):
         ...
 
@@ -199,7 +226,7 @@ class Suffix(ComponentMap, ActiveComponent):
         Constructs this component, applying rule if it exists.
         """
         if is_debug_set(logger):
-            logger.debug("Constructing Suffix '%s'", self.name)
+            logger.debug(f"Constructing %s '%s'", self.__class__.__name__, self.name)
 
         if self._constructed is True:
             return
@@ -377,6 +404,11 @@ class Suffix(ComponentMap, ActiveComponent):
 
     def __str__(self):
         return ActiveComponent.__str__(self)
+
+
+@disable_methods(_SUFFIX_API)
+class AbstractSuffix(Suffix):
+    pass
 
 
 class SuffixFinder(object):
