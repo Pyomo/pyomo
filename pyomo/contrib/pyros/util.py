@@ -1309,14 +1309,18 @@ def add_decision_rule_variables(model_data, config):
     )
 
     for idx, ss_var in enumerate(second_stage_variables):
-        # declare DR coefficients for current second-stage
-        # variable
+        # declare DR coefficients for current second-stage variable
         indexed_dr_var = Var(
             range(num_dr_vars), initialize=0, bounds=(None, None), domain=Reals
         )
         model_data.working_model.add_component(
             f"decision_rule_var_{idx}", indexed_dr_var
         )
+
+        # index 0 entry of the IndexedVar is the static
+        # DR term. initialize to user-provided value of
+        # the corresponding second-stage variable.
+        # all other entries remain initialized to 0.
         indexed_dr_var[0].set_value(value(ss_var, exception=False))
 
         # update attributes
