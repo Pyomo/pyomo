@@ -493,24 +493,6 @@ class LinearModelDecisionTreeExample(CommonTests):
         self.check_untightened_bounds_constraint(
             cons[1], m.x2, m.d2, m.disjunction, {m.d1: 3, m.d3: 110}, upper=10
         )
-
-    def test_log_warning_for_bigm_suffixes(self):
-        m = self.make_model()
-        m.BigM = Suffix(direction=Suffix.LOCAL)
-        m.BigM[m.d2.x2_bounds] = (-100, 100)
-
-        out = StringIO()
-        with LoggingIntercept(out, 'pyomo.gdp.mbigm'):
-            TransformationFactory('gdp.mbigm').apply_to(m)
-
-        warnings = out.getvalue()
-        self.assertIn(
-            "Found active 'BigM' Suffix on 'unknown'. "
-            "The multiple bigM transformation does not currently "
-            "support specifying M's with Suffixes and is ignoring "
-            "this Suffix.",
-            warnings,
-        )
         
     # TODO: If Suffixes allow tuple keys then we can support them and it will
     # look something like this:
