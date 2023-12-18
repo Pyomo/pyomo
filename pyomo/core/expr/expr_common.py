@@ -10,8 +10,8 @@
 #  ___________________________________________________________________________
 
 import enum
+from contextlib import nullcontext
 
-from pyomo.common.backports import nullcontext
 from pyomo.common.deprecation import deprecated
 
 TO_STRING_VERBOSE = False

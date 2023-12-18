@@ -9,14 +9,24 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import collections
 import enum
+import functools
 import itertools
 import logging
+import operator
 import sys
 
-from pyomo.common.collections import Sequence, ComponentMap
+from pyomo.common.collections import Sequence, ComponentMap, ComponentSet
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.errors import DeveloperError, InvalidValueError
+from pyomo.common.numeric_types import (
+    check_if_numeric_type,
+    native_types,
+    native_numeric_types,
+    native_complex_types,
+)
+from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.base import (
     Var,
     Param,
@@ -24,20 +34,34 @@ from pyomo.core.base import (
     Objective,
     Block,
     Constraint,
+    Expression,
     Suffix,
     SortComponents,
 )
 from pyomo.core.base.component import ActiveComponent
-from pyomo.core.expr.numvalue import native_numeric_types, is_fixed, value
+from pyomo.core.base.expression import _ExpressionData
+from pyomo.core.expr.numvalue import is_fixed, value
+import pyomo.core.expr as EXPR
 import pyomo.core.kernel as kernel
 
 logger = logging.getLogger('pyomo.core')
 
 valid_expr_ctypes_minlp = {Var, Param, Expression, Objective}
 valid_active_ctypes_minlp = {Block, Constraint, Objective, Suffix}
+sum_like_expression_types = {
+    EXPR.SumExpression,
+    EXPR.LinearExpression,
+    EXPR.NPV_SumExpression,
+}
+_named_subexpression_types = (
+    _ExpressionData,
+    kernel.expression.expression,
+    kernel.objective.objective,
+)
 
 HALT_ON_EVALUATION_ERROR = False
 nan = float('nan')
+int_float = {int, float}
 
 
 class ExprType(enum.IntEnum):
@@ -71,9 +95,8 @@ class FileDeterminism(enum.IntEnum):
         return enum.Enum.__str__(self)
 
     def __format__(self, spec):
-        # This cannot just call Enum.__format__ because that returns the
-        # numeric value in Python 3.7
-        return str(self).__format__(spec)
+        # Removal of Python 3.7 support allows us to use Enum.__format__
+        return enum.Enum.__format__(self, spec)
 
     @classmethod
     def _missing_(cls, value):
@@ -92,145 +115,343 @@ class FileDeterminism(enum.IntEnum):
         return super()._missing_(value)
 
 
-class InvalidNumber(object):
-    def __init__(self, value):
+class InvalidNumber(PyomoObject):
+    def __init__(self, value, cause=""):
         self.value = value
+        if cause.__class__ is list:
+            self.causes = list(cause)
+        else:
+            self.causes = [cause]
 
-    def duplicate(self, new_value):
-        return InvalidNumber(new_value)
+    @staticmethod
+    def parse_args(*args):
+        causes = []
+        real_args = []
+        for arg in args:
+            if arg.__class__ is InvalidNumber:
+                causes.extend(arg.causes)
+                real_args.append(arg.value)
+            else:
+                real_args.append(arg)
+        return real_args, causes
 
-    def merge(self, other, new_value):
-        return InvalidNumber(new_value)
+    def _cmp(self, op, other):
+        args, causes = InvalidNumber.parse_args(self, other)
+        try:
+            return op(*args)
+        except TypeError:
+            # TypeError will be raised when comparing incompatible types
+            # (e.g., int <= None)
+            return False
+
+    def _op(self, op, *args):
+        args, causes = InvalidNumber.parse_args(*args)
+        try:
+            return InvalidNumber(op(*args), causes)
+        except (TypeError, ArithmeticError):
+            # TypeError will be raised when operating on incompatible
+            # types (e.g., int + None); ArithmeticError can be raised by
+            # invalid operations (like divide by zero)
+            return InvalidNumber(self.value, causes)
 
     def __eq__(self, other):
-        if other.__class__ is InvalidNumber:
-            return self.value == other.value
-        else:
-            return self.value == other
+        return self._cmp(operator.eq, other)
 
     def __lt__(self, other):
-        if other.__class__ is InvalidNumber:
-            return self.value < other.value
-        else:
-            return self.value < other
+        return self._cmp(operator.lt, other)
 
     def __gt__(self, other):
-        if other.__class__ is InvalidNumber:
-            return self.value > other.value
-        else:
-            return self.value > other
+        return self._cmp(operator.gt, other)
 
     def __le__(self, other):
-        if other.__class__ is InvalidNumber:
-            return self.value <= other.value
-        else:
-            return self.value <= other
+        return self._cmp(operator.le, other)
 
     def __ge__(self, other):
-        if other.__class__ is InvalidNumber:
-            return self.value >= other.value
-        else:
-            return self.value >= other
+        return self._cmp(operator.ge, other)
+
+    def _error(self, msg):
+        causes = list(filter(None, self.causes))
+        if causes:
+            msg += "\nThe InvalidNumber was generated by:\n\t"
+            msg += "\n\t".join(causes)
+        raise InvalidValueError(msg)
 
     def __str__(self):
-        return f'InvalidNumber({self.value})'
+        # We will support simple conversion of InvalidNumber to strings
+        # (for reporting purposes)
+        return f'InvalidNumber({self.value!r})'
 
     def __repr__(self):
-        # FIXME: We want to move to where converting InvalidNumber to
-        # string (with either repr() or f"") should raise a
-        # InvalidValueError.  However, at the moment, this breaks some
-        # tests in PyROS.
-        return repr(self.value)
-        # raise InvalidValueError(f'Cannot emit {str(self)} in compiled representation')
+        # We want attempts to convert InvalidNumber to a string
+        # representation to raise a InvalidValueError.
+        self._error(f'Cannot emit {str(self)} in compiled representation')
 
     def __format__(self, format_spec):
         # FIXME: We want to move to where converting InvalidNumber to
         # string (with either repr() or f"") should raise a
         # InvalidValueError.  However, at the moment, this breaks some
         # tests in PyROS.
-        return self.value.__format__(format_spec)
-        # raise InvalidValueError(f'Cannot emit {str(self)} in compiled representation')
+        # return self.value.__format__(format_spec)
+        self._error(f'Cannot emit {str(self)} in compiled representation')
+
+    def __float__(self):
+        # We want attempts to convert InvalidNumber to a float
+        # representation to raise a InvalidValueError.
+        self._error(f'Cannot convert {str(self)} to float')
 
     def __neg__(self):
-        return self.duplicate(-self.value)
+        return self._op(operator.neg, self)
 
     def __abs__(self):
-        return self.duplicate(abs(self.value))
+        return self._op(operator.abs, self)
 
     def __add__(self, other):
-        if other.__class__ is InvalidNumber:
-            return self.merge(other, self.value + other.value)
-        else:
-            return self.duplicate(self.value + other)
+        return self._op(operator.add, self, other)
 
     def __sub__(self, other):
-        if other.__class__ is InvalidNumber:
-            return self.merge(other, self.value - other.value)
-        else:
-            return self.duplicate(self.value - other)
+        return self._op(operator.sub, self, other)
 
     def __mul__(self, other):
-        if other.__class__ is InvalidNumber:
-            return self.merge(other, self.value * other.value)
-        else:
-            return self.duplicate(self.value * other)
+        return self._op(operator.mul, self, other)
 
     def __truediv__(self, other):
-        if other.__class__ is InvalidNumber:
-            return self.merge(other, self.value / other.value)
-        else:
-            return self.duplicate(self.value / other)
+        return self._op(operator.truediv, self, other)
 
     def __pow__(self, other):
-        if other.__class__ is InvalidNumber:
-            return self.merge(other, self.value**other.value)
-        else:
-            return self.duplicate(self.value**other)
+        return self._op(operator.pow, self, other)
 
     def __radd__(self, other):
-        return self.duplicate(other + self.value)
+        return self._op(operator.add, other, self)
 
     def __rsub__(self, other):
-        return self.duplicate(other - self.value)
+        return self._op(operator.sub, other, self)
 
     def __rmul__(self, other):
-        return self.duplicate(other * self.value)
+        return self._op(operator.mul, other, self)
 
     def __rtruediv__(self, other):
-        return self.duplicate(other / self.value)
+        return self._op(operator.truediv, other, self)
 
     def __rpow__(self, other):
-        return self.duplicate(other**self.value)
+        return self._op(operator.pow, other, self)
+
+
+_CONSTANT = ExprType.CONSTANT
+
+
+class BeforeChildDispatcher(collections.defaultdict):
+    """Dispatcher for handling the :py:class:`StreamBasedExpressionVisitor`
+    `beforeChild` callback
+
+    This dispatcher implements a specialization of :py:`defaultdict`
+    that supports automatic type registration.  Any missing types will
+    return the :py:meth:`register_dispatcher` method, which (when called
+    as a callback) will interrogate the type, identify the appropriate
+    callback, add the callback to the dict, and return the result of
+    calling the callback.  As the callback is added to the dict, no type
+    will incur the overhead of `register_dispatcher` more than once.
+
+    Note that all dispatchers are implemented as `staticmethod`
+    functions to avoid the (unnecessary) overhead of binding to the
+    dispatcher object.
+
+    """
+
+    __slots__ = ()
+
+    def __missing__(self, key):
+        return self.register_dispatcher
+
+    def register_dispatcher(self, visitor, child):
+        child_type = type(child)
+        if child_type in native_numeric_types:
+            self[child_type] = self._before_native
+        elif issubclass(child_type, str):
+            self[child_type] = self._before_string
+        elif child_type in native_types:
+            if issubclass(child_type, tuple(native_complex_types)):
+                self[child_type] = self._before_complex
+            else:
+                self[child_type] = self._before_invalid
+        elif not hasattr(child, 'is_expression_type'):
+            if check_if_numeric_type(child):
+                self[child_type] = self._before_native
+            else:
+                self[child_type] = self._before_invalid
+        elif not child.is_expression_type():
+            if child.is_potentially_variable():
+                self[child_type] = self._before_var
+            else:
+                self[child_type] = self._before_param
+        elif not child.is_potentially_variable():
+            self[child_type] = self._before_npv
+            pv_base_type = child.potentially_variable_base_class()
+            if pv_base_type not in self:
+                try:
+                    child.__class__ = pv_base_type
+                    self.register_dispatcher(visitor, child)
+                finally:
+                    child.__class__ = child_type
+        elif (
+            issubclass(child_type, _named_subexpression_types)
+            or child_type is kernel.expression.noclone
+        ):
+            self[child_type] = self._before_named_expression
+        else:
+            self[child_type] = self._before_general_expression
+        return self[child_type](visitor, child)
+
+    @staticmethod
+    def _before_general_expression(visitor, child):
+        return True, None
+
+    @staticmethod
+    def _before_native(visitor, child):
+        return False, (_CONSTANT, child)
+
+    @staticmethod
+    def _before_complex(visitor, child):
+        return False, (_CONSTANT, complex_number_error(child, visitor, child))
+
+    @staticmethod
+    def _before_invalid(visitor, child):
+        return False, (
+            _CONSTANT,
+            InvalidNumber(
+                child, f"{child!r} ({type(child)}) is not a valid numeric type"
+            ),
+        )
+
+    @staticmethod
+    def _before_string(visitor, child):
+        return False, (
+            _CONSTANT,
+            InvalidNumber(
+                child, f"{child!r} ({type(child)}) is not a valid numeric type"
+            ),
+        )
+
+    @staticmethod
+    def _before_npv(visitor, child):
+        try:
+            return False, (
+                _CONSTANT,
+                visitor.check_constant(visitor.evaluate(child), child),
+            )
+        except (ValueError, ArithmeticError):
+            return True, None
+
+    @staticmethod
+    def _before_param(visitor, child):
+        return False, (_CONSTANT, visitor.check_constant(child.value, child))
+
+    #
+    # The following methods must be defined by derivative classes (along
+    # with any other special-case handling they want to implement;
+    # usually including handling for Monomial, Linear, and
+    # ExternalFunction
+    #
+
+    # @staticmethod
+    # def _before_var(visitor, child):
+    #     pass
+
+    # @staticmethod
+    # def _before_named_expression(visitor, child):
+    #     pass
+
+
+class ExitNodeDispatcher(collections.defaultdict):
+    """Dispatcher for handling the :py:class:`StreamBasedExpressionVisitor`
+    `exitNode` callback
+
+    This dispatcher implements a specialization of :py:`defaultdict`
+    that supports automatic type registration.  Any missing types will
+    return the :py:meth:`register_dispatcher` method, which (when called
+    as a callback) will interrogate the type, identify the appropriate
+    callback, add the callback to the dict, and return the result of
+    calling the callback.  As the callback is added to the dict, no type
+    will incur the overhead of `register_dispatcher` more than once.
+
+    Note that in this case, the client is expected to register all
+    non-NPV expression types.  The auto-registration is designed to only
+    handle two cases:
+    - Auto-detection of user-defined Named Expression types
+    - Automatic mappimg of NPV expressions to their equivalent non-NPV handlers
+
+    """
+
+    __slots__ = ()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(None, *args, **kwargs)
+
+    def __missing__(self, key):
+        return functools.partial(self.register_dispatcher, key=key)
+
+    def register_dispatcher(self, visitor, node, *data, key=None):
+        if (
+            isinstance(node, _named_subexpression_types)
+            or type(node) is kernel.expression.noclone
+        ):
+            base_type = Expression
+        elif not node.is_potentially_variable():
+            base_type = node.potentially_variable_base_class()
+        else:
+            base_type = node.__class__
+        if isinstance(key, tuple):
+            base_key = (base_type,) + key[1:]
+            # Only cache handlers for unary, binary and ternary operators
+            cache = len(key) <= 4
+        else:
+            base_key = base_type
+            cache = True
+        if base_key in self:
+            fcn = self[base_key]
+        elif base_type in self:
+            fcn = self[base_type]
+        elif any((k[0] if k.__class__ is tuple else k) is base_type for k in self):
+            raise DeveloperError(
+                f"Base expression key '{base_key}' not found when inserting dispatcher"
+                f" for node '{type(node).__name__}' while walking expression tree."
+            )
+        else:
+            raise DeveloperError(
+                f"Unexpected expression node type '{type(node).__name__}' "
+                "found while walking expression tree."
+            )
+        if cache:
+            self[key] = fcn
+        return fcn(visitor, node, *data)
 
 
 def apply_node_operation(node, args):
     try:
         ans = node._apply_operation(args)
         if ans != ans and ans.__class__ is not InvalidNumber:
-            ans = InvalidNumber(ans)
+            ans = InvalidNumber(ans, "Evaluating '{node}' returned NaN")
         return ans
     except:
+        exc_msg = str(sys.exc_info()[1])
         logger.warning(
             "Exception encountered evaluating expression "
             "'%s(%s)'\n\tmessage: %s\n\texpression: %s"
-            % (node.name, ", ".join(map(str, args)), str(sys.exc_info()[1]), node)
+            % (node.name, ", ".join(map(str, args)), exc_msg, node)
         )
         if HALT_ON_EVALUATION_ERROR:
             raise
-        return InvalidNumber(nan)
+        return InvalidNumber(nan, exc_msg)
 
 
 def complex_number_error(value, visitor, expr, node=""):
     msg = f'Pyomo {visitor.__class__.__name__} does not support complex numbers'
-    logger.warning(
-        ' '.join(filter(None, ("Complex number returned from expression", node)))
-        + f"\n\tmessage: {msg}\n\texpression: {expr}"
-    )
+    cause = ' '.join(filter(None, ("Complex number returned from expression", node)))
+    logger.warning(f"{cause}\n\tmessage: {msg}\n\texpression: {expr}")
     if HALT_ON_EVALUATION_ERROR:
         raise InvalidValueError(
             f'Pyomo {visitor.__class__.__name__} does not support complex numbers'
         )
-    return InvalidNumber(value)
+    return InvalidNumber(value, cause)
 
 
 def categorize_valid_components(
@@ -323,12 +544,13 @@ def categorize_valid_components(
 
 
 def FileDeterminism_to_SortComponents(file_determinism):
-    sorter = SortComponents.unsorted
+    if file_determinism >= FileDeterminism.SORT_SYMBOLS:
+        return SortComponents.ALPHABETICAL | SortComponents.SORTED_INDICES
     if file_determinism >= FileDeterminism.SORT_INDICES:
-        sorter = sorter | SortComponents.indices
-        if file_determinism >= FileDeterminism.SORT_SYMBOLS:
-            sorter = sorter | SortComponents.alphabetical
-    return sorter
+        return SortComponents.SORTED_INDICES
+    if file_determinism >= FileDeterminism.ORDERED:
+        return SortComponents.ORDERED_INDICES
+    return SortComponents.UNSORTED
 
 
 def initialize_var_map_from_column_order(model, config, var_map):
@@ -360,13 +582,33 @@ def initialize_var_map_from_column_order(model, config, var_map):
     if column_order is not None:
         # Note that Vars that appear twice (e.g., through a
         # Reference) will be sorted with the FIRST occurrence.
+        fill_in = ComponentSet()
         for var in column_order:
             if var.is_indexed():
                 for _v in var.values(sorter):
                     if not _v.fixed:
                         var_map[id(_v)] = _v
             elif not var.fixed:
+                pc = var.parent_component()
+                if pc is not var and pc not in fill_in:
+                    # For any VarData in an IndexedVar, remember the
+                    # IndexedVar so that after all the VarData that the
+                    # user has specified in the column ordering have
+                    # been processed (and added to the var_map) we can
+                    # go back and fill in any missing VarData from that
+                    # IndexedVar.  This is needed because later when
+                    # walking expressions we assume that any VarData
+                    # that is not in the var_map will be the first
+                    # VarData from its Var container (indexed or scalar).
+                    fill_in.add(pc)
                 var_map[id(var)] = var
+        # Note that ComponentSet iteration is deterministic, and
+        # re-inserting _v into the var_map will not change the ordering
+        # for any pre-existing variables
+        for pc in fill_in:
+            for _v in pc.values(sorter):
+                if not _v.fixed:
+                    var_map[id(_v)] = _v
     return var_map
 
 

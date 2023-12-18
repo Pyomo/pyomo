@@ -617,13 +617,13 @@ class TestScaleModelTransformation(unittest.TestCase):
         m.scaling_factor[m.b1.v2] = 0.2
 
         # SF should be 0.1 from top level
-        sf = ScaleModel()._get_float_scaling_factor(m, m.v1)
+        sf = ScaleModel()._get_float_scaling_factor(m.v1)
         assert sf == float(0.1)
         # SF should be 0.1 from top level, lower level ignored
-        sf = ScaleModel()._get_float_scaling_factor(m, m.b1.v2)
+        sf = ScaleModel()._get_float_scaling_factor(m.b1.v2)
         assert sf == float(0.2)
         # No SF, should return 1
-        sf = ScaleModel()._get_float_scaling_factor(m, m.b1.b2.v3)
+        sf = ScaleModel()._get_float_scaling_factor(m.b1.b2.v3)
         assert sf == 1.0
 
     def test_get_float_scaling_factor_local_level(self):
@@ -648,11 +648,11 @@ class TestScaleModelTransformation(unittest.TestCase):
         m.b1.scaling_factor[m.b1.b2.v3] = 0.4
 
         # Should get SF from local levels
-        sf = ScaleModel()._get_float_scaling_factor(m, m.v1)
+        sf = ScaleModel()._get_float_scaling_factor(m.v1)
         assert sf == float(0.1)
-        sf = ScaleModel()._get_float_scaling_factor(m, m.b1.v2)
+        sf = ScaleModel()._get_float_scaling_factor(m.b1.v2)
         assert sf == float(0.2)
-        sf = ScaleModel()._get_float_scaling_factor(m, m.b1.b2.v3)
+        sf = ScaleModel()._get_float_scaling_factor(m.b1.b2.v3)
         assert sf == float(0.4)
 
     def test_get_float_scaling_factor_intermediate_level(self):
@@ -681,88 +681,14 @@ class TestScaleModelTransformation(unittest.TestCase):
         m.b1.b2.b3.scaling_factor[m.b1.b2.b3.v3] = 0.4
 
         # v1 should be unscaled as SF set below variable level
-        sf = ScaleModel()._get_float_scaling_factor(m, m.v1)
+        sf = ScaleModel()._get_float_scaling_factor(m.v1)
         assert sf == 1.0
         # v2 should get SF from b1 level
-        sf = ScaleModel()._get_float_scaling_factor(m, m.b1.b2.b3.v2)
+        sf = ScaleModel()._get_float_scaling_factor(m.b1.b2.b3.v2)
         assert sf == float(0.2)
         # v2 should get SF from highest level, ignoring b3 level
-        sf = ScaleModel()._get_float_scaling_factor(m, m.b1.b2.b3.v3)
+        sf = ScaleModel()._get_float_scaling_factor(m.b1.b2.b3.v3)
         assert sf == float(0.3)
-
-    def test_suffix_finder(self):
-        # Build a dummy model
-        m = pyo.ConcreteModel()
-        m.v1 = pyo.Var()
-
-        m.b1 = pyo.Block()
-        m.b1.v2 = pyo.Var()
-
-        m.b1.b2 = pyo.Block()
-        m.b1.b2.v3 = pyo.Var([0])
-
-        xfrm = ScaleModel()
-        _suffix_finder = xfrm._suffix_finder
-
-        # Add Suffixes
-        m.suffix = pyo.Suffix(direction=pyo.Suffix.EXPORT)
-        # No suffix on b1 - make sure we can handle missing suffixes
-        m.b1.b2.suffix = pyo.Suffix(direction=pyo.Suffix.EXPORT)
-
-        # Check for no suffix value
-        assert _suffix_finder(m.b1.b2.v3[0], "suffix") == None
-        assert _suffix_finder(m.b1.b2.v3[0], "suffix", root=m.b1) == None
-
-        # Check finding default values
-        # Add a default at the top level
-        m.suffix[None] = 1
-        assert _suffix_finder(m.b1.b2.v3[0], "suffix") == 1
-        assert _suffix_finder(m.b1.b2.v3[0], "suffix", root=m.b1) == None
-
-        # Add a default suffix at a lower level
-        m.b1.b2.suffix[None] = 2
-        assert _suffix_finder(m.b1.b2.v3[0], "suffix") == 2
-        assert _suffix_finder(m.b1.b2.v3[0], "suffix", root=m.b1) == 2
-
-        # Check for container at lowest level
-        m.b1.b2.suffix[m.b1.b2.v3] = 3
-        assert _suffix_finder(m.b1.b2.v3[0], "suffix") == 3
-        assert _suffix_finder(m.b1.b2.v3[0], "suffix", root=m.b1) == 3
-
-        # Check for container at top level
-        m.suffix[m.b1.b2.v3] = 4
-        assert _suffix_finder(m.b1.b2.v3[0], "suffix") == 4
-        assert _suffix_finder(m.b1.b2.v3[0], "suffix", root=m.b1) == 3
-
-        # Check for specific values at lowest level
-        m.b1.b2.suffix[m.b1.b2.v3[0]] = 5
-        assert _suffix_finder(m.b1.b2.v3[0], "suffix") == 5
-        assert _suffix_finder(m.b1.b2.v3[0], "suffix", root=m.b1) == 5
-
-        # Check for specific values at top level
-        m.suffix[m.b1.b2.v3[0]] = 6
-        assert _suffix_finder(m.b1.b2.v3[0], "suffix") == 6
-        assert _suffix_finder(m.b1.b2.v3[0], "suffix", root=m.b1) == 5
-
-        # Make sure we don't find default suffixes at lower levels
-        assert _suffix_finder(m.b1.v2, "suffix") == 1
-        assert _suffix_finder(m.b1.v2, "suffix", root=m.b1) == None
-
-        # Make sure we don't find specific suffixes at lower levels
-        m.b1.b2.suffix[m.v1] = 5
-        assert _suffix_finder(m.v1, "suffix") == 1
-
-        with self.assertRaisesRegex(
-            ValueError, r"_find_suffix: root must be a BlockData \(found Var: v1\)"
-        ):
-            _suffix_finder(m.b1.v2, "suffix", root=m.v1)
-
-        m.bn = pyo.Block([1, 2])
-        with self.assertRaisesRegex(
-            ValueError,
-            r"_find_suffix: root must be a BlockData " r"\(found IndexedBlock: bn\)",
-        ):
-            _suffix_finder(m.b1.v2, "suffix", root=m.bn)
 
 
 if __name__ == "__main__":

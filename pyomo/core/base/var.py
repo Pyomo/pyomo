@@ -22,7 +22,7 @@ from pyomo.common.modeling import NOTSET
 from pyomo.common.timing import ConstructionTimer
 
 from pyomo.core.staleflag import StaleFlagManager
-from pyomo.core.expr.current import GetItemExpression
+from pyomo.core.expr import GetItemExpression
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.core.expr.numvalue import (
     NumericValue,
@@ -60,8 +60,7 @@ logger = logging.getLogger('pyomo.core')
 
 _inf = float('inf')
 _ninf = -_inf
-_no_lower_bound = {None, _ninf}
-_no_upper_bound = {None, _inf}
+_nonfinite_values = {_inf, _ninf}
 _known_global_real_domains = dict(
     [(_, True) for _ in real_global_set_ids]
     + [(_, False) for _ in integer_global_set_ids]
@@ -110,12 +109,12 @@ class _VarData(ComponentData, NumericValue):
     def has_lb(self):
         """Returns :const:`False` when the lower bound is
         :const:`None` or negative infinity"""
-        return self.lb not in _no_lower_bound
+        return self.lb is not None
 
     def has_ub(self):
         """Returns :const:`False` when the upper bound is
         :const:`None` or positive infinity"""
-        return self.ub not in _no_upper_bound
+        return self.ub is not None
 
     # TODO: deprecate this?  Properties are generally preferred over "set*()"
     def setlb(self, val):
@@ -174,7 +173,16 @@ class _VarData(ComponentData, NumericValue):
         if _id in _known_global_real_domains:
             return not _known_global_real_domains[_id]
         _interval = self.domain.get_interval()
-        return _interval is not None and _interval[2] == 1
+        if _interval is None:
+            return False
+        # Note: it is not sufficient to just check the step: the
+        # starting / ending points must be integers (or not specified)
+        start, stop, step = _interval
+        return (
+            step == 1
+            and (start is None or int(start) == start)
+            and (stop is None or int(stop) == stop)
+        )
 
     def is_binary(self):
         """Returns True when the domain is restricted to Binary values."""
@@ -428,7 +436,7 @@ class _GeneralVarData(_VarData):
     @domain.setter
     def domain(self, domain):
         try:
-            self._domain = SetInitializer(domain)(None, None)
+            self._domain = SetInitializer(domain)(self.parent_block(), self.index())
         except:
             logger.error(
                 "%s is not a valid domain. Variable domains must be an "
@@ -441,54 +449,94 @@ class _GeneralVarData(_VarData):
     def bounds(self):
         # Custom implementation of _VarData.bounds to avoid unnecessary
         # expression generation and duplicate calls to domain.bounds()
-        domain_bounds = self.domain.bounds()
-        if self._lb is None:
-            lb = domain_bounds[0]
-        else:
-            lb = self._lb
-            if lb.__class__ not in native_types:
-                lb = lb()
-            if domain_bounds[0] is not None:
-                lb = max(lb, domain_bounds[0])
-        if self._ub is None:
-            ub = domain_bounds[1]
-        else:
-            ub = self._ub
-            if ub.__class__ not in native_types:
-                ub = ub()
-            if domain_bounds[1] is not None:
-                ub = min(ub, domain_bounds[1])
-        return None if lb == _ninf else lb, None if ub == _inf else ub
+        domain_lb, domain_ub = self.domain.bounds()
+        # lb is the tighter of the domain and bounds
+        lb = self._lb
+        if lb.__class__ not in native_numeric_types:
+            if lb is not None:
+                lb = float(value(lb))
+        if lb in _nonfinite_values or lb != lb:
+            if lb == _ninf:
+                lb = None
+            else:
+                raise ValueError(
+                    "Var '%s' created with an invalid non-finite "
+                    "lower bound (%s)." % (self.name, lb)
+                )
+        if domain_lb is not None:
+            if lb is None:
+                lb = domain_lb
+            else:
+                lb = max(lb, domain_lb)
+        # ub is the tighter of the domain and bounds
+        ub = self._ub
+        if ub.__class__ not in native_numeric_types:
+            if ub is not None:
+                ub = float(value(ub))
+        if ub in _nonfinite_values or ub != ub:
+            if ub == _inf:
+                ub = None
+            else:
+                raise ValueError(
+                    "Var '%s' created with an invalid non-finite "
+                    "upper bound (%s)." % (self.name, ub)
+                )
+        if domain_ub is not None:
+            if ub is None:
+                ub = domain_ub
+            else:
+                ub = min(ub, domain_ub)
+        return lb, ub
 
     @_VarData.lb.getter
     def lb(self):
         # Custom implementation of _VarData.lb to avoid unnecessary
         # expression generation
-        dlb, _ = self.domain.bounds()
-        if self._lb is None:
-            lb = dlb
-        else:
-            lb = self._lb
-            if lb.__class__ not in native_types:
-                lb = lb()
-            if dlb is not None:
-                lb = max(lb, dlb)
-        return None if lb == _ninf else lb
+        domain_lb, domain_ub = self.domain.bounds()
+        # lb is the tighter of the domain and bounds
+        lb = self._lb
+        if lb.__class__ not in native_numeric_types:
+            if lb is not None:
+                lb = float(value(lb))
+        if lb in _nonfinite_values or lb != lb:
+            if lb == _ninf:
+                lb = None
+            else:
+                raise ValueError(
+                    "Var '%s' created with an invalid non-finite "
+                    "lower bound (%s)." % (self.name, lb)
+                )
+        if domain_lb is not None:
+            if lb is None:
+                lb = domain_lb
+            else:
+                lb = max(lb, domain_lb)
+        return lb
 
     @_VarData.ub.getter
     def ub(self):
         # Custom implementation of _VarData.ub to avoid unnecessary
         # expression generation
-        _, dub = self.domain.bounds()
-        if self._ub is None:
-            ub = dub
-        else:
-            ub = self._ub
-            if ub.__class__ not in native_types:
-                ub = ub()
-            if dub is not None:
-                ub = min(ub, dub)
-        return None if ub == _inf else ub
+        domain_lb, domain_ub = self.domain.bounds()
+        # ub is the tighter of the domain and bounds
+        ub = self._ub
+        if ub.__class__ not in native_numeric_types:
+            if ub is not None:
+                ub = float(value(ub))
+        if ub in _nonfinite_values or ub != ub:
+            if ub == _inf:
+                ub = None
+            else:
+                raise ValueError(
+                    "Var '%s' created with an invalid non-finite "
+                    "upper bound (%s)." % (self.name, ub)
+                )
+        if domain_ub is not None:
+            if ub is None:
+                ub = domain_ub
+            else:
+                ub = min(ub, domain_ub)
+        return ub
 
     @property
     def lower(self):
@@ -962,13 +1010,27 @@ class IndexedVar(Var):
     @domain.setter
     def domain(self, domain):
         """Sets the domain for all variables in this container."""
-        # TODO: Ideally we would pass valid arguments to the initializer
-        # that we just created.  However at the moment, getting the
-        # index() is expensive (see #1228).  As a result, for the moment
-        # we will only support constant initializers
-        domain = SetInitializer(domain)(None, None)
-        for vardata in self.values():
-            vardata.domain = domain
+        try:
+            domain_rule = SetInitializer(domain)
+            if domain_rule.constant():
+                domain = domain_rule(self.parent_block(), None)
+                for vardata in self.values():
+                    vardata._domain = domain
+            elif domain_rule.contains_indices():
+                parent = self.parent_block()
+                for index in domain_rule.indices():
+                    self[index]._domain = domain_rule(parent, index)
+            else:
+                parent = self.parent_block()
+                for index, vardata in self.items():
+                    vardata._domain = domain_rule(parent, index)
+        except:
+            logger.error(
+                "%s is not a valid domain. Variable domains must be an "
+                "instance of a Pyomo Set or convertible to a Pyomo Set." % (domain,),
+                extra={'id': 'E2001'},
+            )
+            raise
 
     # Because CP supports indirection [the ability to index objects by
     # another (inter) Var] for certain types (including Var), we will

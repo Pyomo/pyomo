@@ -1,0 +1,40 @@
+* Source:     Pyomo MPS Writer
+* Format:     Free MPS
+*
+NAME knapsack problem
+OBJSENSE
+ MIN
+ROWS
+ N  obj
+ G  c_l_const1_
+COLUMNS
+     MARK0000 'MARKER' 'INTORG'
+     x(_1_) obj 3
+     x(_1_) c_l_const1_ 30
+     x(_2_) obj 2
+     x(_2_) c_l_const1_ 24
+     x(_3_) obj 2
+     x(_3_) c_l_const1_ 11
+     x(_4_) obj 4
+     x(_4_) c_l_const1_ 35
+     x(_5_) obj 5
+     x(_5_) c_l_const1_ 29
+     x(_6_) obj 4
+     x(_6_) c_l_const1_ 8
+     x(_7_) obj 3
+     x(_7_) c_l_const1_ 31
+     x(_8_) obj 1
+     x(_8_) c_l_const1_ 18
+     MARK0001 'MARKER' 'INTEND'
+RHS
+     RHS c_l_const1_ 60
+BOUNDS
+ BV BOUND x(_1_)
+ BV BOUND x(_2_)
+ BV BOUND x(_3_)
+ BV BOUND x(_4_)
+ BV BOUND x(_5_)
+ BV BOUND x(_6_)
+ BV BOUND x(_7_)
+ BV BOUND x(_8_)
+ENDATA

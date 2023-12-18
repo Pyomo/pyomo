@@ -27,6 +27,7 @@ from pyomo.common.dependencies.scipy import sparse as spa
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
+from pyomo.contrib.pynumero.exceptions import PyNumeroEvaluationError
 from pyomo.contrib.pynumero.asl import AmplInterface
 
 if not AmplInterface.available():
@@ -37,12 +38,18 @@ if not AmplInterface.available():
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 
 from pyomo.contrib.pynumero.interfaces.cyipopt_interface import (
+    cyipopt,
     cyipopt_available,
     CyIpoptNLP,
 )
 
 from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import CyIpoptSolver
 from pyomo.contrib.pynumero.algorithms.solvers.callbacks import InfeasibilityCallback
+
+if cyipopt_available:
+    # We don't raise unittest.SkipTest if not cyipopt_available as there is a
+    # test below that tests an exception when cyipopt is unavailable.
+    cyipopt_ge_1_3 = hasattr(cyipopt, "CyIpoptEvaluationError")
 
 
 def create_model1():
@@ -159,6 +166,29 @@ def create_model9():
     return model
 
 
+def make_hs071_model():
+    # This is a model that is mathematically equivalent to the Hock-Schittkowski
+    # test problem 071, but that will trigger an evaluation error if x[0] goes
+    # above 1.1.
+    m = pyo.ConcreteModel()
+    m.x = pyo.Var([0, 1, 2, 3], bounds=(1.0, 5.0))
+    m.x[0] = 1.0
+    m.x[1] = 5.0
+    m.x[2] = 5.0
+    m.x[3] = 1.0
+    m.obj = pyo.Objective(expr=m.x[0] * m.x[3] * (m.x[0] + m.x[1] + m.x[2]) + m.x[2])
+    # This expression evaluates to zero, but is not well defined when x[0] > 1.1
+    trivial_expr_with_eval_error = (pyo.sqrt(1.1 - m.x[0])) ** 2 + m.x[0] - 1.1
+    m.ineq1 = pyo.Constraint(expr=m.x[0] * m.x[1] * m.x[2] * m.x[3] >= 25.0)
+    m.eq1 = pyo.Constraint(
+        expr=(
+            m.x[0] ** 2 + m.x[1] ** 2 + m.x[2] ** 2 + m.x[3] ** 2
+            == 40.0 + trivial_expr_with_eval_error
+        )
+    )
+    return m
+
+
 @unittest.skipIf(cyipopt_available, "cyipopt is available")
 class TestCyIpoptNotAvailable(unittest.TestCase):
     def test_not_available_exception(self):
@@ -261,6 +291,35 @@ class TestCyIpoptSolver(unittest.TestCase):
         x, info = solver.solve(tee=False)
         nlp.set_primals(x)
         self.assertAlmostEqual(nlp.evaluate_objective(), -5.0879028e02, places=5)
+
+    @unittest.skipUnless(
+        cyipopt_available and cyipopt_ge_1_3, "cyipopt version < 1.3.0"
+    )
+    def test_hs071_evalerror(self):
+        m = make_hs071_model()
+        solver = pyo.SolverFactory("cyipopt")
+        res = solver.solve(m, tee=True)
+
+        x = list(m.x[:].value)
+        expected_x = np.array([1.0, 4.74299964, 3.82114998, 1.37940829])
+        np.testing.assert_allclose(x, expected_x)
+
+    def test_hs071_evalerror_halt(self):
+        m = make_hs071_model()
+        solver = pyo.SolverFactory("cyipopt", halt_on_evaluation_error=True)
+        msg = "Error in AMPL evaluation"
+        with self.assertRaisesRegex(PyNumeroEvaluationError, msg):
+            res = solver.solve(m, tee=True)
+
+    @unittest.skipIf(
+        not cyipopt_available or cyipopt_ge_1_3, "cyipopt version >= 1.3.0"
+    )
+    def test_hs071_evalerror_old_cyipopt(self):
+        m = make_hs071_model()
+        solver = pyo.SolverFactory("cyipopt")
+        msg = "Error in AMPL evaluation"
+        with self.assertRaisesRegex(PyNumeroEvaluationError, msg):
+            res = solver.solve(m, tee=True)
 
     def test_infeasibility_callback(self):
         model = create_model1()

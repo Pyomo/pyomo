@@ -37,9 +37,6 @@ from pyomo.core.expr import (
     lnot,
     xor,
     inequality,
-)
-
-from pyomo.core.expr.current import (
     log,
     log10,
     sin,
@@ -73,7 +70,6 @@ from pyomo.core.expr import (
     numeric_expr,
     boolean_value,
     logical_expr,
-    current,
     symbol_map,
     sympy_tools,
     taylor_series,
@@ -193,7 +189,11 @@ from pyomo.core.base.PyomoModel import (
     ConcreteModel,
     AbstractModel,
 )
-from pyomo.core.base.transformation import Transformation, TransformationFactory
+from pyomo.core.base.transformation import (
+    Transformation,
+    TransformationFactory,
+    ReverseTransformationToken,
+)
 
 from pyomo.core.base.instance2dat import instance2dat
 

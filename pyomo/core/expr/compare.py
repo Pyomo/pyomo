@@ -11,7 +11,7 @@
 import collections
 from .visitor import StreamBasedExpressionVisitor
 from .numvalue import nonpyomo_leaf_types
-from .current import (
+from pyomo.core.expr import (
     LinearExpression,
     MonomialTermExpression,
     SumExpression,
@@ -36,8 +36,8 @@ from .current import (
     RangedExpression,
     InequalityExpression,
     EqualityExpression,
+    GetItemExpression,
 )
-from .template_expr import GetItemExpression
 from typing import List
 from pyomo.common.collections import Sequence
 from pyomo.common.errors import PyomoException

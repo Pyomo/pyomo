@@ -230,6 +230,17 @@ class TestDerivs(unittest.TestCase):
         symbolic = reverse_sd(m.o.expr)
         self.assertAlmostEqual(derivs[m.x], pyo.value(symbolic[m.x]), tol)
 
+    def test_constant_named_expressions(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=3)
+        m.e = pyo.Expression(expr=2)
+
+        e = m.x * m.e
+        derivs = reverse_ad(e)
+        symbolic = reverse_sd(e)
+        self.assertAlmostEqual(derivs[m.x], pyo.value(symbolic[m.x]), tol + 3)
+        self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
+
     def test_multiple_named_expressions(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var()

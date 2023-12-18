@@ -9,14 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.deprecation import relocated_module_attribute
 
-# backport of contextlib.nullcontext for supporting Python < 3.7
-class nullcontext(object):
-    def __init__(self, enter_result=None):
-        self.result = enter_result
-
-    def __enter__(self):
-        return self.result
-
-    def __exit__(self, et, ev, tb):
-        return
+relocated_module_attribute('nullcontext', 'contextlib.nullcontext', version='6.7.0')

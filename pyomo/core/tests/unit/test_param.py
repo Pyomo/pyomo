@@ -66,6 +66,7 @@ from pyomo.common.errors import PyomoException
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.base.param import _ParamData
+from pyomo.core.base.set import _SetData
 from pyomo.core.base.units_container import units, pint_available, UnitsError
 
 from io import StringIO
@@ -1481,6 +1482,13 @@ q : Size=0, Index=None, Domain=Any, Default=None, Mutable=False
         self.assertIs(m.p.domain._owner(), m.p)
         self.assertIs(i.p.domain._owner(), i.p)
 
+    def test_domain_set_initializer(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=[1, 2, 3])
+        param_vals = {1: 1, 2: 1, 3: -1}
+        m.p = Param(m.I, initialize=param_vals, domain={-1, 1})
+        self.assertIsInstance(m.p.domain, _SetData)
+
     @unittest.skipUnless(pint_available, "units test requires pint module")
     def test_set_value_units(self):
         m = ConcreteModel()
@@ -1507,6 +1515,25 @@ q : Size=0, Index=None, Domain=Any, Default=None, Mutable=False
 1 Declarations: p
         """.strip(),
         )
+
+    @unittest.skipUnless(pint_available, "units test requires pint module")
+    def test_units_and_mutability(self):
+        m = ConcreteModel()
+        with LoggingIntercept() as LOG:
+            m.p = Param(units=units.g)
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertTrue(m.p.mutable)
+        with LoggingIntercept() as LOG:
+            m.q = Param(units=units.g, mutable=True)
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertTrue(m.q.mutable)
+        with LoggingIntercept() as LOG:
+            m.r = Param(units=units.g, mutable=False)
+        self.assertEqual(
+            LOG.getvalue(),
+            "Params with units must be mutable.  Converting Param 'r' to mutable.\n",
+        )
+        self.assertTrue(m.r.mutable)
 
     def test_scalar_get_mutable_when_not_present(self):
         m = ConcreteModel()

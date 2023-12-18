@@ -2,7 +2,7 @@ import math
 
 from pyomo.common.dependencies import attempt_import
 from pyomo.core import value, SymbolMap, NumericLabeler, Var, Constraint
-from pyomo.core.expr.current import (
+from pyomo.core.expr import (
     ProductExpression,
     SumExpression,
     PowExpression,

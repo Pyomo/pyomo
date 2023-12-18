@@ -25,8 +25,8 @@ _init_url = "$URL$"
 # should generally be left at 0, unless a downstream package is tracking
 # main and needs a hard reference to "suitably new" development.
 major = 6
-minor = 6
-micro = 2
+minor = 7
+micro = 1
 releaselevel = 'invalid'
 # releaselevel = 'final'
 serial = 0

@@ -17,8 +17,8 @@ import itertools
 import logging
 import math
 from io import StringIO
+from contextlib import nullcontext
 
-from pyomo.common.backports import nullcontext
 from pyomo.common.collections import OrderedSet
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter, WriterFactory
@@ -29,7 +29,7 @@ from pyomo.core.expr.numvalue import (
     nonpyomo_leaf_types,
 )
 from pyomo.core.expr.visitor import _ToStringVisitor
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.core.base import (
     SortComponents,
     SymbolMap,

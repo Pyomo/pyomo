@@ -66,21 +66,7 @@ from pyomo.core.base.boolean_var import (
 from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
 from pyomo.core.base.param import IndexedParam, ScalarParam
 from pyomo.core.base.var import ScalarVar, _GeneralVarData, IndexedVar
-import pyomo.core.expr.current as EXPR
-from pyomo.core.expr.logical_expr import (
-    AndExpression,
-    OrExpression,
-    XorExpression,
-    NotExpression,
-    EquivalenceExpression,
-    ImplicationExpression,
-    ExactlyExpression,
-    AtMostExpression,
-    AtLeastExpression,
-)
-from pyomo.core.expr.numeric_expr import MinExpression, MaxExpression
-from pyomo.core.expr.relational_expr import NotEqualExpression
-from pyomo.core.expr.template_expr import CallExpression
+import pyomo.core.expr as EXPR
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor, identify_variables
 from pyomo.core.base import Set, RangeSet
 from pyomo.core.base.set import SetProduct
@@ -926,7 +912,7 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         EXPR.Structural_GetAttrExpression: _handle_getattr,
         EXPR.Numeric_GetAttrExpression: _handle_getattr,
         EXPR.Boolean_GetAttrExpression: _handle_getattr,
-        CallExpression: _handle_call,
+        EXPR.CallExpression: _handle_call,
         EXPR.NegationExpression: _handle_negation_node,
         EXPR.ProductExpression: _handle_product_node,
         EXPR.DivisionExpression: _handle_division_node,
@@ -935,19 +921,19 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         EXPR.MonomialTermExpression: _handle_monomial_expr,
         EXPR.SumExpression: _handle_sum_node,
         EXPR.LinearExpression: _handle_sum_node,
-        MinExpression: _handle_min_node,
-        MaxExpression: _handle_max_node,
-        NotExpression: _handle_not_node,
-        EquivalenceExpression: _handle_equivalence_node,
-        ImplicationExpression: _handle_implication_node,
-        AndExpression: _handle_and_node,
-        OrExpression: _handle_or_node,
-        XorExpression: _handle_xor_node,
-        ExactlyExpression: _handle_exactly_node,
-        AtMostExpression: _handle_at_most_node,
-        AtLeastExpression: _handle_at_least_node,
+        EXPR.MinExpression: _handle_min_node,
+        EXPR.MaxExpression: _handle_max_node,
+        EXPR.NotExpression: _handle_not_node,
+        EXPR.EquivalenceExpression: _handle_equivalence_node,
+        EXPR.ImplicationExpression: _handle_implication_node,
+        EXPR.AndExpression: _handle_and_node,
+        EXPR.OrExpression: _handle_or_node,
+        EXPR.XorExpression: _handle_xor_node,
+        EXPR.ExactlyExpression: _handle_exactly_node,
+        EXPR.AtMostExpression: _handle_at_most_node,
+        EXPR.AtLeastExpression: _handle_at_least_node,
         EXPR.EqualityExpression: _handle_equality_node,
-        NotEqualExpression: _handle_not_equal_node,
+        EXPR.NotEqualExpression: _handle_not_equal_node,
         EXPR.InequalityExpression: _handle_inequality_node,
         EXPR.RangedExpression: _handle_ranged_inequality_node,
         BeforeExpression: _handle_before_expression_node,

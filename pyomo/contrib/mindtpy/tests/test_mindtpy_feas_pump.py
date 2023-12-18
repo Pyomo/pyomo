@@ -14,11 +14,12 @@ from pyomo.environ import SolverFactory, value
 from pyomo.opt import TerminationCondition
 from pyomo.contrib.gdpopt.util import is_feasible
 from pyomo.util.infeasible import log_infeasible_constraints
-from pyomo.contrib.mindtpy.tests.feasibility_pump1 import Feasibility_Pump1
-from pyomo.contrib.mindtpy.tests.feasibility_pump2 import Feasibility_Pump2
+from pyomo.contrib.mindtpy.tests.feasibility_pump1 import FeasPump1
+from pyomo.contrib.mindtpy.tests.feasibility_pump2 import FeasPump2
 
-required_solvers = ('ipopt', 'glpk', 'cplex')
-if all(SolverFactory(s).available() for s in required_solvers):
+required_solvers = ('ipopt', 'cplex')
+# TODO: 'appsi_highs' will fail here.
+if all(SolverFactory(s).available(exception_flag=False) for s in required_solvers):
     subsolvers_available = True
 else:
     subsolvers_available = False
@@ -26,8 +27,8 @@ else:
 model_list = [
     EightProcessFlowsheet(convex=True),
     ConstraintQualificationExample(),
-    Feasibility_Pump1(),
-    Feasibility_Pump2(),
+    FeasPump1(),
+    FeasPump2(),
     SimpleMINLP(),
     SimpleMINLP2(),
     SimpleMINLP3(),
@@ -57,6 +58,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the feasibility pump algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='FP',
@@ -71,6 +73,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the FP-OA algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='OA',

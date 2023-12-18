@@ -12,8 +12,7 @@
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 from pyomo.core.expr.taylor_series import taylor_series_expansion
-from pyomo.core.expr.current import polynomial_degree
-from pyomo.core.expr.calculus.derivatives import differentiate
+from pyomo.core.expr import polynomial_degree, differentiate
 
 
 class TestTaylorSeries(unittest.TestCase):

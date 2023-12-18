@@ -10,11 +10,12 @@
 #  ___________________________________________________________________________
 """Functionality for identifying variables that participate in expressions
 """
-import enum
+
+from contextlib import nullcontext
+
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.core.expr.numvalue import value as pyo_value
 from pyomo.repn import generate_standard_repn
-from pyomo.common.backports import nullcontext
 from pyomo.util.subsystems import TemporarySubsystemManager
 from pyomo.contrib.incidence_analysis.config import IncidenceMethod, IncidenceConfig
 
@@ -58,7 +59,7 @@ def _get_incident_via_standard_repn(expr, include_fixed, linear_only):
             linear_vars.append(var)
     if linear_only:
         nl_var_id_set = set(id(var) for var in repn.nonlinear_vars)
-        return [var for var in repn.linear_vars if id(var) not in nl_var_id_set]
+        return [var for var in linear_vars if id(var) not in nl_var_id_set]
     else:
         # Combine linear and nonlinear variables and filter out duplicates. Note
         # that quadratic=False, so we don't need to include repn.quadratic_vars.

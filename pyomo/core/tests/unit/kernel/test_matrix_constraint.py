@@ -115,8 +115,8 @@ class Test_matrix_constraint(unittest.TestCase):
         self.assertTrue((ctuple.ub == numpy.inf).all())
         self.assertTrue((ctuple.equality == False).all())
         for c in ctuple:
-            self.assertEqual(c.lb, -numpy.inf)
-            self.assertEqual(c.ub, numpy.inf)
+            self.assertEqual(c.lb, None)
+            self.assertEqual(c.ub, None)
             self.assertEqual(c.equality, False)
             self.assertEqual(c(), 0)
             self.assertEqual(c.slack, float('inf'))
@@ -568,8 +568,8 @@ class Test_matrix_constraint(unittest.TestCase):
         with self.assertRaises(ValueError):
             ctuple.rhs
         for c in ctuple:
-            self.assertEqual(c.lb, -numpy.inf)
-            self.assertEqual(c.ub, numpy.inf)
+            self.assertEqual(c.lb, None)
+            self.assertEqual(c.ub, None)
             self.assertEqual(c.equality, False)
             with self.assertRaises(ValueError):
                 c.rhs
@@ -652,8 +652,8 @@ class Test_matrix_constraint(unittest.TestCase):
         with self.assertRaises(ValueError):
             ctuple.rhs
         for c in ctuple:
-            self.assertEqual(c.lb, -numpy.inf)
-            self.assertEqual(c.ub, numpy.inf)
+            self.assertEqual(c.lb, None)
+            self.assertEqual(c.ub, None)
             self.assertEqual(c.equality, False)
             with self.assertRaises(ValueError):
                 c.rhs
@@ -681,8 +681,8 @@ class Test_matrix_constraint(unittest.TestCase):
         with self.assertRaises(ValueError):
             ctuple.rhs
         for c in ctuple:
-            self.assertEqual(c.lb, -numpy.inf)
-            self.assertEqual(c.ub, numpy.inf)
+            self.assertEqual(c.lb, None)
+            self.assertEqual(c.ub, None)
             self.assertEqual(c.equality, False)
             with self.assertRaises(ValueError):
                 c.rhs

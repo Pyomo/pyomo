@@ -12,7 +12,7 @@
 from pyomo.gdp import GDP_Error, Disjunction
 from pyomo.gdp.disjunct import _DisjunctData, Disjunct
 
-import pyomo.core.expr.current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.core.base.component import _ComponentBase
 from pyomo.core import (
     Block,
@@ -154,6 +154,14 @@ class GDPTree:
         else:
             return None
 
+    def children(self, u):
+        """Returns the direct descendents of node u.
+
+        Arg:
+            u : A node in the tree
+        """
+        return self._children[u]
+
     def parent_disjunct(self, u):
         """Returns the parent Disjunct of u, or None if u is the
         closest-to-root Disjunct in the forest.
@@ -231,6 +239,12 @@ class GDPTree:
         for u, children in self._children.items():
             if len(children) == 0:
                 yield u
+
+    @property
+    def disjunct_nodes(self):
+        for v in self._vertices:
+            if isinstance(v, _DisjunctData) or v.ctype is Disjunct:
+                yield v
 
 
 def _parent_disjunct(obj):

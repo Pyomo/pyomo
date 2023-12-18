@@ -30,7 +30,7 @@ from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.expr.numvalue import as_numeric
-from pyomo.core.expr.current import identify_variables
+from pyomo.core.expr import identify_variables
 from pyomo.core.base.label import alphanum_label_from_name
 
 from pyomo.network.util import create_var, tighten_var_domain
