@@ -22,7 +22,6 @@ from pyomo.core.base.var import IndexedVar
 from pyomo.core.base.set_types import Reals
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core.expr import value
-import pyomo.core.expr as EXPR
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.core.expr.visitor import (
@@ -40,11 +39,9 @@ import itertools as it
 import timeit
 from contextlib import contextmanager
 import logging
-from pprint import pprint
 import math
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.log import Preformatted
-from scipy.special import comb
 
 
 # Tolerances used in the code
@@ -1304,7 +1301,7 @@ def add_decision_rule_variables(model_data, config):
     # variable depends on DR order and uncertainty set dimension
     degree = config.decision_rule_order
     num_uncertain_params = len(model_data.working_model.util.uncertain_params)
-    num_dr_vars = comb(
+    num_dr_vars = sp.special.comb(
         N=num_uncertain_params + degree, k=degree, exact=True, repetition=False
     )
 
@@ -1328,37 +1325,6 @@ def add_decision_rule_variables(model_data, config):
         decision_rule_vars.append(indexed_dr_var)
 
     model_data.working_model.util.decision_rule_vars = decision_rule_vars
-
-
-def partition_powers(n, v):
-    """Partition a total degree n across v variables
-
-    This is an implementation of the "stars and bars" algorithm from
-    combinatorial mathematics.
-
-    This partitions a "total integer degree" of n across v variables
-    such that each variable gets an integer degree >= 0.  You can think
-    of this as dividing a set of n+v things into v groupings, with the
-    power for each v_i being 1 less than the number of things in the
-    i'th group (because the v is part of the group).  It is therefore
-    sufficient to just get the v-1 starting points chosen from a list of
-    indices n+v long (the first starting point is fixed to be 0).
-
-    """
-    for starts in it.combinations(range(1, n + v), v - 1):
-        # add the initial starting point to the beginning and the total
-        # number of objects (degree counters and variables) to the end
-        # of the list.  The degree for each variable is 1 less than the
-        # difference of sequential starting points (to account for the
-        # variable itself)
-        starts = (0,) + starts + (n + v,)
-        yield [starts[i + 1] - starts[i] - 1 for i in range(v)]
-
-
-def sort_partitioned_powers(powers_list):
-    powers_list = sorted(powers_list, reverse=True)
-    powers_list = sorted(powers_list, key=lambda elem: max(elem))
-    return powers_list
 
 
 def add_decision_rule_constraints(model_data, config):
