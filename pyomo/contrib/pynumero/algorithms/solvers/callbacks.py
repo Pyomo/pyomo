@@ -150,12 +150,13 @@ class InfeasibilityCallback(CyIpoptIntermediateCallbackBase):
         # previous iteration.
         logger.info("")
         logger.info(f"INFEASIBILITIES FOR ITERATION {iter_count}")
-        logger.info("------------------------------" + "-" * len(str(iter_count)))
+        logger.info("==============================" + "=" * len(str(iter_count)))
 
         # TODO: Reduce repeated code here
         i_max_xL = sorted_coords_x_L_viol[0]
         if abs(x_L_viol[i_max_xL]) >= threshold:
             logger.info("Lower bound violation")
+            logger.info("---------------------")
             logger.info(self._get_header())
             for i in sorted_coords_x_L_viol[: self._n_residuals]:
                 name = self._variable_names[i]
@@ -163,10 +164,12 @@ class InfeasibilityCallback(CyIpoptIntermediateCallbackBase):
                 infeas_str = f"{infeas:.2e}"
                 msg = infeas_str + " " + name
                 logger.info(msg)
+            logger.info("---------------------")
 
         i_max_xU = sorted_coords_x_U_viol[0]
         if abs(x_U_viol[i_max_xU]) >= threshold:
             logger.info("Upper bound violation")
+            logger.info("---------------------")
             logger.info(self._get_header())
             for i in sorted_coords_x_U_viol[: self._n_residuals]:
                 name = self._variable_names[i]
@@ -174,10 +177,12 @@ class InfeasibilityCallback(CyIpoptIntermediateCallbackBase):
                 infeas_str = f"{infeas:.2e}"
                 msg = infeas_str + " " + name
                 logger.info(msg)
+            logger.info("---------------------")
 
         i_max_compl_xL = sorted_coords_compl_x_L[0]
         if abs(x_L_viol[i_max_compl_xL]) >= threshold:
             logger.info("Lower bound complementarity")
+            logger.info("---------------------------")
             logger.info(self._get_header())
             for i in sorted_coords_compl_x_L[: self._n_residuals]:
                 name = self._variable_names[i]
@@ -185,10 +190,12 @@ class InfeasibilityCallback(CyIpoptIntermediateCallbackBase):
                 infeas_str = f"{infeas:.2e}"
                 msg = infeas_str + " " + name
                 logger.info(msg)
+            logger.info("---------------------------")
 
         i_max_compl_xU = sorted_coords_compl_x_U[0]
         if abs(x_U_viol[i_max_xU]) >= threshold:
             logger.info("Upper bound complementarity")
+            logger.info("---------------------------")
             logger.info(self._get_header())
             for i in sorted_coords_compl_x_U[: self._n_residuals]:
                 name = self._variable_names[i]
@@ -196,10 +203,12 @@ class InfeasibilityCallback(CyIpoptIntermediateCallbackBase):
                 infeas_str = f"{infeas:.2e}"
                 msg = infeas_str + " " + name
                 logger.info(msg)
+            logger.info("---------------------------")
 
         i_max_primal = sorted_coords_primal_infeas[0]
         if abs(primal_infeas[i_max_primal]) >= threshold:
             logger.info("Primal infeasibility")
+            logger.info("--------------------")
             logger.info(self._get_header())
             for i in sorted_coords_primal_infeas[: self._n_residuals]:
                 name = self._constraint_names[i]
@@ -207,10 +216,12 @@ class InfeasibilityCallback(CyIpoptIntermediateCallbackBase):
                 infeas_str = f"{infeas:.2e}"
                 msg = infeas_str + " " + name
                 logger.info(msg)
+            logger.info("--------------------")
 
         i_max_dual = sorted_coords_dual_infeas[0]
         if abs(dual_infeas[i_max_dual]) >= threshold:
             logger.info("Dual infeasibility")
+            logger.info("------------------")
             logger.info(self._get_header())
             for i in sorted_coords_dual_infeas[: self._n_residuals]:
                 name = self._variable_names[i]
@@ -218,5 +229,6 @@ class InfeasibilityCallback(CyIpoptIntermediateCallbackBase):
                 infeas_str = f"{infeas:.2e}"
                 msg = infeas_str + " " + name
                 logger.info(msg)
+            logger.info("------------------")
 
-        logger.info("------------------------------" + "-" * len(str(iter_count)))
+        logger.info("==============================" + "=" * len(str(iter_count)))
