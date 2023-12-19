@@ -2647,6 +2647,34 @@ A : Size=1, Index=None, Ordered=True
             list(RangeSet(ranges=[NR(0, 2, 0, (True, False))]).ranges()),
         )
 
+        x = RangeSet(0, 6, 0) - RangeSet(1, 5, 2)
+        self.assertIs(type(x), SetDifference_InfiniteSet)
+        self.assertFalse(x.isfinite())
+        self.assertFalse(x.isordered())
+
+        self.assertIn(0, x)
+        self.assertNotIn(1, x)
+        self.assertIn(2, x)
+        self.assertNotIn(3, x)
+        self.assertIn(4, x)
+        self.assertNotIn(5, x)
+        self.assertIn(6, x)
+        self.assertNotIn(7, x)
+
+        self.assertEqual(
+            list(x.ranges()),
+            list(
+                RangeSet(
+                    ranges=[
+                        NR(0, 1, 0, (True, False)),
+                        NR(1, 3, 0, (False, False)),
+                        NR(3, 5, 0, (False, False)),
+                        NR(5, 6, 0, (False, True)),
+                    ]
+                ).ranges()
+            ),
+        )
+
 
 class TestSetSymmetricDifference(unittest.TestCase):
     def test_pickle(self):
