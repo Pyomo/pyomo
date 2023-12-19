@@ -369,10 +369,6 @@ class LegacySolverInterface:
     interface. Necessary for backwards compatibility.
     """
 
-    def __init__(self):
-        self.original_config = self.config
-        self.config = self.config()
-
     def solve(
         self,
         model: _BlockData,
@@ -397,6 +393,7 @@ class LegacySolverInterface:
             Legacy results object
 
         """
+        original_config = self.config
         self.config = self.config()
         self.config.tee = tee
         self.config.load_solution = load_solutions
@@ -488,7 +485,7 @@ class LegacySolverInterface:
         if delete_legacy_soln:
             legacy_results.solution.delete(0)
 
-        self.config = self.original_config
+        self.config = original_config
         self.options = original_options
 
         return legacy_results
