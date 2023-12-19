@@ -48,8 +48,6 @@ class ipoptSolverError(PyomoException):
     General exception to catch solver system errors
     """
 
-    pass
-
 
 class ipoptConfig(SolverConfig):
     def __init__(
@@ -83,6 +81,9 @@ class ipoptConfig(SolverConfig):
         )
         self.log_level = self.declare(
             'log_level', ConfigValue(domain=NonNegativeInt, default=logging.INFO)
+        )
+        self.presolve: bool = self.declare(
+            'presolve', ConfigValue(domain=bool, default=True)
         )
 
 
@@ -186,8 +187,6 @@ class ipopt(SolverBase):
         self._config = self.CONFIG(kwds)
         self._writer = NLWriter()
         self._writer.config.skip_trivial_constraints = True
-        # TODO: Make this an option; not always turned on
-        self._writer.config.linear_presolve = True
         self.ipopt_options = self._config.solver_options
 
     def available(self):
@@ -265,6 +264,12 @@ class ipopt(SolverBase):
         # Update configuration options, based on keywords passed to solve
         config: ipoptConfig = self.config(kwds.pop('options', {}))
         config.set_value(kwds)
+        self._writer.config.linear_presolve = config.presolve
+        if config.threads:
+            logger.log(
+                logging.INFO,
+                msg="The `threads` option was utilized, but this has not yet been implemented for {self.__class__}.",
+            )
         results = ipoptResults()
         with TempfileManager.new_context() as tempfile:
             if config.temp_dir is None:
@@ -405,6 +410,8 @@ class ipopt(SolverBase):
         results.timing_info.wall_time = (
             end_timestamp - start_timestamp
         ).total_seconds()
+        if config.report_timing:
+            results.report_timing()
         return results
 
     def _parse_ipopt_output(self, stream: io.StringIO):

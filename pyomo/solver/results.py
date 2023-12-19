@@ -246,6 +246,12 @@ class Results(ConfigDict):
         s += 'objective_bound: ' + str(self.objective_bound)
         return s
 
+    def report_timing(self):
+        print('Timing Information: ')
+        print('-' * 50)
+        self.timing_info.display()
+        print('-' * 50)
+
 
 class ResultsReader:
     pass

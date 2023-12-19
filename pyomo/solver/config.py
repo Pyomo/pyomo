@@ -21,24 +21,7 @@ from pyomo.common.config import (
 
 class SolverConfig(ConfigDict):
     """
-    Attributes
-    ----------
-    time_limit: float - sent to solver
-        Time limit for the solver
-    tee: bool
-        If True, then the solver log goes to stdout
-    load_solution: bool - wrapper
-        If False, then the values of the primal variables will not be
-        loaded into the model
-    symbolic_solver_labels: bool - sent to solver
-        If True, the names given to the solver will reflect the names
-        of the pyomo components. Cannot be changed after set_instance
-        is called.
-    report_timing: bool - wrapper
-        If True, then some timing information will be printed at the
-        end of the solve.
-    threads: integer - sent to solver
-        Number of threads to be used by a solver.
+    Base config values for all solver interfaces
     """
 
     def __init__(
@@ -57,28 +40,62 @@ class SolverConfig(ConfigDict):
             visibility=visibility,
         )
 
-        self.tee: bool = self.declare('tee', ConfigValue(domain=bool, default=False))
+        self.tee: bool = self.declare(
+            'tee',
+            ConfigValue(
+                domain=bool,
+                default=False,
+                description="If True, the solver log prints to stdout.",
+            ),
+        )
         self.load_solution: bool = self.declare(
-            'load_solution', ConfigValue(domain=bool, default=True)
+            'load_solution',
+            ConfigValue(
+                domain=bool,
+                default=True,
+                description="If True, the values of the primal variables will be loaded into the model.",
+            ),
         )
         self.raise_exception_on_nonoptimal_result: bool = self.declare(
             'raise_exception_on_nonoptimal_result',
-            ConfigValue(domain=bool, default=True),
+            ConfigValue(
+                domain=bool,
+                default=True,
+                description="If False, the `solve` method will continue processing even if the returned result is nonoptimal.",
+            ),
         )
         self.symbolic_solver_labels: bool = self.declare(
-            'symbolic_solver_labels', ConfigValue(domain=bool, default=False)
+            'symbolic_solver_labels',
+            ConfigValue(
+                domain=bool,
+                default=False,
+                description="If True, the names given to the solver will reflect the names of the Pyomo components. Cannot be changed after set_instance is called.",
+            ),
         )
         self.report_timing: bool = self.declare(
-            'report_timing', ConfigValue(domain=bool, default=False)
+            'report_timing',
+            ConfigValue(
+                domain=bool,
+                default=False,
+                description="If True, timing information will be printed at the end of a solve call.",
+            ),
         )
         self.threads: Optional[int] = self.declare(
-            'threads', ConfigValue(domain=NonNegativeInt)
+            'threads',
+            ConfigValue(
+                domain=NonNegativeInt,
+                description="Number of threads to be used by a solver.",
+            ),
         )
         self.time_limit: Optional[float] = self.declare(
-            'time_limit', ConfigValue(domain=NonNegativeFloat)
+            'time_limit',
+            ConfigValue(
+                domain=NonNegativeFloat, description="Time limit applied to the solver."
+            ),
         )
         self.solver_options: ConfigDict = self.declare(
-            'solver_options', ConfigDict(implicit=True)
+            'solver_options',
+            ConfigDict(implicit=True, description="Options to pass to the solver."),
         )
 
 
