@@ -37,6 +37,18 @@ from pyomo.solver.results import (
 
 
 class SolverBase(abc.ABC):
+    """
+    Base class upon which direct solver interfaces can be built.
+
+    This base class contains the required methods for all direct solvers:
+        - available: Determines whether the solver is able to be run, combining
+        both whether it can be found on the system and if the license is valid.
+        - config: The configuration method for solver objects.
+        - solve: The main method of every solver
+        - version: The version of the solver
+        - is_persistent: Set to false for all direct solvers.
+    """
+
     #
     # Support "with" statements. Forgetting to call deactivate
     # on Plugins is a common source of memory leaks
@@ -45,9 +57,14 @@ class SolverBase(abc.ABC):
         return self
 
     def __exit__(self, t, v, traceback):
-        pass
+        """Exit statement - enables `with` statements."""
 
     class Availability(enum.IntEnum):
+        """
+        Class to capture different statuses in which a solver can exist in
+        order to record its availability for use.
+        """
+
         FullLicense = 2
         LimitedLicense = 1
         NotFound = 0
@@ -56,7 +73,7 @@ class SolverBase(abc.ABC):
         NeedsCompiledExtension = -3
 
         def __bool__(self):
-            return self._value_ > 0
+            return self.real > 0
 
         def __format__(self, format_spec):
             # We want general formatting of this Enum to return the
@@ -93,7 +110,6 @@ class SolverBase(abc.ABC):
         results: Results
             A results object
         """
-        pass
 
     @abc.abstractmethod
     def available(self):
@@ -120,7 +136,6 @@ class SolverBase(abc.ABC):
             be True if the solver is runable at all and False
             otherwise.
         """
-        pass
 
     @abc.abstractmethod
     def version(self) -> Tuple:
@@ -143,7 +158,6 @@ class SolverBase(abc.ABC):
             An object for configuring pyomo solve options such as the time limit.
             These options are mostly independent of the solver.
         """
-        pass
 
     def is_persistent(self):
         """
@@ -156,7 +170,21 @@ class SolverBase(abc.ABC):
 
 
 class PersistentSolverBase(SolverBase):
+    """
+    Base class upon which persistent solvers can be built. This inherits the
+    methods from the direct solver base and adds those methods that are necessary
+    for persistent solvers.
+
+    Example usage can be seen in solvers within APPSI.
+    """
+
     def is_persistent(self):
+        """
+        Returns
+        -------
+        is_persistent: bool
+            True if the solver is a persistent solver.
+        """
         return True
 
     def load_vars(
@@ -179,7 +207,20 @@ class PersistentSolverBase(SolverBase):
     def get_primals(
         self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
     ) -> Mapping[_GeneralVarData, float]:
-        pass
+        """
+        Get mapping of variables to primals.
+
+        Parameters
+        ----------
+        vars_to_load : Optional[Sequence[_GeneralVarData]], optional
+            Which vars to be populated into the map. The default is None.
+
+        Returns
+        -------
+        Mapping[_GeneralVarData, float]
+            A map of variables to primals.
+
+        """
 
     def get_duals(
         self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None
@@ -198,9 +239,6 @@ class PersistentSolverBase(SolverBase):
         duals: dict
             Maps constraints to dual values
         """
-        raise NotImplementedError(
-            '{0} does not support the get_duals method'.format(type(self))
-        )
 
     def get_slacks(
         self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None
@@ -217,9 +255,6 @@ class PersistentSolverBase(SolverBase):
         slacks: dict
             Maps constraints to slack values
         """
-        raise NotImplementedError(
-            '{0} does not support the get_slacks method'.format(type(self))
-        )
 
     def get_reduced_costs(
         self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
@@ -236,9 +271,6 @@ class PersistentSolverBase(SolverBase):
         reduced_costs: ComponentMap
             Maps variable to reduced cost
         """
-        raise NotImplementedError(
-            '{0} does not support the get_reduced_costs method'.format(type(self))
-        )
 
     @property
     @abc.abstractmethod
@@ -295,6 +327,11 @@ class PersistentSolverBase(SolverBase):
 
 
 class LegacySolverInterface:
+    """
+    Class to map the new solver interface features into the legacy solver
+    interface. Necessary for backwards compatibility.
+    """
+
     def solve(
         self,
         model: _BlockData,
