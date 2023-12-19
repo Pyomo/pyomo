@@ -73,7 +73,7 @@ class SolverBase(abc.ABC):
         NeedsCompiledExtension = -3
 
         def __bool__(self):
-            return self.real > 0
+            return self._value_ > 0
 
         def __format__(self, format_spec):
             # We want general formatting of this Enum to return the
@@ -219,8 +219,10 @@ class PersistentSolverBase(SolverBase):
         -------
         Mapping[_GeneralVarData, float]
             A map of variables to primals.
-
         """
+        raise NotImplementedError(
+            '{0} does not support the get_primals method'.format(type(self))
+        )
 
     def get_duals(
         self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None
@@ -239,6 +241,9 @@ class PersistentSolverBase(SolverBase):
         duals: dict
             Maps constraints to dual values
         """
+        raise NotImplementedError(
+            '{0} does not support the get_duals method'.format(type(self))
+        )
 
     def get_slacks(
         self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None
@@ -255,6 +260,9 @@ class PersistentSolverBase(SolverBase):
         slacks: dict
             Maps constraints to slack values
         """
+        raise NotImplementedError(
+            '{0} does not support the get_slacks method'.format(type(self))
+        )
 
     def get_reduced_costs(
         self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
@@ -271,59 +279,88 @@ class PersistentSolverBase(SolverBase):
         reduced_costs: ComponentMap
             Maps variable to reduced cost
         """
+        raise NotImplementedError(
+            '{0} does not support the get_reduced_costs method'.format(type(self))
+        )
 
     @property
     @abc.abstractmethod
     def update_config(self) -> UpdateConfig:
-        pass
+        """
+        Updates the solver config
+        """
 
     @abc.abstractmethod
     def set_instance(self, model):
-        pass
+        """
+        Set an instance of the model
+        """
 
     @abc.abstractmethod
     def add_variables(self, variables: List[_GeneralVarData]):
-        pass
+        """
+        Add variables to the model
+        """
 
     @abc.abstractmethod
     def add_params(self, params: List[_ParamData]):
-        pass
+        """
+        Add parameters to the model
+        """
 
     @abc.abstractmethod
     def add_constraints(self, cons: List[_GeneralConstraintData]):
-        pass
+        """
+        Add constraints to the model
+        """
 
     @abc.abstractmethod
     def add_block(self, block: _BlockData):
-        pass
+        """
+        Add a block to the model
+        """
 
     @abc.abstractmethod
     def remove_variables(self, variables: List[_GeneralVarData]):
-        pass
+        """
+        Remove variables from the model
+        """
 
     @abc.abstractmethod
     def remove_params(self, params: List[_ParamData]):
-        pass
+        """
+        Remove parameters from the model
+        """
 
     @abc.abstractmethod
     def remove_constraints(self, cons: List[_GeneralConstraintData]):
-        pass
+        """
+        Remove constraints from the model
+        """
 
     @abc.abstractmethod
     def remove_block(self, block: _BlockData):
-        pass
+        """
+        Remove a block from the model
+        """
 
     @abc.abstractmethod
     def set_objective(self, obj: _GeneralObjectiveData):
-        pass
+        """
+        Set current objective for the model
+        """
 
     @abc.abstractmethod
     def update_variables(self, variables: List[_GeneralVarData]):
-        pass
+        """
+        Update variables on the model
+        """
 
     @abc.abstractmethod
     def update_params(self):
-        pass
+        """
+        Update parameters on the model
+        """
 
 
 class LegacySolverInterface:
@@ -331,6 +368,10 @@ class LegacySolverInterface:
     Class to map the new solver interface features into the legacy solver
     interface. Necessary for backwards compatibility.
     """
+
+    def __init__(self):
+        self.original_config = self.config
+        self.config = self.config()
 
     def solve(
         self,
@@ -347,7 +388,15 @@ class LegacySolverInterface:
         keepfiles: bool = False,
         symbolic_solver_labels: bool = False,
     ):
-        original_config = self.config
+        """
+        Solve method: maps new solve method style to backwards compatible version.
+
+        Returns
+        -------
+        legacy_results
+            Legacy results object
+
+        """
         self.config = self.config()
         self.config.tee = tee
         self.config.load_solution = load_solutions
@@ -401,10 +450,10 @@ class LegacySolverInterface:
             legacy_soln.gap = None
 
         symbol_map = SymbolMap()
-        symbol_map.byObject = dict(self.symbol_map.byObject)
-        symbol_map.bySymbol = dict(self.symbol_map.bySymbol)
-        symbol_map.aliases = dict(self.symbol_map.aliases)
-        symbol_map.default_labeler = self.symbol_map.default_labeler
+        symbol_map.byObject = dict(symbol_map.byObject)
+        symbol_map.bySymbol = dict(symbol_map.bySymbol)
+        symbol_map.aliases = dict(symbol_map.aliases)
+        symbol_map.default_labeler = symbol_map.default_labeler
         model.solutions.add_symbol_map(symbol_map)
         legacy_results._smap_id = id(symbol_map)
 
@@ -439,12 +488,16 @@ class LegacySolverInterface:
         if delete_legacy_soln:
             legacy_results.solution.delete(0)
 
-        self.config = original_config
+        self.config = self.original_config
         self.options = original_options
 
         return legacy_results
 
     def available(self, exception_flag=True):
+        """
+        Returns a bool determining whether the requested solver is available
+        on the system.
+        """
         ans = super().available()
         if exception_flag and not ans:
             raise ApplicationError(f'Solver {self.__class__} is not available ({ans}).')
@@ -468,6 +521,14 @@ class LegacySolverInterface:
 
     @property
     def options(self):
+        """
+        Read the options for the dictated solver.
+
+        NOTE: Only the set of solvers for which the LegacySolverInterface is compatible
+        are accounted for within this property.
+        Not all solvers are currently covered by this backwards compatibility
+        class.
+        """
         for solver_name in ['gurobi', 'ipopt', 'cplex', 'cbc', 'highs']:
             if hasattr(self, solver_name + '_options'):
                 return getattr(self, solver_name + '_options')
@@ -475,6 +536,9 @@ class LegacySolverInterface:
 
     @options.setter
     def options(self, val):
+        """
+        Set the options for the dictated solver.
+        """
         found = False
         for solver_name in ['gurobi', 'ipopt', 'cplex', 'cbc', 'highs']:
             if hasattr(self, solver_name + '_options'):

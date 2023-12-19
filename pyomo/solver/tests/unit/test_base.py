@@ -63,7 +63,6 @@ class TestPersistentSolverBase(unittest.TestCase):
     def test_persistent_solver_base(self):
         self.instance = base.PersistentSolverBase()
         self.assertTrue(self.instance.is_persistent())
-        self.assertEqual(self.instance.get_primals(), None)
         self.assertEqual(self.instance.update_config, None)
         self.assertEqual(self.instance.set_instance(None), None)
         self.assertEqual(self.instance.add_variables(None), None)
@@ -77,6 +76,9 @@ class TestPersistentSolverBase(unittest.TestCase):
         self.assertEqual(self.instance.set_objective(None), None)
         self.assertEqual(self.instance.update_variables(None), None)
         self.assertEqual(self.instance.update_params(), None)
+
+        with self.assertRaises(NotImplementedError):
+            self.instance.get_primals()
 
         with self.assertRaises(NotImplementedError):
             self.instance.get_duals()
