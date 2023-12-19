@@ -173,7 +173,7 @@ class PersistentSolverUtils(abc.ABC):
 
     def set_instance(self, model):
         saved_update_config = self.update_config
-        self.__init__()
+        self.__init__(only_child_vars=self._only_child_vars)
         self.update_config = saved_update_config
         self._model = model
         self.add_block(model)
@@ -632,17 +632,17 @@ class PersistentSolverUtils(abc.ABC):
             vars_to_update = []
             for v in vars_to_check:
                 _v, lb, ub, fixed, domain_interval, value = self._vars[id(v)]
-                if lb is not v._lb:
-                    vars_to_update.append(v)
-                elif ub is not v._ub:
-                    vars_to_update.append(v)
-                elif (fixed is not v.fixed) or (fixed and (value != v.value)):
+                if (fixed != v.fixed) or (fixed and (value != v.value)):
                     vars_to_update.append(v)
                     if self.update_config.treat_fixed_vars_as_params:
                         for c in self._referenced_variables[id(v)][0]:
                             cons_to_remove_and_add[c] = None
                         if self._referenced_variables[id(v)][2] is not None:
                             need_to_set_objective = True
+                elif lb is not v._lb:
+                    vars_to_update.append(v)
+                elif ub is not v._ub:
+                    vars_to_update.append(v)
                 elif domain_interval != v.domain.get_interval():
                     vars_to_update.append(v)
             self.update_variables(vars_to_update)
