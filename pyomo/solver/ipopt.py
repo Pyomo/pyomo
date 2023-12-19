@@ -20,6 +20,7 @@ from pyomo.common import Executable
 from pyomo.common.config import ConfigValue, NonNegativeInt, NonNegativeFloat
 from pyomo.common.errors import PyomoException
 from pyomo.common.tempfiles import TempfileManager
+from pyomo.core.base import Objective
 from pyomo.core.base.label import NumericLabeler
 from pyomo.repn.plugins.nl_writer import NLWriter, NLWriterInfo, AMPLRepn
 from pyomo.solver.base import SolverBase, SymbolMap
@@ -390,7 +391,14 @@ class ipopt(SolverBase):
             ):
                 model.rc.update(results.solution_loader.get_reduced_costs())
 
-        if results.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}:
+        if results.solution_status in {
+            SolutionStatus.feasible,
+            SolutionStatus.optimal,
+        } and len(
+            list(
+                model.component_data_objects(Objective, descend_into=True, active=True)
+            )
+        ):
             if config.load_solution:
                 results.incumbent_objective = value(nl_info.objectives[0])
             else:

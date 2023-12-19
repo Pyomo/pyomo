@@ -430,14 +430,15 @@ class LegacySolverInterface:
         legacy_results.solver.termination_message = str(results.termination_condition)
 
         obj = get_objective(model)
-        legacy_results.problem.sense = obj.sense
+        if obj:
+            legacy_results.problem.sense = obj.sense
 
-        if obj.sense == minimize:
-            legacy_results.problem.lower_bound = results.objective_bound
-            legacy_results.problem.upper_bound = results.incumbent_objective
-        else:
-            legacy_results.problem.upper_bound = results.objective_bound
-            legacy_results.problem.lower_bound = results.incumbent_objective
+            if obj.sense == minimize:
+                legacy_results.problem.lower_bound = results.objective_bound
+                legacy_results.problem.upper_bound = results.incumbent_objective
+            else:
+                legacy_results.problem.upper_bound = results.objective_bound
+                legacy_results.problem.lower_bound = results.incumbent_objective
         if (
             results.incumbent_objective is not None
             and results.objective_bound is not None
