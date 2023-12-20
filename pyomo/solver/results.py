@@ -40,8 +40,6 @@ class SolverResultsError(PyomoException):
     General exception to catch solver system errors
     """
 
-    pass
-
 
 class TerminationCondition(enum.Enum):
     """

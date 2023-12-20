@@ -369,6 +369,10 @@ class LegacySolverInterface:
     interface. Necessary for backwards compatibility.
     """
 
+    def set_config(self, config):
+        # TODO: Make a mapping from new config -> old config
+        pass
+
     def solve(
         self,
         model: _BlockData,
@@ -430,7 +434,7 @@ class LegacySolverInterface:
         legacy_results.solver.termination_message = str(results.termination_condition)
 
         obj = get_objective(model)
-        if obj:
+        if len(list(obj)) > 0:
             legacy_results.problem.sense = obj.sense
 
             if obj.sense == minimize:
