@@ -113,7 +113,7 @@ class ComponentMap(AutoSlots.Mixin, collections_MutableMapping):
             self_val = self._dict[other_id][1]
             # Note: check "is" first to help avoid creation of Pyomo
             # expressions (for the case that the values contain the same
-            # pyomo component)
+            # Pyomo component)
             if self_val is not val and self_val != val:
                 return False
         return True

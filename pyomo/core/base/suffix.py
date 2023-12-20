@@ -199,10 +199,10 @@ class Suffix(ComponentMap, ActiveComponent):
         self._datatype = None
         self._rule = None
 
-        # The suffix direction (note the setter performs error chrcking)
+        # The suffix direction (note the setter performs error checking)
         self.direction = kwargs.pop('direction', Suffix.LOCAL)
 
-        # The suffix datatype (note the setter performs error chrcking)
+        # The suffix datatype (note the setter performs error checking)
         self.datatype = kwargs.pop('datatype', Suffix.FLOAT)
 
         # The suffix construction rule
