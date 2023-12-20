@@ -268,8 +268,8 @@ class ipopt(SolverBase):
         self._writer.config.linear_presolve = config.presolve
         if config.threads:
             logger.log(
-                logging.INFO,
-                msg="The `threads` option was utilized, but this has not yet been implemented for {self.__class__}.",
+                logging.WARNING,
+                msg=f"The `threads` option was specified, but this has not yet been implemented for {self.__class__}.",
             )
         results = ipoptResults()
         with TempfileManager.new_context() as tempfile:
