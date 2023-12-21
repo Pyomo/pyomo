@@ -627,8 +627,15 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                     if lower_M is None:
                         scratch.obj.expr = constraint.body - constraint.lower
                         scratch.obj.sense = minimize
-                        results = self._config.solver.solve(other_disjunct)
-                        if (
+                        results = self._config.solver.solve(other_disjunct,
+                                                            load_solutions=False)
+                        if (results.solver.termination_condition is 
+                            TerminationCondition.infeasible):
+                            logger.debug("Disjunct '%s' is infeasible, deactivating."
+                                         % other_disjunct.name)
+                            other_disjunct.deactivate()
+                            lower_M = 0
+                        elif (
                             results.solver.termination_condition
                             is not TerminationCondition.optimal
                         ):
@@ -638,14 +645,23 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                                 "Disjunct '%s' is selected."
                                 % (constraint.name, disjunct.name, other_disjunct.name)
                             )
-                        lower_M = value(scratch.obj.expr)
+                        else:
+                            other_disjunct.solutions.load_from(results)
+                            lower_M = value(scratch.obj.expr)
                 if constraint.upper is not None and upper_M is None:
                     # last resort: calculate
                     if upper_M is None:
                         scratch.obj.expr = constraint.body - constraint.upper
                         scratch.obj.sense = maximize
-                        results = self._config.solver.solve(other_disjunct)
-                        if (
+                        results = self._config.solver.solve(other_disjunct,
+                                                            load_solutions=False)
+                        if (results.solver.termination_condition is 
+                            TerminationCondition.infeasible):
+                            logger.debug("Disjunct '%s' is infeasible, deactivating."
+                                         % other_disjunct.name)
+                            other_disjunct.deactivate()
+                            upper_M = 0
+                        elif (
                             results.solver.termination_condition
                             is not TerminationCondition.optimal
                         ):
@@ -655,7 +671,9 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                                 "Disjunct '%s' is selected."
                                 % (constraint.name, disjunct.name, other_disjunct.name)
                             )
-                        upper_M = value(scratch.obj.expr)
+                        else:
+                            other_disjunct.solutions.load_from(results)
+                            upper_M = value(scratch.obj.expr)
                 arg_Ms[constraint, other_disjunct] = (lower_M, upper_M)
                 transBlock._mbm_values[constraint, other_disjunct] = (lower_M, upper_M)
 
