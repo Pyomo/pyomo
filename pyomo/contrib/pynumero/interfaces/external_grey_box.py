@@ -45,6 +45,10 @@ Note: To solve a Pyomo model that contains these external models
       we have a specialized interface built on PyNumero that provides
       an interface to the CyIpopt solver.
 
+constraints: c(x) = 0
+outputs: y = c(x)
+
+
 To use this interface:
    * Create a class that is derived from ExternalGreyBoxModel and
      implement the necessary methods. This derived class must provide
