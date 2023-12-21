@@ -1158,8 +1158,13 @@ class DocplexWriter(object):
                 RangeSet,
                 Port,
             },
-            targets={Objective, Constraint, LogicalConstraint, IntervalVar,
-                     SequenceVar},
+            targets={
+                Objective,
+                Constraint,
+                LogicalConstraint,
+                IntervalVar,
+                SequenceVar,
+            },
         )
         if unknown:
             raise ValueError(
