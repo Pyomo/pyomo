@@ -19,8 +19,10 @@ import sys
 from setuptools import setup, find_packages, Command
 
 try:
+    # This works beginning in setuptools 40.7.0 (27 Jan 2019)
     from setuptools import DistutilsOptionError
 except ImportError:
+    # Needed for setuptools prior to 40.7.0
     from distutils.errors import DistutilsOptionError
 
 
