@@ -31,6 +31,7 @@ from pyomo.contrib.cp.interval_var import (
     IndexedIntervalVar,
 )
 from pyomo.contrib.cp.sequence_var import (
+    SequenceVar,
     ScalarSequenceVar,
     IndexedSequenceVar,
     _SequenceVarData,
@@ -1157,7 +1158,8 @@ class DocplexWriter(object):
                 RangeSet,
                 Port,
             },
-            targets={Objective, Constraint, LogicalConstraint, IntervalVar},
+            targets={Objective, Constraint, LogicalConstraint, IntervalVar,
+                     SequenceVar},
         )
         if unknown:
             raise ValueError(
@@ -1386,6 +1388,10 @@ class CPOptimizerSolver(object):
                     )
                 else:
                     sol = sol.get_value()
+                if py_var.ctype is SequenceVar:
+                    # They don't actually have values--the IntervalVars will get
+                    # set.
+                    continue
                 if py_var.ctype is IntervalVar:
                     if len(sol) == 0:
                         # The interval_var is absent

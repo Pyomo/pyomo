@@ -12,7 +12,10 @@
 import pyomo.common.unittest as unittest
 from pyomo.common.fileutils import Executable
 
-from pyomo.contrib.cp import IntervalVar, Pulse, Step, AlwaysIn
+from pyomo.contrib.cp import (
+    IntervalVar, SequenceVar, Pulse, Step, AlwaysIn,
+    first_in_sequence, predecessor_to, no_overlap
+)
 from pyomo.contrib.cp.repn.docplex_writer import LogicalToDoCplex
 from pyomo.environ import (
     all_different,
@@ -360,7 +363,6 @@ class TestSolveModel(unittest.TestCase):
             results.solver.termination_condition, TerminationCondition.optimal
         )
         self.assertEqual(value(m.obj), perfect)
-        m.person_name.pprint()
         self.assertEqual(value(m.person_name['P1']), 0)
         self.assertEqual(value(m.person_name['P2']), 1)
         self.assertEqual(value(m.person_name['P3']), 2)
@@ -392,3 +394,24 @@ class TestSolveModel(unittest.TestCase):
             results.solver.termination_condition, TerminationCondition.optimal
         )
         self.assertEqual(value(m.obj), perfect)
+
+    def test_scheduling_with_sequence_vars(self):
+        m = ConcreteModel()
+        m.Steps = Set(initialize=[1, 2, 3])
+        def length_rule(m, j):
+            return 2*j
+        m.i = IntervalVar(m.Steps, start=(0, 12), end=(0, 12), length=length_rule)
+        m.seq = SequenceVar(expr=[m.i[j] for j in m.Steps])
+        m.first = LogicalConstraint(expr=first_in_sequence(m.i[1], m.seq))
+        m.seq_order1 = LogicalConstraint(expr=predecessor_to(m.i[1], m.i[2], m.seq))
+        m.seq_order2 = LogicalConstraint(expr=predecessor_to(m.i[2], m.i[3], m.seq))
+        m.no_ovlerpa = LogicalConstraint(expr=no_overlap(m.seq))
+
+        results = SolverFactory('cp_optimizer').solve(m)
+        self.assertEqual(
+            results.solver.termination_condition, TerminationCondition.feasible
+        )
+        self.assertEqual(value(m.i[1].start_time), 0)
+        self.assertEqual(value(m.i[2].start_time), 2)
+        self.assertEqual(value(m.i[3].start_time), 6)
+                                    
