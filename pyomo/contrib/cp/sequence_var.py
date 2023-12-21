@@ -91,7 +91,7 @@ class SequenceVar(ActiveIndexedComponent):
         obj._index = index
 
         if self._init_rule is not None:
-            obj.set_value(self._init_rule(parent, index))
+            obj.set_value(self._init_rule(parent, *index))
         if self._init_expr is not None:
             obj.set_value(self._init_expr)
 
