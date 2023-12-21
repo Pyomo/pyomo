@@ -627,12 +627,17 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                     if lower_M is None:
                         scratch.obj.expr = constraint.body - constraint.lower
                         scratch.obj.sense = minimize
-                        results = self._config.solver.solve(other_disjunct,
-                                                            load_solutions=False)
-                        if (results.solver.termination_condition is 
-                            TerminationCondition.infeasible):
-                            logger.debug("Disjunct '%s' is infeasible, deactivating."
-                                         % other_disjunct.name)
+                        results = self._config.solver.solve(
+                            other_disjunct, load_solutions=False
+                        )
+                        if (
+                            results.solver.termination_condition
+                            is TerminationCondition.infeasible
+                        ):
+                            logger.debug(
+                                "Disjunct '%s' is infeasible, deactivating."
+                                % other_disjunct.name
+                            )
                             other_disjunct.deactivate()
                             lower_M = 0
                         elif (
@@ -653,12 +658,17 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                     if upper_M is None:
                         scratch.obj.expr = constraint.body - constraint.upper
                         scratch.obj.sense = maximize
-                        results = self._config.solver.solve(other_disjunct,
-                                                            load_solutions=False)
-                        if (results.solver.termination_condition is 
-                            TerminationCondition.infeasible):
-                            logger.debug("Disjunct '%s' is infeasible, deactivating."
-                                         % other_disjunct.name)
+                        results = self._config.solver.solve(
+                            other_disjunct, load_solutions=False
+                        )
+                        if (
+                            results.solver.termination_condition
+                            is TerminationCondition.infeasible
+                        ):
+                            logger.debug(
+                                "Disjunct '%s' is infeasible, deactivating."
+                                % other_disjunct.name
+                            )
                             other_disjunct.deactivate()
                             upper_M = 0
                         elif (

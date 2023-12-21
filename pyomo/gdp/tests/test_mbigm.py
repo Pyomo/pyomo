@@ -50,6 +50,7 @@ gurobi_available = (
 )
 exdir = normpath(join(PYOMO_ROOT_DIR, 'examples', 'gdp'))
 
+
 class CommonTests(unittest.TestCase):
     def check_pretty_bound_constraints(self, cons, var, bounds, lb):
         self.assertEqual(value(cons.upper), 0)
@@ -66,6 +67,7 @@ class CommonTests(unittest.TestCase):
             check_linear_coef(self, repn, var, 1)
             for disj, bnd in bounds.items():
                 check_linear_coef(self, repn, disj.binary_indicator_var, -bnd)
+
 
 class LinearModelDecisionTreeExample(CommonTests):
     def make_model(self):
@@ -494,7 +496,7 @@ class LinearModelDecisionTreeExample(CommonTests):
         self.check_untightened_bounds_constraint(
             cons[1], m.x2, m.d2, m.disjunction, {m.d1: 3, m.d3: 110}, upper=10
         )
-        
+
     # TODO: If Suffixes allow tuple keys then we can support them and it will
     # look something like this:
     # def test_Ms_specified_as_suffixes_honored(self):
@@ -877,6 +879,7 @@ class NestedDisjunctsInFlatGDP(unittest.TestCase):
     def test_declare_disjuncts_in_disjunction_rule(self):
         check_nested_disjuncts_in_flat_gdp(self, 'bigm')
 
+
 class IndexedDisjunctiveConstraints(CommonTests):
     def test_empty_constraint_container_on_Disjunct(self):
         m = ConcreteModel()
@@ -889,17 +892,12 @@ class IndexedDisjunctiveConstraints(CommonTests):
 
         mbm = TransformationFactory('gdp.mbigm')
         mbm.apply_to(m)
-        
+
         cons = mbm.get_transformed_constraints(m.e.c)
         self.assertEqual(len(cons), 2)
-        self.check_pretty_bound_constraints(
-            cons[0], m.x, {m.d: 2, m.e: 2.7}, lb=True
-        
-        )
-        self.check_pretty_bound_constraints(
-            cons[1], m.x, {m.d: 3, m.e: 2.7}, lb=False
-        )
-        
+        self.check_pretty_bound_constraints(cons[0], m.x, {m.d: 2, m.e: 2.7}, lb=True)
+        self.check_pretty_bound_constraints(cons[1], m.x, {m.d: 3, m.e: 2.7}, lb=False)
+
 
 @unittest.skipUnless(gurobi_available, "Gurobi is not available")
 class IndexedDisjunction(unittest.TestCase):
@@ -955,17 +953,20 @@ class IndexedDisjunction(unittest.TestCase):
         self.assertIs(cons_again[0], cons[0])
         self.assertIs(cons_again[1], cons[1])
 
+
 class EdgeCases(unittest.TestCase):
     @unittest.skipUnless(gurobi_available, "Gurobi is not available")
     def test_calculate_Ms_infeasible_Disjunct(self):
         m = ConcreteModel()
         m.x = Var(bounds=(1, 12))
         m.y = Var(bounds=(19, 22))
-        m.disjunction = Disjunction(expr=[
-            [m.x >= 3 + m.y, m.y == 19.75], # infeasible given bounds
-            [m.y >= 21 + m.x], # unique solution
-            [m.x == m.y - 9], # x in interval [10, 12]
-        ])
+        m.disjunction = Disjunction(
+            expr=[
+                [m.x >= 3 + m.y, m.y == 19.75],  # infeasible given bounds
+                [m.y >= 21 + m.x],  # unique solution
+                [m.x == m.y - 9],  # x in interval [10, 12]
+            ]
+        )
 
         out = StringIO()
         mbm = TransformationFactory('gdp.mbigm')
@@ -982,33 +983,33 @@ class EdgeCases(unittest.TestCase):
         self.assertFalse(m.disjunction.disjuncts[0].active)
         self.assertTrue(m.disjunction.disjuncts[0].indicator_var.fixed)
         self.assertFalse(value(m.disjunction.disjuncts[0].indicator_var))
-        
+
         # the remaining constraints are transformed correctly.
-        cons = mbm.get_transformed_constraints(
-            m.disjunction.disjuncts[1].constraint[1])
+        cons = mbm.get_transformed_constraints(m.disjunction.disjuncts[1].constraint[1])
         self.assertEqual(len(cons), 1)
         assertExpressionsEqual(
             self,
             cons[0].expr,
-            21 + m.x - m.y <= 0*m.disjunction.disjuncts[0].binary_indicator_var +
-            12.0*m.disjunction.disjuncts[2].binary_indicator_var
+            21 + m.x - m.y
+            <= 0 * m.disjunction.disjuncts[0].binary_indicator_var
+            + 12.0 * m.disjunction.disjuncts[2].binary_indicator_var,
         )
 
-        cons = mbm.get_transformed_constraints(
-            m.disjunction.disjuncts[2].constraint[1])
+        cons = mbm.get_transformed_constraints(m.disjunction.disjuncts[2].constraint[1])
         self.assertEqual(len(cons), 2)
         print(cons[0].expr)
         print(cons[1].expr)
         assertExpressionsEqual(
             self,
             cons[0].expr,
-            0.0*m.disjunction_disjuncts[0].binary_indicator_var -
-            12.0*m.disjunction_disjuncts[1].binary_indicator_var <= m.x - (m.y - 9)
+            0.0 * m.disjunction_disjuncts[0].binary_indicator_var
+            - 12.0 * m.disjunction_disjuncts[1].binary_indicator_var
+            <= m.x - (m.y - 9),
         )
         assertExpressionsEqual(
             self,
             cons[1].expr,
-            m.x - (m.y - 9) <= 0.0*m.disjunction_disjuncts[0].binary_indicator_var -
-            12.0*m.disjunction_disjuncts[1].binary_indicator_var
+            m.x - (m.y - 9)
+            <= 0.0 * m.disjunction_disjuncts[0].binary_indicator_var
+            - 12.0 * m.disjunction_disjuncts[1].binary_indicator_var,
         )
- 
