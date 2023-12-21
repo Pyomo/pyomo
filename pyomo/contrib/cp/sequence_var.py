@@ -18,6 +18,7 @@ from pyomo.core import ModelComponentFactory
 from pyomo.core.base.component import ActiveComponentData
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import ActiveIndexedComponent
+from pyomo.core.base.initializer import Initializer
 
 import sys
 from weakref import ref as weakref_ref
@@ -72,7 +73,7 @@ class SequenceVar(ActiveIndexedComponent):
             return IndexedSequenceVar.__new__(IndexedSequenceVar)
 
     def __init__(self, *args, **kwargs):
-        self._init_rule = kwargs.pop('rule', None)
+        self._init_rule = Initializer(kwargs.pop('rule', None))
         self._init_expr = kwargs.pop('expr', None)
         kwargs.setdefault('ctype', SequenceVar)
         super(SequenceVar, self).__init__(*args, **kwargs)
@@ -91,7 +92,7 @@ class SequenceVar(ActiveIndexedComponent):
         obj._index = index
 
         if self._init_rule is not None:
-            obj.set_value(self._init_rule(parent, *index))
+            obj.set_value(self._init_rule(parent, index))
         if self._init_expr is not None:
             obj.set_value(self._init_expr)
 
