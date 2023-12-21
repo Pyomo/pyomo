@@ -405,7 +405,6 @@ class WalkerTests(unittest.TestCase):
         )
 
         del M.w
-        del M.w_index
         M.w = VarList()
         e = 2 * sum_product(M.z, M.x)
         walker = ReplacementWalkerTest1(M)

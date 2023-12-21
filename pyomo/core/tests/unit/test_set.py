@@ -993,9 +993,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             i = SetOf([1, 2, 3])
-            self.assertEqual(output.getvalue(), "")
-            i.construct()
-            ref = 'Constructing SetOf, name=OrderedSetOf, from data=None\n'
+            ref = 'Constructing SetOf, name=[1, 2, 3], from data=None\n'
             self.assertEqual(output.getvalue(), ref)
             # Calling construct() twice bypasses construction the second
             # time around
@@ -1811,7 +1809,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 class Test_SetOperator(unittest.TestCase):
     def test_construct(self):
         p = Param(initialize=3)
-        a = RangeSet(p)
+        a = RangeSet(p, name='a')
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             i = a * a
@@ -1820,12 +1818,9 @@ class Test_SetOperator(unittest.TestCase):
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             i.construct()
             ref = (
-                'Constructing SetOperator, name=SetProduct_OrderedSet, '
-                'from data=None\n'
-                'Constructing RangeSet, name=FiniteScalarRangeSet, '
-                'from data=None\n'
-                'Constructing Set, name=SetProduct_OrderedSet, '
-                'from data=None\n'
+                'Constructing SetOperator, name=a*a, from data=None\n'
+                'Constructing Set, name=a*a, from data=None\n'
+                'Constructing RangeSet, name=a, from data=None\n'
             )
             self.assertEqual(output.getvalue(), ref)
             # Calling construct() twice bypasses construction the second
@@ -1937,8 +1932,8 @@ class TestSetUnion(unittest.TestCase):
         m.A.pprint(ostream=output)
         ref = """
 A : Size=1, Index=None, Ordered=True
-    Key  : Dimen : Domain        : Size : Members
-    None :     1 : I | A_index_0 :    4 : {1, 2, 3, 4}
+    Key  : Dimen : Domain     : Size : Members
+    None :     1 : I | {3, 4} :    4 : {1, 2, 3, 4}
 """.strip()
         self.assertEqual(output.getvalue().strip(), ref)
 
@@ -2213,8 +2208,8 @@ class TestSetIntersection(unittest.TestCase):
         m.A.pprint(ostream=output)
         ref = """
 A : Size=1, Index=None, Ordered=True
-    Key  : Dimen : Domain        : Size : Members
-    None :     1 : I & A_index_0 :    0 :      {}
+    Key  : Dimen : Domain     : Size : Members
+    None :     1 : I & {3, 4} :    0 :      {}
 """.strip()
         self.assertEqual(output.getvalue().strip(), ref)
 
@@ -2491,8 +2486,8 @@ class TestSetDifference(unittest.TestCase):
         m.A.pprint(ostream=output)
         ref = """
 A : Size=1, Index=None, Ordered=True
-    Key  : Dimen : Domain        : Size : Members
-    None :     1 : I - A_index_0 :    2 : {1, 2}
+    Key  : Dimen : Domain     : Size : Members
+    None :     1 : I - {3, 4} :    2 : {1, 2}
 """.strip()
         self.assertEqual(output.getvalue().strip(), ref)
 
@@ -2720,8 +2715,8 @@ class TestSetSymmetricDifference(unittest.TestCase):
         m.A.pprint(ostream=output)
         ref = """
 A : Size=1, Index=None, Ordered=True
-    Key  : Dimen : Domain        : Size : Members
-    None :     1 : I ^ A_index_0 :    4 : {1, 2, 3, 4}
+    Key  : Dimen : Domain     : Size : Members
+    None :     1 : I ^ {3, 4} :    4 : {1, 2, 3, 4}
 """.strip()
         self.assertEqual(output.getvalue().strip(), ref)
 
@@ -2982,8 +2977,8 @@ class TestSetProduct(unittest.TestCase):
         m.A.pprint(ostream=output)
         ref = """
 A : Size=1, Index=None, Ordered=True
-    Key  : Dimen : Domain      : Size : Members
-    None :     2 : I*A_index_0 :    4 : {(1, 3), (1, 4), (2, 3), (2, 4)}
+    Key  : Dimen : Domain   : Size : Members
+    None :     2 : I*{3, 4} :    4 : {(1, 3), (1, 4), (2, 3), (2, 4)}
 """.strip()
         self.assertEqual(output.getvalue().strip(), ref)
 
@@ -4406,17 +4401,17 @@ class TestSet(unittest.TestCase):
         self.assertEqual(list(m.I), [0, 2.0, 4])
         with self.assertRaisesRegex(
             ValueError,
-            'The value is not in the domain ' r'\(Integers & I_domain_index_0_index_1',
+            r'The value is not in the domain \(Integers & \[0:inf:2\]\) & \[0..9\]',
         ):
             m.I.add(1.5)
         with self.assertRaisesRegex(
             ValueError,
-            'The value is not in the domain ' r'\(Integers & I_domain_index_0_index_1',
+            r'The value is not in the domain \(Integers & \[0:inf:2\]\) & \[0..9\]',
         ):
             m.I.add(1)
         with self.assertRaisesRegex(
             ValueError,
-            'The value is not in the domain ' r'\(Integers & I_domain_index_0_index_1',
+            r'The value is not in the domain \(Integers & \[0:inf:2\]\) & \[0..9\]',
         ):
             m.I.add(10)
 
@@ -4454,8 +4449,8 @@ class TestSet(unittest.TestCase):
         Key  : Dimen : Domain : Size : Members
         None :     2 :    Any :    2 : {(3, 4), (1, 2)}
     M : Size=1, Index=None, Ordered=False
-        Key  : Dimen : Domain            : Size : Members
-        None :     1 : Reals - M_index_1 :  Inf : ([-inf..0) | (0..inf])
+        Key  : Dimen : Domain      : Size : Members
+        None :     1 : Reals - [0] :  Inf : ([-inf..0) | (0..inf])
     N : Size=1, Index=None, Ordered=False
         Key  : Dimen : Domain           : Size : Members
         None :     1 : Integers - Reals :  Inf :      []
@@ -4465,12 +4460,7 @@ class TestSet(unittest.TestCase):
         Key  : Finite : Members
         None :   True :   [1:3]
 
-1 SetOf Declarations
-    M_index_1 : Dimen=1, Size=1, Bounds=(0, 0)
-        Key  : Ordered : Members
-        None :    True :     [0]
-
-8 Declarations: I_index I J K L M_index_1 M N""".strip(),
+7 Declarations: I_index I J K L M N""".strip(),
         )
 
     def test_pickle(self):
@@ -4556,11 +4546,11 @@ class TestSet(unittest.TestCase):
         ref = """
 I : Size=0, Index=None, Ordered=Insertion
     Not constructed
-II : Size=0, Index=II_index, Ordered=Insertion
+II : Size=0, Index={1, 2, 3}, Ordered=Insertion
     Not constructed
 J : Size=0, Index=None, Ordered=Insertion
     Not constructed
-JJ : Size=0, Index=JJ_index, Ordered=Insertion
+JJ : Size=0, Index={1, 2, 3}, Ordered=Insertion
     Not constructed""".strip()
         self.assertEqual(output.getvalue().strip(), ref)
 
@@ -4827,7 +4817,7 @@ I : Size=1, Index=None, Ordered=Insertion
         output = StringIO()
         m.I.pprint(ostream=output)
         ref = """
-I : Size=2, Index=I_index, Ordered=Insertion
+I : Size=2, Index={1, 2, 3, 4, 5}, Ordered=Insertion
     Key : Dimen : Domain : Size : Members
       2 :     1 :    Any :    2 : {0, 1}
       4 :     1 :    Any :    4 : {0, 1, 2, 3}
@@ -6301,14 +6291,11 @@ c : Size=3, Index=CHOICES, Active=True
             output = StringIO()
             m.pprint(ostream=output)
             ref = """
-3 Set Declarations
+2 Set Declarations
     arc_keys : Set of arcs
         Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain          : Size : Members
-        None :     2 : arc_keys_domain :    2 : {(0, 0), (0, 1)}
-    arc_keys_domain : Size=1, Index=None, Ordered=True
         Key  : Dimen : Domain              : Size : Members
-        None :     2 : node_keys*node_keys :    4 : {(0, 0), (0, 1), (1, 0), (1, 1)}
+        None :     2 : node_keys*node_keys :    2 : {(0, 0), (0, 1)}
     node_keys : Set of nodes
         Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
@@ -6325,7 +6312,7 @@ c : Size=3, Index=CHOICES, Active=True
         Key  : Active : Sense    : Expression
         None :   True : minimize : arc_variables[0,0] + arc_variables[0,1]
 
-5 Declarations: node_keys arc_keys_domain arc_keys arc_variables obj
+4 Declarations: node_keys arc_keys arc_variables obj
 """.strip()
             self.assertEqual(output.getvalue().strip(), ref)
 
@@ -6334,18 +6321,15 @@ c : Size=3, Index=CHOICES, Active=True
             output = StringIO()
             m.pprint(ostream=output)
             ref = """
-3 Set Declarations
+2 Set Declarations
     arc_keys : Set of arcs
         Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain          : Size : Members
-        None :  None : arc_keys_domain :    2 : {ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=0)), ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=1))}
-    arc_keys_domain : Size=1, Index=None, Ordered=True
         Key  : Dimen : Domain              : Size : Members
-        None :  None : node_keys*node_keys :    4 : {(NodeKey(id=0), NodeKey(id=0)), (NodeKey(id=0), NodeKey(id=1)), (NodeKey(id=1), NodeKey(id=0)), (NodeKey(id=1), NodeKey(id=1))}
+        None :     2 : node_keys*node_keys :    2 : {ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=0)), ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=1))}
     node_keys : Set of nodes
         Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
-        None :  None :    Any :    2 : {NodeKey(id=0), NodeKey(id=1)}
+        None :     1 :    Any :    2 : {NodeKey(id=0), NodeKey(id=1)}
 
 1 Var Declarations
     arc_variables : Size=2, Index=arc_keys
@@ -6358,7 +6342,7 @@ c : Size=3, Index=CHOICES, Active=True
         Key  : Active : Sense    : Expression
         None :   True : minimize : arc_variables[ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=0))] + arc_variables[ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=1))]
 
-5 Declarations: node_keys arc_keys_domain arc_keys arc_variables obj
+4 Declarations: node_keys arc_keys arc_variables obj
 """.strip()
             self.assertEqual(output.getvalue().strip(), ref)
 
