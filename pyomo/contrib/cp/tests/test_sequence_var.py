@@ -153,5 +153,5 @@ seq : Size=2, Index=alphabetic
         for i in m.alphabetic:
             for j in m.numeric:
                 self.assertTrue((i, j) in m.s)
-                self.assertEqual(len(m.s[i, j]), 1)
+                self.assertEqual(len(m.s[i, j].interval_vars), 1)
                 self.assertIs(m.s[i, j].interval_vars[0], m.i[i, j])
