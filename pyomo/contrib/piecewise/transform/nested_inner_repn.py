@@ -52,8 +52,8 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearTransformationBa
 
         substitute_var = transBlock.substitute_var = Var()
         pw_linear_func.map_transformation_var(pw_expr, substitute_var)
-        substitute_var_lb = float("inf")
-        substitute_var_ub = -float("inf")
+        transBlock.substitute_var_lb = float("inf")
+        transBlock.substitute_var_ub = -float("inf")
 
         choices = list(zip(pw_linear_func._simplices, pw_linear_func._linear_functions))
 
@@ -66,7 +66,7 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearTransformationBa
             transBlock.set_substitute = Constraint(
                 expr=substitute_var == linear_func_expr
             )
-            (substitute_var_lb, substitute_var_ub) = compute_bounds_on_expr(
+            (transBlock.substitute_var_lb, transBlock.substitute_var_ub) = compute_bounds_on_expr(
                 linear_func_expr
             )
         else:
@@ -76,10 +76,10 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearTransformationBa
             )
 
         # Set bounds as determined when setting up the disjunction
-        if substitute_var_lb < float("inf"):
-            transBlock.substitute_var.setlb(substitute_var_lb)
-        if substitute_var_ub > -float("inf"):
-            transBlock.substitute_var.setub(substitute_var_ub)
+        if transBlock.substitute_var_lb < float("inf"):
+            transBlock.substitute_var.setlb(transBlock.substitute_var_lb)
+        if transBlock.substitute_var_ub > -float("inf"):
+            transBlock.substitute_var.setub(transBlock.substitute_var_ub)
 
         return substitute_var
 
@@ -178,10 +178,10 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearTransformationBa
 
         # Widen the variable bounds to those of this linear func expression
         (lb, ub) = compute_bounds_on_expr(linear_func_expr)
-        if lb is not None and lb < substitute_var_lb:
-            substitute_var_lb = lb
-        if ub is not None and ub > substitute_var_ub:
-            substitute_var_ub = ub
+        if lb is not None and lb < root_block.substitute_var_lb:
+            root_block.substitute_var_lb = lb
+        if ub is not None and ub > root_block.substitute_var_ub:
+            root_block.substitute_var_ub = ub
 
         # Constrain x = \sum \lambda_i v_i
         @b.Constraint(range(pw_expr.nargs())) # dimension
