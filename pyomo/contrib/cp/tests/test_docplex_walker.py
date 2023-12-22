@@ -1372,15 +1372,9 @@ class TestCPExpressionWalker_CumulFuncExpressions(CommonTest):
         i = visitor.var_map[id(m.i)]
 
         self.assertTrue(
-            expr[1].equals(
-                cp.always_in(
-                    cp.pulse(i, 3),
-                    interval=(0, 10),
-                    min=0,
-                    max=3,
-                )
-            )
+            expr[1].equals(cp.always_in(cp.pulse(i, 3), interval=(0, 10), min=0, max=3))
         )
+
 
 @unittest.skipIf(not docplex_available, "docplex is not available")
 class TestCPExpressionWalker_NamedExpressions(CommonTest):

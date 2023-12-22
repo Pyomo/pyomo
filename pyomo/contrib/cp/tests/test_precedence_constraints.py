@@ -177,8 +177,9 @@ class TestPrecedenceRelationships(unittest.TestCase):
     def test_end_before_start_param_delay(self):
         m = self.get_model()
         m.PrepTime = Param(initialize=5)
-        m.c = LogicalConstraint(expr=m.a.end_time.before(m.b.start_time,
-                                                         delay=m.PrepTime))
+        m.c = LogicalConstraint(
+            expr=m.a.end_time.before(m.b.start_time, delay=m.PrepTime)
+        )
         self.assertIsInstance(m.c.expr, BeforeExpression)
         self.assertEqual(len(m.c.expr.args), 3)
         self.assertIs(m.c.expr.args[0], m.a.end_time)
@@ -186,4 +187,3 @@ class TestPrecedenceRelationships(unittest.TestCase):
         self.assertIs(m.c.expr.delay, m.PrepTime)
 
         self.assertEqual(str(m.c.expr), "a.end_time + PrepTime <= b.start_time")
-
