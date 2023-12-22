@@ -81,7 +81,16 @@ def inv(xl, xu, feasibility_tol):
 
 
 def div(xl, xu, yl, yu, feasibility_tol):
-    return mul(xl, xu, *inv(yl, yu, feasibility_tol))
+    lb, ub = mul(xl, xu, *inv(yl, yu, feasibility_tol))
+    if xl >= 0 and yl >= 0:
+        lb = max(lb, 0)
+    elif xu <= 0 and yu <= 0:
+        lb = max(lb, 0)
+    elif xl >= 0 and yu <= 0:
+        ub = min(ub, 0)
+    elif xu <= 0 and yl >= 0:
+        ub = min(ub, 0)
+    return lb, ub
 
 
 def power(xl, xu, yl, yu, feasibility_tol):
