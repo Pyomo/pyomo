@@ -1223,8 +1223,6 @@ class DocplexWriter(object):
 
         # Write logical constraints
         for cons in components[LogicalConstraint]:
-            print(cons)
-            print(cons.expr)
             expr = visitor.walk_expression((cons.expr, cons, 0))
             if expr[0] is _ELEMENT_CONSTRAINT:
                 # Make the expression into a docplex-approved boolean-valued
