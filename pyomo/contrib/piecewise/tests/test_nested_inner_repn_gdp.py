@@ -17,10 +17,10 @@ from pyomo.environ import SolverFactory, Var, Constraint
 from pyomo.gdp import Disjunction, Disjunct
 from pyomo.core.expr.compare import assertExpressionsEqual
 
+
 # Test the nested inner repn gdp model using the common_tests code
 class TestTransformPiecewiseModelToNestedInnerRepnGDP(unittest.TestCase):
-
-    # Check one disjunct for proper contents. Disjunct structure should be 
+    # Check one disjunct for proper contents. Disjunct structure should be
     # identical to the version for the inner representation gdp
     def check_log_disjunct(self, d, pts, f, substitute_var, x):
         self.assertEqual(len(d.component_map(Constraint)), 3)
@@ -85,7 +85,6 @@ class TestTransformPiecewiseModelToNestedInnerRepnGDP(unittest.TestCase):
             + pts[2][1] * d.lambdas[2],
         )
 
-
     # Check the structure of the log PWLF Block
     def check_pw_log(self, m):
         z = m.pw_log.get_transformation_var(m.log_expr)
@@ -111,7 +110,9 @@ class TestTransformPiecewiseModelToNestedInnerRepnGDP(unittest.TestCase):
 
         # Left disjunct with constraints
         self.assertIsInstance(log_block.d_l, Disjunct)
-        self.check_log_disjunct(log_block.d_l, (1, 3), m.f1, log_block.substitute_var, m.x)
+        self.check_log_disjunct(
+            log_block.d_l, (1, 3), m.f1, log_block.substitute_var, m.x
+        )
 
         # Right disjunct with disjunction
         self.assertIsInstance(log_block.d_r, Disjunct)
@@ -120,9 +121,13 @@ class TestTransformPiecewiseModelToNestedInnerRepnGDP(unittest.TestCase):
 
         # Left and right child disjuncts with constraints
         self.assertIsInstance(log_block.d_r.d_l, Disjunct)
-        self.check_log_disjunct(log_block.d_r.d_l, (3, 6), m.f2, log_block.substitute_var, m.x)
+        self.check_log_disjunct(
+            log_block.d_r.d_l, (3, 6), m.f2, log_block.substitute_var, m.x
+        )
         self.assertIsInstance(log_block.d_r.d_r, Disjunct)
-        self.check_log_disjunct(log_block.d_r.d_r, (6, 10), m.f3, log_block.substitute_var, m.x)
+        self.check_log_disjunct(
+            log_block.d_r.d_r, (6, 10), m.f3, log_block.substitute_var, m.x
+        )
 
         # Check that this also became the objective
         self.assertIs(m.obj.expr.expr, log_block.substitute_var)
@@ -156,10 +161,12 @@ class TestTransformPiecewiseModelToNestedInnerRepnGDP(unittest.TestCase):
 
         # And check the substitute Var is in the objective now.
         self.assertIs(m.indexed_c[0].body.args[0].expr, paraboloid_block.substitute_var)
-    
+
     # Test methods using the common_tests.py code. Copied in from test_inner_repn_gdp.py.
     def test_transformation_do_not_descend(self):
-        ct.check_transformation_do_not_descend(self, 'contrib.piecewise.nested_inner_repn_gdp')
+        ct.check_transformation_do_not_descend(
+            self, 'contrib.piecewise.nested_inner_repn_gdp'
+        )
 
     def test_transformation_PiecewiseLinearFunction_targets(self):
         ct.check_transformation_PiecewiseLinearFunction_targets(
@@ -167,7 +174,9 @@ class TestTransformPiecewiseModelToNestedInnerRepnGDP(unittest.TestCase):
         )
 
     def test_descend_into_expressions(self):
-        ct.check_descend_into_expressions(self, 'contrib.piecewise.nested_inner_repn_gdp')
+        ct.check_descend_into_expressions(
+            self, 'contrib.piecewise.nested_inner_repn_gdp'
+        )
 
     def test_descend_into_expressions_constraint_target(self):
         ct.check_descend_into_expressions_constraint_target(

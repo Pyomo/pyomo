@@ -25,8 +25,8 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearTransformationBa
     of extreme points, with multipliers "local" to that particular polytope,
     i.e., not shared with neighbors. This method of formulating the piecewise
     linear function imposes no restrictions on the family of polytopes. Note
-    that this is NOT a logarithmic formulation - it has linearly many Boolean 
-    variables.  However, it is inspired by the disaggregated logarithmic 
+    that this is NOT a logarithmic formulation - it has linearly many Boolean
+    variables.  However, it is inspired by the disaggregated logarithmic
     formulation of [1]. Up to variable substitution, the amount of Boolean
     variables is logarithmic, as in [1].
 
@@ -66,9 +66,10 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearTransformationBa
             transBlock.set_substitute = Constraint(
                 expr=substitute_var == linear_func_expr
             )
-            (transBlock.substitute_var_lb, transBlock.substitute_var_ub) = compute_bounds_on_expr(
-                linear_func_expr
-            )
+            (
+                transBlock.substitute_var_lb,
+                transBlock.substitute_var_ub,
+            ) = compute_bounds_on_expr(linear_func_expr)
         else:
             # Add the disjunction
             transBlock.disj = self._get_disjunction(
@@ -86,7 +87,9 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearTransformationBa
     # Recursively form the Disjunctions and Disjuncts. This shouldn't blow up
     # the stack, since the whole point is that we'll only go logarithmically
     # many calls deep.
-    def _get_disjunction(self, choices, parent_block, pw_expr, pw_linear_func, root_block):
+    def _get_disjunction(
+        self, choices, parent_block, pw_expr, pw_linear_func, root_block
+    ):
         size = len(choices)
 
         # Our base cases will be 3 and 2, since it would be silly to construct
@@ -184,7 +187,7 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearTransformationBa
             root_block.substitute_var_ub = ub
 
         # Constrain x = \sum \lambda_i v_i
-        @b.Constraint(range(pw_expr.nargs())) # dimension
+        @b.Constraint(range(pw_expr.nargs()))  # dimension
         def linear_combo(d, i):
             return pw_expr.args[i] == sum(
                 d.lambdas[j] * pt[i] for j, pt in enumerate(extreme_pts)

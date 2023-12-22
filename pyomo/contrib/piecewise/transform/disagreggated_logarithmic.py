@@ -60,14 +60,12 @@ class DisaggregatedLogarithmicInnerMIPTransformation(PiecewiseLinearTransformati
         simplices = pw_linear_func._simplices
         num_simplices = len(simplices)
         transBlock.simplex_indices = RangeSet(0, num_simplices - 1)
-        # Assumption: the simplices are really full-dimensional simplices and all have the 
+        # Assumption: the simplices are really full-dimensional simplices and all have the
         # same number of points, which is dimension + 1
         transBlock.simplex_point_indices = RangeSet(0, dimension)
 
         # Enumeration of simplices: map from simplex number to simplex object
-        idx_to_simplex = {
-            k: v for k, v in zip(transBlock.simplex_indices, simplices)
-        }
+        idx_to_simplex = {k: v for k, v in zip(transBlock.simplex_indices, simplices)}
 
         # List of tuples of simplex indices with their linear function
         simplex_indices_and_lin_funcs = list(
