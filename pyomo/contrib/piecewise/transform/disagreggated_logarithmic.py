@@ -1,7 +1,7 @@
 from pyomo.contrib.piecewise.transform.piecewise_linear_transformation_base import (
     PiecewiseLinearTransformationBase,
 )
-from pyomo.core import Constraint, Binary, Var, RangeSet
+from pyomo.core import Constraint, Binary, Var, RangeSet, Set
 from pyomo.core.base import TransformationFactory
 from pyomo.common.errors import DeveloperError
 from math import ceil, log2
@@ -99,14 +99,14 @@ class DisaggregatedLogarithmicInnerMIPTransformation(PiecewiseLinearTransformati
         # Build up P_0 and P_plus ahead of time.
 
         # {P \in \mathcal{P} | B(P)_l = 0}
-        @transBlock.Set(transBlock.simplex_indices)
-        def P_0(l):
+        def P_0_init(m, l):
             return [p for p in transBlock.simplex_indices if B[p][l] == 0]
+        transBlock.P_0 = Set(transBlock.log_simplex_indices, initialize=P_0_init)
 
         # {P \in \mathcal{P} | B(P)_l = 1}
-        @transBlock.Set(transBlock.simplex_indices)
-        def P_0(l):
+        def P_plus_init(m, l):
             return [p for p in transBlock.simplex_indices if B[p][l] == 1]
+        transBlock.P_plus = Set(transBlock.log_simplex_indices, initialize=P_plus_init)
 
         # The lambda variables \lambda_{P,v} are indexed by the simplex and the point in it
         transBlock.lambdas = Var(
