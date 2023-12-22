@@ -98,6 +98,18 @@ class DisaggregatedLogarithmicInnerMIPTransformation(PiecewiseLinearTransformati
             # map index(P) -> corresponding vector in {0, 1}^n
             B[i] = self._get_binary_vector(i, log_dimension)
 
+        # Build up P_0 and P_plus ahead of time.
+
+        # {P \in \mathcal{P} | B(P)_l = 0}
+        @transBlock.Set(transBlock.simplex_indices)
+        def P_0(l):
+            return [p for p in transBlock.simplex_indices if B[p][l] == 0]
+
+        # {P \in \mathcal{P} | B(P)_l = 1}
+        @transBlock.Set(transBlock.simplex_indices)
+        def P_0(l):
+            return [p for p in transBlock.simplex_indices if B[p][l] == 1]
+
         # The lambda variables \lambda_{P,v} are indexed by the simplex and the point in it
         transBlock.lambdas = Var(
             transBlock.simplex_indices, transBlock.simplex_point_indices, bounds=(0, 1)
@@ -116,14 +128,14 @@ class DisaggregatedLogarithmicInnerMIPTransformation(PiecewiseLinearTransformati
             == 1
         )
 
-        # The branching rules, establishing using the binaries that only one simplex's lambdas
-        # may be nonzero
+        # The branching rules, establishing using the binaries that only one simplex's lambda
+        # coefficients may be nonzero
         @transBlock.Constraint(transBlock.log_simplex_indices)  # (6c.1)
         def simplex_choice_1(b, l):
             return (
                 sum(
                     transBlock.lambdas[P, v]
-                    for P in self._P_plus(B, l, transBlock.simplex_indices)
+                    for P in transBlock.P_plus[l]
                     for v in transBlock.simplex_point_indices
                 )
                 <= transBlock.binaries[l]
@@ -134,7 +146,7 @@ class DisaggregatedLogarithmicInnerMIPTransformation(PiecewiseLinearTransformati
             return (
                 sum(
                     transBlock.lambdas[P, v]
-                    for P in self._P_0(B, l, transBlock.simplex_indices)
+                    for P in transBlock.P_0[l]
                     for v in transBlock.simplex_point_indices
                 )
                 <= 1 - transBlock.binaries[l]
@@ -174,11 +186,3 @@ class DisaggregatedLogarithmicInnerMIPTransformation(PiecewiseLinearTransformati
         # Use python's string formatting instead of bothering with modular
         # arithmetic. Hopefully not slow.
         return tuple(int(x) for x in format(num, f"0{length}b"))
-
-    # Return {P \in \mathcal{P} | B(P)_l = 0}
-    def _P_0(self, B, l, simplex_indices):
-        return [p for p in simplex_indices if B[p][l] == 0]
-
-    # Return {P \in \mathcal{P} | B(P)_l = 1}
-    def _P_plus(self, B, l, simplex_indices):
-        return [p for p in simplex_indices if B[p][l] == 1]
