@@ -621,22 +621,22 @@ def _before_interval_var_presence(visitor, child):
 
 
 def _handle_step_at_node(visitor, node):
-    return cp.step_at(node._time, node._height)
+    return False, (_GENERAL, cp.step_at(node._time, node._height))
 
 
 def _handle_step_at_start_node(visitor, node):
     cpx_var = _get_docplex_interval_var(visitor, node._time)
-    return cp.step_at_start(cpx_var, node._height)
+    return False, (_GENERAL, cp.step_at_start(cpx_var, node._height))
 
 
 def _handle_step_at_end_node(visitor, node):
     cpx_var = _get_docplex_interval_var(visitor, node._time)
-    return cp.step_at_end(cpx_var, node._height)
+    return False, (_GENERAL, cp.step_at_end(cpx_var, node._height))
 
 
 def _handle_pulse_node(visitor, node):
     cpx_var = _get_docplex_interval_var(visitor, node._interval_var)
-    return cp.pulse(cpx_var, node._height)
+    return False, (_GENERAL, cp.pulse(cpx_var, node._height))
 
 
 def _handle_negated_step_function_node(visitor, node):
@@ -647,9 +647,9 @@ def _handle_cumulative_function(visitor, node):
     expr = 0
     for arg in node.args:
         if arg.__class__ is NegatedStepFunction:
-            expr -= _handle_negated_step_function_node(visitor, arg)
+            expr -= _handle_negated_step_function_node(visitor, arg)[1][1]
         else:
-            expr += _step_function_handles[arg.__class__](visitor, arg)
+            expr += _step_function_handles[arg.__class__](visitor, arg)[1][1]
 
     return False, (_GENERAL, expr)
 
@@ -1223,6 +1223,8 @@ class DocplexWriter(object):
 
         # Write logical constraints
         for cons in components[LogicalConstraint]:
+            print(cons)
+            print(cons.expr)
             expr = visitor.walk_expression((cons.expr, cons, 0))
             if expr[0] is _ELEMENT_CONSTRAINT:
                 # Make the expression into a docplex-approved boolean-valued

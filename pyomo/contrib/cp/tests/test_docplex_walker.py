@@ -1358,6 +1358,29 @@ class TestCPExpressionWalker_CumulFuncExpressions(CommonTest):
             )
         )
 
+    def test_always_in_single_pulse(self):
+        # This is a bit silly as you can tell whether or not it is feasible
+        # structurally, but there's not reason it couldn't happen.
+        m = self.get_model()
+        f = Pulse((m.i, 3))
+        m.c = LogicalConstraint(expr=f.within((0, 3), (0, 10)))
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.expr, m.c, 0))
+
+        self.assertIn(id(m.i), visitor.var_map)
+
+        i = visitor.var_map[id(m.i)]
+
+        self.assertTrue(
+            expr[1].equals(
+                cp.always_in(
+                    cp.pulse(i, 3),
+                    interval=(0, 10),
+                    min=0,
+                    max=3,
+                )
+            )
+        )
 
 @unittest.skipIf(not docplex_available, "docplex is not available")
 class TestCPExpressionWalker_NamedExpressions(CommonTest):
