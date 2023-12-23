@@ -4216,6 +4216,7 @@ class _AnySet(_SetData, Set):
         # accept (and ignore) this value.
         kwds.setdefault('domain', self)
         Set.__init__(self, **kwds)
+        self.construct()
 
     def get(self, val, default=None):
         return val if val is not Ellipsis else default
