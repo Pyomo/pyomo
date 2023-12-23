@@ -4424,6 +4424,9 @@ def DeclareGlobalSet(obj, caller_globals=None):
     # Cache the set bounds / interval
     _set._bounds = obj.bounds()
     _set._interval = obj.get_interval()
+    # Now that the set is constructed, override the _anonymous_sets to
+    # mark the set as a global set (used by process_setarg)
+    _set._anonymous_sets = GlobalSetBase
     return _set
 
 
