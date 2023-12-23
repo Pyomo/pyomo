@@ -18,7 +18,6 @@ import warnings
 
 from .deprecation import deprecated, deprecation_warning, in_testing_environment
 from .errors import DeferredImportError
-from . import numeric_types
 
 
 SUPPRESS_DEPENDENCY_WARNINGS = False
@@ -784,6 +783,8 @@ def _finalize_matplotlib(module, available):
 def _finalize_numpy(np, available):
     if not available:
         return
+    from . import numeric_types
+
     # Register ndarray as a native type to prevent 1-element ndarrays
     # from accidentally registering ndarray as a native_numeric_type.
     numeric_types.native_types.add(np.ndarray)

@@ -13,6 +13,7 @@ import os
 
 from .dependencies import ctypes
 
+
 def _as_bytes(val):
     """Helper function to coerce a string to a bytes() object"""
     if isinstance(val, bytes):
