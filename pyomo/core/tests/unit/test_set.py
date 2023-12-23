@@ -1819,7 +1819,6 @@ class Test_SetOperator(unittest.TestCase):
             i.construct()
             ref = (
                 'Constructing SetOperator, name=a*a, from data=None\n'
-                'Constructing Set, name=a*a, from data=None\n'
                 'Constructing RangeSet, name=a, from data=None\n'
             )
             self.assertEqual(output.getvalue(), ref)
