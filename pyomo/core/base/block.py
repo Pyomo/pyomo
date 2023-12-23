@@ -2095,6 +2095,11 @@ class Block(ActiveIndexedComponent):
         """
         Initialize the block
         """
+        if self._constructed:
+            return
+        self._constructed = True
+
+        timer = ConstructionTimer(self)
         if is_debug_set(logger):
             logger.debug(
                 "Constructing %s '%s', from data=%s",
@@ -2102,10 +2107,6 @@ class Block(ActiveIndexedComponent):
                 self.name,
                 str(data),
             )
-        if self._constructed:
-            return
-        timer = ConstructionTimer(self)
-        self._constructed = True
 
         if self._anonymous_sets is not None:
             for _set in self._anonymous_sets:

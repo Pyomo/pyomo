@@ -2131,10 +2131,11 @@ class Set(IndexedComponent):
     def construct(self, data=None):
         if self._constructed:
             return
+        self._constructed = True
+
         timer = ConstructionTimer(self)
         if is_debug_set(logger):
-            logger.debug("Constructing Set, name=%s, from data=%r" % (self.name, data))
-        self._constructed = True
+            logger.debug("Constructing Set, name=%s, from data=%r" % (self, data))
 
         if self._anonymous_sets is not None:
             for _set in self._anonymous_sets:
@@ -2479,6 +2480,7 @@ class SetOf(_SetData, Component):
         kwds.setdefault('ctype', SetOf)
         Component.__init__(self, **kwds)
         self._ref = reference
+        self.construct()
 
     def __str__(self):
         if self.parent_block() is not None:
@@ -2488,12 +2490,11 @@ class SetOf(_SetData, Component):
     def construct(self, data=None):
         if self._constructed:
             return
+        self._constructed = True
+
         timer = ConstructionTimer(self)
         if is_debug_set(logger):
-            logger.debug(
-                "Constructing SetOf, name=%s, from data=%r" % (self.name, data)
-            )
-        self._constructed = True
+            logger.debug("Constructing SetOf, name=%s, from data=%r" % (self, data))
         timer.report()
 
     @property
@@ -2985,11 +2986,16 @@ class RangeSet(Component):
     def construct(self, data=None):
         if self._constructed:
             return
+
         timer = ConstructionTimer(self)
         if is_debug_set(logger):
-            logger.debug(
-                "Constructing RangeSet, name=%s, from data=%r" % (self.name, data)
-            )
+            logger.debug("Constructing RangeSet, name=%s, from data=%r" % (self, data))
+        # Note: we cannot set the constructed flag until after we have
+        # generated the debug message: the debug message needs the name,
+        # which in turn may need ranges(), which has not been
+        # constructed.
+        self._constructed = True
+
         if data is not None:
             raise ValueError(
                 "RangeSet.construct() does not support the data= argument.\n"
@@ -4260,6 +4266,7 @@ class _EmptySet(_FiniteSetMixin, _SetData, Set):
     def __init__(self, **kwds):
         _SetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
+        self.construct()
 
     def get(self, val, default=None):
         return default

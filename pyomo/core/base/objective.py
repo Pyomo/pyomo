@@ -567,8 +567,7 @@ class ObjectiveList(IndexedObjective):
         _rule = kwargs.pop('rule', None)
         self._starting_index = kwargs.pop('starting_index', 1)
 
-        args = (Set(dimen=1),)
-        super().__init__(*args, **kwargs)
+        super().__init__(Set(dimen=1), **kwargs)
 
         self.rule = Initializer(_rule, allow_generators=True)
         # HACK to make the "counted call" syntax work.  We wait until

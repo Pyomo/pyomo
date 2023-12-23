@@ -518,22 +518,22 @@ class LogicalConstraintList(IndexedLogicalConstraint):
 
     def __init__(self, **kwargs):
         """Constructor"""
-        args = (Set(),)
         if 'expr' in kwargs:
             raise ValueError("LogicalConstraintList does not accept the 'expr' keyword")
-        LogicalConstraint.__init__(self, *args, **kwargs)
+        LogicalConstraint.__init__(self, Set(dimen=1), **kwargs)
 
     def construct(self, data=None):
         """
         Construct the expression(s) for this logical constraint.
         """
+        if self._constructed:
+            return
+        self._constructed = True
+
         generate_debug_messages = is_debug_set(logger)
         if generate_debug_messages:
             logger.debug("Constructing logical constraint list %s" % self.name)
 
-        if self._constructed:
-            return
-        self._constructed = True
         if self._anonymous_sets is not None:
             for _set in self._anonymous_sets:
                 _set.construct()
