@@ -16,13 +16,7 @@ import re
 import sys
 import subprocess
 
-from collections import namedtuple
-
 import pyomo.common.unittest as unittest
-
-from pyomo.common.dependencies import numpy_available, attempt_import
-
-pyro4, pyro4_available = attempt_import('Pyro4')
 
 
 class ImportData(object):
@@ -145,7 +139,6 @@ class TestPyomoEnviron(unittest.TestCase):
             'base64',  # Imported on Windows
             'cPickle',
             'csv',
-            'ctypes',
             'decimal',
             'gc',  # Imported on MacOS, Windows; Linux in 3.10
             'glob',
@@ -157,7 +150,6 @@ class TestPyomoEnviron(unittest.TestCase):
             'logging',
             'pickle',
             'platform',
-            'random',  # Imported on MacOS, Windows
             'shlex',
             'socket',  # Imported on MacOS, Windows; Linux in 3.10
             'tempfile',  # Imported on MacOS, Windows

@@ -743,6 +743,12 @@ def _finalize_yaml(module, available):
         yaml_load_args['Loader'] = module.SafeLoader
 
 
+def _finalize_ctypes(module, available):
+    # ctypes.util must be explicitly imported (and fileutils assumes
+    # this has already happened)
+    import ctypes.util
+
+
 def _finalize_scipy(module, available):
     if available:
         # Import key subpackages that we will want to assume are present
@@ -835,6 +841,14 @@ def _pyutilib_importer():
     return importlib.import_module('pyutilib')
 
 
+# Standard libraries that are slower to import and not strictly required
+# on all platforms / situations.
+ctypes, _ = attempt_import(
+    'ctypes', deferred_submodules=['util'], callback=_finalize_ctypes
+)
+random, _ = attempt_import('random')
+
+# Commonly-used optional dependencies
 dill, dill_available = attempt_import('dill')
 mpi4py, mpi4py_available = attempt_import('mpi4py')
 networkx, networkx_available = attempt_import('networkx')
