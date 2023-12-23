@@ -66,8 +66,7 @@ _known_global_real_domains = dict(
     + [(_, False) for _ in integer_global_set_ids]
 )
 _VARDATA_API = (
-    # including 'domain' runs afoul of logic in Block._add_implicit_sets()
-    # 'domain',
+    'domain',
     'bounds',
     'lower',
     'upper',
