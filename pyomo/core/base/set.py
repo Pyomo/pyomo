@@ -1344,7 +1344,7 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
         return len(self._values)
 
     def __str__(self):
-        if self.parent_block() is not None:
+        if self.parent_component()._name is not None:
             return self.name
         if not self.parent_component()._constructed:
             return type(self).__name__
@@ -2483,7 +2483,7 @@ class SetOf(_SetData, Component):
         self.construct()
 
     def __str__(self):
-        if self.parent_block() is not None:
+        if self._name is not None:
             return self.name
         return str(self._ref)
 
@@ -2966,14 +2966,12 @@ class RangeSet(Component):
             pass
 
     def __str__(self):
-        if self.parent_block() is not None:
+        # Named, components should return their name e.g., Reals
+        if self._name is not None:
             return self.name
         # Unconstructed floating components return their type
         if not self._constructed:
             return type(self).__name__
-        # Named, constructed components should return their name e.g., Reals
-        if type(self).__name__ != self._name:
-            return self.name
         # Floating, unnamed constructed components return their ranges()
         ans = ' | '.join(str(_) for _ in self.ranges())
         if ' | ' in ans:
@@ -3003,19 +3001,9 @@ class RangeSet(Component):
                 "as numbers, constants, or Params to the RangeSet() "
                 "declaration"
             )
-        self._constructed = True
 
         args, ranges = self._init_data
-        if any(not is_constant(arg) for arg in args):
-            logger.warning(
-                "Constructing RangeSet '%s' from non-constant data (e.g., "
-                "Var or mutable Param).  The linkage between this RangeSet "
-                "and the original source data will be broken, so updating "
-                "the data value in the future will not be reflected in this "
-                "RangeSet.  To suppress this warning, explicitly convert "
-                "the source data to a constant type (e.g., float, int, or "
-                "immutable Param)" % (self.name,)
-            )
+        nonconstant_data_warning = any(not is_constant(arg) for arg in args)
         args = tuple(value(arg) for arg in args)
         if type(ranges) is not tuple:
             ranges = tuple(ranges)
@@ -3176,6 +3164,22 @@ class RangeSet(Component):
                         "Set %s" % (val, self.name)
                     )
 
+        # Defer the warning about non-constant args until after the
+        # component has been constructed, so that the conversion of the
+        # component to a rational string will work (anonymous RangeSets
+        # will report their ranges, which aren't present until
+        # construction is over)
+        if nonconstant_data_warning:
+            logger.warning(
+                "Constructing RangeSet '%s' from non-constant data (e.g., "
+                "Var or mutable Param).  The linkage between this RangeSet "
+                "and the original source data will be broken, so updating "
+                "the data value in the future will not be reflected in this "
+                "RangeSet.  To suppress this warning, explicitly convert "
+                "the source data to a constant type (e.g., float, int, or "
+                "immutable Param)" % (self,)
+            )
+
         timer.report()
 
     #
@@ -3320,7 +3324,7 @@ class SetOperator(_SetData, Set):
             if fail:
                 raise ValueError(
                     "Constructing SetOperator %s with incompatible data "
-                    "(data=%s}" % (self.name, data)
+                    "(data=%s}" % (self, data)
                 )
         timer.report()
 
@@ -3346,7 +3350,7 @@ class SetOperator(_SetData, Set):
         )
 
     def __str__(self):
-        if self.parent_block() is not None:
+        if self._name is not None:
             return self.name
         return self._expression_str()
 
@@ -4245,7 +4249,7 @@ class _AnySet(_SetData, Set):
         return Any
 
     def __str__(self):
-        if self.parent_block() is not None:
+        if self._name is not None:
             return self.name
         return type(self).__name__
 
@@ -4291,7 +4295,7 @@ class _EmptySet(_FiniteSetMixin, _SetData, Set):
         return EmptySet
 
     def __str__(self):
-        if self.parent_block() is not None:
+        if self._name is not None:
             return self.name
         return type(self).__name__
 
