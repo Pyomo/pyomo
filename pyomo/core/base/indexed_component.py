@@ -1001,11 +1001,13 @@ value() function."""
                 slice_dim -= 1
             if normalize_index.flatten:
                 set_dim = self.dim()
-            elif self._implicit_subsets is None:
+            elif not self.is_indexed():
                 # Scalar component.
                 set_dim = 0
             else:
-                set_dim = len(self._implicit_subsets)
+                set_dim = self.index_set().dimen
+                if set_dim is None:
+                    set_dim = 1
 
             structurally_valid = False
             if slice_dim == set_dim or set_dim is None:

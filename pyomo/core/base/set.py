@@ -1382,8 +1382,10 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
             else:
                 # If we are not normalizing indices, then we cannot reliably
                 # infer the set dimen
+                _d = 1
+                if isinstance(value, Sequence) and self.dimen != 1:
+                    _d = len(value)
                 _value = value
-                _d = None
             if _value not in self._domain:
                 raise ValueError(
                     "Cannot add value %s to Set %s.\n"
@@ -3944,7 +3946,7 @@ class SetProduct(SetOperator):
     @property
     def dimen(self):
         if not (FLATTEN_CROSS_PRODUCT and normalize_index.flatten):
-            return None
+            return len(self._sets)
         # By convention, "None" trumps UnknownSetDimen.  That is, a set
         # product is "non-dimentioned" if any term is non-dimentioned,
         # even if we do not yet know the dimentionality of another term.
