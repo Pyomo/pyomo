@@ -49,6 +49,12 @@ class TestAssumedBehavior(unittest.TestCase):
     immediately obvious would be the case.
     """
 
+    def setUp(self):
+        self._orig_flatten = normalize_index.flatten
+
+    def tearDown(self):
+        normalize_index.flatten = self._orig_flatten
+
     def test_cross(self):
         m = ConcreteModel()
         m.s1 = Set(initialize=[1, 2])
@@ -313,6 +319,12 @@ class TestCategorize(_TestFlattenBase, unittest.TestCase):
 
 
 class TestFlatten(_TestFlattenBase, unittest.TestCase):
+    def setUp(self):
+        self._orig_flatten = normalize_index.flatten
+
+    def tearDown(self):
+        normalize_index.flatten = self._orig_flatten
+
     def _model1_1d_sets(self):
         # One-dimensional sets, no skipping.
         m = ConcreteModel()

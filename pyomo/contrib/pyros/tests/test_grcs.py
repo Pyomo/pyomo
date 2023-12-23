@@ -296,8 +296,6 @@ class testAddDecisionRuleVars(unittest.TestCase):
 
         m.working_model.del_component(m.working_model.decision_rule_var_0)
         m.working_model.del_component(m.working_model.decision_rule_var_1)
-        m.working_model.del_component(m.working_model.decision_rule_var_0_index)
-        m.working_model.del_component(m.working_model.decision_rule_var_1_index)
 
         config.decision_rule_order = 2
 
@@ -395,8 +393,6 @@ class testAddDecisionRuleConstraints(unittest.TestCase):
         # === Decision rule vars have been added
         m.working_model.del_component(m.working_model.decision_rule_var_0)
         m.working_model.del_component(m.working_model.decision_rule_var_1)
-        m.working_model.del_component(m.working_model.decision_rule_var_0_index)
-        m.working_model.del_component(m.working_model.decision_rule_var_1_index)
 
         m.working_model.decision_rule_var_0 = Var([0, 1, 2, 3, 4, 5], initialize=0)
         m.working_model.decision_rule_var_1 = Var([0, 1, 2, 3, 4, 5], initialize=0)
