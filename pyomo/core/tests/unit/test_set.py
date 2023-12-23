@@ -112,17 +112,19 @@ from pyomo.environ import (
 
 class Test_SetInitializer(unittest.TestCase):
     def test_single_set(self):
+        tmp = Set()  # a placeholder to accumulate _anonymous_sets references
+
         a = SetInitializer(None)
         self.assertIs(type(a), SetInitializer)
         self.assertIsNone(a._set)
-        self.assertIs(a(None, None), Any)
+        self.assertIs(a(None, None, tmp), Any)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
 
         a = SetInitializer(Reals)
         self.assertIs(type(a), SetInitializer)
         self.assertIs(type(a._set), ConstantInitializer)
-        self.assertIs(a(None, None), Reals)
+        self.assertIs(a(None, None, tmp), Reals)
         self.assertIs(a._set.val, Reals)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
@@ -130,18 +132,20 @@ class Test_SetInitializer(unittest.TestCase):
         a = SetInitializer({1: Reals})
         self.assertIs(type(a), SetInitializer)
         self.assertIs(type(a._set), ItemInitializer)
-        self.assertIs(a(None, 1), Reals)
+        self.assertIs(a(None, 1, tmp), Reals)
         self.assertFalse(a.constant())
         self.assertFalse(a.verified)
 
     def test_intersect(self):
+        tmp = Set()  # a placeholder to accumulate _anonymous_sets references
+
         a = SetInitializer(None)
         a.intersect(SetInitializer(None))
         self.assertIs(type(a), SetInitializer)
         self.assertIsNone(a._set)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
-        self.assertIs(a(None, None), Any)
+        self.assertIs(a(None, None, tmp), Any)
 
         a = SetInitializer(None)
         a.intersect(SetInitializer(Reals))
@@ -150,7 +154,7 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertIs(a._set.val, Reals)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
-        self.assertIs(a(None, None), Reals)
+        self.assertIs(a(None, None, tmp), Reals)
 
         a = SetInitializer(None)
         a.intersect(BoundsInitializer(5, default_step=1))
@@ -158,7 +162,7 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertIs(type(a._set), BoundsInitializer)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
-        self.assertEqual(a(None, None), RangeSet(5))
+        self.assertEqual(a(None, None, tmp), RangeSet(5))
 
         a = SetInitializer(Reals)
         a.intersect(SetInitializer(None))
@@ -167,7 +171,7 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertIs(a._set.val, Reals)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
-        self.assertIs(a(None, None), Reals)
+        self.assertIs(a(None, None, tmp), Reals)
 
         a = SetInitializer(Reals)
         a.intersect(SetInitializer(Integers))
@@ -179,7 +183,7 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertIs(a._set._B.val, Integers)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
-        s = a(None, None)
+        s = a(None, None, tmp)
         self.assertIs(type(s), SetIntersection_InfiniteSet)
         self.assertIs(s._sets[0], Reals)
         self.assertIs(s._sets[1], Integers)
@@ -195,7 +199,7 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertIs(a._set._A._B.val, Integers)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
-        s = a(None, None)
+        s = a(None, None, tmp)
         self.assertIs(type(s), SetIntersection_OrderedSet)
         self.assertIs(type(s._sets[0]), SetIntersection_InfiniteSet)
         self.assertIsInstance(s._sets[1], RangeSet)
@@ -212,7 +216,7 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertIs(a._set._A._B.val, Integers)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
-        s = a(None, None)
+        s = a(None, None, tmp)
         self.assertIs(type(s), SetIntersection_InfiniteSet)
         p.construct()
         s.construct()
@@ -236,8 +240,8 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertFalse(a.constant())
         self.assertFalse(a.verified)
         with self.assertRaises(KeyError):
-            a(None, None)
-        s = a(None, 1)
+            a(None, None, tmp)
+        s = a(None, 1, tmp)
         self.assertIs(type(s), SetIntersection_InfiniteSet)
         p.construct()
         s.construct()
@@ -304,15 +308,17 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertEqual(s, RangeSet(0, 5))
 
     def test_setdefault(self):
+        tmp = Set()  # a placeholder to accumulate _anonymous_sets references
+
         a = SetInitializer(None)
-        self.assertIs(a(None, None), Any)
+        self.assertIs(a(None, None, tmp), Any)
         a.setdefault(Reals)
-        self.assertIs(a(None, None), Reals)
+        self.assertIs(a(None, None, tmp), Reals)
 
         a = SetInitializer(Integers)
-        self.assertIs(a(None, None), Integers)
+        self.assertIs(a(None, None, tmp), Integers)
         a.setdefault(Reals)
-        self.assertIs(a(None, None), Integers)
+        self.assertIs(a(None, None, tmp), Integers)
 
         a = BoundsInitializer(5, default_step=1)
         self.assertEqual(a(None, None), RangeSet(5))
@@ -321,9 +327,9 @@ class Test_SetInitializer(unittest.TestCase):
 
         a = SetInitializer(Reals)
         a.intersect(SetInitializer(Integers))
-        self.assertIs(type(a(None, None)), SetIntersection_InfiniteSet)
+        self.assertIs(type(a(None, None, tmp)), SetIntersection_InfiniteSet)
         a.setdefault(RangeSet(5))
-        self.assertIs(type(a(None, None)), SetIntersection_InfiniteSet)
+        self.assertIs(type(a(None, None, tmp)), SetIntersection_InfiniteSet)
 
     def test_indices(self):
         a = SetInitializer(None)
