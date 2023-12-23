@@ -32,6 +32,7 @@ from pyomo.core.base.global_set import UnindexedComponent_set
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.common import DeveloperError
 from pyomo.common.autoslots import fast_deepcopy
+from pyomo.common.collections import ComponentSet
 from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.errors import DeveloperError, TemplateExpressionError
@@ -304,37 +305,33 @@ class IndexedComponent(Component):
         #
         self._data = {}
         #
-        if len(args) == 0 or (len(args) == 1 and args[0] is UnindexedComponent_set):
+        if len(args) == 0 or (args[0] is UnindexedComponent_set and len(args) == 1):
             #
             # If no indexing sets are provided, generate a dummy index
             #
-            self._implicit_subsets = None
             self._index_set = UnindexedComponent_set
+            self._anonymous_sets = None
         elif len(args) == 1:
             #
             # If a single indexing set is provided, just process it.
             #
-            self._implicit_subsets = None
-            self._index_set = BASE.set.process_setarg(args[0])
+            self._index_set, self._anonymous_sets = BASE.set.process_setarg(args[0])
         else:
             #
             # If multiple indexing sets are provided, process them all,
-            # and store the cross-product of these sets.  The individual
-            # sets need to stored in the Pyomo model, so the
-            # _implicit_subsets class data is used for this temporary
-            # storage.
+            # and store the cross-product of these sets.
             #
-            # Example:  Pyomo allows things like
-            # "Param([1,2,3], range(100), initialize=0)".  This
-            # needs to create *3* sets: two SetOf components and then
-            # the SetProduct.  That means that the component needs to
-            # hold on to the implicit SetOf objects until the component
-            # is assigned to a model (where the implicit subsets can be
-            # "transferred" to the model).
+            # Example: Pyomo allows things like "Param([1,2,3],
+            # range(100), initialize=0)".  This needs to create *3*
+            # sets: two SetOf components and then the SetProduct.  As
+            # the user declined to name any of these sets, we will not
+            # make up names and instead store them on the model as
+            # "anonymous components"
             #
-            tmp = [BASE.set.process_setarg(x) for x in args]
-            self._implicit_subsets = tmp
-            self._index_set = tmp[0].cross(*tmp[1:])
+            self._index_set = BASE.set.SetProduct(*args)
+            self._anonymous_sets = ComponentSet((self._index_set,))
+            if self._index_set._anonymous_sets is not None:
+                self._anonymous_sets.update(self._index_set._anonymous_sets)
 
     def _create_objects_for_deepcopy(self, memo, component_list):
         _new = self.__class__.__new__(self.__class__)

@@ -210,8 +210,6 @@ class LogicalConstraint(ActiveIndexedComponent):
             A dictionary from the index set to component data objects
         _index_set
             The set of valid indices
-        _implicit_subsets
-            A tuple of set objects that represents the index set
         _model
             A weakref to the model that owns this component
         _parent
@@ -279,6 +277,10 @@ class LogicalConstraint(ActiveIndexedComponent):
             return
         timer = ConstructionTimer(self)
         self._constructed = True
+
+        if self._anonymous_sets is not None:
+            for _set in self._anonymous_sets:
+                _set.construct()
 
         _init_expr = self._init_expr
         _init_rule = self.rule
@@ -532,6 +534,9 @@ class LogicalConstraintList(IndexedLogicalConstraint):
         if self._constructed:
             return
         self._constructed = True
+        if self._anonymous_sets is not None:
+            for _set in self._anonymous_sets:
+                _set.construct()
 
         assert self._init_expr is None
         _init_rule = self.rule

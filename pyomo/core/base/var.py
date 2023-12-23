@@ -436,7 +436,9 @@ class _GeneralVarData(_VarData):
     @domain.setter
     def domain(self, domain):
         try:
-            self._domain = SetInitializer(domain)(self.parent_block(), self.index())
+            self._domain = SetInitializer(domain)(
+                self.parent_block(), self.index(), self
+            )
         except:
             logger.error(
                 "%s is not a valid domain. Variable domains must be an "
@@ -774,6 +776,10 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         if is_debug_set(logger):
             logger.debug("Constructing Variable %s" % (self.name,))
 
+        if self._anonymous_sets is not None:
+            for _set in self._anonymous_sets:
+                _set.construct()
+
         # Note: define 'index' to avoid 'variable referenced before
         # assignment' in the error message generated in the 'except:'
         # block below.
@@ -854,7 +860,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
                         # We can directly set the attribute (not the
                         # property) because the SetInitializer ensures
                         # that the value is a proper Set.
-                        obj._domain = self._rule_domain(block, index)
+                        obj._domain = self._rule_domain(block, index, self)
                 if call_bounds_rule:
                     for index, obj in self._data.items():
                         obj.lower, obj.upper = self._rule_bounds(block, index)
@@ -891,7 +897,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         obj._index = index
         # We can directly set the attribute (not the property) because
         # the SetInitializer ensures that the value is a proper Set.
-        obj._domain = self._rule_domain(parent, index)
+        obj._domain = self._rule_domain(parent, index, self)
         if self._rule_bounds is not None:
             obj.lower, obj.upper = self._rule_bounds(parent, index)
         if self._rule_init is not None:
@@ -1013,17 +1019,17 @@ class IndexedVar(Var):
         try:
             domain_rule = SetInitializer(domain)
             if domain_rule.constant():
-                domain = domain_rule(self.parent_block(), None)
+                domain = domain_rule(self.parent_block(), None, self)
                 for vardata in self.values():
                     vardata._domain = domain
             elif domain_rule.contains_indices():
                 parent = self.parent_block()
                 for index in domain_rule.indices():
-                    self[index]._domain = domain_rule(parent, index)
+                    self[index]._domain = domain_rule(parent, index, self)
             else:
                 parent = self.parent_block()
                 for index, vardata in self.items():
-                    vardata._domain = domain_rule(parent, index)
+                    vardata._domain = domain_rule(parent, index, self)
         except:
             logger.error(
                 "%s is not a valid domain. Variable domains must be an "

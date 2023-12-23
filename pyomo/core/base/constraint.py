@@ -717,8 +717,6 @@ class Constraint(ActiveIndexedComponent):
             A dictionary from the index set to component data objects
         _index
             The set of valid indices
-        _implicit_subsets
-            A tuple of set objects that represents the index set
         _model
             A weakref to the model that owns this component
         _parent
@@ -771,6 +769,10 @@ class Constraint(ActiveIndexedComponent):
         timer = ConstructionTimer(self)
         if is_debug_set(logger):
             logger.debug("Constructing constraint %s" % (self.name))
+
+        if self._anonymous_sets is not None:
+            for _set in self._anonymous_sets:
+                _set.construct()
 
         rule = self.rule
         try:
@@ -1068,7 +1070,9 @@ class ConstraintList(IndexedConstraint):
         if is_debug_set(logger):
             logger.debug("Constructing constraint list %s" % (self.name))
 
-        self.index_set().construct()
+        if self._anonymous_sets is not None:
+            for _set in self._anonymous_sets:
+                _set.construct()
 
         if self.rule is not None:
             _rule = self.rule(self.parent_block(), ())
