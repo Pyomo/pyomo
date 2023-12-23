@@ -589,6 +589,8 @@ class _SetData(_SetDataBase):
         # ranges (or no ranges).  We will re-generate non-finite sets to
         # make sure we get an accurate "finiteness" flag.
         if hasattr(other, 'isfinite'):
+            if not other.parent_component().is_constructed():
+                return False
             other_isfinite = other.isfinite()
             if not other_isfinite:
                 try:
