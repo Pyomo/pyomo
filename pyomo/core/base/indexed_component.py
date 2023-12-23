@@ -256,8 +256,7 @@ def rule_wrapper(rule, wrapping_fcn, positional_arg_map=None):
 
 
 class IndexedComponent(Component):
-    """
-    This is the base class for all indexed modeling components.
+    """This is the base class for all indexed modeling components.
     This class stores a dictionary, self._data, that maps indices
     to component data objects.  The object self._index_set defines valid
     keys for this dictionary, and the dictionary keys may be a
@@ -279,11 +278,16 @@ class IndexedComponent(Component):
         doc         A text string describing this component
 
     Private class attributes:
-        _data               A dictionary from the index set to
-                                component data objects
-        _index_set              The set of valid indices
-        _implicit_subsets   A temporary data element that stores
-                                sets that are transferred to the model
+
+        _data:  A dictionary from the index set to component data objects
+
+        _index_set:  The set of valid indices
+
+        _anonymous_sets: A ComponentSet of "anonymous" sets used by this
+            component.  Anonymous sets are Set / SetOperator / RangeSet
+            that compose attributes like _index_set, but are not
+            themselves explicitly assigned (and named) on any Block
+
     """
 
     class Skip(object):
