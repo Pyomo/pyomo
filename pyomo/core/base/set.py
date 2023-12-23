@@ -1152,33 +1152,23 @@ class _SetData(_SetDataBase):
 
     def __ror__(self, other):
         # See the discussion of Set vs SetOf in process_setarg above
-        #
-        # return SetOf(other) | self
-        return process_setarg(other) | self
+        return SetUnion(other, self)
 
     def __rand__(self, other):
         # See the discussion of Set vs SetOf in process_setarg above
-        #
-        # return SetOf(other) & self
-        return process_setarg(other) & self
+        return SetIntersection(other, self)
 
     def __rsub__(self, other):
         # See the discussion of Set vs SetOf in process_setarg above
-        #
-        # return SetOf(other) - self
-        return process_setarg(other) - self
+        return SetDifference(other, self)
 
     def __rxor__(self, other):
         # See the discussion of Set vs SetOf in process_setarg above
-        #
-        # return SetOf(other) ^ self
-        return process_setarg(other) ^ self
+        return SetSymmetricDifference(other, self)
 
     def __rmul__(self, other):
         # See the discussion of Set vs SetOf in process_setarg above
-        #
-        # return SetOf(other) * self
-        return process_setarg(other) * self
+        return SetProduct(other, self)
 
     def __lt__(self, other):
         """
