@@ -203,6 +203,22 @@ class _BnB(pybnb.Problem):
             raise RuntimeError(f"Cannot handle termination condition {res.termination_condition} when solving relaxation")
         res.solution_loader.load_vars()
 
+        while True:
+            added_cuts = False
+            for r in self.relaxation_objects:
+                new_con = r.add_cut(keep_cut=True, check_violation=True, feasibility_tol=1e-8)
+                if new_con is not None:
+                    added_cuts = True
+            if added_cuts:
+                res = self.config.lp_solver.solve(self.relaxation)
+                if res.termination_condition == appsi.base.TerminationCondition.infeasible:
+                    return self.infeasible_objective()
+                if res.termination_condition != appsi.base.TerminationCondition.optimal:
+                    raise RuntimeError(f"Cannot handle termination condition {res.termination_condition} when solving relaxation")
+                res.solution_loader.load_vars()
+            else:
+                break
+
         if self.current_node.tree_depth % 2 == 0 and self.current_node.tree_depth != 0:
             should_obbt = True
             if self._sense == pybnb.minimize:
@@ -328,6 +344,7 @@ class _BnB(pybnb.Problem):
                     max_viol = err
 
         if var_to_branch_on is None:
+            return pybnb.Node()
             raise NotImplementedError("relaxation was feasible - add handling for this")
 
         xl1 = xl.copy()
@@ -363,7 +380,7 @@ def solve_with_bnb(model: _BlockData, config: BnBConfig, comm=None):
         queue_strategy=pybnb.QueueStrategy.bound,
         absolute_gap=config.abs_gap,
         relative_gap=config.rel_gap,
-        comparison_tolerance=1e-5,
+        comparison_tolerance=1e-4,
         comm=comm,
         # log=logger,
     )
