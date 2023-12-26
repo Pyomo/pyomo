@@ -66,12 +66,20 @@ class _OACut(object):
         for v, val in zip(self.expr_vars, var_vals):
             v.set_value(val, skip_validation=True)
         try:
-            offset_val = pe.value(self.nonlin_expr)
-            for ndx, v in enumerate(self.expr_vars):
-                der = pe.value(self.derivs[ndx])
-                offset_val -= der * v.value
-                self.coefficients[ndx]._value = der
-            self.offset._value = offset_val
+            offset_val = pe.value(self.nonlin_expr, exception=False)
+            if offset_val is None:
+                res = (False, None, None, 'evaluation error')
+            else:
+                for ndx, v in enumerate(self.expr_vars):
+                    der = pe.value(self.derivs[ndx], exception=False)
+                    if der is None:
+                        res = (False, None, None, 'evaluation error')
+                        break
+                    else:
+                        offset_val -= der * v.value
+                        self.coefficients[ndx]._value = der
+            if res[0]:
+                self.offset._value = offset_val
         except (OverflowError, ValueError, ZeroDivisionError) as e:
             res = (False, None, None, str(e))
         finally:
@@ -305,7 +313,7 @@ class BaseRelaxationData(_BlockData):
                         self._cuts = IndexedConstraint(pe.Any)
                     if self._oa_params is None:
                         del self._oa_params
-                        self._oa_params = IndexedParam(pe.Any, mutable=True)
+                        self._oa_params = IndexedParam(pe.Any, mutable=True, initialize=0, within=pe.Any)
                     self.clean_oa_points(ensure_oa_at_vertices=ensure_oa_at_vertices)
                     self._update_oa_cuts()
                 else:
@@ -439,10 +447,12 @@ class BaseRelaxationData(_BlockData):
         coef_params = list()
         for v in rhs_vars:
             p = self._oa_params[self._current_param_index]
+            p.value = None
             self._oa_param_indices[p] = self._current_param_index
             coef_params.append(p)
             self._current_param_index += 1
         offset_param = self._oa_params[self._current_param_index]
+        offset_param.value = None
         self._oa_param_indices[offset_param] = self._current_param_index
         self._current_param_index += 1
         oa_cut = _OACut(self._get_expr_for_oa(), rhs_vars, coef_params, offset_param)
@@ -563,7 +573,7 @@ class BaseRelaxationData(_BlockData):
         self._current_param_index = 0
         if self._oa_params is not None:
             del self._oa_params
-            self._oa_params = pe.Param(pe.Any, mutable=True)
+            self._oa_params = pe.Param(pe.Any, mutable=True, initialize=0, within=pe.Any)
         if self._cuts is not None:
             del self._cuts
             self._cuts = pe.Constraint(pe.Any)
