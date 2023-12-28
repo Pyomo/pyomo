@@ -143,13 +143,25 @@ class _BnB(pybnb.Problem):
         self.config.lp_solver.update_config.treat_fixed_vars_as_params = True
         self.config.nlp_solver.config.load_solution = False
 
+        obj = get_objective(nlp)
+        if obj.sense == pe.minimize:
+            self._sense = pybnb.minimize
+        else:
+            self._sense = pybnb.maximize
+
         # perform fbbt before constructing relaxations in case
         # we can identify things like x**3 is convex because
         # x >= 0
         self.interval_tightener = it = appsi.fbbt.IntervalTightener()
         it.config.deactivate_satisfied_constraints = True
         it.config.feasibility_tol = config.feasibility_tol
+        if feasible_objective is not None:
+            if obj.sense == pe.minimize:
+                relaxation.obj_ineq = pe.Constraint(expr=obj.expr <= feasible_objective)
+            else:
+                relaxation.obj_ineq = pe.Constraint(expr=obj.expr >= feasible_objective)
         it.perform_fbbt(relaxation)
+        del relaxation.obj_ineq
         _fix_vars_with_close_bounds(relaxation)
 
         impose_structure(relaxation)
@@ -173,11 +185,6 @@ class _BnB(pybnb.Problem):
 
         self.all_branching_vars = list(binary_vars) + list(integer_vars) + list(self.rhs_vars)
         self.var_to_ndx_map = ComponentMap((v, ndx) for ndx, v in enumerate(self.all_branching_vars))
-
-        if get_objective(nlp).sense == pe.minimize:
-            self._sense = pybnb.minimize
-        else:
-            self._sense = pybnb.maximize
 
         self.current_node: Optional[pybnb.Node] = None
         self.feasible_objective = feasible_objective
@@ -206,7 +213,7 @@ class _BnB(pybnb.Problem):
         while True:
             added_cuts = False
             for r in self.relaxation_objects:
-                new_con = r.add_cut(keep_cut=True, check_violation=True, feasibility_tol=1e-8)
+                new_con = r.add_cut(keep_cut=True, check_violation=True, feasibility_tol=self.config.feasibility_tol)
                 if new_con is not None:
                     added_cuts = True
             if added_cuts:
@@ -317,10 +324,10 @@ class _BnB(pybnb.Problem):
             else:
                 v.setub(None)
 
-        if lb == ub:
-            v.fix(lb)
-        else:
-            v.unfix()
+            if lb == ub:
+                v.fix(lb)
+            else:
+                v.unfix()
 
         for r in self.relaxation_objects:
             r.rebuild()

@@ -24,7 +24,7 @@ class AlphaBBCutGenerator(CutGenerator):
         if lhs_val >= value(self.rhs):
             return None
         
-        alpha = max(0, -0.5 * self.hessian.get_maximum_eigenvalue())
+        alpha = max(0, -0.5 * self.hessian.get_minimum_eigenvalue())
         alpha_sum = 0
         for ndx, v in enumerate(self.xlist):
             lb, ub = v.bounds

@@ -123,15 +123,9 @@ class Hessian(object):
         all_vars = list(
             ComponentSet(m.component_data_objects(pe.Var, descend_into=True))
         )
-        tmp_name = unique_component_name(m, "all_vars")
-        setattr(m, tmp_name, all_vars)
         from .auto_relax import relax
 
-        relaxation = relax(m, in_place=False)
-        new_vars = getattr(relaxation, "all_vars")
-        self._orig_to_relaxation_vars = pe.ComponentMap(zip(all_vars, new_vars))
-        delattr(m, tmp_name)
-        delattr(relaxation, tmp_name)
+        relaxation = relax(m)
         self._eigenvalue_relaxation = relaxation
         return relaxation
 
