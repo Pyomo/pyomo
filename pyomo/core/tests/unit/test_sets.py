@@ -3395,7 +3395,9 @@ class TestSetErrors(PyomoModel):
         with self.assertRaisesRegex(RuntimeError, ".*before it has been constructed"):
             a[0]
         a.construct()
-        with self.assertRaisesRegex(IndexError, "Pyomo Sets are 1-indexed"):
+        with self.assertRaisesRegex(
+            IndexError, "Accessing Pyomo Sets by position is 1-based"
+        ):
             a[0]
         self.assertEqual(a[1], 2)
 

@@ -208,7 +208,7 @@ class NumericRange(object):
                 return False
 
         if self.step:
-            _dir = math.copysign(1, self.step)
+            _dir = int(math.copysign(1, self.step))
             _from_start = value - self.start
             return (
                 0 <= _dir * _from_start <= _dir * (self.end - self.start)
@@ -411,14 +411,13 @@ class NumericRange(object):
 
         assert new_step >= abs(cnr.step)
         assert new_step % cnr.step == 0
-        _dir = math.copysign(1, cnr.step)
+        _dir = int(math.copysign(1, cnr.step))
         _subranges = []
         for i in range(int(abs(new_step // cnr.step))):
             if _dir * (cnr.start + i * cnr.step) > _dir * cnr.end:
                 # Once we walk past the end of the range, we are done
                 # (all remaining offsets will be farther past the end)
                 break
-
             _subranges.append(
                 NumericRange(cnr.start + i * cnr.step, cnr.end, _dir * new_step)
             )
@@ -458,7 +457,7 @@ class NumericRange(object):
             else:
                 # one of the steps was 0: add to preserve the non-zero step
                 a += b
-        return abs(a)
+        return int(abs(a))
 
     def _push_to_discrete_element(self, val, push_to_next_larger_value):
         if not self.step or val in _infinite:
@@ -557,9 +556,14 @@ class NumericRange(object):
                             NumericRange(t.start, start, 0, (t.closed[0], False))
                         )
                     if s.step:  # i.e., not a single point
-                        for i in range(int(start // s.step), int(end // s.step)):
+                        for i in range(int((end - start) // s.step)):
                             _new_subranges.append(
-                                NumericRange(i * s.step, (i + 1) * s.step, 0, '()')
+                                NumericRange(
+                                    start + i * s.step,
+                                    start + (i + 1) * s.step,
+                                    0,
+                                    '()',
+                                )
                             )
                     if t.end > end:
                         _new_subranges.append(
@@ -605,7 +609,7 @@ class NumericRange(object):
                         )
                     elif t_max == s_max and t_c[1] and not s_c[1]:
                         _new_subranges.append(NumericRange(t_max, t_max, 0))
-                _this = _new_subranges
+            _this = _new_subranges
         return _this
 
     def range_intersection(self, other_ranges):
