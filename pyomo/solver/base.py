@@ -387,7 +387,7 @@ class LegacySolverInterface:
         options: Optional[Dict] = None,
         keepfiles: bool = False,
         symbolic_solver_labels: bool = False,
-        raise_exception_on_nonoptimal_result: bool = False
+        raise_exception_on_nonoptimal_result: bool = False,
     ):
         """
         Solve method: maps new solve method style to backwards compatible version.
@@ -407,7 +407,9 @@ class LegacySolverInterface:
         self.config.report_timing = report_timing
         # This is a new flag in the interface. To preserve backwards compability,
         # its default is set to "False"
-        self.config.raise_exception_on_nonoptimal_result = raise_exception_on_nonoptimal_result
+        self.config.raise_exception_on_nonoptimal_result = (
+            raise_exception_on_nonoptimal_result
+        )
         if solver_io is not None:
             raise NotImplementedError('Still working on this')
         if suffixes is not None:
