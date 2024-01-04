@@ -532,8 +532,8 @@ class LegacySolverInterface:
         class.
         """
         for solver_name in ['gurobi', 'ipopt', 'cplex', 'cbc', 'highs']:
-            if hasattr(self, solver_name + '_options'):
-                return getattr(self, solver_name + '_options')
+            if hasattr(self, 'solver_options'):
+                return getattr(self, 'solver_options')
         raise NotImplementedError('Could not find the correct options')
 
     @options.setter
@@ -543,8 +543,8 @@ class LegacySolverInterface:
         """
         found = False
         for solver_name in ['gurobi', 'ipopt', 'cplex', 'cbc', 'highs']:
-            if hasattr(self, solver_name + '_options'):
-                setattr(self, solver_name + '_options', val)
+            if hasattr(self, 'solver_options'):
+                setattr(self, 'solver_options', val)
                 found = True
         if not found:
             raise NotImplementedError('Could not find the correct options')

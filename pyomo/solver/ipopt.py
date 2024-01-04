@@ -14,7 +14,7 @@ import subprocess
 import datetime
 import io
 import sys
-from typing import Mapping, Optional
+from typing import Mapping, Optional, Dict
 
 from pyomo.common import Executable
 from pyomo.common.config import ConfigValue, NonNegativeInt, NonNegativeFloat
@@ -188,7 +188,7 @@ class ipopt(SolverBase):
         self._config = self.CONFIG(kwds)
         self._writer = NLWriter()
         self._writer.config.skip_trivial_constraints = True
-        self.ipopt_options = self._config.solver_options
+        self._solver_options = self._config.solver_options
 
     def available(self):
         if self.config.executable.path() is None:
@@ -217,6 +217,14 @@ class ipopt(SolverBase):
         self._config = val
 
     @property
+    def solver_options(self):
+        return self._solver_options
+
+    @solver_options.setter
+    def solver_options(self, val: Dict):
+        self._solver_options = val
+
+    @property
     def symbol_map(self):
         return self._symbol_map
 
@@ -240,15 +248,14 @@ class ipopt(SolverBase):
         cmd = [str(config.executable), basename + '.nl', '-AMPL']
         if opt_file:
             cmd.append('option_file_name=' + basename + '.opt')
-        if 'option_file_name' in config.solver_options:
+        if 'option_file_name' in self.solver_options:
             raise ValueError(
                 'Pyomo generates the ipopt options file as part of the solve method. '
                 'Add all options to ipopt.config.solver_options instead.'
             )
-        self.ipopt_options = dict(config.solver_options)
-        if config.time_limit is not None and 'max_cpu_time' not in self.ipopt_options:
-            self.ipopt_options['max_cpu_time'] = config.time_limit
-        for k, val in self.ipopt_options.items():
+        if config.time_limit is not None and 'max_cpu_time' not in self.solver_options:
+            self.solver_options['max_cpu_time'] = config.time_limit
+        for k, val in self.solver_options.items():
             if k in ipopt_command_line_options:
                 cmd.append(str(k) + '=' + str(val))
         return cmd
@@ -309,7 +316,7 @@ class ipopt(SolverBase):
             # Write the opt_file, if there should be one; return a bool to say
             # whether or not we have one (so we can correctly build the command line)
             opt_file = self._write_options_file(
-                filename=basename, options=config.solver_options
+                filename=basename, options=self.solver_options
             )
             # Call ipopt - passing the files via the subprocess
             cmd = self._create_command_line(
