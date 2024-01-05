@@ -139,6 +139,7 @@ class TestPyomoEnviron(unittest.TestCase):
             'base64',  # Imported on Windows
             'cPickle',
             'csv',
+            'ctypes',  # mandatory import in core/base/external.py; TODO: fix this
             'decimal',
             'gc',  # Imported on MacOS, Windows; Linux in 3.10
             'glob',
