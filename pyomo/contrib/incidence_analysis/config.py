@@ -114,7 +114,6 @@ _ampl_repn_visitor = ConfigValue(
 
 
 class _IncidenceConfigDict(ConfigDict):
-
     def __call__(
         self,
         value=NOTSET,
@@ -147,7 +146,6 @@ class _IncidenceConfigDict(ConfigDict):
             new.ampl_repn_visitor = _ReconstructVisitor
 
         return new
-
 
 
 IncidenceConfig = _IncidenceConfigDict()
