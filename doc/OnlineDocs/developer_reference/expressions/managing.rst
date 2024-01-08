@@ -86,20 +86,6 @@ a consistent ordering of terms that should make it easier to interpret
 expressions.
 
 
-Cloning Expressions
--------------------
-
-Expressions are automatically cloned only during certain expression
-transformations.  Since this can be an expensive operation, the
-:data:`clone_counter <pyomo.core.expr.clone_counter>` context
-manager object is provided to track the number of times the
-:func:`clone_expression <pyomo.core.expr.clone_expression>`
-function is executed.
-
-For example:
-
-.. literalinclude:: ../../tests/expr/managing_ex4.spy
-
 Evaluating Expressions
 ----------------------
 
