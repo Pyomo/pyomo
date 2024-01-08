@@ -50,12 +50,10 @@ def gurobi_generate_solutions(model, num_solutions=10, rel_opt_gap=None,
             [Solution]
     '''
     
-    #opt = pe.SolverFactory('appsi_gurobi')
     opt = appsi.solvers.Gurobi()
     for parameter, value in solver_options.items():
         opt.gurobi_options[parameter] = value
-    #opt.options['PoolSolutions'] = num_solutions
-    #opt.options['PoolSearchMode'] = 2
+
     opt.gurobi_options['PoolSolutions'] = num_solutions
     opt.gurobi_options['PoolSearchMode'] = 2
     opt.config.stream_solver = tee
@@ -63,10 +61,8 @@ def gurobi_generate_solutions(model, num_solutions=10, rel_opt_gap=None,
         opt.gurobi_options['PoolGap'] = rel_opt_gap
     if abs_opt_gap is not None:
         opt.gurobi_options['PoolGapAbs'] = abs_opt_gap
-    results = opt.solve(model)#, tee=tee)
-    #status = results.solver.status
-    status = results.termination_condition
-    #condition = results.solver.termination_condition
+    results = opt.solve(model)
+
     condition = results.termination_condition
     solutions = []
     if condition == appsi.base.TerminationCondition.optimal:

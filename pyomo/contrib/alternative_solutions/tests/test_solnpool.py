@@ -41,8 +41,8 @@ class TestSolnPoolUnit(unittest.TestCase):
     '''
 
     def test_ip_feasibility(self):
-        '''
-        COMMENTS'''
+        '''Check that the correct number of alternate solutions are found for
+        each objective value in an ip with known solutions'''
         m = tc.get_triangle_ip()
         results = sp.gurobi_generate_solutions(m, 100)
         objectives = [round(result.objective[1], 2) for result in results]
@@ -52,9 +52,10 @@ class TestSolnPoolUnit(unittest.TestCase):
 
     def test_mip_feasibility(self):
         '''
-        COMMENTS'''
-        m = tc.get_hexagonal_pyramid_mip()
-        results = sp.gurobi_generate_solutions(m, 100)
+        Check that the correct number of alternate solutions are found for
+        each objective value in a mip with known solutions'''
+        m = tc.get_indexed_hexagonal_pyramid_mip()
+        results = sp.gurobi_generate_solutions(m, 100, tee = True)
         objectives = [round(result.objective[1], 2) for result in results]
         actual_solns_by_obj = m.num_ranked_solns
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
@@ -62,7 +63,8 @@ class TestSolnPoolUnit(unittest.TestCase):
 
     def test_mip_rel_feasibility(self):
         '''
-        COMMENTS'''
+        Check that relative mip gap constraints are added and the correct
+        number of alternative solutions are found'''
         m = tc.get_hexagonal_pyramid_mip()
         results = sp.gurobi_generate_solutions(m, 100, rel_opt_gap=.2)
         objectives = [round(result.objective[1], 2) for result in results]
@@ -72,7 +74,8 @@ class TestSolnPoolUnit(unittest.TestCase):
 
     def test_mip_abs_feasibility(self):
         '''
-        COMMENTS'''
+        Check that absolute mip gap constraints are added and the correct
+        number of alternative solutions are found'''
         m = tc.get_hexagonal_pyramid_mip()
         results = sp.gurobi_generate_solutions(m, 100, abs_opt_gap=1.99)
         objectives = [round(result.objective[1], 2) for result in results]

@@ -123,6 +123,34 @@ def get_2d_diamond_problem(discrete_x=False, discrete_y=False):
 
     return m
 
+def get_3d_polyhedron_problem():
+    ''' 
+    Simple 3d polyhedron that is expressed using all types of linear constraints
+    '''
+    m = pe.ConcreteModel()
+    m.x = pe.Var([0,1,2], within=pe.Reals)
+    m.x[0].setlb(-1)
+    m.x[0].setub(1)
+    m.x[1].setlb(-2)
+    m.x[1].setub(2)
+    m.x[2].setlb(1)
+    m.x[2].setub(2)
+
+    def _constraint_switch_rule(m, i):
+        if i == 0:
+            return m.x[0] + m.x[1] <= 2
+        elif i == 1:
+            return -m.x[0] + m.x[1] <= 2
+        elif i == 2:
+            return m.x[0] + m.x[1] >= -2
+        elif i == 3:
+            return -m.x[0] + m.x[1] >= -2
+        elif i == 4:
+            return m.x[0] + m.x[1] + m.x[2] == 4
+    m.c = pe.Constraint([i for i in range(5)], rule = _constraint_switch_rule)
+
+    m.o = pe.Objective(expr=m.x[0]  + m.x[2], sense=pe.maximize)
+    return m
 
 def get_2d_unbounded_problem():
     '''
@@ -142,7 +170,6 @@ def get_2d_unbounded_problem():
     m.continuous_bounds = pe.ComponentMap()
     m.continuous_bounds[m.x] = (float('-inf'), 4)
     m.continuous_bounds[m.y] = (2, float('inf'))
-
     return m
 
 def get_2d_degenerate_lp():
@@ -251,7 +278,7 @@ def get_aos_test_knapsack(var_max, weights, values, capacity_fraction):
     feasible_sols = sorted(feasible_sols, key=lambda sol: sol[1], reverse=True)
     return m
 
-def get_hexagonal_pyramid_mip():
+def get_pentagonal_pyramid_mip():
     ''' 
     Pentagonal pyramid with integer coordinates in the first two dimensions and 
     a third continuous dimension.
@@ -275,7 +302,31 @@ def get_hexagonal_pyramid_mip():
     m.num_ranked_solns = [1, 4, 2, 8, 2, 12, 4, 16, 4, 20]
     return m
 
-def get_bloated_hexagonal_pyramid_mip():
+def get_indexed_pentagonal_pyramid_mip():
+    ''' 
+    Pentagonal pyramid with integer coordinates in the first two dimensions and 
+    a third continuous dimension.
+
+    '''
+    var_max = 5
+    m = pe.ConcreteModel()
+    m.x = pe.Var([1,2], within=pe.Integers, bounds=(-var_max,var_max))
+    m.z = pe.Var(within=pe.NonNegativeReals, bounds=(0,var_max))
+    m.o = pe.Objective(expr=m.z, sense=pe.maximize)
+    base_points = np.array([[0, var_max, 0], [var_max, 0, 0], [var_max/2.0, -var_max, 0], [-var_max/2.0, -var_max, 0], [-var_max, 0, 0]])
+    apex_point = np.array([0, 0, var_max])
+
+    def _con_rule(m, i):
+        vec_1 = base_points[i] - apex_point
+        vec_2 = base_points[(i+1) % var_max] - base_points[i]
+        n = np.cross(vec_1, vec_2)
+        expr = n[0]*(m.x[1] - apex_point[0]) + n[1]*(m.x[2] - apex_point[1]) + n[2]*(m.z - apex_point[2])
+        return expr >= 0
+    m.c = pe.Constraint([i for i in range(5)], rule=_con_rule)
+    m.num_ranked_solns = [1, 4, 2, 8, 2, 12, 4, 16, 4, 20]
+    return m
+
+def get_bloated_pentagonal_pyramid_mip():
     ''' 
     Pentagonal pyramid with integer coordinates in the first two dimensions and 
     a third continuous dimension. Bounds are artificially widened for obbt testing purposes
