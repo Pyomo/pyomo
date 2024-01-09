@@ -42,7 +42,7 @@ class TestOnlineDocExamples(unittest.BaseLineTestDriver, unittest.TestCase):
         # data
         'test_data_ABCD9': ['pyodbc'],
         'test_data_ABCD8': ['pyodbc'],
-        'test_data_ABCD7': ['win32com'],
+        'test_data_ABCD7': ['win32com', 'pyutilib'],
         # dataportal
         'test_dataportal_dataportal_tab': ['xlrd', 'pyutilib'],
         'test_dataportal_set_initialization': ['numpy'],
