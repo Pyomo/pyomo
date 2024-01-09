@@ -26,6 +26,9 @@ env:
   CACHE_VER: v221013.1
   NEOS_EMAIL: tests@pyomo.org
   SRC_REF: ${{ github.head_ref || github.ref }}
+  # Display must be available globally for linux to know where xvfb is
+  DISPLAY: ":99.0"
+  QT_SELECT: "qt6"
 
 jobs:
   lint:
