@@ -28,12 +28,14 @@ string representation that is a nested functional form.  For example:
 Labeler and Symbol Map
 ~~~~~~~~~~~~~~~~~~~~~~
 
-The string representation used for variables in expression can be customized to
-define different label formats.  If the :data:`labeler` option is specified, then this
-function (or class functor) is used to generate a string label used to represent the variable.  Pyomo
-defines a variety of labelers in the `pyomo.core.base.label` module.  For example, the
-:class:`NumericLabeler` defines a functor that can be used to sequentially generate
-simple labels with a prefix followed by the variable count:
+The string representation used for variables in expression can be
+customized to define different label formats.  If the :data:`labeler`
+option is specified, then this function (or class functor) is used to
+generate a string label used to represent the variable.  Pyomo defines a
+variety of labelers in the `pyomo.core.base.label` module.  For example,
+the :class:`NumericLabeler` defines a functor that can be used to
+sequentially generate simple labels with a prefix followed by the
+variable count:
 
 .. literalinclude:: ../../tests/expr/managing_ex2.spy
 
@@ -46,44 +48,20 @@ variables in different expressions have a consistent label in their
 associated string representations.
 
 
-Standardized String Representations
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The :data:`standardize` option can be used to re-order the string 
-representation to print polynomial terms before nonlinear terms.  By
-default, :data:`standardize` is :const:`False`, and the string
-representation reflects the order in which terms were combined to
-form the expression.  Pyomo does not guarantee that the string 
-representation exactly matches the Python expression order, since
-some simplification and re-ordering of terms is done automatically to
-improve the efficiency of expression generation.  But in most cases
-the string representation will closely correspond to the 
-Python expression order.
-
-If :data:`standardize` is :const:`True`, then the pyomo expression
-is processed to identify polynomial terms, and the string representation
-consists of the constant and linear terms followed by
-an expression that contains other nonlinear terms.  For example:
-
-.. literalinclude:: ../../tests/expr/managing_ex3.spy
-
 Other Ways to Generate String Representations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 There are two other standard ways to generate string representations:
 
-* Call the :func:`__str__` magic method (e.g. using the Python :func:`str()` function.  This 
-  calls :func:`expression_to_string <pyomo.core.expr.expression_to_string>` with
-  the option :data:`standardize` equal to :const:`True` (see below).
+* Call the :func:`__str__` magic method (e.g. using the Python
+  :func:`str()` function.  This calls :func:`expression_to_string
+  <pyomo.core.expr.expression_to_string>`, using the default values for
+  all arguments.
 
-* Call the :func:`to_string` method on the :class:`ExpressionBase <pyomo.core.expr.ExpressionBase>` class.
-  This defaults to calling :func:`expression_to_string <pyomo.core.expr.expression_to_string>` with
-  the option :data:`standardize` equal to :const:`False` (see below).
-
-In practice, we expect at the :func:`__str__` magic method will be
-used by most users, and the standardization of the output provides
-a consistent ordering of terms that should make it easier to interpret
-expressions.
+* Call the :func:`to_string` method on the
+  :class:`ExpressionBase<pyomo.core.expr.ExpressionBase>` class.  This
+  calls :func:`expression_to_string
+  <pyomo.core.expr.expression_to_string>` and accepts the same arguments.
 
 
 Evaluating Expressions
@@ -108,7 +86,7 @@ raise an exception.  This exception can be suppressed using the
 
 .. literalinclude:: ../../tests/expr/managing_ex7.spy
 
-This option is useful in contexts where adding a try block is inconvenient 
+This option is useful in contexts where adding a try block is inconvenient
 in your modeling script.
 
 .. note::
@@ -127,7 +105,7 @@ Expression transformations sometimes need to find all nodes in an
 expression tree that are of a given type.  Pyomo contains two utility
 functions that support this functionality.  First, the
 :func:`identify_components <pyomo.core.expr.identify_components>`
-function is a generator function that walks the expression tree and yields all 
+function is a generator function that walks the expression tree and yields all
 nodes whose type is in a specified set of node types.  For example:
 
 .. literalinclude:: ../../tests/expr/managing_ex8.spy
@@ -152,8 +130,15 @@ is computed using the values of its children.
 
 Walking an expression tree can be tricky, and the code requires intimate
 knowledge of the design of the expression system.  Pyomo includes
-several classes that define so-called visitor patterns for walking
-expression tree:
+several classes that define visitor patterns for walking expression
+tree:
+
+:class:`StreamBasedExpressionVisitor <pyomo.core.expr.StreamBasedExpressionVisitor>`
+    The most general and extensible visitor class.  This visitor
+    implements an event-based approach for walking the tree inspired by
+    the ``expat`` library for processing XML files.  The visitor has
+    seven event callbacks that users can hook into, providing very
+    fine-grained control over the expression walker.
 
 :class:`SimpleExpressionVisitor <pyomo.core.expr.SimpleExpressionVisitor>`
     A :func:`visitor` method is called for each node in the tree,
@@ -173,33 +158,39 @@ expression tree:
 
 These classes define a variety of suitable tree search methods:
 
-* :class:`SimpleExpressionVisitor <pyomo.core.expr.SimpleExpressionVisitor>`
+* :class:`StreamBasedExpressionVisitor <pyomo.core.expr.StreamBasedExpressionVisitor>`
 
-  * **xbfs**: breadth-first search where leaf nodes are immediately visited
-  * **xbfs_yield_leaves**: breadth-first search where leaf nodes are immediately visited, and the visit method yields a value
-
-* :class:`ExpressionValueVisitor <pyomo.core.expr.ExpressionValueVisitor>`
-
-  * **dfs_postorder_stack**: postorder depth-first search using a stack
+  * ``walk_expression``: depth-first traversal of the expression tree.
 
 * :class:`ExpressionReplacementVisitor <pyomo.core.expr.ExpressionReplacementVisitor>`
 
-  * **dfs_postorder_stack**: postorder depth-first search using a stack
+  * ``walk_expression``: depth-first traversal of the expression tree.
 
-.. note::
+* :class:`SimpleExpressionVisitor <pyomo.core.expr.SimpleExpressionVisitor>`
 
-    The PyUtilib visitor classes define several other search methods
-    that could be used with Pyomo expressions.  But these are the 
-    only search methods currently used within Pyomo.
+  * ``xbfs``: breadth-first search where leaf nodes are immediately visited
+  * ``xbfs_yield_leaves``: breadth-first search where leaf nodes are
+    immediately visited, and the visit method yields a value
 
-To implement a visitor object, a user creates a subclass of one of these 
-classes.  Only one of a few methods will need to be defined to
-implement the visitor:
+* :class:`ExpressionValueVisitor <pyomo.core.expr.ExpressionValueVisitor>`
+
+  * ``dfs_postorder_stack``: postorder depth-first search using a
+    nonrecursive stack
+
+
+To implement a visitor object, a user needs to provide specializations
+for specific events.  For legacy visitors based on the PyUtilib
+visitor pattern (e.g., :class:`SimpleExpressionVisitor` and
+:class:`ExpressionValueVisitor`), one must create a subclass of one of these
+classes and override at least one of the following:
 
 :func:`visitor`
     Defines the operation that is performed when a node is visited.  In
-    the :class:`ExpressionValueVisitor <pyomo.core.expr.ExpressionValueVisitor>` and :class:`ExpressionReplacementVisitor <pyomo.core.expr.ExpressionReplacementVisitor>` visitor classes, this 
-    method returns a value that is used by its parent node.
+    the :class:`ExpressionValueVisitor
+    <pyomo.core.expr.ExpressionValueVisitor>` and
+    :class:`ExpressionReplacementVisitor
+    <pyomo.core.expr.ExpressionReplacementVisitor>` visitor classes,
+    this method returns a value that is used by its parent node.
 
 :func:`visiting_potential_leaf`
     Checks if the search should terminate with this node.  If no,
@@ -211,8 +202,16 @@ implement the visitor:
     class.
 
 :func:`finalize`
-    This method defines the final value that is returned from the 
+    This method defines the final value that is returned from the
     visitor.  This is not normally redefined.
+
+For modern visitors based on the :class:`StreamBasedExpressionVisitor
+<pyomo.core.expr.StreamBasedExpressionVisitor>`, one can either define a
+subclass, pass the callbacks to an instance of the base class, or assign
+the callbacks as attributes on an instance of the base class.  The
+:class:`StreamBasedExpressionVisitor
+<pyomo.core.expr.StreamBasedExpressionVisitor>` provides seven
+callbacks, which are documented in the class documentation.
 
 Detailed documentation of the APIs for these methods is provided
 with the class documentation for these visitors.
@@ -226,7 +225,7 @@ class:
 
 .. literalinclude:: ../../tests/expr/managing_visitor1.spy
 
-The class constructor creates a counter, and the :func:`visit` method 
+The class constructor creates a counter, and the :func:`visit` method
 increments this counter for every node that is visited.  The :func:`finalize`
 method returns the value of this counter after the tree has been walked.  The
 following function illustrates this use of this visitor class:
@@ -261,16 +260,13 @@ class:
 
 .. literalinclude:: ../../tests/expr/managing_visitor5.spy
 
-No :func:`visit` method needs to be defined.  The
-:func:`visiting_potential_leaf` function identifies variable nodes
+No other method need to be defined.  The
+:func:`beforeChild` method identifies variable nodes
 and returns a product expression that contains a mutable parameter.
-The :class:`_LinearExpression` class has a different representation
-that embeds variables.  Hence, this class must be handled 
-in a separate condition that explicitly transforms this sub-expression.
 
 .. literalinclude:: ../../tests/expr/managing_visitor6.spy
 
-The :func:`scale_expression` function is called with an expression and 
+The :func:`scale_expression` function is called with an expression and
 a dictionary, :attr:`scale`, that maps variable ID to model parameter.  For example:
 
 .. literalinclude:: ../../tests/expr/managing_visitor7.spy
