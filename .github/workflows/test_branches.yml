@@ -194,6 +194,9 @@ jobs:
         sudo apt-get -o Dir::Cache=${GITHUB_WORKSPACE}/cache/os \
             install libopenblas-dev gfortran liblapack-dev glpk-utils
         sudo chmod -R 777 ${GITHUB_WORKSPACE}/cache/os
+        sudo apt-get -qq install libxcb-xinerama0 pyqt5-dev-tools
+        # start xvfb in the background
+        sudo /usr/bin/Xvfb $DISPLAY -screen 0 1280x1024x24 &
 
     - name: Update Windows
       if: matrix.TARGET == 'win'
