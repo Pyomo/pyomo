@@ -743,8 +743,8 @@ class BaseLineTestDriver(object):
             'Total CPU',
             'Ipopt',
             'license',
-            'Status: optimal',
-            'Status: feasible',
+            #'Status: optimal',
+            #'Status: feasible',
             'time:',
             'Time:',
             'with format cpxlp',
@@ -752,12 +752,13 @@ class BaseLineTestDriver(object):
             'execution time=',
             'Solver results file:',
             'TokenServer',
+            # ignore entries in pstats reports:
             'function calls',
             'List reduced',
             '.py:',
-            '{built-in method',
-            '{method',
-            '{pyomo.core.expr.numvalue.as_numeric}',
+            ' {built-in method',
+            ' {method',
+            ' {pyomo.core.expr.numvalue.as_numeric}',
         ):
             if field in line:
                 return True
