@@ -47,6 +47,8 @@ class TestOnlineDocExamples(unittest.BaseLineTestDriver, unittest.TestCase):
         'test_dataportal_dataportal_tab': ['xlrd', 'pyutilib'],
         'test_dataportal_set_initialization': ['numpy'],
         'test_dataportal_param_initialization': ['numpy'],
+        # kernel
+        'test_kernel_examples': ['pympler'],
     }
 
     @parameterized.parameterized.expand(
