@@ -908,7 +908,6 @@ class BaseLineTestDriver(object):
         finally:
             os.chdir(cwd)
 
-
         try:
             self.compare_baselines(OUT.getvalue(), baseline)
         except:
