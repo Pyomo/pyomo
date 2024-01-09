@@ -732,6 +732,7 @@ class BaseLineTestDriver(object):
             'Function',
             'File',
             'Matplotlib',
+            'Memory:',
             '-------',
             '=======',
             '    ^',

@@ -230,5 +230,5 @@
     - pw.c[1]: linear_constraint(active=True, expr=pw.v[0] + 2*pw.v[1] + pw.v[2] + 2*pw.v[3] - f  ==  0)
     - pw.c[2]: linear_constraint(active=True, expr=pw.v[0] + pw.v[1] + pw.v[2] + pw.v[3]  ==  1)
    - pw.s: sos(active=True, level=2, entries=['(pw.v[0],1)', '(pw.v[1],2)', '(pw.v[2],3)', '(pw.v[3],4)'])
-1.9 KB
-9.5 KB
+Memory: 1.9 KB
+Memory: 9.5 KB
