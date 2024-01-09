@@ -14,7 +14,7 @@
 
 import pyomo.environ as pyo
 
-import pyomo.contrib.parmest.scenariocreator_deprecated as scen_deprecated
+import pyomo.contrib.parmest.deprecated.scenariocreator as scen_deprecated
 
 import logging
 logger = logging.getLogger(__name__)

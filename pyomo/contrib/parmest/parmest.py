@@ -63,7 +63,7 @@ import pyomo.contrib.parmest.utils as utils
 import pyomo.contrib.parmest.graphics as graphics
 from pyomo.dae import ContinuousSet
 
-import pyomo.contrib.parmest.parmest_deprecated as parmest_deprecated
+import pyomo.contrib.parmest.deprecated.parmest as parmest_deprecated
 
 parmest_available = numpy_available & pandas_available & scipy_available
 
@@ -398,14 +398,21 @@ class Estimator(object):
         """
         Return list of fitted model parameter names
         """
-        # if fitted model parameter names differ from theta_names created when Estimator object is created
-        if hasattr(self, 'theta_names_updated'):
-            return self.theta_names_updated
+        # check for deprecated inputs
+        if self.pest_deprecated is not None:
+
+            # if fitted model parameter names differ from theta_names 
+            # created when Estimator object is created
+            if hasattr(self, 'theta_names_updated'):
+                return self.pest_deprecated.theta_names_updated
+
+            else:
+                return (
+                    self.pest_deprecated.theta_names
+                )  # default theta_names, created when Estimator object is created
 
         else:
-            return (
-                self.theta_names
-            )  # default theta_names, created when Estimator object is created
+            return None
 
     def _create_parmest_model(self, data):
         """
