@@ -1482,7 +1482,8 @@ def relax(
     """
     m = pe.Block(concrete=True)
     m.cons = pe.ConstraintList()
-    m.aux_vars = pe.VarList()
+    if not hasattr(m, 'aux_vars'):
+        m.aux_vars = pe.VarList()
     m.relaxations = pe.Block()
     m.aux_cons = pe.ConstraintList()
 
