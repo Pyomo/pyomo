@@ -334,7 +334,7 @@ jobs:
         echo "*** Install Pyomo dependencies ***"
         # Note: this will fail the build if any installation fails (or
         # possibly if it outputs messages to stderr)
-        conda install --update-deps -q -y $CONDA_DEPENDENCIES pytest-qt
+        conda install --update-deps -q -y $CONDA_DEPENDENCIES qtconsole pint pytest-qt
         if test -z "${{matrix.slim}}"; then
             PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
             echo "Installing for $PYVER"
