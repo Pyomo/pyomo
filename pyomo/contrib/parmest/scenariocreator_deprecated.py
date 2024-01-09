@@ -14,10 +14,6 @@
 
 import pyomo.environ as pyo
 
-import pyomo.contrib.parmest.scenariocreator_deprecated as scen_deprecated
-
-import logging
-logger = logging.getLogger(__name__)
 
 class ScenarioSet(object):
     """
@@ -123,17 +119,8 @@ class ScenarioCreator(object):
     """
 
     def __init__(self, pest, solvername):
-
-        # is this a deprecated pest object?
-        self.scen_deprecated = None
-        if pest.pest_deprecated is not None:
-            logger.warning("Using a deprecated parmest object for scenario " +
-                "creator, please recreate object using experiment lists.")
-            self.scen_deprecated = scen_deprecated.ScenarioCreator(
-                pest.pest_deprecated, solvername)
-        else:
-            self.pest = pest
-            self.solvername = solvername
+        self.pest = pest
+        self.solvername = solvername
 
     def ScenariosFromExperiments(self, addtoSet):
         """Creates new self.Scenarios list using the experiments only.
@@ -144,12 +131,7 @@ class ScenarioCreator(object):
             a ScenarioSet
         """
 
-        # check if using deprecated pest object
-        if self.scen_deprecated is not None:
-            self.scen_deprecated.ScenariosFromExperiments(addtoSet)
-            return
-            
-        assert isinstance(addtoSet, ScenarioSet)
+        # assert isinstance(addtoSet, ScenarioSet)
 
         scenario_numbers = list(range(len(self.pest.callback_data)))
 
@@ -178,13 +160,7 @@ class ScenarioCreator(object):
             numtomake (int) : number of scenarios to create
         """
 
-        # check if using deprecated pest object
-        if self.scen_deprecated is not None:
-            self.scen_deprecated.ScenariosFromBootstrap(
-                addtoSet, numtomake, seed=seed)
-            return
-
-        assert isinstance(addtoSet, ScenarioSet)
+        # assert isinstance(addtoSet, ScenarioSet)
 
         bootstrap_thetas = self.pest.theta_est_bootstrap(numtomake, seed=seed)
         addtoSet.append_bootstrap(bootstrap_thetas)

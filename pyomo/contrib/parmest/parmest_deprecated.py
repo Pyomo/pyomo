@@ -63,8 +63,6 @@ import pyomo.contrib.parmest.utils as utils
 import pyomo.contrib.parmest.graphics as graphics
 from pyomo.dae import ContinuousSet
 
-import pyomo.contrib.parmest.parmest_deprecated as parmest_deprecated
-
 parmest_available = numpy_available & pandas_available & scipy_available
 
 inverse_reduced_hessian, inverse_reduced_hessian_available = attempt_import(
@@ -338,32 +336,16 @@ class Estimator(object):
         Provides options to the solver (also the name of an attribute)
     """
 
-    # backwards compatible constructor will accept the old inputs
-    # from parmest_deprecated as well as the new inputs using experiment lists
-    def __init__(self, *args, **kwargs):
-        
-        # use deprecated interface
-        self.pest_deprecated = None
-        if len(args) > 1:
-            logger.warning('Using deprecated parmest inputs (model_function, ' +
-                 'data, theta_names), please use experiment lists instead.')
-            self.pest_deprecated = parmest_deprecated.Estimator(*args, **kwargs)
-            return
-
-        print("New parmest interface using Experiment lists coming soon!")
-        exit()
-
-    # def __init__(
-    #     self,
-    #     model_function,
-    #     data,
-    #     theta_names,
-    #     obj_function=None,
-    #     tee=False,
-    #     diagnostic_mode=False,
-    #     solver_options=None,
-    # ):
-
+    def __init__(
+        self,
+        model_function,
+        data,
+        theta_names,
+        obj_function=None,
+        tee=False,
+        diagnostic_mode=False,
+        solver_options=None,
+    ):
         self.model_function = model_function
 
         assert isinstance(
@@ -924,15 +906,6 @@ class Estimator(object):
         cov: pd.DataFrame
             Covariance matrix of the fitted parameters (only for solver='ef_ipopt')
         """
-
-        # check if we are using deprecated parmest
-        if self.pest_deprecated is not None:
-            return self.pest_deprecated.theta_est(
-                solver=solver, 
-                return_values=return_values,
-                calc_cov=calc_cov,
-                cov_n=cov_n)
-        
         assert isinstance(solver, str)
         assert isinstance(return_values, list)
         assert isinstance(calc_cov, bool)
@@ -983,16 +956,6 @@ class Estimator(object):
             Theta values for each sample and (if return_samples = True)
             the sample numbers used in each estimation
         """
-
-        # check if we are using deprecated parmest
-        if self.pest_deprecated is not None:
-            return self.pest_deprecated.theta_est_bootstrap(
-                bootstrap_samples,
-                samplesize=samplesize,
-                replacement=replacement,
-                seed=seed,
-                return_samples=return_samples)
-
         assert isinstance(bootstrap_samples, int)
         assert isinstance(samplesize, (type(None), int))
         assert isinstance(replacement, bool)
@@ -1048,15 +1011,6 @@ class Estimator(object):
             Theta values for each sample and (if return_samples = True)
             the sample numbers left out of each estimation
         """
-
-        # check if we are using deprecated parmest
-        if self.pest_deprecated is not None:
-            return self.pest_deprecated.theta_est_leaveNout(
-                lNo, 
-                lNo_samples=lNo_samples,
-                seed=seed, 
-                return_samples=return_samples)
-
         assert isinstance(lNo, int)
         assert isinstance(lNo_samples, (type(None), int))
         assert isinstance(seed, (type(None), int))
@@ -1130,16 +1084,6 @@ class Estimator(object):
         indicates if the theta estimate is in (True) or out (False) of the
         alpha region for a given distribution (based on the bootstrap results)
         """
-
-        # check if we are using deprecated parmest
-        if self.pest_deprecated is not None:
-            return self.pest_deprecated.leaveNout_bootstrap_test(
-                lNo, 
-                lNo_samples, 
-                bootstrap_samples, 
-                distribution, alphas, 
-                seed=seed)
-
         assert isinstance(lNo, int)
         assert isinstance(lNo_samples, (type(None), int))
         assert isinstance(bootstrap_samples, int)
@@ -1200,13 +1144,6 @@ class Estimator(object):
             Objective value for each theta (infeasible solutions are
             omitted).
         """
-
-        # check if we are using deprecated parmest
-        if self.pest_deprecated is not None:
-            return self.pest_deprecated.objective_at_theta(
-                theta_values=theta_values,
-                initialize_parmest_model=initialize_parmest_model)
-
         if len(self.theta_names) == 1 and self.theta_names[0] == 'parmest_dummy_var':
             pass  # skip assertion if model has no fitted parameters
         else:
@@ -1321,15 +1258,6 @@ class Estimator(object):
         thresholds: pd.Series
             If return_threshold = True, the thresholds are also returned.
         """
-
-        # check if we are using deprecated parmest
-        if self.pest_deprecated is not None:
-            return self.pest_deprecated.likelihood_ratio_test(
-                obj_at_theta, 
-                obj_value, 
-                alphas, 
-                return_thresholds=return_thresholds)
-
         assert isinstance(obj_at_theta, pd.DataFrame)
         assert isinstance(obj_value, (int, float))
         assert isinstance(alphas, list)
@@ -1382,15 +1310,6 @@ class Estimator(object):
             If test_theta_values is not None, returns test theta value along
             with True (inside) or False (outside) for each alpha
         """
-
-        # check if we are using deprecated parmest
-        if self.pest_deprecated is not None:
-            return self.pest_deprecated.confidence_region_test(
-                theta_values, 
-                distribution, 
-                alphas, 
-                test_theta_values=test_theta_values)
-
         assert isinstance(theta_values, pd.DataFrame)
         assert distribution in ['Rect', 'MVN', 'KDE']
         assert isinstance(alphas, list)
