@@ -597,7 +597,7 @@ class BaseLineTestDriver(object):
         super().__init__(test)
 
     def initialize_dependencies(self):
-        # Note: aas a rule, pyomo.common is not allowed to import from
+        # Note: as a rule, pyomo.common is not allowed to import from
         # the rest of Pyomo.  we permit it here because a) this is not
         # at module scope, and b) there is really no better / more
         # logical place in pyomo to put this code.
