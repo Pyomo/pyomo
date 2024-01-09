@@ -1,21 +1,25 @@
 1 Set Declarations
-    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
-        ['A1', 'A2', 'A3']
+    A : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {'A1', 'A2', 'A3'}
 
 1 Declarations: A
 1 Set Declarations
-    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
-        ['A1', 'A2', 'A3']
+    A : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {'A1', 'A2', 'A3'}
 
 1 Declarations: A
 1 Set Declarations
-    C : Dim=0, Dimen=2, Size=9, Domain=None, Ordered=False, Bounds=None
-        [('A1', 1), ('A1', 2), ('A1', 3), ('A2', 1), ('A2', 2), ('A2', 3), ('A3', 1), ('A3', 2), ('A3', 3)]
+    C : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     2 :    Any :    9 : {('A1', 1), ('A1', 2), ('A1', 3), ('A2', 1), ('A2', 2), ('A2', 3), ('A3', 1), ('A3', 2), ('A3', 3)}
 
 1 Declarations: C
 1 Set Declarations
-    D : Dim=0, Dimen=2, Size=3, Domain=None, Ordered=False, Bounds=None
-        [('A1', 1), ('A2', 2), ('A3', 3)]
+    D : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     2 :    Any :    3 : {('A1', 1), ('A2', 2), ('A3', 3)}
 
 1 Declarations: D
 1 Param Declarations
@@ -25,8 +29,9 @@
 
 1 Declarations: z
 1 Set Declarations
-    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
-        ['A1', 'A2', 'A3']
+    A : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {'A1', 'A2', 'A3'}
 
 1 Param Declarations
     y : Size=3, Index=A, Domain=Any, Default=None, Mutable=False
@@ -37,8 +42,9 @@
 
 2 Declarations: A y
 1 Set Declarations
-    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
-        ['A1', 'A2', 'A3']
+    A : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {'A1', 'A2', 'A3'}
 
 2 Param Declarations
     w : Size=3, Index=A, Domain=Any, Default=None, Mutable=False
@@ -54,8 +60,9 @@
 
 3 Declarations: A x w
 1 Set Declarations
-    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
-        ['A1', 'A2', 'A3']
+    A : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {'A1', 'A2', 'A3'}
 
 1 Param Declarations
     y : Size=3, Index=A, Domain=Any, Default=None, Mutable=False
@@ -66,8 +73,9 @@
 
 2 Declarations: A y
 1 Set Declarations
-    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
-        ['A1', 'A2', 'A3']
+    A : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {'A1', 'A2', 'A3'}
 
 1 Param Declarations
     w : Size=3, Index=A, Domain=Any, Default=None, Mutable=False
@@ -78,12 +86,15 @@
 
 2 Declarations: A w
 3 Set Declarations
-    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
-        ['A1', 'A2', 'A3']
-    I : Dim=0, Dimen=1, Size=4, Domain=None, Ordered=False, Bounds=None
-        ['I1', 'I2', 'I3', 'I4']
-    u_index : Dim=0, Dimen=2, Size=12, Domain=None, Ordered=False, Bounds=None
-        Virtual
+    A : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {'A1', 'A2', 'A3'}
+    I : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    4 : {'I1', 'I2', 'I3', 'I4'}
+    u_index : Size=1, Index=None, Ordered=True
+        Key  : Dimen : Domain : Size : Members
+        None :     2 :    I*A :   12 : {('I1', 'A1'), ('I1', 'A2'), ('I1', 'A3'), ('I2', 'A1'), ('I2', 'A2'), ('I2', 'A3'), ('I3', 'A1'), ('I3', 'A2'), ('I3', 'A3'), ('I4', 'A1'), ('I4', 'A2'), ('I4', 'A3')}
 
 1 Param Declarations
     u : Size=12, Index=u_index, Domain=Any, Default=None, Mutable=False
@@ -103,12 +114,15 @@
 
 4 Declarations: A I u_index u
 3 Set Declarations
-    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
-        ['A1', 'A2', 'A3']
-    I : Dim=0, Dimen=1, Size=4, Domain=None, Ordered=False, Bounds=None
-        ['I1', 'I2', 'I3', 'I4']
-    t_index : Dim=0, Dimen=2, Size=12, Domain=None, Ordered=False, Bounds=None
-        Virtual
+    A : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {'A1', 'A2', 'A3'}
+    I : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    4 : {'I1', 'I2', 'I3', 'I4'}
+    t_index : Size=1, Index=None, Ordered=True
+        Key  : Dimen : Domain : Size : Members
+        None :     2 :    A*I :   12 : {('A1', 'I1'), ('A1', 'I2'), ('A1', 'I3'), ('A1', 'I4'), ('A2', 'I1'), ('A2', 'I2'), ('A2', 'I3'), ('A2', 'I4'), ('A3', 'I1'), ('A3', 'I2'), ('A3', 'I3'), ('A3', 'I4')}
 
 1 Param Declarations
     t : Size=12, Index=t_index, Domain=Any, Default=None, Mutable=False
@@ -128,8 +142,9 @@
 
 4 Declarations: A I t_index t
 1 Set Declarations
-    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
-        ['A1', 'A2', 'A3']
+    A : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {'A1', 'A2', 'A3'}
 
 1 Param Declarations
     s : Size=2, Index=A, Domain=Any, Default=None, Mutable=False
@@ -139,8 +154,9 @@
 
 2 Declarations: A s
 1 Set Declarations
-    A : Dim=0, Dimen=1, Size=4, Domain=None, Ordered=False, Bounds=None
-        ['A1', 'A2', 'A3', 'A4']
+    A : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    4 : {'A1', 'A2', 'A3', 'A4'}
 
 1 Param Declarations
     y : Size=3, Index=A, Domain=Any, Default=None, Mutable=False
@@ -151,8 +167,9 @@
 
 2 Declarations: A y
 1 Set Declarations
-    A : Dim=0, Dimen=2, Size=3, Domain=None, Ordered=False, Bounds=None
-        [('A1', 'B1'), ('A2', 'B2'), ('A3', 'B3')]
+    A : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     2 :    Any :    3 : {('A1', 'B1'), ('A2', 'B2'), ('A3', 'B3')}
 
 1 Param Declarations
     p : Size=3, Index=A, Domain=Any, Default=None, Mutable=False
@@ -163,13 +180,15 @@
 
 2 Declarations: A p
 1 Set Declarations
-    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
-        ['A1', 'A2', 'A3']
+    A : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {'A1', 'A2', 'A3'}
 
 1 Declarations: A
 1 Set Declarations
-    y_index : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
-        ['A1', 'A2', 'A3']
+    y_index : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {'A1', 'A2', 'A3'}
 
 2 Param Declarations
     y : Size=3, Index=y_index, Domain=Any, Default=None, Mutable=False
@@ -188,8 +207,9 @@ A1 3.3
 A2 3.4
 A3 3.5
 1 Set Declarations
-    A : Dim=0, Dimen=2, Size=3, Domain=None, Ordered=False, Bounds=None
-        [('A1', 'B1'), ('A2', 'B2'), ('A3', 'B3')]
+    A : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     2 :    Any :    3 : {('A1', 'B1'), ('A2', 'B2'), ('A3', 'B3')}
 
 1 Param Declarations
     p : Size=3, Index=A, Domain=Any, Default=None, Mutable=False
@@ -200,8 +220,9 @@ A3 3.5
 
 2 Declarations: A p
 1 Set Declarations
-    A : Dim=0, Dimen=2, Size=0, Domain=None, Ordered=False, Bounds=None
-        []
+    A : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     2 :    Any :    0 :      {}
 
 1 Param Declarations
     p : Size=0, Index=A, Domain=Any, Default=None, Mutable=False
@@ -209,8 +230,9 @@ A3 3.5
 
 2 Declarations: A p
 1 Set Declarations
-    A : Dim=0, Dimen=2, Size=3, Domain=None, Ordered=False, Bounds=None
-        [('A1', 'B1'), ('A2', 'B2'), ('A3', 'B3')]
+    A : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     2 :    Any :    3 : {('A1', 'B1'), ('A2', 'B2'), ('A3', 'B3')}
 
 1 Param Declarations
     p : Size=3, Index=A, Domain=Any, Default=None, Mutable=False
@@ -221,8 +243,9 @@ A3 3.5
 
 2 Declarations: A p
 1 Set Declarations
-    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
-        ['A1', 'A2', 'A3']
+    A : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {'A1', 'A2', 'A3'}
 
 1 Param Declarations
     p : Size=3, Index=A, Domain=Any, Default=None, Mutable=False
@@ -233,14 +256,16 @@ A3 3.5
 
 2 Declarations: A p
 3 Set Declarations
-    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
-        ['A1', 'A2', 'A3']
-    B : Dim=0, Dimen=2, Size=3, Domain=None, Ordered=False, Bounds=None
-        [(1, 'B1'), (2, 'B2'), (3, 'B3')]
-    C : Dim=1, Dimen=1, Size=6, Domain=None, ArraySize=2, Ordered=False, Bounds=None
-        Key : Members
-         A1 : [1, 2, 3]
-         A3 : [10, 20, 30]
+    A : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {'A1', 'A2', 'A3'}
+    B : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     2 :    Any :    3 : {(1, 'B1'), (2, 'B2'), (3, 'B3')}
+    C : Size=2, Index=A, Ordered=Insertion
+        Key : Dimen : Domain : Size : Members
+         A1 :     1 :    Any :    3 : {1, 2, 3}
+         A3 :     1 :    Any :    3 : {10, 20, 30}
 
 3 Param Declarations
     p : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
@@ -259,14 +284,16 @@ A3 3.5
 
 6 Declarations: A B C p q r
 3 Set Declarations
-    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
-        ['A1', 'A2', 'A3']
-    B : Dim=0, Dimen=2, Size=3, Domain=None, Ordered=False, Bounds=None
-        [(1, 'B1'), (2, 'B2'), (3, 'B3')]
-    C : Dim=1, Dimen=1, Size=6, Domain=None, ArraySize=2, Ordered=False, Bounds=None
-        Key : Members
-         A1 : [1, 2, 3]
-         A3 : [10, 20, 30]
+    A : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {'A1', 'A2', 'A3'}
+    B : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     2 :    Any :    3 : {(1, 'B1'), (2, 'B2'), (3, 'B3')}
+    C : Size=2, Index=A, Ordered=Insertion
+        Key : Dimen : Domain : Size : Members
+         A1 :     1 :    Any :    3 : {1, 2, 3}
+         A3 :     1 :    Any :    3 : {10, 20, 30}
 
 3 Param Declarations
     p : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
@@ -285,12 +312,14 @@ A3 3.5
 
 6 Declarations: A B C p q r
 1 Set Declarations
-    C : Dim=0, Dimen=2, Size=9, Domain=None, Ordered=False, Bounds=None
-        [('A1', 1), ('A1', 2), ('A1', 3), ('A2', 1), ('A2', 2), ('A2', 3), ('A3', 1), ('A3', 2), ('A3', 3)]
+    C : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     2 :    Any :    9 : {('A1', 1), ('A1', 2), ('A1', 3), ('A2', 1), ('A2', 2), ('A2', 3), ('A3', 1), ('A3', 2), ('A3', 3)}
 
 1 Declarations: C
 1 Set Declarations
-    C : Dim=0, Dimen=2, Size=3, Domain=None, Ordered=False, Bounds=None
-        [('A1', 1), ('A2', 2), ('A3', 3)]
+    C : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     2 :    Any :    3 : {('A1', 1), ('A2', 2), ('A3', 3)}
 
 1 Declarations: C

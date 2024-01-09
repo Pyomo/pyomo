@@ -1,24 +1,34 @@
+WARNING: Initializing ordered Set B with a fundamentally unordered data source
+(type: set).  This WILL potentially lead to nondeterministic behavior in Pyomo
 9 Set Declarations
-    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(2, 5)
-        [2, 3, 5]
-    B : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(2, 5)
-        [2, 3, 5]
-    C : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(2, 5)
-        [2, 3, 5]
-    D : Dim=0, Dimen=1, Size=9, Domain=None, Ordered=False, Bounds=(0, 8)
-        [0, 1, 2, 3, 4, 5, 6, 7, 8]
-    E : Dim=0, Dimen=1, Size=1, Domain=None, Ordered=False, Bounds=(2, 2)
-        [2]
-    F : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(2, 5)
-        [2, 3, 5]
-    G : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(2, 5)
-        [2, 3, 5]
-    H : Dim=1, Dimen=1, Size=9, Domain=None, ArraySize=3, Ordered=False, Bounds=None
-        Key : Members
-          2 : [1, 3, 5]
-          3 : [2, 4, 6]
-          4 : [3, 5, 7]
-    H_index : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(2, 4)
-        [2, 3, 4]
+    A : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {2, 3, 5}
+    B : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {2, 3, 5}
+    C : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {2, 3, 5}
+    D : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    9 : {0, 1, 2, 3, 4, 5, 6, 7, 8}
+    E : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    1 :    {2,}
+    F : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {2, 3, 5}
+    G : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {2, 3, 5}
+    H : Size=3, Index=H_index, Ordered=Insertion
+        Key : Dimen : Domain : Size : Members
+          2 :     1 :    Any :    3 : {1, 3, 5}
+          3 :     1 :    Any :    3 : {2, 4, 6}
+          4 :     1 :    Any :    3 : {3, 5, 7}
+    H_index : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {2, 3, 4}
 
 9 Declarations: A B C D E F G H_index H

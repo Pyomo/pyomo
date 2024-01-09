@@ -1,10 +1,13 @@
 3 Set Declarations
-    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
-        ['A1', 'A2', 'A3']
-    B : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
-        ['B1', 'B2', 'B3']
-    N_index : Dim=0, Dimen=2, Size=9, Domain=None, Ordered=False, Bounds=None
-        Virtual
+    A : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {'A1', 'A2', 'A3'}
+    B : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {'B1', 'B2', 'B3'}
+    N_index : Size=1, Index=None, Ordered=True
+        Key  : Dimen : Domain : Size : Members
+        None :     2 :    A*B :    9 : {('A1', 'B1'), ('A1', 'B2'), ('A1', 'B3'), ('A2', 'B1'), ('A2', 'B2'), ('A2', 'B3'), ('A3', 'B1'), ('A3', 'B2'), ('A3', 'B3')}
 
 2 Param Declarations
     M : Size=3, Index=A, Domain=Any, Default=None, Mutable=False
