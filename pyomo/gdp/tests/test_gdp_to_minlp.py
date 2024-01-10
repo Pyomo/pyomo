@@ -1,0 +1,300 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
+import pyomo.common.unittest as unittest
+
+from pyomo.environ import (
+    TransformationFactory,
+    Block,
+    Constraint,
+    ConcreteModel,
+    Var,
+    Any,
+)
+from pyomo.gdp import Disjunct, Disjunction
+from pyomo.core.expr.compare import (
+    assertExpressionsEqual,
+)
+from pyomo.repn import generate_standard_repn
+
+import pyomo.core.expr as EXPR
+import pyomo.gdp.tests.models as models
+import pyomo.gdp.tests.common_tests as ct
+
+import random
+
+
+class CommonTests:
+    def diff_apply_to_and_create_using(self, model):
+        ct.diff_apply_to_and_create_using(self, model, 'gdp.gdp_to_minlp')
+
+
+class TwoTermDisj(unittest.TestCase, CommonTests):
+    def setUp(self):
+        # set seed so we can test name collisions predictably
+        random.seed(666)
+
+    def test_new_block_created(self):
+        m = models.makeTwoTermDisj()
+        TransformationFactory('gdp.gdp_to_minlp').apply_to(m)
+
+        # we have a transformation block
+        transBlock = m.component("_pyomo_gdp_gdp_to_minlp_reformulation")
+        self.assertIsInstance(transBlock, Block)
+
+        disjBlock = transBlock.component("relaxedDisjuncts")
+        self.assertIsInstance(disjBlock, Block)
+        self.assertEqual(len(disjBlock), 2)
+        # it has the disjuncts on it
+        self.assertIs(m.d[0].transformation_block, disjBlock[0])
+        self.assertIs(m.d[1].transformation_block, disjBlock[1])
+
+    def test_disjunction_deactivated(self):
+        ct.check_disjunction_deactivated(self, 'gdp_to_minlp')
+
+    def test_disjunctDatas_deactivated(self):
+        ct.check_disjunctDatas_deactivated(self, 'gdp_to_minlp')
+
+    def test_do_not_transform_twice_if_disjunction_reactivated(self):
+        ct.check_do_not_transform_twice_if_disjunction_reactivated(self, 'gdp_to_minlp')
+
+    def test_xor_constraint_mapping(self):
+        ct.check_xor_constraint_mapping(self, 'gdp_to_minlp')
+
+    def test_xor_constraint_mapping_two_disjunctions(self):
+        ct.check_xor_constraint_mapping_two_disjunctions(self, 'gdp_to_minlp')
+
+    def test_disjunct_mapping(self):
+        ct.check_disjunct_mapping(self, 'gdp_to_minlp')
+
+    def test_disjunct_and_constraint_maps(self):
+        """Tests the actual data structures used to store the maps."""
+        m = models.makeTwoTermDisj()
+        gdp_to_minlp = TransformationFactory('gdp.gdp_to_minlp')
+        gdp_to_minlp.apply_to(m)
+        disjBlock = m._pyomo_gdp_gdp_to_minlp_reformulation.relaxedDisjuncts
+        oldblock = m.component("d")
+
+        # we are counting on the fact that the disjuncts get relaxed in the
+        # same order every time.
+        for i in [0, 1]:
+            self.assertIs(oldblock[i].transformation_block, disjBlock[i])
+            self.assertIs(gdp_to_minlp.get_src_disjunct(disjBlock[i]), oldblock[i])
+
+        # check constraint dict has right mapping
+        c1_list = gdp_to_minlp.get_transformed_constraints(oldblock[1].c1)
+        # this is an equality
+        self.assertEqual(len(c1_list), 1)
+        self.assertIs(c1_list[0].parent_block(), disjBlock[1])
+        self.assertIs(gdp_to_minlp.get_src_constraint(c1_list[0]), oldblock[1].c1)
+
+        c2_list = gdp_to_minlp.get_transformed_constraints(oldblock[1].c2)
+        # just ub
+        self.assertEqual(len(c2_list), 1)
+        self.assertIs(c2_list[0].parent_block(), disjBlock[1])
+        self.assertIs(gdp_to_minlp.get_src_constraint(c2_list[0]), oldblock[1].c2)
+
+        c_list = gdp_to_minlp.get_transformed_constraints(oldblock[0].c)
+        # just lb
+        self.assertEqual(len(c_list), 1)
+        self.assertIs(c_list[0].parent_block(), disjBlock[0])
+        self.assertIs(gdp_to_minlp.get_src_constraint(c_list[0]), oldblock[0].c)
+
+    def test_new_block_nameCollision(self):
+        ct.check_transformation_block_name_collision(self, 'gdp_to_minlp')
+
+    def test_indicator_vars(self):
+        ct.check_indicator_vars(self, 'gdp_to_minlp')
+
+    def test_xor_constraints(self):
+        ct.check_xor_constraint(self, 'gdp_to_minlp')
+
+    def test_or_constraints(self):
+        m = models.makeTwoTermDisj()
+        m.disjunction.xor = False
+        TransformationFactory('gdp.gdp_to_minlp').apply_to(m)
+
+        # check or constraint is an or (upper bound is None)
+        orcons = m._pyomo_gdp_gdp_to_minlp_reformulation.component("disjunction_xor")
+        self.assertIsInstance(orcons, Constraint)
+        assertExpressionsEqual(
+            self,
+            orcons.body,
+            EXPR.LinearExpression(
+                [
+                    EXPR.MonomialTermExpression((1, m.d[0].binary_indicator_var)),
+                    EXPR.MonomialTermExpression((1, m.d[1].binary_indicator_var)),
+                ]
+            ),
+        )
+        self.assertEqual(orcons.lower, 1)
+        self.assertIsNone(orcons.upper)
+
+    def test_deactivated_constraints(self):
+        ct.check_deactivated_constraints(self, 'gdp_to_minlp')
+
+    def test_transformed_constraints(self):
+        m = models.makeTwoTermDisj()
+        gdp_to_minlp = TransformationFactory('gdp.gdp_to_minlp')
+        gdp_to_minlp.apply_to(m)
+        self.check_transformed_constraints(m, gdp_to_minlp, -3, 2, 7, 2)
+
+    def test_do_not_transform_userDeactivated_disjuncts(self):
+        ct.check_user_deactivated_disjuncts(self, 'gdp_to_minlp')
+
+    def test_improperly_deactivated_disjuncts(self):
+        ct.check_improperly_deactivated_disjuncts(self, 'gdp_to_minlp')
+
+    def test_do_not_transform_userDeactivated_IndexedDisjunction(self):
+        ct.check_do_not_transform_userDeactivated_indexedDisjunction(self, 'gdp_to_minlp')
+
+    # helper method to check the M values in all of the transformed
+    # constraints (m, M) is the tuple for M.  This also relies on the
+    # disjuncts being transformed in the same order every time.
+    def check_transformed_constraints(self, model, gdp_to_minlp, cons1lb, cons2lb, cons2ub, cons3ub):
+        disjBlock = model._pyomo_gdp_gdp_to_minlp_reformulation.relaxedDisjuncts
+
+        # first constraint
+        c = gdp_to_minlp.get_transformed_constraints(model.d[0].c)
+        self.assertEqual(len(c), 1)
+        c_lb = c[0]
+        self.assertTrue(c[0].active)
+        repn = generate_standard_repn(c[0].body)
+        self.assertIsNone(repn.nonlinear_expr)
+        self.assertEqual(len(repn.quadratic_coefs), 1)
+        self.assertEqual(len(repn.linear_coefs), 1)
+        ind_var = model.d[0].indicator_var
+        ct.check_quadratic_coef(self, repn, model.a, ind_var, 1)
+        ct.check_linear_coef(self, repn, ind_var, -model.d[0].c.lower)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(c[0].lower, 0)
+        self.assertIsNone(c[0].upper)
+
+        # second constraint
+        c = gdp_to_minlp.get_transformed_constraints(model.d[1].c1)
+        self.assertEqual(len(c), 1)
+        c_eq = c[0]
+        self.assertTrue(c[0].active)
+        repn = generate_standard_repn(c[0].body)
+        self.assertTrue(repn.nonlinear_expr is None)
+        self.assertEqual(len(repn.linear_coefs), 0)
+        self.assertEqual(len(repn.quadratic_coefs), 1)
+        ind_var = model.d[1].indicator_var
+        ct.check_quadratic_coef(self, repn, model.a, ind_var, 1)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(c[0].lower, 0)
+        self.assertEqual(c[0].upper, 0)
+
+        # third constraint
+        c = gdp_to_minlp.get_transformed_constraints(model.d[1].c2)
+        self.assertEqual(len(c), 1)
+        c_ub = c[0]
+        self.assertTrue(c_ub.active)
+        repn = generate_standard_repn(c_ub.body)
+        self.assertIsNone(repn.nonlinear_expr)
+        self.assertEqual(len(repn.linear_coefs), 1)
+        self.assertEqual(len(repn.quadratic_coefs), 1)
+        ct.check_quadratic_coef(self, repn, model.x, ind_var, 1)
+        ct.check_linear_coef(self, repn, ind_var, -model.d[1].c2.upper)
+        self.assertEqual(repn.constant, 0)
+        self.assertIsNone(c_ub.lower)
+        self.assertEqual(c_ub.upper, 0)
+
+    def test_create_using(self):
+        m = models.makeTwoTermDisj()
+        self.diff_apply_to_and_create_using(m)
+
+    def test_indexed_constraints_in_disjunct(self):
+        m = ConcreteModel()
+        m.I = [1, 2, 3]
+        m.x = Var(m.I, bounds=(0, 10))
+
+        def c_rule(b, i):
+            m = b.model()
+            return m.x[i] >= i
+
+        def d_rule(d, j):
+            m = d.model()
+            d.c = Constraint(m.I[:j], rule=c_rule)
+
+        m.d = Disjunct(m.I, rule=d_rule)
+        m.disjunction = Disjunction(expr=[m.d[i] for i in m.I])
+
+        TransformationFactory('gdp.gdp_to_minlp').apply_to(m)
+        transBlock = m._pyomo_gdp_gdp_to_minlp_reformulation
+
+        # 2 blocks: the original Disjunct and the transformation block
+        self.assertEqual(len(list(m.component_objects(Block, descend_into=False))), 1)
+        self.assertEqual(len(list(m.component_objects(Disjunct))), 1)
+
+        # Each relaxed disjunct should have 1 var (the reference to the
+        # indicator var), and i "d[i].c" Constraints
+        for i in [1, 2, 3]:
+            relaxed = transBlock.relaxedDisjuncts[i - 1]
+            self.assertEqual(len(list(relaxed.component_objects(Var))), 1)
+            self.assertEqual(len(list(relaxed.component_data_objects(Var))), 1)
+            self.assertEqual(len(list(relaxed.component_objects(Constraint))), 1)
+            self.assertEqual(len(list(relaxed.component_data_objects(Constraint))), i)
+
+    def test_virtual_indexed_constraints_in_disjunct(self):
+        m = ConcreteModel()
+        m.I = [1, 2, 3]
+        m.x = Var(m.I, bounds=(0, 10))
+
+        def d_rule(d, j):
+            m = d.model()
+            d.c = Constraint(Any)
+            for k in range(j):
+                d.c[k + 1] = m.x[k + 1] >= k + 1
+
+        m.d = Disjunct(m.I, rule=d_rule)
+        m.disjunction = Disjunction(expr=[m.d[i] for i in m.I])
+
+        TransformationFactory('gdp.gdp_to_minlp').apply_to(m)
+        transBlock = m._pyomo_gdp_gdp_to_minlp_reformulation
+
+        # 2 blocks: the original Disjunct and the transformation block
+        self.assertEqual(len(list(m.component_objects(Block, descend_into=False))), 1)
+        self.assertEqual(len(list(m.component_objects(Disjunct))), 1)
+
+        # Each relaxed disjunct should have 1 var (the reference to the
+        # indicator var), and i "d[i].c" Constraints
+        for i in [1, 2, 3]:
+            relaxed = transBlock.relaxedDisjuncts[i - 1]
+            self.assertEqual(len(list(relaxed.component_objects(Var))), 1)
+            self.assertEqual(len(list(relaxed.component_data_objects(Var))), 1)
+            self.assertEqual(len(list(relaxed.component_objects(Constraint))), 1)
+            self.assertEqual(len(list(relaxed.component_data_objects(Constraint))), i)
+
+    def test_local_var(self):
+        m = models.localVar()
+        gdp_to_minlp = TransformationFactory('gdp.gdp_to_minlp')
+        gdp_to_minlp.apply_to(m)
+
+        # we just need to make sure that constraint was transformed correctly,
+        # which just means that the M values were correct.
+        transformedC = gdp_to_minlp.get_transformed_constraints(m.disj2.cons)
+        self.assertEqual(len(transformedC), 1)
+        eq = transformedC[0]
+        repn = generate_standard_repn(eq.body)
+        self.assertIsNone(repn.nonlinear_expr)
+        self.assertEqual(len(repn.linear_coefs), 1)
+        self.assertEqual(len(repn.quadratic_coefs), 2)
+        ct.check_linear_coef(self, repn, m.disj2.indicator_var, -3)
+        ct.check_quadratic_coef(self, repn, m.x, m.disj2.indicator_var, 1)
+        ct.check_quadratic_coef(self, repn, m.disj2.y, m.disj2.indicator_var, 1)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(eq.lb, 0)
+        self.assertEqual(eq.ub, 0)
+
+
+if __name__ == '__main__':
+    unittest.main()

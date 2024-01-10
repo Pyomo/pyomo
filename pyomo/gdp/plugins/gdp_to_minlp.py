@@ -2,45 +2,11 @@ from .gdp_to_mip_transformation import GDP_to_MIP_Transformation
 from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.core.base import TransformationFactory
 from pyomo.core.util import target_list
-from pyomo.core import (
-    Block,
-    BooleanVar,
-    Connector,
-    Constraint,
-    Param,
-    Set,
-    SetOf,
-    Var,
-    Expression,
-    SortComponents,
-    TraversalStrategy,
-    value,
-    RangeSet,
-    NonNegativeIntegers,
-    Binary,
-    Any,
-)
-from pyomo.core.base import TransformationFactory, Reference
-import pyomo.core.expr as EXPR
-from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.plugins.bigm_mixin import (
-    _BigM_MixIn,
-    _get_bigM_suffix_list,
-    _warn_for_unused_bigM_args,
-)
+from pyomo.gdp import Disjunction
 from pyomo.gdp.plugins.gdp_to_mip_transformation import GDP_to_MIP_Transformation
-from pyomo.gdp.transformed_disjunct import _TransformedDisjunct
-from pyomo.gdp.util import is_child_of, _get_constraint_transBlock, _to_dict
 from pyomo.core.util import target_list
-from pyomo.network import Port
-from pyomo.repn import generate_standard_repn
-from weakref import ref as weakref_ref, ReferenceType
+from weakref import ref as weakref_ref
 import logging
-from pyomo.gdp import GDP_Error
-from pyomo.common.collections import ComponentSet
-from pyomo.contrib.fbbt.expression_bounds_walker import ExpressionBoundsVisitor
-import pyomo.contrib.fbbt.interval as interval
-from pyomo.core import Suffix
 
 
 logger = logging.getLogger('pyomo.gdp.gdp_to_minlp')
@@ -185,17 +151,17 @@ class GDPToMINLPTransformation(GDP_to_MIP_Transformation):
         lb, ub = c.lower, c.upper
         if (c.equality or lb is ub) and lb is not None:
             # equality
-            newConstraint.add((name, i, 'eq'), lb * indicator_var == c.body * indicator_var)
+            newConstraint.add((name, i, 'eq'), c.body * indicator_var - lb * indicator_var == 0)
             constraintMap['transformedConstraints'][c] = [newConstraint[name, i, 'eq']]
             constraintMap['srcConstraints'][newConstraint[name, i, 'eq']] = c
         else:
             # inequality
             if lb is not None:
-                newConstraint.add((name, i, 'lb'), lb * indicator_var <= c.body * indicator_var)
+                newConstraint.add((name, i, 'lb'), 0 <= c.body * indicator_var - lb * indicator_var)
                 constraintMap['transformedConstraints'][c] = [newConstraint[name, i, 'lb']]
                 constraintMap['srcConstraints'][newConstraint[name, i, 'lb']] = c
             if ub is not None:
-                newConstraint.add((name, i, 'ub'), c.body * indicator_var <= ub * indicator_var)
+                newConstraint.add((name, i, 'ub'), c.body * indicator_var - ub * indicator_var <= 0)
                 transformed = constraintMap['transformedConstraints'].get(c)
                 if transformed is not None:
                     constraintMap['transformedConstraints'][c].append(
