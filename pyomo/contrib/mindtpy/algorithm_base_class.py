@@ -519,9 +519,9 @@ class _MindtPyAlgorithm(object):
         return primal_integral
 
     def get_integral_info(self):
-        '''
+        """
         Obtain primal integral, dual integral and primal dual gap integral.
-        '''
+        """
         self.primal_integral = self.get_primal_integral()
         self.dual_integral = self.get_dual_integral()
         self.primal_dual_gap_integral = self.primal_integral + self.dual_integral
@@ -2598,7 +2598,7 @@ class _MindtPyAlgorithm(object):
             self.working_model.MindtPy_utils.cuts.del_component('fp_orthogonality_cuts')
 
     def initialize_mip_problem(self):
-        '''Deactivate the nonlinear constraints to create the MIP problem.'''
+        """Deactivate the nonlinear constraints to create the MIP problem."""
         # if single tree is activated, we need to add bounds for unbounded variables in nonlinear constraints to avoid unbounded main problem.
         config = self.config
         if config.single_tree:

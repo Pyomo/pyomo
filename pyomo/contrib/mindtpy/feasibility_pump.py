@@ -44,7 +44,7 @@ class MindtPy_FP_Solver(_MindtPyAlgorithm):
         super().check_config()
 
     def initialize_mip_problem(self):
-        '''Deactivate the nonlinear constraints to create the MIP problem.'''
+        """Deactivate the nonlinear constraints to create the MIP problem."""
         super().initialize_mip_problem()
         self.jacobians = calc_jacobians(
             self.mip.MindtPy_utils.nonlinear_constraint_list,

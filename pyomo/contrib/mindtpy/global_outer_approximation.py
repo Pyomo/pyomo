@@ -67,7 +67,7 @@ class MindtPy_GOA_Solver(_MindtPyAlgorithm):
         super().check_config()
 
     def initialize_mip_problem(self):
-        '''Deactivate the nonlinear constraints to create the MIP problem.'''
+        """Deactivate the nonlinear constraints to create the MIP problem."""
         super().initialize_mip_problem()
         self.mip.MindtPy_utils.cuts.aff_cuts = ConstraintList(doc='Affine cuts')
 

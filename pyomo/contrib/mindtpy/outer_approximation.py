@@ -94,7 +94,7 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
         _MindtPyAlgorithm.check_config(self)
 
     def initialize_mip_problem(self):
-        '''Deactivate the nonlinear constraints to create the MIP problem.'''
+        """Deactivate the nonlinear constraints to create the MIP problem."""
         super().initialize_mip_problem()
         self.jacobians = calc_jacobians(
             self.mip.MindtPy_utils.nonlinear_constraint_list,
