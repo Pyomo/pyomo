@@ -634,7 +634,7 @@ jobs:
       if: matrix.other == '/singletest'
       run: |
         cd pyomo/contrib/simplification/
-	$PYTHON_EXE build.py --inplace
+        $PYTHON_EXE build.py --inplace
 
     - name: Report pyomo plugin information
       run: |
