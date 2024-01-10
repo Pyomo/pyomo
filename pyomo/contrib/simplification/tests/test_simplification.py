@@ -1,10 +1,12 @@
 from pyomo.common.unittest import TestCase
+from pyomo.common import unittest
 from pyomo.contrib.simplification import Simplifier
 from pyomo.core.expr.compare import assertExpressionsEqual, compare_expressions
 import pyomo.environ as pe
 from pyomo.core.expr.calculus.diff_with_pyomo import reverse_sd
 
 
+@unittest.pytest.mark.simplification
 class TestSimplification(TestCase):
     def compare_against_possible_results(self, got, expected_list):
         success = False
