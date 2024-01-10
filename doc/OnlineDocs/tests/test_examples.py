@@ -38,13 +38,18 @@ class TestOnlineDocExamples(unittest.BaseLineTestDriver, unittest.TestCase):
     )
 
     solver_dependencies = {}
+    # Note on package dependencies: two tests actually need
+    # pyutilib.excel.spreadsheet; however, the pyutilib importer is
+    # broken on Python>=3.12, so instead of checking for spreadsheet, we
+    # will check for pyutilib.component, which triggers the importer
+    # (and catches the error on 3.12)
     package_dependencies = {
         # data
         'test_data_ABCD9': ['pyodbc'],
         'test_data_ABCD8': ['pyodbc'],
-        'test_data_ABCD7': ['win32com', 'pyutilib.excel.spreadsheet'],
+        'test_data_ABCD7': ['win32com', 'pyutilib.component'],
         # dataportal
-        'test_dataportal_dataportal_tab': ['xlrd', 'pyutilib.excel.spreadsheet'],
+        'test_dataportal_dataportal_tab': ['xlrd', 'pyutilib.component'],
         'test_dataportal_set_initialization': ['numpy'],
         'test_dataportal_param_initialization': ['numpy'],
         # kernel

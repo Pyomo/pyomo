@@ -752,7 +752,7 @@ class BaseLineTestDriver(object):
             'execution time=',
             'Solver results file:',
             'TokenServer',
-            # ignore entries in pstats reports:
+            # next 6 patterns ignore entries in pstats reports:
             'function calls',
             'List reduced',
             '.py:',
