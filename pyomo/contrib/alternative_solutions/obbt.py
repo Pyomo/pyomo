@@ -11,6 +11,7 @@
 
 import pyomo.environ as pe
 from pyomo.contrib.alternative_solutions import aos_utils
+from pyomo.contrib import appsi
 import pdb
 
 def obbt_analysis(model, variables='all', rel_opt_gap=None, abs_opt_gap=None, 
@@ -75,21 +76,32 @@ def obbt_analysis(model, variables='all', rel_opt_gap=None, abs_opt_gap=None,
                                                             2 * num_vars))
     orig_objective = aos_utils._get_active_objective(model)
     
-    opt = pe.SolverFactory(solver)
-    for parameter, value in solver_options.items():
-        opt.options[parameter] = value
     use_appsi = False
     if 'appsi' in solver:
-        use_appsi = True    
+        opt = appsi.solvers.Gurobi()
+        for parameter, value in solver_options.items():
+            opt.gurobi_options[parameter] = var_value
+        opt.config.stream_solver = tee
+        results = opt.solve(model)
+        condition = results.termination_condition
+        optimal_tc = appsi.base.TerminationCondition.optimal
+        infeas_or_unbdd_tc = appsi.base.TerminationCondition.infeasibleOrUnbounded
+        unbdd_tc = appsi.base.TerminationCondition.unbounded
+        use_appsi = True 
+    else:
+        opt = pe.SolverFactory(solver)
+        for parameter, value in solver_options.items():
+            opt.options[parameter] = value
+        results = opt.solve(model, warmstart=warmstart, tee=tee)
+        condition = results.solver.termination_condition
+        optimal_tc = pe.TerminationCondition.optimal
+        infeas_or_unbdd_tc = pe.TerminationCondition.infeasibleOrUnbounded
+        unbdd_tc = pe.TerminationCondition.unbounded
     print('Peforming initial solve of model.')
-    results = opt.solve(model, warmstart=warmstart, tee=tee)
-    status = results.solver.status
-    condition = results.solver.termination_condition
 
-    if condition != pe.TerminationCondition.optimal:
-        raise Exception(('OBBT cannot be applied, SolverStatus = {}, '
-                         'TerminationCondition = {}').format(status.value, 
-                                                             condition.value))
+    if condition != optimal_tc:
+        raise Exception(('OBBT cannot be applied, '
+                         'TerminationCondition = {}').format(condition.value))
     if warmstart:
         _add_solution(solutions)
     orig_objective_value = pe.value(orig_objective)
@@ -143,11 +155,22 @@ def obbt_analysis(model, variables='all', rel_opt_gap=None, abs_opt_gap=None,
             if use_appsi:
                 opt.update_config.check_for_new_or_removed_constraints = \
                     new_constraint
-            results = opt.solve(model, warmstart=warmstart, tee=tee)
+            if use_appsi:
+                opt.config.stream_solver = tee
+                try:
+                    results = opt.solve(model)
+                    condition = results.termination_condition
+                except:
+                    pass
+            else:
+                try:
+                    results = opt.solve(model, warmstart=warmstart, tee=tee)
+                    condition = results.solver.termination_condition
+                except:
+                    pass
             new_constraint = False
-            status = results.solver.status
-            condition = results.solver.termination_condition
-            if condition == pe.TerminationCondition.optimal:
+            
+            if condition == optimal_tc:
                 if warmstart:
                     _add_solution(solutions)
                 obj_val = pe.value(var)
@@ -168,16 +191,16 @@ def obbt_analysis(model, variables='all', rel_opt_gap=None, abs_opt_gap=None,
                     
             # An infeasibleOrUnbounded status code will imply the problem is
             # unbounded since feasibility has been established previously
-            elif (condition == pe.TerminationCondition.infeasibleOrUnbounded or 
-                  condition == pe.TerminationCondition.unbounded):
+            elif (condition == infeas_or_unbdd_tc or 
+                  condition == unbdd_tc):
                 if sense == pe.minimize:
                     variable_bounds[var][idx] = float('-inf')
                 else:
                     variable_bounds[var][idx] = float('inf')
             else:
                 print(('Unexpected condition for the variable {} {} problem.'
-                       'SolverStatus = {}, TerminationCondition = {}').\
-                      format(var.name, bound_dir, status.value, 
+                       'TerminationCondition = {}').\
+                      format(var.name, bound_dir, 
                              condition.value))
             
             var_value = variable_bounds[var][idx]

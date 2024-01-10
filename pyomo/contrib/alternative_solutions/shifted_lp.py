@@ -15,6 +15,7 @@ from pyomo.common.collections import ComponentMap
 from pyomo.gdp.util import clone_without_expression_components
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.contrib.alternative_solutions import aos_utils
+import pdb
     
 def _get_unique_name(collection, name):
     '''Create a unique name for an item that will be added to a collection.'''
@@ -45,7 +46,7 @@ def get_shifted_linear_model(model, block=None):
     s.t.
         A_1 * x  =  b_1
         A_2 * x <= b_2
-        l <= x <= u
+        l <= x <= uf
         
     a problem of the form,
     
