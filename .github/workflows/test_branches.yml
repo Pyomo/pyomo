@@ -95,6 +95,14 @@ jobs:
           PACKAGES: mpi4py
 
         - os: ubuntu-latest
+          python: 3.11
+          other: /singletest
+          category: "-m 'neos or importtest or simplification'"
+          skip_doctest: 1
+          TARGET: linux
+          PYENV: pip
+
+        - os: ubuntu-latest
           python: '3.10'
           other: /cython
           setup_options: --with-cython
@@ -148,6 +156,25 @@ jobs:
     #  with:
     #    path: cache/os
     #    key: pkg-${{env.CACHE_VER}}.0-${{runner.os}}
+
+    - name: install ginac
+      if: ${{ matrix.other == 'singletest' }}
+      run: |
+        pwd
+        cd ..
+        curl https://www.ginac.de/CLN/cln-1.3.6.tar.bz2 >cln-1.3.6.tar.bz2
+        tar -xvf cln-1.3.6.tar.bz2
+        cd cln-1.3.6
+        ./configure
+        make
+        make install
+        cd
+        curl https://www.ginac.de/ginac-1.8.7.tar.bz2 >ginac-1.8.7.tar.bz2
+        tar -xvf ginac-1.8.7.tar.bz2
+        cd ginac-1.8.7
+        ./configure
+        make
+        make install
 
     - name: TPL package download cache
       uses: actions/cache@v3
