@@ -215,8 +215,7 @@ jobs:
         python-version: ${{ matrix.python }}
 
     # This is necessary for qt (UI) tests; the package utilized here does not
-    # have support for OSX, but we don't do any OSX testing inherently.
-    # This is just to protect us in case we do add that into the matrix someday.
+    # have support for OSX.
     - name: Set up UI testing infrastructure
       if: ${{ matrix.TARGET != 'osx' }}
       uses: pyvista/setup-headless-display-action@v2
