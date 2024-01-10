@@ -21,7 +21,7 @@ defaults:
 env:
   PYTHONWARNINGS: ignore::UserWarning
   PYTHON_CORE_PKGS: wheel
-  PYPI_ONLY: z3-solver PyQt6
+  PYPI_ONLY: z3-solver
   PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels
   CACHE_VER: v221013.1
   NEOS_EMAIL: tests@pyomo.org
@@ -319,7 +319,7 @@ jobs:
         fi
         # HACK: Remove problem packages on conda+Linux
         if test "${{matrix.TARGET}}" == linux; then
-            EXCLUDE="casadi numdifftools $EXCLUDE"
+            EXCLUDE="casadi numdifftools PyQt6 $EXCLUDE"
         fi
         EXCLUDE=`echo "$EXCLUDE" | xargs`
         if test -n "$EXCLUDE"; then
@@ -356,7 +356,7 @@ jobs:
                     | sed -r 's/\s+/ /g' | cut -d\  -f3) || echo ""
                 if test -n "$_BUILDS"; then
                     _ISPY=$(echo "$_BUILDS" | grep "^py") \
-                        || echo "\nINFO: No python build detected."
+                        || echo "INFO: No python build detected."
                     _PYOK=$(echo "$_BUILDS" | grep -E "^($PYVER|pyh)") \
                         || echo "INFO: No python build matching $PYVER detected."
                     if test -z "$_ISPY" -o -n "$_PYOK"; then
