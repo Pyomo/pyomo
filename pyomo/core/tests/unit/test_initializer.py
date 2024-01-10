@@ -12,6 +12,7 @@
 import functools
 import pickle
 import platform
+import sys
 import types
 
 import pyomo.common.unittest as unittest
