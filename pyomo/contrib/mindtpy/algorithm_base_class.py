@@ -102,14 +102,14 @@ class _MindtPyAlgorithm(object):
         self.fixed_nlp = None
 
         # We store bounds, timing info, iteration count, incumbent, and the
-        # expression of the original (possibly nonlinear) objective function.
+        # Expression of the original (possibly nonlinear) objective function.
         self.results = SolverResults()
         self.timing = Bunch()
         self.curr_int_sol = []
         self.should_terminate = False
         self.integer_list = []
-        # dictionary {integer solution (list): [cuts begin index, cuts end index] (list)}
-        self.int_sol_2_cuts_ind = dict()
+        # Dictionary {integer solution (list): [cuts begin index, cuts end index] (list)}
+        self.integer_solution_to_cuts_index = dict()
 
         # Set up iteration counters
         self.nlp_iter = 0
@@ -813,7 +813,7 @@ class _MindtPyAlgorithm(object):
             self.integer_list.append(self.curr_int_sol)
             fixed_nlp, fixed_nlp_result = self.solve_subproblem()
             self.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result)
-            self.int_sol_2_cuts_ind[self.curr_int_sol] = [
+            self.integer_solution_to_cuts_index[self.curr_int_sol] = [
                 1,
                 len(self.mip.MindtPy_utils.cuts.oa_cuts),
             ]
