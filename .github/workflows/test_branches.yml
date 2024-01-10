@@ -158,7 +158,7 @@ jobs:
     #    key: pkg-${{env.CACHE_VER}}.0-${{runner.os}}
 
     - name: install ginac
-      if: ${{ matrix.other == 'singletest' }}
+      if: matrix.TARGET == 'singletest'
       run: |
         pwd
         cd ..
