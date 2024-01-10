@@ -274,7 +274,6 @@ class LazyOACallback_cplex(
                         'Skipping constraint %s due to MCPP error' % (constr.name)
                     )
                     continue  # skip to the next constraint
-                # TODO: check if the value of ccSlope and cvSlope is not Nan or inf. If so, we skip this.
                 ccSlope = mc_eqn.subcc()
                 cvSlope = mc_eqn.subcv()
                 ccStart = mc_eqn.concave()
