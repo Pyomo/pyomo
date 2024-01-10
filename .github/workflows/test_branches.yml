@@ -217,7 +217,7 @@ jobs:
     # have support for OSX, but we don't do any OSX/conda testing inherently.
     # This is just to protect us in case we do add that into the matrix someday.
     - name: Set up UI testing infrastructure
-      if: ${{ matrix.PYENV == 'conda' && matrix.TARGET != 'osx' }}
+      if: ${{ matrix.TARGET != 'osx' }}
       uses: pyvista/setup-headless-display-action@v2
       with:
         qt: true
