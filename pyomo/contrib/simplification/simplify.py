@@ -34,10 +34,10 @@ def simplify_with_ginac(expr: NumericExpression, ginac_interface):
 
 
 class Simplifier(object):
-    def __init__(self, supress_no_ginac_warnings: bool = False) -> None:
+    def __init__(self, suppress_no_ginac_warnings: bool = False) -> None:
         if ginac_available:
             self.gi = GinacInterface(False)
-        self.suppress_no_ginac_warnings = supress_no_ginac_warnings
+        self.suppress_no_ginac_warnings = suppress_no_ginac_warnings
 
     def simplify(self, expr: NumericExpression):
         if ginac_available:

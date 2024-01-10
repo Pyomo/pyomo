@@ -167,14 +167,14 @@ jobs:
         cd cln-1.3.6
         ./configure
         make
-        make install
+        sudo make install
         cd
         curl https://www.ginac.de/ginac-1.8.7.tar.bz2 >ginac-1.8.7.tar.bz2
         tar -xvf ginac-1.8.7.tar.bz2
         cd ginac-1.8.7
         ./configure
         make
-        make install
+        sudo make install
 
     - name: TPL package download cache
       uses: actions/cache@v3
@@ -629,6 +629,12 @@ jobs:
         echo "Pyomo build-extensions"
         echo ""
         pyomo build-extensions --parallel 2
+
+    - name: Install GiNaC Interface
+      if: matrix.other == '/singletest'
+      run: |
+        cd pyomo/contrib/simplification/
+	$PYTHON_EXE build.py --inplace
 
     - name: Report pyomo plugin information
       run: |
