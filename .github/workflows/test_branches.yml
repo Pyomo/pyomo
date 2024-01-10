@@ -214,7 +214,7 @@ jobs:
         python-version: ${{ matrix.python }}
 
     - name: Set up headless display
-      if: matrix.PYENV == 'conda' && ${{ matrix.TARGET != 'osx' }}
+      if: ${{ matrix.PYENV == 'conda' && matrix.TARGET != 'osx' }}
       uses: pyvista/setup-headless-display-action@v2
       with:
         qt: true
