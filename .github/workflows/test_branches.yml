@@ -21,7 +21,7 @@ defaults:
 env:
   PYTHONWARNINGS: ignore::UserWarning
   PYTHON_CORE_PKGS: wheel
-  PYPI_ONLY: z3-solver pyqt6
+  PYPI_ONLY: z3-solver PyQt6
   PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels
   CACHE_VER: v221013.1
   NEOS_EMAIL: tests@pyomo.org
@@ -328,9 +328,7 @@ jobs:
             done
         fi
         for PKG in $PACKAGES; do
-            echo "######### Analyzing $PKG"
             if [[ " $PYPI_ONLY " == *" $PKG "* ]]; then
-                echo "######## Skipping $PKG"
                 PYPI_DEPENDENCIES="$PYPI_DEPENDENCIES $PKG"
             else
                 CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES $PKG"
