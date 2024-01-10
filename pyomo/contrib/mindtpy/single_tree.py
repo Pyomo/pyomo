@@ -666,6 +666,7 @@ class LazyOACallback_cplex(
         main_mip = self.main_mip
         mindtpy_solver = self.mindtpy_solver
 
+        # The lazy constraint callback may be invoked during MIP start processing. In that case get_solution_source returns mip_start_solution.
         # Reference: https://www.ibm.com/docs/en/icos/22.1.1?topic=SSSA5P_22.1.1/ilog.odms.cplex.help/refpythoncplex/html/cplex.callbacks.SolutionSource-class.htm
         # Another solution source is user_solution = 118, but it will not be encountered in LazyConstraintCallback.
         config.logger.info(
