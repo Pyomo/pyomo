@@ -321,7 +321,7 @@ jobs:
         if test "${{matrix.TARGET}}" == linux; then
             EXCLUDE="casadi numdifftools pyqt6 $EXCLUDE"
         fi
-        EXCLUDE=`echo "$EXCLUDE" | xargs`
+        EXCLUDE=`echo "$EXCLUDE PyQt6 pyqt6" | xargs`
         if test -n "$EXCLUDE"; then
             for WORD in $EXCLUDE; do
                 PACKAGES=${PACKAGES//$WORD / }
