@@ -281,6 +281,7 @@ setup_kwargs = dict(
             'python-louvain',  # community_detection
             'pyyaml',  # core
             'qtconsole',  # contrib.viewer
+            'qtpy',  # contrib.viewer
             'scipy',
             'sympy',  # differentiation
             'xlrd',  # dataportals
