@@ -328,8 +328,9 @@ jobs:
             done
         fi
         for PKG in $PACKAGES; do
+            echo "######### Analyzing $PKG"
             if [[ " $PYPI_ONLY " == *" $PKG "* ]]; then
-                echo "Skipping $PKG"
+                echo "######## Skipping $PKG"
                 PYPI_DEPENDENCIES="$PYPI_DEPENDENCIES $PKG"
             else
                 CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES $PKG"
