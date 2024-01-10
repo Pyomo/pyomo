@@ -21,7 +21,7 @@ ex ginac_expr_from_pyomo_node(
   case py_float: {
     double val = expr.cast<double>();
     if (is_integer(val)) {
-      res = numeric(expr.cast<long>());
+      res = numeric((long) val);
     }
     else {
       res = numeric(val);

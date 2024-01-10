@@ -25,7 +25,10 @@ def simplify_with_sympy(expr: NumericExpression):
 
 def simplify_with_ginac(expr: NumericExpression, ginac_interface):
     gi = ginac_interface
-    return gi.from_ginac(gi.to_ginac(expr).normal())
+    ginac_expr = gi.to_ginac(expr)
+    ginac_expr = ginac_expr.normal()
+    new_expr = gi.from_ginac(ginac_expr)
+    return new_expr
 
 
 class Simplifier(object):

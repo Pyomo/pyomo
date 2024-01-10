@@ -6,6 +6,14 @@ from pyomo.core.expr.calculus.diff_with_pyomo import reverse_sd
 
 
 class TestSimplification(TestCase):
+    def compare_against_possible_results(self, got, expected_list):
+        success = False
+        for exp in expected_list:
+            if compare_expressions(got, exp):
+                success = True
+                break
+        self.assertTrue(success)
+
     def test_simplify(self):
         m = pe.ConcreteModel()
         x = m.x = pe.Var(bounds=(0, None))
@@ -24,13 +32,16 @@ class TestSimplification(TestCase):
         e1 = p*x**2 + p*x + p*x**2
         simp = Simplifier()
         e2 = simp.simplify(e1)
-        exp1 = p*x**2.0*2.0 + p*x
-        exp2 = p*x + p*x**2.0*2.0
-        self.assertTrue(
-            compare_expressions(e2, exp1) 
-            or compare_expressions(e2, exp2)
-            or compare_expressions(e2, p*x + x**2.0*p*2.0)
-            or compare_expressions(e2, x**2.0*p*2.0 + p*x)
+        self.compare_against_possible_results(
+            e2, 
+            [
+                p*x**2.0*2.0 + p*x,
+                p*x + p*x**2.0*2.0,
+                2.0*p*x**2.0 + p*x,
+                p*x + 2.0*p*x**2.0,
+                x**2.0*p*2.0 + p*x,
+                p*x + x**2.0*p*2.0
+            ]
         )
 
     def test_mul(self):
@@ -48,8 +59,13 @@ class TestSimplification(TestCase):
         e = 2 + x
         simp = Simplifier()
         e2 = simp.simplify(e)
-        expected = x + 2.0
-        assertExpressionsEqual(self, expected, e2)
+        self.compare_against_possible_results(
+            e2,
+            [
+                2.0 + x,
+                x + 2.0,
+            ]
+        )
 
     def test_neg(self):
         m = pe.ConcreteModel()
@@ -57,6 +73,47 @@ class TestSimplification(TestCase):
         e = -pe.log(x)
         simp = Simplifier()
         e2 = simp.simplify(e)
-        expected = pe.log(x)*(-1.0)
-        assertExpressionsEqual(self, expected, e2)
+        self.compare_against_possible_results(
+            e2,
+            [
+                (-1.0)*pe.log(x),
+                pe.log(x)*(-1.0),
+                -pe.log(x),
+            ]
+        )
 
+    def test_pow(self):
+        m = pe.ConcreteModel()
+        x = m.x = pe.Var()
+        e = x**2.0
+        simp = Simplifier()
+        e2 = simp.simplify(e)
+        assertExpressionsEqual(self, e, e2)
+
+    def test_div(self):
+        m = pe.ConcreteModel()
+        x = m.x = pe.Var()
+        y = m.y = pe.Var()
+        e = x/y + y/x - x/y
+        simp = Simplifier()
+        e2 = simp.simplify(e)
+        print(e2)
+        self.compare_against_possible_results(
+            e2,
+            [
+                y/x,
+                y*(1.0/x),
+                y*x**-1.0,
+                x**-1.0 * y,
+            ],
+        )
+
+    def test_unary(self):
+        m = pe.ConcreteModel()
+        x = m.x = pe.Var()
+        func_list = [pe.log, pe.sin, pe.cos, pe.tan, pe.asin, pe.acos, pe.atan]
+        for func in func_list:
+            e = func(x)
+            simp = Simplifier()
+            e2 = simp.simplify(e)
+            assertExpressionsEqual(self, e, e2)
