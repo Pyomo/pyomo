@@ -689,6 +689,7 @@ class LazyOACallback_cplex(
             mindtpy_solver.mip_start_lazy_oa_cuts = []
 
         if mindtpy_solver.should_terminate:
+            # TODO: check the performance difference if we don't use self.abort() and let cplex terminate by itself.
             self.abort()
             return
         self.handle_lazy_main_feasible_solution(main_mip, mindtpy_solver, config, opt)
@@ -744,6 +745,7 @@ class LazyOACallback_cplex(
                 )
             )
             mindtpy_solver.results.solver.termination_condition = tc.optimal
+            # TODO: check the performance difference if we don't use self.abort() and let cplex terminate by itself.
             self.abort()
             return
 
