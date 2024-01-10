@@ -280,4 +280,7 @@ class ExpressionBoundsVisitor(StreamBasedExpressionVisitor):
         return _before_child_handlers[child.__class__](self, child)
 
     def exitNode(self, node, data):
-        return _operator_dispatcher[node.__class__](self, node, *data)
+        if node.__class__ in _operator_dispatcher:
+            return _operator_dispatcher[node.__class__](self, node, *data)
+        else:
+            return -inf, inf
