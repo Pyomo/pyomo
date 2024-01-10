@@ -9,6 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from numpy.linalg import norm
+
 import pyomo.environ as pe
 from pyomo.common.collections import ComponentSet
 import pyomo.common.unittest as unittest
@@ -140,6 +142,13 @@ class TestAOSUtilsUnit(unittest.TestCase):
         self.assertEqual(10, cons[0].lower)
         self.assertEqual(None, cons[1].upper)
         self.assertEqual(9, cons[1].lower)
+        
+    def test_random_direction(self):
+        '''
+        Ensure that _get_random_direction returns a normal vector.
+        '''
+        vector = au._get_random_direction(10)
+        self.assertAlmostEqual(1.0, norm(vector))
 
     def get_var_model(self):
         '''
