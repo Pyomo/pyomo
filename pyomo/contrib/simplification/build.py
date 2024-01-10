@@ -17,6 +17,7 @@ def build_ginac_interface(args=[]):
         sources.append(os.path.join(dname, fname))
 
     ginac_lib = find_library('ginac')
+    print(ginac_lib)
     if ginac_lib is None:
         raise RuntimeError(
             'could not find GiNaC library; please make sure it is in the LD_LIBRARY_PATH environment variable'
