@@ -213,7 +213,10 @@ jobs:
         auto-update-conda: false
         python-version: ${{ matrix.python }}
 
-    - name: Set up headless display
+    # This is necessary for qt (UI) tests; the package utilized here does not
+    # have support for OSX, but we don't do any OSX/conda testing inherently.
+    # This is just to protect us in case we do add that into the matrix someday.
+    - name: Set up UI testing infrastructure
       if: ${{ matrix.PYENV == 'conda' && matrix.TARGET != 'osx' }}
       uses: pyvista/setup-headless-display-action@v2
       with:
@@ -354,7 +357,7 @@ jobs:
                 if test -n "$_BUILDS"; then
                     _ISPY=$(echo "$_BUILDS" | grep "^py") \
                         || echo "\nINFO: No python build detected."
-                    _PYOK=$(echo "$_BUILDS" | grep "^($PYVER|pyh)") \
+                    _PYOK=$(echo "$_BUILDS" | grep -E "^($PYVER|pyh)") \
                         || echo "INFO: No python build matching $PYVER detected."
                     if test -z "$_ISPY" -o -n "$_PYOK"; then
                         echo "\n... INSTALLING $PKG"
