@@ -319,7 +319,7 @@ jobs:
         fi
         # HACK: Remove problem packages on conda+Linux
         if test "${{matrix.TARGET}}" == linux; then
-            EXCLUDE="casadi numdifftools PyQt6 $EXCLUDE"
+            EXCLUDE="casadi numdifftools pyqt6 $EXCLUDE"
         fi
         EXCLUDE=`echo "$EXCLUDE" | xargs`
         if test -n "$EXCLUDE"; then
