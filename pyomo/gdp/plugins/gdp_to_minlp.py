@@ -107,9 +107,7 @@ class GDPToMINLPTransformation(GDP_to_MIP_Transformation):
         # deactivate disjunct to keep the writers happy
         obj._deactivate_without_fixing_indicator()
 
-    def _transform_constraint(
-        self, obj, disjunct
-    ):
+    def _transform_constraint(self, obj, disjunct):
         # add constraint to the transformation block, we'll transform it there.
         transBlock = disjunct._transformation_block()
         constraintMap = transBlock._constraintMap
@@ -151,17 +149,25 @@ class GDPToMINLPTransformation(GDP_to_MIP_Transformation):
         lb, ub = c.lower, c.upper
         if (c.equality or lb is ub) and lb is not None:
             # equality
-            newConstraint.add((name, i, 'eq'), c.body * indicator_var - lb * indicator_var == 0)
+            newConstraint.add(
+                (name, i, 'eq'), c.body * indicator_var - lb * indicator_var == 0
+            )
             constraintMap['transformedConstraints'][c] = [newConstraint[name, i, 'eq']]
             constraintMap['srcConstraints'][newConstraint[name, i, 'eq']] = c
         else:
             # inequality
             if lb is not None:
-                newConstraint.add((name, i, 'lb'), 0 <= c.body * indicator_var - lb * indicator_var)
-                constraintMap['transformedConstraints'][c] = [newConstraint[name, i, 'lb']]
+                newConstraint.add(
+                    (name, i, 'lb'), 0 <= c.body * indicator_var - lb * indicator_var
+                )
+                constraintMap['transformedConstraints'][c] = [
+                    newConstraint[name, i, 'lb']
+                ]
                 constraintMap['srcConstraints'][newConstraint[name, i, 'lb']] = c
             if ub is not None:
-                newConstraint.add((name, i, 'ub'), c.body * indicator_var - ub * indicator_var <= 0)
+                newConstraint.add(
+                    (name, i, 'ub'), c.body * indicator_var - ub * indicator_var <= 0
+                )
                 transformed = constraintMap['transformedConstraints'].get(c)
                 if transformed is not None:
                     constraintMap['transformedConstraints'][c].append(

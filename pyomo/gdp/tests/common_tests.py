@@ -63,7 +63,7 @@ def check_quadratic_coef(self, repn, v1, v2, coef):
         v1 = v1.get_associated_binary()
     if isinstance(v2, BooleanVar):
         v2 = v2.get_associated_binary()
-    
+
     v1id = id(v1)
     v2id = id(v2)
 

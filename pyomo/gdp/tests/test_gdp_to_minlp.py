@@ -20,9 +20,7 @@ from pyomo.environ import (
     Any,
 )
 from pyomo.gdp import Disjunct, Disjunction
-from pyomo.core.expr.compare import (
-    assertExpressionsEqual,
-)
+from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.repn import generate_standard_repn
 
 import pyomo.core.expr as EXPR
@@ -154,12 +152,16 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         ct.check_improperly_deactivated_disjuncts(self, 'gdp_to_minlp')
 
     def test_do_not_transform_userDeactivated_IndexedDisjunction(self):
-        ct.check_do_not_transform_userDeactivated_indexedDisjunction(self, 'gdp_to_minlp')
+        ct.check_do_not_transform_userDeactivated_indexedDisjunction(
+            self, 'gdp_to_minlp'
+        )
 
     # helper method to check the M values in all of the transformed
     # constraints (m, M) is the tuple for M.  This also relies on the
     # disjuncts being transformed in the same order every time.
-    def check_transformed_constraints(self, model, gdp_to_minlp, cons1lb, cons2lb, cons2ub, cons3ub):
+    def check_transformed_constraints(
+        self, model, gdp_to_minlp, cons1lb, cons2lb, cons2ub, cons3ub
+    ):
         disjBlock = model._pyomo_gdp_gdp_to_minlp_reformulation.relaxedDisjuncts
 
         # first constraint
