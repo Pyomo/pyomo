@@ -319,7 +319,7 @@ jobs:
         fi
         # HACK: Remove problem packages on conda+Linux
         if test "${{matrix.TARGET}}" == linux; then
-            EXCLUDE="casadi numdifftools pint $EXCLUDE"
+            EXCLUDE="casadi numdifftools $EXCLUDE"
         fi
         EXCLUDE=`echo "$EXCLUDE" | xargs`
         if test -n "$EXCLUDE"; then
@@ -329,6 +329,7 @@ jobs:
         fi
         for PKG in $PACKAGES; do
             if [[ " $PYPI_ONLY " == *" $PKG "* ]]; then
+                echo "Skipping $PKG"
                 PYPI_DEPENDENCIES="$PYPI_DEPENDENCIES $PKG"
             else
                 CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES $PKG"
