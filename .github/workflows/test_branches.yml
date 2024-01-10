@@ -192,7 +192,7 @@ jobs:
         #  - install glpk
         #  - ipopt needs: libopenblas-dev gfortran liblapack-dev
         sudo apt-get -o Dir::Cache=${GITHUB_WORKSPACE}/cache/os \
-            install libopenblas-dev gfortran liblapack-dev glpk-utils libgl1
+            install libopenblas-dev gfortran liblapack-dev glpk-utils libgl1 libegl1
         sudo chmod -R 777 ${GITHUB_WORKSPACE}/cache/os
 
     - name: Update Windows
