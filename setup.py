@@ -250,7 +250,6 @@ setup_kwargs = dict(
             'pybind11',
             'pytest',
             'pytest-parallel',
-            'pytest-qt',  # for testing contrib.viewer
         ],
         'docs': [
             'Sphinx>4',
@@ -279,6 +278,7 @@ setup_kwargs = dict(
             'pint',  # units
             'plotly',  # incidence_analysis
             'PyQt6',  # contrib.viewer
+            'pytest-qt',  # for testing contrib.viewer
             'python-louvain',  # community_detection
             'pyyaml',  # core
             'qtconsole',  # contrib.viewer
