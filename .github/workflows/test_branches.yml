@@ -337,7 +337,7 @@ jobs:
         echo "*** Install Pyomo dependencies ***"
         # Note: this will fail the build if any installation fails (or
         # possibly if it outputs messages to stderr)
-        conda install --update-deps -q -y $CONDA_DEPENDENCIES qtconsole pint pytest-qt
+        conda install --update-deps -q -y $CONDA_DEPENDENCIES
         if test -z "${{matrix.slim}}"; then
             PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
             echo "Installing for $PYVER"
@@ -360,7 +360,8 @@ jobs:
                     _PYOK=$(echo "$_BUILDS" | grep -E "^($PYVER|pyh)") \
                         || echo "INFO: No python build matching $PYVER detected."
                     if test -z "$_ISPY" -o -n "$_PYOK"; then
-                        echo "\n... INSTALLING $PKG"
+                        echo ""
+                        echo "... INSTALLING $PKG"
                         conda install -y "$PKG" || _BUILDS=""
                     fi
                 fi

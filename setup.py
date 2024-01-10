@@ -246,10 +246,11 @@ setup_kwargs = dict(
         'tests': [
             #'codecov', # useful for testing infrastructures, but not required
             'coverage',
-            'pytest',
-            'pytest-parallel',
             'parameterized',
             'pybind11',
+            'pytest',
+            'pytest-parallel',
+            'pytest-qt',  # for testing contrib.viewer
         ],
         'docs': [
             'Sphinx>4',
@@ -279,6 +280,7 @@ setup_kwargs = dict(
             'plotly',  # incidence_analysis
             'python-louvain',  # community_detection
             'pyyaml',  # core
+            'qtconsole',  # contrib.viewer
             'scipy',
             'sympy',  # differentiation
             'xlrd',  # dataportals
