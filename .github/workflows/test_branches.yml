@@ -191,6 +191,7 @@ jobs:
         # Notes:
         #  - install glpk
         #  - ipopt needs: libopenblas-dev gfortran liblapack-dev
+        #  - contrib.viewer needs: libg1l libegl1
         sudo apt-get -o Dir::Cache=${GITHUB_WORKSPACE}/cache/os \
             install libopenblas-dev gfortran liblapack-dev glpk-utils libgl1 libegl1
         sudo chmod -R 777 ${GITHUB_WORKSPACE}/cache/os
@@ -214,7 +215,7 @@ jobs:
         python-version: ${{ matrix.python }}
 
     # This is necessary for qt (UI) tests; the package utilized here does not
-    # have support for OSX, but we don't do any OSX/conda testing inherently.
+    # have support for OSX, but we don't do any OSX testing inherently.
     # This is just to protect us in case we do add that into the matrix someday.
     - name: Set up UI testing infrastructure
       if: ${{ matrix.TARGET != 'osx' }}
@@ -319,7 +320,7 @@ jobs:
         fi
         # HACK: Remove problem packages on conda+Linux
         if test "${{matrix.TARGET}}" == linux; then
-            EXCLUDE="casadi numdifftools pyqt6 $EXCLUDE"
+            EXCLUDE="casadi numdifftools $EXCLUDE"
         fi
         EXCLUDE=`echo "$EXCLUDE PyQt6 pyqt6" | xargs`
         if test -n "$EXCLUDE"; then
