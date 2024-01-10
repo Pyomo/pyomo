@@ -11,16 +11,16 @@ from pyomo.common.envvar import PYOMO_CONFIG_DIR
 
 def build_ginac_interface(args=[]):
     dname = this_file_dir()
-    _sources = [
-        'ginac_interface.cpp',
-    ]
+    _sources = ['ginac_interface.cpp']
     sources = list()
     for fname in _sources:
         sources.append(os.path.join(dname, fname))
 
     ginac_lib = find_library('ginac')
     if ginac_lib is None:
-        raise RuntimeError('could not find GiNaC library; please make sure it is in the LD_LIBRARY_PATH environment variable')
+        raise RuntimeError(
+            'could not find GiNaC library; please make sure it is in the LD_LIBRARY_PATH environment variable'
+        )
     ginac_lib_dir = os.path.dirname(ginac_lib)
     ginac_build_dir = os.path.dirname(ginac_lib_dir)
     ginac_include_dir = os.path.join(ginac_build_dir, 'include')
@@ -29,7 +29,9 @@ def build_ginac_interface(args=[]):
 
     cln_lib = find_library('cln')
     if cln_lib is None:
-        raise RuntimeError('could not find CLN library; please make sure it is in the LD_LIBRARY_PATH environment variable')
+        raise RuntimeError(
+            'could not find CLN library; please make sure it is in the LD_LIBRARY_PATH environment variable'
+        )
     cln_lib_dir = os.path.dirname(cln_lib)
     cln_build_dir = os.path.dirname(cln_lib_dir)
     cln_include_dir = os.path.join(cln_build_dir, 'include')
@@ -38,8 +40,8 @@ def build_ginac_interface(args=[]):
 
     extra_args = ['-std=c++11']
     ext = Pybind11Extension(
-        'ginac_interface', 
-        sources=sources, 
+        'ginac_interface',
+        sources=sources,
         language='c++',
         include_dirs=[cln_include_dir, ginac_include_dir],
         library_dirs=[cln_lib_dir, ginac_lib_dir],

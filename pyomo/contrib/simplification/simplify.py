@@ -3,8 +3,10 @@ from pyomo.core.expr.numeric_expr import NumericExpression
 from pyomo.core.expr.numvalue import is_fixed, value
 import logging
 import warnings
+
 try:
     from pyomo.contrib.simplification.ginac_interface import GinacInterface
+
     ginac_available = True
 except:
     GinacInterface = None

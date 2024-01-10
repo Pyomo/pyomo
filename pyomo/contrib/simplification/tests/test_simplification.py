@@ -19,7 +19,7 @@ class TestSimplification(TestCase):
     def test_simplify(self):
         m = pe.ConcreteModel()
         x = m.x = pe.Var(bounds=(0, None))
-        e = x*pe.log(x)
+        e = x * pe.log(x)
         der1 = reverse_sd(e)[x]
         der2 = reverse_sd(der1)[x]
         simp = Simplifier()
@@ -31,28 +31,28 @@ class TestSimplification(TestCase):
         m = pe.ConcreteModel()
         x = m.x = pe.Var()
         p = m.p = pe.Param(mutable=True)
-        e1 = p*x**2 + p*x + p*x**2
+        e1 = p * x**2 + p * x + p * x**2
         simp = Simplifier()
         e2 = simp.simplify(e1)
         self.compare_against_possible_results(
-            e2, 
+            e2,
             [
-                p*x**2.0*2.0 + p*x,
-                p*x + p*x**2.0*2.0,
-                2.0*p*x**2.0 + p*x,
-                p*x + 2.0*p*x**2.0,
-                x**2.0*p*2.0 + p*x,
-                p*x + x**2.0*p*2.0
-            ]
+                p * x**2.0 * 2.0 + p * x,
+                p * x + p * x**2.0 * 2.0,
+                2.0 * p * x**2.0 + p * x,
+                p * x + 2.0 * p * x**2.0,
+                x**2.0 * p * 2.0 + p * x,
+                p * x + x**2.0 * p * 2.0,
+            ],
         )
 
     def test_mul(self):
         m = pe.ConcreteModel()
         x = m.x = pe.Var()
-        e = 2*x
+        e = 2 * x
         simp = Simplifier()
         e2 = simp.simplify(e)
-        expected = 2.0*x
+        expected = 2.0 * x
         assertExpressionsEqual(self, expected, e2)
 
     def test_sum(self):
@@ -61,13 +61,7 @@ class TestSimplification(TestCase):
         e = 2 + x
         simp = Simplifier()
         e2 = simp.simplify(e)
-        self.compare_against_possible_results(
-            e2,
-            [
-                2.0 + x,
-                x + 2.0,
-            ]
-        )
+        self.compare_against_possible_results(e2, [2.0 + x, x + 2.0])
 
     def test_neg(self):
         m = pe.ConcreteModel()
@@ -76,12 +70,7 @@ class TestSimplification(TestCase):
         simp = Simplifier()
         e2 = simp.simplify(e)
         self.compare_against_possible_results(
-            e2,
-            [
-                (-1.0)*pe.log(x),
-                pe.log(x)*(-1.0),
-                -pe.log(x),
-            ]
+            e2, [(-1.0) * pe.log(x), pe.log(x) * (-1.0), -pe.log(x)]
         )
 
     def test_pow(self):
@@ -96,18 +85,12 @@ class TestSimplification(TestCase):
         m = pe.ConcreteModel()
         x = m.x = pe.Var()
         y = m.y = pe.Var()
-        e = x/y + y/x - x/y
+        e = x / y + y / x - x / y
         simp = Simplifier()
         e2 = simp.simplify(e)
         print(e2)
         self.compare_against_possible_results(
-            e2,
-            [
-                y/x,
-                y*(1.0/x),
-                y*x**-1.0,
-                x**-1.0 * y,
-            ],
+            e2, [y / x, y * (1.0 / x), y * x**-1.0, x**-1.0 * y]
         )
 
     def test_unary(self):
