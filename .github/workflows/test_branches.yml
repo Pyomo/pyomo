@@ -168,7 +168,7 @@ jobs:
         ./configure
         make
         sudo make install
-        cd
+        cd ..
         curl https://www.ginac.de/ginac-1.8.7.tar.bz2 >ginac-1.8.7.tar.bz2
         tar -xvf ginac-1.8.7.tar.bz2
         cd ginac-1.8.7
