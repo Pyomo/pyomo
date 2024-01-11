@@ -655,6 +655,7 @@ jobs:
     - name: Run Pyomo tests
       if: matrix.mpi == 0
       run: |
+        $PYTHON_EXE -c "from pyomo.contrib.simplification.ginac_interface import GinacInterface"
         $PYTHON_EXE -m pytest -v \
             -W ignore::Warning ${{matrix.category}} \
             pyomo `pwd`/pyomo-model-libraries \
