@@ -576,9 +576,10 @@ class Test_Initializer(unittest.TestCase):
             # persist through Pyomo's Initializer handling (and not
             # special case it there)
             self.assertIs(type(a), ScalarCallInitializer)
+            self.assertTrue(a.constant())
         else:
             self.assertIs(type(a), IndexedCallInitializer)
-        self.assertFalse(a.constant())
+            self.assertFalse(a.constant())
         self.assertFalse(a.verified)
         self.assertFalse(a.contains_indices())
         # but this is not callable, as int won't accept the 'model'
