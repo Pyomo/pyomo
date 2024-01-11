@@ -64,10 +64,10 @@ bounds
    -inf <= Z <= +inf
    0 <= X <= 3
    -inf <= con_INC_delta(1) <= 1
-   -inf <= con_INC_delta(3) <= +inf
-   0 <= con_INC_delta(5) <= +inf
    -inf <= con_INC_delta(2) <= +inf
+   -inf <= con_INC_delta(3) <= +inf
    -inf <= con_INC_delta(4) <= +inf
+   0 <= con_INC_delta(5) <= +inf
    0 <= con_INC_bin_y(1) <= 1
    0 <= con_INC_bin_y(2) <= 1
    0 <= con_INC_bin_y(3) <= 1

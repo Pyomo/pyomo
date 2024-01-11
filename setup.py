@@ -19,8 +19,10 @@ import sys
 from setuptools import setup, find_packages, Command
 
 try:
+    # This works beginning in setuptools 40.7.0 (27 Jan 2019)
     from setuptools import DistutilsOptionError
 except ImportError:
+    # Needed for setuptools prior to 40.7.0
     from distutils.errors import DistutilsOptionError
 
 
@@ -232,6 +234,7 @@ setup_kwargs = dict(
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
         'Programming Language :: Python :: Implementation :: CPython',
         'Programming Language :: Python :: Implementation :: PyPy',
         'Topic :: Scientific/Engineering :: Mathematics',

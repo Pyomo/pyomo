@@ -55,7 +55,7 @@ def convert_problem(
         if os.sep in fname:  # pragma:nocover
             fname = tmp.split(os.sep)[-1]
         source_ptype = [guess_format(fname)]
-        if source_ptype is [None]:
+        if source_ptype == [None]:
             raise ConverterError("Unknown suffix type: " + tmp)
     else:
         source_ptype = args[0].valid_problem_types()
