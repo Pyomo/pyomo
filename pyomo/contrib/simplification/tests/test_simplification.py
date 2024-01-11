@@ -1,11 +1,17 @@
 from pyomo.common.unittest import TestCase
 from pyomo.common import unittest
 from pyomo.contrib.simplification import Simplifier
+from pyomo.contrib.simplification.simplify import ginac_available
 from pyomo.core.expr.compare import assertExpressionsEqual, compare_expressions
 import pyomo.environ as pe
 from pyomo.core.expr.calculus.diff_with_pyomo import reverse_sd
+from pyomo.common.dependencies import attempt_import
 
 
+sympy, sympy_available = attempt_import('sympy')
+
+
+@unittest.skipIf((not sympy_available) and (not ginac_available), 'neither sympy nor ginac are available')
 @unittest.pytest.mark.simplification
 class TestSimplification(TestCase):
     def compare_against_possible_results(self, got, expected_list):
