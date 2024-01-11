@@ -633,7 +633,7 @@ jobs:
     - name: Install GiNaC Interface
       if: matrix.other == '/singletest'
       run: |
-        ls /usr/local/include/ginac/
+        export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
         cd pyomo/contrib/simplification/
         $PYTHON_EXE build.py --inplace
 
