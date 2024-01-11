@@ -150,7 +150,7 @@ class GDPToMINLPTransformation(GDP_to_MIP_Transformation):
         if (c.equality or lb is ub) and lb is not None:
             # equality
             newConstraint.add(
-                (name, i, 'eq'), c.body * indicator_var - lb * indicator_var == 0
+                (name, i, 'eq'), (c.body - lb) * indicator_var == 0
             )
             constraintMap['transformedConstraints'][c] = [newConstraint[name, i, 'eq']]
             constraintMap['srcConstraints'][newConstraint[name, i, 'eq']] = c
@@ -158,7 +158,7 @@ class GDPToMINLPTransformation(GDP_to_MIP_Transformation):
             # inequality
             if lb is not None:
                 newConstraint.add(
-                    (name, i, 'lb'), 0 <= c.body * indicator_var - lb * indicator_var
+                    (name, i, 'lb'), 0 <= (c.body - lb) * indicator_var
                 )
                 constraintMap['transformedConstraints'][c] = [
                     newConstraint[name, i, 'lb']
@@ -166,7 +166,7 @@ class GDPToMINLPTransformation(GDP_to_MIP_Transformation):
                 constraintMap['srcConstraints'][newConstraint[name, i, 'lb']] = c
             if ub is not None:
                 newConstraint.add(
-                    (name, i, 'ub'), c.body * indicator_var - ub * indicator_var <= 0
+                    (name, i, 'ub'), (c.body - ub) * indicator_var <= 0
                 )
                 transformed = constraintMap['transformedConstraints'].get(c)
                 if transformed is not None:
