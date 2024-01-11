@@ -35,25 +35,6 @@ class TestSimplificationSympy(TestCase):
         expected = x**-1.0
         assertExpressionsEqual(self, expected, der2_simp)
 
-    def test_param(self):
-        m = pe.ConcreteModel()
-        x = m.x = pe.Var()
-        p = m.p = pe.Param(mutable=True)
-        e1 = p * x**2 + p * x + p * x**2
-        simp = Simplifier()
-        e2 = simp.simplify(e1)
-        self.compare_against_possible_results(
-            e2,
-            [
-                p * x**2.0 * 2.0 + p * x,
-                p * x + p * x**2.0 * 2.0,
-                2.0 * p * x**2.0 + p * x,
-                p * x + 2.0 * p * x**2.0,
-                x**2.0 * p * 2.0 + p * x,
-                p * x + x**2.0 * p * 2.0,
-            ],
-        )
-
     def test_mul(self):
         m = pe.ConcreteModel()
         x = m.x = pe.Var()
@@ -118,4 +99,21 @@ class TestSimplificationSympy(TestCase):
 )
 @unittest.pytest.mark.simplification
 class TestSimplificationGiNaC(TestSimplificationSympy):
-    pass
+    def test_param(self):
+        m = pe.ConcreteModel()
+        x = m.x = pe.Var()
+        p = m.p = pe.Param(mutable=True)
+        e1 = p * x**2 + p * x + p * x**2
+        simp = Simplifier()
+        e2 = simp.simplify(e1)
+        self.compare_against_possible_results(
+            e2,
+            [
+                p * x**2.0 * 2.0 + p * x,
+                p * x + p * x**2.0 * 2.0,
+                2.0 * p * x**2.0 + p * x,
+                p * x + 2.0 * p * x**2.0,
+                x**2.0 * p * 2.0 + p * x,
+                p * x + x**2.0 * p * 2.0,
+            ],
+        )
