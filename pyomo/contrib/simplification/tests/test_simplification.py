@@ -11,7 +11,10 @@ from pyomo.common.dependencies import attempt_import
 sympy, sympy_available = attempt_import('sympy')
 
 
-@unittest.skipIf((not sympy_available) and (not ginac_available), 'neither sympy nor ginac are available')
+@unittest.skipIf(
+    (not sympy_available) and (not ginac_available),
+    'neither sympy nor ginac are available',
+)
 class TestSimplification(TestCase):
     def compare_against_possible_results(self, got, expected_list):
         success = False
