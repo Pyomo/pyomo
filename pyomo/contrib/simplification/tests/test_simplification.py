@@ -11,11 +11,7 @@ from pyomo.common.dependencies import attempt_import
 sympy, sympy_available = attempt_import('sympy')
 
 
-@unittest.skipIf(
-    (not sympy_available) or (ginac_available),
-    'sympy is not available',
-)
-class TestSimplificationSympy(TestCase):
+class SimplificationMixin:
     def compare_against_possible_results(self, got, expected_list):
         success = False
         for exp in expected_list:
@@ -94,11 +90,19 @@ class TestSimplificationSympy(TestCase):
 
 
 @unittest.skipIf(
+    (not sympy_available) or (ginac_available),
+    'sympy is not available',
+)
+class TestSimplificationSympy(TestCase, SimplificationMixin):
+    pass
+
+
+@unittest.skipIf(
     not ginac_available,
     'GiNaC is not available',
 )
 @unittest.pytest.mark.simplification
-class TestSimplificationGiNaC(TestSimplificationSympy):
+class TestSimplificationGiNaC(TestCase, SimplificationMixin):
     def test_param(self):
         m = pe.ConcreteModel()
         x = m.x = pe.Var()
