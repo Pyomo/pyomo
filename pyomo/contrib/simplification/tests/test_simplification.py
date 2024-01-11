@@ -15,6 +15,7 @@ sympy, sympy_available = attempt_import('sympy')
     (not sympy_available) and (not ginac_available),
     'neither sympy nor ginac are available',
 )
+@unittest.pytest.mark.simplification
 class TestSimplification(TestCase):
     def compare_against_possible_results(self, got, expected_list):
         success = False

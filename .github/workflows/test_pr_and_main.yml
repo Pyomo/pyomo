@@ -98,7 +98,7 @@ jobs:
         - os: ubuntu-latest
           python: 3.11
           other: /singletest
-          category: "-m 'neos or importtest'"
+          category: "-m 'neos or importtest or simplification'"
           skip_doctest: 1
           TARGET: linux
           PYENV: pip
