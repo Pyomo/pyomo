@@ -195,7 +195,19 @@ def compare_expressions(expr1, expr2, include_named_exprs=True):
         expr2, include_named_exprs=include_named_exprs
     )
     try:
-        res = pn1 == pn2
+        res = True
+        if len(pn1) != len(pn2):
+            res = False
+        if res:
+            for a, b in zip(pn1, pn2):
+                if a.__class__ is not b.__class__:
+                    res = False
+                    break
+                if a == b:
+                    continue
+                else:
+                    res = False
+                    break
     except PyomoException:
         res = False
     return res
