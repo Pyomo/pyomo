@@ -12,11 +12,10 @@ sympy, sympy_available = attempt_import('sympy')
 
 
 @unittest.skipIf(
-    (not sympy_available) and (not ginac_available),
-    'neither sympy nor ginac are available',
+    (not sympy_available) or (ginac_available),
+    'sympy is not available',
 )
-@unittest.pytest.mark.simplification
-class TestSimplification(TestCase):
+class TestSimplificationSympy(TestCase):
     def compare_against_possible_results(self, got, expected_list):
         success = False
         for exp in expected_list:
@@ -111,3 +110,12 @@ class TestSimplification(TestCase):
             simp = Simplifier()
             e2 = simp.simplify(e)
             assertExpressionsEqual(self, e, e2)
+
+
+@unittest.skipIf(
+    not ginac_available,
+    'GiNaC is not available',
+)
+@unittest.pytest.mark.simplification
+class TestSimplificationGiNaC(TestSimplificationSympy):
+    pass
