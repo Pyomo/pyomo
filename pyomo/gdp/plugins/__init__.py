@@ -22,3 +22,4 @@ def load():
     import pyomo.gdp.plugins.multiple_bigm
     import pyomo.gdp.plugins.transform_current_disjunctive_state
     import pyomo.gdp.plugins.bound_pretransformation
+    import pyomo.gdp.plugins.gdp_to_minlp

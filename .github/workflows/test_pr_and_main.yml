@@ -622,8 +622,8 @@ jobs:
         echo "COVERAGE_PROCESS_START=$COVERAGE_RC" >> $GITHUB_ENV
         cp ${GITHUB_WORKSPACE}/.coveragerc ${COVERAGE_RC}
         echo "data_file=${COVERAGE_BASE}age" >> ${COVERAGE_RC}
-        SITE_PACKAGES=$($PYTHON_EXE -c "from distutils.sysconfig import \
-            get_python_lib; print(get_python_lib())")
+        SITE_PACKAGES=$($PYTHON_EXE -c \
+            "import sysconfig; print(sysconfig.get_path('purelib'))")
         echo "Python site-packages: $SITE_PACKAGES"
         echo 'import coverage; coverage.process_startup()' \
             > ${SITE_PACKAGES}/run_coverage_at_startup.pth

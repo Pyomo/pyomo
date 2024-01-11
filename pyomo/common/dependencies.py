@@ -18,7 +18,6 @@ import warnings
 
 from .deprecation import deprecated, deprecation_warning, in_testing_environment
 from .errors import DeferredImportError
-from . import numeric_types
 
 
 SUPPRESS_DEPENDENCY_WARNINGS = False
@@ -743,6 +742,12 @@ def _finalize_yaml(module, available):
         yaml_load_args['Loader'] = module.SafeLoader
 
 
+def _finalize_ctypes(module, available):
+    # ctypes.util must be explicitly imported (and fileutils assumes
+    # this has already happened)
+    import ctypes.util
+
+
 def _finalize_scipy(module, available):
     if available:
         # Import key subpackages that we will want to assume are present
@@ -778,6 +783,8 @@ def _finalize_matplotlib(module, available):
 def _finalize_numpy(np, available):
     if not available:
         return
+    from . import numeric_types
+
     # Register ndarray as a native type to prevent 1-element ndarrays
     # from accidentally registering ndarray as a native_numeric_type.
     numeric_types.native_types.add(np.ndarray)
@@ -826,6 +833,23 @@ def _finalize_numpy(np, available):
         numeric_types.RegisterComplexType(t)
 
 
+def _pyutilib_importer():
+    # On newer Pythons, PyUtilib import will fail, but only if a
+    # second-level module is imported.  We will arbitrarily choose to
+    # check pyutilib.component (as that is the path exercised by the
+    # pyomo.common.tempfiles deprecation path)
+    importlib.import_module('pyutilib.component')
+    return importlib.import_module('pyutilib')
+
+
+# Standard libraries that are slower to import and not strictly required
+# on all platforms / situations.
+ctypes, _ = attempt_import(
+    'ctypes', deferred_submodules=['util'], callback=_finalize_ctypes
+)
+random, _ = attempt_import('random')
+
+# Commonly-used optional dependencies
 dill, dill_available = attempt_import('dill')
 mpi4py, mpi4py_available = attempt_import('mpi4py')
 networkx, networkx_available = attempt_import('networkx')
@@ -833,7 +857,7 @@ numpy, numpy_available = attempt_import('numpy', callback=_finalize_numpy)
 pandas, pandas_available = attempt_import('pandas')
 plotly, plotly_available = attempt_import('plotly')
 pympler, pympler_available = attempt_import('pympler', callback=_finalize_pympler)
-pyutilib, pyutilib_available = attempt_import('pyutilib')
+pyutilib, pyutilib_available = attempt_import('pyutilib', importer=_pyutilib_importer)
 scipy, scipy_available = attempt_import(
     'scipy',
     callback=_finalize_scipy,

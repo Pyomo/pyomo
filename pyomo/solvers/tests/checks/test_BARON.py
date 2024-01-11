@@ -20,9 +20,9 @@ from pyomo.environ import ConcreteModel, Constraint, Objective, Var, log10, mini
 from pyomo.opt import SolverFactory, TerminationCondition
 
 # check if BARON is available
-from pyomo.solvers.tests.solvers import test_solver_cases
+from pyomo.solvers.tests.solvers import test_solver_cases as _test_solver_cases
 
-baron_available = test_solver_cases('baron', 'bar').available
+baron_available = _test_solver_cases('baron', 'bar').available
 
 
 @unittest.skipIf(not baron_available, "The 'BARON' solver is not available")
