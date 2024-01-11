@@ -19,7 +19,7 @@ logger = logging.getLogger('pyomo.core')
 
 from math import isclose
 
-from pyomo.common.dependencies import numpy as np, numpy_available
+from pyomo.common.dependencies import attempt_import
 from pyomo.common.deprecation import (
     deprecated,
     deprecation_warning,
@@ -46,6 +46,9 @@ from pyomo.core.expr.expr_common import (
 
 # Note: pyggyback on expr.base's use of attempt_import(visitor)
 from pyomo.core.expr.base import ExpressionBase, NPV_Mixin, visitor
+
+
+_ndarray, _ = attempt_import('pyomo.core.expr.ndarray')
 
 relocated_module_attribute(
     'is_potentially_variable',
@@ -634,7 +637,9 @@ explicitly resolving the numeric value using the Pyomo value() function.
         return _abs_dispatcher[self.__class__](self)
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        return NumericNDArray.__array_ufunc__(None, ufunc, method, *inputs, **kwargs)
+        return _ndarray.NumericNDArray.__array_ufunc__(
+            None, ufunc, method, *inputs, **kwargs
+        )
 
     def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
         """Return a string representation of the expression tree.
@@ -669,35 +674,6 @@ explicitly resolving the numeric value using the Pyomo value() function.
             elif labeler is not None:
                 return labeler(self)
         return str(self)
-
-
-#
-# Note: the "if numpy_available" in the class definition also ensures
-# that the numpy types are registered if numpy is in fact available
-#
-# TODO: Move this to a separate module to support avoiding the numpy
-# import if numpy is not actually used.
-class NumericNDArray(np.ndarray if numpy_available else object):
-    """An ndarray subclass that stores Pyomo numeric expressions"""
-
-    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        if method == '__call__':
-            # Convert all incoming types to ndarray (to prevent recursion)
-            args = [np.asarray(i) for i in inputs]
-            # Set the return type to be an 'object'.  This prevents the
-            # logical operators from casting the result to a bool.  This
-            # requires numpy >= 1.6
-            kwargs['dtype'] = object
-
-        # Delegate to the base ufunc, but return an instance of this
-        # class so that additional operators hit this method.
-        ans = getattr(ufunc, method)(*args, **kwargs)
-        if isinstance(ans, np.ndarray):
-            if ans.size == 1:
-                return ans[0]
-            return ans.view(NumericNDArray)
-        else:
-            return ans
 
 
 # -------------------------------------------------------
