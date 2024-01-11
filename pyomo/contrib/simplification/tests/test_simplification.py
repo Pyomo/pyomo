@@ -89,18 +89,12 @@ class SimplificationMixin:
             assertExpressionsEqual(self, e, e2)
 
 
-@unittest.skipIf(
-    (not sympy_available) or (ginac_available),
-    'sympy is not available',
-)
+@unittest.skipIf((not sympy_available) or (ginac_available), 'sympy is not available')
 class TestSimplificationSympy(TestCase, SimplificationMixin):
     pass
 
 
-@unittest.skipIf(
-    not ginac_available,
-    'GiNaC is not available',
-)
+@unittest.skipIf(not ginac_available, 'GiNaC is not available')
 @unittest.pytest.mark.simplification
 class TestSimplificationGiNaC(TestCase, SimplificationMixin):
     def test_param(self):
