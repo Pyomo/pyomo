@@ -786,13 +786,9 @@ class BaseLineTestDriver(object):
                 s = line.find("seconds") + 7
                 line = line[s:]
 
+            item_list = []
             items = line.strip().split()
             for i in items:
-                if not i:
-                    continue
-                if i.startswith('/') or i.startswith(":\\", 1):
-                    continue
-
                 # A few substitutions to get tests passing on pypy3
                 if ".inf" in i:
                     i = i.replace(".inf", "inf")
@@ -800,9 +796,10 @@ class BaseLineTestDriver(object):
                     i = i.replace("null", "None")
 
                 try:
-                    filtered.append(float(i))
+                    item_list.append(float(i))
                 except:
-                    filtered.append(i)
+                    item_list.append(i)
+            filtered.append(item_list)
 
         return filtered
 
@@ -810,56 +807,6 @@ class BaseLineTestDriver(object):
         # Filter files independently and then compare filtered contents
         out_filtered = self.filter_file_contents(test_output.strip().split('\n'))
         base_filtered = self.filter_file_contents(baseline.strip().split('\n'))
-
-        if len(out_filtered) != len(base_filtered):
-            # it is likely that a solver returned a (slightly) nonzero
-            # value for a variable that is normally 0.  Try to look for
-            # sequences like "['varname:', 'Value:', 1e-9]" that appear
-            # in one result but not the other and remove them.
-            i = 0
-            while i < min(len(out_filtered), len(base_filtered)):
-                try:
-                    self.assertStructuredAlmostEqual(
-                        out_filtered[i],
-                        base_filtered[i],
-                        abstol=abstol,
-                        reltol=reltol,
-                        allow_second_superset=False,
-                    )
-                    i += 1
-                    continue
-                except self.failureException:
-                    pass
-
-                try:
-                    index_of_out_i_in_base = base_filtered.index(out_filtered[i], i)
-                except ValueError:
-                    index_of_out_i_in_base = float('inf')
-                try:
-                    index_of_base_i_in_out = out_filtered.index(base_filtered[i], i)
-                except ValueError:
-                    index_of_base_i_in_out = float('inf')
-                if index_of_out_i_in_base < index_of_base_i_in_out:
-                    extra = base_filtered
-                    n = index_of_out_i_in_base
-                else:
-                    extra = out_filtered
-                    n = index_of_base_i_in_out
-                if n == float('inf'):
-                    n = None
-                extra_terms = extra[i:n]
-                try:
-                    assert len(extra_terms) % 3 == 0
-                    assert all(str(_)[-1] == ":" for _ in extra_terms[0::3])
-                    assert all(str(_) == "Value:" for _ in extra_terms[1::3])
-                    assert all(abs(_) < abstol for _ in extra_terms[2::3])
-                except:
-                    # This does not match the pattern we are looking
-                    # for: quit processing, and let the next
-                    # assertStructuredAlmostEqual raise the appropriate
-                    # failureException
-                    break
-                extra[i:n] = []
 
         try:
             self.assertStructuredAlmostEqual(
@@ -869,6 +816,7 @@ class BaseLineTestDriver(object):
                 reltol=reltol,
                 allow_second_superset=False,
             )
+            return True
         except self.failureException:
             # Print helpful information when file comparison fails
             print('---------------------------------')
@@ -881,7 +829,6 @@ class BaseLineTestDriver(object):
             print('---------------------------------')
             print(test_output)
             raise
-        return True
 
     def python_test_driver(self, tname, test_file, base_file):
         bname = os.path.basename(test_file)
