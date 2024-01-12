@@ -23,7 +23,7 @@ mimics the Python operations used to construct an expression.  The
 :data:`verbose` flag can be set to :const:`True` to generate a
 string representation that is a nested functional form.  For example:
 
-.. literalinclude:: ../../tests/expr/managing_ex1.spy
+.. literalinclude:: ../../src/expr/managing_ex1.spy
 
 Labeler and Symbol Map
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -37,7 +37,7 @@ the :class:`NumericLabeler` defines a functor that can be used to
 sequentially generate simple labels with a prefix followed by the
 variable count:
 
-.. literalinclude:: ../../tests/expr/managing_ex2.spy
+.. literalinclude:: ../../src/expr/managing_ex2.spy
 
 The :data:`smap` option is used to specify a symbol map object
 (:class:`SymbolMap <pyomo.core.expr.symbol_map.SymbolMap>`), which
@@ -72,19 +72,19 @@ the expression have a value.  The :func:`value <pyomo.core.expr.value>`
 function can be used to walk the expression tree and compute the
 value of an expression.  For example:
 
-.. literalinclude:: ../../tests/expr/managing_ex5.spy
+.. literalinclude:: ../../src/expr/managing_ex5.spy
 
 Additionally, expressions define the :func:`__call__` method, so the
 following is another way to compute the value of an expression:
 
-.. literalinclude:: ../../tests/expr/managing_ex6.spy
+.. literalinclude:: ../../src/expr/managing_ex6.spy
 
 If a parameter or variable is undefined, then the :func:`value
 <pyomo.core.expr.value>` function and :func:`__call__` method will
 raise an exception.  This exception can be suppressed using the
 :attr:`exception` option.  For example:
 
-.. literalinclude:: ../../tests/expr/managing_ex7.spy
+.. literalinclude:: ../../src/expr/managing_ex7.spy
 
 This option is useful in contexts where adding a try block is inconvenient
 in your modeling script.
@@ -108,7 +108,7 @@ functions that support this functionality.  First, the
 function is a generator function that walks the expression tree and yields all
 nodes whose type is in a specified set of node types.  For example:
 
-.. literalinclude:: ../../tests/expr/managing_ex8.spy
+.. literalinclude:: ../../src/expr/managing_ex8.spy
 
 The :func:`identify_variables <pyomo.core.expr.identify_variables>`
 function is a generator function that yields all nodes that are
@@ -117,7 +117,7 @@ but this set of variable types does not need to be specified by the user.
 However, the :attr:`include_fixed` flag can be specified to omit fixed
 variables.  For example:
 
-.. literalinclude:: ../../tests/expr/managing_ex9.spy
+.. literalinclude:: ../../src/expr/managing_ex9.spy
 
 Walking an Expression Tree with a Visitor Class
 -----------------------------------------------
@@ -223,14 +223,14 @@ In this example, we describe an visitor class that counts the number
 of nodes in an expression (including leaf nodes).  Consider the following
 class:
 
-.. literalinclude:: ../../tests/expr/managing_visitor1.spy
+.. literalinclude:: ../../src/expr/managing_visitor1.spy
 
 The class constructor creates a counter, and the :func:`visit` method
 increments this counter for every node that is visited.  The :func:`finalize`
 method returns the value of this counter after the tree has been walked.  The
 following function illustrates this use of this visitor class:
 
-.. literalinclude:: ../../tests/expr/managing_visitor2.spy
+.. literalinclude:: ../../src/expr/managing_visitor2.spy
 
 
 ExpressionValueVisitor Example
@@ -240,14 +240,14 @@ In this example, we describe an visitor class that clones the
 expression tree (including leaf nodes).  Consider the following
 class:
 
-.. literalinclude:: ../../tests/expr/managing_visitor3.spy
+.. literalinclude:: ../../src/expr/managing_visitor3.spy
 
 The :func:`visit` method creates a new expression node with children
 specified by :attr:`values`.  The :func:`visiting_potential_leaf`
 method performs a :func:`deepcopy` on leaf nodes, which are native
 Python types or non-expression objects.
 
-.. literalinclude:: ../../tests/expr/managing_visitor4.spy
+.. literalinclude:: ../../src/expr/managing_visitor4.spy
 
 
 ExpressionReplacementVisitor Example
@@ -258,15 +258,15 @@ variables with scaled variables, using a mutable parameter that
 can be modified later.  the following
 class:
 
-.. literalinclude:: ../../tests/expr/managing_visitor5.spy
+.. literalinclude:: ../../src/expr/managing_visitor5.spy
 
 No other method need to be defined.  The
 :func:`beforeChild` method identifies variable nodes
 and returns a product expression that contains a mutable parameter.
 
-.. literalinclude:: ../../tests/expr/managing_visitor6.spy
+.. literalinclude:: ../../src/expr/managing_visitor6.spy
 
 The :func:`scale_expression` function is called with an expression and
 a dictionary, :attr:`scale`, that maps variable ID to model parameter.  For example:
 
-.. literalinclude:: ../../tests/expr/managing_visitor7.spy
+.. literalinclude:: ../../src/expr/managing_visitor7.spy
