@@ -2,7 +2,6 @@ from pyomo.contrib.coramin.utils.coramin_enums import EigenValueBounder, Relaxat
 from pyomo.contrib.coramin.relaxations.custom_block import declare_custom_block
 from pyomo.contrib.coramin.relaxations.relaxations_base import (
     BaseRelaxationData,
-    ComponentWeakRef,
 )
 from pyomo.contrib.coramin.relaxations.hessian import Hessian
 from typing import Optional, Tuple
@@ -19,7 +18,7 @@ class AlphaBBRelaxationData(BaseRelaxationData):
     def __init__(self, component):
         super().__init__(component)
         self._xs: Optional[Tuple[_GeneralVarData]] = None
-        self._aux_var_ref = ComponentWeakRef(None)
+        self._aux_var = None
         self._f_x_expr: Optional[ExpressionBase] = None
         self._alphabb_rhs: Optional[ExpressionBase] = None
         self._hessian: Optional[Hessian] = None
@@ -31,10 +30,6 @@ class AlphaBBRelaxationData(BaseRelaxationData):
     @property
     def hessian(self):
         return self._hessian
-
-    @property
-    def _aux_var(self):
-        return self._aux_var_ref.get_component()
 
     def get_rhs_vars(self) -> Tuple[_GeneralVarData, ...]:
         return self._xs
@@ -89,7 +84,7 @@ class AlphaBBRelaxationData(BaseRelaxationData):
             safety_tol=safety_tol,
         )
         self._xs = tuple(identify_variables(f_x_expr, include_fixed=False))
-        self._aux_var_ref.set_component(aux_var)
+        object.__setattr__(self, '_aux_var', aux_var)
         self._f_x_expr = f_x_expr
         if hessian is None:
             hessian = Hessian(

@@ -2,7 +2,6 @@ from pyomo.contrib.coramin.utils.coramin_enums import RelaxationSide, FunctionSh
 from pyomo.contrib.coramin.relaxations.custom_block import declare_custom_block
 from pyomo.contrib.coramin.relaxations.relaxations_base import (
     BaseRelaxationData,
-    ComponentWeakRef,
 )
 from pyomo.core.expr.visitor import identify_variables
 import math
@@ -15,13 +14,9 @@ class MultivariateRelaxationData(BaseRelaxationData):
     def __init__(self, component):
         super(MultivariateRelaxationData, self).__init__(component)
         self._xs = None
-        self._aux_var_ref = ComponentWeakRef(None)
+        self._aux_var = None
         self._f_x_expr = None
         self._function_shape = FunctionShape.UNKNOWN
-
-    @property
-    def _aux_var(self):
-        return self._aux_var_ref.get_component()
 
     def get_rhs_vars(self):
         return self._xs
@@ -71,7 +66,7 @@ class MultivariateRelaxationData(BaseRelaxationData):
             safety_tol=safety_tol,
         )
         self._xs = tuple(identify_variables(f_x_expr, include_fixed=False))
-        self._aux_var_ref.set_component(aux_var)
+        object.__setattr__(self, '_aux_var', aux_var)
         self._f_x_expr = f_x_expr
 
     def build(

@@ -427,7 +427,7 @@ class BaseRelaxationData(_BlockData):
             relational_operator_string = '<='
         else:
             raise ValueError('Unexpected relaxation side')
-        return f'Relaxation for {self.get_aux_var().name} {relational_operator_string} {str(self.get_rhs_expr())}'
+        return f'Relaxation for {self.get_aux_var()} {relational_operator_string} {self.get_rhs_expr()}'
 
     def pprint(self, ostream=None, verbose=False, prefix=""):
         if ostream is None:
@@ -826,30 +826,3 @@ class BasePWRelaxationData(BaseRelaxationData):
             assert upper is not None
             ans[var] = lower, upper
         return ans
-
-
-class ComponentWeakRef(object):
-    """
-    This object is used to reference components from a block that are not owned by that block.
-    """
-
-    # ToDo: Example in the documentation
-    def __init__(self, comp):
-        self.compref = None
-        self.set_component(comp)
-
-    def get_component(self):
-        if self.compref is None:
-            return None
-        return self.compref()
-
-    def set_component(self, comp):
-        self.compref = None
-        if comp is not None:
-            self.compref = weakref.ref(comp)
-
-    def __setstate__(self, state):
-        self.set_component(state['compref'])
-
-    def __getstate__(self):
-        return {'compref': self.get_component()}

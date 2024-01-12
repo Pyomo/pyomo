@@ -1,6 +1,6 @@
 import pyomo.environ as pyo
 from pyomo.contrib.coramin.utils.coramin_enums import RelaxationSide, FunctionShape
-from .relaxations_base import BasePWRelaxationData, ComponentWeakRef, _check_cut
+from .relaxations_base import BasePWRelaxationData, _check_cut
 from .custom_block import declare_custom_block
 import numpy as np
 import math
@@ -662,8 +662,8 @@ class PWUnivariateRelaxationData(BasePWRelaxationData):
 
     def __init__(self, component):
         super().__init__(component)
-        self._xref = ComponentWeakRef(None)
-        self._aux_var_ref = ComponentWeakRef(None)
+        self._x = None
+        self._aux_var = None
         self._pw_repn = 'INC'
         self._function_shape = FunctionShape.UNKNOWN
         self._f_x_expr = None
@@ -672,14 +672,6 @@ class PWUnivariateRelaxationData(BasePWRelaxationData):
         self._secant_slope: Optional[Union[ScalarParam, IndexedParam]] = None
         self._secant_intercept: Optional[Union[ScalarParam, IndexedParam]] = None
         self._pw_secant = None
-
-    @property
-    def _x(self):
-        return self._xref.get_component()
-
-    @property
-    def _aux_var(self):
-        return self._aux_var_ref.get_component()
 
     def get_rhs_vars(self):
         return (self._x,)
@@ -740,8 +732,8 @@ class PWUnivariateRelaxationData(BasePWRelaxationData):
         self._function_shape = shape
         self._f_x_expr = f_x_expr
 
-        self._xref.set_component(x)
-        self._aux_var_ref.set_component(aux_var)
+        object.__setattr__(self, '_x', x)
+        object.__setattr__(self, '_aux_var', aux_var)
         bnds_list = _get_bnds_list(self._x)
         self._partitions[self._x] = bnds_list
 

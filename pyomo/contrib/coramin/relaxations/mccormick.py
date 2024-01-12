@@ -2,7 +2,7 @@ import logging
 import pyomo.environ as pyo
 from pyomo.contrib.coramin.utils.coramin_enums import RelaxationSide
 from .custom_block import declare_custom_block
-from .relaxations_base import BasePWRelaxationData, ComponentWeakRef, _check_cut
+from .relaxations_base import BasePWRelaxationData, _check_cut
 import math
 from ._utils import check_var_pts, _get_bnds_list, _get_bnds_tuple
 from pyomo.core.base.param import IndexedParam
@@ -136,9 +136,9 @@ class PWMcCormickRelaxationData(BasePWRelaxationData):
 
     def __init__(self, component):
         BasePWRelaxationData.__init__(self, component)
-        self._x1ref = ComponentWeakRef(None)
-        self._x2ref = ComponentWeakRef(None)
-        self._aux_var_ref = ComponentWeakRef(None)
+        self._x1 = None
+        self._x2 = None
+        self._aux_var = None
         self._f_x_expr = None
         self._mc_index = None
         self._slopes_index = None
@@ -148,18 +148,6 @@ class PWMcCormickRelaxationData(BasePWRelaxationData):
         self._mccormicks: Optional[IndexedConstraint] = None
         self._mc_exprs: Dict[int, LinearExpression] = dict()
         self._pw = None
-
-    @property
-    def _x1(self):
-        return self._x1ref.get_component()
-
-    @property
-    def _x2(self):
-        return self._x2ref.get_component()
-
-    @property
-    def _aux_var(self):
-        return self._aux_var_ref.get_component()
 
     def get_rhs_vars(self):
         return self._x1, self._x2
@@ -218,9 +206,9 @@ class PWMcCormickRelaxationData(BasePWRelaxationData):
             small_coef=small_coef,
             safety_tol=safety_tol,
         )
-        self._x1ref.set_component(x1)
-        self._x2ref.set_component(x2)
-        self._aux_var_ref.set_component(aux_var)
+        object.__setattr__(self, '_x1', x1)
+        object.__setattr__(self, '_x2', x2)
+        object.__setattr__(self, '_aux_var', aux_var)
         self._partitions[self._x1] = _get_bnds_list(self._x1)
         self._f_x_expr = x1 * x2
 
