@@ -243,16 +243,8 @@ setup_kwargs = dict(
     python_requires='>=3.8',
     install_requires=['ply'],
     extras_require={
-        'tests': [
-            'coverage',
-            'parameterized',
-            'pybind11',
-            'pytest',
-            'pytest-parallel',
-        ],
-        'tests_optional': [
-            'pytest-qt',  # contrib.viewer
-        ],
+        'tests': ['coverage', 'parameterized', 'pybind11', 'pytest', 'pytest-parallel'],
+        'tests_optional': ['pytest-qt'],  # contrib.viewer
         'docs': [
             'Sphinx>4',
             'sphinx-copybutton',
