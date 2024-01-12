@@ -22,8 +22,8 @@ env:
   PYTHONWARNINGS: ignore::UserWarning
   PYTHON_CORE_PKGS: wheel
   PYPI_ONLY: z3-solver
-  PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels pytest-qt PySide6
-  CONDA_EXCLUDE: PySide6 pyside6
+  PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels pytest-qt PyQt5
+  CONDA_EXCLUDE: PyQt5 pyqt5
   CACHE_VER: v221013.1
   NEOS_EMAIL: tests@pyomo.org
   SRC_REF: ${{ github.head_ref || github.ref }}
