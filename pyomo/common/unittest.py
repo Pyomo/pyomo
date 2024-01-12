@@ -556,7 +556,7 @@ class TestCase(_unittest.TestCase):
         return context.handle('assertRaisesRegex', args, kwargs)
 
 
-class BaseLineTestDriver(object):
+class BaselineTestDriver(object):
     """Generic driver for performing baseline tests in bulk
 
     This test driver was originally crafted for testing the examples in
@@ -818,7 +818,7 @@ class BaseLineTestDriver(object):
 
         return filtered
 
-    def compare_baselines(self, test_output, baseline, abstol=1e-6, reltol=None):
+    def compare_baseline(self, test_output, baseline, abstol=1e-6, reltol=None):
         # Filter files independently and then compare filtered contents
         out_filtered = self.filter_file_contents(
             test_output.strip().split('\n'), abstol
@@ -875,7 +875,7 @@ class BaseLineTestDriver(object):
             os.chdir(cwd)
 
         try:
-            self.compare_baselines(OUT.getvalue(), baseline)
+            self.compare_baseline(OUT.getvalue(), baseline)
         except:
             if os.environ.get('PYOMO_TEST_UPDATE_BASELINES', None):
                 with open(base_file, 'w') as FILE:
@@ -915,7 +915,7 @@ class BaseLineTestDriver(object):
             os.chdir(cwd)
 
         try:
-            self.compare_baselines(rc.stdout.decode(), baseline)
+            self.compare_baseline(rc.stdout.decode(), baseline)
         except:
             if os.environ.get('PYOMO_TEST_UPDATE_BASELINES', None):
                 with open(base_file, 'w') as FILE:

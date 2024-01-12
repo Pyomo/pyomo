@@ -29,11 +29,11 @@ bool(matplotlib_available)
 currdir = this_file_dir()
 
 
-class TestOnlineDocExamples(unittest.BaseLineTestDriver, unittest.TestCase):
+class TestOnlineDocExamples(unittest.BaselineTestDriver, unittest.TestCase):
     # Only test files in directories ending in -ch. These directories
     # contain the updated python and scripting files corresponding to
     # each chapter in the book.
-    py_tests, sh_tests = unittest.BaseLineTestDriver.gather_tests(
+    py_tests, sh_tests = unittest.BaselineTestDriver.gather_tests(
         list(filter(os.path.isdir, glob.glob(os.path.join(currdir, '*'))))
     )
 
@@ -57,13 +57,13 @@ class TestOnlineDocExamples(unittest.BaseLineTestDriver, unittest.TestCase):
     }
 
     @parameterized.parameterized.expand(
-        sh_tests, name_func=unittest.BaseLineTestDriver.custom_name_func
+        sh_tests, name_func=unittest.BaselineTestDriver.custom_name_func
     )
     def test_sh(self, tname, test_file, base_file):
         self.shell_test_driver(tname, test_file, base_file)
 
     @parameterized.parameterized.expand(
-        py_tests, name_func=unittest.BaseLineTestDriver.custom_name_func
+        py_tests, name_func=unittest.BaselineTestDriver.custom_name_func
     )
     def test_py(self, tname, test_file, base_file):
         self.python_test_driver(tname, test_file, base_file)
