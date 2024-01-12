@@ -244,12 +244,14 @@ setup_kwargs = dict(
     install_requires=['ply'],
     extras_require={
         'tests': [
-            #'codecov', # useful for testing infrastructures, but not required
             'coverage',
             'parameterized',
             'pybind11',
             'pytest',
             'pytest-parallel',
+        ],
+        'tests_optional': [
+            'pytest-qt',  # contrib.viewer
         ],
         'docs': [
             'Sphinx>4',
@@ -277,7 +279,7 @@ setup_kwargs = dict(
             #'pathos',   # requested for #963, but PR currently closed
             'pint',  # units
             'plotly',  # incidence_analysis
-            'PyQt6',  # contrib.viewer
+            'PySide6',  # contrib.viewer
             'pytest-qt',  # for testing contrib.viewer
             'python-louvain',  # community_detection
             'pyyaml',  # core

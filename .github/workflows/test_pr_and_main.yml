@@ -25,7 +25,8 @@ env:
   PYTHONWARNINGS: ignore::UserWarning
   PYTHON_CORE_PKGS: wheel
   PYPI_ONLY: z3-solver
-  PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels PyQt6 pytest-qt
+  PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels pytest-qt PySide6
+  CONDA_EXCLUDE: PySide6 pyside6
   CACHE_VER: v221013.1
   NEOS_EMAIL: tests@pyomo.org
   SRC_REF: ${{ github.head_ref || github.ref }}
@@ -156,7 +157,7 @@ jobs:
         # Note: pandas 1.0.3 causes gams 29.1.0 import to fail in python 3.8
         EXTRAS=tests
         if test -z "${{matrix.slim}}"; then
-            EXTRAS="$EXTRAS,docs,optional"
+            EXTRAS="$EXTRAS,tests_optional,docs,optional"
         fi
         echo "EXTRAS=$EXTRAS" >> $GITHUB_ENV
         PYTHON_PACKAGES="${{matrix.PACKAGES}}"
@@ -351,7 +352,7 @@ jobs:
         if test "${{matrix.TARGET}}" == linux; then
             EXCLUDE="casadi numdifftools $EXCLUDE"
         fi
-        EXCLUDE=`echo "$EXCLUDE PyQt6 pyqt6" | xargs`
+        EXCLUDE=`echo "$EXCLUDE $CONDA_EXCLUDE" | xargs`
         if test -n "$EXCLUDE"; then
             for WORD in $EXCLUDE; do
                 PACKAGES=${PACKAGES//$WORD / }
