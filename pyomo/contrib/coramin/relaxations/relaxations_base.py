@@ -365,7 +365,7 @@ class BaseRelaxationData(_BlockData):
         -------
         float
         """
-        dev = self.get_aux_var().value - pe.value(self.get_rhs_expr())
+        dev = pe.value(self.get_aux_var()) - pe.value(self.get_rhs_expr())
         if self.relaxation_side is RelaxationSide.BOTH:
             dev = abs(dev)
         elif self.relaxation_side is RelaxationSide.UNDER:
@@ -632,9 +632,9 @@ class BaseRelaxationData(_BlockData):
                     rhs_val = None
                 if rhs_val is not None:
                     if self.has_convex_underestimator():
-                        viol = rhs_val - self.get_aux_var().value
+                        viol = rhs_val - pe.value(self.get_aux_var())
                     else:
-                        viol = self.get_aux_var().value - rhs_val
+                        viol = pe.value(self.get_aux_var()) - rhs_val
                     if viol > feasibility_tol:
                         needs_cut = True
             else:

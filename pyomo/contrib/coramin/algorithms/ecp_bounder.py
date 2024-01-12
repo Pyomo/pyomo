@@ -192,12 +192,12 @@ class ECPBounder(appsi.base.PersistentSolver):
                         RelaxationSide.BOTH,
                         RelaxationSide.UNDER,
                     }:
-                        viol = pe.value(b.get_rhs_expr()) - b.get_aux_var().value
+                        viol = pe.value(b.get_rhs_expr()) - pe.value(b.get_aux_var())
                     elif b.is_rhs_concave() and b.relaxation_side in {
                         RelaxationSide.BOTH,
                         RelaxationSide.OVER,
                     }:
-                        viol = b.get_aux_var().value - pe.value(b.get_rhs_expr())
+                        viol = pe.value(b.get_aux_var()) - pe.value(b.get_rhs_expr())
                 except (OverflowError, ZeroDivisionError, ValueError) as err:
                     logger.warning("could not generate ECP cut due to " + str(err))
                 if viol is not None:

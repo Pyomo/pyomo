@@ -656,7 +656,7 @@ class MultiTree(Solver):
             if err:
                 break
 
-            aux_val = b.get_aux_var().value
+            aux_val = pe.value(b.get_aux_var())
             rhs_val = pe.value(b.get_rhs_expr())
             if (
                 aux_val > rhs_val + self.config.feasibility_tolerance
