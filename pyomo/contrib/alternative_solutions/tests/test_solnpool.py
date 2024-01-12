@@ -54,7 +54,7 @@ class TestSolnPoolUnit(unittest.TestCase):
         '''
         Check that the correct number of alternate solutions are found for
         each objective value in a mip with known solutions'''
-        m = tc.get_indexed_hexagonal_pyramid_mip()
+        m = tc.get_indexed_pentagonal_pyramid_mip()
         results = sp.gurobi_generate_solutions(m, 100, tee = True)
         objectives = [round(result.objective[1], 2) for result in results]
         actual_solns_by_obj = m.num_ranked_solns
@@ -65,7 +65,7 @@ class TestSolnPoolUnit(unittest.TestCase):
         '''
         Check that relative mip gap constraints are added and the correct
         number of alternative solutions are found'''
-        m = tc.get_hexagonal_pyramid_mip()
+        m = tc.get_pentagonal_pyramid_mip()
         results = sp.gurobi_generate_solutions(m, 100, rel_opt_gap=.2)
         objectives = [round(result.objective[1], 2) for result in results]
         actual_solns_by_obj = m.num_ranked_solns[0:2]
@@ -76,7 +76,7 @@ class TestSolnPoolUnit(unittest.TestCase):
         '''
         Check that absolute mip gap constraints are added and the correct
         number of alternative solutions are found'''
-        m = tc.get_hexagonal_pyramid_mip()
+        m = tc.get_pentagonal_pyramid_mip()
         results = sp.gurobi_generate_solutions(m, 100, abs_opt_gap=1.99)
         objectives = [round(result.objective[1], 2) for result in results]
         actual_solns_by_obj = m.num_ranked_solns[0:3]
