@@ -9,14 +9,15 @@ from weakref import ref as weakref_ref
 import logging
 
 
-logger = logging.getLogger('pyomo.gdp.gdp_to_minlp')
+logger = logging.getLogger('pyomo.gdp.binary_multiplication')
 
 
 @TransformationFactory.register(
-    'gdp.gdp_to_minlp', doc="Reformulate the GDP as an MINLP."
+    'gdp.binary_multiplication',
+    doc="Reformulate the GDP as an MINLP by multiplying f(x) <= 0 by y to get f(x) * y <= 0.",
 )
 class GDPToMINLPTransformation(GDP_to_MIP_Transformation):
-    CONFIG = ConfigDict("gdp.gdp_to_minlp")
+    CONFIG = ConfigDict("gdp.binary_multiplication")
     CONFIG.declare(
         'targets',
         ConfigValue(
@@ -33,7 +34,7 @@ class GDPToMINLPTransformation(GDP_to_MIP_Transformation):
         ),
     )
 
-    transformation_name = 'gdp_to_minlp'
+    transformation_name = 'binary_multiplication'
 
     def __init__(self):
         super().__init__(logger)
@@ -149,25 +150,19 @@ class GDPToMINLPTransformation(GDP_to_MIP_Transformation):
         lb, ub = c.lower, c.upper
         if (c.equality or lb is ub) and lb is not None:
             # equality
-            newConstraint.add(
-                (name, i, 'eq'), (c.body - lb) * indicator_var == 0
-            )
+            newConstraint.add((name, i, 'eq'), (c.body - lb) * indicator_var == 0)
             constraintMap['transformedConstraints'][c] = [newConstraint[name, i, 'eq']]
             constraintMap['srcConstraints'][newConstraint[name, i, 'eq']] = c
         else:
             # inequality
             if lb is not None:
-                newConstraint.add(
-                    (name, i, 'lb'), 0 <= (c.body - lb) * indicator_var
-                )
+                newConstraint.add((name, i, 'lb'), 0 <= (c.body - lb) * indicator_var)
                 constraintMap['transformedConstraints'][c] = [
                     newConstraint[name, i, 'lb']
                 ]
                 constraintMap['srcConstraints'][newConstraint[name, i, 'lb']] = c
             if ub is not None:
-                newConstraint.add(
-                    (name, i, 'ub'), (c.body - ub) * indicator_var <= 0
-                )
+                newConstraint.add((name, i, 'ub'), (c.body - ub) * indicator_var <= 0)
                 transformed = constraintMap['transformedConstraints'].get(c)
                 if transformed is not None:
                     constraintMap['transformedConstraints'][c].append(
