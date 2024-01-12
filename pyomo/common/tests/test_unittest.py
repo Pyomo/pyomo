@@ -472,7 +472,7 @@ TEST OUTPUT FILE
                 'c.sh',
                 'c.yml',
                 'd.sh',
-                'd.yml',
+                'd.txt',
                 'e.sh',
             ):
                 with open(os.path.join(tmpdir, fname), 'w'):
