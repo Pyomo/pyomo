@@ -9,14 +9,14 @@ from weakref import ref as weakref_ref
 import logging
 
 
-logger = logging.getLogger('pyomo.gdp.gdp_to_minlp')
+logger = logging.getLogger('pyomo.gdp.binary_multiplication')
 
 
 @TransformationFactory.register(
-    'gdp.gdp_to_minlp', doc="Reformulate the GDP as an MINLP."
+    'gdp.binary_multiplication', doc="Reformulate the GDP as an MINLP by multiplying f(x) <= 0 by y to get f(x) * y <= 0."
 )
 class GDPToMINLPTransformation(GDP_to_MIP_Transformation):
-    CONFIG = ConfigDict("gdp.gdp_to_minlp")
+    CONFIG = ConfigDict("gdp.binary_multiplication")
     CONFIG.declare(
         'targets',
         ConfigValue(
@@ -33,7 +33,7 @@ class GDPToMINLPTransformation(GDP_to_MIP_Transformation):
         ),
     )
 
-    transformation_name = 'gdp_to_minlp'
+    transformation_name = 'binary_multiplication'
 
     def __init__(self):
         super().__init__(logger)
