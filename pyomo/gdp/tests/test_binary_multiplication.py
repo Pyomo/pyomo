@@ -32,7 +32,7 @@ import random
 
 class CommonTests:
     def diff_apply_to_and_create_using(self, model):
-        ct.diff_apply_to_and_create_using(self, model, 'gdp.gdp_to_minlp')
+        ct.diff_apply_to_and_create_using(self, model, 'gdp.binary_multiplication')
 
 
 class TwoTermDisj(unittest.TestCase, CommonTests):
@@ -42,10 +42,10 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
 
     def test_new_block_created(self):
         m = models.makeTwoTermDisj()
-        TransformationFactory('gdp.gdp_to_minlp').apply_to(m)
+        TransformationFactory('gdp.binary_multiplication').apply_to(m)
 
         # we have a transformation block
-        transBlock = m.component("_pyomo_gdp_gdp_to_minlp_reformulation")
+        transBlock = m.component("_pyomo_gdp_binary_multiplication_reformulation")
         self.assertIsInstance(transBlock, Block)
 
         disjBlock = transBlock.component("relaxedDisjuncts")
@@ -56,72 +56,72 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertIs(m.d[1].transformation_block, disjBlock[1])
 
     def test_disjunction_deactivated(self):
-        ct.check_disjunction_deactivated(self, 'gdp_to_minlp')
+        ct.check_disjunction_deactivated(self, 'binary_multiplication')
 
     def test_disjunctDatas_deactivated(self):
-        ct.check_disjunctDatas_deactivated(self, 'gdp_to_minlp')
+        ct.check_disjunctDatas_deactivated(self, 'binary_multiplication')
 
     def test_do_not_transform_twice_if_disjunction_reactivated(self):
-        ct.check_do_not_transform_twice_if_disjunction_reactivated(self, 'gdp_to_minlp')
+        ct.check_do_not_transform_twice_if_disjunction_reactivated(self, 'binary_multiplication')
 
     def test_xor_constraint_mapping(self):
-        ct.check_xor_constraint_mapping(self, 'gdp_to_minlp')
+        ct.check_xor_constraint_mapping(self, 'binary_multiplication')
 
     def test_xor_constraint_mapping_two_disjunctions(self):
-        ct.check_xor_constraint_mapping_two_disjunctions(self, 'gdp_to_minlp')
+        ct.check_xor_constraint_mapping_two_disjunctions(self, 'binary_multiplication')
 
     def test_disjunct_mapping(self):
-        ct.check_disjunct_mapping(self, 'gdp_to_minlp')
+        ct.check_disjunct_mapping(self, 'binary_multiplication')
 
     def test_disjunct_and_constraint_maps(self):
         """Tests the actual data structures used to store the maps."""
         m = models.makeTwoTermDisj()
-        gdp_to_minlp = TransformationFactory('gdp.gdp_to_minlp')
-        gdp_to_minlp.apply_to(m)
-        disjBlock = m._pyomo_gdp_gdp_to_minlp_reformulation.relaxedDisjuncts
+        binary_multiplication = TransformationFactory('gdp.binary_multiplication')
+        binary_multiplication.apply_to(m)
+        disjBlock = m._pyomo_gdp_binary_multiplication_reformulation.relaxedDisjuncts
         oldblock = m.component("d")
 
         # we are counting on the fact that the disjuncts get relaxed in the
         # same order every time.
         for i in [0, 1]:
             self.assertIs(oldblock[i].transformation_block, disjBlock[i])
-            self.assertIs(gdp_to_minlp.get_src_disjunct(disjBlock[i]), oldblock[i])
+            self.assertIs(binary_multiplication.get_src_disjunct(disjBlock[i]), oldblock[i])
 
         # check constraint dict has right mapping
-        c1_list = gdp_to_minlp.get_transformed_constraints(oldblock[1].c1)
+        c1_list = binary_multiplication.get_transformed_constraints(oldblock[1].c1)
         # this is an equality
         self.assertEqual(len(c1_list), 1)
         self.assertIs(c1_list[0].parent_block(), disjBlock[1])
-        self.assertIs(gdp_to_minlp.get_src_constraint(c1_list[0]), oldblock[1].c1)
+        self.assertIs(binary_multiplication.get_src_constraint(c1_list[0]), oldblock[1].c1)
 
-        c2_list = gdp_to_minlp.get_transformed_constraints(oldblock[1].c2)
+        c2_list = binary_multiplication.get_transformed_constraints(oldblock[1].c2)
         # just ub
         self.assertEqual(len(c2_list), 1)
         self.assertIs(c2_list[0].parent_block(), disjBlock[1])
-        self.assertIs(gdp_to_minlp.get_src_constraint(c2_list[0]), oldblock[1].c2)
+        self.assertIs(binary_multiplication.get_src_constraint(c2_list[0]), oldblock[1].c2)
 
-        c_list = gdp_to_minlp.get_transformed_constraints(oldblock[0].c)
+        c_list = binary_multiplication.get_transformed_constraints(oldblock[0].c)
         # just lb
         self.assertEqual(len(c_list), 1)
         self.assertIs(c_list[0].parent_block(), disjBlock[0])
-        self.assertIs(gdp_to_minlp.get_src_constraint(c_list[0]), oldblock[0].c)
+        self.assertIs(binary_multiplication.get_src_constraint(c_list[0]), oldblock[0].c)
 
     def test_new_block_nameCollision(self):
-        ct.check_transformation_block_name_collision(self, 'gdp_to_minlp')
+        ct.check_transformation_block_name_collision(self, 'binary_multiplication')
 
     def test_indicator_vars(self):
-        ct.check_indicator_vars(self, 'gdp_to_minlp')
+        ct.check_indicator_vars(self, 'binary_multiplication')
 
     def test_xor_constraints(self):
-        ct.check_xor_constraint(self, 'gdp_to_minlp')
+        ct.check_xor_constraint(self, 'binary_multiplication')
 
     def test_or_constraints(self):
         m = models.makeTwoTermDisj()
         m.disjunction.xor = False
-        TransformationFactory('gdp.gdp_to_minlp').apply_to(m)
+        TransformationFactory('gdp.binary_multiplication').apply_to(m)
 
         # check or constraint is an or (upper bound is None)
-        orcons = m._pyomo_gdp_gdp_to_minlp_reformulation.component("disjunction_xor")
+        orcons = m._pyomo_gdp_binary_multiplication_reformulation.component("disjunction_xor")
         self.assertIsInstance(orcons, Constraint)
         assertExpressionsEqual(
             self,
@@ -137,35 +137,35 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertIsNone(orcons.upper)
 
     def test_deactivated_constraints(self):
-        ct.check_deactivated_constraints(self, 'gdp_to_minlp')
+        ct.check_deactivated_constraints(self, 'binary_multiplication')
 
     def test_transformed_constraints(self):
         m = models.makeTwoTermDisj()
-        gdp_to_minlp = TransformationFactory('gdp.gdp_to_minlp')
-        gdp_to_minlp.apply_to(m)
-        self.check_transformed_constraints(m, gdp_to_minlp, -3, 2, 7, 2)
+        binary_multiplication = TransformationFactory('gdp.binary_multiplication')
+        binary_multiplication.apply_to(m)
+        self.check_transformed_constraints(m, binary_multiplication, -3, 2, 7, 2)
 
     def test_do_not_transform_userDeactivated_disjuncts(self):
-        ct.check_user_deactivated_disjuncts(self, 'gdp_to_minlp')
+        ct.check_user_deactivated_disjuncts(self, 'binary_multiplication')
 
     def test_improperly_deactivated_disjuncts(self):
-        ct.check_improperly_deactivated_disjuncts(self, 'gdp_to_minlp')
+        ct.check_improperly_deactivated_disjuncts(self, 'binary_multiplication')
 
     def test_do_not_transform_userDeactivated_IndexedDisjunction(self):
         ct.check_do_not_transform_userDeactivated_indexedDisjunction(
-            self, 'gdp_to_minlp'
+            self, 'binary_multiplication'
         )
 
     # helper method to check the M values in all of the transformed
     # constraints (m, M) is the tuple for M.  This also relies on the
     # disjuncts being transformed in the same order every time.
     def check_transformed_constraints(
-        self, model, gdp_to_minlp, cons1lb, cons2lb, cons2ub, cons3ub
+        self, model, binary_multiplication, cons1lb, cons2lb, cons2ub, cons3ub
     ):
-        disjBlock = model._pyomo_gdp_gdp_to_minlp_reformulation.relaxedDisjuncts
+        disjBlock = model._pyomo_gdp_binary_multiplication_reformulation.relaxedDisjuncts
 
         # first constraint
-        c = gdp_to_minlp.get_transformed_constraints(model.d[0].c)
+        c = binary_multiplication.get_transformed_constraints(model.d[0].c)
         self.assertEqual(len(c), 1)
         c_lb = c[0]
         self.assertTrue(c[0].active)
@@ -181,7 +181,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertIsNone(c[0].upper)
 
         # second constraint
-        c = gdp_to_minlp.get_transformed_constraints(model.d[1].c1)
+        c = binary_multiplication.get_transformed_constraints(model.d[1].c1)
         self.assertEqual(len(c), 1)
         c_eq = c[0]
         self.assertTrue(c[0].active)
@@ -196,7 +196,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertEqual(c[0].upper, 0)
 
         # third constraint
-        c = gdp_to_minlp.get_transformed_constraints(model.d[1].c2)
+        c = binary_multiplication.get_transformed_constraints(model.d[1].c2)
         self.assertEqual(len(c), 1)
         c_ub = c[0]
         self.assertTrue(c_ub.active)
@@ -230,8 +230,8 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         m.d = Disjunct(m.I, rule=d_rule)
         m.disjunction = Disjunction(expr=[m.d[i] for i in m.I])
 
-        TransformationFactory('gdp.gdp_to_minlp').apply_to(m)
-        transBlock = m._pyomo_gdp_gdp_to_minlp_reformulation
+        TransformationFactory('gdp.binary_multiplication').apply_to(m)
+        transBlock = m._pyomo_gdp_binary_multiplication_reformulation
 
         # 2 blocks: the original Disjunct and the transformation block
         self.assertEqual(len(list(m.component_objects(Block, descend_into=False))), 1)
@@ -260,8 +260,8 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         m.d = Disjunct(m.I, rule=d_rule)
         m.disjunction = Disjunction(expr=[m.d[i] for i in m.I])
 
-        TransformationFactory('gdp.gdp_to_minlp').apply_to(m)
-        transBlock = m._pyomo_gdp_gdp_to_minlp_reformulation
+        TransformationFactory('gdp.binary_multiplication').apply_to(m)
+        transBlock = m._pyomo_gdp_binary_multiplication_reformulation
 
         # 2 blocks: the original Disjunct and the transformation block
         self.assertEqual(len(list(m.component_objects(Block, descend_into=False))), 1)
@@ -278,12 +278,12 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
 
     def test_local_var(self):
         m = models.localVar()
-        gdp_to_minlp = TransformationFactory('gdp.gdp_to_minlp')
-        gdp_to_minlp.apply_to(m)
+        binary_multiplication = TransformationFactory('gdp.binary_multiplication')
+        binary_multiplication.apply_to(m)
 
         # we just need to make sure that constraint was transformed correctly,
         # which just means that the M values were correct.
-        transformedC = gdp_to_minlp.get_transformed_constraints(m.disj2.cons)
+        transformedC = binary_multiplication.get_transformed_constraints(m.disj2.cons)
         self.assertEqual(len(transformedC), 1)
         eq = transformedC[0]
         repn = generate_standard_repn(eq.body)
