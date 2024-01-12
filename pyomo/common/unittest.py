@@ -764,7 +764,7 @@ class BaseLineTestDriver(object):
                 return True
         return False
 
-    def filter_file_contents(self, lines):
+    def filter_file_contents(self, lines, abstol=None):
         filtered = []
         deprecated = None
         for line in lines:
@@ -799,14 +799,31 @@ class BaseLineTestDriver(object):
                     item_list.append(float(i))
                 except:
                     item_list.append(i)
-            filtered.append(item_list)
+
+            # We can get printed results objects where the baseline is
+            # exactly 0 (and omitted) and the test is slightly non-zero.
+            # We will look for the pattern of values printed from
+            # results objects and remote them if they are within
+            # tolerance of 0
+            if (
+                len(item_list) == 2
+                and item_list[0] == 'Value:'
+                and abs(item_list[1]) < (abstol or 0)
+                and len(filtered[-1]) == 1
+                and filtered[-1][-1] == ':'
+            ):
+                filtered.pop()
+            else:
+                filtered.append(item_list)
 
         return filtered
 
     def compare_baselines(self, test_output, baseline, abstol=1e-6, reltol=None):
         # Filter files independently and then compare filtered contents
-        out_filtered = self.filter_file_contents(test_output.strip().split('\n'))
-        base_filtered = self.filter_file_contents(baseline.strip().split('\n'))
+        out_filtered = self.filter_file_contents(
+            test_output.strip().split('\n'), abstol
+        )
+        base_filtered = self.filter_file_contents(baseline.strip().split('\n'), abstol)
 
         try:
             self.assertStructuredAlmostEqual(
