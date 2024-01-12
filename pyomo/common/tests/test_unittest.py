@@ -11,11 +11,14 @@
 
 import datetime
 import multiprocessing
-from io import StringIO
+import os
 import time
+from io import StringIO
 
 import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
+from pyomo.common.tee import capture_output
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.environ import ConcreteModel, Var, Param
 
 
@@ -296,17 +299,19 @@ Solution:
 pass_ref = """
 [    0.00] Setting up Pyomo environment
 [    0.00] Applying Pyomo preprocessing actions
+WARNING: DEPRECATED: The Model.preprocess() method is deprecated and no longer
+    performs any actions  (deprecated in 6.0) (called from <stdin>:1)
 [    0.00] Creating model
-[    0.00] Applying solver
-[    0.05] Processing results
+[    0.01] Applying solver
+[    0.06] Processing results
     Number of solutions: 1
     Solution Information
       Gap: None
       Status: optimal
       Function Value: -0.00010001318188373491
     Solver results file: results.yml
-[    0.05] Applying Pyomo postprocessing actions
-[    0.05] Pyomo Finished
+[    0.06] Applying Pyomo postprocessing actions
+[    0.06] Pyomo Finished
 # ==========================================================
 # = Solver Results                                         =
 # ==========================================================
@@ -357,16 +362,16 @@ fail_ref = """
 [    0.00] Setting up Pyomo environment
 [    0.00] Applying Pyomo preprocessing actions
 [    0.00] Creating model
-[    0.00] Applying solver
-[    0.05] Processing results
+[    0.01] Applying solver
+[    0.06] Processing results
     Number of solutions: 1
     Solution Information
       Gap: None
       Status: optimal
       Function Value: -0.00010001318188373491
     Solver results file: results.yml
-[    0.05] Applying Pyomo postprocessing actions
-[    0.05] Pyomo Finished
+[    0.06] Applying Pyomo postprocessing actions
+[    0.06] Pyomo Finished
 # ==========================================================
 # = Solver Results                                         =
 # ==========================================================
@@ -422,11 +427,130 @@ class TestBaselineTestDriver(unittest.BaselineTestDriver, unittest.TestCase):
         self.compare_baseline(pass_ref, baseline, abstol=1e-6)
 
         with self.assertRaises(self.failureException):
-            self.compare_baseline(pass_ref, baseline, None)
+            with capture_output() as OUT:
+                self.compare_baseline(pass_ref, baseline, None)
+        self.assertEqual(
+            OUT.getvalue(),
+            f"""---------------------------------
+BASELINE FILE
+---------------------------------
+{baseline}
+=================================
+---------------------------------
+TEST OUTPUT FILE
+---------------------------------
+{pass_ref}
+""",
+        )
 
     def test_baseline_fail(self):
         with self.assertRaises(self.failureException):
-            self.compare_baseline(fail_ref, baseline)
+            with capture_output() as OUT:
+                self.compare_baseline(fail_ref, baseline)
+        self.assertEqual(
+            OUT.getvalue(),
+            f"""---------------------------------
+BASELINE FILE
+---------------------------------
+{baseline}
+=================================
+---------------------------------
+TEST OUTPUT FILE
+---------------------------------
+{fail_ref}
+""",
+        )
+
+    def test_testcase_collection(self):
+        with TempfileManager.new_context() as TMP:
+            tmpdir = TMP.create_tempdir()
+            for fname in (
+                'a.py',
+                'b.py',
+                'b.txt',
+                'c.py',
+                'c.sh',
+                'c.yml',
+                'd.sh',
+                'd.yml',
+                'e.sh',
+            ):
+                with open(os.path.join(tmpdir, fname), 'w'):
+                    pass
+
+            py_tests, sh_tests = unittest.BaselineTestDriver.gather_tests([tmpdir])
+            self.assertEqual(
+                py_tests,
+                [
+                    (
+                        os.path.basename(tmpdir) + '_b',
+                        os.path.join(tmpdir, 'b.py'),
+                        os.path.join(tmpdir, 'b.txt'),
+                    )
+                ],
+            )
+            self.assertEqual(
+                sh_tests,
+                [
+                    (
+                        os.path.basename(tmpdir) + '_c',
+                        os.path.join(tmpdir, 'c.sh'),
+                        os.path.join(tmpdir, 'c.yml'),
+                    ),
+                    (
+                        os.path.basename(tmpdir) + '_d',
+                        os.path.join(tmpdir, 'd.sh'),
+                        os.path.join(tmpdir, 'd.txt'),
+                    ),
+                ],
+            )
+
+            self.python_test_driver(*py_tests[0])
+
+            _update_baselines = os.environ.pop('PYOMO_TEST_UPDATE_BASELINES', None)
+            try:
+                with open(os.path.join(tmpdir, 'b.py'), 'w') as FILE:
+                    FILE.write('print("Hello, World")\n')
+
+                with self.assertRaises(self.failureException):
+                    self.python_test_driver(*py_tests[0])
+                with open(os.path.join(tmpdir, 'b.txt'), 'r') as FILE:
+                    self.assertEqual(FILE.read(), "")
+
+                os.environ['PYOMO_TEST_UPDATE_BASELINES'] = '1'
+
+                with self.assertRaises(self.failureException):
+                    self.python_test_driver(*py_tests[0])
+                with open(os.path.join(tmpdir, 'b.txt'), 'r') as FILE:
+                    self.assertEqual(FILE.read(), "Hello, World\n")
+
+            finally:
+                os.environ.pop('PYOMO_TEST_UPDATE_BASELINES', None)
+                if _update_baselines is not None:
+                    os.environ['PYOMO_TEST_UPDATE_BASELINES'] = _update_baselines
+
+            self.shell_test_driver(*sh_tests[1])
+            _update_baselines = os.environ.pop('PYOMO_TEST_UPDATE_BASELINES', None)
+            try:
+                with open(os.path.join(tmpdir, 'd.sh'), 'w') as FILE:
+                    FILE.write('echo "Hello, World"\n')
+
+                with self.assertRaises(self.failureException):
+                    self.shell_test_driver(*sh_tests[1])
+                with open(os.path.join(tmpdir, 'd.txt'), 'r') as FILE:
+                    self.assertEqual(FILE.read(), "")
+
+                os.environ['PYOMO_TEST_UPDATE_BASELINES'] = '1'
+
+                with self.assertRaises(self.failureException):
+                    self.shell_test_driver(*sh_tests[1])
+                with open(os.path.join(tmpdir, 'd.txt'), 'r') as FILE:
+                    self.assertEqual(FILE.read(), "Hello, World\n")
+
+            finally:
+                os.environ.pop('PYOMO_TEST_UPDATE_BASELINES', None)
+                if _update_baselines is not None:
+                    os.environ['PYOMO_TEST_UPDATE_BASELINES'] = _update_baselines
 
 
 if __name__ == '__main__':
