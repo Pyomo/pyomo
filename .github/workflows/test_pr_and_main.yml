@@ -25,8 +25,8 @@ env:
   PYTHONWARNINGS: ignore::UserWarning
   PYTHON_CORE_PKGS: wheel
   PYPI_ONLY: z3-solver
-  PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels pytest-qt PySide6
-  CONDA_EXCLUDE: PySide6 pyside6
+  PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels pytest-qt PyQt5
+  CONDA_EXCLUDE: PyQt5 pyqt5
   CACHE_VER: v221013.1
   NEOS_EMAIL: tests@pyomo.org
   SRC_REF: ${{ github.head_ref || github.ref }}
@@ -222,7 +222,6 @@ jobs:
         # Notes:
         #  - install glpk
         #  - ipopt needs: libopenblas-dev gfortran liblapack-dev
-        #  - contrib.viewer needs: libg1l libegl1
         sudo apt-get -o Dir::Cache=${GITHUB_WORKSPACE}/cache/os \
             install libopenblas-dev gfortran liblapack-dev glpk-utils
         sudo chmod -R 777 ${GITHUB_WORKSPACE}/cache/os
@@ -252,7 +251,7 @@ jobs:
       uses: pyvista/setup-headless-display-action@v2
       with:
         qt: true
-        pyvista: true
+        pyvista: false
 
     # GitHub actions is very fragile when it comes to setting up various
     # Python interpreters, expecially the setup-miniconda interface.
