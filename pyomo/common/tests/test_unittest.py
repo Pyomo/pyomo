@@ -236,5 +236,198 @@ class TestPyomoUnittest(unittest.TestCase):
             self.bound_function_require_fork()
 
 
+baseline = """
+[    0.00] Setting up Pyomo environment
+[    0.00] Applying Pyomo preprocessing actions
+[    0.00] Creating model
+[    0.00] Applying solver
+[    0.05] Processing results
+    Number of solutions: 1
+    Solution Information
+      Gap: None
+      Status: optimal
+      Function Value: -9.99943939749e-05
+    Solver results file: results.yml
+[    0.05] Applying Pyomo postprocessing actions
+[    0.05] Pyomo Finished
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem:
+- Lower bound: -inf
+  Upper bound: inf
+  Number of objectives: 1
+  Number of constraints: 3
+  Number of variables: 3
+  Sense: unknown
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver:
+- Status: ok
+  Message: Ipopt 3.12.3\x3a Optimal Solution Found
+  Termination condition: optimal
+  Id: 0
+  Error rc: 0
+  Time: 0.0408430099487
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution:
+- number of solutions: 1
+  number of solutions displayed: 1
+- Gap: None
+  Status: optimal
+  Message: Ipopt 3.12.3\x3a Optimal Solution Found
+  Objective:
+    f1:
+      Value: -9.99943939749e-05
+  Variable:
+    compl.v:
+      Value: 9.99943939749e-05
+    y:
+      Value: 9.99943939749e-05
+  Constraint: No values
+"""
+
+pass_ref = """
+[    0.00] Setting up Pyomo environment
+[    0.00] Applying Pyomo preprocessing actions
+[    0.00] Creating model
+[    0.00] Applying solver
+[    0.05] Processing results
+    Number of solutions: 1
+    Solution Information
+      Gap: None
+      Status: optimal
+      Function Value: -0.00010001318188373491
+    Solver results file: results.yml
+[    0.05] Applying Pyomo postprocessing actions
+[    0.05] Pyomo Finished
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem:
+- Lower bound: -inf
+  Upper bound: inf
+  Number of objectives: 1
+  Number of constraints: 3
+  Number of variables: 3
+  Sense: unknown
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver:
+- Status: ok
+  Message: Ipopt 3.14.13\x3a Optimal Solution Found
+  Termination condition: optimal
+  Id: 0
+  Error rc: 0
+  Time: 0.04224729537963867
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution:
+- number of solutions: 1
+  number of solutions displayed: 1
+- Gap: None
+  Status: optimal
+  Message: Ipopt 3.14.13\x3a Optimal Solution Found
+  Objective:
+    f1:
+      Value: -0.00010001318188373491
+  Variable:
+    compl.v:
+      Value: 9.99943939749205e-05
+    x:
+      Value: -9.39395440720558e-09
+    y:
+      Value: 9.99943939749205e-05
+  Constraint: No values
+
+"""
+
+fail_ref = """
+[    0.00] Setting up Pyomo environment
+[    0.00] Applying Pyomo preprocessing actions
+[    0.00] Creating model
+[    0.00] Applying solver
+[    0.05] Processing results
+    Number of solutions: 1
+    Solution Information
+      Gap: None
+      Status: optimal
+      Function Value: -0.00010001318188373491
+    Solver results file: results.yml
+[    0.05] Applying Pyomo postprocessing actions
+[    0.05] Pyomo Finished
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem:
+- Lower bound: -inf
+  Upper bound: inf
+  Number of objectives: 1
+  Number of constraints: 3
+  Number of variables: 3
+  Sense: unknown
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver:
+- Status: ok
+  Message: Ipopt 3.14.13\x3a Optimal Solution Found
+  Termination condition: optimal
+  Id: 0
+  Error rc: 0
+  Time: 0.04224729537963867
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution:
+- number of solutions: 1
+  number of solutions displayed: 1
+- Gap: None
+  Status: optimal
+  Message: Ipopt 3.14.13\x3a Optimal Solution Found
+  Objective:
+    f1:
+      Value: -0.00010001318188373491
+  Variable:
+    compl.v:
+      Value: 9.79943939749205e-05
+    x:
+      Value: -9.39395440720558e-09
+    y:
+      Value: 9.99943939749205e-05
+  Constraint: No values
+
+"""
+
+
+class TestBaselineTestDriver(unittest.BaselineTestDriver, unittest.TestCase):
+    solver_dependencies = {}
+    package_dependencies = {}
+
+    def test_baseline_pass(self):
+        self.compare_baseline(pass_ref, baseline, abstol=1e-6)
+
+        with self.assertRaises(self.failureException):
+            self.compare_baseline(pass_ref, baseline, None)
+
+    def test_baseline_fail(self):
+        with self.assertRaises(self.failureException):
+            self.compare_baseline(fail_ref, baseline)
+
+
 if __name__ == '__main__':
     unittest.main()
