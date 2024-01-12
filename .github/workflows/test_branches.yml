@@ -53,8 +53,6 @@ jobs:
     name: ${{ matrix.TARGET }}/${{ matrix.python }}${{ matrix.other }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
-    env:
-      DISPLAY: ':99.0'
     strategy:
       fail-fast: false
       matrix:
@@ -197,11 +195,7 @@ jobs:
         #  - contrib.viewer needs: libg1l libegl1
         sudo apt-get -o Dir::Cache=${GITHUB_WORKSPACE}/cache/os \
             install libopenblas-dev gfortran liblapack-dev glpk-utils
-        sudo apt-get -o Dir::Cache=${GITHUB_WORKSPACE}/cache/os \
-            install -y xvfb x11-utils libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 xdotool
         sudo chmod -R 777 ${GITHUB_WORKSPACE}/cache/os
-        # start xvfb in the background
-        sudo /usr/bin/Xvfb $DISPLAY -screen 0 1280x1024x24 &
 
     - name: Update Windows
       if: matrix.TARGET == 'win'
@@ -220,6 +214,15 @@ jobs:
       with:
         auto-update-conda: false
         python-version: ${{ matrix.python }}
+
+    # This is necessary for qt (UI) tests; the package utilized here does not
+    # have support for OSX.
+    - name: Set up UI testing infrastructure
+      if: ${{ matrix.TARGET != 'osx' }}
+      uses: pyvista/setup-headless-display-action@v2
+      with:
+        qt: true
+        pyvista: false
 
     # GitHub actions is very fragile when it comes to setting up various
     # Python interpreters, expecially the setup-miniconda interface.
