@@ -272,7 +272,6 @@ setup_kwargs = dict(
             'pint',  # units
             'plotly',  # incidence_analysis
             'PyQt5',  # contrib.viewer
-            'pytest-qt',  # for testing contrib.viewer
             'python-louvain',  # community_detection
             'pyyaml',  # core
             'qtconsole',  # contrib.viewer
