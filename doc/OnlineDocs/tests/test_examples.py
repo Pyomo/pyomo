@@ -12,21 +12,19 @@
 import pyomo.common.unittest as unittest
 import glob
 import os
-from pyomo.common.dependencies import attempt_import
+from pyomo.common.dependencies import attempt_import, matplotlib_available
 from pyomo.common.fileutils import this_file_dir
 import pyomo.environ as pyo
 
+
+currdir = this_file_dir()
 
 parameterized, param_available = attempt_import('parameterized')
 if not param_available:
     raise unittest.SkipTest('Parameterized is not available.')
 
-# Needed for testing (switches the matplotlib backend):
-from pyomo.common.dependencies import matplotlib_available
-
+# Needed for testing (triggers matplotlib import and switches its backend):
 bool(matplotlib_available)
-
-currdir = this_file_dir()
 
 
 class TestOnlineDocExamples(unittest.BaselineTestDriver, unittest.TestCase):
