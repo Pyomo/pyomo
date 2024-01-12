@@ -271,7 +271,7 @@ setup_kwargs = dict(
             #'pathos',   # requested for #963, but PR currently closed
             'pint',  # units
             'plotly',  # incidence_analysis
-            'PySide6',  # contrib.viewer
+            'PyQt5',  # contrib.viewer
             'pytest-qt',  # for testing contrib.viewer
             'python-louvain',  # community_detection
             'pyyaml',  # core

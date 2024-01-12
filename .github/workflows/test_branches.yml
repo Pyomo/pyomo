@@ -55,7 +55,6 @@ jobs:
     timeout-minutes: 120
     env:
       DISPLAY: ':99.0'
-      QT_SELECT: 'qt6'
     strategy:
       fail-fast: false
       matrix:
@@ -199,7 +198,7 @@ jobs:
         sudo apt-get -o Dir::Cache=${GITHUB_WORKSPACE}/cache/os \
             install libopenblas-dev gfortran liblapack-dev glpk-utils
         sudo apt-get -o Dir::Cache=${GITHUB_WORKSPACE}/cache/os \
-            install -y xvfb x11-utils libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 xdotool libegl1
+            install -y xvfb x11-utils libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 xdotool
         sudo chmod -R 777 ${GITHUB_WORKSPACE}/cache/os
         # start xvfb in the background
         sudo /usr/bin/Xvfb $DISPLAY -screen 0 1280x1024x24 &
