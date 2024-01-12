@@ -62,7 +62,9 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         ct.check_disjunctDatas_deactivated(self, 'binary_multiplication')
 
     def test_do_not_transform_twice_if_disjunction_reactivated(self):
-        ct.check_do_not_transform_twice_if_disjunction_reactivated(self, 'binary_multiplication')
+        ct.check_do_not_transform_twice_if_disjunction_reactivated(
+            self, 'binary_multiplication'
+        )
 
     def test_xor_constraint_mapping(self):
         ct.check_xor_constraint_mapping(self, 'binary_multiplication')
@@ -85,26 +87,34 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         # same order every time.
         for i in [0, 1]:
             self.assertIs(oldblock[i].transformation_block, disjBlock[i])
-            self.assertIs(binary_multiplication.get_src_disjunct(disjBlock[i]), oldblock[i])
+            self.assertIs(
+                binary_multiplication.get_src_disjunct(disjBlock[i]), oldblock[i]
+            )
 
         # check constraint dict has right mapping
         c1_list = binary_multiplication.get_transformed_constraints(oldblock[1].c1)
         # this is an equality
         self.assertEqual(len(c1_list), 1)
         self.assertIs(c1_list[0].parent_block(), disjBlock[1])
-        self.assertIs(binary_multiplication.get_src_constraint(c1_list[0]), oldblock[1].c1)
+        self.assertIs(
+            binary_multiplication.get_src_constraint(c1_list[0]), oldblock[1].c1
+        )
 
         c2_list = binary_multiplication.get_transformed_constraints(oldblock[1].c2)
         # just ub
         self.assertEqual(len(c2_list), 1)
         self.assertIs(c2_list[0].parent_block(), disjBlock[1])
-        self.assertIs(binary_multiplication.get_src_constraint(c2_list[0]), oldblock[1].c2)
+        self.assertIs(
+            binary_multiplication.get_src_constraint(c2_list[0]), oldblock[1].c2
+        )
 
         c_list = binary_multiplication.get_transformed_constraints(oldblock[0].c)
         # just lb
         self.assertEqual(len(c_list), 1)
         self.assertIs(c_list[0].parent_block(), disjBlock[0])
-        self.assertIs(binary_multiplication.get_src_constraint(c_list[0]), oldblock[0].c)
+        self.assertIs(
+            binary_multiplication.get_src_constraint(c_list[0]), oldblock[0].c
+        )
 
     def test_new_block_nameCollision(self):
         ct.check_transformation_block_name_collision(self, 'binary_multiplication')
@@ -121,7 +131,9 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         TransformationFactory('gdp.binary_multiplication').apply_to(m)
 
         # check or constraint is an or (upper bound is None)
-        orcons = m._pyomo_gdp_binary_multiplication_reformulation.component("disjunction_xor")
+        orcons = m._pyomo_gdp_binary_multiplication_reformulation.component(
+            "disjunction_xor"
+        )
         self.assertIsInstance(orcons, Constraint)
         assertExpressionsEqual(
             self,
@@ -162,7 +174,9 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
     def check_transformed_constraints(
         self, model, binary_multiplication, cons1lb, cons2lb, cons2ub, cons3ub
     ):
-        disjBlock = model._pyomo_gdp_binary_multiplication_reformulation.relaxedDisjuncts
+        disjBlock = (
+            model._pyomo_gdp_binary_multiplication_reformulation.relaxedDisjuncts
+        )
 
         # first constraint
         c = binary_multiplication.get_transformed_constraints(model.d[0].c)
