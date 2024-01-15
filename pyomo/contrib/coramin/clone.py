@@ -58,7 +58,7 @@ def clone_active_flat(m1: _BlockData, num_clones: int = 1) -> List[_BlockData]:
             var_map[v] = v
         aux_var = r.get_aux_var()
         var_map[aux_var] = aux_var
-        if not aux_var.is_fixed():
+        if not pe.is_fixed(aux_var):
             all_vars.add(aux_var)
         new_rel = copy_relaxation_with_local_data(r, var_map)
         for m2 in clone_list:

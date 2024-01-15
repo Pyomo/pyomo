@@ -250,6 +250,7 @@ class PWMcCormickRelaxationData(BasePWRelaxationData):
         self._remove_relaxation()
 
     def rebuild(self, build_nonlinear_constraint=False, ensure_oa_at_vertices=True):
+        build_nonlinear_constraint = build_nonlinear_constraint or self._x1.is_fixed() or self._x2.is_fixed() or (self._x1.lb == self._x1.ub and self._x1.lb is not None) or (self._x2.lb == self._x2.ub and self._x2.lb is not None)
         super(PWMcCormickRelaxationData, self).rebuild(
             build_nonlinear_constraint=build_nonlinear_constraint,
             ensure_oa_at_vertices=ensure_oa_at_vertices,

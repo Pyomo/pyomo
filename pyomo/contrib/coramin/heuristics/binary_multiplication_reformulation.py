@@ -1,20 +1,10 @@
 import pyomo.environ as pe
-import pybnb
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.var import _GeneralVarData, ScalarVar
 from pyomo.core.base.param import _ParamData, ScalarParam
 from pyomo.core.base.expression import _GeneralExpressionData, ScalarExpression
 from pyomo.core.expr import numeric_expr
-from typing import Tuple, List, Sequence, Optional, MutableMapping
-from pyomo.contrib import appsi
-from pyomo.contrib.coramin.utils.pyomo_utils import get_objective
-import numpy as np
-import math
-from pyomo.common.collections import ComponentSet, ComponentMap
-from pyomo.core.expr.visitor import identify_variables
-from mpi4py import MPI
-import time
-from pyomo.contrib.appsi.fbbt import IntervalTightener, InfeasibleConstraintException
+from typing import Sequence
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.core.expr.numvalue import NumericValue, native_numeric_types
 from typing import Union, Sequence
