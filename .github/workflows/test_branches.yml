@@ -22,7 +22,7 @@ env:
   PYTHONWARNINGS: ignore::UserWarning
   PYTHON_CORE_PKGS: wheel
   PYPI_ONLY: z3-solver
-  PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels pytest-qt
+  PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels
   CACHE_VER: v221013.1
   NEOS_EMAIL: tests@pyomo.org
   SRC_REF: ${{ github.head_ref || github.ref }}
@@ -75,7 +75,7 @@ jobs:
           python: 3.9
           TARGET: win
           PYENV: conda
-          PACKAGES: glpk
+          PACKAGES: glpk pytest-qt
 
         - os: ubuntu-latest
           python: '3.11'
@@ -83,7 +83,7 @@ jobs:
           skip_doctest: 1
           TARGET: linux
           PYENV: conda
-          PACKAGES:
+          PACKAGES: pytest-qt
 
         - os: ubuntu-latest
           python: 3.9
@@ -126,7 +126,7 @@ jobs:
         # Note: pandas 1.0.3 causes gams 29.1.0 import to fail in python 3.8
         EXTRAS=tests
         if test -z "${{matrix.slim}}"; then
-            EXTRAS="$EXTRAS,tests_optional,docs,optional"
+            EXTRAS="$EXTRAS,docs,optional"
         fi
         echo "EXTRAS=$EXTRAS" >> $GITHUB_ENV
         PYTHON_PACKAGES="${{matrix.PACKAGES}}"
