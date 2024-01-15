@@ -1,7 +1,7 @@
 import pyomo.environ as pe
 from pyomo.contrib import appsi
 from pyomo.common.timing import HierarchicalTimer
-from pyomo.solver import results
+from pyomo.contrib.solver import results
 
 
 def main(plot=True, n_points=200):

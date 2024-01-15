@@ -11,8 +11,8 @@
 
 from pyomo.common import unittest
 from pyomo.common.config import ConfigDict
-from pyomo.solver import results
-from pyomo.solver import solution
+from pyomo.contrib.solver import results
+from pyomo.contrib.solver import solution
 import pyomo.environ as pyo
 from pyomo.core.base.var import ScalarVar
 

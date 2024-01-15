@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.common import unittest
-from pyomo.solver import base
+from pyomo.contrib.solver import base
 
 
 class TestSolverBase(unittest.TestCase):
