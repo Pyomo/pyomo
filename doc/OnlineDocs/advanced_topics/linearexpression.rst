@@ -11,7 +11,9 @@ when there are long, dense, linear expressions. The arguments are
 
 where the second and third arguments are lists that must be of the
 same length. Here is a simple example that illustrates the
-syntax. This example creates two constraints that are the same:
+syntax. This example creates two constraints that are the same; in this
+particular case the LinearExpression component would offer very little improvement
+because Pyomo would be able to detect that `campe2` is a linear expression:
 
 .. doctest::
 
