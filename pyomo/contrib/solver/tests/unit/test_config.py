@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.common import unittest
-from pyomo.solver.config import SolverConfig, BranchAndBoundConfig
+from pyomo.contrib.solver.config import SolverConfig, BranchAndBoundConfig
 
 
 class TestSolverConfig(unittest.TestCase):

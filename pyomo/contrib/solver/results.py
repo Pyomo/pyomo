@@ -31,7 +31,7 @@ from pyomo.opt.results.solver import (
     TerminationCondition as LegacyTerminationCondition,
     SolverStatus as LegacySolverStatus,
 )
-from pyomo.solver.solution import SolutionLoaderBase
+from pyomo.contrib.solver.solution import SolutionLoaderBase
 from pyomo.repn.plugins.nl_writer import NLWriterInfo
 
 

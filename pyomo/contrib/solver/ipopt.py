@@ -24,16 +24,16 @@ from pyomo.core.base import Objective
 from pyomo.core.base.label import NumericLabeler
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn.plugins.nl_writer import NLWriter, NLWriterInfo, AMPLRepn
-from pyomo.solver.base import SolverBase, SymbolMap
-from pyomo.solver.config import SolverConfig
-from pyomo.solver.factory import SolverFactory
-from pyomo.solver.results import (
+from pyomo.contrib.solver.base import SolverBase, SymbolMap
+from pyomo.contrib.solver.config import SolverConfig
+from pyomo.contrib.solver.factory import SolverFactory
+from pyomo.contrib.solver.results import (
     Results,
     TerminationCondition,
     SolutionStatus,
     parse_sol_file,
 )
-from pyomo.solver.solution import SolutionLoaderBase, SolutionLoader
+from pyomo.contrib.solver.solution import SolutionLoaderBase, SolutionLoader
 from pyomo.common.tee import TeeStream
 from pyomo.common.log import LogStream
 from pyomo.core.expr.visitor import replace_expressions
@@ -278,7 +278,7 @@ class ipopt(SolverBase):
         if config.threads:
             logger.log(
                 logging.WARNING,
-                msg=f"The `threads` option was specified, but but is not used by {self.__class__}.",
+                msg=f"The `threads` option was specified, but this is not used by {self.__class__}.",
             )
         results = ipoptResults()
         with TempfileManager.new_context() as tempfile:

@@ -4,8 +4,8 @@ from pyomo.common import unittest
 
 parameterized, param_available = attempt_import('parameterized')
 parameterized = parameterized.parameterized
-from pyomo.solver.base import PersistentSolverBase
-from pyomo.solver.results import TerminationCondition, Results
+from pyomo.contrib.solver.base import PersistentSolverBase
+from pyomo.contrib.solver.results import TerminationCondition, Results
 from pyomo.contrib.appsi.cmodel import cmodel_available
 from pyomo.contrib.appsi.solvers import Gurobi, Ipopt, Highs
 from typing import Type

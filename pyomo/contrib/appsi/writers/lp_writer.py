@@ -8,7 +8,7 @@ from pyomo.core.base.block import _BlockData
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.kernel.objective import minimize
-from pyomo.solver.util import PersistentSolverUtils
+from pyomo.contrib.solver.util import PersistentSolverUtils
 from .config import WriterConfig
 from ..cmodel import cmodel, cmodel_available
 

@@ -22,8 +22,8 @@ from pyomo.core.base.objective import Objective, _GeneralObjectiveData
 from pyomo.common.collections import ComponentMap
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.expr.numvalue import NumericConstant
-from pyomo.solver.config import UpdateConfig
-from pyomo.solver.results import TerminationCondition, SolutionStatus
+from pyomo.contrib.solver.config import UpdateConfig
+from pyomo.contrib.solver.results import TerminationCondition, SolutionStatus
 
 
 def get_objective(block):

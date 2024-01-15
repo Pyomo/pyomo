@@ -20,11 +20,11 @@ from pyomo.repn import generate_standard_repn
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.common.dependencies import numpy as np
 from pyomo.core.staleflag import StaleFlagManager
-from pyomo.solver.base import PersistentSolverBase
-from pyomo.solver.config import BranchAndBoundConfig
-from pyomo.solver.results import TerminationCondition, Results
-from pyomo.solver.solution import PersistentSolutionLoader
-from pyomo.solver.util import PersistentSolverUtils
+from pyomo.contrib.solver.base import PersistentSolverBase
+from pyomo.contrib.solver.config import BranchAndBoundConfig
+from pyomo.contrib.solver.results import TerminationCondition, Results
+from pyomo.contrib.solver.solution import PersistentSolutionLoader
+from pyomo.contrib.solver.util import PersistentSolverUtils
 
 logger = logging.getLogger(__name__)
 

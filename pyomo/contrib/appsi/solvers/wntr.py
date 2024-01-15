@@ -1,8 +1,8 @@
-from pyomo.solver.base import PersistentSolverBase
-from pyomo.solver.util import PersistentSolverUtils
-from pyomo.solver.config import SolverConfig
-from pyomo.solver.results import Results, TerminationCondition, SolutionStatus
-from pyomo.solver.solution import PersistentSolutionLoader
+from pyomo.contrib.solver.base import PersistentSolverBase
+from pyomo.contrib.solver.util import PersistentSolverUtils
+from pyomo.contrib.solver.config import SolverConfig
+from pyomo.contrib.solver.results import Results, TerminationCondition, SolutionStatus
+from pyomo.contrib.solver.solution import PersistentSolutionLoader
 from pyomo.core.expr.numeric_expr import (
     ProductExpression,
     DivisionExpression,

@@ -13,8 +13,8 @@
 import pyomo.environ as pyo
 from pyomo.common.fileutils import ExecutableData
 from pyomo.common.config import ConfigDict
-from pyomo.solver.ipopt import ipoptConfig
-from pyomo.solver.factory import SolverFactory
+from pyomo.contrib.solver.ipopt import ipoptConfig
+from pyomo.contrib.solver.factory import SolverFactory
 from pyomo.common import unittest
 
 

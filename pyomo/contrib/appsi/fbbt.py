@@ -1,4 +1,4 @@
-from pyomo.solver.util import PersistentSolverUtils
+from pyomo.contrib.solver.util import PersistentSolverUtils
 from pyomo.common.config import (
     ConfigDict,
     ConfigValue,

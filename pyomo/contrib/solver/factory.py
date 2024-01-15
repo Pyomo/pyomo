@@ -12,7 +12,7 @@
 
 from pyomo.opt.base import SolverFactory as LegacySolverFactory
 from pyomo.common.factory import Factory
-from pyomo.solver.base import LegacySolverInterface
+from pyomo.contrib.solver.base import LegacySolverInterface
 
 
 class SolverFactoryClass(Factory):

@@ -11,7 +11,7 @@
 
 from pyomo.common import unittest
 import pyomo.environ as pyo
-from pyomo.solver.util import collect_vars_and_named_exprs, get_objective
+from pyomo.contrib.solver.util import collect_vars_and_named_exprs, get_objective
 from typing import Callable
 from pyomo.common.gsl import find_GSL
 

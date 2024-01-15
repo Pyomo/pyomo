@@ -13,7 +13,7 @@ from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.kernel.objective import minimize
 from pyomo.common.collections import OrderedSet
 from pyomo.repn.plugins.ampl.ampl_ import set_pyomo_amplfunc_env
-from pyomo.solver.util import PersistentSolverUtils
+from pyomo.contrib.solver.util import PersistentSolverUtils
 
 from .config import WriterConfig
 from ..cmodel import cmodel, cmodel_available

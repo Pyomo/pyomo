@@ -26,10 +26,10 @@ from pyomo.common.config import ConfigValue, NonNegativeInt
 from pyomo.common.errors import PyomoException
 from pyomo.contrib.appsi.cmodel import cmodel_available
 from pyomo.core.staleflag import StaleFlagManager
-from pyomo.solver.base import PersistentSolverBase
-from pyomo.solver.config import SolverConfig
-from pyomo.solver.results import TerminationCondition, Results
-from pyomo.solver.solution import PersistentSolutionLoader
+from pyomo.contrib.solver.base import PersistentSolverBase
+from pyomo.contrib.solver.config import SolverConfig
+from pyomo.contrib.solver.results import TerminationCondition, Results
+from pyomo.contrib.solver.solution import PersistentSolutionLoader
 
 
 logger = logging.getLogger(__name__)

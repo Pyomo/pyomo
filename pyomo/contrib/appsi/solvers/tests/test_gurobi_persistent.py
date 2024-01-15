@@ -1,7 +1,7 @@
 from pyomo.common import unittest
 import pyomo.environ as pe
 from pyomo.contrib.appsi.solvers.gurobi import Gurobi
-from pyomo.solver.results import TerminationCondition
+from pyomo.contrib.solver.results import TerminationCondition
 from pyomo.core.expr.taylor_series import taylor_series_expansion
 
 

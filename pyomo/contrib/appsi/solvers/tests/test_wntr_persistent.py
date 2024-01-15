@@ -1,6 +1,6 @@
 import pyomo.environ as pe
 import pyomo.common.unittest as unittest
-from pyomo.solver.results import TerminationCondition, SolutionStatus
+from pyomo.contrib.solver.results import TerminationCondition, SolutionStatus
 from pyomo.contrib.appsi.solvers.wntr import Wntr, wntr_available
 import math
 
