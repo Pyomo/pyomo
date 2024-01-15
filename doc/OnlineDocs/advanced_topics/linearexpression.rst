@@ -2,7 +2,7 @@ LinearExpression
 ================
 
 Significant speed
-improvements can be obtained using the ``LinearExpression`` object
+improvements can sometimes be obtained using the ``LinearExpression`` object
 when there are long, dense, linear expressions. The arguments are
 
 :: 
