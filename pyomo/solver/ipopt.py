@@ -22,6 +22,7 @@ from pyomo.common.errors import PyomoException
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.base import Objective
 from pyomo.core.base.label import NumericLabeler
+from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn.plugins.nl_writer import NLWriter, NLWriterInfo, AMPLRepn
 from pyomo.solver.base import SolverBase, SymbolMap
 from pyomo.solver.config import SolverConfig
@@ -82,9 +83,6 @@ class ipoptConfig(SolverConfig):
         )
         self.log_level = self.declare(
             'log_level', ConfigValue(domain=NonNegativeInt, default=logging.INFO)
-        )
-        self.presolve: bool = self.declare(
-            'presolve', ConfigValue(domain=bool, default=True)
         )
 
 
@@ -209,6 +207,10 @@ class ipopt(SolverBase):
         return version
 
     @property
+    def writer(self):
+        return self._writer
+
+    @property
     def config(self):
         return self._config
 
@@ -269,14 +271,14 @@ class ipopt(SolverBase):
             raise ipoptSolverError(
                 f'Solver {self.__class__} is not available ({avail}).'
             )
+        StaleFlagManager.mark_all_as_stale()
         # Update configuration options, based on keywords passed to solve
         config: ipoptConfig = self.config(kwds.pop('options', {}))
         config.set_value(kwds)
-        self._writer.config.linear_presolve = config.presolve
         if config.threads:
             logger.log(
                 logging.WARNING,
-                msg=f"The `threads` option was specified, but this has not yet been implemented for {self.__class__}.",
+                msg=f"The `threads` option was specified, but but is not used by {self.__class__}.",
             )
         results = ipoptResults()
         with TempfileManager.new_context() as tempfile:

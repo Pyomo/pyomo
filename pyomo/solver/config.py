@@ -85,6 +85,7 @@ class SolverConfig(ConfigDict):
             ConfigValue(
                 domain=NonNegativeInt,
                 description="Number of threads to be used by a solver.",
+                default=None,
             ),
         )
         self.time_limit: Optional[float] = self.declare(
