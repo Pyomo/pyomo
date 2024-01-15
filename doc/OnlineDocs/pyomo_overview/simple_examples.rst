@@ -91,7 +91,7 @@ One way to implement this in Pyomo is as shown as follows:
    :hide:
 
    >>> # Create an instance to verify that the rules fire correctly
-   >>> inst = model.create_instance('tests/scripting/abstract1.dat')
+   >>> inst = model.create_instance('src/scripting/abstract1.dat')
 
 .. note::
 
@@ -261,9 +261,9 @@ parameters. Here is one file that provides data (in AMPL "``.dat``" format).
    :hide:
 
    >>> # Create an instance to verify that the rules fire correctly
-   >>> inst = model.create_instance('tests/scripting/abstract1.dat')
+   >>> inst = model.create_instance('src/scripting/abstract1.dat')
 
-.. literalinclude:: ../tests/scripting/abstract1.dat
+.. literalinclude:: ../src/scripting/abstract1.dat
    :language: text
 
 There are multiple formats that can be used to provide data to a Pyomo
@@ -327,18 +327,18 @@ the same model. To start with an illustration of general indexes,
 consider a slightly different Pyomo implementation of the model we just
 presented.
 
-.. literalinclude:: ../tests/scripting/abstract2.py
+.. literalinclude:: ../src/scripting/abstract2.py
    :language: python
 
 To get the same instantiated model, the following data file can be used.
 
-.. literalinclude:: ../tests/scripting/abstract2a.dat
+.. literalinclude:: ../src/scripting/abstract2a.dat
    :language: none
 
 However, this model can also be fed different data for problems of the
 same general form using meaningful indexes.
 
-.. literalinclude:: ../tests/scripting/abstract2.dat
+.. literalinclude:: ../src/scripting/abstract2.dat
    :language: none
 
 

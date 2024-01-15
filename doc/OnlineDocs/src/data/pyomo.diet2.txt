@@ -1,16 +1,16 @@
 [    0.00] Setting up Pyomo environment
 [    0.00] Applying Pyomo preprocessing actions
 [    0.00] Creating model
-[    0.03] Applying solver
-[    0.05] Processing results
+[    0.01] Applying solver
+[    0.01] Processing results
     Number of solutions: 1
     Solution Information
       Gap: 0.0
       Status: optimal
       Function Value: 2.81
     Solver results file: results.yml
-[    0.05] Applying Pyomo postprocessing actions
-[    0.05] Pyomo Finished
+[    0.01] Applying Pyomo postprocessing actions
+[    0.01] Pyomo Finished
 # ==========================================================
 # = Solver Results                                         =
 # ==========================================================
@@ -22,9 +22,9 @@ Problem:
   Lower bound: 2.81
   Upper bound: 2.81
   Number of objectives: 1
-  Number of constraints: 4
-  Number of variables: 10
-  Number of nonzeros: 10
+  Number of constraints: 3
+  Number of variables: 9
+  Number of nonzeros: 9
   Sense: minimize
 # ----------------------------------------------------------
 #   Solver Information
@@ -37,7 +37,7 @@ Solver:
       Number of bounded subproblems: 1
       Number of created subproblems: 1
   Error rc: 0
-  Time: 0.006503582000732422
+  Time: 0.0018515586853027344
 # ----------------------------------------------------------
 #   Solution Information
 # ----------------------------------------------------------

@@ -5,7 +5,7 @@ import copy
 
 # ---------------------------------------------
 # @ex1
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 
 M = ConcreteModel()
 M.x = Var()
@@ -21,7 +21,7 @@ print(EXPR.expression_to_string(e, verbose=True))
 
 # ---------------------------------------------
 # @ex2
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 
 M = ConcreteModel()
 M.x = Var()
@@ -32,35 +32,6 @@ e = sin(M.x) + 2 * M.y
 # sin(x1) + 2*x2
 print(EXPR.expression_to_string(e, labeler=NumericLabeler('x')))
 # @ex2
-
-# ---------------------------------------------
-# @ex3
-from pyomo.core.expr import current as EXPR
-
-M = ConcreteModel()
-M.x = Var()
-M.y = Var()
-
-e = sin(M.x) + 2 * M.y + M.x * M.y - 3
-
-# -3 + 2*y + sin(x) + x*y
-print(EXPR.expression_to_string(e, standardize=True))
-# @ex3
-
-# ---------------------------------------------
-# @ex4
-from pyomo.core.expr import current as EXPR
-
-M = ConcreteModel()
-M.x = Var()
-
-with EXPR.clone_counter() as counter:
-    start = counter.count
-    e1 = sin(M.x)
-    e2 = e1.clone()
-    total = counter.count - start
-    assert total == 1
-# @ex4
 
 # ---------------------------------------------
 # @ex5
@@ -85,7 +56,7 @@ assert val is None
 
 # ---------------------------------------------
 # @ex8
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 
 M = ConcreteModel()
 M.x = Var()
@@ -98,7 +69,7 @@ assert list(EXPR.identify_components(e, s)) == [M.p]
 
 # ---------------------------------------------
 # @ex9
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 
 M = ConcreteModel()
 M.x = Var()
@@ -116,7 +87,7 @@ assert set(id(v) for v in EXPR.identify_variables(e, include_fixed=False)) == se
 
 # ---------------------------------------------
 # @visitor1
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 
 
 class SizeofVisitor(EXPR.SimpleExpressionVisitor):
@@ -129,8 +100,7 @@ class SizeofVisitor(EXPR.SimpleExpressionVisitor):
     def finalize(self):
         return self.counter
 
-
-# @visitor1
+    # @visitor1
 
 
 # ---------------------------------------------
@@ -144,13 +114,12 @@ def sizeof_expression(expr):
     # Compute the value using the :func:`xbfs` search method.
     #
     return visitor.xbfs(expr)
+    # @visitor2
 
-
-# @visitor2
 
 # ---------------------------------------------
 # @visitor3
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 
 
 class CloneVisitor(EXPR.ExpressionValueVisitor):
@@ -161,22 +130,17 @@ class CloneVisitor(EXPR.ExpressionValueVisitor):
         #
         # Clone the interior node
         #
-        return node.construct_clone(tuple(values), self.memo)
+        return node.create_node_with_local_data(values)
 
     def visiting_potential_leaf(self, node):
         #
         # Clone leaf nodes in the expression tree
         #
-        if (
-            node.__class__ in native_numeric_types
-            or node.__class__ not in pyomo5_expression_types
-        ):
+        if node.__class__ in native_numeric_types or not node.is_expression_type():
             return True, copy.deepcopy(node, self.memo)
 
         return False, None
-
-
-# @visitor3
+        # @visitor3
 
 
 # ---------------------------------------------
@@ -191,13 +155,29 @@ def clone_expression(expr):
     # search method.
     #
     return visitor.dfs_postorder_stack(expr)
+    # @visitor4
 
 
-# @visitor4
+# Test:
+m = ConcreteModel()
+m.x = Var(range(2))
+m.p = Param(range(5), mutable=True)
+e = m.x[0] + 5 * m.x[1]
+ce = clone_expression(e)
+print(e is not ce)
+# True
+print(str(e))
+# x[0] + 5*x[1]
+print(str(ce))
+# x[0] + 5*x[1]
+print(e.arg(0) is not ce.arg(0))
+# True
+print(e.arg(1) is not ce.arg(1))
+# True
 
 # ---------------------------------------------
 # @visitor5
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 
 
 class ScalingVisitor(EXPR.ExpressionReplacementVisitor):
@@ -205,29 +185,24 @@ class ScalingVisitor(EXPR.ExpressionReplacementVisitor):
         super(ScalingVisitor, self).__init__()
         self.scale = scale
 
-    def visiting_potential_leaf(self, node):
+    def beforeChild(self, node, child, child_idx):
         #
-        # Clone leaf nodes in the expression tree
+        # Native numeric types are terminal nodes; this also catches all
+        # nodes that do not conform to the ExpressionBase API (i.e.,
+        # define is_variable_type)
         #
-        if node.__class__ in native_numeric_types:
-            return True, node
-
-        if node.is_variable_type():
-            return True, self.scale[id(node)] * node
-
-        if isinstance(node, EXPR.LinearExpression):
-            node_ = copy.deepcopy(node)
-            node_.constant = node.constant
-            node_.linear_vars = copy.copy(node.linear_vars)
-            node_.linear_coefs = []
-            for i, v in enumerate(node.linear_vars):
-                node_.linear_coefs.append(node.linear_coefs[i] * self.scale[id(v)])
-            return True, node_
-
-        return False, None
-
-
-# @visitor5
+        if child.__class__ in native_numeric_types:
+            return False, child
+        #
+        # Replace leaf variables with scaled variables
+        #
+        if child.is_variable_type():
+            return False, self.scale[id(child)] * child
+        #
+        # Everything else can be processed normally
+        #
+        return True, None
+        # @visitor5
 
 
 # ---------------------------------------------
@@ -241,10 +216,9 @@ def scale_expression(expr, scale):
     # Scale the expression using the :func:`dfs_postorder_stack`
     # search method.
     #
-    return visitor.dfs_postorder_stack(expr)
+    return visitor.walk_expression(expr)
+    # @visitor6
 
-
-# @visitor6
 
 # ---------------------------------------------
 # @visitor7

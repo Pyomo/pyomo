@@ -405,7 +405,7 @@ class LegacySolverInterface:
         self.config.symbolic_solver_labels = symbolic_solver_labels
         self.config.time_limit = timelimit
         self.config.report_timing = report_timing
-        # This is a new flag in the interface. To preserve backwards compability,
+        # This is a new flag in the interface. To preserve backwards compatibility,
         # its default is set to "False"
         self.config.raise_exception_on_nonoptimal_result = (
             raise_exception_on_nonoptimal_result

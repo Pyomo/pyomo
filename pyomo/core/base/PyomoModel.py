@@ -877,6 +877,7 @@ arguments (which have been ignored):"""
                 str(data).strip(),
                 type(err).__name__,
                 err,
+                extra={'cleandoc': False},
             )
             raise
 
