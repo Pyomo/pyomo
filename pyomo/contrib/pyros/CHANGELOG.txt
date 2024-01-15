@@ -1,0 +1,115 @@
+===============
+PyROS CHANGELOG
+===============
+
+-------------------------------------------------------------------------------
+PyROS 1.2.8    12 Oct 2023
+-------------------------------------------------------------------------------
+- Refactor PyROS separation routine, fix scenario selection heuristic
+- Add efficiency for discrete uncertainty set separation
+- Fix coefficient matching routine
+- Fix subproblem timers and time accumulators
+- Update and document PyROS solver logging system
+- Fix iteration overcounting in event of `max_iter` termination status
+- Fixes to (assembly of) PyROS `ROSolveResults` object
+
+
+-------------------------------------------------------------------------------
+PyROS 1.2.7    26 Apr 2023
+-------------------------------------------------------------------------------
+- Refurbish separation problem routines and data structures
+- Ensure implementation of separation scenario selection heuristic
+  is consistent with original intent
+- Fix local and global separation solve time accumulators
+- Prefer TicTocTimer for solve time accumulators
+
+
+-------------------------------------------------------------------------------
+PyROS 1.2.6    07 Dec 2022
+-------------------------------------------------------------------------------
+- Add more judicious enforcement of PyROS time limit.
+- Update PyROS solver and webpage docs
+
+
+-------------------------------------------------------------------------------
+PyROS 1.2.5    06 Dec 2022
+-------------------------------------------------------------------------------
+- Add `config` argument to `UncertaintySet.bounding_model`
+
+
+-------------------------------------------------------------------------------
+PyROS 1.2.4    22 Nov 2022
+-------------------------------------------------------------------------------
+- Add origin attribute to BudgetSet.
+
+
+-------------------------------------------------------------------------------
+PyROS 1.2.3    22 Nov 2022
+-------------------------------------------------------------------------------
+- Generalize FactorModelSet.
+- Resolve issues with FactorModelSet parameter bounds.
+- Modularize construction of uncertainty set bounding problems.
+
+
+-------------------------------------------------------------------------------
+PyROS 1.2.2    09 Nov 2022
+-------------------------------------------------------------------------------
+- Rewrite PyROS `UncertaintySet` module, class, and attribute docstrings
+  and make attribute validation more rigorous.
+
+
+-------------------------------------------------------------------------------
+PyROS 1.2.1    05 Oct 2022
+-------------------------------------------------------------------------------
+- Fix subordinate optimizer SolverResults solve time access routines.
+
+
+-------------------------------------------------------------------------------
+PyROS 1.2.0    09 Sep 2022
+-------------------------------------------------------------------------------
+- Ensure master feasibility problems initialized to a feasible point.
+- Initialize master problems to master feasibility solution (if solved
+  successfully), or to initial point (otherwise)
+- Initialize separation problems to nominal polished master solution (if
+  nominal objective focus), or to solution from most recently added block
+  (if worst case focus).
+- Extend documentation and handling of Exceptions and non-optimal subsolver
+  terminations.
+
+
+-------------------------------------------------------------------------------
+PyROS 1.1.4    27 Jul 2022
+-------------------------------------------------------------------------------
+- Ensure `DiscreteScenarioSet` problems terminate successfully if there
+  are no remaining scenarios to separate.
+
+
+-------------------------------------------------------------------------------
+PyROS 1.1.3    12 Jul 2022
+-------------------------------------------------------------------------------
+- Avoid master feasibiliity problem unit consistency checks.
+
+
+-------------------------------------------------------------------------------
+PyROS 1.1.2    31 May 2022
+-------------------------------------------------------------------------------
+- Fixes to PyROS ellipsoidal sets.
+- Account for variable domains in PyROS model standardization.
+
+
+-------------------------------------------------------------------------------
+PyROS 1.1.1    25 Apr 2022
+-------------------------------------------------------------------------------
+- Fixes to Pyomo model objective validation.
+
+
+-------------------------------------------------------------------------------
+PyROS 1.1.0    04 Apr 2022
+-------------------------------------------------------------------------------
+- Change master feasibility problem formulation, initialization, and scaling
+
+
+-------------------------------------------------------------------------------
+PyROS 1.0.0    13 Jul 2021
+-------------------------------------------------------------------------------
+- Initial release

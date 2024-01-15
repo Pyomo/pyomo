@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -13,29 +14,36 @@ import pickle
 import pyomo.common.unittest as unittest
 
 from pyomo.common.dependencies import dill, dill_available as has_dill
-from pyomo.core.expr.numvalue import (NumericValue,
-                                      is_fixed,
-                                      is_constant,
-                                      is_potentially_variable)
+from pyomo.core.expr.numvalue import (
+    NumericValue,
+    is_fixed,
+    is_constant,
+    is_potentially_variable,
+)
 from pyomo.kernel import pprint
-from pyomo.core.tests.unit.kernel.test_dict_container import \
-    _TestActiveDictContainerBase
-from pyomo.core.tests.unit.kernel.test_tuple_container import \
-    _TestActiveTupleContainerBase
-from pyomo.core.tests.unit.kernel.test_list_container import \
-    _TestActiveListContainerBase
+from pyomo.core.tests.unit.kernel.test_dict_container import (
+    _TestActiveDictContainerBase,
+)
+from pyomo.core.tests.unit.kernel.test_tuple_container import (
+    _TestActiveTupleContainerBase,
+)
+from pyomo.core.tests.unit.kernel.test_list_container import (
+    _TestActiveListContainerBase,
+)
 from pyomo.core.kernel.base import ICategorizedObject
-from pyomo.core.kernel.parameter import (IParameter,
-                                         parameter,
-                                         functional_value,
-                                         parameter_dict,
-                                         parameter_tuple,
-                                         parameter_list)
+from pyomo.core.kernel.parameter import (
+    IParameter,
+    parameter,
+    functional_value,
+    parameter_dict,
+    parameter_tuple,
+    parameter_list,
+)
 from pyomo.core.kernel.variable import variable
 from pyomo.core.kernel.block import block
 
-class Test_parameter(unittest.TestCase):
 
+class Test_parameter(unittest.TestCase):
     def test_pprint(self):
         # Not really testing what the output is, just that
         # an error does not occur. The pprint functionality
@@ -62,15 +70,13 @@ class Test_parameter(unittest.TestCase):
         p = parameter(value=1.0)
         self.assertEqual(p.value, 1.0)
         self.assertIs(p.parent, None)
-        pup = pickle.loads(
-            pickle.dumps(p))
+        pup = pickle.loads(pickle.dumps(p))
         self.assertEqual(pup.value, 1.0)
         self.assertIs(pup.parent, None)
         b = block()
         b.p = p
         self.assertIs(p.parent, b)
-        bup = pickle.loads(
-            pickle.dumps(b))
+        bup = pickle.loads(pickle.dumps(b))
         pup = bup.p
         self.assertEqual(pup.value, 1.0)
         self.assertIs(pup.parent, bup)
@@ -138,8 +144,8 @@ class Test_parameter(unittest.TestCase):
         #     to do with mutability...
         self.assertEqual(p.is_parameter_type(), False)
 
-class Test_functional_value(unittest.TestCase):
 
+class Test_functional_value(unittest.TestCase):
     def test_pprint(self):
         # Not really testing what the output is, just that
         # an error does not occur. The pprint functionality
@@ -166,27 +172,23 @@ class Test_functional_value(unittest.TestCase):
         f = functional_value()
         self.assertIs(f.fn, None)
         self.assertIs(f.parent, None)
-        fup = pickle.loads(
-            pickle.dumps(f))
+        fup = pickle.loads(pickle.dumps(f))
         self.assertIs(fup.fn, None)
         self.assertIs(fup.parent, None)
         b = block()
         b.f = f
         self.assertIs(f.parent, b)
-        bup = pickle.loads(
-            pickle.dumps(b))
+        bup = pickle.loads(pickle.dumps(b))
         fup = bup.f
         self.assertIs(fup.fn, None)
         self.assertIs(fup.parent, bup)
 
-    @unittest.skipIf(not has_dill,
-                     "The dill module is not available")
+    @unittest.skipIf(not has_dill, "The dill module is not available")
     def test_dill(self):
         p = parameter(1)
         f = functional_value(lambda: p())
         self.assertEqual(f(), 1)
-        fup = dill.loads(
-            dill.dumps(f))
+        fup = dill.loads(dill.dumps(f))
         p.value = 2
         self.assertEqual(f(), 2)
         self.assertEqual(fup(), 1)
@@ -194,8 +196,7 @@ class Test_functional_value(unittest.TestCase):
         b.p = p
         b.f = f
         self.assertEqual(b.f(), 2)
-        bup = dill.loads(
-            dill.dumps(b))
+        bup = dill.loads(dill.dumps(b))
         fup = bup.f
         b.p.value = 4
         self.assertEqual(b.f(), 4)
@@ -227,8 +228,10 @@ class Test_functional_value(unittest.TestCase):
             f(exception=True)
         with self.assertRaises(TypeError):
             f()
+
         def value_error():
             raise ValueError()
+
         f.fn = value_error
         self.assertIsNot(f.fn, None)
         self.assertEqual(f(exception=False), None)
@@ -243,7 +246,7 @@ class Test_functional_value(unittest.TestCase):
         self.assertEqual(f.ctype, IParameter)
         self.assertEqual(f.fn, None)
         self.assertEqual(f(), None)
-        x = [1,2]
+        x = [1, 2]
         f.fn = lambda: max(x)
         self.assertEqual(f(), 2)
         x[0] = 3
@@ -303,20 +306,20 @@ class Test_functional_value(unittest.TestCase):
         self.assertEqual(f.is_parameter_type(), False)
 
 
-class Test_parameter_dict(_TestActiveDictContainerBase,
-                          unittest.TestCase):
+class Test_parameter_dict(_TestActiveDictContainerBase, unittest.TestCase):
     _container_type = parameter_dict
     _ctype_factory = lambda self: parameter()
 
-class Test_parameter_tuple(_TestActiveTupleContainerBase,
-                           unittest.TestCase):
+
+class Test_parameter_tuple(_TestActiveTupleContainerBase, unittest.TestCase):
     _container_type = parameter_tuple
     _ctype_factory = lambda self: parameter()
 
-class Test_parameter_list(_TestActiveListContainerBase,
-                           unittest.TestCase):
+
+class Test_parameter_list(_TestActiveListContainerBase, unittest.TestCase):
     _container_type = parameter_list
     _ctype_factory = lambda self: parameter()
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -17,11 +18,9 @@ from pyomo.common.collections import Bunch
 
 @SolverFactory.register('mpec_minlp', doc='MPEC solver transforms to a MINLP')
 class MPEC_Solver2(pyomo.opt.OptSolver):
-
-
     def __init__(self, **kwds):
         kwds['type'] = 'mpec_minlp'
-        pyomo.opt.OptSolver.__init__(self,**kwds)
+        pyomo.opt.OptSolver.__init__(self, **kwds)
         self._metasolver = True
 
     def _presolve(self, *args, **kwds):
@@ -40,12 +39,12 @@ class MPEC_Solver2(pyomo.opt.OptSolver):
         xfrm.apply_to(self._instance)
 
         xfrm = TransformationFactory('gdp.bigm')
-        xfrm.apply_to(self._instance, bigM=self.options.get('bigM',10**6))
+        xfrm.apply_to(self._instance, bigM=self.options.get('bigM', 10**6))
         #
         # Solve with a specified solver
         #
         solver = self.options.solver
-        if not self.options.solver:                     #pragma:nocover
+        if not self.options.solver:  # pragma:nocover
             self.options.solver = solver = 'glpk'
 
         # use the with block here so that deactivation of the
@@ -60,14 +59,17 @@ class MPEC_Solver2(pyomo.opt.OptSolver):
             #         io_options are getting relayed to the subsolver
             #         here).
             #
-            self.results = opt.solve(self._instance,
-                                     tee=self._tee,
-                                     timelimit=self._timelimit)
+            self.results = opt.solve(
+                self._instance, tee=self._tee, timelimit=self._timelimit
+            )
             #
             # Reclassify the Complementarity components
             #
             from pyomo.mpec import Complementarity
-            for cuid in self._instance._transformation_data['mpec.simple_disjunction'].compl_cuids:
+
+            for cuid in self._instance._transformation_data[
+                'mpec.simple_disjunction'
+            ].compl_cuids:
                 cobj = cuid.find_component_on(self._instance)
                 cobj.parent_block().reclassify_component_type(cobj, Complementarity)
             #
@@ -83,8 +85,7 @@ class MPEC_Solver2(pyomo.opt.OptSolver):
             #
             # Return the sub-solver return condition value and log
             #
-            return Bunch(rc=getattr(opt,'_rc', None),
-                                       log=getattr(opt,'_log',None))
+            return Bunch(rc=getattr(opt, '_rc', None), log=getattr(opt, '_log', None))
 
     def _postsolve(self):
         #
@@ -105,4 +106,3 @@ class MPEC_Solver2(pyomo.opt.OptSolver):
         # Return the results
         #
         return self.results
-

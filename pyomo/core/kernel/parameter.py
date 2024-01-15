@@ -1,26 +1,27 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.expr.numvalue import (is_numeric_data,
-                                      NumericValue)
+from pyomo.core.expr.numvalue import is_numeric_data, NumericValue
 from pyomo.core.kernel.base import ICategorizedObject
 from pyomo.core.kernel.container_utils import define_simple_containers
 
 
 class IParameter(ICategorizedObject, NumericValue):
     """The interface for mutable numeric data."""
+
     __slots__ = ()
 
     def __call__(self, exception=True):
         """Computes the numeric value of this object."""
-        raise NotImplementedError     #pragma:nocover
+        raise NotImplementedError  # pragma:nocover
 
     #
     # Implement the NumericValue abstract methods
@@ -62,12 +63,10 @@ class IParameter(ICategorizedObject, NumericValue):
 class parameter(IParameter):
     """A object for storing a mutable, numeric value that
     can be used to build a symbolic expression."""
+
     _ctype = IParameter
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_active",
-                 "_value",
-                 "__weakref__")
+    __slots__ = ("_parent", "_storage_key", "_active", "_value", "__weakref__")
+
     def __init__(self, value=None):
         self._parent = None
         self._storage_key = None
@@ -88,7 +87,7 @@ class parameter(IParameter):
 
     @property
     def value(self):
-        """The value of the paramater"""
+        """The value of the parameter"""
         return self._value
 
     @value.setter
@@ -103,12 +102,10 @@ class functional_value(IParameter):
     Note that models making use of this object may require
     the dill module for serialization.
     """
+
     _ctype = IParameter
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_active",
-                 "_fn",
-                 "__weakref__")
+    __slots__ = ("_parent", "_storage_key", "_active", "_fn", "__weakref__")
+
     def __init__(self, fn=None):
         self._parent = None
         self._storage_key = None
@@ -131,8 +128,7 @@ class functional_value(IParameter):
                 return None
         # this exception should never be masked
         if not is_numeric_data(val):
-            raise TypeError(
-                "Functional value is not numeric data")
+            raise TypeError("Functional value is not numeric data")
         return val
 
     #
@@ -151,6 +147,4 @@ class functional_value(IParameter):
 
 # inserts class definitions for simple _tuple, _list, and
 # _dict containers into this module
-define_simple_containers(globals(),
-                         "parameter",
-                         IParameter)
+define_simple_containers(globals(), "parameter", IParameter)

@@ -7,11 +7,22 @@ Bibliography
 
 .. [AIMMS] http://www.aimms.com/
 
-.. [BirgeLouveauxBook] J.R. Birge and F. Louveaux. Introduction to
-                        Stochastic Programming. Springer Series in
-                        Operations Research. New York. Springer, 1997
-
 .. [GAMS] http://www.gams.com
+
+.. [Isenberg_et_al] Isenberg, NM, Akula, P, Eslick, JC, Bhattacharyya, D,
+   Miller, DC, Gounaris, CE. A generalized cutting‐set approach for
+   nonlinear robust optimization in process systems
+   engineering. AIChE J. 2021; 67:e17175. DOI `10.1002/aic.17175
+   <https://aiche.onlinelibrary.wiley.com/doi/abs/10.1002/aic.17175>`_
+
+.. [mpisppy] Bernard Knueven, David Mildebrath, Christopher Muir,
+   John D Siirola, Jean-Paul Watson, and David L Woodruff, A Parallel 
+   Hub-and-Spoke System for Large-Scale Scenario-Based Optimization 
+   Under Uncertainty, pre-print, 2020
+  
+.. [ParmestPaper] Katherine A. Klise, Bethany L. Nicholson, Andrea
+   Staid, David L.Woodruff.  Parmest: Parameter Estimation Via Pyomo.
+   Computer Aided Chemical Engineering, 47 (2019): 41-46.
 
 .. [PyomoBookI] William E. Hart, Carl D. Laird, Jean-Paul Watson,
                 David L. Woodruff. Pyomo – Optimization Modeling in
@@ -22,6 +33,12 @@ Bibliography
                  J. D. Siirola. Pyomo - Optimization Modeling in Python,
                  2nd Edition.  Springer Optimization and Its
                  Applications, Vol 67.  Springer, 2017.
+
+.. [PyomoBookIII] Bynum, Michael L., Gabriel A. Hackebeil,
+                  William E. Hart, Carl D. Laird, Bethany L. Nicholson,
+                  John D. Siirola, Jean-Paul Watson, and David L. Woodruff.
+                  Pyomo - Optimization Modeling in Python, 3rd Edition.
+                  Vol. 67. Springer, 2021.
 
 .. [PyomoJournal] William E. Hart, Jean-Paul Watson, David L. Woodruff.
                   "Pyomo: modeling and solving mathematical programs in
@@ -34,11 +51,6 @@ Bibliography
               optimization with differential and algebraic equations."
               Mathematical Programming Computation 10(2) (2018):
               187-223.
-
-.. [PySPJournal] Jean-Paul Watson, David L. Woodruff, William E. Hart.
-                 "Pyomo: modeling and solving mathematical programs in
-                 Python," Mathematical Programming Computation, Volume
-                 4, Number 2, June 2012, Pages 109-142
 
 .. [RooneyBiegler] W.C. Rooney, L.T. Biegler, "Design for model parameter 
                    uncertainty using nonlinear confidence regions", AIChE 

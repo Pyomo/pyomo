@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -29,11 +30,7 @@ class Factory(object):
         self._doc = {}
 
     def __call__(self, name, **kwds):
-        if 'exception' in kwds:
-            exception = kwds['exception']
-            del kwds['exception']
-        else:
-            exception = False
+        exception = kwds.pop('exception', False)
         name = str(name)
         if not name in self._cls:
             if not exception:
@@ -61,10 +58,11 @@ class Factory(object):
         if name in self._cls:
             del self._cls[name]
             del self._doc[name]
-    
+
     def register(self, name, doc=None):
         def fn(cls):
             self._cls[name] = cls
             self._doc[name] = doc
             return cls
+
         return fn

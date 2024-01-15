@@ -1,0 +1,17 @@
+set A := AA BB CC;
+
+set B := BB;
+
+set C := CC;
+
+set D := (AA,BB) (BB,BB) (CC,BB);
+
+set E := (AA,BB) (BB,BB) (CC,BB);
+
+set F[1] := AA;
+set F[2] := BB;
+set F[3] := CC;
+
+set G[1] := AA;
+set G[2] := BB;
+set G[3] := CC;

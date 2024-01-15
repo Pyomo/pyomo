@@ -1,40 +1,33 @@
-from .base_linear_solver_interface import LinearSolverInterface
-from .results import LinearSolverStatus, LinearSolverResults
-from scipy.sparse.linalg import splu
+from .base_linear_solver_interface import IPLinearSolverInterface
+from pyomo.contrib.pynumero.linalg.base import LinearSolverResults
 from scipy.linalg import eigvals
-from scipy.sparse import isspmatrix_csc
-from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
+from scipy.sparse import spmatrix
+from pyomo.contrib.pynumero.sparse import BlockMatrix
 import logging
 import numpy as np
+from pyomo.contrib.pynumero.linalg.scipy_interface import ScipyLU
+from typing import Union
 
-class ScipyInterface(LinearSolverInterface):
+
+class ScipyInterface(ScipyLU, IPLinearSolverInterface):
+    @classmethod
+    def getLoggerName(cls):
+        return 'ScipyLU'
+
     def __init__(self, compute_inertia=False):
-        self._lu = None
+        super(ScipyInterface, self).__init__()
         self._inertia = None
         self.compute_inertia = compute_inertia
 
         self.logger = logging.getLogger('scipy')
         self.logger.propagate = False
 
-    def do_symbolic_factorization(self, matrix, raise_on_error=True):
-        res = LinearSolverResults()
-        res.status = LinearSolverStatus.successful
-        return res
-
-    def do_numeric_factorization(self, matrix, raise_on_error=True):
-        if not isspmatrix_csc(matrix):
-            matrix = matrix.tocsc()
-        res = LinearSolverResults()
-        try:
-            self._lu = splu(matrix)
-            res.status = LinearSolverStatus.successful
-        except RuntimeError as err:
-            if raise_on_error:
-                raise err
-            if 'Factor is exactly singular' in str(err):
-                res.status = LinearSolverStatus.singular
-            else:
-                res.status = LinearSolverStatus.error
+    def do_numeric_factorization(
+        self, matrix: Union[spmatrix, BlockMatrix], raise_on_error: bool = True
+    ) -> LinearSolverResults:
+        res = super(ScipyInterface, self).do_numeric_factorization(
+            matrix=matrix, raise_on_error=raise_on_error
+        )
 
         if self.compute_inertia:
             eig = eigvals(matrix.toarray())
@@ -45,22 +38,9 @@ class ScipyInterface(LinearSolverInterface):
 
         return res
 
-    def do_back_solve(self, rhs):
-        if isinstance(rhs, BlockVector):
-            _rhs = rhs.flatten()
-        else:
-            _rhs = rhs
-
-        result = self._lu.solve(_rhs)
-
-        if isinstance(rhs, BlockVector):
-            _result = rhs.copy_structure()
-            _result.copyfrom(result)
-            result = _result
-        
-        return result
-
     def get_inertia(self):
         if self._inertia is None:
-            raise RuntimeError('The intertia was not computed during do_numeric_factorization. Set compute_inertia to True.')
+            raise RuntimeError(
+                'The inertia was not computed during do_numeric_factorization. Set compute_inertia to True.'
+            )
         return self._inertia

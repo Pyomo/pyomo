@@ -1,4 +1,4 @@
 model diet2.mod;
 data diet.dat;
-option solver cplex;
+option solver cbc;
 solve;

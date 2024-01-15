@@ -1,0 +1,9 @@
+# warehouses: 1 delivery cost: 3986.0
+# warehouses: 2 delivery cost: 2745.0
+# warehouses: 3 delivery cost: 2745.0
+# warehouses: 4 delivery cost: 2745.0
+# warehouses: 5 delivery cost: 2745.0
+# warehouses: 6 delivery cost: 2745.0
+# warehouses: 7 delivery cost: 2745.0
+# warehouses: 8 delivery cost: 2745.0
+# warehouses: 9 delivery cost: 2745.0

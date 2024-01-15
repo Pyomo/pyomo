@@ -1,6 +1,7 @@
-from pyomo.contrib.pynumero.interfaces.nlp import NLP
+from pyomo.contrib.pynumero.interfaces.nlp import NLP, ExtendedNLP
 import numpy as np
 import scipy.sparse as sp
+
 
 class _BaseNLPDelegator(NLP):
     def __init__(self, original_nlp):
@@ -105,6 +106,34 @@ class _BaseNLPDelegator(NLP):
         self._original_nlp.report_solver_status(status_code, status_message)
 
 
+class _ExtendedNLPDelegator(_BaseNLPDelegator):
+    def __init__(self, original_nlp):
+        if not isinstance(original_nlp, ExtendedNLP):
+            raise TypeError(
+                "Original NLP must be an instance of ExtendedNLP to use in"
+                " an _ExtendedNLPDelegator. Got type %s" % type(original_nlp)
+            )
+        super().__init__(original_nlp)
+
+    def n_eq_constraints(self):
+        return self._original_nlp.n_eq_constraints()
+
+    def n_ineq_constraints(self):
+        return self._original_nlp.n_ineq_constraints()
+
+    def evaluate_eq_constraints(self):
+        return self._original_nlp.evaluate_eq_constraints()
+
+    def evaluate_jacobian_eq(self):
+        return self._original_nlp.evaluate_jacobian_eq()
+
+    def evaluate_ineq_constraints(self):
+        return self._original_nlp.evaluate_ineq_constraints()
+
+    def evaluate_jacobian_ineq(self):
+        return self._original_nlp.evaluate_jacobian_ineq()
+
+
 class RenamedNLP(_BaseNLPDelegator):
     def __init__(self, original_nlp, primals_name_map):
         """
@@ -130,9 +159,10 @@ class RenamedNLP(_BaseNLPDelegator):
     def _generate_new_names(self):
         if self._new_primals_names is None:
             assert self._original_nlp.n_primals() == len(self._primals_name_map)
-            self._new_primals_names = \
-                [self._primals_name_map[nm] for nm in self._original_nlp.primals_names()]
-            
+            self._new_primals_names = [
+                self._primals_name_map[nm] for nm in self._original_nlp.primals_names()
+            ]
+
     def primals_names(self):
         return self._new_primals_names
 
@@ -141,7 +171,7 @@ class ProjectedNLP(_BaseNLPDelegator):
     def __init__(self, original_nlp, primals_ordering):
         """
         This class takes an NLP that depends on a set of primals (original
-        space) and converts it to an NLP that depends on a reordered set of 
+        space) and converts it to an NLP that depends on a reordered set of
         primals (projected space).
 
         This will impact all the returned items associated with primal
@@ -149,7 +179,7 @@ class ProjectedNLP(_BaseNLPDelegator):
         instead of the original primals ordering.
 
         Note also that this can include additional primal variables not
-        in the original NLP, or can exclude primal variables that were 
+        in the original NLP, or can exclude primal variables that were
         in the original NLP.
 
         Parameters
@@ -158,9 +188,9 @@ class ProjectedNLP(_BaseNLPDelegator):
             The original NLP object that implements the NLP interface
 
         primals_ordering: list
-           List of strings indicating the desired primal variable 
+           List of strings indicating the desired primal variable
            ordering for this NLP. The list can contain new variables
-           that are not in the original NLP, thereby expanding the 
+           that are not in the original NLP, thereby expanding the
            space of the primal variables.
         """
         super(ProjectedNLP, self).__init__(original_nlp)
@@ -176,18 +206,20 @@ class ProjectedNLP(_BaseNLPDelegator):
 
     def _generate_maps(self):
         if self._original_idxs is None or self._projected_idxs is None:
-            primals_ordering_dict = {k:i for i,k in enumerate(self._primals_ordering)}
+            primals_ordering_dict = {k: i for i, k in enumerate(self._primals_ordering)}
             original_names = self._original_nlp.primals_names()
             original_idxs = list()
             projected_idxs = list()
-            for i,nm in enumerate(original_names):
+            for i, nm in enumerate(original_names):
                 if nm in primals_ordering_dict:
                     # we need the reordering for this element
                     original_idxs.append(i)
                     projected_idxs.append(primals_ordering_dict[nm])
             self._original_idxs = np.asarray(original_idxs)
             self._projected_idxs = np.asarray(projected_idxs)
-            self._original_to_projected = np.nan*np.zeros(self._original_nlp.n_primals())
+            self._original_to_projected = np.nan * np.zeros(
+                self._original_nlp.n_primals()
+            )
             self._original_to_projected[self._original_idxs] = self._projected_idxs
 
     def n_primals(self):
@@ -209,10 +241,10 @@ class ProjectedNLP(_BaseNLPDelegator):
         return self._nnz_hessian_lag
 
     def _project_primals(self, default, original_primals):
-        projected_x = default*np.ones(self.n_primals(), dtype=np.float64)
+        projected_x = default * np.ones(self.n_primals(), dtype=np.float64)
         projected_x[self._projected_idxs] = original_primals[self._original_idxs]
         return projected_x
-        
+
     def primals_lb(self):
         return self._project_primals(-np.inf, self._original_nlp.primals_lb())
 
@@ -243,7 +275,9 @@ class ProjectedNLP(_BaseNLPDelegator):
 
     def get_primals(self):
         original_primals = self._original_nlp.get_primals()
-        self._projected_primals[self._projected_idxs] = original_primals[self._original_idxs]
+        self._projected_primals[self._projected_idxs] = original_primals[
+            self._original_idxs
+        ]
         return self._projected_primals
 
     def get_primals_scaling(self):
@@ -251,7 +285,7 @@ class ProjectedNLP(_BaseNLPDelegator):
 
     def evaluate_grad_objective(self, out=None):
         original_grad_objective = self._original_nlp.evaluate_grad_objective()
-        projected_objective = self._project_primals(0.0, original_grad_objective) 
+        projected_objective = self._project_primals(0.0, original_grad_objective)
         if out is None:
             return projected_objective
         np.copyto(out, projected_objective)
@@ -262,7 +296,7 @@ class ProjectedNLP(_BaseNLPDelegator):
         if out is not None:
             np.copyto(out.data, original_jacobian.data[self._jacobian_nz_mask])
             return out
-        
+
         row = original_jacobian.row
         col = original_jacobian.col
         data = original_jacobian.data
@@ -276,21 +310,26 @@ class ProjectedNLP(_BaseNLPDelegator):
         new_row = row[self._jacobian_nz_mask]
         new_data = data[self._jacobian_nz_mask]
 
-        return sp.coo_matrix((new_data, (new_row,new_col)), shape=(self.n_constraints(), self.n_primals()))
+        return sp.coo_matrix(
+            (new_data, (new_row, new_col)),
+            shape=(self.n_constraints(), self.n_primals()),
+        )
 
     def evaluate_hessian_lag(self, out=None):
         original_hessian = self._original_nlp.evaluate_hessian_lag()
         if out is not None:
             np.copyto(out.data, original_hessian.data[self._hessian_nz_mask])
             return out
-        
+
         row = original_hessian.row
         col = original_hessian.col
         data = original_hessian.data
 
         if self._hessian_nz_mask is None:
             # need to remap the irow, jcol to the new space and change the size
-            self._hessian_nz_mask = np.isin(col, self._original_idxs) & np.isin(row, self._original_idxs)
+            self._hessian_nz_mask = np.isin(col, self._original_idxs) & np.isin(
+                row, self._original_idxs
+            )
 
         new_col = col[self._hessian_nz_mask]
         new_col = self._original_to_projected[new_col]
@@ -298,7 +337,63 @@ class ProjectedNLP(_BaseNLPDelegator):
         new_row = self._original_to_projected[new_row]
         new_data = data[self._hessian_nz_mask]
 
-        return sp.coo_matrix((new_data, (new_row,new_col)), shape=(self.n_primals(), self.n_primals()))
+        return sp.coo_matrix(
+            (new_data, (new_row, new_col)), shape=(self.n_primals(), self.n_primals())
+        )
 
     def report_solver_status(self, status_code, status_message):
         raise NotImplementedError('Need to think about this...')
+
+
+class ProjectedExtendedNLP(ProjectedNLP, _ExtendedNLPDelegator):
+    def __init__(self, original_nlp, primals_ordering):
+        super(ProjectedExtendedNLP, self).__init__(original_nlp, primals_ordering)
+        self._jacobian_eq_nz_mask = None
+        self._jacobian_ineq_nz_mask = None
+
+    def evaluate_jacobian_eq(self, out=None):
+        original_jacobian = self._original_nlp.evaluate_jacobian_eq()
+        if out is not None:
+            np.copyto(out.data, original_jacobian.data[self._jacobian_eq_nz_mask])
+            return out
+
+        row = original_jacobian.row
+        col = original_jacobian.col
+        data = original_jacobian.data
+
+        if self._jacobian_eq_nz_mask is None:
+            # need to remap the irow, jcol to the new space and change the size
+            self._jacobian_eq_nz_mask = np.isin(col, self._original_idxs)
+
+        new_col = col[self._jacobian_eq_nz_mask]
+        new_col = self._original_to_projected[new_col]
+        new_row = row[self._jacobian_eq_nz_mask]
+        new_data = data[self._jacobian_eq_nz_mask]
+
+        return sp.coo_matrix(
+            (new_data, (new_row, new_col)),
+            shape=(self.n_eq_constraints(), self.n_primals()),
+        )
+
+    def evaluate_jacobian_ineq(self, out=None):
+        original_jacobian = self._original_nlp.evaluate_jacobian_ineq()
+        if out is not None:
+            np.copyto(out.data, original_jacobian.data[self._jacobian_ineq_nz_mask])
+            return out
+
+        row = original_jacobian.row
+        col = original_jacobian.col
+        data = original_jacobian.data
+
+        if self._jacobian_ineq_nz_mask is None:
+            self._jacobian_ineq_nz_mask = np.isin(col, self._original_idxs)
+
+        new_col = col[self._jacobian_ineq_nz_mask]
+        new_col = self._original_to_projected[new_col]
+        new_row = row[self._jacobian_ineq_nz_mask]
+        new_data = data[self._jacobian_ineq_nz_mask]
+
+        return sp.coo_matrix(
+            (new_data, (new_row, new_col)),
+            shape=(self.n_ineq_constraints(), self.n_primals()),
+        )

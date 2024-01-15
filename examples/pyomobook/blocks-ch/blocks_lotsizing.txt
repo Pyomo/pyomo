@@ -1,0 +1,5 @@
+Period: 1, Prod. Amount: 3.0
+Period: 2, Prod. Amount: 5.0
+Period: 3, Prod. Amount: 5.0
+Period: 4, Prod. Amount: 5.0
+Period: 5, Prod. Amount: 0.0

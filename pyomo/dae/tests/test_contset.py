@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -26,7 +27,6 @@ currdir = dirname(abspath(__file__)) + os.sep
 
 
 class TestContinuousSet(unittest.TestCase):
-
     # test __init__
     def test_init(self):
         model = ConcreteModel()
@@ -85,8 +85,7 @@ class TestContinuousSet(unittest.TestCase):
         self.assertEqual(model.t.last(), 4)
 
         model = ConcreteModel()
-        with self.assertRaisesRegex(
-                ValueError, r"value is not in the domain \[0..4\]"):
+        with self.assertRaisesRegex(ValueError, r"value is not in the domain \[0..4\]"):
             model.t = ContinuousSet(bounds=(0, 4), initialize=[1, 2, 3, 5])
         # self.assertEqual(len(model.t), 5)
         # self.assertEqual(model.t.first(), 0)
@@ -95,8 +94,7 @@ class TestContinuousSet(unittest.TestCase):
         # del model.t
 
         model = ConcreteModel()
-        with self.assertRaisesRegex(
-                ValueError, r"value is not in the domain \[2..6\]"):
+        with self.assertRaisesRegex(ValueError, r"value is not in the domain \[2..6\]"):
             model.t = ContinuousSet(bounds=(2, 6), initialize=[1, 2, 3, 5])
         # self.assertEqual(len(model.t), 5)
         # self.assertEqual(model.t.first(), 1)
@@ -104,8 +102,7 @@ class TestContinuousSet(unittest.TestCase):
         # del model.t
 
         model = ConcreteModel()
-        with self.assertRaisesRegex(
-                ValueError, r"value is not in the domain \[2..4\]"):
+        with self.assertRaisesRegex(ValueError, r"value is not in the domain \[2..4\]"):
             model.t = ContinuousSet(bounds=(2, 4), initialize=[1, 3, 5])
         # self.assertEqual(len(model.t), 3)
         # self.assertNotIn(2, model.t)
@@ -190,16 +187,16 @@ class TestContinuousSet(unittest.TestCase):
 
     def test_duplicate_construct(self):
         m = ConcreteModel()
-        m.t = ContinuousSet(initialize=[1,2,3])
-        self.assertEqual(m.t, [1,2,3])
-        self.assertEqual(m.t._fe, [1,2,3])
+        m.t = ContinuousSet(initialize=[1, 2, 3])
+        self.assertEqual(m.t, [1, 2, 3])
+        self.assertEqual(m.t._fe, [1, 2, 3])
         m.t.add(1.5)
         m.t.add(2.5)
-        self.assertEqual(m.t, [1,1.5,2,2.5,3])
-        self.assertEqual(m.t._fe, [1,2,3])
+        self.assertEqual(m.t, [1, 1.5, 2, 2.5, 3])
+        self.assertEqual(m.t._fe, [1, 2, 3])
         m.t.construct()
-        self.assertEqual(m.t, [1,1.5,2,2.5,3])
-        self.assertEqual(m.t._fe, [1,2,3])
+        self.assertEqual(m.t, [1, 1.5, 2, 2.5, 3])
+        self.assertEqual(m.t._fe, [1, 2, 3])
 
     def test_find_nearest_index(self):
         m = ConcreteModel()
@@ -229,8 +226,8 @@ class TestContinuousSet(unittest.TestCase):
         init_list = []
         for i in range(5):
             i0 = float(i)
-            i1 = round((i+0.15)*1e4)/1e4
-            i2 = round((i+0.64)*1e4)/1e4
+            i1 = round((i + 0.15) * 1e4) / 1e4
+            i2 = round((i + 0.64) * 1e4) / 1e4
             # Round to get rid of numerical error due to float addition
             init_list.extend([i, i1, i2])
         init_list.append(5.0)
@@ -273,12 +270,11 @@ class TestContinuousSet(unittest.TestCase):
         # delta_right == 2.15-2.075 == 0.07499999999999973
         # Index 8 is returned (time[8] == 2.15), even though
         # "tie"-break logic suggests index 7 should be.
-        #i = m.time.find_nearest_index(2.075)
-        #self.assertEqual(i, 7)
+        # i = m.time.find_nearest_index(2.075)
+        # self.assertEqual(i, 7)
 
 
 class TestIO(unittest.TestCase):
-
     def setUp(self):
         #
         # Create Model
@@ -310,9 +306,10 @@ class TestIO(unittest.TestCase):
         OUTPUT.close()
         self.model.A = ContinuousSet(bounds=(0, 4))
         with self.assertRaisesRegex(
-                ValueError, r"The value is not in the domain \[0..4\]"):
+            ValueError, r"The value is not in the domain \[0..4\]"
+        ):
             self.instance = self.model.create_instance("diffset.dat")
-        #self.assertEqual(len(self.instance.A), 4)
+        # self.assertEqual(len(self.instance.A), 4)
 
     def test_io3(self):
         OUTPUT = open("diffset.dat", "w")
@@ -322,9 +319,10 @@ class TestIO(unittest.TestCase):
         OUTPUT.close()
         self.model.A = ContinuousSet(bounds=(2, 6))
         with self.assertRaisesRegex(
-                ValueError, r"The value is not in the domain \[2..6\]"):
+            ValueError, r"The value is not in the domain \[2..6\]"
+        ):
             self.instance = self.model.create_instance("diffset.dat")
-        #self.assertEqual(len(self.instance.A), 4)
+        # self.assertEqual(len(self.instance.A), 4)
 
     def test_io4(self):
         OUTPUT = open("diffset.dat", "w")
@@ -334,9 +332,10 @@ class TestIO(unittest.TestCase):
         OUTPUT.close()
         self.model.A = ContinuousSet(bounds=(2, 4))
         with self.assertRaisesRegex(
-                ValueError, r"The value is not in the domain \[2..4\]"):
+            ValueError, r"The value is not in the domain \[2..4\]"
+        ):
             self.instance = self.model.create_instance("diffset.dat")
-        #self.assertEqual(len(self.instance.A), 3)
+        # self.assertEqual(len(self.instance.A), 3)
 
     def test_io5(self):
         OUTPUT = open("diffset.dat", "w")
@@ -370,6 +369,7 @@ class TestIO(unittest.TestCase):
         self.model.B = ContinuousSet(bounds=(0, 1))
         self.instance = self.model.create_instance("diffset.dat")
         self.assertEqual(len(self.instance.B), 2)
+
 
 if __name__ == "__main__":
     unittest.main()

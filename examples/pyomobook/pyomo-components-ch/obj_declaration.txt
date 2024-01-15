@@ -1,0 +1,74 @@
+declscalar
+Model unknown
+
+  Variables:
+    None
+
+  Objectives:
+    a : Size=0, Index=None, Active=True
+        Key : Active : Value
+
+  Constraints:
+    None
+declexprrule
+Model unknown
+
+  Variables:
+    x : Size=2, Index=x_index
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+          1 :  None :   1.0 :  None : False : False :  Reals
+          2 :  None :   1.0 :  None : False : False :  Reals
+
+  Objectives:
+    b : Size=1, Index=None, Active=True
+        Key  : Active : Value
+        None :   True :   3.0
+    c : Size=1, Index=None, Active=True
+        Key  : Active : Value
+        None :   True :   3.0
+
+  Constraints:
+    None
+declmulti
+declskip
+Model unknown
+
+  Variables:
+    x : Size=3, Index=x_index
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+          Q :  None :   1.0 :  None : False : False :  Reals
+          R :  None :   1.0 :  None : False : False :  Reals
+          S :  None :   1.0 :  None : False : False :  Reals
+
+  Objectives:
+    d : Size=3, Index=d_index, Active=True
+        Key : Active : Value
+          Q :   True :   1.0
+          R :   True :   1.0
+          S :   True :   1.0
+    e : Size=2, Index=e_index, Active=True
+        Key : Active : Value
+          Q :   True :   1.0
+          S :   True :   1.0
+
+  Constraints:
+    None
+value
+x[Q] + 2*x[R]
+1
+6.5
+Model unknown
+
+  Variables:
+    x : Size=2, Index=x_index
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+          Q :  None :   1.5 :  None : False : False :  Reals
+          R :  None :   2.5 :  None : False : False :  Reals
+
+  Objectives:
+    o : Size=1, Index=None, Active=True
+        Key  : Active : Value
+        None :   True :   6.5
+
+  Constraints:
+    None

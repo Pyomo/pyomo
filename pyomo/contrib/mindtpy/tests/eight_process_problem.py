@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Re-implementation of eight-process problem.
 
 Re-implementation of Duran example 3 superstructure synthesis problem in Pyomo
@@ -21,10 +22,20 @@ page 969 of Turkay & Grossmann, 1996.
 http://dx.doi.org/10.1016/0098-1354(95)00219-7
 
 """
-from __future__ import division
 
-from pyomo.environ import (Binary, ConcreteModel, Constraint, NonNegativeReals,
-                           Objective, Param, RangeSet, Var, exp, minimize)
+from pyomo.environ import (
+    Binary,
+    ConcreteModel,
+    Constraint,
+    NonNegativeReals,
+    Objective,
+    Param,
+    RangeSet,
+    Var,
+    exp,
+    minimize,
+)
+from pyomo.common.collections import ComponentMap
 
 
 class EightProcessFlowsheet(ConcreteModel):
@@ -37,17 +48,17 @@ class EightProcessFlowsheet(ConcreteModel):
         m = self
 
         """Set declarations"""
-        I = m.I = RangeSet(2, 25, doc="process streams")
-        J = m.J = RangeSet(1, 8, doc="process units")
-        m.PI = RangeSet(1, 4, doc="integer constraints")
-        m.DS = RangeSet(1, 4, doc="design specifications")
+        I = m.I = RangeSet(2, 25, doc='process streams')
+        J = m.J = RangeSet(1, 8, doc='process units')
+        m.PI = RangeSet(1, 4, doc='integer constraints')
+        m.DS = RangeSet(1, 4, doc='design specifications')
         """
         1: Unit 8
         2: Unit 8
         3: Unit 4
         4: Unit 4
         """
-        m.MB = RangeSet(1, 7, doc="mass balances")
+        m.MB = RangeSet(1, 7, doc='mass balances')
         """Material balances:
         1: 4-6-7
         2: 3-5-8
@@ -66,9 +77,22 @@ class EightProcessFlowsheet(ConcreteModel):
 
         # VARIABLE COST COEFF FOR PROCESS UNITS - STREAMS
         # Format: stream #: cost
-        variable_cost = {3: -10, 5: -15, 9: -40, 19: 25, 21: 35, 25: -35,
-                         17: 80, 14: 15, 10: 15, 2: 1, 4: 1, 18: -65, 20: -60,
-                         22: -80}
+        variable_cost = {
+            3: -10,
+            5: -15,
+            9: -40,
+            19: 25,
+            21: 35,
+            25: -35,
+            17: 80,
+            14: 15,
+            10: 15,
+            2: 1,
+            4: 1,
+            18: -65,
+            20: -60,
+            22: -80,
+        }
         CV = m.CV = Param(I, initialize=variable_cost, default=0)
 
         # initial point information for equipment selection (for each NLP
@@ -76,13 +100,35 @@ class EightProcessFlowsheet(ConcreteModel):
         initY = {
             'sub1': {1: 1, 2: 0, 3: 1, 4: 1, 5: 0, 6: 0, 7: 1, 8: 1},
             'sub2': {1: 0, 2: 1, 3: 1, 4: 1, 5: 0, 6: 1, 7: 0, 8: 1},
-            'sub3': {1: 1, 2: 0, 3: 1, 4: 0, 5: 1, 6: 0, 7: 0, 8: 1}
+            'sub3': {1: 1, 2: 0, 3: 1, 4: 0, 5: 1, 6: 0, 7: 0, 8: 1},
         }
         # initial point information for stream flows
-        initX = {1: 0, 2: 2, 3: 1.5, 4: 0, 5: 0, 6: 0.75, 7: 0.5, 8: 0.5,
-                 9: 0.75, 10: 0, 11: 1.5, 12: 1.34, 13: 2, 14: 2.5, 15: 0,
-                 16: 0, 17: 2, 18: 0.75, 19: 2, 20: 1.5, 21: 0, 22: 0,
-                 23: 1.7, 24: 1.5, 25: 0.5}
+        initX = {
+            2: 2,
+            3: 1.5,
+            4: 0,
+            5: 0,
+            6: 0.75,
+            7: 0.5,
+            8: 0.5,
+            9: 0.75,
+            10: 0,
+            11: 1.5,
+            12: 1.34,
+            13: 2,
+            14: 2.5,
+            15: 0,
+            16: 0,
+            17: 2,
+            18: 0.75,
+            19: 2,
+            20: 1.5,
+            21: 0,
+            22: 0,
+            23: 1.7,
+            24: 1.5,
+            25: 0.5,
+        }
 
         """Variable declarations"""
         # BINARY VARIABLE DENOTING EXISTENCE-NONEXISTENCE
@@ -143,14 +189,63 @@ class EightProcessFlowsheet(ConcreteModel):
         m.pureint4 = Constraint(expr=m.Y[3] - m.Y[8] <= 0)
 
         """Cost (objective) function definition"""
-        m.cost = Objective(expr=sum(Y[j] * CF[j] for j in J) +
-                           sum(X[i] * CV[i] for i in I) + CONSTANT,
-                           sense=minimize)
+        m.objective = Objective(
+            expr=sum(Y[j] * CF[j] for j in J) + sum(X[i] * CV[i] for i in I) + CONSTANT,
+            sense=minimize,
+        )
 
         """Bound definitions"""
         # x (flow) upper bounds
         # x_ubs = {3: 2, 5: 2, 9: 2, 10: 1, 14: 1, 17: 2, 19: 2, 21: 2, 25: 3}
-        x_ubs = {2: 10, 3: 2, 4: 10, 5: 2, 9: 2, 10: 1, 14: 1, 17: 2, 18: 10, 19: 2,
-                 20: 10, 21: 2, 22: 10, 25: 3}  # add bounds for variables in nonlinear constraints
+        x_ubs = {
+            2: 10,
+            3: 2,
+            4: 10,
+            5: 2,
+            9: 2,
+            10: 1,
+            14: 1,
+            17: 2,
+            18: 10,
+            19: 2,
+            20: 10,
+            21: 2,
+            22: 10,
+            25: 3,
+        }  # add bounds for variables in nonlinear constraints
         for i, x_ub in x_ubs.items():
             X[i].setub(x_ub)
+        m.optimal_value = 68.0097
+        m.optimal_solution = ComponentMap()
+        m.optimal_solution[m.X[2]] = 0.0
+        m.optimal_solution[m.X[3]] = 0.0
+        m.optimal_solution[m.X[4]] = 4.294490050470028
+        m.optimal_solution[m.X[5]] = 1.9999999999999998
+        m.optimal_solution[m.X[6]] = 0.6666666666666665
+        m.optimal_solution[m.X[7]] = 0.1979983174202069
+        m.optimal_solution[m.X[8]] = 0.4686683492464596
+        m.optimal_solution[m.X[9]] = 0.0
+        m.optimal_solution[m.X[10]] = 0.4686683492464596
+        m.optimal_solution[m.X[11]] = 1.3333333333333333
+        m.optimal_solution[m.X[12]] = 1.3333333333333333
+        m.optimal_solution[m.X[13]] = 2.0
+        m.optimal_solution[m.X[14]] = 0.26666666666666666
+        m.optimal_solution[m.X[15]] = 0.0
+        m.optimal_solution[m.X[16]] = 0.0
+        m.optimal_solution[m.X[17]] = 0.5858354365580745
+        m.optimal_solution[m.X[18]] = 0.720035498875516
+        m.optimal_solution[m.X[19]] = 2.0
+        m.optimal_solution[m.X[20]] = 1.6479184330021648
+        m.optimal_solution[m.X[21]] = 0.0
+        m.optimal_solution[m.X[22]] = 0.0
+        m.optimal_solution[m.X[23]] = 1.6479184330021648
+        m.optimal_solution[m.X[24]] = 1.3812517663354982
+        m.optimal_solution[m.X[25]] = 0.5858354365580745
+        m.optimal_solution[m.Y[1]] = 0.0
+        m.optimal_solution[m.Y[2]] = 1.0
+        m.optimal_solution[m.Y[3]] = 0.0
+        m.optimal_solution[m.Y[4]] = 1.0
+        m.optimal_solution[m.Y[5]] = 0.0
+        m.optimal_solution[m.Y[6]] = 1.0
+        m.optimal_solution[m.Y[7]] = 0.0
+        m.optimal_solution[m.Y[8]] = 1.0

@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -10,12 +11,10 @@
 
 import collections.abc
 
-from pyomo.core.kernel.homogeneous_container import \
-    IHomogeneousContainer
+from pyomo.core.kernel.homogeneous_container import IHomogeneousContainer
 
 
-class TupleContainer(IHomogeneousContainer,
-                     collections.abc.Sequence):
+class TupleContainer(IHomogeneousContainer, collections.abc.Sequence):
     """
     A partial implementation of the IHomogeneousContainer
     interface that provides tuple-like storage functionality.
@@ -29,6 +28,7 @@ class TupleContainer(IHomogeneousContainer,
     other ICategorizedObjectContainer implementations that
     are defined with the same ctype.
     """
+
     __slots__ = ()
     _child_storage_delimiter_string = ""
     _child_storage_entry_string = "[%s]"
@@ -43,8 +43,8 @@ class TupleContainer(IHomogeneousContainer,
             if len(args) > 1:
                 raise TypeError(
                     "%s expected at most 1 arguments, "
-                    "got %s" % (self.__class__.__name__,
-                                len(args)))
+                    "got %s" % (self.__class__.__name__, len(args))
+                )
             for item in args[0]:
                 self._insert(len(self), item)
 
@@ -63,17 +63,14 @@ class TupleContainer(IHomogeneousContainer,
                 "Invalid assignment to type %s with index %s. "
                 "A parent container has already been "
                 "assigned to the object being inserted: %s"
-                % (self.__class__.__name__,
-                   i,
-                   item.parent.name))
+                % (self.__class__.__name__, i, item.parent.name)
+            )
         else:
             raise TypeError(
                 "Invalid assignment to type %s with index %s. "
                 "The object being inserted has the wrong "
-                "category type: %s"
-                % (self.__class__.__name__,
-                   i,
-                   item.ctype))
+                "category type: %s" % (self.__class__.__name__, i, item.ctype)
+            )
 
     #
     # Define the ICategorizedObjectContainer abstract methods
@@ -115,13 +112,11 @@ class TupleContainer(IHomogeneousContainer,
     # Convert both objects to a plain tuple of (type(val),
     # id(val)) tuples and compare that instead.
     def __eq__(self, other):
-        if not isinstance(other, (collections.abc.Set,
-                                  collections.abc.Sequence)):
+        if not isinstance(other, (collections.abc.Set, collections.abc.Sequence)):
             return False
-        return tuple((type(val), id(val))
-                     for val in self) == \
-               tuple((type(val), id(val))
-                     for val in other)
+        return tuple((type(val), id(val)) for val in self) == tuple(
+            (type(val), id(val)) for val in other
+        )
 
     def __ne__(self, other):
         return not (self == other)
@@ -142,7 +137,7 @@ class TupleContainer(IHomogeneousContainer,
     def index(self, item, start=0, stop=None):
         """S.index(value, [start, [stop]]) -> integer -- return first index of value.
 
-           Raises ValueError if the value is not present.
+        Raises ValueError if the value is not present.
         """
         if start is not None and start < 0:
             start = max(len(self) + start, 0)

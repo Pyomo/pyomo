@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -27,24 +28,27 @@ from scipy.optimize import fsolve
 from scipy.sparse import coo_matrix
 from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxModel
 
+
 def reactor_outlet_concentrations(sv, caf, k1, k2, k3):
     def _model(x, sv, caf, k1, k2, k3):
         ca, cb, cc, cd = x[0], x[1], x[2], x[3]
 
         # compute the residuals
         r = np.zeros(4)
-        r[0] = sv*caf + (-sv-k1)*ca - 2*k3*ca**2
-        r[1] = k1*ca + (-sv-k2)*cb
-        r[2] = k2*cb - sv*cc
-        r[3] = k3*ca**2 - sv*cd
+        r[0] = sv * caf + (-sv - k1) * ca - 2 * k3 * ca**2
+        r[1] = k1 * ca + (-sv - k2) * cb
+        r[2] = k2 * cb - sv * cc
+        r[3] = k3 * ca**2 - sv * cd
 
         return r
 
-    concentrations = \
-        fsolve(lambda x: _model(x, sv, caf, k1, k2, k3), np.ones(4), xtol=1e-8)
+    concentrations = fsolve(
+        lambda x: _model(x, sv, caf, k1, k2, k3), np.ones(4), xtol=1e-8
+    )
 
     # Todo: check solve status
     return concentrations
+
 
 class ReactorConcentrationsOutputModel(ExternalGreyBoxModel):
     def input_names(self):
@@ -67,14 +71,14 @@ class ReactorConcentrationsOutputModel(ExternalGreyBoxModel):
         # initialize the variables
         pyomo_block.inputs['sv'].value = 5
         pyomo_block.inputs['caf'].value = 10000
-        pyomo_block.inputs['k1'].value = 5/6
-        pyomo_block.inputs['k2'].value = 5/3
-        pyomo_block.inputs['k3'].value = 1/6000
+        pyomo_block.inputs['k1'].value = 5 / 6
+        pyomo_block.inputs['k2'].value = 5 / 3
+        pyomo_block.inputs['k3'].value = 1 / 6000
         pyomo_block.outputs['ca'].value = 1
         pyomo_block.outputs['cb'].value = 1
         pyomo_block.outputs['cc'].value = 1
         pyomo_block.outputs['cd'].value = 1
-        
+
     def evaluate_outputs(self):
         sv = self._input_values[0]
         caf = self._input_values[1]
@@ -90,17 +94,17 @@ class ReactorConcentrationsOutputModel(ExternalGreyBoxModel):
         delta = 1e-6
         u0 = np.copy(self._input_values)
         y0 = self.evaluate_outputs()
-        jac = np.empty((4,5))
+        jac = np.empty((4, 5))
         u = np.copy(self._input_values)
         for j in range(len(u)):
             # perturb the variables
             u[j] += delta
             self.set_input_values(u)
             yperturb = self.evaluate_outputs()
-            jac_col = (yperturb - y0)/delta
-            jac[:,j] = jac_col
+            jac_col = (yperturb - y0) / delta
+            jac[:, j] = jac_col
             u[j] = u0[j]
-            
+
         # return us back to our starting state
         self.set_input_values(u0)
 
@@ -113,17 +117,16 @@ class ReactorConcentrationsOutputModel(ExternalGreyBoxModel):
             for c in range(5):
                 row.append(r)
                 col.append(c)
-                data.append(jac[r,c])
-                
-        return coo_matrix((data, (row, col)), shape=(4,5))
+                data.append(jac[r, c])
+
+        return coo_matrix((data, (row, col)), shape=(4, 5))
+
 
 if __name__ == '__main__':
     sv = 1.34
     caf = 10000
-    k1 = 5/6
-    k2 = 5/3
-    k3 = 1/6000
+    k1 = 5 / 6
+    k2 = 5 / 3
+    k3 = 1 / 6000
     concentrations = reactor_outlet_concentrations(sv, caf, k1, k2, k3)
     print(concentrations)
-    
-    

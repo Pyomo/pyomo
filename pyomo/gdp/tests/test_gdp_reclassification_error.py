@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -31,8 +32,7 @@ class TestGDPReclassificationError(unittest.TestCase):
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.gdp', logging.WARNING):
             check_model_algebraic(m)
-        self.assertRegex( log.getvalue(), 
-                                  '.*not found in any Disjunctions.*')
+        self.assertRegex(log.getvalue(), '.*not found in any Disjunctions.*')
 
     def test_disjunct_not_in_active_disjunction(self):
         m = pyo.ConcreteModel()
@@ -47,6 +47,8 @@ class TestGDPReclassificationError(unittest.TestCase):
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.gdp', logging.WARNING):
             check_model_algebraic(m)
-        self.assertRegex(log.getvalue(), 
-                                 '.*While it participates in a Disjunction, '
-                                 'that Disjunction is currently deactivated.*')
+        self.assertRegex(
+            log.getvalue(),
+            '.*While it participates in a Disjunction, '
+            'that Disjunction is currently deactivated.*',
+        )

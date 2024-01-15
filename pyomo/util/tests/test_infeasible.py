@@ -2,7 +2,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -16,9 +17,12 @@ from io import StringIO
 import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 from pyomo.environ import ConcreteModel, Constraint, Var, inequality
-from pyomo.util.infeasible import (log_active_constraints, log_close_to_bounds,
-                                   log_infeasible_bounds,
-                                   log_infeasible_constraints)
+from pyomo.util.infeasible import (
+    log_active_constraints,
+    log_close_to_bounds,
+    log_infeasible_bounds,
+    log_infeasible_constraints,
+)
 
 
 class TestInfeasible(unittest.TestCase):
@@ -41,8 +45,8 @@ class TestInfeasible(unittest.TestCase):
         m.c10 = Constraint(expr=m.y >= 3, doc="Inactive")
         m.c10.deactivate()
         m.c11 = Constraint(expr=m.y <= m.y.value)
-        m.yy = Var(bounds=(0, 1), initialize=1E-7, doc="Close to lower bound")
-        m.y3 = Var(bounds=(0, 1E-7), initialize=0, doc="Bounds too close")
+        m.yy = Var(bounds=(0, 1), initialize=1e-7, doc="Close to lower bound")
+        m.y3 = Var(bounds=(0, 1e-7), initialize=0, doc="Bounds too close")
         m.y4 = Var(bounds=(0, 1), initialize=2, doc="Fixed out of bounds.")
         m.y4.fix()
         return m
@@ -50,6 +54,16 @@ class TestInfeasible(unittest.TestCase):
     def test_log_infeasible_constraints(self):
         """Test for logging of infeasible constraints."""
         m = self.build_model()
+
+        with LoggingIntercept(None, 'pyomo.util.infeasible') as LOG:
+            log_infeasible_constraints(m)
+        self.assertEqual(
+            'log_infeasible_constraints() called with a logger whose '
+            'effective level is higher than logging.INFO: no output '
+            'will be logged regardless of constraint feasibility',
+            LOG.getvalue().strip(),
+        )
+
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.util.infeasible', logging.INFO):
             log_infeasible_constraints(m)
@@ -57,8 +71,8 @@ class TestInfeasible(unittest.TestCase):
             "CONSTR c1: 2.0 </= 1",
             "CONSTR c2: 1 =/= 4.0",
             "CONSTR c3: 1 </= 0.0",
-            "CONSTR c5: 5.0 <?= missing variable value <?= 10.0",
-            "CONSTR c7: missing variable value =?= 6.0",
+            "CONSTR c5: 5.0 <?= evaluation error <?= 10.0",
+            "CONSTR c7: evaluation error =?= 6.0",
             "CONSTR c8: 3.0 </= 1 <= 6.0",
             "CONSTR c9: 0.0 <= 1 </= 0.5",
         ]
@@ -69,11 +83,24 @@ class TestInfeasible(unittest.TestCase):
         m = self.build_model()
         m.x.setlb(2)
         m.x.setub(0)
+
+        with LoggingIntercept(None, 'pyomo.util.infeasible') as LOG:
+            log_infeasible_bounds(m)
+        self.assertEqual(
+            'log_infeasible_bounds() called with a logger whose '
+            'effective level is higher than logging.INFO: no output '
+            'will be logged regardless of bound feasibility',
+            LOG.getvalue().strip(),
+        )
+
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.util', logging.INFO):
             log_infeasible_bounds(m)
         expected_output = [
-            "VAR x: 1 >/= LB 2", "VAR x: 1 </= UB 0", "VAR y4: 2 </= UB 1",
+            "VAR x: LB 2 </= 1",
+            "VAR x: 1 </= UB 0",
+            "VAR z: no assigned value.",
+            "VAR y4: 2 </= UB 1",
         ]
         self.assertEqual(expected_output, output.getvalue().splitlines())
 
@@ -82,27 +109,48 @@ class TestInfeasible(unittest.TestCase):
         m = self.build_model()
         depr = StringIO()
         output = StringIO()
-        with LoggingIntercept(depr, 'pyomo'):
-            with LoggingIntercept(output, 'pyomo.util', logging.INFO):
-                log_active_constraints(m)
+        with LoggingIntercept(depr, 'pyomo.util', logging.WARNING):
+            log_active_constraints(m)
         self.assertIn("log_active_constraints is deprecated.", depr.getvalue())
+        with LoggingIntercept(output, 'pyomo.util', logging.INFO):
+            log_active_constraints(m)
         expected_output = [
-            "c1 active", "c2 active", "c3 active", "c4 active",
-            "c5 active", "c6 active", "c7 active", "c8 active",
-            "c9 active", "c11 active"
+            "c1 active",
+            "c2 active",
+            "c3 active",
+            "c4 active",
+            "c5 active",
+            "c6 active",
+            "c7 active",
+            "c8 active",
+            "c9 active",
+            "c11 active",
         ]
-        self.assertEqual(expected_output, output.getvalue().splitlines())
+        self.assertEqual(
+            expected_output, output.getvalue()[len(depr.getvalue()) :].splitlines()
+        )
 
     def test_log_close_to_bounds(self):
         """Test logging of variables and constraints near bounds."""
         m = self.build_model()
+
+        with LoggingIntercept(None, 'pyomo.util.infeasible') as LOG:
+            log_close_to_bounds(m)
+        self.assertEqual(
+            'log_close_to_bounds() called with a logger whose '
+            'effective level is higher than logging.INFO: no output '
+            'will be logged regardless of bound status',
+            LOG.getvalue().strip(),
+        )
+
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.util.infeasible', logging.INFO):
             log_close_to_bounds(m)
         expected_output = [
-            "y near UB of 2", "yy near LB of 0", "c4 near LB",
-            "Skipping CONSTR c5: missing variable value.",
-            "c11 near UB",
+            "y near UB of 2",
+            "yy near LB of 0",
+            "c4 near LB of 1.9999999",
+            "c11 near UB of 1.9999999",
         ]
         self.assertEqual(expected_output, output.getvalue().splitlines())
 
@@ -113,13 +161,20 @@ class TestInfeasible(unittest.TestCase):
         with LoggingIntercept(output, 'pyomo.util.infeasible', logging.INFO):
             log_infeasible_constraints(m, log_expression=True)
         expected_output = [
-            "CONSTR c1: 2.0 </= 1", "  - EXPR: 2.0 </= x",
-            "CONSTR c2: 1 =/= 4.0", "  - EXPR: x =/= 4.0",
-            "CONSTR c3: 1 </= 0.0", "  - EXPR: x </= 0.0",
-            "CONSTR c5: 5.0 <?= missing variable value <?= 10.0", "  - EXPR: 5.0 <?= z <?= 10.0",
-            "CONSTR c7: missing variable value =?= 6.0", "  - EXPR: z =?= 6.0",
-            "CONSTR c8: 3.0 </= 1 <= 6.0", "  - EXPR: 3.0 </= x <= 6.0",
-            "CONSTR c9: 0.0 <= 1 </= 0.5", "  - EXPR: 0.0 <= x </= 0.5",
+            "CONSTR c1: 2.0 </= 1",
+            "  - EXPR: 2.0 </= x",
+            "CONSTR c2: 1 =/= 4.0",
+            "  - EXPR: x =/= 4.0",
+            "CONSTR c3: 1 </= 0.0",
+            "  - EXPR: x </= 0.0",
+            "CONSTR c5: 5.0 <?= evaluation error <?= 10.0",
+            "  - EXPR: 5.0 <?= z <?= 10.0",
+            "CONSTR c7: evaluation error =?= 6.0",
+            "  - EXPR: z =?= 6.0",
+            "CONSTR c8: 3.0 </= 1 <= 6.0",
+            "  - EXPR: 3.0 </= x <= 6.0",
+            "CONSTR c9: 0.0 <= 1 </= 0.5",
+            "  - EXPR: 0.0 <= x </= 0.5",
         ]
         self.assertEqual(expected_output, output.getvalue().splitlines())
 
@@ -130,13 +185,20 @@ class TestInfeasible(unittest.TestCase):
         with LoggingIntercept(output, 'pyomo.util.infeasible', logging.INFO):
             log_infeasible_constraints(m, log_variables=True)
         expected_output = [
-            "CONSTR c1: 2.0 </= 1", "  - VAR x: 1",
-            "CONSTR c2: 1 =/= 4.0", "  - VAR x: 1",
-            "CONSTR c3: 1 </= 0.0", "  - VAR x: 1",
-            "CONSTR c5: 5.0 <?= missing variable value <?= 10.0", "  - VAR z: None",
-            "CONSTR c7: missing variable value =?= 6.0", "  - VAR z: None",
-            "CONSTR c8: 3.0 </= 1 <= 6.0", "  - VAR x: 1",
-            "CONSTR c9: 0.0 <= 1 </= 0.5", "  - VAR x: 1",
+            "CONSTR c1: 2.0 </= 1",
+            "  - VAR x: 1",
+            "CONSTR c2: 1 =/= 4.0",
+            "  - VAR x: 1",
+            "CONSTR c3: 1 </= 0.0",
+            "  - VAR x: 1",
+            "CONSTR c5: 5.0 <?= evaluation error <?= 10.0",
+            "  - VAR z: None",
+            "CONSTR c7: evaluation error =?= 6.0",
+            "  - VAR z: None",
+            "CONSTR c8: 3.0 </= 1 <= 6.0",
+            "  - VAR x: 1",
+            "CONSTR c9: 0.0 <= 1 </= 0.5",
+            "  - VAR x: 1",
         ]
         self.assertEqual(expected_output, output.getvalue().splitlines())
 

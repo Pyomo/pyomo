@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -15,8 +16,10 @@ try:
     import pyomo.contrib.pynumero.asl as _asl
 except ImportError as e:
     print('{}'.format(e))
-    raise ImportError('Error importing asl.'
-                      'Make sure libpynumero_ASL is installed and added to path.')
+    raise ImportError(
+        'Error importing asl.'
+        'Make sure libpynumero_ASL is installed and added to path.'
+    )
 
 from scipy.sparse import coo_matrix
 import os
@@ -26,16 +29,17 @@ from pyomo.contrib.pynumero.interfaces.nlp import ExtendedNLP
 
 __all__ = ['AslNLP', 'AmplNLP']
 
+
 # ToDo: need to add support for modifying bounds.
 # support for changing variable bounds seems possible.
 # support for changing inequality bounds would require more work. (this is less frequent?)
-# TODO: check performance impacts of cacheing - memory and computational time.
+# TODO: check performance impacts of caching - memory and computational time.
 # TODO: only create and cache data for ExtendedNLP methods if they are ever asked for
 # TODO: There are todos in the code below
 class AslNLP(ExtendedNLP):
     def __init__(self, nl_file):
         """
-        Base class for NLP classes based on the Ampl Solver Library and 
+        Base class for NLP classes based on the Ampl Solver Library and
         NL files.
 
         Parameters
@@ -64,20 +68,36 @@ class AslNLP(ExtendedNLP):
         self._cached_objective = None
         self._cached_grad_objective = self.create_new_vector('primals')
         self._cached_con_full = np.zeros(self._n_con_full, dtype=np.float64)
-        self._cached_jac_full = coo_matrix((np.zeros(self._nnz_jac_full, dtype=np.float64),
-                                               (self._irows_jac_full, self._jcols_jac_full)),
-                                              shape=(self._n_con_full, self._n_primals))
+        self._cached_jac_full = coo_matrix(
+            (
+                np.zeros(self._nnz_jac_full, dtype=np.float64),
+                (self._irows_jac_full, self._jcols_jac_full),
+            ),
+            shape=(self._n_con_full, self._n_primals),
+        )
         # these are only being cached for quicker copy of the matrix with the nonzero structure
         # TODO: only create these caches if the ExtendedNLP methods are asked for?
-        self._cached_jac_eq = coo_matrix((np.zeros(self._nnz_jac_eq, dtype=np.float64),
-                                               (self._irows_jac_eq, self._jcols_jac_eq)),
-                                               shape=(self._n_con_eq, self._n_primals))
-        self._cached_jac_ineq = coo_matrix((np.zeros(self._nnz_jac_ineq),
-                                                 (self._irows_jac_ineq, self._jcols_jac_ineq)),
-                                                shape=(self._n_con_ineq, self._n_primals))
-        self._cached_hessian_lag = coo_matrix((np.zeros(self._nnz_hessian_lag, dtype=np.float64),
-                                               (self._irows_hess, self._jcols_hess)),
-                                              shape=(self._n_primals, self._n_primals))
+        self._cached_jac_eq = coo_matrix(
+            (
+                np.zeros(self._nnz_jac_eq, dtype=np.float64),
+                (self._irows_jac_eq, self._jcols_jac_eq),
+            ),
+            shape=(self._n_con_eq, self._n_primals),
+        )
+        self._cached_jac_ineq = coo_matrix(
+            (
+                np.zeros(self._nnz_jac_ineq),
+                (self._irows_jac_ineq, self._jcols_jac_ineq),
+            ),
+            shape=(self._n_con_ineq, self._n_primals),
+        )
+        self._cached_hessian_lag = coo_matrix(
+            (
+                np.zeros(self._nnz_hessian_lag, dtype=np.float64),
+                (self._irows_hess, self._jcols_hess),
+            ),
+            shape=(self._n_primals, self._n_primals),
+        )
 
         self._invalidate_primals_cache()
         self._invalidate_duals_cache()
@@ -106,7 +126,7 @@ class AslNLP(ExtendedNLP):
         self._nnz_jac_full = self._asl.get_nnz_jac_g()
         self._nnz_hess_lag_lower = self._asl.get_nnz_hessian_lag()
 
-        # get the initial values for the primals 
+        # get the initial values for the primals
         self._init_primals = np.zeros(self._n_primals, dtype=np.float64)
         self._init_duals_full = np.zeros(self._n_con_full, dtype=np.float64)
         self._asl.get_init_x(self._init_primals)
@@ -129,21 +149,13 @@ class AslNLP(ExtendedNLP):
         self._asl.get_g_lower_bounds(self._con_full_lb)
         self._asl.get_g_upper_bounds(self._con_full_ub)
 
-        # check to make sure there are no fixed variables or crossed bounds
-        # TODO: this tolerance should somehow be linked to the algorithm tolerance?
-        # TODO: is the "fixed" check necessary?
-        tolerance_fixed_bounds = 1e-8
+        # check to make sure there are no crossed bounds
         bounds_difference = self._primals_ub - self._primals_lb
-        abs_bounds_difference = np.absolute(bounds_difference)
-        fixed_vars = np.any(abs_bounds_difference < tolerance_fixed_bounds)
-        if fixed_vars:
-            print(np.where(abs_bounds_difference<tolerance_fixed_bounds))
-            raise RuntimeError("Variables fixed using bounds is not currently supported.")
-
-        inconsistent_bounds = np.any(bounds_difference < 0.0)
-        if inconsistent_bounds:
-            # TODO: improve error message
-            raise RuntimeError("Variables found with upper bounds set below the lower bounds.")
+        if np.any(bounds_difference < 0):
+            print(np.where(bounds_difference < 0))
+            raise RuntimeError(
+                "Some variables have lower bounds that are greater than the upper bounds."
+            )
 
         # Build the maps for converting from the full constraint
         # vector (which includes all equality and inequality constraints)
@@ -159,7 +171,9 @@ class AslNLP(ExtendedNLP):
 
         # get the initial values for the dual variables
         self._init_duals_eq = np.compress(self._con_full_eq_mask, self._init_duals_full)
-        self._init_duals_ineq = np.compress(self._con_full_ineq_mask, self._init_duals_full)
+        self._init_duals_ineq = np.compress(
+            self._con_full_ineq_mask, self._init_duals_full
+        )
         self._init_duals_eq.flags.writeable = False
         self._init_duals_ineq.flags.writeable = False
 
@@ -173,7 +187,7 @@ class AslNLP(ExtendedNLP):
         self._con_full_ub[self._con_full_eq_mask] = 0.0
         self._con_full_lb.flags.writeable = False
         self._con_full_ub.flags.writeable = False
-        
+
         # set number of equatity and inequality constraints from maps
         self._n_con_eq = len(self._con_eq_full_map)
         self._n_con_ineq = len(self._con_ineq_full_map)
@@ -189,19 +203,31 @@ class AslNLP(ExtendedNLP):
 
         self._nz_con_full_eq_mask = np.isin(self._irows_jac_full, self._con_eq_full_map)
         self._nz_con_full_ineq_mask = np.logical_not(self._nz_con_full_eq_mask)
-        self._irows_jac_eq = np.compress(self._nz_con_full_eq_mask, self._irows_jac_full)
-        self._jcols_jac_eq = np.compress(self._nz_con_full_eq_mask, self._jcols_jac_full)
-        self._irows_jac_ineq = np.compress(self._nz_con_full_ineq_mask, self._irows_jac_full)
-        self._jcols_jac_ineq = np.compress(self._nz_con_full_ineq_mask, self._jcols_jac_full)
+        self._irows_jac_eq = np.compress(
+            self._nz_con_full_eq_mask, self._irows_jac_full
+        )
+        self._jcols_jac_eq = np.compress(
+            self._nz_con_full_eq_mask, self._jcols_jac_full
+        )
+        self._irows_jac_ineq = np.compress(
+            self._nz_con_full_ineq_mask, self._irows_jac_full
+        )
+        self._jcols_jac_ineq = np.compress(
+            self._nz_con_full_ineq_mask, self._jcols_jac_full
+        )
         self._nnz_jac_eq = len(self._irows_jac_eq)
         self._nnz_jac_ineq = len(self._irows_jac_ineq)
 
         # this is expensive but only done once - can we do this with numpy somehow?
-        self._con_full_eq_map = full_eq_map = {self._con_eq_full_map[i]: i for i in range(self._n_con_eq)}
+        self._con_full_eq_map = full_eq_map = {
+            self._con_eq_full_map[i]: i for i in range(self._n_con_eq)
+        }
         for i, v in enumerate(self._irows_jac_eq):
             self._irows_jac_eq[i] = full_eq_map[v]
 
-        self._con_full_ineq_map = full_ineq_map = {self._con_ineq_full_map[i]: i for i in range(self._n_con_ineq)}
+        self._con_full_ineq_map = full_ineq_map = {
+            self._con_ineq_full_map[i]: i for i in range(self._n_con_ineq)
+        }
         for i, v in enumerate(self._irows_jac_ineq):
             self._irows_jac_ineq[i] = full_ineq_map[v]
 
@@ -242,7 +268,9 @@ class AslNLP(ExtendedNLP):
         bounds_difference = self._con_full_ub - self._con_full_lb
         inconsistent_bounds = np.any(bounds_difference < 0.0)
         if inconsistent_bounds:
-            raise RuntimeError("Bounds on range constraints found with upper bounds set below the lower bounds.")
+            raise RuntimeError(
+                "Bounds on range constraints found with upper bounds set below the lower bounds."
+            )
 
         # build maps from con_full to con_eq and con_ineq
         abs_bounds_difference = np.absolute(bounds_difference)
@@ -293,7 +321,7 @@ class AslNLP(ExtendedNLP):
     # overloaded from NLP
     def nnz_jacobian(self):
         return self._nnz_jac_full
-    
+
     # overloaded from ExtendedNLP
     def nnz_jacobian_eq(self):
         return self._nnz_jac_eq
@@ -317,11 +345,11 @@ class AslNLP(ExtendedNLP):
     # overloaded from NLP
     def constraints_lb(self):
         return self._con_full_lb
-    
+
     # overloaded from NLP
     def constraints_ub(self):
         return self._con_full_ub
-    
+
     # overloaded from ExtendedNLP
     def ineq_lb(self):
         return self._con_ineq_lb
@@ -349,7 +377,7 @@ class AslNLP(ExtendedNLP):
     # overloaded from NLP / Extended NLP
     def create_new_vector(self, vector_type):
         """
-        Creates a vector of the appropriate length and structure as 
+        Creates a vector of the appropriate length and structure as
         requested
 
         Parameters
@@ -380,7 +408,7 @@ class AslNLP(ExtendedNLP):
 
     # overloaded from NLP
     def get_primals(self):
-        return  self._primals.copy()
+        return self._primals.copy()
 
     # overloaded from NLP
     def set_duals(self, duals):
@@ -402,7 +430,7 @@ class AslNLP(ExtendedNLP):
     # overloaded from NLP
     def get_obj_factor(self):
         return self._obj_factor
-    
+
     # overloaded from ExtendedNLP
     def set_duals_eq(self, duals_eq):
         self._invalidate_duals_cache()
@@ -441,16 +469,14 @@ class AslNLP(ExtendedNLP):
     def get_eq_constraints_scaling(self):
         constraints_scaling = self.get_constraints_scaling()
         if constraints_scaling is not None:
-            return np.compress(self._con_full_eq_mask,
-                               constraints_scaling)
+            return np.compress(self._con_full_eq_mask, constraints_scaling)
         return None
 
     # overloaded from ExtendedNLP
     def get_ineq_constraints_scaling(self):
         constraints_scaling = self.get_constraints_scaling()
         if constraints_scaling is not None:
-            return np.compress(self._con_full_ineq_mask,
-                               constraints_scaling)
+            return np.compress(self._con_full_ineq_mask, constraints_scaling)
         return None
 
     def _evaluate_objective_and_cache_if_necessary(self):
@@ -471,7 +497,11 @@ class AslNLP(ExtendedNLP):
 
         if out is not None:
             if not isinstance(out, np.ndarray) or out.size != self._n_primals:
-                raise RuntimeError('Called evaluate_grad_objective with an invalid "out" argument - should take an ndarray of size {}'.format(self._n_primals))
+                raise RuntimeError(
+                    'Called evaluate_grad_objective with an invalid "out" argument - should take an ndarray of size {}'.format(
+                        self._n_primals
+                    )
+                )
             np.copyto(out, self._cached_grad_objective)
             return out
         else:
@@ -491,9 +521,11 @@ class AslNLP(ExtendedNLP):
 
         if out is not None:
             if not isinstance(out, np.ndarray) or out.size != self._n_con_full:
-                raise RuntimeError('Called evaluate_constraints with an invalid'
-                                   ' "out" argument - should take an ndarray of '
-                                   'size {}'.format(self._n_con_full))
+                raise RuntimeError(
+                    'Called evaluate_constraints with an invalid'
+                    ' "out" argument - should take an ndarray of '
+                    'size {}'.format(self._n_con_full)
+                )
             np.copyto(out, self._cached_con_full)
             return out
         else:
@@ -505,11 +537,13 @@ class AslNLP(ExtendedNLP):
 
         if out is not None:
             if not isinstance(out, np.ndarray) or out.size != self._n_con_eq:
-                raise RuntimeError('Called evaluate_eq_constraints with an invalid'
-                                   ' "out" argument - should take an ndarray of '
-                                   'size {}'.format(self._n_con_eq))
+                raise RuntimeError(
+                    'Called evaluate_eq_constraints with an invalid'
+                    ' "out" argument - should take an ndarray of '
+                    'size {}'.format(self._n_con_eq)
+                )
             self._cached_con_full.compress(self._con_full_eq_mask, out=out)
-            return  out
+            return out
         else:
             return self._cached_con_full.compress(self._con_full_eq_mask)
 
@@ -519,9 +553,11 @@ class AslNLP(ExtendedNLP):
 
         if out is not None:
             if not isinstance(out, np.ndarray) or out.size != self._n_con_ineq:
-                raise RuntimeError('Called evaluate_ineq_constraints with an invalid'
-                                   ' "out" argument - should take an ndarray of '
-                                   'size {}'.format(self._n_con_ineq))
+                raise RuntimeError(
+                    'Called evaluate_ineq_constraints with an invalid'
+                    ' "out" argument - should take an ndarray of '
+                    'size {}'.format(self._n_con_ineq)
+                )
             self._cached_con_full.compress(self._con_full_ineq_mask, out=out)
             return out
         else:
@@ -539,14 +575,19 @@ class AslNLP(ExtendedNLP):
         self._evaluate_jacobians_and_cache_if_necessary()
 
         if out is not None:
-            if not isinstance(out, coo_matrix) \
-               or out.shape[0] != self._n_con_full \
-               or out.shape[1] != self._n_primals \
-               or out.nnz != self._nnz_jac_full:
-                raise RuntimeError('evaluate_jacobian called with an "out" argument'
-                                   ' that is invalid. This should be a coo_matrix with'
-                                   ' shape=({},{}) and nnz={}'
-                                   .format(self._n_con_full, self._n_primals, self._nnz_jac_full))
+            if (
+                not isinstance(out, coo_matrix)
+                or out.shape[0] != self._n_con_full
+                or out.shape[1] != self._n_primals
+                or out.nnz != self._nnz_jac_full
+            ):
+                raise RuntimeError(
+                    'evaluate_jacobian called with an "out" argument'
+                    ' that is invalid. This should be a coo_matrix with'
+                    ' shape=({},{}) and nnz={}'.format(
+                        self._n_con_full, self._n_primals, self._nnz_jac_full
+                    )
+                )
             np.copyto(out.data, self._cached_jac_full.data)
             return out
         else:
@@ -557,19 +598,26 @@ class AslNLP(ExtendedNLP):
         self._evaluate_jacobians_and_cache_if_necessary()
 
         if out is not None:
-            if not isinstance(out, coo_matrix) \
-               or out.shape[0] != self._n_con_eq \
-               or out.shape[1] != self._n_primals \
-               or out.nnz != self._nnz_jac_eq:
-                raise RuntimeError('evaluate_jacobian_eq called with an "out" argument'
-                                   ' that is invalid. This should be a coo_matrix with'
-                                   ' shape=({},{}) and nnz={}'
-                                   .format(self._n_con_eq, self._n_primals, self._nnz_jac_eq))
-            
+            if (
+                not isinstance(out, coo_matrix)
+                or out.shape[0] != self._n_con_eq
+                or out.shape[1] != self._n_primals
+                or out.nnz != self._nnz_jac_eq
+            ):
+                raise RuntimeError(
+                    'evaluate_jacobian_eq called with an "out" argument'
+                    ' that is invalid. This should be a coo_matrix with'
+                    ' shape=({},{}) and nnz={}'.format(
+                        self._n_con_eq, self._n_primals, self._nnz_jac_eq
+                    )
+                )
+
             self._cached_jac_full.data.compress(self._nz_con_full_eq_mask, out=out.data)
             return out
         else:
-            self._cached_jac_full.data.compress(self._nz_con_full_eq_mask, out=self._cached_jac_eq.data)
+            self._cached_jac_full.data.compress(
+                self._nz_con_full_eq_mask, out=self._cached_jac_eq.data
+            )
             return self._cached_jac_eq.copy()
 
     # overloaded from NLP
@@ -577,19 +625,28 @@ class AslNLP(ExtendedNLP):
         self._evaluate_jacobians_and_cache_if_necessary()
 
         if out is not None:
-            if not isinstance(out, coo_matrix) \
-               or out.shape[0] != self._n_con_ineq \
-               or out.shape[1] != self._n_primals \
-               or out.nnz != self._nnz_jac_ineq:
-                raise RuntimeError('evaluate_jacobian_ineq called with an "out" argument'
-                                   ' that is invalid. This should be a coo_matrix with'
-                                   ' shape=({},{}) and nnz={}'
-                                   .format(self._n_con_ineq, self._n_primals, self._nnz_jac_ineq))
-            
-            self._cached_jac_full.data.compress(self._nz_con_full_ineq_mask, out=out.data)
+            if (
+                not isinstance(out, coo_matrix)
+                or out.shape[0] != self._n_con_ineq
+                or out.shape[1] != self._n_primals
+                or out.nnz != self._nnz_jac_ineq
+            ):
+                raise RuntimeError(
+                    'evaluate_jacobian_ineq called with an "out" argument'
+                    ' that is invalid. This should be a coo_matrix with'
+                    ' shape=({},{}) and nnz={}'.format(
+                        self._n_con_ineq, self._n_primals, self._nnz_jac_ineq
+                    )
+                )
+
+            self._cached_jac_full.data.compress(
+                self._nz_con_full_ineq_mask, out=out.data
+            )
             return out
         else:
-            self._cached_jac_full.data.compress(self._nz_con_full_ineq_mask, out=self._cached_jac_ineq.data)
+            self._cached_jac_full.data.compress(
+                self._nz_con_full_ineq_mask, out=self._cached_jac_ineq.data
+            )
             return self._cached_jac_ineq.copy()
 
     def evaluate_hessian_lag(self, out=None):
@@ -601,8 +658,9 @@ class AslNLP(ExtendedNLP):
 
             # get the hessian
             data = np.zeros(self._nnz_hess_lag_lower, np.float64)
-            self._asl.eval_hes_lag(self._primals, self._duals_full,
-                                   data, obj_factor=self._obj_factor)
+            self._asl.eval_hes_lag(
+                self._primals, self._duals_full, data, obj_factor=self._obj_factor
+            )
             values = np.concatenate((data, data[self._lower_hess_mask]))
             # note: this was done to ensure that scipy did not change
             # the structure of a sparse matrix if one of the nonzeros
@@ -614,26 +672,36 @@ class AslNLP(ExtendedNLP):
             self._hessian_lag_is_cached = True
 
         if out is not None:
-            if not isinstance(out, coo_matrix) or out.shape[0] != self._n_primals or \
-               out.shape[1] != self._n_primals or out.nnz != self._nnz_hessian_lag:
-                raise RuntimeError('evaluate_hessian_lag called with an "out" argument'
-                                   ' that is invalid. This should be a coo_matrix with'
-                                   ' shape=({},{}) adn nnz={}'
-                                   .format(self._n_primals, self._n_primals, self._nnz_hessian_lag))
+            if (
+                not isinstance(out, coo_matrix)
+                or out.shape[0] != self._n_primals
+                or out.shape[1] != self._n_primals
+                or out.nnz != self._nnz_hessian_lag
+            ):
+                raise RuntimeError(
+                    'evaluate_hessian_lag called with an "out" argument'
+                    ' that is invalid. This should be a coo_matrix with'
+                    ' shape=({},{}) and nnz={}'.format(
+                        self._n_primals, self._n_primals, self._nnz_hessian_lag
+                    )
+                )
             np.copyto(out.data, self._cached_hessian_lag.data)
             return out
         else:
             return self._cached_hessian_lag.copy()
 
     def report_solver_status(self, status_code, status_message):
-        self._asl.finalize_solution(status_code, status_message, self._primals, self._duals)
+        self._asl.finalize_solution(
+            status_code, status_message, self._primals, self._duals
+        )
+
 
 class AmplNLP(AslNLP):
     def __init__(self, nl_file, row_filename=None, col_filename=None):
         """
         AMPL nonlinear program interface.
         If row_filename and col_filename are not provided, the interface
-        will see if files exist (with same name as nl_file but the .row 
+        will see if files exist (with same name as nl_file but the .row
         and .col extensions)
 
         Parameters
@@ -668,7 +736,9 @@ class AmplNLP(AslNLP):
         self._name_to_vidx = None
         if col_filename is not None:
             self._vidx_to_name = self._build_component_names_list(col_filename)
-            self._name_to_vidx = {self._vidx_to_name[vidx]: vidx for vidx in range(self._n_primals)}
+            self._name_to_vidx = {
+                self._vidx_to_name[vidx]: vidx for vidx in range(self._n_primals)
+            }
 
         # create containers with names of constraints and objective
         self._con_full_idx_to_name = None
@@ -681,17 +751,31 @@ class AmplNLP(AslNLP):
             self._obj_name = all_names[-1]
             del all_names[-1]
             self._con_full_idx_to_name = all_names
-            self._con_eq_idx_to_name = [all_names[self._con_eq_full_map[i]] for i in range(self._n_con_eq)]
-            self._con_ineq_idx_to_name = [all_names[self._con_ineq_full_map[i]] for i in range(self._n_con_ineq)]
-            self._name_to_con_full_idx = {all_names[cidx]: cidx for cidx in range(self._n_con_full)}
-            self._name_to_con_eq_idx = {name:idx for idx,name in enumerate(self._con_eq_idx_to_name)}
-            self._name_to_con_ineq_idx = {name:idx for idx,name in enumerate(self._con_ineq_idx_to_name)}
+            self._con_eq_idx_to_name = [
+                all_names[self._con_eq_full_map[i]] for i in range(self._n_con_eq)
+            ]
+            self._con_ineq_idx_to_name = [
+                all_names[self._con_ineq_full_map[i]] for i in range(self._n_con_ineq)
+            ]
+            self._name_to_con_full_idx = {
+                all_names[cidx]: cidx for cidx in range(self._n_con_full)
+            }
+            self._name_to_con_eq_idx = {
+                name: idx for idx, name in enumerate(self._con_eq_idx_to_name)
+            }
+            self._name_to_con_ineq_idx = {
+                name: idx for idx, name in enumerate(self._con_ineq_idx_to_name)
+            }
 
     def primals_names(self):
         """Returns ordered list with names of primal variables"""
         return list(self._vidx_to_name)
 
-    @deprecated(msg='This method has been replaced with primals_names', version='6.0.0.dev0', remove_in='6.0')
+    @deprecated(
+        msg='This method has been replaced with primals_names',
+        version='6.0.0',
+        remove_in='6.0',
+    )
     def variable_names(self):
         """Returns ordered list with names of primal variables"""
         return self.primals_names()
@@ -711,7 +795,11 @@ class AmplNLP(AslNLP):
         (corresponding to evaluate_ineq_constraints)"""
         return list(self._con_ineq_idx_to_name)
 
-    @deprecated(msg='This method has been replaced with primal_idx', version='6.0.0.dev0', remove_in='6.0')
+    @deprecated(
+        msg='This method has been replaced with primal_idx',
+        version='6.0.0',
+        remove_in='6.0',
+    )
     def variable_idx(self, var_name):
         return self.primal_idx(var_name)
 
@@ -783,9 +871,9 @@ class AmplNLP(AslNLP):
 
     @staticmethod
     def _build_component_names_list(filename):
-        """ Builds an ordered list of strings from a file 
+        """Builds an ordered list of strings from a file
         containing strings on separate lines (e.g., the row
-        and col files """
+        and col files"""
         ordered_names = list()
         with open(filename, 'r') as f:
             for line in f:

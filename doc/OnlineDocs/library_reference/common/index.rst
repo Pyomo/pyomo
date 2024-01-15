@@ -1,7 +1,7 @@
 Common Utilities
 ================
 
-Pyomo provides a set of general-purpose utilites through
+Pyomo provides a set of general-purpose utilities through
 ``pyomo.common``.  These utilities are self-contained and do not import
 or rely on any other parts of Pyomo.
 
@@ -10,4 +10,9 @@ or rely on any other parts of Pyomo.
 
    config.rst
    dependencies.rst
+   deprecation.rst
+   errors.rst
+   fileutils.rst
+   formatting.rst
+   tempfiles.rst
    timing.rst

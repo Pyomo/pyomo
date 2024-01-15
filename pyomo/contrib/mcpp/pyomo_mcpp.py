@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -22,16 +23,24 @@ from pyomo.core.base.block import SubclassOf
 from pyomo.core.base.expression import _ExpressionData
 from pyomo.core.expr.numvalue import nonpyomo_leaf_types
 from pyomo.core.expr.numeric_expr import (
-    AbsExpression, LinearExpression, NegationExpression, NPV_AbsExpression,
-    NPV_ExternalFunctionExpression, NPV_NegationExpression, NPV_PowExpression,
-    NPV_ProductExpression, NPV_ReciprocalExpression, NPV_SumExpression,
-    NPV_UnaryFunctionExpression, PowExpression, ProductExpression,
-    ReciprocalExpression, SumExpression, UnaryFunctionExpression,
-    NPV_DivisionExpression, DivisionExpression,
+    AbsExpression,
+    LinearExpression,
+    NegationExpression,
+    NPV_AbsExpression,
+    NPV_ExternalFunctionExpression,
+    NPV_NegationExpression,
+    NPV_PowExpression,
+    NPV_ProductExpression,
+    NPV_SumExpression,
+    NPV_UnaryFunctionExpression,
+    PowExpression,
+    ProductExpression,
+    SumExpression,
+    UnaryFunctionExpression,
+    NPV_DivisionExpression,
+    DivisionExpression,
 )
-from pyomo.core.expr.visitor import (
-    StreamBasedExpressionVisitor, identify_variables,
-)
+from pyomo.core.expr.visitor import StreamBasedExpressionVisitor, identify_variables
 from pyomo.common.collections import ComponentMap
 
 logger = logging.getLogger('pyomo.contrib.mcpp')
@@ -47,10 +56,14 @@ def mcpp_available():
 
 
 NPV_expressions = (
-    NPV_AbsExpression, NPV_ExternalFunctionExpression,
-    NPV_NegationExpression, NPV_PowExpression,
-    NPV_ProductExpression, NPV_ReciprocalExpression, NPV_SumExpression,
-    NPV_UnaryFunctionExpression, NPV_DivisionExpression,
+    NPV_AbsExpression,
+    NPV_ExternalFunctionExpression,
+    NPV_NegationExpression,
+    NPV_PowExpression,
+    NPV_ProductExpression,
+    NPV_SumExpression,
+    NPV_UnaryFunctionExpression,
+    NPV_DivisionExpression,
 )
 
 
@@ -63,7 +76,7 @@ def _MCPP_lib():
 
     # Version number
     mcpp.get_version.restype = ctypes.c_char_p
-    
+
     mcpp.toString.argtypes = [ctypes.c_void_p]
     mcpp.toString.restype = ctypes.c_char_p
 
@@ -86,8 +99,13 @@ def _MCPP_lib():
     mcpp.subcv.restype = ctypes.c_double
 
     # Create MC type variable
-    mcpp.newVar.argtypes = [ctypes.c_double, ctypes.c_double,
-                                 ctypes.c_double, ctypes.c_int, ctypes.c_int]
+    mcpp.newVar.argtypes = [
+        ctypes.c_double,
+        ctypes.c_double,
+        ctypes.c_double,
+        ctypes.c_int,
+        ctypes.c_int,
+    ]
     mcpp.newVar.restype = ctypes.c_void_p
 
     # Create MC type constant
@@ -116,10 +134,6 @@ def _MCPP_lib():
     # sqrt function
     mcpp.mc_sqrt.argtypes = [ctypes.c_void_p]
     mcpp.mc_sqrt.restype = ctypes.c_void_p
-
-    # 1 / MC Variable
-    mcpp.reciprocal.argtypes = [ctypes.c_void_p]
-    mcpp.reciprocal.restype = ctypes.c_void_p
 
     # - MC Variable
     mcpp.negation.argtypes = [ctypes.c_void_p]
@@ -169,14 +183,14 @@ def _MCPP_lib():
     mcpp.try_unary_fcn.restype = ctypes.c_void_p
 
     # Binary function exception wrapper
-    mcpp.try_binary_fcn.argtypes = [ctypes.c_void_p, ctypes.c_void_p,
-                                         ctypes.c_void_p]
+    mcpp.try_binary_fcn.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p]
     mcpp.try_binary_fcn.restype = ctypes.c_void_p
 
     # Error message retrieval
     mcpp.get_last_exception_message.restype = ctypes.c_char_p
 
     return mcpp
+
 
 # Initialize the singleton to None
 _MCPP_lib._mcpp = None
@@ -249,9 +263,6 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
                 ans = self.mcpp.try_binary_fcn(self.mcpp.powerf, data[0], data[1])
             else:
                 ans = self.mcpp.try_binary_fcn(self.mcpp.powerx, data[0], data[1])
-        elif isinstance(node, ReciprocalExpression):
-            # Note: unreachable after ReciprocalExpression was removed
-            ans = self.mcpp.try_unary_fcn(self.mcpp.reciprocal, data[0])
         elif isinstance(node, DivisionExpression):
             ans = self.mcpp.try_binary_fcn(self.mcpp.divide, data[0], data[1])
         elif isinstance(node, NegationExpression):
@@ -260,7 +271,8 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
             ans = self.mcpp.try_unary_fcn(self.mcpp.mc_abs, data[0])
         elif isinstance(node, LinearExpression):
             raise NotImplementedError(
-                'Quicksum has bugs that prevent proper usage of MC++.')
+                'Quicksum has bugs that prevent proper usage of MC++.'
+            )
             # ans = self.mcpp.newConstant(node.constant)
             # for coef, var in zip(node.linear_coefs, node.linear_vars):
             #     ans = self.mcpp.add(
@@ -346,20 +358,20 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
         if lb == -inf:
             lb = -500000
             logger.warning(
-                'Var %s missing lower bound. Assuming LB of %s'
-                % (var.name, lb))
+                'Var %s missing lower bound. Assuming LB of %s' % (var.name, lb)
+            )
         if ub == inf:
             ub = 500000
             logger.warning(
-                'Var %s missing upper bound. Assuming UB of %s'
-                % (var.name, ub))
+                'Var %s missing upper bound. Assuming UB of %s' % (var.name, ub)
+            )
         if var_val is None:
             var_val = (lb + ub) / 2
             self.missing_value_warnings.append(
                 'Var %s missing value. Assuming midpoint value of %s'
-                % (var.name, var_val))
-        return self.mcpp.newVar(
-            lb, var_val, ub, self.num_vars, var_idx)
+                % (var.name, var_val)
+            )
+        return self.mcpp.newVar(lb, var_val, ub, self.num_vars, var_idx)
 
     def finalizeResult(self, node_result):
         # Note, the node_result should NOT be in self.refs
@@ -406,7 +418,7 @@ class McCormick(object):
 
     def changePoint(self, var, point): updates the current value() on the
     pyomo side and the current point on the MC++ side.
-                                                                    """
+    """
 
     def __init__(self, expression, improved_var_bounds=None):
         # Guarantee that McCormick objects have mc_expr defined
@@ -473,4 +485,3 @@ class McCormick(object):
             for message in self.visitor.missing_value_warnings:
                 logger.warning(message)
             self.visitor.missing_value_warnings = []
-

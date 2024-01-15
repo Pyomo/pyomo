@@ -1,31 +1,23 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import sys
 import logging
 import collections.abc
 
-from pyomo.core.kernel.homogeneous_container import \
-    IHomogeneousContainer
-
-if sys.version_info[:2] >= (3,7):
-    # dict became ordered in CPython 3.6 and added to the standard in 3.7
-    _ordered_dict_ = dict
-else:
-    _ordered_dict_ = collections.OrderedDict
+from pyomo.core.kernel.homogeneous_container import IHomogeneousContainer
 
 logger = logging.getLogger('pyomo.core')
 
 
-class DictContainer(IHomogeneousContainer,
-                    collections.abc.MutableMapping):
+class DictContainer(IHomogeneousContainer, collections.abc.MutableMapping):
     """
     A partial implementation of the IHomogeneousContainer
     interface that provides dict-like storage functionality.
@@ -39,18 +31,19 @@ class DictContainer(IHomogeneousContainer,
     other ICategorizedObjectContainer implementations that
     are defined with the same ctype.
     """
+
     __slots__ = ()
     _child_storage_delimiter_string = ""
     _child_storage_entry_string = "[%s]"
 
     def __init__(self, *args, **kwds):
-        self._data = _ordered_dict_()
+        self._data = dict()
         if len(args) > 0:
             if len(args) > 1:
                 raise TypeError(
                     "%s expected at most 1 arguments, "
-                    "got %s" % (self.__class__.__name__,
-                                len(args)))
+                    "got %s" % (self.__class__.__name__, len(args))
+                )
             self.update(args[0])
         if len(kwds):
             self.update(**kwds)
@@ -91,9 +84,12 @@ class DictContainer(IHomogeneousContainer,
                         "indicative of a modeling error. To avoid this "
                         "warning, delete the original object from the "
                         "container before assigning a new object."
-                        % (self[key].name,
-                           self[key].__class__.__name__,
-                           item.__class__.__name__))
+                        % (
+                            self[key].name,
+                            self[key].__class__.__name__,
+                            item.__class__.__name__,
+                        )
+                    )
                     self._data[key]._clear_parent_and_storage_key()
                 self._fast_insert(key, item)
                 return
@@ -111,18 +107,14 @@ class DictContainer(IHomogeneousContainer,
                 "Invalid assignment to %s type with name '%s' "
                 "at key %s. A parent container has already been "
                 "assigned to the object being inserted: %s"
-                % (self.__class__.__name__,
-                   self.name,
-                   key,
-                   item.parent.name))
+                % (self.__class__.__name__, self.name, key, item.parent.name)
+            )
         else:
             raise TypeError(
                 "Invalid assignment to type %s with index %s. "
                 "The object being inserted has the wrong "
-                "category type: %s"
-                % (self.__class__.__name__,
-                   key,
-                   item.ctype))
+                "category type: %s" % (self.__class__.__name__, key, item.ctype)
+            )
 
     def __delitem__(self, key):
         self._data[key]._clear_parent_and_storage_key()
@@ -151,10 +143,9 @@ class DictContainer(IHomogeneousContainer,
     def __eq__(self, other):
         if not isinstance(other, collections.abc.Mapping):
             return False
-        return {key:(type(val), id(val))
-                    for key, val in self.items()} == \
-               {key:(type(val), id(val))
-                    for key, val in other.items()}
+        return {key: (type(val), id(val)) for key, val in self.items()} == {
+            key: (type(val), id(val)) for key, val in other.items()
+        }
 
     def __ne__(self, other):
         return not (self == other)

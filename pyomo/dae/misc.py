@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -17,6 +18,7 @@ from pyomo.core import Expression, Param
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.block import IndexedBlock, SortComponents
 from pyomo.dae import ContinuousSet, DAE_Error
+from pyomo.common.formatting import tostr
 
 from io import StringIO
 
@@ -56,7 +58,7 @@ def generate_finite_elements(ds, nfe):
         # is placed at the midpoint of the largest step. This
         # process is repeated until we have achieved the desired
         # number of finite elements. If there are multiple "largest steps"
-        # the point will be placed at the first occurance of the
+        # the point will be placed at the first occurrence of the
         # largest step
 
         addpts = nfe - (len(ds) - 1)
@@ -119,7 +121,7 @@ def expand_components(block):
     # BlockData will be added to the indexed Block but will not be
     # constructed correctly.
     for blk in block.component_objects(Block, descend_into=True):
-        missing_idx = set(blk._index) - set(blk._data.keys())
+        missing_idx = set(blk.index_set()) - set(blk._data.keys())
         if missing_idx:
             blk._dae_missing_idx = missing_idx
 
@@ -127,7 +129,6 @@ def expand_components(block):
     # swallowed by the LoggingIntercept context below are re-raised if the
     # discretization encounters an error it isn't expecting.
     try:
-
         # Intercept logging to suppress Error messages arising from failed
         # constraint rules. These error messages get logged even though the
         # AttributeError causing the error is caught and handled by this
@@ -136,11 +137,11 @@ def expand_components(block):
         # unexpected exception is raised.
         buf = StringIO()
         with LoggingIntercept(buf, 'pyomo.core', logging.ERROR):
-
             # Identify components that need to be expanded and try expanding
             # them
-            for c in block.component_objects(descend_into=True,
-                                             sort=SortComponents.declOrder):
+            for c in block.component_objects(
+                descend_into=True, sort=SortComponents.declOrder
+            ):
                 try:
                     update_contset_indexed_component(c, expansion_map)
                 except AttributeError:
@@ -159,13 +160,14 @@ def expand_components(block):
                     except AttributeError:
                         redo_expansion.append(c)
                 if len(redo_expansion) == N:
-                    raise DAE_Error("Unable to fully discretize %s. Possible "
-                                    "circular references detected between "
-                                    "components %s. Reformulate your model to"
-                                    " remove circular references or apply a "
-                                    "discretization transformation before "
-                                    "linking blocks together."
-                                    % (block, str(redo_expansion)))
+                    raise DAE_Error(
+                        "Unable to fully discretize %s. Possible "
+                        "circular references detected between "
+                        "components %s. Reformulate your model to"
+                        " remove circular references or apply a "
+                        "discretization transformation before "
+                        "linking blocks together." % (block, tostr(redo_expansion))
+                    )
 
                 N = len(redo_expansion)
 
@@ -173,13 +175,14 @@ def expand_components(block):
         logger.error(buf.getvalue())
         raise
 
+
 def update_contset_indexed_component(comp, expansion_map):
     """
     Update any model components which are indexed by a ContinuousSet that
     has changed
     """
 
-    # This implemenation will *NOT* check for or update
+    # This implementation will *NOT* check for or update
     # components which use a ContinuousSet implicitly. ex) an
     # objective function which iterates through a ContinuousSet and
     # sums the squared error.  If you use a ContinuousSet implicitly
@@ -188,7 +191,7 @@ def update_contset_indexed_component(comp, expansion_map):
 
     if comp.ctype is Suffix:
         return
-    
+
     # Params indexed by a ContinuousSet should include an initialize
     # and/or default rule which will be called automatically when the
     # parameter value at a new point in the ContinuousSet is
@@ -200,6 +203,7 @@ def update_contset_indexed_component(comp, expansion_map):
     # Integral components are handled after every ContinuousSet has been
     # discretized. Import is deferred to here due to circular references.
     from pyomo.dae import Integral
+
     if comp.ctype is Integral:
         return
 
@@ -233,11 +237,11 @@ def update_contset_indexed_component(comp, expansion_map):
                 expansion_map[comp] = _update_expression
                 _update_expression(comp)
             elif isinstance(comp, Piecewise):
-                expansion_map[comp] =_update_piecewise
+                expansion_map[comp] = _update_piecewise
                 _update_piecewise(comp)
             elif comp.ctype == Block:
                 expansion_map[comp] = _update_block
-                _update_block(comp)    
+                _update_block(comp)
             else:
                 raise TypeError(
                     "Found component %s of type %s indexed "
@@ -246,7 +250,8 @@ def update_contset_indexed_component(comp, expansion_map):
                     "discretization transformation in pyomo.dae. "
                     "Try adding the component to the model "
                     "after discretizing. Alert the pyomo developers "
-                    "for more assistance." % (str(comp), comp.ctype))
+                    "for more assistance." % (str(comp), comp.ctype)
+                )
 
 
 def _update_var(v):
@@ -259,7 +264,7 @@ def _update_var(v):
     #       Var (which is now a IndexedComponent). However, it
     #       would be much slower to rely on that method to generate new
     #       _VarData for a large number of new indices.
-    new_indices = set(v._index) - set(v._data.keys())
+    new_indices = set(v.index_set()) - set(v._data.keys())
     for index in new_indices:
         v.add(index)
 
@@ -269,13 +274,7 @@ def _update_constraint(con):
     This method will construct any additional indices in a constraint
     resulting from the discretization of a ContinuousSet.
     """
-
-    _rule = con.rule
-    _parent = con._parent()
-    for i in con.index_set():
-        if i not in con:
-            # Code taken from the construct() method of Constraint
-            con.add(i, _rule(_parent, i))
+    con.to_dense_data()
 
 
 def _update_expression(expre):
@@ -283,12 +282,7 @@ def _update_expression(expre):
     This method will construct any additional indices in an expression
     resulting from the discretization of a ContinuousSet.
     """
-    _rule = expre._init_rule
-    _parent = expre._parent()
-    for i in expre.index_set():
-        if i not in expre:
-            # Code taken from the construct() method of Expression
-            expre.add(i, apply_indexed_rule(expre, _rule, _parent, i))
+    expre.to_dense_data()
 
 
 def _update_block(blk):
@@ -306,12 +300,12 @@ def _update_block(blk):
     sufficient to update it correctly.
 
     """
-    
+
     # Check if Block construct method is overridden
     # getattr needed below for Python 2, 3 compatibility
-    if blk.construct.__func__ is not getattr(IndexedBlock.construct,
-                                             '__func__',
-                                             IndexedBlock.construct):
+    if blk.construct.__func__ is not getattr(
+        IndexedBlock.construct, '__func__', IndexedBlock.construct
+    ):
         # check for custom update function
         if hasattr(blk, 'update_after_discretization'):
             blk.update_after_discretization()
@@ -326,7 +320,8 @@ def _update_block(blk):
                 'that the component was expanded correctly. To suppress this '
                 'warning, please provide an update_after_discretization() '
                 'function on Block-derived components that override '
-                'construct()' % blk.name)
+                'construct()' % blk.name
+            )
 
     missing_idx = getattr(blk, '_dae_missing_idx', set([]))
     for idx in list(missing_idx):
@@ -352,8 +347,10 @@ def create_access_function(var):
     This method returns a function that returns a component by calling
     it rather than indexing it
     """
+
     def _fun(*args):
         return var[args]
+
     return _fun
 
 
@@ -365,9 +362,10 @@ def create_partial_expression(scheme, expr, ind, loc):
     discretization scheme to one indexing set at a time but we also want
     the function to be expanded over any other indexing sets.
     """
+
     def _fun(*args):
-        return scheme(lambda i: expr(*(args[0:loc] + (i,) + args[loc + 1:])),
-                      ind)
+        return scheme(lambda i: expr(*(args[0:loc] + (i,) + args[loc + 1 :])), ind)
+
     return lambda *args: _fun(*args)(args[loc])
 
 
@@ -384,8 +382,9 @@ def add_discretization_equations(block, d):
         except IndexError:
             return Constraint.Skip
 
-    block.add_component(d.local_name + '_disc_eq',
-                        Constraint(d.index_set(), rule=_disc_eq))
+    block.add_component(
+        d.local_name + '_disc_eq', Constraint(d.index_set(), rule=_disc_eq)
+    )
 
 
 def add_continuity_equations(block, d, i, loc):
@@ -404,16 +403,17 @@ def add_continuity_equations(block, d, i, loc):
 
         def _fun(i):
             tmp = list(s)
-            idx = s.ord(i)-1
+            idx = s.ord(i) - 1
             low = s.get_lower_element_boundary(i)
             if i != low or idx == 0:
                 raise IndexError("list index out of range")
             low = s.get_lower_element_boundary(tmp[idx - 1])
-            lowidx = s.ord(low)-1
+            lowidx = s.ord(low) - 1
             return sum(v(tmp[lowidx + j]) * afinal[j] for j in range(ncp + 1))
+
         return _fun
-    expr = create_partial_expression(_cont_exp, create_access_function(svar),
-                                     i, loc)
+
+    expr = create_partial_expression(_cont_exp, create_access_function(svar), i, loc)
 
     def _cont_eq(m, *args):
         try:
@@ -421,8 +421,7 @@ def add_continuity_equations(block, d, i, loc):
         except IndexError:
             return Constraint.Skip
 
-    block.add_component(nme, Constraint(d.index_set(),
-                                        rule=_cont_eq))
+    block.add_component(nme, Constraint(d.index_set(), rule=_cont_eq))
 
 
 def block_fully_discretized(b):
@@ -452,7 +451,7 @@ def get_index_information(var, ds):
 
     if var.dim() != 1:
         indCount = 0
-        for index in var.index_set().set_tuple:
+        for index in var.index_set().subsets():
             if isinstance(index, ContinuousSet):
                 if index is ds:
                     dsindex = indCount
@@ -460,7 +459,7 @@ def get_index_information(var, ds):
                     # If var is indexed by multiple ContinuousSets treat
                     # other ContinuousSets like a normal indexing set
                     indargs.append(index)
-                indCount += 1     # A ContinuousSet must be one dimensional
+                indCount += 1  # A ContinuousSet must be one dimensional
             else:
                 indargs.append(index)
                 indCount += index.dimen
@@ -499,7 +498,7 @@ def _get_idx(l, ds, n, i, k):
     points.
     """
     t = list(ds)
-    tmp = ds.ord(ds._fe[i])-1
+    tmp = ds.ord(ds._fe[i]) - 1
     tik = t[tmp + k]
     if n is None:
         return tik

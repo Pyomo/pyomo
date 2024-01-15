@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -14,13 +15,15 @@ from pyomo.common.dependencies import attempt_import
 from .interface import InteriorPointInterface
 from .linalg.scipy_interface import ScipyInterface
 
-np, numpy_available = attempt_import('numpy',
-                                     'Interior point requires numpy',
-                                     minimum_version='1.13.0')
+np, numpy_available = attempt_import(
+    'numpy', 'Interior point requires numpy', minimum_version='1.13.0'
+)
 
 
 # Todo: This function currently used IPOPT for the initial solve - should accept solver
-def inv_reduced_hessian_barrier(model, independent_variables, bound_tolerance=1e-6, solver_options=None, tee=False):
+def inv_reduced_hessian_barrier(
+    model, independent_variables, bound_tolerance=1e-6, solver_options=None, tee=False
+):
     """
     This function computes the inverse of the reduced Hessian of a problem at the
     solution. This function first solves the problem with Ipopt and then generates
@@ -28,8 +31,8 @@ def inv_reduced_hessian_barrier(model, independent_variables, bound_tolerance=1e
 
     For more information on the reduced Hessian, see "Numerical Optimization", 2nd Edition
     Nocedal and Wright, 2006.
-    
-    The approach used in this method can be found in, "Computational Strategies for 
+
+    The approach used in this method can be found in, "Computational Strategies for
     the Optimal Operation of Large-Scale Chemical Processes", Dissertation, V. Zavala
     2008. See section 3.2.1.
 
@@ -39,7 +42,7 @@ def inv_reduced_hessian_barrier(model, independent_variables, bound_tolerance=1e
         The Pyomo model that we want to solve and analyze
     independent_variables : list of Pyomo variables
         This is the list of independent variables for computing the reduced hessian.
-        These variables must not be at their bounds at the solution of the 
+        These variables must not be at their bounds at the solution of the
         optimization problem.
     bound_tolerance : float
        The tolerance to use when checking if the variables are too close to their bound.
@@ -75,8 +78,8 @@ def inv_reduced_hessian_barrier(model, independent_variables, bound_tolerance=1e
             solver.options[key] = solver_options[key]
 
     # set options to prevent bounds relaxation (and 0 slacks)
-    solver.options['bound_relax_factor']=0
-    solver.options['honor_original_bounds']='no'
+    solver.options['bound_relax_factor'] = 0
+    solver.options['honor_original_bounds'] = 'no'
 
     # solve the problem
     status = solver.solve(m, tee=tee)
@@ -88,17 +91,19 @@ def inv_reduced_hessian_barrier(model, independent_variables, bound_tolerance=1e
     estimated_mu = list()
     for v in m.ipopt_zL_out:
         if v.has_lb():
-            estimated_mu.append((pyo.value(v) - v.lb)*m.ipopt_zL_out[v])
+            estimated_mu.append((pyo.value(v) - v.lb) * m.ipopt_zL_out[v])
     for v in m.ipopt_zU_out:
         if v.has_ub():
-            estimated_mu.append((v.ub - pyo.value(v))*m.ipopt_zU_out[v])
+            estimated_mu.append((v.ub - pyo.value(v)) * m.ipopt_zU_out[v])
     if len(estimated_mu) == 0:
         mu = 10**-8.6
     else:
-        mu = sum(estimated_mu)/len(estimated_mu)
+        mu = sum(estimated_mu) / len(estimated_mu)
         # check to make sure these estimates were all reasonable
-        if any([abs(mu-estmu) > 1e-7 for estmu in estimated_mu]):
-            print('Warning: estimated values of mu do not seem consistent - using mu=10^(-8.6)')
+        if any([abs(mu - estmu) > 1e-7 for estmu in estimated_mu]):
+            print(
+                'Warning: estimated values of mu do not seem consistent - using mu=10^(-8.6)'
+            )
             mu = 10**-8.6
 
     # collect the list of var data objects for the independent variables
@@ -112,12 +117,15 @@ def inv_reduced_hessian_barrier(model, independent_variables, bound_tolerance=1e
 
     # check that none of the independent variables are at their bounds
     for v in ind_vardatas:
-        if (v.has_lb() and pyo.value(v) - v.lb <= bound_tolerance) or \
-           (v.has_ub() and v.ub - pyo.value(v) <= bound_tolerance):
-                raise ValueError("Independent variable: {} has a solution value that is near"
-                                 " its bound (according to tolerance). The reduced hessian"
-                                 " computation does not support this at this time. All"
-                                 " independent variables should be in their interior.".format(v))
+        if (v.has_lb() and pyo.value(v) - v.lb <= bound_tolerance) or (
+            v.has_ub() and v.ub - pyo.value(v) <= bound_tolerance
+        ):
+            raise ValueError(
+                "Independent variable: {} has a solution value that is near"
+                " its bound (according to tolerance). The reduced hessian"
+                " computation does not support this at this time. All"
+                " independent variables should be in their interior.".format(v)
+            )
 
     # find the list of indices that we need to make up the reduced hessian
     kkt_builder = InteriorPointInterface(m)
@@ -134,12 +142,12 @@ def inv_reduced_hessian_barrier(model, independent_variables, bound_tolerance=1e
     n_rh = len(ind_var_indices)
     rhs = np.zeros(kkt.shape[0])
     inv_red_hess = np.zeros((n_rh, n_rh))
-    
+
     for rhi, vari in enumerate(ind_var_indices):
         rhs[vari] = 1
-        v = linear_solver.do_back_solve(rhs)
+        v, res = linear_solver.do_back_solve(rhs)
         rhs[vari] = 0
         for rhj, varj in enumerate(ind_var_indices):
-            inv_red_hess[rhi,rhj] = v[varj]
+            inv_red_hess[rhi, rhj] = v[varj]
 
     return status, inv_red_hess

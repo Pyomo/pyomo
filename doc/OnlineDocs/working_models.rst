@@ -58,7 +58,7 @@ computer to solve the problem or even to iterate over solutions. This
 example is provided just to illustrate some elementary aspects of
 scripting.
 
-.. literalinclude:: tests/scripting/iterative1.spy
+.. literalinclude:: src/scripting/iterative1.spy
    :language: python
 
 Let us now analyze this script. The first line is a comment that happens
@@ -66,7 +66,7 @@ to give the name of the file. This is followed by two lines that import
 symbols for Pyomo. The pyomo namespace is imported as
 ``pyo``. Therefore, ``pyo.`` must precede each use of a Pyomo name.
 
-.. literalinclude:: tests/scripting/iterative1_Import_symbols_for_pyomo.spy
+.. literalinclude:: src/scripting/iterative1_Import_symbols_for_pyomo.spy
    :language: python
 
 An object to perform optimization is created by calling
@@ -74,7 +74,7 @@ An object to perform optimization is created by calling
 argument would be ``'gurobi'`` if, e.g., Gurobi was desired instead of
 glpk:
 
-.. literalinclude:: tests/scripting/iterative1_Call_SolverFactory_with_argument.spy
+.. literalinclude:: src/scripting/iterative1_Call_SolverFactory_with_argument.spy
    :language: python
 
 The next lines after a comment create a model. For our discussion here,
@@ -86,13 +86,13 @@ to keep it simple.  Constraints could be present in the base model.
 Even though it is an abstract model, the base model is fully specified
 by these commands because it requires no external data:
 
-.. literalinclude:: tests/scripting/iterative1_Create_base_model.spy
+.. literalinclude:: src/scripting/iterative1_Create_base_model.spy
    :language: python
 
 The next line is not part of the base model specification. It creates an
 empty constraint list that the script will use to add constraints.
 
-.. literalinclude:: tests/scripting/iterative1_Create_empty_constraint_list.spy
+.. literalinclude:: src/scripting/iterative1_Create_empty_constraint_list.spy
    :language: python
 
 The next non-comment line creates the instantiated model and refers to
@@ -103,19 +103,19 @@ the ``create`` function is called without arguments because none are
 needed; however, the name of a file with data commands is given as an
 argument in many scripts.
 
-.. literalinclude:: tests/scripting/iterative1_Create_instantiated_model.spy
+.. literalinclude:: src/scripting/iterative1_Create_instantiated_model.spy
    :language: python
 
 The next line invokes the solver and refers to the object contain
 results with the Python variable ``results``.
 
-.. literalinclude:: tests/scripting/iterative1_Solve_and_refer_to_results.spy
+.. literalinclude:: src/scripting/iterative1_Solve_and_refer_to_results.spy
    :language: python
 
 The solve function loads the results into the instance, so the next line
 writes out the updated values.
 
-.. literalinclude:: tests/scripting/iterative1_Display_updated_value.spy
+.. literalinclude:: src/scripting/iterative1_Display_updated_value.spy
    :language: python
 
 The next non-comment line is a Python iteration command that will
@@ -123,7 +123,7 @@ successively assign the integers from 0 to 4 to the Python variable
 ``i``, although that variable is not used in script. This loop is what
 causes the script to generate five more solutions:
 
-.. literalinclude:: tests/scripting/iterative1_Assign_integers.spy
+.. literalinclude:: src/scripting/iterative1_Assign_integers.spy
    :language: python
 
 An expression is built up in the Python variable named ``expr``.  The
@@ -135,7 +135,7 @@ zero and the expression in ``expr`` is augmented accordingly.  Although
 Pyomo expression when it is assigned expressions involving Pyomo
 variable objects:
 
-.. literalinclude:: tests/scripting/iterative1_Iteratively_assign_and_test.spy
+.. literalinclude:: src/scripting/iterative1_Iteratively_assign_and_test.spy
    :language: python
 
 During the first iteration (when ``i`` is 0), we know that all values of
@@ -156,10 +156,10 @@ expression. That is exactly what we want in this case. When we wanted to
 use the current value in the ``if`` statement, we used the ``value``
 function to get it.
 
-The next line adds to the constaint list called ``c`` the requirement
+The next line adds to the constraint list called ``c`` the requirement
 that the expression be greater than or equal to one:
 
-.. literalinclude:: tests/scripting/iterative1_Add_expression_constraint.spy
+.. literalinclude:: src/scripting/iterative1_Add_expression_constraint.spy
    :language: python
 
 The proof that this precludes the last solution is left as an exerise
@@ -167,7 +167,7 @@ for the reader.
 
 The final lines in the outer for loop find a solution and display it:
 
-.. literalinclude:: tests/scripting/iterative1_Find_and_display_solution.spy
+.. literalinclude:: src/scripting/iterative1_Find_and_display_solution.spy
    :language: python
 
 .. note::
@@ -184,7 +184,7 @@ The final lines in the outer for loop find a solution and display it:
 
    >>> results = opt.solve(instance, load_solutions=False) # doctest: +SKIP
    
-   This approach can be usefull if there is a concern that the solver
+   This approach can be useful if there is a concern that the solver
    did not terminate with an optimal solution. For example,
    
    >>> results = opt.solve(instance, load_solutions=False) # doctest: +SKIP
@@ -207,7 +207,7 @@ idea for users of an ``AbstractModel``:
 #. Create an ``AbstractModel`` (suppose it is called ``model``)
 #. Call ``model.create_instance()`` to create an instance (suppose it is called ``instance``)
 #. Solve ``instance``
-#. Change someting in ``instance``
+#. Change something in ``instance``
 #. Solve ``instance`` again
 
 .. note::
@@ -219,7 +219,7 @@ idea for users of an ``AbstractModel``:
 
 ..
    NOTE: the tests in this file are fragile right now because some
-   code has been brought inline (particularly from spy4cripts.spy)
+   code has been brought inline (particularly from spy4scripts.spy)
    DO NOT redefine instance until you are ready to delete this entire comment.
    (and note that model is redefined all over the place).
    
@@ -259,7 +259,7 @@ indexed), the assignment can be made using
    If the ``Param`` is not declared to be mutable, an error will occur if an assignment to it is attempted.
     
 For more information about access to Pyomo parameters, see the section
-in this document on ``Param`` access :ref:`ParmAccess`. Note that for
+in this document on ``Param`` access :ref:`ParamAccess`. Note that for
 concrete models, the model is the instance.
 
 Fixing Variables and Re-solving
@@ -268,20 +268,20 @@ Fixing Variables and Re-solving
 Instead of changing model data, scripts are often used to fix variable
 values. The following example illustrates this.
 
-.. literalinclude:: tests/scripting/iterative2.spy
+.. literalinclude:: src/scripting/iterative2.spy
    :language: python
 
 In this example, the variables are binary. The model is solved and then
 the value of ``model.x[2]`` is flipped to the opposite value before
 solving the model again. The main lines of interest are:
 
-.. literalinclude:: tests/scripting/iterative2_Flip_value_before_solve_again.spy
+.. literalinclude:: src/scripting/iterative2_Flip_value_before_solve_again.spy
    :language: python
 
 This could also have been accomplished by setting the upper and lower
 bounds:
 
-   >>> if instance.x[2] == 0:
+   >>> if instance.x[2].value == 0:
    ...     instance.x[2].setlb(1)
    ...     instance.x[2].setub(1)
    ... else:
@@ -297,11 +297,11 @@ this document on ``Var`` access :ref:`VarAccess`.
 
 Note that
 
-   >>> instance.x.fix(2)
+   >>> instance.x.fix(1)
 
 is equivalent to
 
-   >>> instance.x.value = 2
+   >>> instance.x.value = 1
    >>> instance.x.fixed = True
 
 and
@@ -340,7 +340,6 @@ of the objective function object. Here is a simple example:
    >>> print ("------------- extend obj --------------") # doctest: +SKIP
    >>> model.obj.expr += 10 * model.y
 
-   >>> opt = SolverFactory('cplex') # doctest: +SKIP
    >>> opt.solve(model) # doctest: +SKIP
    >>> model.pprint() # doctest: +SKIP
 
@@ -418,7 +417,7 @@ One Variable from a Python Script
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Assuming the model has been instantiated and solved and the results have
-been loded back into the instance object, then we can make use of the
+been loaded back into the instance object, then we can make use of the
 fact that the variable is a member of the instance object and its value
 can be accessed using its ``value`` member. For example, suppose the
 model contains a variable named ``quant`` that is a singleton (has no
@@ -431,7 +430,7 @@ Consider the following very simple example, which is similar to the
 iterative example. This is a concrete model. In this example, the value
 of ``x[2]`` is accessed.
 
-.. literalinclude:: tests/scripting/noiteration1.py
+.. literalinclude:: src/scripting/noiteration1.py
    :language: python
 
 .. note::
@@ -464,7 +463,7 @@ indexed (i.e., the only index value is ``None``), then the code could
 print the value without the word ``None`` next to it.
 
 Assuming again that the model has been instantiated and solved and the
-results have been loded back into the instance object. Here is a code
+results have been loaded back into the instance object. Here is a code
 snippet for fixing all integers at their current value:
 
     >>> for var in instance.component_data_objects(pyo.Var, active=True):
@@ -477,10 +476,10 @@ Another way to access all of the variables (particularly if there are
 blocks) is as follows (this particular snippet assumes that instead of
 `import pyomo.environ as pyo` `from pyo.environ import *` was used):
 
-.. literalinclude:: tests/scripting/block_iter_example_compprintloop.spy
+.. literalinclude:: src/scripting/block_iter_example_compprintloop.spy
    :language: python
 
-.. _ParmAccess:
+.. _ParamAccess:
 
 Accessing Parameter Values
 --------------------------
@@ -522,21 +521,21 @@ To signal that duals are desired, declare a Suffix component with the
 name "dual" on the model or instance with an IMPORT or IMPORT_EXPORT
 direction.
 
-.. literalinclude:: tests/scripting/driveabs2_Create_dual_suffix_component.spy
+.. literalinclude:: src/scripting/driveabs2_Create_dual_suffix_component.spy
    :language: python
 
 See the section on Suffixes :ref:`Suffixes` for more information on
 Pyomo's Suffix component. After the results are obtained and loaded into
 an instance, duals can be accessed in the following fashion.
 
-.. literalinclude:: tests/scripting/driveabs2_Access_all_dual.spy
+.. literalinclude:: src/scripting/driveabs2_Access_all_dual.spy
    :language: python
 
 The following snippet will only work, of course, if there is a
 constraint with the name ``AxbConstraint`` that has and index, which is
 the string ``Film``.
 
-.. literalinclude:: tests/scripting/driveabs2_Access_one_dual.spy
+.. literalinclude:: src/scripting/driveabs2_Access_one_dual.spy
    :language: python
 
 Here is a complete example that relies on the file ``abstract2.py`` to
@@ -545,14 +544,14 @@ data. Note that the model in ``abstract2.py`` does contain a constraint
 named ``AxbConstraint`` and ``abstract2.dat`` does specify an index for
 it named ``Film``.
 
-.. literalinclude:: tests/scripting/driveabs2.spy
+.. literalinclude:: src/scripting/driveabs2.spy
    :language: python
 
 Concrete models are slightly different because the model is the
 instance. Here is a complete example that relies on the file
 ``concrete1.py`` to provide the model and instantiate it.
 
-.. literalinclude:: tests/scripting/driveconc1.py
+.. literalinclude:: src/scripting/driveconc1.py
    :language: python
 
 Accessing Slacks
@@ -569,7 +568,7 @@ After a solve, the results object has a member ``Solution.Status`` that
 contains the solver status. The following snippet shows an example of
 access via a ``print`` statement:
 
-.. literalinclude:: tests/scripting/spy4scripts_Print_solver_status.spy
+.. literalinclude:: src/scripting/spy4scripts_Print_solver_status.spy
    :language: python
 
 The use of the Python ``str`` function to cast the value to a be string
@@ -577,12 +576,12 @@ makes it easy to test it. In particular, the value 'optimal' indicates
 that the solver succeeded. It is also possible to access Pyomo data that
 can be compared with the solver status as in the following code snippet:
 
-.. literalinclude:: tests/scripting/spy4scripts_Pyomo_data_comparedwith_solver_status_1.spy
+.. literalinclude:: src/scripting/spy4scripts_Pyomo_data_comparedwith_solver_status_1.spy
    :language: python
 
 Alternatively,
 
-.. literalinclude:: tests/scripting/spy4scripts_Pyomo_data_comparedwith_solver_status_2.spy
+.. literalinclude:: src/scripting/spy4scripts_Pyomo_data_comparedwith_solver_status_2.spy
    :language: python
 
 .. _TeeTrue:
@@ -593,7 +592,7 @@ Display of Solver Output
 
 To see the output of the solver, use the option ``tee=True`` as in
 
-.. literalinclude:: tests/scripting/spy4scripts_See_solver_output.spy
+.. literalinclude:: src/scripting/spy4scripts_See_solver_output.spy
    :language: python
 
 This can be useful for troubleshooting solver difficulties.
@@ -608,7 +607,7 @@ solver. In scripts or callbacks, the options can be attached to the
 solver object by adding to its options dictionary as illustrated by this
 snippet:
 
-.. literalinclude:: tests/scripting/spy4scripts_Add_option_to_solver.spy
+.. literalinclude:: src/scripting/spy4scripts_Add_option_to_solver.spy
    :language: python
 
 If multiple options are needed, then multiple dictionary entries should
@@ -617,7 +616,7 @@ be added.
 Sometimes it is desirable to pass options as part of the call to the
 solve function as in this snippet:
 
-.. literalinclude:: tests/scripting/spy4scripts_Add_multiple_options_to_solver.spy
+.. literalinclude:: src/scripting/spy4scripts_Add_multiple_options_to_solver.spy
    :language: python
 
 The quoted string is passed directly to the solver. If multiple options
@@ -645,7 +644,7 @@ situations where they are not, the SolverFactory function accepts the
 keyword ``executable``, which you can use to set an absolute or relative
 path to a solver executable. E.g.,
 
-.. literalinclude:: tests/scripting/spy4scripts_Set_path_to_solver_executable.spy
+.. literalinclude:: src/scripting/spy4scripts_Set_path_to_solver_executable.spy
    :language: python
 
 Warm Starts
@@ -655,7 +654,7 @@ Some solvers support a warm start based on current values of
 variables. To use this feature, set the values of variables in the
 instance and pass ``warmstart=True`` to the ``solve()`` method. E.g.,
 
-.. literalinclude:: tests/scripting/spy4scripts_Pass_warmstart_to_solver.spy
+.. literalinclude:: src/scripting/spy4scripts_Pass_warmstart_to_solver.spy
    :language: python
 
 .. note::
@@ -687,7 +686,7 @@ parallel. The example can be run with the following command:
    mpirun -np 2 python -m mpi4py parallel.py
 
 
-.. literalinclude:: tests/scripting/parallel.py
+.. literalinclude:: src/scripting/parallel.py
    :language: python
 
 
@@ -701,5 +700,5 @@ The pyomo command-line ``--tempdir`` option propagates through to the
 TempFileManager service. One can accomplish the same through the
 following few lines of code in a script:
 
-.. literalinclude:: tests/scripting/spy4scripts_Specify_temporary_directory_name.spy
+.. literalinclude:: src/scripting/spy4scripts_Specify_temporary_directory_name.spy
    :language: python

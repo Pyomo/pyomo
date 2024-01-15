@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -21,19 +22,26 @@
 #
 
 from pyomo.environ import ConcreteModel, Var, Objective, Constraint, RangeSet
+
 model = ConcreteModel()
 
-n=3
+n = 3
 
-model.x = Var([(k,i) for k in range(1,n+1) for i in range(k,n+1)])
+model.x = Var([(k, i) for k in range(1, n + 1) for i in range(k, n + 1)])
+
 
 def obj_rule(model):
-	return model.x[n,n]
+    return model.x[n, n]
+
+
 model.obj = Objective(rule=obj_rule)
 
-def var_bnd_rule(model,i):
-	return (-1.0, model.x[1,i], 1.0)
-model.var_bnd = Constraint(RangeSet(1,n),rule=var_bnd_rule)
 
-model.x[1,1] = 1.0
-model.x[1,1].fixed = True
+def var_bnd_rule(model, i):
+    return (-1.0, model.x[1, i], 1.0)
+
+
+model.var_bnd = Constraint(RangeSet(1, n), rule=var_bnd_rule)
+
+model.x[1, 1] = 1.0
+model.x[1, 1].fixed = True

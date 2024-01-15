@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -55,7 +56,7 @@ model.F = Set(model.A)
 #
 # An indexed set
 #
-model.G = Set(model.A,model.B)
+model.G = Set(model.A, model.B)
 #
 # A simple set
 #
@@ -94,8 +95,8 @@ model.W = Param(model.A)
 #
 # Initializing a parameter with two indices
 #
-model.U = Param(model.I,model.A)
-model.T = Param(model.A,model.I)
+model.U = Param(model.I, model.A)
+model.T = Param(model.A, model.I)
 #
 # Initializing a parameter with missing data
 #
@@ -130,4 +131,3 @@ model.NNN = Param(model.x)
 ##
 instance = model.create_instance("data.dat")
 instance.pprint()
-

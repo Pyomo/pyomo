@@ -1,18 +1,19 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from random import random
 import sys
+from .dependencies import random
 
 
-def randint(a,b):
+def randint(a, b):
     """Our implementation of random.randint.
 
     The Python random.randint is not consistent between python versions
@@ -20,20 +21,20 @@ def randint(a,b):
     can support deterministic testing (i.e., setting the random.seed and
     expecting the same sequence), we will implement a simple, but stable
     version of randint()."""
-    return int((b-a+1)*random())
+    return int((b - a + 1) * random.random())
 
 
 def unique_component_name(instance, name):
-    # test if this name already exists in model. If not, we're good. 
+    # test if this name already exists in model. If not, we're good.
     # Else, we add random numbers until it doesn't
     if instance.component(name) is None and not hasattr(instance, name):
         return name
-    name += '_%d' % (randint(0,9),)
+    name += '_%d' % (randint(0, 9),)
     while True:
         if instance.component(name) is None and not hasattr(instance, name):
             return name
         else:
-            name += str(randint(0,9))
+            name += str(randint(0, 9))
 
 
 class FlagType(type):
@@ -49,15 +50,19 @@ class FlagType(type):
     in functions so that the Sphinx-generated documentation is "cleaner"
 
     """
+
     if 'sphinx' in sys.modules or 'Sphinx' in sys.modules:
+
         def __repr__(cls):
             return cls.__qualname__
+
     else:
+
         def __repr__(cls):
             return cls.__module__ + "." + cls.__qualname__
 
     def __str__(cls):
-        return __name__
+        return cls.__name__
 
 
 class NOTSET(object, metaclass=FlagType):
@@ -70,7 +75,9 @@ class NOTSET(object, metaclass=FlagType):
       >>>         pass  # no argument was provided to `value`
 
     """
+
     pass
+
 
 # Backward compatibility with the previous name for this flag
 NoArgumentGiven = NOTSET

@@ -58,7 +58,6 @@ One way to implement this in Pyomo is as shown as follows:
 
 .. testcode::
 
-   from __future__ import division
    import pyomo.environ as pyo
 
    model = pyo.AbstractModel()
@@ -92,7 +91,7 @@ One way to implement this in Pyomo is as shown as follows:
    :hide:
 
    >>> # Create an instance to verify that the rules fire correctly
-   >>> inst = model.create_instance('tests/scripting/abstract1.dat')
+   >>> inst = model.create_instance('src/scripting/abstract1.dat')
 
 .. note::
 
@@ -103,21 +102,8 @@ One way to implement this in Pyomo is as shown as follows:
    indented and the end of the indentation is used by Python to signal
    the end of the definition.
 
-We will now examine the lines in this example.  The first import line is
-used to ensure that ``int`` or ``long`` division arguments are converted
-to floating point values before division is performed.
-
-.. testcode::
-
-   from __future__ import division
-
-In Python versions before 3.0, division returns the floor of the
-mathematical result of division if arguments are ``int`` or ``long``.
-This import line avoids unexpected behavior when developing mathematical
-models with integer values in Python 2.x (and is not necessary in Python
-3.x).
-
-The next import line that is required in every Pyomo model. Its purpose
+We will now examine the lines in this example.  
+The first import line is required in every Pyomo model. Its purpose
 is to make the symbols used by Pyomo known to Python.
 
 .. testcode::
@@ -275,9 +261,9 @@ parameters. Here is one file that provides data (in AMPL "``.dat``" format).
    :hide:
 
    >>> # Create an instance to verify that the rules fire correctly
-   >>> inst = model.create_instance('tests/scripting/abstract1.dat')
+   >>> inst = model.create_instance('src/scripting/abstract1.dat')
 
-.. literalinclude:: ../tests/scripting/abstract1.dat
+.. literalinclude:: ../src/scripting/abstract1.dat
    :language: text
 
 There are multiple formats that can be used to provide data to a Pyomo
@@ -341,18 +327,18 @@ the same model. To start with an illustration of general indexes,
 consider a slightly different Pyomo implementation of the model we just
 presented.
 
-.. literalinclude:: ../tests/scripting/abstract2.py
+.. literalinclude:: ../src/scripting/abstract2.py
    :language: python
 
 To get the same instantiated model, the following data file can be used.
 
-.. literalinclude:: ../tests/scripting/abstract2a.dat
+.. literalinclude:: ../src/scripting/abstract2a.dat
    :language: none
 
 However, this model can also be fed different data for problems of the
 same general form using meaningful indexes.
 
-.. literalinclude:: ../tests/scripting/abstract2.dat
+.. literalinclude:: ../src/scripting/abstract2.dat
    :language: none
 
 

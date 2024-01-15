@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -17,9 +18,12 @@ from pyomo.common.collections import ComponentSet, ComponentMap, Bunch
 from pyomo.core.base import Suffix, Var, Constraint, SOSConstraint, Objective
 from pyomo.core.expr.numvalue import is_fixed
 from pyomo.core.expr.numvalue import value
+from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn import generate_standard_repn
 from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
-from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import DirectOrPersistentSolver
+from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import (
+    DirectOrPersistentSolver,
+)
 from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.opt.results.results_ import SolverResults
 from pyomo.opt.results.solution import Solution, SolutionStatus
@@ -109,7 +113,6 @@ class _LinearConstraintData(object):
 
 @SolverFactory.register('cplex_direct', doc='Direct python interface to CPLEX')
 class CPLEXDirect(DirectSolver):
-
     def __init__(self, **kwds):
         kwds['type'] = 'cplexdirect'
         DirectSolver.__init__(self, **kwds)
@@ -121,10 +124,12 @@ class CPLEXDirect(DirectSolver):
     def _init(self):
         try:
             import cplex
+
             self._cplex = cplex
             self._python_api_exists = True
             self._version = tuple(
-                int(k) for k in self._cplex.Cplex().get_version().split('.'))
+                int(k) for k in self._cplex.Cplex().get_version().split('.')
+            )
             while len(self._version) < 4:
                 self._version += (0,)
             self._version = tuple(int(i) for i in self._version[:4])
@@ -146,7 +151,7 @@ class CPLEXDirect(DirectSolver):
         self._max_constraint_degree = 2
         self._max_obj_degree = 2
 
-        # Note: Undefined capabilites default to None
+        # Note: Undefined capabilities default to None
         self._capabilities.linear = True
         self._capabilities.quadratic_objective = True
         self._capabilities.quadratic_constraint = True
@@ -155,10 +160,8 @@ class CPLEXDirect(DirectSolver):
         self._capabilities.sos2 = True
 
     def _apply_solver(self):
-        if not self._save_results:
-            for block in self._pyomo_model.block_data_objects(descend_into=True, active=True):
-                for var in block.component_data_objects(ctype=Var, descend_into=False, active=True, sort=False):
-                    var.stale = True
+        StaleFlagManager.mark_all_as_stale()
+
         # In recent versions of CPLEX it is helpful to manually open the
         # log file and then explicitly close it after CPLEX is finished.
         # This ensures that the file is closed (and unlocked) on Windows
@@ -166,68 +169,86 @@ class CPLEXDirect(DirectSolver):
         # log file.  Passing in an opened file object is supported at
         # least as far back as CPLEX 12.5.1 [the oldest version
         # supported by IBM as of 1 Oct 2020]
-        if self.version() >= (12, 5, 1) \
-           and isinstance(self._log_file, str):
+        if self.version() >= (12, 5, 1) and isinstance(self._log_file, str):
             _log_file = (open(self._log_file, 'a'),)
             _close_log_file = True
         else:
             _log_file = (self._log_file,)
             _close_log_file = False
         if self._tee:
+
             def _process_stream(arg):
                 sys.stdout.write(arg)
                 return arg
+
             _log_file += (_process_stream,)
         try:
             self._solver_model.set_results_stream(*_log_file)
             if self._keepfiles:
-                print("Solver log file: "+self._log_file)
-            
-            obj_degree = self._objective.expr.polynomial_degree()
+                print("Solver log file: " + self._log_file)
+
+            obj_degree = self._objective.polynomial_degree()
             if obj_degree is None or obj_degree > 2:
-                raise DegreeError('CPLEXDirect does not support expressions of degree {0}.'\
-                                  .format(obj_degree))
+                raise DegreeError(
+                    'CPLEXDirect does not support expressions of degree {0}.'.format(
+                        obj_degree
+                    )
+                )
             elif obj_degree == 2:
                 quadratic_objective = True
             else:
                 quadratic_objective = False
-            
+
             num_integer_vars = self._solver_model.variables.get_num_integer()
             num_binary_vars = self._solver_model.variables.get_num_binary()
             num_sos = self._solver_model.SOS.get_num()
-            
+
             if self._solver_model.quadratic_constraints.get_num() != 0:
                 quadratic_cons = True
             else:
                 quadratic_cons = False
-            
+
             if (num_integer_vars + num_binary_vars + num_sos) > 0:
                 integer = True
             else:
                 integer = False
-            
+
             if integer:
                 if quadratic_cons:
-                    self._solver_model.set_problem_type(self._solver_model.problem_type.MIQCP)
+                    self._solver_model.set_problem_type(
+                        self._solver_model.problem_type.MIQCP
+                    )
                 elif quadratic_objective:
-                    self._solver_model.set_problem_type(self._solver_model.problem_type.MIQP)
+                    self._solver_model.set_problem_type(
+                        self._solver_model.problem_type.MIQP
+                    )
                 else:
-                    self._solver_model.set_problem_type(self._solver_model.problem_type.MILP)
+                    self._solver_model.set_problem_type(
+                        self._solver_model.problem_type.MILP
+                    )
             else:
                 if quadratic_cons:
-                    self._solver_model.set_problem_type(self._solver_model.problem_type.QCP)
+                    self._solver_model.set_problem_type(
+                        self._solver_model.problem_type.QCP
+                    )
                 elif quadratic_objective:
-                    self._solver_model.set_problem_type(self._solver_model.problem_type.QP)
+                    self._solver_model.set_problem_type(
+                        self._solver_model.problem_type.QP
+                    )
                 else:
-                    self._solver_model.set_problem_type(self._solver_model.problem_type.LP)
+                    self._solver_model.set_problem_type(
+                        self._solver_model.problem_type.LP
+                    )
 
             # if the user specifies a 'mipgap'
             # set cplex's mip.tolerances.mipgap
             if self.options.mipgap is not None:
-                self._solver_model.parameters.mip.tolerances.mipgap.set(float(self.options.mipgap))
-            
+                self._solver_model.parameters.mip.tolerances.mipgap.set(
+                    float(self.options.mipgap)
+                )
+
             for key, option in self.options.items():
-                if key == 'mipgap': # handled above
+                if key == 'mipgap':  # handled above
                     continue
                 opt_cmd = self._solver_model.parameters
                 key_pieces = key.split('_')
@@ -250,7 +271,7 @@ class CPLEXDirect(DirectSolver):
                     if not _is_numeric(option):
                         raise
                     opt_cmd.set(float(option))
-            
+
             t0 = time.time()
             self._solver_model.solve()
             t1 = time.time()
@@ -302,7 +323,9 @@ class CPLEXDirect(DirectSolver):
             repn = generate_standard_repn(expr, quadratic=False)
 
         try:
-            cplex_expr, referenced_vars = self._get_expr_from_pyomo_repn(repn, max_degree)
+            cplex_expr, referenced_vars = self._get_expr_from_pyomo_repn(
+                repn, max_degree
+            )
         except DegreeError as e:
             msg = e.args[0]
             msg += '\nexpr: {0}'.format(expr)
@@ -351,10 +374,11 @@ class CPLEXDirect(DirectSolver):
             self._solver_model = self._cplex.Cplex()
         except Exception:
             e = sys.exc_info()[1]
-            msg = ("Unable to create CPLEX model. "
-                   "Have you installed the Python "
-                   "bindings for CPLEX?\n\n\t"+
-                   "Error message: {0}".format(e))
+            msg = (
+                "Unable to create CPLEX model. "
+                "Have you installed the Python "
+                "bindings for CPLEX?\n\n\t" + "Error message: {0}".format(e)
+            )
             raise Exception(msg)
 
         self._add_block(model)
@@ -371,7 +395,8 @@ class CPLEXDirect(DirectSolver):
                             "the IO-option 'output_fixed_variable_bounds=True' "
                             "to suppress this error and fix the variable "
                             "by overwriting its bounds in the CPLEX instance."
-                            % (var.name, self._pyomo_model.name,))
+                            % (var.name, self._pyomo_model.name)
+                        )
 
     def _add_block(self, block):
         var_data = _VariableData(self._solver_model)
@@ -384,10 +409,7 @@ class CPLEXDirect(DirectSolver):
         lin_con_data = _LinearConstraintData(self._solver_model)
         for sub_block in block.block_data_objects(descend_into=True, active=True):
             for con in sub_block.component_data_objects(
-                ctype=Constraint,
-                descend_into=False,
-                active=True,
-                sort=True,
+                ctype=Constraint, descend_into=False, active=True, sort=True
             ):
                 if not con.has_lb() and not con.has_ub():
                     assert not con.equality
@@ -396,18 +418,13 @@ class CPLEXDirect(DirectSolver):
                 self._add_constraint(con, lin_con_data)
 
             for con in sub_block.component_data_objects(
-                ctype=SOSConstraint,
-                descend_into=False,
-                active=True,
-                sort=True,
+                ctype=SOSConstraint, descend_into=False, active=True, sort=True
             ):
                 self._add_sos_constraint(con)
 
             obj_counter = 0
             for obj in sub_block.component_data_objects(
-                ctype=Objective,
-                descend_into=False,
-                active=True,
+                ctype=Objective, descend_into=False, active=True
             ):
                 obj_counter += 1
                 if obj_counter > 1:
@@ -479,18 +496,22 @@ class CPLEXDirect(DirectSolver):
                 cplex_lin_con_data.store_in_cplex()
         else:
             if sense == 'R':
-                raise ValueError("The CPLEXDirect interface does not "
-                                 "support quadratic range constraints: "
-                                 "{0}".format(con))
+                raise ValueError(
+                    "The CPLEXDirect interface does not "
+                    "support quadratic range constraints: "
+                    "{0}".format(con)
+                )
             self._solver_model.quadratic_constraints.add(
-                lin_expr=[cplex_expr.variables,
-                          cplex_expr.coefficients],
-                quad_expr=[cplex_expr.q_variables1,
-                           cplex_expr.q_variables2,
-                           cplex_expr.q_coefficients],
+                lin_expr=[cplex_expr.variables, cplex_expr.coefficients],
+                quad_expr=[
+                    cplex_expr.q_variables1,
+                    cplex_expr.q_variables2,
+                    cplex_expr.q_coefficients,
+                ],
                 sense=sense,
                 rhs=rhs,
-                name=conname)
+                name=conname,
+            )
 
         for var in referenced_vars:
             self._referenced_variables[var] += 1
@@ -509,8 +530,9 @@ class CPLEXDirect(DirectSolver):
         elif level == 2:
             sos_type = self._solver_model.SOS.type.SOS2
         else:
-            raise ValueError("Solver does not support SOS "
-                             "level {0} constraints".format(level))
+            raise ValueError(
+                "Solver does not support SOS level {0} constraints".format(level)
+            )
 
         cplex_vars = []
         weights = []
@@ -530,7 +552,9 @@ class CPLEXDirect(DirectSolver):
             self._referenced_variables[v] += 1
             weights.append(w)
 
-        self._solver_model.SOS.add(type=sos_type, SOS=[cplex_vars, weights], name=conname)
+        self._solver_model.SOS.add(
+            type=sos_type, SOS=[cplex_vars, weights], name=conname
+        )
         self._pyomo_con_to_solver_con_map[con] = conname
         self._solver_con_to_pyomo_con_map[conname] = con
 
@@ -547,7 +571,9 @@ class CPLEXDirect(DirectSolver):
         elif var.is_continuous():
             vtype = self._solver_model.variables.type.continuous
         else:
-            raise ValueError('Variable domain type is not recognized for {0}'.format(var.domain))
+            raise ValueError(
+                'Variable domain type is not recognized for {0}'.format(var.domain)
+            )
         return vtype
 
     def _set_objective(self, obj):
@@ -567,9 +593,16 @@ class CPLEXDirect(DirectSolver):
         else:
             raise ValueError('Objective sense is not recognized: {0}'.format(obj.sense))
 
-        cplex_expr, referenced_vars = self._get_expr_from_pyomo_expr(obj.expr, self._max_obj_degree)
-        for i in range(len(cplex_expr.q_coefficients)):
-            cplex_expr.q_coefficients[i] *= 2
+        cplex_expr, referenced_vars = self._get_expr_from_pyomo_expr(
+            obj.expr, self._max_obj_degree
+        )
+        # CPLEX actually uses x'Qx/2 in the objective, as the
+        # off-diagonal entries appear in both the lower triangle and the
+        # upper triangle (i.e., c*x1*x2 and c*x2*x1).  However, since
+        # the diagonal entries only appear once, we need to double them.
+        for i, v1 in enumerate(cplex_expr.q_variables1):
+            if v1 == cplex_expr.q_variables2[i]:
+                cplex_expr.q_coefficients[i] *= 2
 
         for var in referenced_vars:
             self._referenced_variables[var] += 1
@@ -579,7 +612,9 @@ class CPLEXDirect(DirectSolver):
             self._solver_model.objective.set_offset(cplex_expr.offset)
 
         linear_objective_already_exists = any(self._solver_model.objective.get_linear())
-        quadratic_objective_already_exists = self._solver_model.objective.get_num_quadratic_nonzeros()
+        quadratic_objective_already_exists = (
+            self._solver_model.objective.get_num_quadratic_nonzeros()
+        )
 
         contains_linear_terms = any(cplex_expr.coefficients)
         contains_quadratic_terms = any(cplex_expr.q_coefficients)
@@ -589,7 +624,9 @@ class CPLEXDirect(DirectSolver):
             self._solver_model.objective.set_linear([(i, 0.0) for i in range(num_cols)])
 
             if contains_linear_terms:
-                self._solver_model.objective.set_linear(list(zip(cplex_expr.variables, cplex_expr.coefficients)))
+                self._solver_model.objective.set_linear(
+                    list(zip(cplex_expr.variables, cplex_expr.coefficients))
+                )
 
         if quadratic_objective_already_exists or contains_quadratic_terms:
             self._solver_model.objective.set_quadratic([0.0] * num_cols)
@@ -600,7 +637,7 @@ class CPLEXDirect(DirectSolver):
                         zip(
                             cplex_expr.q_variables1,
                             cplex_expr.q_variables2,
-                            cplex_expr.q_coefficients
+                            cplex_expr.q_coefficients,
                         )
                     )
                 )
@@ -628,14 +665,19 @@ class CPLEXDirect(DirectSolver):
                 extract_reduced_costs = True
                 flag = True
             if not flag:
-                raise RuntimeError("***The cplex_direct solver plugin cannot extract solution suffix="+suffix)
+                raise RuntimeError(
+                    "***The cplex_direct solver plugin cannot extract solution suffix="
+                    + suffix
+                )
 
         cpxprob = self._solver_model
         status = cpxprob.solution.get_status()
 
-        if cpxprob.get_problem_type() in [cpxprob.problem_type.MILP,
-                                          cpxprob.problem_type.MIQP,
-                                          cpxprob.problem_type.MIQCP]:
+        if cpxprob.get_problem_type() in [
+            cpxprob.problem_type.MILP,
+            cpxprob.problem_type.MIQP,
+            cpxprob.problem_type.MIQCP,
+        ]:
             if extract_reduced_costs:
                 logger.warning("Cannot get reduced costs for MIP.")
             if extract_duals:
@@ -646,7 +688,7 @@ class CPLEXDirect(DirectSolver):
         self.results = SolverResults()
         soln = Solution()
 
-        self.results.solver.name = ("CPLEX {0}".format(cpxprob.get_version()))
+        self.results.solver.name = "CPLEX {0}".format(cpxprob.get_version())
         self.results.solver.wallclock_time = self._wallclock_time
 
         if status in [1, 101, 102]:
@@ -661,8 +703,9 @@ class CPLEXDirect(DirectSolver):
             # Note: status of 4 means infeasible or unbounded
             #       and 119 means MIP infeasible or unbounded
             self.results.solver.status = SolverStatus.warning
-            self.results.solver.termination_condition = \
+            self.results.solver.termination_condition = (
                 TerminationCondition.infeasibleOrUnbounded
+            )
             soln.status = SolutionStatus.unsure
         elif status in [3, 103]:
             self.results.solver.status = SolverStatus.warning
@@ -670,11 +713,15 @@ class CPLEXDirect(DirectSolver):
             soln.status = SolutionStatus.infeasible
         elif status in [10]:
             self.results.solver.status = SolverStatus.aborted
-            self.results.solver.termination_condition = TerminationCondition.maxIterations
+            self.results.solver.termination_condition = (
+                TerminationCondition.maxIterations
+            )
             soln.status = SolutionStatus.stoppedByLimit
         elif status in [11, 25, 107, 131]:
             self.results.solver.status = SolverStatus.aborted
-            self.results.solver.termination_condition = TerminationCondition.maxTimeLimit
+            self.results.solver.termination_condition = (
+                TerminationCondition.maxTimeLimit
+            )
             soln.status = SolutionStatus.stoppedByLimit
         else:
             self.results.solver.status = SolverStatus.error
@@ -686,50 +733,75 @@ class CPLEXDirect(DirectSolver):
         elif cpxprob.objective.get_sense() == cpxprob.objective.sense.maximize:
             self.results.problem.sense = maximize
         else:
-            raise RuntimeError('Unrecognized cplex objective sense: {0}'.\
-                               format(cpxprob.objective.get_sense()))
+            raise RuntimeError(
+                'Unrecognized cplex objective sense: {0}'.format(
+                    cpxprob.objective.get_sense()
+                )
+            )
 
         self.results.problem.upper_bound = None
         self.results.problem.lower_bound = None
         if cpxprob.solution.get_solution_type() != cpxprob.solution.type.none:
-            if (cpxprob.variables.get_num_binary() + cpxprob.variables.get_num_integer()) == 0:
-                self.results.problem.upper_bound = cpxprob.solution.get_objective_value()
-                self.results.problem.lower_bound = cpxprob.solution.get_objective_value()
+            if (
+                cpxprob.variables.get_num_binary() + cpxprob.variables.get_num_integer()
+            ) == 0:
+                self.results.problem.upper_bound = (
+                    cpxprob.solution.get_objective_value()
+                )
+                self.results.problem.lower_bound = (
+                    cpxprob.solution.get_objective_value()
+                )
             elif cpxprob.objective.get_sense() == cpxprob.objective.sense.minimize:
-                self.results.problem.upper_bound = cpxprob.solution.get_objective_value()
-                self.results.problem.lower_bound = cpxprob.solution.MIP.get_best_objective()
+                self.results.problem.upper_bound = (
+                    cpxprob.solution.get_objective_value()
+                )
+                self.results.problem.lower_bound = (
+                    cpxprob.solution.MIP.get_best_objective()
+                )
             else:
                 assert cpxprob.objective.get_sense() == cpxprob.objective.sense.maximize
-                self.results.problem.upper_bound = cpxprob.solution.MIP.get_best_objective()
-                self.results.problem.lower_bound = cpxprob.solution.get_objective_value()
+                self.results.problem.upper_bound = (
+                    cpxprob.solution.MIP.get_best_objective()
+                )
+                self.results.problem.lower_bound = (
+                    cpxprob.solution.get_objective_value()
+                )
 
         try:
-            soln.gap = self.results.problem.upper_bound - self.results.problem.lower_bound
+            soln.gap = (
+                self.results.problem.upper_bound - self.results.problem.lower_bound
+            )
         except TypeError:
             soln.gap = None
 
         self.results.problem.name = cpxprob.get_problem_name()
         assert cpxprob.indicator_constraints.get_num() == 0
-        self.results.problem.number_of_constraints = \
-            (cpxprob.linear_constraints.get_num() +
-             cpxprob.quadratic_constraints.get_num() +
-             cpxprob.SOS.get_num())
+        self.results.problem.number_of_constraints = (
+            cpxprob.linear_constraints.get_num()
+            + cpxprob.quadratic_constraints.get_num()
+            + cpxprob.SOS.get_num()
+        )
         self.results.problem.number_of_nonzeros = None
         self.results.problem.number_of_variables = cpxprob.variables.get_num()
-        self.results.problem.number_of_binary_variables = cpxprob.variables.get_num_binary()
-        self.results.problem.number_of_integer_variables = cpxprob.variables.get_num_integer()
+        self.results.problem.number_of_binary_variables = (
+            cpxprob.variables.get_num_binary()
+        )
+        self.results.problem.number_of_integer_variables = (
+            cpxprob.variables.get_num_integer()
+        )
         assert cpxprob.variables.get_num_semiinteger() == 0
         assert cpxprob.variables.get_num_semicontinuous() == 0
-        self.results.problem.number_of_continuous_variables = \
-            (cpxprob.variables.get_num() -
-             cpxprob.variables.get_num_binary() -
-             cpxprob.variables.get_num_integer())
+        self.results.problem.number_of_continuous_variables = (
+            cpxprob.variables.get_num()
+            - cpxprob.variables.get_num_binary()
+            - cpxprob.variables.get_num_integer()
+        )
         self.results.problem.number_of_objectives = 1
 
         # only try to get objective and variable values if a solution exists
         if self._save_results:
             """
-            This code in this if statement is only needed for backwards compatability. It is more efficient to set
+            This code in this if statement is only needed for backwards compatibility. It is more efficient to set
             _save_results to False and use load_vars, load_duals, etc.
             """
             if cpxprob.solution.get_solution_type() > 0:
@@ -742,11 +814,12 @@ class CPLEXDirect(DirectSolver):
                 for name, val in zip(var_names, var_vals):
                     pyomo_var = self._solver_var_to_pyomo_var_map[name]
                     if self._referenced_variables[pyomo_var] > 0:
-                        pyomo_var.stale = False
                         soln_variables[name] = {"Value": val}
 
                 if extract_reduced_costs:
-                    reduced_costs = self._solver_model.solution.get_reduced_costs(var_names)
+                    reduced_costs = self._solver_model.solution.get_reduced_costs(
+                        var_names
+                    )
                     for i, name in enumerate(var_names):
                         pyomo_var = self._solver_var_to_pyomo_var_map[name]
                         if self._referenced_variables[pyomo_var] > 0:
@@ -755,7 +828,9 @@ class CPLEXDirect(DirectSolver):
                 if extract_slacks:
                     for con_name in self._solver_model.linear_constraints.get_names():
                         soln_constraints[con_name] = {}
-                    for con_name in self._solver_model.quadratic_constraints.get_names():
+                    for (
+                        con_name
+                    ) in self._solver_model.quadratic_constraints.get_names():
                         soln_constraints[con_name] = {}
                 elif extract_duals:
                     # CPLEX PYTHON API DOES NOT SUPPORT QUADRATIC DUAL COLLECTION
@@ -764,16 +839,22 @@ class CPLEXDirect(DirectSolver):
 
                 if extract_duals:
                     dual_values = self._solver_model.solution.get_dual_values()
-                    for i, con_name in enumerate(self._solver_model.linear_constraints.get_names()):
+                    for i, con_name in enumerate(
+                        self._solver_model.linear_constraints.get_names()
+                    ):
                         soln_constraints[con_name]["Dual"] = dual_values[i]
 
                 if extract_slacks:
                     linear_slacks = self._solver_model.solution.get_linear_slacks()
                     qudratic_slacks = self._solver_model.solution.get_quadratic_slacks()
-                    for i, con_name in enumerate(self._solver_model.linear_constraints.get_names()):
+                    for i, con_name in enumerate(
+                        self._solver_model.linear_constraints.get_names()
+                    ):
                         pyomo_con = self._solver_con_to_pyomo_con_map[con_name]
                         if pyomo_con in self._range_constraints:
-                            R_ = self._solver_model.linear_constraints.get_range_values(con_name)
+                            R_ = self._solver_model.linear_constraints.get_range_values(
+                                con_name
+                            )
                             if R_ == 0:
                                 soln_constraints[con_name]["Slack"] = linear_slacks[i]
                             else:
@@ -785,11 +866,13 @@ class CPLEXDirect(DirectSolver):
                                     soln_constraints[con_name]["Slack"] = -Ls_
                         else:
                             soln_constraints[con_name]["Slack"] = linear_slacks[i]
-                    for i, con_name in enumerate(self._solver_model.quadratic_constraints.get_names()):
+                    for i, con_name in enumerate(
+                        self._solver_model.quadratic_constraints.get_names()
+                    ):
                         soln_constraints[con_name]["Slack"] = qudratic_slacks[i]
         elif self._load_solutions:
             if cpxprob.solution.get_solution_type() > 0:
-                self._load_vars()
+                self.load_vars()
 
                 if extract_reduced_costs:
                     self._load_rc()
@@ -815,9 +898,11 @@ class CPLEXDirect(DirectSolver):
         # here warm start means MIP start, which we can not add
         # if the problem type is not discrete
         cpxprob = self._solver_model
-        if cpxprob.get_problem_type() in [cpxprob.problem_type.MILP,
-                                          cpxprob.problem_type.MIQP,
-                                          cpxprob.problem_type.MIQCP]:
+        if cpxprob.get_problem_type() in [
+            cpxprob.problem_type.MILP,
+            cpxprob.problem_type.MIQP,
+            cpxprob.problem_type.MIQCP,
+        ]:
             var_names = []
             var_values = []
             for pyomo_var, cplex_var in self._pyomo_var_to_solver_var_map.items():
@@ -828,7 +913,8 @@ class CPLEXDirect(DirectSolver):
             if len(var_names):
                 self._solver_model.MIP_starts.add(
                     [var_names, var_values],
-                    self._solver_model.MIP_starts.effort_level.auto)
+                    self._solver_model.MIP_starts.effort_level.auto,
+                )
 
     def _load_vars(self, vars_to_load=None):
         var_map = self._pyomo_var_to_ndx_map
@@ -841,8 +927,7 @@ class CPLEXDirect(DirectSolver):
 
         for pyomo_var, val in zip(vars_to_load, vals):
             if self._referenced_variables[pyomo_var] > 0:
-                pyomo_var.stale = False
-                pyomo_var.value = val
+                pyomo_var.set_value(val, skip_validation=True)
 
     def _load_rc(self, vars_to_load=None):
         if not hasattr(self._pyomo_model, 'rc'):
@@ -872,7 +957,9 @@ class CPLEXDirect(DirectSolver):
             vals = self._solver_model.solution.get_dual_values()
         else:
             cplex_cons_to_load = set([con_map[pyomo_con] for pyomo_con in cons_to_load])
-            linear_cons_to_load = cplex_cons_to_load.intersection(set(self._solver_model.linear_constraints.get_names()))
+            linear_cons_to_load = cplex_cons_to_load.intersection(
+                set(self._solver_model.linear_constraints.get_names())
+            )
             vals = self._solver_model.solution.get_dual_values(linear_cons_to_load)
 
         for i, cplex_con in enumerate(linear_cons_to_load):
@@ -889,14 +976,24 @@ class CPLEXDirect(DirectSolver):
         if cons_to_load is None:
             linear_cons_to_load = self._solver_model.linear_constraints.get_names()
             linear_vals = self._solver_model.solution.get_linear_slacks()
-            quadratic_cons_to_load = self._solver_model.quadratic_constraints.get_names()
+            quadratic_cons_to_load = (
+                self._solver_model.quadratic_constraints.get_names()
+            )
             quadratic_vals = self._solver_model.solution.get_quadratic_slacks()
         else:
             cplex_cons_to_load = set([con_map[pyomo_con] for pyomo_con in cons_to_load])
-            linear_cons_to_load = cplex_cons_to_load.intersection(set(self._solver_model.linear_constraints.get_names()))
-            linear_vals = self._solver_model.solution.get_linear_slacks(linear_cons_to_load)
-            quadratic_cons_to_load = cplex_cons_to_load.intersection(set(self._solver_model.quadratic_constraints.get_names()))
-            quadratic_vals = self._solver_model.solution.get_quadratic_slacks(quadratic_cons_to_load)
+            linear_cons_to_load = cplex_cons_to_load.intersection(
+                set(self._solver_model.linear_constraints.get_names())
+            )
+            linear_vals = self._solver_model.solution.get_linear_slacks(
+                linear_cons_to_load
+            )
+            quadratic_cons_to_load = cplex_cons_to_load.intersection(
+                set(self._solver_model.quadratic_constraints.get_names())
+            )
+            quadratic_vals = self._solver_model.solution.get_quadratic_slacks(
+                quadratic_cons_to_load
+            )
 
         for i, cplex_con in enumerate(linear_cons_to_load):
             pyomo_con = reverse_con_map[cplex_con]

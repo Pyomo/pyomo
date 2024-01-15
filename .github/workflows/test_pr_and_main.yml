@@ -13,6 +13,10 @@ on:
         description: Git Hash (Optional)
         required: false
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 defaults:
   run:
     shell: bash -l {0}
@@ -20,36 +24,48 @@ defaults:
 env:
   PYTHONWARNINGS: ignore::UserWarning
   PYTHON_CORE_PKGS: wheel
-  PYTHON_REQUIRED_PKGS: >
-      nose coverage parameterized pybind11
-  PYTHON_BASE_PKGS: >
-      ply dill ipython networkx openpyxl pathos
-      pint pyro4 pyyaml sphinx_rtd_theme sympy xlrd
-      python-louvain
-  PYTHON_NUMPY_PKGS: >
-      numpy scipy pyodbc pandas matplotlib seaborn numdifftools 
-      parameterized casadi
-  CACHE_VER: v210415.0
+  PYPI_ONLY: z3-solver
+  PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels
+  CACHE_VER: v221013.1
   NEOS_EMAIL: tests@pyomo.org
+  SRC_REF: ${{ github.head_ref || github.ref }}
 
 jobs:
+  lint:
+    name: lint/style-and-typos
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Pyomo source
+      uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    - name: Black Formatting Check
+      run: |
+        pip install black
+        black . -S -C --check --diff --exclude examples/pyomobook/python-ch/BadIndent.py
+    - name: Spell Check
+      uses: crate-ci/typos@master
+      with: 
+        config: ./.github/workflows/typos.toml
+
+
   build:
     name: ${{ matrix.TARGET }}/${{ matrix.python }}${{ matrix.other }}
+    needs: lint  # the linter job is a prerequisite for PRs
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 90
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-18.04, macos-latest, windows-latest]
-        python: [3.6, 3.7, 3.8, 3.9, pypy3]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: [ 3.8, 3.9, '3.10', '3.11', '3.12' ]
         other: [""]
-        category: ["nightly"]
-        # Ubuntu-18.04 should be replaced with ubuntu-latest once PyNumero
-        # build error is resolved:
-        # https://github.com/Pyomo/pyomo/issues/1710
+        category: [""]
 
         include:
-        - os: ubuntu-18.04
+        - os: ubuntu-latest
           TARGET: linux
           PYENV: pip
 
@@ -62,33 +78,33 @@ jobs:
           PYENV: conda
           PACKAGES: glpk
 
-        - os: ubuntu-18.04
-          python: 3.8
+        - os: ubuntu-latest
+          python: '3.11'
+          other: /conda
+          skip_doctest: 1
+          TARGET: linux
+          PYENV: conda
+          PACKAGES:
+
+        - os: ubuntu-latest
+          python: 3.9
           other: /mpi
           mpi: 3
           skip_doctest: 1
           TARGET: linux
           PYENV: conda
-          PACKAGES: mpi4py openmpi
+          PACKAGES: mpi4py
 
-        - os: ubuntu-18.04
-          python: 3.7
-          other: /conda
-          skip_doctest: 1
-          TARGET: linux
-          PYENV: conda
-          PACKAGES: mpi4py openmpi
-
-        - os: ubuntu-18.04
-          python: 3.9
-          other: /slim
-          slim: 1
+        - os: ubuntu-latest
+          python: '3.11'
+          other: /singletest
+          category: "-m 'neos or importtest'"
           skip_doctest: 1
           TARGET: linux
           PYENV: pip
 
-        - os: ubuntu-18.04
-          python: 3.6
+        - os: ubuntu-latest
+          python: '3.10'
           other: /cython
           setup_options: --with-cython
           skip_doctest: 1
@@ -96,21 +112,37 @@ jobs:
           PYENV: pip
           PACKAGES: cython
 
-        - os: ubuntu-18.04
-          python: 3.7
-          other: /singletest
-          category: neos
+        - os: windows-latest
+          python: 3.8
+          other: /pip
+          skip_doctest: 1
+          TARGET: win
+          PYENV: pip
+
+        - os: ubuntu-latest
+          python: 3.8
+          other: /slim
+          slim: 1
           skip_doctest: 1
           TARGET: linux
           PYENV: pip
 
-        exclude:
-        - {os: macos-latest, python: pypy3}
-        - {os: windows-latest, python: pypy3}
+        - os: ubuntu-latest
+          python: 3.9
+          other: /pyutilib
+          TARGET: linux
+          PYENV: pip
+          PACKAGES: pyutilib
+
+        - os: ubuntu-latest
+          python: pypy-3.9
+          skip_doctest: 1
+          TARGET: linux
+          PYENV: pip
 
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Configure job parameters
       run: |
@@ -122,49 +154,34 @@ jobs:
             echo "GHA_JOBGROUP=other" >> $GITHUB_ENV
         fi
         # Note: pandas 1.0.3 causes gams 29.1.0 import to fail in python 3.8
-        PYTHON_PACKAGES="${PYTHON_REQUIRED_PKGS}"
+        EXTRAS=tests
         if test -z "${{matrix.slim}}"; then
-            PYTHON_PACKAGES="$PYTHON_PACKAGES ${PYTHON_BASE_PKGS}"
+            EXTRAS="$EXTRAS,docs,optional"
         fi
-        if [[ ${{matrix.python}} != pypy* && ! "${{matrix.slim}}" ]]; then
-            # NumPy and derivatives either don't build under pypy, or if
-            # they do, the builds take forever.
-            PYTHON_PACKAGES="$PYTHON_PACKAGES ${PYTHON_NUMPY_PKGS}"
-        fi
-        PYTHON_PACKAGES="$PYTHON_PACKAGES ${{matrix.PACKAGES}}"
+        echo "EXTRAS=$EXTRAS" >> $GITHUB_ENV
+        PYTHON_PACKAGES="${{matrix.PACKAGES}}"
         echo "PYTHON_PACKAGES=$PYTHON_PACKAGES" \
             | tr '\n' ' ' | sed 's/ \+/ /g' >> $GITHUB_ENV
 
-    # Ideally we would cache the conda downloads; however, each cache is
-    # over 850MB, and with 5 python versions, that would consume 4.2 of
-    # the 5 GB GitHub allows.
-    #
-    #- name: Conda package cache
-    #  uses: actions/cache@v2
-    #  if: matrix.PYENV == 'conda'
-    #  id: conda-cache
+    #- name: Pip package cache
+    #  uses: actions/cache@v3
+    #  if: matrix.PYENV == 'pip'
+    #  id: pip-cache
     #  with:
-    #    path: cache/conda
-    #    key: conda-${{env.CACHE_VER}}.0-${{runner.os}}-${{matrix.python}}
+    #    path: cache/pip
+    #    key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-${{matrix.python}}
 
-    - name: Pip package cache
-      uses: actions/cache@v2
-      if: matrix.PYENV == 'pip'
-      id: pip-cache
-      with:
-        path: cache/pip
-        key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-${{matrix.python}}
-
-    - name: OS package cache
-      uses: actions/cache@v2
-      if: matrix.TARGET != 'osx'
-      id: os-cache
-      with:
-        path: cache/os
-        key: pkg-${{env.CACHE_VER}}.0-${{runner.os}}
+    #- name: OS package cache
+    #  uses: actions/cache@v3
+    #  if: matrix.TARGET != 'osx'
+    #  id: os-cache
+    #  with:
+    #    path: cache/os
+    #    key: pkg-${{env.CACHE_VER}}.0-${{runner.os}}
 
     - name: TPL package download cache
-      uses: actions/cache@v2
+      uses: actions/cache@v3
+      if: ${{ ! matrix.slim }}
       id: download-cache
       with:
         path: cache/download
@@ -215,7 +232,7 @@ jobs:
 
     - name: Set up Python ${{ matrix.python }}
       if: matrix.PYENV == 'pip'
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python }}
 
@@ -223,7 +240,7 @@ jobs:
       if: matrix.PYENV == 'conda'
       uses: conda-incubator/setup-miniconda@v2
       with:
-        auto-update-conda: true
+        auto-update-conda: false
         python-version: ${{ matrix.python }}
 
     # GitHub actions is very fragile when it comes to setting up various
@@ -248,52 +265,165 @@ jobs:
       run: |
         python -c 'import sys;print(sys.executable)'
         python -m pip install --cache-dir cache/pip --upgrade pip
-        pip install --cache-dir cache/pip ${PYTHON_CORE_PKGS}
-        pip install --cache-dir cache/pip ${PYTHON_PACKAGES}
-        pip install --cache-dir cache/pip pymysql || \
-            pip install --cache-dir cache/pip pymysql
+        python -m pip install --cache-dir cache/pip setuptools
+        PYOMO_DEPENDENCIES=`python setup.py dependencies \
+            --extras "$EXTRAS" | tail -1`
+        PACKAGES="${PYTHON_CORE_PKGS} ${PYTHON_PACKAGES} ${PYOMO_DEPENDENCIES} "
+        if [[ ${{matrix.python}} == pypy* ]]; then
+            EXCLUDE="$PYPY_EXCLUDE $EXCLUDE"
+        fi
+        EXCLUDE=`echo "$EXCLUDE" | xargs`
+        if test -n "$EXCLUDE"; then
+            for WORD in $EXCLUDE; do
+                PACKAGES=${PACKAGES//$WORD / }
+            done
+        fi
+        python -m pip install --cache-dir cache/pip ${PACKAGES}
+        python -m pip install --cache-dir cache/pip pymysql || \
+            python -m pip install --cache-dir cache/pip pymysql
         if test -z "${{matrix.slim}}"; then
-            pip install --cache-dir cache/pip cplex \
+            python -m pip install --cache-dir cache/pip cplex docplex \
                 || echo "WARNING: CPLEX Community Edition is not available"
-            pip install --cache-dir cache/pip \
-                -i https://pypi.gurobi.com gurobipy \
+            python -m pip install --cache-dir cache/pip \
+                -i https://pypi.gurobi.com gurobipy==10.0.3 \
                 || echo "WARNING: Gurobi is not available"
-            pip install --cache-dir cache/pip xpress \
+            python -m pip install --cache-dir cache/pip xpress \
                 || echo "WARNING: Xpress Community Edition is not available"
-            pip install --cache-dir cache/pip z3-solver \
-                || echo "WARNING: Z3 Solver is not available"
+            if [[ ${{matrix.python}} == pypy* ]]; then
+                echo "skipping wntr for pypy"
+            else
+                python -m pip install wntr \
+                    || echo "WARNING: WNTR is not available"
+            fi
         fi
         python -c 'import sys; print("PYTHON_EXE=%s" \
             % (sys.executable,))' >> $GITHUB_ENV
-        echo "NOSETESTS="`which nosetests` >> $GITHUB_ENV
+        echo ""
+        echo "Final pip environment:"
+        python -m pip list | sed 's/^/    /'
 
     - name: Install Python packages (conda)
       if: matrix.PYENV == 'conda'
       run: |
-        mkdir -p $GITHUB_WORKSPACE/cache/conda
+        # Set up environment
         conda config --set always_yes yes
         conda config --set auto_update_conda false
-        conda config --prepend pkgs_dirs $GITHUB_WORKSPACE/cache/conda
+        conda config --remove channels defaults
+        conda config --append channels nodefaults
+        conda config --append channels conda-forge
+        # Try to install mamba
+        conda install --update-deps -q -y -n base conda-libmamba-solver \
+            || MAMBA_FAILED=1
+        if test -z "$MAMBA_FAILED"; then
+            echo "*** Activating the mamba environment solver ***"
+            conda config --set solver libmamba
+        fi
+        # Add the rest of the channels
+        conda config --append channels gurobi
+        conda config --append channels ibmdecisionoptimization
+        conda config --append channels fico-xpress
+        # Print environment info
+        echo "*** CONDA environment: ***"
         conda info
         conda config --show-sources
+        conda config --show channels
         conda list --show-channel-urls
-        conda install -q -y -c conda-forge ${PYTHON_CORE_PKGS}
-        conda install -q -y -c conda-forge ${PYTHON_PACKAGES}
-        if test -z "${{matrix.slim}}"; then
-            conda install -q -y -c ibmdecisionoptimization 'cplex>=12.10' \
-                || echo "WARNING: CPLEX Community Edition is not available"
-            conda install -q -y -c gurobi gurobi \
-                || echo "WARNING: Gurobi is not available"
-            conda install -q -y -c fico-xpress xpress \
-                || echo "WARNING: Xpress Community Edition is not available"
-            for PKG in cyipopt pymumps; do
-                conda install -q -y -c conda-forge $PKG \
-                    || echo "WARNING: $PKG is not available"
+        which python
+        python --version
+        # Note: some pypi packages are not available through conda
+        PYOMO_DEPENDENCIES=`python setup.py dependencies \
+            --extras "$EXTRAS" | tail -1`
+        PACKAGES="${PYTHON_CORE_PKGS} ${PYTHON_PACKAGES} ${PYOMO_DEPENDENCIES} "
+        if [[ ${{matrix.python}} == pypy* ]]; then
+            EXCLUDE="$PYPY_EXCLUDE $EXCLUDE"
+        fi
+        # HACK: Remove problem packages on conda+Linux
+        if test "${{matrix.TARGET}}" == linux; then
+            EXCLUDE="casadi numdifftools pint $EXCLUDE"
+        fi
+        EXCLUDE=`echo "$EXCLUDE" | xargs`
+        if test -n "$EXCLUDE"; then
+            for WORD in $EXCLUDE; do
+                PACKAGES=${PACKAGES//$WORD / }
             done
         fi
+        for PKG in $PACKAGES; do
+            if [[ " $PYPI_ONLY " == *" $PKG "* ]]; then
+                PYPI_DEPENDENCIES="$PYPI_DEPENDENCIES $PKG"
+            else
+                CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES $PKG"
+            fi
+        done
+        echo "*** Install Pyomo dependencies ***"
+        # Note: this will fail the build if any installation fails (or
+        # possibly if it outputs messages to stderr)
+        conda install --update-deps -q -y $CONDA_DEPENDENCIES
+        if test -z "${{matrix.slim}}"; then
+            PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
+            echo "Installing for $PYVER"
+            for PKG in 'cplex>=12.10' docplex 'gurobi=10.0.3' xpress cyipopt pymumps scip; do
+                echo ""
+                echo "*** Install $PKG ***"
+                # conda can literally take an hour to determine that a
+                # package is not available.  Perform a quick search to see
+                # if the package is available for this interpreter before
+                # attempting an install.
+                # NOTE: conda search will attempt approximate matches.
+                _PKGLIST=$(conda search -f "$PKG") || echo "Package $PKG not found"
+                echo "$_PKGLIST"
+                _BASE=$(echo "$PKG" | sed 's/[=<>].*//')
+                _BUILDS=$(echo "$_PKGLIST" | grep "^$_BASE " \
+                    | sed -r 's/\s+/ /g' | cut -d\  -f3) || echo ""
+                if test -n "$_BUILDS"; then
+                    _ISPY=$(echo "$_BUILDS" | grep "^py") \
+                        || echo "No python build detected"
+                    _PYOK=$(echo "$_BUILDS" | grep "^$PYVER") \
+                        || echo "No python build matching $PYVER detected"
+                    if test -z "$_ISPY" -o -n "$_PYOK"; then
+                        echo "... INSTALLING $PKG"
+                        conda install -y "$PKG" || _BUILDS=""
+                    fi
+                fi
+                if test -z "$_BUILDS"; then
+                    echo "WARNING: $PKG is not available"
+                fi
+            done
+            # TODO: This is a hack to stop test_qt.py from running until we
+            # can better troubleshoot why it fails on GHA
+            for QTPACKAGE in qt pyqt; do
+                # Because conda is insane, removing packages can cause
+                # unrelated packages to be updated (breaking version
+                # specifications specified previously, e.g., in
+                # setup.py).  There doesn't appear to be a good
+                # workaround, so we will just force-remove (recognizing
+                # that it may break other conda cruft).
+                conda remove --force-remove $QTPACKAGE \
+                    || echo "$QTPACKAGE not in this environment"
+            done
+        fi
+        # Re-try Pyomo (optional) dependencies with pip
+        if test -n "$PYPI_DEPENDENCIES"; then
+            python -m pip install --cache-dir cache/pip $PYPI_DEPENDENCIES
+        fi
+        # remember this python interpreter
         python -c 'import sys; print("PYTHON_EXE=%s" \
             % (sys.executable,))' >> $GITHUB_ENV
-        echo "NOSETESTS="`which nosetests` >> $GITHUB_ENV
+        #
+        # conda activate puts itself first in the PATH, which overrides
+        # any paths we add through GITHUB_PATH.  We will update .profile
+        # to move the local runner paths back to the front (before conda).
+        for profile in $HOME/.profile $HOME/.bash_profile; do
+            if test ! -e $profile; then
+                continue
+            fi
+            echo '' >> $profile
+            echo 'export PATH=`echo "$PATH" \
+                | tr ":" "\\n" | grep runner | tr "\n" ":"`:`echo "$PATH" \
+                | tr ":" "\\n" | grep -v runner | tr "\n" ":"`' >> $profile
+        done
+        echo ""
+        echo "Final conda environment:"
+        conda list | sed 's/^/    /'
 
     - name: Setup TPL package directories
       run: |
@@ -325,12 +455,12 @@ jobs:
             URL=${URL}/releases/download/$VER
             if test "${{matrix.TARGET}}" == linux; then
                 curl --max-time 150 --retry 8 \
-                    -L $URL/idaes-solvers-ubuntu1804-64.tar.gz \
+                    -L $URL/idaes-solvers-ubuntu2004-x86_64.tar.gz \
                     > $IPOPT_TAR
             else
                 curl --max-time 150 --retry 8 \
-                    -L $URL/idaes-solvers-windows-64.tar.gz \
-                    $URL/idaes-lib-windows-64.tar.gz > $IPOPT_TAR
+                    -L $URL/idaes-solvers-windows-x86_64.tar.gz \
+                    $URL/idaes-lib-windows-x86_64.tar.gz > $IPOPT_TAR
             fi
         fi
         cd $IPOPT_DIR
@@ -353,6 +483,8 @@ jobs:
         echo "DYLD_LIBRARY_PATH=${env:DYLD_LIBRARY_PATH}:$GAMS_DIR" `
             Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         $INSTALLER = "${env:DOWNLOAD_DIR}/gams_install.exe"
+        # We are pinning to 29.1.0 because a license is required for
+        # versions after this in order to run in demo mode.
         $URL = "https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             $URL = "$URL/windows/windows_x64_64.exe"
@@ -363,7 +495,8 @@ jobs:
         }
         if (-not (Test-Path "$INSTALLER" -PathType Leaf)) {
             echo "...downloading GAMS"
-            Invoke-WebRequest -Uri "$URL" -OutFile "$INSTALLER"
+            Invoke-WebRequest -Uri "$URL" -OutFile "$INSTALLER" `
+                -RetryIntervalSec 30 -MaximumRetryCount 8 -TimeoutSec 150
         }
         echo "...installing GAMS"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
@@ -413,7 +546,8 @@ jobs:
         }
         if (-not (Test-Path "$INSTALLER" -PathType Leaf)) {
             echo "...downloading BARON ($URL)"
-            Invoke-WebRequest -Uri "$URL" -OutFile "$INSTALLER"
+            Invoke-WebRequest -Uri "$URL" -OutFile "$INSTALLER" `
+                -RetryIntervalSec 30 -MaximumRetryCount 8 -TimeoutSec 150
         }
         echo "...installing BARON"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
@@ -452,15 +586,12 @@ jobs:
         echo "$GJH_DIR"
         ls -l $GJH_DIR
 
-    - name: Install Pyomo and PyUtilib
+    - name: Install Pyomo
       run: |
         echo ""
         echo "Clone Pyomo-model-libraries..."
-        git clone https://github.com/Pyomo/pyomo-model-libraries.git
-        echo ""
-        echo "Install PyUtilib..."
-        echo ""
-        $PYTHON_EXE -m pip install git+https://github.com/PyUtilib/pyutilib
+        URL=https://github.com/Pyomo/pyomo-model-libraries.git
+        git clone -b ${SRC_REF##*/} $URL || git clone -b main $URL
         echo ""
         echo "Install Pyomo..."
         echo ""
@@ -469,6 +600,15 @@ jobs:
         echo "Set custom PYOMO_CONFIG_DIR"
         echo ""
         echo "PYOMO_CONFIG_DIR=${GITHUB_WORKSPACE}/config" >> $GITHUB_ENV
+
+    # this has to be done after Pyomo is installed because highspy 
+    # depends on pyomo's find_library function
+    - name: Install HiGHS
+      if: ${{ ! matrix.slim }}
+      shell: bash
+      run: |
+        $PYTHON_EXE -m pip install --cache-dir cache/pip highspy \
+            || echo "WARNING: highspy is not available"
 
     - name: Set up coverage tracking
       run: |
@@ -482,18 +622,19 @@ jobs:
         echo "COVERAGE_PROCESS_START=$COVERAGE_RC" >> $GITHUB_ENV
         cp ${GITHUB_WORKSPACE}/.coveragerc ${COVERAGE_RC}
         echo "data_file=${COVERAGE_BASE}age" >> ${COVERAGE_RC}
-        SITE_PACKAGES=$($PYTHON_EXE -c "from distutils.sysconfig import \
-            get_python_lib; print(get_python_lib())")
+        SITE_PACKAGES=$($PYTHON_EXE -c \
+            "import sysconfig; print(sysconfig.get_path('purelib'))")
         echo "Python site-packages: $SITE_PACKAGES"
         echo 'import coverage; coverage.process_startup()' \
             > ${SITE_PACKAGES}/run_coverage_at_startup.pth
 
     - name: Download and install extensions
+      if: ${{ ! matrix.slim }}
       run: |
         echo ""
         echo "Pyomo download-extensions"
         echo ""
-        pyomo download-extensions
+        pyomo download-extensions || exit 1
         echo ""
         echo "Pyomo build-extensions"
         echo ""
@@ -509,12 +650,10 @@ jobs:
     - name: Run Pyomo tests
       if: matrix.mpi == 0
       run: |
-        CATEGORY=
-        for cat in ${{matrix.category}}; do
-            CATEGORY+=" --cat $cat"
-        done
-        $PYTHON_EXE -m pyomo.common.unittest \
-            pyomo `pwd`/pyomo-model-libraries -v $CATEGORY
+        $PYTHON_EXE -m pytest -v \
+            -W ignore::Warning ${{matrix.category}} \
+            pyomo `pwd`/pyomo-model-libraries \
+            `pwd`/examples `pwd`/doc --junitxml="TEST-pyomo.xml"
 
     - name: Run Pyomo MPI tests
       if: matrix.mpi != 0
@@ -523,9 +662,10 @@ jobs:
         # is fully generated by a single process before invoking MPI
         $PYTHON_EXE -c "from pyomo.dataportal.parse_datacmds import \
             parse_data_commands; parse_data_commands(data='')"
-        mpirun -np ${{matrix.mpi}} --oversubscribe $NOSETESTS -v \
-            --with-xunit --xunit-file=TEST-pyomo-mpi.xml \
-            --eval-attr="mpi and (not fragile)" \
+        # Note: if we are testing with openmpi, add '--oversubscribe'
+        mpirun -np ${{matrix.mpi}} pytest -v \
+            --junit-xml=TEST-pyomo-mpi.xml \
+            -m "mpi" -W ignore::Warning \
             pyomo `pwd`/pyomo-model-libraries
 
     - name: Run documentation tests
@@ -540,7 +680,7 @@ jobs:
         coverage xml -i
 
     - name: Record build artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: ${{github.job}}_${{env.GHA_JOBGROUP}}-${{env.GHA_JOBNAME}}
         path: |
@@ -549,6 +689,48 @@ jobs:
           # In general, do not record test results as artifacts to
           #   manage total artifact storage
           # TEST-*.xml
+
+
+  bare-python-env:
+    name: linux/3.8/bare-env
+    needs: lint  # the linter job is a prerequisite for PRs
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+    - name: Checkout Pyomo source
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.8
+
+    - name: Install Pyomo
+      run: |
+        echo ""
+        echo "Install Pyomo..."
+        echo ""
+        python setup.py develop
+        echo ""
+        echo "Set custom PYOMO_CONFIG_DIR"
+        echo ""
+        echo "PYOMO_CONFIG_DIR=${GITHUB_WORKSPACE}/config" >> $GITHUB_ENV
+
+    - name: Report pyomo plugin information
+      run: |
+        echo "$PATH"
+        pyomo help --solvers || exit 1
+        pyomo help --transformations || exit 1
+        pyomo help --writers || exit 1
+
+    - name: Run Pyomo standalone test
+      run: |
+        echo ""
+        echo "Running standalone Pyomo test"
+        echo ""
+        python `pwd`/pyomo/environ/tests/standalone_minimal_pyomo_driver.py \
+            || exit 1
+
 
   cover:
     name: process-coverage-${{ matrix.TARGET }}
@@ -559,10 +741,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-18.04, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
 
         include:
-        - os: ubuntu-18.04
+        - os: ubuntu-latest
           TARGET: linux
         - os: macos-latest
           TARGET: osx
@@ -571,23 +753,23 @@ jobs:
 
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       # We need the source for .codecov.yml and running "coverage xml"
 
-    - name: Pip package cache
-      uses: actions/cache@v2
-      id: pip-cache
-      with:
-        path: cache/pip
-        key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-3.8
+    #- name: Pip package cache
+    #  uses: actions/cache@v3
+    #  id: pip-cache
+    #  with:
+    #    path: cache/pip
+    #    key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-3.8
 
     - name: Download build artifacts
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         path: artifacts
 
     - name: Set up Python 3.8
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: 3.8
 
@@ -596,20 +778,18 @@ jobs:
       run: |
         python -c 'import sys;print(sys.executable)'
         python -m pip install --cache-dir cache/pip --upgrade pip
-        pip install --cache-dir cache/pip ${PYTHON_CORE_PKGS} \
-            ${PYTHON_REQUIRED_PKGS}
+        PYOMO_DEPENDENCIES=`python setup.py dependencies \
+            --extras "tests" | tail -1`
+        python -m pip install --cache-dir cache/pip \
+            ${PYTHON_CORE_PKGS} ${PYOMO_DEPENDENCIES}
         python -c 'import sys; print("PYTHON_EXE=%s" \
             % (sys.executable,))' >> $GITHUB_ENV
 
-    - name: Install Pyomo and PyUtilib
+    - name: Install Pyomo
       run: |
         echo ""
         echo "Clone Pyomo-model-libraries..."
         git clone https://github.com/Pyomo/pyomo-model-libraries.git
-        echo ""
-        echo "Install PyUtilib..."
-        echo ""
-        $PYTHON_EXE -m pip install git+https://github.com/PyUtilib/pyutilib
         echo ""
         echo "Install Pyomo..."
         echo ""
@@ -646,7 +826,7 @@ jobs:
             exit 1
         fi
 
-    - name: Upload codecov reports
+    - name: Combine coverage reports
       if: github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main'
       run: |
         set +e
@@ -655,71 +835,51 @@ jobs:
         else
             SHA=$GITHUB_SHA
         fi
-        function upload {
-            echo ""
-            echo "Build group: $1"
-            export CODECOV_NAME=$1
-            export TAG=$1
-            export GHA_OS_NAME=${{matrix.TARGET}}
-            shift
-            rm -vf .coverage coverage.xml
-            echo "    $@" | sed 's/ /\n    /'
-            coverage combine --debug=dataio $@
-            if test ! -e .coverage; then
-                echo "No coverage to upload."
-                return
-            fi
-            coverage xml || coverage xml -i
-            i=0
-            while : ; do
-                ((i+=1))
-                rm -f codecov.log
-                echo "Uploading coverage to codecov (attempt ${i})"
-                bash $CODECOV -Z -e TAG,GHA_OS_NAME -X gcov -X s3 \
-                    -f coverage.xml -C $SHA | tee codecov.log
-                if test $? == 0; then
-                    echo "PASS $CODECOV_NAME" >> codecov.result
-                    break
-                elif test $i -ge 2; then
-                    if test `grep successfully codecov.log | wc -l` -gt 0; then
-                        echo "PASS $CODECOV_NAME (implied)" >> codecov.result
-                    else
-                        # Do not fail the build (yet) just because the
-                        # codecov upload fails
-                        echo "FAIL $CODECOV_NAME" >> codecov.result
-                        break
-                    fi
-                fi
-                DELAY=$(( RANDOM % 30 + 30))
-                echo "Pausing $DELAY seconds before re-attempting upload"
-                sleep $DELAY
-            done
-        }
         for ARTIFACT in artifacts/*_*${{matrix.TARGET}}_*; do
             NAME=`echo $ARTIFACT | cut -d/ -f2`
             cp -v $ARTIFACT/.coverage .coverage-$NAME
         done
-        upload ${{matrix.TARGET}} .coverage-*_${{matrix.TARGET}}-*
-        if compgen -G ".coverage-*" > /dev/null; then
-            upload ${{matrix.TARGET}}/other .coverage-*
+        rm -vf .coverage coverage.xml
+        echo "Build: ${{ matrix.TARGET }}/other"
+        echo ""
+        FILES=.coverage-*_other-*
+        coverage combine --debug=dataio $FILES
+        if test ! -e .coverage; then
+            echo "No coverage to upload."
+        else
+            coverage xml || coverage xml -i
+            mv -v coverage.xml coverage-other.xml
         fi
-        # Legacy builds that don't support coverage 5.x
-        if compgen -G ".coverage-*" > /dev/null; then
-            echo ""
-            echo "Installing coverage 4.x for legacy builds"
-            pip install 'coverage<5'
-            upload ${{matrix.TARGET}}/legacy .coverage-*
+        echo ""
+        echo "Build: ${{ matrix.TARGET }}"
+        echo ""
+        FILES=.coverage-*_${{matrix.TARGET}}-*
+        coverage combine --debug=dataio $FILES
+        rm -vf artifacts/*/*.xml
+        if test ! -e .coverage; then
+            echo "No coverage to upload."
+        else
+            coverage xml || coverage xml -i
         fi
 
-    - name: Check codecov upload success
-      run: |
-        FAIL=`grep FAIL codecov.result | wc -l`
-        ALL=`cat codecov.result | wc -l`
-        echo "$FAIL of $ALL codecov uploads failed"
-        if test $FAIL -gt 0; then
-            grep FAIL codecov.result | sed 's/^/    /'
-            if test $FAIL -gt 1; then
-                echo "More than 1 codecov upload failed."
-                exit 1
-            fi
-        fi
+    - name: Upload codecov reports
+      if: github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main'
+      uses: codecov/codecov-action@v3
+      with:
+        files: coverage.xml
+        token: ${{ secrets.PYOMO_CODECOV_TOKEN }}
+        name: ${{ matrix.TARGET }}
+        flags: ${{ matrix.TARGET }}
+        fail_ci_if_error: true
+
+    - name: Upload other coverage reports
+      if: |
+        hashFiles('coverage-other.xml') != '' &&
+        (github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main')
+      uses: codecov/codecov-action@v3
+      with:
+        files: coverage-other.xml
+        token: ${{ secrets.PYOMO_CODECOV_TOKEN }}
+        name: ${{ matrix.TARGET }}/other
+        flags: ${{ matrix.TARGET }},other
+        fail_ci_if_error: true

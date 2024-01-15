@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -12,24 +13,35 @@
 
 import pyomo.common.unittest as unittest
 
-from pyomo.environ import ConcreteModel, Var, Constraint, Objective, Suffix, Binary, TransformationFactory, SolverFactory, Reals
+from pyomo.environ import (
+    ConcreteModel,
+    Var,
+    Constraint,
+    Objective,
+    Suffix,
+    Binary,
+    TransformationFactory,
+    SolverFactory,
+    Reals,
+)
 from pyomo.opt import check_available_solvers
 
 solvers = check_available_solvers('cplex', 'gurobi', 'glpk')
+
 
 def _generateModel():
     model = ConcreteModel()
     model.x = Var(within=Binary)
     model.y = Var()
     model.c1 = Constraint(expr=model.y >= model.x)
-    model.c2 = Constraint(expr=model.y >= 1.5-model.x)
+    model.c2 = Constraint(expr=model.y >= 1.5 - model.x)
     model.obj = Objective(expr=model.y)
     model.dual = Suffix(direction=Suffix.IMPORT_EXPORT)
     return model
 
-class Test(unittest.TestCase):
 
-    @unittest.skipIf( len(solvers) == 0, "LP/MIP solver not available")
+class Test(unittest.TestCase):
+    @unittest.skipIf(len(solvers) == 0, "LP/MIP solver not available")
     def test_solve_relax_transform(self):
         s = SolverFactory(solvers[0])
         m = _generateModel()
@@ -48,8 +60,7 @@ class Test(unittest.TestCase):
         self.assertAlmostEqual(m.dual[m.c1], -0.5, 4)
         self.assertAlmostEqual(m.dual[m.c2], -0.5, 4)
 
-
-    @unittest.skipIf( len(solvers) == 0, "LP/MIP solver not available")
+    @unittest.skipIf(len(solvers) == 0, "LP/MIP solver not available")
     def test_solve_fix_transform(self):
         s = SolverFactory(solvers[0])
         m = _generateModel()
@@ -68,6 +79,7 @@ class Test(unittest.TestCase):
         self.assertEqual(len(m.dual), 2)
         self.assertAlmostEqual(m.dual[m.c1], -1, 4)
         self.assertAlmostEqual(m.dual[m.c2], 0, 4)
+
 
 if __name__ == "__main__":
     unittest.main()

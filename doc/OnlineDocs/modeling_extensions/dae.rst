@@ -446,7 +446,7 @@ a number of finite element points which is less than the number of points
 already included in the :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` then
 the transformation will ignore the specified number and proceed with the larger
 set of points. Discretization points will never be removed from a
-:py:class:`ContinousSet<pyomo.dae.ContinuousSet>` during the discretization.
+:py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` during the discretization.
 
 The following code is a Python script applying the backward difference
 method. The code also shows how to add a constraint to a discretized model.
@@ -583,7 +583,7 @@ In the above example, the ``reduce_collocation_points`` function restricts
 the variable ``model.u`` to have only **1** free collocation point per
 finite element, thereby enforcing a piecewise constant profile.
 :numref:`Fig. %s <reduce_points_fig>` shows the solution profile before and
-after appling
+after applying
 the ``reduce_collocation_points`` function.
 
 .. _reduce_points_fig:
@@ -837,8 +837,8 @@ the corresponding values for the dynamic variable profiles.
     - Need to provide initial conditions for dynamic states by setting the
       value or using fix()
 
-Specifying Time-Varing Inputs
-*****************************
+Specifying Time-Varying Inputs
+******************************
 The :py:class:`Simulator<pyomo.dae.Simulator>` supports simulation of a system
 of ODE's or DAE's with time-varying parameters or control inputs. Time-varying
 inputs can be specified using a Pyomo ``Suffix``. We currently only support

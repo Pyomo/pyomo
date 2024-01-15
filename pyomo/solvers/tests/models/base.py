@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -19,13 +20,15 @@ from pyomo.core import Suffix, Var, Constraint, Objective
 from pyomo.opt import ProblemFormat, SolverFactory, TerminationCondition
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
-thisDir = dirname(abspath( __file__ ))
+thisDir = dirname(abspath(__file__))
 
 _test_models = {}
 
 
-@unittest.nottest
-def test_models(arg=None):
+def all_models(arg=None):
+    """
+    Previously named "test_models" - renamed due to port to Pytest
+    """
     if arg is None:
         return _test_models
     else:
@@ -33,7 +36,7 @@ def test_models(arg=None):
 
 
 def register_model(cls):
-    """ Decorator for test model classes """
+    """Decorator for test model classes"""
     global _test_models
     assert cls.__name__ not in _test_models
     _test_models[cls.__name__] = cls
@@ -59,15 +62,14 @@ class _BaseTestModel(object):
         self.solve_should_fail = False
 
     def add_results(self, filename):
-        """ Add results file """
+        """Add results file"""
         self.results_file = join(thisDir, filename)
 
     def generate_model(self, import_suffixes=[]):
-        """ Generate the model """
+        """Generate the model"""
         self._generate_model()
         # Add suffixes
-        self.test_suffixes = [] if self.disable_suffix_tests else \
-                        import_suffixes
+        self.test_suffixes = [] if self.disable_suffix_tests else import_suffixes
         if isinstance(self.model, IBlock):
             for suffix in self.test_suffixes:
                 setattr(self.model, suffix, pmo.suffix(direction=pmo.suffix.IMPORT))
@@ -75,14 +77,10 @@ class _BaseTestModel(object):
             for suffix in self.test_suffixes:
                 setattr(self.model, suffix, Suffix(direction=Suffix.IMPORT))
 
-    def solve(self,
-              solver,
-              io,
-              io_options,
-              solver_options,
-              symbolic_labels,
-              load_solutions):
-        """ Optimize the model """
+    def solve(
+        self, solver, io, io_options, solver_options, symbolic_labels, load_solutions
+    ):
+        """Optimize the model"""
         assert self.model is not None
 
         if not io_options:
@@ -99,7 +97,7 @@ class _BaseTestModel(object):
             assert opt.problem_format() == ProblemFormat.cpxlp
         elif io == 'mps':
             assert opt.problem_format() == ProblemFormat.mps
-        #elif io == 'python':
+        # elif io == 'python':
         #    print opt.problem_format()
         #    assert opt.problem_format() is None
 
@@ -107,12 +105,11 @@ class _BaseTestModel(object):
             if isinstance(opt, PersistentSolver):
                 opt.set_instance(self.model, symbolic_solver_labels=symbolic_labels)
                 if opt.warm_start_capable():
-                    results = opt.solve(warmstart=True,
-                                        load_solutions=load_solutions,
-                                        **io_options)
+                    results = opt.solve(
+                        warmstart=True, load_solutions=load_solutions, **io_options
+                    )
                 else:
-                    results = opt.solve(load_solutions=load_solutions,
-                                        **io_options)
+                    results = opt.solve(load_solutions=load_solutions, **io_options)
             else:
                 if opt.warm_start_capable():
                     results = opt.solve(
@@ -120,36 +117,34 @@ class _BaseTestModel(object):
                         symbolic_solver_labels=symbolic_labels,
                         warmstart=True,
                         load_solutions=load_solutions,
-                        **io_options)
+                        **io_options
+                    )
                 else:
                     results = opt.solve(
                         self.model,
                         symbolic_solver_labels=symbolic_labels,
                         load_solutions=load_solutions,
-                        **io_options)
+                        **io_options
+                    )
 
             return opt, results
         finally:
             pass
-            #opt.deactivate()
+            # opt.deactivate()
         del opt
         return None, None
 
     def save_current_solution(self, filename, **kwds):
-        """ Save the solution in a specified file name """
+        """Save the solution in a specified file name"""
         assert self.model is not None
         model = self.model
-        suffixes = dict((suffix, getattr(model,suffix))
-                        for suffix in kwds.pop('suffixes',[]))
+        suffixes = dict(
+            (suffix, getattr(model, suffix)) for suffix in kwds.pop('suffixes', [])
+        )
         for suf in suffixes.values():
-            if isinstance(self.model, IBlock):
-                assert isinstance(suf,pmo.suffix)
-                assert suf.import_enabled
-            else:
-                assert isinstance(suf,Suffix)
-                assert suf.import_enabled()
+            assert suf.import_enabled()
 
-        with open(filename,'w') as f:
+        with open(filename, 'w') as f:
             #
             # Collect Block, Variable, Constraint, Objective and Suffix data
             #
@@ -192,231 +187,282 @@ class _BaseTestModel(object):
         assert self.model is not None
         assert self.results_file is not None
         model = self.model
-        suffixes = dict((suffix, getattr(model,suffix))
-                        for suffix in kwds.pop('suffixes',[]))
-        exclude = kwds.pop('exclude_suffixes',set())
+        suffixes = dict(
+            (suffix, getattr(model, suffix)) for suffix in kwds.pop('suffixes', [])
+        )
+        exclude = kwds.pop('exclude_suffixes', set())
         for suf in suffixes.values():
-            if isinstance(self.model, IBlock):
-                assert isinstance(suf,pmo.suffix)
-                assert suf.import_enabled
-            else:
-                assert isinstance(suf,Suffix)
-                assert suf.import_enabled()
+            assert suf.import_enabled()
         solution = None
-        error_str = ("Difference in solution for {0}.{1}:\n\tBaseline "
-                     "- {2}\n\tCurrent - {3}")
+        error_str = (
+            "Difference in solution for {0}.{1}:\n\tBaseline - {2}\n\tCurrent - {3}"
+        )
 
-        with open(self.results_file,'r') as f:
+        with open(self.results_file, 'r') as f:
             try:
                 solution = json.load(f)
             except:
-                return (False,"Problem reading file "+self.results_file)
+                return (False, "Problem reading file " + self.results_file)
 
         for var in model.component_data_objects(Var):
             var_value_sol = solution[var.name]['value']
             var_value = var.value
             if not ((var_value is None) and (var_value_sol is None)):
-                if ((var_value is None) ^ (var_value_sol is None)) or \
-                   (abs(var_value_sol - var_value) > self.diff_tol):
-                    return (False,
-                            error_str.format(var.name,
-                                             'value',
-                                             var_value_sol,
-                                             var_value))
+                if ((var_value is None) ^ (var_value_sol is None)) or (
+                    abs(var_value_sol - var_value) > self.diff_tol
+                ):
+                    return (
+                        False,
+                        error_str.format(var.name, 'value', var_value_sol, var_value),
+                    )
             if not (solution[var.name]['stale'] is var.stale):
-                return (False,
-                        error_str.format(var.name,
-                                         'stale',
-                                         solution[var.name]['stale'],
-                                         var.stale))
+                return (
+                    False,
+                    error_str.format(
+                        var.name, 'stale', solution[var.name]['stale'], var.stale
+                    ),
+                )
             for suffix_name, suffix in suffixes.items():
                 _ex = exclude.get(suffix_name, None)
                 if suffix_name in solution[var.name]:
                     if suffix.get(var) is None:
-                        if _ex is not None and (
-                                not _ex[1] or var.name in _ex[1] ):
+                        if _ex is not None and (not _ex[1] or var.name in _ex[1]):
                             continue
-                        if not(solution[var.name][suffix_name] in \
-                               solution["suffix defaults"][suffix_name]):
-                            return (False,
-                                    error_str.format(
-                                        var.name,
-                                        suffix,
-                                        solution[var.name][suffix_name],
-                                        "none defined"))
-                    elif _ex is not None and _ex[0] and (
-                            not _ex[1] or var.name in _ex[1] ):
-                        return (
-                            False,
-                            "Expected solution to be missing suffix %s"
-                            % suffix_name)
-                    elif not abs(solution[var.name][suffix_name] - \
-                                 suffix.get(var)) < self.diff_tol:
-                        return (False,
+                        if not (
+                            solution[var.name][suffix_name]
+                            in solution["suffix defaults"][suffix_name]
+                        ):
+                            return (
+                                False,
                                 error_str.format(
                                     var.name,
                                     suffix,
                                     solution[var.name][suffix_name],
-                                    suffix.get(var)))
+                                    "none defined",
+                                ),
+                            )
+                    elif (
+                        _ex is not None
+                        and _ex[0]
+                        and (not _ex[1] or var.name in _ex[1])
+                    ):
+                        return (
+                            False,
+                            "Expected solution to be missing suffix %s" % suffix_name,
+                        )
+                    elif (
+                        not abs(solution[var.name][suffix_name] - suffix.get(var))
+                        < self.diff_tol
+                    ):
+                        return (
+                            False,
+                            error_str.format(
+                                var.name,
+                                suffix,
+                                solution[var.name][suffix_name],
+                                suffix.get(var),
+                            ),
+                        )
 
         for con in model.component_data_objects(Constraint):
             con_value_sol = solution[con.name]['value']
             con_value = con(exception=False)
             if not ((con_value is None) and (con_value_sol is None)):
-                if ((con_value is None) ^ (con_value_sol is None)) or \
-                   (abs(con_value_sol - con_value) > self.diff_tol):
-                    return (False,
-                            error_str.format(con.name,
-                                             'value',
-                                             con_value_sol,
-                                             con_value))
+                if ((con_value is None) ^ (con_value_sol is None)) or (
+                    abs(con_value_sol - con_value) > self.diff_tol
+                ):
+                    return (
+                        False,
+                        error_str.format(con.name, 'value', con_value_sol, con_value),
+                    )
             for suffix_name, suffix in suffixes.items():
                 _ex = exclude.get(suffix_name, None)
                 if suffix_name in solution[con.name]:
                     if suffix.get(con) is None:
-                        if _ex is not None and (
-                                not _ex[1] or con.name in _ex[1] ):
+                        if _ex is not None and (not _ex[1] or con.name in _ex[1]):
                             continue
-                        if not (solution[con.name][suffix_name] in \
-                                solution["suffix defaults"][suffix_name]):
-                            return (False,
-                                    error_str.format(
-                                        con.name,
-                                        suffix,
-                                        solution[con.name][suffix_name],
-                                        "none defined"))
-                    elif _ex is not None and _ex[0] and (
-                            not _ex[1] or con.name in _ex[1] ):
-                        return (
-                            False,
-                            "Expected solution to be missing suffix %s"
-                            % suffix_name)
-                    elif not abs(solution[con.name][suffix_name] - \
-                                 suffix.get(con)) < self.diff_tol:
-                        return (False,
+                        if not (
+                            solution[con.name][suffix_name]
+                            in solution["suffix defaults"][suffix_name]
+                        ):
+                            return (
+                                False,
                                 error_str.format(
                                     con.name,
                                     suffix,
                                     solution[con.name][suffix_name],
-                                    suffix.get(con)))
+                                    "none defined",
+                                ),
+                            )
+                    elif (
+                        _ex is not None
+                        and _ex[0]
+                        and (not _ex[1] or con.name in _ex[1])
+                    ):
+                        return (
+                            False,
+                            "Expected solution to be missing suffix %s" % suffix_name,
+                        )
+                    elif (
+                        not abs(solution[con.name][suffix_name] - suffix.get(con))
+                        < self.diff_tol
+                    ):
+                        return (
+                            False,
+                            error_str.format(
+                                con.name,
+                                suffix,
+                                solution[con.name][suffix_name],
+                                suffix.get(con),
+                            ),
+                        )
 
         for obj in model.component_data_objects(Objective):
             obj_value_sol = solution[obj.name]['value']
             obj_value = obj(exception=False)
             if not ((obj_value is None) and (obj_value_sol is None)):
-                if ((obj_value is None) ^ (obj_value_sol is None)) or \
-                   (abs(obj_value_sol - obj_value) > self.diff_tol):
-                    return (False,
-                            error_str.format(obj.name,
-                                             'value',
-                                             obj_value_sol,
-                                             obj_value))
+                if ((obj_value is None) ^ (obj_value_sol is None)) or (
+                    abs(obj_value_sol - obj_value) > self.diff_tol
+                ):
+                    return (
+                        False,
+                        error_str.format(obj.name, 'value', obj_value_sol, obj_value),
+                    )
             for suffix_name, suffix in suffixes.items():
                 _ex = exclude.get(suffix_name, None)
                 if suffix_name in solution[obj.name]:
                     if suffix.get(obj) is None:
-                        if _ex is not None and (
-                                not _ex[1] or obj.name in _ex[1] ):
+                        if _ex is not None and (not _ex[1] or obj.name in _ex[1]):
                             continue
-                        if not(solution[obj.name][suffix_name] in \
-                               solution["suffix defaults"][suffix_name]):
-                            return (False,
-                                    error_str.format(
-                                        obj.name,
-                                        suffix,
-                                        solution[obj.name][suffix_name],
-                                        "none defined"))
-                    elif _ex is not None and _ex[0] and (
-                            not _ex[1] or obj.name in _ex[1] ):
-                        return (
-                            False,
-                            "Expected solution to be missing suffix %s"
-                            % suffix_name)
-                    elif not abs(solution[obj.name][suffix_name] - \
-                                 suffix.get(obj)) < self.diff_tol:
-                        return (False,
+                        if not (
+                            solution[obj.name][suffix_name]
+                            in solution["suffix defaults"][suffix_name]
+                        ):
+                            return (
+                                False,
                                 error_str.format(
                                     obj.name,
                                     suffix,
                                     solution[obj.name][suffix_name],
-                                    suffix.get(obj)))
+                                    "none defined",
+                                ),
+                            )
+                    elif (
+                        _ex is not None
+                        and _ex[0]
+                        and (not _ex[1] or obj.name in _ex[1])
+                    ):
+                        return (
+                            False,
+                            "Expected solution to be missing suffix %s" % suffix_name,
+                        )
+                    elif (
+                        not abs(solution[obj.name][suffix_name] - suffix.get(obj))
+                        < self.diff_tol
+                    ):
+                        return (
+                            False,
+                            error_str.format(
+                                obj.name,
+                                suffix,
+                                solution[obj.name][suffix_name],
+                                suffix.get(obj),
+                            ),
+                        )
 
-        first=True
+        first = True
         for block in model.block_data_objects():
             if first:
-                first=False
+                first = False
                 continue
             for suffix_name, suffix in suffixes.items():
                 _ex = exclude.get(suffix_name, None)
-                if (solution[block.name] is not None) and \
-                   (suffix_name in solution[block.name]):
+                if (solution[block.name] is not None) and (
+                    suffix_name in solution[block.name]
+                ):
                     if suffix.get(block) is None:
-                        if _ex is not None and (
-                                not _ex[1] or block.name in _ex[1] ):
+                        if _ex is not None and (not _ex[1] or block.name in _ex[1]):
                             continue
-                        if not(solution[block.name][suffix_name] in \
-                               solution["suffix defaults"][suffix_name]):
-                            return (False,
-                                    error_str.format(
-                                        block.name,
-                                        suffix,
-                                        solution[block.name][suffix_name],
-                                        "none defined"))
-                    elif _ex is not None and _ex[0] and (
-                            not _ex[1] or block.name in _ex[1] ):
-                        return (
-                            False,
-                            "Expected solution to be missing suffix %s"
-                            % suffix_name)
-                    elif not abs(solution[block.name][suffix_name] - \
-                                 suffix.get(block)) < self.diff_tol:
-                        return (False,
+                        if not (
+                            solution[block.name][suffix_name]
+                            in solution["suffix defaults"][suffix_name]
+                        ):
+                            return (
+                                False,
                                 error_str.format(
                                     block.name,
                                     suffix,
                                     solution[block.name][suffix_name],
-                                    suffix.get(block)))
-        return (True,"")
+                                    "none defined",
+                                ),
+                            )
+                    elif (
+                        _ex is not None
+                        and _ex[0]
+                        and (not _ex[1] or block.name in _ex[1])
+                    ):
+                        return (
+                            False,
+                            "Expected solution to be missing suffix %s" % suffix_name,
+                        )
+                    elif (
+                        not abs(solution[block.name][suffix_name] - suffix.get(block))
+                        < self.diff_tol
+                    ):
+                        return (
+                            False,
+                            error_str.format(
+                                block.name,
+                                suffix,
+                                solution[block.name][suffix_name],
+                                suffix.get(block),
+                            ),
+                        )
+        return (True, "")
 
     def validate_capabilities(self, opt):
-        """ Validate the capabilites of the optimizer """
-        if (self.linear is True) and \
-           (not opt.has_capability('linear') is True):
+        """Validate the capabilities of the optimizer"""
+        if (self.linear is True) and (not opt.has_capability('linear') is True):
             return False
-        if (self.integer is True) and \
-           (not opt.has_capability('integer') is True):
+        if (self.integer is True) and (not opt.has_capability('integer') is True):
             return False
-        if (self.quadratic_objective is True) and \
-           (not opt.has_capability('quadratic_objective') is True):
+        if (self.quadratic_objective is True) and (
+            not opt.has_capability('quadratic_objective') is True
+        ):
             return False
-        if (self.quadratic_constraint is True) and \
-           (not opt.has_capability('quadratic_constraint') is True):
+        if (self.quadratic_constraint is True) and (
+            not opt.has_capability('quadratic_constraint') is True
+        ):
             return False
-        if (self.sos1 is True) and \
-           (not opt.has_capability('sos1') is True):
+        if (self.sos1 is True) and (not opt.has_capability('sos1') is True):
             return False
-        if (self.sos2 is True) and \
-           (not opt.has_capability('sos2') is True):
+        if (self.sos2 is True) and (not opt.has_capability('sos2') is True):
             return False
         return True
 
     def post_solve_test_validation(self, tester, results):
-        """ Perform post-solve validation tests """
+        """Perform post-solve validation tests"""
         if tester is None:
-            assert results['Solver'][0]['termination condition'] == TerminationCondition.optimal
+            assert (
+                results['Solver'][0]['termination condition']
+                == TerminationCondition.optimal
+            )
         else:
-            tester.assertEqual(results['Solver'][0]['termination condition'], TerminationCondition.optimal)
+            tester.assertEqual(
+                results['Solver'][0]['termination condition'],
+                TerminationCondition.optimal,
+            )
 
     def warmstart_model(self):
-        """ Initialize model parameters """
+        """Initialize model parameters"""
         pass
 
 
 if __name__ == "__main__":
     import pyomo.solvers.tests.models
+
     for key, value in _test_models.items():
         print(key)
         obj = value()
         obj.generate_model()
         obj.warmstart_model()
-

@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -16,6 +17,7 @@ import pyomo.common.unittest as unittest
 
 try:
     import pyodbc
+
     pyodbc_available = True
 
     from pyomo.dataportal.plugins.db_table import ODBCConfig, ODBCError
@@ -25,10 +27,8 @@ except ImportError:
 
 @unittest.skipIf(not pyodbc_available, "PyODBC is not installed.")
 class TestODBCIni(unittest.TestCase):
-
     def __init__(self, *args, **kwargs):
         unittest.TestCase.__init__(self, *args, **kwargs)
-
 
         self.ACCESS_CONFIGSTR = "Microsoft Access Driver (*.mdb)"
         self.EXCEL_CONFIGSTR = "Microsoft Excel Driver (*.xls)"
@@ -70,20 +70,33 @@ UNICODE = UTF-8
 
     def test_init_simple_data(self):
         config = ODBCConfig(data=self.simple_data)
-        self.assertEqual({'testdb' : self.ACCESS_CONFIGSTR}, config.sources)
-        self.assertEqual({'testdb' : {'Database' : "testdb.mdb"}}, config.source_specs)
+        self.assertEqual({'testdb': self.ACCESS_CONFIGSTR}, config.sources)
+        self.assertEqual({'testdb': {'Database': "testdb.mdb"}}, config.source_specs)
         self.assertEqual({}, config.odbc_info)
 
     def test_init_complex_data(self):
         config = ODBCConfig(data=self.complex_data)
-        self.assertEqual({'test1' : self.ACCESS_CONFIGSTR, 'test2' : self.EXCEL_CONFIGSTR}, config.sources)
-        self.assertEqual({'test1' : {'Database' : "test1.db", 'LogonID' : "Admin", 'pwd' : "secret_pass"}, 'test2' : {'Database' : "test2.xls"}}, config.source_specs)
-        self.assertEqual({'UNICODE' : "UTF-8"}, config.odbc_info)
+        self.assertEqual(
+            {'test1': self.ACCESS_CONFIGSTR, 'test2': self.EXCEL_CONFIGSTR},
+            config.sources,
+        )
+        self.assertEqual(
+            {
+                'test1': {
+                    'Database': "test1.db",
+                    'LogonID': "Admin",
+                    'pwd': "secret_pass",
+                },
+                'test2': {'Database': "test2.xls"},
+            },
+            config.source_specs,
+        )
+        self.assertEqual({'UNICODE': "UTF-8"}, config.odbc_info)
 
     def test_add_source(self):
         config = ODBCConfig()
         config.add_source("testdb", self.ACCESS_CONFIGSTR)
-        self.assertEqual({'testdb' : self.ACCESS_CONFIGSTR}, config.sources)
+        self.assertEqual({'testdb': self.ACCESS_CONFIGSTR}, config.sources)
         self.assertEqual({}, config.source_specs)
         self.assertEqual({}, config.odbc_info)
 
@@ -102,18 +115,18 @@ UNICODE = UTF-8
     def test_add_source_spec(self):
         config = ODBCConfig()
         config.add_source("testdb", self.ACCESS_CONFIGSTR)
-        config.add_source_spec("testdb", {'Database' : "testdb.mdb"})
-        self.assertEqual({'testdb' : {'Database' : "testdb.mdb"}}, config.source_specs)
+        config.add_source_spec("testdb", {'Database': "testdb.mdb"})
+        self.assertEqual({'testdb': {'Database': "testdb.mdb"}}, config.source_specs)
 
     def test_add_spec_bad(self):
         config = ODBCConfig()
         with self.assertRaises(ODBCError):
-            config.add_source_spec("testdb", {'Database' : "testdb.mdb"})
+            config.add_source_spec("testdb", {'Database': "testdb.mdb"})
 
     def test_del_source_dependent(self):
         config = ODBCConfig()
         config.add_source("testdb", self.ACCESS_CONFIGSTR)
-        config.add_source_spec("testdb", {'Database' : "testdb.mdb"})
+        config.add_source_spec("testdb", {'Database': "testdb.mdb"})
         config.del_source("testdb")
         self.assertEqual({}, config.sources)
         self.assertEqual({}, config.source_specs)
@@ -121,7 +134,7 @@ UNICODE = UTF-8
     def test_set_odbc_info(self):
         config = ODBCConfig()
         config.set_odbc_info("UNICODE", "UTF-8")
-        self.assertEqual({'UNICODE' : "UTF-8"}, config.odbc_info)
+        self.assertEqual({'UNICODE': "UTF-8"}, config.odbc_info)
 
     def test_odbc_repr(self):
         config = ODBCConfig(data=self.simple_data)
@@ -137,7 +150,7 @@ UNICODE = UTF-8
             config = ODBCConfig(filename=iniPath)
             config.write(outPath)
 
-            written = ODBCConfig(filename = outPath)
+            written = ODBCConfig(filename=outPath)
             self.assertEqual(config, written)
 
             try:
@@ -150,9 +163,10 @@ UNICODE = UTF-8
 
         configA = ODBCConfig(data=self.simple_data)
         configB = ODBCConfig()
-        configB.sources = {'testdb' : self.ACCESS_CONFIGSTR}
-        configB.source_specs = {'testdb' : {'Database' : 'testdb.mdb'}}
+        configB.sources = {'testdb': self.ACCESS_CONFIGSTR}
+        configB.source_specs = {'testdb': {'Database': 'testdb.mdb'}}
         self.assertEqual(configA, configB)
+
 
 if __name__ == "__main__":
     unittest.main()

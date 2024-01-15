@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -12,12 +13,17 @@
 
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.core.base.constraint import Constraint
-from pyomo.core.base.plugin import TransformationFactory
+from pyomo.core.base.transformation import TransformationFactory
 from pyomo.core.base.suffix import Suffix
 from pyomo.core.expr.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn.standard_repn import generate_standard_repn
-from pyomo.common.config import ConfigBlock, ConfigValue, add_docstring_list
+from pyomo.common.config import (
+    ConfigBlock,
+    ConfigValue,
+    document_kwargs_from_configdict,
+)
+from pyomo.common.errors import InfeasibleConstraintException
 
 
 def _build_equality_set(m):
@@ -32,18 +38,23 @@ def _build_equality_set(m):
     #: dict: map of var UID to the set of all equality-linked var UIDs
     eq_var_map = ComponentMap()
     relevant_vars = ComponentSet()
-    for constr in m.component_data_objects(ctype=Constraint,
-                                           active=True,
-                                           descend_into=True):
+    for constr in m.component_data_objects(
+        ctype=Constraint, active=True, descend_into=True
+    ):
         # Check to make sure the constraint is of form v1 - v2 == 0
-        if (value(constr.lower) == 0 and value(constr.upper) == 0 and
-                constr.body.polynomial_degree() == 1):
+        if (
+            value(constr.lower) == 0
+            and value(constr.upper) == 0
+            and constr.body.polynomial_degree() == 1
+        ):
             repn = generate_standard_repn(constr.body)
             # only take the variables with nonzero coefficients
-            vars_ = [v for i, v in enumerate(repn.linear_vars)
-                     if repn.linear_coefs[i]]
-            if (len(vars_) == 2 and
-                    sorted(l for l in repn.linear_coefs if l) == [-1, 1]):
+            vars_ = [v for i, v in enumerate(repn.linear_vars) if repn.linear_coefs[i]]
+            if (
+                len(vars_) == 2
+                and repn.constant == 0
+                and sorted(l for l in repn.linear_coefs if l) == [-1, 1]
+            ):
                 # this is an a == b constraint.
                 v1 = vars_[0]
                 v2 = vars_[1]
@@ -60,9 +71,9 @@ def _build_equality_set(m):
 def _detect_fixed_variables(m):
     """Detect fixed variables due to constraints of form var = const."""
     new_fixed_vars = ComponentSet()
-    for constr in m.component_data_objects(ctype=Constraint,
-                                           active=True,
-                                           descend_into=True):
+    for constr in m.component_data_objects(
+        ctype=Constraint, active=True, descend_into=True
+    ):
         if constr.equality and constr.body.polynomial_degree() == 1:
             repn = generate_standard_repn(constr.body)
             if len(repn.linear_vars) == 1 and repn.linear_coefs[0]:
@@ -75,9 +86,11 @@ def _detect_fixed_variables(m):
     return new_fixed_vars
 
 
-
-@TransformationFactory.register('contrib.propagate_fixed_vars',
-          doc="Propagate variable fixing for equalities of type x = y.")
+@TransformationFactory.register(
+    'contrib.propagate_fixed_vars',
+    doc="Propagate variable fixing for equalities of type x = y.",
+)
+@document_kwargs_from_configdict('CONFIG')
 class FixedVarPropagator(IsomorphicTransformation):
     """Propagate variable fixing for equalities of type :math:`x = y`.
 
@@ -93,13 +106,15 @@ class FixedVarPropagator(IsomorphicTransformation):
     """
 
     CONFIG = ConfigBlock()
-    CONFIG.declare("tmp", ConfigValue(
-        default=False, domain=bool,
-        description="True to store the set of transformed variables and "
-        "their old states so that they can be later restored."
-    ))
-
-    __doc__ = add_docstring_list(__doc__, CONFIG)
+    CONFIG.declare(
+        "tmp",
+        ConfigValue(
+            default=False,
+            domain=bool,
+            description="True to store the set of transformed variables and "
+            "their old states so that they can be later restored.",
+        ),
+    )
 
     def _apply_to(self, instance, **kwds):
         config = self.CONFIG(kwds)
@@ -114,7 +129,7 @@ class FixedVarPropagator(IsomorphicTransformation):
         fixed_vars.update(newly_fixed)
         processed = ComponentSet()
         # Go through each fixed variable to propagate the 'fixed' status to all
-        # equality-linked variabes.
+        # equality-linked variables.
         for v1 in fixed_vars:
             # If we have already processed the variable, skip it.
             if v1 in processed:
@@ -122,15 +137,14 @@ class FixedVarPropagator(IsomorphicTransformation):
 
             eq_set = eq_var_map.get(v1, ComponentSet([v1]))
             for v2 in eq_set:
-                if (v2.fixed and value(v1) != value(v2)):
-                    raise ValueError(
+                if v2.fixed and value(v1) != value(v2):
+                    raise InfeasibleConstraintException(
                         'Variables {} and {} have conflicting fixed '
                         'values of {} and {}, but are linked by '
-                        'equality constraints.'
-                        .format(v1.name,
-                                v2.name,
-                                value(v1),
-                                value(v2)))
+                        'equality constraints.'.format(
+                            v1.name, v2.name, value(v1), value(v2)
+                        )
+                    )
                 elif not v2.fixed:
                     v2.fix(value(v1))
                     if config.tmp:
@@ -146,8 +160,11 @@ class FixedVarPropagator(IsomorphicTransformation):
         del instance._tmp_propagate_fixed
 
 
-@TransformationFactory.register('contrib.propagate_eq_var_bounds',
-          doc="Propagate variable bounds for equalities of type x = y.")
+@TransformationFactory.register(
+    'contrib.propagate_eq_var_bounds',
+    doc="Propagate variable bounds for equalities of type x = y.",
+)
+@document_kwargs_from_configdict('CONFIG')
 class VarBoundPropagator(IsomorphicTransformation):
     """Propagate variable bounds for equalities of type :math:`x = y`.
 
@@ -160,19 +177,20 @@ class VarBoundPropagator(IsomorphicTransformation):
     """
 
     CONFIG = ConfigBlock()
-    CONFIG.declare("tmp", ConfigValue(
-        default=False, domain=bool,
-        description="True to store the set of transformed variables and "
-        "their old states so that they can be later restored."
-    ))
-
-    __doc__ = add_docstring_list(__doc__, CONFIG)
+    CONFIG.declare(
+        "tmp",
+        ConfigValue(
+            default=False,
+            domain=bool,
+            description="True to store the set of transformed variables and "
+            "their old states so that they can be later restored.",
+        ),
+    )
 
     def _apply_to(self, instance, **kwds):
         config = self.CONFIG(kwds)
         if config.tmp and not hasattr(instance, '_tmp_propagate_original_bounds'):
-            instance._tmp_propagate_original_bounds = Suffix(
-                direction=Suffix.LOCAL)
+            instance._tmp_propagate_original_bounds = Suffix(direction=Suffix.LOCAL)
         eq_var_map, relevant_vars = _build_equality_set(instance)
         processed = ComponentSet()
         # Go through each variable in an equality set to propagate the variable
@@ -191,24 +209,25 @@ class VarBoundPropagator(IsomorphicTransformation):
             ubs = [v.ub for v in var_equality_set if v.has_ub()]
             min_ub = min(ubs) if len(ubs) > 0 else None
 
-            # Check  for error due to bound cross-over
+            # Check for error due to bound cross-over
             if max_lb is not None and min_ub is not None and max_lb > min_ub:
-                # the lower bound is above the upper bound. Raise a ValueError.
+                # the lower bound is above the upper bound. Raise an exception.
                 # get variable with the highest lower bound
                 v1 = next(v for v in var_equality_set if v.lb == max_lb)
                 # get variable with the lowest upper bound
                 v2 = next(v for v in var_equality_set if v.ub == min_ub)
-                raise ValueError(
+                raise InfeasibleConstraintException(
                     'Variable {} has a lower bound {} '
-                    ' > the upper bound {} of variable {}, '
-                    'but they are linked by equality constraints.'
-                    .format(v1.name, value(v1.lb), value(v2.ub), v2.name))
+                    '> the upper bound {} of variable {}, '
+                    'but they are linked by equality constraints.'.format(
+                        v1.name, value(v1.lb), value(v2.ub), v2.name
+                    )
+                )
 
             for v in var_equality_set:
                 if config.tmp:
                     # TODO warn if overwriting
-                    instance._tmp_propagate_original_bounds[v] = (
-                        v.lb, v.ub)
+                    instance._tmp_propagate_original_bounds[v] = (v.lb, v.ub)
                 v.setlb(max_lb)
                 v.setub(min_ub)
 

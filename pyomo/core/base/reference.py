@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -10,21 +11,37 @@
 
 from pyomo.common import DeveloperError
 from pyomo.common.collections import (
-    UserDict, OrderedDict, Mapping, MutableMapping,
-    Set as collections_Set, Sequence,
+    UserDict,
+    Mapping,
+    MutableMapping,
+    Set as collections_Set,
+    Sequence,
 )
-from pyomo.core.base.set import SetOf, OrderedSetOf, _SetDataBase
+from pyomo.common.modeling import NOTSET
+from pyomo.core.base.set import DeclareGlobalSet, Set, SetOf, OrderedSetOf, _SetDataBase
 from pyomo.core.base.component import Component, ComponentData
-from pyomo.core.base.indexed_component import (
-    IndexedComponent, UnindexedComponent_set
-)
+from pyomo.core.base.global_set import UnindexedComponent_set
+from pyomo.core.base.enums import SortComponents
+from pyomo.core.base.indexed_component import IndexedComponent, normalize_index
 from pyomo.core.base.indexed_component_slice import (
-    IndexedComponent_slice, _IndexedComponent_slice_iter
+    IndexedComponent_slice,
+    _IndexedComponent_slice_iter,
 )
 from pyomo.core.base.util import flatten_tuple
 from pyomo.common.deprecation import deprecated
 
-_NotSpecified = object()
+_UnindexedComponent_key = list(UnindexedComponent_set)
+_UnindexedComponent_base_key = tuple(UnindexedComponent_set)
+
+DeclareGlobalSet(
+    Set(
+        initialize=UnindexedComponent_set,
+        name='UnindexedComponent_ReferenceSet',
+        doc='An indexing set used by references to unindexed (scalar) '
+        'components that is equivalent to but NOT the UnindexedComponent_set',
+    ),
+    globals(),
+)
 
 
 class _fill_in_known_wildcards(object):
@@ -58,9 +75,8 @@ class _fill_in_known_wildcards(object):
         look_in_index.  [default: False]
 
     """
-    def __init__(self, wildcard_values,
-                 look_in_index=False,
-                 get_if_not_present=False):
+
+    def __init__(self, wildcard_values, look_in_index=False, get_if_not_present=False):
         self.base_key = wildcard_values
         self.key = list(wildcard_values)
         self.known_slices = set()
@@ -101,13 +117,15 @@ class _fill_in_known_wildcards(object):
                 raise SliceEllipsisLookupError(
                     "Cannot lookup elements in a _ReferenceDict when the "
                     "underlying slice object contains ellipsis over a jagged "
-                    "(dimen=None) Set")
+                    "(dimen=None) Set"
+                )
         try:
             # Here we assemble the index we will actually use to access
             # the component.
             idx = tuple(
                 _slice.fixed[i] if i in _slice.fixed else self.key.pop(0)
-                for i in range(idx_count))
+                for i in range(idx_count)
+            )
             # _slice corresponds to some sliced entry in the call/iter stacks
             # that contains the information describing the slice.
             # Here we fill in an index with the fixed indices from the slice
@@ -117,7 +135,8 @@ class _fill_in_known_wildcards(object):
             raise KeyError(
                 "Insufficient values for slice of indexed component '%s' "
                 "(found evaluating slice index %s)"
-                % (_slice.component.name, self.base_key))
+                % (_slice.component.name, self.base_key)
+            )
 
         if idx in _slice.component:
             # We have found a matching component at this level of the
@@ -133,6 +152,8 @@ class _fill_in_known_wildcards(object):
             # that is contained by the component.
             _slice.last_index = idx
             return _slice.component[idx[0]]
+        elif not idx:
+            return _slice.component
         elif self.look_in_index:
             # At this point we know our component is sparse and we did
             # not find the component data.  Since `look_in_index` is
@@ -141,26 +162,31 @@ class _fill_in_known_wildcards(object):
             # creation (and return) of the new component data.
             if idx in _slice.component.index_set():
                 _slice.last_index = idx
-                return _slice.component[idx] if self.get_if_not_present \
-                    else None
+                return _slice.component[idx] if self.get_if_not_present else None
             elif len(idx) == 1 and idx[0] in _slice.component.index_set():
                 _slice.last_index = idx
-                return _slice.component[idx[0]] if self.get_if_not_present \
-                    else None
+                return _slice.component[idx[0]] if self.get_if_not_present else None
 
         raise KeyError(
             "Index %s is not valid for indexed component '%s' "
             "(found evaluating slice index %s)"
-            % (idx, _slice.component.name, self.base_key))
+            % (idx, _slice.component.name, self.base_key)
+        )
 
     def check_complete(self):
-        if self.key:
-            raise KeyError("Extra (unused) values for slice index %s"
-                           % ( self.base_key, ))
+        if not self.key:
+            return
+        if (
+            self.key == _UnindexedComponent_key
+            and self.base_key == _UnindexedComponent_base_key
+        ):
+            return
+        raise KeyError("Extra (unused) values for slice index %s" % (self.base_key,))
 
 
 class SliceEllipsisLookupError(LookupError):
     pass
+
 
 class _ReferenceDict(MutableMapping):
     """A dict-like object whose values are defined by a slice.
@@ -176,6 +202,7 @@ class _ReferenceDict(MutableMapping):
     component_slice : :py:class:`IndexedComponent_slice`
         The slice object that defines the "members" of this mutable mapping.
     """
+
     def __init__(self, component_slice):
         self._slice = component_slice
 
@@ -199,16 +226,22 @@ class _ReferenceDict(MutableMapping):
                 if _iter.get_last_index_wildcards() == key:
                     return True
             return False
-        except (StopIteration, LookupError):
+        except StopIteration:
             return False
+        except LookupError as e:
+            if normalize_index.flatten:
+                return False
+            try:
+                next(self._get_iter(self._slice, (key,)))
+                return True
+            except LookupError:
+                return False
 
     def __getitem__(self, key):
         try:
             # This calls IC_slice_iter.__next__, which calls
             # _fill_in_known_wildcards.
-            return next(
-                self._get_iter(self._slice, key, get_if_not_present=True)
-            )
+            return next(self._get_iter(self._slice, key, get_if_not_present=True))
         except SliceEllipsisLookupError:
             if type(key) is tuple and len(key) == 1:
                 key = key[0]
@@ -232,20 +265,22 @@ class _ReferenceDict(MutableMapping):
             tmp._call_stack[-1] = (
                 IndexedComponent_slice.set_item,
                 tmp._call_stack[-1][1],
-                val )
+                val,
+            )
         elif op == IndexedComponent_slice.slice_info:
             tmp._call_stack[-1] = (
                 IndexedComponent_slice.set_item,
                 tmp._call_stack[-1][1],
-                val )
+                val,
+            )
         elif op == IndexedComponent_slice.get_attribute:
             tmp._call_stack[-1] = (
                 IndexedComponent_slice.set_attribute,
                 tmp._call_stack[-1][1],
-                val )
+                val,
+            )
         else:
-            raise DeveloperError(
-                "Unexpected slice _call_stack operation: %s" % op)
+            raise DeveloperError("Unexpected slice _call_stack operation: %s" % op)
         try:
             next(self._get_iter(tmp, key, get_if_not_present=True))
         except StopIteration:
@@ -259,54 +294,56 @@ class _ReferenceDict(MutableMapping):
             # change it to delete the item
             tmp._call_stack[-1] = (
                 IndexedComponent_slice.del_item,
-                tmp._call_stack[-1][1] )
+                tmp._call_stack[-1][1],
+            )
         elif op == IndexedComponent_slice.slice_info:
             assert len(tmp._call_stack) == 1
             _iter = self._get_iter(tmp, key)
-            try:
-                next(_iter)
-                del _iter._iter_stack[0].component[_iter.get_last_index()]
-                return
-            except StopIteration:
-                raise KeyError("KeyError: %s" % (key,))
+            # The iterator should map all StopIteration exceptions to KeyErrors
+            next(_iter)
+            del _iter._iter_stack[0].component[_iter.get_last_index()]
+            return
         elif op == IndexedComponent_slice.get_attribute:
             # If the last attribute of the slice retrieves an attribute,
             # change it to delete the attribute
             tmp._call_stack[-1] = (
                 IndexedComponent_slice.del_attribute,
-                tmp._call_stack[-1][1] )
+                tmp._call_stack[-1][1],
+            )
         else:
-            raise DeveloperError(
-                "Unexpected slice _call_stack operation: %s" % op)
+            raise DeveloperError("Unexpected slice _call_stack operation: %s" % op)
         try:
             next(self._get_iter(tmp, key))
         except StopIteration:
             pass
 
     def __iter__(self):
-        return self._slice.wildcard_keys()
+        return self._slice.wildcard_keys(SortComponents.UNSORTED)
 
     def __len__(self):
         # Note that unlike for regular dicts, len() of a _ReferenceDict
         # is very slow (linear time).
         return sum(1 for i in self._slice)
 
-    def items(self):
+    def keys(self, sort=SortComponents.UNSORTED):
+        return self._slice.wildcard_keys(sort)
+
+    def items(self, sort=SortComponents.UNSORTED):
         """Return the wildcard, value tuples for this ReferenceDict
 
         This method is necessary because the default implementation
         iterates over the keys and looks the values up in the
         dictionary.  Unfortunately some slices have structures that make
         looking up components by the wildcard keys very expensive
-        (linear time; e.g., the use of elipses with jagged sets).  By
+        (linear time; e.g., the use of ellipses with jagged sets).  By
         implementing this method without using lookups, general methods
         that iterate over everything (like component.pprint()) will
         still be linear and not quadratic time.
 
         """
-        return self._slice.wildcard_items()
+        return self._slice.wildcard_items(sort)
 
-    def values(self):
+    def values(self, sort=SortComponents.UNSORTED):
         """Return the values for this ReferenceDict
 
         This method is necessary because the default implementation
@@ -319,15 +356,15 @@ class _ReferenceDict(MutableMapping):
         still be linear and not quadratic time.
 
         """
-        return iter(self._slice)
+        return self._slice.wildcard_values(sort)
 
-    @deprecated('The iteritems method is deprecated. Use dict.items().',
-                version='TBD')
+    @deprecated('The iteritems method is deprecated. Use dict.items().', version='6.0')
     def iteritems(self):
         return self.items()
 
-    @deprecated('The itervalues method is deprecated. Use dict.values().',
-                version='TBD')
+    @deprecated(
+        'The itervalues method is deprecated. Use dict.values().', version='6.0'
+    )
     def itervalues(self):
         return self.values()
 
@@ -339,10 +376,10 @@ class _ReferenceDict(MutableMapping):
         # This is how this object does lookups.
         if key.__class__ not in (tuple, list):
             key = (key,)
+        if normalize_index.flatten:
+            key = flatten_tuple(key)
         return _IndexedComponent_slice_iter(
-            _slice,
-            _fill_in_known_wildcards(flatten_tuple(key),
-                                     get_if_not_present=get_if_not_present)
+            _slice, _fill_in_known_wildcards(key, get_if_not_present=get_if_not_present)
         )
 
 
@@ -357,7 +394,7 @@ class _ReferenceDict_mapping(UserDict):
 class _ReferenceSet(collections_Set):
     """A set-like object whose values are defined by a slice.
 
-    This implements a dict-like object whose members are defined by a
+    This implements a set-like object whose members are defined by a
     component slice (:py:class:`IndexedComponent_slice`).
     :py:class:`_ReferenceSet` differs from the
     :py:class:`_ReferenceDict` above in that it looks in the underlying
@@ -370,6 +407,7 @@ class _ReferenceSet(collections_Set):
         The slice object that defines the "members" of this set
 
     """
+
     def __init__(self, component_slice):
         self._slice = component_slice
 
@@ -390,7 +428,7 @@ class _ReferenceSet(collections_Set):
             return False
 
     def __iter__(self):
-        return self._slice.index_wildcard_keys()
+        return self._slice.index_wildcard_keys(False)
 
     def __len__(self):
         return sum(1 for _ in self)
@@ -398,11 +436,22 @@ class _ReferenceSet(collections_Set):
     def _get_iter(self, _slice, key):
         if key.__class__ not in (tuple, list):
             key = (key,)
+        if normalize_index.flatten:
+            key = flatten_tuple(key)
         return _IndexedComponent_slice_iter(
             _slice,
-            _fill_in_known_wildcards(flatten_tuple(key), look_in_index=True),
-            iter_over_index=True
+            _fill_in_known_wildcards(key, look_in_index=True),
+            iter_over_index=True,
         )
+
+    def __str__(self):
+        return "ReferenceSet(%s)" % (self._slice,)
+
+    def ordered_iter(self):
+        return self._slice.index_wildcard_keys(SortComponents.ORDERED_INDICES)
+
+    def sorted_iter(self):
+        return self._slice.index_wildcard_keys(SortComponents.SORTED_INDICES)
 
 
 def _identify_wildcard_sets(iter_stack, index):
@@ -421,7 +470,7 @@ def _identify_wildcard_sets(iter_stack, index):
     # _iter_stack.  Each dict maps position within that level's
     # component's "subsets" list to the set at that position if it is a
     # wildcard set.
-    wildcard_stack = [None]*len(iter_stack)
+    wildcard_stack = [None] * len(iter_stack)
     for i, level in enumerate(iter_stack):
         if level is not None:
             offset = 0
@@ -430,7 +479,9 @@ def _identify_wildcard_sets(iter_stack, index):
             wildcard_sets = {}
             # `wildcard_sets` maps position in the current level's
             # "subsets list" to its set if that set is a wildcard.
-            for j, s in enumerate(level.component.index_set().subsets()):
+            for j, s in enumerate(
+                level.component.index_set().subsets(expand_all_set_operators=False)
+            ):
                 # Iterate over the sets that could possibly be wildcards
                 if s is UnindexedComponent_set:
                     wildcard_sets[j] = s
@@ -441,8 +492,12 @@ def _identify_wildcard_sets(iter_stack, index):
                 # `wildcard_count` is the number of coordinates of this
                 # set (which may be multi-dimensional) that have been
                 # sliced.
-                wildcard_count = sum( 1 for k in range(s.dimen)
-                            if k+offset not in level.fixed )
+                if level.fixed is None:
+                    wildcard_count = s.dimen
+                else:
+                    wildcard_count = sum(
+                        1 for k in range(s.dimen) if k + offset not in level.fixed
+                    )
                 # `k+offset` is a position in the "total" (flattened)
                 # index tuple.  All the _slice_generator's information
                 # is in terms of this total index tuple.
@@ -466,7 +521,7 @@ def _identify_wildcard_sets(iter_stack, index):
             # with ellipsis should get caught by the check for s.dimen
             # above.
             #
-            #if offset != level.explicit_index_count:
+            # if offset != level.explicit_index_count:
             #    return None
             wildcard_stack[i] = wildcard_sets
     if not index:
@@ -495,7 +550,7 @@ def _identify_wildcard_sets(iter_stack, index):
         if len(index[i]) != len(level):
             return None
         # if any wildcard "subset" differs in position or set.
-        if any(index[i].get(j,None) is not _set for j,_set in level.items()):
+        if any(index[i].get(j, None) is not _set for j, _set in level.items()):
             return None
         # These checks seem to intentionally preclude
         #     m.b1[:].v and m.b2[1,:].v
@@ -508,7 +563,8 @@ def _identify_wildcard_sets(iter_stack, index):
         #     Reference(m.c[:].v)
     return index
 
-def Reference(reference, ctype=_NotSpecified):
+
+def Reference(reference, ctype=NOTSET):
     """Creates a component that references other components
 
     ``Reference`` generates a *reference component*; that is, an indexed
@@ -556,7 +612,7 @@ def Reference(reference, ctype=_NotSpecified):
         ...
         >>> m.r1 = Reference(m.b[:,:].x)
         >>> m.r1.pprint()
-        r1 : Size=4, Index=r1_index
+        r1 : Size=4, Index=r1_index, ReferenceTo=b[:, :].x
             Key    : Lower : Value : Upper : Fixed : Stale : Domain
             (1, 3) :     1 :  None :     3 : False :  True :  Reals
             (1, 4) :     1 :  None :     4 : False :  True :  Reals
@@ -569,7 +625,7 @@ def Reference(reference, ctype=_NotSpecified):
 
         >>> m.r2 = Reference(m.b[:,3].x)
         >>> m.r2.pprint()
-        r2 : Size=2, Index=b_index_0
+        r2 : Size=2, Index=b_index_0, ReferenceTo=b[:, 3].x
             Key : Lower : Value : Upper : Fixed : Stale : Domain
               1 :     1 :  None :     3 : False :  True :  Reals
               2 :     2 :  None :     3 : False :  True :  Reals
@@ -579,7 +635,6 @@ def Reference(reference, ctype=_NotSpecified):
 
     .. doctest::
 
-        >>> from pyomo.environ import *
         >>> m = ConcreteModel()
         >>> @m.Block([1,2])
         ... def b(b,i):
@@ -587,7 +642,7 @@ def Reference(reference, ctype=_NotSpecified):
         ...
         >>> m.r3 = Reference(m.b[:].x[:])
         >>> m.r3.pprint()
-        r3 : Size=4, Index=r3_index
+        r3 : Size=4, Index=r3_index, ReferenceTo=b[:].x[:]
             Key    : Lower : Value : Upper : Fixed : Stale : Domain
             (1, 3) :     1 :  None :  None : False :  True :  Reals
             (1, 4) :     1 :  None :  None : False :  True :  Reals
@@ -609,72 +664,112 @@ def Reference(reference, ctype=_NotSpecified):
 
     """
     referent = reference
+    #
+    # Before constructing the reference object that we will return,
+    # we need to know its index set, its ctype, and its _data
+    # dict. The following if statement sets the _data dict
+    # for all possible input types and sets up data structures
+    # necessary to determine the index set and ctype.
+    #
     if isinstance(reference, IndexedComponent_slice):
-        _data = _ReferenceDict(reference)
-        _iter = iter(reference)
         slice_idx = []
         index = None
+        _data = _ReferenceDict(reference)
+        _iter = iter(reference)
     elif isinstance(reference, Component):
+        slice_idx = None
+        if reference.is_indexed():
+            index = reference.index_set()
+        else:
+            index = UnindexedComponent_ReferenceSet
+        if ctype is NOTSET:
+            ctype = reference.ctype
         reference = reference[...]
         _data = _ReferenceDict(reference)
-        _iter = iter(reference)
-        slice_idx = []
-        index = None
+        # index and ctype are now set; no need to iterate over the slice
+        _iter = ()
+    elif isinstance(reference, ComponentData):
+        slice_idx = None
+        index = UnindexedComponent_ReferenceSet
+        if ctype is NOTSET:
+            ctype = reference.ctype
+        reference = IndexedComponent_slice(reference.parent_component())[
+            reference.index()
+        ]
+        _data = _ReferenceDict(reference)
+        # index and ctype are now set; no need to iterate over the slice
+        _iter = ()
     elif isinstance(reference, Mapping):
+        slice_idx = None
         _data = _ReferenceDict_mapping(dict(reference))
         _iter = _data.values()
-        slice_idx = None
         index = SetOf(_data)
     elif isinstance(reference, Sequence):
-        _data = _ReferenceDict_mapping(OrderedDict(enumerate(reference)))
-        _iter = _data.values()
         slice_idx = None
+        _data = _ReferenceDict_mapping(dict(enumerate(reference)))
+        _iter = _data.values()
         index = OrderedSetOf(_data)
     else:
         raise TypeError(
             "First argument to Reference constructors must be a "
             "component, component slice, Sequence, or Mapping (received %s)"
-            % (type(reference).__name__,))
+            % (type(reference).__name__,)
+        )
 
-    if ctype is _NotSpecified:
+    if ctype is NOTSET:
         ctypes = set()
     else:
-        # If the caller specified a ctype, then we will prepopulate the
-        # list to improve our chances of avoiding a scan of the entire
-        # Reference (by simulating multiple ctypes having been found, we
-        # can break out as soon as we know that there are not common
-        # subsets).
-        ctypes = set((1,2))
+        if slice_idx is None:
+            # A slice was not provided. We know the ctype and that there
+            # cannot be common subsets (because a slice was not provided).
+            # We don't need to iterate over the data objects at all.
+            # Note that this is redundant for Component and ComponentData
+            # inputs, as _iter was already empty.
+            _iter = ()
 
     for obj in _iter:
-        ctypes.add(obj.ctype)
-        if not isinstance(obj, ComponentData):
-            # This object is not a ComponentData (likely it is a pure
-            # IndexedComponent container).  As the Reference will treat
-            # it as if it *were* a ComponentData, we will skip ctype
-            # identification and return a base IndexedComponent, thereby
-            # preventing strange exceptions in the writers and with
-            # things like pprint().  Of course, all of this logic is
-            # skipped if the User knows better and forced a ctype on us.
-            ctypes.add(0)
+        #
+        # We were provided a collection of ComponentData, either via
+        # a slice, sequence, or mapping. Now we iterate over these
+        # objects to attempt to infer both the ctype and, if a slice
+        # was provided, the index_set (determined by slice_index).
+        #
+        if ctype is NOTSET:
+            ctypes.add(obj.ctype)
+            if not isinstance(obj, ComponentData):
+                # This object is not a ComponentData (likely it is a pure
+                # IndexedComponent container).  As the Reference will treat
+                # it as if it *were* a ComponentData, we will skip ctype
+                # identification and return a base IndexedComponent, thereby
+                # preventing strange exceptions in the writers and with
+                # things like pprint().  Of course, all of this logic is
+                # skipped if the User knows better and forced a ctype on us.
+                ctypes.add(0)
         # Note that we want to walk the entire slice, unless we can
         # prove that BOTH there aren't common indexing sets (i.e., index
         # is None) AND there is more than one ctype.
         if slice_idx is not None:
             # As long as we haven't ruled out the possibility of common
             # wildcard sets, then we will use _identify_wildcard_sets to
-            # identify the wilcards for this obj and check compatibility
+            # identify the wildcards for this obj and check compatibility
             # of the wildcards with any previously-identified wildcards.
             slice_idx = _identify_wildcard_sets(_iter._iter_stack, slice_idx)
-        elif len(ctypes) > 1:
+        elif ctype is not NOTSET or len(ctypes) > 1:
             break
 
     if index is None:
+        #
+        # index is None, i.e. a slice was provided. If a slice index
+        # has been identified (by all slice members having the same
+        # "wildcard sets"), use this to construct an indexing set.
+        # Otherwise, use a _ReferenceSet.
+        #
         if not slice_idx:
             index = SetOf(_ReferenceSet(reference))
         else:
-            wildcards = sum((sorted(lvl.items()) for lvl in slice_idx
-                             if lvl is not None), [])
+            wildcards = sum(
+                (sorted(lvl.items()) for lvl in slice_idx if lvl is not None), []
+            )
             # Wildcards is a list of (coordinate, set) tuples.  Coordinate
             # is that within the subsets list, and set is a wildcard set.
             index = wildcards[0][1]
@@ -687,8 +782,10 @@ def Reference(reference, ctype=_NotSpecified):
                 index = index * idx
             # index is now either a single Set, or a SetProduct of the
             # wildcard sets.
-    if ctype is _NotSpecified:
+    if ctype is NOTSET:
         if len(ctypes) == 1:
+            # If ctype is not set and only one ctype was identified above,
+            # use this ctype.
             ctype = ctypes.pop()
         else:
             ctype = IndexedComponent

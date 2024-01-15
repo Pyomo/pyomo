@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -30,9 +31,11 @@ def has_discrete_variables(block):
 def log_model_constraints(m, logger=logger, active=True):
     """Prints the model constraints in the model."""
     for constr in m.component_data_objects(
-            ctype=Constraint, active=active, descend_into=True,
-            descent_order=TraversalStrategy.PrefixDepthFirstSearch):
-        logger.info("%s %s" % (
-            constr.name,
-            ("active" if constr.active else "deactivated")
-        ))
+        ctype=Constraint,
+        active=active,
+        descend_into=True,
+        descent_order=TraversalStrategy.PrefixDepthFirstSearch,
+    ):
+        logger.info(
+            "%s %s" % (constr.name, ("active" if constr.active else "deactivated"))
+        )

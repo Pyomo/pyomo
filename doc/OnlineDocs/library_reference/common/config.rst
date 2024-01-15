@@ -12,11 +12,21 @@ Core classes
    ConfigList
    ConfigValue
 
+Utilities
+~~~~~~~~~
+
+.. autosummary::
+
+   document_kwargs_from_configdict
+
+
 Domain validators
 ~~~~~~~~~~~~~~~~~
 
 .. autosummary::
 
+   Bool
+   Integer
    PositiveInt
    NegativeInt
    NonNegativeInt
@@ -27,8 +37,11 @@ Domain validators
    NonNegativeFloat
    In
    InEnum
+   ListOf
+   Module
    Path
    PathList
+   DynamicImplicitDomain
 
 .. autoclass:: ConfigBase
    :members:
@@ -49,6 +62,10 @@ Domain validators
    :members:
    :undoc-members:
 
+.. autodecorator:: document_kwargs_from_configdict
+
+.. autofunction:: Bool
+.. autofunction:: Integer
 .. autofunction:: PositiveInt
 .. autofunction:: NegativeInt
 .. autofunction:: NonNegativeInt
@@ -59,5 +76,8 @@ Domain validators
 .. autofunction:: NonNegativeFloat
 .. autoclass:: In
 .. autoclass:: InEnum
+.. autoclass:: ListOf
+.. autoclass:: Module
 .. autoclass:: Path
 .. autoclass:: PathList
+.. autoclass:: DynamicImplicitDomain

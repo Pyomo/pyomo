@@ -10,48 +10,72 @@ on:
         description: Git Hash (Optional)
         required: false
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYOMO_SETUP_ARGS: "--with-cython --with-distributable-extensions"
+
 jobs:
-  manylinux:
-    name: ${{ matrix.TARGET }}/wheel_creation
+  native_wheels:
+    name: Build wheels (${{ matrix.wheel-version }}) on ${{ matrix.os }} for native and cross-compiled architecture
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
       matrix:
-        os: [ubuntu-latest]
-        include:
-        - os: ubuntu-latest
-          TARGET: manylinux
-        python-version: [3.7]
+        os: [ubuntu-22.04, windows-latest, macos-latest]
+        arch: [all]
+        wheel-version: ['cp38*', 'cp39*', 'cp310*', 'cp311*', 'cp312*']
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install twine wheel setuptools
-    - name: Build manylinux Python wheels
-      uses: RalfG/python-wheels-manylinux-build@v0.3.3-manylinux2010_x86_64
-      with:
-        python-versions: 'cp36-cp36m cp37-cp37m cp38-cp38 cp39-cp39'
-        build-requirements: 'cython'
-        package-path: ''
-        pip-wheel-args: ''
-        # When locally testing, --no-deps flag is necessary (PyUtilib dependency will trigger an error otherwise)
-    - name: Consolidate wheels
-      run: |
-        sudo test -d dist || mkdir -v dist
-        sudo find . -name \*.whl | grep -v /dist/ | xargs -n1 -i mv -v "{}" dist/
-    - name: Delete linux wheels
-      run: |
-        sudo rm -rfv dist/*-linux_x86_64.whl
-    - name: Upload artifact
-      uses: actions/upload-artifact@v1
-      with:
-        name: manylinux-wheels
-        path: dist
+      - uses: actions/checkout@v4
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.16.2
+        with:
+          output-dir: dist
+        env:
+            CIBW_ARCHS_LINUX: "native"
+            CIBW_ARCHS_MACOS: "native arm64"
+            CIBW_ARCHS_WINDOWS: "native ARM64"
+            CIBW_SKIP: "*-musllinux*"
+            CIBW_BUILD: ${{ matrix.wheel-version }}
+            CIBW_BUILD_VERBOSITY: 1
+            CIBW_BEFORE_BUILD: pip install cython pybind11
+            CIBW_CONFIG_SETTINGS: '--global-option="--with-cython --with-distributable-extensions"'
+      - uses: actions/upload-artifact@v3
+        with:
+          name: native_wheels
+          path: dist/*.whl
+
+  alternative_wheels:
+    name: Build wheels (${{ matrix.wheel-version }}) on ${{ matrix.os }} for aarch64
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-22.04]
+        arch: [all]
+        wheel-version: ['cp38*', 'cp39*', 'cp310*', 'cp311*', 'cp312*']
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up QEMU
+        if: runner.os == 'Linux'
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: all
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.16.2
+        with:
+          output-dir: dist
+        env:
+            CIBW_ARCHS_LINUX: "aarch64"
+            CIBW_SKIP: "*-musllinux*"
+            CIBW_BUILD: ${{ matrix.wheel-version }}
+            CIBW_BUILD_VERBOSITY: 1
+            CIBW_BEFORE_BUILD: pip install cython pybind11
+            CIBW_CONFIG_SETTINGS: '--global-option="--with-cython --with-distributable-extensions"'
+      - uses: actions/upload-artifact@v3
+        with:
+          name: alt_wheels
+          path: dist/*.whl
 
   generictarball:
     name: ${{ matrix.TARGET }}
@@ -63,87 +87,23 @@ jobs:
         include:
         - os: ubuntu-latest
           TARGET: generic_tarball
-        python-version: [3.7]
+        python-version: [3.8]
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install twine wheel setuptools
+        pip install twine wheel setuptools pybind11
     - name: Build generic tarball
       run: |
         python setup.py --without-cython sdist --format=gztar
     - name: Upload artifact
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v3
       with:
         name: generictarball
         path: dist
 
-  osx:
-    name: ${{ matrix.TARGET }}py${{ matrix.python-version }}/wheel_creation
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-latest]
-        include:
-        - os: macos-latest
-          TARGET: osx
-        python-version: [ 3.6, 3.7, 3.8, 3.9 ]
-    steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install twine wheel setuptools cython
-    - name: Build OSX Python wheels
-      run: |
-        python setup.py  --with-cython sdist --format=gztar bdist_wheel
-
-    - name: Upload artifact
-      uses: actions/upload-artifact@v1
-      with:
-        name: osx-wheels
-        path: dist
-
-  windows:
-    name: ${{ matrix.TARGET }}py${{ matrix.python-version }}/wheel_creation
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-latest]
-        include:
-        - os: windows-latest
-          TARGET: win
-        python-version: [ 3.6, 3.7, 3.8, 3.9 ]
-    steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      shell: pwsh
-      run: |
-        $env:PYTHONWARNINGS="ignore::UserWarning"
-        Invoke-Expression "python -m pip install --upgrade pip"
-        Invoke-Expression "pip install setuptools twine wheel cython"
-    - name: Build Windows Python wheels
-      shell: pwsh
-      run: |
-        $env:PYTHONWARNINGS="ignore::UserWarning"
-        Invoke-Expression "python setup.py  --with-cython sdist --format=gztar bdist_wheel"
-    - name: Upload artifact
-      uses: actions/upload-artifact@v1
-      with:
-        name: win-wheels
-        path: dist

@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -22,10 +23,23 @@ from pyomo.core.expr.cnf_walker import to_cnf
 from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.environ import (
-    land, atleast, atmost, BooleanConstant, BooleanVarList, ComponentMap, equivalent, exactly, implies, lor, RangeSet,
+    land,
+    atleast,
+    atmost,
+    BooleanConstant,
+    BooleanVarList,
+    ComponentMap,
+    equivalent,
+    exactly,
+    implies,
+    lor,
+    RangeSet,
     value,
-    ConcreteModel, BooleanVar,
-    lnot, xor, )
+    ConcreteModel,
+    BooleanVar,
+    lnot,
+    xor,
+)
 
 
 def _generate_possible_truth_inputs(nargs):
@@ -43,7 +57,6 @@ def _check_equivalent(assert_handle, expr_1, expr_2):
 
 
 class TestLogicalClasses(unittest.TestCase):
-
     def test_BooleanVar(self):
         """
         Simple construction and value setting
@@ -89,13 +102,13 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y2 = BooleanVar()
         op_static = xor(m.Y1, m.Y2)
         op_class = m.Y1.xor(m.Y2)
-        # op_operator = m.Y1 ^ m.Y2
+        op_operator = m.Y1 ^ m.Y2
         for truth_combination in _generate_possible_truth_inputs(2):
             m.Y1.value, m.Y2.value = truth_combination[0], truth_combination[1]
             correct_value = operator.xor(*truth_combination)
             self.assertEqual(value(op_static), correct_value)
             self.assertEqual(value(op_class), correct_value)
-            # self.assertEqual(value(op_operator), correct_value)
+            self.assertEqual(value(op_operator), correct_value)
 
     def test_binary_implies(self):
         m = ConcreteModel()
@@ -121,13 +134,13 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y2 = BooleanVar()
         op_static = land(m.Y1, m.Y2)
         op_class = m.Y1.land(m.Y2)
-        # op_operator = m.Y1 & m.Y2
+        op_operator = m.Y1 & m.Y2
         for truth_combination in _generate_possible_truth_inputs(2):
             m.Y1.value, m.Y2.value = truth_combination[0], truth_combination[1]
             correct_value = all(truth_combination)
             self.assertEqual(value(op_static), correct_value)
             self.assertEqual(value(op_class), correct_value)
-            # self.assertEqual(value(op_operator), correct_value)
+            self.assertEqual(value(op_operator), correct_value)
 
     def test_binary_or(self):
         m = ConcreteModel()
@@ -135,13 +148,13 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y2 = BooleanVar()
         op_static = lor(m.Y1, m.Y2)
         op_class = m.Y1.lor(m.Y2)
-        # op_operator = m.Y1 | m.Y2
+        op_operator = m.Y1 | m.Y2
         for truth_combination in _generate_possible_truth_inputs(2):
             m.Y1.value, m.Y2.value = truth_combination[0], truth_combination[1]
             correct_value = any(truth_combination)
             self.assertEqual(value(op_static), correct_value)
             self.assertEqual(value(op_class), correct_value)
-            # self.assertEqual(value(op_operator), correct_value)
+            self.assertEqual(value(op_operator), correct_value)
 
     def test_nary_and(self):
         nargs = 3
@@ -188,7 +201,9 @@ class TestLogicalClasses(unittest.TestCase):
             for ntrue in range(nargs + 1):
                 m.Y.set_values(dict(enumerate(truth_combination, 1)))
                 correct_value = sum(truth_combination) == ntrue
-                self.assertEqual(value(exactly(ntrue, *(m.Y[i] for i in m.s))), correct_value)
+                self.assertEqual(
+                    value(exactly(ntrue, *(m.Y[i] for i in m.s))), correct_value
+                )
                 self.assertEqual(value(exactly(ntrue, m.Y)), correct_value)
 
     def test_nary_atmost(self):
@@ -200,7 +215,9 @@ class TestLogicalClasses(unittest.TestCase):
             for ntrue in range(nargs + 1):
                 m.Y.set_values(dict(enumerate(truth_combination, 1)))
                 correct_value = sum(truth_combination) <= ntrue
-                self.assertEqual(value(atmost(ntrue, *(m.Y[i] for i in m.s))), correct_value)
+                self.assertEqual(
+                    value(atmost(ntrue, *(m.Y[i] for i in m.s))), correct_value
+                )
                 self.assertEqual(value(atmost(ntrue, m.Y)), correct_value)
 
     def test_nary_atleast(self):
@@ -212,7 +229,9 @@ class TestLogicalClasses(unittest.TestCase):
             for ntrue in range(nargs + 1):
                 m.Y.set_values(dict(enumerate(truth_combination, 1)))
                 correct_value = sum(truth_combination) >= ntrue
-                self.assertEqual(value(atleast(ntrue, *(m.Y[i] for i in m.s))), correct_value)
+                self.assertEqual(
+                    value(atleast(ntrue, *(m.Y[i] for i in m.s))), correct_value
+                )
                 self.assertEqual(value(atleast(ntrue, m.Y)), correct_value)
 
     def test_to_string(self):
@@ -220,6 +239,7 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y1 = BooleanVar()
         m.Y2 = BooleanVar()
         m.Y3 = BooleanVar()
+        m.Y4 = BooleanVar()
 
         self.assertEqual(str(land(m.Y1, m.Y2, m.Y3)), "Y1 ∧ Y2 ∧ Y3")
         self.assertEqual(str(lor(m.Y1, m.Y2, m.Y3)), "Y1 ∨ Y2 ∨ Y3")
@@ -230,8 +250,16 @@ class TestLogicalClasses(unittest.TestCase):
         self.assertEqual(str(atmost(1, m.Y1, m.Y2)), "atmost(1: [Y1, Y2])")
         self.assertEqual(str(exactly(1, m.Y1, m.Y2)), "exactly(1: [Y1, Y2])")
 
-        # Precedence check
+        # Precedence checks
         self.assertEqual(str(m.Y1.implies(m.Y2).lor(m.Y3)), "(Y1 --> Y2) ∨ Y3")
+        self.assertEqual(str(m.Y1 & m.Y2 | m.Y3 ^ m.Y4), "Y1 ∧ Y2 ∨ Y3 ⊻ Y4")
+        self.assertEqual(str(m.Y1 & (m.Y2 | m.Y3) ^ m.Y4), "Y1 ∧ (Y2 ∨ Y3) ⊻ Y4")
+        self.assertEqual(str(m.Y1 & m.Y2 ^ m.Y3 | m.Y4), "Y1 ∧ Y2 ⊻ Y3 ∨ Y4")
+        self.assertEqual(str(m.Y1 & m.Y2 ^ (m.Y3 | m.Y4)), "Y1 ∧ Y2 ⊻ (Y3 ∨ Y4)")
+        self.assertEqual(str(m.Y1 & (m.Y2 ^ (m.Y3 | m.Y4))), "Y1 ∧ (Y2 ⊻ (Y3 ∨ Y4))")
+        self.assertEqual(str(m.Y1 | m.Y2 ^ m.Y3 & m.Y4), "Y1 ∨ Y2 ⊻ Y3 ∧ Y4")
+        self.assertEqual(str((m.Y1 | m.Y2) ^ m.Y3 & m.Y4), "(Y1 ∨ Y2) ⊻ Y3 ∧ Y4")
+        self.assertEqual(str(((m.Y1 | m.Y2) ^ m.Y3) & m.Y4), "((Y1 ∨ Y2) ⊻ Y3) ∧ Y4")
 
     def test_node_types(self):
         m = ConcreteModel()
@@ -250,20 +278,70 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y2 = BooleanVar()
         m.Y3 = BooleanVar()
 
+        def iadd():
+            m.Y3 += 2
+
+        def isub():
+            m.Y3 -= 2
+
+        def imul():
+            m.Y3 *= 2
+
+        def idiv():
+            m.Y3 /= 2
+
+        def ipow():
+            m.Y3 **= 2
+
+        def iand():
+            m.Y3 &= 2
+
+        def ior():
+            m.Y3 |= 2
+
+        def ixor():
+            m.Y3 ^= 2
+
         def invalid_expression_generator():
             yield lambda: m.Y1 + m.Y2
             yield lambda: m.Y1 - m.Y2
             yield lambda: m.Y1 * m.Y2
             yield lambda: m.Y1 / m.Y2
             yield lambda: m.Y1**m.Y2
+            yield lambda: m.Y1.land(0)
+            yield lambda: m.Y1.lor(0)
+            yield lambda: m.Y1.xor(0)
+            yield lambda: m.Y1.equivalent_to(0)
+            yield lambda: m.Y1.implies(0)
             yield lambda: 0 + m.Y2
             yield lambda: 0 - m.Y2
             yield lambda: 0 * m.Y2
             yield lambda: 0 / m.Y2
             yield lambda: 0**m.Y2
+            yield lambda: 0 & m.Y2
+            yield lambda: 0 | m.Y2
+            yield lambda: 0 ^ m.Y2
+            yield lambda: m.Y3 + 2
+            yield lambda: m.Y3 - 2
+            yield lambda: m.Y3 * 2
+            yield lambda: m.Y3 / 2
+            yield lambda: m.Y3**2
+            yield lambda: m.Y3 & 2
+            yield lambda: m.Y3 | 2
+            yield lambda: m.Y3 ^ 2
+            yield iadd
+            yield isub
+            yield imul
+            yield idiv
+            yield ipow
+            yield iand
+            yield ior
+            yield ixor
 
-        numeric_error_msg = "(?:(?:unsupported operand type)|(?:operands do not support))"
-        for invalid_expr_fcn in invalid_expression_generator():
+        numeric_error_msg = (
+            "(?:(?:unsupported operand type)|(?:operands do not support))"
+        )
+        for i, invalid_expr_fcn in enumerate(invalid_expression_generator()):
             with self.assertRaisesRegex(TypeError, numeric_error_msg):
                 _ = invalid_expr_fcn()
 
@@ -272,8 +350,11 @@ class TestLogicalClasses(unittest.TestCase):
             yield lambda: +m.Y1
 
         for invalid_expr_fcn in invalid_unary_expression_generator():
-            with self.assertRaisesRegex(TypeError, "(?:(?:bad operand type for unary)"
-                                                   "|(?:unsupported operand type for unary))"):
+            with self.assertRaisesRegex(
+                TypeError,
+                "(?:(?:bad operand type for unary)"
+                "|(?:unsupported operand type for unary))",
+            ):
                 _ = invalid_expr_fcn()
 
         def invalid_comparison_generator():
@@ -283,7 +364,9 @@ class TestLogicalClasses(unittest.TestCase):
             yield lambda: m.Y1 < 0
 
         # These errors differ between python versions, regrettably
-        comparison_error_msg = "(?:(?:unorderable types)|(?:not supported between instances of))"
+        comparison_error_msg = (
+            "(?:(?:unorderable types)|(?:not supported between instances of))"
+        )
         for invalid_expr_fcn in invalid_comparison_generator():
             with self.assertRaisesRegex(TypeError, comparison_error_msg):
                 _ = invalid_expr_fcn()
@@ -293,12 +376,14 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y1 = BooleanVar()
 
         with self.assertRaisesRegex(
-                TypeError, "argument must be a string or a number"):
+            TypeError, r"argument must be a string or a(.*) number"
+        ):
             float(m.Y1)
 
         with self.assertRaisesRegex(
-                TypeError, "argument must be a string"
-                           "(?:, a bytes-like object)? or a number"):
+            TypeError,
+            r"argument must be a string" r"(?:, a bytes-like object)? or a(.*) number",
+        ):
             int(m.Y1)
 
 

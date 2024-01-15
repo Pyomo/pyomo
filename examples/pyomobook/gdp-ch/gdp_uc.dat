@@ -1,0 +1,12 @@
+# gdp_uc.dat
+
+param NumTimePeriods := 3;
+
+set GENERATORS := g1 g2;
+
+param MaxPower := g1 100 g2 200;
+param MinPower := g1 10 g2 20;
+param RampUpLimit := g1 5 g2 10;
+param RampDownLimit := g1 5 g2 10;
+param StartUpRampLimit := g1 10 g2 20 ;
+param ShutDownRampLimit := g1 10 g2 20 ;

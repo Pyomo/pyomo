@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -24,25 +25,41 @@ Ref:
                      7  constraints
 
 """
-from __future__ import division
 
-from pyomo.environ import (Binary, ConcreteModel, Constraint,
-                           NonNegativeReals, Objective,
-                           RangeSet, Var, minimize)
+from pyomo.environ import (
+    Binary,
+    ConcreteModel,
+    Constraint,
+    NonNegativeReals,
+    Objective,
+    RangeSet,
+    Var,
+    minimize,
+    Block,
+)
+from pyomo.common.collections import ComponentMap
+from pyomo.contrib.mindtpy.tests.MINLP_simple_grey_box import (
+    GreyBoxModel,
+    build_model_external,
+)
 
 
 class SimpleMINLP(ConcreteModel):
     """Convex MINLP problem Assignment 6 APSE."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, grey_box=False, *args, **kwargs):
         """Create the problem."""
         kwargs.setdefault('name', 'SimpleMINLP')
+        if grey_box and GreyBoxModel is None:
+            m = None
+            return
+
         super(SimpleMINLP, self).__init__(*args, **kwargs)
         m = self
 
         """Set declarations"""
-        I = m.I = RangeSet(1, 2, doc="continuous variables")
-        J = m.J = RangeSet(1, 3, doc="discrete variables")
+        I = m.I = RangeSet(1, 2, doc='continuous variables')
+        J = m.J = RangeSet(1, 3, doc='discrete variables')
 
         # initial point information for discrete variables
         initY = {
@@ -50,7 +67,7 @@ class SimpleMINLP(ConcreteModel):
             'sub2': {1: 0, 2: 1, 3: 1},
             'sub3': {1: 1, 2: 0, 3: 1},
             'sub4': {1: 1, 2: 1, 3: 0},
-            'sub5': {1: 0, 2: 0, 3: 0}
+            'sub5': {1: 0, 2: 0, 3: 0},
         }
         # initial point information for continuous variables
         initX = {1: 0, 2: 0}
@@ -72,11 +89,51 @@ class SimpleMINLP(ConcreteModel):
         m.const7 = Constraint(expr=m.Y[1] + m.Y[2] + m.Y[3] >= 1)
 
         """Cost (objective) function definition"""
-        m.cost = Objective(expr=Y[1] + 1.5 * Y[2] + 0.5 * Y[3] + X[1] ** 2 + X[2] ** 2,
-                           sense=minimize)
+        m.objective = Objective(
+            expr=Y[1] + 1.5 * Y[2] + 0.5 * Y[3] + X[1] ** 2 + X[2] ** 2, sense=minimize
+        )
+
+        if not grey_box:
+            m.objective = Objective(
+                expr=Y[1] + 1.5 * Y[2] + 0.5 * Y[3] + X[1] ** 2 + X[2] ** 2,
+                sense=minimize,
+            )
+        else:
+
+            def _model_i(b):
+                build_model_external(b)
+
+            m.my_block = Block(rule=_model_i)
+
+            for i in m.I:
+
+                def eq_inputX(m):
+                    return m.X[i] == m.my_block.egb.inputs["X" + str(i)]
+
+                con_name = "con_X_" + str(i)
+                m.add_component(con_name, Constraint(expr=eq_inputX))
+
+            for j in m.J:
+
+                def eq_inputY(m):
+                    return m.Y[j] == m.my_block.egb.inputs["Y" + str(j)]
+
+                con_name = "con_Y_" + str(j)
+                m.add_component(con_name, Constraint(expr=eq_inputY))
+
+            # add objective
+            m.objective = Objective(expr=m.my_block.egb.outputs['z'], sense=minimize)
 
         """Bound definitions"""
         # x (continuous) upper bounds
         x_ubs = {1: 4, 2: 4}
         for i, x_ub in x_ubs.items():
             X[i].setub(x_ub)
+
+        m.optimal_value = 3.5
+        m.optimal_solution = ComponentMap()
+        m.optimal_solution[m.X[1]] = 1.0
+        m.optimal_solution[m.X[2]] = 1.0
+        m.optimal_solution[m.Y[1]] = 0.0
+        m.optimal_solution[m.Y[2]] = 1.0
+        m.optimal_solution[m.Y[3]] = 0.0

@@ -1,0 +1,7 @@
+set A := 1 a 1 c 1 e 2 a 2 c 2 e 3 a 3 c 3 e;
+
+param B (tr) : 1 2 3 := 
+a 1 4 7
+c 2 5 8
+e 3 6 9
+;

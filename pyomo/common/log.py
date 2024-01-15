@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -17,25 +18,40 @@
 #
 # Utility classes for working with the logger
 #
-
+import inspect
+import io
 import logging
 import re
 import sys
 import textwrap
-from io import TextIOBase
 
+from pyomo.version.info import releaselevel
 from pyomo.common.deprecation import deprecated
 from pyomo.common.fileutils import PYOMO_ROOT_DIR
+from pyomo.common.formatting import wrap_reStructuredText
 
 _indentation_re = re.compile(r'\s*')
-_bullet_re = re.compile(r'(?:[-*] +)|(\[\s*[A-Za-z0-9\.]+\s*\] +)')
-_bullet_char = '-*['
+
+_RTD_URL = "https://pyomo.readthedocs.io/en/%s/errors.html" % (
+    'stable'
+    if (releaselevel == 'final' or 'sphinx' in sys.modules or 'Sphinx' in sys.modules)
+    else 'latest'
+)
+
+
+def RTD(_id):
+    _id = str(_id).lower()
+    assert _id[0] in 'wex'
+    return f"{_RTD_URL}#{_id}"
+
 
 _DEBUG = logging.DEBUG
 _NOTSET = logging.NOTSET
 if not __debug__:
+
     def is_debug_set(logger):
         return False
+
 elif hasattr(getattr(logging.getLogger(), 'manager', None), 'disable'):
     # This works for CPython and PyPy, but relies on a manager attribute
     # to get the current value of the logging.disabled() flag
@@ -59,6 +75,7 @@ elif hasattr(getattr(logging.getLogger(), 'manager', None), 'disable'):
         _level = logger.getEffectiveLevel()
         # Filter out NOTSET and higher levels
         return _NOTSET < _level <= _DEBUG
+
 else:
     # This is inefficient (it indirectly checks effective level twice),
     # but is included for [as yet unknown] platforms that ONLY implement
@@ -67,6 +84,7 @@ else:
         if not logger.isEnabledFor(_DEBUG):
             return False
         return logger.getEffectiveLevel() > _NOTSET
+
 
 class WrappingFormatter(logging.Formatter):
     _flag = "<<!MSG!>>"
@@ -80,126 +98,94 @@ class WrappingFormatter(logging.Formatter):
             elif kwds['style'] == '$':
                 kwds['fmt'] = '$levelname: $message'
             else:
-                raise ValueError('unrecognized style flag "%s"'
-                                 % (kwds['style'],))
+                raise ValueError('unrecognized style flag "%s"' % (kwds['style'],))
         self._wrapper = textwrap.TextWrapper(width=kwds.pop('wrap', 78))
-        self.hang = kwds.pop('hang', ' '*4)
+        self._wrapper.subsequent_indent = kwds.pop('hang', ' ' * 4)
+        if not self._wrapper.subsequent_indent:
+            self._wrapper.subsequent_indent = ''
         self.basepath = kwds.pop('base', None)
         super(WrappingFormatter, self).__init__(**kwds)
 
     def format(self, record):
-        _orig = {k:getattr(record, k) for k in ('msg', 'args', 'pathname')}
         msg = record.getMessage()
+        if record.msg.__class__ is not str and isinstance(record.msg, Preformatted):
+            return msg
+
+        _orig = {
+            k: getattr(record, k) for k in ('msg', 'args', 'pathname', 'levelname')
+        }
+        _id = getattr(record, 'id', None)
         record.msg = self._flag
         record.args = None
+        if _id:
+            record.levelname += f" ({_id.upper()})"
         if self.basepath and record.pathname.startswith(self.basepath):
-            record.pathname = '[base]' + record.pathname[len(self.basepath):]
+            record.pathname = '[base]' + record.pathname[len(self.basepath) :]
         try:
             raw_msg = super(WrappingFormatter, self).format(record)
         finally:
-            for k,v in _orig.items():
+            for k, v in _orig.items():
                 setattr(record, k, v)
 
+        # We want to normalize the incoming message *before* we start
+        # formatting (wrapping) paragraphs.
+        #
         # Most of the messages are either unformatted long lines or
         # triple-quote blocks of text.  In the latter case, if the text
         # starts on the same line as the triple-quote, then it is almost
         # certainly NOT indented with the bulk of the text, which will
         # cause dedent to get confused and not strip any leading
-        # whitespace.  This attempts to work around that case:
+        # whitespace.
         #
-        #if not (_msg.startswith('\n') or _indentation_re.match(_msg).group()):
-        #    # copy the indention for the second line to the first:
-        #    lines = _msg.splitlines()
-        #    if len(lines) > 1:
-        #        _msg = _indentation_re.match(lines[1]).group() + _msg
-        #
-        # The problem with the above logic is that users may want a
-        # simple introductory line followed by an intented line (our
-        # tests did this!), and cannot specify it without adding an
-        # extra blank line to the output.  In contrast, it is possible
-        # for the user to fix the scenario above that motivated this
-        # code by just indenting their first line correctly.
-        msg = textwrap.dedent(msg).strip()
+        # A standard approach is to use inspect.cleandoc, which
+        # allows for the first line to have 0 indent.
+        if getattr(record, 'cleandoc', True):
+            msg = inspect.cleandoc(msg)
 
         # Split the formatted log message (that currently has _flag in
         # lieu of the actual message content) into lines, then
         # recombine, substituting and wrapping any lines that contain
         # _flag.
         return '\n'.join(
-            self._wrap_msg(l, msg) if self._flag in l else l
-            for l in raw_msg.splitlines()
+            self._wrap_msg(line, msg, _id) if self._flag in line else line
+            for line in raw_msg.splitlines()
         )
 
-    def _wrap_msg(self, l, msg):
-        indent = _indentation_re.match(l).group()
-        return self._wrap(l.strip().replace(self._flag, msg), indent)
-
-    def _wrap(self, msg, base_indent):
-        # As textwrap only works on single paragraphs, we need to break
-        # up the incoming message into paragraphs before we pass it to
-        # textwrap.
-        paragraphs = []
-        verbatim = False
-        for line in msg.rstrip().splitlines():
-            leading = _indentation_re.match(line).group()
-            content = line.strip()
-            if not content:
-                paragraphs.append((None, None))
-            elif content == '```':
-                verbatim ^= True
-            elif verbatim:
-                paragraphs.append((None, line))
-            else:
-                matchBullet = _bullet_re.match(content)
-                if matchBullet:
-                    paragraphs.append(
-                        (leading + ' '*len(matchBullet.group()), [content]))
-                elif paragraphs and paragraphs[-1][0] == leading:
-                    paragraphs[-1][1].append( content )
-                else:
-                    paragraphs.append((leading, [content]))
-
-        base_indent = (self.hang or '') + base_indent
-
-        for i, (indent, par) in enumerate(paragraphs):
-            if indent is None:
-                if par is None:
-                    paragraphs[i] = ''
-                else:
-                    paragraphs[i] = base_indent + par
-                continue
-
-            par_indent = base_indent + indent
-            self._wrapper.subsequent_indent = par_indent
-            if not i and self.hang:
-                self._wrapper.initial_indent = par_indent[len(self.hang):]
-            else:
-                self._wrapper.initial_indent = par_indent
-
-            # Bulleted lists get indented with a hanging indent
-            bullet = _bullet_re.match(par[0])
-            if bullet:
-                self._wrapper.initial_indent = par_indent[:-len(bullet.group())]
-
-            paragraphs[i] = self._wrapper.fill(' '.join(par))
-        return '\n'.join(paragraphs)
+    def _wrap_msg(self, format_line, msg, _id):
+        _init = self._wrapper.initial_indent, self._wrapper.subsequent_indent
+        # We will honor the "hang" argument (for specifying a hanging
+        # indent) unless the formatting line was indented (e.g. because
+        # DEBUG was set), in which case we will use that for both the
+        # first line and all subsequent lines.
+        indent = _indentation_re.match(format_line).group()
+        if indent:
+            self._wrapper.initial_indent = self._wrapper.subsequent_indent = indent
+        try:
+            wrapped_msg = wrap_reStructuredText(
+                format_line.strip().replace(self._flag, msg), self._wrapper
+            )
+        finally:
+            # Restore the wrapper state
+            self._wrapper.initial_indent, self._wrapper.subsequent_indent = _init
+        if _id:
+            wrapped_msg += f"\n{indent}{_init[1]}See also {RTD(_id)}"
+        return wrapped_msg
 
 
 class LegacyPyomoFormatter(logging.Formatter):
-    """This mocks up the legacy Pyomo log formating.
+    """This mocks up the legacy Pyomo log formatting.
 
     This formatter takes a callback function (`verbosity`) that will be
     called for each message.  Based on the result, one of two formatting
     templates will be used.
 
     """
+
     def __init__(self, **kwds):
         if 'fmt' in kwds:
-            raise ValueError(
-                "'fmt' is not a valid option for the LegacyFormatter")
+            raise ValueError("'fmt' is not a valid option for the LegacyFormatter")
         if 'style' in kwds:
-            raise ValueError(
-                "'style' is not a valid option for the LegacyFormatter")
+            raise ValueError("'style' is not a valid option for the LegacyFormatter")
 
         self.verbosity = kwds.pop('verbosity', lambda: True)
         self.standard_formatter = WrappingFormatter(**kwds)
@@ -207,7 +193,7 @@ class LegacyPyomoFormatter(logging.Formatter):
             fmt='%(levelname)s: "%(pathname)s", %(lineno)d, %(funcName)s\n'
             '    %(message)s',
             hang=False,
-            **kwds
+            **kwds,
         )
         super(LegacyPyomoFormatter, self).__init__()
 
@@ -230,6 +216,19 @@ class StdoutHandler(logging.StreamHandler):
         super(StdoutHandler, self).emit(record)
 
 
+class Preformatted(object):
+    __slots__ = ('msg',)
+
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __str__(self):
+        return str(self.msg)
+
+    def __repr__(self):
+        return f'Preformatted({self.msg!r})'
+
+
 class _GlobalLogFilter(object):
     def __init__(self):
         self.logger = logging.getLogger()
@@ -242,31 +241,29 @@ class _GlobalLogFilter(object):
 # different formatter based on if the main pyomo logger is enabled for
 # debugging.  It has been updated to suppress output if any handlers
 # have been defined at the root level.
-_pyomoLogger = logging.getLogger('pyomo')
-_handler = StdoutHandler()
-_handler.setFormatter(LegacyPyomoFormatter(
-    base=PYOMO_ROOT_DIR,
-    verbosity=lambda: _pyomoLogger.isEnabledFor(logging.DEBUG),
-))
-_handler.addFilter(_GlobalLogFilter())
-_pyomoLogger.addHandler(_handler)
+pyomo_logger = logging.getLogger('pyomo')
+pyomo_handler = StdoutHandler()
+pyomo_formatter = LegacyPyomoFormatter(
+    base=PYOMO_ROOT_DIR, verbosity=lambda: pyomo_logger.isEnabledFor(logging.DEBUG)
+)
+pyomo_handler.setFormatter(pyomo_formatter)
+pyomo_handler.addFilter(_GlobalLogFilter())
+pyomo_logger.addHandler(pyomo_handler)
 
 
-@deprecated('The pyomo.common.log.LogHandler class has been deprecated '
-            'in favor of standard Handlers from the Python logging module '
-            'combined with the pyomo.common.log.WrappingFormatter.',
-            version='5.7.3')
+@deprecated(
+    'The pyomo.common.log.LogHandler class has been deprecated '
+    'in favor of standard Handlers from the Python logging module '
+    'combined with the pyomo.common.log.WrappingFormatter.',
+    version='5.7.3',
+)
 class LogHandler(logging.StreamHandler):
-    def __init__(self, base='', stream=None,
-                 level=logging.NOTSET, verbosity=None):
+    def __init__(self, base='', stream=None, level=logging.NOTSET, verbosity=None):
         super(LogHandler, self).__init__(stream)
         self.setLevel(level),
         if verbosity is None:
             verbosity = lambda: True
-        self.setFormatter(LegacyPyomoFormatter(
-            base=base,
-            verbosity=verbosity,
-        ))
+        self.setFormatter(LegacyPyomoFormatter(base=base, verbosity=verbosity))
 
 
 class LoggingIntercept(object):
@@ -280,10 +277,17 @@ class LoggingIntercept(object):
     logger will be temporarily removed and the logger will be set not to
     propagate messages up to higher-level loggers.
 
-    Args:
-        output (FILE): the file stream to send log messages to
-        module (str): the target logger name to intercept
-        level (int): the logging level to intercept
+    Parameters
+    ----------
+    output: io.TextIOBase
+        the file stream to send log messages to
+    module: str
+        the target logger name to intercept
+    level: int
+        the logging level to intercept
+    formatter: logging.Formatter
+        the formatter to use when rendering the log messages.  If not
+        specified, uses `'%(message)s'`
 
     Examples:
         >>> import io, logging
@@ -292,45 +296,69 @@ class LoggingIntercept(object):
         >>> with LoggingIntercept(buf, 'pyomo.core', logging.WARNING):
         ...     logging.getLogger('pyomo.core').warning('a simple message')
         >>> buf.getvalue()
+
     """
 
-    def __init__(self, output, module=None, level=logging.WARNING):
-        self.handler = logging.StreamHandler(output)
-        self.handler.setFormatter(logging.Formatter('%(message)s'))
-        self.handler.setLevel(level)
+    def __init__(self, output=None, module=None, level=logging.WARNING, formatter=None):
+        self.handler = None
+        self.output = output
         self.module = module
+        self._level = level
+        if formatter is None:
+            formatter = logging.Formatter('%(message)s')
+        self._formatter = formatter
         self._save = None
 
     def __enter__(self):
+        # Set up the handler
+        output = self.output
+        if output is None:
+            output = io.StringIO()
+        assert self.handler is None
+        self.handler = logging.StreamHandler(output)
+        self.handler.setFormatter(self._formatter)
+        self.handler.setLevel(self._level)
+        # Register the handler with the appropriate module scope
         logger = logging.getLogger(self.module)
         self._save = logger.level, logger.propagate, logger.handlers
         logger.handlers = []
         logger.propagate = 0
         logger.setLevel(self.handler.level)
         logger.addHandler(self.handler)
+        return output
 
     def __exit__(self, et, ev, tb):
         logger = logging.getLogger(self.module)
         logger.removeHandler(self.handler)
+        self.handler = None
         logger.setLevel(self._save[0])
         logger.propagate = self._save[1]
         for h in self._save[2]:
             logger.handlers.append(h)
 
 
-class LogStream(TextIOBase):
+class LogStream(io.TextIOBase):
     """
     This class logs whatever gets sent to the write method.
     This is useful for logging solver output (a LogStream
     instance can be handed to TeeStream from pyomo.common.tee).
     """
+
     def __init__(self, level, logger):
         self._level = level
         self._logger = logger
+        self._buffer = ''
 
     def write(self, s: str) -> int:
         res = len(s)
-        s = s.rstrip('\n')
-        for line in s.split('\n'):
+        if self._buffer:
+            s = self._buffer + s
+        lines = s.split('\n')
+        for line in lines[:-1]:
             self._logger.log(self._level, line)
+        self._buffer = lines[-1]
         return res
+
+    def flush(self):
+        if self._buffer:
+            self.write('\n')

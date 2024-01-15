@@ -1,18 +1,21 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
 import sys
 import copy
+from pyomo.common.deprecation import deprecation_warning
 
 try:
     import pkg_resources
+
     pyomo_commands = pkg_resources.iter_entry_points('pyomo.command')
 except:
     pyomo_commands = []
@@ -26,10 +29,12 @@ for entrypoint in pyomo_commands:
     except Exception:
         exctype, err, tb = sys.exc_info()  # BUG?
         import traceback
-        msg = "Error loading pyomo.command entry point %s:\nOriginal %s: %s\n"\
-              "Traceback:\n%s" \
-              % (entrypoint, exctype.__name__, err,
-                 ''.join(traceback.format_tb(tb)),)
+
+        msg = (
+            "Error loading pyomo.command entry point %s:\nOriginal %s: %s\n"
+            "Traceback:\n%s"
+            % (entrypoint, exctype.__name__, err, ''.join(traceback.format_tb(tb)))
+        )
         # clear local variables to remove circular references
         exctype = err = tb = None
         # TODO: Should this just log an error and re-raise the original
@@ -43,6 +48,7 @@ def main(args=None):
     #
     from pyomo.scripting import pyomo_parser
     import pyomo.environ
+
     #
     # Parse the arguments
     #
@@ -54,13 +60,20 @@ def main(args=None):
     #
     if not args:
         args.append('-h')
-    # FIXME: This should use the logger and not print()
     if args[0][0] == '-':
         if args[0] not in ['-h', '--help', '--version']:
-            print("WARNING: converting to the 'pyomo solve' subcommand")
+            deprecation_warning(
+                "Running the 'pyomo' script with no subcommand is deprecated. "
+                "Defaulting to 'pyomo solve'",
+                version='6.5.0',
+            )
             args = ['solve'] + args[0:]
     elif args[0] not in pyomo_parser.subparsers:
-        print("WARNING: converting to the 'pyomo solve' subcommand")
+        deprecation_warning(
+            "Running the 'pyomo' script with no subcommand is deprecated. "
+            "Defaulting to 'pyomo solve'",
+            version='6.5.0',
+        )
         args = ['solve'] + args[0:]
     #
     # Process arguments
@@ -94,6 +107,7 @@ def main_console_script():
         return ans.errorcode
     except AttributeError:
         return ans
+
 
 if __name__ == '__main__':
     sys.exit(main_console_script())

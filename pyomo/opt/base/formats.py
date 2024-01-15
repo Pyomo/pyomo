@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -13,7 +14,8 @@
 #
 __all__ = ['ProblemFormat', 'ResultsFormat', 'guess_format']
 
-import enum 
+import enum
+
 
 #
 # pyomo - A pyomo.core.PyomoModel object, or a *.py file that defines such an object
@@ -27,16 +29,16 @@ import enum
 # gams - A GAMS input file
 #
 class ProblemFormat(str, enum.Enum):
-    pyomo='pyomo'
-    cpxlp='cpxlp'
-    nl='nl'
-    mps='mps'
-    mod='mod'
-    lpxlp='lpxlp'
-    osil='osil'
-    bar='bar'
-    gams='gams'
-    
+    pyomo = 'pyomo'
+    cpxlp = 'cpxlp'
+    nl = 'nl'
+    mps = 'mps'
+    mod = 'mod'
+    lpxlp = 'lpxlp'
+    osil = 'osil'
+    bar = 'bar'
+    gams = 'gams'
+
     # Overloading __str__ is needed to match the behavior of the old
     # pyutilib.enum class (removed June 2020). There are spots in the
     # code base that expect the string representation for items in the
@@ -55,12 +57,12 @@ class ProblemFormat(str, enum.Enum):
 # json - A Pyomo results file in JSON format
 #
 class ResultsFormat(str, enum.Enum):
-    osrl='osrl'
-    results='results'
-    sol='sol'
-    soln='soln'
-    yaml='yaml'
-    json='json'
+    osrl = 'osrl'
+    results = 'results'
+    sol = 'sol'
+    soln = 'soln'
+    yaml = 'yaml'
+    json = 'json'
 
     # Overloading __str__ is needed to match the behavior of the old
     # pyutilib.enum class (removed June 2020). There are spots in the
@@ -73,24 +75,24 @@ class ResultsFormat(str, enum.Enum):
 
 def guess_format(filename):
     formats = {}
-    formats['py']=ProblemFormat.pyomo
-    formats['nl']=ProblemFormat.nl
-    formats['bar']=ProblemFormat.bar
-    formats['mps']=ProblemFormat.mps
-    formats['mod']=ProblemFormat.mod
-    formats['lp']=ProblemFormat.cpxlp
-    formats['osil']=ProblemFormat.osil
-    formats['gms']=ProblemFormat.gams
-    formats['gams']=ProblemFormat.gams
+    formats['py'] = ProblemFormat.pyomo
+    formats['nl'] = ProblemFormat.nl
+    formats['bar'] = ProblemFormat.bar
+    formats['mps'] = ProblemFormat.mps
+    formats['mod'] = ProblemFormat.mod
+    formats['lp'] = ProblemFormat.cpxlp
+    formats['osil'] = ProblemFormat.osil
+    formats['gms'] = ProblemFormat.gams
+    formats['gams'] = ProblemFormat.gams
 
-    formats['sol']=ResultsFormat.sol
-    formats['osrl']=ResultsFormat.osrl
-    formats['soln']=ResultsFormat.soln
-    formats['yml']=ResultsFormat.yaml
-    formats['yaml']=ResultsFormat.yaml
-    formats['jsn']=ResultsFormat.json
-    formats['json']=ResultsFormat.json
-    formats['results']=ResultsFormat.yaml
+    formats['sol'] = ResultsFormat.sol
+    formats['osrl'] = ResultsFormat.osrl
+    formats['soln'] = ResultsFormat.soln
+    formats['yml'] = ResultsFormat.yaml
+    formats['yaml'] = ResultsFormat.yaml
+    formats['jsn'] = ResultsFormat.json
+    formats['json'] = ResultsFormat.json
+    formats['results'] = ResultsFormat.yaml
     if filename:
         return formats.get(filename.split('.')[-1].strip(), None)
     else:

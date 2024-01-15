@@ -1,14 +1,15 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-# 
+#
 # Unit Tests for Integral Objects
 #
 
@@ -17,8 +18,7 @@ from os.path import abspath, dirname
 
 import pyomo.common.unittest as unittest
 
-from pyomo.environ import (ConcreteModel, Var, Set, TransformationFactory,
-                           Expression)
+from pyomo.environ import ConcreteModel, Var, Set, TransformationFactory, Expression
 from pyomo.dae import ContinuousSet, Integral
 from pyomo.dae.diffvar import DAE_Error
 
@@ -29,7 +29,6 @@ currdir = dirname(abspath(__file__)) + os.sep
 
 
 class TestIntegral(unittest.TestCase):
-
     # test valid declarations
     def test_valid(self):
         m = ConcreteModel()
@@ -111,7 +110,7 @@ class TestIntegral(unittest.TestCase):
             return m.v3[x, t]
 
         def _int3(m, s, t):
-            return m.v2[s,t]
+            return m.v2[s, t]
 
         # Integrals must be indexed by a ContinuousSet
         with self.assertRaises(ValueError):
@@ -123,7 +122,7 @@ class TestIntegral(unittest.TestCase):
 
         # No ContinuousSet specified
         with self.assertRaises(ValueError):
-            m.int2 = Integral(m.x, m.t, rule= _int2)
+            m.int2 = Integral(m.x, m.t, rule=_int2)
 
         # 'wrt' is not a ContinuousSet
         with self.assertRaises(ValueError):
@@ -135,71 +134,70 @@ class TestIntegral(unittest.TestCase):
 
         # 'bounds' not supported
         with self.assertRaises(DAE_Error):
-            m.int = Integral(m.t, wrt=m.t, rule=_int, bounds=(0,0.5))
+            m.int = Integral(m.t, wrt=m.t, rule=_int, bounds=(0, 0.5))
 
         # No rule specified
         with self.assertRaises(ValueError):
             m.int = Integral(m.t, wrt=m.t)
 
-            # test DerivativeVar reclassification after discretization
+    # test Integral reclassification after discretization
+    def test_reclassification_finite_difference(self):
+        m = ConcreteModel()
+        m.t = ContinuousSet(bounds=(0, 1))
+        m.x = ContinuousSet(bounds=(5, 10))
+        m.s = Set(initialize=[1, 2, 3])
+        m.v = Var(m.t)
+        m.v2 = Var(m.s, m.t)
+        m.v3 = Var(m.t, m.x)
 
-        def test_reclassification_finite_difference(self):
-            m = ConcreteModel()
-            m.t = ContinuousSet(bounds=(0, 1))
-            m.x = ContinuousSet(bounds=(5, 10))
-            m.s = Set(initialize=[1, 2, 3])
-            m.v = Var(m.t)
-            m.v2 = Var(m.s, m.t)
-            m.v3 = Var(m.t, m.x)
+        def _int1(m, t):
+            return m.v[t]
 
-            def _int1(m, t):
-                return m.v[t]
+        m.int1 = Integral(m.t, rule=_int1)
 
-            m.int1 = Integral(m.t, rule=_int1)
+        def _int2(m, s, t):
+            return m.v2[s, t]
 
-            def _int2(m, s, t):
-                return m.v2[s, t]
+        m.int2 = Integral(m.s, m.t, wrt=m.t, rule=_int2)
 
-            m.int2 = Integral(m.s, m.t, wrt=m.t, rule=_int2)
+        def _int3(m, t, x):
+            return m.v3[t, x]
 
-            def _int3(m, t, x):
-                return m.v3[t, x]
+        m.int3 = Integral(m.t, m.x, wrt=m.t, rule=_int3)
 
-            m.int3 = Integral(m.t, m.x, wrt=m.t, rule=_int3)
+        def _int4(m, x):
+            return m.int3[x]
 
-            def _int4(m, x):
-                return m.int3[x]
+        m.int4 = Integral(m.x, wrt=m.x, rule=_int4)
 
-            m.int4 = Integral(m.x, wrt=m.x, rule=_int4)
+        self.assertFalse(m.int1.is_fully_discretized())
+        self.assertFalse(m.int2.is_fully_discretized())
+        self.assertFalse(m.int3.is_fully_discretized())
+        self.assertFalse(m.int4.is_fully_discretized())
 
-            self.assertFalse(m.int1.is_fully_discretized())
-            self.assertFalse(m.int2.is_fully_discretized())
-            self.assertFalse(m.int3.is_fully_discretized())
-            self.assertFalse(m.int4.is_fully_discretized())
+        TransformationFactory('dae.finite_difference').apply_to(m, wrt=m.t)
 
-            TransformationFactory('dae.finite_difference').apply_to(m, wrt=m.t)
+        self.assertTrue(m.int1.is_fully_discretized())
+        self.assertTrue(m.int2.is_fully_discretized())
+        self.assertFalse(m.int3.is_fully_discretized())
+        self.assertFalse(m.int4.is_fully_discretized())
 
-            self.assertTrue(m.int1.is_fully_discretized())
-            self.assertTrue(m.int2.is_fully_discretized())
-            self.assertFalse(m.int3.is_fully_discretized())
-            self.assertFalse(m.int4.is_fully_discretized())
+        self.assertTrue(m.int1.ctype is Integral)
+        self.assertTrue(m.int2.ctype is Integral)
+        self.assertTrue(m.int3.ctype is Integral)
+        self.assertTrue(m.int4.ctype is Integral)
 
-            self.assertTrue(m.int1.ctype is Integral)
-            self.assertTrue(m.int2.ctype is Integral)
-            self.assertTrue(m.int3.ctype is Integral)
-            self.assertTrue(m.int4.ctype is Integral)
+        TransformationFactory('dae.finite_difference').apply_to(m, wrt=m.x)
 
-            TransformationFactory('dae.finite_difference').apply_to(m, wrt=m.x)
+        self.assertTrue(m.int3.is_fully_discretized())
+        self.assertTrue(m.int4.is_fully_discretized())
 
-            self.assertTrue(m.int3.is_fully_discretized())
-            self.assertTrue(m.int4.is_fully_discretized())
+        self.assertTrue(m.int1.ctype is Expression)
+        self.assertTrue(m.int2.ctype is Expression)
+        self.assertTrue(m.int3.ctype is Expression)
+        self.assertTrue(m.int4.ctype is Expression)
 
-            self.assertTrue(m.int1.ctype is Expression)
-            self.assertTrue(m.int2.ctype is Expression)
-            self.assertTrue(m.int3.ctype is Expression)
-            self.assertTrue(m.int4.ctype is Expression)
-
-    # test DerivativeVar reclassification after discretization
+    # test Integral reclassification after discretization
     def test_reclassification_collocation(self):
         m = ConcreteModel()
         m.t = ContinuousSet(bounds=(0, 1))

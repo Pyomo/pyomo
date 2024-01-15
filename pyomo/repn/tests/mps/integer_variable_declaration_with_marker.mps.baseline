@@ -1,0 +1,27 @@
+* Source:     Pyomo MPS Writer
+* Format:     Free MPS
+*
+NAME Example-mix-integer-linear-problem
+OBJSENSE
+ MIN
+ROWS
+ N  obj
+ G  c_l_const1_
+ L  c_u_const2_
+COLUMNS
+     MARK0000 'MARKER' 'INTORG'
+     x1 obj 3
+     x1 c_l_const1_ 4
+     x1 c_u_const2_ 1
+     MARK0001 'MARKER' 'INTEND'
+     x2 obj 2
+     x2 c_l_const1_ 3
+     x2 c_u_const2_ 2
+RHS
+     RHS c_l_const1_ 10
+     RHS c_u_const2_ 7
+BOUNDS
+ LI BOUND x1 0
+ UI BOUND x1 10E20
+ LO BOUND x2 0
+ENDATA

@@ -10,7 +10,7 @@ Pyomo Expressions
     This documentation does not explicitly reference objects in
     pyomo.core.kernel.  While the Pyomo5 expression system works
     with pyomo.core.kernel objects, the documentation of these
-    documents was not sufficient to appropriately descibe the use
+    documents was not sufficient to appropriately describe the use
     of kernel objects in expressions.
 
 Pyomo supports the declaration of symbolic expressions that represent
@@ -21,7 +21,7 @@ nodes contain operators.  Pyomo relies on so-called magic methods
 to automate the construction of symbolic expressions.  For example,
 consider an expression ``e`` declared as follows:
 
-.. literalinclude:: ../../tests/expr/index_simple.spy
+.. literalinclude:: ../../src/expr/index_simple.spy
 
 Python determines that the magic method ``__mul__`` is called on
 the ``M.v`` object, with the argument ``2``.  This method returns

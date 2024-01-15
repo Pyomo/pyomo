@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -15,29 +16,34 @@ import os
 
 import pyomo.common.unittest as unittest
 from pyomo.common.errors import ApplicationError
+from pyomo.common.fileutils import this_file_dir
 
 from pyomo.opt.base import UnknownSolver
 from pyomo.opt.base.solvers import SolverFactory
 from pyomo.opt.solver import SystemCallSolver
 
-thisdir = os.path.dirname(os.path.abspath(__file__))
+thisdir = os.path.normpath(this_file_dir())
 exedirname = "exe_dir"
 exedir = os.path.join(thisdir, exedirname)
-exedir_user = exedir.replace(os.path.expanduser("~"), "~", 1)
+user_home = os.path.normpath(os.path.expanduser("~"))
+user_home_pos = exedir.find(user_home)
+exedir_user = exedir
+if user_home_pos >= 0:
+    _test_user_exedir = os.path.join(
+        user_home, exedir[user_home_pos + len(user_home) + 1 :]
+    )
+    if os.path.samefile(exedir, _test_user_exedir):
+        exedir_user = os.path.join("~", exedir[user_home_pos + len(user_home) + 1 :])
 
-notexe_nopath  = "file_not_executable"
+notexe_nopath = "file_not_executable"
 notexe_abspath = os.path.join(exedir, notexe_nopath)
 notexe_abspath_user = os.path.join(exedir_user, notexe_nopath)
-notexe_relpath = (os.path.curdir + os.path.sep +
-                  exedirname + os.path.sep +
-                  notexe_nopath)
+notexe_relpath = os.path.curdir + os.path.sep + exedirname + os.path.sep + notexe_nopath
 
-isexe_nopath  = "file_is_executable"
+isexe_nopath = "file_is_executable"
 isexe_abspath = os.path.join(exedir, isexe_nopath)
 isexe_abspath_user = os.path.join(exedir_user, isexe_nopath)
-isexe_relpath = (os.path.curdir + os.path.sep + \
-                 exedirname + os.path.sep +
-                 isexe_nopath)
+isexe_relpath = os.path.curdir + os.path.sep + exedirname + os.path.sep + isexe_nopath
 
 # Names to test the "executable" functionality with through the
 # SolverFactory.  These tests are necessary due to logic that is in
@@ -49,7 +55,6 @@ is_windows = os.name == 'nt'
 
 
 class TestSystemCallSolver(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         import pyomo.environ
@@ -110,7 +115,7 @@ class TestSystemCallSolver(unittest.TestCase):
             # a partial implementation
             with self.assertRaises(ApplicationError):
                 opt.available(exception_flag=True)
-            #with self.assertRaises(ApplicationError):
+            # with self.assertRaises(ApplicationError):
             #    opt.available(exception_flag=False)
 
     def test_reset_executable(self):
@@ -134,8 +139,10 @@ class TestSystemCallSolver(unittest.TestCase):
             self.assertEqual(opt._user_executable, notexe_nopath)
             self.assertEqual(opt.executable(), notexe_nopath)
 
-
-    @unittest.skipIf(is_windows, "Skipping test because it requires testing if a file is executable on Windows")
+    @unittest.skipIf(
+        is_windows,
+        "Skipping test because it requires testing if a file is executable on Windows",
+    )
     def test_set_executable_notexe_relpath(self):
         with SystemCallSolver(type='test') as opt:
             self.assertEqual(id(opt._user_executable), id(None))
@@ -146,7 +153,10 @@ class TestSystemCallSolver(unittest.TestCase):
             self.assertEqual(opt._user_executable, notexe_relpath)
             self.assertEqual(opt.executable(), notexe_relpath)
 
-    @unittest.skipIf(is_windows, "Skipping test because it requires testing if a file is executable on Windows")
+    @unittest.skipIf(
+        is_windows,
+        "Skipping test because it requires testing if a file is executable on Windows",
+    )
     def test_set_executable_notexe_abspath(self):
         with SystemCallSolver(type='test') as opt:
             self.assertEqual(id(opt._user_executable), id(None))
@@ -157,7 +167,10 @@ class TestSystemCallSolver(unittest.TestCase):
             self.assertEqual(opt._user_executable, notexe_abspath)
             self.assertEqual(opt.executable(), notexe_abspath)
 
-    @unittest.skipIf(is_windows, "Skipping test because it requires testing if a file is executable on Windows")
+    @unittest.skipIf(
+        is_windows,
+        "Skipping test because it requires testing if a file is executable on Windows",
+    )
     def test_set_executable_notexe_abspath_user(self):
         with SystemCallSolver(type='test') as opt:
             self.assertEqual(id(opt._user_executable), id(None))
@@ -225,13 +238,12 @@ class TestSystemCallSolver(unittest.TestCase):
         with SystemCallSolver(type='test') as opt:
             self.assertEqual(id(opt._user_executable), id(None))
             opt.set_executable(isexe_abspath_user)
-            self.assertEqual(opt._user_executable, isexe_abspath)
-            self.assertEqual(opt.executable(), isexe_abspath)
+            self.assertTrue(os.path.samefile(opt._user_executable, isexe_abspath))
+            self.assertTrue(os.path.samefile(opt.executable(), isexe_abspath))
             opt._user_executable = None
             opt.set_executable(isexe_abspath_user, validate=False)
             self.assertEqual(opt._user_executable, isexe_abspath_user)
             self.assertEqual(opt.executable(), isexe_abspath_user)
-
 
     def test_SolverFactory_executable_isexe_nopath(self):
         for name in _test_names:
@@ -281,8 +293,12 @@ class TestSystemCallSolver(unittest.TestCase):
             with SolverFactory(name, executable=isexe_abspath_user) as opt:
                 if isinstance(opt, UnknownSolver):
                     continue
-                self.assertEqual(opt._user_executable, isexe_abspath)
-                self.assertEqual(opt.executable(), isexe_abspath)
+                # Note the user path could be different from our
+                # computed path due to symlinks.  Check that the
+                # executable is the same file.
+                self.assertTrue(os.path.samefile(opt._user_executable, isexe_abspath))
+                self.assertTrue(os.path.samefile(opt.executable(), isexe_abspath))
+
 
 if __name__ == "__main__":
     unittest.main()

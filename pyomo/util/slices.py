@@ -1,16 +1,19 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.collections import ComponentSet
 from pyomo.core.base.indexed_component import normalize_index
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 from pyomo.core.base.global_set import UnindexedComponent_set
+
 
 def _to_iterable(source):
     iterable_scalars = (str, bytes)
@@ -23,10 +26,11 @@ def _to_iterable(source):
     else:
         yield source
 
+
 def get_component_call_stack(comp, context=None):
     """Get the call stack necessary to locate a `Component`
 
-    The call stack is a `list` of `tuple`s where the first entry is a 
+    The call stack is a `list` of `tuple`s where the first entry is a
     code for `__getattr__` or  `__getitem__`, using the same convention
     as `IndexedComponent_slice`. The second entry is the argument of
     the corresponding function. Following this sequence of calls from
@@ -52,7 +56,7 @@ def get_component_call_stack(comp, context=None):
     # A component is not said to exist in "the context of" itself.
     call_stack = []
     while comp.parent_block() is not None:
-        # If parent_block is None, comp is the root 
+        # If parent_block is None, comp is the root
         # of the model, so we don't add anything else
         # to the call stack.
         if comp is context:
@@ -70,12 +74,12 @@ def get_component_call_stack(comp, context=None):
             break
 
         # Add (get_attribute, name) to the call stack
-        call_stack.append((
-            IndexedComponent_slice.get_attribute,
-            parent_component.local_name
-            ))
+        call_stack.append(
+            (IndexedComponent_slice.get_attribute, parent_component.local_name)
+        )
         comp = comp.parent_block()
     return call_stack
+
 
 def slice_component_along_sets(comp, sets, context=None):
     """Slice a component along the indices corresponding to some sets,
@@ -83,12 +87,12 @@ def slice_component_along_sets(comp, sets, context=None):
 
     Given a component or component data object, for all parent components
     and parent blocks between the object and the `context` block, replace
-    any index corresponding to a set in `sets` with slices or an 
+    any index corresponding to a set in `sets` with slices or an
     ellipsis.
 
     Parameters:
     -----------
-    comp: `pyomo.core.base.component.Component` or 
+    comp: `pyomo.core.base.component.Component` or
     `pyomo.core.base.component.ComponentData`
         Component whose parent structure to search and replace
     sets: `pyomo.common.collections.ComponentSet`
@@ -100,9 +104,15 @@ def slice_component_along_sets(comp, sets, context=None):
     Returns:
     --------
     `pyomo.core.base.indexed_component_slice.IndexedComponent_slice`:
-        Slice of `comp` with wildcards replacing the indices of `sets`    
+        Slice of `comp` with wildcards replacing the indices of `sets`
 
     """
+    # Cast to ComponentSet so a tuple or list of sets is an appropriate
+    # argument. Otherwise a tuple or list of sets will potentially
+    # silently do the wrong thing (as inclusion in a tuple or list does
+    # not distinguish between different sets with the same elements).
+    sets = ComponentSet(sets)
+
     if context is None:
         context = comp.model()
     call_stack = get_component_call_stack(comp, context)
@@ -122,9 +132,12 @@ def slice_component_along_sets(comp, sets, context=None):
             # Process arg to replace desired indices with slices.
             location_set_map = get_location_set_map(arg, index_set)
             arg = replace_indices(arg, location_set_map, sets)
+            if normalize_index.flatten:
+                arg = normalize_index(arg)
             sliced_comp = sliced_comp[arg]
 
     return sliced_comp
+
 
 def replace_indices(index, location_set_map, sets):
     """Use `location_set_map` to replace values in `index` with slices
@@ -145,6 +158,7 @@ def replace_indices(index, location_set_map, sets):
     `tuple`: Index with values replaced by slices
 
     """
+    sets = ComponentSet(sets)
     index = tuple(_to_iterable(index))
     new_index = []
     loc = 0
@@ -171,6 +185,7 @@ def replace_indices(index, location_set_map, sets):
             continue
         loc += 1
     return tuple(new_index)
+
 
 def get_location_set_map(index, index_set):
     """Map each value in an index to the set from which it originates
@@ -215,7 +230,7 @@ def get_location_set_map(index, index_set):
             # Although in this case, the location of an index should
             # just be its position in the subsets list, so maybe
             # the info we need is actually more simple to obtain.
-            )
+        )
 
     subsets = list(index_set.subsets())
 
@@ -233,8 +248,8 @@ def get_location_set_map(index, index_set):
             dimen_none_set_coord = sub_coord
             break
         for i in range(dimen):
-            location_set_map[location+i] = sub
-            locations_left.remove(location+i)
+            location_set_map[location + i] = sub
+            locations_left.remove(location + i)
         location += dimen
 
     # We are either done or have encountered a set of dimen None
@@ -252,20 +267,20 @@ def get_location_set_map(index, index_set):
                 # Make sure this set is the same one we encountered
                 # earlier. It is sufficient to check the coordinate.
                 raise RuntimeError(
-                'Cannot get locations when multiple sets of dimen==None '
-                'are present.'
-                '\nFound %s at position %s and %s at position %s.'
-                '\nLocation is ambiguous in this case.'
-                % (dimen_none_set, dimen_none_set_coord, sub, sub_coord)
+                    'Cannot get locations when multiple sets of dimen==None '
+                    'are present.'
+                    '\nFound %s at position %s and %s at position %s.'
+                    '\nLocation is ambiguous in this case.'
+                    % (dimen_none_set, dimen_none_set_coord, sub, sub_coord)
                 )
             break
         for i in range(dimen):
-            location_set_map[location-i] = sub
-            locations_left.remove(location-i)
+            location_set_map[location - i] = sub
+            locations_left.remove(location - i)
         location -= sub.dimen
 
     for loc in locations_left:
-        # All remaining locations, that cannot be accessed from some 
+        # All remaining locations, that cannot be accessed from some
         # constant offset from the beginning or end of the tuple,
         # must belong to the dimen-None set.
         location_set_map[loc] = dimen_none_set

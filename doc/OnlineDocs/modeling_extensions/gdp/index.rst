@@ -9,7 +9,7 @@ Generalized Disjunctive Programming
    :align: right
    :class: no-scaled-link
 
-The Pyomo.GDP modeling extension provides support for Generalized Disjunctive Programming (GDP)\ [#gdp]_, an extension of Disjunctive Programming\ [#dp]_ from the operations research community to include nonlinear relationships. The classic form for a GDP is given by:
+The Pyomo.GDP modeling extension\ [#gdp-main-paper]_ provides support for Generalized Disjunctive Programming (GDP)\ [#gdp]_, an extension of Disjunctive Programming\ [#dp]_ from the operations research community to include nonlinear relationships. The classic form for a GDP is given by:
 
 .. math::
 
@@ -54,7 +54,7 @@ These can be expressed as a disjunction as follows:
     \text{constraints} \\
     \text{for }\textit{else}
     \end{gathered}\right] \\
-    Y_1 \underline{\vee} Y_2
+    Y_1 \veebar Y_2
     \end{gather*}
 
 Here, if the Boolean :math:`Y_1` is ``True``, then the constraints in the first disjunct are enforced; otherwise, the constraints in the second disjunct are enforced.
@@ -70,6 +70,7 @@ The following sections describe the key concepts, modeling, and solution approac
 
 Literature References
 =====================
+.. [#gdp-main-paper] Chen, Q., Johnson, E. S., Bernal, D. E., Valentin, R., Kale, S., Bates, J., Siirola, J. D. and Grossmann, I. E. (2021). Pyomo.GDP: an ecosystem for logic based modeling and optimization development, *Optimization and Engineering* (pp. 1-36).https://doi.org/10.1007/s11081-021-09601-7 
 
 .. [#gdp] Raman, R., & Grossmann, I. E. (1994). Modelling and computational techniques for logic based integer programming. *Computers & Chemical Engineering*, 18(7), 563–578. https://doi.org/10.1016/0098-1354(93)E0010-7
 

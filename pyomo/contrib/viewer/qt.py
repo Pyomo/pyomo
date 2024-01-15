@@ -1,96 +1,129 @@
-##############################################################################
-# Institute for the Design of Advanced Energy Systems Process Systems
-# Engineering Framework (IDAES PSE Framework) Copyright (c) 2018-2019, by the
-# software owners: The Regents of the University of California, through
-# Lawrence Berkeley National Laboratory,  National Technology & Engineering
-# Solutions of Sandia, LLC, Carnegie Mellon University, West Virginia
-# University Research Corporation, et al. All rights reserved.
+#  ___________________________________________________________________________
 #
-# This software is distributed under the 3-clause BSD License.
-##############################################################################
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  ___________________________________________________________________________
+#
+#  This module was originally developed as part of the IDAES PSE Framework
+#
+#  Institute for the Design of Advanced Energy Systems Process Systems
+#  Engineering Framework (IDAES PSE Framework) Copyright (c) 2018-2019, by the
+#  software owners: The Regents of the University of California, through
+#  Lawrence Berkeley National Laboratory,  National Technology & Engineering
+#  Solutions of Sandia, LLC, Carnegie Mellon University, West Virginia
+#  University Research Corporation, et al. All rights reserved.
+#
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """
-Import PyQt5 if available, then try PyQt4, then, if all else fails, use some
-dummy classes to allow some testing. If anything fails to import, the excpetion
-is logged.  That should make it clear exacly what's missing, but it could be a
-little annoying it you are using PyQt4 or don't need jupyter qtconsole.  In the
-future, will probably cut PyQt4 support, so it will be less of an issue.
+Try to import PySide6, which is the current official Qt 6 Python interface. Then, 
+try PyQt5 if that doesn't work. If no compatible Qt Python interface is found,
+use some dummy classes to allow some testing.
 """
 __author__ = "John Eslick"
 
-import logging
-_log = logging.getLogger(__name__)
+import enum
+import importlib
 
+# Supported Qt wrappers in preferred order
+supported = ["PySide6", "PyQt5"]
+# Import errors encountered, delay logging for testing reasons
+import_errors = []
+# Set this to the Qt wrapper module is available
+available = False
 
-class DummyQtCore(object):
-    """
-    A dummy QtCore class to allow some testing without PyQt
-    """
-    class QModelIndex(object):
-        pass
+for module_str in supported:
+    try:
+        qt_package = importlib.import_module(module_str)
+        QtWidgets = importlib.import_module(f"{module_str}.QtWidgets")
+        QtCore = importlib.import_module(f"{module_str}.QtCore")
+        QtGui = importlib.import_module(f"{module_str}.QtGui")
+        available = module_str
+        break
+    except Exception as e:
+        import_errors.append(f"{e}")
+
+if not available:
+    # If Qt is not available, we still want to be able to test as much
+    # as we can, so add some dummy classes that allow for testing
     class Qt(object):
-        class DisplayRole(object):
-            pass
-        class EditRole(object):
+        class ItemDataRole(enum.Enum):
+            EditRole = 1
+            DisplayRole = 2
+            ToolTipRole = 3
+            ForegroundRole = 4
+
+    class QtCore(object):
+        """
+        A dummy QtCore class to allow some testing without PyQt
+        """
+
+        class QModelIndex(object):
             pass
 
-class DummyQAbstractItemModel(object):
-    """
-    A dummy QAbstractItemModel class to allow some testing without PyQt
-    """
-    def __init__(*args, **kwargs):
+        Qt = Qt
+
+    class QAbstractItemModel(object):
+        """
+        A dummy QAbstractItemModel class to allow some testing without PyQt
+        """
+
+        def __init__(*args, **kwargs):
+            pass
+
+    class QAbstractTableModel(object):
+        """
+        A dummy QAbstractTableModel class to allow some testing without PyQt
+        """
+
+        def __init__(*args, **kwargs):
+            pass
+
+    class QItemEditorCreatorBase(object):
+        """
+        A dummy QItemEditorCreatorBase class to allow some testing without PyQt
+        """
+
         pass
 
-class DummyQAbstractTableModel(object):
-    """
-    A dummy QAbstractTableModel class to allow some testing without PyQt
-    """
-    def __init__(*args, **kwargs):
+    class QItemDelegate(object):
+        """
+        A dummy QItemDelegate class to allow some testing without PyQt
+        """
+
         pass
 
-qt_available = False
-qt_import_errors = []
-
-try:
-    from PyQt5 import QtCore
-except:
-    qt_import_errors.append("Cannot import PyQt5.QtCore")
-    try:
-        from PyQt4 import QtCore
-    except:
-        qt_import_errors.append("Cannot import PyQt4.QtCore")
-    else:
-        try:
-            from PyQt4.QtGui import (QAbstractItemView, QFileDialog, QMainWindow,
-                                     QMessageBox, QMdiArea, QApplication,
-                                     QTableWidgetItem, QColor, QAction,
-                                     QStatusBar, QLineEdit, QItemEditorFactory,
-                                     QItemEditorCreatorBase, QStyledItemDelegate,
-                                     QItemDelegate, QComboBox)
-            from PyQt4.QtCore import (QAbstractItemModel, QAbstractTableModel,
-                                      QVariant)
-            import PyQt4.QtCore as QtCore
-            from PyQt4 import uic
-            qt_available = True
-        except:
-            qt_import_errors.append("Cannot import PyQt4")
 else:
-    try:
-        from PyQt5.QtWidgets import (QAbstractItemView, QFileDialog, QMainWindow,
-                                     QMessageBox, QMdiArea, QApplication,
-                                     QTableWidgetItem, QAction, QStatusBar,
-                                     QLineEdit, QItemEditorFactory,
-                                     QItemEditorCreatorBase, QStyledItemDelegate,
-                                     QItemDelegate, QComboBox)
-        from PyQt5.QtGui import QColor
-        from PyQt5.QtCore import (QAbstractItemModel, QAbstractTableModel,
-                                  QVariant)
-        import PyQt5.QtCore as QtCore
+    QAbstractItemView = QtWidgets.QAbstractItemView
+    QFileDialog = QtWidgets.QFileDialog
+    QMainWindow = QtWidgets.QMainWindow
+    QMainWindow = QtWidgets.QMainWindow
+    QMdiArea = QtWidgets.QMdiArea
+    QApplication = QtWidgets.QApplication
+    QTableWidgetItem = QtWidgets.QTableWidgetItem
+    QStatusBar = QtWidgets.QStatusBar
+    QLineEdit = QtWidgets.QLineEdit
+    QItemEditorFactory = QtWidgets.QItemEditorFactory
+    QItemEditorCreatorBase = QtWidgets.QItemEditorCreatorBase
+    QStyledItemDelegate = QtWidgets.QStyledItemDelegate
+    QItemDelegate = QtWidgets.QItemDelegate
+    QComboBox = QtWidgets.QComboBox
+    QMessageBox = QtWidgets.QMessageBox
+    QColor = QtGui.QColor
+    QAbstractItemModel = QtCore.QAbstractItemModel
+    QAbstractTableModel = QtCore.QAbstractTableModel
+    QMetaType = QtCore.QMetaType
+    Qt = QtCore.Qt
+    if available == "PySide6":
+        from PySide6.QtGui import QAction
+        from PySide6.QtCore import Signal
+        from PySide6 import QtUiTools as uic
+    elif available == "PyQt5":
+        from PyQt5.QtWidgets import QAction
+        from PyQt5.QtCore import pyqtSignal as Signal
         from PyQt5 import uic
-        qt_available = True
-    except:
-        qt_import_errors.append("Cannot import PyQt5")
-
-if not qt_available:
-    QAbstractItemModel = DummyQAbstractItemModel
-    QAbstractTableModel = DummyQAbstractTableModel
-    QtCore = DummyQtCore

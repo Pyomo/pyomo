@@ -1,0 +1,33 @@
+{
+   "WH": [
+      "Harlingen",
+      "Memphis",
+      "Ashland"
+   ],
+   "CUST": [
+      "NYC",
+      "LA",
+      "Chicago",
+      "Houston"
+   ],
+   "dist": {
+      "Harlingen": {
+         "NYC": 1956,
+         "LA": 1606,
+         "Chicago": 1410,
+         "Houston": 330
+      },
+      "Memphis": {
+         "NYC": 1096,
+         "LA": 1792,
+         "Chicago": 531,
+         "Houston": 567
+      },
+      "Ashland": {
+         "NYC": 485,
+         "LA": 2322,
+         "Chicago": 324,
+         "Houston": 1236
+      }
+   }
+}

@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -20,13 +21,13 @@ where m_{i,j} are sparse matrices
 .. rubric:: Contents
 
 """
-
+from __future__ import annotations
+from pyomo.common.dependencies import mpi4py
 from .mpi_block_vector import MPIBlockVector
 from .block_vector import BlockVector
 from .block_matrix import BlockMatrix, NotFullyDefinedBlockMatrixError
 from .block_matrix import assert_block_structure as block_matrix_assert_block_structure
 from .base_block import BaseBlockMatrix
-from mpi4py import MPI
 import numpy as np
 from scipy.sparse import coo_matrix
 import operator
@@ -34,12 +35,13 @@ import operator
 __all__ = ['MPIBlockMatrix']
 
 
-def assert_block_structure(mat):
+def assert_block_structure(mat: MPIBlockMatrix):
     if mat.has_undefined_row_sizes() or mat.has_undefined_col_sizes():
         mat.broadcast_block_sizes()
-    if mat.has_undefined_row_sizes() or mat.has_undefined_col_sizes():
-        msg = 'Call MPIBlockMatrix.broadcast_block_sizes() first. '
-        raise NotFullyDefinedBlockMatrixError(msg)
+    # an error would be raised in broadcast_block_sizes if there were still
+    # undefined block rows or columns
+    assert not mat.has_undefined_row_sizes()
+    assert not mat.has_undefined_col_sizes()
 
 
 class MPIBlockMatrix(BaseBlockMatrix):
@@ -84,22 +86,18 @@ class MPIBlockMatrix(BaseBlockMatrix):
     assert_correct_owners: bool
                            If True, then checks will be performed to ensure
                            that processor owners are consistent. This check
-                           requires communication. If False, this check is 
+                           requires communication. If False, this check is
                            skipped.
     """
 
-    def __init__(self,
-                 nbrows,
-                 nbcols,
-                 rank_ownership,
-                 mpi_comm,
-                 assert_correct_owners=False):
-
+    def __init__(
+        self, nbrows, nbcols, rank_ownership, mpi_comm, assert_correct_owners=False
+    ):
         shape = (nbrows, nbcols)
         self._block_matrix = BlockMatrix(nbrows, nbcols)
         self._mpiw = mpi_comm
         rank = self._mpiw.Get_rank()
-        self._rank_owner = np.asarray(rank_ownership, dtype=np.int)
+        self._rank_owner = np.asarray(rank_ownership, dtype=np.int64)
         self._owned_mask = np.bitwise_or(self._rank_owner == rank, self._rank_owner < 0)
         self._unique_owned_mask = self._rank_owner == rank
 
@@ -108,8 +106,9 @@ class MPIBlockMatrix(BaseBlockMatrix):
         # Note: this requires communication but is disabled when assertions
         # are turned off
         if assert_correct_owners:
-            assert self._assert_correct_owners(), \
-                'rank_owner must be the same in all processors'
+            assert (
+                self._assert_correct_owners()
+            ), 'rank_owner must be the same in all processors'
 
         # make some of the pointers unmutable
         self._rank_owner.flags.writeable = False
@@ -146,33 +145,21 @@ class MPIBlockMatrix(BaseBlockMatrix):
             if not self._block_matrix.is_empty_block(i, j):
                 local_nnz += self._block_matrix.get_block(i, j).nnz
 
-        return self._mpiw.allreduce(local_nnz, op=MPI.SUM)
+        return self._mpiw.allreduce(local_nnz, op=mpi4py.MPI.SUM)
 
     @property
     def owned_blocks(self):
         """
         Returns list with inidices of blocks owned by this processor.
         """
-        bm, bn = self.bshape
-        owned_blocks = []
-        for i in range(bm):
-            for j in range(bn):
-                if self._owned_mask[i, j]:
-                    owned_blocks.append((i,j))
-        return owned_blocks
+        return list(zip(*np.nonzero(self._owned_mask)))
 
     @property
     def shared_blocks(self):
         """
         Returns list of 2-tuples with inidices of blocks shared by all processors
         """
-        bm, bn = self.bshape
-        owned_blocks = []
-        for i in range(bm):
-            for j in range(bn):
-                if self._owned_mask[i, j] and self._rank_owner[i, j]<0:
-                    owned_blocks.append((i,j))
-        return owned_blocks
+        return list(zip(*np.nonzero(self._rank_owner < 0)))
 
     @property
     def rank_ownership(self):
@@ -207,11 +194,17 @@ class MPIBlockMatrix(BaseBlockMatrix):
     def set_col_size(self, col, size):
         self._block_matrix.set_col_size(col, size)
 
-    def is_row_size_defined(self, row):
-        return self._block_matrix.is_row_size_defined(row)
+    def is_row_size_defined(self, row, this_process_only=True):
+        res = self._block_matrix.is_row_size_defined(row)
+        if not this_process_only:
+            res = self.mpi_comm.allreduce(res, op=mpi4py.MPI.LOR)
+        return bool(res)
 
-    def is_col_size_defined(self, col):
-        return self._block_matrix.is_col_size_defined(col)
+    def is_col_size_defined(self, col, this_process_only=True):
+        res = self._block_matrix.is_col_size_defined(col)
+        if not this_process_only:
+            res = self.mpi_comm.allreduce(res, op=mpi4py.MPI.LOR)
+        return bool(res)
 
     def get_block_mask(self, copy=True):
         return self._block_matrix.get_block_mask(copy=copy)
@@ -247,15 +240,21 @@ class MPIBlockMatrix(BaseBlockMatrix):
         MPIBlockMatrix with dimensions reversed
         """
         if axes is not None:
-            raise ValueError(("Sparse matrices do not support "
-                              "an 'axes' parameter because swapping "
-                              "dimensions is the only logical permutation."))
+            raise ValueError(
+                (
+                    "Sparse matrices do not support "
+                    "an 'axes' parameter because swapping "
+                    "dimensions is the only logical permutation."
+                )
+            )
         if not copy:
             raise ValueError('MPIBlockMatrix only supports transpose with copy=True')
 
         m = self.bshape[0]
         n = self.bshape[1]
-        result = MPIBlockMatrix(n, m, self._rank_owner.T, self._mpiw, assert_correct_owners=False)
+        result = MPIBlockMatrix(
+            n, m, self._rank_owner.T, self._mpiw, assert_correct_owners=False
+        )
         result._block_matrix = self._block_matrix.transpose()
         return result
 
@@ -339,7 +338,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
         self._mpiw.Allreduce(local_result, global_result)
         return global_result
 
-    def is_empty_block(self, idx, jdx):
+    def is_empty_block(self, idx, jdx, this_process_only=True):
         """
         Indicates if a block is empty
 
@@ -355,7 +354,10 @@ class MPIBlockMatrix(BaseBlockMatrix):
         boolean
 
         """
-        raise NotImplementedError('Operation not supported by MPIBlockMatrix')
+        res = self._block_matrix.is_empty_block(idx, jdx)
+        if not this_process_only:
+            res = self.mpi_comm.allreduce(res, op=mpi4py.MPI.LAND)
+        return bool(res)
 
     # Note: this requires communication
     def broadcast_block_sizes(self):
@@ -380,8 +382,9 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
         send_data = np.concatenate([local_row_data, local_col_data])
 
-        receive_data = np.empty(num_processors * (self.bshape[0] + self.bshape[1]),
-                                dtype=np.int64)
+        receive_data = np.empty(
+            num_processors * (self.bshape[0] + self.bshape[1]), dtype=np.int64
+        )
         self._mpiw.Allgather(send_data, receive_data)
 
         proc_dims = np.split(receive_data, num_processors)
@@ -394,19 +397,22 @@ class MPIBlockMatrix(BaseBlockMatrix):
         for i in range(m):
             rows_length = set()
             for k in range(num_processors):
-                row_sizes, col_sizes = np.split(proc_dims[k],
-                                                [self.bshape[0]])
+                row_sizes, col_sizes = np.split(proc_dims[k], [self.bshape[0]])
                 rows_length.add(row_sizes[i])
             if len(rows_length) > 2:
-                msg = 'Row {} has more than one dimension accross processors'.format(i)
+                msg = 'Row {} has more than one dimension across processors'.format(i)
                 raise RuntimeError(msg)
             elif len(rows_length) == 2:
                 if -1 not in rows_length:
-                    msg = 'Row {} has more than one dimension accross processors'.format(i)
+                    msg = 'Row {} has more than one dimension across processors'.format(
+                        i
+                    )
                     raise RuntimeError(msg)
                 rows_length.remove(-1)
             elif -1 in rows_length:
-                msg = 'The dimensions of block row {} were not defined in any process'.format(i)
+                msg = 'The dimensions of block row {} were not defined in any process'.format(
+                    i
+                )
                 raise NotFullyDefinedBlockMatrixError(msg)
 
             # here rows_length must only have one element
@@ -416,19 +422,24 @@ class MPIBlockMatrix(BaseBlockMatrix):
         for i in range(n):
             cols_length = set()
             for k in range(num_processors):
-                rows_sizes, col_sizes = np.split(proc_dims[k],
-                                                 [self.bshape[0]])
+                rows_sizes, col_sizes = np.split(proc_dims[k], [self.bshape[0]])
                 cols_length.add(col_sizes[i])
             if len(cols_length) > 2:
-                msg = 'Column {} has more than one dimension accross processors'.format(i)
+                msg = 'Column {} has more than one dimension across processors'.format(
+                    i
+                )
                 raise RuntimeError(msg)
             elif len(cols_length) == 2:
                 if -1 not in cols_length:
-                    msg = 'Column {} has more than one dimension accross processors'.format(i)
+                    msg = 'Column {} has more than one dimension across processors'.format(
+                        i
+                    )
                     raise RuntimeError(msg)
                 cols_length.remove(-1)
             elif -1 in cols_length:
-                msg = 'The dimensions of block column {} were not defined in any process'.format(i)
+                msg = 'The dimensions of block column {} were not defined in any process'.format(
+                    i
+                )
                 raise NotFullyDefinedBlockMatrixError(msg)
 
             # here rows_length must only have one element
@@ -555,7 +566,9 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
         """
         m, n = self.bshape
-        result = MPIBlockMatrix(m, n, self._rank_owner, self._mpiw, assert_correct_owners=False)
+        result = MPIBlockMatrix(
+            m, n, self._rank_owner, self._mpiw, assert_correct_owners=False
+        )
         result._block_matrix = self._block_matrix.copy()
         return result
 
@@ -572,7 +585,9 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
         """
         m, n = self.bshape
-        result = MPIBlockMatrix(m, n, self._rank_owner, self._mpiw, assert_correct_owners=False)
+        result = MPIBlockMatrix(
+            m, n, self._rank_owner, self._mpiw, assert_correct_owners=False
+        )
         result._block_matrix = self._block_matrix.copy_structure()
         return result
 
@@ -609,67 +624,34 @@ class MPIBlockMatrix(BaseBlockMatrix):
         msg = '{}{}\n'.format(self.__class__.__name__, self.bshape)
         for idx in range(self.bshape[0]):
             for jdx in range(self.bshape[1]):
-                rank = self._rank_owner[idx, jdx] if self._rank_owner[idx, jdx] >= 0 else 'A'
+                rank = (
+                    self._rank_owner[idx, jdx]
+                    if self._rank_owner[idx, jdx] >= 0
+                    else 'A'
+                )
                 msg += '({}, {}): Owned by processor{}\n'.format(idx, jdx, rank)
         return msg
-
-    def pprint(self, root=0):
-        """Prints MPIBlockMatrix in pretty format"""
-        assert_block_structure(self)
-        msg = self.__repr__() + '\n'
-        num_processors = self._mpiw.Get_size()
-        # figure out which ones are none
-        local_mask = self._block_matrix._block_mask.flatten()
-        receive_data = np.empty(num_processors * local_mask.size,
-                                dtype=np.bool)
-
-        self._mpiw.Allgather(local_mask, receive_data)
-        all_masks = np.split(receive_data, num_processors)
-        m, n = self.bshape
-        matrix_maks = [mask.reshape(m, n) for mask in all_masks]
-
-        global_mask = np.zeros((m, n), dtype=np.bool)
-        for k in range(num_processors):
-            for idx in range(m):
-                for jdx in range(n):
-                    global_mask[idx, jdx] += matrix_maks[k][idx, jdx]
-
-        for idx in range(m):
-            for jdx in range(n):
-                rank = self._rank_owner[idx, jdx] if self._rank_owner[idx, jdx] >= 0 else 'A'
-                row_size = self.get_row_size(idx)
-                col_size = self.get_col_size(jdx)
-                is_none = '' if global_mask[idx, jdx] else '*'
-                repn = 'Owned by {} Shape({},{}){}'.format(rank,
-                                                           row_size,
-                                                           col_size,
-                                                           is_none)
-                msg += '({}, {}): {}\n'.format(idx, jdx, repn)
-        if self._mpiw.Get_rank() == root:
-            print(msg)
 
     def get_block(self, row, col):
         block = self._block_matrix.get_block(row, col)
         owner = self._rank_owner[row, col]
         rank = self._mpiw.Get_rank()
-        assert owner == rank or \
-               owner < 0, \
-               'Block {} not owned by processor {}'.format((row, col), rank)
+        assert owner == rank or owner < 0, 'Block {} not owned by processor {}'.format(
+            (row, col), rank
+        )
 
         return block
 
     def set_block(self, row, col, value):
-        assert row >= 0 and \
-               col >= 0, 'Indices must be positive'
+        assert row >= 0 and col >= 0, 'Indices must be positive'
 
-        assert row < self.bshape[0] and \
-               col < self.bshape[1], 'Indices out of range'
+        assert row < self.bshape[0] and col < self.bshape[1], 'Indices out of range'
 
         owner = self._rank_owner[row, col]
         rank = self._mpiw.Get_rank()
-        assert owner == rank or \
-               owner < 0, \
-               'Block {} not owned by processor {}'.format((row, col), rank)
+        assert owner == rank or owner < 0, 'Block {} not owned by processor {}'.format(
+            (row, col), rank
+        )
 
         self._block_matrix.set_block(row, col, value)
 
@@ -682,14 +664,18 @@ class MPIBlockMatrix(BaseBlockMatrix):
     def _binary_operation_helper(self, other, operation):
         result = self.copy_structure()
         if isinstance(other, (MPIBlockMatrix, BlockMatrix)):
-            assert other.bshape == self.bshape, \
-                'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
+            assert other.bshape == self.bshape, 'dimensions mismatch {} != {}'.format(
+                self.bshape, other.bshape
+            )
 
             if isinstance(other, MPIBlockMatrix):
-                assert np.array_equal(self._rank_owner, other._rank_owner), \
-                    'MPIBlockMatrices must be distributed in same processors'
+                assert np.array_equal(
+                    self._rank_owner, other._rank_owner
+                ), 'MPIBlockMatrices must be distributed in same processors'
 
-            block_indices = np.bitwise_or(self.get_block_mask(copy=False), other.get_block_mask(copy=False))
+            block_indices = np.bitwise_or(
+                self.get_block_mask(copy=False), other.get_block_mask(copy=False)
+            )
             block_indices = np.bitwise_and(block_indices, self._owned_mask)
             ii, jj = np.nonzero(block_indices)
             for i, j in zip(ii, jj):
@@ -702,9 +688,13 @@ class MPIBlockMatrix(BaseBlockMatrix):
                 elif mat1 is None and mat2 is not None:
                     result.set_block(i, j, operation(0, mat2))
                 else:
-                    raise ValueError('This is unexpected. Please report to the developers.')
+                    raise ValueError(
+                        'This is unexpected. Please report to the developers.'
+                    )
         elif np.isscalar(other):
-            block_indices = np.bitwise_and(self.get_block_mask(copy=False), self._owned_mask)
+            block_indices = np.bitwise_and(
+                self.get_block_mask(copy=False), self._owned_mask
+            )
             for i, j in zip(*np.nonzero(block_indices)):
                 result.set_block(i, j, operation(self.get_block(i, j), other))
         else:
@@ -715,12 +705,14 @@ class MPIBlockMatrix(BaseBlockMatrix):
         if isinstance(other, (MPIBlockMatrix, BlockMatrix)):
             assert operation in {operator.iadd, operator.isub}
 
-            assert other.bshape == self.bshape, \
-                'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
+            assert other.bshape == self.bshape, 'dimensions mismatch {} != {}'.format(
+                self.bshape, other.bshape
+            )
 
             if isinstance(other, MPIBlockMatrix):
-                assert np.array_equal(self._rank_owner, other._rank_owner), \
-                    'MPIBlockMatrices must be distributed in same processors'
+                assert np.array_equal(
+                    self._rank_owner, other._rank_owner
+                ), 'MPIBlockMatrices must be distributed in same processors'
 
             block_indices = other.get_block_mask(copy=False)
             block_indices = np.bitwise_and(block_indices, self._owned_mask)
@@ -740,7 +732,9 @@ class MPIBlockMatrix(BaseBlockMatrix):
                 else:
                     raise RuntimeError('Please report this to the developers.')
         elif np.isscalar(other):
-            block_indices = np.bitwise_and(self.get_block_mask(copy=False), self._owned_mask)
+            block_indices = np.bitwise_and(
+                self.get_block_mask(copy=False), self._owned_mask
+            )
             for i, j in zip(*np.nonzero(block_indices)):
                 blk = self.get_block(i, j)
                 blk = operation(blk, other)
@@ -764,7 +758,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
     def _get_block_vector_for_dot_product(self, x):
         if isinstance(x, MPIBlockVector):
             """
-            Consider a non-empty block m_{i, j} from the mpi block matrix with rank owner r_m and the 
+            Consider a non-empty block m_{i, j} from the mpi block matrix with rank owner r_m and the
             corresponding block v_{j} from the mpi block vector with rank owner r_v. There are 4 cases:
               1. r_m = r_v
                  In this case, all is good.
@@ -775,7 +769,9 @@ class MPIBlockMatrix(BaseBlockMatrix):
               4. If none of the above cases hold, then v_{j} must be broadcast
             """
             n_block_rows, n_block_cols = self.bshape
-            blocks_needing_broadcast = np.zeros(n_block_cols, dtype=np.int64)  # a value > 0 means broadcast
+            blocks_needing_broadcast = np.zeros(
+                n_block_cols, dtype=np.int64
+            )  # a value > 0 means broadcast
             x_rank_ownership = x.rank_ownership
             comm = self._mpiw
             rank = comm.Get_rank()
@@ -784,7 +780,9 @@ class MPIBlockMatrix(BaseBlockMatrix):
                 block_indices = self._owned_mask
             else:
                 block_indices = self._unique_owned_mask
-            block_indices = np.bitwise_and(block_indices, self.get_block_mask(copy=False))
+            block_indices = np.bitwise_and(
+                block_indices, self.get_block_mask(copy=False)
+            )
             for i, j in zip(*np.nonzero(block_indices)):
                 r_m = self._rank_owner[i, j]
                 r_v = x_rank_ownership[j]
@@ -829,7 +827,9 @@ class MPIBlockMatrix(BaseBlockMatrix):
             y.copyfrom(x)
             return y
         else:
-            raise NotImplementedError('Dot product is not yet supported for MPIBlockMatrix*'+str(type(x)))
+            raise NotImplementedError(
+                'Dot product is not yet supported for MPIBlockMatrix*' + str(type(x))
+            )
 
     def _block_vector_multiply(self, x):
         """
@@ -859,7 +859,9 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
         global_blocks_that_need_reduced = np.zeros(n_block_rows, dtype=np.int64)
         comm.Allreduce(blocks_that_need_reduced, global_blocks_that_need_reduced)
-        block_indices_that_need_reduced = np.nonzero(global_blocks_that_need_reduced > 1)[0]
+        block_indices_that_need_reduced = np.nonzero(
+            global_blocks_that_need_reduced > 1
+        )[0]
         global_res_rank_owner = np.zeros(n_block_rows, dtype=np.int64)
         comm.Allreduce(res_rank_owner, global_res_rank_owner)
         global_res_rank_owner[block_indices_that_need_reduced] = -1
@@ -876,10 +878,12 @@ class MPIBlockMatrix(BaseBlockMatrix):
             else:
                 global_res_rank_owner[ndx] = -1
 
-        res = MPIBlockVector(nblocks=n_block_rows,
-                             rank_owner=global_res_rank_owner,
-                             mpi_comm=comm,
-                             assert_correct_owners=False)
+        res = MPIBlockVector(
+            nblocks=n_block_rows,
+            rank_owner=global_res_rank_owner,
+            mpi_comm=comm,
+            assert_correct_owners=False,
+        )
         for ndx in np.nonzero(res.ownership_mask)[0]:
             res.set_block(ndx, np.zeros(self.get_row_size(ndx)))
         if rank == 0:
@@ -984,14 +988,18 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
     def __neg__(self):
         result = self.copy_structure()
-        block_indices = np.bitwise_and(self.get_block_mask(copy=False), self._owned_mask)
+        block_indices = np.bitwise_and(
+            self.get_block_mask(copy=False), self._owned_mask
+        )
         for i, j in zip(*np.nonzero(block_indices)):
             result.set_block(i, j, -self.get_block(i, j))
         return result
 
     def __abs__(self):
         result = self.copy_structure()
-        block_indices = np.bitwise_and(self.get_block_mask(copy=False), self._owned_mask)
+        block_indices = np.bitwise_and(
+            self.get_block_mask(copy=False), self._owned_mask
+        )
         for i, j in zip(*np.nonzero(block_indices)):
             result.set_block(i, j, abs(self.get_block(i, j)))
         return result
@@ -1001,9 +1009,12 @@ class MPIBlockMatrix(BaseBlockMatrix):
         result = self.copy_structure()
 
         if isinstance(other, MPIBlockMatrix):
-            assert other.bshape == self.bshape, 'dimension mismatch {} != {}'.format(self.bshape, other.bshape)
-            assert np.array_equal(self.rank_ownership, other.rank_ownership), 'MPIBlockMatrices must be distributed in ' \
-                                                                              'the same processors'
+            assert other.bshape == self.bshape, 'dimension mismatch {} != {}'.format(
+                self.bshape, other.bshape
+            )
+            assert np.array_equal(
+                self.rank_ownership, other.rank_ownership
+            ), 'MPIBlockMatrices must be distributed in the same processors'
 
             for i, j in zip(*np.nonzero(self.ownership_mask)):
                 mat1 = self.get_block(i, j)
@@ -1070,10 +1081,10 @@ class MPIBlockMatrix(BaseBlockMatrix):
         assert_block_structure(self)
 
         bm, bn = self.bshape
-        # get cummulative sum of block sizes
+        # get cumulative sum of block sizes
         cum = self.col_block_sizes(copy=False).cumsum()
         assert index >= 0, 'index out of bounds'
-        assert index < cum[bn-1], 'index out of bounds'
+        assert index < cum[bn - 1], 'index out of bounds'
 
         # exits if only has one column
         if bn <= 1:
@@ -1104,10 +1115,10 @@ class MPIBlockMatrix(BaseBlockMatrix):
         assert_block_structure(self)
 
         bm, bn = self.bshape
-        # get cummulative sum of block sizes
+        # get cumulative sum of block sizes
         cum = self.row_block_sizes(copy=False).cumsum()
         assert index >= 0, 'index out of bounds'
-        assert index < cum[bm-1], 'index out of bounds'
+        assert index < cum[bm - 1], 'index out of bounds'
 
         # exits if only has one column
         if bm <= 1:
@@ -1146,16 +1157,13 @@ class MPIBlockMatrix(BaseBlockMatrix):
         for i in range(bm):
             col_ownership.append(self._rank_owner[i, bcol])
         # create vector
-        bv = MPIBlockVector(bm,
-                            col_ownership,
-                            self._mpiw,
-                            assert_correct_owners=False)
+        bv = MPIBlockVector(bm, col_ownership, self._mpiw, assert_correct_owners=False)
 
         # compute offset columns
         offset = 0
         if bcol > 0:
             cum_sum = self.col_block_sizes(copy=False).cumsum()
-            offset = cum_sum[bcol-1]
+            offset = cum_sum[bcol - 1]
 
         # populate vector
         rank = self._mpiw.Get_rank()
@@ -1165,10 +1173,10 @@ class MPIBlockMatrix(BaseBlockMatrix):
                 if self._block_matrix.is_empty_block(row_bid, bcol):
                     v = np.zeros(self.get_row_size(row_bid))
                 elif isinstance(sub_matrix, BaseBlockMatrix):
-                    v = sub_matrix.getcol(j-offset)
+                    v = sub_matrix.getcol(j - offset)
                 else:
                     # if it is sparse matrix transform array to vector
-                    v = sub_matrix.getcol(j-offset).toarray().flatten()
+                    v = sub_matrix.getcol(j - offset).toarray().flatten()
                 bv.set_block(row_bid, v)
         return bv
 
@@ -1195,34 +1203,33 @@ class MPIBlockMatrix(BaseBlockMatrix):
         row_ownership = []
         bm, bn = self.bshape
         for j in range(bn):
-             row_ownership.append(self._rank_owner[brow, j])
+            row_ownership.append(self._rank_owner[brow, j])
         # create vector
-        bv = MPIBlockVector(bn,
-                            row_ownership,
-                            self._mpiw,
-                            assert_correct_owners=False)
+        bv = MPIBlockVector(bn, row_ownership, self._mpiw, assert_correct_owners=False)
         # compute offset columns
         offset = 0
         if brow > 0:
             cum_sum = self.row_block_sizes(copy=False).cumsum()
-            offset = cum_sum[brow-1]
+            offset = cum_sum[brow - 1]
         # populate vector
         rank = self._mpiw.Get_rank()
         for col_bid, owner in enumerate(row_ownership):
-            if rank == owner or owner<0:
+            if rank == owner or owner < 0:
                 sub_matrix = self._block_matrix.get_block(brow, col_bid)
                 if self._block_matrix.is_empty_block(brow, col_bid):
                     v = np.zeros(self.get_col_size(col_bid))
                 elif isinstance(sub_matrix, BaseBlockMatrix):
-                    v = sub_matrix.getrow(i-offset)
+                    v = sub_matrix.getrow(i - offset)
                 else:
                     # if it is sparse matrix transform array to vector
-                    v = sub_matrix.getrow(i-offset).toarray().flatten()
+                    v = sub_matrix.getrow(i - offset).toarray().flatten()
                 bv.set_block(col_bid, v)
         return bv
 
     @staticmethod
-    def fromBlockMatrix(block_matrix, rank_ownership, mpi_comm, assert_correct_owners=False):
+    def fromBlockMatrix(
+        block_matrix, rank_ownership, mpi_comm, assert_correct_owners=False
+    ):
         """
         Creates a parallel MPIBlockMatrix from blockmatrix
 
@@ -1242,11 +1249,13 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
         # create mpi matrix
         bm, bn = block_matrix.bshape
-        mat = MPIBlockMatrix(bm,
-                             bn,
-                             rank_ownership,
-                             mpi_comm,
-                             assert_correct_owners=assert_correct_owners)
+        mat = MPIBlockMatrix(
+            bm,
+            bn,
+            rank_ownership,
+            mpi_comm,
+            assert_correct_owners=assert_correct_owners,
+        )
 
         # populate matrix
         for i in range(bm):

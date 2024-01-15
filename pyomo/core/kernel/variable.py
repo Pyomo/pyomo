@@ -1,37 +1,33 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 from pyomo.common.modeling import NoArgumentGiven
-from pyomo.core.expr.numvalue import (NumericValue,
-                                      is_numeric_data,
-                                      value)
-from pyomo.core.kernel.base import \
-    (ICategorizedObject,
-     _abstract_readwrite_property)
-from pyomo.core.kernel.container_utils import \
-    define_simple_containers
-from pyomo.core.kernel.set_types import (RealSet,
-                                         IntegerSet)
+from pyomo.core.staleflag import StaleFlagManager
+from pyomo.core.expr.numvalue import NumericValue, is_numeric_data, value
+from pyomo.core.kernel.base import ICategorizedObject, _abstract_readwrite_property
+from pyomo.core.kernel.container_utils import define_simple_containers
+from pyomo.core.kernel.set_types import RealSet, IntegerSet
 
 _pos_inf = float('inf')
 _neg_inf = float('-inf')
 
-def _extract_domain_type_and_bounds(domain_type,
-                                    domain,
-                                    lb, ub):
+
+def _extract_domain_type_and_bounds(domain_type, domain, lb, ub):
     if domain is not None:
         if domain_type is not None:
             raise ValueError(
                 "At most one of the 'domain' and "
                 "'domain_type' keywords can be changed "
                 "from their default value when "
-                "initializing a variable.")
+                "initializing a variable."
+            )
         domain_lb, domain_ub, domain_step = domain.get_interval()
         if domain_step == 0:
             domain_type = RealSet
@@ -43,28 +39,31 @@ def _extract_domain_type_and_bounds(domain_type,
                 raise ValueError(
                     "The 'lb' keyword can not be used "
                     "to initialize a variable when the "
-                    "domain lower bound is finite.")
+                    "domain lower bound is finite."
+                )
             lb = domain_lb
         if domain_ub is not None:
             if ub is not None:
                 raise ValueError(
                     "The 'ub' keyword can not be used "
                     "to initialize a variable when the "
-                    "domain upper bound is finite.")
+                    "domain upper bound is finite."
+                )
             ub = domain_ub
     elif domain_type is None:
         domain_type = RealSet
     if domain_type not in IVariable._valid_domain_types:
         raise ValueError(
             "Domain type '%s' is not valid. Must be "
-            "one of: %s" % (domain_type,
-                            IVariable._valid_domain_types))
+            "one of: %s" % (domain_type, IVariable._valid_domain_types)
+        )
 
     return domain_type, lb, ub
 
 
 class IVariable(ICategorizedObject, NumericValue):
     """The interface for decision variables"""
+
     __slots__ = ()
 
     _valid_domain_types = (RealSet, IntegerSet)
@@ -76,18 +75,16 @@ class IVariable(ICategorizedObject, NumericValue):
     #
 
     domain_type = _abstract_readwrite_property(
-        doc=("The domain type of the variable "
-             "(:class:`RealSet` or :class:`IntegerSet`)"))
-    lb = _abstract_readwrite_property(
-        doc="The lower bound of the variable")
-    ub = _abstract_readwrite_property(
-        doc="The upper bound of the variable")
-    value = _abstract_readwrite_property(
-        doc="The value of the variable")
-    fixed = _abstract_readwrite_property(
-        doc="The fixed status of the variable")
-    stale = _abstract_readwrite_property(
-        doc="The stale status of the variable")
+        doc=(
+            "The domain type of the variable "
+            "(:class:`RealSet` or :class:`IntegerSet`)"
+        )
+    )
+    lb = _abstract_readwrite_property(doc="The lower bound of the variable")
+    ub = _abstract_readwrite_property(doc="The upper bound of the variable")
+    value = _abstract_readwrite_property(doc="The value of the variable")
+    fixed = _abstract_readwrite_property(doc="The fixed status of the variable")
+    stale = _abstract_readwrite_property(doc="The stale status of the variable")
 
     #
     # Interface
@@ -97,9 +94,34 @@ class IVariable(ICategorizedObject, NumericValue):
     def bounds(self):
         """Get/Set the bounds as a tuple (lb, ub)."""
         return (self.lb, self.ub)
+
     @bounds.setter
     def bounds(self, bounds_tuple):
-        self.lb, self.ub = bounds_tuple
+        self.lower, self.upper = bounds_tuple
+
+    @property
+    def lb(self):
+        """Return the numeric value of the variable lower bound."""
+        lb = value(self.lower)
+        if lb == _neg_inf:
+            return None
+        return lb
+
+    @lb.setter
+    def lb(self, val):
+        self.lower = val
+
+    @property
+    def ub(self):
+        """Return the numeric value of the variable upper bound."""
+        ub = value(self.upper)
+        if ub == _pos_inf:
+            return None
+        return ub
+
+    @ub.setter
+    def ub(self, val):
+        self.upper = val
 
     def fix(self, value=NoArgumentGiven):
         """
@@ -117,21 +139,19 @@ class IVariable(ICategorizedObject, NumericValue):
         :const:`False`."""
         self.fixed = False
 
-    free=unfix
+    free = unfix
 
     def has_lb(self):
         """Returns :const:`False` when the lower bound is
         :const:`None` or negative infinity"""
         lb = self.lb
-        return (lb is not None) and \
-            (value(lb) != _neg_inf)
+        return (lb is not None) and (lb != _neg_inf)
 
     def has_ub(self):
         """Returns :const:`False` when the upper bound is
         :const:`None` or positive infinity"""
         ub = self.ub
-        return (ub is not None) and \
-            (value(ub) != _pos_inf)
+        return (ub is not None) and (ub != _pos_inf)
 
     @property
     def lslack(self):
@@ -143,8 +163,6 @@ class IVariable(ICategorizedObject, NumericValue):
         lb = self.lb
         if lb is None:
             lb = _neg_inf
-        else:
-            lb = value(lb)
         return val - lb
 
     @property
@@ -157,8 +175,6 @@ class IVariable(ICategorizedObject, NumericValue):
         ub = self.ub
         if ub is None:
             ub = _pos_inf
-        else:
-            ub = value(ub)
         return ub - val
 
     @property
@@ -199,19 +215,22 @@ class IVariable(ICategorizedObject, NumericValue):
         """Returns :const:`True` when the domain type is
         :class:`IntegerSet` and the bounds are within
         [0,1]."""
-        return self.domain_type.get_interval()[2] == 1 \
-            and (value(self.lb), value(self.ub)) in {(0,1), (0,0), (1,1)}
+        return self.domain_type.get_interval()[2] == 1 and (self.lb, self.ub) in {
+            (0, 1),
+            (0, 0),
+            (1, 1),
+        }
 
-# TODO?
-#    def is_semicontinuous(self):
-#        """Returns :const:`True` when the domain class is
-#        SemiContinuous."""
-#        return issubclass(self.domain_type, SemiRealSet)
+    # TODO?
+    #    def is_semicontinuous(self):
+    #        """Returns :const:`True` when the domain class is
+    #        SemiContinuous."""
+    #        return issubclass(self.domain_type, SemiRealSet)
 
-#    def is_semiinteger(self):
-#        """Returns :const:`True` when the domain class is
-#        SemiInteger."""
-#        return issubclass(self.domain_type, SemiIntegerSet)
+    #    def is_semiinteger(self):
+    #        """Returns :const:`True` when the domain class is
+    #        SemiInteger."""
+    #        return issubclass(self.domain_type, SemiIntegerSet)
 
     #
     # Implement the NumericValue abstract methods
@@ -256,6 +275,7 @@ class IVariable(ICategorizedObject, NumericValue):
         if exception and (self.value is None):
             raise ValueError("value is None")
         return self.value
+
 
 class variable(IVariable):
     """A decision variable
@@ -306,25 +326,24 @@ class variable(IVariable):
         >>> # Also a binary variable
         >>> x = pmo.variable(domain_type=pmo.IntegerSet, lb=0, ub=1)
     """
-    _ctype = IVariable
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_domain_type",
-                 "_active",
-                 "_lb",
-                 "_ub",
-                 "_value",
-                 "_fixed",
-                 "_stale",
-                 "__weakref__")
 
-    def __init__(self,
-                 domain_type=None,
-                 domain=None,
-                 lb=None,
-                 ub=None,
-                 value=None,
-                 fixed=False):
+    _ctype = IVariable
+    __slots__ = (
+        "_parent",
+        "_storage_key",
+        "_domain_type",
+        "_active",
+        "_lb",
+        "_ub",
+        "_value",
+        "_fixed",
+        "_stale",
+        "__weakref__",
+    )
+
+    def __init__(
+        self, domain_type=None, domain=None, lb=None, ub=None, value=None, fixed=False
+    ):
         self._parent = None
         self._storage_key = None
         self._active = True
@@ -333,52 +352,58 @@ class variable(IVariable):
         self._ub = ub
         self._value = value
         self._fixed = fixed
-        self._stale = True
-        if (domain_type is not None) or \
-           (domain is not None):
-            self._domain_type, self._lb, self._ub = \
-                _extract_domain_type_and_bounds(domain_type,
-                                                domain,
-                                                lb, ub)
+        self._stale = 0  # True
+        if (domain_type is not None) or (domain is not None):
+            self._domain_type, self._lb, self._ub = _extract_domain_type_and_bounds(
+                domain_type, domain, lb, ub
+            )
 
     @property
-    def lb(self):
+    def lower(self):
         """The lower bound of the variable"""
         return self._lb
-    @lb.setter
-    def lb(self, lb):
-        if (lb is not None) and \
-           (not is_numeric_data(lb)):
+
+    @lower.setter
+    def lower(self, lb):
+        if (lb is not None) and (not is_numeric_data(lb)):
             raise ValueError(
-                    "Variable lower bounds must be numbers or "
-                    "expressions restricted to numeric data.")
+                "Variable lower bounds must be numbers or "
+                "expressions restricted to numeric data."
+            )
         self._lb = lb
 
     @property
-    def ub(self):
+    def upper(self):
         """The upper bound of the variable"""
         return self._ub
-    @ub.setter
-    def ub(self, ub):
-        if (ub is not None) and \
-           (not is_numeric_data(ub)):
+
+    @upper.setter
+    def upper(self, ub):
+        if (ub is not None) and (not is_numeric_data(ub)):
             raise ValueError(
-                    "Variable upper bounds must be numbers or "
-                    "expressions restricted to numeric data.")
+                "Variable upper bounds must be numbers or "
+                "expressions restricted to numeric data."
+            )
         self._ub = ub
 
     @property
     def value(self):
         """The value of the variable"""
         return self._value
+
     @value.setter
     def value(self, value):
         self._value = value
+        self._stale = StaleFlagManager.get_flag(self._stale)
+
+    def set_value(self, value, skip_validation=True):
+        self.value = value
 
     @property
     def fixed(self):
         """The fixed status of the variable"""
         return self._fixed
+
     @fixed.setter
     def fixed(self, fixed):
         self._fixed = fixed
@@ -386,23 +411,28 @@ class variable(IVariable):
     @property
     def stale(self):
         """The stale status of the variable"""
-        return self._stale
+        return StaleFlagManager.is_stale(self._stale)
+
     @stale.setter
     def stale(self, stale):
-        self._stale = stale
+        if stale:
+            self._stale = 0
+        else:
+            self._stale = StaleFlagManager.get_flag(0)
 
     @property
     def domain_type(self):
         """The domain type of the variable (:class:`RealSet`
         or :class:`IntegerSet`)"""
         return self._domain_type
+
     @domain_type.setter
     def domain_type(self, domain_type):
         if domain_type not in IVariable._valid_domain_types:
             raise ValueError(
                 "Domain type '%s' is not valid. Must be "
-                "one of: %s" % (self.domain_type,
-                                IVariable._valid_domain_types))
+                "one of: %s" % (self.domain_type, IVariable._valid_domain_types)
+            )
         self._domain_type = domain_type
 
     def _set_domain(self, domain):
@@ -410,15 +440,13 @@ class variable(IVariable):
         updates the :attr:`domain_type` property and
         overwrites the :attr:`lb` and :attr:`ub` properties
         with the domain bounds."""
-        self.domain_type, self.lb, self.ub = \
-            _extract_domain_type_and_bounds(None,
-                                            domain,
-                                            None, None)
-    domain = property(fset=_set_domain,
-                      doc=_set_domain.__doc__)
+        self.domain_type, self.lb, self.ub = _extract_domain_type_and_bounds(
+            None, domain, None, None
+        )
+
+    domain = property(fset=_set_domain, doc=_set_domain.__doc__)
+
 
 # inserts class definitions for simple _tuple, _list, and
 # _dict containers into this module
-define_simple_containers(globals(),
-                         "variable",
-                         IVariable)
+define_simple_containers(globals(), "variable", IVariable)

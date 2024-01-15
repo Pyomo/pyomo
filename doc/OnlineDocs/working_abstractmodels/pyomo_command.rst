@@ -18,14 +18,14 @@ Passing Options to a Solver
 ---------------------------
 
 To pass arguments to a solver when using the ``pyomo solve`` command,
-appned the Pyomo command line with the argument ``--solver-options=``
+append the Pyomo command line with the argument ``--solver-options=``
 followed by an argument that is a string to be sent to the solver
 (perhaps with dashes added by Pyomo).  So for most MIP solvers, the mip
 gap can be set using
 
 ::
 
-   --solver-options= "mipgap=0.01 "
+   --solver-options="mipgap=0.01"
 
 Multiple options are separated by a space.  Options that do not take an
 argument should be specified with the equals sign followed by either a
@@ -36,7 +36,7 @@ mipgap of two percent and the GLPK cuts option, use
 
 ::
 
-   solver=glpk --solver-options="mipgap=0.02 cuts="
+   --solver=glpk --solver-options="mipgap=0.02 cuts="
 
 If there are multiple "levels" to the keyword, as is the case for some
 Gurobi and CPLEX options, the tokens are separated by underscore.  For
@@ -90,7 +90,7 @@ When there seem to be troubles expressing the model, it is often useful
 to embed print commands in the model in places that will yield helpful
 information.  Consider the following snippet:
 
-.. literalinclude:: ../tests/scripting/spy4PyomoCommand_Troubleshooting_printed_command.spy
+.. literalinclude:: ../src/scripting/spy4PyomoCommand_Troubleshooting_printed_command.spy
    :language: python
 
 The effect will be to output every member of the set ``model.I`` at the

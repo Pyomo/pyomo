@@ -12,7 +12,7 @@ Python package dependencies
 #. numpy
 #. pandas
 #. pyomo
-#. pyutilib
+#. mpisppy (optional)
 #. matplotlib (optional)
 #. scipy.stats (optional)
 #. seaborn (optional)

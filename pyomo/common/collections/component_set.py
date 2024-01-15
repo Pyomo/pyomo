@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -35,28 +36,29 @@ class ComponentSet(collections_MutableSet):
     deepcopied/pickled unless it is done so along with
     its component entries (e.g., as part of a block). ***
     """
+
     __slots__ = ("_data",)
+
     def __init__(self, *args):
         self._data = dict()
         if len(args) > 0:
             if len(args) > 1:
                 raise TypeError(
                     "%s expected at most 1 arguments, "
-                    "got %s" % (self.__class__.__name__,
-                                len(args)))
+                    "got %s" % (self.__class__.__name__, len(args))
+                )
             self.update(args[0])
 
     def __str__(self):
         """String representation of the mapping."""
         tmp = []
         for objid, obj in self._data.items():
-            tmp.append(str(obj)+" (id="+str(objid)+")")
-        return "ComponentSet("+str(tmp)+")"
+            tmp.append(str(obj) + " (id=" + str(objid) + ")")
+        return "ComponentSet(" + str(tmp) + ")"
 
     def update(self, args):
         """Update a set with the union of itself and others."""
-        self._data.update((id(obj), obj)
-                          for obj in args)
+        self._data.update((id(obj), obj) for obj in args)
 
     #
     # This method must be defined for deepcopy/pickling
@@ -66,7 +68,7 @@ class ComponentSet(collections_MutableSet):
         # object id() may have changed after unpickling,
         # so we rebuild the dictionary keys
         assert len(state) == 1
-        self._data = {id(obj):obj for obj in state['_data']}
+        self._data = {id(obj): obj for obj in state['_data']}
 
     def __getstate__(self):
         return {'_data': tuple(self._data.values())}
@@ -104,10 +106,9 @@ class ComponentSet(collections_MutableSet):
     def __eq__(self, other):
         if not isinstance(other, collections_Set):
             return False
-        return set((type(val), id(val))
-                   for val in self) == \
-               set((type(val), id(val))
-                   for val in other)
+        return set((type(val), id(val)) for val in self) == set(
+            (type(val), id(val)) for val in other
+        )
 
     def __ne__(self, other):
         return not (self == other)
@@ -126,5 +127,4 @@ class ComponentSet(collections_MutableSet):
         try:
             del self._data[id(val)]
         except KeyError:
-            raise KeyError("Component with id '%s': %s"
-                           % (id(val), str(val)))
+            raise KeyError("Component with id '%s': %s" % (id(val), str(val)))

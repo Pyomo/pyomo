@@ -1,0 +1,6 @@
+[    0.00] Setting up Pyomo environment
+[    0.00] Applying Pyomo preprocessing actions
+[    0.00] Creating model
+Model written to file 'concrete1.lp'
+[    0.00] Pyomo Finished
+diff: ../command-ch/concrete1-ref.lp: No such file or directory

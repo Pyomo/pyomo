@@ -1,14 +1,21 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['SolverInformation', 'SolverStatus', 'TerminationCondition', 'check_optimal_termination', 'assert_optimal_termination']
+__all__ = [
+    'SolverInformation',
+    'SolverStatus',
+    'TerminationCondition',
+    'check_optimal_termination',
+    'assert_optimal_termination',
+]
 
 import enum
 from pyomo.opt.results.container import MapContainer, ScalarType
@@ -18,12 +25,12 @@ from pyomo.opt.results.container import MapContainer, ScalarType
 # A coarse summary of how the solver terminated.
 #
 class SolverStatus(str, enum.Enum):
-    ok='ok'                        # Normal termination
-    warning='warning'              # Termination with unusual condition
-    error='error'                  # Terminated internally with error
-    aborted='aborted'              # Terminated due to external conditions
-                                   #   (e.g. interrupts)
-    unknown='unknown'              # An unitialized value
+    ok = 'ok'  # Normal termination
+    warning = 'warning'  # Termination with unusual condition
+    error = 'error'  # Terminated internally with error
+    aborted = 'aborted'  # Terminated due to external conditions
+    #   (e.g. interrupts)
+    unknown = 'unknown'  # An uninitialized value
 
     # Overloading __str__ is needed to match the behavior of the old
     # pyutilib.enum class (removed June 2020). There are spots in the
@@ -33,45 +40,52 @@ class SolverStatus(str, enum.Enum):
     def __str__(self):
         return self.value
 
+
 #
 # A description of how the solver terminated
 #
 class TerminationCondition(str, enum.Enum):
     # UNKNOWN
-    unknown='unknown'                               # An unitialized value
+    unknown = 'unknown'  # An uninitialized value
     # OK
-    maxTimeLimit='maxTimeLimit'                     # Exceeded maximum time limited allowed by user
-                                                    #    but having return a feasible solution
-    maxIterations='maxIterations'                   # Exceeded maximum number of iterations allowed
-                                                    #    by user (e.g., simplex iterations)
-    minFunctionValue='minFunctionValue'             # Found solution smaller than specified function
-                                                    #    value
-    minStepLength='minStepLength'                   # Step length is smaller than specified limit
-    globallyOptimal='globallyOptimal'               # Found a globally optimal solution
-    locallyOptimal='locallyOptimal'                 # Found a locally optimal solution
-    feasible='feasible'                             # Found a solution that is feasible
-    optimal='optimal'                               # Found an optimal solution
-    maxEvaluations='maxEvaluations'                 # Exceeded maximum number of problem evaluations
-                                                    #    (e.g., branch and bound nodes)
-    other='other'                                   # Other, uncategorized normal termination
+    maxTimeLimit = 'maxTimeLimit'  # Exceeded maximum time limited allowed by user
+    #    but having return a feasible solution
+    maxIterations = 'maxIterations'  # Exceeded maximum number of iterations allowed
+    #    by user (e.g., simplex iterations)
+    minFunctionValue = (
+        'minFunctionValue'  # Found solution smaller than specified function
+    )
+    #    value
+    minStepLength = 'minStepLength'  # Step length is smaller than specified limit
+    globallyOptimal = 'globallyOptimal'  # Found a globally optimal solution
+    locallyOptimal = 'locallyOptimal'  # Found a locally optimal solution
+    feasible = 'feasible'  # Found a solution that is feasible
+    optimal = 'optimal'  # Found an optimal solution
+    maxEvaluations = 'maxEvaluations'  # Exceeded maximum number of problem evaluations
+    #    (e.g., branch and bound nodes)
+    other = 'other'  # Other, uncategorized normal termination
     # WARNING
-    unbounded='unbounded'                           # Demonstrated that problem is unbounded
-    infeasible='infeasible'                         # Demonstrated that the problem is infeasible
-    infeasibleOrUnbounded='infeasibleOrUnbounded'   # Problem is either infeasible or unbounded
-    invalidProblem='invalidProblem'                 # The problem setup or characteristics are not
-                                                    #    valid for the solver
-    intermediateNonInteger='intermediateNonInteger' # A non-integer solution has been returned
-    noSolution='noSolution'                         # No feasible solution found but infeasibility
-                                                    #    not proven
+    unbounded = 'unbounded'  # Demonstrated that problem is unbounded
+    infeasible = 'infeasible'  # Demonstrated that the problem is infeasible
+    infeasibleOrUnbounded = (
+        'infeasibleOrUnbounded'  # Problem is either infeasible or unbounded
+    )
+    invalidProblem = 'invalidProblem'  # The problem setup or characteristics are not
+    #    valid for the solver
+    intermediateNonInteger = (
+        'intermediateNonInteger'  # A non-integer solution has been returned
+    )
+    noSolution = 'noSolution'  # No feasible solution found but infeasibility
+    #    not proven
     # ERROR
-    solverFailure='solverFailure'                   # Solver failed to terminate correctly
-    internalSolverError='internalSolverError'       # Internal solver error
-    error='error'                                   # Other errors
+    solverFailure = 'solverFailure'  # Solver failed to terminate correctly
+    internalSolverError = 'internalSolverError'  # Internal solver error
+    error = 'error'  # Other errors
     # ABORTED
-    userInterrupt='userInterrupt'                   # Interrupt signal generated by user
-    resourceInterrupt='resourceInterrupt'           # Interrupt signal in resources used by
-                                                    #    optimizer
-    licensingProblems='licensingProblems'           # Problem accessing solver license
+    userInterrupt = 'userInterrupt'  # Interrupt signal generated by user
+    resourceInterrupt = 'resourceInterrupt'  # Interrupt signal in resources used by
+    #    optimizer
+    licensingProblems = 'licensingProblems'  # Problem accessing solver license
 
     # Overloading __str__ is needed to match the behavior of the old
     # pyutilib.enum class (removed June 2020). There are spots in the
@@ -94,34 +108,38 @@ class TerminationCondition(str, enum.Enum):
         SolverStatus
         """
         if tc in {
-                TerminationCondition.maxTimeLimit,
-                TerminationCondition.maxIterations,
-                TerminationCondition.minFunctionValue,
-                TerminationCondition.minStepLength,
-                TerminationCondition.globallyOptimal,
-                TerminationCondition.locallyOptimal,
-                TerminationCondition.feasible,
-                TerminationCondition.optimal,
-                TerminationCondition.maxEvaluations,
-                TerminationCondition.other }:
+            TerminationCondition.maxTimeLimit,
+            TerminationCondition.maxIterations,
+            TerminationCondition.minFunctionValue,
+            TerminationCondition.minStepLength,
+            TerminationCondition.globallyOptimal,
+            TerminationCondition.locallyOptimal,
+            TerminationCondition.feasible,
+            TerminationCondition.optimal,
+            TerminationCondition.maxEvaluations,
+            TerminationCondition.other,
+        }:
             return SolverStatus.ok
         if tc in {
-                TerminationCondition.unbounded,
-                TerminationCondition.infeasible,
-                TerminationCondition.infeasibleOrUnbounded,
-                TerminationCondition.invalidProblem,
-                TerminationCondition.intermediateNonInteger,
-                TerminationCondition.noSolution }:
+            TerminationCondition.unbounded,
+            TerminationCondition.infeasible,
+            TerminationCondition.infeasibleOrUnbounded,
+            TerminationCondition.invalidProblem,
+            TerminationCondition.intermediateNonInteger,
+            TerminationCondition.noSolution,
+        }:
             return SolverStatus.warning
         if tc in {
-                TerminationCondition.solverFailure,
-                TerminationCondition.internalSolverError,
-                TerminationCondition.error }:
+            TerminationCondition.solverFailure,
+            TerminationCondition.internalSolverError,
+            TerminationCondition.error,
+        }:
             return SolverStatus.error
         if tc in {
-                TerminationCondition.userInterrupt,
-                TerminationCondition.resourceInterrupt,
-                TerminationCondition.licensingProblems }:
+            TerminationCondition.userInterrupt,
+            TerminationCondition.resourceInterrupt,
+            TerminationCondition.licensingProblems,
+        }:
             return SolverStatus.aborted
         return SolverStatus.unknown
 
@@ -139,10 +157,11 @@ def check_optimal_termination(results):
     -------
     `bool`
     """
-    if results.solver.status == SolverStatus.ok and \
-       (results.solver.termination_condition == TerminationCondition.optimal
+    if results.solver.status == SolverStatus.ok and (
+        results.solver.termination_condition == TerminationCondition.optimal
         or results.solver.termination_condition == TerminationCondition.locallyOptimal
-        or results.solver.termination_condition == TerminationCondition.globallyOptimal):
+        or results.solver.termination_condition == TerminationCondition.globallyOptimal
+    ):
         return True
     return False
 
@@ -158,14 +177,16 @@ def assert_optimal_termination(results):
     results : Pyomo results object returned from solver.solve
     """
     if not check_optimal_termination(results):
-        msg  = 'Solver failed to return an optimal solution. ' \
-            'Solver status: {}, Termination condition: {}'.format(results.solver.status,
-                                                                  results.solver.termination_condition)
+        msg = (
+            'Solver failed to return an optimal solution. '
+            'Solver status: {}, Termination condition: {}'.format(
+                results.solver.status, results.solver.termination_condition
+            )
+        )
         raise RuntimeError(msg)
-    
+
 
 class BranchAndBoundStats(MapContainer):
-
     def __init__(self):
         MapContainer.__init__(self)
         self.declare('number of bounded subproblems')
@@ -173,7 +194,6 @@ class BranchAndBoundStats(MapContainer):
 
 
 class BlackBoxStats(MapContainer):
-
     def __init__(self):
         MapContainer.__init__(self)
         self.declare('number of function evaluations')
@@ -182,16 +202,13 @@ class BlackBoxStats(MapContainer):
 
 
 class SolverStatistics(MapContainer):
-
     def __init__(self):
         MapContainer.__init__(self)
-        self.declare("branch_and_bound", value=BranchAndBoundStats(),
-                     active=False)
+        self.declare("branch_and_bound", value=BranchAndBoundStats(), active=False)
         self.declare("black_box", value=BlackBoxStats(), active=False)
 
 
 class SolverInformation(MapContainer):
-
     def __init__(self):
         MapContainer.__init__(self)
         self.declare('name')
@@ -205,8 +222,7 @@ class SolverInformation(MapContainer):
         self.declare('wallclock_time', type=ScalarType.time)
         # Semantics: The specific condition that caused the solver to
         # terminate.
-        self.declare('termination_condition',
-                     value=TerminationCondition.unknown)
+        self.declare('termination_condition', value=TerminationCondition.unknown)
         # Semantics: A string printed by the solver that summarizes the
         # termination status.
         self.declare('termination_message')

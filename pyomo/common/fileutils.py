@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -15,8 +16,22 @@
 #  the U.S. Government retains certain rights in this software.
 #  ___________________________________________________________________________
 
+"""This module provides general utilities for working with the file system
 
-import ctypes.util
+.. autosummary::
+
+   this_file
+   this_file_dir
+   find_path
+   find_file
+   find_dir
+   find_library
+   find_executable
+   import_file
+   PathManager
+   PathData
+"""
+
 import glob
 import inspect
 import logging
@@ -25,8 +40,12 @@ import platform
 import importlib.util
 import sys
 
-from .deprecation import deprecated
-from . import config
+from . import envvar
+from .dependencies import ctypes
+from .deprecation import deprecated, relocated_module_attribute
+
+relocated_module_attribute('StreamIndenter', 'pyomo.common.formatting', version='6.2')
+
 
 def this_file(stack_offset=1):
     """Returns the file name for the module that calls this function.
@@ -49,17 +68,23 @@ def this_file(stack_offset=1):
     return os.path.abspath(inspect.getfile(callerFrame))
 
 
-def this_file_dir():
-    """Returns the directory containing the module that calls this function.
-    """
-    return os.path.dirname(this_file(stack_offset=2))
+def this_file_dir(stack_offset=1):
+    """Returns the directory containing the module that calls this function."""
+    return os.path.dirname(this_file(stack_offset=1 + stack_offset))
 
 
 PYOMO_ROOT_DIR = os.path.dirname(os.path.dirname(this_file_dir()))
 
 
-def find_path(name, validate, cwd=True, mode=os.R_OK, ext=None,
-              pathlist=[], allow_pathlist_deep_references=True):
+def find_path(
+    name,
+    validate,
+    cwd=True,
+    mode=os.R_OK,
+    ext=None,
+    pathlist=[],
+    allow_pathlist_deep_references=True,
+):
     """Locate a path, given a set of search parameters
 
     Parameters
@@ -118,7 +143,7 @@ def find_path(name, validate, cwd=True, mode=os.R_OK, ext=None,
 
     if allow_pathlist_deep_references or os.path.basename(name) == name:
         if isinstance(pathlist, str):
-            locations.extend( pathlist.split(os.pathsep) )
+            locations.extend(pathlist.split(os.pathsep))
         else:
             locations.extend(pathlist)
 
@@ -133,7 +158,7 @@ def find_path(name, validate, cwd=True, mode=os.R_OK, ext=None,
         if not path:
             continue
         for _ext in extlist:
-            for test in glob.glob(os.path.join(path, name+_ext)):
+            for test in glob.glob(os.path.join(path, name + _ext)):
                 if not validate(test):
                     continue
                 if mode is not None and not os.access(test, mode):
@@ -142,14 +167,20 @@ def find_path(name, validate, cwd=True, mode=os.R_OK, ext=None,
     return None
 
 
-def find_file(filename, cwd=True, mode=os.R_OK, ext=None, pathlist=[],
-              allow_pathlist_deep_references=True):
+def find_file(
+    filename,
+    cwd=True,
+    mode=os.R_OK,
+    ext=None,
+    pathlist=[],
+    allow_pathlist_deep_references=True,
+):
     """Locate a file, given a set of search parameters
 
     Parameters
     ----------
     filename : str
-    
+
         The file name to locate.  The file name may contain references
         to a user's home directory (``~user``), environment variables
         (``${HOME}/bin``), and shell wildcards (``?`` and ``*``); all of
@@ -190,15 +221,19 @@ def find_file(filename, cwd=True, mode=os.R_OK, ext=None, pathlist=[],
 
     """
     return find_path(
-        filename, os.path.isfile, cwd=cwd, mode=mode, ext=ext,
+        filename,
+        os.path.isfile,
+        cwd=cwd,
+        mode=mode,
+        ext=ext,
         pathlist=pathlist,
-        allow_pathlist_deep_references=allow_pathlist_deep_references
+        allow_pathlist_deep_references=allow_pathlist_deep_references,
     )
 
 
-
-def find_dir(dirname, cwd=True, mode=os.R_OK, pathlist=[],
-             allow_pathlist_deep_references=True):
+def find_dir(
+    dirname, cwd=True, mode=os.R_OK, pathlist=[], allow_pathlist_deep_references=True
+):
     """Locate a directory, given a set of search parameters
 
     Parameters
@@ -241,24 +276,24 @@ def find_dir(dirname, cwd=True, mode=os.R_OK, pathlist=[],
 
     """
     return find_path(
-        dirname, os.path.isdir, cwd=cwd, mode=mode, pathlist=pathlist,
-        allow_pathlist_deep_references=allow_pathlist_deep_references
+        dirname,
+        os.path.isdir,
+        cwd=cwd,
+        mode=mode,
+        pathlist=pathlist,
+        allow_pathlist_deep_references=allow_pathlist_deep_references,
     )
 
 
-_exeExt = {
-    'linux':   None,
-    'windows': '.exe',
-    'cygwin':  '.exe',
-    'darwin':  None,
-}
+_exeExt = {'linux': None, 'windows': '.exe', 'cygwin': '.exe', 'darwin': None}
 
 _libExt = {
-    'linux':   ('.so', '.so.*'),
+    'linux': ('.so', '.so.*'),
     'windows': ('.dll', '.pyd'),
-    'cygwin':  ('.dll', '.so', '.so.*'),
-    'darwin':  ('.dylib', '.so', '.so.*'),
+    'cygwin': ('.dll', '.so', '.so.*'),
+    'darwin': ('.dylib', '.so', '.so.*'),
 }
+
 
 def _system():
     system = platform.system().lower()
@@ -268,7 +303,7 @@ def _system():
 
 
 def _path():
-    return (os.environ.get('PATH','') or os.defpath).split(os.pathsep)
+    return (os.environ.get('PATH', '') or os.defpath).split(os.pathsep)
 
 
 def find_library(libname, cwd=True, include_PATH=True, pathlist=None):
@@ -316,10 +351,10 @@ def find_library(libname, cwd=True, include_PATH=True, pathlist=None):
     if pathlist is None:
         # Note: PYOMO_CONFIG_DIR/lib comes before LD_LIBRARY_PATH, and
         # PYOMO_CONFIG_DIR/bin comes immediately before PATH
-        pathlist = [ os.path.join(config.PYOMO_CONFIG_DIR, 'lib') ]
-        pathlist.extend(os.environ.get('LD_LIBRARY_PATH','').split(os.pathsep))
+        pathlist = [os.path.join(envvar.PYOMO_CONFIG_DIR, 'lib')]
+        pathlist.extend(os.environ.get('LD_LIBRARY_PATH', '').split(os.pathsep))
         if include_PATH:
-            pathlist.append( os.path.join(config.PYOMO_CONFIG_DIR, 'bin') )
+            pathlist.append(os.path.join(envvar.PYOMO_CONFIG_DIR, 'bin'))
     elif isinstance(pathlist, str):
         pathlist = pathlist.split(os.pathsep)
     else:
@@ -331,7 +366,7 @@ def find_library(libname, cwd=True, include_PATH=True, pathlist=None):
     lib = find_file(libname, cwd=cwd, ext=ext, pathlist=pathlist)
     if lib is None and not libname.startswith('lib'):
         # Search 2: prepend 'lib' (with extensions) in our paths
-        lib = find_file('lib'+libname, cwd=cwd, ext=ext, pathlist=pathlist)
+        lib = find_file('lib' + libname, cwd=cwd, ext=ext, pathlist=pathlist)
     if lib is not None:
         return lib
     # Search 3: use ctypes.util.find_library (which expects 'lib' and
@@ -339,7 +374,7 @@ def find_library(libname, cwd=True, include_PATH=True, pathlist=None):
     libname_base, ext = os.path.splitext(os.path.basename(libname))
     if libname_base.startswith('lib') and _system() != 'windows':
         libname_base = libname_base[3:]
-    if ext.lower().startswith(('.so','.dll','.dylib')):
+    if ext.lower().startswith(('.so', '.dll', '.dylib')):
         return ctypes.util.find_library(libname_base)
     else:
         return ctypes.util.find_library(libname)
@@ -386,7 +421,7 @@ def find_executable(exename, cwd=True, include_PATH=True, pathlist=None):
 
     """
     if pathlist is None:
-        pathlist = [ os.path.join(config.PYOMO_CONFIG_DIR, 'bin') ]
+        pathlist = [os.path.join(envvar.PYOMO_CONFIG_DIR, 'bin')]
     elif isinstance(pathlist, str):
         pathlist = pathlist.split(os.pathsep)
     else:
@@ -394,90 +429,59 @@ def find_executable(exename, cwd=True, include_PATH=True, pathlist=None):
     if include_PATH:
         pathlist.extend(_path())
     ext = _exeExt.get(_system(), None)
-    return find_file(exename, cwd=cwd, ext=ext, mode=os.R_OK|os.X_OK,
-                     pathlist=pathlist, allow_pathlist_deep_references=False)
+    return find_file(
+        exename,
+        cwd=cwd,
+        ext=ext,
+        mode=os.R_OK | os.X_OK,
+        pathlist=pathlist,
+        allow_pathlist_deep_references=False,
+    )
 
 
-def import_file(path, clear_cache=False, infer_package=True):
+def import_file(path, clear_cache=False, infer_package=True, module_name=None):
     """
     Import a module given the full path/filename of the file.
     Replaces import_file from pyutilib (Pyomo 6.0.0).
-    
+
     This function returns the module object that is created.
+
     Parameters
     ----------
-    path : str
+    path: str
         Full path to .py file.
     clear_cache: bool
         Remove module if already loaded. The default is False.
     """
-    path = os.path.normpath(os.path.abspath(os.path.expanduser(
-        os.path.expandvars(path))))
+    path = os.path.normpath(
+        os.path.abspath(os.path.expanduser(os.path.expandvars(path)))
+    )
     if not os.path.exists(path):
         raise FileNotFoundError('File does not exist. Check path.')
     module_dir, module_file = os.path.split(path)
-    module_name, module_ext = os.path.splitext(module_file)
+    if module_name is None:
+        module_name, module_ext = os.path.splitext(module_file)
     if infer_package:
-        while module_dir and os.path.exists(
-                os.path.join(module_dir, '__init__.py')):
+        while module_dir and os.path.exists(os.path.join(module_dir, '__init__.py')):
             module_dir, mod = os.path.split(module_dir)
             module_name = mod + '.' + module_name
     if clear_cache and module_name in sys.modules:
         del sys.modules[module_name]
-    spec = importlib.util.spec_from_file_location(module_name, path)
-    module = spec.loader.load_module()
+    sys.path.insert(0, module_dir)
+    try:
+        spec = importlib.util.spec_from_file_location(module_name, path)
+        module = importlib.util.module_from_spec(spec)
+        if module_name not in sys.modules:
+            sys.modules[module_name] = module
+        spec.loader.exec_module(module)
+    finally:
+        sys.path.pop(0)
     return module
 
 
-class StreamIndenter(object):
-    """
-    Mock-up of a file-like object that wraps another file-like object
-    and indents all data using the specified string before passing it to
-    the underlying file.  Since this presents a full file interface,
-    StreamIndenter objects may be arbitrarily nested.
-    """
+class PathData(object):
+    """An object for storing and managing a :py:class:`PathManager` path"""
 
-    def __init__(self, ostream, indent=' '*4):
-        self.os = ostream
-        self.indent = indent
-        self.stripped_indent = indent.rstrip()
-        self.newline = True
-
-    def __getattr__(self, name):
-        return getattr(self.os, name)
-
-    def write(self, data):
-        if not len(data):
-            return
-        lines = data.split('\n')
-        if self.newline:
-            if lines[0]:
-                self.os.write(self.indent+lines[0])
-            else:
-                self.os.write(self.stripped_indent)
-        else:
-            self.os.write(lines[0])
-        if len(lines) < 2:
-            self.newline = False
-            return
-        for line in lines[1:-1]:
-            if line:
-                self.os.write("\n"+self.indent+line)
-            else:
-                self.os.write("\n"+self.stripped_indent)
-        if lines[-1]:
-            self.os.write("\n"+self.indent+lines[-1])
-            self.newline = False
-        else:
-            self.os.write("\n")
-            self.newline = True
-
-    def writelines(self, sequence):
-        for x in sequence:
-            self.write(x)
-
-
-class _PathData(object):
     def __init__(self, manager, name):
         self._mngr = manager
         self._registered_name = name
@@ -509,11 +513,13 @@ class _PathData(object):
             logging.getLogger('pyomo.common').warning(
                 "explicitly setting the path for '%s' to an "
                 "invalid object or nonexistent location ('%s')"
-                % (self._registered_name, value))
+                % (self._registered_name, value)
+            )
 
-    @deprecated("get_path() is deprecated; use "
-                "pyomo.common.Executable(name).path()",
-                version='5.6.2')
+    @deprecated(
+        "get_path() is deprecated; use pyomo.common.Executable(name).path()",
+        version='5.6.2',
+    )
     def get_path(self):
         return self.path()
 
@@ -565,9 +571,12 @@ class _PathData(object):
         return ans
 
 
-class _ExecutableData(_PathData):
+class ExecutableData(PathData):
+    """A :py:class:`PathData` class specifically for executables."""
+
     @property
     def executable(self):
+        """Get (or set) the path to the executable"""
         return self.path()
 
     @executable.setter
@@ -581,9 +590,9 @@ class PathManager(object):
     The :py:class:`PathManager` defines a class very similar to the
     :py:class:`CachedFactory` class; however it does not register type
     constructors.  Instead, it registers instances of
-    :py:class:`_PathData` (or :py:class:`_ExecutableData`).  These
+    :py:class:`PathData` (or :py:class:`ExecutableData`).  These
     contain the resolved path to the directory object under which the
-    :py:class:`_PathData` object was registered.  We do not use
+    :py:class:`PathData` object was registered.  We do not use
     the PyUtilib ``register_executable`` and ``registered_executable``
     functions so that we can automatically include Pyomo-specific
     locations in the search path (namely the ``PYOMO_CONFIG_DIR``).
@@ -604,7 +613,7 @@ class PathManager(object):
         >>> import os
         >>> from stat import S_IXUSR, S_IXGRP, S_IXOTH
         >>> _testfile = os.path.join(
-        ...    pyomo.common.config.PYOMO_CONFIG_DIR, 'bin', 'demo_exec_file')
+        ...    pyomo.common.envvar.PYOMO_CONFIG_DIR, 'bin', 'demo_exec_file')
         >>> _del_testfile = not os.path.exists(_testfile)
         >>> if _del_testfile:
         ...     open(_testfile,'w').close()
@@ -622,7 +631,7 @@ class PathManager(object):
         True
 
     For convenience, :py:meth:`available()` and :py:meth:`path()` are
-    available by casting the :py:class:`_PathData` object requrned
+    available by casting the :py:class:`PathData` object requrned
     from ``Executable`` or ``Library`` to either a ``bool`` or ``str``:
 
     .. doctest::
@@ -636,7 +645,7 @@ class PathManager(object):
     time a client queried the location or availability, the
     PathManager will return incorrect information.  You can cause
     the :py:class:`PathManager` to refresh its cache by calling
-    ``rehash()`` on either the :py:class:`_PathData` (for the
+    ``rehash()`` on either the :py:class:`PathData` (for the
     single file) or the :py:class:`PathManager` to refresh the
     cache for all files:
 
@@ -650,13 +659,13 @@ class PathManager(object):
     The ``Executable`` singleton looks for executables in the system
     ``PATH`` and in the list of directories specified by the ``pathlist``
     attribute.  ``Executable.pathlist`` defaults to a list containing the
-    ``os.path.join(pyomo.common.config.PYOMO_CONFIG_DIR, 'bin')``.
+    ``os.path.join(pyomo.common.envvar.PYOMO_CONFIG_DIR, 'bin')``.
 
     The ``Library`` singleton looks for executables in the system
     ``LD_LIBRARY_PATH``, ``PATH`` and in the list of directories
     specified by the ``pathlist`` attribute.  ``Library.pathlist``
     defaults to a list containing the
-    ``os.path.join(pyomo.common.config.PYOMO_CONFIG_DIR, 'lib')``.
+    ``os.path.join(pyomo.common.envvar.PYOMO_CONFIG_DIR, 'lib')``.
 
     Users may also override the normal file resolution by explicitly
     setting the location using :py:meth:`set_path`:
@@ -664,7 +673,7 @@ class PathManager(object):
     .. doctest::
 
         >>> Executable('demo_exec_file').set_path(os.path.join(
-        ...     pyomo.common.config.PYOMO_CONFIG_DIR, 'bin', 'demo_exec_file'))
+        ...     pyomo.common.envvar.PYOMO_CONFIG_DIR, 'bin', 'demo_exec_file'))
 
     Explicitly setting the path is an absolute operation and will
     set the location whether or not that location points to an actual
@@ -676,8 +685,8 @@ class PathManager(object):
 
         >>> Executable('demo_exec_file').set_path(None)
 
-    The ``Executable`` singleton uses :py:class:`_ExecutableData`, an
-    extended form of the :py:class:`_PathData` class, which provides the
+    The ``Executable`` singleton uses :py:class:`ExecutableData`, an
+    extended form of the :py:class:`PathData` class, which provides the
     ``executable`` property as an alais for :py:meth:`path()` and
     :py:meth:`set_path()`:
 
@@ -685,8 +694,9 @@ class PathManager(object):
 
         >>> loc = Executable('demo_exec_file').executable
         >>> print(os.path.isfile(loc))
+        True
         >>> Executable('demo_exec_file').executable = os.path.join(
-        ...     pyomo.common.config.PYOMO_CONFIG_DIR, 'bin', 'demo_exec_file')
+        ...     pyomo.common.envvar.PYOMO_CONFIG_DIR, 'bin', 'demo_exec_file')
         >>> Executable('demo_exec_file').executable = None
 
     .. doctest::
@@ -696,6 +706,7 @@ class PathManager(object):
         ...     os.remove(_testfile)
 
     """
+
     def __init__(self, finder, dataClass):
         self._pathTo = {}
         self._find = finder
@@ -718,19 +729,23 @@ class PathManager(object):
         for _path in self._pathTo.values():
             _path.rehash()
 
+
 #
 # Define singleton objects for Pyomo / Users to interact with
 #
-Executable = PathManager(find_executable, _ExecutableData)
-Library = PathManager(find_library, _PathData)
+Executable = PathManager(find_executable, ExecutableData)
+Library = PathManager(find_library, PathData)
 
 
-@deprecated("pyomo.common.register_executable(name) has been deprecated; "
-            "explicit registration is no longer necessary",
-            version='5.6.2')
+@deprecated(
+    "pyomo.common.register_executable(name) has been deprecated; "
+    "explicit registration is no longer necessary",
+    version='5.6.2',
+)
 def register_executable(name, validate=None):
     # Setting to None will cause Executable to re-search the pathlist
     return Executable(name).rehash()
+
 
 @deprecated(
     """pyomo.common.registered_executable(name) has been deprecated; use
@@ -738,7 +753,8 @@ def register_executable(name, validate=None):
     pyomo.common.Executable(name).available() to get a bool indicating
     file availability.  Equivalent results can be obtained by casting
     Executable(name) to string or bool.""",
-    version='5.6.2')
+    version='5.6.2',
+)
 def registered_executable(name):
     ans = Executable(name)
     if ans.path() is None:
@@ -746,8 +762,11 @@ def registered_executable(name):
     else:
         return ans
 
-@deprecated("pyomo.common.unregister_executable(name) has been deprecated; "
-            "use Executable(name).disable()",
-            version='5.6.2')
+
+@deprecated(
+    "pyomo.common.unregister_executable(name) has been deprecated; "
+    "use Executable(name).disable()",
+    version='5.6.2',
+)
 def unregister_executable(name):
     Executable(name).disable()

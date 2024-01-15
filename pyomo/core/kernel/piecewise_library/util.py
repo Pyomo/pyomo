@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -11,13 +12,13 @@
 import operator
 import itertools
 
-from pyomo.common.dependencies import (
-    numpy, numpy_available, scipy, scipy_available
-)
+from pyomo.common.dependencies import numpy, numpy_available, scipy, scipy_available
+
 
 class PiecewiseValidationError(Exception):
     """An exception raised when validation of piecewise
     linear functions fail."""
+
 
 def is_constant(vals):
     """Checks if a list of points is constant"""
@@ -26,7 +27,8 @@ def is_constant(vals):
     it = iter(vals)
     next(it)
     op = operator.eq
-    return all(itertools.starmap(op, zip(it,vals)))
+    return all(itertools.starmap(op, zip(it, vals)))
+
 
 def is_nondecreasing(vals):
     """Checks if a list of points is nondecreasing"""
@@ -35,7 +37,8 @@ def is_nondecreasing(vals):
     it = iter(vals)
     next(it)
     op = operator.ge
-    return all(itertools.starmap(op, zip(it,vals)))
+    return all(itertools.starmap(op, zip(it, vals)))
+
 
 def is_nonincreasing(vals):
     """Checks if a list of points is nonincreasing"""
@@ -44,14 +47,16 @@ def is_nonincreasing(vals):
     it = iter(vals)
     next(it)
     op = operator.le
-    return all(itertools.starmap(op, zip(it,vals)))
+    return all(itertools.starmap(op, zip(it, vals)))
+
 
 def is_positive_power_of_two(x):
     """Checks if a number is a nonzero and positive power of 2"""
-    if (x <= 0):
+    if x <= 0:
         return False
     else:
-        return ( (x & (x - 1)) == 0 )
+        return (x & (x - 1)) == 0
+
 
 def log2floor(n):
     """Computes the exact value of floor(log2(n)) without
@@ -60,24 +65,26 @@ def log2floor(n):
     assert n > 0
     return n.bit_length() - 1
 
+
 def generate_gray_code(nbits):
     """Generates a Gray code of nbits as list of lists"""
     bitset = [0 for i in range(nbits)]
     # important that we copy bitset each time
     graycode = [list(bitset)]
 
-    for i in range(2,(1<<nbits)+1):
-        if i%2:
-            for j in range(-1,-nbits,-1):
+    for i in range(2, (1 << nbits) + 1):
+        if i % 2:
+            for j in range(-1, -nbits, -1):
                 if bitset[j]:
-                    bitset[j-1]=bitset[j-1]^1
+                    bitset[j - 1] = bitset[j - 1] ^ 1
                     break
         else:
-            bitset[-1]=bitset[-1]^1
+            bitset[-1] = bitset[-1] ^ 1
         # important that we copy bitset each time
         graycode.append(list(bitset))
 
     return graycode
+
 
 def characterize_function(breakpoints, values):
     """
@@ -93,7 +100,7 @@ def characterize_function(breakpoints, values):
             function corresponding to the breakpoints.
 
     Returns:
-        (int, list): a function characterization code and \
+        (int, list): a function characterization code and
             the list of slopes.
 
     .. note::
@@ -109,15 +116,15 @@ def characterize_function(breakpoints, values):
         may be :const:`None`.
     """
     if not is_nondecreasing(breakpoints):
-        raise ValueError(
-            "The list of breakpoints must be nondecreasing")
+        raise ValueError("The list of breakpoints must be nondecreasing")
 
     step = False
     slopes = []
     for i in range(1, len(breakpoints)):
-        if breakpoints[i] != breakpoints[i-1]:
-            slope = float(values[i] - values[i-1]) / \
-                    (breakpoints[i] - breakpoints[i-1])
+        if breakpoints[i] != breakpoints[i - 1]:
+            slope = float(values[i] - values[i - 1]) / (
+                breakpoints[i] - breakpoints[i - 1]
+            )
         else:
             slope = None
             step = True
@@ -133,11 +140,14 @@ def characterize_function(breakpoints, values):
         return characterize_function.concave, slopes
     else:
         return characterize_function.other, slopes
-characterize_function.affine  = 1
-characterize_function.convex  = 2
+
+
+characterize_function.affine = 1
+characterize_function.convex = 2
 characterize_function.concave = 3
-characterize_function.step    = 4
-characterize_function.other   = 5
+characterize_function.step = 4
+characterize_function.other = 5
+
 
 def generate_delaunay(variables, num=10, **kwds):
     """
@@ -163,11 +173,10 @@ def generate_delaunay(variables, num=10, **kwds):
             linegrids.append(numpy.linspace(v.lb, v.ub, num))
         else:
             raise ValueError(
-                "Variable %s does not have a "
-                "finite lower and upper bound.")
+                "Variable %s does not have a finite lower and upper bound."
+            )
     # generates a meshgrid and then flattens and transposes
     # the meshgrid into an (npoints, D) shaped array of
     # coordinates
-    points = numpy.vstack(numpy.meshgrid(*linegrids)).\
-             reshape(len(variables),-1).T
+    points = numpy.vstack(numpy.meshgrid(*linegrids)).reshape(len(variables), -1).T
     return scipy.spatial.Delaunay(points, **kwds)

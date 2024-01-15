@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -26,8 +27,8 @@ def create_subproblem(root):
     m.x2 = pyo.Var()
     m.y = pyo.Var()
     m.obj = pyo.Objective(expr=-m.x2)
-    m.c1 = pyo.Constraint(expr=(m.x1 - 1)**2 + m.x2**2 <= pyo.log(m.y))
-    m.c2 = pyo.Constraint(expr=(m.x1 + 1)**2 + m.x2**2 <= pyo.log(m.y))
+    m.c1 = pyo.Constraint(expr=(m.x1 - 1) ** 2 + m.x2**2 <= pyo.log(m.y))
+    m.c2 = pyo.Constraint(expr=(m.x1 + 1) ** 2 + m.x2**2 <= pyo.log(m.y))
 
     complicating_vars_map = pyo.ComponentMap()
     complicating_vars_map[root.y] = m.y
@@ -40,10 +41,12 @@ def main():
     root_vars = [m.y]
     m.benders = BendersCutGenerator()
     m.benders.set_input(root_vars=root_vars, tol=1e-8)
-    m.benders.add_subproblem(subproblem_fn=create_subproblem,
-                             subproblem_fn_kwargs={'root': m},
-                             root_eta=m.eta,
-                             subproblem_solver='ipopt', )
+    m.benders.add_subproblem(
+        subproblem_fn=create_subproblem,
+        subproblem_fn_kwargs={'root': m},
+        root_eta=m.eta,
+        subproblem_solver='ipopt',
+    )
     opt = pyo.SolverFactory('gurobi_direct')
 
     for i in range(30):

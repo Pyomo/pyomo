@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -18,9 +19,10 @@ from pyomo.common.tempfiles import TempfileManager
 from pyomo.opt.base import ProblemFormat, ResultsFormat
 from pyomo.opt.base.solvers import _extract_version, SolverFactory
 from pyomo.opt.results import SolverStatus, SolverResults, TerminationCondition
-from pyomo.opt.solver import  SystemCallSolver
+from pyomo.opt.solver import SystemCallSolver
 
 import logging
+
 logger = logging.getLogger('pyomo.solvers')
 
 
@@ -40,7 +42,7 @@ class IPOPT(SystemCallSolver):
         # Setup valid problem formats, and valid results for each problem format
         # Also set the default problem and results formats.
         #
-        self._valid_problem_formats=[ProblemFormat.nl]
+        self._valid_problem_formats = [ProblemFormat.nl]
         self._valid_result_formats = {}
         self._valid_result_formats[ProblemFormat.nl] = [ResultsFormat.sol]
         self.set_problem_format(ProblemFormat.nl)
@@ -60,8 +62,10 @@ class IPOPT(SystemCallSolver):
     def _default_executable(self):
         executable = Executable("ipopt")
         if not executable:
-            logger.warning("Could not locate the 'ipopt' executable, "
-                           "which is required for solver %s" % self.name)
+            logger.warning(
+                "Could not locate the 'ipopt' executable, "
+                "which is required for solver %s" % self.name
+            )
             self.enable = False
             return None
         return executable.path()
@@ -73,23 +77,24 @@ class IPOPT(SystemCallSolver):
         solver_exec = self.executable()
         if solver_exec is None:
             return _extract_version('')
-        results = subprocess.run( [solver_exec,"-v"], timeout=1,
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.STDOUT,
-                                 universal_newlines=True)
+        results = subprocess.run(
+            [solver_exec, "-v"],
+            timeout=1,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+        )
         return _extract_version(results.stdout)
 
     def create_command_line(self, executable, problem_files):
-
-        assert(self._problem_format == ProblemFormat.nl)
-        assert(self._results_format == ResultsFormat.sol)
+        assert self._problem_format == ProblemFormat.nl
+        assert self._results_format == ResultsFormat.sol
 
         #
         # Define log file
         #
         if self._log_file is None:
-            self._log_file = TempfileManager.\
-                             create_tempfile(suffix="_ipopt.log")
+            self._log_file = TempfileManager.create_tempfile(suffix="_ipopt.log")
 
         fname = problem_files[0]
         if '.' in fname:
@@ -98,7 +103,7 @@ class IPOPT(SystemCallSolver):
                 fname = '.'.join(tmp[:-1])
             else:
                 fname = tmp[0]
-        self._soln_file = fname+".sol"
+        self._soln_file = fname + ".sol"
 
         #
         # Define results file (since an external parser is used)
@@ -108,7 +113,7 @@ class IPOPT(SystemCallSolver):
         #
         # Define command line
         #
-        env=os.environ.copy()
+        env = os.environ.copy()
         #
         # Merge the PYOMO_AMPLFUNC (externals defined within
         # Pyomo/Pyomo) with any user-specified external function
@@ -137,11 +142,11 @@ class IPOPT(SystemCallSolver):
                 if key == "option_file_name":
                     ofn_option_used = True
                 if isinstance(self.options[key], str) and ' ' in self.options[key]:
-                    env_opt.append(key+"=\""+str(self.options[key])+"\"")
-                    cmd.append(str(key)+"="+str(self.options[key]))
+                    env_opt.append(key + "=\"" + str(self.options[key]) + "\"")
+                    cmd.append(str(key) + "=" + str(self.options[key]))
                 else:
-                    env_opt.append(key+"="+str(self.options[key]))
-                    cmd.append(str(key)+"="+str(self.options[key]))
+                    env_opt.append(key + "=" + str(self.options[key]))
+                    cmd.append(str(key) + "=" + str(self.options[key]))
 
         if len(of_opt) > 0:
             # If the 'option_file_name' command-line option
@@ -154,32 +159,33 @@ class IPOPT(SystemCallSolver):
                     "option for Ipopt can not be used "
                     "when specifying options for the "
                     "options file (i.e., options that "
-                    "start with 'OF_'")
+                    "start with 'OF_'"
+                )
 
             # Now check if an 'ipopt.opt' file exists in the
             # current working directory. If so, we need to
             # make it clear that this file will be ignored.
             default_of_name = os.path.join(os.getcwd(), 'ipopt.opt')
             if os.path.exists(default_of_name):
-                logger.warning("A file named '%s' exists in "
-                               "the current working directory, but "
-                               "Ipopt options file options (i.e., "
-                               "options that start with 'OF_') were "
-                               "provided. The options file '%s' will "
-                               "be ignored." % (default_of_name,
-                                                default_of_name))
+                logger.warning(
+                    "A file named '%s' exists in "
+                    "the current working directory, but "
+                    "Ipopt options file options (i.e., "
+                    "options that start with 'OF_') were "
+                    "provided. The options file '%s' will "
+                    "be ignored." % (default_of_name, default_of_name)
+                )
 
             # Now write the new options file
-            options_filename = TempfileManager.\
-                               create_tempfile(suffix="_ipopt.opt")
+            options_filename = TempfileManager.create_tempfile(suffix="_ipopt.opt")
             with open(options_filename, "w") as f:
                 for key, val in of_opt:
-                    f.write(key+" "+str(val)+"\n")
+                    f.write(key + " " + str(val) + "\n")
 
             # Now set the command-line option telling Ipopt
             # to use this file
-            env_opt.append('option_file_name="'+str(options_filename)+'"')
-            cmd.append('option_file_name='+str(options_filename))
+            env_opt.append('option_file_name="' + str(options_filename) + '"')
+            cmd.append('option_file_name=' + str(options_filename))
 
         envstr = "%s_options" % self.options.solver
         # Merge with any options coming in through the environment

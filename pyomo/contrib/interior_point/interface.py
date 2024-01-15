@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -236,12 +237,14 @@ class BaseInteriorPointInterface(object, metaclass=ABCMeta):
     def regularize_equality_gradient(self, kkt, coef, copy_kkt=True):
         raise RuntimeError(
             'Equality gradient regularization is necessary but no '
-            'function has been implemented for doing so.')
+            'function has been implemented for doing so.'
+        )
 
     def regularize_hessian(self, kkt, coef, copy_kkt=True):
         raise RuntimeError(
             'Hessian of Lagrangian regularization is necessary but no '
-            'function has been implemented for doing so.')
+            'function has been implemented for doing so.'
+        )
 
 
 class InteriorPointInterface(BaseInteriorPointInterface):
@@ -254,9 +257,11 @@ class InteriorPointInterface(BaseInteriorPointInterface):
         self._slacks = self.init_slacks()
 
         # set the init_duals_primals_lb/ub from ipopt_zL_out, ipopt_zU_out if available
-        # need to compress them as well and initialize the duals_primals_lb/ub 
-        self._init_duals_primals_lb, self._init_duals_primals_ub =\
-            self._get_full_duals_primals_bounds()
+        # need to compress them as well and initialize the duals_primals_lb/ub
+        (
+            self._init_duals_primals_lb,
+            self._init_duals_primals_ub,
+        ) = self._get_full_duals_primals_bounds()
         self._init_duals_primals_lb[np.isneginf(self._nlp.primals_lb())] = 0
         self._init_duals_primals_ub[np.isinf(self._nlp.primals_ub())] = 0
         self._duals_primals_lb = self._init_duals_primals_lb.copy()
@@ -415,8 +420,9 @@ class InteriorPointInterface(BaseInteriorPointInterface):
         primals = self._nlp.get_primals()
 
         timer.start('hess block')
-        data = (duals_primals_lb/(primals - self._nlp.primals_lb()) +
-                duals_primals_ub/(self._nlp.primals_ub() - primals))
+        data = duals_primals_lb / (
+            primals - self._nlp.primals_lb()
+        ) + duals_primals_ub / (self._nlp.primals_ub() - primals)
         n = self._nlp.n_primals()
         indices = np.arange(n)
         hess_block = scipy.sparse.coo_matrix((data, (indices, indices)), shape=(n, n))
@@ -424,8 +430,9 @@ class InteriorPointInterface(BaseInteriorPointInterface):
         timer.stop('hess block')
 
         timer.start('slack block')
-        data = (duals_slacks_lb/(self._slacks - self._nlp.ineq_lb()) +
-                duals_slacks_ub/(self._nlp.ineq_ub() - self._slacks))
+        data = duals_slacks_lb / (
+            self._slacks - self._nlp.ineq_lb()
+        ) + duals_slacks_ub / (self._nlp.ineq_ub() - self._slacks)
         n = self._nlp.n_ineq_constraints()
         indices = np.arange(n)
         slack_block = scipy.sparse.coo_matrix((data, (indices, indices)), shape=(n, n))
@@ -439,12 +446,12 @@ class InteriorPointInterface(BaseInteriorPointInterface):
         kkt.set_block(0, 2, jac_eq.transpose())
         kkt.set_block(3, 0, jac_ineq)
         kkt.set_block(0, 3, jac_ineq.transpose())
-        kkt.set_block(3, 1, -scipy.sparse.identity(
-                                            self._nlp.n_ineq_constraints(),
-                                            format='coo'))
-        kkt.set_block(1, 3, -scipy.sparse.identity(
-                                            self._nlp.n_ineq_constraints(),
-                                            format='coo'))
+        kkt.set_block(
+            3, 1, -scipy.sparse.identity(self._nlp.n_ineq_constraints(), format='coo')
+        )
+        kkt.set_block(
+            1, 3, -scipy.sparse.identity(self._nlp.n_ineq_constraints(), format='coo')
+        )
         timer.stop('set block')
         return kkt
 
@@ -464,17 +471,21 @@ class InteriorPointInterface(BaseInteriorPointInterface):
         timer.stop('eval cons')
 
         timer.start('grad_lag_primals')
-        grad_lag_primals = (grad_obj +
-                            jac_eq.transpose() * self._nlp.get_duals_eq() +
-                            jac_ineq.transpose() * self._nlp.get_duals_ineq() -
-                            self._barrier / (self._nlp.get_primals() - self._nlp.primals_lb()) +
-                            self._barrier / (self._nlp.primals_ub() - self._nlp.get_primals()))
+        grad_lag_primals = (
+            grad_obj
+            + jac_eq.transpose() * self._nlp.get_duals_eq()
+            + jac_ineq.transpose() * self._nlp.get_duals_ineq()
+            - self._barrier / (self._nlp.get_primals() - self._nlp.primals_lb())
+            + self._barrier / (self._nlp.primals_ub() - self._nlp.get_primals())
+        )
         timer.stop('grad_lag_primals')
 
         timer.start('grad_lag_slacks')
-        grad_lag_slacks = (-self._nlp.get_duals_ineq() -
-                           self._barrier / (self._slacks - self._nlp.ineq_lb()) +
-                           self._barrier / (self._nlp.ineq_ub() - self._slacks))
+        grad_lag_slacks = (
+            -self._nlp.get_duals_ineq()
+            - self._barrier / (self._slacks - self._nlp.ineq_lb())
+            + self._barrier / (self._nlp.ineq_ub() - self._slacks)
+        )
         timer.stop('grad_lag_slacks')
 
         rhs = BlockVector(4)
@@ -504,27 +515,31 @@ class InteriorPointInterface(BaseInteriorPointInterface):
         return self._delta_duals_ineq
 
     def get_delta_duals_primals_lb(self):
-        res = (((self._barrier - self._duals_primals_lb * self._delta_primals) /
-                (self._nlp.get_primals() - self._nlp.primals_lb())) -
-               self._duals_primals_lb)
+        res = (
+            (self._barrier - self._duals_primals_lb * self._delta_primals)
+            / (self._nlp.get_primals() - self._nlp.primals_lb())
+        ) - self._duals_primals_lb
         return res
 
     def get_delta_duals_primals_ub(self):
-        res = (((self._barrier + self._duals_primals_ub * self._delta_primals) /
-                (self._nlp.primals_ub() - self._nlp.get_primals())) -
-               self._duals_primals_ub)
+        res = (
+            (self._barrier + self._duals_primals_ub * self._delta_primals)
+            / (self._nlp.primals_ub() - self._nlp.get_primals())
+        ) - self._duals_primals_ub
         return res
 
     def get_delta_duals_slacks_lb(self):
-        res = (((self._barrier - self._duals_slacks_lb * self._delta_slacks) /
-                (self._slacks - self._nlp.ineq_lb())) -
-               self._duals_slacks_lb)
+        res = (
+            (self._barrier - self._duals_slacks_lb * self._delta_slacks)
+            / (self._slacks - self._nlp.ineq_lb())
+        ) - self._duals_slacks_lb
         return res
 
     def get_delta_duals_slacks_ub(self):
-        res = (((self._barrier + self._duals_slacks_ub * self._delta_slacks) /
-                (self._nlp.ineq_ub() - self._slacks)) -
-               self._duals_slacks_ub)
+        res = (
+            (self._barrier + self._duals_slacks_ub * self._delta_slacks)
+            / (self._nlp.ineq_ub() - self._slacks)
+        ) - self._duals_slacks_ub
         return res
 
     def evaluate_objective(self):
@@ -555,9 +570,9 @@ class InteriorPointInterface(BaseInteriorPointInterface):
         if copy_kkt:
             kkt = kkt.copy()
         reg_coef = coef
-        ptb = (reg_coef *
-               scipy.sparse.identity(self._nlp.n_eq_constraints(),
-                                     format='coo'))
+        ptb = reg_coef * scipy.sparse.identity(
+            self._nlp.n_eq_constraints(), format='coo'
+        )
 
         kkt.set_block(2, 2, ptb)
         return kkt
@@ -576,21 +591,22 @@ class InteriorPointInterface(BaseInteriorPointInterface):
         full_duals_primals_lb = None
         full_duals_primals_ub = None
         # Check in case _nlp was constructed as an AmplNLP (from an nl file)
-        if (hasattr(self._nlp, 'pyomo_model') and 
-            hasattr(self._nlp, 'get_pyomo_variables')):
+        if hasattr(self._nlp, 'pyomo_model') and hasattr(
+            self._nlp, 'get_pyomo_variables'
+        ):
             pyomo_model = self._nlp.pyomo_model()
             pyomo_variables = self._nlp.get_pyomo_variables()
-            if hasattr(pyomo_model,'ipopt_zL_out'):
-                zL_suffix = pyomo_model.ipopt_zL_out 
+            if hasattr(pyomo_model, 'ipopt_zL_out'):
+                zL_suffix = pyomo_model.ipopt_zL_out
                 full_duals_primals_lb = np.empty(self._nlp.n_primals())
-                for i,v in enumerate(pyomo_variables):
+                for i, v in enumerate(pyomo_variables):
                     if v in zL_suffix:
                         full_duals_primals_lb[i] = zL_suffix[v]
 
-            if hasattr(pyomo_model,'ipopt_zU_out'):
-                zU_suffix = pyomo_model.ipopt_zU_out 
+            if hasattr(pyomo_model, 'ipopt_zU_out'):
+                zU_suffix = pyomo_model.ipopt_zU_out
                 full_duals_primals_ub = np.empty(self._nlp.n_primals())
-                for i,v in enumerate(pyomo_variables):
+                for i, v in enumerate(pyomo_variables):
                     if v in zU_suffix:
                         full_duals_primals_ub[i] = zU_suffix[v]
 
@@ -604,12 +620,14 @@ class InteriorPointInterface(BaseInteriorPointInterface):
 
     def load_primals_into_pyomo_model(self):
         if not isinstance(self._nlp, pyomo_nlp.PyomoNLP):
-            raise RuntimeError('Can only load primals into a pyomo model if a pyomo model was used in the constructor.')
+            raise RuntimeError(
+                'Can only load primals into a pyomo model if a pyomo model was used in the constructor.'
+            )
 
         pyomo_variables = self._nlp.get_pyomo_variables()
         primals = self._nlp.get_primals()
         for i, v in enumerate(pyomo_variables):
-            v.value = primals[i]
+            v.set_value(primals[i], skip_validation=True)
 
     def pyomo_model(self):
         return self._nlp.pyomo_model()

@@ -1,7 +1,8 @@
 /**___________________________________________________________________________
  *
  * Pyomo: Python Optimization Modeling Objects
- * Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+ * Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
  * Under the terms of Contract DE-NA0003525 with National Technology and
  * Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
  * rights in this software.
@@ -33,7 +34,7 @@ char* new_char_p_from_std_str(std::string str)
    //return const_cast<char*>(str.c_str());
 }
 
-void AmplInterface::initialize(const char *nlfilename)
+void AmplInterface::initialize(const char *nlfilename, const char *amplfunc)
 {
    // The includes from the Ampl Solver Library
    // have a number of macros that expand to include
@@ -49,10 +50,27 @@ void AmplInterface::initialize(const char *nlfilename)
    typedef std::vector<std::string>::iterator iter;
 
    std::string cp_nlfilename(nlfilename);
+   std::string cp_amplfunc(amplfunc);
 
    // translate options to command input
    std::vector <std::string> arguments;
    arguments.push_back("pynumero");
+   if (cp_amplfunc.length() > 0) {
+      arguments.push_back("-i");
+      arguments.push_back(cp_amplfunc);
+      // We don't know the exact ASL date where the ASL corrected an
+      // issue where AMPLFUNC from a previous load would bleed into (and
+      // override the -i for) subsequent instances, but we know things
+      // work in 20160307, but not in 20150101.
+      if (ASLdate_ASL < 20160307) {
+         std::cerr << "WARNING: ASLdate " << ASLdate_ASL << " < 20160307."
+                   << std::endl;
+         std::cerr << "    This is known to have bugs when used with "
+                   << "user-provided external functions" << std::endl;
+         std::cerr << "    Consider recompiling PyNumero against a more "
+                   << "recent version of the ASL." << std::endl;
+      }
+   }
    arguments.push_back(cp_nlfilename);
    for (iter it=options.begin(); it != options.end(); ++it) {
       arguments.push_back(*it);
@@ -409,6 +427,10 @@ void AmplInterface::finalize_solution(int ampl_solve_result_num, char* msg, doub
    write_sol(msg, const_cast<double *>(const_x), const_cast<double *>(const_lam), 0);
 }
 
+long AmplInterface::get_asl_date() {
+   return ASLdate_ASL;
+}
+
 AmplInterfaceFile::AmplInterfaceFile()
    : AmplInterface()
 {}
@@ -428,7 +450,7 @@ AmplInterfaceStr::AmplInterfaceStr(char* nl, size_t size)
      nl_size(size)
 {}
 
-// THIS METHOD IS DIABLED FOR NOW
+// THIS METHOD IS DISABLED FOR NOW
 FILE* AmplInterfaceStr::open_nl(ASL_pfgh *asl, char* stub)
 {
    // Ignore the stub and use the cached NL file content
@@ -447,23 +469,35 @@ FILE* AmplInterfaceStr::open_nl(ASL_pfgh *asl, char* stub)
 }
 
 extern "C" {
+   PYNUMERO_ASL_EXPORT int
+   EXTERNAL_AmplInterface_version() {
+      /** 0: original implementation
+          1: added EXTERNAL_AmplInterface_dummy
+             updated EXTERNAL_AmplInterface_eval_hes_lag arguments
+          2: added EXTERNAL_AmplInterface_version
+             added amplfunc argument to EXTERNAL_AmplInterface_new_file
+          3: added EXTERNAL_get_asl_date
+       **/
+      return 3;
+   }
+
    PYNUMERO_ASL_EXPORT AmplInterface*
-   EXTERNAL_AmplInterface_new_file(char *nlfilename) {
+   EXTERNAL_AmplInterface_new_file(char *nlfilename, char *amplfunc) {
       AmplInterface* ans = new AmplInterfaceFile();
-      ans->initialize(nlfilename);
+      ans->initialize(nlfilename, amplfunc);
       return ans;
    }
 
    PYNUMERO_ASL_EXPORT AmplInterface*
-   EXTERNAL_AmplInterface_new_str(char *nl, size_t size) {
+   EXTERNAL_AmplInterface_new_str(char *nl, size_t size, char *amplfunc) {
       AmplInterface* ans = new AmplInterfaceStr(nl, size);
-      ans->initialize("membuf.nl");
+      ans->initialize("membuf.nl", amplfunc);
       return ans;
    }
 
    PYNUMERO_ASL_EXPORT AmplInterface*
-   EXTERNAL_AmplInterface_new(char *nlfilename) {
-      return EXTERNAL_AmplInterface_new_file(nlfilename);
+   EXTERNAL_AmplInterface_new(char *nlfilename, char *amplfunc) {
+      return EXTERNAL_AmplInterface_new_file(nlfilename, amplfunc);
    }
 
    PYNUMERO_ASL_EXPORT
@@ -573,6 +607,11 @@ extern "C" {
      double *const_x, int nx, double *const_lam, int nc ) {
       p_ai->finalize_solution(ampl_solve_result_num, msg,
                               const_x, nx, const_lam, nc);
+   }
+
+   PYNUMERO_ASL_EXPORT
+   long EXTERNAL_get_asl_date() {
+      return ASLdate_ASL;
    }
 
    PYNUMERO_ASL_EXPORT

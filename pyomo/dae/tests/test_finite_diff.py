@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -11,8 +12,7 @@
 from __future__ import print_function
 import pyomo.common.unittest as unittest
 
-from pyomo.environ import (Var, Set, ConcreteModel, 
-                           TransformationFactory)
+from pyomo.environ import Var, Set, ConcreteModel, TransformationFactory
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.diffvar import DAE_Error
 
@@ -21,6 +21,7 @@ from io import StringIO
 from pyomo.common.log import LoggingIntercept
 
 from os.path import abspath, dirname, normpath, join
+
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'dae'))
 
@@ -39,14 +40,14 @@ class TestFiniteDiff(unittest.TestCase):
         m.v1 = Var(m.t)
         m.dv1 = DerivativeVar(m.v1)
         m.s = Set(initialize=[1, 2, 3], ordered=True)
-        
+
     # test backward finite difference discretization
     # on var indexed by single ContinuousSet
     def test_disc_single_index_backward(self):
         m = self.m.clone()
         disc = TransformationFactory('dae.finite_difference')
         disc.apply_to(m, nfe=5)
-         
+
         self.assertTrue(hasattr(m, 'dv1_disc_eq'))
         self.assertEqual(len(m.dv1_disc_eq), 5)
         self.assertEqual(len(m.v1), 6)
@@ -62,8 +63,7 @@ class TestFiniteDiff(unittest.TestCase):
         self.assertTrue(hasattr(m, '_pyomo_dae_reclassified_derivativevars'))
         self.assertIn(m.dv1, m._pyomo_dae_reclassified_derivativevars)
 
-        output = \
-"""\
+        output = """\
 dv1_disc_eq : Size=5, Index=t, Active=True
     Key : Lower : Body                               : Upper : Active
     2.0 :   0.0 :   dv1[2.0] - 0.5*(v1[2.0] - v1[0]) :   0.0 :   True
@@ -83,7 +83,7 @@ dv1_disc_eq : Size=5, Index=t, Active=True
         m.dv1dt2 = DerivativeVar(m.v1, wrt=(m.t, m.t))
         disc = TransformationFactory('dae.finite_difference')
         disc.apply_to(m, nfe=2)
-         
+
         self.assertTrue(hasattr(m, 'dv1dt2_disc_eq'))
         self.assertEqual(len(m.dv1dt2_disc_eq), 1)
         self.assertEqual(len(m.v1), 3)
@@ -92,8 +92,7 @@ dv1_disc_eq : Size=5, Index=t, Active=True
         self.assertIn(m.dv1, m._pyomo_dae_reclassified_derivativevars)
         self.assertIn(m.dv1dt2, m._pyomo_dae_reclassified_derivativevars)
 
-        output = \
-"""\
+        output = """\
 dv1dt2_disc_eq : Size=1, Index=t, Active=True
     Key : Lower : Body                                           : Upper : Active
      10 :   0.0 : dv1dt2[10] - 0.04*(v1[10] - 2*v1[5.0] + v1[0]) :   0.0 :   True
@@ -124,8 +123,7 @@ dv1dt2_disc_eq : Size=1, Index=t, Active=True
         self.assertTrue(hasattr(m, '_pyomo_dae_reclassified_derivativevars'))
         self.assertIn(m.dv1, m._pyomo_dae_reclassified_derivativevars)
 
-        output = \
-"""\
+        output = """\
 dv1_disc_eq : Size=5, Index=t, Active=True
     Key : Lower : Body                               : Upper : Active
       0 :   0.0 :     dv1[0] - 0.5*(v1[2.0] - v1[0]) :   0.0 :   True
@@ -154,8 +152,7 @@ dv1_disc_eq : Size=5, Index=t, Active=True
         self.assertIn(m.dv1, m._pyomo_dae_reclassified_derivativevars)
         self.assertIn(m.dv1dt2, m._pyomo_dae_reclassified_derivativevars)
 
-        output = \
-"""\
+        output = """\
 dv1dt2_disc_eq : Size=1, Index=t, Active=True
     Key : Lower : Body                                          : Upper : Active
       0 :   0.0 : dv1dt2[0] - 0.04*(v1[10] - 2*v1[5.0] + v1[0]) :   0.0 :   True
@@ -183,8 +180,7 @@ dv1dt2_disc_eq : Size=1, Index=t, Active=True
         for idx, val in enumerate(list(m.t)):
             self.assertAlmostEqual(val, expected_disc_points[idx])
 
-        output = \
-"""\
+        output = """\
 dv1_disc_eq : Size=4, Index=t, Active=True
     Key : Lower : Body                                : Upper : Active
     2.0 :   0.0 :   dv1[2.0] - 0.25*(v1[4.0] - v1[0]) :   0.0 :   True
@@ -208,8 +204,7 @@ dv1_disc_eq : Size=4, Index=t, Active=True
         self.assertEqual(len(m.dv1dt2_disc_eq), 1)
         self.assertEqual(len(m.v1), 3)
 
-        output = \
-"""\
+        output = """\
 dv1dt2_disc_eq : Size=1, Index=t, Active=True
     Key : Lower : Body                                            : Upper : Active
     5.0 :   0.0 : dv1dt2[5.0] - 0.04*(v1[10] - 2*v1[5.0] + v1[0]) :   0.0 :   True
@@ -259,7 +254,7 @@ dv1dt2_disc_eq : Size=1, Index=t, Active=True
 
         expected_t_disc_points = [0, 5.0, 10]
         expected_t2_disc_points = [0, 2.5, 5]
-        
+
         for idx, val in enumerate(list(m.t)):
             self.assertAlmostEqual(val, expected_t_disc_points[idx])
 
@@ -306,12 +301,10 @@ dv1dt2_disc_eq : Size=1, Index=t, Active=True
             TransformationFactory('dae.finite_difference').apply_to(m, nfe=-1)
 
         with self.assertRaises(ValueError):
-            TransformationFactory('dae.finite_difference').apply_to(m,
-                                                                    scheme='foo')
+            TransformationFactory('dae.finite_difference').apply_to(m, scheme='foo')
 
         with self.assertRaises(ValueError):
-            TransformationFactory('dae.finite_difference').apply_to(m,
-                                                                    foo=True)
+            TransformationFactory('dae.finite_difference').apply_to(m, foo=True)
 
         TransformationFactory('dae.finite_difference').apply_to(m, wrt=m.t)
         with self.assertRaises(ValueError):

@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -18,17 +19,17 @@ from Optimal_Control import m
 
 # Discretize model using Orthogonal Collocation
 discretizer = TransformationFactory('dae.collocation')
-discretizer.apply_to(m,nfe=20,ncp=3,scheme='LAGRANGE-RADAU')
-discretizer.reduce_collocation_points(m,var=m.u,ncp=1,contset=m.t)
+discretizer.apply_to(m, nfe=20, ncp=3, scheme='LAGRANGE-RADAU')
+discretizer.reduce_collocation_points(m, var=m.u, ncp=1, contset=m.t)
 
-solver=SolverFactory('ipopt')
+solver = SolverFactory('ipopt')
 
-results = solver.solve(m,tee=True)
+results = solver.solve(m, tee=True)
 
 x1 = []
 x2 = []
 u = []
-t=[]
+t = []
 
 print(sorted(m.t))
 
@@ -40,9 +41,9 @@ for i in sorted(m.t):
 
 import matplotlib.pyplot as plt
 
-plt.plot(t,x1)
-plt.plot(t,x2)
+plt.plot(t, x1)
+plt.plot(t, x2)
 plt.show()
 
-plt.plot(t,u)
+plt.plot(t, u)
 plt.show()

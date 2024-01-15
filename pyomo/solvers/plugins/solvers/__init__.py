@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -9,11 +10,8 @@
 #  ___________________________________________________________________________
 
 # TODO: Disabled until we can confirm application to Pyomo models
-import pyomo.solvers.plugins.solvers.PICO
 import pyomo.solvers.plugins.solvers.CBCplugin
 import pyomo.solvers.plugins.solvers.GLPK
-import pyomo.solvers.plugins.solvers.GLPK_old
-import pyomo.solvers.plugins.solvers.glpk_direct
 import pyomo.solvers.plugins.solvers.CPLEX
 import pyomo.solvers.plugins.solvers.GUROBI
 import pyomo.solvers.plugins.solvers.BARON

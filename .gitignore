@@ -18,9 +18,13 @@ doc/OnlineDocs/**/*.spy
 pyomo/dataportal/parse_table_datacmds.py
 gurobi.log
 
-# Results from nosetests --with-coverage
+# Results from pytest --with-coverage
 .coverage
 *.cover
 
 # Jupyterhub/Jupyterlab checkpoints
 .ipynb_checkpoints
+cplex.log
+
+# Mac tracking files
+*.DS_Store*

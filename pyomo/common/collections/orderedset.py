@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -13,17 +14,23 @@ from collections import OrderedDict
 
 
 class OrderedSet(MutableSet):
-    __slots__ = ('_dict')
+    __slots__ = ('_dict',)
 
     def __init__(self, iterable=None):
+        # TODO: Starting in Python 3.7, dict is ordered (and is faster
+        # than OrderedDict).  dict began supporting reversed() in 3.8.
+        # We should consider changing the underlying data type here from
+        # OrderedDict to dict.
         self._dict = OrderedDict()
         if iterable is not None:
-            self.update(iterable)
+            if iterable.__class__ is OrderedSet:
+                self._dict.update(iterable._dict)
+            else:
+                self.update(iterable)
 
     def __str__(self):
         """String representation of the mapping."""
         return "OrderedSet(%s)" % (', '.join(repr(x) for x in self))
-
 
     def update(self, iterable):
         for val in iterable:
@@ -54,8 +61,7 @@ class OrderedSet(MutableSet):
 
     def add(self, val):
         """Add an element."""
-        if val not in self._dict:
-            self._dict[val] = None
+        self._dict[val] = None
 
     def discard(self, val):
         """Remove an element. Do not raise an exception if absent."""
@@ -76,10 +82,18 @@ class OrderedSet(MutableSet):
         del self._dict[val]
 
     def intersection(self, other):
-        res = OrderedSet([i for i in self if i in other])
+        other = set(other)
+        res = OrderedSet(filter(other.__contains__, self))
         return res
 
     def union(self, other):
         res = OrderedSet(self)
         res.update(other)
         return res
+
+    #
+    # Not strictly part of MutableSet, but it makes sense that OrderedSet
+    # should be reversible
+    #
+    def __reversed__(self):
+        return reversed(self._dict)

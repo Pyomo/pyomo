@@ -14,6 +14,6 @@ coverage:
 #    - !ci.appveyor.com
 codecov:
   notify:
-    # GHA: 4, Jenkins: 4
-    after_n_builds: 8  # all
+    # GHA: 4, Jenkins: 8
+    after_n_builds: 12  # all
     wait_for_ci: yes

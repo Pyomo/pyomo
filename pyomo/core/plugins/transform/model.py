@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -17,6 +18,7 @@
 
 from pyomo.core.base import Objective, Constraint
 import array
+
 
 def to_standard_form(self):
     """
@@ -34,7 +36,6 @@ def to_standard_form(self):
 
     from pyomo.repn import generate_standard_repn
 
-
     # We first need to create an map of all variables to their column
     # number
     colID = {}
@@ -51,7 +52,7 @@ def to_standard_form(self):
     # First we go through the constraints and introduce slack and excess
     # variables to eliminate inequality constraints
     #
-    # N.B. Structure heirarchy:
+    # N.B. Structure hierarchy:
     #
     # active_components: {class: {attr_name: object}}
     # object -> Constraint: ._data: {ndx: _ConstraintData}
@@ -91,7 +92,6 @@ def to_standard_form(self):
     objectives = {}
     # For each registered component
     for c in self.component_map(active=True):
-
         # Get all subclasses of Constraint
         if issubclass(c, Constraint):
             cons = self.component_map(c, active=True)
@@ -106,13 +106,15 @@ def to_standard_form(self):
 
                     # Process the body
                     terms = self._process_canonical_repn(
-                        generate_standard_repn(con.body, var_id_map))
+                        generate_standard_repn(con.body, var_id_map)
+                    )
 
                     # Process the bounds of the constraint
                     if con.equality:
                         # Equality constraint, only check lower bound
                         lb = self._process_canonical_repn(
-                            generate_standard_repn(con.lower, var_id_map))
+                            generate_standard_repn(con.lower, var_id_map)
+                        )
 
                         # Update terms
                         for k in lb:
@@ -125,14 +127,14 @@ def to_standard_form(self):
                         # Add constraint to equality constraints
                         eqConstraints[(con_set_name, ndx)] = terms
                     else:
-
                         # Process upper bounds (<= constraints)
                         if con.upper is not None:
                             # Less than or equal to constraint
                             tmp = dict(terms)
 
                             ub = self._process_canonical_repn(
-                                generate_standard_repn(con.upper, var_id_map))
+                                generate_standard_repn(con.upper, var_id_map)
+                            )
 
                             # Update terms
                             for k in ub:
@@ -151,7 +153,8 @@ def to_standard_form(self):
                             tmp = dict(terms)
 
                             lb = self._process_canonical_repn(
-                                generate_standard_repn(con.lower, var_id_map))
+                                generate_standard_repn(con.lower, var_id_map)
+                            )
 
                             # Update terms
                             for k in lb:
@@ -176,25 +179,24 @@ def to_standard_form(self):
                     obj = obj_set._data[ndx]
                     # Process the objective
                     terms = self._process_canonical_repn(
-                        generate_standard_repn(obj.expr, var_id_map))
+                        generate_standard_repn(obj.expr, var_id_map)
+                    )
 
                     objectives[(obj_set_name, ndx)] = terms
-
 
     # We now have all the constraints. Add a slack variable for every
     # <= constraint and an excess variable for every >= constraint.
     nSlack = len(leConstraints)
     nExcess = len(geConstraints)
 
-    nConstraints = len(leConstraints) + len(geConstraints) + \
-                   len(eqConstraints)
+    nConstraints = len(leConstraints) + len(geConstraints) + len(eqConstraints)
     nVariables = len(colID) + nSlack + nExcess
     nRegVariables = len(colID)
 
     # Make the arrays
-    coefficients = array.array("d", [0]*nConstraints*nVariables)
-    constraints = array.array("d", [0]*nConstraints)
-    costs = array.array("d", [0]*nVariables)
+    coefficients = array.array("d", [0] * nConstraints * nVariables)
+    constraints = array.array("d", [0] * nConstraints)
+    costs = array.array("d", [0] * nVariables)
 
     # Populate the coefficient matrix
     constraintID = 0
@@ -211,11 +213,10 @@ def to_standard_form(self):
             else:
                 # Variable coefficient
                 col = colID[termKey]
-                coefficients[constraintID*nVariables + col] = coef
+                coefficients[constraintID * nVariables + col] = coef
 
         # Add the slack
-        coefficients[constraintID*nVariables + nRegVariables + \
-                    constraintID] = 1
+        coefficients[constraintID * nVariables + nRegVariables + constraintID] = 1
         constraintID += 1
 
     # Add greater than or equal to constraints
@@ -230,11 +231,10 @@ def to_standard_form(self):
             else:
                 # Variable coefficient
                 col = colID[termKey]
-                coefficients[constraintID*nVariables + col] = coef
+                coefficients[constraintID * nVariables + col] = coef
 
         # Add the slack
-        coefficients[constraintID*nVariables + nRegVariables + \
-                    constraintID] = -1
+        coefficients[constraintID * nVariables + nRegVariables + constraintID] = -1
         constraintID += 1
 
     # Add equality constraints
@@ -249,7 +249,7 @@ def to_standard_form(self):
             else:
                 # Variable coefficient
                 col = colID[termKey]
-                coefficients[constraintID*nVariables + col] = coef
+                coefficients[constraintID * nVariables + col] = coef
 
         constraintID += 1
 
@@ -301,9 +301,9 @@ def to_standard_form(self):
         conNames.append(strName)
 
     # Generate the variable names
-    varNames = [None]*len(colID)
+    varNames = [None] * len(colID)
     for name in colID:
-        tmp_name = " " + name
+        tmp_name = ' ' + name
         if len(tmp_name) > maxColWidth:
             maxColWidth = len(tmp_name)
         varNames[colID[name]] = tmp_name
@@ -319,22 +319,28 @@ def to_standard_form(self):
         varNames.append(tmp_name)
 
     # Variable names
-    line = " "*maxConNameLen + (" "*constraintPadding) + " "
+    line = ' ' * maxConNameLen + (' ' * constraintPadding) + ' '
     for col in range(0, nVariables):
         # Format entry
         token = varNames[col]
 
         # Pad with trailing whitespace
-        token += " "*(maxColWidth - len(token))
+        token += ' ' * (maxColWidth - len(token))
 
         # Add to line
-        line += " " + token + " "
-    print(line+'\n')
+        line += ' ' + token + ' '
+    print(line + '\n')
 
     # Cost vector
-    print(" "*maxConNameLen + (" "*constraintPadding) + "+--" + \
-          " "*((maxColWidth+2)*nVariables - 4) + "--+" + '\n')
-    line = " "*maxConNameLen + (" "*constraintPadding) + "|"
+    print(
+        ' ' * maxConNameLen
+        + (' ' * constraintPadding)
+        + "+--"
+        + ' ' * ((maxColWidth + 2) * nVariables - 4)
+        + "--+"
+        + '\n'
+    )
+    line = ' ' * maxConNameLen + (' ' * constraintPadding) + "|"
     for col in range(0, nVariables):
         # Format entry
         token = numFmt % costs[col]
@@ -342,38 +348,57 @@ def to_standard_form(self):
             token = altFmt % costs[col]
 
         # Pad with trailing whitespace
-        token += " "*(maxColWidth - len(token))
+        token += ' ' * (maxColWidth - len(token))
 
         # Add to line
-        line += " " + token + " "
+        line += ' ' + token + ' '
     line += "|"
-    print(line+'\n')
-    print(" "*maxConNameLen + (" "*constraintPadding) + "+--" + \
-          " "*((maxColWidth+2)*nVariables - 4) + "--+"+'\n')
+    print(line + '\n')
+    print(
+        ' ' * maxConNameLen
+        + (' ' * constraintPadding)
+        + "+--"
+        + ' ' * ((maxColWidth + 2) * nVariables - 4)
+        + "--+"
+        + '\n'
+    )
 
     # Constraints
-    print(" "*maxConNameLen + (" "*constraintPadding) + "+--" + \
-          " "*((maxColWidth+2)*nVariables - 4) + "--+" + \
-          (" "*constraintPadding) + "+--" + \
-          (" "*(maxConstraintColWidth-1)) + "--+"+'\n')
+    print(
+        ' ' * maxConNameLen
+        + (' ' * constraintPadding)
+        + "+--"
+        + ' ' * ((maxColWidth + 2) * nVariables - 4)
+        + "--+"
+        + (' ' * constraintPadding)
+        + "+--"
+        + (' ' * (maxConstraintColWidth - 1))
+        + "--+"
+        + '\n'
+    )
     for row in range(0, nConstraints):
         # Print constraint name
-        line = conNames[row] + (" "*constraintPadding) + (" "*(maxConNameLen - len(conNames[row]))) + "|"
+        line = (
+            conNames[row]
+            + (' ' * constraintPadding)
+            + (' ' * (maxConNameLen - len(conNames[row])))
+            + "|"
+        )
 
         # Print each coefficient
         for col in range(0, nVariables):
             # Format entry
-            token = numFmt % coefficients[nVariables*row + col]
+            token = numFmt % coefficients[nVariables * row + col]
             if len(token) > maxColWidth:
-                token = altFmt % coefficients[nVariables*row + col]
+                token = altFmt % coefficients[nVariables * row + col]
 
             # Pad with trailing whitespace
-            token += " "*(maxColWidth - len(token))
+            token += ' ' * (maxColWidth - len(token))
 
             # Add to line
-            line += " " + token + " "
+            line += ' ' + token + ' '
 
-        line += "|" + (" "*constraintPadding) + "|"
+        line += "|" + (' ' * constraintPadding) + "|"
 
         # Add constraint vector
         token = numFmt % constraints[row]
@@ -381,16 +406,25 @@ def to_standard_form(self):
             token = altFmt % constraints[row]
 
         # Pad with trailing whitespace
-        token += " "*(maxConstraintColWidth - len(token))
+        token += ' ' * (maxConstraintColWidth - len(token))
 
-        line += " " + token + "  |"
-        print(line+'\n')
-    print(" "*maxConNameLen + (" "*constraintPadding) + "+--" + \
-          " "*((maxColWidth+2)*nVariables - 4) + "--+" + \
-          (" "*constraintPadding) + "+--" + (" "*(maxConstraintColWidth-1))\
-          + "--+"+'\n')
+        line += ' ' + token + "  |"
+        print(line + '\n')
+    print(
+        ' ' * maxConNameLen
+        + (' ' * constraintPadding)
+        + "+--"
+        + ' ' * ((maxColWidth + 2) * nVariables - 4)
+        + "--+"
+        + (' ' * constraintPadding)
+        + "+--"
+        + (' ' * (maxConstraintColWidth - 1))
+        + "--+"
+        + '\n'
+    )
 
     return (coefficients, costs, constraints)
+
 
 def _process_canonical_repn(self, expr):
     """
@@ -420,4 +454,3 @@ def _process_canonical_repn(self, expr):
         raise TypeError("Nonlinear terms in expression")
 
     return terms
-

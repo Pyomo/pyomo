@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -15,13 +16,13 @@ from pyomo.core import TransformationFactory
 from pyomo.common.collections import Bunch
 
 
-@SolverFactory.register('mpec_nlp', doc='MPEC solver that optimizes a nonlinear transformation')
+@SolverFactory.register(
+    'mpec_nlp', doc='MPEC solver that optimizes a nonlinear transformation'
+)
 class MPEC_Solver1(pyomo.opt.OptSolver):
-
-
     def __init__(self, **kwds):
         kwds['type'] = 'mpec_nlp'
-        pyomo.opt.OptSolver.__init__(self,**kwds)
+        pyomo.opt.OptSolver.__init__(self, **kwds)
         self._metasolver = True
 
     def _presolve(self, *args, **kwds):
@@ -42,7 +43,7 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
         # Solve with a specified solver
         #
         solver = self.options.solver
-        if not self.options.solver:                 #pragma:nocover
+        if not self.options.solver:  # pragma:nocover
             self.options.solver = solver = 'ipopt'
 
         # use the with block here so that deactivation of the
@@ -52,8 +53,8 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
             self.results = []
             epsilon_final = self.options.get('epsilon_final', 1e-7)
             epsilon = self.options.get('epsilon_initial', epsilon_final)
-            while (True):
-                self._instance.mpec_bound.value = epsilon
+            while True:
+                self._instance.mpec_bound.set_value(epsilon)
                 #
                 # **NOTE: It would be better to override _presolve on the
                 #         base class of this solver as you might be
@@ -62,9 +63,9 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
                 #         io_options are getting relayed to the subsolver
                 #         here).
                 #
-                res = opt.solve(self._instance,
-                                tee=self._tee,
-                                timelimit=self._timelimit)
+                res = opt.solve(
+                    self._instance, tee=self._tee, timelimit=self._timelimit
+                )
                 self.results.append(res)
                 epsilon /= 10.0
                 if epsilon < epsilon_final:
@@ -73,7 +74,10 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
             # Reclassify the Complementarity components
             #
             from pyomo.mpec import Complementarity
-            for cuid in self._instance._transformation_data['mpec.simple_nonlinear'].compl_cuids:
+
+            for cuid in self._instance._transformation_data[
+                'mpec.simple_nonlinear'
+            ].compl_cuids:
                 cobj = cuid.find_component_on(self._instance)
                 cobj.parent_block().reclassify_component_type(cobj, Complementarity)
             #
@@ -84,8 +88,7 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
             #
             # Return the sub-solver return condition value and log
             #
-            return Bunch(rc=getattr(opt,'_rc', None),
-                                       log=getattr(opt,'_log',None))
+            return Bunch(rc=getattr(opt, '_rc', None), log=getattr(opt, '_log', None))
 
     def _postsolve(self):
         #
@@ -99,12 +102,12 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
         solv.name = self.options.subsolver
         solv.wallclock_time = self.wall_time
         cpu_ = []
-        for res in self.results:                    #pragma:nocover
+        for res in self.results:  # pragma:nocover
             if not getattr(res.solver, 'cpu_time', None) is None:
-                cpu_.append( res.solver.cpu_time )
-        if len(cpu_) > 0:                           #pragma:nocover
+                cpu_.append(res.solver.cpu_time)
+        if len(cpu_) > 0:  # pragma:nocover
             solv.cpu_time = sum(cpu_)
-        #solv.termination_condition = pyomo.opt.TerminationCondition.maxIterations
+        # solv.termination_condition = pyomo.opt.TerminationCondition.maxIterations
         #
         # PROBLEM
         #
@@ -113,9 +116,15 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
         prob.name = self._instance.name
         prob.number_of_constraints = self._instance.statistics.number_of_constraints
         prob.number_of_variables = self._instance.statistics.number_of_variables
-        prob.number_of_binary_variables = self._instance.statistics.number_of_binary_variables
-        prob.number_of_integer_variables = self._instance.statistics.number_of_integer_variables
-        prob.number_of_continuous_variables = self._instance.statistics.number_of_continuous_variables
+        prob.number_of_binary_variables = (
+            self._instance.statistics.number_of_binary_variables
+        )
+        prob.number_of_integer_variables = (
+            self._instance.statistics.number_of_integer_variables
+        )
+        prob.number_of_continuous_variables = (
+            self._instance.statistics.number_of_continuous_variables
+        )
         prob.number_of_objectives = self._instance.statistics.number_of_objectives
         #
         # SOLUTION(S)

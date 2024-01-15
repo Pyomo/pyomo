@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -10,9 +11,19 @@
 
 from collections.abc import MutableMapping as collections_MutableMapping
 from collections.abc import Mapping as collections_Mapping
+from pyomo.common.autoslots import AutoSlots
 
 
-class ComponentMap(collections_MutableMapping):
+def _rebuild_ids(encode, val):
+    if encode:
+        return val
+    else:
+        # object id() may have changed after unpickling,
+        # so we rebuild the dictionary keys
+        return {id(obj): (obj, v) for obj, v in val.values()}
+
+
+class ComponentMap(AutoSlots.Mixin, collections_MutableMapping):
     """
     This class is a replacement for dict that allows Pyomo
     modeling components to be used as entry keys. The
@@ -36,54 +47,20 @@ class ComponentMap(collections_MutableMapping):
     components for which it contains map entries (e.g., as
     part of a block). ***
     """
+
     __slots__ = ("_dict",)
+    __autoslot_mappers__ = {'_dict': _rebuild_ids}
+
     def __init__(self, *args, **kwds):
         # maps id(obj) -> (obj,val)
         self._dict = {}
         # handle the dict-style initialization scenarios
         self.update(*args, **kwds)
 
-    #
-    # This method must be defined for deepcopy/pickling
-    # because this class relies on Python ids.
-    #
-    def __setstate__(self, state):
-        # *** Temporary hack to allow this class to be used
-        # *** in inheritance chains for both the old and new
-        # *** component hierarchies.
-        for cls in self.__class__.__mro__:
-            if cls.__name__ == "ICategorizedObject":
-                super(ComponentMap, self).__setstate__(state)
-                break
-
-        # object id() may have changed after unpickling,
-        # so we rebuild the dictionary keys
-        self._dict = \
-            {id(obj):(obj,val) \
-                 for obj, val in state['_dict'].values()}
-
-    def __getstate__(self):
-        # *** Temporary hack to allow this class to be used
-        # *** in inheritance chains for both the old and new
-        # *** component hierarchies.
-        try:
-            super(ComponentMap, self).__getstate__
-        except AttributeError:
-            state = {}
-        else:
-            state = super(ComponentMap, self).__getstate__()
-        for cls in self.__class__.__mro__:
-            if cls.__name__ == "ICategorizedObject":
-                break
-        else:
-            for i in ComponentMap.__slots__:
-                state[i] = getattr(self, i)
-        return state
-
     def __str__(self):
         """String representation of the mapping."""
-        tmp = {str(c)+" (id="+str(id(c))+")":v for c,v in self.items()}
-        return "ComponentMap("+str(tmp)+")"
+        tmp = {str(c) + " (id=" + str(id(c)) + ")": v for c, v in self.items()}
+        return "ComponentMap(" + str(tmp) + ")"
 
     #
     # Implement MutableMapping abstract methods
@@ -93,23 +70,19 @@ class ComponentMap(collections_MutableMapping):
         try:
             return self._dict[id(obj)][1]
         except KeyError:
-            raise KeyError("Component with id '%s': %s"
-                           % (id(obj), str(obj)))
+            raise KeyError("Component with id '%s': %s" % (id(obj), str(obj)))
 
     def __setitem__(self, obj, val):
-        self._dict[id(obj)] = (obj,val)
+        self._dict[id(obj)] = (obj, val)
 
     def __delitem__(self, obj):
         try:
             del self._dict[id(obj)]
         except KeyError:
-            raise KeyError("Component with id '%s': %s"
-                           % (id(obj), str(obj)))
+            raise KeyError("Component with id '%s': %s" % (id(obj), str(obj)))
 
     def __iter__(self):
-        return (obj \
-                for obj, val in \
-                self._dict.values())
+        return (obj for obj, val in self._dict.values())
 
     def __len__(self):
         return self._dict.__len__()
@@ -118,6 +91,13 @@ class ComponentMap(collections_MutableMapping):
     # Overload MutableMapping default implementations
     #
 
+    # We want a specialization of update() to avoid unnecessary calls to
+    # id() when copying / merging ComponentMaps
+    def update(self, *args, **kwargs):
+        if len(args) == 1 and not kwargs and isinstance(args[0], ComponentMap):
+            return self._dict.update(args[0]._dict)
+        return super().update(*args, **kwargs)
+
     # We want to avoid generating Pyomo expressions due to
     # comparison of values, so we convert both objects to a
     # plain dictionary mapping key->(type(val), id(val)) and
@@ -125,10 +105,9 @@ class ComponentMap(collections_MutableMapping):
     def __eq__(self, other):
         if not isinstance(other, collections_Mapping):
             return False
-        return {(type(key), id(key)):val
-                    for key, val in self.items()} == \
-               {(type(key), id(key)):val
-                    for key, val in other.items()}
+        return {(type(key), id(key)): val for key, val in self.items()} == {
+            (type(key), id(key)): val for key, val in other.items()
+        }
 
     def __ne__(self, other):
         return not (self == other)
@@ -161,5 +140,3 @@ class ComponentMap(collections_MutableMapping):
         else:
             self[key] = default
         return default
-
-

@@ -18,14 +18,17 @@ with a diverse set of optimization capabilities.
    solving_pyomo_models.rst
    working_models.rst
    working_abstractmodels/index.rst
+   model_transformations/index.rst
    modeling_extensions/index.rst
    tutorial_examples.rst
    model_debugging/index.rst
    advanced_topics/index.rst
+   errors.rst
    developer_reference/index.rst
    library_reference/index.rst
    contribution_guide.rst
    contributed_packages/index.rst
+   related_packages.rst
    bibliography.rst
 
 Indices and Tables

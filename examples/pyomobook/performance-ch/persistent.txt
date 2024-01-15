@@ -1,0 +1,7 @@
+Restricted license - for non-production use only - expires 2022-01-13
+Objective after solve 1:  5.0000000039343995
+Objective after solve 2:  5.555555556979119
+Objective after solve 3:  5.0000000039343995
+Objective after solve 4:  5.0000000039343995
+AttributeError was raised
+Objective after solve 5:  5.0000000039343995

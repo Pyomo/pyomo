@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -38,7 +39,7 @@ class DataPortal(object):
             Default is :const:`None`.
         filename (str): A file from which data is loaded.  Default
             is :const:`None`.
-        data_dict (dict): A dictionary used to initialize the data 
+        data_dict (dict): A dictionary used to initialize the data
             in this object.  Default is :const:`None`.
     """
 
@@ -47,16 +48,18 @@ class DataPortal(object):
         Constructor
         """
         if len(args) > 0:
-            raise RuntimeError("Unexpected constructor argument for a DataPortal object")
+            raise RuntimeError(
+                "Unexpected constructor argument for a DataPortal object"
+            )
 
         # Initialize this object with no data manager
         self._data_manager = None
 
         # Map initialization data as follows: _data[namespace][symbol] -> data
-        self._data={}
+        self._data = {}
 
         # This is the data that is imported from various sources
-        self._default={}
+        self._default = {}
 
         # Get the model for which this data is associated.
         self._model = kwds.pop('model', None)
@@ -81,9 +84,9 @@ class DataPortal(object):
         This data manager is used to process future data imports and exports.
 
         Args:
-            filename (str): A filename that specifies the data source.  
+            filename (str): A filename that specifies the data source.
                 Default is :const:`None`.
-            server (str): The name of the remote server that hosts the data.  
+            server (str): The name of the remote server that hosts the data.
                 Default is :const:`None`.
             using (str): The name of the resource used to load the data.
                 Default is :const:`None`.
@@ -92,11 +95,11 @@ class DataPortal(object):
         """
         if not self._data_manager is None:
             self._data_manager.close()
-        data = kwds.get('using',None)
+        data = kwds.get('using', None)
         if data is None:
-            data = kwds.get('filename',None)
+            data = kwds.get('filename', None)
         if data is None:
-            data = kwds.get('server',None)
+            data = kwds.get('server', None)
         if '.' in data:
             tmp = data.split(".")[-1]
         else:
@@ -125,25 +128,25 @@ class DataPortal(object):
 
         Other keyword arguments are passed to the :func:`connect()` method.
         """
-        if is_debug_set(logger):        #pragma:nocover
+        if is_debug_set(logger):  # pragma:nocover
             logger.debug("Loading data...")
         #
         # Process arguments
         #
         _model = kwds.pop('model', None)
         if not _model is None:
-            self._model=_model
+            self._model = _model
         #
-        # If _disconnect is True, then disconnect the data 
+        # If _disconnect is True, then disconnect the data
         # manager after we load data
         #
-        _disconnect=False
+        _disconnect = False
         if self._data_manager is None:
             #
             # Start a new connection
             #
             self.connect(**kwds)
-            _disconnect=True
+            _disconnect = True
         elif len(kwds) > 0:
             #
             # We are continuing to store using an existing connection.
@@ -159,7 +162,7 @@ class DataPortal(object):
         #
         # Read from data manager into self._data and self._default
         #
-        if is_debug_set(logger):        #pragma:nocover
+        if is_debug_set(logger):  # pragma:nocover
             logger.debug("Processing data ...")
         self._data_manager.read()
         status = self._data_manager.process(self._model, self._data, self._default)
@@ -169,7 +172,7 @@ class DataPortal(object):
         #
         if _disconnect:
             self.disconnect()
-        if is_debug_set(logger):        #pragma:nocover
+        if is_debug_set(logger):  # pragma:nocover
             logger.debug("Done.")
 
     def store(self, **kwds):
@@ -182,22 +185,22 @@ class DataPortal(object):
 
         Other keyword arguments are passed to the :func:`connect()` method.
         """
-        if is_debug_set(logger):        #pragma:nocover
+        if is_debug_set(logger):  # pragma:nocover
             logger.debug("Storing data...")
         #
         # Process arguments
         #
         _model = kwds.pop('model', None)
         if not _model is None:
-            self._model=_model
+            self._model = _model
         #
-	    # If _disconnect is True, then disconnect the data manager
-	    # after we load data
+        # If _disconnect is True, then disconnect the data manager
+        # after we load data
         #
-        _disconnect=False
+        _disconnect = False
         if self._data_manager is None:
             self.connect(**kwds)
-            _disconnect=True
+            _disconnect = True
         elif len(kwds) > 0:
             #
             # Q: Should we reinitialize?  The semantic difference between
@@ -218,12 +221,12 @@ class DataPortal(object):
         #
         if _disconnect:
             self.disconnect()
-        if is_debug_set(logger):        #pragma:nocover
+        if is_debug_set(logger):  # pragma:nocover
             logger.debug("Done.")
 
     def data(self, name=None, namespace=None):
         """
-	    Return the data associated with a symbol and namespace
+            Return the data associated with a symbol and namespace
 
         Args:
             name (str): The name of the symbol that is returned.
@@ -234,11 +237,11 @@ class DataPortal(object):
 
         Returns:
             If ``name`` is :const:`None`, then the dictionary for
-            the namespace is returned.  Otherwise, the data 
+            the namespace is returned.  Otherwise, the data
             associated with ``name`` in given namespace is returned.
-            The return value is a constant if :const:`None` if 
+            The return value is a constant if :const:`None` if
             there is a single value in the symbol dictionary, and otherwise
-            the symbol dictionary is returned.            
+            the symbol dictionary is returned.
         """
         if not namespace in self._data:
             raise IOError("Unknown namespace '%s'" % str(namespace))
@@ -252,7 +255,7 @@ class DataPortal(object):
 
     def __getitem__(self, *args):
         """
-        Return the specified data value.  
+        Return the specified data value.
 
         If a single argument is given, then this is the symbol name::
 
@@ -266,7 +269,7 @@ class DataPortal(object):
             dp[namespace, name]
 
         Args:
-            *args (str): A tuple of arguents.
+            *args (str): A tuple of arguments.
 
         Returns:
             If a single argument is given, then the data associated
@@ -275,15 +278,17 @@ class DataPortal(object):
             symbol in the given namespace is returned.
         """
         if type(args[0]) is tuple or type(args[0]) is list:
-            assert(len(args) == 1)
+            assert len(args) == 1
             args = args[0]
         if len(args) > 2:
-            raise IOError("Must specify data name:  DataPortal[name] or Data[namespace, name]")
+            raise IOError(
+                "Must specify data name:  DataPortal[name] or Data[namespace, name]"
+            )
         elif len(args) == 2:
             namespace = args[0]
             name = args[1]
         else:
-            namespace=None
+            namespace = None
             name = args[0]
 
         ans = self._data[namespace][name]
@@ -365,27 +370,31 @@ class DataPortal(object):
         """
         options = self._data_manager.options
         #
-        if options.data is None and (not options.set is None or not options.param is None or not options.index is None):
+        if options.data is None and (
+            not options.set is None
+            or not options.param is None
+            or not options.index is None
+        ):
             #
             # Set options.data to a list of elements of the options.set,
             # options.param and options.index values.
             #
             options.data = []
             if not options.set is None:
-                assert(type(options.set) not in (list, tuple))
+                assert type(options.set) not in (list, tuple)
                 options.data.append(options.set)
                 #
                 # The set option should not be a list or tuple.
                 #
-                #if type(options.set) in (list,tuple):
+                # if type(options.set) in (list,tuple):
                 #    for item in options.set:
                 #        options.data.append(item)
-                #else:
+                # else:
                 #    options.data.append(options.set)
             if not options.index is None:
                 options.data.append(options.index)
             if not options.param is None:
-                if type(options.param) in (list,tuple):
+                if type(options.param) in (list, tuple):
                     for item in options.param:
                         options.data.append(item)
                 else:
@@ -417,7 +426,7 @@ class DataPortal(object):
             #
             try:
                 self._model = options.data.model()
-                options.data = [ self._data_manager.options.data.local_name ]
+                options.data = [self._data_manager.options.data.local_name]
             except:
                 pass
 
@@ -433,4 +442,3 @@ class DataPortal(object):
                 self._data[name] = c.data()
             except:
                 self._data[name] = c.extract_values()
-

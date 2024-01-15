@@ -1,17 +1,21 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import sys
+
 import pyomo.common.unittest as unittest
 
 from pyomo.environ import ConcreteModel, Var
-from pyomo.common.modeling import unique_component_name
+from pyomo.common.modeling import unique_component_name, NOTSET
+
 
 class TestModeling(unittest.TestCase):
     def test_unique_component_name(self):
@@ -45,3 +49,7 @@ class TestModeling(unittest.TestCase):
         self.assertIn(name[2], '0123456789')
         self.assertIn(name[3], '0123456789')
 
+    def test_NOTSET(self):
+        self.assertEqual(str(NOTSET), 'NOTSET')
+        assert 'sphinx' not in sys.modules
+        self.assertEqual(repr(NOTSET), 'pyomo.common.modeling.NOTSET')

@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -23,20 +24,15 @@ def create_parser(parser=None):
     #
     if parser is None:
         parser = argparse.ArgumentParser(
-                usage = '%(prog)s [options] <model_or_config_file> [<data_files>]'
-                )
-    parser.add_argument('--solver',
-        action='store',
-        dest='solver',
-        default=None)
-    parser.add_argument('--solver-manager',
-        action='store',
-        dest='solver_manager',
-        default='serial')
-    parser.add_argument('--generate-config-template',
-        action='store',
-        dest='template',
-        default=None)
+            usage='%(prog)s [options] <model_or_config_file> [<data_files>]'
+        )
+    parser.add_argument('--solver', action='store', dest='solver', default=None)
+    parser.add_argument(
+        '--solver-manager', action='store', dest='solver_manager', default='serial'
+    )
+    parser.add_argument(
+        '--generate-config-template', action='store', dest='template', default=None
+    )
     return parser
 
 
@@ -48,23 +44,28 @@ def create_temporary_parser(solver=False, generate=False):
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
     _subparsers = parser.add_subparsers()
     _parser = _subparsers.add_parser('solve')
-    _parser.formatter_class=CustomHelpFormatter
+    _parser.formatter_class = CustomHelpFormatter
     if generate:
         #
         # Adding documentation about the two options that are
         # defined in the initial parser.
         #
-        _parser.add_argument('--generate-config-template',
+        _parser.add_argument(
+            '--generate-config-template',
             action='store',
             dest='template',
             default=None,
-            help='Create a configuration template file in YAML or JSON and exit.')
+            help='Create a configuration template file in YAML or JSON and exit.',
+        )
     if solver:
-        _parser.add_argument('--solver',
+        _parser.add_argument(
+            '--solver',
             action='store',
             dest='solver',
             default=None,
-            help='Solver name.  This option is required unless the solver name is specified in a configuration file.')
+            help='Solver name. This option is required unless the solver name is'
+            'specified in a configuration file.',
+        )
         _parser.usage = '%(prog)s [options] <model_or_config_file> [<data_files>]'
         _parser.epilog = """
 Description:
@@ -115,26 +116,32 @@ more configuration options than are available with command-line options.
 
 """
     #
-    _parser.add_argument('model_or_config_file',
+    _parser.add_argument(
+        'model_or_config_file',
         action='store',
         nargs='?',
         default='',
-        help="A Python module that defines a Pyomo model, or a configuration file that defines options for 'pyomo solve' (in either YAML or JSON format)")
-    _parser.add_argument('data_files',
+        help="A Python module that defines a Pyomo model, or a configuration file "
+        "that defines options for 'pyomo solve' (in either YAML or JSON format)",
+    )
+    _parser.add_argument(
+        'data_files',
         action='store',
         nargs='*',
         default=[],
-        help='Pyomo data files that defined data used to initialize the model (specified in the first argument)')
+        help='Pyomo data files that defined data used to initialize the model '
+        '(specified in the first argument)',
+    )
     #
     return _parser
 
 
 def solve_exec(args, unparsed):
-
     import pyomo.scripting.util
+
     #
-    solver_manager = getattr(args,'solver_manager',None)
-    solver = getattr(args,'solver',None)
+    solver_manager = getattr(args, 'solver_manager', None)
+    solver = getattr(args, 'solver', None)
     #
     if solver is None:
         #
@@ -162,7 +169,7 @@ def solve_exec(args, unparsed):
                 print("ERROR: No solver specified!")
                 print("")
             parser = create_temporary_parser(solver=True, generate=True)
-            parser.parse_args(args=unparsed+['-h'])
+            parser.parse_args(args=unparsed + ['-h'])
             sys.exit(1)
 
     config = None
@@ -214,23 +221,26 @@ def solve_exec(args, unparsed):
     config.solvers[0].manager = solver_manager
 
     from pyomo.scripting.pyomo_command import run_pyomo
+
     #
     # Note that we pass-in pre-parsed options.  The run_command()
     # function knows to not perform a parse, but instead to simply
     # used these parsed values.
     #
-    return pyomo.scripting.util.run_command(command=run_pyomo,
-                                            parser=_parser,
-                                            options=config,
-                                            name='pyomo solve')
+    return pyomo.scripting.util.run_command(
+        command=run_pyomo, parser=_parser, options=config, name='pyomo solve'
+    )
+
 
 #
 # Add a subparser for the solve command
 #
-solve_parser = create_parser(add_subparser('solve',
-    func=solve_exec,
-    help='Optimize a model',
-    add_help=False,
-    description='This pyomo subcommand is used to analyze optimization models.'
-    ))
-
+solve_parser = create_parser(
+    add_subparser(
+        'solve',
+        func=solve_exec,
+        help='Optimize a model',
+        add_help=False,
+        description='This pyomo subcommand is used to analyze optimization models.',
+    )
+)

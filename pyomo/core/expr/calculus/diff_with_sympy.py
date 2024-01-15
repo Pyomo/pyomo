@@ -1,14 +1,19 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.expr.sympy_tools import sympy_available, sympyify_expression, sympy2pyomo_expression
+from pyomo.core.expr.sympy_tools import (
+    sympy_available,
+    sympyify_expression,
+    sympy2pyomo_expression,
+)
 
 # A "public" attribute indicating that differentiate() can be called
 # ... this provides a bit of future-proofing for alternative approaches
@@ -35,11 +40,14 @@ def differentiate(expr, wrt=None, wrt_list=None):
     if not sympy_available:
         raise RuntimeError(
             "The sympy module is not available.\n\t"
-            "Cannot perform automatic symbolic differentiation.")
-    if not (( wrt is None ) ^ ( wrt_list is None )):
+            "Cannot perform automatic symbolic differentiation."
+        )
+    if not ((wrt is None) ^ (wrt_list is None)):
         raise ValueError(
-            "differentiate(): Must specify exactly one of wrt and wrt_list")
+            "differentiate(): Must specify exactly one of wrt and wrt_list"
+        )
     import sympy
+
     #
     # Convert the Pyomo expression to a sympy expression
     #
@@ -50,26 +58,26 @@ def differentiate(expr, wrt=None, wrt_list=None):
     # appear in the expression (so that we can detect wrt combinations
     # that are, by definition, 0)
     #
-    partial_derivs = {x:None for x in objectMap.sympyVars()}
+    partial_derivs = {x: None for x in objectMap.sympyVars()}
     #
     # Setup the WRT list
     #
     if wrt is not None:
-        wrt_list = [ wrt ]
+        wrt_list = [wrt]
     else:
         # Copy the list because we will normalize things in place below
         wrt_list = list(wrt_list)
     #
     # Convert WRT vars into sympy vars
     #
-    ans = [None]*len(wrt_list)
+    ans = [None] * len(wrt_list)
     for i, target in enumerate(wrt_list):
         if target.__class__ is not tuple:
             target = (target,)
         wrt_list[i] = tuple(objectMap.getSympySymbol(x) for x in target)
         for x in wrt_list[i]:
             if x not in partial_derivs:
-                ans[i] = 0.
+                ans[i] = 0.0
                 break
     #
     # We assume that users will not request duplicate derivatives.  We
@@ -89,7 +97,7 @@ def differentiate(expr, wrt=None, wrt_list=None):
             if j == last_partial_idx:
                 part = sympy.diff(part, wrt_var)
             else:
-                partial_target = target[:j+1]
+                partial_target = target[: j + 1]
                 if partial_target in partial_derivs:
                     part = partial_derivs[partial_target]
                 else:

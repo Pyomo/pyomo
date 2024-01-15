@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -15,13 +16,26 @@ import pyomo.common.unittest as unittest
 from io import StringIO
 import logging
 
-from pyomo.environ import ConcreteModel, AbstractModel, Var, Set, Constraint, RangeSet, NonNegativeReals, Reals, Binary, TransformationFactory, Block, value
+from pyomo.environ import (
+    ConcreteModel,
+    AbstractModel,
+    Var,
+    Set,
+    Constraint,
+    RangeSet,
+    NonNegativeReals,
+    Reals,
+    Binary,
+    TransformationFactory,
+    Block,
+    value,
+)
 from pyomo.network import Arc, Port
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.common.collections.component_set import ComponentSet
 
-class TestArc(unittest.TestCase):
 
+class TestArc(unittest.TestCase):
     def test_default_scalar_constructor(self):
         m = ConcreteModel()
         m.c1 = Arc()
@@ -56,7 +70,6 @@ class TestArc(unittest.TestCase):
         m.c1 = Arc([1, 2, 3])
         self.assertEqual(len(m.c1), 0)
         self.assertIs(m.c1.ctype, Arc)
-
 
         inst = m.create_instance()
         self.assertEqual(len(m.c1), 0)
@@ -121,8 +134,10 @@ class TestArc(unittest.TestCase):
     def test_with_indexed_ports(self):
         def rule1(m, i):
             return dict(source=m.prt1[i], destination=m.prt2[i])
+
         def rule2(m, i):
             return dict(ports=(m.prt1[i], m.prt2[i]))
+
         def rule3(m, i):
             # should accept any two-member iterable
             return (c for c in (m.prt1[i], m.prt2[i]))
@@ -287,15 +302,17 @@ class TestArc(unittest.TestCase):
 
         os = StringIO()
         m.friend.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""friend : Size=5, Index=s, Active=True
+        self.assertEqual(
+            os.getvalue(),
+            """friend : Size=5, Index=s, Active=True
     Key : Ports              : Directed : Active
       1 : (prt1[1], prt2[1]) :     True :   True
       2 : (prt1[2], prt2[2]) :     True :   True
       3 : (prt1[3], prt2[3]) :     True :   True
       4 : (prt1[4], prt2[4]) :     True :   True
       5 : (prt1[5], prt2[5]) :     True :   True
-""")
+""",
+        )
 
         m = ConcreteModel()
         m.z = RangeSet(1, 2)
@@ -310,13 +327,14 @@ class TestArc(unittest.TestCase):
 
         os = StringIO()
         m.pal.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""pal : Size=2, Index=z, Active=True
+        self.assertEqual(
+            os.getvalue(),
+            """pal : Size=2, Index=z, Active=True
     Key : Ports              : Directed : Active
       1 : (prt1[1], prt2[1]) :    False :   True
       2 : (prt1[2], prt2[2]) :    False :  False
-""")
-
+""",
+        )
 
     def test_expand_single_scalar(self):
         m = ConcreteModel()
@@ -347,16 +365,17 @@ class TestArc(unittest.TestCase):
 
         os = StringIO()
         blk.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""c_expanded : Size=1, Index=None, Active=True
+        self.assertEqual(
+            os.getvalue(),
+            """c_expanded : Size=1, Index=None, Active=True
     1 Constraint Declarations
         v_equality : Size=1, Index=None, Active=True
             Key  : Lower : Body  : Upper : Active
             None :   0.0 : x - y :   0.0 :   True
 
     1 Declarations: v_equality
-""")
-
+""",
+        )
 
     def test_expand_scalar(self):
         m = ConcreteModel()
@@ -388,8 +407,9 @@ class TestArc(unittest.TestCase):
 
         os = StringIO()
         blk.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""c_expanded : Size=1, Index=None, Active=True
+        self.assertEqual(
+            os.getvalue(),
+            """c_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
         a_equality : Size=1, Index=None, Active=True
             Key  : Lower : Body  : Upper : Active
@@ -399,8 +419,8 @@ class TestArc(unittest.TestCase):
             None :   0.0 : y - w :   0.0 :   True
 
     2 Declarations: a_equality b_equality
-""")
-
+""",
+        )
 
     def test_expand_expression(self):
         m = ConcreteModel()
@@ -432,8 +452,9 @@ class TestArc(unittest.TestCase):
 
         os = StringIO()
         blk.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""c_expanded : Size=1, Index=None, Active=True
+        self.assertEqual(
+            os.getvalue(),
+            """c_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
         expr1_equality : Size=1, Index=None, Active=True
             Key  : Lower : Body    : Upper : Active
@@ -443,16 +464,16 @@ class TestArc(unittest.TestCase):
             None :   0.0 : 1 + y - (1 + w) :   0.0 :   True
 
     2 Declarations: expr1_equality expr2_equality
-""")
-
+""",
+        )
 
     def test_expand_indexed(self):
         m = ConcreteModel()
-        m.x = Var([1,2])
-        m.y = Var([1,2], [1,2])
+        m.x = Var([1, 2])
+        m.y = Var([1, 2], [1, 2])
         m.z = Var()
-        m.t = Var([1,2])
-        m.u = Var([1,2], [1,2])
+        m.t = Var([1, 2])
+        m.u = Var([1, 2], [1, 2])
         m.v = Var()
         m.prt1 = Port()
         m.prt1.add(m.x, "a")
@@ -479,8 +500,9 @@ class TestArc(unittest.TestCase):
 
         os = StringIO()
         blk.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""c_expanded : Size=1, Index=None, Active=True
+        self.assertEqual(
+            os.getvalue(),
+            """c_expanded : Size=1, Index=None, Active=True
     3 Constraint Declarations
         a_equality : Size=2, Index=x_index, Active=True
             Key : Lower : Body        : Upper : Active
@@ -497,8 +519,8 @@ class TestArc(unittest.TestCase):
             None :   0.0 : z - v :   0.0 :   True
 
     3 Declarations: a_equality b_equality c_equality
-""")
-
+""",
+        )
 
     def test_expand_trivial(self):
         m = ConcreteModel()
@@ -522,20 +544,21 @@ class TestArc(unittest.TestCase):
 
         os = StringIO()
         blk.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""c_expanded : Size=1, Index=None, Active=True
+        self.assertEqual(
+            os.getvalue(),
+            """c_expanded : Size=1, Index=None, Active=True
     1 Constraint Declarations
         a_equality : Size=1, Index=None, Active=True
             Key  : Lower : Body  : Upper : Active
             None :   0.0 : x - x :   0.0 :   True
 
     1 Declarations: a_equality
-""")
-
+""",
+        )
 
     def test_expand_empty_scalar(self):
         m = ConcreteModel()
-        m.x = Var(bounds=(1,3))
+        m.x = Var(bounds=(1, 3))
         m.y = Var(domain=Binary)
         m.PRT = Port()
         m.PRT.add(m.x)
@@ -556,15 +579,16 @@ class TestArc(unittest.TestCase):
         self.assertTrue(blk.component('x_equality').active)
         self.assertTrue(blk.component('y_equality').active)
 
-        self.assertIs( m.x.domain, m.component('EPRT_auto_x').domain )
-        self.assertIs( m.y.domain, m.component('EPRT_auto_y').domain )
-        self.assertEqual( m.x.bounds, m.component('EPRT_auto_x').bounds )
-        self.assertEqual( m.y.bounds, m.component('EPRT_auto_y').bounds )
+        self.assertIs(m.x.domain, m.component('EPRT_auto_x').domain)
+        self.assertIs(m.y.domain, m.component('EPRT_auto_y').domain)
+        self.assertEqual(m.x.bounds, m.component('EPRT_auto_x').bounds)
+        self.assertEqual(m.y.bounds, m.component('EPRT_auto_y').bounds)
 
         os = StringIO()
         blk.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""c_expanded : Size=1, Index=None, Active=True
+        self.assertEqual(
+            os.getvalue(),
+            """c_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
         x_equality : Size=1, Index=None, Active=True
             Key  : Lower : Body            : Upper : Active
@@ -574,8 +598,8 @@ class TestArc(unittest.TestCase):
             None :   0.0 : y - EPRT_auto_y :   0.0 :   True
 
     2 Declarations: x_equality y_equality
-""")
-
+""",
+        )
 
     def test_expand_empty_expression(self):
         m = ConcreteModel()
@@ -602,8 +626,9 @@ class TestArc(unittest.TestCase):
 
         os = StringIO()
         blk.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""c_expanded : Size=1, Index=None, Active=True
+        self.assertEqual(
+            os.getvalue(),
+            """c_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
         x_equality : Size=1, Index=None, Active=True
             Key  : Lower : Body              : Upper : Active
@@ -613,13 +638,13 @@ class TestArc(unittest.TestCase):
             None :   0.0 : 1 + y - EPRT_auto_y :   0.0 :   True
 
     2 Declarations: x_equality y_equality
-""")
-
+""",
+        )
 
     def test_expand_empty_indexed(self):
         m = ConcreteModel()
-        m.x = Var([1,2], domain=Binary)
-        m.y = Var(bounds=(1,3))
+        m.x = Var([1, 2], domain=Binary)
+        m.y = Var(bounds=(1, 3))
         m.PRT = Port()
         m.PRT.add(m.x)
         m.PRT.add(m.y)
@@ -639,17 +664,18 @@ class TestArc(unittest.TestCase):
         self.assertTrue(blk.component('x_equality').active)
         self.assertTrue(blk.component('y_equality').active)
 
-        self.assertIs( m.x[1].domain, m.component('EPRT_auto_x')[1].domain )
-        self.assertIs( m.x[2].domain, m.component('EPRT_auto_x')[2].domain )
-        self.assertIs( m.y.domain, m.component('EPRT_auto_y').domain )
-        self.assertEqual( m.x[1].bounds, m.component('EPRT_auto_x')[1].bounds )
-        self.assertEqual( m.x[2].bounds, m.component('EPRT_auto_x')[2].bounds )
-        self.assertEqual( m.y.bounds, m.component('EPRT_auto_y').bounds )
+        self.assertIs(m.x[1].domain, m.component('EPRT_auto_x')[1].domain)
+        self.assertIs(m.x[2].domain, m.component('EPRT_auto_x')[2].domain)
+        self.assertIs(m.y.domain, m.component('EPRT_auto_y').domain)
+        self.assertEqual(m.x[1].bounds, m.component('EPRT_auto_x')[1].bounds)
+        self.assertEqual(m.x[2].bounds, m.component('EPRT_auto_x')[2].bounds)
+        self.assertEqual(m.y.bounds, m.component('EPRT_auto_y').bounds)
 
         os = StringIO()
         blk.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""c_expanded : Size=1, Index=None, Active=True
+        self.assertEqual(
+            os.getvalue(),
+            """c_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
         x_equality : Size=2, Index=x_index, Active=True
             Key : Lower : Body                  : Upper : Active
@@ -660,13 +686,13 @@ class TestArc(unittest.TestCase):
             None :   0.0 : y - EPRT_auto_y :   0.0 :   True
 
     2 Declarations: x_equality y_equality
-""")
-
+""",
+        )
 
     def test_expand_multiple_empty_indexed(self):
         m = ConcreteModel()
-        m.x = Var([1,2], domain=Binary)
-        m.y = Var(bounds=(1,3))
+        m.x = Var([1, 2], domain=Binary)
+        m.y = Var(bounds=(1, 3))
         m.PRT = Port()
         m.PRT.add(m.x)
         m.PRT.add(m.y)
@@ -693,24 +719,25 @@ class TestArc(unittest.TestCase):
         self.assertTrue(blk_d.component('x_equality').active)
         self.assertTrue(blk_d.component('y_equality').active)
 
-        self.assertIs( m.x[1].domain, m.component('EPRT1_auto_x')[1].domain )
-        self.assertIs( m.x[2].domain, m.component('EPRT1_auto_x')[2].domain )
-        self.assertIs( m.y.domain, m.component('EPRT1_auto_y').domain )
-        self.assertEqual( m.x[1].bounds, m.component('EPRT1_auto_x')[1].bounds )
-        self.assertEqual( m.x[2].bounds, m.component('EPRT1_auto_x')[2].bounds )
-        self.assertEqual( m.y.bounds, m.component('EPRT1_auto_y').bounds )
+        self.assertIs(m.x[1].domain, m.component('EPRT1_auto_x')[1].domain)
+        self.assertIs(m.x[2].domain, m.component('EPRT1_auto_x')[2].domain)
+        self.assertIs(m.y.domain, m.component('EPRT1_auto_y').domain)
+        self.assertEqual(m.x[1].bounds, m.component('EPRT1_auto_x')[1].bounds)
+        self.assertEqual(m.x[2].bounds, m.component('EPRT1_auto_x')[2].bounds)
+        self.assertEqual(m.y.bounds, m.component('EPRT1_auto_y').bounds)
 
-        self.assertIs( m.x[1].domain, m.component('EPRT2_auto_x')[1].domain )
-        self.assertIs( m.x[2].domain, m.component('EPRT2_auto_x')[2].domain )
-        self.assertIs( m.y.domain, m.component('EPRT2_auto_y').domain )
-        self.assertEqual( m.x[1].bounds, m.component('EPRT2_auto_x')[1].bounds )
-        self.assertEqual( m.x[2].bounds, m.component('EPRT2_auto_x')[2].bounds )
-        self.assertEqual( m.y.bounds, m.component('EPRT2_auto_y').bounds )
+        self.assertIs(m.x[1].domain, m.component('EPRT2_auto_x')[1].domain)
+        self.assertIs(m.x[2].domain, m.component('EPRT2_auto_x')[2].domain)
+        self.assertIs(m.y.domain, m.component('EPRT2_auto_y').domain)
+        self.assertEqual(m.x[1].bounds, m.component('EPRT2_auto_x')[1].bounds)
+        self.assertEqual(m.x[2].bounds, m.component('EPRT2_auto_x')[2].bounds)
+        self.assertEqual(m.y.bounds, m.component('EPRT2_auto_y').bounds)
 
         os = StringIO()
         blk_c.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""c_expanded : Size=1, Index=None, Active=True
+        self.assertEqual(
+            os.getvalue(),
+            """c_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
         x_equality : Size=2, Index=x_index, Active=True
             Key : Lower : Body                   : Upper : Active
@@ -721,12 +748,14 @@ class TestArc(unittest.TestCase):
             None :   0.0 : y - EPRT1_auto_y :   0.0 :   True
 
     2 Declarations: x_equality y_equality
-""")
+""",
+        )
 
         os = StringIO()
         blk_d.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""d_expanded : Size=1, Index=None, Active=True
+        self.assertEqual(
+            os.getvalue(),
+            """d_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
         x_equality : Size=2, Index=x_index, Active=True
             Key : Lower : Body                              : Upper : Active
@@ -737,26 +766,26 @@ class TestArc(unittest.TestCase):
             None :   0.0 : EPRT2_auto_y - EPRT1_auto_y :   0.0 :   True
 
     2 Declarations: x_equality y_equality
-""")
-
+""",
+        )
 
     def test_expand_multiple_indexed(self):
         m = ConcreteModel()
-        m.x = Var([1,2], domain=Binary)
-        m.y = Var(bounds=(1,3))
+        m.x = Var([1, 2], domain=Binary)
+        m.y = Var(bounds=(1, 3))
         m.PRT = Port()
         m.PRT.add(m.x)
         m.PRT.add(m.y)
-        m.a1 = Var([1,2])
-        m.a2 = Var([1,2])
+        m.a1 = Var([1, 2])
+        m.a2 = Var([1, 2])
         m.b1 = Var()
         m.b2 = Var()
         m.EPRT1 = Port()
-        m.EPRT1.add(m.a1,'x')
-        m.EPRT1.add(m.b1,'y')
+        m.EPRT1.add(m.a1, 'x')
+        m.EPRT1.add(m.b1, 'y')
         m.EPRT2 = Port()
-        m.EPRT2.add(m.a2,'x')
-        m.EPRT2.add(m.b2,'y')
+        m.EPRT2.add(m.a2, 'x')
+        m.EPRT2.add(m.b2, 'y')
 
         m.c = Arc(ports=(m.PRT, m.EPRT1))
         m.d = Arc(ports=(m.EPRT2, m.EPRT1))
@@ -779,8 +808,9 @@ class TestArc(unittest.TestCase):
 
         os = StringIO()
         blk_c.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""c_expanded : Size=1, Index=None, Active=True
+        self.assertEqual(
+            os.getvalue(),
+            """c_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
         x_equality : Size=2, Index=x_index, Active=True
             Key : Lower : Body         : Upper : Active
@@ -791,12 +821,14 @@ class TestArc(unittest.TestCase):
             None :   0.0 : y - b1 :   0.0 :   True
 
     2 Declarations: x_equality y_equality
-""")
+""",
+        )
 
         os = StringIO()
         blk_d.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""d_expanded : Size=1, Index=None, Active=True
+        self.assertEqual(
+            os.getvalue(),
+            """d_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
         x_equality : Size=2, Index=x_index, Active=True
             Key : Lower : Body          : Upper : Active
@@ -807,22 +839,22 @@ class TestArc(unittest.TestCase):
             None :   0.0 : b2 - b1 :   0.0 :   True
 
     2 Declarations: x_equality y_equality
-""")
-
+""",
+        )
 
     def test_expand_implicit_indexed(self):
         m = ConcreteModel()
-        m.x = Var([1,2], domain=Binary)
-        m.y = Var(bounds=(1,3))
+        m.x = Var([1, 2], domain=Binary)
+        m.y = Var(bounds=(1, 3))
         m.PRT = Port()
         m.PRT.add(m.x)
         m.PRT.add(m.y)
-        m.a2 = Var([1,2])
+        m.a2 = Var([1, 2])
         m.b1 = Var()
         m.EPRT2 = Port(implicit=['x'])
-        m.EPRT2.add(m.b1,'y')
+        m.EPRT2.add(m.b1, 'y')
         m.EPRT1 = Port(implicit=['y'])
-        m.EPRT1.add(m.a2,'x')
+        m.EPRT1.add(m.a2, 'x')
 
         m.c = Arc(ports=(m.EPRT1, m.PRT))
         m.d = Arc(ports=(m.EPRT2, m.PRT))
@@ -832,23 +864,27 @@ class TestArc(unittest.TestCase):
 
         os = StringIO()
         m.EPRT1.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""EPRT1 : Size=1, Index=None
+        self.assertEqual(
+            os.getvalue(),
+            """EPRT1 : Size=1, Index=None
     Key  : Name : Size : Variable
     None :    x :    2 :       a2
          :    y :    - :     None
-""")
+""",
+        )
 
         TransformationFactory('network.expand_arcs').apply_to(m)
 
         os = StringIO()
         m.EPRT1.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""EPRT1 : Size=1, Index=None
+        self.assertEqual(
+            os.getvalue(),
+            """EPRT1 : Size=1, Index=None
     Key  : Name : Size : Variable
     None :    x :    2 :           a2
          :    y :    1 : EPRT1_auto_y
-""")
+""",
+        )
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 4)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 6)
@@ -863,8 +899,9 @@ class TestArc(unittest.TestCase):
 
         os = StringIO()
         blk_c.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""c_expanded : Size=1, Index=None, Active=True
+        self.assertEqual(
+            os.getvalue(),
+            """c_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
         x_equality : Size=2, Index=a2_index, Active=True
             Key : Lower : Body         : Upper : Active
@@ -875,12 +912,14 @@ class TestArc(unittest.TestCase):
             None :   0.0 : EPRT1_auto_y - y :   0.0 :   True
 
     2 Declarations: x_equality y_equality
-""")
+""",
+        )
 
         os = StringIO()
         blk_d.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""d_expanded : Size=1, Index=None, Active=True
+        self.assertEqual(
+            os.getvalue(),
+            """d_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
         x_equality : Size=2, Index=a2_index, Active=True
             Key : Lower : Body                   : Upper : Active
@@ -891,8 +930,8 @@ class TestArc(unittest.TestCase):
             None :   0.0 : b1 - y :   0.0 :   True
 
     2 Declarations: x_equality y_equality
-""")
-
+""",
+        )
 
     def test_expand_indexed_arc(self):
         def rule(m, i):
@@ -923,8 +962,9 @@ class TestArc(unittest.TestCase):
 
         os = StringIO()
         m.component('eq_expanded').pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""eq_expanded : Size=2, Index=eq_index, Active=True
+        self.assertEqual(
+            os.getvalue(),
+            """eq_expanded : Size=2, Index=eq_index, Active=True
     eq_expanded[1] : Active=True
         1 Constraint Declarations
             v_equality : Size=1, Index=None, Active=True
@@ -939,8 +979,8 @@ class TestArc(unittest.TestCase):
                 None :   0.0 : y - w :   0.0 :   True
 
         1 Declarations: t_equality
-""")
-
+""",
+        )
 
     def test_inactive(self):
         m = ConcreteModel()
@@ -976,24 +1016,32 @@ class TestArc(unittest.TestCase):
 
         os = StringIO()
         blk.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""c_expanded : Size=1, Index=None, Active=True
+        self.assertEqual(
+            os.getvalue(),
+            """c_expanded : Size=1, Index=None, Active=True
     1 Constraint Declarations
         v_equality : Size=1, Index=None, Active=True
             Key  : Lower : Body  : Upper : Active
             None :   0.0 : x - y :   0.0 :   True
 
     1 Declarations: v_equality
-""")
+""",
+        )
 
     def test_extensive_no_splitfrac_single_var(self):
         m = ConcreteModel()
         m.x = Var()
         m.y = Var()
         m.z = Var()
-        m.p1 = Port(initialize={'v': (m.x, Port.Extensive, {'include_splitfrac':False})})
-        m.p2 = Port(initialize={'v': (m.y, Port.Extensive, {'include_splitfrac':False})})
-        m.p3 = Port(initialize={'v': (m.z, Port.Extensive, {'include_splitfrac':False})})
+        m.p1 = Port(
+            initialize={'v': (m.x, Port.Extensive, {'include_splitfrac': False})}
+        )
+        m.p2 = Port(
+            initialize={'v': (m.y, Port.Extensive, {'include_splitfrac': False})}
+        )
+        m.p3 = Port(
+            initialize={'v': (m.z, Port.Extensive, {'include_splitfrac': False})}
+        )
         m.a1 = Arc(source=m.p1, destination=m.p2)
         m.a2 = Arc(source=m.p1, destination=m.p3)
 
@@ -1001,8 +1049,9 @@ class TestArc(unittest.TestCase):
 
         os = StringIO()
         m.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""3 Var Declarations
+        self.assertEqual(
+            os.getvalue(),
+            """3 Var Declarations
     x : Size=1, Index=None
         Key  : Lower : Value : Upper : Fixed : Stale : Domain
         None :  None :  None :  None : False :  True :  Reals
@@ -1060,7 +1109,8 @@ class TestArc(unittest.TestCase):
         None :    v :    1 :        z
 
 13 Declarations: x y z p1 p2 p3 a1 a2 a1_expanded a2_expanded p1_v_outsum p2_v_insum p3_v_insum
-""")
+""",
+        )
 
     def test_extensive_single_var(self):
         m = ConcreteModel()
@@ -1077,8 +1127,9 @@ class TestArc(unittest.TestCase):
 
         os = StringIO()
         m.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""3 Var Declarations
+        self.assertEqual(
+            os.getvalue(),
+            """3 Var Declarations
     x : Size=1, Index=None
         Key  : Lower : Value : Upper : Fixed : Stale : Domain
         None :  None :  None :  None : False :  True :  Reals
@@ -1136,7 +1187,8 @@ class TestArc(unittest.TestCase):
         None :    v :    1 :        z
 
 13 Declarations: x y z p1 p2 p3 a1 a2 a1_expanded a2_expanded p1_v_outsum p2_v_insum p3_v_insum
-""")
+""",
+        )
 
     def test_extensive_no_splitfrac_expansion(self):
         m = ConcreteModel()
@@ -1148,11 +1200,17 @@ class TestArc(unittest.TestCase):
 
         def source_block(b):
             b.p_out = Var(b.model().time)
-            b.outlet = Port(initialize={'p': (b.p_out, Port.Extensive, {'include_splitfrac':False})})
+            b.outlet = Port(
+                initialize={
+                    'p': (b.p_out, Port.Extensive, {'include_splitfrac': False})
+                }
+            )
 
         def load_block(b):
             b.p_in = Var(b.model().time)
-            b.inlet = Port(initialize={'p': (b.p_in, Port.Extensive, {'include_splitfrac':False})})
+            b.inlet = Port(
+                initialize={'p': (b.p_in, Port.Extensive, {'include_splitfrac': False})}
+            )
 
         source_block(m.source)
         load_block(m.load1)
@@ -1304,18 +1362,26 @@ class TestArc(unittest.TestCase):
         m.node1.mass = Var()
         m.node1.temp = Var()
 
-        m.node1.port = Port(initialize=[(m.node1.flow, Port.Extensive),
-                                        (m.node1.mass, Port.Extensive),
-                                        m.node1.temp])
+        m.node1.port = Port(
+            initialize=[
+                (m.node1.flow, Port.Extensive),
+                (m.node1.mass, Port.Extensive),
+                m.node1.temp,
+            ]
+        )
 
         m.node2 = Block()
         m.node2.flow = Var(m.comp, domain=NonNegativeReals)
         m.node2.mass = Var()
         m.node2.temp = Var()
 
-        m.node2.port = Port(initialize=[(m.node2.flow, Port.Extensive),
-                                        (m.node2.mass, Port.Extensive),
-                                        m.node2.temp])
+        m.node2.port = Port(
+            initialize=[
+                (m.node2.flow, Port.Extensive),
+                (m.node2.mass, Port.Extensive),
+                m.node2.temp,
+            ]
+        )
 
         # Port with multiple inlets and outlets
         m.multi = Block()
@@ -1323,9 +1389,13 @@ class TestArc(unittest.TestCase):
         m.multi.mass = Var()
         m.multi.temp = Var()
 
-        m.multi.port = Port(initialize=[(m.multi.flow, Port.Extensive),
-                                        (m.multi.mass, Port.Extensive),
-                                        m.multi.temp])
+        m.multi.port = Port(
+            initialize=[
+                (m.multi.flow, Port.Extensive),
+                (m.multi.mass, Port.Extensive),
+                m.multi.temp,
+            ]
+        )
 
         # Product
         m.prod = Block()
@@ -1352,7 +1422,7 @@ class TestArc(unittest.TestCase):
         m.stream10 = Arc(source=m.multi.port, destination=m.tru.inlet)
 
         # SplitFrac specifications
-        m.feed.outlet.set_split_fraction(m.stream1, .6, fix=True)
+        m.feed.outlet.set_split_fraction(m.stream1, 0.6, fix=True)
 
         m.stream0.deactivate()
 
@@ -1360,8 +1430,9 @@ class TestArc(unittest.TestCase):
 
         os = StringIO()
         m.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""1 Set Declarations
+        self.assertEqual(
+            os.getvalue(),
+            """1 Set Declarations
     comp : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    3 : {'a', 'b', 'c'}
@@ -1876,7 +1947,8 @@ class TestArc(unittest.TestCase):
         None : (multi.port, prod.inlet) :     True :  False
 
 28 Declarations: comp feed tru node1 node2 multi prod stream0 stream1 stream2 stream3 stream4 stream5 stream6 stream7 stream8 stream9 stream10 stream1_expanded stream2_expanded stream3_expanded stream4_expanded stream5_expanded stream6_expanded stream7_expanded stream8_expanded stream9_expanded stream10_expanded
-""")
+""",
+        )
 
     def test_clone(self):
         m = ConcreteModel()

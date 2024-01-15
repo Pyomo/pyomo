@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -15,14 +16,10 @@ from io import StringIO
 import pyomo.common.unittest as unittest
 import pyomo.kernel as pmo
 from pyomo.common.log import LoggingIntercept
-from pyomo.core.kernel.base import \
-    (ICategorizedObject,
-     ICategorizedObjectContainer)
-from pyomo.core.kernel.homogeneous_container import \
-    IHomogeneousContainer
+from pyomo.core.kernel.base import ICategorizedObject, ICategorizedObjectContainer
+from pyomo.core.kernel.homogeneous_container import IHomogeneousContainer
 from pyomo.core.kernel.list_container import ListContainer
-from pyomo.core.kernel.block import (block,
-                                     block_list)
+from pyomo.core.kernel.block import block, block_list
 
 #
 # There are no fully implemented test suites in this
@@ -37,11 +34,12 @@ from pyomo.core.kernel.block import (block,
 #       and weakref (bas
 _pickle_test_protocol = pickle.HIGHEST_PROTOCOL
 
+
 class _bad_ctype(object):
     ctype = "_this_is_definitely_not_the_ctype_being_tested"
 
-class _TestListContainerBase(object):
 
+class _TestListContainerBase(object):
     # set by derived class
     _container_type = None
     _ctype_factory = None
@@ -55,15 +53,18 @@ class _TestListContainerBase(object):
         assert out.getvalue() == ""
         with LoggingIntercept(out, 'pyomo.core'):
             c[0] = self._ctype_factory()
-        assert out.getvalue() == \
-            ("Implicitly replacing the entry [0] "
-             "(type=%s) with a new object (type=%s). "
-             "This is usually indicative of a modeling "
-             "error. To avoid this warning, delete the "
-             "original object from the container before "
-             "assigning a new object.\n"
-             % (self._ctype_factory().__class__.__name__,
-                self._ctype_factory().__class__.__name__))
+        assert out.getvalue() == (
+            "Implicitly replacing the entry [0] "
+            "(type=%s) with a new object (type=%s). "
+            "This is usually indicative of a modeling "
+            "error. To avoid this warning, delete the "
+            "original object from the container before "
+            "assigning a new object.\n"
+            % (
+                self._ctype_factory().__class__.__name__,
+                self._ctype_factory().__class__.__name__,
+            )
+        )
 
     def test_ctype(self):
         c = self._container_type()
@@ -77,11 +78,9 @@ class _TestListContainerBase(object):
 
     def test_init2(self):
         index = range(5)
-        c = self._container_type(
-            self._ctype_factory() for i in index)
+        c = self._container_type(self._ctype_factory() for i in index)
         with self.assertRaises(TypeError):
-            d = self._container_type(
-                *tuple(self._ctype_factory() for i in index))
+            d = self._container_type(*tuple(self._ctype_factory() for i in index))
 
     def test_type(self):
         clist = self._container_type()
@@ -100,8 +99,7 @@ class _TestListContainerBase(object):
 
     def test_len2(self):
         index = range(5)
-        c = self._container_type(
-            self._ctype_factory() for i in index)
+        c = self._container_type(self._ctype_factory() for i in index)
         self.assertEqual(len(c), len(index))
 
     def test_append(self):
@@ -112,7 +110,7 @@ class _TestListContainerBase(object):
             c_new = self._ctype_factory()
             c.append(c_new)
             self.assertEqual(id(c[-1]), id(c_new))
-            self.assertEqual(len(c), i+1)
+            self.assertEqual(len(c), i + 1)
 
     def test_insert(self):
         c = self._container_type()
@@ -122,7 +120,7 @@ class _TestListContainerBase(object):
             c_new = self._ctype_factory()
             c.insert(0, c_new)
             self.assertEqual(id(c[0]), id(c_new))
-            self.assertEqual(len(c), i+1)
+            self.assertEqual(len(c), i + 1)
 
     def test_setitem(self):
         c = self._container_type()
@@ -139,8 +137,7 @@ class _TestListContainerBase(object):
     def test_wrong_type_init(self):
         index = range(5)
         with self.assertRaises(TypeError):
-            c = self._container_type(
-                _bad_ctype() for i in index)
+            c = self._container_type(_bad_ctype() for i in index)
 
     def test_wrong_type_append(self):
         c = self._container_type()
@@ -204,13 +201,11 @@ class _TestListContainerBase(object):
 
     def test_setitem_exists_overwrite(self):
         index = range(5)
-        c = self._container_type(
-            self._ctype_factory() for i in index)
+        c = self._container_type(self._ctype_factory() for i in index)
         self.assertEqual(len(c), len(index))
         for i in index:
             cdata = c[i]
-            self.assertEqual(id(cdata.parent),
-                             id(c))
+            self.assertEqual(id(cdata.parent), id(c))
             c[i] = self._ctype_factory()
             self.assertEqual(len(c), len(index))
             self.assertNotEqual(id(cdata), id(c[i]))
@@ -218,21 +213,18 @@ class _TestListContainerBase(object):
 
     def test_delitem(self):
         index = range(5)
-        c = self._container_type(
-            self._ctype_factory() for i in index)
+        c = self._container_type(self._ctype_factory() for i in index)
         self.assertEqual(len(c), len(index))
         for i in index:
             cdata = c[0]
-            self.assertEqual(id(cdata.parent),
-                             id(c))
+            self.assertEqual(id(cdata.parent), id(c))
             del c[0]
-            self.assertEqual(len(c), len(index)-(i+1))
+            self.assertEqual(len(c), len(index) - (i + 1))
             self.assertEqual(cdata.parent, None)
 
     def test_iter(self):
         index = range(5)
-        c = self._container_type(
-            self._ctype_factory() for i in index)
+        c = self._container_type(self._ctype_factory() for i in index)
         self.assertEqual(len(c), len(index))
         raw_list = c[:]
         self.assertEqual(type(raw_list), list)
@@ -241,8 +233,7 @@ class _TestListContainerBase(object):
 
     def test_reverse(self):
         index = range(5)
-        c = self._container_type(
-            self._ctype_factory() for i in index)
+        c = self._container_type(self._ctype_factory() for i in index)
         raw_list = c[:]
         self.assertEqual(type(raw_list), list)
         for c1, c2 in zip(reversed(c), reversed(raw_list)):
@@ -255,8 +246,7 @@ class _TestListContainerBase(object):
     def test_remove(self):
         model = block()
         index = range(5)
-        c = self._container_type(
-            self._ctype_factory() for i in index)
+        c = self._container_type(self._ctype_factory() for i in index)
         for i in index:
             cdata = c[0]
             self.assertEqual(cdata in c, True)
@@ -265,8 +255,7 @@ class _TestListContainerBase(object):
 
     def test_pop(self):
         index = range(5)
-        c = self._container_type(
-            self._ctype_factory() for i in index)
+        c = self._container_type(self._ctype_factory() for i in index)
         for i in index:
             cdata = c[-1]
             self.assertEqual(cdata in c, True)
@@ -276,49 +265,40 @@ class _TestListContainerBase(object):
 
     def test_index(self):
         index = range(5)
-        c = self._container_type(
-            self._ctype_factory() for i in index)
+        c = self._container_type(self._ctype_factory() for i in index)
         for i in index:
             cdata = c[i]
             self.assertEqual(c.index(cdata), i)
             self.assertEqual(c.index(cdata, start=i), i)
             with self.assertRaises(ValueError):
-                c.index(cdata, start=i+1)
+                c.index(cdata, start=i + 1)
             with self.assertRaises(ValueError):
                 c.index(cdata, start=i, stop=i)
             with self.assertRaises(ValueError):
                 c.index(cdata, stop=i)
-            self.assertEqual(
-                c.index(cdata, start=i, stop=i+1), i)
+            self.assertEqual(c.index(cdata, start=i, stop=i + 1), i)
             with self.assertRaises(ValueError):
-                c.index(cdata, start=i+1, stop=i+1)
-            self.assertEqual(
-                c.index(cdata, start=-len(index)+i), i)
+                c.index(cdata, start=i + 1, stop=i + 1)
+            self.assertEqual(c.index(cdata, start=-len(index) + i), i)
             if i == index[-1]:
-                self.assertEqual(
-                    c.index(cdata, start=-len(index)+i+1), i)
+                self.assertEqual(c.index(cdata, start=-len(index) + i + 1), i)
             else:
                 with self.assertRaises(ValueError):
-                    self.assertEqual(
-                        c.index(cdata, start=-len(index)+i+1),
-                        i)
+                    self.assertEqual(c.index(cdata, start=-len(index) + i + 1), i)
             if i == index[-1]:
                 with self.assertRaises(ValueError):
-                    self.assertEqual(
-                        c.index(cdata, stop=-len(index)+i+1), i)
+                    self.assertEqual(c.index(cdata, stop=-len(index) + i + 1), i)
             else:
-                self.assertEqual(
-                    c.index(cdata, stop=-len(index)+i+1), i)
+                self.assertEqual(c.index(cdata, stop=-len(index) + i + 1), i)
         tmp = self._ctype_factory()
         with self.assertRaises(ValueError):
             c.index(tmp)
         with self.assertRaises(ValueError):
-            c.index(tmp, stop=len(c)+1)
+            c.index(tmp, stop=len(c) + 1)
 
     def test_extend(self):
         index = range(5)
-        c = self._container_type(
-            self._ctype_factory() for i in index)
+        c = self._container_type(self._ctype_factory() for i in index)
         c_more_list = [self._ctype_factory() for i in index]
         self.assertEqual(len(c), len(index))
         self.assertTrue(len(c_more_list) > 0)
@@ -326,29 +306,26 @@ class _TestListContainerBase(object):
             self.assertEqual(cdata.parent, None)
         c.extend(c_more_list)
         for cdata in c_more_list:
-            self.assertEqual(id(cdata.parent),
-                             id(c))
+            self.assertEqual(id(cdata.parent), id(c))
 
     def test_count(self):
         index = range(5)
-        c = self._container_type(
-            self._ctype_factory() for i in index)
+        c = self._container_type(self._ctype_factory() for i in index)
         for i in index:
             self.assertEqual(c.count(c[i]), 1)
 
     def test_pickle(self):
         index = range(5)
-        clist = self._container_type(
-            self._ctype_factory() for i in index)
+        clist = self._container_type(self._ctype_factory() for i in index)
         clist.append(self._container_type())
         index = list(index)
         index = index + [len(index)]
         for i in index:
             self.assertTrue(clist[i].parent is clist)
         pickled_clist = pickle.loads(
-            pickle.dumps(clist, protocol=_pickle_test_protocol))
-        self.assertTrue(
-            isinstance(pickled_clist, self._container_type))
+            pickle.dumps(clist, protocol=_pickle_test_protocol)
+        )
+        self.assertTrue(isinstance(pickled_clist, self._container_type))
         self.assertTrue(pickled_clist.parent is None)
         self.assertEqual(len(pickled_clist), len(index))
         self.assertNotEqual(id(pickled_clist), id(clist))
@@ -479,8 +456,7 @@ class _TestListContainerBase(object):
         for i, c in enumerate(children):
             self.assertTrue(c.parent is clist)
             self.assertEqual(c.local_name, "[%s]" % (i))
-            self.assertEqual(c.name,
-                             "[0].model.clist[%s]" % (i))
+            self.assertEqual(c.name, "[0].model.clist[%s]" % (i))
 
         m = block()
         m.blist = blist
@@ -495,8 +471,7 @@ class _TestListContainerBase(object):
         for i, c in enumerate(children):
             self.assertTrue(c.parent is clist)
             self.assertEqual(c.local_name, "[%s]" % (i))
-            self.assertEqual(c.name,
-                             "blist[0].model.clist[%s]" % (i))
+            self.assertEqual(c.name, "blist[0].model.clist[%s]" % (i))
             self.assertEqual(c.name, names[c])
         for c in clist.components():
             self.assertNotEqual(c.name, None)
@@ -514,8 +489,10 @@ class _TestListContainerBase(object):
         clist.append(clistflattened[-1])
         clistflattened.append(self._ctype_factory())
         clist.append(clistflattened[-1])
-        self.assertEqual(list(id(_c) for _c in clist.components()),
-                         list(id(_c) for _c in clistflattened))
+        self.assertEqual(
+            list(id(_c) for _c in clist.components()),
+            list(id(_c) for _c in clistflattened),
+        )
 
         csublist = self._container_type()
         self.assertEqual(list(csublist.components()), [])
@@ -533,20 +510,26 @@ class _TestListContainerBase(object):
         clistflattened.append(csublistflattened[-1])
         csublist.append(csublistflattened[-1])
 
-        self.assertEqual(list(id(_c) for _c in csublist.components()),
-                         list(id(_c) for _c in csublistflattened))
-        self.assertEqual(len(set(id(_c) for _c in csublist.components())),
-                         len(list(id(_c) for _c in csublist.components())))
-        self.assertEqual(len(set(id(_c) for _c in csublist.components())),
-                         3)
+        self.assertEqual(
+            list(id(_c) for _c in csublist.components()),
+            list(id(_c) for _c in csublistflattened),
+        )
+        self.assertEqual(
+            len(set(id(_c) for _c in csublist.components())),
+            len(list(id(_c) for _c in csublist.components())),
+        )
+        self.assertEqual(len(set(id(_c) for _c in csublist.components())), 3)
 
         clist.append(csublist)
-        self.assertEqual(list(id(_c) for _c in clist.components()),
-                         list(id(_c) for _c in clistflattened))
-        self.assertEqual(len(set(id(_c) for _c in clist.components())),
-                         len(list(id(_c) for _c in clist.components())))
-        self.assertEqual(len(set(id(_c) for _c in clist.components())),
-                         5)
+        self.assertEqual(
+            list(id(_c) for _c in clist.components()),
+            list(id(_c) for _c in clistflattened),
+        )
+        self.assertEqual(
+            len(set(id(_c) for _c in clist.components())),
+            len(list(id(_c) for _c in clist.components())),
+        )
+        self.assertEqual(len(set(id(_c) for _c in clist.components())), 5)
 
     def test_preorder_traversal(self):
         traversal = []
@@ -563,14 +546,14 @@ class _TestListContainerBase(object):
 
         descend = lambda x: not x._is_heterogeneous_container
 
-        self.assertEqual([c.name for c in traversal],
-                         [c.name for c in pmo.preorder_traversal(
-                             clist,
-                             descend=descend)])
-        self.assertEqual([id(c) for c in traversal],
-                         [id(c) for c in pmo.preorder_traversal(
-                             clist,
-                             descend=descend)])
+        self.assertEqual(
+            [c.name for c in traversal],
+            [c.name for c in pmo.preorder_traversal(clist, descend=descend)],
+        )
+        self.assertEqual(
+            [id(c) for c in traversal],
+            [id(c) for c in pmo.preorder_traversal(clist, descend=descend)],
+        )
 
         return clist, traversal
 
@@ -591,9 +574,9 @@ class _TestListContainerBase(object):
             self.assertTrue(x._is_container)
             descend.seen.append(x)
             return False
+
         descend.seen = []
-        order = list(pmo.preorder_traversal(clist,
-                                            descend=descend))
+        order = list(pmo.preorder_traversal(clist, descend=descend))
         self.assertEqual(len(order), 1)
         self.assertIs(order[0], clist)
         self.assertEqual(len(descend.seen), 1)
@@ -603,41 +586,39 @@ class _TestListContainerBase(object):
             self.assertTrue(x._is_container)
             descend.seen.append(x)
             return not x._is_heterogeneous_container
+
         descend.seen = []
-        order = list(pmo.preorder_traversal(clist,
-                                            descend=descend))
-        self.assertEqual([c.name for c in traversal],
-                         [c.name for c in order])
-        self.assertEqual([id(c) for c in traversal],
-                         [id(c) for c in order])
-        self.assertEqual([c.name for c in traversal
-                          if c._is_container],
-                         [c.name for c in descend.seen])
-        self.assertEqual([id(c) for c in traversal
-                          if c._is_container],
-                         [id(c) for c in descend.seen])
+        order = list(pmo.preorder_traversal(clist, descend=descend))
+        self.assertEqual([c.name for c in traversal], [c.name for c in order])
+        self.assertEqual([id(c) for c in traversal], [id(c) for c in order])
+        self.assertEqual(
+            [c.name for c in traversal if c._is_container],
+            [c.name for c in descend.seen],
+        )
+        self.assertEqual(
+            [id(c) for c in traversal if c._is_container], [id(c) for c in descend.seen]
+        )
 
         def descend(x):
             self.assertTrue(x._is_container)
             descend.seen.append(x)
             return not x._is_heterogeneous_container
+
         descend.seen = []
-        order = list(pmo.preorder_traversal(clist,
-                                            descend=descend))
-        self.assertEqual([c.name for c in traversal],
-                         [c.name for c in order])
-        self.assertEqual([id(c) for c in traversal],
-                         [id(c) for c in order])
-        self.assertEqual([c.name for c in traversal
-                          if c._is_container],
-                         [c.name for c in descend.seen])
-        self.assertEqual([id(c) for c in traversal
-                          if c._is_container],
-                         [id(c) for c in descend.seen])
+        order = list(pmo.preorder_traversal(clist, descend=descend))
+        self.assertEqual([c.name for c in traversal], [c.name for c in order])
+        self.assertEqual([id(c) for c in traversal], [id(c) for c in order])
+        self.assertEqual(
+            [c.name for c in traversal if c._is_container],
+            [c.name for c in descend.seen],
+        )
+        self.assertEqual(
+            [id(c) for c in traversal if c._is_container], [id(c) for c in descend.seen]
+        )
         return clist, traversal
 
-class _TestActiveListContainerBase(_TestListContainerBase):
 
+class _TestActiveListContainerBase(_TestListContainerBase):
     def test_active_type(self):
         clist = self._container_type()
         self.assertTrue(isinstance(clist, ICategorizedObject))
@@ -651,8 +632,7 @@ class _TestActiveListContainerBase(_TestListContainerBase):
 
     def test_active(self):
         index = list(range(4))
-        clist = self._container_type(self._ctype_factory()
-                                     for i in index)
+        clist = self._container_type(self._ctype_factory() for i in index)
         with self.assertRaises(AttributeError):
             clist.active = False
         for c in clist:
@@ -682,8 +662,9 @@ class _TestActiveListContainerBase(_TestListContainerBase):
         for c in clist.components(active=True):
             self.assertEqual(c.active, True)
         self.assertEqual(len(list(clist.components())), len(clist))
-        self.assertEqual(len(list(clist.components())),
-                         len(list(clist.components(active=True))))
+        self.assertEqual(
+            len(list(clist.components())), len(list(clist.components(active=True)))
+        )
 
         m.deactivate(shallow=False)
 
@@ -695,8 +676,9 @@ class _TestActiveListContainerBase(_TestListContainerBase):
         self.assertEqual(clist.active, False)
         for c in clist:
             self.assertEqual(c.active, False)
-        self.assertNotEqual(len(list(clist.components())),
-                            len(list(clist.components(active=None))))
+        self.assertNotEqual(
+            len(list(clist.components())), len(list(clist.components(active=None)))
+        )
         self.assertEqual(len(list(clist.components(active=True))), 0)
 
         test_c = clist[0]
@@ -711,8 +693,9 @@ class _TestActiveListContainerBase(_TestListContainerBase):
         self.assertEqual(clist.active, False)
         for c in clist:
             self.assertEqual(c.active, False)
-        self.assertNotEqual(len(list(clist.components())),
-                            len(list(clist.components(active=None))))
+        self.assertNotEqual(
+            len(list(clist.components())), len(list(clist.components(active=None)))
+        )
         self.assertEqual(len(list(clist.components(active=True))), 0)
 
         clist.remove(test_c)
@@ -748,8 +731,9 @@ class _TestActiveListContainerBase(_TestListContainerBase):
             self.assertEqual(c.active, True)
         for c in clist.components(active=True):
             self.assertEqual(c.active, True)
-        self.assertNotEqual(len(list(clist.components())),
-                            len(list(clist.components(active=None))))
+        self.assertNotEqual(
+            len(list(clist.components())), len(list(clist.components(active=None)))
+        )
         self.assertEqual(len(list(clist.components(active=True))), 1)
 
         m.activate(shallow=False)
@@ -767,8 +751,9 @@ class _TestActiveListContainerBase(_TestListContainerBase):
         for c in clist.components(active=True):
             self.assertEqual(c.active, True)
         self.assertEqual(len(list(clist.components())), len(clist))
-        self.assertEqual(len(list(clist.components())),
-                         len(list(clist.components(active=True))))
+        self.assertEqual(
+            len(list(clist.components())), len(list(clist.components(active=True)))
+        )
 
         m.deactivate(shallow=False)
 
@@ -780,11 +765,12 @@ class _TestActiveListContainerBase(_TestListContainerBase):
         self.assertEqual(clist.active, False)
         for c in clist:
             self.assertEqual(c.active, False)
-        self.assertNotEqual(len(list(clist.components())),
-                            len(list(clist.components(active=None))))
+        self.assertNotEqual(
+            len(list(clist.components())), len(list(clist.components(active=None)))
+        )
         self.assertEqual(len(list(clist.components(active=True))), 0)
 
-        clist[len(clist)-1] = self._ctype_factory()
+        clist[len(clist) - 1] = self._ctype_factory()
 
         self.assertEqual(m.active, False)
         self.assertEqual(blist.active, False)
@@ -800,12 +786,12 @@ class _TestActiveListContainerBase(_TestListContainerBase):
         self.assertEqual(model.active, False)
         self.assertEqual(clist.active, True)
         for i, c in enumerate(clist):
-            if i == len(clist)-1:
+            if i == len(clist) - 1:
                 self.assertEqual(c.active, True)
             else:
                 self.assertEqual(c.active, False)
         for i, c in enumerate(clist.components(active=None)):
-            if i == len(clist)-1:
+            if i == len(clist) - 1:
                 self.assertEqual(c.active, True)
             else:
                 self.assertEqual(c.active, False)
@@ -813,8 +799,9 @@ class _TestActiveListContainerBase(_TestListContainerBase):
             self.assertEqual(c.active, True)
         for c in clist.components(active=True):
             self.assertEqual(c.active, True)
-        self.assertNotEqual(len(list(clist.components())),
-                            len(list(clist.components(active=None))))
+        self.assertNotEqual(
+            len(list(clist.components())), len(list(clist.components(active=None)))
+        )
         self.assertEqual(len(list(clist.components(active=True))), 1)
 
         clist.activate(shallow=False)
@@ -832,8 +819,9 @@ class _TestActiveListContainerBase(_TestListContainerBase):
         for c in clist.components(active=True):
             self.assertEqual(c.active, True)
         self.assertEqual(len(list(clist.components())), len(clist))
-        self.assertEqual(len(list(clist.components())),
-                         len(list(clist.components(active=True))))
+        self.assertEqual(
+            len(list(clist.components())), len(list(clist.components(active=True)))
+        )
 
         clist.deactivate(shallow=False)
 
@@ -845,8 +833,9 @@ class _TestActiveListContainerBase(_TestListContainerBase):
         self.assertEqual(clist.active, False)
         for i, c in enumerate(clist):
             self.assertEqual(c.active, False)
-        self.assertNotEqual(len(list(clist.components())),
-                            len(list(clist.components(active=None))))
+        self.assertNotEqual(
+            len(list(clist.components())), len(list(clist.components(active=None)))
+        )
         self.assertEqual(len(list(clist.components(active=True))), 0)
 
         clist[-1].activate()
@@ -865,12 +854,12 @@ class _TestActiveListContainerBase(_TestListContainerBase):
         self.assertEqual(model.active, False)
         self.assertEqual(clist.active, True)
         for i, c in enumerate(clist):
-            if i == len(clist)-1:
+            if i == len(clist) - 1:
                 self.assertEqual(c.active, True)
             else:
                 self.assertEqual(c.active, False)
         for i, c in enumerate(clist.components(active=None)):
-            if i == len(clist)-1:
+            if i == len(clist) - 1:
                 self.assertEqual(c.active, True)
             else:
                 self.assertEqual(c.active, False)
@@ -878,8 +867,9 @@ class _TestActiveListContainerBase(_TestListContainerBase):
             self.assertEqual(c.active, True)
         for c in clist.components(active=True):
             self.assertEqual(c.active, True)
-        self.assertNotEqual(len(list(clist.components())),
-                            len(list(clist.components(active=None))))
+        self.assertNotEqual(
+            len(list(clist.components())), len(list(clist.components(active=None)))
+        )
         self.assertEqual(len(list(clist.components(active=True))), 1)
 
         clist.deactivate(shallow=False)
@@ -898,169 +888,172 @@ class _TestActiveListContainerBase(_TestListContainerBase):
         for c in clist.components(active=True):
             self.assertEqual(c.active, True)
         self.assertEqual(len(list(clist.components())), len(clist))
-        self.assertEqual(len(list(clist.components())),
-                         len(list(clist.components(active=True))))
+        self.assertEqual(
+            len(list(clist.components())), len(list(clist.components(active=True)))
+        )
 
     def test_preorder_traversal(self):
-        clist, traversal = \
-            super(_TestActiveListContainerBase, self).\
-            test_preorder_traversal()
+        clist, traversal = super(
+            _TestActiveListContainerBase, self
+        ).test_preorder_traversal()
 
         descend = lambda x: not x._is_heterogeneous_container
 
         clist[1].deactivate()
-        self.assertEqual([None,'[0]','[2]'],
-                         [c.name for c in pmo.preorder_traversal(
-                             clist,
-                             active=True,
-                             descend=descend)])
-        self.assertEqual([id(clist),id(clist[0]),id(clist[2])],
-                         [id(c) for c in pmo.preorder_traversal(
-                             clist,
-                             active=True,
-                             descend=descend)])
+        self.assertEqual(
+            [None, '[0]', '[2]'],
+            [
+                c.name
+                for c in pmo.preorder_traversal(clist, active=True, descend=descend)
+            ],
+        )
+        self.assertEqual(
+            [id(clist), id(clist[0]), id(clist[2])],
+            [
+                id(c)
+                for c in pmo.preorder_traversal(clist, active=True, descend=descend)
+            ],
+        )
 
         clist[1].deactivate(shallow=False)
-        self.assertEqual([c.name for c in traversal if c.active],
-                         [c.name for c in pmo.preorder_traversal(
-                             clist,
-                             active=True,
-                             descend=descend)])
-        self.assertEqual([id(c) for c in traversal if c.active],
-                         [id(c) for c in pmo.preorder_traversal(
-                             clist,
-                             active=True,
-                             descend=descend)])
+        self.assertEqual(
+            [c.name for c in traversal if c.active],
+            [
+                c.name
+                for c in pmo.preorder_traversal(clist, active=True, descend=descend)
+            ],
+        )
+        self.assertEqual(
+            [id(c) for c in traversal if c.active],
+            [
+                id(c)
+                for c in pmo.preorder_traversal(clist, active=True, descend=descend)
+            ],
+        )
 
         clist.deactivate()
-        self.assertEqual(len(list(pmo.preorder_traversal(clist,
-                                                         active=True))),
-                         0)
-        self.assertEqual(len(list(pmo.generate_names(clist,
-                                                     active=True))),
-                         0)
+        self.assertEqual(len(list(pmo.preorder_traversal(clist, active=True))), 0)
+        self.assertEqual(len(list(pmo.generate_names(clist, active=True))), 0)
 
     def test_preorder_traversal_descend_check(self):
-        clist, traversal = \
-            super(_TestActiveListContainerBase, self).\
-            test_preorder_traversal_descend_check()
+        clist, traversal = super(
+            _TestActiveListContainerBase, self
+        ).test_preorder_traversal_descend_check()
 
         clist[1].deactivate()
+
         def descend(x):
             self.assertTrue(x._is_container)
             descend.seen.append(x)
             return not x._is_heterogeneous_container
+
         descend.seen = []
-        order = list(pmo.preorder_traversal(clist,
-                                            active=True,
-                                            descend=descend))
-        self.assertEqual([None,'[0]','[2]'],
-                         [c.name for c in order])
-        self.assertEqual([id(clist),id(clist[0]),id(clist[2])],
-                         [id(c) for c in order])
+        order = list(pmo.preorder_traversal(clist, active=True, descend=descend))
+        self.assertEqual([None, '[0]', '[2]'], [c.name for c in order])
+        self.assertEqual(
+            [id(clist), id(clist[0]), id(clist[2])], [id(c) for c in order]
+        )
         if clist.ctype._is_heterogeneous_container:
-            self.assertEqual([None,'[0]','[2]'],
-                             [c.name for c in descend.seen])
-            self.assertEqual([id(clist),id(clist[0]),id(clist[2])],
-                             [id(c) for c in descend.seen])
+            self.assertEqual([None, '[0]', '[2]'], [c.name for c in descend.seen])
+            self.assertEqual(
+                [id(clist), id(clist[0]), id(clist[2])], [id(c) for c in descend.seen]
+            )
         else:
-            self.assertEqual([None],
-                             [c.name for c in descend.seen])
-            self.assertEqual([id(clist)],
-                             [id(c) for c in descend.seen])
+            self.assertEqual([None], [c.name for c in descend.seen])
+            self.assertEqual([id(clist)], [id(c) for c in descend.seen])
 
         def descend(x):
             self.assertTrue(x._is_container)
             descend.seen.append(x)
             return x.active and (not x._is_heterogeneous_container)
+
         descend.seen = []
-        order = list(pmo.preorder_traversal(clist,
-                                            active=None,
-                                            descend=descend))
-        self.assertEqual([None,'[0]','[1]','[2]'],
-                         [c.name for c in order])
-        self.assertEqual([id(clist),id(clist[0]),id(clist[1]),id(clist[2])],
-                         [id(c) for c in order])
+        order = list(pmo.preorder_traversal(clist, active=None, descend=descend))
+        self.assertEqual([None, '[0]', '[1]', '[2]'], [c.name for c in order])
+        self.assertEqual(
+            [id(clist), id(clist[0]), id(clist[1]), id(clist[2])],
+            [id(c) for c in order],
+        )
         if clist.ctype._is_heterogeneous_container:
-            self.assertEqual([None,'[0]','[1]','[2]'],
-                             [c.name for c in descend.seen])
-            self.assertEqual([id(clist),id(clist[0]),id(clist[1]),id(clist[2])],
-                             [id(c) for c in descend.seen])
+            self.assertEqual(
+                [None, '[0]', '[1]', '[2]'], [c.name for c in descend.seen]
+            )
+            self.assertEqual(
+                [id(clist), id(clist[0]), id(clist[1]), id(clist[2])],
+                [id(c) for c in descend.seen],
+            )
         else:
-            self.assertEqual([None,'[1]'],
-                             [c.name for c in descend.seen])
-            self.assertEqual([id(clist),id(clist[1])],
-                             [id(c) for c in descend.seen])
+            self.assertEqual([None, '[1]'], [c.name for c in descend.seen])
+            self.assertEqual([id(clist), id(clist[1])], [id(c) for c in descend.seen])
 
         clist[1].deactivate(shallow=False)
+
         def descend(x):
             self.assertTrue(x._is_container)
             descend.seen.append(x)
             return not x._is_heterogeneous_container
+
         descend.seen = []
-        order = list(pmo.preorder_traversal(clist,
-                                            active=True,
-                                            descend=descend))
-        self.assertEqual([c.name for c in traversal if c.active],
-                         [c.name for c in order])
-        self.assertEqual([id(c) for c in traversal if c.active],
-                         [id(c) for c in order])
-        self.assertEqual([c.name for c in traversal
-                          if c.active and \
-                          c._is_container],
-                         [c.name for c in descend.seen])
-        self.assertEqual([id(c) for c in traversal
-                          if c.active and \
-                          c._is_container],
-                         [id(c) for c in descend.seen])
+        order = list(pmo.preorder_traversal(clist, active=True, descend=descend))
+        self.assertEqual(
+            [c.name for c in traversal if c.active], [c.name for c in order]
+        )
+        self.assertEqual([id(c) for c in traversal if c.active], [id(c) for c in order])
+        self.assertEqual(
+            [c.name for c in traversal if c.active and c._is_container],
+            [c.name for c in descend.seen],
+        )
+        self.assertEqual(
+            [id(c) for c in traversal if c.active and c._is_container],
+            [id(c) for c in descend.seen],
+        )
 
         def descend(x):
             self.assertTrue(x._is_container)
             descend.seen.append(x)
             return x.active and (not x._is_heterogeneous_container)
+
         descend.seen = []
-        order = list(pmo.preorder_traversal(clist,
-                                            active=None,
-                                            descend=descend))
-        self.assertEqual([None,'[0]','[1]','[2]'],
-                         [c.name for c in order])
-        self.assertEqual([id(clist),id(clist[0]),id(clist[1]),id(clist[2])],
-                         [id(c) for c in order])
+        order = list(pmo.preorder_traversal(clist, active=None, descend=descend))
+        self.assertEqual([None, '[0]', '[1]', '[2]'], [c.name for c in order])
+        self.assertEqual(
+            [id(clist), id(clist[0]), id(clist[1]), id(clist[2])],
+            [id(c) for c in order],
+        )
         if clist.ctype._is_heterogeneous_container:
-            self.assertEqual([None,'[0]','[1]','[2]'],
-                             [c.name for c in descend.seen])
-            self.assertEqual([id(clist),id(clist[0]),id(clist[1]),id(clist[2])],
-                             [id(c) for c in descend.seen])
+            self.assertEqual(
+                [None, '[0]', '[1]', '[2]'], [c.name for c in descend.seen]
+            )
+            self.assertEqual(
+                [id(clist), id(clist[0]), id(clist[1]), id(clist[2])],
+                [id(c) for c in descend.seen],
+            )
         else:
-            self.assertEqual([None,'[1]'],
-                             [c.name for c in descend.seen])
-            self.assertEqual([id(clist),id(clist[1])],
-                             [id(c) for c in descend.seen])
+            self.assertEqual([None, '[1]'], [c.name for c in descend.seen])
+            self.assertEqual([id(clist), id(clist[1])], [id(c) for c in descend.seen])
 
         clist.deactivate()
+
         def descend(x):
             self.assertTrue(x._is_container)
             descend.seen.append(x)
             return True
+
         descend.seen = []
-        order = list(pmo.preorder_traversal(clist,
-                                            active=True,
-                                            descend=descend))
+        order = list(pmo.preorder_traversal(clist, active=True, descend=descend))
         self.assertEqual(len(descend.seen), 0)
-        self.assertEqual(len(list(pmo.generate_names(clist,
-                                                     active=True))),
-                         0)
+        self.assertEqual(len(list(pmo.generate_names(clist, active=True))), 0)
 
         def descend(x):
             self.assertTrue(x._is_container)
             descend.seen.append(x)
             return x.active
+
         descend.seen = []
-        order = list(pmo.preorder_traversal(clist,
-                                            active=None,
-                                            descend=descend))
+        order = list(pmo.preorder_traversal(clist, active=None, descend=descend))
         self.assertEqual(len(descend.seen), 1)
         self.assertIs(descend.seen[0], clist)
+
 
 if __name__ == "__main__":
     unittest.main()

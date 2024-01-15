@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -17,31 +18,39 @@ import subprocess
 
 from pyomo.common import Executable
 from pyomo.common.collections import Bunch
+from pyomo.common.fileutils import this_file_dir
+from pyomo.common.tee import capture_output
 from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver
 from pyomo.opt.base.solvers import _extract_version, SolverFactory
-from pyomo.opt.results import SolverStatus, TerminationCondition, SolutionStatus, ProblemSense, Solution
+from pyomo.opt.results import (
+    SolverStatus,
+    TerminationCondition,
+    SolutionStatus,
+    ProblemSense,
+    Solution,
+)
 from pyomo.opt.solver import ILMLicensedSystemCallSolver
 from pyomo.core.kernel.block import IBlock
+from pyomo.core import ConcreteModel, Var, Objective
+
+from .gurobi_direct import gurobipy_available
+from .ASL import ASL
 
 logger = logging.getLogger('pyomo.solvers')
 
 
 @SolverFactory.register('gurobi', doc='The GUROBI LP/MIP solver')
 class GUROBI(OptSolver):
-    """The GUROBI LP/MIP solver
-    """
+    """The GUROBI LP/MIP solver"""
+
     def __new__(cls, *args, **kwds):
-        try:
-            mode = kwds['solver_io']
-            if mode is None:
-                mode = 'lp'
-            del kwds['solver_io']
-        except KeyError:
+        mode = kwds.pop('solver_io', 'lp')
+        if mode is None:
             mode = 'lp'
         #
-        if mode  == 'lp':
+        if mode == 'lp':
             return SolverFactory('_gurobi_shell', **kwds)
         if mode == 'mps':
             opt = SolverFactory('_gurobi_shell', **kwds)
@@ -63,7 +72,7 @@ class GUROBI(OptSolver):
         if mode == 'os':
             opt = SolverFactory('_ossolver', **kwds)
         elif mode == 'nl':
-            opt = SolverFactory('asl', **kwds)
+            opt = SolverFactory('_gurobi_nl', **kwds)
         else:
             logger.error('Unknown IO type: %s' % mode)
             return
@@ -71,11 +80,28 @@ class GUROBI(OptSolver):
         return opt
 
 
+@SolverFactory.register('_gurobi_nl', doc='NL interface to the Gurobi solver')
+class GUROBINL(ASL):
+    """NL interface to gurobi_ampl."""
 
-@SolverFactory.register('_gurobi_shell',  doc='Shell interface to the GUROBI LP/MIP solver')
+    def license_is_valid(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(1, 2))
+        m.obj = Objective(expr=m.x)
+        try:
+            with capture_output():
+                self.solve(m)
+            return abs(m.x.value - 1) <= 1e-4
+        except:
+            return False
+
+
+@SolverFactory.register(
+    '_gurobi_shell', doc='Shell interface to the GUROBI LP/MIP solver'
+)
 class GUROBISHELL(ILMLicensedSystemCallSolver):
-    """Shell interface to the GUROBI LP/MIP solver
-    """
+    """Shell interface to the GUROBI LP/MIP solver"""
+
     _solver_info_cache = {}
 
     def __init__(self, **kwds):
@@ -85,18 +111,21 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         kwds['type'] = 'gurobi'
         ILMLicensedSystemCallSolver.__init__(self, **kwds)
 
-        # NOTE: eventually both of the following attributes should be migrated to a common base class.
-        # is the current solve warm-started? a transient data member to communicate state information
-        # across the _presolve, _apply_solver, and _postsolve methods.
+        # NOTE: eventually both of the following attributes should be
+        # migrated to a common base class.  is the current solve
+        # warm-started? a transient data member to communicate state
+        # information across the _presolve, _apply_solver, and
+        # _postsolve methods.
         self._warm_start_solve = False
-        # related to the above, the temporary name of the MST warm-start file (if any).
+        # related to the above, the temporary name of the MST warm-start
+        # file (if any).
         self._warm_start_file_name = None
 
         #
         # Define valid problem formats and associated results formats
         #
-        self._valid_problem_formats=[ProblemFormat.cpxlp, ProblemFormat.mps]
-        self._valid_result_formats={}
+        self._valid_problem_formats = [ProblemFormat.cpxlp, ProblemFormat.mps]
+        self._valid_result_formats = {}
         self._valid_result_formats[ProblemFormat.cpxlp] = [ResultsFormat.soln]
         self._valid_result_formats[ProblemFormat.mps] = [ResultsFormat.soln]
         self.set_problem_format(ProblemFormat.cpxlp)
@@ -125,30 +154,28 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         if not solver_exec:
             licensed = False
         else:
-            executable = os.path.join(
-                os.path.dirname(solver_exec), 'gurobi_cl')
-
+            executable = os.path.join(os.path.dirname(solver_exec), 'gurobi_cl')
             try:
-                rc = subprocess.call([executable, "--license"],
-                                     stdout=subprocess.PIPE,
-                                     stderr=subprocess.STDOUT)
+                rc = subprocess.call(
+                    [executable, "--license"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                )
             except OSError:
-                rc = 1
-                if rc:
-                    #
-                    # Try the --status flag if --license is not available
-                    #
-                    try:
-                        rc = subprocess.call([executable, "--status"],
-                                             stdout=subprocess.PIPE,
-                                             stderr=subprocess.STDOUT)
-                    except OSError:
-                        rc = 1
+                try:
+                    rc = subprocess.run(
+                        [solver_exec],
+                        input=('import gurobipy; gurobipy.Env().dispose(); quit()'),
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        universal_newlines=True,
+                    ).returncode
+                except OSError:
+                    rc = 1
             licensed = not rc
 
         self._solver_info_cache[(solver_exec, 'licensed')] = licensed
         return licensed
-
 
     def _default_results_format(self, prob_format):
         return ResultsFormat.soln
@@ -156,43 +183,35 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
     def warm_start_capable(self):
         return True
 
-    def available(self, exception_flag=False):
-        val = ILMLicensedSystemCallSolver.available(self, exception_flag)
-        if not val:
-            return False
-        return True
-
     #
-    # write a warm-start file in the GUROBI MST format, which is *not* the same as the CPLEX MST format.
+    # write a warm-start file in the GUROBI MST format, which is *not*
+    # the same as the CPLEX MST format.
     #
     def _warm_start(self, instance):
-
         from pyomo.core.base import Var
 
         # for each variable in the symbol_map, add a child to the
         # variables element.  Both continuous and discrete are accepted
         # (and required, depending on other options), according to the
         # CPLEX manual.
+        #
         # **Note**: This assumes that the symbol_map is "clean", i.e.,
-        # contains only references to the variables encountered in constraints
+        # contains only references to the variables encountered in
+        # constraints
         output_index = 0
         if isinstance(instance, IBlock):
-            smap = getattr(instance,"._symbol_maps")\
-                   [self._smap_id]
+            smap = getattr(instance, "._symbol_maps")[self._smap_id]
         else:
             smap = instance.solutions.symbol_map[self._smap_id]
         byObject = smap.byObject
         with open(self._warm_start_file_name, 'w') as mst_file:
             for vdata in instance.component_data_objects(Var):
-                if (vdata.value is not None) and \
-                   (id(vdata) in byObject):
+                if (vdata.value is not None) and (id(vdata) in byObject):
                     name = byObject[id(vdata)]
-                    mst_file.write("%s %s\n"
-                                   % (name, vdata.value))
+                    mst_file.write("%s %s\n" % (name, vdata.value))
 
     # over-ride presolve to extract the warm-start keyword, if specified.
     def _presolve(self, *args, **kwds):
-
         # create a context in the temporary file manager for
         # this plugin - is "pop"ed in the _postsolve method.
         TempfileManager.push()
@@ -206,23 +225,25 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         if self._warm_start_file_name is not None:
             user_warmstart = True
 
-        # the input argument can currently be one of two things: an instance or a filename.
-        # if a filename is provided and a warm-start is indicated, we go ahead and
-        # create the temporary file - assuming that the user has already, via some external
-        # mechanism, invoked warm_start() with a instance to create the warm start file.
-        if self._warm_start_solve and \
-           isinstance(args[0], str):
+        # the input argument can currently be one of two things: an
+        # instance or a filename.  if a filename is provided and a
+        # warm-start is indicated, we go ahead and create the temporary
+        # file - assuming that the user has already, via some external
+        # mechanism, invoked warm_start() with a instance to create the
+        # warm start file.
+        if self._warm_start_solve and isinstance(args[0], str):
             # we assume the user knows what they are doing...
             pass
-        elif self._warm_start_solve and \
-             (not isinstance(args[0], str)):
-            # assign the name of the warm start file *before* calling the base class
-            # presolve - the base class method ends up creating the command line,
-            # and the warm start file-name is (obviously) needed there.
+        elif self._warm_start_solve and (not isinstance(args[0], str)):
+            # assign the name of the warm start file *before* calling
+            # the base class presolve - the base class method ends up
+            # creating the command line, and the warm start file-name is
+            # (obviously) needed there.
             if self._warm_start_file_name is None:
                 assert not user_warmstart
-                self._warm_start_file_name = TempfileManager.\
-                                             create_tempfile(suffix = '.gurobi.mst')
+                self._warm_start_file_name = TempfileManager.create_tempfile(
+                    suffix='.gurobi.mst'
+                )
 
         # let the base class handle any remaining keywords/actions.
         ILMLicensedSystemCallSolver._presolve(self, *args, **kwds)
@@ -231,33 +252,38 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         # symbol_map is actually constructed!
 
         if (len(args) > 0) and (not isinstance(args[0], str)):
-
             if len(args) != 1:
                 raise ValueError(
                     "GUROBI _presolve method can only handle a single "
-                    "problem instance - %s were supplied" % (len(args),))
+                    "problem instance - %s were supplied" % (len(args),)
+                )
 
             # write the warm-start file - currently only supports MIPs.
             # we only know how to deal with a single problem instance.
             if self._warm_start_solve and (not user_warmstart):
-
                 start_time = time.time()
                 self._warm_start(args[0])
                 end_time = time.time()
                 if self._report_timing is True:
-                    print("Warm start write time=%.2f seconds" % (end_time-start_time))
+                    print(
+                        "Warm start write time=%.2f seconds" % (end_time - start_time)
+                    )
 
     def _default_executable(self):
         if sys.platform == 'win32':
             executable = Executable("gurobi.bat")
         else:
             executable = Executable("gurobi.sh")
-        if not executable:
-            logger.warning("Could not locate the 'gurobi' executable, "
-                           "which is required for solver %s" % self.name)
-            self.enable = False
-            return None
-        return executable.path()
+        if executable:
+            return executable.path()
+        if gurobipy_available:
+            return sys.executable
+        logger.warning(
+            "Could not locate the 'gurobi' executable, "
+            "which is required for solver %s" % self.name
+        )
+        self.enable = False
+        return None
 
     def _get_version(self):
         """
@@ -272,7 +298,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         else:
             results = subprocess.run(
                 [solver_exec],
-                input='from gurobipy import *; print(gurobi.version()); exit()',
+                input=('import gurobipy; print(gurobipy.gurobi.version()); quit()'),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 universal_newlines=True,
@@ -280,31 +306,31 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
             ver = None
             try:
                 ver = tuple(eval(results.stdout.strip()))
-                while(len(ver) < 4):
+                while len(ver) < 4:
                     ver += (0,)
             except SyntaxError:
                 ver = _extract_version('')
-        ver = ver[:4]
+        if ver is not None:
+            ver = ver[:4]
         self._solver_info_cache[(solver_exec, 'version')] = ver
         return ver
 
-    def create_command_line(self,executable,problem_files):
-
+    def create_command_line(self, executable, problem_files):
         #
         # Define log file
-        # The log file in CPLEX contains the solution trace, but the solver status can be found in the solution file.
+        # The log file in CPLEX contains the solution trace, but the
+        # solver status can be found in the solution file.
         #
         if self._log_file is None:
-            self._log_file = TempfileManager.\
-                            create_tempfile(suffix = '.gurobi.log')
+            self._log_file = TempfileManager.create_tempfile(suffix='.gurobi.log')
 
         #
         # Define solution file
-        # As indicated above, contains (in XML) both the solution and solver status.
+        # As indicated above, contains (in XML) both the solution and
+        # solver status.
         #
         if self._soln_file is None:
-            self._soln_file = TempfileManager.\
-                              create_tempfile(suffix = '.gurobi.txt')
+            self._soln_file = TempfileManager.create_tempfile(suffix='.gurobi.txt')
 
         #
         # Write the GUROBI execution script
@@ -315,30 +341,32 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         warmstart_filename = self._warm_start_file_name
 
         # translate the options into a normal python dictionary, from a
-        # pyutilib SectionWrapper - the
-        # gurobi_run function doesn't know about pyomo, so the translation
-        # is necessary.
+        # pyutilib SectionWrapper - the gurobi_run function doesn't know
+        # about pyomo, so the translation is necessary.
         options_dict = {}
         for key in self.options:
             options_dict[key] = self.options[key]
 
-        # NOTE: the gurobi shell is independent of Pyomo python virtualized environment, so any
-        #       imports - specifically that required to get GUROBI_RUN - must be handled explicitly.
-        # NOTE: The gurobi plugin (GUROBI.py) and GUROBI_RUN.py live in the same directory.
-        script  = "import sys\n"
+        # NOTE: the gurobi shell is independent of Pyomo python
+        #       virtualized environment, so any imports - specifically
+        #       that required to get GUROBI_RUN - must be handled
+        #       explicitly.
+        # NOTE: The gurobi plugin (GUROBI.py) and GUROBI_RUN.py live in
+        #       the same directory.
+        script = "import sys\n"
         script += "from gurobipy import *\n"
-        script += "sys.path.append(%r)\n" % os.path.dirname(__file__)
+        script += "sys.path.append(%r)\n" % (this_file_dir(),)
         script += "from GUROBI_RUN import *\n"
         script += "gurobi_run("
-        mipgap = float(self.options.mipgap) if \
-                 self.options.mipgap is not None else \
-                 None
-        for x in ( problem_filename,
-                   warmstart_filename,
-                   solution_filename,
-                   None,
-                   options_dict,
-                   self._suffixes ):
+        mipgap = float(self.options.mipgap) if self.options.mipgap is not None else None
+        for x in (
+            problem_filename,
+            warmstart_filename,
+            solution_filename,
+            None,
+            options_dict,
+            self._suffixes,
+        ):
             script += "%r," % x
         script += ")\n"
         script += "quit()\n"
@@ -346,16 +374,14 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         # dump the script and warm-start file names for the
         # user if we're keeping files around.
         if self._keepfiles:
-            script_fname = TempfileManager.create_tempfile(suffix = '.gurobi.script')
+            script_fname = TempfileManager.create_tempfile(suffix='.gurobi.script')
             script_file = open(script_fname, 'w')
-            script_file.write( script )
+            script_file.write(script)
             script_file.close()
 
             print("Solver script file: '%s'" % script_fname)
-            if self._warm_start_solve and \
-               (self._warm_start_file_name is not None):
-                print("Solver warm-start file: "
-                      +self._warm_start_file_name)
+            if self._warm_start_solve and (self._warm_start_file_name is not None):
+                print("Solver warm-start file: " + self._warm_start_file_name)
 
         #
         # Define command line
@@ -363,16 +389,9 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         cmd = [executable]
         if self._timer:
             cmd.insert(0, self._timer)
-        return Bunch(cmd=cmd, script=script,
-                                   log_file=self._log_file, env=None)
-
-    def process_logfile(self):
-
-        return ILMLicensedSystemCallSolver.process_logfile(self)
+        return Bunch(cmd=cmd, script=script, log_file=self._log_file, env=None)
 
     def process_soln_file(self, results):
-
-
         # the only suffixes that we extract from CPLEX are
         # constraint duals, constraint slacks, and variable
         # reduced-costs. scan through the solver suffix list
@@ -382,18 +401,21 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         extract_slacks = False
         extract_rc = False
         for suffix in self._suffixes:
-            flag=False
+            flag = False
             if re.match(suffix, "dual"):
                 extract_duals = True
-                flag=True
+                flag = True
             if re.match(suffix, "slack"):
                 extract_slacks = True
-                flag=True
+                flag = True
             if re.match(suffix, "rc"):
                 extract_rc = True
-                flag=True
+                flag = True
             if not flag:
-                raise RuntimeError("***The GUROBI solver plugin cannot extract solution suffix="+suffix)
+                raise RuntimeError(
+                    "***The GUROBI solver plugin cannot extract solution suffix="
+                    + suffix
+                )
 
         # check for existence of the solution file
         # not sure why we just return - would think that we
@@ -409,13 +431,14 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
 
         num_variables_read = 0
 
-        # string compares are too expensive, so simply introduce some section IDs.
+        # string compares are too expensive, so simply introduce some
+        # section IDs.
         # 0 - unknown
         # 1 - problem
         # 2 - solution
         # 3 - solver
 
-        section = 0 # unknown
+        section = 0  # unknown
 
         solution_seen = False
 
@@ -426,56 +449,69 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         for line in INPUT:
             line = line.strip()
             tokens = [token.strip() for token in line.split(":")]
-            if (tokens[0] == 'section'):
-                if (tokens[1] == 'problem'):
+            if tokens[0] == 'section':
+                if tokens[1] == 'problem':
                     section = 1
-                elif (tokens[1] == 'solution'):
+                elif tokens[1] == 'solution':
                     section = 2
                     solution_seen = True
-                elif (tokens[1] == 'solver'):
+                elif tokens[1] == 'solver':
                     section = 3
             else:
-                if (section == 2):
-                    if (tokens[0] == 'var'):
+                if section == 2:
+                    if tokens[0] == 'var':
                         if tokens[1] != "ONE_VAR_CONSTANT":
-                            soln_variables[tokens[1]] = {"Value" : float(tokens[2])}
+                            soln_variables[tokens[1]] = {"Value": float(tokens[2])}
                             num_variables_read += 1
-                    elif (tokens[0] == 'status'):
+                    elif tokens[0] == 'status':
                         soln.status = getattr(SolutionStatus, tokens[1])
-                    elif (tokens[0] == 'gap'):
+                    elif tokens[0] == 'gap':
                         soln.gap = float(tokens[1])
-                    elif (tokens[0] == 'objective'):
+                    elif tokens[0] == 'objective':
                         if tokens[1].strip() != 'None':
-                            soln.objective['__default_objective__'] = \
-                                {'Value': float(tokens[1])}
+                            soln.objective['__default_objective__'] = {
+                                'Value': float(tokens[1])
+                            }
                             if results.problem.sense == ProblemSense.minimize:
                                 results.problem.upper_bound = float(tokens[1])
                             else:
                                 results.problem.lower_bound = float(tokens[1])
-                    elif (tokens[0] == 'constraintdual'):
+                    elif tokens[0] == 'constraintdual':
                         name = tokens[1]
                         if name != "c_e_ONE_VAR_CONSTANT":
                             if name.startswith('c_'):
-                                soln_constraints.setdefault(tokens[1],{})["Dual"] = float(tokens[2])
+                                soln_constraints.setdefault(tokens[1], {})[
+                                    "Dual"
+                                ] = float(tokens[2])
                             elif name.startswith('r_l_'):
-                                range_duals.setdefault(name[4:],[0,0])[0] = float(tokens[2])
+                                range_duals.setdefault(name[4:], [0, 0])[0] = float(
+                                    tokens[2]
+                                )
                             elif name.startswith('r_u_'):
-                                range_duals.setdefault(name[4:],[0,0])[1] = float(tokens[2])
-                    elif (tokens[0] == 'constraintslack'):
+                                range_duals.setdefault(name[4:], [0, 0])[1] = float(
+                                    tokens[2]
+                                )
+                    elif tokens[0] == 'constraintslack':
                         name = tokens[1]
                         if name != "c_e_ONE_VAR_CONSTANT":
                             if name.startswith('c_'):
-                                soln_constraints.setdefault(tokens[1],{})["Slack"] = float(tokens[2])
+                                soln_constraints.setdefault(tokens[1], {})[
+                                    "Slack"
+                                ] = float(tokens[2])
                             elif name.startswith('r_l_'):
-                                range_slacks.setdefault(name[4:],[0,0])[0] = float(tokens[2])
+                                range_slacks.setdefault(name[4:], [0, 0])[0] = float(
+                                    tokens[2]
+                                )
                             elif name.startswith('r_u_'):
-                                range_slacks.setdefault(name[4:],[0,0])[1] = float(tokens[2])
-                    elif (tokens[0] == 'varrc'):
+                                range_slacks.setdefault(name[4:], [0, 0])[1] = float(
+                                    tokens[2]
+                                )
+                    elif tokens[0] == 'varrc':
                         if tokens[1] != "ONE_VAR_CONSTANT":
                             soln_variables[tokens[1]]["Rc"] = float(tokens[2])
                     else:
                         setattr(soln, tokens[0], tokens[1])
-                elif (section == 1):
+                elif section == 1:
                     if tokens[0] == 'sense':
                         if tokens[1] == 'minimize':
                             results.problem.sense = ProblemSense.minimize
@@ -487,14 +523,18 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
                         except:
                             val = tokens[1]
                         setattr(results.problem, tokens[0], val)
-                elif (section == 3):
-                    if (tokens[0] == 'status'):
+                elif section == 3:
+                    if tokens[0] == 'status':
                         results.solver.status = getattr(SolverStatus, tokens[1])
-                    elif (tokens[0] == 'termination_condition'):
+                    elif tokens[0] == 'termination_condition':
                         try:
-                            results.solver.termination_condition = getattr(TerminationCondition, tokens[1])
+                            results.solver.termination_condition = getattr(
+                                TerminationCondition, tokens[1]
+                            )
                         except AttributeError:
-                            results.solver.termination_condition = TerminationCondition.unknown
+                            results.solver.termination_condition = (
+                                TerminationCondition.unknown
+                            )
                     else:
                         setattr(results.solver, tokens[0], tokens[1])
 
@@ -502,35 +542,38 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
 
         # For the range constraints, supply only the dual with the largest
         # magnitude (at least one should always be numerically zero)
-        for key,(ld,ud) in range_duals.items():
+        for key, (ld, ud) in range_duals.items():
             if abs(ld) > abs(ud):
-                soln_constraints['r_l_'+key] = {"Dual" : ld}
+                soln_constraints['r_l_' + key] = {"Dual": ld}
             else:
-                soln_constraints['r_l_'+key] = {"Dual" : ud}                # Use the same key
+                # Use the same key
+                soln_constraints['r_l_' + key] = {"Dual": ud}
         # slacks
-        for key,(ls,us) in range_slacks.items():
+        for key, (ls, us) in range_slacks.items():
             if abs(ls) > abs(us):
-                soln_constraints.setdefault('r_l_'+key,{})["Slack"] = ls
+                soln_constraints.setdefault('r_l_' + key, {})["Slack"] = ls
             else:
-                soln_constraints.setdefault('r_l_'+key,{})["Slack"] = us    # Use the same key
+                # Use the same key
+                soln_constraints.setdefault('r_l_' + key, {})["Slack"] = us
 
         if solution_seen:
             results.solution.insert(soln)
 
     def _postsolve(self):
-
-        # take care of the annoying GUROBI log file in the current directory.
-        # this approach doesn't seem overly efficient, but python os module functions
-        # doesn't accept regular expression directly.
+        # take care of the annoying GUROBI log file in the current
+        # directory.  this approach doesn't seem overly efficient, but
+        # python os module functions doesn't accept regular expression
+        # directly.
         filename_list = os.listdir(".")
         for filename in filename_list:
-            # IMPT: trap the possible exception raised by the file not existing.
-            #       this can occur in pyro environments where > 1 workers are
-            #       running GUROBI, and were started from the same directory.
-            #       these logs don't matter anyway (we redirect everything),
-            #       and are largely an annoyance.
+            # IMPT: trap the possible exception raised by the file not
+            #       existing.  this can occur in pyro environments where
+            #       > 1 workers are running GUROBI, and were started
+            #       from the same directory.  these logs don't matter
+            #       anyway (we redirect everything), and are largely an
+            #       annoyance.
             try:
-                if  re.match('gurobi\.log', filename) != None:
+                if re.match(r'gurobi\.log', filename) != None:
                     os.remove(filename)
             except OSError:
                 pass

@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -14,9 +15,9 @@ from .diff_with_pyomo import reverse_sd, reverse_ad
 
 
 class Modes(str, enum.Enum):
-    sympy='sympy'
-    reverse_symbolic='reverse_symbolic'
-    reverse_numeric='reverse_numeric'
+    sympy = 'sympy'
+    reverse_symbolic = 'reverse_symbolic'
+    reverse_numeric = 'reverse_numeric'
 
     # Overloading __str__ is needed to match the behavior of the old
     # pyutilib.enum class (removed June 2020). There are spots in the
@@ -36,7 +37,7 @@ def differentiate(expr, wrt=None, wrt_list=None, mode=Modes.reverse_numeric):
 
     Parameters
     ----------
-    expr: pyomo.core.expr.numeric_expr.ExpressionBase
+    expr: pyomo.core.expr.numeric_expr.NumericExpression
         The expression to differentiate
     wrt: pyomo.core.base.var._GeneralVarData
         If specified, this function will return the derivative with
@@ -76,11 +77,18 @@ def differentiate(expr, wrt=None, wrt_list=None, mode=Modes.reverse_numeric):
 
     Returns
     -------
-    res: float, :py:class:`ExpressionBase`, :py:class:`ComponentMap`, or list
+    res: float, :py:class:`NumericExpression`, :py:class:`ComponentMap`, or list
         The value or expression of the derivative(s)
 
     """
 
+    try:
+        mode = Modes(mode)
+    except:
+        raise ValueError(
+            f'differentiate(): Unrecognized differentiation mode: {mode}\n'
+            f'Expected one of {list(map(str, Modes))}.'
+        )
     if mode == Modes.reverse_numeric or mode == Modes.reverse_symbolic:
         if mode == Modes.reverse_numeric:
             res = reverse_ad(expr=expr)
@@ -90,7 +98,8 @@ def differentiate(expr, wrt=None, wrt_list=None, mode=Modes.reverse_numeric):
         if wrt is not None:
             if wrt_list is not None:
                 raise ValueError(
-                    'differentiate(): Cannot specify both wrt and wrt_list.')
+                    'differentiate(): Cannot specify both wrt and wrt_list.'
+                )
             if wrt in res:
                 res = res[wrt]
             else:
@@ -103,12 +112,9 @@ def differentiate(expr, wrt=None, wrt_list=None, mode=Modes.reverse_numeric):
                 else:
                     _res.append(0)
             res = _res
-    elif mode is Modes.sympy:
-        res = sympy_diff(expr=expr, wrt=wrt, wrt_list=wrt_list)
     else:
-        raise ValueError(
-            'differentiate(): Unrecognized differentiation mode: {0}'.format(
-                mode))
+        assert mode == Modes.sympy
+        res = sympy_diff(expr=expr, wrt=wrt, wrt_list=wrt_list)
 
     return res
 

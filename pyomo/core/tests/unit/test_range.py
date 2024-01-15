@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -13,28 +14,32 @@ import pickle
 import pyomo.common.unittest as unittest
 
 from pyomo.core.base.range import (
-    NumericRange as NR, NonNumericRange as NNR, RangeProduct as RP,
-    AnyRange, RangeDifferenceError
+    NumericRange as NR,
+    NonNumericRange as NNR,
+    RangeProduct as RP,
+    AnyRange,
+    RangeDifferenceError,
 )
-from pyomo.core.base.set import (
-    Any
-)
+from pyomo.core.base.set import Any
+
+_inf = float('inf')
+
 
 class TestNumericRange(unittest.TestCase):
     def test_init(self):
         a = NR(None, None, 0)
-        self.assertIsNone(a.start)
-        self.assertIsNone(a.end)
+        self.assertEqual(a.start, -_inf)
+        self.assertEqual(a.end, _inf)
         self.assertEqual(a.step, 0)
 
-        a = NR(-float('inf'), float('inf'), 0)
-        self.assertIsNone(a.start)
-        self.assertIsNone(a.end)
+        a = NR(-_inf, _inf, 0)
+        self.assertEqual(a.start, -_inf)
+        self.assertEqual(a.end, _inf)
         self.assertEqual(a.step, 0)
 
         a = NR(0, None, 0)
         self.assertEqual(a.start, 0)
-        self.assertIsNone(a.end)
+        self.assertEqual(a.end, _inf)
         self.assertEqual(a.step, 0)
 
         a = NR(0, 0, 0)
@@ -43,9 +48,9 @@ class TestNumericRange(unittest.TestCase):
         self.assertEqual(a.step, 0)
 
         with self.assertRaisesRegex(
-                ValueError, '.*start must be <= end for continuous ranges'):
+            ValueError, '.*start must be <= end for continuous ranges'
+        ):
             NR(0, -1, 0)
-
 
         with self.assertRaisesRegex(ValueError, '.*start must not be None'):
             NR(None, None, 1)
@@ -54,24 +59,29 @@ class TestNumericRange(unittest.TestCase):
             NR(None, None, 1.5)
 
         with self.assertRaisesRegex(
-                ValueError,
-                '.*start, end ordering incompatible with step direction'):
+            ValueError, '.*start, end ordering incompatible with step direction'
+        ):
             NR(0, 1, -1)
 
         with self.assertRaisesRegex(
-                ValueError,
-                '.*start, end ordering incompatible with step direction'):
+            ValueError, '.*start, end ordering incompatible with step direction'
+        ):
             NR(1, 0, 1)
 
         with self.assertRaisesRegex(
-                ValueError,
-                r'\[0:1\] is discrete, but passed closed=\(False, True\)'):
+            ValueError, r'\[0:1\] is discrete, but passed closed=\(False, True\)'
+        ):
             NR(0, 1, 1, "(]")
 
         a = NR(0, None, 1)
         self.assertEqual(a.start, 0)
-        self.assertEqual(a.end, None)
+        self.assertEqual(a.end, _inf)
         self.assertEqual(a.step, 1)
+
+        a = NR(0, None, -1)
+        self.assertEqual(a.start, 0)
+        self.assertEqual(a.end, -_inf)
+        self.assertEqual(a.step, -1)
 
         a = NR(0, 5, 1)
         self.assertEqual(a.start, 0)
@@ -99,11 +109,13 @@ class TestNumericRange(unittest.TestCase):
         self.assertEqual(a.step, 1)
 
         with self.assertRaisesRegex(
-                ValueError, '.*start, end ordering incompatible with step'):
+            ValueError, '.*start, end ordering incompatible with step'
+        ):
             NR(0, -1, 1)
 
         with self.assertRaisesRegex(
-                ValueError, '.*start, end ordering incompatible with step'):
+            ValueError, '.*start, end ordering incompatible with step'
+        ):
             NR(0, 1, -2)
 
     def test_str(self):
@@ -214,6 +226,76 @@ class TestNumericRange(unittest.TestCase):
         self.assertNotIn(-1.1, NR(10, None, -2))
         self.assertNotIn(1.1, NR(0, None, 2))
 
+        # test special cases (for implicit numpy ndarray compatibility)
+        self.assertNotIn('z', NR(0, None, 0))
+        self.assertNotIn(['z'], NR(0, None, 0))
+        self.assertIn([1], NR(0, None, 0))
+        self.assertNotIn([-1], NR(0, None, 0))
+        self.assertIn({0: 1}, NR(0, None, 0))
+        self.assertNotIn({0: -1}, NR(0, None, 0))
+        self.assertNotIn({1: 1}, NR(0, None, 0))
+
+        class _Unrelated(object):
+            pass
+
+        self.assertNotIn(_Unrelated(), NR(0, None, 0))
+        self.assertNotIn(_Unrelated, NR._types_comparable_to_int)
+
+        class _NonComparable(_Unrelated):
+            def __init__(self, val):
+                self.val = val
+
+            def __sub__(self, other):
+                return self
+
+            def __gt__(self, other):
+                return True
+
+            def __le__(self, other):
+                return True
+
+        self.assertNotIn(_NonComparable(1), NR(0, None, 0))
+        self.assertNotIn(_NonComparable, NR._types_comparable_to_int)
+
+        class _NotCastable(_NonComparable):
+            def __lt__(self, other):
+                return True
+
+            def __eq__(self, other):
+                return True
+
+            def __ne__(self, other):
+                return True
+
+        self.assertNotIn(_NotCastable(1), NR(0, None, 0))
+        self.assertNotIn(_NotCastable, NR._types_comparable_to_int)
+
+        class _Custom(object):
+            def __init__(self, val):
+                self.val = val
+
+            def __lt__(self, other):
+                return self.val < other
+
+            def __gt__(self, other):
+                return self.val > other
+
+            def __le__(self, other):
+                return self.val <= other
+
+            def __ge__(self, other):
+                return self.val >= other
+
+            def __eq__(self, other):
+                return self.val == other
+
+            def __sub__(self, other):
+                return self.val - other
+
+        self.assertIn(_Custom(1), NR(0, None, 0))
+        self.assertIn(_Custom, NR._types_comparable_to_int)
+        NR._types_comparable_to_int.discard(_Custom)
+
     def test_isdisjoint(self):
         def _isdisjoint(expected_result, a, b):
             self.assertIs(expected_result, a.isdisjoint(b))
@@ -234,8 +316,8 @@ class TestNumericRange(unittest.TestCase):
         _isdisjoint(False, NR(0, 1, 0), NR(-1, 1, 0))
         _isdisjoint(False, NR(0, 1, 0), NR(-1, 2, 0))
 
-        _isdisjoint(True, NR(0, 1, 0, (True,False)), NR(1, 2, 0))
-        _isdisjoint(True, NR(0, 1, 0, (False,True)), NR(-1, 0, 0))
+        _isdisjoint(True, NR(0, 1, 0, (True, False)), NR(1, 2, 0))
+        _isdisjoint(True, NR(0, 1, 0, (False, True)), NR(-1, 0, 0))
 
         #
         # Continuous to discrete ranges (positive step)
@@ -260,18 +342,18 @@ class TestNumericRange(unittest.TestCase):
         _isdisjoint(True, NR(0.1, 0.9, 0), NR(-1, 1, 1))
         _isdisjoint(True, NR(0.1, 0.9, 0), NR(-1, 2, 1))
 
-        _isdisjoint(False, NR(-.1, 1.1, 0), NR(-1, 2, 1))
-        _isdisjoint(False, NR(-.1, 1.1, 0), NR(-2, 0, 2))
-        _isdisjoint(True, NR(-.1, 1.1, 0), NR(-1, -1, 1))
-        _isdisjoint(True, NR(-.1, 1.1, 0), NR(-2, -1, 1))
+        _isdisjoint(False, NR(-0.1, 1.1, 0), NR(-1, 2, 1))
+        _isdisjoint(False, NR(-0.1, 1.1, 0), NR(-2, 0, 2))
+        _isdisjoint(True, NR(-0.1, 1.1, 0), NR(-1, -1, 1))
+        _isdisjoint(True, NR(-0.1, 1.1, 0), NR(-2, -1, 1))
 
         # (additional edge cases)
-        _isdisjoint(False, NR(0, 1, 0, closed=(True,True)), NR(-1, 2, 1))
-        _isdisjoint(False, NR(0, 1, 0, closed=(True,False)), NR(-1, 2, 1))
-        _isdisjoint(False, NR(0, 1, 0, closed=(False,True)), NR(-1, 2, 1))
-        _isdisjoint(True, NR(0, 1, 0, closed=(False,False)), NR(-1, 2, 1))
-        _isdisjoint(True, NR(0.1, 1, 0, closed=(True,False)), NR(-1, 2, 1))
-        _isdisjoint(True, NR(0, 0.9, 0, closed=(False,True)), NR(-1, 2, 1))
+        _isdisjoint(False, NR(0, 1, 0, closed=(True, True)), NR(-1, 2, 1))
+        _isdisjoint(False, NR(0, 1, 0, closed=(True, False)), NR(-1, 2, 1))
+        _isdisjoint(False, NR(0, 1, 0, closed=(False, True)), NR(-1, 2, 1))
+        _isdisjoint(True, NR(0, 1, 0, closed=(False, False)), NR(-1, 2, 1))
+        _isdisjoint(True, NR(0.1, 1, 0, closed=(True, False)), NR(-1, 2, 1))
+        _isdisjoint(True, NR(0, 0.9, 0, closed=(False, True)), NR(-1, 2, 1))
         _isdisjoint(False, NR(0, 0.99, 0), NR(-1, 1, 1))
         _isdisjoint(True, NR(0.001, 0.99, 0), NR(-1, 1, 1))
 
@@ -300,15 +382,15 @@ class TestNumericRange(unittest.TestCase):
         #
         # Discrete to discrete sets
         #
-        _isdisjoint(False, NR(0,10,2), NR(2,10,2))
-        _isdisjoint(True, NR(0,10,2), NR(1,10,2))
+        _isdisjoint(False, NR(0, 10, 2), NR(2, 10, 2))
+        _isdisjoint(True, NR(0, 10, 2), NR(1, 10, 2))
 
-        _isdisjoint(False, NR(0,50,5), NR(0,50,7))
-        _isdisjoint(False, NR(0,34,5), NR(0,34,7))
-        _isdisjoint(False, NR(5,50,5), NR(7,50,7))
-        _isdisjoint(True, NR(5,34,5), NR(7,34,7))
-        _isdisjoint(False, NR(5,50,5), NR(49,7,-7))
-        _isdisjoint(True, NR(5,34,5), NR(28,7,-7))
+        _isdisjoint(False, NR(0, 50, 5), NR(0, 50, 7))
+        _isdisjoint(False, NR(0, 34, 5), NR(0, 34, 7))
+        _isdisjoint(False, NR(5, 50, 5), NR(7, 50, 7))
+        _isdisjoint(True, NR(5, 34, 5), NR(7, 34, 7))
+        _isdisjoint(False, NR(5, 50, 5), NR(49, 7, -7))
+        _isdisjoint(True, NR(5, 34, 5), NR(28, 7, -7))
 
         _isdisjoint(True, NR(0.25, 10, 1), NR(0.5, 20, 1))
         _isdisjoint(True, NR(0.25, 10, 1), NR(0.5, 20, 2))
@@ -353,29 +435,29 @@ class TestNumericRange(unittest.TestCase):
         self.assertFalse(NR(None, 0, 0).issubset(NR(None, -1, 0)))
         self.assertFalse(NR(None, 0, 0).issubset(NR(0, None, 0)))
 
-        B = True,True
-        self.assertTrue(NR(0,1,0,(True,True)).issubset(NR(0,1,0,B)))
-        self.assertTrue(NR(0,1,0,(True,False)).issubset(NR(0,1,0,B)))
-        self.assertTrue(NR(0,1,0,(False,True)).issubset(NR(0,1,0,B)))
-        self.assertTrue(NR(0,1,0,(False,False)).issubset(NR(0,1,0,B)))
+        B = True, True
+        self.assertTrue(NR(0, 1, 0, (True, True)).issubset(NR(0, 1, 0, B)))
+        self.assertTrue(NR(0, 1, 0, (True, False)).issubset(NR(0, 1, 0, B)))
+        self.assertTrue(NR(0, 1, 0, (False, True)).issubset(NR(0, 1, 0, B)))
+        self.assertTrue(NR(0, 1, 0, (False, False)).issubset(NR(0, 1, 0, B)))
 
-        B = True,False
-        self.assertFalse(NR(0,1,0,(True,True)).issubset(NR(0,1,0,B)))
-        self.assertTrue(NR(0,1,0,(True,False)).issubset(NR(0,1,0,B)))
-        self.assertFalse(NR(0,1,0,(False,True)).issubset(NR(0,1,0,B)))
-        self.assertTrue(NR(0,1,0,(False,False)).issubset(NR(0,1,0,B)))
+        B = True, False
+        self.assertFalse(NR(0, 1, 0, (True, True)).issubset(NR(0, 1, 0, B)))
+        self.assertTrue(NR(0, 1, 0, (True, False)).issubset(NR(0, 1, 0, B)))
+        self.assertFalse(NR(0, 1, 0, (False, True)).issubset(NR(0, 1, 0, B)))
+        self.assertTrue(NR(0, 1, 0, (False, False)).issubset(NR(0, 1, 0, B)))
 
-        B = False,True
-        self.assertFalse(NR(0,1,0,(True,True)).issubset(NR(0,1,0,B)))
-        self.assertFalse(NR(0,1,0,(True,False)).issubset(NR(0,1,0,B)))
-        self.assertTrue(NR(0,1,0,(False,True)).issubset(NR(0,1,0,B)))
-        self.assertTrue(NR(0,1,0,(False,False)).issubset(NR(0,1,0,B)))
+        B = False, True
+        self.assertFalse(NR(0, 1, 0, (True, True)).issubset(NR(0, 1, 0, B)))
+        self.assertFalse(NR(0, 1, 0, (True, False)).issubset(NR(0, 1, 0, B)))
+        self.assertTrue(NR(0, 1, 0, (False, True)).issubset(NR(0, 1, 0, B)))
+        self.assertTrue(NR(0, 1, 0, (False, False)).issubset(NR(0, 1, 0, B)))
 
-        B = False,False
-        self.assertFalse(NR(0,1,0,(True,True)).issubset(NR(0,1,0,B)))
-        self.assertFalse(NR(0,1,0,(True,False)).issubset(NR(0,1,0,B)))
-        self.assertFalse(NR(0,1,0,(False,True)).issubset(NR(0,1,0,B)))
-        self.assertTrue(NR(0,1,0,(False,False)).issubset(NR(0,1,0,B)))
+        B = False, False
+        self.assertFalse(NR(0, 1, 0, (True, True)).issubset(NR(0, 1, 0, B)))
+        self.assertFalse(NR(0, 1, 0, (True, False)).issubset(NR(0, 1, 0, B)))
+        self.assertFalse(NR(0, 1, 0, (False, True)).issubset(NR(0, 1, 0, B)))
+        self.assertTrue(NR(0, 1, 0, (False, False)).issubset(NR(0, 1, 0, B)))
 
         # Continuous - discrete
         self.assertTrue(NR(0, None, 1).issubset(NR(None, None, 0)))
@@ -418,211 +500,174 @@ class TestNumericRange(unittest.TestCase):
         self.assertFalse(NR(15, 15, 0).issubset(NR(0, 10, 1)))
 
     def test_lcm(self):
+        self.assertEqual(NR(None, None, 0)._step_lcm((NR(0, 1, 0),)), 0)
+        self.assertEqual(NR(None, None, 0)._step_lcm((NR(0, 0, 0),)), 1)
+        self.assertEqual(NR(0, None, 3)._step_lcm((NR(0, None, 1),)), 3)
+        self.assertEqual(NR(0, None, 3)._step_lcm((NR(0, None, 0),)), 3)
+        self.assertEqual(NR(0, None, 0)._step_lcm((NR(0, None, 1),)), 1)
+        self.assertEqual(NR(0, None, 3)._step_lcm((NR(0, None, 2),)), 6)
+        self.assertEqual(NR(0, None, 18)._step_lcm((NR(0, None, 12),)), 36)
+        self.assertEqual(NR(0, None, 3)._step_lcm((NR(0, None, 2), NR(0, None, 5))), 30)
         self.assertEqual(
-            NR(None,None,0)._step_lcm((NR(0,1,0),)),
-            0
-        )
-        self.assertEqual(
-            NR(None,None,0)._step_lcm((NR(0,0,0),)),
-            1
-        )
-        self.assertEqual(
-            NR(0,None,3)._step_lcm((NR(0,None,1),)),
-            3
-        )
-        self.assertEqual(
-            NR(0,None,3)._step_lcm((NR(0,None,0),)),
-            3
-        )
-        self.assertEqual(
-            NR(0,None,0)._step_lcm((NR(0,None,1),)),
-            1
-        )
-        self.assertEqual(
-            NR(0,None,3)._step_lcm((NR(0,None,2),)),
-            6
-        )
-        self.assertEqual(
-            NR(0,None,18)._step_lcm((NR(0,None,12),)),
-            36
-        )
-        self.assertEqual(
-            NR(0,None,3)._step_lcm((NR(0,None,2),NR(0,None,5))),
-            30
-        )
-        self.assertEqual(
-            NR(0,None,3)._step_lcm((NR(0,None,2),NR(0,None,10))),
-            30
+            NR(0, None, 3)._step_lcm((NR(0, None, 2), NR(0, None, 10))), 30
         )
 
     def test_range_difference(self):
         self.assertEqual(
-            NR(0,None,1).range_difference([NR(1,None,0)]),
-            [NR(0,0,0)],
+            NR(0, None, 1).range_difference([NR(1, None, 0)]), [NR(0, 0, 0)]
         )
         self.assertEqual(
-            NR(0,None,1).range_difference([NR(0,0,0)]),
-            [NR(1,None,1)],
+            NR(0, None, 1).range_difference([NR(0, 0, 0)]), [NR(1, None, 1)]
         )
         self.assertEqual(
-            NR(0,None,2).range_difference([NR(10,None,3)]),
-            [NR(0,None,6), NR(2,None,6), NR(4,4,0)],
+            NR(0, None, 2).range_difference([NR(10, None, 3)]),
+            [NR(0, None, 6), NR(2, None, 6), NR(4, 4, 0)],
         )
         with self.assertRaisesRegex(ValueError, "Unknown range type, list"):
-            NR(0,None,0).range_difference([[0]])
+            NR(0, None, 0).range_difference([[0]])
 
         # test relatively prime ranges that don't expand to all offsets
         self.assertEqual(
-            NR(0,7,2).range_difference([NR(6,None,10)]),
-            [NR(0,0,0), NR(2,2,0), NR(4,4,0)],
+            NR(0, 7, 2).range_difference([NR(6, None, 10)]),
+            [NR(0, 0, 0), NR(2, 2, 0), NR(4, 4, 0)],
         )
 
         # test ranges running in the other direction
         self.assertEqual(
-            NR(10,0,-1).range_difference([NR(7,4,-2)]),
-            [NR(10,0,-2), NR(1,3,2), NR(9,9,0)],
+            NR(10, 0, -1).range_difference([NR(7, 4, -2)]),
+            [NR(10, 0, -2), NR(1, 3, 2), NR(9, 9, 0)],
         )
         self.assertEqual(
-            NR(0,None,-1).range_difference([NR(-10,10,0)]),
-            [NR(-11,None,-1)],
+            NR(0, None, -1).range_difference([NR(-10, 10, 0)]), [NR(-11, None, -1)]
         )
 
         # Test non-overlapping ranges
-        self.assertEqual(
-            NR(0,4,0).range_difference([NR(5,10,0)]),
-            [NR(0,4,0)],
-        )
-        self.assertEqual(
-            NR(5,10,0).range_difference([NR(0,4,0)]),
-            [NR(5,10,0)],
-        )
+        self.assertEqual(NR(0, 4, 0).range_difference([NR(5, 10, 0)]), [NR(0, 4, 0)])
+        self.assertEqual(NR(5, 10, 0).range_difference([NR(0, 4, 0)]), [NR(5, 10, 0)])
 
         # Test continuous ranges
 
         # Subtracting a closed range from a closed range should
         # result in an open range.
         self.assertEqual(
-            NR(0,None,0).range_difference([NR(5,None,0)]),
-            [NR(0,5,0,'[)')],
+            NR(0, None, 0).range_difference([NR(5, None, 0)]), [NR(0, 5, 0, '[)')]
         )
         self.assertEqual(
-            NR(0,None,0).range_difference([NR(5,10,0)]),
-            [NR(0,5,0,'[)'), NR(10,None,0,'(]')],
+            NR(0, None, 0).range_difference([NR(5, 10, 0)]),
+            [NR(0, 5, 0, '[)'), NR(10, None, 0, '(]')],
         )
         self.assertEqual(
-            NR(None,0,0).range_difference([NR(-5,None,0)]),
-            [NR(None,-5,0,'[)')],
+            NR(None, 0, 0).range_difference([NR(-5, None, 0)]), [NR(None, -5, 0, '[)')]
         )
         self.assertEqual(
-            NR(None,0,0).range_difference([NR(-5,0,0,'[)')]),
-            [NR(None,-5,0,'[)')],
+            NR(None, 0, 0).range_difference([NR(-5, 0, 0, '[]')]),
+            [NR(None, -5, 0, '[)')],
         )
         self.assertEqual(
-            NR(0,10,0).range_difference([NR(None,5,0,'[)')]),
-            [NR(5,10,0,'[]')],
+            NR(None, 0, 0).range_difference([NR(-5, 0, 0, '[)')]),
+            [NR(None, -5, 0, '[)'), NR(0, 0, 0)],
+        )
+        self.assertEqual(
+            NR(0, 10, 0).range_difference([NR(None, 5, 0, '[)')]), [NR(5, 10, 0, '[]')]
         )
         # Subtracting an open range from a closed range gives a closed
         # range
         self.assertEqual(
-            NR(0,None,0).range_difference([NR(5,10,0,'()')]),
-            [NR(0,5,0,'[]'), NR(10,None,0,'[]')],
+            NR(0, None, 0).range_difference([NR(5, 10, 0, '()')]),
+            [NR(0, 5, 0, '[]'), NR(10, None, 0, '[]')],
         )
         # Subtracting a discrete range from a continuous range gives a
         # set of open continuous ranges
         self.assertEqual(
-            NR(None,None,0).range_difference([NR(5,10,5)]),
-            [NR(None,5,0,'[)'), NR(5,10,0,'()'), NR(10,None,0,'(]')],
+            NR(None, None, 0).range_difference([NR(5, 10, 5)]),
+            [NR(None, 5, 0, '[)'), NR(5, 10, 0, '()'), NR(10, None, 0, '(]')],
         )
         self.assertEqual(
-            NR(-10,20,0).range_difference([NR(5,10,5)]),
-            [NR(-10,5,0,'[)'), NR(5,10,0,'()'), NR(10,20,0,'(]')],
+            NR(-10, 20, 0).range_difference([NR(5, 10, 5)]),
+            [NR(-10, 5, 0, '[)'), NR(5, 10, 0, '()'), NR(10, 20, 0, '(]')],
         )
         self.assertEqual(
-            NR(-10,20,0,"()").range_difference([NR(5,10,5)]),
-            [NR(-10,5,0,'()'), NR(5,10,0,'()'), NR(10,20,0,'()')],
+            NR(-10, 20, 0, "()").range_difference([NR(5, 10, 5)]),
+            [NR(-10, 5, 0, '()'), NR(5, 10, 0, '()'), NR(10, 20, 0, '()')],
         )
         self.assertEqual(
-            NR(-3,3,0).range_difference([NR(0,None,5),NR(0,None,-5)]),
-            [NR(-3,0,0,'[)'), NR(0,3,0,'(]')],
+            NR(-3, 3, 0).range_difference([NR(0, None, 5), NR(0, None, -5)]),
+            [NR(-3, 0, 0, '[)'), NR(0, 3, 0, '(]')],
         )
 
         # Disjoint ranges...
         a = NR(0.25, 10, 1)
         self.assertEqual(a.range_difference([NR(0.5, 20, 1)]), [a])
-        self.assertEqual(a.range_difference([NR(0.5, 20, 2)]),
-                         [NR(0.25, 8.25, 2), NR(1.25, 9.25, 2)])
+        self.assertEqual(
+            a.range_difference([NR(0.5, 20, 2)]), [NR(0.25, 8.25, 2), NR(1.25, 9.25, 2)]
+        )
         a = NR(0, 100, 2)
-        self.assertEqual(a.range_difference([NR(1, 100, 4)]),
-                         [NR(0, 100, 4), NR(2, 98, 4)])
+        self.assertEqual(
+            a.range_difference([NR(1, 100, 4)]), [NR(0, 100, 4), NR(2, 98, 4)]
+        )
         a = NR(0, None, 2)
-        self.assertEqual(a.range_difference([NR(1, None, 4)]),
-                         [NR(0, None, 4), NR(2, None, 4)])
+        self.assertEqual(
+            a.range_difference([NR(1, None, 4)]), [NR(0, None, 4), NR(2, None, 4)]
+        )
         a = NR(0.25, None, 1)
         self.assertEqual(a.range_difference([NR(0.5, None, 1)]), [a])
 
-        # And the onee thing we don't support:
+        # open/closed infinite ranges
+        a = NR(None, None, 0)
+        self.assertEqual(
+            a.range_difference([NR(None, None, 0, "()")]),
+            [NR(-_inf, -_inf, 0), NR(_inf, _inf, 0)],
+        )
+        self.assertEqual(
+            a.range_difference([NR(None, None, 0, "()"), NR(None, None, 0, "[)")]),
+            [NR(_inf, _inf, 0)],
+        )
+
+        # And the one thing we don't support:
         with self.assertRaisesRegex(
-                RangeDifferenceError, 'We do not support subtracting an '
-                r'infinite discrete range \[0:None\] from an infinite '
-                r'continuous range \[None..None\]'):
-            NR(None,None,0).range_difference([NR(0,None,1)])
+            RangeDifferenceError,
+            'We do not support subtracting an '
+            r'infinite discrete range \[0:inf\] from an infinite '
+            r'continuous range \[-inf..inf\]',
+        ):
+            NR(None, None, 0).range_difference([NR(0, None, 1)])
 
     def test_range_intersection(self):
         self.assertEqual(
-            NR(0,None,1).range_intersection([NR(1,None,0)]),
-            [NR(1,None,1)],
+            NR(0, None, 1).range_intersection([NR(1, None, 0)]), [NR(1, None, 1)]
         )
         self.assertEqual(
-            NR(0,None,1).range_intersection([NR(0,0,0)]),
-            [NR(0,0,0)],
+            NR(0, None, 1).range_intersection([NR(0, 0, 0)]), [NR(0, 0, 0)]
         )
         self.assertEqual(
-            NR(0,None,1).range_intersection([NR(0.5,1.5,0)]),
-            [NR(1,1,0)],
+            NR(0, None, 1).range_intersection([NR(0.5, 1.5, 0)]), [NR(1, 1, 0)]
         )
         self.assertEqual(
-            NR(0,None,2).range_intersection([NR(1,None,3)]),
-            [NR(4,None,6)],
+            NR(0, None, 2).range_intersection([NR(1, None, 3)]), [NR(4, None, 6)]
         )
         with self.assertRaisesRegex(ValueError, "Unknown range type, list"):
-            NR(0,None,0).range_intersection([[0]])
+            NR(0, None, 0).range_intersection([[0]])
 
         # Test non-overlapping ranges
-        self.assertEqual(
-            NR(0,4,0).range_intersection([NR(5,10,0)]),
-            [],
-        )
-        self.assertEqual(
-            NR(5,10,0).range_intersection([NR(0,4,0)]),
-            [],
-        )
-        self.assertEqual(
-            NR(0,4,0).range_intersection([NNR('a')]),
-            [],
-        )
+        self.assertEqual(NR(0, 4, 0).range_intersection([NR(5, 10, 0)]), [])
+        self.assertEqual(NR(5, 10, 0).range_intersection([NR(0, 4, 0)]), [])
+        self.assertEqual(NR(0, 4, 0).range_intersection([NNR('a')]), [])
 
         # test ranges running in the other direction
         self.assertEqual(
-            NR(10,0,-1).range_intersection([NR(7,4,-2)]),
-            [NR(5,7,2)],
+            NR(10, 0, -1).range_intersection([NR(7, 4, -2)]), [NR(5, 7, 2)]
         )
         self.assertEqual(
-            NR(10,0,-1).range_intersection([NR(7,None,-2)]),
-            [NR(1,7,2)],
+            NR(10, 0, -1).range_intersection([NR(7, None, -2)]), [NR(1, 7, 2)]
         )
         self.assertEqual(
-            NR(0,None,-1).range_intersection([NR(None,-10,0)]),
-            [NR(-10,None,-1)],
+            NR(0, None, -1).range_intersection([NR(None, -10, 0)]), [NR(-10, None, -1)]
         )
 
         # Test continuous ranges
+        self.assertEqual(NR(0, 5, 0).range_intersection([NR(5, 10, 0)]), [NR(5, 5, 0)])
         self.assertEqual(
-            NR(0,5,0).range_intersection([NR(5,10,0)]),
-            [NR(5,5,0)],
-        )
-        self.assertEqual(
-            NR(0,None,0).range_intersection([NR(5,None,0)]),
-            [NR(5,None,0)],
+            NR(0, None, 0).range_intersection([NR(5, None, 0)]), [NR(5, None, 0)]
         )
 
         # Disjoint ranges...
@@ -637,10 +682,10 @@ class TestNumericRange(unittest.TestCase):
         self.assertEqual(a.range_intersection([NR(0.5, None, 1)]), [])
 
     def test_pickle(self):
-        a = NR(0,100,5)
+        a = NR(0, 100, 5)
         b = pickle.loads(pickle.dumps(a))
-        self.assertIsNot(a,b)
-        self.assertEqual(a,b)
+        self.assertIsNot(a, b)
+        self.assertEqual(a, b)
 
 
 class TestAnyRange(unittest.TestCase):
@@ -667,31 +712,19 @@ class TestAnyRange(unittest.TestCase):
         self.assertIn('a', a)
 
     def test_range_difference(self):
-        self.assertEqual(
-            AnyRange().range_difference([NR(0,None,1)]),
-            [AnyRange()]
-        )
-        self.assertEqual(
-            NR(0,None,1).range_difference([AnyRange()]),
-            []
-        )
-        self.assertEqual(
-            AnyRange().range_difference([AnyRange()]),
-            []
-        )
+        self.assertEqual(AnyRange().range_difference([NR(0, None, 1)]), [AnyRange()])
+        self.assertEqual(NR(0, None, 1).range_difference([AnyRange()]), [])
+        self.assertEqual(AnyRange().range_difference([AnyRange()]), [])
 
     def test_range_intersection(self):
         self.assertEqual(
-            AnyRange().range_intersection([NR(0,None,1)]),
-            [NR(0,None,1)]
+            AnyRange().range_intersection([NR(0, None, 1)]), [NR(0, None, 1)]
         )
         self.assertEqual(
-            NR(0,None,1).range_intersection([AnyRange()]),
-            [NR(0,None,1)]
+            NR(0, None, 1).range_intersection([AnyRange()]), [NR(0, None, 1)]
         )
         self.assertEqual(
-            NR(0,None,-1).range_intersection([AnyRange()]),
-            [NR(0,None,-1)]
+            NR(0, None, -1).range_intersection([AnyRange()]), [NR(0, None, -1)]
         )
 
     def test_info_methods(self):
@@ -702,8 +735,8 @@ class TestAnyRange(unittest.TestCase):
     def test_pickle(self):
         a = AnyRange()
         b = pickle.loads(pickle.dumps(a))
-        self.assertIsNot(a,b)
-        self.assertEqual(a,b)
+        self.assertIsNot(a, b)
+        self.assertEqual(a, b)
 
 
 class TestNonNumericRange(unittest.TestCase):
@@ -744,26 +777,14 @@ class TestNonNumericRange(unittest.TestCase):
     def test_range_difference(self):
         a = NNR('a')
         b = NNR(None)
-        self.assertEqual(
-            a.range_difference([NNR('a')]),
-            []
-        )
-        self.assertEqual(
-            a.range_difference([b]),
-            [NNR('a')]
-        )
+        self.assertEqual(a.range_difference([NNR('a')]), [])
+        self.assertEqual(a.range_difference([b]), [NNR('a')])
 
     def test_range_intersection(self):
         a = NNR('a')
         b = NNR(None)
-        self.assertEqual(
-            a.range_intersection([b]),
-            []
-        )
-        self.assertEqual(
-            a.range_intersection([NNR('a')]),
-            [NNR('a')]
-        )
+        self.assertEqual(a.range_intersection([b]), [])
+        self.assertEqual(a.range_intersection([NNR('a')]), [NNR('a')])
 
     def test_info_methods(self):
         a = NNR('a')
@@ -773,22 +794,22 @@ class TestNonNumericRange(unittest.TestCase):
     def test_pickle(self):
         a = NNR('a')
         b = pickle.loads(pickle.dumps(a))
-        self.assertIsNot(a,b)
-        self.assertEqual(a,b)
+        self.assertIsNot(a, b)
+        self.assertEqual(a, b)
 
 
 class TestRangeProduct(unittest.TestCase):
     def test_str(self):
-        a = RP([[NR(0,10,1)],[NR(0,10,0),NNR('a')]])
+        a = RP([[NR(0, 10, 1)], [NR(0, 10, 0), NNR('a')]])
         self.assertEqual(str(a), '<[0:10], ([0..10], {a})>')
 
     def test_range_relational(self):
-        a = RP([[NR(0,10,1)],[NR(0,10,0),NNR('a')]])
-        aa = RP([[NR(0,10,1)],[NR(0,10,0),NNR('a')]])
-        b = RP([[NR(0,10,1)],[NR(0,10,0),NNR('a'),NNR('b')]])
-        c = RP([[NR(0,10,1)],[NR(0,10,0),NNR('b')]])
-        d = RP([[NR(0,10,0)],[NR(0,10,0),NNR('a')]])
-        d = RP([[NR(0,10,0)],[AnyRange()]])
+        a = RP([[NR(0, 10, 1)], [NR(0, 10, 0), NNR('a')]])
+        aa = RP([[NR(0, 10, 1)], [NR(0, 10, 0), NNR('a')]])
+        b = RP([[NR(0, 10, 1)], [NR(0, 10, 0), NNR('a'), NNR('b')]])
+        c = RP([[NR(0, 10, 1)], [NR(0, 10, 0), NNR('b')]])
+        d = RP([[NR(0, 10, 0)], [NR(0, 10, 0), NNR('a')]])
+        d = RP([[NR(0, 10, 0)], [AnyRange()]])
 
         self.assertTrue(a.issubset(aa))
         self.assertTrue(a.issubset(b))
@@ -796,37 +817,37 @@ class TestRangeProduct(unittest.TestCase):
         self.assertTrue(a.issubset(d))
 
         self.assertFalse(a.issubset(NNR('a')))
-        self.assertFalse(a.issubset(NR(None,None,0)))
+        self.assertFalse(a.issubset(NR(None, None, 0)))
         self.assertTrue(a.issubset(AnyRange()))
 
     def test_contains(self):
         a = NNR('a')
-        b = NR(0,5,0)
-        c = NR(5,10,1)
-        x = RP([[a],[b,c]])
+        b = NR(0, 5, 0)
+        c = NR(5, 10, 1)
+        x = RP([[a], [b, c]])
         self.assertNotIn('a', x)
         self.assertNotIn(0, x)
         self.assertNotIn(None, x)
-        self.assertIn(('a',0), x)
-        self.assertIn(('a',6), x)
-        self.assertNotIn(('a',6.5), x)
+        self.assertIn(('a', 0), x)
+        self.assertIn(('a', 6), x)
+        self.assertNotIn(('a', 6.5), x)
 
     def test_equality(self):
         a = NNR('a')
-        b = NR(0,5,0)
-        c = NR(5,10,1)
-        x = RP([[a],[b,c]])
-        y = RP([[a],[c]])
-        self.assertEqual(x,x)
-        self.assertNotEqual(x,y)
+        b = NR(0, 5, 0)
+        c = NR(5, 10, 1)
+        x = RP([[a], [b, c]])
+        y = RP([[a], [c]])
+        self.assertEqual(x, x)
+        self.assertNotEqual(x, y)
 
     def test_isdisjoint(self):
         a = NNR('a')
-        b = NR(0,5,0)
-        c = NR(5,10,1)
-        x = RP([[a],[b,c]])
-        y = RP([[a],[c]])
-        z = RP([[a],[b],[c]])
+        b = NR(0, 5, 0)
+        c = NR(5, 10, 1)
+        x = RP([[a], [b, c]])
+        y = RP([[a], [c]])
+        z = RP([[a], [b], [c]])
         w = RP([[AnyRange()], [b]])
         self.assertFalse(x.isdisjoint(x))
         self.assertFalse(x.isdisjoint(y))
@@ -835,48 +856,49 @@ class TestRangeProduct(unittest.TestCase):
         self.assertTrue(x.isdisjoint(a))
         self.assertFalse(y.isdisjoint(w))
         self.assertFalse(x.isdisjoint(AnyRange()))
-        v = RP([[AnyRange()],[NR(0,5,0,(False,False))]])
+        v = RP([[AnyRange()], [NR(0, 5, 0, (False, False))]])
         self.assertTrue(y.isdisjoint(v))
 
     def test_range_difference(self):
         a = NNR('a')
-        b = NR(0,5,0)
-        c = NR(5,10,1)
-        x = RP([[a],[b,c]])
-        y = RP([[a],[c]])
-        z = RP([[a],[b],[c]])
+        b = NR(0, 5, 0)
+        b1 = NR(0, 5, 0, '[)')  # Note: b & c overlap, so [b,c]-c != b
+        c = NR(5, 10, 1)
+        x = RP([[a], [b, c]])
+        y = RP([[a], [c]])
+        z = RP([[a], [b], [c]])
         w = RP([list(Any.ranges()), [b]])
         self.assertEqual(x.range_difference([x]), [])
-        self.assertEqual(x.range_difference([y]), [RP([[a],[b]])])
+        self.assertEqual(x.range_difference([y]), [RP([[a], [b1]])])
         self.assertEqual(x.range_difference([z]), [x])
         self.assertEqual(x.range_difference(Any.ranges()), [])
-        self.assertEqual(x.range_difference([w]), [RP([[a],[NR(6,10,1)]])])
-        v = RP([[AnyRange()],[NR(0,5,0,(False,False))]])
+        self.assertEqual(x.range_difference([w]), [RP([[a], [NR(6, 10, 1)]])])
+        v = RP([[AnyRange()], [NR(0, 5, 0, (False, False))]])
         self.assertEqual(y.range_difference([v]), [y])
 
     def test_range_intersection(self):
         a = NNR('a')
-        b = NR(0,5,0)
-        c = NR(5,10,1)
-        x = RP([[a],[b,c]])
-        y = RP([[a],[c]])
-        z = RP([[a],[b],[c]])
+        b = NR(0, 5, 0)
+        c = NR(5, 10, 1)
+        x = RP([[a], [b, c]])
+        y = RP([[a], [c]])
+        z = RP([[a], [b], [c]])
         w = RP([list(Any.ranges()), [b]])
         self.assertEqual(x.range_intersection([x]), [x])
         self.assertEqual(x.range_intersection([y]), [y])
         self.assertEqual(x.range_intersection([z]), [])
         self.assertEqual(x.range_intersection(Any.ranges()), [x])
-        self.assertEqual(x.range_intersection([w]), [RP([[a],[b]])])
-        self.assertEqual(y.range_intersection([w]), [RP([[a],[NR(5,5,0)]])])
-        v = RP([[AnyRange()],[NR(0,5,0,(False,False))]])
+        self.assertEqual(x.range_intersection([w]), [RP([[a], [b]])])
+        self.assertEqual(y.range_intersection([w]), [RP([[a], [NR(5, 5, 0)]])])
+        v = RP([[AnyRange()], [NR(0, 5, 0, (False, False))]])
         self.assertEqual(y.range_intersection([v]), [])
 
     def test_info_methods(self):
         a = NNR('a')
-        b = NR(0,5,0)
-        c = NR(5,10,1)
-        x = RP([[a],[b,c]])
-        y = RP([[a],[c]])
+        b = NR(0, 5, 0)
+        c = NR(5, 10, 1)
+        x = RP([[a], [b, c]])
+        y = RP([[a], [c]])
         self.assertFalse(x.isdiscrete())
         self.assertFalse(x.isfinite())
         self.assertTrue(y.isdiscrete())
@@ -884,17 +906,15 @@ class TestRangeProduct(unittest.TestCase):
 
     def test_pickle(self):
         a = NNR('a')
-        b = NR(0,5,0)
-        c = NR(5,10,1)
-        x = RP([[a],[b,c]])
-        y = RP([[a],[c]])
+        b = NR(0, 5, 0)
+        c = NR(5, 10, 1)
+        x = RP([[a], [b, c]])
+        y = RP([[a], [c]])
 
         xx = pickle.loads(pickle.dumps(x))
-        self.assertIsNot(x,xx)
-        self.assertEqual(x,xx)
+        self.assertIsNot(x, xx)
+        self.assertEqual(x, xx)
 
         yy = pickle.loads(pickle.dumps(y))
-        self.assertIsNot(y,yy)
-        self.assertEqual(y,yy)
-
-
+        self.assertIsNot(y, yy)
+        self.assertEqual(y, yy)

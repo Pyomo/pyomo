@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -10,29 +11,35 @@
 
 import copy
 import weakref
+from pyomo.common.autoslots import AutoSlots
+
 
 def _not_implemented(*args, **kwds):
-    raise NotImplementedError("This property is abstract")     #pragma:nocover
+    raise NotImplementedError("This property is abstract")  # pragma:nocover
+
 
 def _abstract_readwrite_property(**kwds):
-    p = property(fget=_not_implemented,
-                 fset=_not_implemented,
-                 **kwds)
+    p = property(fget=_not_implemented, fset=_not_implemented, **kwds)
     return p
 
+
 def _abstract_readonly_property(**kwds):
-    p = property(fget=_not_implemented,
-                 **kwds)
+    p = property(fget=_not_implemented, **kwds)
     return p
+
 
 class _no_ctype(object):
     """The default argument for methods that accept a ctype."""
+
     pass
+
 
 # This will be populated outside of core.kernel. It will map
 # AML classes (which are the ctypes used by all of the
 # solver interfaces) to Kernel classes
 _convert_ctype = {}
+_kernel_ctype_backmap = {}
+
 
 def _convert_descend_into(value):
     """Converts the descend_into keyword to a function"""
@@ -42,10 +49,13 @@ def _convert_descend_into(value):
         return _convert_descend_into._true
     else:
         return _convert_descend_into._false
+
+
 _convert_descend_into._true = lambda x: True
 _convert_descend_into._false = lambda x: False
 
-class ICategorizedObject(object):
+
+class ICategorizedObject(AutoSlots.Mixin):
     """
     Interface for objects that maintain a weak reference to
     a parent storage object and have a category type.
@@ -65,7 +75,9 @@ class ICategorizedObject(object):
         _active (bool): Stores the active status of this
             object.
     """
+
     __slots__ = ()
+    __autoslot_mappers__ = {'_parent': AutoSlots.weakref_mapper}
 
     # These flags can be used by implementations
     # to avoid isinstance calls.
@@ -104,11 +116,10 @@ class ICategorizedObject(object):
     def active(self):
         """The active status of this object."""
         return self._active
+
     @active.setter
     def active(self, value):
-        raise AttributeError(
-            "Assignment not allowed. Use the "
-            "(de)activate method")
+        raise AttributeError("Assignment not allowed. Use the (de)activate method")
 
     ### The following group of methods use object.__setattr__
     ### to update the _parent, _storage_key, and _active flags.
@@ -130,13 +141,16 @@ class ICategorizedObject(object):
     def deactivate(self):
         """Deactivate this object."""
         object.__setattr__(self, "_active", False)
+
     ###
 
-    def getname(self,
-                fully_qualified=False,
-                name_buffer={}, # HACK: ignored (required to work with some solver interfaces, but that code should change soon)
-                convert=str,
-                relative_to=None):
+    def getname(
+        self,
+        fully_qualified=False,
+        name_buffer={},  # HACK: ignored (required to work with some solver interfaces, but that code should change soon)
+        convert=str,
+        relative_to=None,
+    ):
         """
         Dynamically generates a name for this object.
 
@@ -158,8 +172,7 @@ class ICategorizedObject(object):
             context of its parent; otherwise (if no parent
             exists), this method returns :const:`None`.
         """
-        assert fully_qualified or \
-            (relative_to is None)
+        assert fully_qualified or (relative_to is None)
         parent = self.parent
         if parent is None:
             return None
@@ -167,14 +180,11 @@ class ICategorizedObject(object):
         key = self.storage_key
         name = parent._child_storage_entry_string % convert(key)
         if fully_qualified:
-            parent_name = parent.getname(fully_qualified=True,
-                                         relative_to=relative_to)
-            if (parent_name is not None) and \
-               ((relative_to is None) or \
-                (parent is not relative_to)):
-                return (parent_name +
-                        parent._child_storage_delimiter_string +
-                        name)
+            parent_name = parent.getname(fully_qualified=True, relative_to=relative_to)
+            if (parent_name is not None) and (
+                (relative_to is None) or (parent is not relative_to)
+            ):
+                return parent_name + parent._child_storage_delimiter_string + name
             else:
                 return name
         else:
@@ -201,7 +211,7 @@ class ICategorizedObject(object):
         name is returned."""
         name = self.name
         if name is None:
-            return "<"+self.__class__.__name__+">"
+            return "<" + self.__class__.__name__ + ">"
         else:
             return name
 
@@ -218,9 +228,9 @@ class ICategorizedObject(object):
         save_parent = self._parent
         object.__setattr__(self, "_parent", None)
         try:
-            new_block = copy.deepcopy(self,
-                                      {'__categorized_object_scope__':
-                                       {id(self): True, id(None): False}})
+            new_block = copy.deepcopy(
+                self, {'__block_scope__': {id(self): True, id(None): False}}
+            )
         finally:
             object.__setattr__(self, "_parent", save_parent)
         return new_block
@@ -233,68 +243,39 @@ class ICategorizedObject(object):
     #
 
     def __deepcopy__(self, memo):
-        if '__categorized_object_scope__' in memo and \
-                id(self) not in memo['__categorized_object_scope__']:
-            _known = memo['__categorized_object_scope__']
-            _new = []
+        if '__block_scope__' in memo:
+            _known = memo['__block_scope__']
+            _new = None
             tmp = self.parent
-            tmpId = id(tmp)
-            while tmpId not in _known:
-                _new.append(tmpId)
+            _in_scope = tmp is None
+            while id(tmp) not in _known:
+                _new = (_new, id(tmp))
                 tmp = tmp.parent
-                tmpId = id(tmp)
+            _in_scope |= _known[id(tmp)]
 
-            for _id in _new:
-                _known[_id] = _known[tmpId]
+            while _new is not None:
+                _new, _id = _new
+                _known[_id] = _in_scope
 
-            if not _known[tmpId]:
+            if not _in_scope and id(self) not in _known:
                 # component is out-of-scope. shallow copy only
-                ans = memo[id(self)] = self
-                return ans
+                memo[id(self)] = self
+                return self
+
+        if id(self) in memo:
+            return memo[id(self)]
 
         ans = memo[id(self)] = self.__class__.__new__(self.__class__)
         ans.__setstate__(copy.deepcopy(self.__getstate__(), memo))
         return ans
 
-    #
-    # The following two methods allow implementations to be
-    # pickled. These should work whether or not the
-    # implementation makes use of __slots__, and whether or
-    # not non-empty __slots__ declarations appear on
-    # multiple classes in the inheritance chain.
-    #
-
-    def __getstate__(self):
-        state = getattr(self, "__dict__", {}).copy()
-        # Get all slots in the inheritance chain
-        for cls in self.__class__.__mro__:
-            for key in cls.__dict__.get("__slots__",()):
-                state[key] = getattr(self, key)
-        # make sure we don't store the __dict__ in
-        # duplicate (it can be declared as a slot)
-        state.pop('__dict__', None)
-        # make sure not to pickle the __weakref__
-        # slot if it was declared
-        state.pop('__weakref__', None)
-        # make sure to dereference the parent weakref
-        state['_parent'] = self.parent
-        return state
-
-    def __setstate__(self, state):
-        for key, value in state.items():
-            # bypass a possibly overridden __setattr__
-            object.__setattr__(self, key, value)
-        # make sure _parent is a weakref
-        # if it is not None
-        if self._parent is not None:
-            self._update_parent_and_storage_key(self._parent,
-                                                self._storage_key)
 
 class ICategorizedObjectContainer(ICategorizedObject):
     """
     Interface for categorized containers of categorized
     objects.
     """
+
     _is_container = True
     _child_storage_delimiter_string = None
     _child_storage_entry_string = None
@@ -327,13 +308,13 @@ class ICategorizedObjectContainer(ICategorizedObject):
     def child(self, *args, **kwds):
         """Returns a child of this container given a storage
         key."""
-        raise NotImplementedError     #pragma:nocover
+        raise NotImplementedError  # pragma:nocover
 
     def children(self, *args, **kwds):
         """A generator over the children of this container."""
-        raise NotImplementedError     #pragma:nocover
+        raise NotImplementedError  # pragma:nocover
 
     def components(self, *args, **kwds):
         """A generator over the set of components stored
         under this container."""
-        raise NotImplementedError     #pragma:nocover
+        raise NotImplementedError  # pragma:nocover

@@ -1,23 +1,20 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
 import math
 import logging
-from pyomo.common.errors import DeveloperError, InfeasibleConstraintException, PyomoException
+from pyomo.common.errors import InfeasibleConstraintException, IntervalException
 
 logger = logging.getLogger(__name__)
 inf = float('inf')
-
-
-class IntervalException(PyomoException):
-    pass
 
 
 def add(xl, xu, yl, yu):
@@ -29,37 +26,65 @@ def sub(xl, xu, yl, yu):
 
 
 def mul(xl, xu, yl, yu):
-    lb = min(xl*yl, xl*yu, xu*yl, xu*yu)
-    ub = max(xl*yl, xl*yu, xu*yl, xu*yu)
-    if math.isnan(lb):
-        lb = -inf
-    if math.isnan(ub):
-        ub = inf
+    lb = inf
+    ub = -inf
+    for i in (xl * yl, xu * yu, xu * yl, xl * yu):
+        if i < lb:
+            lb = i
+        if i > ub:
+            ub = i
+        if i != i:  # math.isnan(i)
+            return (-inf, inf)
     return lb, ub
 
 
 def inv(xl, xu, feasibility_tol):
-    if xl <= feasibility_tol and xu >= -feasibility_tol:
-        # if the denominator (x) can include 0, then 1/x is unbounded.
+    """
+    The case where xl is very slightly positive but should be very slightly negative (or xu is very slightly negative
+    but should be very slightly positive) should not be an issue. Suppose xu is 2 and xl is 1e-15 but should be -1e-15.
+    The bounds obtained from this function will be [0.5, 1e15] or [0.5, inf), depending on the value of
+    feasibility_tol. The true bounds are (-inf, -1e15] U [0.5, inf), where U is union. The exclusion of (-inf, -1e15]
+    should be acceptable. Additionally, it very important to return a non-negative interval when xl is non-negative.
+    """
+    if xu - xl <= -feasibility_tol:
+        raise InfeasibleConstraintException(
+            f'lower bound is greater than upper bound in inv; xl: {xl}; xu: {xu}'
+        )
+    elif xu <= 0 <= xl:
+        # This has to return -inf to inf because it could later be multiplied by 0
         lb = -inf
         ub = inf
-    else:
+    elif xl < 0 < xu:
+        lb = -inf
+        ub = inf
+    elif 0 <= xl <= feasibility_tol:
+        # xu must be strictly positive
+        ub = inf
+        lb = 1.0 / xu
+    elif xl > feasibility_tol:
+        # xl and xu must be strictly positive
         ub = 1.0 / xl
         lb = 1.0 / xu
+    elif -feasibility_tol <= xu <= 0:
+        # xl must be strictly negative
+        lb = -inf
+        ub = 1.0 / xl
+    elif xu < -feasibility_tol:
+        # xl and xu must be strictly negative
+        ub = 1.0 / xl
+        lb = 1.0 / xu
+    else:
+        # everything else
+        lb = -inf
+        ub = inf
     return lb, ub
 
 
 def div(xl, xu, yl, yu, feasibility_tol):
-    if yl <= feasibility_tol and yu >= -feasibility_tol:
-        # if the denominator (y) can include 0, then x/y is unbounded.
-        lb = -inf
-        ub = inf
-    else:
-        lb, ub = mul(xl, xu, *inv(yl, yu, feasibility_tol))
-    return lb, ub
+    return mul(xl, xu, *inv(yl, yu, feasibility_tol))
 
 
-def power(xl, xu, yl, yu):
+def power(xl, xu, yl, yu, feasibility_tol):
     """
     Compute bounds on x**y.
     """
@@ -67,24 +92,28 @@ def power(xl, xu, yl, yu):
         """
         If x is always positive, things are simple. We only need to worry about the sign of y.
         """
-        if yl < 0 and yu > 0:
-            lb = min(xu ** yl, xl ** yu)
-            ub = max(xl ** yl, xu ** yu)
+        if yl < 0 < yu:
+            lb = min(xu**yl, xl**yu)
+            ub = max(xl**yl, xu**yu)
         elif yl >= 0:
             lb = min(xl**yl, xl**yu)
             ub = max(xu**yl, xu**yu)
-        elif yu <= 0:
+        else:  # yu <= 0:
             lb = min(xu**yl, xu**yu)
             ub = max(xl**yl, xl**yu)
-        else:
-            raise DeveloperError()
     elif xl == 0:
         if yl >= 0:
-            lb = min(xl ** yl, xl ** yu)
-            ub = max(xu ** yl, xu ** yu)
+            lb = min(xl**yl, xl**yu)
+            ub = max(xu**yl, xu**yu)
+        elif yu <= 0:
+            lb, ub = inv(
+                *power(xl, xu, *sub(0, 0, yl, yu), feasibility_tol), feasibility_tol
+            )
         else:
-            lb = -inf
-            ub = inf
+            lb1, ub1 = power(xl, xu, 0, yu, feasibility_tol)
+            lb2, ub2 = power(xl, xu, yl, 0, feasibility_tol)
+            lb = min(lb1, lb2)
+            ub = max(ub1, ub2)
     elif yl == yu and yl == round(yl):
         # the exponent is an integer, so x can be negative
         """
@@ -92,55 +121,58 @@ def power(xl, xu, yl, yu):
         1) The sign of x
         2) The sign of y
         3) Whether y is even or odd.
-        
+
         There are also special cases to avoid math domain errors.
         """
         y = yl
         if xu <= 0:
             if y < 0:
                 if y % 2 == 0:
-                    lb = xl ** y
+                    lb = xl**y
                     if xu == 0:
                         ub = inf
                     else:
-                        ub = xu ** y
+                        ub = xu**y
                 else:
                     if xu == 0:
                         lb = -inf
                         ub = inf
                     else:
-                        lb = xu ** y
-                        ub = xl ** y
+                        lb = xu**y
+                        ub = xl**y
             else:
                 if y % 2 == 0:
-                    lb = xu ** y
-                    ub = xl ** y
+                    lb = xu**y
+                    ub = xl**y
                 else:
-                    lb = xl ** y
-                    ub = xu ** y
-        else:
+                    lb = xl**y
+                    ub = xu**y
+        else:  # xu is positive
             if y < 0:
                 if y % 2 == 0:
-                    lb = min(xl ** y, xu ** y)
+                    lb = min(xl**y, xu**y)
                     ub = inf
                 else:
-                    lb = - inf
+                    lb = -inf
                     ub = inf
-            else:
+            else:  # exponent is nonnegative
                 if y % 2 == 0:
+                    # xl is negative and xu is positive, so lb is 0
                     lb = 0
-                    ub = max(xl ** y, xu ** y)
+                    ub = max(xl**y, xu**y)
                 else:
-                    lb = xl ** y
-                    ub = xu ** y
+                    lb = xl**y
+                    ub = xu**y
     elif yl == yu:
         # the exponent has to be fractional, so x must be positive
         if xu < 0:
             msg = 'Cannot raise a negative number to the power of {0}.\n'.format(yl)
-            msg += 'The upper bound of a variable raised to the power of {0} is {1}'.format(yl, xu)
+            msg += 'The upper bound of a variable raised to the power of {0} is {1}'.format(
+                yl, xu
+            )
             raise InfeasibleConstraintException(msg)
         xl = 0
-        lb, ub = power(xl, xu, yl, yu)
+        lb, ub = power(xl, xu, yl, yu, feasibility_tol)
     else:
         lb = -inf
         ub = inf
@@ -175,17 +207,21 @@ def _inverse_power1(zl, zu, yl, yu, orig_xl, orig_xu, feasibility_tol):
             if y is even, then there are two primary cases (note that it is much easier to walk through these
             while looking at plots):
             case 1: y is positive
-                x**y is convex, positive, and symmetric. The bounds on x depend on the lower bound of z. If zl <= 0, 
-                then xl should simply be -xu. However, if zl > 0, then we may be able to say something better. For 
-                example, if the original lower bound on x is positive, then we can keep xl computed from 
-                x = exp(ln(z) / y). Furthermore, if the original lower bound on x is larger than -xl computed from 
+                x**y is convex, positive, and symmetric. The bounds on x depend on the lower bound of z. If zl <= 0,
+                then xl should simply be -xu. However, if zl > 0, then we may be able to say something better. For
+                example, if the original lower bound on x is positive, then we can keep xl computed from
+                x = exp(ln(z) / y). Furthermore, if the original lower bound on x is larger than -xl computed from
                 x = exp(ln(z) / y), then we can still keep the xl computed from x = exp(ln(z) / y). Similar logic
                 applies to the upper bound of x.
             case 2: y is negative
                 The ideas are similar to case 1.
             """
             if zu + feasibility_tol < 0:
-                raise InfeasibleConstraintException('Infeasible. Anything to the power of {0} must be positive.'.format(y))
+                raise InfeasibleConstraintException(
+                    'Infeasible. Anything to the power of {0} must be positive.'.format(
+                        y
+                    )
+                )
             if y > 0:
                 if zu <= 0:
                     _xl = 0
@@ -206,7 +242,11 @@ def _inverse_power1(zl, zu, yl, yu, orig_xl, orig_xu, feasibility_tol):
                 xu = _xu
             else:
                 if zu == 0:
-                    raise InfeasibleConstraintException('Infeasible. Anything to the power of {0} must be positive.'.format(y))
+                    raise InfeasibleConstraintException(
+                        'Infeasible. Anything to the power of {0} must be positive.'.format(
+                            y
+                        )
+                    )
                 elif zl <= 0:
                     _xl = -inf
                     _xu = inf
@@ -223,20 +263,20 @@ def _inverse_power1(zl, zu, yl, yu, orig_xl, orig_xu, feasibility_tol):
                 xu = _xu
         else:  # y % 2 == 1
             """
-            y is odd. 
+            y is odd.
             Case 1: y is positive
                 x**y is monotonically increasing. If y is positive, then we can can compute the bounds on x using
                 x = z**(1/y) and the signs on xl and xu depend on the signs of zl and zu.
             Case 2: y is negative
-                Again, this is easier to visualize with a plot. x**y approaches zero when x approaches -inf or inf. 
+                Again, this is easier to visualize with a plot. x**y approaches zero when x approaches -inf or inf.
                 Thus, if zl < 0 < zu, then no bounds can be inferred for x. If z is positive (zl >=0 ) then we can
                 use the bounds computed from x = exp(ln(z) / y). If z is negative (zu <= 0), then we live in the
                 bottom left quadrant, xl depends on zu, and xu depends on zl.
             """
             if y > 0:
-                xl = abs(zl)**(1.0/y)
+                xl = abs(zl) ** (1.0 / y)
                 xl = math.copysign(xl, zl)
-                xu = abs(zu)**(1.0/y)
+                xu = abs(zu) ** (1.0 / y)
                 xu = math.copysign(xu, zu)
             else:
                 if zl >= 0:
@@ -245,11 +285,11 @@ def _inverse_power1(zl, zu, yl, yu, orig_xl, orig_xu, feasibility_tol):
                     if zu == 0:
                         xl = -inf
                     else:
-                        xl = -abs(zu)**(1.0/y)
+                        xl = -abs(zu) ** (1.0 / y)
                     if zl == 0:
                         xu = -inf
                     else:
-                        xu = -abs(zl)**(1.0/y)
+                        xu = -abs(zl) ** (1.0 / y)
                 else:
                     xl = -inf
                     xu = inf
@@ -266,13 +306,39 @@ def _inverse_power2(zl, zu, xl, xu, feasiblity_tol):
     if the exponent is an integer.
     """
     if xu <= 0:
-        raise IntervalException('Cannot raise a negative variable to a fractional power.')
+        raise IntervalException(
+            'Cannot raise a negative variable to a fractional power.'
+        )
     if (xl > 0 and zu <= 0) or (xl >= 0 and zu < 0):
-        raise InfeasibleConstraintException('A positive variable raised to the power of anything must be positive.')
+        raise InfeasibleConstraintException(
+            'A positive variable raised to the power of anything must be positive.'
+        )
     lba, uba = log(zl, zu)
     lbb, ubb = log(xl, xu)
     yl, yu = div(lba, uba, lbb, ubb, feasiblity_tol)
     return yl, yu
+
+
+def interval_abs(xl, xu):
+    abs_xl = abs(xl)
+    abs_xu = abs(xu)
+    if xl <= 0 and 0 <= xu:
+        res_lb = 0
+        res_ub = max(abs_xl, abs_xu)
+    else:
+        res_lb = min(abs_xl, abs_xu)
+        res_ub = max(abs_xl, abs_xu)
+    return res_lb, res_ub
+
+
+def _inverse_abs(zl, zu):
+    if zl < 0:
+        zl = 0
+    if zu < 0:
+        zu = 0
+    xu = max(zl, zu)
+    xl = -xu
+    return xl, xu
 
 
 def exp(xl, xu):
@@ -466,7 +532,7 @@ def asin(xl, xu, yl, yu, feasibility_tol):
             xl = sin(y)
             y >= yl
 
-        globally. 
+        globally.
         """
         # first find the next minimum of x = sin(y). Minimums occur at y = 2*pi*n - pi/2 for integer n.
         i = (yl + pi / 2) / (2 * pi)
@@ -476,7 +542,9 @@ def asin(xl, xu, yl, yu, feasibility_tol):
         i2 = 2 * pi * i2 - pi / 2
         # now find the next value of y such that xl = sin(y). This can be computed by a distance from the minimum (i).
         y_tmp = math.asin(xl)  # this will give me a value between -pi/2 and pi/2
-        dist = y_tmp - (-pi / 2)  # this is the distance between the minimum of the sin function and a value that
+        dist = y_tmp - (
+            -pi / 2
+        )  # this is the distance between the minimum of the sin function and a value that
         # satisfies xl = sin(y)
         lb1 = i1 + dist
         lb2 = i2 + dist
@@ -577,7 +645,7 @@ def acos(xl, xu, yl, yu, feasibility_tol):
             xl = cos(y)
             y >= yl
 
-        globally. 
+        globally.
         """
         # first find the next minimum of x = cos(y). Minimums occur at y = 2*pi*n - pi for integer n.
         i = (yl + pi) / (2 * pi)
@@ -587,7 +655,9 @@ def acos(xl, xu, yl, yu, feasibility_tol):
         i2 = 2 * pi * i2 - pi
         # now find the next value of y such that xl = cos(y). This can be computed by a distance from the minimum (i).
         y_tmp = math.acos(xl)  # this will give me a value between 0 and pi
-        dist = pi - y_tmp  # this is the distance between the minimum of the sin function and a value that
+        dist = (
+            pi - y_tmp
+        )  # this is the distance between the minimum of the sin function and a value that
         # satisfies xl = sin(y)
         lb1 = i1 + dist
         lb2 = i2 + dist
@@ -678,7 +748,7 @@ def atan(xl, xu, yl, yu):
         i = math.floor(i)
         i = pi * i + pi / 2
         y_tmp = math.atan(xl)
-        dist = y_tmp - (-pi/2)
+        dist = y_tmp - (-pi / 2)
         lb = i + dist
 
     if xu >= inf or yu >= inf:

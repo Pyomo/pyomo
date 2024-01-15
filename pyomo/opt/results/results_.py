@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -19,10 +20,7 @@ import os.path
 
 from pyomo.common.dependencies import yaml, yaml_load_args, yaml_available
 import pyomo.opt
-from pyomo.opt.results.container import (undefined,
-                                         ignore,
-                                         ListContainer,
-                                         MapContainer)
+from pyomo.opt.results.container import undefined, ignore, ListContainer, MapContainer
 import pyomo.opt.results.solution
 from pyomo.opt.results.solution import default_print_options as dpo
 import pyomo.opt.results.problem
@@ -32,8 +30,8 @@ from io import StringIO
 
 logger = logging.getLogger(__name__)
 
-class SolverResults(MapContainer):
 
+class SolverResults(MapContainer):
     undefined = undefined
     default_print_options = dpo
 
@@ -41,24 +39,30 @@ class SolverResults(MapContainer):
         MapContainer.__init__(self)
         self._sections = []
         self._descriptions = {}
-        self.add('problem',
-                 ListContainer(pyomo.opt.results.problem.ProblemInformation),
-                 False,
-                 "Problem Information")
-        self.add('solver',
-                 ListContainer(pyomo.opt.results.solver.SolverInformation),
-                 False,
-                 "Solver Information")
-        self.add('solution',
-                 pyomo.opt.results.solution.SolutionSet(),
-                 False,
-                 "Solution Information")
+        self.add(
+            'problem',
+            ListContainer(pyomo.opt.results.problem.ProblemInformation),
+            False,
+            "Problem Information",
+        )
+        self.add(
+            'solver',
+            ListContainer(pyomo.opt.results.solver.SolverInformation),
+            False,
+            "Solver Information",
+        )
+        self.add(
+            'solution',
+            pyomo.opt.results.solution.SolutionSet(),
+            False,
+            "Solution Information",
+        )
 
     def add(self, name, value, active, description):
         self.declare(name, value=value, active=active)
         tmp = self._convert(name)
         self._sections.append(tmp)
-        self._descriptions[tmp]=description
+        self._descriptions[tmp] = description
 
     def json_repn(self, options=None):
         if options is None:
@@ -95,7 +99,8 @@ class SolverResults(MapContainer):
             elif normalized_ext and _fmt != normalized_ext:
                 logger.warning(
                     "writing results to file (%s) using what appears "
-                    "to be an incompatible format (%s)" % (fname, _fmt))
+                    "to be an incompatible format (%s)" % (fname, _fmt)
+                )
             with open(fname, "w") as OUTPUT:
                 kwds['ostream'] = OUTPUT
                 kwds['format'] = _fmt
@@ -120,7 +125,7 @@ class SolverResults(MapContainer):
         option = copy.copy(SolverResults.default_print_options)
         # TODO: verify that we need this for-loop
         for key in kwds:
-            setattr(option,key,kwds[key])
+            setattr(option, key, kwds[key])
         repn = self.json_repn(option)
 
         for soln in repn.get('Solution', []):
@@ -129,7 +134,7 @@ class SolverResults(MapContainer):
                 if data not in soln:
                     continue
                 data_value = soln[data]
-                if not isinstance(data_value,dict):
+                if not isinstance(data_value, dict):
                     continue
                 if not data_value:
                     # a variable/constraint/objective may have no
@@ -137,19 +142,19 @@ class SolverResults(MapContainer):
                     # extracted in a solution.
                     soln[data] = "No values"
                     continue
-                for kk,vv in data_value.items():
+                for kk, vv in data_value.items():
                     # TODO: remove this if-block.  This is a hack
                     if not type(vv) is dict:
-                        vv = {'Value':vv}
+                        vv = {'Value': vv}
                     tmp = {}
-                    for k,v in vv.items():
+                    for k, v in vv.items():
                         # TODO: remove this if-block.  This is a hack
                         if v is not None and math.fabs(v) > 1e-16:
                             tmp[k] = v
                     if len(tmp) > 0:
                         soln[data][kk] = tmp
                     else:
-                        remove.add((data,kk))
+                        remove.add((data, kk))
                 for item in remove:
                     del soln[item[0]][item[1]]
         json.dump(repn, ostream, indent=4, sort_keys=True)
@@ -164,7 +169,7 @@ class SolverResults(MapContainer):
         option = copy.copy(SolverResults.default_print_options)
         # TODO: verify that we need this for-loop
         for key in kwds:
-            setattr(option,key,kwds[key])
+            setattr(option, key, kwds[key])
         repn = self._repn_(option)
 
         ostream.write("# ==========================================================\n")
@@ -174,11 +179,15 @@ class SolverResults(MapContainer):
             key = self._order[i]
             if not key in repn:
                 continue
-            item = dict.__getitem__(self,key)
-            ostream.write("# ----------------------------------------------------------\n")
+            item = dict.__getitem__(self, key)
+            ostream.write(
+                "# ----------------------------------------------------------\n"
+            )
             ostream.write("#   %s\n" % self._descriptions[key])
-            ostream.write("# ----------------------------------------------------------\n")
-            ostream.write(key+": ")
+            ostream.write(
+                "# ----------------------------------------------------------\n"
+            )
+            ostream.write(key + ": ")
             if isinstance(item, ListContainer):
                 item.pprint(ostream, option, prefix="", repn=repn[key])
             else:
@@ -191,9 +200,9 @@ class SolverResults(MapContainer):
         else:
             ostream = sys.stdin
         if 'filename' in kwds:
-            INPUT=open(kwds['filename'],"r")
+            INPUT = open(kwds['filename'], "r")
             del kwds['filename']
-            kwds['istream']=INPUT
+            kwds['istream'] = INPUT
             self.read(**kwds)
             INPUT.close()
             return
@@ -206,7 +215,7 @@ class SolverResults(MapContainer):
             key = self._order[i]
             if not key in repn:
                 continue
-            item = dict.__getitem__(self,key)
+            item = dict.__getitem__(self, key)
             item.load(repn[key])
 
     def __repr__(self):
@@ -214,7 +223,7 @@ class SolverResults(MapContainer):
 
     def __str__(self):
         ostream = StringIO()
-        option=SolverResults.default_print_options
+        option = SolverResults.default_print_options
         self.pprint(ostream, option, repn=self._repn_(option))
         return ostream.getvalue()
 
@@ -222,4 +231,4 @@ class SolverResults(MapContainer):
 if __name__ == '__main__':
     results = SolverResults()
     results.write(schema=True)
-    #print results
+    # print results

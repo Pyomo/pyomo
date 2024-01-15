@@ -2,16 +2,16 @@
 # Important environment variables:
 #
 # WORKSPACE: path to the base WORKSPACE.  This script assumes that there
-#     are 3 available subdirectories: pyomo (the pyomo source checkout,
-#     pyutilib (the pyutilib source checkout) and pyomo-model-libraries
+#     are 2 available subdirectories: pyomo (the pyomo source checkout
+#     and pyomo-model-libraries
 #     (the checkout of the additional model libraries repo).  It will
 #     create two additional directories within WORKSPACE: python (a
 #     virtualenv) and config (the local Pyomo configuration/cache
 #     directory)
 #
-# CATEGORY: the category to pass to pyomo.common.unittest (defaults to nightly)
+# CATEGORY: the category to pass to pytest
 #
-# TEST_SUITES: Paths (module or directory) to be passed to nosetests to
+# TEST_SUITES: Paths (module or directory) to be passed to pytest to
 #     run. (defaults to "pyomo '$WORKSPACE/pyomo-model-libraries'")
 #
 # SLIM: If nonempty, then the virtualenv will only have pip, setuptools,
@@ -28,20 +28,23 @@
 # PYOMO_SETUP_ARGS: passed to the 'python setup.py develop' command
 #     (e.g., to specify --with-cython)
 #
-# PYOMO_DOWNLOAD_ARGS: passed to the 'pyomo download-extensions" command
+# PYOMO_DOWNLOAD_ARGS: passed to the 'pyomo download-extensions' command
 #     (e.g., to set up local SSL certificate authorities)
+#
+# PYTEST_EXTRA_ARGS: passed to the 'pytest' command
+#     (e.g., to add extra pytest options like '--collect-only')
 #
 if test -z "$WORKSPACE"; then
     export WORKSPACE=`pwd`
 fi
-if test -z "$CATEGORY"; then
-    export CATEGORY=nightly
-fi
 if test -z "$TEST_SUITES"; then
-    export TEST_SUITES="pyomo ${WORKSPACE}/pyomo-model-libraries"
+    export TEST_SUITES="${WORKSPACE}/pyomo/pyomo ${WORKSPACE}/pyomo-model-libraries ${WORKSPACE}/pyomo/examples ${WORKSPACE}/pyomo/doc"
 fi
 if test -z "$SLIM"; then
     export VENV_SYSTEM_PACKAGES='--system-site-packages'
+fi
+if test ! -z "$CATEGORY"; then
+    export PY_CAT="-m $CATEGORY"
 fi
 
 if test "$WORKSPACE" != "`pwd`"; then
@@ -63,7 +66,6 @@ if test -z "$MODE" -o "$MODE" == setup; then
     echo "#"
     for EXT in pyc pyx pyd so dylib dll; do
         find ${WORKSPACE}/pyomo -name \*.$EXT -delete
-        find ${WORKSPACE}/pyutilib -name \*.$EXT -delete
     done
 
     # Set up the local lpython
@@ -71,22 +73,26 @@ if test -z "$MODE" -o "$MODE" == setup; then
     echo "#"
     echo "# Setting up virtual environment"
     echo "#"
-    virtualenv python $VENV_SYSTEM_PACKAGES --clear
+    virtualenv python $VENV_SYSTEM_PACKAGES --clear || exit 1
     source python/bin/activate
     # Because modules set the PYTHONPATH, we need to make sure that the
     # virtualenv appears first
-    LOCAL_SITE_PACKAGES=`python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
+    LOCAL_SITE_PACKAGES=`python -c "import sysconfig; print(sysconfig.get_path('purelib'))"`
     export PYTHONPATH="$LOCAL_SITE_PACKAGES:$PYTHONPATH"
 
-    # Set up Pyomo, PyUtilib checkouts
+    # Set up Pyomo checkouts
     echo ""
     # configure the Pyomo configuration directory
     echo "#"
-    echo "# Installing python modules"
+    echo "# Installing pyomo modules"
     echo "#"
-    pushd "$WORKSPACE/pyutilib" || exit 1
-    python setup.py develop || exit 1
-    popd
+    if test -d "$WORKSPACE/pyutilib"; then
+        pushd "$WORKSPACE/pyutilib"
+        python setup.py develop || echo "PyUtilib failed - skipping."
+        popd
+    else
+        echo "PyUtilib not found; skipping"
+    fi
     pushd "$WORKSPACE/pyomo" || exit 1
     python setup.py develop $PYOMO_SETUP_ARGS || exit 1
     popd
@@ -157,17 +163,27 @@ if test -z "$MODE" -o "$MODE" == setup; then
 fi
 
 if test -z "$MODE" -o "$MODE" == test; then
-    # Move into the pyomo directory
-    pushd ${WORKSPACE}/pyomo || exit 1
-
+    # Copy conftest.py into every requested test suite that is NOT
+    # within ${WORKSPACE}/pyomo
+    for TEST in $TEST_SUITES; do
+      if [[ "$TEST" != *"${WORKSPACE}/pyomo/"* ]]; then
+        cp ${WORKSPACE}/conftest.py $TEST
+      fi;
+    done
+    rm ${WORKSPACE}/conftest.py
     echo ""
     echo "#"
     echo "# Running Pyomo tests"
     echo "#"
-    python -m pyomo.common.unittest $TEST_SUITES -v --cat=$CATEGORY --xunit
+    python -m pytest -v \
+        -W ignore::Warning \
+        --junitxml="TEST-pyomo.xml" \
+        $PY_CAT $TEST_SUITES $PYTEST_EXTRA_ARGS
 
     # Combine the coverage results and upload
     if test -z "$DISABLE_COVERAGE"; then
+        # Enter ${WORKSPACE}/pyomo for coverage Processing
+        pushd ${WORKSPACE}/pyomo || exit 1
         echo ""
         echo "#"
         echo "# Processing coverage information in "`pwd`
@@ -202,8 +218,7 @@ if test -z "$MODE" -o "$MODE" == test; then
             done
         fi
         rm .coverage
+        # Exit ${WORKSPACE}/pyomo
+        popd
     fi
-
-    # Exit ${WORKSPACE}/pyomo
-    popd
 fi

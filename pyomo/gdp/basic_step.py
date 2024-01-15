@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -16,18 +17,18 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.gdp.disjunct import Disjunct, Disjunction
 
 import logging
+
 logger = logging.getLogger('pyomo.gdp')
 
 
-def _pseudo_clone(self):
-    """Clone everything in a Disjunct except for the indicator_var"""
-    memo = {
-        '__block_scope__': {id(self): True, id(None): False},
-        id(self.indicator_var): self.indicator_var,
-    }
-    new_block = copy.deepcopy(self, memo)
-    new_block._parent = None
-    return new_block
+def _clone_all_but_indicator_vars(self):
+    """Clone everything in a Disjunct except for the indicator_vars"""
+    return self.clone(
+        {
+            id(self.indicator_var): self.indicator_var,
+            id(self.binary_indicator_var): self.binary_indicator_var,
+        }
+    )
 
 
 def _squish_singletons(tuple_iter):
@@ -43,25 +44,41 @@ def apply_basic_step(disjunctions_or_constraints):
     #
     # Basic steps only apply to XOR'd disjunctions
     #
-    disjunctions = list(obj for obj in disjunctions_or_constraints
-                        if obj.ctype == Disjunction)
-    constraints = list(obj for obj in disjunctions_or_constraints
-                       if obj.ctype == Constraint)
+    disjunctions = list(
+        obj for obj in disjunctions_or_constraints if obj.ctype is Disjunction
+    )
+    constraints = list(
+        obj for obj in disjunctions_or_constraints if obj.ctype is Constraint
+    )
+    if len(disjunctions) + len(constraints) != len(disjunctions_or_constraints):
+        raise ValueError(
+            'apply_basic_step only accepts a list containing '
+            'Disjunctions or Constraints'
+        )
+    if not disjunctions:
+        raise ValueError(
+            'apply_basic_step: argument list must contain at least one Disjunction'
+        )
     for d in disjunctions:
         if not d.xor:
             raise ValueError(
                 "Basic steps can only be applied to XOR'd disjunctions\n\t"
-                "(raised by disjunction %s)" % (d.name,))
+                "(raised by disjunction %s)" % (d.name,)
+            )
         if not d.active:
-            logger.warning("Warning: applying basic step to a previously "
-                           "deactivated disjunction (%s)" % (d.name,))
+            logger.warning(
+                "Warning: applying basic step to a previously "
+                "deactivated disjunction (%s)" % (d.name,)
+            )
 
     ans = Block(concrete=True)
     ans.DISJUNCTIONS = Set(initialize=range(len(disjunctions)))
     ans.INDEX = Set(
         dimen=len(disjunctions),
-        initialize=_squish_singletons(itertools.product(
-            *tuple( range(len(d.disjuncts)) for d in disjunctions ))))
+        initialize=_squish_singletons(
+            itertools.product(*tuple(range(len(d.disjuncts)) for d in disjunctions))
+        ),
+    )
 
     #
     # Form the individual disjuncts for the new basic step
@@ -74,13 +91,16 @@ def apply_basic_step(disjunctions_or_constraints):
         #
         ans.disjuncts[idx].src = Block(ans.DISJUNCTIONS)
         for i in ans.DISJUNCTIONS:
-            tmp = _pseudo_clone(disjunctions[i].disjuncts[
-                idx[i] if isinstance(idx, tuple) else idx])
-            for k,v in list(tmp.component_map().items()):
-                if k == 'indicator_var':
+            src_disj = disjunctions[i].disjuncts[
+                idx[i] if isinstance(idx, tuple) else idx
+            ]
+            tmp = _clone_all_but_indicator_vars(src_disj)
+            for k, v in list(tmp.component_map().items()):
+                if v.parent_block() is not tmp:
+                    # Skip indicator_var and binary_indicator_var
                     continue
                 tmp.del_component(k)
-                ans.disjuncts[idx].src[i].add_component(k,v)
+                ans.disjuncts[idx].src[i].add_component(k, v)
         # Copy in the constraints corresponding to the improper disjunctions
         ans.disjuncts[idx].improper_constraints = ConstraintList()
         for constr in constraints:
@@ -102,20 +122,23 @@ def apply_basic_step(disjunctions_or_constraints):
     # Link the new disjunct indicator_var's to the original
     # indicator_var's.  Since only one of the new
     #
-    NAME_BUFFER = {}
     ans.indicator_links = ConstraintList()
     for i in ans.DISJUNCTIONS:
         for j in range(len(disjunctions[i].disjuncts)):
             orig_var = disjunctions[i].disjuncts[j].indicator_var
+            orig_binary_var = orig_var.get_associated_binary()
             ans.indicator_links.add(
-                orig_var ==
-                sum( ans.disjuncts[idx].indicator_var for idx in ans.INDEX
-                     if (idx[i] if isinstance(idx, tuple) else idx) == j ))
+                orig_binary_var
+                == sum(
+                    ans.disjuncts[idx].binary_indicator_var
+                    for idx in ans.INDEX
+                    if (idx[i] if isinstance(idx, tuple) else idx) == j
+                )
+            )
             # and throw on a Reference to original on the block
-            name_base = orig_var.getname(fully_qualified=True,
-                                         name_buffer=NAME_BUFFER)
-            ans.add_component(unique_component_name( ans, name_base),
-                              Reference(orig_var))
+            for v in (orig_var, orig_binary_var):
+                name_base = v.getname(fully_qualified=True)
+                ans.add_component(unique_component_name(ans, name_base), Reference(v))
 
     # Form the new disjunction
     ans.disjunction = Disjunction(expr=[ans.disjuncts[i] for i in ans.INDEX])
@@ -133,14 +156,19 @@ def apply_basic_step(disjunctions_or_constraints):
 
 if __name__ == '__main__':
     from pyomo.environ import ConcreteModel, Constraint, Var
+
     m = ConcreteModel()
+
     def _d(d, i):
         d.x = Var(range(i))
         d.silly = Constraint(expr=d.indicator_var == i)
-    m.d = Disjunct([1,2], rule=_d)
+
+    m.d = Disjunct([1, 2], rule=_d)
+
     def _e(e, i):
-        e.y = Var(range(2,i))
-    m.e = Disjunct([3,4,5], rule=_e)
+        e.y = Var(range(2, i))
+
+    m.e = Disjunct([3, 4, 5], rule=_e)
 
     m.dd = Disjunction(expr=[m.d[1], m.d[2]])
     m.ee = Disjunction(expr=[m.e[3], m.e[4], m.e[5]])

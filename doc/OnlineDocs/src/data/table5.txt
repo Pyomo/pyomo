@@ -1,0 +1,9 @@
+2 Set Declarations
+    Y : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     2 :    Any :    3 : {(4.3, 5.3), (4.4, 5.4), (4.5, 5.5)}
+    Z : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     2 :    Any :    3 : {('A1', 'B1'), ('A2', 'B2'), ('A3', 'B3')}
+
+2 Declarations: Z Y

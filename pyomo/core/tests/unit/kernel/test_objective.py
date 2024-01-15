@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -13,25 +14,30 @@ import pickle
 import pyomo.common.unittest as unittest
 from pyomo.core.expr.numvalue import NumericValue
 from pyomo.kernel import pprint
-from pyomo.core.tests.unit.kernel.test_dict_container import \
-    _TestActiveDictContainerBase
-from pyomo.core.tests.unit.kernel.test_tuple_container import \
-    _TestActiveTupleContainerBase
-from pyomo.core.tests.unit.kernel.test_list_container import \
-    _TestActiveListContainerBase
+from pyomo.core.tests.unit.kernel.test_dict_container import (
+    _TestActiveDictContainerBase,
+)
+from pyomo.core.tests.unit.kernel.test_tuple_container import (
+    _TestActiveTupleContainerBase,
+)
+from pyomo.core.tests.unit.kernel.test_list_container import (
+    _TestActiveListContainerBase,
+)
 from pyomo.core.kernel.base import ICategorizedObject
-from pyomo.core.kernel.objective import (IObjective,
-                                         objective,
-                                         objective_dict,
-                                         objective_tuple,
-                                         objective_list,
-                                         minimize,
-                                         maximize)
+from pyomo.core.kernel.objective import (
+    IObjective,
+    objective,
+    objective_dict,
+    objective_tuple,
+    objective_list,
+    minimize,
+    maximize,
+)
 from pyomo.core.kernel.variable import variable
 from pyomo.core.kernel.block import block
 
-class Test_objective(unittest.TestCase):
 
+class Test_objective(unittest.TestCase):
     def test_pprint(self):
         # Not really testing what the output is, just that
         # an error does not occur. The pprint functionality
@@ -56,21 +62,18 @@ class Test_objective(unittest.TestCase):
         self.assertIs(type(o)._ctype, IObjective)
 
     def test_pickle(self):
-        o = objective(sense=maximize,
-                      expr=1.0)
+        o = objective(sense=maximize, expr=1.0)
         self.assertEqual(o.sense, maximize)
         self.assertEqual(o.expr, 1.0)
         self.assertEqual(o.parent, None)
-        oup = pickle.loads(
-            pickle.dumps(o))
+        oup = pickle.loads(pickle.dumps(o))
         self.assertEqual(oup.sense, maximize)
         self.assertEqual(oup.expr, 1.0)
         self.assertEqual(oup.parent, None)
         b = block()
         b.o = o
         self.assertIs(o.parent, b)
-        bup = pickle.loads(
-            pickle.dumps(b))
+        bup = pickle.loads(pickle.dumps(b))
         oup = bup.o
         self.assertEqual(oup.sense, maximize)
         self.assertEqual(oup.expr, 1.0)
@@ -128,20 +131,21 @@ class Test_objective(unittest.TestCase):
         self.assertEqual(o.active, False)
         self.assertEqual(b.active, False)
 
-class Test_objective_dict(_TestActiveDictContainerBase,
-                          unittest.TestCase):
+
+class Test_objective_dict(_TestActiveDictContainerBase, unittest.TestCase):
     _container_type = objective_dict
     _ctype_factory = lambda self: objective()
 
-class Test_objective_tuple(_TestActiveTupleContainerBase,
-                           unittest.TestCase):
+
+class Test_objective_tuple(_TestActiveTupleContainerBase, unittest.TestCase):
     _container_type = objective_tuple
     _ctype_factory = lambda self: objective()
 
-class Test_objective_list(_TestActiveListContainerBase,
-                          unittest.TestCase):
+
+class Test_objective_list(_TestActiveListContainerBase, unittest.TestCase):
     _container_type = objective_list
     _ctype_factory = lambda self: objective()
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,19 +1,17 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
 import logging
 
-from pyomo.core.base import (Transformation,
-                             TransformationFactory,
-                             Block,
-                             SortComponents)
+from pyomo.core.base import Transformation, TransformationFactory, Block, SortComponents
 from pyomo.mpec.complementarity import Complementarity
 from pyomo.gdp import Disjunct
 
@@ -21,13 +19,13 @@ logger = logging.getLogger('pyomo.core')
 
 
 #
-# This transformation reworks each Complementarity block to 
+# This transformation reworks each Complementarity block to
 # setup a standard form.
 #
-@TransformationFactory.register('mpec.standard_form', doc="Standard reformulation of complementarity condition")
+@TransformationFactory.register(
+    'mpec.standard_form', doc="Standard reformulation of complementarity condition"
+)
 class MPEC3_Transformation(Transformation):
-
-
     def __init__(self):
         super(MPEC3_Transformation, self).__init__()
 
@@ -35,9 +33,12 @@ class MPEC3_Transformation(Transformation):
         #
         # Iterate over the model finding Complementarity components
         #
-        for complementarity in instance.component_objects(Complementarity, active=True,
-                                                          descend_into=(Block, Disjunct),
-                                                          sort=SortComponents.deterministic):
+        for complementarity in instance.component_objects(
+            Complementarity,
+            active=True,
+            descend_into=(Block, Disjunct),
+            sort=SortComponents.deterministic,
+        ):
             block = complementarity.parent_block()
             for index in sorted(complementarity.keys()):
                 _data = complementarity[index]

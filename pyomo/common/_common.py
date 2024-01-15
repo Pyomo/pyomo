@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -24,7 +25,8 @@ try:
 except NameError:
     old_help = None
 
-def help(thing=None):                               #pragma:nocover
+
+def help(thing=None):  # pragma:nocover
     if not thing is None and hasattr(thing, '__help__'):
         print(thing.__help__)
     else:
@@ -32,8 +34,9 @@ def help(thing=None):                               #pragma:nocover
             raise NameError("Builtin 'help' is not available")
         old_help(thing)
 
+
 try:
     __builtins__['help'] = help
-except:                                             #pragma:nocover
+except:  # pragma:nocover
     # If this fails, then just die silently.
     pass

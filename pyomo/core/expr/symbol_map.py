@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -19,8 +20,8 @@ class SymbolMap(object):
     input to an optimizer.
 
     Warning:
-        A symbol map should never be pickled.  This class is 
-        typically constructed by solvers and writers, and it may be 
+        A symbol map should never be pickled.  This class is
+        typically constructed by solvers and writers, and it may be
         owned by models.
 
     Note:
@@ -28,8 +29,8 @@ class SymbolMap(object):
 
     Attributes:
         byObject (dict):  maps (object id) to (string label)
-        bySymbol (dict):  maps (string label) to (object weakref)
-        alias (dict):  maps (string label) to (object weakref)
+        bySymbol (dict):  maps (string label) to (object)
+        alias (dict):  maps (string label) to (object)
         default_labeler: used to compute a string label from an object
     """
 
@@ -44,40 +45,62 @@ class SymbolMap(object):
 
     def __getstate__(self):
         #
-        # TODO: Why is this method defined given the previous
-        #   comment that this object should not be pickled?
+        # While we should generally not pickle a SymbolMap, we still
+        # need to implement __getstate__ / __setstate__ so that the
+        # bi-map is correctly duplicated if the object is ever
+        # deepcopied (the id() keys need to be updated to point to the
+        # new model objects)
         #
         # Note: byObject and bySymbol constitute a bimap.  We only need
-        # to pickle one of them, and bySymbol is easier.
+        # to save one of them.
         #
-        return {
-            'bySymbol': tuple(
-                (key, obj()) for key, obj in self.bySymbol.items() ),
-            'aliases': tuple(
-                (key, obj()) for key, obj in self.aliases.items() ),
-        }
+        return (self.bySymbol, self.aliases, self.default_labeler)
 
     def __setstate__(self, state):
-        self.byObject = {id(obj):key for key, obj  in state['bySymbol']}
-        self.bySymbol = {key:weakref_ref(obj) for key,obj in state['bySymbol']}
-        self.aliases = {key:weakref_ref(obj) for key, obj in state['aliases']}
+        self.bySymbol, self.aliases, self.default_labeler = state
+        self.byObject = {id(v): k for k, v in self.bySymbol.items()}
 
     def addSymbol(self, obj, symb):
         """
         Add a symbol for a given object
+
+        This method assumes that objects and symbol names will not conflict.
         """
+        nSymbols = len(self.byObject) + 1
         self.byObject[id(obj)] = symb
-        self.bySymbol[symb] = weakref_ref(obj)
+        self.bySymbol[symb] = obj
+        if nSymbols != len(self.bySymbol):
+            raise RuntimeError(
+                "SymbolMap.addSymbol(): duplicate symbol.  "
+                "SymbolMap likely in an inconsistent state"
+            )
+        if len(self.byObject) != len(self.bySymbol):
+            raise RuntimeError(
+                "SymbolMap.addSymbol(): duplicate object.  "
+                "SymbolMap likely in an inconsistent state"
+            )
 
     def addSymbols(self, obj_symbol_tuples):
         """
         Add (object, symbol) tuples from an iterable object.
 
-        This method assumes that symbol names will not conflict.
+        This method assumes that objects and symbol names will not conflict.
         """
-        tuples = [(obj, symb) for obj,symb in obj_symbol_tuples]
-        self.byObject.update((id(obj_), symb_) for obj_,symb_ in tuples)
-        self.bySymbol.update((symb_, weakref_ref(obj_)) for obj_,symb_ in tuples)
+        nSymbols = len(self.bySymbol)
+        for obj, symbol in obj_symbol_tuples:
+            self.byObject[id(obj)] = symbol
+            self.bySymbol[symbol] = obj
+            nSymbols += 1
+        if nSymbols != len(self.bySymbol):
+            raise RuntimeError(
+                "SymbolMap.addSymbols(): duplicate symbol.  "
+                "SymbolMap likely in an inconsistent state"
+            )
+        if len(self.byObject) != len(self.bySymbol):
+            raise RuntimeError(
+                "SymbolMap.addSymbols(): duplicate object.  "
+                "SymbolMap likely in an inconsistent state"
+            )
 
     def createSymbol(self, obj, labeler=None, *args):
         """
@@ -85,31 +108,27 @@ class SymbolMap(object):
         error checking is done to ensure that the generated symbol
         name is unique.
         """
-        #if args:
-        #    symb = labeler(obj, *args)
-        #else:
-        #    symb = labeler(obj)
-        if labeler:
-            symb = labeler(obj)
-        elif self.default_labeler:
-            symb = self.default_labeler(obj)
-        else:
-            symb = str(obj)
-        self.byObject[id(obj)] = symb
-        self.bySymbol[symb] = weakref_ref(obj)
-        return symb
+        if labeler is None:
+            if self.default_labeler is not None:
+                labeler = self.default_labeler
+            else:
+                labeler = str
+        symbol = labeler(obj, *args)
+        self.addSymbol(obj, symbol)
+        return symbol
 
-    def createSymbols(self, objs, labeler, *args):
+    def createSymbols(self, objs, labeler=None, *args):
         """
         Create a symbol for iterable objects with a given labeler.  No
         error checking is done to ensure that the generated symbol
         names are unique.
         """
-        #if args:
-        #    self.addSymbols([(obj,labeler(obj, *args)) for obj in objs])
-        #else:
-        #    self.addSymbols([(obj,labeler(obj)) for obj in objs])
-        self.addSymbols([(obj,labeler(obj)) for obj in objs])
+        if labeler is None:
+            if self.default_labeler is not None:
+                labeler = self.default_labeler
+            else:
+                labeler = str
+        self.addSymbols((obj, labeler(obj, *args)) for obj in objs)
 
     def getSymbol(self, obj, labeler=None, *args):
         """
@@ -122,21 +141,20 @@ class SymbolMap(object):
         #
         # Create a new symbol, performing an error check if it is a duplicate
         #
-        if labeler:
-            symb = labeler(obj)
-        elif self.default_labeler:
-            symb = self.default_labeler(obj)
-        else:
-            symb = str(obj)
-        if symb in self.bySymbol:
-            if self.bySymbol[symb]() is not obj:
-                raise RuntimeError(
-                    "Duplicate symbol '%s' already associated with "
-                    "component '%s' (conflicting component: '%s')"
-                    % (symb, self.bySymbol[symb]().name, obj.name) )
-        self.bySymbol[symb] = weakref_ref(obj)
-        self.byObject[obj_id] = symb
-        return symb
+        symbol = (labeler or self.default_labeler or str)(obj, *args)
+        if symbol in self.bySymbol:
+            # The labeler can have side-effects, including registering
+            # this symbol in the symbol map
+            if obj is self.bySymbol[symbol]:
+                return symbol
+            raise RuntimeError(
+                "Duplicate symbol '%s' already associated with "
+                "component '%s' (conflicting component: '%s')"
+                % (symbol, self.bySymbol[symbol].name, obj.name)
+            )
+        self.bySymbol[symbol] = obj
+        self.byObject[obj_id] = symbol
+        return symbol
 
     def alias(self, obj, name):
         """
@@ -148,28 +166,33 @@ class SymbolMap(object):
             # If the alias exists and the objects are the same,
             # then return.  Otherwise, raise an exception.
             #
-            old_object = self.aliases[name]()
+            old_object = self.aliases[name]
             if old_object is obj:
                 return
             else:
                 raise RuntimeError(
                     "Duplicate alias '%s' already associated with "
                     "component '%s' (conflicting component: '%s')"
-                    % (name, "UNKNOWN" if old_object is None else old_object.name, obj.name) )
+                    % (
+                        name,
+                        "UNKNOWN" if old_object is None else old_object.name,
+                        obj.name,
+                    )
+                )
         else:
             #
             # Add the alias
             #
-            self.aliases[name] = weakref_ref(obj)
+            self.aliases[name] = obj
 
     def getObject(self, symbol):
         """
         Return the object corresponding to a symbol
         """
         if symbol in self.bySymbol:
-            return self.bySymbol[symbol]()
+            return self.bySymbol[symbol]
         elif symbol in self.aliases:
-            return self.aliases[symbol]()
+            return self.aliases[symbol]
         else:
             return SymbolMap.UnknownSymbol
 

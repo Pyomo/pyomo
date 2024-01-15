@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -27,14 +28,16 @@ from pyomo.opt import SolverFactory
 ### Create the gurobi_ampl solver plugin using the ASL interface
 solver = 'gurobi_ampl'
 solver_io = 'nl'
-stream_solver = False     # True prints solver output to screen
-keepfiles =     False     # True prints intermediate file names (.nl,.sol,...)
-opt = SolverFactory(solver,solver_io=solver_io)
+stream_solver = False  # True prints solver output to screen
+keepfiles = False  # True prints intermediate file names (.nl,.sol,...)
+opt = SolverFactory(solver, solver_io=solver_io)
 
 if opt is None:
     print("")
-    print("ERROR: Unable to create solver plugin for %s "\
-          "using the %s interface" % (solver, solver_io))
+    print(
+        "ERROR: Unable to create solver plugin for %s "
+        "using the %s interface" % (solver, solver_io)
+    )
     print("")
     exit(1)
 
@@ -42,7 +45,7 @@ if opt is None:
 opt.options['outlev'] = 1
 
 # tell gurobi to find an iis table for the infeasible model
-opt.options['iisfind'] = 1 # tell gurobi to be verbose with output
+opt.options['iisfind'] = 1  # tell gurobi to be verbose with output
 
 ### Create a trivial and infeasible example model
 model = ConcreteModel()
@@ -58,11 +61,9 @@ model.iis = Suffix(direction=Suffix.IMPORT)
 ### Send the model to gurobi_ampl and collect the solution
 # The solver plugin will scan the model for all active suffixes
 # valid for importing, which it will store into the results object
-results = opt.solve(model,
-                    keepfiles=keepfiles,
-                    tee=stream_solver)
+results = opt.solve(model, keepfiles=keepfiles, tee=stream_solver)
 
 print("")
 print("IIS Results")
 for component, value in model.iis.items():
-    print(component.name+" "+str(value))
+    print(component.name + " " + str(value))

@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -46,7 +47,7 @@ class IsomorphicTransformation(Transformation):
 
 
 class LinearTransformation(Transformation):
-    """ Base class for all linear model transformations. """
+    """Base class for all linear model transformations."""
 
     def __init__(self, **kwds):
         kwds["name"] = kwds.get("name", "linear_transform")
@@ -66,9 +67,8 @@ class NonIsomorphicTransformation(Transformation):
 
 
 class NonlinearTransformation(Transformation):
-    """ Base class for all nonlinear model transformations. """
+    """Base class for all nonlinear model transformations."""
 
     def __init__(self, **kwds):
         kwds["name"] = kwds.get("name", "nonlinear_transform")
         super(NonlinearTransformation, self).__init__(**kwds)
-

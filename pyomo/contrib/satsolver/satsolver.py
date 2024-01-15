@@ -1,28 +1,21 @@
-import math 
+import math
 
 from pyomo.common.dependencies import attempt_import
 from pyomo.core import value, SymbolMap, NumericLabeler, Var, Constraint
-from pyomo.core.expr.logical_expr import (
-    EqualityExpression,
-    InequalityExpression,
-)
-from pyomo.core.expr.numeric_expr import (
+from pyomo.core.expr import (
     ProductExpression,
     SumExpression,
     PowExpression,
     NegationExpression,
     MonomialTermExpression,
     DivisionExpression,
-    ReciprocalExpression,
     AbsExpression,
     UnaryFunctionExpression,
+    EqualityExpression,
+    InequalityExpression,
 )
-from pyomo.core.expr.numvalue import (
-    nonpyomo_leaf_types,
-)
-from pyomo.core.expr.visitor import (
-    StreamBasedExpressionVisitor,
-)
+from pyomo.core.expr.numvalue import nonpyomo_leaf_types
+from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.gdp import Disjunction
 
 z3, z3_available = attempt_import('z3')
@@ -116,9 +109,9 @@ class SMTSatSolver(object):
         lb = var.lb
         ub = var.ub
         if lb is not None:
-            self.bounds_list.append("(assert (>= " + nm + " " + str(lb) + "))\n")
+            self.bounds_list.append("(assert (>= " + nm + ' ' + str(lb) + "))\n")
         if ub is not None:
-            self.bounds_list.append("(assert (<= " + nm + " " + str(ub) + "))\n")
+            self.bounds_list.append("(assert (<= " + nm + ' ' + str(ub) + "))\n")
 
     # define variables
     def add_var(self, var):
@@ -152,8 +145,15 @@ class SMTSatSolver(object):
         for disj in smt_djn[1]:
             cons_string = "true"
             for c in disj[1]:
-                cons_string = "(and " + cons_string + " " + c + ")"
-            djn_string = djn_string + "(assert (=> ( = 1 " + disj[0] + ") " + cons_string + "))\n"
+                cons_string = "(and " + cons_string + ' ' + c + ")"
+            djn_string = (
+                djn_string
+                + "(assert (=> ( = 1 "
+                + disj[0]
+                + ") "
+                + cons_string
+                + "))\n"
+            )
         return djn_string
 
     # converts disjunction to internal class storage
@@ -162,9 +162,9 @@ class SMTSatSolver(object):
         disjuncts = []
         for disj in djn.disjuncts:
             constraints = []
-            iv = disj.indicator_var
+            iv = disj.binary_indicator_var
             label = self.add_var(iv)
-            or_expr = "(+ " + or_expr + " " + label + ")"
+            or_expr = "(+ " + or_expr + ' ' + label + ")"
             for c in disj.component_data_objects(ctype=Constraint, active=True):
                 try:
                     constraints.append(self.walker.walk_expression(c.expr))
@@ -182,9 +182,9 @@ class SMTSatSolver(object):
     def _process_inactive_disjunction(self, djn):
         or_expr = "0"
         for disj in djn.disjuncts:
-            iv = disj.indicator_var
+            iv = disj.binary_indicator_var
             label = self.add_var(iv)
-            or_expr = "(+ " + or_expr + " " + label + ")"
+            or_expr = "(+ " + or_expr + ' ' + label + ")"
         if djn.xor:
             or_expr = "(assert (= 1 " + or_expr + "))\n"
         else:
@@ -196,8 +196,16 @@ class SMTSatSolver(object):
         variable_string = ''.join(self.variable_list)
         bounds_string = ''.join(self.bounds_list)
         expression_string = ''.join(self.expression_list)
-        disjunctions_string = ''.join([self._compute_disjunction_string(d) for d in self.disjunctions_list])
-        smtstring = prefix_string + variable_string + bounds_string + expression_string + disjunctions_string
+        disjunctions_string = ''.join(
+            [self._compute_disjunction_string(d) for d in self.disjunctions_list]
+        )
+        smtstring = (
+            prefix_string
+            + variable_string
+            + bounds_string
+            + expression_string
+            + disjunctions_string
+        )
         return smtstring
 
     def get_var_dict(self):
@@ -226,27 +234,25 @@ class SMT_visitor(StreamBasedExpressionVisitor):
 
     def exitNode(self, node, data):
         if isinstance(node, EqualityExpression):
-            ans = "(= " + data[0] + " " + data[1] + ")"
+            ans = "(= " + data[0] + ' ' + data[1] + ")"
         elif isinstance(node, InequalityExpression):
-            ans = "(<= " + data[0] + " " + data[1] + ")"
+            ans = "(<= " + data[0] + ' ' + data[1] + ")"
         elif isinstance(node, ProductExpression):
             ans = data[0]
             for arg in data[1:]:
-                ans = "(* " + ans + " " + arg + ")"
+                ans = "(* " + ans + ' ' + arg + ")"
         elif isinstance(node, SumExpression):
             ans = data[0]
             for arg in data[1:]:
-                ans = "(+ " + ans + " " + arg + ")"
+                ans = "(+ " + ans + ' ' + arg + ")"
         elif isinstance(node, PowExpression):
-            ans = "(^ " + data[0] + " " + data[1] + ")"
+            ans = "(^ " + data[0] + ' ' + data[1] + ")"
         elif isinstance(node, NegationExpression):
             ans = "(- 0 " + data[0] + ")"
         elif isinstance(node, MonomialTermExpression):
-            ans = "(* " + data[0] + " " + data[1] + ")"
+            ans = "(* " + data[0] + ' ' + data[1] + ")"
         elif isinstance(node, DivisionExpression):
-            ans = "(/ " + data[0] + " " + data[1] + ")"
-        elif isinstance(node, ReciprocalExpression):
-            ans = "(/ 1 " + data[0] + ")"
+            ans = "(/ " + data[0] + ' ' + data[1] + ")"
         elif isinstance(node, AbsExpression):
             ans = "(abs " + data[0] + ")"
         elif isinstance(node, UnaryFunctionExpression):
@@ -271,7 +277,9 @@ class SMT_visitor(StreamBasedExpressionVisitor):
             else:
                 raise NotImplementedError("Unknown unary function: %s" % (node.name,))
         else:
-            raise NotImplementedError(str(type(node)) + " expression not handled by z3 interface")
+            raise NotImplementedError(
+                str(type(node)) + " expression not handled by z3 interface"
+            )
         return ans
 
     def beforeChild(self, node, child, child_idx):

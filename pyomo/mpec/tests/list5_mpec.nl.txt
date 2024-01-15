@@ -19,10 +19,10 @@
 
 1 Block Declarations
     cc : Size=3, Index=cc_index, Active=True
-        Key : Arg0   : Arg1               : Active
-          1 : y + x3 : x1 + 2*x2  ==  0.0 :   True
-          2 : y + x3 : x1 + 2*x2  ==  1.0 :   True
-          3 : y + x3 : x1 + 2*x2  ==  2.0 :   True
+        Key : Arg0   : Arg1             : Active
+          1 : y + x3 : x1 + 2*x2  ==  0 :   True
+          2 : y + x3 : x1 + 2*x2  ==  1 :   True
+          3 : y + x3 : x1 + 2*x2  ==  2 :   True
         cc[1] : Active=True
             1 Constraint Declarations
                 c : Size=1, Index=None, Active=True

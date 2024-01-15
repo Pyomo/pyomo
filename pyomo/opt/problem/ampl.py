@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -17,9 +18,8 @@ __all__ = ['AmplModel']
 
 import os
 
-from pyomo.opt.base import (ProblemFormat,
-                            convert_problem,
-                            guess_format)
+from pyomo.opt.base import ProblemFormat, convert_problem, guess_format
+
 
 class AmplModel(object):
     """
@@ -62,6 +62,7 @@ class AmplModel(object):
         else:
             args = (self.modfile, self.datfile)
         res = convert_problem(args, format, [format], solver_capability)
-        if not filename is None:
+        if filename is not None and res[0][0] != filename:
+            if os.path.exists(filename):
+                os.remove(filename)
             os.rename(res[0][0], filename)
-

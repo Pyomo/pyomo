@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -10,36 +11,34 @@
 
 import os
 import types
+
 try:
     import new
-    new_available=True
+
+    new_available = True
 except:
-    new_available=False
+    new_available = False
 
 import pyomo.common.unittest as unittest
 
-from pyomo.solvers.tests.models.base import test_models
-from pyomo.solvers.tests.testcases import test_scenarios
+from pyomo.solvers.tests.models.base import all_models
+from pyomo.solvers.tests.testcases import generate_scenarios
 from pyomo.common.log import LoggingIntercept
 
 from io import StringIO
 
 # The test directory
-thisDir = os.path.dirname(os.path.abspath( __file__ ))
+thisDir = os.path.dirname(os.path.abspath(__file__))
 
 # Cleanup Expected Failure Results Files
 _cleanup_expected_failures = True
+
 
 #
 # A function that returns a function that gets
 # added to a test class.
 #
-@unittest.nottest
-def create_test_method(model,
-                       solver,
-                       io,
-                       test_case):
-
+def create_method(model, solver, io, test_case):
     is_expected_failure = test_case.status == 'expected failure'
 
     #
@@ -65,11 +64,11 @@ def create_test_method(model,
                     test_case.testcase.io_options,
                     test_case.testcase.options,
                     symbolic_labels,
-                    load_solutions)
+                    load_solutions,
+                )
         model_class.post_solve_test_validation(self, results)
         if len(results.solution) == 0:
-            self.assertIn("No solution is available",
-                          out.getvalue())
+            self.assertIn("No solution is available", out.getvalue())
         else:
             # Note ASL solvers might still return a solution
             # file with garbage values in it for a failed solve
@@ -77,19 +76,24 @@ def create_test_method(model,
 
     # Skip this test if the status is 'skip'
     if test_case.status == 'skip':
-        def skipping_test(self):
+
+        def return_test(self):
             return self.skipTest(test_case.msg)
-        return skipping_test
 
-    if is_expected_failure:
+    elif is_expected_failure:
+
         @unittest.expectedFailure
-        def failing_failed_solve_test(self):
+        def return_test(self):
             return failed_solve_test(self)
-        # Return a test that is expected to fail
-        return failing_failed_solve_test
 
-    # Return a normal test
-    return failed_solve_test
+    else:
+        # Return a normal test
+        def return_test(self):
+            return failed_solve_test(self)
+
+    unittest.pytest.mark.solver(solver)(return_test)
+    return return_test
+
 
 cls = None
 
@@ -97,9 +101,9 @@ cls = None
 # Create test driver classes for each test model
 #
 driver = {}
-for model in test_models():
+for model in all_models():
     # Get the test case for the model
-    case = test_models(model)
+    case = all_models(model)
     if case().solve_should_fail:
         # Create the test class
         name = "Test_%s" % model
@@ -108,14 +112,13 @@ for model in test_models():
         else:
             cls = types.new_class(name, (unittest.TestCase,))
             cls.__module__ = __name__
-        cls = unittest.category(*case.level)(cls)
         driver[model] = cls
         globals()[name] = cls
 
 #
 # Iterate through all test scenarios and add test methods
 #
-for key, value in test_scenarios():
+for key, value in generate_scenarios():
     model, solver, io = key
 
     if model in driver:
@@ -124,11 +127,9 @@ for key, value in test_scenarios():
         #       a change in load_solutions behavior is
         #       propagated into that framework.
         if "_kernel" in cls.__name__:
-            test_name = "test_"+solver+"_"+io
-            test_method = create_test_method(model, solver, io, value)
+            test_name = "test_" + solver + "_" + io
+            test_method = create_method(model, solver, io, value)
             if test_method is not None:
-                test_method = unittest.category('smoke','nightly',solver)(
-                    test_method)
                 setattr(cls, test_name, test_method)
                 test_method = None
 

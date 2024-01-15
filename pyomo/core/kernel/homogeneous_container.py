@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -9,6 +10,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.core.kernel.base import ICategorizedObjectContainer
+
 
 class IHomogeneousContainer(ICategorizedObjectContainer):
     """
@@ -26,16 +28,17 @@ class IHomogeneousContainer(ICategorizedObjectContainer):
     other :class:`ICategorizedObjectContainer`
     implementations that are defined with the same ctype.
     """
+
     __slots__ = ()
 
     #
     # Define the ICategorizedObjectContainer abstract methods
     #
 
-    #def child(self, *args, **kwds):
+    # def child(self, *args, **kwds):
     # ... not defined here
 
-    #def children(self, *args, **kwds):
+    # def children(self, *args, **kwds):
     # ... not defined here
 
     def components(self, active=True):
@@ -59,16 +62,13 @@ class IHomogeneousContainer(ICategorizedObjectContainer):
         assert active in (None, True)
 
         # if not active, then no children can be active
-        if (active is not None) and \
-           (not self.active):
+        if (active is not None) and (not self.active):
             return
 
         for child in self.children():
-            if (active is None) or \
-               child.active:
-                if (not child._is_container) or \
-                   child._is_heterogeneous_container:
-                        yield child
+            if (active is None) or child.active:
+                if (not child._is_container) or child._is_heterogeneous_container:
+                    yield child
                 else:
                     assert child._is_container
                     for obj in child.components(active=active):

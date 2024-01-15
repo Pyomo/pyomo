@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -14,6 +15,7 @@ import logging
 logger = logging.getLogger('pyomo.core')
 
 _virtual_sets = []
+
 
 #
 # Dummy types used by Kernel as domain flags
@@ -71,6 +73,7 @@ class BinarySet(object):
     def is_binary():
         return True
 
-#TODO: Deprecate BooleanSet (that will soon be replaced by a true BooleanSet
+
+# TODO: Deprecate BooleanSet (that will soon be replaced by a true BooleanSet
 #      admitting {True, False})
 BooleanSet = BinarySet

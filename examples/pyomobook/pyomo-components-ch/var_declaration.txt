@@ -1,0 +1,39 @@
+3.14 = 3.14
+[3.14, 3.14, 3.14] = [3.14, 3.14, 3.14]
+[1.5, 4.5, 5.5] = [1.5, 4.5, 5.5]
+[1.5, 2.5, 3.5] = [1.5, 2.5, 3.5]
+x = x
+A : Size=1, Index=None, Ordered=Insertion
+    Key  : Dimen : Domain : Size : Members
+    None :     1 :    Any :    3 : {1, 2, 3}
+A
+Reals
+Boolean
+A : Size=1, Index=None, Ordered=Insertion
+    Key  : Dimen : Domain : Size : Members
+    None :     1 :    Any :    3 : {1, 2, 3}
+s : Size=3, Index=A
+    Key : Lower : Value : Upper : Fixed : Stale : Domain
+      1 :     1 :  None :     2 : False :  True :  [1:2]
+      2 :     2 :  None :     3 : False :  True :  [2:3]
+      3 :     3 :  None :     4 : False :  True :  [3:4]
+A : Size=1, Index=None, Ordered=Insertion
+    Key  : Dimen : Domain : Size : Members
+    None :     1 :    Any :    3 : {1, 2, 3}
+0.0
+None
+6.5
+7.5
+9.5
+5.5
+2.1
+3
+9
+varattrib
+4.5
+0
+None
+True
+True
+False
+True

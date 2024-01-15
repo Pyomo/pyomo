@@ -1,16 +1,29 @@
-##############################################################################
-# Institute for the Design of Advanced Energy Systems Process Systems
-# Engineering Framework (IDAES PSE Framework) Copyright (c) 2018-2019, by the
-# software owners: The Regents of the University of California, through
-# Lawrence Berkeley National Laboratory,  National Technology & Engineering
-# Solutions of Sandia, LLC, Carnegie Mellon University, West Virginia
-# University Research Corporation, et al. All rights reserved.
+#  ___________________________________________________________________________
 #
-# This software is distributed under the 3-clause BSD License.
-##############################################################################
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  ___________________________________________________________________________
+#
+#  This module was originally developed as part of the IDAES PSE Framework
+#
+#  Institute for the Design of Advanced Energy Systems Process Systems
+#  Engineering Framework (IDAES PSE Framework) Copyright (c) 2018-2019, by the
+#  software owners: The Regents of the University of California, through
+#  Lawrence Berkeley National Laboratory,  National Technology & Engineering
+#  Solutions of Sandia, LLC, Carnegie Mellon University, West Virginia
+#  University Research Corporation, et al. All rights reserved.
+#
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 from pyomo.common.collections import ComponentSet
-from pyomo.core.expr.current import identify_variables
+from pyomo.core.expr import identify_variables
 from pyomo.environ import Constraint, value
+
 
 def value_no_exception(c, div0=None):
     """
@@ -26,6 +39,7 @@ def value_no_exception(c, div0=None):
     except ZeroDivisionError:
         return div0
 
+
 def get_residual(ui_data, c):
     """
     Calculate the residual (constraint violation) of a constraint. This residual
@@ -40,19 +54,32 @@ def get_residual(ui_data, c):
     Returns:
         (float) residual
     """
-    ub = value_no_exception(c.upper)
-    lb = value_no_exception(c.lower)
+    if c.upper is None:
+        ub = None  # This is no upper bound
+    else:
+        ub = value_no_exception(c.upper, "Divide_by_0")
+        if ub is None or isinstance(ub, str):
+            # This is calc error
+            return ub
+    if c.lower is None:
+        lb = None  # This is no lower bound
+    else:
+        lb = value_no_exception(c.lower, "Divide_by_0")
+        if lb is None or isinstance(lb, str):
+            # This is calc error
+            return lb
     try:
         v = ui_data.value_cache[c]
     except KeyError:
-        v = None
-    if v is None:
-        return
+        return None
+    if v is None or isinstance(v, str):
+        return v
     if lb is not None and v < lb:
         return lb - v
     if ub is not None and v > ub:
         return v - ub
     return 0.0
+
 
 def active_equalities(blk):
     """
@@ -70,6 +97,7 @@ def active_equalities(blk):
         except ZeroDivisionError:
             pass
 
+
 def active_constraint_set(blk):
     """
     Return a set of active constraints in a model.
@@ -80,6 +108,7 @@ def active_constraint_set(blk):
         (ComponentSet): Active equality constraints
     """
     return ComponentSet(blk.component_data_objects(Constraint, active=True))
+
 
 def active_equality_set(blk):
     """
@@ -92,6 +121,7 @@ def active_equality_set(blk):
     """
     return ComponentSet(active_equalities(blk))
 
+
 def count_free_variables(blk):
     """
     Count free variables that are in active equality constraints.  Ignore
@@ -99,17 +129,20 @@ def count_free_variables(blk):
     """
     return len(free_variables_in_active_equalities_set(blk))
 
+
 def count_equality_constraints(blk):
     """
     Count active equality constraints.
     """
     return len(active_equality_set(blk))
 
+
 def count_constraints(blk):
     """
     Count active constraints.
     """
     return len(active_constraint_set(blk))
+
 
 def degrees_of_freedom(blk):
     """
@@ -122,9 +155,10 @@ def degrees_of_freedom(blk):
     """
     return count_free_variables(blk) - count_equality_constraints(blk)
 
+
 def free_variables_in_active_equalities_set(blk):
     """
-    Return a set of variables that are contined in active equalities.
+    Return a set of variables that are continued in active equalities.
     """
     vin = ComponentSet()
     for c in active_equalities(blk):

@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -14,7 +15,10 @@ from __future__ import division
 import logging
 
 from pyomo.common.config import (
-    ConfigBlock, ConfigValue, In, add_docstring_list
+    ConfigBlock,
+    ConfigValue,
+    In,
+    document_kwargs_from_configdict,
 )
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.multistart.high_conf_stop import should_stop
@@ -26,8 +30,8 @@ from pyomo.opt import TerminationCondition as tc
 logger = logging.getLogger('pyomo.contrib.multistart')
 
 
-@SolverFactory.register('multistart',
-                        doc='MultiStart solver for NLPs')
+@SolverFactory.register('multistart', doc='MultiStart solver for NLPs')
+@document_kwargs_from_configdict('CONFIG')
 class MultiStart(object):
     """Solver wrapper that initializes at multiple starting points.
 
@@ -41,61 +45,85 @@ class MultiStart(object):
     """
 
     CONFIG = ConfigBlock("MultiStart")
-    CONFIG.declare("strategy", ConfigValue(
-        default="rand", domain=In(strategies.keys()),
-        description="Specify the restart strategy. Defaults to rand.",
-        doc="""Specify the restart strategy.
+    CONFIG.declare(
+        "strategy",
+        ConfigValue(
+            default="rand",
+            domain=In(strategies.keys()),
+            description="Specify the restart strategy. Defaults to rand.",
+            doc="""Specify the restart strategy.
 
         - "rand": random choice between variable bounds
         - "midpoint_guess_and_bound": midpoint between current value and farthest bound
         - "rand_guess_and_bound": random choice between current value and farthest bound
         - "rand_distributed": random choice among evenly distributed values
         - "midpoint": exact midpoint between the bounds. If using this option, multiple iterations are useless.
-        """
-    ))
-    CONFIG.declare("solver", ConfigValue(
-        default="ipopt",
-        description="solver to use, defaults to ipopt"
-    ))
-    CONFIG.declare("solver_args", ConfigValue(
-        default={},
-        description="Dictionary of keyword arguments to pass to the solver."
-    ))
-    CONFIG.declare("iterations", ConfigValue(
-        default=10,
-        description="Specify the number of iterations, defaults to 10. "
-        "If -1 is specified, the high confidence stopping rule will be used"
-    ))
-    CONFIG.declare("stopping_mass", ConfigValue(
-        default=0.5,
-        description="Maximum allowable estimated missing mass of optima.",
-        doc="""Maximum allowable estimated missing mass of optima for the
+        """,
+        ),
+    )
+    CONFIG.declare(
+        "solver",
+        ConfigValue(default="ipopt", description="solver to use, defaults to ipopt"),
+    )
+    CONFIG.declare(
+        "solver_args",
+        ConfigValue(
+            default={},
+            description="Dictionary of keyword arguments to pass to the solver.",
+        ),
+    )
+    CONFIG.declare(
+        "iterations",
+        ConfigValue(
+            default=10,
+            description="Specify the number of iterations, defaults to 10. "
+            "If -1 is specified, the high confidence stopping rule will be used",
+        ),
+    )
+    CONFIG.declare(
+        "stopping_mass",
+        ConfigValue(
+            default=0.5,
+            description="Maximum allowable estimated missing mass of optima.",
+            doc="""Maximum allowable estimated missing mass of optima for the
         high confidence stopping rule, only used with the random strategy.
         The lower the parameter, the stricter the rule.
-        Value bounded in (0, 1]."""
-    ))
-    CONFIG.declare("stopping_delta", ConfigValue(
-        default=0.5,
-        description="1 minus the confidence level required for the stopping rule.",
-        doc="""1 minus the confidence level required for the stopping rule for the
+        Value bounded in (0, 1].""",
+        ),
+    )
+    CONFIG.declare(
+        "stopping_delta",
+        ConfigValue(
+            default=0.5,
+            description="1 minus the confidence level required for the stopping rule.",
+            doc="""1 minus the confidence level required for the stopping rule for the
         high confidence stopping rule, only used with the random strategy.
         The lower the parameter, the stricter the rule.
-        Value bounded in (0, 1]."""
-    ))
-    CONFIG.declare("suppress_unbounded_warning", ConfigValue(
-        default=False, domain=bool,
-        description="True to suppress warning for skipping unbounded variables."
-    ))
-    CONFIG.declare("HCS_max_iterations", ConfigValue(
-        default=1000,
-        description="Maximum number of iterations before interrupting the high confidence stopping rule."
-    ))
-    CONFIG.declare("HCS_tolerance", ConfigValue(
-        default=0,
-        description="Tolerance on HCS objective value equality. Defaults to Python float equality precision."
-    ))
-
-    __doc__ = add_docstring_list(__doc__, CONFIG)
+        Value bounded in (0, 1].""",
+        ),
+    )
+    CONFIG.declare(
+        "suppress_unbounded_warning",
+        ConfigValue(
+            default=False,
+            domain=bool,
+            description="True to suppress warning for skipping unbounded variables.",
+        ),
+    )
+    CONFIG.declare(
+        "HCS_max_iterations",
+        ConfigValue(
+            default=1000,
+            description="Maximum number of iterations before interrupting the high confidence stopping rule.",
+        ),
+    )
+    CONFIG.declare(
+        "HCS_tolerance",
+        ConfigValue(
+            default=0,
+            description="Tolerance on HCS objective value equality. Defaults to Python float equality precision.",
+        ),
+    )
 
     def available(self, exception_flag=True):
         """Check if solver is available.
@@ -120,16 +148,19 @@ class MultiStart(object):
         # Model sense
         objectives = model.component_data_objects(Objective, active=True)
         obj = next(objectives, None)
-        #Check model validity
+        # Check model validity
         if next(objectives, None) is not None:
             raise RuntimeError(
-                "Multistart solver is unable to handle model with multiple active objectives.")
+                "Multistart solver is unable to handle model with multiple active objectives."
+            )
         if obj is None:
             raise RuntimeError(
-                "Multistart solver is unable to handle model with no active objective.")
-        if obj.polynomial_degree()==0:
+                "Multistart solver is unable to handle model with no active objective."
+            )
+        if obj.polynomial_degree() == 0:
             raise RuntimeError(
-                "Multistart solver received model with constant objective")
+                "Multistart solver received model with constant objective"
+            )
 
         # store objective values and objective/result information for best
         # solution obtained
@@ -142,13 +173,17 @@ class MultiStart(object):
         try:
             # create temporary variable list for value transfer
             tmp_var_list_name = unique_component_name(model, "_vars_list")
-            setattr(model, tmp_var_list_name,
-                    list(model.component_data_objects(
-                        ctype=Var, descend_into=True)))
+            setattr(
+                model,
+                tmp_var_list_name,
+                list(model.component_data_objects(ctype=Var, descend_into=True)),
+            )
 
             best_result = result = solver.solve(model, **config.solver_args)
-            if (result.solver.status is SolverStatus.ok and
-                    result.solver.termination_condition is tc.optimal):
+            if (
+                result.solver.status is SolverStatus.ok
+                and result.solver.termination_condition is tc.optimal
+            ):
                 obj_val = value(obj.expr)
                 best_objective = obj_val
                 objectives.append(obj_val)
@@ -159,14 +194,18 @@ class MultiStart(object):
             using_HCS = config.iterations == -1
             HCS_completed = False
             if using_HCS:
-                assert config.strategy == "rand", \
-                    "High confidence stopping rule requires rand strategy."
+                assert (
+                    config.strategy == "rand"
+                ), "High confidence stopping rule requires rand strategy."
                 max_iter = config.HCS_max_iterations
 
             while num_iter < max_iter:
                 if using_HCS and should_stop(
-                        objectives, config.stopping_mass,
-                        config.stopping_delta, config.HCS_tolerance):
+                    objectives,
+                    config.stopping_mass,
+                    config.stopping_delta,
+                    config.HCS_tolerance,
+                ):
                     HCS_completed = True
                     break
                 num_iter += 1
@@ -174,8 +213,10 @@ class MultiStart(object):
                 m = model.clone() if num_iter > 1 else model
                 reinitialize_variables(m, config)
                 result = solver.solve(m, **config.solver_args)
-                if (result.solver.status is SolverStatus.ok and
-                        result.solver.termination_condition is tc.optimal):
+                if (
+                    result.solver.status is SolverStatus.ok
+                    and result.solver.termination_condition is tc.optimal
+                ):
                     model_objectives = m.component_data_objects(Objective, active=True)
                     mobj = next(model_objectives)
                     obj_val = value(mobj.expr)
@@ -196,7 +237,8 @@ class MultiStart(object):
                 logger.warning(
                     "High confidence stopping rule was unable to complete "
                     "after %s iterations. To increase this limit, change the "
-                    "HCS_max_iterations flag." % num_iter)
+                    "HCS_max_iterations flag." % num_iter
+                )
 
             # if no better result was found than initial solve, then return
             # that without needing to copy variables.
@@ -208,7 +250,7 @@ class MultiStart(object):
             best_soln_var_list = getattr(best_model, tmp_var_list_name)
             for orig_var, new_var in zip(orig_var_list, best_soln_var_list):
                 if not orig_var.is_fixed():
-                    orig_var.value = new_var.value
+                    orig_var.set_value(new_var.value, skip_validation=True)
 
             return best_result
         finally:

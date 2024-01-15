@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -10,11 +11,25 @@
 
 
 import pyomo.common.unittest as unittest
-from pyomo.environ import ConcreteModel, Var, RangeSet, Block, Constraint, CounterLabeler, NumericLabeler, TextLabeler, ComponentUID, ShortNameLabeler, CNameLabeler, CuidLabeler, AlphaNumericTextLabeler, NameLabeler
+from pyomo.environ import (
+    ConcreteModel,
+    Var,
+    RangeSet,
+    Block,
+    Constraint,
+    CounterLabeler,
+    NumericLabeler,
+    TextLabeler,
+    ComponentUID,
+    ShortNameLabeler,
+    CNameLabeler,
+    CuidLabeler,
+    AlphaNumericTextLabeler,
+    NameLabeler,
+)
 
 
 class LabelerTests(unittest.TestCase):
-
     def setUp(self):
         m = ConcreteModel()
         m.mycomp = Var()
@@ -73,7 +88,7 @@ class LabelerTests(unittest.TestCase):
         self.assertEqual(lbl(self.long1), 'myverylongcomponentname')
         self.assertEqual(lbl(m.myblock), 'myblock')
         self.assertEqual(lbl(m.myblock.mystreet), 'myblock.mystreet')
-        self.assertEqual(lbl(self.thecopy), 'myblock.mystreet')
+        self.assertEqual(lbl(self.thecopy), "'myblock.mystreet'")
         self.assertEqual(lbl(m.ind[3]), 'ind[3]')
         self.assertEqual(lbl(m.ind[10]), 'ind[10]')
         self.assertEqual(lbl(m.ind[1]), 'ind[1]')
@@ -87,7 +102,7 @@ class LabelerTests(unittest.TestCase):
         self.assertEqual(lbl(self.long1), 'myverylongcomponentname')
         self.assertEqual(lbl(m.myblock), 'myblock')
         self.assertEqual(lbl(m.myblock.mystreet), 'myblock_mystreet')
-        self.assertEqual(lbl(self.thecopy), 'myblock_mystreet')
+        self.assertEqual(lbl(self.thecopy), '_myblock_mystreet_')
         self.assertEqual(lbl(m.ind[3]), 'ind(3)')
         self.assertEqual(lbl(m.ind[10]), 'ind(10)')
         self.assertEqual(lbl(m.ind[1]), 'ind(1)')
@@ -101,7 +116,7 @@ class LabelerTests(unittest.TestCase):
         self.assertEqual(lbl(self.long1), 'myverylongcomponentname')
         self.assertEqual(lbl(m.myblock), 'myblock')
         self.assertEqual(lbl(m.myblock.mystreet), 'myblock_mystreet')
-        self.assertEqual(lbl(self.thecopy), 'myblock_mystreet')
+        self.assertEqual(lbl(self.thecopy), '_myblock_mystreet_')
         self.assertEqual(lbl(m.ind[3]), 'ind_3_')
         self.assertEqual(lbl(m.ind[10]), 'ind_10_')
         self.assertEqual(lbl(m.ind[1]), 'ind_1_')
@@ -115,7 +130,7 @@ class LabelerTests(unittest.TestCase):
         self.assertEqual(lbl(self.long1), 'myverylongcomponentname')
         self.assertEqual(lbl(m.myblock), 'myblock')
         self.assertEqual(lbl(m.myblock.mystreet), 'myblock.mystreet')
-        self.assertEqual(lbl(self.thecopy), 'myblock.mystreet')
+        self.assertEqual(lbl(self.thecopy), "'myblock.mystreet'")
         self.assertEqual(lbl(m.ind[3]), 'ind[3]')
         self.assertEqual(lbl(m.ind[10]), 'ind[10]')
         self.assertEqual(lbl(m.ind[1]), 'ind[1]')
@@ -149,10 +164,13 @@ class LabelerTests(unittest.TestCase):
         self.assertEqual(lbl(m.ind[3]), 'ind_3_')
         self.assertEqual(lbl(m.ind[10]), 'ind_10_')
         self.assertEqual(lbl(m.ind[1]), 'ind_1_')
+        self.assertEqual(lbl(self.thecopy), '_myblock_mystreet_')
 
         # Test name collision
+        m._myblock = Block()
+        m._myblock.mystreet_ = Var()
         self.assertEqual(lbl(m.mycomp), 'mycomp_6_')
-        self.assertEqual(lbl(self.thecopy), 'myblock_mystreet_7_')
+        self.assertEqual(lbl(m._myblock.mystreet_), 'myblock_mystreet__7_')
         self.assertEqual(lbl(m.MyComp), 'MyComp_8_')
 
     def test_shortnamelabeler_prefix(self):
@@ -170,10 +188,13 @@ class LabelerTests(unittest.TestCase):
         self.assertEqual(lbl(m.ind[3]), 'ind_3_')
         self.assertEqual(lbl(m.ind[10]), 'ind_10_')
         self.assertEqual(lbl(m.ind[1]), 'ind_1_')
+        self.assertEqual(lbl(self.thecopy), '_myblock_mystreet_')
 
         # Test name collision
+        m._myblock = Block()
+        m._myblock.mystreet_ = Var()
         self.assertEqual(lbl(m.mycomp), 's_mycomp_5_')
-        self.assertEqual(lbl(self.thecopy), 's_yblock_mystreet_6_')
+        self.assertEqual(lbl(m._myblock.mystreet_), 's_block_mystreet__6_')
         self.assertEqual(lbl(m.MyComp), 's_MyComp_7_')
 
     def test_case_sensitive_shortnamelabeler(self):
@@ -191,24 +212,26 @@ class LabelerTests(unittest.TestCase):
         self.assertEqual(lbl(m.ind[3]), 'ind_3_')
         self.assertEqual(lbl(m.ind[10]), 'ind_10_')
         self.assertEqual(lbl(m.ind[1]), 'ind_1_')
+        self.assertEqual(lbl(self.thecopy), '_myblock_mystreet_')
 
         # Test name collision
-        self.assertEqual(lbl(m.mycomp), 'mycomp')
-        self.assertEqual(lbl(self.thecopy), 'myblock_mystreet')
+        m._myblock = Block()
+        m._myblock.mystreet_ = Var()
+        self.assertEqual(lbl(m.mycomp), 'mycomp_6_')
+        self.assertEqual(lbl(m._myblock.mystreet_), 'myblock_mystreet__7_')
         self.assertEqual(lbl(m.MyComp), 'MyComp')
 
     def test_case_shortnamelabeler_overflow(self):
         m = self.m
         lbl = ShortNameLabeler(4, '_', caseInsensitive=True)
         for i in range(9):
-            self.assertEqual(lbl(m.mycomp), 'p_%d_' % (i+1))
+            self.assertEqual(lbl(m.mycomp), 'p_%d_' % (i + 1))
         with self.assertRaisesRegex(RuntimeError, "Too many identifiers"):
             lbl(m.mycomp)
 
     def test_shortnamelabeler_legal_regex(self):
         m = ConcreteModel()
-        lbl = ShortNameLabeler(
-            60, suffix='_', prefix='s_', legalRegex='^[a-zA-Z]')
+        lbl = ShortNameLabeler(60, suffix='_', prefix='s_', legalRegex='^[a-zA-Z]')
 
         m.legal_var = Var()
         self.assertEqual(lbl(m.legal_var), 'legal_var')

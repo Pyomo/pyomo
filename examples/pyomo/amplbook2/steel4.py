@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -33,17 +34,26 @@ model.commit = Param(model.PROD, within=NonNegativeReals)
 
 model.market = Param(model.PROD, within=NonNegativeReals)
 
-def Make_bounds(model,i):
-    return (model.commit[i],model.market[i])
+
+def Make_bounds(model, i):
+    return (model.commit[i], model.market[i])
+
+
 model.Make = Var(model.PROD, bounds=Make_bounds)
 
-def Objective_rule (model):
+
+def Objective_rule(model):
     return sum_product(model.profit, model.Make)
+
+
 model.Total_Profit = Objective(rule=Objective_rule, sense=maximize)
+
 
 def Timelim_rule(model, s):
     timeexpr = 0
     for p in model.PROD:
-        timeexpr = timeexpr + (1.0/model.rate[p,s]) * model.Make[p]
+        timeexpr = timeexpr + (1.0 / model.rate[p, s]) * model.Make[p]
     return timeexpr < model.avail[s]
+
+
 model.Time = Constraint(model.STAGE, rule=Timelim_rule)

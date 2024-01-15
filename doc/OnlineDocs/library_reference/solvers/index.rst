@@ -6,4 +6,6 @@ Solver Interfaces
 
    gams.rst
    cplex_persistent.rst
+   gurobi_direct.rst
    gurobi_persistent.rst
+   xpress_persistent.rst

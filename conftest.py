@@ -1,0 +1,74 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
+import pytest
+
+
+def pytest_runtest_setup(item):
+    """
+    This method overrides pytest's default behavior for marked tests.
+
+    The logic below follows this flow:
+        1) Did the user ask for a specific solver using the '--solver' flag?
+            If so: Add skip statements to any test NOT labeled with the
+            requested solver category.
+        2) Did the user ask for a specific marker using the '-m' flag?
+            If so: Return to pytest's default behavior.
+        3) If the user requested no specific solver or marker, look at each
+           test for the following:
+            a) If unmarked, run the test
+            b) If marked with implicit_markers, run the test
+            c) If marked "solver" and NOT any explicit marker, run the test
+            OTHERWISE: Skip the test.
+    In other words - we want to run unmarked, implicit, and solver tests as
+    the default mode; but if solver tests are also marked with an explicit
+    category (e.g., "expensive"), we will skip them.
+    """
+    marker = item.iter_markers()
+    solvernames = [mark.args[0] for mark in item.iter_markers(name="solver")]
+    solveroption = item.config.getoption("--solver")
+    markeroption = item.config.getoption("-m")
+    implicit_markers = ['default']
+    extended_implicit_markers = implicit_markers + ['solver']
+    item_markers = set(mark.name for mark in marker)
+    if solveroption:
+        if solveroption not in solvernames:
+            pytest.skip("SKIPPED: Test not marked {!r}".format(solveroption))
+            return
+    elif markeroption:
+        return
+    elif item_markers:
+        if not set(implicit_markers).issubset(
+            item_markers
+        ) and not item_markers.issubset(set(extended_implicit_markers)):
+            pytest.skip('SKIPPED: Only running default, solver, and unmarked tests.')
+
+
+def pytest_addoption(parser):
+    """
+    Add another parser option to specify suite of solver tests to run
+    """
+    parser.addoption(
+        "--solver",
+        action="store",
+        metavar="SOLVER",
+        help="Run tests matching the requested SOLVER.",
+    )
+
+
+def pytest_configure(config):
+    """
+    Register additional solver marker, as applicable.
+    This stops pytest from printing a warning about unregistered solver options.
+    """
+    config.addinivalue_line(
+        "markers", "solver(name): mark test to run the named solver"
+    )

@@ -4,12 +4,12 @@ Core Classes
 The following are the two core classes documented here:
 
    * :class:`NumericValue<pyomo.core.expr.numvalue.NumericValue>`
-   * :class:`ExpressionBase<pyomo.core.expr.current.ExpressionBase>`
+   * :class:`NumericExpression<pyomo.core.expr.NumericExpression>`
 
 The remaining classes are the public classes for expressions, which
 developers may need to know about. The methods for these classes are not
 documented because they are described in the
-:class:`ExpressionBase<pyomo.core.expr.current.ExpressionBase>` class.
+:class:`NumericExpression<pyomo.core.expr.NumericExpression>` class.
 
 Sets with Expression Types
 --------------------------
@@ -21,15 +21,15 @@ Pyomo expressions.
 .. autodata:: pyomo.core.expr.numvalue.native_types
 .. autodata:: pyomo.core.expr.numvalue.nonpyomo_leaf_types
 
-NumericValue and ExpressionBase
--------------------------------
+NumericValue and NumericExpression
+----------------------------------
 
 .. autoclass:: pyomo.core.expr.numvalue.NumericValue
     :members:
     :special-members:
     :private-members:
 
-.. autoclass:: pyomo.core.expr.current.ExpressionBase
+.. autoclass:: pyomo.core.expr.NumericExpression
     :members:
     :show-inheritance:
     :special-members:
@@ -38,67 +38,67 @@ NumericValue and ExpressionBase
 Other Public Classes
 --------------------
 
-.. autoclass:: pyomo.core.expr.current.NegationExpression
+.. autoclass:: pyomo.core.expr.NegationExpression
     :members:
     :show-inheritance:
     :undoc-members:
     :private-members:
 
-.. autoclass:: pyomo.core.expr.current.ExternalFunctionExpression
+.. autoclass:: pyomo.core.expr.ExternalFunctionExpression
     :members:
     :show-inheritance:
     :undoc-members:
     :private-members:
 
-.. autoclass:: pyomo.core.expr.current.ProductExpression
+.. autoclass:: pyomo.core.expr.ProductExpression
     :members:
     :show-inheritance:
     :undoc-members:
     :private-members:
 
-.. autoclass:: pyomo.core.expr.current.ReciprocalExpression
+.. autoclass:: pyomo.core.expr.DivisionExpression
     :members:
     :show-inheritance:
     :undoc-members:
     :private-members:
 
-.. autoclass:: pyomo.core.expr.current.InequalityExpression
+.. autoclass:: pyomo.core.expr.InequalityExpression
     :members:
     :show-inheritance:
     :undoc-members:
     :private-members:
 
-.. autoclass:: pyomo.core.expr.current.EqualityExpression
+.. autoclass:: pyomo.core.expr.EqualityExpression
     :members:
     :show-inheritance:
     :undoc-members:
     :private-members:
 
-.. autoclass:: pyomo.core.expr.current.SumExpression
+.. autoclass:: pyomo.core.expr.SumExpression
     :members:
     :show-inheritance:
     :undoc-members:
     :private-members:
 
-.. autoclass:: pyomo.core.expr.current.GetItemExpression
+.. autoclass:: pyomo.core.expr.GetItemExpression
     :members:
     :show-inheritance:
     :undoc-members:
     :private-members:
 
-.. autoclass:: pyomo.core.expr.current.Expr_ifExpression
+.. autoclass:: pyomo.core.expr.Expr_ifExpression
     :members:
     :show-inheritance:
     :undoc-members:
     :private-members:
 
-.. autoclass:: pyomo.core.expr.current.UnaryFunctionExpression
+.. autoclass:: pyomo.core.expr.UnaryFunctionExpression
     :members:
     :show-inheritance:
     :undoc-members:
     :private-members:
 
-.. autoclass:: pyomo.core.expr.current.AbsExpression
+.. autoclass:: pyomo.core.expr.AbsExpression
     :members:
     :show-inheritance:
     :undoc-members:

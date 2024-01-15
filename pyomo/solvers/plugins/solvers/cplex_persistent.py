@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -26,7 +27,7 @@ class CPLEXPersistent(PersistentSolver, CPLEXDirect):
     Keyword Arguments
     -----------------
     model: ConcreteModel
-        Passing a model to the constructor is equivalent to calling the set_instance mehtod.
+        Passing a model to the constructor is equivalent to calling the set_instance method.
     type: str
         String indicating the class type of the solver instance.
     name: str
@@ -53,7 +54,9 @@ class CPLEXPersistent(PersistentSolver, CPLEXDirect):
             try:
                 self._solver_model.quadratic_constraints.delete(solver_con)
             except self._cplex.exceptions.CplexError:
-                raise ValueError('Failed to find the cplex constraint {0}'.format(solver_con))
+                raise ValueError(
+                    'Failed to find the cplex constraint {0}'.format(solver_con)
+                )
 
     def _remove_sos_constraint(self, solver_sos_con):
         self._solver_model.SOS.delete(solver_sos_con)
@@ -85,12 +88,16 @@ class CPLEXPersistent(PersistentSolver, CPLEXDirect):
         # see PR #366 for discussion about handling indexed
         # objects and keeping compatibility with the
         # pyomo.kernel objects
-        #if var.is_indexed():
+        # if var.is_indexed():
         #    for child_var in var.values():
         #        self.compile_var(child_var)
         #    return
         if var not in self._pyomo_var_to_solver_var_map:
-            raise ValueError('The Var provided to compile_var needs to be added first: {0}'.format(var))
+            raise ValueError(
+                'The Var provided to compile_var needs to be added first: {0}'.format(
+                    var
+                )
+            )
         cplex_var = self._pyomo_var_to_solver_var_map[var]
         vtype = self._cplex_vtype_from_var(var)
         lb, ub = self._cplex_lb_ub_from_var(var)
@@ -116,9 +123,9 @@ class CPLEXPersistent(PersistentSolver, CPLEXDirect):
         """Add a column to the solver's model
 
         This will add the Pyomo variable var to the solver's
-        model, and put the coefficients on the associated 
+        model, and put the coefficients on the associated
         constraints in the solver model. If the obj_coef is
-        not zero, it will add obj_coef*var to the objective 
+        not zero, it will add obj_coef*var to the objective
         of the solver's model.
 
         Parameters
@@ -135,8 +142,14 @@ class CPLEXPersistent(PersistentSolver, CPLEXDirect):
         lb, ub = self._cplex_lb_ub_from_var(var)
 
         ## do column addition
-        self._solver_model.variables.add(obj=[obj_coef], lb=[lb], ub=[ub], types=[vtype], names=[varname],
-                            columns=[self._cplex.SparsePair(ind=constraints, val=coefficients)])
+        self._solver_model.variables.add(
+            obj=[obj_coef],
+            lb=[lb],
+            ub=[ub],
+            types=[vtype],
+            names=[varname],
+            columns=[self._cplex.SparsePair(ind=constraints, val=coefficients)],
+        )
 
         self._pyomo_var_to_solver_var_map[var] = varname
         self._solver_var_to_pyomo_var_map[varname] = var

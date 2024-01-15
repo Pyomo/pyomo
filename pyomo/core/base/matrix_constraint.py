@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -12,20 +13,20 @@
 import logging
 import weakref
 
+from pyomo.common.gc_manager import PauseGC
+from pyomo.common.log import is_debug_set
 from pyomo.core.base.set_types import Any
 from pyomo.core.expr.numvalue import value
 from pyomo.core.expr.numeric_expr import LinearExpression
-from pyomo.core.base.plugin import ModelComponentFactory
+from pyomo.core.base.component import ModelComponentFactory
+from pyomo.core.base.constraint import IndexedConstraint, _ConstraintData
 from pyomo.repn.standard_repn import StandardRepn
-from pyomo.core.base.constraint import (IndexedConstraint,
-                                        _ConstraintData)
-from pyomo.common.gc_manager import PauseGC
-from pyomo.common.log import is_debug_set
 
 from collections.abc import Mapping
 
 
 logger = logging.getLogger('pyomo.core')
+
 
 class _MatrixConstraintData(_ConstraintData):
     """
@@ -55,7 +56,7 @@ class _MatrixConstraintData(_ConstraintData):
         _index          The row index into the main coefficient matrix
     """
 
-    __slots__ = ('_index',)
+    __slots__ = ()
 
     # the super secret flag that makes the writers
     # handle _MatrixConstraintData objects more efficiently
@@ -79,8 +80,7 @@ class _MatrixConstraintData(_ConstraintData):
         variables = []
         coefficients = []
         constant = 0
-        for p in range(indptr[index],
-                        indptr[index+1]):
+        for p in range(indptr[index], indptr[index + 1]):
             v = x[indices[p]]
             c = data[p]
             if not v.fixed:
@@ -119,7 +119,6 @@ class _MatrixConstraintData(_ConstraintData):
         This method must be defined because this class uses slots.
         """
         result = super(_MatrixConstraintData, self).__getstate__()
-        result['_index'] = self._index
         return result
 
     # Since this class requires no special processing of the state
@@ -139,11 +138,9 @@ class _MatrixConstraintData(_ConstraintData):
         indices = comp._A_indices
         indptr = comp._A_indptr
         x = comp._x
-        ptrs = range(indptr[index],
-                      indptr[index+1])
+        ptrs = range(indptr[index], indptr[index + 1])
         try:
-            return sum(x[indices[p]].value * data[p]
-                       for p in ptrs)
+            return sum(x[indices[p]].value * data[p] for p in ptrs)
         except (ValueError, TypeError):
             if exception:
                 raise
@@ -153,15 +150,13 @@ class _MatrixConstraintData(_ConstraintData):
         """Returns :const:`False` when the lower bound is
         :const:`None` or negative infinity"""
         lb = self.lower
-        return (lb is not None) and \
-            (lb != float('-inf'))
+        return (lb is not None) and (lb != float('-inf'))
 
     def has_ub(self):
         """Returns :const:`False` when the upper bound is
         :const:`None` or positive infinity"""
         ub = self.upper
-        return (ub is not None) and \
-            (ub != float('inf'))
+        return (ub is not None) and (ub != float('inf'))
 
     def lslack(self):
         """Lower slack (body - lb). Returns :const:`None` if
@@ -226,12 +221,11 @@ class _MatrixConstraintData(_ConstraintData):
         indices = comp._A_indices
         indptr = comp._A_indptr
         x = comp._x
-        ptrs = range(indptr[index],
-                      indptr[index+1])
+        ptrs = range(indptr[index], indptr[index + 1])
         return LinearExpression(
             linear_vars=[x[indices[p]] for p in ptrs],
             linear_coefs=[data[p] for p in ptrs],
-            constant=0
+            constant=0,
         )
 
     @property
@@ -256,8 +250,7 @@ class _MatrixConstraintData(_ConstraintData):
         constraint."""
         comp = self.parent_component()
         index = self._index
-        if (comp._lower[index] is None) or \
-           (comp._upper[index] is None):
+        if (comp._lower[index] is None) or (comp._upper[index] is None):
             return False
         return comp._lower[index] == comp._upper[index]
 
@@ -275,13 +268,10 @@ class _MatrixConstraintData(_ConstraintData):
 
     def set_value(self, expr):
         """Set the expression on this constraint."""
-        raise NotImplementedError(
-            "MatrixConstraint row elements can not be updated"
-        )
+        raise NotImplementedError("MatrixConstraint row elements can not be updated")
 
 
-@ModelComponentFactory.register(
-                   "A set of constraint expressions in Ax=b form.")
+@ModelComponentFactory.register("A set of constraint expressions in Ax=b form.")
 class MatrixConstraint(Mapping, IndexedConstraint):
     """
     Defines a set of linear constraints of the form:
@@ -329,7 +319,6 @@ class MatrixConstraint(Mapping, IndexedConstraint):
     """
 
     def __init__(self, A_data, A_indices, A_indptr, lb, ub, x):
-
         m = len(lb)
         n = len(x)
         nnz = len(A_data)
@@ -348,16 +337,16 @@ class MatrixConstraint(Mapping, IndexedConstraint):
     def construct(self, data=None):
         """Construct the expression(s) for this constraint."""
         if is_debug_set(logger):
-            logger.debug("Constructing constraint %s"
-                         % (self.name))
+            logger.debug("Constructing constraint %s" % (self.name))
         if self._constructed:
             return
         self._constructed = True
 
         ref = weakref.ref(self)
         with PauseGC():
-            self._data = tuple(_MatrixConstraintData(i, ref)
-                               for i in range(len(self._lower)))
+            self._data = tuple(
+                _MatrixConstraintData(i, ref) for i in range(len(self._lower))
+            )
 
     #
     # Override some IndexedComponent methods

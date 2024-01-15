@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -12,7 +13,15 @@
 # NOTE: deprecated code
 #
 from pyomo.common.deprecation import deprecated
-from pyomo.core import TransformationFactory, Constraint, Set, Var, Objective, AbstractModel, maximize
+from pyomo.core import (
+    TransformationFactory,
+    Constraint,
+    Set,
+    Var,
+    Objective,
+    AbstractModel,
+    maximize,
+)
 from pyomo.repn import generate_standard_repn
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.core.plugins.transform.standard_form import StandardForm
@@ -41,14 +50,15 @@ class DualTransformation(IsomorphicTransformation):
         "Development of dualization capabilities has been shifted to "
         "the Pyomo Adversarial Optimization (PAO) library. Please contact "
         "William Hart for further details (wehart@sandia.gov).",
-        version='5.6.2')
+        version='5.6.2',
+    )
     def __init__(self, **kwds):
         kwds['name'] = "linear_dual"
         super(DualTransformation, self).__init__(**kwds)
 
     def _create_using(self, model, **kwds):
         """
-        Tranform a model to its Lagrangian dual.
+        Transform a model to its Lagrangian dual.
         """
 
         # Optional naming schemes for dual variables and constraints
@@ -87,68 +97,64 @@ class DualTransformation(IsomorphicTransformation):
         # {variable_name: coefficient}
         c = _sparse(0)
 
-        # Walk constaints
-        for (con_name, con_array) in sf.component_map(Constraint, active=True).items():
-            for con in (con_array[ndx] for ndx in con_array._index):
+        # Walk constraints
+        for con_name, con_array in sf.component_map(Constraint, active=True).items():
+            for con in (con_array[ndx] for ndx in con_array.index_set()):
                 # The qualified constraint name
                 cname = "%s%s" % (variable_prefix, con.local_name)
 
                 # Process the body of the constraint
-                body_terms = process_canonical_repn(
-                    generate_standard_repn(con.body))
+                body_terms = process_canonical_repn(generate_standard_repn(con.body))
 
                 # Add a numeric constant to the 'b' vector, if present
                 b[cname] -= body_terms.pop(None, 0)
 
                 # Add variable coefficients to the 'A' matrix
                 row = _sparse(0)
-                for (vname, coef) in body_terms.items():
+                for vname, coef in body_terms.items():
                     row["%s%s" % (vname, constraint_suffix)] += coef
 
                 # Process the upper bound of the constraint. We rely on
                 # StandardForm to produce equality constraints, thus
                 # requiring us only to check the lower bounds.
-                lower_terms = process_canonical_repn(
-                    generate_standard_repn(con.lower))
+                lower_terms = process_canonical_repn(generate_standard_repn(con.lower))
 
                 # Add a numeric constant to the 'b' matrix, if present
                 b[cname] += lower_terms.pop(None, 0)
 
                 # Add any variables to the 'A' matrix, if present
-                for (vname, coef) in lower_terms.items():
+                for vname, coef in lower_terms.items():
                     row["%s%s" % (vname, constraint_suffix)] -= coef
 
                 A[cname] = row
 
         # Walk objectives. Multiply all coefficients by the objective's 'sense'
         # to convert maximizing objectives to minimizing ones.
-        for (obj_name, obj_array) in sf.component_map(Objective, active=True).items():
-            for obj in (obj_array[ndx] for ndx in obj_array._index):
+        for obj_name, obj_array in sf.component_map(Objective, active=True).items():
+            for obj in (obj_array[ndx] for ndx in obj_array.index_set()):
                 # The qualified objective name
 
                 # Process the objective
-                terms = process_canonical_repn(
-                    generate_standard_repn(obj.expr))
+                terms = process_canonical_repn(generate_standard_repn(obj.expr))
 
                 # Add coefficients
-                for (name, coef) in terms.items():
-                    c["%s%s" % (name, constraint_suffix)] += coef*obj_array.sense
+                for name, coef in terms.items():
+                    c["%s%s" % (name, constraint_suffix)] += coef * obj_array.sense
 
         # Form the dual
         dual = AbstractModel()
 
         # Make constraint index set
         constraint_set_init = []
-        for (var_name, var_array) in sf.component_map(Var, active=True).items():
-            for var in (var_array[ndx] for ndx in var_array._index):
-                constraint_set_init.append("%s%s" %
-                                           (var.local_name, constraint_suffix))
+        for var_name, var_array in sf.component_map(Var, active=True).items():
+            for var in (var_array[ndx] for ndx in var_array.index_set()):
+                constraint_set_init.append("%s%s" % (var.local_name, constraint_suffix))
 
         # Make variable index set
         variable_set_init = []
         dual_variable_roots = []
-        for (con_name, con_array) in sf.component_map(Constraint, active=True).items():
-            for con in (con_array[ndx] for ndx in con_array._index):
+        for con_name, con_array in sf.component_map(Constraint, active=True).items():
+            for con in (con_array[ndx] for ndx in con_array.index_set()):
                 dual_variable_roots.append(con.local_name)
                 variable_set_init.append("%s%s" % (variable_prefix, con.local_name))
 
@@ -159,14 +165,14 @@ class DualTransformation(IsomorphicTransformation):
 
         # Make the dual constraints
         def constraintRule(A, c, ndx, model):
-            return sum(A[v][ndx] * model.vars[v] for v in model.var_set) <= \
-                   c[ndx]
-        dual.cons = Constraint(dual.con_set,
-                               rule=partial(constraintRule, A, c))
+            return sum(A[v][ndx] * model.vars[v] for v in model.var_set) <= c[ndx]
+
+        dual.cons = Constraint(dual.con_set, rule=partial(constraintRule, A, c))
 
         # Make the dual objective (maximizing)
         def objectiveRule(b, model):
             return sum(b[v] * model.vars[v] for v in model.var_set)
+
         dual.obj = Objective(rule=partial(objectiveRule, b), sense=maximize)
 
         return dual.create()
@@ -206,4 +212,3 @@ class _sparse(dict):
                 return self._default_func()
             else:
                 return self._default_value
-

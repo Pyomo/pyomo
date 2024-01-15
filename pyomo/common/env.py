@@ -1,16 +1,18 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import ctypes
-import multiprocessing
 import os
+
+from .dependencies import ctypes
+
 
 def _as_bytes(val):
     """Helper function to coerce a string to a bytes() object"""
@@ -63,8 +65,20 @@ def _load_dll(name, timeout=10):
     """
     if not ctypes.util.find_library(name):
         return False, None
+
+    import multiprocessing
+
     if _load_dll.pool is None:
-        _load_dll.pool = multiprocessing.Pool(1)
+        try:
+            _load_dll.pool = multiprocessing.Pool(1)
+        except AssertionError:
+            # multiprocessing will fail with an assertion error if this
+            # Python process is a daemonic process (e.g., it was
+            # launched within a dask server).  Fall back on a serial
+            # process (and live with the risk that the import hangs).
+            import multiprocessing.dummy
+
+            _load_dll.pool = multiprocessing.dummy.Pool(1)
     job = _load_dll.pool.apply_async(_attempt_ctypes_cdll, (name,))
     try:
         result = job.get(timeout)
@@ -79,6 +93,7 @@ def _load_dll(name, timeout=10):
         return result, ctypes.CDLL(name)
     else:
         return result, None
+
 
 # For efficiency, cache the multiprocessing Pool between calls to _load_dll
 _load_dll.pool = None
@@ -163,7 +178,7 @@ class _OSEnviron(object):
         try:
             return os.environb.get(key, None)
         except AttributeError:
-            return _as_bytes(os.environ.get(_as_unicode(key),None))
+            return _as_bytes(os.environ.get(_as_unicode(key), None))
 
     def wgetenv(self, key):
         # PY2 doesn't distinguish, and PY3's environ is nominally
@@ -205,7 +220,7 @@ class _MsvcrtDLL(object):
         if self._loaded is not None:
             return self._loaded
 
-        self._loaded,  self.dll = _load_dll(self._libname)
+        self._loaded, self.dll = _load_dll(self._libname)
         if not self._loaded:
             return self._loaded
 
@@ -232,16 +247,14 @@ class _MsvcrtDLL(object):
             return None
 
         try:
-            envp = ctypes.POINTER(ctypes.c_wchar_p).in_dll(
-                self.dll, '_wenviron')
+            envp = ctypes.POINTER(ctypes.c_wchar_p).in_dll(self.dll, '_wenviron')
             if not envp.contents:
                 envp = None
         except ValueError:
             envp = None
         if envp is None:
             try:
-                envp = ctypes.POINTER(ctypes.c_char_p).in_dll(
-                    self.dll, '_environ')
+                envp = ctypes.POINTER(ctypes.c_char_p).in_dll(self.dll, '_environ')
                 if not envp.contents:
                     return None
             except ValueError:
@@ -255,12 +268,13 @@ class _MsvcrtDLL(object):
             size += len(line)
             if len(line) == 0:
                 raise ValueError(
-                    "Error processing MSVCRT _environ: "
-                    "0-length string encountered")
+                    "Error processing MSVCRT _environ: 0-length string encountered"
+                )
             if size > 32767:
                 raise ValueError(
                     "Error processing MSVCRT _environ: "
-                    "exceeded max environment block size (32767)")
+                    "exceeded max environment block size (32767)"
+                )
             key, val = line.split('=', 1)
             ans[key] = val
         return ans
@@ -281,7 +295,7 @@ class _Win32DLL(object):
         if self._loaded is not None:
             return self._loaded
 
-        self._loaded,  self.dll = _load_dll(self._libname)
+        self._loaded, self.dll = _load_dll(self._libname)
         if not self._loaded:
             return self._loaded
 
@@ -295,13 +309,15 @@ class _Win32DLL(object):
 
         # Note DWORD == c_ulong
         self._getenv_dll = self.dll.GetEnvironmentVariableA
-        self._getenv_dll.argtypes = [
-            ctypes.c_char_p, ctypes.c_char_p, ctypes.c_ulong]
+        self._getenv_dll.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_ulong]
         self._getenv_dll.restype = ctypes.c_ulong
 
         self._wgetenv_dll = self.dll.GetEnvironmentVariableW
         self._wgetenv_dll.argtypes = [
-            ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_ulong]
+            ctypes.c_wchar_p,
+            ctypes.c_wchar_p,
+            ctypes.c_ulong,
+        ]
         self._wgetenv_dll.restype = ctypes.c_ulong
 
         # We (arbitrarily) choose to return the unicode environ
@@ -351,14 +367,16 @@ class _Win32DLL(object):
                 if len(_str_buf[i]) == 0:
                     raise ValueError(
                         "Error processing Win32 GetEnvironmentStringsW: "
-                        "0-length character encountered")
-                if i > 32767: # max var length
+                        "0-length character encountered"
+                    )
+                if i > 32767:  # max var length
                     raise ValueError(
                         "Error processing Win32 GetEnvironmentStringsW: "
-                        "exceeded max environment block size (32767)")
+                        "exceeded max environment block size (32767)"
+                    )
             key, val = _str.split('=', 1)
             ans[key] = val
-            i += len(_str_buf[i]) # Skip the NULL
+            i += len(_str_buf[i])  # Skip the NULL
         self._free_envstr(_str_buf)
         return ans
 
@@ -421,7 +439,7 @@ class CtypesEnviron(object):
     # important to deal with it before the msvcrt libraries.
     DLLs = [
         _Win32DLL('kernel32'),
-        _MsvcrtDLL(getattr(ctypes.util,'find_msvcrt',lambda: None)()),
+        _MsvcrtDLL(getattr(ctypes.util, 'find_msvcrt', lambda: None)()),
         _MsvcrtDLL('api-ms-win-crt-environment-l1-1-0'),
         _MsvcrtDLL('msvcrt'),
         _MsvcrtDLL('msvcr120'),
@@ -434,17 +452,16 @@ class CtypesEnviron(object):
     ]
 
     def __init__(self, **kwds):
-        self.interfaces = [
-            _RestorableEnvironInterface(_OSEnviron()),
-        ]
-        self.interfaces.extend(_RestorableEnvironInterface(dll)
-                               for dll in self.DLLs if dll.available())
+        self.interfaces = [_RestorableEnvironInterface(_OSEnviron())]
+        self.interfaces.extend(
+            _RestorableEnvironInterface(dll) for dll in self.DLLs if dll.available()
+        )
         # If this is the first time a CtypesEnviron was created, the
         # calls to dll.activate() may have spawned a multiprocessing
         # pool, which we should clean up.
         if _load_dll.pool is not None:
-             _load_dll.pool.terminate()
-             _load_dll.pool = None
+            _load_dll.pool.terminate()
+            _load_dll.pool = None
         # Set the incoming env strings on all interfaces...
         for k, v in kwds.items():
             self[k] = v

@@ -68,7 +68,7 @@ optimization models.
 		<!--Fill in your text below (outside the comment block).       -->
 
 		<projectManager>
-Carl D. Laird, Chair, Pyomo Management Committee, cdlaird at sandia dot gov
+Carl D. Laird, Chair, Pyomo Management Committee, claird at andrew dot cmu dot edu
 		</projectManager>
 
 		<!-- Fill in the URLS you would like use for your main         -->
@@ -107,7 +107,7 @@ Carl D. Laird, Chair, Pyomo Management Committee, cdlaird at sandia dot gov
                      license file directly.
                 -->
 		<projectLicenseURL>
-		  https://github.com/Pyomo/pyomo/blob/main/LICENSE.txt
+		  https://github.com/Pyomo/pyomo/blob/main/LICENSE.md
 		</projectLicenseURL>
 
 		<!-- Below, you can list other COIN projects your project      -->
@@ -227,8 +227,8 @@ Carl D. Laird, Chair, Pyomo Management Committee, cdlaird at sandia dot gov
 			     Use explicit overrides to disable use of automated
 			     version reporting.
 			-->
-			<stableVersionNumber>5.7.3</stableVersionNumber>
-			<releaseNumber>5.7.3</releaseNumber>
+			<stableVersionNumber>6.7.0</stableVersionNumber>
+			<releaseNumber>6.7.0</releaseNumber>
 
 		</developmentStatus>
 
@@ -287,7 +287,7 @@ Carl D. Laird, Chair, Pyomo Management Committee, cdlaird at sandia dot gov
 
 			<platform>
 				<operatingSystem>Any</operatingSystem>
-				<compiler>Python 3.6, 3.7, 3.8, 3.9</compiler>
+				<compiler>Python 3.8, 3.9, 3.10, 3.11, 3.12</compiler>
 			</platform>
 
 		</testedPlatforms>

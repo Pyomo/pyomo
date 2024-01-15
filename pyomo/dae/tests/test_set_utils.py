@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -17,7 +18,12 @@ from os.path import abspath, dirname
 import pyomo.common.unittest as unittest
 
 from pyomo.environ import (
-    Block, Constraint, ConcreteModel, Var, Set, TransformationFactory
+    Block,
+    Constraint,
+    ConcreteModel,
+    Var,
+    Set,
+    TransformationFactory,
 )
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.set_utils import (
@@ -46,8 +52,9 @@ def make_model():
         b.v = Var(m.time, m.space, initialize=1)
         b.dv = DerivativeVar(b.v, wrt=m.time, initialize=0)
 
-        b.con = Constraint(m.time, m.space,
-                rule=lambda b, t, x: b.dv[t, x] == 7 - b.v[t, x])
+        b.con = Constraint(
+            m.time, m.space, rule=lambda b, t, x: b.dv[t, x] == 7 - b.v[t, x]
+        )
         # Inconsistent
 
         @b.Block(m.time)
@@ -64,18 +71,19 @@ def make_model():
 
             @b.Constraint(m.set2)
             def con(b, s):
-                return (5*b.v[s] ==
-                        m.fs.b2[m.time.first(), m.space.first()].v[c])
+                return 5 * b.v[s] == m.fs.b2[m.time.first(), m.space.first()].v[c]
                 # inconsistent
 
     @m.fs.Constraint(m.time)
     def con1(fs, t):
         return fs.b1.v[t, m.space.last()] == 5
+
     # Will be inconsistent
 
     @m.fs.Constraint(m.space)
     def con2(fs, x):
         return fs.b1.v[m.time.first(), x] == fs.v0[x]
+
     # will be consistent
 
     disc = TransformationFactory('dae.collocation')
@@ -86,7 +94,6 @@ def make_model():
 
 
 class TestDaeSetUtils(unittest.TestCase):
-    
     # Test explicit/implicit index detection functions
     def test_indexed_by(self):
         m = ConcreteModel()
@@ -146,47 +153,66 @@ class TestDaeSetUtils(unittest.TestCase):
         self.assertFalse(is_in_block_indexed_by(m.v2, m.set))
         self.assertTrue(is_in_block_indexed_by(m.b1[m.time[1]].v2, m.time))
 
-        self.assertTrue(is_in_block_indexed_by(
-            m.b2[m.time[1], m.space[1]].b.v1, m.time))
-        self.assertTrue(is_in_block_indexed_by(
-            m.b2[m.time[1], m.space[1]].b.v2, m.time))
-        self.assertTrue(is_explicitly_indexed_by(
-            m.b2[m.time[1], m.space[1]].b.v2, m.time))
-        self.assertFalse(is_in_block_indexed_by(
-            m.b2[m.time[1], m.space[1]].b.v1, m.set))
+        self.assertTrue(
+            is_in_block_indexed_by(m.b2[m.time[1], m.space[1]].b.v1, m.time)
+        )
+        self.assertTrue(
+            is_in_block_indexed_by(m.b2[m.time[1], m.space[1]].b.v2, m.time)
+        )
+        self.assertTrue(
+            is_explicitly_indexed_by(m.b2[m.time[1], m.space[1]].b.v2, m.time)
+        )
+        self.assertFalse(
+            is_in_block_indexed_by(m.b2[m.time[1], m.space[1]].b.v1, m.set)
+        )
 
-        self.assertFalse(is_in_block_indexed_by(
-            m.b2[m.time[1], m.space[1]].b.v1, 
-            m.space, stop_at=m.b2[m.time[1], m.space[1]]))
+        self.assertFalse(
+            is_in_block_indexed_by(
+                m.b2[m.time[1], m.space[1]].b.v1,
+                m.space,
+                stop_at=m.b2[m.time[1], m.space[1]],
+            )
+        )
 
         # Explicit indexing with multi-dimensional set:
         self.assertTrue(is_explicitly_indexed_by(m.v4, m.time, m.set2))
         self.assertTrue(is_explicitly_indexed_by(m.v5, m.time, m.set2, m.space))
 
         # Implicit indexing with multi-dimensional set:
-        self.assertTrue(is_in_block_indexed_by(
-            m.b3['a', 1, m.time[1]].v, m.set2))
-        self.assertTrue(is_in_block_indexed_by(
-            m.b3['a', 1, m.time[1]].v, m.time))
-        self.assertTrue(is_in_block_indexed_by(
-            m.b3['a', 1, m.time[1]].v1[m.space[1]], m.set2))
-        self.assertFalse(is_in_block_indexed_by(
-            m.b3['a', 1, m.time[1]].v1[m.space[1]], m.space))
-        self.assertTrue(is_in_block_indexed_by(
-            m.b3['b', 2, m.time[2]].b[m.space[2]].v['b'], m.set2))
-        self.assertTrue(is_in_block_indexed_by(
-            m.b3['b', 2, m.time[2]].b[m.space[2]].v['b'], m.time))
-        self.assertTrue(is_in_block_indexed_by(
-            m.b3['b', 2, m.time[2]].b[m.space[2]].v['b'], m.space))
-        self.assertFalse(is_in_block_indexed_by(
-            m.b3['b', 2, m.time[2]].b[m.space[2]].v['b'], m.set))
-        self.assertFalse(is_in_block_indexed_by(
-            m.b3['b', 2, m.time[2]].b[m.space[2]].v['b'], m.time,
-            stop_at=m.b3['b', 2, m.time[2]]))
-        self.assertFalse(is_in_block_indexed_by(
-            m.b3['b', 2, m.time[2]].b[m.space[2]].v['b'], m.time,
-            stop_at=m.b3))
-
+        self.assertTrue(is_in_block_indexed_by(m.b3['a', 1, m.time[1]].v, m.set2))
+        self.assertTrue(is_in_block_indexed_by(m.b3['a', 1, m.time[1]].v, m.time))
+        self.assertTrue(
+            is_in_block_indexed_by(m.b3['a', 1, m.time[1]].v1[m.space[1]], m.set2)
+        )
+        self.assertFalse(
+            is_in_block_indexed_by(m.b3['a', 1, m.time[1]].v1[m.space[1]], m.space)
+        )
+        self.assertTrue(
+            is_in_block_indexed_by(m.b3['b', 2, m.time[2]].b[m.space[2]].v['b'], m.set2)
+        )
+        self.assertTrue(
+            is_in_block_indexed_by(m.b3['b', 2, m.time[2]].b[m.space[2]].v['b'], m.time)
+        )
+        self.assertTrue(
+            is_in_block_indexed_by(
+                m.b3['b', 2, m.time[2]].b[m.space[2]].v['b'], m.space
+            )
+        )
+        self.assertFalse(
+            is_in_block_indexed_by(m.b3['b', 2, m.time[2]].b[m.space[2]].v['b'], m.set)
+        )
+        self.assertFalse(
+            is_in_block_indexed_by(
+                m.b3['b', 2, m.time[2]].b[m.space[2]].v['b'],
+                m.time,
+                stop_at=m.b3['b', 2, m.time[2]],
+            )
+        )
+        self.assertFalse(
+            is_in_block_indexed_by(
+                m.b3['b', 2, m.time[2]].b[m.space[2]].v['b'], m.time, stop_at=m.b3
+            )
+        )
 
     # Test get_index_set_except and _complete_index
     def test_get_index_set_except(self):
@@ -235,9 +261,8 @@ class TestDaeSetUtils(unittest.TestCase):
         info = get_index_set_except(m.v2, m.time)
         set_except = info['set_except']
         index_getter = info['index_getter']
-        self.assertTrue(m.space[1] in set_except
-                        and m.space.last() in set_except)
-	# Here (2,) is the partial index, corresponding to space.
+        self.assertTrue(m.space[1] in set_except and m.space.last() in set_except)
+        # Here (2,) is the partial index, corresponding to space.
         # Can be provided as a scalar or tuple. 4, the time index,
         # should be inserted before (2,)
         self.assertEqual(index_getter((2,), 4), (4, 2))
@@ -248,7 +273,7 @@ class TestDaeSetUtils(unittest.TestCase):
         set_except = info['set_except']
         index_getter = info['index_getter']
         self.assertTrue(set_except == [None])
-        # 5, 7 are the desired index values for space, time 
+        # 5, 7 are the desired index values for space, time
         # index_getter should put them in the right order for m.v2,
         # even if they are not valid indices for m.v2
         self.assertEqual(index_getter((), 5, 7), (7, 5))
@@ -259,8 +284,9 @@ class TestDaeSetUtils(unittest.TestCase):
         # indexing v3
         set_except = info['set_except']
         index_getter = info['index_getter']
-        self.assertTrue((m.space[1], 'b') in set_except
-                        and (m.space.last(), 'a') in set_except)
+        self.assertTrue(
+            (m.space[1], 'b') in set_except and (m.space.last(), 'a') in set_except
+        )
         # index_getter inserts a scalar index into an index of length 2
         self.assertEqual(index_getter((2, 'b'), 7), (7, 2, 'b'))
 
@@ -279,7 +305,7 @@ class TestDaeSetUtils(unittest.TestCase):
         index_getter = info['index_getter']
         self.assertTrue((m.time[1], 'd') in set_except)
         self.assertEqual(index_getter((4, 'f'), 'b', 8), (4, 8, 'b', 'f'))
-        
+
         # The intended usage of this function looks something like:
         index_set = m.v4.index_set()
         for partial_index in set_except:
@@ -298,15 +324,19 @@ class TestDaeSetUtils(unittest.TestCase):
         set_except = info['set_except']
         index_getter = info['index_getter']
         self.assertTrue(m.space[1] in set_except)
-        self.assertEqual(index_getter(m.space[1], ('b', 2), m.time[1]),
-                (m.time[1], m.space[1], 'b', 2))
+        self.assertEqual(
+            index_getter(m.space[1], ('b', 2), m.time[1]),
+            (m.time[1], m.space[1], 'b', 2),
+        )
 
         info = get_index_set_except(m.v7, m.time)
         set_except = info['set_except']
         index_getter = info['index_getter']
         self.assertIn(('a', 1, m.space[1]), set_except)
-        self.assertEqual(index_getter(('a', 1, m.space[1]), m.time[1]),
-                         ('a', 1, m.space[1], m.time[1]))
+        self.assertEqual(
+            index_getter(('a', 1, m.space[1]), m.time[1]),
+            ('a', 1, m.space[1], m.time[1]),
+        )
 
         m.v8 = Var(m.time, m.set3, m.time)
         with self.assertRaises(ValueError):
@@ -333,25 +363,26 @@ class TestDaeSetUtils(unittest.TestCase):
         self.assertFalse(m.fs.b1.con[m.time[3], m.space[1]].active)
 
         with self.assertRaises(KeyError):
-            deactivate_model_at(m, m.time, m.time[1], allow_skip=False,
-                    suppress_warnings=True)
+            deactivate_model_at(
+                m, m.time, m.time[1], allow_skip=False, suppress_warnings=True
+            )
 
     def test_get_indices_of_projection(self):
         m = ConcreteModel()
-        m.s1 = Set(initialize=[1,2,3])
-        m.s2 = Set(initialize=[4,5,6])
-        m.s3 = Set(initialize=['a','b'])
-        m.s4 = Set(initialize=['c','d'])
+        m.s1 = Set(initialize=[1, 2, 3])
+        m.s2 = Set(initialize=[4, 5, 6])
+        m.s3 = Set(initialize=['a', 'b'])
+        m.s4 = Set(initialize=['c', 'd'])
 
         # Basic test:
         product = m.s1.cross(m.s2, m.s3, m.s4)
         info = get_indices_of_projection(product, m.s2)
         set_except = info['set_except']
         index_getter = info['index_getter']
-        predicted_len = len(m.s1)*len(m.s3)*len(m.s4)
+        predicted_len = len(m.s1) * len(m.s3) * len(m.s4)
         self.assertEqual(len(set_except), predicted_len)
         removed_index = 4
-        for idx in m.s1*m.s3*m.s4:
+        for idx in m.s1 * m.s3 * m.s4:
             self.assertIn(idx, set_except)
             full_index = index_getter(idx, removed_index)
             self.assertIn(full_index, product)
@@ -362,10 +393,10 @@ class TestDaeSetUtils(unittest.TestCase):
         info = get_indices_of_projection(product, m.s2)
         set_except = info['set_except']
         index_getter = info['index_getter']
-        predicted_len = len(m.s1)*len(m.s3)*len(m.s4)
+        predicted_len = len(m.s1) * len(m.s3) * len(m.s4)
         self.assertEqual(len(set_except), predicted_len)
         removed_index = 4
-        for idx in m.s1*m.s3*m.s4:
+        for idx in m.s1 * m.s3 * m.s4:
             self.assertIn(idx, set_except)
             full_index = index_getter(idx, removed_index)
             self.assertIn(full_index, product)
@@ -375,10 +406,10 @@ class TestDaeSetUtils(unittest.TestCase):
         info = get_indices_of_projection(product, m.s2, m.s4)
         set_except = info['set_except']
         index_getter = info['index_getter']
-        predicted_len = len(m.s1)*len(m.s3)
+        predicted_len = len(m.s1) * len(m.s3)
         self.assertEqual(len(set_except), predicted_len)
         removed_index = (4, 'd')
-        for idx in m.s1*m.s3:
+        for idx in m.s1 * m.s3:
             self.assertIn(idx, set_except)
             full_index = index_getter(idx, *removed_index)
             self.assertIn(full_index, product)

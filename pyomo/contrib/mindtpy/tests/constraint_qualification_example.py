@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """ Example of constraint qualification.
 
 The expected optimal solution value is 3.
@@ -8,21 +9,31 @@ The expected optimal solution value is 3.
                      2  constraints
 
 """
-from __future__ import division
 
-from pyomo.environ import (Binary, ConcreteModel, Constraint, Reals,
-                           Objective, Param, RangeSet, Var, exp, minimize, log)
+from pyomo.environ import (
+    Binary,
+    ConcreteModel,
+    Constraint,
+    Objective,
+    Var,
+    minimize,
+    log,
+)
+from pyomo.common.collections import ComponentMap
 
 
 class ConstraintQualificationExample(ConcreteModel):
-
     def __init__(self, *args, **kwargs):
         """Create the problem."""
         kwargs.setdefault('name', 'ConstraintQualificationExample')
         super(ConstraintQualificationExample, self).__init__(*args, **kwargs)
-        model = self
-        model.x = Var(bounds=(1.0, 10.0), initialize=5.0)
-        model.y = Var(within=Binary)
-        model.c1 = Constraint(expr=(model.x-3.0)**2 <= 50.0*(1-model.y))
-        model.c2 = Constraint(expr=model.x*log(model.x)+5.0 <= 50.0*(model.y))
-        model.objective = Objective(expr=model.x, sense=minimize)
+        m = self
+        m.x = Var(bounds=(1.0, 10.0), initialize=5.0)
+        m.y = Var(within=Binary, initialize=1.0)
+        m.c1 = Constraint(expr=(m.x - 3.0) ** 2 <= 50.0 * (1 - m.y))
+        m.c2 = Constraint(expr=m.x * log(m.x) + 5.0 <= 50.0 * (m.y))
+        m.objective = Objective(expr=m.x, sense=minimize)
+        m.optimal_value = 3
+        m.optimal_solution = ComponentMap()
+        m.optimal_solution[m.x] = 3.0
+        m.optimal_solution[m.y] = 1.0

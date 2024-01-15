@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -21,8 +22,9 @@ import json
 import os.path
 
 import pyomo.common.unittest as unittest
+from pyomo.common.log import LoggingIntercept
 
-import pyomo.scripting.pyomo_command as main
+from pyomo.scripting.pyomo_main import main
 from pyomo.scripting.util import cleanup
 from pyomo.neos.kestrel import kestrelAMPL
 import pyomo.neos
@@ -30,6 +32,7 @@ import pyomo.neos
 import pyomo.environ as pyo
 
 from pyomo.common.fileutils import this_file_dir
+
 currdir = this_file_dir()
 
 neos_available = False
@@ -49,13 +52,13 @@ def _model(sense):
     # - linear
     # - solution has nonzero variable values (so they appear in the results)
     model = pyo.ConcreteModel()
-    model.y = pyo.Var(bounds=(-10,10), initialize=0.5)
-    model.x = pyo.Var(bounds=(-5,5), initialize=0.5)
+    model.y = pyo.Var(bounds=(-10, 10), initialize=0.5)
+    model.x = pyo.Var(bounds=(-5, 5), initialize=0.5)
 
     @model.ConstraintList()
     def c(m):
         yield m.y >= m.x - 2
-        yield m.y >= - m.x
+        yield m.y >= -m.x
         yield m.y <= m.x
         yield m.y <= 2 - m.x
 
@@ -63,24 +66,37 @@ def _model(sense):
     return model
 
 
-@unittest.category('nightly', 'neos')
+@unittest.pytest.mark.default
+@unittest.pytest.mark.neos
 @unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
 @unittest.skipUnless(email_set, "NEOS_EMAIL not set")
 class TestKestrel(unittest.TestCase):
-
     def test_doc(self):
         kestrel = kestrelAMPL()
         tmp = [tuple(name.split(':')) for name in kestrel.solvers()]
-        amplsolvers = set(v[0].lower() for v in tmp if v[1]=='AMPL')
+        amplsolvers = set(v[0].lower() for v in tmp if v[1] == 'AMPL')
 
         doc = pyomo.neos.doc
         dockeys = set(doc.keys())
 
         self.assertEqual(amplsolvers, dockeys)
 
-        #gamssolvers = set(v[0].lower() for v in tmp if v[1]=='GAMS')
-        #missing = gamssolvers - amplsolvers
-        #self.assertEqual(len(missing) == 0)
+        # gamssolvers = set(v[0].lower() for v in tmp if v[1]=='GAMS')
+        # missing = gamssolvers - amplsolvers
+        # self.assertEqual(len(missing) == 0)
+
+    def test_connection_failed(self):
+        try:
+            orig_host = pyomo.neos.kestrel.NEOS.host
+            pyomo.neos.kestrel.NEOS.host = 'neos-bogus-server.org'
+            with LoggingIntercept() as LOG:
+                kestrel = kestrelAMPL()
+            self.assertIsNone(kestrel.neos)
+            self.assertRegex(
+                LOG.getvalue(), r"NEOS is temporarily unavailable:\n\t\(.+\)"
+            )
+        finally:
+            pyomo.neos.kestrel.NEOS.host = orig_host
 
 
 class RunAllNEOSSolvers(object):
@@ -133,19 +149,21 @@ class RunAllNEOSSolvers(object):
     def test_mosek(self):
         self._run('mosek')
 
+    def test_octeract(self):
+        self._run('octeract')
+
     def test_ooqp(self):
         if self.sense == pyo.maximize:
             # OOQP does not recognize maximization problems and
             # minimizes instead.
-            with self.assertRaisesRegex(
-                    AssertionError, '.* != 1 within'):
+            with self.assertRaisesRegex(AssertionError, '.* != 1 within'):
                 self._run('ooqp')
         else:
             self._run('ooqp')
 
-    # The simple tests aren't complementarity 
+    # The simple tests aren't complementarity
     # problems
-    #def test_path(self):
+    # def test_path(self):
     #    self._run('path')
 
     def test_snopt(self):
@@ -161,12 +179,12 @@ class RunAllNEOSSolvers(object):
 class DirectDriver(object):
     def _run(self, opt, constrained=True):
         m = _model(self.sense)
-        solver_manager = pyo.SolverManagerFactory('neos')
-        results = solver_manager.solve(m, opt=opt)
+        with pyo.SolverManagerFactory('neos') as solver_manager:
+            results = solver_manager.solve(m, opt=opt)
 
         expected_y = {
             (pyo.minimize, True): -1,
-            (pyo.maximize, True):  1,
+            (pyo.maximize, True): 1,
             (pyo.minimize, False): -10,
             (pyo.maximize, False): 10,
         }[self.sense, constrained]
@@ -178,31 +196,33 @@ class DirectDriver(object):
         self.assertAlmostEqual(pyo.value(m.obj), expected_y, delta=1e-5)
         self.assertAlmostEqual(pyo.value(m.y), expected_y, delta=1e-5)
 
-class PyomoCommandDriver(object):
 
+class PyomoCommandDriver(object):
     def _run(self, opt, constrained=True):
         expected_y = {
             (pyo.minimize, True): -1,
-            (pyo.maximize, True):  1,
+            (pyo.maximize, True): 1,
             (pyo.minimize, False): -10,
             (pyo.maximize, False): 10,
         }[self.sense, constrained]
 
-        filename = 'model_min_lp.py' if self.sense == pyo.minimize \
-                   else 'model_max_lp.py'
+        filename = (
+            'model_min_lp.py' if self.sense == pyo.minimize else 'model_max_lp.py'
+        )
 
         results = os.path.join(currdir, 'result.json')
         args = [
+            'solve',
             os.path.join(currdir, filename),
             '--solver-manager=neos',
             '--solver=%s' % opt,
             '--logging=quiet',
             '--save-results=%s' % results,
             '--results-format=json',
-            '-c'
-            ]
+            '-c',
+        ]
         try:
-            output = main.run(args)
+            output = main(args)
             self.assertEqual(output.errorcode, 0)
 
             with open(results) as FILE:
@@ -212,53 +232,65 @@ class PyomoCommandDriver(object):
             if os.path.exists(results):
                 os.remove(results)
 
-        self.assertEqual(
-            data['Solver'][0]['Status'], 'ok')
-        self.assertEqual(
-            data['Solution'][1]['Status'], 'optimal')
+        self.assertEqual(data['Solver'][0]['Status'], 'ok')
+        self.assertEqual(data['Solution'][1]['Status'], 'optimal')
         self.assertAlmostEqual(
-            data['Solution'][1]['Objective']['obj']['Value'],
-            expected_y, delta=1e-5)
+            data['Solution'][1]['Objective']['obj']['Value'], expected_y, delta=1e-5
+        )
         if constrained:
             # If the solver ignores constraints, x is degenerate
             self.assertAlmostEqual(
-                data['Solution'][1]['Variable']['x']['Value'],
-                1, delta=1e-5)
+                data['Solution'][1]['Variable']['x']['Value'], 1, delta=1e-5
+            )
         self.assertAlmostEqual(
-            data['Solution'][1]['Variable']['y']['Value'],
-            expected_y, delta=1e-5)
+            data['Solution'][1]['Variable']['y']['Value'], expected_y, delta=1e-5
+        )
 
 
-@unittest.category('neos')
+@unittest.pytest.mark.neos
 @unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
 @unittest.skipUnless(email_set, "NEOS_EMAIL not set")
-class TestSolvers_direct_call_min(RunAllNEOSSolvers, DirectDriver,
-                                  unittest.TestCase):
+class TestSolvers_direct_call_min(RunAllNEOSSolvers, DirectDriver, unittest.TestCase):
     sense = pyo.minimize
 
-    # Add the CBC test to the nightly suite
-    @unittest.category('nightly')
-    def test_cbc(self):
-        super(TestSolvers_direct_call_min, self).test_cbc()
 
-@unittest.category('neos')
+@unittest.pytest.mark.neos
 @unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
 @unittest.skipUnless(email_set, "NEOS_EMAIL not set")
-class TestSolvers_direct_call_max(RunAllNEOSSolvers, DirectDriver,
-                                  unittest.TestCase):
+class TestSolvers_direct_call_max(RunAllNEOSSolvers, DirectDriver, unittest.TestCase):
     sense = pyo.maximize
 
-@unittest.category('neos')
+
+@unittest.pytest.mark.neos
 @unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
 @unittest.skipUnless(email_set, "NEOS_EMAIL not set")
-class TestSolvers_pyomo_cmd_min(RunAllNEOSSolvers, PyomoCommandDriver,
-                                unittest.TestCase):
+class TestSolvers_pyomo_cmd_min(
+    RunAllNEOSSolvers, PyomoCommandDriver, unittest.TestCase
+):
     sense = pyo.minimize
 
-    # Add the CBC test to the nightly suite
-    @unittest.category('nightly')
-    def test_cbc(self):
-        super(TestSolvers_pyomo_cmd_min, self).test_cbc()
+
+@unittest.pytest.mark.default
+@unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
+@unittest.skipUnless(email_set, "NEOS_EMAIL not set")
+class TestCBC_timeout_direct_call(DirectDriver, unittest.TestCase):
+    sense = pyo.minimize
+
+    @unittest.timeout(60, timeout_raises=unittest.SkipTest)
+    def test_cbc_timeout(self):
+        super()._run('cbc')
+
+
+@unittest.pytest.mark.default
+@unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
+@unittest.skipUnless(email_set, "NEOS_EMAIL not set")
+class TestCBC_timeout_pyomo_cmd(PyomoCommandDriver, unittest.TestCase):
+    sense = pyo.minimize
+
+    @unittest.timeout(60, timeout_raises=unittest.SkipTest)
+    def test_cbc_timeout(self):
+        super()._run('cbc')
+
 
 if __name__ == "__main__":
     unittest.main()

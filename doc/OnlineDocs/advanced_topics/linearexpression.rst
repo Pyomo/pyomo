@@ -39,4 +39,4 @@ syntax. This example creates two constraints that are the same:
 .. warning::
 
    The lists that are passed to ``LinearExpression`` are not copied, so caution must
-   be excercised if they are modified after the component is constructed.
+   be exercised if they are modified after the component is constructed.

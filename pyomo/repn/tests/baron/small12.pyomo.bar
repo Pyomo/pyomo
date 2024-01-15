@@ -11,18 +11,18 @@ EQUATIONS c_e_FIX_ONE_VAR_CONST__, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11,
 c_e_FIX_ONE_VAR_CONST__:  ONE_VAR_CONST__  == 1;
 c1: Expr_if( ( 0.0 ), then=( vTrue ), else=( vFalse ) ) == -1;
 c2: Expr_if( ( 1.0 ), then=( vTrue ), else=( vFalse ) ) == 1;
-c3: Expr_if( ( vN1  <=  0.0 ), then=( vTrue ), else=( vFalse ) ) == 1;
-c4: Expr_if( ( v0  <=  0.0 ), then=( vTrue ), else=( vFalse ) ) == 1;
-c5: Expr_if( ( vP1  <=  0.0 ), then=( vTrue ), else=( vFalse ) ) == -1;
-c6: Expr_if( ( vN1  <  0.0 ), then=( vTrue ), else=( vFalse ) ) == 1;
-c7: Expr_if( ( v0  <  0.0 ), then=( vTrue ), else=( vFalse ) ) == -1;
-c8: Expr_if( ( vP1  <  0.0 ), then=( vTrue ), else=( vFalse ) ) == -1;
-c9: Expr_if( ( 0.0  <=  10.0*vN1 ), then=( vTrue ), else=( vFalse ) ) == -1;
-c10: Expr_if( ( 0.0  <=  10.0*v0 ), then=( vTrue ), else=( vFalse ) ) == 1;
-c11: Expr_if( ( 0.0  <=  10.0*vP1 ), then=( vTrue ), else=( vFalse ) ) == 1;
-c12: Expr_if( ( 0.0  <  10.0*vN1 ), then=( vTrue ), else=( vFalse ) ) == -1;
-c13: Expr_if( ( 0.0  <  10.0*v0 ), then=( vTrue ), else=( vFalse ) ) == -1;
-c14: Expr_if( ( 0.0  <  10.0*vP1 ), then=( vTrue ), else=( vFalse ) ) == 1;
+c3: Expr_if( ( vN1  <=  0 ), then=( vTrue ), else=( vFalse ) ) == 1;
+c4: Expr_if( ( v0  <=  0 ), then=( vTrue ), else=( vFalse ) ) == 1;
+c5: Expr_if( ( vP1  <=  0 ), then=( vTrue ), else=( vFalse ) ) == -1;
+c6: Expr_if( ( vN1  <  0 ), then=( vTrue ), else=( vFalse ) ) == 1;
+c7: Expr_if( ( v0  <  0 ), then=( vTrue ), else=( vFalse ) ) == -1;
+c8: Expr_if( ( vP1  <  0 ), then=( vTrue ), else=( vFalse ) ) == -1;
+c9: Expr_if( ( 0  <=  10.0*vN1 ), then=( vTrue ), else=( vFalse ) ) == -1;
+c10: Expr_if( ( 0  <=  10.0*v0 ), then=( vTrue ), else=( vFalse ) ) == 1;
+c11: Expr_if( ( 0  <=  10.0*vP1 ), then=( vTrue ), else=( vFalse ) ) == 1;
+c12: Expr_if( ( 0  <  10.0*vN1 ), then=( vTrue ), else=( vFalse ) ) == -1;
+c13: Expr_if( ( 0  <  10.0*v0 ), then=( vTrue ), else=( vFalse ) ) == -1;
+c14: Expr_if( ( 0  <  10.0*vP1 ), then=( vTrue ), else=( vFalse ) ) == 1;
 c15: Expr_if( ( -1  <=  vN2  <=  1 ), then=( vTrue ), else=( vFalse ) ) == -1;
 c16: Expr_if( ( - vP1  <=  vN1  <=  1 ), then=( vTrue ), else=( vFalse ) ) == 1;
 c17: Expr_if( ( - vP1**2  <=  v0  <=  1 ), then=( vTrue ), else=( vFalse ) ) == 1;
@@ -34,7 +34,7 @@ c22: Expr_if( ( -1  <  v0  <  vP1**2 ), then=( vTrue ), else=( vFalse ) ) == 1;
 c23: Expr_if( ( -1  <  vP1  <  vP1 ), then=( vTrue ), else=( vFalse ) ) == -1;
 c24: Expr_if( ( -1  <  vP2  <  1 ), then=( vTrue ), else=( vFalse ) ) == -1;
 
-OBJ: minimize 10 * Expr_if( ( v0 ), then=( vTrue ), else=( vFalse ) );
+OBJ: minimize 10*Expr_if( ( v0 ), then=( vTrue ), else=( vFalse ) );
 
 STARTING_POINT{
 ONE_VAR_CONST__: 1;

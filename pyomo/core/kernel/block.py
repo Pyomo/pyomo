@@ -1,39 +1,31 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import sys
 import logging
 import math
 
-if sys.version_info[:2] >= (3,7):
-    # dict became ordered in CPython 3.6 and added to the standard in 3.7
-    _ordered_dict_ = dict
-else:
-    import collections
-    _ordered_dict_ = collections.OrderedDict
-
+from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.symbol_map import SymbolMap
-from pyomo.core.kernel.base import \
-    (_no_ctype,
-     _convert_ctype)
-from pyomo.core.kernel.heterogeneous_container import \
-    IHeterogeneousContainer
-from pyomo.core.kernel.container_utils import \
-    define_simple_containers
+from pyomo.core.kernel.base import _no_ctype, _convert_ctype
+from pyomo.core.kernel.heterogeneous_container import IHeterogeneousContainer
+from pyomo.core.kernel.container_utils import define_simple_containers
 
 logger = logging.getLogger('pyomo.core')
+
 
 class IBlock(IHeterogeneousContainer):
     """A generalized container that can store objects of
     any category type as attributes.
     """
+
     __slots__ = ()
     _child_storage_delimiter_string = "."
     _child_storage_entry_string = "%s"
@@ -42,7 +34,7 @@ class IBlock(IHeterogeneousContainer):
     # Define the IHeterogeneousContainer abstract methods
     #
 
-    #def child_ctypes(self, *args, **kwds):
+    # def child_ctypes(self, *args, **kwds):
     # ... not defined here
 
     #
@@ -62,8 +54,9 @@ class IBlock(IHeterogeneousContainer):
         except AttributeError:
             raise KeyError(str(key))
 
-    #def children(self, *args, **kwds):
+    # def children(self, *args, **kwds):
     # ... not defined here
+
 
 class block(IBlock):
     """A generalized container for defining hierarchical
@@ -97,16 +90,15 @@ class block(IBlock):
         d['_storage_key'] = None
         d['_active'] = True
         d['_block__byctype'] = None
-        d['_block__order'] = _ordered_dict_()
+        d['_block__order'] = dict()
 
     def _activate_large_storage_mode(self):
-        if self.__byctype.__class__ is not _ordered_dict_:
-            self_byctype = \
-                self.__dict__['_block__byctype'] = _ordered_dict_()
+        if self.__byctype.__class__ is not dict:
+            self_byctype = self.__dict__['_block__byctype'] = dict()
             for key, obj in self.__order.items():
                 ctype = obj.ctype
                 if ctype not in self_byctype:
-                    self_byctype[ctype] = _ordered_dict_()
+                    self_byctype[ctype] = dict()
                 self_byctype[ctype][key] = obj
 
     #
@@ -131,7 +123,7 @@ class block(IBlock):
                     ctypes_set.add(child_ctype)
                     ctypes.append(child_ctype)
             return tuple(ctypes)
-        elif self_byctype.__class__ is _ordered_dict_:
+        elif self_byctype.__class__ is dict:
             # large-block storage
             return tuple(self_byctype)
         else:
@@ -163,13 +155,11 @@ class block(IBlock):
         ctype = _convert_ctype.get(ctype, ctype)
 
         if ctype is _no_ctype:
-            for child in self.__order.values():
-                yield child
-        elif self_byctype.__class__ is _ordered_dict_:
+            yield from self.__order.values()
+        elif self_byctype.__class__ is dict:
             # large-block storage
             if ctype in self_byctype:
-                for child in self_byctype[ctype].values():
-                    yield child
+                yield from self_byctype[ctype].values()
         elif self_byctype.__class__ is int:
             # small-block storage
             # (self_byctype is a union of hash bytes)
@@ -180,8 +170,7 @@ class block(IBlock):
                         yield child
         elif self_byctype is ctype:
             # storing a single ctype
-            for child in self.__order.values():
-                yield child
+            yield from self.__order.values()
 
     #
     # Interface
@@ -189,8 +178,9 @@ class block(IBlock):
 
     def __setattr__(self, name, obj):
         if name in self._block_reserved_words:
-            raise ValueError("Attempting to modify a reserved "
-                             "block attribute: %s" % (name,))
+            raise ValueError(
+                "Attempting to modify a reserved block attribute: %s" % (name,)
+            )
         needs_del = False
         same_obj = False
         self_order = self.__order
@@ -207,9 +197,12 @@ class block(IBlock):
                     "To avoid this warning, delete the original "
                     "object from the block before assigning a new "
                     "object."
-                    % (name,
-                       getattr(self, name).__class__.__name__,
-                       obj.__class__.__name__))
+                    % (
+                        name,
+                        getattr(self, name).__class__.__name__,
+                        obj.__class__.__name__,
+                    )
+                )
             else:
                 same_obj = True
                 assert obj.parent is self
@@ -229,10 +222,10 @@ class block(IBlock):
                 if self_byctype is None:
                     # storing a single ctype
                     self.__dict__['_block__byctype'] = ctype
-                elif self_byctype.__class__ is _ordered_dict_:
+                elif self_byctype.__class__ is dict:
                     # large-block storage
                     if ctype not in self_byctype:
-                        self_byctype[ctype] = _ordered_dict_()
+                        self_byctype[ctype] = dict()
                     self_byctype[ctype][name] = obj
                 elif self_byctype.__class__ is int:
                     # small-block storage
@@ -251,17 +244,16 @@ class block(IBlock):
                             # if we have exceeded the threshold
                             self._activate_large_storage_mode()
                         else:
-                            self.__dict__['_block__byctype'] = \
-                                hash(self_byctype) | hash(ctype)
+                            self.__dict__['_block__byctype'] = hash(
+                                self_byctype
+                            ) | hash(ctype)
             else:
                 raise ValueError(
                     "Invalid assignment to %s type with name '%s' "
                     "at entry %s. A parent container has already "
                     "been assigned to the object being inserted: %s"
-                    % (self.__class__.__name__,
-                       self.name,
-                       name,
-                       obj.parent.name))
+                    % (self.__class__.__name__, self.name, name, obj.parent.name)
+                )
         super(block, self).__setattr__(name, obj)
 
     def __delattr__(self, name):
@@ -271,7 +263,7 @@ class block(IBlock):
             del self_order[name]
             obj._clear_parent_and_storage_key()
             self_byctype = self.__byctype
-            if self_byctype.__class__ is _ordered_dict_:
+            if self_byctype.__class__ is dict:
                 # large-block storage
                 ctype = obj.ctype
                 del self_byctype[ctype][name]
@@ -279,12 +271,14 @@ class block(IBlock):
                     del self_byctype[ctype]
         super(block, self).__delattr__(name)
 
-    def write(self,
-              filename,
-              format=None,
-              _solver_capability=None,
-              _called_by_solver=False,
-              **kwds):
+    def write(
+        self,
+        filename,
+        format=None,
+        _solver_capability=None,
+        _called_by_solver=False,
+        **kwds
+    ):
         """
         Write the model to a file, with a given format.
 
@@ -300,6 +294,7 @@ class block(IBlock):
             a :class:`SymbolMap`
         """
         import pyomo.opt
+
         #
         # Guess the format if none is specified
         #
@@ -310,15 +305,12 @@ class block(IBlock):
         if problem_writer is None:
             raise ValueError(
                 "Cannot write model in format '%s': no model "
-                "writer registered for that format"
-                % str(format))
+                "writer registered for that format" % str(format)
+            )
 
         if _solver_capability is None:
             _solver_capability = lambda x: True
-        (filename_, smap) = problem_writer(self,
-                                           filename,
-                                           _solver_capability,
-                                           kwds)
+        (filename_, smap) = problem_writer(self, filename, _solver_capability, kwds)
         assert filename_ == filename
 
         if _called_by_solver:
@@ -331,10 +323,12 @@ class block(IBlock):
         else:
             return smap
 
-    def load_solution(self,
-                      solution,
-                      allow_consistent_values_for_fixed_vars=False,
-                      comparison_tolerance_for_fixed_vars=1e-5):
+    def load_solution(
+        self,
+        solution,
+        allow_consistent_values_for_fixed_vars=False,
+        comparison_tolerance_for_fixed_vars=1e-5,
+    ):
         """
         Load a solution.
 
@@ -353,19 +347,16 @@ class block(IBlock):
                 value in the solution is consistent with the
                 value of a fixed variable.
         """
-        from pyomo.core.kernel.suffix import \
-            import_suffix_generator
+        from pyomo.core.kernel.suffix import import_suffix_generator
 
         symbol_map = solution.symbol_map
-        default_variable_value = getattr(solution,
-                                         "default_variable_value",
-                                         None)
+        default_variable_value = getattr(solution, "default_variable_value", None)
 
         # Generate the list of active import suffixes on
         # this top level model
-        valid_import_suffixes = \
-            {obj.storage_key:obj
-                 for obj in import_suffix_generator(self)}
+        valid_import_suffixes = {
+            obj.storage_key: obj for obj in import_suffix_generator(self)
+        }
 
         # To ensure that import suffix data gets properly
         # overwritten (e.g., the case where nonzero dual
@@ -384,17 +375,21 @@ class block(IBlock):
                 valid_import_suffixes[attr_key][self] = attr_value
 
         #
+        # Set the "stale" flag of each variable in the model prior to
+        # loading the solution, so you known which variables have "real"
+        # values and which ones don't.
+        #
+        StaleFlagManager.mark_all_as_stale()
+        #
         # Load variable data
         #
         from pyomo.core.kernel.variable import IVariable
-        for var in self.components(ctype=IVariable):
-            var.stale = True
-        var_skip_attrs = ['id','canonical_label']
+
+        var_skip_attrs = ['id', 'canonical_label']
         seen_var_ids = set()
         for label, entry in solution.variable.items():
             var = symbol_map.getObject(label)
-            if (var is None) or \
-               (var is SymbolMap.UnknownSymbol):
+            if (var is None) or (var is SymbolMap.UnknownSymbol):
                 # NOTE: the following is a hack, to handle
                 #    the ONE_VAR_CONSTANT variable that is
                 #    necessary for the objective
@@ -405,35 +400,44 @@ class block(IBlock):
                 if "ONE_VAR_CONST" in label:
                     continue
                 else:
-                    raise KeyError("Variable associated with symbol '%s' "
-                                   "is not found on this block"
-                                   % (label))
+                    raise KeyError(
+                        "Variable associated with symbol '%s' "
+                        "is not found on this block" % (label)
+                    )
 
             seen_var_ids.add(id(var))
 
-            if (not allow_consistent_values_for_fixed_vars) and \
-               var.fixed:
-                raise ValueError("Variable '%s' is currently fixed. "
-                                 "A new value is not expected "
-                                 "in solution" % (var.name))
+            if (not allow_consistent_values_for_fixed_vars) and var.fixed:
+                raise ValueError(
+                    "Variable '%s' is currently fixed. "
+                    "A new value is not expected "
+                    "in solution" % (var.name)
+                )
 
             for _attr_key, attr_value in entry.items():
                 attr_key = _attr_key[0].lower() + _attr_key[1:]
                 if attr_key == 'value':
-                    if allow_consistent_values_for_fixed_vars and \
-                       var.fixed and \
-                       (math.fabs(attr_value - var.value) > \
-                        comparison_tolerance_for_fixed_vars):
+                    if (
+                        allow_consistent_values_for_fixed_vars
+                        and var.fixed
+                        and (
+                            math.fabs(attr_value - var.value)
+                            > comparison_tolerance_for_fixed_vars
+                        )
+                    ):
                         raise ValueError(
                             "Variable %s is currently fixed. "
                             "A value of '%s' in solution is "
                             "not within tolerance=%s of the current "
                             "value of '%s'"
-                            % (var.name, attr_value,
-                               comparison_tolerance_for_fixed_vars,
-                               var.value))
-                    var.value = attr_value
-                    var.stale = False
+                            % (
+                                var.name,
+                                attr_value,
+                                comparison_tolerance_for_fixed_vars,
+                                var.value,
+                            )
+                        )
+                    var.set_value(attr_value, skip_validation=True)
                 elif attr_key in valid_import_suffixes:
                     valid_import_suffixes[attr_key][var] = attr_value
 
@@ -446,22 +450,21 @@ class block(IBlock):
         # Load objective solution (should simply be suffixes if
         # they exist)
         #
-        objective_skip_attrs = ['id','canonical_label','value']
-        for label,entry in solution.objective.items():
+        objective_skip_attrs = ['id', 'canonical_label', 'value']
+        for label, entry in solution.objective.items():
             obj = symbol_map.getObject(label)
-            if (obj is None) or \
-               (obj is SymbolMap.UnknownSymbol):
-                raise KeyError("Objective associated with symbol '%s' "
-                                "is not found on this block"
-                                % (label))
+            if (obj is None) or (obj is SymbolMap.UnknownSymbol):
+                raise KeyError(
+                    "Objective associated with symbol '%s' "
+                    "is not found on this block" % (label)
+                )
             # Because of __default_objective__, an objective might
             # appear twice in the objective dictionary.
             unseen_var_ids.discard(id(obj))
             for _attr_key, attr_value in entry.items():
                 attr_key = _attr_key[0].lower() + _attr_key[1:]
                 if attr_key in valid_import_suffixes:
-                    valid_import_suffixes[attr_key][obj] = \
-                        attr_value
+                    valid_import_suffixes[attr_key][obj] = attr_value
 
         #
         # Load constraint solution
@@ -476,16 +479,15 @@ class block(IBlock):
                 if "ONE_VAR_CONST" in label:
                     continue
                 else:
-                    raise KeyError("Constraint associated with symbol '%s' "
-                                   "is not found on this block"
-                                   % (label))
-            unseen_var_ids.remove(id(con))
+                    raise KeyError(
+                        "Constraint associated with symbol '%s' "
+                        "is not found on this block" % (label)
+                    )
+            unseen_var_ids.discard(id(con))
             for _attr_key, attr_value in entry.items():
                 attr_key = _attr_key[0].lower() + _attr_key[1:]
                 if attr_key in valid_import_suffixes:
-                    valid_import_suffixes[attr_key][con] = \
-                        attr_value
-
+                    valid_import_suffixes[attr_key][con] = attr_value
 
         #
         # Load sparse variable solution
@@ -495,32 +497,44 @@ class block(IBlock):
                 var = symbol_map.getObject(symbol_map.byObject[var_id])
                 if var.ctype is not IVariable:
                     continue
-                if (not allow_consistent_values_for_fixed_vars) and \
-                   var.fixed:
-                    raise ValueError("Variable '%s' is currently fixed. "
-                                     "A new value is not expected "
-                                     "in solution" % (var.name))
+                if (not allow_consistent_values_for_fixed_vars) and var.fixed:
+                    raise ValueError(
+                        "Variable '%s' is currently fixed. "
+                        "A new value is not expected "
+                        "in solution" % (var.name)
+                    )
 
-                if allow_consistent_values_for_fixed_vars and \
-                   var.fixed and \
-                   (math.fabs(default_variable_value - var.value) > \
-                    comparison_tolerance_for_fixed_vars):
+                if (
+                    allow_consistent_values_for_fixed_vars
+                    and var.fixed
+                    and (
+                        math.fabs(default_variable_value - var.value)
+                        > comparison_tolerance_for_fixed_vars
+                    )
+                ):
                     raise ValueError(
                         "Variable %s is currently fixed. "
                         "A value of '%s' in solution is "
                         "not within tolerance=%s of the current "
                         "value of '%s'"
-                        % (var.name, default_variable_value,
-                           comparison_tolerance_for_fixed_vars,
-                           var.value))
-                var.value = default_variable_value
-                var.stale = False
+                        % (
+                            var.name,
+                            default_variable_value,
+                            comparison_tolerance_for_fixed_vars,
+                            var.value,
+                        )
+                    )
+                var.set_value(default_variable_value, skip_validation=True)
+
+        # Set the state flag to "delayed advance": it will auto-advance
+        # if a non-stale variable is updated (causing all non-stale
+        # variables to be marked as stale).
+        StaleFlagManager.mark_all_as_stale(delayed=True)
+
 
 # inserts class definitions for simple _tuple, _list, and
 # _dict containers into this module
-define_simple_containers(globals(),
-                         "block",
-                         IBlock)
+define_simple_containers(globals(), "block", IBlock)
 
 # populate the initial set of reserved block attributes so
 # that users can not overwrite them when building a model

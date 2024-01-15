@@ -1,0 +1,12 @@
+[    0.00] Setting up Pyomo environment
+[    0.00] Applying Pyomo preprocessing actions
+[    0.00] Creating model
+[    0.00] Applying solver
+[    0.03] Processing results
+    Number of solutions: 1
+    Solution Information
+      Gap: None
+      Status: optimal
+    Solver results file: results.yml
+[    0.03] Applying Pyomo postprocessing actions
+[    0.03] Pyomo Finished

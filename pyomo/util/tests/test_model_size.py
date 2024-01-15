@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -18,8 +19,7 @@ import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 from pyomo.core import Binary, Block, ConcreteModel, Constraint, Integers, Var
 from pyomo.gdp import Disjunct, Disjunction
-from pyomo.util.model_size import (build_model_size_report,
-                                   log_model_size_report)
+from pyomo.util.model_size import build_model_size_report, log_model_size_report
 from pyomo.common.fileutils import import_file
 
 currdir = dirname(abspath(__file__))
@@ -38,8 +38,7 @@ class TestModelSizeReport(unittest.TestCase):
 
     def test_eight_process(self):
         """Test with the eight process problem model."""
-        exfile = import_file(
-            join(exdir, 'eight_process', 'eight_proc_model.py'))
+        exfile = import_file(join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
         model_size = build_model_size_report(eight_process)
         self.assertEqual(model_size.activated.variables, 44)
@@ -65,8 +64,7 @@ class TestModelSizeReport(unittest.TestCase):
 
     def test_constrained_layout(self):
         """Test with the constrained layout GDP model."""
-        exfile = import_file(join(
-            exdir, 'constrained_layout', 'cons_layout_model.py'))
+        exfile = import_file(join(exdir, 'constrained_layout', 'cons_layout_model.py'))
         model = exfile.build_constrained_layout_model()
         model_size = build_model_size_report(model)
         self.assertEqual(model_size.activated.variables, 30)
@@ -122,6 +120,7 @@ class TestModelSizeReport(unittest.TestCase):
 
     def test_disjunctive_model(self):
         from pyomo.gdp.tests.models import makeNestedDisjunctions
+
         m = makeNestedDisjunctions()
         model_size = build_model_size_report(m)
         self.assertEqual(model_size.activated.variables, 10)
@@ -144,7 +143,7 @@ class TestModelSizeReport(unittest.TestCase):
         m.y = Var()
         m.z = Var()
         m.z.fix(3)
-        m.c = Constraint(expr=m.x ** 2 == 4)
+        m.c = Constraint(expr=m.x**2 == 4)
         m.c2 = Constraint(expr=m.x / m.y == 3)
         m.c3 = Constraint(expr=m.x * m.z == 5)
         m.c4 = Constraint(expr=m.x * m.y == 5)

@@ -1,7 +1,7 @@
 g3 0 1 0	# problem small14
  2 19 1 0 19	# vars, constraints, objectives, ranges, eqns
  19 0	# nonlinear constraints, objectives
- 0 0	# network constraints: nonlinear, linear
+ 0 0 	# network constraints: nonlinear, linear
  2 0 0	# nonlinear vars in constraints, objectives, both
  0 0 0 1	# linear network variables; functions; arith, flags
  0 0 0 0 0	# discrete variables: binary, integer, nonlinear (b,c,o)
@@ -48,8 +48,8 @@ C12
 o52
 o3
 o0
-v0
 n7.3890560989306495
+v0
 n5.43656365691809
 C13
 o47

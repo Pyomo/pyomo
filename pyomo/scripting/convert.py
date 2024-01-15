@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -15,11 +16,7 @@ import sys
 
 from pyomo.common.collections import Bunch
 from pyomo.opt import ProblemFormat
-from pyomo.core.base import (Objective,
-                             Var,
-                             Constraint,
-                             value,
-                             ConcreteModel)
+from pyomo.core.base import Objective, Var, Constraint, value, ConcreteModel
 
 _format = None
 
@@ -37,7 +34,7 @@ def convert(options=Bunch(), parser=None, model_format=None):
         if _format == ProblemFormat.cpxlp:
             options.model.save_file = 'unknown.lp'
         else:
-            options.model.save_file = 'unknown.'+str(_format)
+            options.model.save_file = 'unknown.' + str(_format)
     options.model.save_format = _format
 
     data = Bunch(options=options)
@@ -55,23 +52,21 @@ def convert(options=Bunch(), parser=None, model_format=None):
 
         model_data.options = options
     except:
-
         # TBD: I should be able to call this function in the case of
         #      an exception to perform cleanup. However, as it stands
         #      calling finalize with its default keyword value for
         #      model(=None) results in an a different error related to
         #      task port values.  Not sure how to interpret that.
-        pyomo.scripting.util.finalize(data,
-                                      model=ConcreteModel(),
-                                      instance=None,
-                                      results=None)
+        pyomo.scripting.util.finalize(
+            data, model=ConcreteModel(), instance=None, results=None
+        )
         raise
 
     else:
-
         pyomo.scripting.util.finalize(data, model=model_data.model)
 
     return model_data
+
 
 def convert_dakota(options=Bunch(), parser=None):
     #
@@ -88,7 +83,7 @@ def convert_dakota(options=Bunch(), parser=None):
 
     # By default replace .py with .nl
     if options.model.save_file is None:
-       options.model.save_file = model_file_no_ext + '.nl'
+        options.model.save_file = model_file_no_ext + '.nl'
     options.model.save_format = ProblemFormat.nl
     # Dakota requires .row/.col files
     options.model.symbolic_solver_labels = True
@@ -108,9 +103,9 @@ def convert_dakota(options=Bunch(), parser=None):
     model = model_data.instance
 
     # Easy way
-    #print "VARIABLE:"
-    #lines = open(options.save_model.replace('.nl','.col'),'r').readlines()
-    #for varName in lines:
+    # print "VARIABLE:"
+    # lines = open(options.save_model.replace('.nl','.col'),'r').readlines()
+    # for varName in lines:
     #    varName = varName.strip()
     #    var = model_data.symbol_map.getObject(varName)
     #    print "'%s': %s" % (varName, var)
@@ -184,13 +179,13 @@ def convert_dakota(options=Bunch(), parser=None):
 
     dakfrag.write("#--- Dakota interface block ---#\n")
     dakfrag.write("interface\n")
-    dakfrag.write("  algebraic_mappings = '" + options.model.save_file  + "'\n")
+    dakfrag.write("  algebraic_mappings = '" + options.model.save_file + "'\n")
 
     dakfrag.write("#--- Dakota responses block ---#\n")
     dakfrag.write("responses\n")
     dakfrag.write("  objective_functions " + str(objectives) + '\n')
 
-    if (constraints > 0):
+    if constraints > 0:
         dakfrag.write("  nonlinear_inequality_constraints " + str(constraints) + '\n')
         dakfrag.write("    lower_bounds " + " ".join(cons_lb) + '\n')
         dakfrag.write("    upper_bounds " + " ".join(cons_ub) + '\n')
@@ -198,7 +193,7 @@ def convert_dakota(options=Bunch(), parser=None):
     dakfrag.write("    descriptors\n")
     for od in obj_descriptors:
         dakfrag.write("      '%s'\n" % od)
-    if (constraints > 0):
+    if constraints > 0:
         for cd in cons_descriptors:
             dakfrag.write("      '%s'\n" % cd)
 
@@ -208,35 +203,43 @@ def convert_dakota(options=Bunch(), parser=None):
 
     dakfrag.close()
 
-    sys.stdout.write( "Dakota input fragment written to file '%s'\n" 
-                      % (model_file_no_ext + ".dak",) )
+    sys.stdout.write(
+        "Dakota input fragment written to file '%s'\n" % (model_file_no_ext + ".dak",)
+    )
     return model_data
 
 
 def pyomo2lp(args=None):
     from pyomo.scripting.pyomo_main import main
+
     if args is None:
         return main()
     else:
-        return main(['convert', '--format=lp']+args)
+        return main(['convert', '--format=lp'] + args)
+
 
 def pyomo2nl(args=None):
     from pyomo.scripting.pyomo_main import main
+
     if args is None:
         return main()
     else:
-        return main(['convert', '--format=nl']+args)
+        return main(['convert', '--format=nl'] + args)
+
 
 def pyomo2bar(args=None):
     from pyomo.scripting.pyomo_main import main
+
     if args is None:
         return main()
     else:
-        return main(['convert', '--format=bar']+args)
+        return main(['convert', '--format=bar'] + args)
+
 
 def pyomo2dakota(args=None):
     from pyomo.scripting.pyomo_main import main
+
     if args is None:
         return main()
     else:
-        return main(['convert','--format=dakota']+args)
+        return main(['convert', '--format=dakota'] + args)
