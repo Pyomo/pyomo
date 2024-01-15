@@ -25,8 +25,7 @@ env:
   PYTHONWARNINGS: ignore::UserWarning
   PYTHON_CORE_PKGS: wheel
   PYPI_ONLY: z3-solver
-  PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels pytest-qt PyQt5
-  CONDA_EXCLUDE: PyQt5 pyqt5
+  PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels pytest-qt
   CACHE_VER: v221013.1
   NEOS_EMAIL: tests@pyomo.org
   SRC_REF: ${{ github.head_ref || github.ref }}
@@ -351,7 +350,7 @@ jobs:
         if test "${{matrix.TARGET}}" == linux; then
             EXCLUDE="casadi numdifftools $EXCLUDE"
         fi
-        EXCLUDE=`echo "$EXCLUDE $CONDA_EXCLUDE" | xargs`
+        EXCLUDE=`echo "$EXCLUDE" | xargs`
         if test -n "$EXCLUDE"; then
             for WORD in $EXCLUDE; do
                 PACKAGES=${PACKAGES//$WORD / }
