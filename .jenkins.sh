@@ -38,7 +38,7 @@ if test -z "$WORKSPACE"; then
     export WORKSPACE=`pwd`
 fi
 if test -z "$TEST_SUITES"; then
-    export TEST_SUITES="${WORKSPACE}/pyomo/pyomo ${WORKSPACE}/pyomo-model-libraries ${WORKSPACE}/pyomo/examples/pyomobook"
+    export TEST_SUITES="${WORKSPACE}/pyomo/pyomo ${WORKSPACE}/pyomo-model-libraries ${WORKSPACE}/pyomo/examples ${WORKSPACE}/pyomo/doc"
 fi
 if test -z "$SLIM"; then
     export VENV_SYSTEM_PACKAGES='--system-site-packages'

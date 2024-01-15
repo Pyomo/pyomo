@@ -33,9 +33,9 @@ class Test(unittest.TestCase):
     def setUpClass(cls):
         global scip_available
         import pyomo.environ
-        from pyomo.solvers.tests.solvers import test_solver_cases
+        from pyomo.solvers.tests.solvers import test_solver_cases as _test_solver_cases
 
-        scip_available = test_solver_cases('scip', 'nl').available
+        scip_available = _test_solver_cases('scip', 'nl').available
 
     def setUp(self):
         if not scip_available:

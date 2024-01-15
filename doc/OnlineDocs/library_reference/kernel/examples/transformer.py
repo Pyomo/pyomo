@@ -37,7 +37,7 @@ class Transformer(pyomo.kernel.block):
 
 # @kernel
 
-print(_fmt(pympler.asizeof.asizeof(Transformer())))
+print("Memory:", _fmt(pympler.asizeof.asizeof(Transformer())))
 
 
 # @aml
@@ -52,4 +52,4 @@ def Transformer():
 
 # @aml
 
-print(_fmt(pympler.asizeof.asizeof(Transformer())))
+print("Memory:", _fmt(pympler.asizeof.asizeof(Transformer())))
