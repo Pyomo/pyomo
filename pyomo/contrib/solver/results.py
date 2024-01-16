@@ -244,6 +244,9 @@ class Results(ConfigDict):
             ConfigValue(domain=str, default=None, visibility=ADVANCED_OPTION),
         )
 
+    def display(self, content_filter=None, indent_spacing=2, ostream=None, visibility=0):
+        return super().display(content_filter, indent_spacing, ostream, visibility)
+
 
 class ResultsReader:
     pass
