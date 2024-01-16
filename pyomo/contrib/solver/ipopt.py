@@ -108,20 +108,25 @@ class ipoptResults(Results):
 
 class ipoptSolutionLoader(SolSolutionLoader):
     def get_reduced_costs(self, vars_to_load: Sequence[_GeneralVarData] | None = None) -> Mapping[_GeneralVarData, float]:
+        if self._nl_info.scaling is None:
+            scale_list = [1] * len(self._nl_info.variables)
+        else:
+            scale_list = self._nl_info.scaling.variables
         sol_data = self._sol_data
         nl_info = self._nl_info
         zl_map = sol_data.var_suffixes['ipopt_zL_out']
         zu_map = sol_data.var_suffixes['ipopt_zU_out']
         rc = dict()
-        for v in nl_info.variables:
+        for ndx, v in enumerate(nl_info.variables):
+            scale = scale_list[ndx]
             v_id = id(v)
             rc[v_id] = (v, 0)
-            if v_id in zl_map:
-                zl = zl_map[v_id][1]
+            if ndx in zl_map:
+                zl = zl_map[ndx] * scale
                 if abs(zl) > abs(rc[v_id][1]):
                     rc[v_id] = (v, zl)
-            if v_id in zu_map:
-                zu = zu_map[v_id][1]
+            if ndx in zu_map:
+                zu = zu_map[ndx] * scale
                 if abs(zu) > abs(rc[v_id][1]):
                     rc[v_id] = (v, zu)
 

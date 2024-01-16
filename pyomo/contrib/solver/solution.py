@@ -208,8 +208,12 @@ class SolSolutionLoader(SolutionLoaderBase):
     def load_vars(
         self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
     ) -> NoReturn:
-        for v, val in zip(self._nl_info.variables, self._sol_data.primals):
-            v.set_value(val, skip_validation=True)
+        if self._nl_info.scaling is None:
+            scale_list = [1] * len(self._nl_info.variables)
+        else:
+            scale_list = self._nl_info.scaling.variables
+        for v, val, scale in zip(self._nl_info.variables, self._sol_data.primals, scale_list):
+            v.set_value(val/scale, skip_validation=True)
 
         for v, v_expr in self._nl_info.eliminated_vars:
             v.set_value(value(v_expr), skip_validation=True)
@@ -217,7 +221,13 @@ class SolSolutionLoader(SolutionLoaderBase):
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
     def get_primals(self, vars_to_load: Sequence[_GeneralVarData] | None = None) -> Mapping[_GeneralVarData, float]:
-        val_map = dict(zip([id(v) for v in self._nl_info.variables], self._sol_data.primals))
+        if self._nl_info.scaling is None:
+            scale_list = [1] * len(self._nl_info.variables)
+        else:
+            scale_list = self._nl_info.scaling.variables
+        val_map = dict()
+        for v, val, scale in zip(self._nl_info.variables, self._sol_data.primals, scale_list):
+            val_map[id(v)] = val / scale
 
         for v, v_expr in self._nl_info.eliminated_vars:
             val = replace_expressions(v_expr, substitution_map=val_map)
@@ -225,14 +235,27 @@ class SolSolutionLoader(SolutionLoaderBase):
             val_map[v_id] = val
 
         res = ComponentMap()
+        if vars_to_load is None:
+            vars_to_load = self._nl_info.variables + [v for v, _ in self._nl_info.eliminated_vars]
         for v in vars_to_load:
             res[v] = val_map[id(v)]
 
         return res
     
     def get_duals(self, cons_to_load: Sequence[_GeneralConstraintData] | None = None) -> Dict[_GeneralConstraintData, float]:
-        cons_to_load = set(cons_to_load)
-        return {c: val for c, val in zip(self._nl_info.constraints, self._sol_data.duals) if c in cons_to_load}
+        if self._nl_info.scaling is None:
+            scale_list = [1] * len(self._nl_info.constraints)
+        else:
+            scale_list = self._nl_info.scaling.constraints
+        if cons_to_load is None:
+            cons_to_load = set(self._nl_info.constraints)
+        else:
+            cons_to_load = set(cons_to_load)
+        res = dict()
+        for c, val, scale in zip(self._nl_info.constraints, self._sol_data.duals, scale_list):
+            if c in cons_to_load:
+                res[c] = val * scale
+        return res
 
 
 class PersistentSolutionLoader(SolutionLoaderBase):
