@@ -562,7 +562,7 @@ class Test_as_numeric(unittest.TestCase):
     @unittest.skipUnless(numpy_available, "This test requires NumPy")
     def test_automatic_numpy_registration(self):
         cmd = (
-            'import pyomo; from pyomo.core.base import Var; import numpy as np; '
+            'import pyomo; from pyomo.core.base import Var, Param; import numpy as np; '
             'print(np.float64 in pyomo.common.numeric_types.native_numeric_types); '
             '%s; print(np.float64 in pyomo.common.numeric_types.native_numeric_types)'
         )
@@ -580,6 +580,8 @@ class Test_as_numeric(unittest.TestCase):
         _tester('np.float64(5) <= Var()')
         _tester('np.float64(5) + Var()')
         _tester('Var() + np.float64(5)')
+        _tester('v = Var(); v.construct(); v.value = np.float64(5)')
+        _tester('p = Param(mutable=True); p.construct(); p.value = np.float64(5)')
 
 
 if __name__ == "__main__":

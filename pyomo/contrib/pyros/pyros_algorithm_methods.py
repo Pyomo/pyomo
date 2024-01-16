@@ -886,6 +886,16 @@ def ROSolver_iterative_solve(model_data, config):
             np.array([pt for pt in separation_data.points_added_to_master])
         )
 
+        # initialize second-stage and state variables
+        # for new master block to separation
+        # solution chosen by heuristic. consequently,
+        # equality constraints should all be satisfied (up to tolerances).
+        for var, val in separation_results.violating_separation_variable_values.items():
+            master_var = master_data.master_model.scenarios[k + 1, 0].find_component(
+                var
+            )
+            master_var.set_value(val)
+
         k += 1
 
         iter_log_record.log(config.progress_logger.info)
