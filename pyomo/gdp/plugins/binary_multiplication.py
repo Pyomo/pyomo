@@ -3,30 +3,28 @@ from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.core.base import TransformationFactory
 from pyomo.core.util import target_list
 from pyomo.gdp import Disjunction
-from pyomo.gdp.plugins.gdp_to_mip_transformation import GDP_to_MIP_Transformation
-from pyomo.core.util import target_list
 from weakref import ref as weakref_ref
 import logging
 
 
-logger = logging.getLogger('pyomo.gdp.binary_multiplication')
+logger = logging.getLogger(__name__)
 
 
 @TransformationFactory.register(
     'gdp.binary_multiplication',
-    doc="Reformulate the GDP as an MINLP by multiplying f(x) <= 0 by y to get f(x) * y <= 0.",
+    doc="Reformulate the GDP as an MINLP by multiplying f(x) <= 0 by y to get f(x) * y <= 0 where y is the binary corresponding to the Boolean indicator var of the Disjunct containing f(x) <= 0.",
 )
-class GDPToMINLPTransformation(GDP_to_MIP_Transformation):
+class GDPBinaryMultiplicationTransformation(GDP_to_MIP_Transformation):
     CONFIG = ConfigDict("gdp.binary_multiplication")
     CONFIG.declare(
         'targets',
         ConfigValue(
             default=None,
             domain=target_list,
-            description="target or list of targets that will be relaxed",
+            description="target or list of targets that will be transformed",
             doc="""
 
-        This specifies the list of components to relax. If None (default), the
+        This specifies the list of components to transform. If None (default), the
         entire model is transformed. Note that if the transformation is done out
         of place, the list of targets should be attached to the model before it
         is cloned, and the list will specify the targets on the cloned
@@ -81,7 +79,8 @@ class GDPToMINLPTransformation(GDP_to_MIP_Transformation):
             or_expr += disjunct.binary_indicator_var
             self._transform_disjunct(disjunct, transBlock)
 
-        rhs = 1 if parent_disjunct is None else parent_disjunct.binary_indicator_var
+        # rhs = 1 if parent_disjunct is None else parent_disjunct.binary_indicator_var
+        rhs = 1
         if obj.xor:
             xorConstraint[index] = or_expr == rhs
         else:
