@@ -32,8 +32,8 @@ from pyomo.contrib.solver.results import (
     Results,
     TerminationCondition,
     SolutionStatus,
-    parse_sol_file,
 )
+from .sol_reader import parse_sol_file
 from pyomo.contrib.solver.solution import SolutionLoaderBase, SolutionLoader
 from pyomo.common.tee import TeeStream
 from pyomo.common.log import LogStream
