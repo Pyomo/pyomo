@@ -1,9 +1,7 @@
 from collections.abc import Iterable
 import logging
 import math
-import sys
 from typing import List, Dict, Optional
-
 from pyomo.common.collections import ComponentSet, ComponentMap, OrderedSet
 from pyomo.common.log import LogStream
 from pyomo.common.dependencies import attempt_import
@@ -14,20 +12,24 @@ from pyomo.common.shutdown import python_is_shutting_down
 from pyomo.common.config import ConfigValue, NonNegativeInt
 from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
-from pyomo.core.base.var import _GeneralVarData
+from pyomo.core.base.var import Var, _GeneralVarData
 from pyomo.core.base.constraint import _GeneralConstraintData
 from pyomo.core.base.sos import _SOSConstraintData
 from pyomo.core.base.param import _ParamData
 from pyomo.core.expr.numvalue import value, is_constant, is_fixed, native_numeric_types
 from pyomo.repn import generate_standard_repn
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
+from pyomo.contrib.appsi.base import (
+    PersistentSolver,
+    Results,
+    TerminationCondition,
+    MIPSolverConfig,
+    PersistentBase,
+    PersistentSolutionLoader,
+)
+from pyomo.contrib.appsi.cmodel import cmodel, cmodel_available
 from pyomo.core.staleflag import StaleFlagManager
-from pyomo.contrib.solver.base import PersistentSolverBase
-from pyomo.contrib.solver.config import BranchAndBoundConfig
-from pyomo.contrib.solver.results import TerminationCondition, Results
-from pyomo.contrib.solver.solution import PersistentSolutionLoader
-from pyomo.contrib.solver.util import PersistentSolverUtils
-
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +53,7 @@ class DegreeError(PyomoException):
     pass
 
 
-class GurobiConfig(BranchAndBoundConfig):
+class GurobiConfig(MIPSolverConfig):
     def __init__(
         self,
         description=None,
@@ -60,7 +62,7 @@ class GurobiConfig(BranchAndBoundConfig):
         implicit_domain=None,
         visibility=0,
     ):
-        super().__init__(
+        super(GurobiConfig, self).__init__(
             description=description,
             doc=doc,
             implicit=implicit,
@@ -93,12 +95,12 @@ class GurobiSolutionLoader(PersistentSolutionLoader):
 
 class GurobiResults(Results):
     def __init__(self, solver):
-        super().__init__()
-        self.timing_info.wall_time = None
+        super(GurobiResults, self).__init__()
+        self.wallclock_time = None
         self.solution_loader = GurobiSolutionLoader(solver=solver)
 
 
-class _MutableLowerBound:
+class _MutableLowerBound(object):
     def __init__(self, expr):
         self.var = None
         self.expr = expr
@@ -107,7 +109,7 @@ class _MutableLowerBound:
         self.var.setAttr('lb', value(self.expr))
 
 
-class _MutableUpperBound:
+class _MutableUpperBound(object):
     def __init__(self, expr):
         self.var = None
         self.expr = expr
@@ -116,7 +118,7 @@ class _MutableUpperBound:
         self.var.setAttr('ub', value(self.expr))
 
 
-class _MutableLinearCoefficient:
+class _MutableLinearCoefficient(object):
     def __init__(self):
         self.expr = None
         self.var = None
@@ -127,7 +129,7 @@ class _MutableLinearCoefficient:
         self.gurobi_model.chgCoeff(self.con, self.var, value(self.expr))
 
 
-class _MutableRangeConstant:
+class _MutableRangeConstant(object):
     def __init__(self):
         self.lhs_expr = None
         self.rhs_expr = None
@@ -143,7 +145,7 @@ class _MutableRangeConstant:
         slack.ub = rhs_val - lhs_val
 
 
-class _MutableConstant:
+class _MutableConstant(object):
     def __init__(self):
         self.expr = None
         self.con = None
@@ -152,7 +154,7 @@ class _MutableConstant:
         self.con.rhs = value(self.expr)
 
 
-class _MutableQuadraticConstraint:
+class _MutableQuadraticConstraint(object):
     def __init__(
         self, gurobi_model, gurobi_con, constant, linear_coefs, quadratic_coefs
     ):
@@ -187,7 +189,7 @@ class _MutableQuadraticConstraint:
         return value(self.constant.expr)
 
 
-class _MutableObjective:
+class _MutableObjective(object):
     def __init__(self, gurobi_model, constant, linear_coefs, quadratic_coefs):
         self.gurobi_model = gurobi_model
         self.constant = constant
@@ -215,14 +217,14 @@ class _MutableObjective:
         return gurobi_expr
 
 
-class _MutableQuadraticCoefficient:
+class _MutableQuadraticCoefficient(object):
     def __init__(self):
         self.expr = None
         self.var1 = None
         self.var2 = None
 
 
-class Gurobi(PersistentSolverUtils, PersistentSolverBase):
+class Gurobi(PersistentBase, PersistentSolver):
     """
     Interface to Gurobi
     """
@@ -231,21 +233,21 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
     _num_instances = 0
 
     def __init__(self, only_child_vars=False):
-        super().__init__(only_child_vars=only_child_vars)
+        super(Gurobi, self).__init__(only_child_vars=only_child_vars)
         self._num_instances += 1
         self._config = GurobiConfig()
-        self._solver_options = {}
+        self._solver_options = dict()
         self._solver_model = None
         self._symbol_map = SymbolMap()
         self._labeler = None
-        self._pyomo_var_to_solver_var_map = {}
-        self._pyomo_con_to_solver_con_map = {}
-        self._solver_con_to_pyomo_con_map = {}
-        self._pyomo_sos_to_solver_sos_map = {}
+        self._pyomo_var_to_solver_var_map = dict()
+        self._pyomo_con_to_solver_con_map = dict()
+        self._solver_con_to_pyomo_con_map = dict()
+        self._pyomo_sos_to_solver_sos_map = dict()
         self._range_constraints = OrderedSet()
-        self._mutable_helpers = {}
-        self._mutable_bounds = {}
-        self._mutable_quadratic_helpers = {}
+        self._mutable_helpers = dict()
+        self._mutable_bounds = dict()
+        self._mutable_quadratic_helpers = dict()
         self._mutable_objective = None
         self._needs_updated = True
         self._callback = None
@@ -351,7 +353,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
                 level=self.config.log_level, logger=self.config.solver_output_logger
             )
         ]
-        if self.config.tee:
+        if self.config.stream_solver:
             ostreams.append(sys.stdout)
 
         with TeeStream(*ostreams) as t:
@@ -364,8 +366,8 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
 
                 if config.time_limit is not None:
                     self._solver_model.setParam('TimeLimit', config.time_limit)
-                if config.rel_gap is not None:
-                    self._solver_model.setParam('MIPGap', config.rel_gap)
+                if config.mip_gap is not None:
+                    self._solver_model.setParam('MIPGap', config.mip_gap)
 
                 for key, option in options.items():
                     self._solver_model.setParam(key, option)
@@ -446,12 +448,12 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         return lb, ub, vtype
 
     def _add_variables(self, variables: List[_GeneralVarData]):
-        var_names = []
-        vtypes = []
-        lbs = []
-        ubs = []
-        mutable_lbs = {}
-        mutable_ubs = {}
+        var_names = list()
+        vtypes = list()
+        lbs = list()
+        ubs = list()
+        mutable_lbs = dict()
+        mutable_ubs = dict()
         for ndx, var in enumerate(variables):
             varname = self._symbol_map.getSymbol(var, self._labeler)
             lb, ub, vtype = self._process_domain_and_bounds(
@@ -499,6 +501,8 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
             )
         self._reinit()
         self._model = model
+        if self.use_extensions and cmodel_available:
+            self._expr_types = cmodel.PyomoExprTypes()
 
         if self.config.symbolic_solver_labels:
             self._labeler = TextLabeler()
@@ -515,8 +519,8 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
             self.set_objective(None)
 
     def _get_expr_from_pyomo_expr(self, expr):
-        mutable_linear_coefficients = []
-        mutable_quadratic_coefficients = []
+        mutable_linear_coefficients = list()
+        mutable_quadratic_coefficients = list()
         repn = generate_standard_repn(expr, quadratic=True, compute_values=False)
 
         degree = repn.polynomial_degree()
@@ -526,7 +530,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
             )
 
         if len(repn.linear_vars) > 0:
-            linear_coef_vals = []
+            linear_coef_vals = list()
             for ndx, coef in enumerate(repn.linear_coefs):
                 if not is_constant(coef):
                     mutable_linear_coefficient = _MutableLinearCoefficient()
@@ -820,8 +824,8 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
             sense = gurobipy.GRB.MINIMIZE
             gurobi_expr = 0
             repn_constant = 0
-            mutable_linear_coefficients = []
-            mutable_quadratic_coefficients = []
+            mutable_linear_coefficients = list()
+            mutable_quadratic_coefficients = list()
         else:
             if obj.sense == minimize:
                 sense = gurobipy.GRB.MINIMIZE
@@ -865,16 +869,14 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         status = gprob.Status
 
         results = GurobiResults(self)
-        results.timing_info.wall_time = gprob.Runtime
+        results.wallclock_time = gprob.Runtime
 
         if status == grb.LOADED:  # problem is loaded, but no solution
             results.termination_condition = TerminationCondition.unknown
         elif status == grb.OPTIMAL:  # optimal
-            results.termination_condition = (
-                TerminationCondition.convergenceCriteriaSatisfied
-            )
+            results.termination_condition = TerminationCondition.optimal
         elif status == grb.INFEASIBLE:
-            results.termination_condition = TerminationCondition.provenInfeasible
+            results.termination_condition = TerminationCondition.infeasible
         elif status == grb.INF_OR_UNBD:
             results.termination_condition = TerminationCondition.infeasibleOrUnbounded
         elif status == grb.UNBOUNDED:
@@ -882,9 +884,9 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         elif status == grb.CUTOFF:
             results.termination_condition = TerminationCondition.objectiveLimit
         elif status == grb.ITERATION_LIMIT:
-            results.termination_condition = TerminationCondition.iterationLimit
+            results.termination_condition = TerminationCondition.maxIterations
         elif status == grb.NODE_LIMIT:
-            results.termination_condition = TerminationCondition.iterationLimit
+            results.termination_condition = TerminationCondition.maxIterations
         elif status == grb.TIME_LIMIT:
             results.termination_condition = TerminationCondition.maxTimeLimit
         elif status == grb.SOLUTION_LIMIT:
@@ -900,33 +902,30 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         else:
             results.termination_condition = TerminationCondition.unknown
 
-        results.incumbent_objective = None
-        results.objective_bound = None
+        results.best_feasible_objective = None
+        results.best_objective_bound = None
         if self._objective is not None:
             try:
-                results.incumbent_objective = gprob.ObjVal
+                results.best_feasible_objective = gprob.ObjVal
             except (gurobipy.GurobiError, AttributeError):
-                results.incumbent_objective = None
+                results.best_feasible_objective = None
             try:
-                results.objective_bound = gprob.ObjBound
+                results.best_objective_bound = gprob.ObjBound
             except (gurobipy.GurobiError, AttributeError):
                 if self._objective.sense == minimize:
-                    results.objective_bound = -math.inf
+                    results.best_objective_bound = -math.inf
                 else:
-                    results.objective_bound = math.inf
+                    results.best_objective_bound = math.inf
 
-            if results.incumbent_objective is not None and not math.isfinite(
-                results.incumbent_objective
+            if results.best_feasible_objective is not None and not math.isfinite(
+                results.best_feasible_objective
             ):
-                results.incumbent_objective = None
+                results.best_feasible_objective = None
 
         timer.start('load solution')
         if config.load_solution:
             if gprob.SolCount > 0:
-                if (
-                    results.termination_condition
-                    != TerminationCondition.convergenceCriteriaSatisfied
-                ):
+                if results.termination_condition != TerminationCondition.optimal:
                     logger.warning(
                         'Loading a feasible but suboptimal solution. '
                         'Please set load_solution=False and check '
@@ -939,7 +938,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
                     'A feasible solution was not found, so no solution can be loaded.'
                     'Please set opt.config.load_solution=False and check '
                     'results.termination_condition and '
-                    'results.incumbent_objective before loading a solution.'
+                    'results.best_feasible_objective before loading a solution.'
                 )
         timer.stop('load solution')
 
@@ -1048,7 +1047,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
 
         con_map = self._pyomo_con_to_solver_con_map
         reverse_con_map = self._solver_con_to_pyomo_con_map
-        dual = {}
+        dual = dict()
 
         if cons_to_load is None:
             linear_cons_to_load = self._solver_model.getConstrs()
@@ -1091,7 +1090,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
 
         con_map = self._pyomo_con_to_solver_con_map
         reverse_con_map = self._solver_con_to_pyomo_con_map
-        slack = {}
+        slack = dict()
 
         gurobi_range_con_vars = OrderedSet(self._solver_model.getVars()) - OrderedSet(
             self._pyomo_var_to_solver_var_map.values()
@@ -1141,7 +1140,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
     def update(self, timer: HierarchicalTimer = None):
         if self._needs_updated:
             self._update_gurobi_model()
-        super().update(timer=timer)
+        super(Gurobi, self).update(timer=timer)
         self._update_gurobi_model()
 
     def _update_gurobi_model(self):
@@ -1197,8 +1196,8 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         if attr in {'Sense', 'RHS', 'ConstrName'}:
             raise ValueError(
                 'Linear constraint attr {0} cannot be set with'
-                ' the set_linear_constraint_attr method. Please use'
-                ' the remove_constraint and add_constraint methods.'.format(attr)
+                + ' the set_linear_constraint_attr method. Please use'
+                + ' the remove_constraint and add_constraint methods.'.format(attr)
             )
         self._pyomo_con_to_solver_con_map[con].setAttr(attr, val)
         self._needs_updated = True
@@ -1226,8 +1225,8 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         if attr in {'LB', 'UB', 'VType', 'VarName'}:
             raise ValueError(
                 'Var attr {0} cannot be set with'
-                ' the set_var_attr method. Please use'
-                ' the update_var method.'.format(attr)
+                + ' the set_var_attr method. Please use'
+                + ' the update_var method.'.format(attr)
             )
         if attr == 'Obj':
             raise ValueError(
@@ -1385,7 +1384,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
                 >>> _c = _add_cut(4)  # this is an arbitrary choice
                 >>>
                 >>> opt = appsi.solvers.Gurobi()
-                >>> opt.config.tee = True
+                >>> opt.config.stream_solver = True
                 >>> opt.set_instance(m) # doctest:+SKIP
                 >>> opt.gurobi_options['PreCrush'] = 1
                 >>> opt.gurobi_options['LazyConstraints'] = 1

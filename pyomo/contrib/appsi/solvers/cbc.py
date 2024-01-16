@@ -1,16 +1,20 @@
-import logging
-import math
-import subprocess
-import sys
-from typing import Optional, Sequence, Dict, List, Mapping
-
-
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.fileutils import Executable
+from pyomo.contrib.appsi.base import (
+    PersistentSolver,
+    Results,
+    TerminationCondition,
+    SolverConfig,
+    PersistentSolutionLoader,
+)
 from pyomo.contrib.appsi.writers import LPWriter
 from pyomo.common.log import LogStream
+import logging
+import subprocess
 from pyomo.core.kernel.objective import minimize, maximize
+import math
 from pyomo.common.collections import ComponentMap
+from typing import Optional, Sequence, NoReturn, List, Mapping
 from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.base.constraint import _GeneralConstraintData
 from pyomo.core.base.block import _BlockData
@@ -18,14 +22,12 @@ from pyomo.core.base.param import _ParamData
 from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.tee import TeeStream
+import sys
+from typing import Dict
 from pyomo.common.config import ConfigValue, NonNegativeInt
 from pyomo.common.errors import PyomoException
 from pyomo.contrib.appsi.cmodel import cmodel_available
 from pyomo.core.staleflag import StaleFlagManager
-from pyomo.contrib.solver.base import PersistentSolverBase
-from pyomo.contrib.solver.config import SolverConfig
-from pyomo.contrib.solver.results import TerminationCondition, Results
-from pyomo.contrib.solver.solution import PersistentSolutionLoader
 
 
 logger = logging.getLogger(__name__)
@@ -40,7 +42,7 @@ class CbcConfig(SolverConfig):
         implicit_domain=None,
         visibility=0,
     ):
-        super().__init__(
+        super(CbcConfig, self).__init__(
             description=description,
             doc=doc,
             implicit=implicit,
@@ -61,15 +63,15 @@ class CbcConfig(SolverConfig):
         self.log_level = logging.INFO
 
 
-class Cbc(PersistentSolverBase):
+class Cbc(PersistentSolver):
     def __init__(self, only_child_vars=False):
         self._config = CbcConfig()
-        self._solver_options = {}
+        self._solver_options = dict()
         self._writer = LPWriter(only_child_vars=only_child_vars)
         self._filename = None
-        self._dual_sol = {}
-        self._primal_sol = {}
-        self._reduced_costs = {}
+        self._dual_sol = dict()
+        self._primal_sol = dict()
+        self._reduced_costs = dict()
         self._last_results_object: Optional[Results] = None
 
     def available(self):
@@ -230,19 +232,17 @@ class Cbc(PersistentSolverBase):
         termination_line = all_lines[0].lower()
         obj_val = None
         if termination_line.startswith('optimal'):
-            results.termination_condition = (
-                TerminationCondition.convergenceCriteriaSatisfied
-            )
+            results.termination_condition = TerminationCondition.optimal
             obj_val = float(termination_line.split()[-1])
         elif 'infeasible' in termination_line:
-            results.termination_condition = TerminationCondition.provenInfeasible
+            results.termination_condition = TerminationCondition.infeasible
         elif 'unbounded' in termination_line:
             results.termination_condition = TerminationCondition.unbounded
         elif termination_line.startswith('stopped on time'):
             results.termination_condition = TerminationCondition.maxTimeLimit
             obj_val = float(termination_line.split()[-1])
         elif termination_line.startswith('stopped on iterations'):
-            results.termination_condition = TerminationCondition.iterationLimit
+            results.termination_condition = TerminationCondition.maxIterations
             obj_val = float(termination_line.split()[-1])
         else:
             results.termination_condition = TerminationCondition.unknown
@@ -261,9 +261,9 @@ class Cbc(PersistentSolverBase):
                     first_var_line = ndx
         last_var_line = len(all_lines) - 1
 
-        self._dual_sol = {}
-        self._primal_sol = {}
-        self._reduced_costs = {}
+        self._dual_sol = dict()
+        self._primal_sol = dict()
+        self._reduced_costs = dict()
 
         symbol_map = self._writer.symbol_map
 
@@ -307,30 +307,26 @@ class Cbc(PersistentSolverBase):
                 self._reduced_costs[v_id] = (v, -rc_val)
 
         if (
-            results.termination_condition
-            == TerminationCondition.convergenceCriteriaSatisfied
+            results.termination_condition == TerminationCondition.optimal
             and self.config.load_solution
         ):
             for v_id, (v, val) in self._primal_sol.items():
                 v.set_value(val, skip_validation=True)
             if self._writer.get_active_objective() is None:
-                results.incumbent_objective = None
+                results.best_feasible_objective = None
             else:
-                results.incumbent_objective = obj_val
-        elif (
-            results.termination_condition
-            == TerminationCondition.convergenceCriteriaSatisfied
-        ):
+                results.best_feasible_objective = obj_val
+        elif results.termination_condition == TerminationCondition.optimal:
             if self._writer.get_active_objective() is None:
-                results.incumbent_objective = None
+                results.best_feasible_objective = None
             else:
-                results.incumbent_objective = obj_val
+                results.best_feasible_objective = obj_val
         elif self.config.load_solution:
             raise RuntimeError(
                 'A feasible solution was not found, so no solution can be loaded.'
                 'Please set opt.config.load_solution=False and check '
                 'results.termination_condition and '
-                'results.incumbent_objective before loading a solution.'
+                'results.best_feasible_objective before loading a solution.'
             )
 
         return results
@@ -366,7 +362,7 @@ class Cbc(PersistentSolverBase):
                 yield tmp_k, tmp_v
 
         cmd = [str(config.executable)]
-        action_options = []
+        action_options = list()
         if config.time_limit is not None:
             cmd.extend(['-sec', str(config.time_limit)])
             cmd.extend(['-timeMode', 'elapsed'])
@@ -387,7 +383,7 @@ class Cbc(PersistentSolverBase):
                 level=self.config.log_level, logger=self.config.solver_output_logger
             )
         ]
-        if self.config.tee:
+        if self.config.stream_solver:
             ostreams.append(sys.stdout)
 
         with TeeStream(*ostreams) as t:
@@ -407,24 +403,24 @@ class Cbc(PersistentSolverBase):
                     'A feasible solution was not found, so no solution can be loaded.'
                     'Please set opt.config.load_solution=False and check '
                     'results.termination_condition and '
-                    'results.incumbent_objective before loading a solution.'
+                    'results.best_feasible_objective before loading a solution.'
                 )
             results = Results()
             results.termination_condition = TerminationCondition.error
-            results.incumbent_objective = None
+            results.best_feasible_objective = None
         else:
             timer.start('parse solution')
             results = self._parse_soln()
             timer.stop('parse solution')
 
         if self._writer.get_active_objective() is None:
-            results.incumbent_objective = None
-            results.objective_bound = None
+            results.best_feasible_objective = None
+            results.best_objective_bound = None
         else:
             if self._writer.get_active_objective().sense == minimize:
-                results.objective_bound = -math.inf
+                results.best_objective_bound = -math.inf
             else:
-                results.objective_bound = math.inf
+                results.best_objective_bound = math.inf
 
         results.solution_loader = PersistentSolutionLoader(solver=self)
 
@@ -435,7 +431,7 @@ class Cbc(PersistentSolverBase):
     ) -> Mapping[_GeneralVarData, float]:
         if (
             self._last_results_object is None
-            or self._last_results_object.incumbent_objective is None
+            or self._last_results_object.best_feasible_objective is None
         ):
             raise RuntimeError(
                 'Solver does not currently have a valid solution. Please '
@@ -455,7 +451,7 @@ class Cbc(PersistentSolverBase):
         if (
             self._last_results_object is None
             or self._last_results_object.termination_condition
-            != TerminationCondition.convergenceCriteriaSatisfied
+            != TerminationCondition.optimal
         ):
             raise RuntimeError(
                 'Solver does not currently have valid duals. Please '
@@ -473,7 +469,7 @@ class Cbc(PersistentSolverBase):
         if (
             self._last_results_object is None
             or self._last_results_object.termination_condition
-            != TerminationCondition.convergenceCriteriaSatisfied
+            != TerminationCondition.optimal
         ):
             raise RuntimeError(
                 'Solver does not currently have valid reduced costs. Please '

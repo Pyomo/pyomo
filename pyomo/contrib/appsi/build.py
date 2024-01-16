@@ -9,9 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import errno
 import shutil
-import stat
 import glob
 import os
 import sys
@@ -81,7 +79,7 @@ def build_appsi(args=[]):
             print("Building in '%s'" % tmpdir)
             os.chdir(tmpdir)
             try:
-                super().run()
+                super(appsi_build_ext, self).run()
                 if not self.inplace:
                     library = glob.glob("build/*/appsi_cmodel.*")[0]
                     target = os.path.join(
@@ -118,7 +116,7 @@ def build_appsi(args=[]):
         pybind11.setup_helpers.MACOS = original_pybind11_setup_helpers_macos
 
 
-class AppsiBuilder:
+class AppsiBuilder(object):
     def __call__(self, parallel):
         return build_appsi()
 

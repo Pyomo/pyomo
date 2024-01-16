@@ -1,7 +1,6 @@
 import pyomo.environ as pe
 from pyomo.contrib import appsi
 from pyomo.common.timing import HierarchicalTimer
-from pyomo.contrib.solver import results
 
 
 def main(plot=True, n_points=200):
@@ -17,7 +16,7 @@ def main(plot=True, n_points=200):
     m.c1 = pe.Constraint(expr=m.y >= (m.x + 1) ** 2)
     m.c2 = pe.Constraint(expr=m.y >= (m.x - m.p) ** 2)
 
-    opt = appsi.solvers.Ipopt()  # create an APPSI solver interface
+    opt = appsi.solvers.Cplex()  # create an APPSI solver interface
     opt.config.load_solution = False  # modify the config options
     # change how automatic updates are handled
     opt.update_config.check_for_new_or_removed_vars = False
@@ -25,18 +24,15 @@ def main(plot=True, n_points=200):
 
     # write a for loop to vary the value of parameter p from 1 to 10
     p_values = [float(i) for i in np.linspace(1, 10, n_points)]
-    obj_values = []
-    x_values = []
+    obj_values = list()
+    x_values = list()
     timer = HierarchicalTimer()  # create a timer for some basic profiling
     timer.start('p loop')
     for p_val in p_values:
         m.p.value = p_val
         res = opt.solve(m, timer=timer)
-        assert (
-            res.termination_condition
-            == results.TerminationCondition.convergenceCriteriaSatisfied
-        )
-        obj_values.append(res.incumbent_objective)
+        assert res.termination_condition == appsi.base.TerminationCondition.optimal
+        obj_values.append(res.best_feasible_objective)
         opt.load_vars([m.x])
         x_values.append(m.x.value)
     timer.stop('p loop')

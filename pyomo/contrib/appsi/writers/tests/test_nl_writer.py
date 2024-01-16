@@ -1,4 +1,4 @@
-from pyomo.common import unittest
+import pyomo.common.unittest as unittest
 from pyomo.common.tempfiles import TempfileManager
 import pyomo.environ as pe
 from pyomo.contrib import appsi

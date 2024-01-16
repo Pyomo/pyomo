@@ -1,5 +1,5 @@
 import pyomo.environ as pe
-from pyomo.common import unittest
+import pyomo.common.unittest as unittest
 from pyomo.contrib.appsi.cmodel import cmodel_available
 from pyomo.common.gsl import find_GSL
 
@@ -11,7 +11,7 @@ class TestIpoptPersistent(unittest.TestCase):
         if not DLL:
             self.skipTest('Could not find the amplgls.dll library')
 
-        opt = pe.SolverFactory('ipopt_v2')
+        opt = pe.SolverFactory('appsi_ipopt')
         if not opt.available(exception_flag=False):
             raise unittest.SkipTest
 
@@ -31,7 +31,7 @@ class TestIpoptPersistent(unittest.TestCase):
         if not DLL:
             self.skipTest('Could not find the amplgls.dll library')
 
-        opt = pe.SolverFactory('ipopt_v2')
+        opt = pe.SolverFactory('appsi_ipopt')
         if not opt.available(exception_flag=False):
             raise unittest.SkipTest
 

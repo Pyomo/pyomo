@@ -1,4 +1,4 @@
-from pyomo.contrib.solver.util import PersistentSolverUtils
+from pyomo.contrib.appsi.base import PersistentBase
 from pyomo.common.config import (
     ConfigDict,
     ConfigValue,
@@ -11,9 +11,10 @@ from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.constraint import _GeneralConstraintData
 from pyomo.core.base.sos import _SOSConstraintData
-from pyomo.core.base.objective import _GeneralObjectiveData, minimize
+from pyomo.core.base.objective import _GeneralObjectiveData, minimize, maximize
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base import SymbolMap, TextLabeler
+from pyomo.common.errors import InfeasibleConstraintException
 
 
 class IntervalConfig(ConfigDict):
@@ -34,7 +35,7 @@ class IntervalConfig(ConfigDict):
         implicit_domain=None,
         visibility=0,
     ):
-        super().__init__(
+        super(IntervalConfig, self).__init__(
             description=description,
             doc=doc,
             implicit=implicit,
@@ -59,16 +60,16 @@ class IntervalConfig(ConfigDict):
         )
 
 
-class IntervalTightener(PersistentSolverUtils):
+class IntervalTightener(PersistentBase):
     def __init__(self):
-        super().__init__()
+        super(IntervalTightener, self).__init__()
         self._config = IntervalConfig()
         self._cmodel = None
-        self._var_map = {}
-        self._con_map = {}
-        self._param_map = {}
-        self._rvar_map = {}
-        self._rcon_map = {}
+        self._var_map = dict()
+        self._con_map = dict()
+        self._param_map = dict()
+        self._rvar_map = dict()
+        self._rcon_map = dict()
         self._pyomo_expr_types = cmodel.PyomoExprTypes()
         self._symbolic_solver_labels: bool = False
         self._symbol_map = SymbolMap()
@@ -253,7 +254,7 @@ class IntervalTightener(PersistentSolverUtils):
                 self._vars[v_id] = (_v, _lb, cv_ub, _fixed, _domain, _value)
 
     def _deactivate_satisfied_cons(self):
-        cons_to_deactivate = []
+        cons_to_deactivate = list()
         if self.config.deactivate_satisfied_constraints:
             for c, cc in self._con_map.items():
                 if not cc.active:

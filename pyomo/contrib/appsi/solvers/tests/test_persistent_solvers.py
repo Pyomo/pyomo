@@ -1,15 +1,15 @@
 import pyomo.environ as pe
 from pyomo.common.dependencies import attempt_import
-from pyomo.common import unittest
+import pyomo.common.unittest as unittest
 
 parameterized, param_available = attempt_import('parameterized')
 parameterized = parameterized.parameterized
-from pyomo.contrib.solver.base import PersistentSolverBase
-from pyomo.contrib.solver.results import TerminationCondition, Results
+from pyomo.contrib.appsi.base import TerminationCondition, Results, PersistentSolver
 from pyomo.contrib.appsi.cmodel import cmodel_available
-from pyomo.contrib.appsi.solvers import Gurobi, Ipopt, Highs
+from pyomo.contrib.appsi.solvers import Gurobi, Ipopt, Cplex, Cbc, Highs
 from typing import Type
 from pyomo.core.expr.numeric_expr import LinearExpression
+import os
 
 numpy, numpy_available = attempt_import('numpy')
 import random
@@ -19,11 +19,17 @@ from pyomo import gdp
 if not param_available:
     raise unittest.SkipTest('Parameterized is not available.')
 
-all_solvers = [('gurobi', Gurobi), ('ipopt', Ipopt), ('highs', Highs)]
-mip_solvers = [('gurobi', Gurobi), ('highs', Highs)]
+all_solvers = [
+    ('gurobi', Gurobi),
+    ('ipopt', Ipopt),
+    ('cplex', Cplex),
+    ('cbc', Cbc),
+    ('highs', Highs),
+]
+mip_solvers = [('gurobi', Gurobi), ('cplex', Cplex), ('cbc', Cbc), ('highs', Highs)]
 nlp_solvers = [('ipopt', Ipopt)]
-qcp_solvers = [('gurobi', Gurobi), ('ipopt', Ipopt)]
-miqcqp_solvers = [('gurobi', Gurobi)]
+qcp_solvers = [('gurobi', Gurobi), ('ipopt', Ipopt), ('cplex', Cplex)]
+miqcqp_solvers = [('gurobi', Gurobi), ('cplex', Cplex)]
 only_child_vars_options = [True, False]
 
 
@@ -62,7 +68,7 @@ fixed variables
 
 
 def _load_tests(solver_list, only_child_vars_list):
-    res = []
+    res = list()
     for solver_name, solver in solver_list:
         for child_var_option in only_child_vars_list:
             test_name = f"{solver_name}_only_child_vars_{child_var_option}"
@@ -75,19 +81,17 @@ def _load_tests(solver_list, only_child_vars_list):
 class TestSolvers(unittest.TestCase):
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_remove_variable_and_objective(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):
         # this test is for issue #2888
-        opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
+        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
         m.x = pe.Var(bounds=(2, None))
         m.obj = pe.Objective(expr=m.x)
         res = opt.solve(m)
-        self.assertEqual(
-            res.termination_condition, TerminationCondition.convergenceCriteriaSatisfied
-        )
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
         self.assertAlmostEqual(m.x.value, 2)
 
         del m.x
@@ -95,16 +99,14 @@ class TestSolvers(unittest.TestCase):
         m.x = pe.Var(bounds=(2, None))
         m.obj = pe.Objective(expr=m.x)
         res = opt.solve(m)
-        self.assertEqual(
-            res.termination_condition, TerminationCondition.convergenceCriteriaSatisfied
-        )
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
         self.assertAlmostEqual(m.x.value, 2)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_stale_vars(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):
-        opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
+        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
@@ -147,9 +149,9 @@ class TestSolvers(unittest.TestCase):
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_range_constraint(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):
-        opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
+        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
@@ -157,26 +159,22 @@ class TestSolvers(unittest.TestCase):
         m.obj = pe.Objective(expr=m.x)
         m.c = pe.Constraint(expr=(-1, m.x, 1))
         res = opt.solve(m)
-        self.assertEqual(
-            res.termination_condition, TerminationCondition.convergenceCriteriaSatisfied
-        )
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
         self.assertAlmostEqual(m.x.value, -1)
         duals = opt.get_duals()
         self.assertAlmostEqual(duals[m.c], 1)
         m.obj.sense = pe.maximize
         res = opt.solve(m)
-        self.assertEqual(
-            res.termination_condition, TerminationCondition.convergenceCriteriaSatisfied
-        )
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
         self.assertAlmostEqual(m.x.value, 1)
         duals = opt.get_duals()
         self.assertAlmostEqual(duals[m.c], 1)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_reduced_costs(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):
-        opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
+        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
@@ -184,9 +182,7 @@ class TestSolvers(unittest.TestCase):
         m.y = pe.Var(bounds=(-2, 2))
         m.obj = pe.Objective(expr=3 * m.x + 4 * m.y)
         res = opt.solve(m)
-        self.assertEqual(
-            res.termination_condition, TerminationCondition.convergenceCriteriaSatisfied
-        )
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
         self.assertAlmostEqual(m.x.value, -1)
         self.assertAlmostEqual(m.y.value, -2)
         rc = opt.get_reduced_costs()
@@ -195,35 +191,31 @@ class TestSolvers(unittest.TestCase):
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_reduced_costs2(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):
-        opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
+        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
         m.x = pe.Var(bounds=(-1, 1))
         m.obj = pe.Objective(expr=m.x)
         res = opt.solve(m)
-        self.assertEqual(
-            res.termination_condition, TerminationCondition.convergenceCriteriaSatisfied
-        )
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
         self.assertAlmostEqual(m.x.value, -1)
         rc = opt.get_reduced_costs()
         self.assertAlmostEqual(rc[m.x], 1)
         m.obj.sense = pe.maximize
         res = opt.solve(m)
-        self.assertEqual(
-            res.termination_condition, TerminationCondition.convergenceCriteriaSatisfied
-        )
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
         self.assertAlmostEqual(m.x.value, 1)
         rc = opt.get_reduced_costs()
         self.assertAlmostEqual(rc[m.x], 1)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_param_changes(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):
-        opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
+        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
@@ -244,27 +236,24 @@ class TestSolvers(unittest.TestCase):
             m.b1.value = b1
             m.b2.value = b2
             res: Results = opt.solve(m)
-            self.assertEqual(
-                res.termination_condition,
-                TerminationCondition.convergenceCriteriaSatisfied,
-            )
+            self.assertEqual(res.termination_condition, TerminationCondition.optimal)
             self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
             self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
-            self.assertAlmostEqual(res.incumbent_objective, m.y.value)
-            self.assertTrue(res.objective_bound <= m.y.value)
+            self.assertAlmostEqual(res.best_feasible_objective, m.y.value)
+            self.assertTrue(res.best_objective_bound <= m.y.value)
             duals = opt.get_duals()
             self.assertAlmostEqual(duals[m.c1], (1 + a1 / (a2 - a1)))
             self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_immutable_param(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):
         """
         This test is important because component_data_objects returns immutable params as floats.
         We want to make sure we process these correctly.
         """
-        opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
+        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
@@ -285,23 +274,20 @@ class TestSolvers(unittest.TestCase):
             m.b1.value = b1
             m.b2.value = b2
             res: Results = opt.solve(m)
-            self.assertEqual(
-                res.termination_condition,
-                TerminationCondition.convergenceCriteriaSatisfied,
-            )
+            self.assertEqual(res.termination_condition, TerminationCondition.optimal)
             self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
             self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
-            self.assertAlmostEqual(res.incumbent_objective, m.y.value)
-            self.assertTrue(res.objective_bound <= m.y.value)
+            self.assertAlmostEqual(res.best_feasible_objective, m.y.value)
+            self.assertTrue(res.best_objective_bound <= m.y.value)
             duals = opt.get_duals()
             self.assertAlmostEqual(duals[m.c1], (1 + a1 / (a2 - a1)))
             self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_equality(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):
-        opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
+        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
@@ -322,23 +308,20 @@ class TestSolvers(unittest.TestCase):
             m.b1.value = b1
             m.b2.value = b2
             res: Results = opt.solve(m)
-            self.assertEqual(
-                res.termination_condition,
-                TerminationCondition.convergenceCriteriaSatisfied,
-            )
+            self.assertEqual(res.termination_condition, TerminationCondition.optimal)
             self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
             self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
-            self.assertAlmostEqual(res.incumbent_objective, m.y.value)
-            self.assertTrue(res.objective_bound <= m.y.value)
+            self.assertAlmostEqual(res.best_feasible_objective, m.y.value)
+            self.assertTrue(res.best_objective_bound <= m.y.value)
             duals = opt.get_duals()
             self.assertAlmostEqual(duals[m.c1], (1 + a1 / (a2 - a1)))
             self.assertAlmostEqual(duals[m.c2], -a1 / (a2 - a1))
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_linear_expression(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):
-        opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
+        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
@@ -365,19 +348,16 @@ class TestSolvers(unittest.TestCase):
             m.b1.value = b1
             m.b2.value = b2
             res: Results = opt.solve(m)
-            self.assertEqual(
-                res.termination_condition,
-                TerminationCondition.convergenceCriteriaSatisfied,
-            )
+            self.assertEqual(res.termination_condition, TerminationCondition.optimal)
             self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
-            self.assertAlmostEqual(res.incumbent_objective, m.y.value)
-            self.assertTrue(res.objective_bound <= m.y.value)
+            self.assertAlmostEqual(res.best_feasible_objective, m.y.value)
+            self.assertTrue(res.best_objective_bound <= m.y.value)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_no_objective(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):
-        opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
+        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
@@ -389,7 +369,7 @@ class TestSolvers(unittest.TestCase):
         m.b2 = pe.Param(mutable=True)
         m.c1 = pe.Constraint(expr=m.y == m.a1 * m.x + m.b1)
         m.c2 = pe.Constraint(expr=m.y == m.a2 * m.x + m.b2)
-        opt.config.tee = True
+        opt.config.stream_solver = True
 
         params_to_test = [(1, -1, 2, 1), (1, -2, 2, 1), (1, -1, 3, 1)]
         for a1, a2, b1, b2 in params_to_test:
@@ -398,23 +378,20 @@ class TestSolvers(unittest.TestCase):
             m.b1.value = b1
             m.b2.value = b2
             res: Results = opt.solve(m)
-            self.assertEqual(
-                res.termination_condition,
-                TerminationCondition.convergenceCriteriaSatisfied,
-            )
+            self.assertEqual(res.termination_condition, TerminationCondition.optimal)
             self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
             self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
-            self.assertEqual(res.incumbent_objective, None)
-            self.assertEqual(res.objective_bound, None)
+            self.assertEqual(res.best_feasible_objective, None)
+            self.assertEqual(res.best_objective_bound, None)
             duals = opt.get_duals()
             self.assertAlmostEqual(duals[m.c1], 0)
             self.assertAlmostEqual(duals[m.c2], 0)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_add_remove_cons(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):
-        opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
+        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
@@ -430,26 +407,22 @@ class TestSolvers(unittest.TestCase):
         m.c1 = pe.Constraint(expr=m.y >= a1 * m.x + b1)
         m.c2 = pe.Constraint(expr=m.y >= a2 * m.x + b2)
         res = opt.solve(m)
-        self.assertEqual(
-            res.termination_condition, TerminationCondition.convergenceCriteriaSatisfied
-        )
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
         self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
         self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
-        self.assertAlmostEqual(res.incumbent_objective, m.y.value)
-        self.assertTrue(res.objective_bound <= m.y.value)
+        self.assertAlmostEqual(res.best_feasible_objective, m.y.value)
+        self.assertTrue(res.best_objective_bound <= m.y.value)
         duals = opt.get_duals()
         self.assertAlmostEqual(duals[m.c1], -(1 + a1 / (a2 - a1)))
         self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
 
         m.c3 = pe.Constraint(expr=m.y >= a3 * m.x + b3)
         res = opt.solve(m)
-        self.assertEqual(
-            res.termination_condition, TerminationCondition.convergenceCriteriaSatisfied
-        )
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
         self.assertAlmostEqual(m.x.value, (b3 - b1) / (a1 - a3))
         self.assertAlmostEqual(m.y.value, a1 * (b3 - b1) / (a1 - a3) + b1)
-        self.assertAlmostEqual(res.incumbent_objective, m.y.value)
-        self.assertTrue(res.objective_bound <= m.y.value)
+        self.assertAlmostEqual(res.best_feasible_objective, m.y.value)
+        self.assertTrue(res.best_objective_bound <= m.y.value)
         duals = opt.get_duals()
         self.assertAlmostEqual(duals[m.c1], -(1 + a1 / (a3 - a1)))
         self.assertAlmostEqual(duals[m.c2], 0)
@@ -457,22 +430,20 @@ class TestSolvers(unittest.TestCase):
 
         del m.c3
         res = opt.solve(m)
-        self.assertEqual(
-            res.termination_condition, TerminationCondition.convergenceCriteriaSatisfied
-        )
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
         self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
         self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
-        self.assertAlmostEqual(res.incumbent_objective, m.y.value)
-        self.assertTrue(res.objective_bound <= m.y.value)
+        self.assertAlmostEqual(res.best_feasible_objective, m.y.value)
+        self.assertTrue(res.best_objective_bound <= m.y.value)
         duals = opt.get_duals()
         self.assertAlmostEqual(duals[m.c1], -(1 + a1 / (a2 - a1)))
         self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_results_infeasible(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):
-        opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
+        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
@@ -485,25 +456,21 @@ class TestSolvers(unittest.TestCase):
             res = opt.solve(m)
         opt.config.load_solution = False
         res = opt.solve(m)
-        self.assertNotEqual(
-            res.termination_condition, TerminationCondition.convergenceCriteriaSatisfied
-        )
+        self.assertNotEqual(res.termination_condition, TerminationCondition.optimal)
         if opt_class is Ipopt:
             acceptable_termination_conditions = {
-                TerminationCondition.provenInfeasible,
-                TerminationCondition.locallyInfeasible,
+                TerminationCondition.infeasible,
                 TerminationCondition.unbounded,
             }
         else:
             acceptable_termination_conditions = {
-                TerminationCondition.provenInfeasible,
-                TerminationCondition.locallyInfeasible,
+                TerminationCondition.infeasible,
                 TerminationCondition.infeasibleOrUnbounded,
             }
         self.assertIn(res.termination_condition, acceptable_termination_conditions)
         self.assertAlmostEqual(m.x.value, None)
         self.assertAlmostEqual(m.y.value, None)
-        self.assertTrue(res.incumbent_objective is None)
+        self.assertTrue(res.best_feasible_objective is None)
 
         with self.assertRaisesRegex(
             RuntimeError, '.*does not currently have a valid solution.*'
@@ -519,10 +486,8 @@ class TestSolvers(unittest.TestCase):
             res.solution_loader.get_reduced_costs()
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
-    def test_duals(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
-    ):
-        opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
+    def test_duals(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
+        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
@@ -545,9 +510,9 @@ class TestSolvers(unittest.TestCase):
 
     @parameterized.expand(input=_load_tests(qcp_solvers, only_child_vars_options))
     def test_mutable_quadratic_coefficient(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):
-        opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
+        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
@@ -569,9 +534,9 @@ class TestSolvers(unittest.TestCase):
 
     @parameterized.expand(input=_load_tests(qcp_solvers, only_child_vars_options))
     def test_mutable_quadratic_objective(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):
-        opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
+        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
@@ -596,10 +561,10 @@ class TestSolvers(unittest.TestCase):
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_fixed_vars(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):
         for treat_fixed_vars_as_params in [True, False]:
-            opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
+            opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
             opt.update_config.treat_fixed_vars_as_params = treat_fixed_vars_as_params
             if not opt.available():
                 raise unittest.SkipTest
@@ -636,9 +601,9 @@ class TestSolvers(unittest.TestCase):
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_fixed_vars_2(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):
-        opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
+        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         opt.update_config.treat_fixed_vars_as_params = True
         if not opt.available():
             raise unittest.SkipTest
@@ -675,9 +640,9 @@ class TestSolvers(unittest.TestCase):
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_fixed_vars_3(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):
-        opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
+        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         opt.update_config.treat_fixed_vars_as_params = True
         if not opt.available():
             raise unittest.SkipTest
@@ -692,9 +657,9 @@ class TestSolvers(unittest.TestCase):
 
     @parameterized.expand(input=_load_tests(nlp_solvers, only_child_vars_options))
     def test_fixed_vars_4(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):
-        opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
+        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         opt.update_config.treat_fixed_vars_as_params = True
         if not opt.available():
             raise unittest.SkipTest
@@ -713,9 +678,9 @@ class TestSolvers(unittest.TestCase):
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_mutable_param_with_range(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):
-        opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
+        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
         try:
@@ -783,30 +748,27 @@ class TestSolvers(unittest.TestCase):
             m.c2.value = float(c2)
             m.obj.sense = sense
             res: Results = opt.solve(m)
-            self.assertEqual(
-                res.termination_condition,
-                TerminationCondition.convergenceCriteriaSatisfied,
-            )
+            self.assertEqual(res.termination_condition, TerminationCondition.optimal)
             if sense is pe.minimize:
                 self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2), 6)
                 self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1, 6)
-                self.assertAlmostEqual(res.incumbent_objective, m.y.value, 6)
-                self.assertTrue(res.objective_bound <= m.y.value + 1e-12)
+                self.assertAlmostEqual(res.best_feasible_objective, m.y.value, 6)
+                self.assertTrue(res.best_objective_bound <= m.y.value + 1e-12)
                 duals = opt.get_duals()
                 self.assertAlmostEqual(duals[m.con1], (1 + a1 / (a2 - a1)), 6)
                 self.assertAlmostEqual(duals[m.con2], -a1 / (a2 - a1), 6)
             else:
                 self.assertAlmostEqual(m.x.value, (c2 - c1) / (a1 - a2), 6)
                 self.assertAlmostEqual(m.y.value, a1 * (c2 - c1) / (a1 - a2) + c1, 6)
-                self.assertAlmostEqual(res.incumbent_objective, m.y.value, 6)
-                self.assertTrue(res.objective_bound >= m.y.value - 1e-12)
+                self.assertAlmostEqual(res.best_feasible_objective, m.y.value, 6)
+                self.assertTrue(res.best_objective_bound >= m.y.value - 1e-12)
                 duals = opt.get_duals()
                 self.assertAlmostEqual(duals[m.con1], (1 + a1 / (a2 - a1)), 6)
                 self.assertAlmostEqual(duals[m.con2], -a1 / (a2 - a1), 6)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_add_and_remove_vars(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):
         opt = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
@@ -823,9 +785,7 @@ class TestSolvers(unittest.TestCase):
         opt.update_config.check_for_new_or_removed_vars = False
         opt.config.load_solution = False
         res = opt.solve(m)
-        self.assertEqual(
-            res.termination_condition, TerminationCondition.convergenceCriteriaSatisfied
-        )
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
         opt.load_vars()
         self.assertAlmostEqual(m.y.value, -1)
         m.x = pe.Var()
@@ -839,9 +799,7 @@ class TestSolvers(unittest.TestCase):
             opt.add_variables([m.x])
         opt.add_constraints([m.c1, m.c2])
         res = opt.solve(m)
-        self.assertEqual(
-            res.termination_condition, TerminationCondition.convergenceCriteriaSatisfied
-        )
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
         opt.load_vars()
         self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
         self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
@@ -850,9 +808,7 @@ class TestSolvers(unittest.TestCase):
             opt.remove_variables([m.x])
         m.x.value = None
         res = opt.solve(m)
-        self.assertEqual(
-            res.termination_condition, TerminationCondition.convergenceCriteriaSatisfied
-        )
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
         opt.load_vars()
         self.assertEqual(m.x.value, None)
         self.assertAlmostEqual(m.y.value, -1)
@@ -860,9 +816,7 @@ class TestSolvers(unittest.TestCase):
             opt.load_vars([m.x])
 
     @parameterized.expand(input=_load_tests(nlp_solvers, only_child_vars_options))
-    def test_exp(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
-    ):
+    def test_exp(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
         opt = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
@@ -876,9 +830,7 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, 0.6529186341994245)
 
     @parameterized.expand(input=_load_tests(nlp_solvers, only_child_vars_options))
-    def test_log(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
-    ):
+    def test_log(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
         opt = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
@@ -893,9 +845,9 @@ class TestSolvers(unittest.TestCase):
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_with_numpy(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):
-        opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
+        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
@@ -917,17 +869,15 @@ class TestSolvers(unittest.TestCase):
             )
         )
         res = opt.solve(m)
-        self.assertEqual(
-            res.termination_condition, TerminationCondition.convergenceCriteriaSatisfied
-        )
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
         self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
         self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_bounds_with_params(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):
-        opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
+        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
@@ -959,9 +909,9 @@ class TestSolvers(unittest.TestCase):
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_solution_loader(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):
-        opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
+        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
@@ -1012,9 +962,9 @@ class TestSolvers(unittest.TestCase):
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_time_limit(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):
-        opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
+        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
         from sys import platform
@@ -1029,8 +979,8 @@ class TestSolvers(unittest.TestCase):
         m.x = pe.Var(m.jobs, m.tasks, bounds=(0, 1))
 
         random.seed(0)
-        coefs = []
-        lin_vars = []
+        coefs = list()
+        lin_vars = list()
         for j in m.jobs:
             for t in m.tasks:
                 coefs.append(random.uniform(0, 10))
@@ -1062,13 +1012,21 @@ class TestSolvers(unittest.TestCase):
             opt.config.time_limit = 0
         opt.config.load_solution = False
         res = opt.solve(m)
-        self.assertEqual(res.termination_condition, TerminationCondition.maxTimeLimit)
+        if type(opt) is Cbc:  # I can't figure out why CBC is reporting max iter...
+            self.assertIn(
+                res.termination_condition,
+                {TerminationCondition.maxIterations, TerminationCondition.maxTimeLimit},
+            )
+        else:
+            self.assertEqual(
+                res.termination_condition, TerminationCondition.maxTimeLimit
+            )
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_objective_changes(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):
-        opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
+        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
@@ -1078,13 +1036,13 @@ class TestSolvers(unittest.TestCase):
         m.c2 = pe.Constraint(expr=m.y >= -m.x + 1)
         m.obj = pe.Objective(expr=m.y)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.incumbent_objective, 1)
+        self.assertAlmostEqual(res.best_feasible_objective, 1)
         m.obj = pe.Objective(expr=2 * m.y)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.incumbent_objective, 2)
+        self.assertAlmostEqual(res.best_feasible_objective, 2)
         m.obj.expr = 3 * m.y
         res = opt.solve(m)
-        self.assertAlmostEqual(res.incumbent_objective, 3)
+        self.assertAlmostEqual(res.best_feasible_objective, 3)
         m.obj.sense = pe.maximize
         opt.config.load_solution = False
         res = opt.solve(m)
@@ -1100,88 +1058,88 @@ class TestSolvers(unittest.TestCase):
         m.obj = pe.Objective(expr=m.x * m.y)
         m.x.fix(2)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.incumbent_objective, 6, 6)
+        self.assertAlmostEqual(res.best_feasible_objective, 6, 6)
         m.x.fix(3)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.incumbent_objective, 12, 6)
+        self.assertAlmostEqual(res.best_feasible_objective, 12, 6)
         m.x.unfix()
         m.y.fix(2)
         m.x.setlb(-3)
         m.x.setub(5)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.incumbent_objective, -2, 6)
+        self.assertAlmostEqual(res.best_feasible_objective, -2, 6)
         m.y.unfix()
         m.x.setlb(None)
         m.x.setub(None)
         m.e = pe.Expression(expr=2)
         m.obj = pe.Objective(expr=m.e * m.y)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.incumbent_objective, 2)
+        self.assertAlmostEqual(res.best_feasible_objective, 2)
         m.e.expr = 3
         res = opt.solve(m)
-        self.assertAlmostEqual(res.incumbent_objective, 3)
+        self.assertAlmostEqual(res.best_feasible_objective, 3)
         opt.update_config.check_for_new_objective = False
         m.e.expr = 4
         res = opt.solve(m)
-        self.assertAlmostEqual(res.incumbent_objective, 4)
+        self.assertAlmostEqual(res.best_feasible_objective, 4)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_domain(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):
-        opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
+        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
         m.x = pe.Var(bounds=(1, None), domain=pe.NonNegativeReals)
         m.obj = pe.Objective(expr=m.x)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.incumbent_objective, 1)
+        self.assertAlmostEqual(res.best_feasible_objective, 1)
         m.x.setlb(-1)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.incumbent_objective, 0)
+        self.assertAlmostEqual(res.best_feasible_objective, 0)
         m.x.setlb(1)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.incumbent_objective, 1)
+        self.assertAlmostEqual(res.best_feasible_objective, 1)
         m.x.setlb(-1)
         m.x.domain = pe.Reals
         res = opt.solve(m)
-        self.assertAlmostEqual(res.incumbent_objective, -1)
+        self.assertAlmostEqual(res.best_feasible_objective, -1)
         m.x.domain = pe.NonNegativeReals
         res = opt.solve(m)
-        self.assertAlmostEqual(res.incumbent_objective, 0)
+        self.assertAlmostEqual(res.best_feasible_objective, 0)
 
     @parameterized.expand(input=_load_tests(mip_solvers, only_child_vars_options))
     def test_domain_with_integers(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):
-        opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
+        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
         m.x = pe.Var(bounds=(-1, None), domain=pe.NonNegativeIntegers)
         m.obj = pe.Objective(expr=m.x)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.incumbent_objective, 0)
+        self.assertAlmostEqual(res.best_feasible_objective, 0)
         m.x.setlb(0.5)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.incumbent_objective, 1)
+        self.assertAlmostEqual(res.best_feasible_objective, 1)
         m.x.setlb(-5.5)
         m.x.domain = pe.Integers
         res = opt.solve(m)
-        self.assertAlmostEqual(res.incumbent_objective, -5)
+        self.assertAlmostEqual(res.best_feasible_objective, -5)
         m.x.domain = pe.Binary
         res = opt.solve(m)
-        self.assertAlmostEqual(res.incumbent_objective, 0)
+        self.assertAlmostEqual(res.best_feasible_objective, 0)
         m.x.setlb(0.5)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.incumbent_objective, 1)
+        self.assertAlmostEqual(res.best_feasible_objective, 1)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_fixed_binaries(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):
-        opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
+        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
@@ -1191,25 +1149,25 @@ class TestSolvers(unittest.TestCase):
         m.c = pe.Constraint(expr=m.y >= m.x)
         m.x.fix(0)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.incumbent_objective, 0)
+        self.assertAlmostEqual(res.best_feasible_objective, 0)
         m.x.fix(1)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.incumbent_objective, 1)
+        self.assertAlmostEqual(res.best_feasible_objective, 1)
 
-        opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
+        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         opt.update_config.treat_fixed_vars_as_params = False
         m.x.fix(0)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.incumbent_objective, 0)
+        self.assertAlmostEqual(res.best_feasible_objective, 0)
         m.x.fix(1)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.incumbent_objective, 1)
+        self.assertAlmostEqual(res.best_feasible_objective, 1)
 
     @parameterized.expand(input=_load_tests(mip_solvers, only_child_vars_options))
     def test_with_gdp(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):
-        opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
+        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
 
@@ -1227,15 +1185,20 @@ class TestSolvers(unittest.TestCase):
         pe.TransformationFactory("gdp.bigm").apply_to(m)
 
         res = opt.solve(m)
-        self.assertAlmostEqual(res.incumbent_objective, 1)
+        self.assertAlmostEqual(res.best_feasible_objective, 1)
+        self.assertAlmostEqual(m.x.value, 0)
+        self.assertAlmostEqual(m.y.value, 1)
+
+        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
+        opt.use_extensions = True
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.best_feasible_objective, 1)
         self.assertAlmostEqual(m.x.value, 0)
         self.assertAlmostEqual(m.y.value, 1)
 
     @parameterized.expand(input=all_solvers)
-    def test_variables_elsewhere(
-        self, name: str, opt_class: Type[PersistentSolverBase]
-    ):
-        opt: PersistentSolverBase = opt_class(only_child_vars=False)
+    def test_variables_elsewhere(self, name: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class(only_child_vars=False)
         if not opt.available():
             raise unittest.SkipTest
 
@@ -1248,27 +1211,21 @@ class TestSolvers(unittest.TestCase):
         m.b.c2 = pe.Constraint(expr=m.y >= -m.x)
 
         res = opt.solve(m.b)
-        self.assertEqual(
-            res.termination_condition, TerminationCondition.convergenceCriteriaSatisfied
-        )
-        self.assertAlmostEqual(res.incumbent_objective, 1)
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertAlmostEqual(res.best_feasible_objective, 1)
         self.assertAlmostEqual(m.x.value, -1)
         self.assertAlmostEqual(m.y.value, 1)
 
         m.x.setlb(0)
         res = opt.solve(m.b)
-        self.assertEqual(
-            res.termination_condition, TerminationCondition.convergenceCriteriaSatisfied
-        )
-        self.assertAlmostEqual(res.incumbent_objective, 2)
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertAlmostEqual(res.best_feasible_objective, 2)
         self.assertAlmostEqual(m.x.value, 0)
         self.assertAlmostEqual(m.y.value, 2)
 
     @parameterized.expand(input=all_solvers)
-    def test_variables_elsewhere2(
-        self, name: str, opt_class: Type[PersistentSolverBase]
-    ):
-        opt: PersistentSolverBase = opt_class(only_child_vars=False)
+    def test_variables_elsewhere2(self, name: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class(only_child_vars=False)
         if not opt.available():
             raise unittest.SkipTest
 
@@ -1284,10 +1241,8 @@ class TestSolvers(unittest.TestCase):
         m.c4 = pe.Constraint(expr=m.y >= -m.z + 1)
 
         res = opt.solve(m)
-        self.assertEqual(
-            res.termination_condition, TerminationCondition.convergenceCriteriaSatisfied
-        )
-        self.assertAlmostEqual(res.incumbent_objective, 1)
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertAlmostEqual(res.best_feasible_objective, 1)
         sol = res.solution_loader.get_primals()
         self.assertIn(m.x, sol)
         self.assertIn(m.y, sol)
@@ -1296,20 +1251,16 @@ class TestSolvers(unittest.TestCase):
         del m.c3
         del m.c4
         res = opt.solve(m)
-        self.assertEqual(
-            res.termination_condition, TerminationCondition.convergenceCriteriaSatisfied
-        )
-        self.assertAlmostEqual(res.incumbent_objective, 0)
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertAlmostEqual(res.best_feasible_objective, 0)
         sol = res.solution_loader.get_primals()
         self.assertIn(m.x, sol)
         self.assertIn(m.y, sol)
         self.assertNotIn(m.z, sol)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
-    def test_bug_1(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
-    ):
-        opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
+    def test_bug_1(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
+        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
 
@@ -1322,28 +1273,22 @@ class TestSolvers(unittest.TestCase):
         m.c = pe.Constraint(expr=m.y >= m.p * m.x)
 
         res = opt.solve(m)
-        self.assertEqual(
-            res.termination_condition, TerminationCondition.convergenceCriteriaSatisfied
-        )
-        self.assertAlmostEqual(res.incumbent_objective, 0)
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertAlmostEqual(res.best_feasible_objective, 0)
 
         m.p.value = 1
         res = opt.solve(m)
-        self.assertEqual(
-            res.termination_condition, TerminationCondition.convergenceCriteriaSatisfied
-        )
-        self.assertAlmostEqual(res.incumbent_objective, 3)
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertAlmostEqual(res.best_feasible_objective, 3)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
-    def test_bug_2(
-        self, name: str, opt_class: Type[PersistentSolverBase], only_child_vars
-    ):
+    def test_bug_2(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
         """
         This test is for a bug where an objective containing a fixed variable does
         not get updated properly when the variable is unfixed.
         """
         for fixed_var_option in [True, False]:
-            opt: PersistentSolverBase = opt_class(only_child_vars=only_child_vars)
+            opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
             if not opt.available():
                 raise unittest.SkipTest
             opt.update_config.treat_fixed_vars_as_params = fixed_var_option
@@ -1356,19 +1301,19 @@ class TestSolvers(unittest.TestCase):
 
             m.x.fix(1)
             res = opt.solve(m)
-            self.assertAlmostEqual(res.incumbent_objective, 2, 5)
+            self.assertAlmostEqual(res.best_feasible_objective, 2, 5)
 
             m.x.unfix()
             m.x.setlb(-9)
             m.x.setub(9)
             res = opt.solve(m)
-            self.assertAlmostEqual(res.incumbent_objective, -18, 5)
+            self.assertAlmostEqual(res.best_feasible_objective, -18, 5)
 
 
 @unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
 class TestLegacySolverInterface(unittest.TestCase):
     @parameterized.expand(input=all_solvers)
-    def test_param_updates(self, name: str, opt_class: Type[PersistentSolverBase]):
+    def test_param_updates(self, name: str, opt_class: Type[PersistentSolver]):
         opt = pe.SolverFactory('appsi_' + name)
         if not opt.available(exception_flag=False):
             raise unittest.SkipTest
@@ -1398,7 +1343,7 @@ class TestLegacySolverInterface(unittest.TestCase):
             self.assertAlmostEqual(m.dual[m.c2], a1 / (a2 - a1))
 
     @parameterized.expand(input=all_solvers)
-    def test_load_solutions(self, name: str, opt_class: Type[PersistentSolverBase]):
+    def test_load_solutions(self, name: str, opt_class: Type[PersistentSolver]):
         opt = pe.SolverFactory('appsi_' + name)
         if not opt.available(exception_flag=False):
             raise unittest.SkipTest

@@ -1,6 +1,4 @@
-import os
 from typing import List
-
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.base.constraint import _GeneralConstraintData
@@ -8,31 +6,32 @@ from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.core.base.sos import _SOSConstraintData
 from pyomo.core.base.block import _BlockData
 from pyomo.repn.standard_repn import generate_standard_repn
-from pyomo.core.base import SymbolMap, TextLabeler
+from pyomo.core.expr.numvalue import value
+from pyomo.contrib.appsi.base import PersistentBase
+from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.kernel.objective import minimize
-from pyomo.common.collections import OrderedSet
-from pyomo.repn.plugins.ampl.ampl_ import set_pyomo_amplfunc_env
-from pyomo.contrib.solver.util import PersistentSolverUtils
-
 from .config import WriterConfig
+from pyomo.common.collections import OrderedSet
+import os
 from ..cmodel import cmodel, cmodel_available
+from pyomo.repn.plugins.ampl.ampl_ import set_pyomo_amplfunc_env
 
 
-class NLWriter(PersistentSolverUtils):
+class NLWriter(PersistentBase):
     def __init__(self, only_child_vars=False):
-        super().__init__(only_child_vars=only_child_vars)
+        super(NLWriter, self).__init__(only_child_vars=only_child_vars)
         self._config = WriterConfig()
         self._writer = None
         self._symbol_map = SymbolMap()
         self._var_labeler = None
         self._con_labeler = None
         self._param_labeler = None
-        self._pyomo_var_to_solver_var_map = {}
-        self._pyomo_con_to_solver_con_map = {}
-        self._solver_var_to_pyomo_var_map = {}
-        self._solver_con_to_pyomo_con_map = {}
-        self._pyomo_param_to_solver_param_map = {}
+        self._pyomo_var_to_solver_var_map = dict()
+        self._pyomo_con_to_solver_con_map = dict()
+        self._solver_var_to_pyomo_var_map = dict()
+        self._solver_con_to_pyomo_con_map = dict()
+        self._pyomo_param_to_solver_param_map = dict()
         self._expr_types = None
 
     @property
@@ -173,8 +172,8 @@ class NLWriter(PersistentSolverUtils):
     def _set_objective(self, obj: _GeneralObjectiveData):
         if obj is None:
             const = cmodel.Constant(0)
-            lin_vars = []
-            lin_coef = []
+            lin_vars = list()
+            lin_coef = list()
             nonlin = cmodel.Constant(0)
             sense = 0
         else:
@@ -241,7 +240,7 @@ class NLWriter(PersistentSolverUtils):
         timer.stop('write file')
 
     def update(self, timer: HierarchicalTimer = None):
-        super().update(timer=timer)
+        super(NLWriter, self).update(timer=timer)
         self._set_pyomo_amplfunc_env()
 
     def get_ordered_vars(self):

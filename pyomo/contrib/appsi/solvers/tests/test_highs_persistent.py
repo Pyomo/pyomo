@@ -7,6 +7,7 @@ import pyomo.environ as pe
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tee import capture_output
 from pyomo.contrib.appsi.solvers.highs import Highs
+from pyomo.contrib.appsi.base import TerminationCondition
 
 
 opt = Highs()
@@ -32,12 +33,12 @@ class TestBugs(unittest.TestCase):
 
         opt = Highs()
         res = opt.solve(m)
-        self.assertAlmostEqual(res.incumbent_objective, 1)
+        self.assertAlmostEqual(res.best_feasible_objective, 1)
 
         del m.c1
         m.p2.value = 2
         res = opt.solve(m)
-        self.assertAlmostEqual(res.incumbent_objective, -8)
+        self.assertAlmostEqual(res.best_feasible_objective, -8)
 
     def test_mutable_params_with_remove_vars(self):
         m = pe.ConcreteModel()
@@ -59,14 +60,14 @@ class TestBugs(unittest.TestCase):
 
         opt = Highs()
         res = opt.solve(m)
-        self.assertAlmostEqual(res.incumbent_objective, 1)
+        self.assertAlmostEqual(res.best_feasible_objective, 1)
 
         del m.c1
         del m.c2
         m.p1.value = -9
         m.p2.value = 9
         res = opt.solve(m)
-        self.assertAlmostEqual(res.incumbent_objective, -9)
+        self.assertAlmostEqual(res.best_feasible_objective, -9)
 
     def test_capture_highs_output(self):
         # tests issue #3003
@@ -94,7 +95,7 @@ class TestBugs(unittest.TestCase):
 
         model[-2:-1] = [
             'opt = Highs()',
-            'opt.config.tee = True',
+            'opt.config.stream_solver = True',
             'result = opt.solve(m)',
         ]
         with LoggingIntercept() as LOG, capture_output(capture_fd=True) as OUT:

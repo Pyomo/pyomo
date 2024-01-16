@@ -1,8 +1,11 @@
-from pyomo.contrib.solver.base import PersistentSolverBase
-from pyomo.contrib.solver.util import PersistentSolverUtils
-from pyomo.contrib.solver.config import SolverConfig
-from pyomo.contrib.solver.results import Results, TerminationCondition, SolutionStatus
-from pyomo.contrib.solver.solution import PersistentSolutionLoader
+from pyomo.contrib.appsi.base import (
+    PersistentBase,
+    PersistentSolver,
+    SolverConfig,
+    Results,
+    TerminationCondition,
+    PersistentSolutionLoader,
+)
 from pyomo.core.expr.numeric_expr import (
     ProductExpression,
     DivisionExpression,
@@ -33,6 +36,7 @@ from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
 from pyomo.common.dependencies import attempt_import
 from pyomo.core.staleflag import StaleFlagManager
+from pyomo.contrib.appsi.cmodel import cmodel, cmodel_available
 
 wntr, wntr_available = attempt_import('wntr')
 import logging
@@ -65,10 +69,11 @@ class WntrConfig(SolverConfig):
 class WntrResults(Results):
     def __init__(self, solver):
         super().__init__()
+        self.wallclock_time = None
         self.solution_loader = PersistentSolutionLoader(solver=solver)
 
 
-class Wntr(PersistentSolverUtils, PersistentSolverBase):
+class Wntr(PersistentBase, PersistentSolver):
     def __init__(self, only_child_vars=True):
         super().__init__(only_child_vars=only_child_vars)
         self._config = WntrConfig()
@@ -121,7 +126,7 @@ class Wntr(PersistentSolverUtils, PersistentSolverBase):
         options.update(self.wntr_options)
         opt = wntr.sim.solvers.NewtonSolver(options)
 
-        if self.config.tee:
+        if self.config.stream_solver:
             ostream = sys.stdout
         else:
             ostream = None
@@ -138,14 +143,13 @@ class Wntr(PersistentSolverUtils, PersistentSolverBase):
         tf = time.time()
 
         results = WntrResults(self)
-        results.timing_info.wall_time = tf - t0
+        results.wallclock_time = tf - t0
         if status == wntr.sim.solvers.SolverStatus.converged:
-            results.termination_condition = (
-                TerminationCondition.convergenceCriteriaSatisfied
-            )
-            results.solution_status = SolutionStatus.optimal
+            results.termination_condition = TerminationCondition.optimal
         else:
             results.termination_condition = TerminationCondition.error
+        results.best_feasible_objective = None
+        results.best_objective_bound = None
 
         if self.config.load_solution:
             if status == wntr.sim.solvers.SolverStatus.converged:
@@ -157,7 +161,7 @@ class Wntr(PersistentSolverUtils, PersistentSolverBase):
                     'A feasible solution was not found, so no solution can be loaded.'
                     'Please set opt.config.load_solution=False and check '
                     'results.termination_condition and '
-                    'results.incumbent_objective before loading a solution.'
+                    'results.best_feasible_objective before loading a solution.'
                 )
         return results
 
@@ -208,6 +212,8 @@ class Wntr(PersistentSolverUtils, PersistentSolverBase):
             )
         self._reinit()
         self._model = model
+        if self.use_extensions and cmodel_available:
+            self._expr_types = cmodel.PyomoExprTypes()
 
         if self.config.symbolic_solver_labels:
             self._labeler = TextLabeler()

@@ -5,17 +5,19 @@ from pyomo.core.base.constraint import _GeneralConstraintData
 from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.core.base.sos import _SOSConstraintData
 from pyomo.core.base.block import _BlockData
+from pyomo.repn.standard_repn import generate_standard_repn
+from pyomo.core.expr.numvalue import value
+from pyomo.contrib.appsi.base import PersistentBase
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
 from pyomo.common.timing import HierarchicalTimer
-from pyomo.core.kernel.objective import minimize
-from pyomo.contrib.solver.util import PersistentSolverUtils
+from pyomo.core.kernel.objective import minimize, maximize
 from .config import WriterConfig
 from ..cmodel import cmodel, cmodel_available
 
 
-class LPWriter(PersistentSolverUtils):
+class LPWriter(PersistentBase):
     def __init__(self, only_child_vars=False):
-        super().__init__(only_child_vars=only_child_vars)
+        super(LPWriter, self).__init__(only_child_vars=only_child_vars)
         self._config = WriterConfig()
         self._writer = None
         self._symbol_map = SymbolMap()
@@ -23,11 +25,11 @@ class LPWriter(PersistentSolverUtils):
         self._con_labeler = None
         self._param_labeler = None
         self._obj_labeler = None
-        self._pyomo_var_to_solver_var_map = {}
-        self._pyomo_con_to_solver_con_map = {}
-        self._solver_var_to_pyomo_var_map = {}
-        self._solver_con_to_pyomo_con_map = {}
-        self._pyomo_param_to_solver_param_map = {}
+        self._pyomo_var_to_solver_var_map = dict()
+        self._pyomo_con_to_solver_con_map = dict()
+        self._solver_var_to_pyomo_var_map = dict()
+        self._solver_con_to_pyomo_con_map = dict()
+        self._pyomo_param_to_solver_param_map = dict()
         self._expr_types = None
 
     @property
@@ -87,7 +89,7 @@ class LPWriter(PersistentSolverUtils):
             self._pyomo_param_to_solver_param_map[id(p)] = cp
 
     def _add_constraints(self, cons: List[_GeneralConstraintData]):
-        cmodel.process_lp_constraints()
+        cmodel.process_lp_constraints(cons, self)
 
     def _add_sos_constraints(self, cons: List[_SOSConstraintData]):
         if len(cons) != 0:

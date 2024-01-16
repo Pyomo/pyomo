@@ -1,34 +1,35 @@
+from pyomo.common.tempfiles import TempfileManager
+from pyomo.contrib.appsi.base import (
+    PersistentSolver,
+    Results,
+    TerminationCondition,
+    MIPSolverConfig,
+    PersistentSolutionLoader,
+)
+from pyomo.contrib.appsi.writers import LPWriter
 import logging
 import math
-import sys
-import time
-from typing import Optional, Sequence, Dict, List, Mapping
-
-
-from pyomo.common.tempfiles import TempfileManager
-from pyomo.contrib.appsi.writers import LPWriter
-from pyomo.common.log import LogStream
 from pyomo.common.collections import ComponentMap
+from typing import Optional, Sequence, NoReturn, List, Mapping, Dict
 from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.base.constraint import _GeneralConstraintData
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.common.timing import HierarchicalTimer
+import sys
+import time
+from pyomo.common.log import LogStream
 from pyomo.common.config import ConfigValue, NonNegativeInt
 from pyomo.common.errors import PyomoException
 from pyomo.contrib.appsi.cmodel import cmodel_available
 from pyomo.core.staleflag import StaleFlagManager
-from pyomo.contrib.solver.base import PersistentSolverBase
-from pyomo.contrib.solver.config import BranchAndBoundConfig
-from pyomo.contrib.solver.results import TerminationCondition, Results
-from pyomo.contrib.solver.solution import PersistentSolutionLoader
 
 
 logger = logging.getLogger(__name__)
 
 
-class CplexConfig(BranchAndBoundConfig):
+class CplexConfig(MIPSolverConfig):
     def __init__(
         self,
         description=None,
@@ -37,7 +38,7 @@ class CplexConfig(BranchAndBoundConfig):
         implicit_domain=None,
         visibility=0,
     ):
-        super().__init__(
+        super(CplexConfig, self).__init__(
             description=description,
             doc=doc,
             implicit=implicit,
@@ -58,17 +59,17 @@ class CplexConfig(BranchAndBoundConfig):
 
 class CplexResults(Results):
     def __init__(self, solver):
-        super().__init__()
-        self.timing_info.wall_time = None
+        super(CplexResults, self).__init__()
+        self.wallclock_time = None
         self.solution_loader = PersistentSolutionLoader(solver=solver)
 
 
-class Cplex(PersistentSolverBase):
+class Cplex(PersistentSolver):
     _available = None
 
     def __init__(self, only_child_vars=False):
         self._config = CplexConfig()
-        self._solver_options = {}
+        self._solver_options = dict()
         self._writer = LPWriter(only_child_vars=only_child_vars)
         self._filename = None
         self._last_results_object: Optional[CplexResults] = None
@@ -244,7 +245,7 @@ class Cplex(PersistentSolverBase):
         log_stream = LogStream(
             level=self.config.log_level, logger=self.config.solver_output_logger
         )
-        if config.tee:
+        if config.stream_solver:
 
             def _process_stream(arg):
                 sys.stdout.write(arg)
@@ -263,8 +264,8 @@ class Cplex(PersistentSolverBase):
 
         if config.time_limit is not None:
             cplex_model.parameters.timelimit.set(config.time_limit)
-        if config.rel_gap is not None:
-            cplex_model.parameters.mip.tolerances.mipgap.set(config.rel_gap)
+        if config.mip_gap is not None:
+            cplex_model.parameters.mip.tolerances.mipgap.set(config.mip_gap)
 
         timer.start('cplex solve')
         t0 = time.time()
@@ -279,46 +280,52 @@ class Cplex(PersistentSolverBase):
         cpxprob = self._cplex_model
 
         results = CplexResults(solver=self)
-        results.timing_info.wall_time = solve_time
+        results.wallclock_time = solve_time
         status = cpxprob.solution.get_status()
 
         if status in [1, 101, 102]:
-            results.termination_condition = (
-                TerminationCondition.convergenceCriteriaSatisfied
-            )
+            results.termination_condition = TerminationCondition.optimal
         elif status in [2, 40, 118, 133, 134]:
             results.termination_condition = TerminationCondition.unbounded
         elif status in [4, 119, 134]:
             results.termination_condition = TerminationCondition.infeasibleOrUnbounded
         elif status in [3, 103]:
-            results.termination_condition = TerminationCondition.provenInfeasible
+            results.termination_condition = TerminationCondition.infeasible
         elif status in [10]:
-            results.termination_condition = TerminationCondition.iterationLimit
+            results.termination_condition = TerminationCondition.maxIterations
         elif status in [11, 25, 107, 131]:
             results.termination_condition = TerminationCondition.maxTimeLimit
         else:
             results.termination_condition = TerminationCondition.unknown
 
         if self._writer.get_active_objective() is None:
-            results.incumbent_objective = None
-            results.objective_bound = None
+            results.best_feasible_objective = None
+            results.best_objective_bound = None
         else:
             if cpxprob.solution.get_solution_type() != cpxprob.solution.type.none:
                 if (
                     cpxprob.variables.get_num_binary()
                     + cpxprob.variables.get_num_integer()
                 ) == 0:
-                    results.incumbent_objective = cpxprob.solution.get_objective_value()
-                    results.objective_bound = cpxprob.solution.get_objective_value()
+                    results.best_feasible_objective = (
+                        cpxprob.solution.get_objective_value()
+                    )
+                    results.best_objective_bound = (
+                        cpxprob.solution.get_objective_value()
+                    )
                 else:
-                    results.incumbent_objective = cpxprob.solution.get_objective_value()
-                    results.objective_bound = cpxprob.solution.MIP.get_best_objective()
+                    results.best_feasible_objective = (
+                        cpxprob.solution.get_objective_value()
+                    )
+                    results.best_objective_bound = (
+                        cpxprob.solution.MIP.get_best_objective()
+                    )
             else:
-                results.incumbent_objective = None
+                results.best_feasible_objective = None
                 if cpxprob.objective.get_sense() == cpxprob.objective.sense.minimize:
-                    results.objective_bound = -math.inf
+                    results.best_objective_bound = -math.inf
                 else:
-                    results.objective_bound = math.inf
+                    results.best_objective_bound = math.inf
 
         if config.load_solution:
             if cpxprob.solution.get_solution_type() == cpxprob.solution.type.none:
@@ -326,13 +333,10 @@ class Cplex(PersistentSolverBase):
                     'A feasible solution was not found, so no solution can be loades. '
                     'Please set opt.config.load_solution=False and check '
                     'results.termination_condition and '
-                    'results.incumbent_objective before loading a solution.'
+                    'results.best_feasible_objective before loading a solution.'
                 )
             else:
-                if (
-                    results.termination_condition
-                    != TerminationCondition.convergenceCriteriaSatisfied
-                ):
+                if results.termination_condition != TerminationCondition.optimal:
                     logger.warning(
                         'Loading a feasible but suboptimal solution. '
                         'Please set load_solution=False and check '
@@ -396,7 +400,7 @@ class Cplex(PersistentSolverBase):
             con_names = self._cplex_model.linear_constraints.get_names()
             dual_values = self._cplex_model.solution.get_dual_values()
         else:
-            con_names = []
+            con_names = list()
             for con in cons_to_load:
                 orig_name = symbol_map.byObject[id(con)]
                 if con.equality:
@@ -408,7 +412,7 @@ class Cplex(PersistentSolverBase):
                         con_names.append(orig_name + '_ub')
             dual_values = self._cplex_model.solution.get_dual_values(con_names)
 
-        res = {}
+        res = dict()
         for name, val in zip(con_names, dual_values):
             orig_name = name[:-3]
             if orig_name == 'obj_const_con':

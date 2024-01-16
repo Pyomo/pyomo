@@ -1,20 +1,22 @@
-import math
-import os
-import sys
-from typing import Dict
-import logging
-import subprocess
-
-
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.fileutils import Executable
+from pyomo.contrib.appsi.base import (
+    PersistentSolver,
+    Results,
+    TerminationCondition,
+    SolverConfig,
+    PersistentSolutionLoader,
+)
 from pyomo.contrib.appsi.writers import NLWriter
 from pyomo.common.log import LogStream
+import logging
+import subprocess
 from pyomo.core.kernel.objective import minimize
+import math
 from pyomo.common.collections import ComponentMap
 from pyomo.core.expr.numvalue import value
 from pyomo.core.expr.visitor import replace_expressions
-from typing import Optional, Sequence, List, Mapping
+from typing import Optional, Sequence, NoReturn, List, Mapping
 from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.base.constraint import _GeneralConstraintData
 from pyomo.core.base.block import _BlockData
@@ -22,14 +24,13 @@ from pyomo.core.base.param import _ParamData
 from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.tee import TeeStream
+import sys
+from typing import Dict
 from pyomo.common.config import ConfigValue, NonNegativeInt
 from pyomo.common.errors import PyomoException
+import os
 from pyomo.contrib.appsi.cmodel import cmodel_available
 from pyomo.core.staleflag import StaleFlagManager
-from pyomo.contrib.solver.base import PersistentSolverBase
-from pyomo.contrib.solver.config import SolverConfig
-from pyomo.contrib.solver.results import TerminationCondition, Results
-from pyomo.contrib.solver.solution import PersistentSolutionLoader
 
 
 logger = logging.getLogger(__name__)
@@ -44,7 +45,7 @@ class IpoptConfig(SolverConfig):
         implicit_domain=None,
         visibility=0,
     ):
-        super().__init__(
+        super(IpoptConfig, self).__init__(
             description=description,
             doc=doc,
             implicit=implicit,
@@ -125,13 +126,13 @@ ipopt_command_line_options = {
 }
 
 
-class Ipopt(PersistentSolverBase):
+class Ipopt(PersistentSolver):
     def __init__(self, only_child_vars=False):
         self._config = IpoptConfig()
-        self._solver_options = {}
+        self._solver_options = dict()
         self._writer = NLWriter(only_child_vars=only_child_vars)
         self._filename = None
-        self._dual_sol = {}
+        self._dual_sol = dict()
         self._primal_sol = ComponentMap()
         self._reduced_costs = ComponentMap()
         self._last_results_object: Optional[Results] = None
@@ -296,20 +297,19 @@ class Ipopt(PersistentSolverBase):
         solve_cons = self._writer.get_ordered_cons()
         results = Results()
 
-        with open(self._filename + '.sol', 'r') as f:
-            all_lines = list(f.readlines())
+        f = open(self._filename + '.sol', 'r')
+        all_lines = list(f.readlines())
+        f.close()
 
         termination_line = all_lines[1]
         if 'Optimal Solution Found' in termination_line:
-            results.termination_condition = (
-                TerminationCondition.convergenceCriteriaSatisfied
-            )
+            results.termination_condition = TerminationCondition.optimal
         elif 'Problem may be infeasible' in termination_line:
-            results.termination_condition = TerminationCondition.locallyInfeasible
+            results.termination_condition = TerminationCondition.infeasible
         elif 'problem might be unbounded' in termination_line:
             results.termination_condition = TerminationCondition.unbounded
         elif 'Maximum Number of Iterations Exceeded' in termination_line:
-            results.termination_condition = TerminationCondition.iterationLimit
+            results.termination_condition = TerminationCondition.maxIterations
         elif 'Maximum CPU Time Exceeded' in termination_line:
             results.termination_condition = TerminationCondition.maxTimeLimit
         else:
@@ -347,7 +347,7 @@ class Ipopt(PersistentSolverBase):
             + n_rc_lower
         ]
 
-        self._dual_sol = {}
+        self._dual_sol = dict()
         self._primal_sol = ComponentMap()
         self._reduced_costs = ComponentMap()
 
@@ -384,24 +384,20 @@ class Ipopt(PersistentSolverBase):
                 self._reduced_costs[var] = 0
 
         if (
-            results.termination_condition
-            == TerminationCondition.convergenceCriteriaSatisfied
+            results.termination_condition == TerminationCondition.optimal
             and self.config.load_solution
         ):
             for v, val in self._primal_sol.items():
                 v.set_value(val, skip_validation=True)
             if self._writer.get_active_objective() is None:
-                results.incumbent_objective = None
+                results.best_feasible_objective = None
             else:
-                results.incumbent_objective = value(
+                results.best_feasible_objective = value(
                     self._writer.get_active_objective().expr
                 )
-        elif (
-            results.termination_condition
-            == TerminationCondition.convergenceCriteriaSatisfied
-        ):
+        elif results.termination_condition == TerminationCondition.optimal:
             if self._writer.get_active_objective() is None:
-                results.incumbent_objective = None
+                results.best_feasible_objective = None
             else:
                 obj_expr_evaluated = replace_expressions(
                     self._writer.get_active_objective().expr,
@@ -411,13 +407,13 @@ class Ipopt(PersistentSolverBase):
                     descend_into_named_expressions=True,
                     remove_named_expressions=True,
                 )
-                results.incumbent_objective = value(obj_expr_evaluated)
+                results.best_feasible_objective = value(obj_expr_evaluated)
         elif self.config.load_solution:
             raise RuntimeError(
                 'A feasible solution was not found, so no solution can be loaded.'
                 'Please set opt.config.load_solution=False and check '
                 'results.termination_condition and '
-                'results.incumbent_objective before loading a solution.'
+                'results.best_feasible_objective before loading a solution.'
             )
 
         return results
@@ -435,7 +431,7 @@ class Ipopt(PersistentSolverBase):
                 level=self.config.log_level, logger=self.config.solver_output_logger
             )
         ]
-        if self.config.tee:
+        if self.config.stream_solver:
             ostreams.append(sys.stdout)
 
         cmd = [
@@ -481,23 +477,23 @@ class Ipopt(PersistentSolverBase):
                     'A feasible solution was not found, so no solution can be loaded.'
                     'Please set opt.config.load_solution=False and check '
                     'results.termination_condition and '
-                    'results.incumbent_objective before loading a solution.'
+                    'results.best_feasible_objective before loading a solution.'
                 )
             results = Results()
             results.termination_condition = TerminationCondition.error
-            results.incumbent_objective = None
+            results.best_feasible_objective = None
         else:
             timer.start('parse solution')
             results = self._parse_sol()
             timer.stop('parse solution')
 
         if self._writer.get_active_objective() is None:
-            results.objective_bound = None
+            results.best_objective_bound = None
         else:
             if self._writer.get_active_objective().sense == minimize:
-                results.objective_bound = -math.inf
+                results.best_objective_bound = -math.inf
             else:
-                results.objective_bound = math.inf
+                results.best_objective_bound = math.inf
 
         results.solution_loader = PersistentSolutionLoader(solver=self)
 
@@ -508,7 +504,7 @@ class Ipopt(PersistentSolverBase):
     ) -> Mapping[_GeneralVarData, float]:
         if (
             self._last_results_object is None
-            or self._last_results_object.incumbent_objective is None
+            or self._last_results_object.best_feasible_objective is None
         ):
             raise RuntimeError(
                 'Solver does not currently have a valid solution. Please '
@@ -530,7 +526,7 @@ class Ipopt(PersistentSolverBase):
         if (
             self._last_results_object is None
             or self._last_results_object.termination_condition
-            != TerminationCondition.convergenceCriteriaSatisfied
+            != TerminationCondition.optimal
         ):
             raise RuntimeError(
                 'Solver does not currently have valid duals. Please '
@@ -548,7 +544,7 @@ class Ipopt(PersistentSolverBase):
         if (
             self._last_results_object is None
             or self._last_results_object.termination_condition
-            != TerminationCondition.convergenceCriteriaSatisfied
+            != TerminationCondition.optimal
         ):
             raise RuntimeError(
                 'Solver does not currently have valid reduced costs. Please '
