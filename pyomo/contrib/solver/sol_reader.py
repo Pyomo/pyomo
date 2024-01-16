@@ -6,6 +6,18 @@ from pyomo.core.base.constraint import _ConstraintData
 from pyomo.core.base.objective import _ObjectiveData
 from pyomo.repn.plugins.nl_writer import NLWriterInfo
 from .results import Results, SolverResultsError, SolutionStatus, TerminationCondition
+from pyomo.repn.plugins.nl_writer import AMPLRepn
+
+
+def evaluate_ampl_repn(repn: AMPLRepn, sub_map):
+    assert not repn.nonlinear
+    assert repn.nl is None
+    val = repn.const
+    if repn.linear is not None:
+        for v_id, v_coef in repn.linear.items():
+            val += v_coef * sub_map[v_id]
+    val *= repn.mult
+    return val
 
 
 class SolFileData:
@@ -202,5 +214,13 @@ def parse_sol_file(
                         convert_function(suf_line[1])
                     )
             line = sol_file.readline()
+
+        if len(nl_info.eliminated_vars) > 0:
+            sub_map = {k: v[1] for k, v in sol_data.primals.items()}
+            for v, v_expr in nl_info.eliminated_vars:
+                val = evaluate_ampl_repn(v_expr, sub_map)
+                v_id = id(v)
+                sub_map[v_id] = val
+                sol_data.primals[v_id] = (v, val)
 
         return result, sol_data

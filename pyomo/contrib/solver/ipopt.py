@@ -392,11 +392,7 @@ class ipopt(SolverBase):
         if results.solution_status in {
             SolutionStatus.feasible,
             SolutionStatus.optimal,
-        } and len(
-            list(
-                model.component_data_objects(Objective, descend_into=True, active=True)
-            )
-        ):
+        } and len(nl_info.objectives) > 0:
             if config.load_solution:
                 results.incumbent_objective = value(nl_info.objectives[0])
             else:
@@ -476,14 +472,6 @@ class ipopt(SolverBase):
                     if abs(zu) > abs(rc[v_id][1]):
                         rc[v_id] = (v, zu)
 
-            if len(nl_info.eliminated_vars) > 0:
-                sub_map = {k: v[1] for k, v in sol_data.primals.items()}
-                for v, v_expr in nl_info.eliminated_vars:
-                    val = evaluate_ampl_repn(v_expr, sub_map)
-                    v_id = id(v)
-                    sub_map[v_id] = val
-                    sol_data.primals[v_id] = (v, val)
-
             res.solution_loader = SolutionLoader(
                 primals=sol_data.primals,
                 duals=sol_data.duals,
@@ -492,14 +480,3 @@ class ipopt(SolverBase):
             )
 
         return res
-
-
-def evaluate_ampl_repn(repn: AMPLRepn, sub_map):
-    assert not repn.nonlinear
-    assert repn.nl is None
-    val = repn.const
-    if repn.linear is not None:
-        for v_id, v_coef in repn.linear.items():
-            val += v_coef * sub_map[v_id]
-    val *= repn.mult
-    return val
