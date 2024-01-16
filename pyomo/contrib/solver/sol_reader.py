@@ -9,24 +9,13 @@ from .results import Results, SolverResultsError, SolutionStatus, TerminationCon
 from pyomo.repn.plugins.nl_writer import AMPLRepn
 
 
-def evaluate_ampl_repn(repn: AMPLRepn, sub_map):
-    assert not repn.nonlinear
-    assert repn.nl is None
-    val = repn.const
-    if repn.linear is not None:
-        for v_id, v_coef in repn.linear.items():
-            val += v_coef * sub_map[v_id]
-    val *= repn.mult
-    return val
-
-
 class SolFileData:
     def __init__(self) -> None:
-        self.primals: Dict[int, Tuple[_GeneralVarData, float]] = dict()
-        self.duals: Dict[_ConstraintData, float] = dict()
-        self.var_suffixes: Dict[str, Dict[int, Tuple[_GeneralVarData, Any]]] = dict()
-        self.con_suffixes: Dict[str, Dict[_ConstraintData, Any]] = dict()
-        self.obj_suffixes: Dict[str, Dict[int, Tuple[_ObjectiveData, Any]]] = dict()
+        self.primals: List[float] = list()
+        self.duals: List[float] = list()
+        self.var_suffixes: Dict[str, Dict[int, Any]] = dict()
+        self.con_suffixes: Dict[str, Dict[Any]] = dict()
+        self.obj_suffixes: Dict[str, Dict[int, Any]] = dict()
         self.problem_suffixes: Dict[str, List[Any]] = dict()
 
 
@@ -138,10 +127,8 @@ def parse_sol_file(
         result.extra_info.solver_message = exit_code_message
 
     if result.solution_status != SolutionStatus.noSolution:
-        for v, val in zip(nl_info.variables, variable_vals):
-            sol_data.primals[id(v)] = (v, val)
-        for c, val in zip(nl_info.constraints, duals):
-            sol_data.duals[c] = val
+        sol_data.primals = variable_vals
+        sol_data.duals = duals
         ### Read suffixes ###
         line = sol_file.readline()
         while line:
@@ -180,18 +167,13 @@ def parse_sol_file(
                 for cnt in range(nvalues):
                     suf_line = sol_file.readline().split()
                     var_ndx = int(suf_line[0])
-                    var = nl_info.variables[var_ndx]
-                    sol_data.var_suffixes[suffix_name][id(var)] = (
-                        var,
-                        convert_function(suf_line[1]),
-                    )
+                    sol_data.var_suffixes[suffix_name][var_ndx] = convert_function(suf_line[1])
             elif kind == 1:  # Con
                 sol_data.con_suffixes[suffix_name] = dict()
                 for cnt in range(nvalues):
                     suf_line = sol_file.readline().split()
                     con_ndx = int(suf_line[0])
-                    con = nl_info.constraints[con_ndx]
-                    sol_data.con_suffixes[suffix_name][con] = convert_function(
+                    sol_data.con_suffixes[suffix_name][con_ndx] = convert_function(
                         suf_line[1]
                     )
             elif kind == 2:  # Obj
@@ -199,11 +181,7 @@ def parse_sol_file(
                 for cnt in range(nvalues):
                     suf_line = sol_file.readline().split()
                     obj_ndx = int(suf_line[0])
-                    obj = nl_info.objectives[obj_ndx]
-                    sol_data.obj_suffixes[suffix_name][id(obj)] = (
-                        obj,
-                        convert_function(suf_line[1]),
-                    )
+                    sol_data.obj_suffixes[suffix_name][obj_ndx] = convert_function(suf_line[1])
             elif kind == 3:  # Prob
                 sol_data.problem_suffixes[suffix_name] = list()
                 for cnt in range(nvalues):
@@ -212,13 +190,5 @@ def parse_sol_file(
                         convert_function(suf_line[1])
                     )
             line = sol_file.readline()
-
-        if len(nl_info.eliminated_vars) > 0:
-            sub_map = {k: v[1] for k, v in sol_data.primals.items()}
-            for v, v_expr in nl_info.eliminated_vars:
-                val = evaluate_ampl_repn(v_expr, sub_map)
-                v_id = id(v)
-                sub_map[v_id] = val
-                sol_data.primals[v_id] = (v, val)
 
         return result, sol_data

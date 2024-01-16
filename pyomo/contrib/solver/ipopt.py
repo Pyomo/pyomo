@@ -14,27 +14,28 @@ import subprocess
 import datetime
 import io
 import sys
-from typing import Mapping, Optional, Dict
+from typing import Mapping, Optional, Sequence
 
 from pyomo.common import Executable
 from pyomo.common.config import ConfigValue, NonNegativeInt, NonNegativeFloat
 from pyomo.common.errors import PyomoException
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.timing import HierarchicalTimer
-from pyomo.core.base import Objective
+from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.staleflag import StaleFlagManager
-from pyomo.repn.plugins.nl_writer import NLWriter, NLWriterInfo, AMPLRepn
+from pyomo.repn.plugins.nl_writer import NLWriter, NLWriterInfo
 from pyomo.contrib.solver.base import SolverBase
 from pyomo.contrib.solver.config import SolverConfig
 from pyomo.contrib.solver.factory import SolverFactory
 from pyomo.contrib.solver.results import Results, TerminationCondition, SolutionStatus
 from .sol_reader import parse_sol_file
-from pyomo.contrib.solver.solution import SolutionLoaderBase, SolutionLoader
+from pyomo.contrib.solver.solution import SolSolutionLoader, SolutionLoader
 from pyomo.common.tee import TeeStream
 from pyomo.common.log import LogStream
 from pyomo.core.expr.visitor import replace_expressions
 from pyomo.core.expr.numvalue import value
 from pyomo.core.base.suffix import Suffix
+from pyomo.common.collections import ComponentMap
 
 import logging
 
@@ -110,8 +111,38 @@ class ipoptResults(Results):
         )
 
 
-class ipoptSolutionLoader(SolutionLoaderBase):
-    pass
+class ipoptSolutionLoader(SolSolutionLoader):
+    def get_reduced_costs(self, vars_to_load: Sequence[_GeneralVarData] | None = None) -> Mapping[_GeneralVarData, float]:
+        sol_data = self._sol_data
+        nl_info = self._nl_info
+        zl_map = sol_data.var_suffixes['ipopt_zL_out']
+        zu_map = sol_data.var_suffixes['ipopt_zU_out']
+        rc = dict()
+        for v in nl_info.variables:
+            v_id = id(v)
+            rc[v_id] = (v, 0)
+            if v_id in zl_map:
+                zl = zl_map[v_id][1]
+                if abs(zl) > abs(rc[v_id][1]):
+                    rc[v_id] = (v, zl)
+            if v_id in zu_map:
+                zu = zu_map[v_id][1]
+                if abs(zu) > abs(rc[v_id][1]):
+                    rc[v_id] = (v, zu)
+
+        if vars_to_load is None:
+            res = ComponentMap(rc.values())
+            for v, _ in nl_info.eliminated_vars:
+                res[v] = 0
+        else:
+            res = ComponentMap()
+            for v in vars_to_load:
+                if id(v) in rc:
+                    res[v] = rc[id(v)][1]
+                else:
+                    # eliminated vars
+                    res[v] = 0
+        return res
 
 
 ipopt_command_line_options = {
@@ -452,24 +483,9 @@ class ipopt(SolverBase):
         if res.solution_status == SolutionStatus.noSolution:
             res.solution_loader = SolutionLoader(None, None, None, None)
         else:
-            rc = dict()
-            for v in nl_info.variables:
-                v_id = id(v)
-                rc[v_id] = (v, 0)
-                if v_id in sol_data.var_suffixes['ipopt_zL_out']:
-                    zl = sol_data.var_suffixes['ipopt_zL_out'][v_id][1]
-                    if abs(zl) > abs(rc[v_id][1]):
-                        rc[v_id] = (v, zl)
-                if v_id in sol_data.var_suffixes['ipopt_zU_out']:
-                    zu = sol_data.var_suffixes['ipopt_zU_out'][v_id][1]
-                    if abs(zu) > abs(rc[v_id][1]):
-                        rc[v_id] = (v, zu)
-
-            res.solution_loader = SolutionLoader(
-                primals=sol_data.primals,
-                duals=sol_data.duals,
-                slacks=None,
-                reduced_costs=rc,
+            res.solution_loader = ipoptSolutionLoader(
+                sol_data=sol_data,
+                nl_info=nl_info,
             )
 
         return res
