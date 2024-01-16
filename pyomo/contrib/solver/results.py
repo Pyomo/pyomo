@@ -28,7 +28,6 @@ from pyomo.opt.results.solver import (
     TerminationCondition as LegacyTerminationCondition,
     SolverStatus as LegacySolverStatus,
 )
-from pyomo.contrib.solver.solution import SolutionLoaderBase
 
 
 class SolverResultsError(PyomoException):
@@ -192,7 +191,7 @@ class Results(ConfigDict):
             visibility=visibility,
         )
 
-        self.solution_loader: SolutionLoaderBase = self.declare(
+        self.solution_loader = self.declare(
             'solution_loader', ConfigValue()
         )
         self.termination_condition: TerminationCondition = self.declare(
