@@ -31,9 +31,7 @@ class SolFileData:
 
 
 def parse_sol_file(
-    sol_file: io.TextIOBase,
-    nl_info: NLWriterInfo,
-    result: Results,
+    sol_file: io.TextIOBase, nl_info: NLWriterInfo, result: Results
 ) -> Tuple[Results, SolFileData]:
     sol_data = SolFileData()
 

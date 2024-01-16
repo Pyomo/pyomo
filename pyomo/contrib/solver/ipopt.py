@@ -27,11 +27,7 @@ from pyomo.repn.plugins.nl_writer import NLWriter, NLWriterInfo, AMPLRepn
 from pyomo.contrib.solver.base import SolverBase
 from pyomo.contrib.solver.config import SolverConfig
 from pyomo.contrib.solver.factory import SolverFactory
-from pyomo.contrib.solver.results import (
-    Results,
-    TerminationCondition,
-    SolutionStatus,
-)
+from pyomo.contrib.solver.results import Results, TerminationCondition, SolutionStatus
 from .sol_reader import parse_sol_file
 from pyomo.contrib.solver.solution import SolutionLoaderBase, SolutionLoader
 from pyomo.common.tee import TeeStream
@@ -82,8 +78,7 @@ class ipoptConfig(SolverConfig):
             'log_level', ConfigValue(domain=NonNegativeInt, default=logging.INFO)
         )
         self.writer_config = self.declare(
-            'writer_config', 
-            ConfigValue(default=NLWriter.CONFIG())
+            'writer_config', ConfigValue(default=NLWriter.CONFIG())
         )
 
 
@@ -237,7 +232,10 @@ class ipopt(SolverBase):
                 'Pyomo generates the ipopt options file as part of the solve method. '
                 'Add all options to ipopt.config.solver_options instead.'
             )
-        if config.time_limit is not None and 'max_cpu_time' not in config.solver_options:
+        if (
+            config.time_limit is not None
+            and 'max_cpu_time' not in config.solver_options
+        ):
             config.solver_options['max_cpu_time'] = config.time_limit
         for k, val in config.solver_options.items():
             if k in ipopt_command_line_options:
@@ -386,10 +384,10 @@ class ipopt(SolverBase):
             ):
                 model.rc.update(results.solution_loader.get_reduced_costs())
 
-        if results.solution_status in {
-            SolutionStatus.feasible,
-            SolutionStatus.optimal,
-        } and len(nl_info.objectives) > 0:
+        if (
+            results.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}
+            and len(nl_info.objectives) > 0
+        ):
             if config.load_solution:
                 results.incumbent_objective = value(nl_info.objectives[0])
             else:
@@ -448,9 +446,7 @@ class ipopt(SolverBase):
         self, instream: io.TextIOBase, nl_info: NLWriterInfo, result: ipoptResults
     ):
         res, sol_data = parse_sol_file(
-            sol_file=instream,
-            nl_info=nl_info,
-            result=result,
+            sol_file=instream, nl_info=nl_info, result=result
         )
 
         if res.solution_status == SolutionStatus.noSolution:
