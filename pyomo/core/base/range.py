@@ -12,6 +12,8 @@
 import math
 from collections.abc import Sequence
 
+from pyomo.common.numeric_types import check_if_numeric_type
+
 try:
     from math import remainder
 except ImportError:
@@ -25,6 +27,41 @@ except ImportError:
 
 _inf = float('inf')
 _infinite = {_inf, -_inf}
+
+
+def _check_comparable_to_int(value):
+    if check_if_numeric_type(value):
+        self._types_comparable_to_int.add(value.__class__)
+        return True
+
+    # Special case: because numpy is fond of returning scalars
+    # as length-1 ndarrays, we will include a special case that
+    # will unpack things that look like single element arrays.
+    try:
+        # Note: trap "value[0] is not value" to catch things like
+        # single-character strings
+        if (
+                hasattr(value, '__len__')
+                and hasattr(value, '__getitem__')
+                and len(value) == 1
+                and value[0] is not value
+        ):
+            return value[0] in self
+    except:
+        pass
+    # See if this class behaves like a "normal" number: both
+    # comparable and creatable
+    try:
+        if not (bool(value - 0 > 0) ^ bool(value - 0 <= 0)):
+            return False
+        elif value.__class__(0) != 0 or not value.__class__(0) == 0:
+            return False
+        else:
+            self._types_comparable_to_int.add(value.__class__)
+            return True
+    except:
+        pass
+    return False
 
 
 class RangeDifferenceError(ValueError):
@@ -180,32 +217,37 @@ class NumericRange(object):
     def __contains__(self, value):
         # NumericRanges must hold items that are comparable to ints
         if value.__class__ not in self._types_comparable_to_int:
-            # Special case: because numpy is fond of returning scalars
-            # as length-1 ndarrays, we will include a special case that
-            # will unpack things that look like single element arrays.
-            try:
-                # Note: trap "value[0] is not value" to catch things like
-                # single-character strings
-                if (
-                    hasattr(value, '__len__')
-                    and hasattr(value, '__getitem__')
-                    and len(value) == 1
-                    and value[0] is not value
-                ):
-                    return value[0] in self
-            except:
-                pass
-            # See if this class behaves like a "normal" number: both
-            # comparable and creatable
-            try:
-                if not (bool(value - 0 > 0) ^ bool(value - 0 <= 0)):
+            # Build on numeric_type.check_if_numeric_type to cleanly
+            # handle numpy registrations
+            if check_if_numeric_type(value):
+                self._types_comparable_to_int.add(value.__class__)
+            else:
+                # Special case: because numpy is fond of returning scalars
+                # as length-1 ndarrays, we will include a special case that
+                # will unpack things that look like single element arrays.
+                try:
+                    # Note: trap "value[0] is not value" to catch things like
+                    # single-character strings
+                    if (
+                            hasattr(value, '__len__')
+                            and hasattr(value, '__getitem__')
+                            and len(value) == 1
+                            and value[0] is not value
+                    ):
+                        return value[0] in self
+                except:
+                    pass
+                # See if this class behaves like a "normal" number: both
+                # comparable and creatable
+                try:
+                    if not (bool(value - 0 > 0) ^ bool(value - 0 <= 0)):
+                        return False
+                    elif value.__class__(0) != 0 or not value.__class__(0) == 0:
+                        return False
+                    else:
+                        self._types_comparable_to_int.add(value.__class__)
+                except:
                     return False
-                elif value.__class__(0) != 0 or not value.__class__(0) == 0:
-                    return False
-                else:
-                    self._types_comparable_to_int.add(value.__class__)
-            except:
-                return False
 
         if self.step:
             _dir = int(math.copysign(1, self.step))
