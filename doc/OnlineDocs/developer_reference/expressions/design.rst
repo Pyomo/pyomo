@@ -73,7 +73,7 @@ Expression trees can be categorized in four different ways:
 
 These three categories are illustrated with the following example:
 
-.. literalinclude:: ../../tests/expr/design_categories.spy
+.. literalinclude:: ../../src/expr/design_categories.spy
 
 The following table describes four different simple expressions
 that consist of a single model component, and it shows how they
@@ -107,7 +107,7 @@ Named expressions allow for changes to an expression after it has
 been constructed.  For example, consider the expression ``f`` defined
 with the :class:`Expression <pyomo.core.base.Expression>` component:
 
-.. literalinclude:: ../../tests/expr/design_named_expression.spy
+.. literalinclude:: ../../src/expr/design_named_expression.spy
 
 Although ``f`` is an immutable expression, whose definition is
 fixed, a sub-expressions is the named expression ``M.e``.  Named
@@ -227,7 +227,7 @@ The :data:`linear_expression <pyomo.core.expr.linear_expression>`
 object is a context manager that can be used to declare a linear sum.  For
 example, consider the following two loops:
 
-.. literalinclude:: ../../tests/expr/design_cm1.spy
+.. literalinclude:: ../../src/expr/design_cm1.spy
 
 The first apparent difference in these loops is that the value of
 ``s`` is explicitly initialized while ``e`` is initialized when the
@@ -250,7 +250,7 @@ construct different expressions with different context declarations.
 Finally, note that these context managers can be passed into the :attr:`start`
 method for the :func:`quicksum <pyomo.core.util.quicksum>` function.  For example:
 
-.. literalinclude:: ../../tests/expr/design_cm2.spy
+.. literalinclude:: ../../src/expr/design_cm2.spy
 
 This sum contains terms for ``M.x[i]`` and ``M.y[i]``.  The syntax
 in this example is not intuitive because the sum is being stored

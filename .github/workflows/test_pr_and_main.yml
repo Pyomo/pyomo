@@ -76,7 +76,7 @@ jobs:
         - os: windows-latest
           TARGET: win
           PYENV: conda
-          PACKAGES: glpk
+          PACKAGES: glpk pytest-qt
 
         - os: ubuntu-latest
           python: '3.11'
@@ -84,7 +84,7 @@ jobs:
           skip_doctest: 1
           TARGET: linux
           PYENV: conda
-          PACKAGES:
+          PACKAGES: pytest-qt
 
         - os: ubuntu-latest
           python: 3.9
@@ -261,6 +261,15 @@ jobs:
         auto-update-conda: false
         python-version: ${{ matrix.python }}
 
+    # This is necessary for qt (UI) tests; the package utilized here does not
+    # have support for OSX.
+    - name: Set up UI testing infrastructure
+      if: ${{ matrix.TARGET != 'osx' }}
+      uses: pyvista/setup-headless-display-action@v2
+      with:
+        qt: true
+        pyvista: false
+
     # GitHub actions is very fragile when it comes to setting up various
     # Python interpreters, expecially the setup-miniconda interface.
     # Per the setup-miniconda documentation, it is important to always
@@ -357,7 +366,7 @@ jobs:
         fi
         # HACK: Remove problem packages on conda+Linux
         if test "${{matrix.TARGET}}" == linux; then
-            EXCLUDE="casadi numdifftools pint $EXCLUDE"
+            EXCLUDE="casadi numdifftools $EXCLUDE"
         fi
         EXCLUDE=`echo "$EXCLUDE" | xargs`
         if test -n "$EXCLUDE"; then
@@ -394,10 +403,11 @@ jobs:
                     | sed -r 's/\s+/ /g' | cut -d\  -f3) || echo ""
                 if test -n "$_BUILDS"; then
                     _ISPY=$(echo "$_BUILDS" | grep "^py") \
-                        || echo "No python build detected"
-                    _PYOK=$(echo "$_BUILDS" | grep "^$PYVER") \
-                        || echo "No python build matching $PYVER detected"
+                        || echo "INFO: No python build detected."
+                    _PYOK=$(echo "$_BUILDS" | grep -E "^($PYVER|pyh)") \
+                        || echo "INFO: No python build matching $PYVER detected."
                     if test -z "$_ISPY" -o -n "$_PYOK"; then
+                        echo ""
                         echo "... INSTALLING $PKG"
                         conda install -y "$PKG" || _BUILDS=""
                     fi
@@ -405,18 +415,6 @@ jobs:
                 if test -z "$_BUILDS"; then
                     echo "WARNING: $PKG is not available"
                 fi
-            done
-            # TODO: This is a hack to stop test_qt.py from running until we
-            # can better troubleshoot why it fails on GHA
-            for QTPACKAGE in qt pyqt; do
-                # Because conda is insane, removing packages can cause
-                # unrelated packages to be updated (breaking version
-                # specifications specified previously, e.g., in
-                # setup.py).  There doesn't appear to be a good
-                # workaround, so we will just force-remove (recognizing
-                # that it may break other conda cruft).
-                conda remove --force-remove $QTPACKAGE \
-                    || echo "$QTPACKAGE not in this environment"
             done
         fi
         # Re-try Pyomo (optional) dependencies with pip
@@ -680,7 +678,7 @@ jobs:
         $PYTHON_EXE -m pytest -v \
             -W ignore::Warning ${{matrix.category}} \
             pyomo `pwd`/pyomo-model-libraries \
-            `pwd`/examples/pyomobook --junitxml="TEST-pyomo.xml"
+            `pwd`/examples `pwd`/doc --junitxml="TEST-pyomo.xml"
 
     - name: Run Pyomo MPI tests
       if: matrix.mpi != 0
