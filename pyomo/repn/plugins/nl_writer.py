@@ -338,6 +338,9 @@ class NLWriter(object):
         config.scale_model = False
         config.linear_presolve = False
 
+        # just for backwards compatibility
+        config.skip_trivial_constraints = False
+
         if config.symbolic_solver_labels:
             _open = lambda fname: open(fname, 'w')
         else:
