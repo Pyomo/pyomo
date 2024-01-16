@@ -257,10 +257,8 @@ class SolFileData:
 def parse_sol_file(
     sol_file: io.TextIOBase,
     nl_info: NLWriterInfo,
-    suffixes_to_read: Sequence[str],
     result: Results,
 ) -> Tuple[Results, SolFileData]:
-    suffixes_to_read = set(suffixes_to_read)
     sol_data = SolFileData()
 
     #
@@ -368,9 +366,8 @@ def parse_sol_file(
     if result.solution_status != SolutionStatus.noSolution:
         for v, val in zip(nl_info.variables, variable_vals):
             sol_data.primals[id(v)] = (v, val)
-        if "dual" in suffixes_to_read:
-            for c, val in zip(nl_info.constraints, duals):
-                sol_data.duals[c] = val
+        for c, val in zip(nl_info.constraints, duals):
+            sol_data.duals[c] = val
         ### Read suffixes ###
         line = sol_file.readline()
         while line:
@@ -400,51 +397,46 @@ def parse_sol_file(
             # tablen = int(line[4])
             tabline = int(line[5])
             suffix_name = sol_file.readline().strip()
-            if suffix_name in suffixes_to_read:
-                # ignore translation of the table number to string value for now,
-                # this information can be obtained from the solver documentation
-                for n in range(tabline):
-                    sol_file.readline()
-                if kind == 0:  # Var
-                    sol_data.var_suffixes[suffix_name] = dict()
-                    for cnt in range(nvalues):
-                        suf_line = sol_file.readline().split()
-                        var_ndx = int(suf_line[0])
-                        var = nl_info.variables[var_ndx]
-                        sol_data.var_suffixes[suffix_name][id(var)] = (
-                            var,
-                            convert_function(suf_line[1]),
-                        )
-                elif kind == 1:  # Con
-                    sol_data.con_suffixes[suffix_name] = dict()
-                    for cnt in range(nvalues):
-                        suf_line = sol_file.readline().split()
-                        con_ndx = int(suf_line[0])
-                        con = nl_info.constraints[con_ndx]
-                        sol_data.con_suffixes[suffix_name][con] = convert_function(
-                            suf_line[1]
-                        )
-                elif kind == 2:  # Obj
-                    sol_data.obj_suffixes[suffix_name] = dict()
-                    for cnt in range(nvalues):
-                        suf_line = sol_file.readline().split()
-                        obj_ndx = int(suf_line[0])
-                        obj = nl_info.objectives[obj_ndx]
-                        sol_data.obj_suffixes[suffix_name][id(obj)] = (
-                            obj,
-                            convert_function(suf_line[1]),
-                        )
-                elif kind == 3:  # Prob
-                    sol_data.problem_suffixes[suffix_name] = list()
-                    for cnt in range(nvalues):
-                        suf_line = sol_file.readline().split()
-                        sol_data.problem_suffixes[suffix_name].append(
-                            convert_function(suf_line[1])
-                        )
-            else:
-                # do not store the suffix in the solution object
+            # ignore translation of the table number to string value for now,
+            # this information can be obtained from the solver documentation
+            for n in range(tabline):
+                sol_file.readline()
+            if kind == 0:  # Var
+                sol_data.var_suffixes[suffix_name] = dict()
                 for cnt in range(nvalues):
-                    sol_file.readline()
+                    suf_line = sol_file.readline().split()
+                    var_ndx = int(suf_line[0])
+                    var = nl_info.variables[var_ndx]
+                    sol_data.var_suffixes[suffix_name][id(var)] = (
+                        var,
+                        convert_function(suf_line[1]),
+                    )
+            elif kind == 1:  # Con
+                sol_data.con_suffixes[suffix_name] = dict()
+                for cnt in range(nvalues):
+                    suf_line = sol_file.readline().split()
+                    con_ndx = int(suf_line[0])
+                    con = nl_info.constraints[con_ndx]
+                    sol_data.con_suffixes[suffix_name][con] = convert_function(
+                        suf_line[1]
+                    )
+            elif kind == 2:  # Obj
+                sol_data.obj_suffixes[suffix_name] = dict()
+                for cnt in range(nvalues):
+                    suf_line = sol_file.readline().split()
+                    obj_ndx = int(suf_line[0])
+                    obj = nl_info.objectives[obj_ndx]
+                    sol_data.obj_suffixes[suffix_name][id(obj)] = (
+                        obj,
+                        convert_function(suf_line[1]),
+                    )
+            elif kind == 3:  # Prob
+                sol_data.problem_suffixes[suffix_name] = list()
+                for cnt in range(nvalues):
+                    suf_line = sol_file.readline().split()
+                    sol_data.problem_suffixes[suffix_name].append(
+                        convert_function(suf_line[1])
+                    )
             line = sol_file.readline()
 
         return result, sol_data
