@@ -106,9 +106,9 @@ class ComponentSet(collections_MutableSet):
     def __eq__(self, other):
         if self is other:
             return True
-        if not isinstance(other, collections_Set) or len(self) != len(other):
+        if not isinstance(other, collections_Set):
             return False
-        return all(id(key) in self._data for key in other)
+        return len(self) == len(other) and all(id(key) in self._data for key in other)
 
     def __ne__(self, other):
         return not (self == other)
