@@ -182,7 +182,9 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         c_lb = c[0]
         self.assertTrue(c[0].active)
         ind_var = model.d[0].indicator_var
-        assertExpressionsEqual(self, c[0].body, (model.a - model.d[0].c.lower)*ind_var)
+        assertExpressionsEqual(
+            self, c[0].body, (model.a - model.d[0].c.lower) * ind_var
+        )
         self.assertEqual(c[0].lower, 0)
         self.assertIsNone(c[0].upper)
 
@@ -192,7 +194,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         c_eq = c[0]
         self.assertTrue(c[0].active)
         ind_var = model.d[1].indicator_var
-        assertExpressionsEqual(self, c[0].body, model.a*ind_var)
+        assertExpressionsEqual(self, c[0].body, model.a * ind_var)
         self.assertEqual(c[0].lower, 0)
         self.assertEqual(c[0].upper, 0)
 
@@ -201,7 +203,9 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertEqual(len(c), 1)
         c_ub = c[0]
         self.assertTrue(c_ub.active)
-        assertExpressionsEqual(self, c_ub.body, (model.x - model.d[1].c2.upper)*ind_var)
+        assertExpressionsEqual(
+            self, c_ub.body, (model.x - model.d[1].c2.upper) * ind_var
+        )
         self.assertIsNone(c_ub.lower)
         self.assertEqual(c_ub.upper, 0)
 
