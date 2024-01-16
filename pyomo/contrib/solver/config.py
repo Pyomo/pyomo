@@ -21,122 +21,7 @@ from pyomo.common.config import (
 from pyomo.common.timing import HierarchicalTimer
 
 
-class SolverConfig(ConfigDict):
-    """
-    Base config values for all solver interfaces
-    """
-
-    def __init__(
-        self,
-        description=None,
-        doc=None,
-        implicit=False,
-        implicit_domain=None,
-        visibility=0,
-    ):
-        super().__init__(
-            description=description,
-            doc=doc,
-            implicit=implicit,
-            implicit_domain=implicit_domain,
-            visibility=visibility,
-        )
-
-        self.tee: bool = self.declare(
-            'tee',
-            ConfigValue(
-                domain=bool,
-                default=False,
-                description="If True, the solver log prints to stdout.",
-            ),
-        )
-        self.load_solution: bool = self.declare(
-            'load_solution',
-            ConfigValue(
-                domain=bool,
-                default=True,
-                description="If True, the values of the primal variables will be loaded into the model.",
-            ),
-        )
-        self.raise_exception_on_nonoptimal_result: bool = self.declare(
-            'raise_exception_on_nonoptimal_result',
-            ConfigValue(
-                domain=bool,
-                default=True,
-                description="If False, the `solve` method will continue processing even if the returned result is nonoptimal.",
-            ),
-        )
-        self.symbolic_solver_labels: bool = self.declare(
-            'symbolic_solver_labels',
-            ConfigValue(
-                domain=bool,
-                default=False,
-                description="If True, the names given to the solver will reflect the names of the Pyomo components. Cannot be changed after set_instance is called.",
-            ),
-        )
-        self.timer: HierarchicalTimer = self.declare(
-            'timer',
-            ConfigValue(
-                default=None,
-                description="A HierarchicalTimer.",
-            ),
-        )
-        self.threads: Optional[int] = self.declare(
-            'threads',
-            ConfigValue(
-                domain=NonNegativeInt,
-                description="Number of threads to be used by a solver.",
-                default=None,
-            ),
-        )
-        self.time_limit: Optional[float] = self.declare(
-            'time_limit',
-            ConfigValue(
-                domain=NonNegativeFloat, description="Time limit applied to the solver."
-            ),
-        )
-        self.solver_options: ConfigDict = self.declare(
-            'solver_options',
-            ConfigDict(implicit=True, description="Options to pass to the solver."),
-        )
-
-
-class BranchAndBoundConfig(SolverConfig):
-    """
-    Attributes
-    ----------
-    mip_gap: float
-        Solver will terminate if the mip gap is less than mip_gap
-    relax_integrality: bool
-        If True, all integer variables will be relaxed to continuous
-        variables before solving
-    """
-
-    def __init__(
-        self,
-        description=None,
-        doc=None,
-        implicit=False,
-        implicit_domain=None,
-        visibility=0,
-    ):
-        super().__init__(
-            description=description,
-            doc=doc,
-            implicit=implicit,
-            implicit_domain=implicit_domain,
-            visibility=visibility,
-        )
-
-        self.rel_gap: Optional[float] = self.declare(
-            'rel_gap', ConfigValue(domain=NonNegativeFloat)
-        )
-        self.abs_gap: Optional[float] = self.declare(
-            'abs_gap', ConfigValue(domain=NonNegativeFloat)
-        )
-
-
-class UpdateConfig(ConfigDict):
+class AutoUpdateConfig(ConfigDict):
     """
     This is necessary for persistent solvers.
 
@@ -294,3 +179,158 @@ class UpdateConfig(ConfigDict):
                 updating the values of fixed variables is much faster this way.""",
             ),
         )
+
+
+class SolverConfig(ConfigDict):
+    """
+    Base config values for all solver interfaces
+    """
+
+    def __init__(
+        self,
+        description=None,
+        doc=None,
+        implicit=False,
+        implicit_domain=None,
+        visibility=0,
+    ):
+        super().__init__(
+            description=description,
+            doc=doc,
+            implicit=implicit,
+            implicit_domain=implicit_domain,
+            visibility=visibility,
+        )
+
+        self.tee: bool = self.declare(
+            'tee',
+            ConfigValue(
+                domain=bool,
+                default=False,
+                description="If True, the solver log prints to stdout.",
+            ),
+        )
+        self.load_solution: bool = self.declare(
+            'load_solution',
+            ConfigValue(
+                domain=bool,
+                default=True,
+                description="If True, the values of the primal variables will be loaded into the model.",
+            ),
+        )
+        self.raise_exception_on_nonoptimal_result: bool = self.declare(
+            'raise_exception_on_nonoptimal_result',
+            ConfigValue(
+                domain=bool,
+                default=True,
+                description="If False, the `solve` method will continue processing even if the returned result is nonoptimal.",
+            ),
+        )
+        self.symbolic_solver_labels: bool = self.declare(
+            'symbolic_solver_labels',
+            ConfigValue(
+                domain=bool,
+                default=False,
+                description="If True, the names given to the solver will reflect the names of the Pyomo components. Cannot be changed after set_instance is called.",
+            ),
+        )
+        self.timer: HierarchicalTimer = self.declare(
+            'timer',
+            ConfigValue(
+                default=None,
+                description="A HierarchicalTimer.",
+            ),
+        )
+        self.threads: Optional[int] = self.declare(
+            'threads',
+            ConfigValue(
+                domain=NonNegativeInt,
+                description="Number of threads to be used by a solver.",
+                default=None,
+            ),
+        )
+        self.time_limit: Optional[float] = self.declare(
+            'time_limit',
+            ConfigValue(
+                domain=NonNegativeFloat, description="Time limit applied to the solver."
+            ),
+        )
+        self.solver_options: ConfigDict = self.declare(
+            'solver_options',
+            ConfigDict(implicit=True, description="Options to pass to the solver."),
+        )
+
+
+class BranchAndBoundConfig(SolverConfig):
+    """
+    Attributes
+    ----------
+    mip_gap: float
+        Solver will terminate if the mip gap is less than mip_gap
+    relax_integrality: bool
+        If True, all integer variables will be relaxed to continuous
+        variables before solving
+    """
+
+    def __init__(
+        self,
+        description=None,
+        doc=None,
+        implicit=False,
+        implicit_domain=None,
+        visibility=0,
+    ):
+        super().__init__(
+            description=description,
+            doc=doc,
+            implicit=implicit,
+            implicit_domain=implicit_domain,
+            visibility=visibility,
+        )
+
+        self.rel_gap: Optional[float] = self.declare(
+            'rel_gap', ConfigValue(domain=NonNegativeFloat)
+        )
+        self.abs_gap: Optional[float] = self.declare(
+            'abs_gap', ConfigValue(domain=NonNegativeFloat)
+        )
+
+
+class PersistentSolverConfig(SolverConfig):
+    def __init__(
+        self,
+        description=None,
+        doc=None,
+        implicit=False,
+        implicit_domain=None,
+        visibility=0,
+    ):
+        super().__init__(
+            description=description,
+            doc=doc,
+            implicit=implicit,
+            implicit_domain=implicit_domain,
+            visibility=visibility,
+        )
+
+        self.auto_updats: AutoUpdateConfig = self.declare('auto_updates', AutoUpdateConfig())
+
+
+class PersistentBranchAndBoundConfig(BranchAndBoundConfig):
+    def __init__(
+        self,
+        description=None,
+        doc=None,
+        implicit=False,
+        implicit_domain=None,
+        visibility=0,
+    ):
+        super().__init__(
+            description=description,
+            doc=doc,
+            implicit=implicit,
+            implicit_domain=implicit_domain,
+            visibility=visibility,
+        )
+
+        self.auto_updats: AutoUpdateConfig = self.declare('auto_updates', AutoUpdateConfig())

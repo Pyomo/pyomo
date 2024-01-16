@@ -258,13 +258,6 @@ class PersistentSolverBase(SolverBase):
             '{0} does not support the get_reduced_costs method'.format(type(self))
         )
 
-    @property
-    @abc.abstractmethod
-    def update_config(self) -> UpdateConfig:
-        """
-        Updates the solver config
-        """
-
     @abc.abstractmethod
     def set_instance(self, model):
         """
