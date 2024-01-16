@@ -313,7 +313,7 @@ class PersistentSolverConfig(SolverConfig):
             visibility=visibility,
         )
 
-        self.auto_updats: AutoUpdateConfig = self.declare('auto_updates', AutoUpdateConfig())
+        self.auto_updates: AutoUpdateConfig = self.declare('auto_updates', AutoUpdateConfig())
 
 
 class PersistentBranchAndBoundConfig(BranchAndBoundConfig):
@@ -333,4 +333,4 @@ class PersistentBranchAndBoundConfig(BranchAndBoundConfig):
             visibility=visibility,
         )
 
-        self.auto_updats: AutoUpdateConfig = self.declare('auto_updates', AutoUpdateConfig())
+        self.auto_updates: AutoUpdateConfig = self.declare('auto_updates', AutoUpdateConfig())
