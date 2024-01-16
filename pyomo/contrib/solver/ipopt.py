@@ -69,14 +69,9 @@ class ipoptConfig(SolverConfig):
             'executable', ConfigValue(default=Executable('ipopt'))
         )
         # TODO: Add in a deprecation here for keepfiles
+        # M.B.: Is the above TODO still relevant?
         self.temp_dir: str = self.declare(
             'temp_dir', ConfigValue(domain=str, default=None)
-        )
-        self.solver_output_logger = self.declare(
-            'solver_output_logger', ConfigValue(default=logger)
-        )
-        self.log_level = self.declare(
-            'log_level', ConfigValue(domain=NonNegativeInt, default=logging.INFO)
         )
         self.writer_config = self.declare(
             'writer_config', ConfigValue(default=NLWriter.CONFIG())
@@ -347,10 +342,10 @@ class ipopt(SolverBase):
             ostreams = [io.StringIO()]
             if config.tee:
                 ostreams.append(sys.stdout)
-            else:
+            if config.log_solver_output:
                 ostreams.append(
                     LogStream(
-                        level=config.log_level, logger=config.solver_output_logger
+                        level=logging.INFO, logger=logger
                     )
                 )
             with TeeStream(*ostreams) as t:
