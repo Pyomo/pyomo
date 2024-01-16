@@ -190,24 +190,31 @@ class ipopt(SolverBase):
     def __init__(self, **kwds):
         super().__init__(**kwds)
         self._writer = NLWriter()
+        self._available_cache = None
+        self._version_cache = None
 
     def available(self):
-        if self.config.executable.path() is None:
-            return self.Availability.NotFound
-        return self.Availability.FullLicense
+        if self._available_cache is None:
+            if self.config.executable.path() is None:
+                self._available_cache = self.Availability.NotFound
+            else:
+                self._available_cache = self.Availability.FullLicense
+        return self._available_cache
 
     def version(self):
-        results = subprocess.run(
-            [str(self.config.executable), '--version'],
-            timeout=1,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            universal_newlines=True,
-        )
-        version = results.stdout.splitlines()[0]
-        version = version.split(' ')[1].strip()
-        version = tuple(int(i) for i in version.split('.'))
-        return version
+        if self._version_cache is None:
+            results = subprocess.run(
+                [str(self.config.executable), '--version'],
+                timeout=1,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                universal_newlines=True,
+            )
+            version = results.stdout.splitlines()[0]
+            version = version.split(' ')[1].strip()
+            version = tuple(int(i) for i in version.split('.'))
+            self._version_cache = version
+        return self._version_cache
 
     @property
     def symbol_map(self):
