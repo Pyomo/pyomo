@@ -71,9 +71,6 @@ class ipoptConfig(SolverConfig):
         self.executable = self.declare(
             'executable', ConfigValue(default=Executable('ipopt'))
         )
-        self.save_solver_io: bool = self.declare(
-            'save_solver_io', ConfigValue(domain=bool, default=False)
-        )
         # TODO: Add in a deprecation here for keepfiles
         self.temp_dir: str = self.declare(
             'temp_dir', ConfigValue(domain=str, default=None)
