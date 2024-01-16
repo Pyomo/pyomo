@@ -220,7 +220,9 @@ class Results(ConfigDict):
         self.iteration_count: Optional[int] = self.declare(
             'iteration_count', ConfigValue(domain=NonNegativeInt, default=None)
         )
-        self.timing_info: ConfigDict = self.declare('timing_info', ConfigDict(implicit=True))
+        self.timing_info: ConfigDict = self.declare(
+            'timing_info', ConfigDict(implicit=True)
+        )
 
         self.timing_info.start_timestamp: datetime = self.timing_info.declare(
             'start_timestamp', ConfigValue(domain=Datetime)
@@ -231,8 +233,17 @@ class Results(ConfigDict):
         self.extra_info: ConfigDict = self.declare(
             'extra_info', ConfigDict(implicit=True)
         )
-        self.solver_configuration: ConfigDict = self.declare('solver_configuration', ConfigValue(doc="A copy of the config object used in the solve", visibility=ADVANCED_OPTION))
-        self.solver_log: str = self.declare('solver_log', ConfigValue(domain=str, default=None, visibility=ADVANCED_OPTION))
+        self.solver_configuration: ConfigDict = self.declare(
+            'solver_configuration',
+            ConfigValue(
+                description="A copy of the config object used in the solve",
+                visibility=ADVANCED_OPTION,
+            ),
+        )
+        self.solver_log: str = self.declare(
+            'solver_log',
+            ConfigValue(domain=str, default=None, visibility=ADVANCED_OPTION),
+        )
 
 
 class ResultsReader:
