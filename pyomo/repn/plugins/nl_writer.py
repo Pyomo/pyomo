@@ -214,7 +214,7 @@ class NLWriter(object):
     CONFIG.declare(
         'skip_trivial_constraints',
         ConfigValue(
-            default=False,
+            default=True,
             domain=bool,
             description='Skip writing constraints whose body is constant',
         ),

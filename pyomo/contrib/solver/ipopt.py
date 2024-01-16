@@ -20,6 +20,7 @@ from pyomo.common import Executable
 from pyomo.common.config import ConfigValue, NonNegativeInt, NonNegativeFloat
 from pyomo.common.errors import PyomoException
 from pyomo.common.tempfiles import TempfileManager
+from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.base import Objective
 from pyomo.core.base.label import NumericLabeler
 from pyomo.core.staleflag import StaleFlagManager
@@ -83,6 +84,10 @@ class ipoptConfig(SolverConfig):
         )
         self.log_level = self.declare(
             'log_level', ConfigValue(domain=NonNegativeInt, default=logging.INFO)
+        )
+        self.writer_config = self.declare(
+            'writer_config', 
+            ConfigValue(default=NLWriter.CONFIG())
         )
 
 
@@ -183,10 +188,8 @@ class ipopt(SolverBase):
     CONFIG = ipoptConfig()
 
     def __init__(self, **kwds):
-        self._config = self.CONFIG(kwds)
+        super().__init__(**kwds)
         self._writer = NLWriter()
-        self._writer.config.skip_trivial_constraints = True
-        self._solver_options = self._config.solver_options
 
     def available(self):
         if self.config.executable.path() is None:
@@ -205,26 +208,6 @@ class ipopt(SolverBase):
         version = version.split(' ')[1].strip()
         version = tuple(int(i) for i in version.split('.'))
         return version
-
-    @property
-    def writer(self):
-        return self._writer
-
-    @property
-    def config(self):
-        return self._config
-
-    @config.setter
-    def config(self, val):
-        self._config = val
-
-    @property
-    def solver_options(self):
-        return self._solver_options
-
-    @solver_options.setter
-    def solver_options(self, val: Dict):
-        self._solver_options = val
 
     @property
     def symbol_map(self):
@@ -250,14 +233,14 @@ class ipopt(SolverBase):
         cmd = [str(config.executable), basename + '.nl', '-AMPL']
         if opt_file:
             cmd.append('option_file_name=' + basename + '.opt')
-        if 'option_file_name' in self.solver_options:
+        if 'option_file_name' in config.solver_options:
             raise ValueError(
                 'Pyomo generates the ipopt options file as part of the solve method. '
                 'Add all options to ipopt.config.solver_options instead.'
             )
-        if config.time_limit is not None and 'max_cpu_time' not in self.solver_options:
-            self.solver_options['max_cpu_time'] = config.time_limit
-        for k, val in self.solver_options.items():
+        if config.time_limit is not None and 'max_cpu_time' not in config.solver_options:
+            config.solver_options['max_cpu_time'] = config.time_limit
+        for k, val in config.solver_options.items():
             if k in ipopt_command_line_options:
                 cmd.append(str(k) + '=' + str(val))
         return cmd
@@ -271,15 +254,18 @@ class ipopt(SolverBase):
             raise ipoptSolverError(
                 f'Solver {self.__class__} is not available ({avail}).'
             )
-        StaleFlagManager.mark_all_as_stale()
         # Update configuration options, based on keywords passed to solve
-        config: ipoptConfig = self.config(kwds.pop('options', {}))
-        config.set_value(kwds)
+        config: ipoptConfig = self.config(value=kwds)
         if config.threads:
             logger.log(
                 logging.WARNING,
                 msg=f"The `threads` option was specified, but this is not used by {self.__class__}.",
             )
+        if config.timer is None:
+            timer = HierarchicalTimer()
+        else:
+            timer = config.timer
+        StaleFlagManager.mark_all_as_stale()
         results = ipoptResults()
         with TempfileManager.new_context() as tempfile:
             if config.temp_dir is None:
@@ -296,6 +282,8 @@ class ipopt(SolverBase):
             with open(basename + '.nl', 'w') as nl_file, open(
                 basename + '.row', 'w'
             ) as row_file, open(basename + '.col', 'w') as col_file:
+                timer.start('write_nl_file')
+                self._writer.config.set_value(config.writer_config)
                 nl_info = self._writer.write(
                     model,
                     nl_file,
@@ -303,6 +291,7 @@ class ipopt(SolverBase):
                     col_file,
                     symbolic_solver_labels=config.symbolic_solver_labels,
                 )
+                timer.stop('write_nl_file')
             # Get a copy of the environment to pass to the subprocess
             env = os.environ.copy()
             if nl_info.external_function_libraries:
@@ -318,7 +307,7 @@ class ipopt(SolverBase):
             # Write the opt_file, if there should be one; return a bool to say
             # whether or not we have one (so we can correctly build the command line)
             opt_file = self._write_options_file(
-                filename=basename, options=self.solver_options
+                filename=basename, options=config.solver_options
             )
             # Call ipopt - passing the files via the subprocess
             cmd = self._create_command_line(
@@ -343,6 +332,7 @@ class ipopt(SolverBase):
                     )
                 )
             with TeeStream(*ostreams) as t:
+                timer.start('subprocess')
                 process = subprocess.run(
                     cmd,
                     timeout=timeout,
@@ -351,6 +341,7 @@ class ipopt(SolverBase):
                     stdout=t.STDOUT,
                     stderr=t.STDERR,
                 )
+                timer.stop('subprocess')
                 # This is the stuff we need to parse to get the iterations
                 # and time
                 iters, ipopt_time_nofunc, ipopt_time_func = self._parse_ipopt_output(
@@ -362,7 +353,9 @@ class ipopt(SolverBase):
                 results.solution_loader = SolutionLoader(None, None, None, None)
             else:
                 with open(basename + '.sol', 'r') as sol_file:
+                    timer.start('parse_sol')
                     results = self._parse_solution(sol_file, nl_info, results)
+                    timer.stop('parse_sol')
                 results.iteration_count = iters
                 results.timing_info.no_function_solve_time = ipopt_time_nofunc
                 results.timing_info.function_solve_time = ipopt_time_func
@@ -427,8 +420,6 @@ class ipopt(SolverBase):
         results.timing_info.wall_time = (
             end_timestamp - start_timestamp
         ).total_seconds()
-        if config.report_timing:
-            results.report_timing()
         return results
 
     def _parse_ipopt_output(self, stream: io.StringIO):

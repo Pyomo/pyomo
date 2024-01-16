@@ -95,27 +95,6 @@ class SolutionLoaderBase(abc.ABC):
         """
         raise NotImplementedError(f'{type(self)} does not support the get_duals method')
 
-    def get_slacks(
-        self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None
-    ) -> Dict[_GeneralConstraintData, float]:
-        """
-        Returns a dictionary mapping constraint to slack.
-
-        Parameters
-        ----------
-        cons_to_load: list
-            A list of the constraints whose duals should be loaded. If cons_to_load is None, then the duals for all
-            constraints will be loaded.
-
-        Returns
-        -------
-        slacks: dict
-            Maps constraints to slacks
-        """
-        raise NotImplementedError(
-            f'{type(self)} does not support the get_slacks method'
-        )
-
     def get_reduced_costs(
         self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
     ) -> Mapping[_GeneralVarData, float]:
@@ -198,23 +177,6 @@ class SolutionLoader(SolutionLoaderBase):
                 duals[c] = self._duals[c]
         return duals
 
-    def get_slacks(
-        self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None
-    ) -> Dict[_GeneralConstraintData, float]:
-        if self._slacks is None:
-            raise RuntimeError(
-                'Solution loader does not currently have valid slacks. Please '
-                'check the termination condition and ensure the solver returns slacks '
-                'for the given problem type.'
-            )
-        if cons_to_load is None:
-            slacks = dict(self._slacks)
-        else:
-            slacks = {}
-            for c in cons_to_load:
-                slacks[c] = self._slacks[c]
-        return slacks
-
     def get_reduced_costs(
         self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
     ) -> Mapping[_GeneralVarData, float]:
@@ -244,25 +206,19 @@ class PersistentSolutionLoader(SolutionLoaderBase):
 
     def get_primals(self, vars_to_load=None):
         self._assert_solution_still_valid()
-        return self._solver.get_primals(vars_to_load=vars_to_load)
+        return self._solver._get_primals(vars_to_load=vars_to_load)
 
     def get_duals(
         self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None
     ) -> Dict[_GeneralConstraintData, float]:
         self._assert_solution_still_valid()
-        return self._solver.get_duals(cons_to_load=cons_to_load)
-
-    def get_slacks(
-        self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None
-    ) -> Dict[_GeneralConstraintData, float]:
-        self._assert_solution_still_valid()
-        return self._solver.get_slacks(cons_to_load=cons_to_load)
+        return self._solver._get_duals(cons_to_load=cons_to_load)
 
     def get_reduced_costs(
         self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
     ) -> Mapping[_GeneralVarData, float]:
         self._assert_solution_still_valid()
-        return self._solver.get_reduced_costs(vars_to_load=vars_to_load)
+        return self._solver._get_reduced_costs(vars_to_load=vars_to_load)
 
     def invalidate(self):
         self._valid = False

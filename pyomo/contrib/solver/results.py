@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 import enum
-from typing import Optional, Tuple, Dict, Any, Sequence, List
+from typing import Optional, Tuple, Dict, Any, Sequence, List, Type
 from datetime import datetime
 import io
 
@@ -21,6 +21,7 @@ from pyomo.common.config import (
     NonNegativeInt,
     In,
     NonNegativeFloat,
+    ADVANCED_OPTION,
 )
 from pyomo.common.errors import PyomoException
 from pyomo.core.base.var import _GeneralVarData
@@ -224,7 +225,7 @@ class Results(ConfigDict):
         self.iteration_count: Optional[int] = self.declare(
             'iteration_count', ConfigValue(domain=NonNegativeInt, default=None)
         )
-        self.timing_info: ConfigDict = self.declare('timing_info', ConfigDict())
+        self.timing_info: ConfigDict = self.declare('timing_info', ConfigDict(implicit=True))
 
         self.timing_info.start_timestamp: datetime = self.timing_info.declare(
             'start_timestamp', ConfigValue(domain=Datetime)
@@ -235,20 +236,8 @@ class Results(ConfigDict):
         self.extra_info: ConfigDict = self.declare(
             'extra_info', ConfigDict(implicit=True)
         )
-
-    def __str__(self):
-        s = ''
-        s += 'termination_condition: ' + str(self.termination_condition) + '\n'
-        s += 'solution_status: ' + str(self.solution_status) + '\n'
-        s += 'incumbent_objective: ' + str(self.incumbent_objective) + '\n'
-        s += 'objective_bound: ' + str(self.objective_bound)
-        return s
-
-    def report_timing(self):
-        print('Timing Information: ')
-        print('-' * 50)
-        self.timing_info.display()
-        print('-' * 50)
+        self.solver_configuration: ConfigDict = self.declare('solver_configuration', ConfigDict(doc="A copy of the config object used in the solve", visibility=ADVANCED_OPTION))
+        self.solver_log: str = self.declare('solver_log', ConfigValue(domain=str, default=None, visibility=ADVANCED_OPTION))
 
 
 class ResultsReader:

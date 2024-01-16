@@ -16,7 +16,9 @@ from pyomo.common.config import (
     ConfigValue,
     NonNegativeFloat,
     NonNegativeInt,
+    ADVANCED_OPTION,
 )
+from pyomo.common.timing import HierarchicalTimer
 
 
 class SolverConfig(ConfigDict):
@@ -72,12 +74,11 @@ class SolverConfig(ConfigDict):
                 description="If True, the names given to the solver will reflect the names of the Pyomo components. Cannot be changed after set_instance is called.",
             ),
         )
-        self.report_timing: bool = self.declare(
-            'report_timing',
+        self.timer: HierarchicalTimer = self.declare(
+            'timer',
             ConfigValue(
-                domain=bool,
-                default=False,
-                description="If True, timing information will be printed at the end of a solve call.",
+                default=None,
+                description="A HierarchicalTimer.",
             ),
         )
         self.threads: Optional[int] = self.declare(
@@ -132,9 +133,6 @@ class BranchAndBoundConfig(SolverConfig):
         )
         self.abs_gap: Optional[float] = self.declare(
             'abs_gap', ConfigValue(domain=NonNegativeFloat)
-        )
-        self.relax_integrality: bool = self.declare(
-            'relax_integrality', ConfigValue(domain=bool, default=False)
         )
 
 
@@ -283,6 +281,7 @@ class UpdateConfig(ConfigDict):
             ConfigValue(
                 domain=bool,
                 default=True,
+                visibility=ADVANCED_OPTION,
                 doc="""
                 This is an advanced option that should only be used in special circumstances. 
                 With the default setting of True, fixed variables will be treated like parameters. 
