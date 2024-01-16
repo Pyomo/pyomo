@@ -27,6 +27,7 @@ from pyomo.opt.results.results_ import SolverResults as LegacySolverResults
 from pyomo.opt.results.solution import Solution as LegacySolution
 from pyomo.core.kernel.objective import minimize
 from pyomo.core.base import SymbolMap
+from pyomo.core.base.label import NumericLabeler
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.contrib.solver.util import get_objective
 from pyomo.contrib.solver.results import (
@@ -425,10 +426,7 @@ class LegacySolverInterface:
             legacy_soln.gap = None
 
         symbol_map = SymbolMap()
-        symbol_map.byObject = dict(symbol_map.byObject)
-        symbol_map.bySymbol = dict(symbol_map.bySymbol)
-        symbol_map.aliases = dict(symbol_map.aliases)
-        symbol_map.default_labeler = symbol_map.default_labeler
+        symbol_map.default_labeler = NumericLabeler('x')
         model.solutions.add_symbol_map(symbol_map)
         legacy_results._smap_id = id(symbol_map)
 

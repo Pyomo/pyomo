@@ -22,10 +22,9 @@ from pyomo.common.errors import PyomoException
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.base import Objective
-from pyomo.core.base.label import NumericLabeler
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn.plugins.nl_writer import NLWriter, NLWriterInfo, AMPLRepn
-from pyomo.contrib.solver.base import SolverBase, SymbolMap
+from pyomo.contrib.solver.base import SolverBase
 from pyomo.contrib.solver.config import SolverConfig
 from pyomo.contrib.solver.factory import SolverFactory
 from pyomo.contrib.solver.results import (
@@ -216,10 +215,6 @@ class ipopt(SolverBase):
             self._version_cache = version
         return self._version_cache
 
-    @property
-    def symbol_map(self):
-        return self._symbol_map
-
     def _write_options_file(self, filename: str, options: Mapping):
         # First we need to determine if we even need to create a file.
         # If options is empty, then we return False
@@ -305,12 +300,6 @@ class ipopt(SolverBase):
                 if env.get('AMPLFUNC'):
                     nl_info.external_function_libraries.append(env.get('AMPLFUNC'))
                 env['AMPLFUNC'] = "\n".join(nl_info.external_function_libraries)
-            symbol_map = self._symbol_map = SymbolMap()
-            labeler = NumericLabeler('component')
-            for v in nl_info.variables:
-                symbol_map.getSymbol(v, labeler)
-            for c in nl_info.constraints:
-                symbol_map.getSymbol(c, labeler)
             # Write the opt_file, if there should be one; return a bool to say
             # whether or not we have one (so we can correctly build the command line)
             opt_file = self._write_options_file(
