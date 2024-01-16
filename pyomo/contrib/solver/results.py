@@ -236,7 +236,7 @@ class Results(ConfigDict):
         self.extra_info: ConfigDict = self.declare(
             'extra_info', ConfigDict(implicit=True)
         )
-        self.solver_configuration: ConfigDict = self.declare('solver_configuration', ConfigDict(doc="A copy of the config object used in the solve", visibility=ADVANCED_OPTION))
+        self.solver_configuration: ConfigDict = self.declare('solver_configuration', ConfigValue(doc="A copy of the config object used in the solve", visibility=ADVANCED_OPTION))
         self.solver_log: str = self.declare('solver_log', ConfigValue(domain=str, default=None, visibility=ADVANCED_OPTION))
 
 

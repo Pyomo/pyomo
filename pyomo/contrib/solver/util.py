@@ -22,7 +22,6 @@ from pyomo.core.base.objective import Objective, _GeneralObjectiveData
 from pyomo.common.collections import ComponentMap
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.expr.numvalue import NumericConstant
-from pyomo.contrib.solver.config import UpdateConfig
 from pyomo.contrib.solver.results import TerminationCondition, SolutionStatus
 
 
@@ -154,7 +153,6 @@ class PersistentSolverUtils(abc.ABC):
         )  # maps constraint to list of tuples (named_expr, named_expr.expr)
         self._external_functions = ComponentMap()
         self._obj_named_expressions = []
-        self._update_config = UpdateConfig()
         self._referenced_variables = (
             {}
         )  # var_id: [dict[constraints, None], dict[sos constraints, None], None or objective]
@@ -163,18 +161,10 @@ class PersistentSolverUtils(abc.ABC):
         self._expr_types = None
         self._only_child_vars = only_child_vars
 
-    @property
-    def update_config(self):
-        return self._update_config
-
-    @update_config.setter
-    def update_config(self, val: UpdateConfig):
-        self._update_config = val
-
     def set_instance(self, model):
-        saved_update_config = self.update_config
+        saved_config = self.config
         self.__init__(only_child_vars=self._only_child_vars)
-        self.update_config = saved_update_config
+        self.config = saved_config
         self._model = model
         self.add_block(model)
         if self._objective is None:
@@ -249,7 +239,7 @@ class PersistentSolverUtils(abc.ABC):
             self._vars_referenced_by_con[con] = variables
             for v in variables:
                 self._referenced_variables[id(v)][0][con] = None
-            if not self.update_config.treat_fixed_vars_as_params:
+            if not self.config.auto_updates.treat_fixed_vars_as_params:
                 for v in fixed_vars:
                     v.unfix()
                     all_fixed_vars[id(v)] = v
@@ -302,7 +292,7 @@ class PersistentSolverUtils(abc.ABC):
             self._vars_referenced_by_obj = variables
             for v in variables:
                 self._referenced_variables[id(v)][2] = obj
-            if not self.update_config.treat_fixed_vars_as_params:
+            if not self.config.auto_updates.treat_fixed_vars_as_params:
                 for v in fixed_vars:
                     v.unfix()
             self._set_objective(obj)
@@ -483,7 +473,7 @@ class PersistentSolverUtils(abc.ABC):
     def update(self, timer: HierarchicalTimer = None):
         if timer is None:
             timer = HierarchicalTimer()
-        config = self.update_config
+        config = self.config.auto_updates
         new_vars = []
         old_vars = []
         new_params = []
@@ -634,7 +624,7 @@ class PersistentSolverUtils(abc.ABC):
                 _v, lb, ub, fixed, domain_interval, value = self._vars[id(v)]
                 if (fixed != v.fixed) or (fixed and (value != v.value)):
                     vars_to_update.append(v)
-                    if self.update_config.treat_fixed_vars_as_params:
+                    if self.config.auto_updates.treat_fixed_vars_as_params:
                         for c in self._referenced_variables[id(v)][0]:
                             cons_to_remove_and_add[c] = None
                         if self._referenced_variables[id(v)][2] is not None:
@@ -670,13 +660,13 @@ class PersistentSolverUtils(abc.ABC):
                     break
         timer.stop('named expressions')
         timer.start('objective')
-        if self.update_config.check_for_new_objective:
+        if self.config.auto_updates.check_for_new_objective:
             pyomo_obj = get_objective(self._model)
             if pyomo_obj is not self._objective:
                 need_to_set_objective = True
         else:
             pyomo_obj = self._objective
-        if self.update_config.update_objective:
+        if self.config.auto_updates.update_objective:
             if pyomo_obj is not None and pyomo_obj.expr is not self._objective_expr:
                 need_to_set_objective = True
             elif pyomo_obj is not None and pyomo_obj.sense is not self._objective_sense:

@@ -421,6 +421,9 @@ class ipopt(SolverBase):
                     remove_named_expressions=True,
                 )
 
+        results.solver_configuration = config
+        results.solver_log = ostreams[0].getvalue()
+
         # Capture/record end-time / wall-time
         end_timestamp = datetime.datetime.now(datetime.timezone.utc)
         results.timing_info.start_timestamp = start_timestamp
@@ -462,11 +465,9 @@ class ipopt(SolverBase):
     def _parse_solution(
         self, instream: io.TextIOBase, nl_info: NLWriterInfo, result: ipoptResults
     ):
-        suffixes_to_read = ['dual', 'ipopt_zL_out', 'ipopt_zU_out']
         res, sol_data = parse_sol_file(
             sol_file=instream,
             nl_info=nl_info,
-            suffixes_to_read=suffixes_to_read,
             result=result,
         )
 

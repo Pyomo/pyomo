@@ -28,7 +28,6 @@ from pyomo.opt.results.solution import Solution as LegacySolution
 from pyomo.core.kernel.objective import minimize
 from pyomo.core.base import SymbolMap
 from pyomo.core.staleflag import StaleFlagManager
-from pyomo.contrib.solver.config import UpdateConfig
 from pyomo.contrib.solver.util import get_objective
 from pyomo.contrib.solver.results import (
     Results,
