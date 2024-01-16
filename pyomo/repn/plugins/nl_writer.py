@@ -1536,7 +1536,8 @@ class _NLWriter_impl(object):
 
         # Generate the return information
         eliminated_vars = [
-            (var_map[_id], expr_info) for _id, expr_info in eliminated_vars.items()
+            (var_map[_id], expr_info.to_expr(var_map))
+            for _id, expr_info in eliminated_vars.items()
         ]
         eliminated_vars.reverse()
         if scale_model:

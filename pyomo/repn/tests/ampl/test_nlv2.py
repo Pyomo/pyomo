@@ -1325,12 +1325,7 @@ G0 4   #value
 
         self.assertEqual(
             nlinfo.eliminated_vars,
-            [
-                (m.x[3], nl_writer.AMPLRepn(-4.0, {}, None)),
-                (m.x[1], nl_writer.AMPLRepn(4.0, {}, None)),
-                (m.x[2], nl_writer.AMPLRepn(3.0, {}, None)),
-                (m.x[0], nl_writer.AMPLRepn(5.0, {}, None)),
-            ],
+            [(m.x[3], -4.0), (m.x[1], 4.0), (m.x[2], 3.0), (m.x[0], 5.0)],
         )
         self.assertEqual(
             *nl_diff(
@@ -1376,12 +1371,7 @@ G0 1
 
         self.assertEqual(
             nlinfo.eliminated_vars,
-            [
-                (m.x[3], nl_writer.AMPLRepn(-4.0, {}, None)),
-                (m.x[1], nl_writer.AMPLRepn(4.0, {}, None)),
-                (m.x[2], nl_writer.AMPLRepn(3.0, {}, None)),
-                (m.x[0], nl_writer.AMPLRepn(5.0, {}, None)),
-            ],
+            [(m.x[3], -4.0), (m.x[1], 4.0), (m.x[2], 3.0), (m.x[0], 5.0)],
         )
         self.assertEqual(
             *nl_diff(
@@ -1429,11 +1419,11 @@ G0 1
         self.assertEqual(
             nlinfo.eliminated_vars,
             [
-                (m.x[1], nl_writer.AMPLRepn(4.0, {}, None)),
-                (m.x[5], nl_writer.AMPLRepn(5.0, {}, None)),
-                (m.x[3], nl_writer.AMPLRepn(-4.0, {}, None)),
-                (m.x[2], nl_writer.AMPLRepn(3.0, {}, None)),
-                (m.x[0], nl_writer.AMPLRepn(5.0, {}, None)),
+                (m.x[1], 4.0),
+                (m.x[5], 5.0),
+                (m.x[3], -4.0),
+                (m.x[2], 3.0),
+                (m.x[0], 5.0),
             ],
         )
         self.assertEqual(
@@ -1477,15 +1467,18 @@ G0 1
             nlinfo = nl_writer.NLWriter().write(m, OUT, linear_presolve=True)
         self.assertEqual(LOG.getvalue(), "")
 
-        self.assertEqual(
-            nlinfo.eliminated_vars,
-            [
-                (m.x[4], nl_writer.AMPLRepn(-12, {id(m.x[1]): 3}, None)),
-                (m.x[3], nl_writer.AMPLRepn(-72, {id(m.x[1]): 17}, None)),
-                (m.x[2], nl_writer.AMPLRepn(-13, {id(m.x[1]): 4}, None)),
-                (m.x[0], nl_writer.AMPLRepn(29, {id(m.x[1]): -6}, None)),
-            ],
-        )
+        self.assertIs(nlinfo.eliminated_vars[0][0], m.x[4])
+        self.assertExpressionsEqual(nlinfo.eliminated_vars[0][1], 3.0 * m.x[1] - 12.0)
+
+        self.assertIs(nlinfo.eliminated_vars[1][0], m.x[3])
+        self.assertExpressionsEqual(nlinfo.eliminated_vars[1][1], 17.0 * m.x[1] - 72.0)
+
+        self.assertIs(nlinfo.eliminated_vars[2][0], m.x[2])
+        self.assertExpressionsEqual(nlinfo.eliminated_vars[2][1], 4.0 * m.x[1] - 13.0)
+
+        self.assertIs(nlinfo.eliminated_vars[3][0], m.x[0])
+        self.assertExpressionsEqual(nlinfo.eliminated_vars[3][1], -6.0 * m.x[1] + 29.0)
+
         # Note: bounds on x[1] are:
         #   min(22/3, 82/17, 23/4, -39/-6) == 4.823529411764706
         #   max(2/3, 62/17, 3/4, -19/-6) == 3.6470588235294117
@@ -1531,15 +1524,18 @@ G0 1
             nlinfo = nl_writer.NLWriter().write(m, OUT, linear_presolve=True)
         self.assertEqual(LOG.getvalue(), "")
 
-        self.assertEqual(
-            nlinfo.eliminated_vars,
-            [
-                (m.x[4], nl_writer.AMPLRepn(-12, {id(m.x[1]): 3}, None)),
-                (m.x[3], nl_writer.AMPLRepn(-72, {id(m.x[1]): 17}, None)),
-                (m.x[2], nl_writer.AMPLRepn(-13, {id(m.x[1]): 4}, None)),
-                (m.x[0], nl_writer.AMPLRepn(29, {id(m.x[1]): -6}, None)),
-            ],
-        )
+        self.assertIs(nlinfo.eliminated_vars[0][0], m.x[4])
+        self.assertExpressionsEqual(nlinfo.eliminated_vars[0][1], 3.0 * m.x[1] - 12.0)
+
+        self.assertIs(nlinfo.eliminated_vars[1][0], m.x[3])
+        self.assertExpressionsEqual(nlinfo.eliminated_vars[1][1], 17.0 * m.x[1] - 72.0)
+
+        self.assertIs(nlinfo.eliminated_vars[2][0], m.x[2])
+        self.assertExpressionsEqual(nlinfo.eliminated_vars[2][1], 4.0 * m.x[1] - 13.0)
+
+        self.assertIs(nlinfo.eliminated_vars[3][0], m.x[0])
+        self.assertExpressionsEqual(nlinfo.eliminated_vars[3][1], -6.0 * m.x[1] + 29.0)
+
         # Note: bounds on x[1] are:
         #   min(22/3, 82/17, 23/4, -39/-6) == 4.823529411764706
         #   max(2/3, 62/17, 3/4, -19/-6) == 3.6470588235294117
@@ -1637,9 +1633,7 @@ G0 1
             )
         self.assertEqual(LOG.getvalue(), "")
 
-        self.assertEqual(
-            nlinfo.eliminated_vars, [(m.x[1], nl_writer.AMPLRepn(7, {}, None))]
-        )
+        self.assertEqual(nlinfo.eliminated_vars, [(m.x[1], 7)])
 
         self.assertEqual(
             *nl_diff(
