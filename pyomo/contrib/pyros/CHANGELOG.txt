@@ -3,7 +3,7 @@ PyROS CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
-PyROS 1.2.9    12 Oct 2023
+PyROS 1.2.9    15 Dec 2023
 -------------------------------------------------------------------------------
 - Fix DR polishing optimality constraint for case of nominal objective focus
 - Use previous separation solution to initialize second-stage and state
