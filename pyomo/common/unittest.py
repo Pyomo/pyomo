@@ -563,7 +563,7 @@ class TestCase(_unittest.TestCase):
     def assertExpressionsStructurallyEqual(
         self, a, b, include_named_exprs=True, places=None
     ):
-        from pyomo.core.expr.compare import assertExpressionsEqual
+        from pyomo.core.expr.compare import assertExpressionsStructurallyEqual
 
         return assertExpressionsStructurallyEqual(
             self, a, b, include_named_exprs, places
