@@ -22,6 +22,7 @@ from pyomo.environ import (
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.repn import generate_standard_repn
+from pyomo.core.expr.compare import assertExpressionsEqual
 
 import pyomo.core.expr as EXPR
 import pyomo.gdp.tests.models as models
@@ -168,9 +169,6 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             self, 'binary_multiplication'
         )
 
-    # helper method to check the M values in all of the transformed
-    # constraints (m, M) is the tuple for M.  This also relies on the
-    # disjuncts being transformed in the same order every time.
     def check_transformed_constraints(
         self, model, binary_multiplication, cons1lb, cons2lb, cons2ub, cons3ub
     ):
@@ -183,14 +181,10 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertEqual(len(c), 1)
         c_lb = c[0]
         self.assertTrue(c[0].active)
-        repn = generate_standard_repn(c[0].body)
-        self.assertIsNone(repn.nonlinear_expr)
-        self.assertEqual(len(repn.quadratic_coefs), 1)
-        self.assertEqual(len(repn.linear_coefs), 1)
         ind_var = model.d[0].indicator_var
-        ct.check_quadratic_coef(self, repn, model.a, ind_var, 1)
-        ct.check_linear_coef(self, repn, ind_var, -model.d[0].c.lower)
-        self.assertEqual(repn.constant, 0)
+        assertExpressionsEqual(
+            self, c[0].body, (model.a - model.d[0].c.lower) * ind_var
+        )
         self.assertEqual(c[0].lower, 0)
         self.assertIsNone(c[0].upper)
 
@@ -199,13 +193,8 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertEqual(len(c), 1)
         c_eq = c[0]
         self.assertTrue(c[0].active)
-        repn = generate_standard_repn(c[0].body)
-        self.assertTrue(repn.nonlinear_expr is None)
-        self.assertEqual(len(repn.linear_coefs), 0)
-        self.assertEqual(len(repn.quadratic_coefs), 1)
         ind_var = model.d[1].indicator_var
-        ct.check_quadratic_coef(self, repn, model.a, ind_var, 1)
-        self.assertEqual(repn.constant, 0)
+        assertExpressionsEqual(self, c[0].body, model.a * ind_var)
         self.assertEqual(c[0].lower, 0)
         self.assertEqual(c[0].upper, 0)
 
@@ -214,13 +203,9 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertEqual(len(c), 1)
         c_ub = c[0]
         self.assertTrue(c_ub.active)
-        repn = generate_standard_repn(c_ub.body)
-        self.assertIsNone(repn.nonlinear_expr)
-        self.assertEqual(len(repn.linear_coefs), 1)
-        self.assertEqual(len(repn.quadratic_coefs), 1)
-        ct.check_quadratic_coef(self, repn, model.x, ind_var, 1)
-        ct.check_linear_coef(self, repn, ind_var, -model.d[1].c2.upper)
-        self.assertEqual(repn.constant, 0)
+        assertExpressionsEqual(
+            self, c_ub.body, (model.x - model.d[1].c2.upper) * ind_var
+        )
         self.assertIsNone(c_ub.lower)
         self.assertEqual(c_ub.upper, 0)
 
