@@ -110,7 +110,6 @@ class DivingHeuristic(pybnb.Problem):
 
         for r in iterators.relaxation_data_objects(self.relaxation, descend_into=True, active=True):
             r.rebuild()
-            r.pprint(verbose=True)
 
         for v, lb, ub in zip(self.relaxation.vars, orig_lbs, orig_ubs):
             v.setlb(lb)

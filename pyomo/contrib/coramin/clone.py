@@ -51,13 +51,13 @@ def clone_active_flat(m1: _BlockData, num_clones: int = 1) -> List[_BlockData]:
         rel_list.append(r)
 
     for ndx, r in enumerate(rel_list):
-        var_map = ComponentMap()
+        var_map = dict()
         for v in r.get_rhs_vars():
             if not v.is_fixed():
                 all_vars.add(v)
-            var_map[v] = v
+            var_map[id(v)] = v
         aux_var = r.get_aux_var()
-        var_map[aux_var] = aux_var
+        var_map[id(aux_var)] = aux_var
         if not pe.is_fixed(aux_var):
             all_vars.add(aux_var)
         new_rel = copy_relaxation_with_local_data(r, var_map)

@@ -13,6 +13,7 @@ from pyomo.contrib.coramin.relaxations.mccormick import PWMcCormickRelaxation
 from pyomo.contrib.coramin.utils.coramin_enums import RelaxationSide
 from pyomo.contrib.coramin.relaxations import iterators
 from pyomo.repn.standard_repn import generate_standard_repn
+from pyomo.gdp.disjunct import AutoLinkedBinaryVar
 
 
 class BinaryMultiplicationInfo(object):
@@ -267,6 +268,7 @@ def handle_unary(
 handlers = dict()
 handlers[_GeneralVarData] = handle_var
 handlers[ScalarVar] = handle_var
+handlers[AutoLinkedBinaryVar] = handle_var
 handlers[_ParamData] = handle_param
 handlers[ScalarParam] = handle_param
 handlers[float] = handle_float
