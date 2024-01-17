@@ -9,10 +9,11 @@ import numpy as np
 import math
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.core.expr.visitor import identify_variables
-from mpi4py import MPI
-import time
-
-np.set_printoptions(linewidth=1000)
+from pyomo.contrib.appsi.fbbt import IntervalTightener, InfeasibleConstraintException
+from typing import Sequence
+from .binary_multiplication_reformulation import reformulate_binary_multiplication
+from pyomo.contrib.coramin.clone import clone_active_flat
+from pyomo.contrib.coramin.relaxations import iterators
 
 
 def collect_vars(m: _BlockData) -> Tuple[List[_GeneralVarData], List[_GeneralVarData], List[_GeneralVarData]]:
@@ -53,16 +54,30 @@ def restore_integers(binary_vars: Sequence[_GeneralVarData], integer_vars: Seque
 
 
 class DivingHeuristic(pybnb.Problem):
-    def __init__(self, m: _BlockData, nlp_solver: appsi.base.Solver) -> None:
+    def __init__(self, m: _BlockData) -> None:
         super().__init__()
 
-        nlp_solver.config.load_solution = False
-
         binary_vars, integer_vars, all_vars = collect_vars(m)
+        self.relaxation = clone_active_flat(reformulate_binary_multiplication(m))[0]
+
+        orig_lbs = [v.lb for v in self.relaxation.vars]
+        orig_ubs = [v.ub for v in self.relaxation.vars]
+        for r in iterators.relaxation_data_objects(self.relaxation, descend_into=True, active=True):
+            r.rebuild(build_nonlinear_constraint=True)
+        tightener = IntervalTightener()
+        tightener.config.deactivate_satisfied_constraints = False
+        tightener.perform_fbbt(self.relaxation)
+        self.tight_lbs = [v.lb for v in self.relaxation.vars]
+        self.tight_ubs = [v.ub for v in self.relaxation.vars]
+        for v, lb, ub in zip(self.relaxation.vars, orig_lbs, orig_ubs):
+            v.setlb(lb)
+            v.setub(ub)
+
         relax_integers(binary_vars, integer_vars)
 
         self.m = m
-        self.opt = nlp_solver
+        self.tightener = IntervalTightener()
+        self.tightener.config.deactivate_satisfied_constraints = False
         self.all_vars = all_vars
         self.binary_vars = binary_vars
         self.integer_vars = integer_vars
@@ -82,11 +97,31 @@ class DivingHeuristic(pybnb.Problem):
         return self._sense
     
     def bound(self):
-        res = self.opt.solve(self.m)
-        if res.best_feasible_objective is None:
+        orig_lbs = [v.lb for v in self.relaxation.vars]
+        orig_ubs = [v.ub for v in self.relaxation.vars]
+
+        for v, lb, ub in zip(self.relaxation.vars, self.tight_lbs, self.tight_ubs):
+            assert lb is None or math.isfinite(lb)
+            assert ub is None or math.isfinite(ub)
+            if v.lb is None or (lb is not None and lb > v.lb):
+                v.setlb(lb)
+            if v.ub is None or (ub is not None and ub < v.ub):
+                v.setub(ub)
+
+        for r in iterators.relaxation_data_objects(self.relaxation, descend_into=True, active=True):
+            r.rebuild()
+            r.pprint(verbose=True)
+
+        for v, lb, ub in zip(self.relaxation.vars, orig_lbs, orig_ubs):
+            v.setlb(lb)
+            v.setub(ub)
+
+        opt = pe.SolverFactory('ipopt')
+        res = opt.solve(self.relaxation, skip_trivial_constraints=True, load_solutions=False, tee=False)
+        if not pe.check_optimal_termination(res):
             return self.infeasible_objective()
-        res.solution_loader.load_vars([v for v in self.bin_and_int_vars if not v.is_fixed()])
-        ret = res.best_feasible_objective
+        self.relaxation.solutions.load_from(res)
+        ret = pe.value(self.obj.expr)
         if self._sense == pybnb.minimize:
             ret = max(self.current_node.bound, ret)
         else:
@@ -98,12 +133,30 @@ class DivingHeuristic(pybnb.Problem):
         vals = [v.value for v in unfixed_vars]
         for v in unfixed_vars:
             v.fix(round(v.value))
-        res = self.opt.solve(self.m)
-        if res.best_feasible_objective is None:
+        orig_bounds = [v.bounds for v in self.all_vars]
+        success = True
+        try:
+            self.tightener.perform_fbbt(self.m)
+        except InfeasibleConstraintException:
+            success = False
+        for v, (lb, ub) in zip(self.all_vars, orig_bounds):
+            v.setlb(lb)
+            v.setub(ub)
+        if success:
+            opt = pe.SolverFactory('ipopt')
+            opt.options['max_iter'] = 300
+            try:
+                res = opt.solve(self.m, skip_trivial_constraints=True, load_solutions=False, tee=False)
+            except:
+                success = False
+
+        if not success:
+            ret = self.infeasible_objective()
+        elif not pe.check_optimal_termination(res):
             ret = self.infeasible_objective()
         else:
-            ret = res.best_feasible_objective
-            res.solution_loader.load_vars()
+            self.m.solutions.load_from(res)
+            ret = pe.value(self.obj.expr)
             sol = np.array([v.value for v in self.all_vars], dtype=float)
             xl, xu, _ = self.current_node.state
             self.current_node.state = (xl, xu, sol)
@@ -181,8 +234,8 @@ def assert_feasible(m: _BlockData, var_list: Sequence[_GeneralVarData], feasibil
             assert abs(val - round(val)) <= integer_tol
 
 
-def run_diving_heuristic(m: _BlockData, nlp_solver: appsi.base.Solver, feasibility_tol: float = 1e-6, integer_tol: float = 1e-4, time_limit: float = 300, node_limit: int = 1000):
-    prob = DivingHeuristic(m, nlp_solver)
+def run_diving_heuristic(m: _BlockData, feasibility_tol: float = 1e-6, integer_tol: float = 1e-4, time_limit: float = 300, node_limit: int = 1000):
+    prob = DivingHeuristic(m)
     res: pybnb.SolverResults = pybnb.solve(prob, queue_strategy=pybnb.QueueStrategy.bound, objective_stop=prob.infeasible_objective(), node_limit=node_limit, time_limit=time_limit)
     ss = pybnb.SolutionStatus
     if res.solution_status in {ss.feasible, ss.optimal}:
