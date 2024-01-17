@@ -43,7 +43,7 @@ class TestOBBTUnit(unittest.TestCase):
     
     '''
     
-    def ttest_obbt_continuous(self):
+    def test_obbt_continuous(self):
         '''Check that the correct bounds are found for a continuous problem.'''
         m = tc.get_2d_diamond_problem()
         results = obbt_analysis(m, solver=mip_solver)
@@ -51,20 +51,20 @@ class TestOBBTUnit(unittest.TestCase):
         for var, bounds in results.items():
             assert_array_almost_equal(bounds, m.continuous_bounds[var])
 
-    def ttest_mip_rel_objective(self):
+    def test_mip_rel_objective(self):
         '''Check that relative mip gap constraints are added for a mip with indexed vars and constraints'''
-        m = tc.get_indexed_hexagonal_pyramid_mip()
+        m = tc.get_indexed_pentagonal_pyramid_mip()
         results = obbt_analysis(m, rel_opt_gap=0.5)
         self.assertAlmostEqual(m._obbt.optimality_tol_rel.lb, 2.5)
 
 
-    def ttest_mip_abs_objective(self):
+    def test_mip_abs_objective(self):
         '''Check that absolute mip gap constraints are added'''
-        m = tc.get_hexagonal_pyramid_mip()
+        m = tc.get_pentagonal_pyramid_mip()
         results = obbt_analysis(m, abs_opt_gap=1.99)
         self.assertAlmostEqual(m._obbt.optimality_tol_abs.lb, 3.01)
 
-    def ttest_obbt_warmstart(self):
+    def test_obbt_warmstart(self):
         '''Check that warmstarting works.'''
         m = tc.get_2d_diamond_problem()
         m.x.value = 0
@@ -74,10 +74,10 @@ class TestOBBTUnit(unittest.TestCase):
         for var, bounds in results.items():
             assert_array_almost_equal(bounds, m.continuous_bounds[var]) 
 
-    def ttest_obbt_mip(self):
+    def test_obbt_mip(self):
         '''Check that bound tightening only occurs for continuous variables
         that can be tightened.'''
-        m = tc.get_bloated_hexagonal_pyramid_mip()
+        m = tc.get_bloated_pentagonal_pyramid_mip()
         results = obbt_analysis(m, solver=mip_solver, tee = True)
         bounds_tightened = False
         bounds_not_tightned = False
@@ -101,7 +101,7 @@ class TestOBBTUnit(unittest.TestCase):
         for var, bounds in results.items():
             assert_array_almost_equal(bounds, m.continuous_bounds[var])
 
-    def ttest_bound_tightening(self):
+    def test_bound_tightening(self):
         '''
         Check that the correct bounds are found for a discrete problem where 
         more restrictive bounds are implied by the constraints.'''
@@ -111,7 +111,7 @@ class TestOBBTUnit(unittest.TestCase):
         for var, bounds in results.items():
             assert_array_almost_equal(bounds, m.var_bounds[var])
 
-    def ttest_bound_refinement(self):
+    def test_bound_refinement(self):
         '''
         Check that the correct bounds are found for a discrete problem where 
         more restrictive bounds are implied by the constraints and constraints
@@ -124,7 +124,7 @@ class TestOBBTUnit(unittest.TestCase):
             if m.var_bounds[var][1] < var.ub:
                 self.assertTrue(hasattr(m._obbt, var.name + "_ub"))
             
-    def ttest_obbt_infeasible(self):
+    def test_obbt_infeasible(self):
         '''Check that code catches cases where the problem is infeasible.'''
         m = tc.get_2d_diamond_problem()
         m.infeasible_constraint = pe.Constraint(expr=m.x>=10)

@@ -25,3 +25,4 @@ gurobi.log
 # Jupyterhub/Jupyterlab checkpoints
 .ipynb_checkpoints
 cplex.log
+/.vs

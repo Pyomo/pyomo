@@ -27,7 +27,7 @@ class TestShiftedIP(unittest.TestCase):
         
     def mip_abs_objective(self):
         '''COMMENT'''
-        m = tc.get_indexed_hexagonal_pyramid_mip()
+        m = tc.get_indexed_pentagonal_pyramid_mip()
         m.x.domain = pe.Reals
         opt = pe.SolverFactory('gurobi')
         old_results = opt.solve(m, tee = True)
@@ -46,7 +46,6 @@ class TestShiftedIP(unittest.TestCase):
         new_model = shifted_lp.get_shifted_linear_model(m)
         new_results = opt.solve(new_model, tee = True)
         new_obj = pe.value(new_model.objective)
-        pdb.set_trace()
 
 if __name__ == '__main__':
     unittest.main()
