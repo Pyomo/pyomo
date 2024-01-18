@@ -378,7 +378,11 @@ def _numeric_apply_operation(node, values):
 
 
 def _symbolic_apply_operation(node, values):
-    return node
+    # Note that it important to create a new node using the (new) list
+    # built by the walker.  Doing so decouples the derivative
+    # expressions from the original expression thereby avoiding some
+    # possible infinite loops due to expression entangling (see #3096)
+    return node.create_node_with_local_data(values)
 
 
 class _LeafToRootVisitor(ExpressionValueVisitor):
