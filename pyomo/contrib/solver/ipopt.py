@@ -372,7 +372,7 @@ class ipopt(SolverBase):
 
             if process.returncode != 0:
                 results.termination_condition = TerminationCondition.error
-                results.solution_loader = SolutionLoader(None, None, None, None)
+                results.solution_loader = SolutionLoader(None, None, None)
             else:
                 with open(basename + '.sol', 'r') as sol_file:
                     timer.start('parse_sol')
@@ -481,7 +481,7 @@ class ipopt(SolverBase):
         )
 
         if res.solution_status == SolutionStatus.noSolution:
-            res.solution_loader = SolutionLoader(None, None, None, None)
+            res.solution_loader = SolutionLoader(None, None, None)
         else:
             res.solution_loader = ipoptSolutionLoader(
                 sol_data=sol_data,

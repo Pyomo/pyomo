@@ -17,30 +17,9 @@ from pyomo.core.base.var import _GeneralVarData
 from pyomo.common.collections import ComponentMap
 from pyomo.core.staleflag import StaleFlagManager
 from .sol_reader import SolFileData
-from pyomo.repn.plugins.nl_writer import NLWriterInfo, AMPLRepn
+from pyomo.repn.plugins.nl_writer import NLWriterInfo
 from pyomo.core.expr.numvalue import value
 from pyomo.core.expr.visitor import replace_expressions
-
-# CHANGES:
-# - `load` method: should just load the whole thing back into the model; load_solution = True
-# - `load_variables`
-# - `get_variables`
-# - `get_constraints`
-# - `get_objective`
-# - `get_slacks`
-# - `get_reduced_costs`
-
-# duals is how much better you could get if you weren't constrained.
-# dual value of 0 means that the constraint isn't actively constraining anything.
-# high dual value means that it is costing us a lot in the objective.
-# can also be called "shadow price"
-
-# bounds on variables are implied constraints.
-# getting a dual on the bound of a variable is the reduced cost.
-# IPOPT calls these the bound multipliers (normally they are reduced costs, though). ZL, ZU
-
-# slacks are... something that I don't understand
-# but they are necessary somewhere? I guess?
 
 
 class SolutionLoaderBase(abc.ABC):
@@ -129,7 +108,6 @@ class SolutionLoader(SolutionLoaderBase):
         self,
         primals: Optional[MutableMapping],
         duals: Optional[MutableMapping],
-        slacks: Optional[MutableMapping],
         reduced_costs: Optional[MutableMapping],
     ):
         """
@@ -139,14 +117,11 @@ class SolutionLoader(SolutionLoaderBase):
             maps id(Var) to (var, value)
         duals: dict
             maps Constraint to dual value
-        slacks: dict
-            maps Constraint to slack value
         reduced_costs: dict
             maps id(Var) to (var, reduced_cost)
         """
         self._primals = primals
         self._duals = duals
-        self._slacks = slacks
         self._reduced_costs = reduced_costs
 
     def get_primals(

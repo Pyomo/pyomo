@@ -435,9 +435,6 @@ class LegacySolverInterface:
             if hasattr(model, 'dual') and model.dual.import_enabled():
                 for c, val in results.solution_loader.get_duals().items():
                     model.dual[c] = val
-            if hasattr(model, 'slack') and model.slack.import_enabled():
-                for c, val in results.solution_loader.get_slacks().items():
-                    model.slack[c] = val
             if hasattr(model, 'rc') and model.rc.import_enabled():
                 for v, val in results.solution_loader.get_reduced_costs().items():
                     model.rc[v] = val
@@ -448,11 +445,6 @@ class LegacySolverInterface:
             if hasattr(model, 'dual') and model.dual.import_enabled():
                 for c, val in results.solution_loader.get_duals().items():
                     legacy_soln.constraint[symbol_map.getSymbol(c)] = {'Dual': val}
-            if hasattr(model, 'slack') and model.slack.import_enabled():
-                for c, val in results.solution_loader.get_slacks().items():
-                    symbol = symbol_map.getSymbol(c)
-                    if symbol in legacy_soln.constraint:
-                        legacy_soln.constraint[symbol]['Slack'] = val
             if hasattr(model, 'rc') and model.rc.import_enabled():
                 for v, val in results.solution_loader.get_reduced_costs().items():
                     legacy_soln.variable['Rc'] = val

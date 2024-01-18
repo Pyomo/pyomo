@@ -28,6 +28,4 @@ class TestPersistentSolverBase(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             self.instance.get_duals()
         with self.assertRaises(NotImplementedError):
-            self.instance.get_slacks()
-        with self.assertRaises(NotImplementedError):
             self.instance.get_reduced_costs()

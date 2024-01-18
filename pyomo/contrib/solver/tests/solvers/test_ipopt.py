@@ -45,13 +45,12 @@ class TestIpopt(unittest.TestCase):
         config = ipoptConfig()
         self.assertTrue(config.load_solution)
         self.assertIsInstance(config.solver_options, ConfigDict)
-        print(type(config.executable))
         self.assertIsInstance(config.executable, ExecutableData)
 
         # Test custom initialization
-        solver = SolverFactory('ipopt_v2', save_solver_io=True)
-        self.assertTrue(solver.config.save_solver_io)
+        solver = SolverFactory('ipopt_v2', executable='/path/to/exe')
         self.assertFalse(solver.config.tee)
+        self.assertTrue(solver.config.executable.startswith('/path'))
 
         # Change value on a solve call
         # model = self.create_model()

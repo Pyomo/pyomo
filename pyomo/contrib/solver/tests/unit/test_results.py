@@ -82,6 +82,8 @@ class TestResults(unittest.TestCase):
             'solver_version',
             'termination_condition',
             'timing_info',
+            'solver_log',
+            'solver_configuration'
         }
         actual_declared = res._declared
         self.assertEqual(expected_declared, actual_declared)
@@ -101,7 +103,7 @@ class TestResults(unittest.TestCase):
         self.assertIsInstance(res.extra_info, ConfigDict)
         self.assertIsNone(res.timing_info.start_timestamp)
         self.assertIsNone(res.timing_info.wall_time)
-        res.solution_loader = solution.SolutionLoader(None, None, None, None)
+        res.solution_loader = solution.SolutionLoader(None, None, None)
 
         with self.assertRaisesRegex(
             RuntimeError, '.*does not currently have a valid solution.*'
@@ -115,10 +117,6 @@ class TestResults(unittest.TestCase):
             RuntimeError, '.*does not currently have valid reduced costs.*'
         ):
             res.solution_loader.get_reduced_costs()
-        with self.assertRaisesRegex(
-            RuntimeError, '.*does not currently have valid slacks.*'
-        ):
-            res.solution_loader.get_slacks()
 
     def test_results(self):
         m = pyo.ConcreteModel()
@@ -136,13 +134,10 @@ class TestResults(unittest.TestCase):
         rc = {}
         rc[id(m.x)] = (m.x, 5)
         rc[id(m.y)] = (m.y, 6)
-        slacks = {}
-        slacks[m.c1] = 7
-        slacks[m.c2] = 8
 
         res = results.Results()
         res.solution_loader = solution.SolutionLoader(
-            primals=primals, duals=duals, slacks=slacks, reduced_costs=rc
+            primals=primals, duals=duals, reduced_costs=rc
         )
 
         res.solution_loader.load_vars()
@@ -172,10 +167,3 @@ class TestResults(unittest.TestCase):
         self.assertNotIn(m.x, rc2)
         self.assertAlmostEqual(rc[id(m.y)][1], rc2[m.y])
 
-        slacks2 = res.solution_loader.get_slacks()
-        self.assertAlmostEqual(slacks[m.c1], slacks2[m.c1])
-        self.assertAlmostEqual(slacks[m.c2], slacks2[m.c2])
-
-        slacks2 = res.solution_loader.get_slacks([m.c2])
-        self.assertNotIn(m.c1, slacks2)
-        self.assertAlmostEqual(slacks[m.c2], slacks2[m.c2])
