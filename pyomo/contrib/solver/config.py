@@ -141,10 +141,13 @@ class AutoUpdateConfig(ConfigDict):
     check_for_new_or_removed_constraints: bool
     check_for_new_or_removed_vars: bool
     check_for_new_or_removed_params: bool
+    check_for_new_objective: bool
     update_constraints: bool
     update_vars: bool
     update_params: bool
     update_named_expressions: bool
+    update_objective: bool
+    treat_fixed_vars_as_params: bool
     """
 
     def __init__(

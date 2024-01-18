@@ -16,12 +16,15 @@ from pyomo.contrib.solver.config import SolverConfig, BranchAndBoundConfig
 class TestSolverConfig(unittest.TestCase):
     def test_interface_default_instantiation(self):
         config = SolverConfig()
-        self.assertEqual(config._description, None)
+        self.assertIsNone(config._description)
         self.assertEqual(config._visibility, 0)
         self.assertFalse(config.tee)
         self.assertTrue(config.load_solution)
+        self.assertTrue(config.raise_exception_on_nonoptimal_result)
         self.assertFalse(config.symbolic_solver_labels)
-        self.assertFalse(config.report_timing)
+        self.assertIsNone(config.timer)
+        self.assertIsNone(config.threads)
+        self.assertIsNone(config.time_limit)
 
     def test_interface_custom_instantiation(self):
         config = SolverConfig(description="A description")
@@ -31,20 +34,19 @@ class TestSolverConfig(unittest.TestCase):
         self.assertFalse(config.time_limit)
         config.time_limit = 1.0
         self.assertEqual(config.time_limit, 1.0)
+        self.assertIsInstance(config.time_limit, float)
 
 
 class TestBranchAndBoundConfig(unittest.TestCase):
     def test_interface_default_instantiation(self):
         config = BranchAndBoundConfig()
-        self.assertEqual(config._description, None)
+        self.assertIsNone(config._description)
         self.assertEqual(config._visibility, 0)
         self.assertFalse(config.tee)
         self.assertTrue(config.load_solution)
         self.assertFalse(config.symbolic_solver_labels)
-        self.assertFalse(config.report_timing)
-        self.assertEqual(config.rel_gap, None)
-        self.assertEqual(config.abs_gap, None)
-        self.assertFalse(config.relax_integrality)
+        self.assertIsNone(config.rel_gap)
+        self.assertIsNone(config.abs_gap)
 
     def test_interface_custom_instantiation(self):
         config = BranchAndBoundConfig(description="A description")
@@ -54,5 +56,6 @@ class TestBranchAndBoundConfig(unittest.TestCase):
         self.assertFalse(config.time_limit)
         config.time_limit = 1.0
         self.assertEqual(config.time_limit, 1.0)
+        self.assertIsInstance(config.time_limit, float)
         config.rel_gap = 2.5
         self.assertEqual(config.rel_gap, 2.5)

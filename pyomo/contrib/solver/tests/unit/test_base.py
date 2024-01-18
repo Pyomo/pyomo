@@ -19,7 +19,7 @@ class TestSolverBase(unittest.TestCase):
         self.instance = base.SolverBase()
         self.assertFalse(self.instance.is_persistent())
         self.assertEqual(self.instance.version(), None)
-        self.assertEqual(self.instance.config, None)
+        self.assertEqual(self.instance.CONFIG, self.instance.config)
         self.assertEqual(self.instance.solve(None), None)
         self.assertEqual(self.instance.available(), None)
 
@@ -39,18 +39,16 @@ class TestPersistentSolverBase(unittest.TestCase):
         expected_list = [
             'remove_params',
             'version',
-            'config',
             'update_variables',
             'remove_variables',
             'add_constraints',
-            'get_primals',
+            '_get_primals',
             'set_instance',
             'set_objective',
             'update_params',
             'remove_block',
             'add_block',
             'available',
-            'update_config',
             'add_params',
             'remove_constraints',
             'add_variables',
@@ -63,7 +61,6 @@ class TestPersistentSolverBase(unittest.TestCase):
     def test_persistent_solver_base(self):
         self.instance = base.PersistentSolverBase()
         self.assertTrue(self.instance.is_persistent())
-        self.assertEqual(self.instance.update_config, None)
         self.assertEqual(self.instance.set_instance(None), None)
         self.assertEqual(self.instance.add_variables(None), None)
         self.assertEqual(self.instance.add_params(None), None)
@@ -78,13 +75,10 @@ class TestPersistentSolverBase(unittest.TestCase):
         self.assertEqual(self.instance.update_params(), None)
 
         with self.assertRaises(NotImplementedError):
-            self.instance.get_primals()
+            self.instance._get_primals()
 
         with self.assertRaises(NotImplementedError):
-            self.instance.get_duals()
+            self.instance._get_duals()
 
         with self.assertRaises(NotImplementedError):
-            self.instance.get_slacks()
-
-        with self.assertRaises(NotImplementedError):
-            self.instance.get_reduced_costs()
+            self.instance._get_reduced_costs()
