@@ -108,7 +108,7 @@ class ipoptResults(Results):
 
 class ipoptSolutionLoader(SolSolutionLoader):
     def get_reduced_costs(
-        self, vars_to_load: Sequence[_GeneralVarData] | None = None
+        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
     ) -> Mapping[_GeneralVarData, float]:
         if self._nl_info.scaling is None:
             scale_list = [1] * len(self._nl_info.variables)
