@@ -83,7 +83,7 @@ class TestResults(unittest.TestCase):
             'termination_condition',
             'timing_info',
             'solver_log',
-            'solver_configuration'
+            'solver_configuration',
         }
         actual_declared = res._declared
         self.assertEqual(expected_declared, actual_declared)
@@ -166,4 +166,3 @@ class TestResults(unittest.TestCase):
         rc2 = res.solution_loader.get_reduced_costs([m.y])
         self.assertNotIn(m.x, rc2)
         self.assertAlmostEqual(rc[id(m.y)][1], rc2[m.y])
-

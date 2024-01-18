@@ -191,9 +191,7 @@ class Results(ConfigDict):
             visibility=visibility,
         )
 
-        self.solution_loader = self.declare(
-            'solution_loader', ConfigValue()
-        )
+        self.solution_loader = self.declare('solution_loader', ConfigValue())
         self.termination_condition: TerminationCondition = self.declare(
             'termination_condition',
             ConfigValue(
@@ -244,7 +242,9 @@ class Results(ConfigDict):
             ConfigValue(domain=str, default=None, visibility=ADVANCED_OPTION),
         )
 
-    def display(self, content_filter=None, indent_spacing=2, ostream=None, visibility=0):
+    def display(
+        self, content_filter=None, indent_spacing=2, ostream=None, visibility=0
+    ):
         return super().display(content_filter, indent_spacing, ostream, visibility)
 
 

@@ -167,7 +167,9 @@ def parse_sol_file(
                 for cnt in range(nvalues):
                     suf_line = sol_file.readline().split()
                     var_ndx = int(suf_line[0])
-                    sol_data.var_suffixes[suffix_name][var_ndx] = convert_function(suf_line[1])
+                    sol_data.var_suffixes[suffix_name][var_ndx] = convert_function(
+                        suf_line[1]
+                    )
             elif kind == 1:  # Con
                 sol_data.con_suffixes[suffix_name] = dict()
                 for cnt in range(nvalues):
@@ -181,7 +183,9 @@ def parse_sol_file(
                 for cnt in range(nvalues):
                     suf_line = sol_file.readline().split()
                     obj_ndx = int(suf_line[0])
-                    sol_data.obj_suffixes[suffix_name][obj_ndx] = convert_function(suf_line[1])
+                    sol_data.obj_suffixes[suffix_name][obj_ndx] = convert_function(
+                        suf_line[1]
+                    )
             elif kind == 3:  # Prob
                 sol_data.problem_suffixes[suffix_name] = list()
                 for cnt in range(nvalues):

@@ -107,7 +107,9 @@ class ipoptResults(Results):
 
 
 class ipoptSolutionLoader(SolSolutionLoader):
-    def get_reduced_costs(self, vars_to_load: Sequence[_GeneralVarData] | None = None) -> Mapping[_GeneralVarData, float]:
+    def get_reduced_costs(
+        self, vars_to_load: Sequence[_GeneralVarData] | None = None
+    ) -> Mapping[_GeneralVarData, float]:
         if self._nl_info.scaling is None:
             scale_list = [1] * len(self._nl_info.variables)
         else:
@@ -348,11 +350,7 @@ class ipopt(SolverBase):
             if config.tee:
                 ostreams.append(sys.stdout)
             if config.log_solver_output:
-                ostreams.append(
-                    LogStream(
-                        level=logging.INFO, logger=logger
-                    )
-                )
+                ostreams.append(LogStream(level=logging.INFO, logger=logger))
             with TeeStream(*ostreams) as t:
                 timer.start('subprocess')
                 process = subprocess.run(
@@ -484,8 +482,7 @@ class ipopt(SolverBase):
             res.solution_loader = SolutionLoader(None, None, None)
         else:
             res.solution_loader = ipoptSolutionLoader(
-                sol_data=sol_data,
-                nl_info=nl_info,
+                sol_data=sol_data, nl_info=nl_info
             )
 
         return res
