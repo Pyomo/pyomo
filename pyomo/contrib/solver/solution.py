@@ -198,7 +198,7 @@ class SolSolutionLoader(SolutionLoaderBase):
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
     def get_primals(
-        self, vars_to_load: Sequence[_GeneralVarData] | None = None
+        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
     ) -> Mapping[_GeneralVarData, float]:
         if self._nl_info.scaling is None:
             scale_list = [1] * len(self._nl_info.variables)
@@ -226,7 +226,7 @@ class SolSolutionLoader(SolutionLoaderBase):
         return res
 
     def get_duals(
-        self, cons_to_load: Sequence[_GeneralConstraintData] | None = None
+        self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None
     ) -> Dict[_GeneralConstraintData, float]:
         if self._nl_info.scaling is None:
             scale_list = [1] * len(self._nl_info.constraints)
