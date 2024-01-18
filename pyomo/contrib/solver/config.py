@@ -50,6 +50,14 @@ class SolverConfig(ConfigDict):
                 description="If True, the solver log prints to stdout.",
             ),
         )
+        self.log_solver_output: bool = self.declare(
+            'log_solver_output',
+            ConfigValue(
+                domain=bool,
+                default=False,
+                description="If True, the solver output gets logged.",
+            ),
+        )
         self.load_solution: bool = self.declare(
             'load_solution',
             ConfigValue(
