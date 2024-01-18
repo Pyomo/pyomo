@@ -1,12 +1,21 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
+
 from typing import Tuple, Dict, Any, List
 import io
 
-from pyomo.core.base.var import _GeneralVarData
-from pyomo.core.base.constraint import _ConstraintData
-from pyomo.core.base.objective import _ObjectiveData
+from pyomo.common.errors import DeveloperError
 from pyomo.repn.plugins.nl_writer import NLWriterInfo
 from .results import Results, SolverResultsError, SolutionStatus, TerminationCondition
-from pyomo.repn.plugins.nl_writer import AMPLRepn
 
 
 class SolFileData:
@@ -44,20 +53,21 @@ def parse_sol_file(
     if "Options" in line:
         line = sol_file.readline()
         number_of_options = int(line)
-        need_tolerance = False
-        if (
-            number_of_options > 4
-        ):  # MRM: Entirely unclear why this is necessary, or if it even is
-            number_of_options -= 2
-            need_tolerance = True
+        # We are adding in this DeveloperError to see if the alternative case
+        # is ever actually hit in the wild. In a previous iteration of the sol
+        # reader, there was logic to check for the number of options, but it
+        # was uncovered by tests and unclear if actually necessary.
+        if number_of_options > 4:
+            raise DeveloperError(
+                """
+The sol file reader has hit an unexpected error while parsing. The number of
+options recorded is greater than 4. Please report this error to the Pyomo
+developers.
+                                 """
+            )
         for i in range(number_of_options + 4):
             line = sol_file.readline()
             model_objects.append(int(line))
-        if (
-            need_tolerance
-        ):  # MRM: Entirely unclear why this is necessary, or if it even is
-            line = sol_file.readline()
-            model_objects.append(float(line))
     else:
         raise SolverResultsError("ERROR READING `sol` FILE. No 'Options' line found.")
     # Identify the total number of variables and constraints
