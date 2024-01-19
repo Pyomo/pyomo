@@ -220,7 +220,7 @@ def _handle_named_expression(visitor, node, arg):
     return arg
 
 
-def _handle_uknown_expression_type(visitor, node, *args):
+def _handle_unknown_expression_type(visitor, node, *args):
     return -inf, inf
 
 
@@ -239,7 +239,7 @@ _unary_function_dispatcher = {
 
 
 def _default_exitNode():
-    return _handle_uknown_expression_type
+    return _handle_unknown_expression_type
 
 
 _operator_dispatcher = defaultdict(_default_exitNode)
