@@ -28,7 +28,11 @@ from pyomo.contrib.fbbt.interval import (
     sub,
     tan,
 )
-from pyomo.core.base.expression import Expression, _GeneralExpressionData, ScalarExpression
+from pyomo.core.base.expression import (
+    Expression,
+    _GeneralExpressionData,
+    ScalarExpression,
+)
 from pyomo.core.expr.numeric_expr import (
     NegationExpression,
     ProductExpression,
