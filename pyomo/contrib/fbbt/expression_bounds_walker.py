@@ -28,7 +28,7 @@ from pyomo.contrib.fbbt.interval import (
     sub,
     tan,
 )
-from pyomo.core.base.expression import Expression
+from pyomo.core.base.expression import Expression, _GeneralExpressionData, ScalarExpression
 from pyomo.core.expr.numeric_expr import (
     NegationExpression,
     ProductExpression,
@@ -40,10 +40,19 @@ from pyomo.core.expr.numeric_expr import (
     LinearExpression,
     SumExpression,
     ExternalFunctionExpression,
+    NPV_NegationExpression,
+    NPV_ProductExpression,
+    NPV_DivisionExpression,
+    NPV_PowExpression,
+    NPV_AbsExpression,
+    NPV_UnaryFunctionExpression,
+    NPV_SumExpression,
 )
 from pyomo.core.expr.numvalue import native_numeric_types, native_types, value
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
-from pyomo.repn.util import BeforeChildDispatcher, ExitNodeDispatcher
+from pyomo.repn.util import BeforeChildDispatcher
+from collections import defaultdict
+
 
 inf = float('inf')
 
@@ -207,6 +216,10 @@ def _handle_named_expression(visitor, node, arg):
     return arg
 
 
+def _handle_uknown_expression_type(visitor, node, *args):
+    return -inf, inf
+
+
 _unary_function_dispatcher = {
     'exp': _handle_exp,
     'log': _handle_log,
@@ -221,7 +234,12 @@ _unary_function_dispatcher = {
 }
 
 
-_operator_dispatcher = ExitNodeDispatcher(
+def _default_exitNode():
+    return _handle_uknown_expression_type
+
+
+_operator_dispatcher = defaultdict(_default_exitNode)
+_operator_dispatcher.update(
     {
         ProductExpression: _handle_ProductExpression,
         DivisionExpression: _handle_DivisionExpression,
@@ -233,6 +251,15 @@ _operator_dispatcher = ExitNodeDispatcher(
         UnaryFunctionExpression: _handle_UnaryFunctionExpression,
         LinearExpression: _handle_SumExpression,
         Expression: _handle_named_expression,
+        NPV_ProductExpression: _handle_ProductExpression,
+        NPV_DivisionExpression: _handle_DivisionExpression,
+        NPV_PowExpression: _handle_PowExpression,
+        NPV_AbsExpression: _handle_AbsExpression,
+        NPV_SumExpression: _handle_SumExpression,
+        NPV_NegationExpression: _handle_NegationExpression,
+        NPV_UnaryFunctionExpression: _handle_UnaryFunctionExpression,
+        _GeneralExpressionData: _handle_named_expression,
+        ScalarExpression: _handle_named_expression,
     }
 )
 
@@ -280,7 +307,4 @@ class ExpressionBoundsVisitor(StreamBasedExpressionVisitor):
         return _before_child_handlers[child.__class__](self, child)
 
     def exitNode(self, node, data):
-        if node.__class__ in _operator_dispatcher:
-            return _operator_dispatcher[node.__class__](self, node, *data)
-        else:
-            return -inf, inf
+        return _operator_dispatcher[node.__class__](self, node, *data)
