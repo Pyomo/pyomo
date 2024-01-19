@@ -49,7 +49,7 @@ from pyomo.core.base import Constraint
 from datetime import datetime
 
 
-__version__ = "1.2.8"
+__version__ = "1.2.9"
 
 
 default_pyros_solver_logger = setup_pyros_logger()
@@ -990,13 +990,14 @@ class PyROS(object):
             # === Move bounds on control variables to explicit ineq constraints
             wm_util = model_data.working_model
 
-            # === Assuming all other Var objects in the model are state variables
+            # === Every non-fixed variable that is neither first-stage
+            #     nor second-stage is taken to be a state variable
             fsv = ComponentSet(model_data.working_model.util.first_stage_variables)
             ssv = ComponentSet(model_data.working_model.util.second_stage_variables)
             sv = ComponentSet()
             model_data.working_model.util.state_vars = []
             for v in model_data.working_model.component_data_objects(Var):
-                if v not in fsv and v not in ssv and v not in sv:
+                if not v.fixed and v not in fsv | ssv | sv:
                     model_data.working_model.util.state_vars.append(v)
                     sv.add(v)
 
