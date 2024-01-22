@@ -650,6 +650,11 @@ jobs:
         pyomo help --transformations || exit 1
         pyomo help --writers || exit 1
 
+    - name: Run Simplification Tests
+      if: matrix.other == '/singletest'
+      run: |
+        pytest -v -m 'simplification' pyomo.contrib.simplification/tests/test_simplification.py --junitxml="TEST-pyomo-simplify.xml"
+
     - name: Run Pyomo tests
       if: matrix.mpi == 0
       run: |
@@ -657,11 +662,6 @@ jobs:
             -W ignore::Warning ${{matrix.category}} \
             pyomo `pwd`/pyomo-model-libraries \
             `pwd`/examples `pwd`/doc --junitxml="TEST-pyomo.xml"
-
-    - name: Run Simplification Tests
-      if: matrix.other == '/singletest'
-      run: |
-        pytest -v -m 'simplification' pyomo.contrib.simplification/tests/test_simplification.py --junitxml="TEST-pyomo-simplify.xml"
 
     - name: Run Pyomo MPI tests
       if: matrix.mpi != 0
