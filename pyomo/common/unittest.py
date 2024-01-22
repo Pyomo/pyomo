@@ -555,6 +555,20 @@ class TestCase(_unittest.TestCase):
         context = contextClass(expected_exception, self, expected_regex)
         return context.handle('assertRaisesRegex', args, kwargs)
 
+    def assertExpressionsEqual(self, a, b, include_named_exprs=True, places=None):
+        from pyomo.core.expr.compare import assertExpressionsEqual
+
+        return assertExpressionsEqual(self, a, b, include_named_exprs, places)
+
+    def assertExpressionsStructurallyEqual(
+        self, a, b, include_named_exprs=True, places=None
+    ):
+        from pyomo.core.expr.compare import assertExpressionsStructurallyEqual
+
+        return assertExpressionsStructurallyEqual(
+            self, a, b, include_named_exprs, places
+        )
+
 
 class BaselineTestDriver(object):
     """Generic driver for performing baseline tests in bulk
