@@ -6,6 +6,7 @@ import warnings
 
 try:
     from pyomo.contrib.simplification.ginac_interface import GinacInterface
+
     ginac_available = True
 except:
     GinacInterface = None
