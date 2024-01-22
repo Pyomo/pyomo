@@ -657,7 +657,7 @@ jobs:
         $PYTHON_EXE -c "from pyomo.contrib.simplification.simplify import ginac_available; print(ginac_available)"
         pytest -v -m 'simplification' pyomo/contrib/simplification/tests/test_simplification.py
         $PYTHON_EXE -m pytest -v \
-            -W ignore::Warning ${{matrix.category}} \
+            ${{matrix.category}} \
             pyomo `pwd`/pyomo-model-libraries \
             `pwd`/examples `pwd`/doc --junitxml="TEST-pyomo.xml"
 
