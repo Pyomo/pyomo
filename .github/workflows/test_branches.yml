@@ -97,7 +97,7 @@ jobs:
         - os: ubuntu-latest
           python: 3.11
           other: /singletest
-          category: "-m 'simplification'"
+          category: "-m 'neos or importtest or simplification'"
           skip_doctest: 1
           TARGET: linux
           PYENV: pip
@@ -653,11 +653,8 @@ jobs:
     - name: Run Pyomo tests
       if: matrix.mpi == 0
       run: |
-        $PYTHON_EXE -c "from pyomo.contrib.simplification.ginac_interface import GinacInterface; print(GinacInterface)"
-        $PYTHON_EXE -c "from pyomo.contrib.simplification.simplify import ginac_available; print(ginac_available)"
-        pytest -v -m 'simplification' pyomo/contrib/simplification/tests/test_simplification.py
-        $PYTHON_EXE -m pytest -v \
-            ${{matrix.category}} \
+        pytest -v \
+            -W ignore::Warning ${{matrix.category}} \
             pyomo `pwd`/pyomo-model-libraries \
             `pwd`/examples `pwd`/doc --junitxml="TEST-pyomo.xml"
 
