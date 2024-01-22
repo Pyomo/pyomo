@@ -192,6 +192,9 @@ class DivingHeuristic(pybnb.Problem):
                 v.unfix()
 
     def branch(self):
+        if len(self.bin_and_int_vars) == 0:
+            return pybnb.Node()
+
         xl, xu, _ = self.get_state()
         dist_list = [(abs(v.value - round(v.value)), ndx) for ndx, v in enumerate(self.bin_and_int_vars)]
         dist_list.sort(key=lambda i: i[0], reverse=True)
