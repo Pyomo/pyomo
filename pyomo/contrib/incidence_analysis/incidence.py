@@ -20,7 +20,8 @@ from pyomo.repn.plugins.nl_writer import AMPLRepnVisitor, AMPLRepn, text_nl_temp
 from pyomo.repn.util import FileDeterminism, FileDeterminism_to_SortComponents
 from pyomo.util.subsystems import TemporarySubsystemManager
 from pyomo.contrib.incidence_analysis.config import (
-    IncidenceMethod, get_config_from_kwds
+    IncidenceMethod,
+    get_config_from_kwds,
 )
 
 
