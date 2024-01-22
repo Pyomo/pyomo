@@ -98,7 +98,7 @@ def relax_integers(binary_vars: Sequence[_GeneralVarData], integer_vars: Sequenc
 
 
 def impose_structure(m):
-    m.aux_vars = pe.VarList()
+    m.aux_vars_structure = pe.VarList()
 
     for key, c in list(m.nonlinear.cons.items()):
         repn: StandardRepn = generate_standard_repn(c.body, quadratic=False, compute_values=True)
@@ -109,7 +109,7 @@ def impose_structure(m):
         linear_coefs = list(repn.linear_coefs)
         linear_vars = list(repn.linear_vars)
         for term in expr_list:
-            v = m.aux_vars.add()
+            v = m.aux_vars_structure.add()
             linear_coefs.append(1)
             linear_vars.append(v)
             m.vars.append(v)
@@ -151,7 +151,7 @@ class _BnB(pybnb.Problem):
         # we can identify things like x**3 is convex because
         # x >= 0
         self.interval_tightener = it = appsi.fbbt.IntervalTightener()
-        it.config.deactivate_satisfied_constraints = True
+        it.config.deactivate_satisfied_constraints = False
         it.config.feasibility_tol = config.feasibility_tol
         if feasible_objective is not None:
             if obj.sense == pe.minimize:
@@ -164,6 +164,7 @@ class _BnB(pybnb.Problem):
 
         impose_structure(relaxation)
         #find_cut_generators(relaxation)
+        self._do_not_use = relaxation
         self.relaxation = relaxation = relax(relaxation)
         self.relaxation_objects = list()
         for r in iterators.relaxation_data_objects(relaxation, descend_into=True, active=True):
@@ -186,6 +187,7 @@ class _BnB(pybnb.Problem):
         var_set = ComponentSet(self.binary_vars + self.integer_vars + self.rhs_vars)
         other_vars = ComponentSet(i for i in nlp.vars if i not in var_set)
         other_vars.update(i for i in relaxation.aux_vars.values() if i not in var_set)
+        other_vars.update(i for i in self._do_not_use.aux_vars_structure.values() if i not in var_set)
         self.other_vars = other_vars = list(other_vars)
 
         self.all_branching_vars = list(binary_vars) + list(integer_vars) + list(self.rhs_vars)
@@ -231,6 +233,10 @@ class _BnB(pybnb.Problem):
         # Do FBBT
         for r in self.relaxation_objects:
             r.rebuild(build_nonlinear_constraint=True)
+            for v in self.binary_vars:
+                v.domain = pe.Binary
+            for v in self.integer_vars:
+                v.domain = pe.Integers
         try:
             self.interval_tightener.perform_fbbt(self.relaxation)
         except InfeasibleConstraintException:
@@ -238,6 +244,8 @@ class _BnB(pybnb.Problem):
         finally:
             for r in self.relaxation_objects:
                 r.rebuild()
+            for v in self.bin_and_int_vars:
+                v.domain = pe.Reals
 
         # solve the relaxation
         res = self.config.lp_solver.solve(self.relaxation)
@@ -265,7 +273,7 @@ class _BnB(pybnb.Problem):
                 break
 
         # save the variable values to reload later
-            self.relaxation_solution = res.solution_loader.get_primals()
+        self.relaxation_solution = res.solution_loader.get_primals()
 
         # if the solution is feasible, we are done
         is_feasible = True
@@ -363,8 +371,8 @@ class _BnB(pybnb.Problem):
         xu = list()
 
         for v in self.bin_and_int_vars:
-            xl.append(math.ceil(v.lb))
-            xu.append(math.floor(v.ub))
+            xl.append(math.ceil(v.lb - self.config.integer_tol))
+            xu.append(math.floor(v.ub + self.config.integer_tol))
 
         for v in self.rhs_vars + self.other_vars:
             lb, ub = v.bounds
