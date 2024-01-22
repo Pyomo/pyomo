@@ -69,45 +69,16 @@ class _ReconstructVisitor:
     pass
 
 
-def _amplrepnvisitor_validator(visitor=_ReconstructVisitor):
-    # This checks for and returns a valid AMPLRepnVisitor, but I don't want
-    # to construct this if we're not using IncidenceMethod.ampl_repn.
-    # It is not necessarily the end of the world if we construct this, however,
-    # as the code should still work.
-    if visitor is _ReconstructVisitor:
-        subexpression_cache = {}
-        subexpression_order = []
-        external_functions = {}
-        var_map = {}
-        used_named_expressions = set()
-        symbolic_solver_labels = False
-        # TODO: Explore potential performance benefit of exporting defined variables.
-        # This likely only shows up if we can preserve the subexpression cache across
-        # multiple constraint expressions.
-        export_defined_variables = False
-        sorter = FileDeterminism_to_SortComponents(FileDeterminism.ORDERED)
-        amplvisitor = AMPLRepnVisitor(
-            text_nl_template,
-            subexpression_cache,
-            subexpression_order,
-            external_functions,
-            var_map,
-            used_named_expressions,
-            symbolic_solver_labels,
-            export_defined_variables,
-            sorter,
-        )
-    elif not isinstance(visitor, AMPLRepnVisitor):
+def _amplrepnvisitor_validator(visitor):
+    if not isinstance(visitor, AMPLRepnVisitor):
         raise TypeError(
             "'visitor' config argument should be an instance of AMPLRepnVisitor"
         )
-    else:
-        amplvisitor = visitor
-    return amplvisitor
+    return visitor
 
 
 _ampl_repn_visitor = ConfigValue(
-    default=_ReconstructVisitor,
+    default=None,
     domain=_amplrepnvisitor_validator,
     description="Visitor used to generate AMPLRepn of each constraint",
 )
@@ -141,14 +112,14 @@ class _IncidenceConfigDict(ConfigDict):
 
         if (
             new.method == IncidenceMethod.ampl_repn
-            and "ampl_repn_visitor" not in init_value
+            and "_ampl_repn_visitor" not in init_value
         ):
-            new.ampl_repn_visitor = _ReconstructVisitor
+            new._ampl_repn_visitor = _ReconstructVisitor
 
         return new
 
 
-IncidenceConfig = _IncidenceConfigDict()
+IncidenceConfig = ConfigDict()
 """Options for incidence graph generation
 
 - ``include_fixed`` -- Flag indicating whether fixed variables should be included
@@ -157,8 +128,9 @@ IncidenceConfig = _IncidenceConfigDict()
   should be included.
 - ``method`` -- Method used to identify incident variables. Must be a value of the
   ``IncidenceMethod`` enum.
-- ``ampl_repn_visitor`` -- Expression visitor used to generate ``AMPLRepn`` of each
-  constraint. Must be an instance of ``AMPLRepnVisitor``.
+- ``_ampl_repn_visitor`` -- Expression visitor used to generate ``AMPLRepn`` of each
+  constraint. Must be an instance of ``AMPLRepnVisitor``. *This option is constructed
+  automatically when needed and should not be set by users!*
 
 """
 
@@ -172,4 +144,44 @@ IncidenceConfig.declare("linear_only", _linear_only)
 IncidenceConfig.declare("method", _method)
 
 
-IncidenceConfig.declare("ampl_repn_visitor", _ampl_repn_visitor)
+IncidenceConfig.declare("_ampl_repn_visitor", _ampl_repn_visitor)
+
+
+def get_config_from_kwds(**kwds):
+    """Get an instance of IncidenceConfig from provided keyword arguments.
+
+    If the ``method`` argument is ``IncidenceMethod.ampl_repn`` and no
+    ``AMPLRepnVisitor`` has been provided, a new ``AMPLRepnVisitor`` is
+    constructed. This function should generally be used by callers such
+    as ``IncidenceGraphInterface`` to ensure that a visitor is created then
+    re-used when calling ``get_incident_variables`` in a loop.
+
+    """
+    if (
+        kwds.get("method", None) is IncidenceMethod.ampl_repn
+        and kwds.get("_ampl_repn_visitor", None) is None
+    ):
+        subexpression_cache = {}
+        subexpression_order = []
+        external_functions = {}
+        var_map = {}
+        used_named_expressions = set()
+        symbolic_solver_labels = False
+        # TODO: Explore potential performance benefit of exporting defined variables.
+        # This likely only shows up if we can preserve the subexpression cache across
+        # multiple constraint expressions.
+        export_defined_variables = False
+        sorter = FileDeterminism_to_SortComponents(FileDeterminism.ORDERED)
+        amplvisitor = AMPLRepnVisitor(
+            text_nl_template,
+            subexpression_cache,
+            subexpression_order,
+            external_functions,
+            var_map,
+            used_named_expressions,
+            symbolic_solver_labels,
+            export_defined_variables,
+            sorter,
+        )
+        kwds["_ampl_repn_visitor"] = amplvisitor
+    return IncidenceConfig(kwds)
