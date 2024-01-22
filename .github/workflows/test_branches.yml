@@ -652,7 +652,7 @@ jobs:
     - name: Run Simplification Tests
       if: matrix.other == '/singletest'
       run: |
-        pytest -v -m 'simplification' pyomo.contrib.simplification/tests/test_simplification.py --junitxml="TEST-pyomo-simplify.xml"
+        pytest -v -m 'simplification' pyomo/contrib/simplification/tests/test_simplification.py --junitxml="TEST-pyomo-simplify.xml"
 
     - name: Run Pyomo tests
       if: matrix.mpi == 0
