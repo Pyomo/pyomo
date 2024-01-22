@@ -158,7 +158,7 @@ def _single_solve(
     else:
         new_bnd = None
         msg = f'Warning: Bounds tightening for lb for var {str(v)} was unsuccessful. Termination condition: {results.termination_condition}; The lb was not changed.'
-        logger.warning(msg)
+        logger.debug(msg)
 
     if lb_or_ub == 'lb':
         orig_lb = pyo.value(v.lb)

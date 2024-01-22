@@ -368,6 +368,10 @@ def _relax_convex_pow(
     else:
         arg1 = replace_sub_expression_with_aux_var(arg1, parent_block)
         _x = arg1
+        assert type(arg2) in {int, float}
+        if round(arg2) != arg2:
+            if arg1.lb is None or arg1.lb < 0:
+                arg1.setlb(0)
     degree_map[_aux_var] = 1
     relaxation = PWUnivariateRelaxation()
     relaxation.set_input(
@@ -423,7 +427,7 @@ def _relax_leaf_to_root_PowExpression(
                 degree_map[res] = 0
                 return res
             if not is_constant(arg2):
-                logger.warning(
+                logger.debug(
                     'Only constant exponents are supported: '
                     + str(arg1**arg2)
                     + '\nReplacing '
@@ -556,7 +560,6 @@ def _relax_leaf_to_root_PowExpression(
                         degree_map[res] = 1
                         return res
                 else:
-                    assert compute_float_bounds_on_expr(arg1)[0] >= 0
                     return _relax_convex_pow(
                         arg1=arg1,
                         arg2=arg2,
@@ -568,7 +571,7 @@ def _relax_leaf_to_root_PowExpression(
                     )
         elif degree1 == 0:
             if not is_constant(arg1):
-                logger.warning(
+                logger.debug(
                     'Found {0} raised to a variable power. However, {0} does not appear to be constant (maybe '
                     'it is or depends on a mutable Param?). Replacing {0} with its value.'.format(
                         str(arg1)
