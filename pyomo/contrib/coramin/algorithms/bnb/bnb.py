@@ -327,7 +327,13 @@ class _BnB(pybnb.Problem):
             return self.infeasible_objective()
         unfixed_vars = [v for v in self.bin_and_int_vars if not v.is_fixed()]
         for v in unfixed_vars:
-            v.fix(round(v.value))
+            val = round(v.value)
+            if val < v.lb:
+                val += 1
+            if val > v.ub:
+                val -= 1
+            assert v.lb <= val <= v.ub
+            v.fix(val)
         try:
             res = self.config.nlp_solver.solve(self.nlp, load_solutions=False, skip_trivial_constraints=True, tee=False)
             success = True
