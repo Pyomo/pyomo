@@ -3,6 +3,7 @@ from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.base.block import _BlockData
 from pyomo.common.modeling import unique_component_name
 import pyomo.environ as pe
+from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.contrib import appsi
@@ -18,7 +19,7 @@ from pyomo.core.base.block import _BlockData
 from pyomo.core.base.var import _GeneralVarData
 from pyomo.contrib.coramin.heuristics.diving import run_diving_heuristic
 from pyomo.contrib.coramin.domain_reduction.obbt import perform_obbt
-from typing import Tuple, List, Sequence
+from typing import Tuple, List, Sequence, Optional
 import math
 import numpy as np
 import logging
@@ -73,6 +74,8 @@ class BnBConfig(MIPSolverConfig):
         self.integer_tol = self.declare("integer_tol", ConfigValue(default=1e-4))
         self.node_limit = self.declare("node_limit", ConfigValue(default=1000000000))
         self.mip_gap = 1e-3
+        self.num_root_obbt_iters = self.declare("num_root_obbt_iters", ConfigValue(default=3))
+        self.node_obbt_frequency = self.declare("node_obbt_frequency", ConfigValue(default=2))
 
 
 def collect_vars(m: _BlockData) -> Tuple[List[_GeneralVarData], List[_GeneralVarData]]:
@@ -116,8 +119,8 @@ def impose_structure(m):
         del m.nonlinear.cons[key]
 
 
-def _fix_vars_with_close_bounds(m, tol=1e-12):
-    for v in m.vars:
+def _fix_vars_with_close_bounds(varlist, tol=1e-12):
+    for v in varlist:
         if v.is_fixed():
             v.setlb(v.value)
             v.setub(v.value)
@@ -136,10 +139,9 @@ class _BnB(pybnb.Problem):
         relaxation: _BlockData = relaxation
         self.config = config
         self.config.lp_solver.config.load_solution = False
-        self.config.lp_solver.update_config.treat_fixed_vars_as_params = True
-        self.config.nlp_solver.config.load_solution = False
+        self.relaxation_solution = None
 
-        obj = get_objective(nlp)
+        self.obj = obj = get_objective(nlp)
         if obj.sense == pe.minimize:
             self._sense = pybnb.minimize
         else:
@@ -158,7 +160,7 @@ class _BnB(pybnb.Problem):
                 relaxation.obj_ineq = pe.Constraint(expr=obj.expr >= feasible_objective)
         it.perform_fbbt(relaxation)
         del relaxation.obj_ineq
-        _fix_vars_with_close_bounds(relaxation)
+        _fix_vars_with_close_bounds(relaxation.vars)
 
         impose_structure(relaxation)
         #find_cut_generators(relaxation)
@@ -166,6 +168,8 @@ class _BnB(pybnb.Problem):
         self.relaxation_objects = list()
         for r in iterators.relaxation_data_objects(relaxation, descend_into=True, active=True):
             self.relaxation_objects.append(r)
+            r.rebuild(build_nonlinear_constraint=True)
+        self.interval_tightener.perform_fbbt(self.relaxation)
 
         binary_vars, integer_vars = collect_vars(nlp)
         relax_integers(binary_vars, integer_vars)
@@ -191,20 +195,51 @@ class _BnB(pybnb.Problem):
         self.current_node: Optional[pybnb.Node] = None
         self.feasible_objective = feasible_objective
 
-        for iter in range(3):
+        if self._sense == pybnb.minimize:
+            if self.feasible_objective is None:
+                feasible_objective = math.inf
+            else:
+                feasible_objective = self.feasible_objective
+            feasible_objective += abs(feasible_objective) * 1e-3 + 1e-3
+        else:
+            if self.feasible_objective is None:
+                feasible_objective = -math.inf
+            else:
+                feasible_objective = self.feasible_objective
+            feasible_objective -= abs(feasible_objective) * 1e-3 + 1e-3
+
+        for _ in range(self.config.num_root_obbt_iters):
+            for r in self.relaxation_objects:
+                r.rebuild()
             perform_obbt(
                 relaxation,
                 solver=self.config.lp_solver,
                 varlist=list(self.rhs_vars),
                 objective_bound=feasible_objective,
+                parallel=False,
             )
             for r in self.relaxation_objects:
-                r.rebuild()
+                r.rebuild(build_nonlinear_constraint=True)
+            self.interval_tightener.perform_fbbt(self.relaxation)
+        for r in self.relaxation_objects:
+            r.rebuild()
 
     def sense(self):
         return self._sense
 
     def bound(self):
+        # Do FBBT
+        for r in self.relaxation_objects:
+            r.rebuild(build_nonlinear_constraint=True)
+        try:
+            self.interval_tightener.perform_fbbt(self.relaxation)
+        except InfeasibleConstraintException:
+            return self.infeasible_objective()
+        finally:
+            for r in self.relaxation_objects:
+                r.rebuild()
+
+        # solve the relaxation
         res = self.config.lp_solver.solve(self.relaxation)
         if res.termination_condition == appsi.base.TerminationCondition.infeasible:
             return self.infeasible_objective()
@@ -212,6 +247,7 @@ class _BnB(pybnb.Problem):
             raise RuntimeError(f"Cannot handle termination condition {res.termination_condition} when solving relaxation")
         res.solution_loader.load_vars()
 
+        # add OA cuts for convex constraints
         while True:
             added_cuts = False
             for r in self.relaxation_objects:
@@ -227,6 +263,9 @@ class _BnB(pybnb.Problem):
                 res.solution_loader.load_vars()
             else:
                 break
+
+        # save the variable values to reload later
+            self.relaxation_solution = res.solution_loader.get_primals()
 
         # if the solution is feasible, we are done
         is_feasible = True
@@ -245,7 +284,7 @@ class _BnB(pybnb.Problem):
             return res.best_feasible_objective
 
         # maybe do OBBT
-        if self.current_node.tree_depth % 2 == 0 and self.current_node.tree_depth != 0:
+        if self.current_node.tree_depth % self.config.node_obbt_frequency == 0 and self.current_node.tree_depth != 0:
             should_obbt = True
             if self._sense == pybnb.minimize:
                 if self.feasible_objective is None:
@@ -271,9 +310,13 @@ class _BnB(pybnb.Problem):
                     solver=self.config.lp_solver,
                     varlist=list(self.rhs_vars),
                     objective_bound=feasible_objective,
+                    parallel=False,
                 )
                 for r in self.relaxation_objects:
                     r.rebuild()
+                res = self.config.lp_solver.solve(self.relaxation)
+                res.solution_loader.load_vars()
+                self.relaxation_solution = res.solution_loader.get_primals()
 
         return res.best_objective_bound
 
@@ -283,29 +326,30 @@ class _BnB(pybnb.Problem):
         if self.current_node.tree_depth % 10 != 0:
             return self.infeasible_objective()
         unfixed_vars = [v for v in self.bin_and_int_vars if not v.is_fixed()]
-        vals = [v.value for v in unfixed_vars]
         for v in unfixed_vars:
             v.fix(round(v.value))
-        res = self.config.nlp_solver.solve(self.nlp)
-        if res.best_feasible_objective is None:
+        try:
+            res = self.config.nlp_solver.solve(self.nlp, load_solutions=False, skip_trivial_constraints=True, tee=False)
+            success = True
+        except:
+            success = False
+        if not success or not pe.check_optimal_termination(res):
             ret = self.infeasible_objective()
         else:
-            ret = res.best_feasible_objective
+            self.nlp.solutions.load_from(res)
+            ret = pe.value(self.obj.expr)
             if self.sense == pybnb.minimize:
                 if ret < self.feasible_objective:
                     self.feasible_objective = ret
             else:
                 if ret > self.feasible_objective:
                     self.feasible_objective = ret
-            res.solution_loader.load_vars()
             orig_vars = ComponentSet(self.nlp.vars)
             sol = np.array([v.value for v in self.all_vars], dtype=float)
             xl, xu, _, _ = self.current_node.state
             self.current_node.state = (xl, xu, sol, ret)
-        for v, val in zip(unfixed_vars, vals):
+        for v in unfixed_vars:
             v.unfix()
-            # we have to restore the values so that branch() works properly
-            v.set_value(val, skip_validation=True)
         return ret
 
     def get_state(self):
@@ -352,16 +396,19 @@ class _BnB(pybnb.Problem):
             else:
                 v.setub(None)
 
-            if lb == ub:
-                v.fix(lb)
-            else:
-                v.unfix()
+            v.unfix()
+
+        _fix_vars_with_close_bounds(self.all_vars)
 
         for r in self.relaxation_objects:
             r.rebuild()
 
     def branch(self):
         xl, xu, _, _ = self.get_state()
+
+        # relaod the solution to the relaxation to make sure branching happens correctly
+        for v, val in self.relaxation_solution.items():
+            v.set_value(val, skip_validation=True)
 
         var_to_branch_on = None
         max_viol = 0
@@ -408,7 +455,7 @@ class _BnB(pybnb.Problem):
 def solve_with_bnb(model: _BlockData, config: BnBConfig, comm=None):
     # we don't want to modify the original model
     model, orig_var_map = _get_clone_and_var_map(model)
-    diving_obj, diving_sol = run_diving_heuristic(model, config.nlp_solver, config.feasibility_tol, config.integer_tol)
+    diving_obj, diving_sol = run_diving_heuristic(model, config.feasibility_tol, config.integer_tol)
     prob = _BnB(model, config, feasible_objective=diving_obj)
     res: pybnb.SolverResults = pybnb.solve(
         prob,
