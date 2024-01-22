@@ -42,9 +42,9 @@ class Test(unittest.TestCase):
     def setUpClass(cls):
         global ipopt_available
         import pyomo.environ
-        from pyomo.solvers.tests.solvers import test_solver_cases
+        from pyomo.solvers.tests.solvers import test_solver_cases as _test_solver_cases
 
-        ipopt_available = test_solver_cases('ipopt', 'nl').available
+        ipopt_available = _test_solver_cases('ipopt', 'nl').available
 
     def setUp(self):
         if not ipopt_available:
