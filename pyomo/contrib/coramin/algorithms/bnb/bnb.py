@@ -9,7 +9,7 @@ from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.contrib import appsi
 from pyomo.common.config import ConfigDict, ConfigValue, PositiveFloat
 from pyomo.contrib.coramin.clone import clone_active_flat
-from pyomo.contrib.coramin.relaxations.auto_relax import relax
+from pyomo.contrib.coramin.relaxations.auto_relax import _relax_cloned_model
 from pyomo.repn.standard_repn import generate_standard_repn, StandardRepn
 from pyomo.contrib.coramin.relaxations.split_expr import split_expr
 from pyomo.core.expr.numeric_expr import LinearExpression
@@ -98,7 +98,7 @@ def relax_integers(binary_vars: Sequence[_GeneralVarData], integer_vars: Sequenc
 
 
 def impose_structure(m):
-    m.aux_vars_structure = pe.VarList()
+    m.aux_vars = pe.VarList()
 
     for key, c in list(m.nonlinear.cons.items()):
         repn: StandardRepn = generate_standard_repn(c.body, quadratic=False, compute_values=True)
@@ -109,7 +109,7 @@ def impose_structure(m):
         linear_coefs = list(repn.linear_coefs)
         linear_vars = list(repn.linear_vars)
         for term in expr_list:
-            v = m.aux_vars_structure.add()
+            v = m.aux_vars.add()
             linear_coefs.append(1)
             linear_vars.append(v)
             m.vars.append(v)
@@ -136,7 +136,7 @@ class _BnB(pybnb.Problem):
         # remove all parameters, fixed variables, etc.
         nlp, relaxation = clone_active_flat(model, 2)
         self.nlp: _BlockData = nlp
-        relaxation: _BlockData = relaxation
+        self.relaxation: _BlockData = relaxation
         self.config = config
         self.config.lp_solver.config.load_solution = False
         self.relaxation_solution = None
@@ -164,8 +164,7 @@ class _BnB(pybnb.Problem):
 
         impose_structure(relaxation)
         #find_cut_generators(relaxation)
-        self._do_not_use = relaxation
-        self.relaxation = relaxation = relax(relaxation)
+        _relax_cloned_model(relaxation)
         self.relaxation_objects = list()
         for r in iterators.relaxation_data_objects(relaxation, descend_into=True, active=True):
             self.relaxation_objects.append(r)
@@ -185,9 +184,7 @@ class _BnB(pybnb.Problem):
         self.rhs_vars = list(ComponentSet(self.rhs_vars) - int_var_set)
 
         var_set = ComponentSet(self.binary_vars + self.integer_vars + self.rhs_vars)
-        other_vars = ComponentSet(i for i in nlp.vars if i not in var_set)
-        other_vars.update(i for i in relaxation.aux_vars.values() if i not in var_set)
-        other_vars.update(i for i in self._do_not_use.aux_vars_structure.values() if i not in var_set)
+        other_vars = ComponentSet(i for i in relaxation.vars if i not in var_set)
         self.other_vars = other_vars = list(other_vars)
 
         self.all_branching_vars = list(binary_vars) + list(integer_vars) + list(self.rhs_vars)
@@ -289,6 +286,9 @@ class _BnB(pybnb.Problem):
                     is_feasible = False
                     break
         if is_feasible:
+            sol = np.array([v.value for v in self.all_vars], dtype=float)
+            xl, xu, _, _ = self.current_node.state
+            self.current_node.state = (xl, xu, sol, res.best_feasible_objective)
             return res.best_feasible_objective
 
         # maybe do OBBT
@@ -358,7 +358,6 @@ class _BnB(pybnb.Problem):
             else:
                 if ret > self.feasible_objective:
                     self.feasible_objective = ret
-            orig_vars = ComponentSet(self.nlp.vars)
             sol = np.array([v.value for v in self.all_vars], dtype=float)
             xl, xu, _, _ = self.current_node.state
             self.current_node.state = (xl, xu, sol, ret)

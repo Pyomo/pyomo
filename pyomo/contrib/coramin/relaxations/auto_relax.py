@@ -49,6 +49,7 @@ from typing import MutableMapping, Tuple, Union, Optional
 from pyomo.core.base.block import _BlockData
 from .iterators import relaxation_data_objects
 from pyomo.contrib.coramin.utils.pyomo_utils import get_objective
+from pyomo.contrib.coramin.clone import clone_active_flat
 
 
 logger = logging.getLogger(__name__)
@@ -107,7 +108,8 @@ def replace_sub_expression_with_aux_var(arg, parent_block):
         return arg
     elif arg.is_expression_type():
         _var = parent_block.aux_vars.add()
-        _con = parent_block.aux_cons.add(_var == arg)
+        parent_block.vars.append(_var)
+        _con = parent_block.linear.cons.add(_var == arg)
         fbbt(_con)
         return _var
     else:
@@ -116,6 +118,7 @@ def replace_sub_expression_with_aux_var(arg, parent_block):
 
 def _get_aux_var(parent_block, expr):
     _aux_var = parent_block.aux_vars.add()
+    parent_block.vars.append(_aux_var)
     lb, ub = compute_bounds_on_expr(expr)
     _aux_var.setlb(lb)
     _aux_var.setub(ub)
@@ -1433,7 +1436,7 @@ def _relax_expr_with_convexity_check(
         if is_constant(linking_expr):
             assert value(linking_expr) == 0
         else:
-            parent_block.aux_cons.add(linking_repn.to_expression() == 0)
+            parent_block.linear.cons.add(linking_repn.to_expression() == 0)
         res = res_list[0]
         relaxation_side_map[orig_expr] = RelaxationSide.BOTH
     else:
@@ -1463,44 +1466,27 @@ def _relax_expr_with_convexity_check(
     return res
 
 
-def relax(
-    model,
-    descend_into=True,
-):
+def _relax_cloned_model(m):
     """
     Create a convex relaxation of the model.
 
     Parameters
     ----------
-    model: pyomo.core.base.block._BlockData or pyomo.core.base.PyomoModel.ConcreteModel
-        The model or block to be relaxed
-    descend_into: type or tuple of type, optional
-        The types of pyomo components that should be checked for constraints to be relaxed. The
-        default is (Block, Disjunct).
-
-    Returns
-    -------
     m: pyomo.core.base.block._BlockData or pyomo.core.base.PyomoModel.ConcreteModel
-        The relaxed model
+        The model or block to be relaxed
     """
-    m = pe.Block(concrete=True)
-    m.cons = pe.ConstraintList()
     if not hasattr(m, 'aux_vars'):
         m.aux_vars = pe.VarList()
     m.relaxations = pe.Block()
-    m.aux_cons = pe.ConstraintList()
 
     aux_var_map = dict()
     degree_map = ComponentMap()
     counter = RelaxationCounter()
 
-    for c in nonrelaxation_component_data_objects(
-        model, ctype=Constraint, active=True, descend_into=descend_into,
-    ):
+    for c in m.nonlinear.cons.values():
         repn = generate_standard_repn(c.body, quadratic=False, compute_values=True)
-        if repn.nonlinear_expr is None:
-            m.cons.add((c.lb, c.body, c.ub))
-            continue
+        assert len(repn.quadratic_vars) == 0
+        assert repn.nonlinear_expr is not None
 
         cl, cu = c.lb, c.ub
         if cl is not None and cu is not None:
@@ -1514,6 +1500,40 @@ def relax(
                 'Encountered a constraint without a lower or an upper bound: ' + str(c)
             )
 
+        if len(repn.linear_vars) > 0:
+            new_body = numeric_expr.LinearExpression(
+                constant=repn.constant,
+                linear_coefs=repn.linear_coefs,
+                linear_vars=repn.linear_vars,
+            )
+        else:
+            new_body = repn.constant
+
+        relaxation_side_map = ComponentMap()
+        relaxation_side_map[repn.nonlinear_expr] = relaxation_side
+
+        new_body += _relax_expr(
+            expr=repn.nonlinear_expr,
+            aux_var_map=aux_var_map,
+            parent_block=m,
+            relaxation_side_map=relaxation_side_map,
+            counter=counter,
+            degree_map=degree_map,
+        )
+        m.linear.cons.add((cl, new_body, cu))
+
+    if hasattr(m.nonlinear, 'obj'):
+        obj = m.nonlinear.obj
+        if obj.sense == pe.minimize:
+            relaxation_side = RelaxationSide.UNDER
+        elif obj.sense == pe.maximize:
+            relaxation_side = RelaxationSide.OVER
+        else:
+            raise ValueError(
+                'Encountered an objective with an unrecognized sense: ' + str(obj)
+            )
+
+        repn = generate_standard_repn(obj.expr, quadratic=False, compute_values=True)
         assert len(repn.quadratic_vars) == 0
         assert repn.nonlinear_expr is not None
         if len(repn.linear_vars) > 0:
@@ -1536,67 +1556,30 @@ def relax(
             counter=counter,
             degree_map=degree_map,
         )
-        m.cons.add((cl, new_body, cu))
+        m.linear.obj = pe.Objective(expr=new_body, sense=obj.sense)
 
-    obj = get_objective(model)
-    if obj is not None:
-        degree = polynomial_degree(obj.expr)
-        if degree is None or degree > 1:
-            if obj.sense == pe.minimize:
-                relaxation_side = RelaxationSide.UNDER
-            elif obj.sense == pe.maximize:
-                relaxation_side = RelaxationSide.OVER
-            else:
-                raise ValueError(
-                    'Encountered an objective with an unrecognized sense: ' + str(obj)
-                )
-
-            repn = generate_standard_repn(obj.expr, quadratic=False, compute_values=True)
-            assert len(repn.quadratic_vars) == 0
-            assert repn.nonlinear_expr is not None
-            if len(repn.linear_vars) > 0:
-                new_body = numeric_expr.LinearExpression(
-                    constant=repn.constant,
-                    linear_coefs=repn.linear_coefs,
-                    linear_vars=repn.linear_vars,
-                )
-            else:
-                new_body = repn.constant
-
-            relaxation_side_map = ComponentMap()
-            relaxation_side_map[repn.nonlinear_expr] = relaxation_side
-
-            new_body += _relax_expr(
-                expr=repn.nonlinear_expr,
-                aux_var_map=aux_var_map,
-                parent_block=m,
-                relaxation_side_map=relaxation_side_map,
-                counter=counter,
-                degree_map=degree_map,
-            )
-            m.obj = pe.Objective(expr=new_body, sense=obj.sense)
-        else:
-            m.obj = pe.Objective(expr=obj.expr, sense=obj.sense)
-
-    rel_list = list()
-    for r in relaxation_data_objects(model, descend_into=True, active=True):
-        rel_list.append(r)
-
-    for r in rel_list:
-        var_map = ComponentMap()
-        for v in r.get_rhs_vars():
-            if not v.is_fixed():
-                all_vars.add(v)
-            var_map[v] = v
-        aux_var = r.get_aux_var()
-        var_map[aux_var] = aux_var
-        if not aux_var.is_fixed():
-            all_vars.add(aux_var)
-        new_rel = copy_relaxation_with_local_data(r, var_map)
-        setattr(m, f'rel{counter}', new_rel)
-        counter.increment()
+    del m.nonlinear
 
     for relaxation in relaxation_data_objects(m, descend_into=True, active=True):
         relaxation.rebuild()
 
+
+def relax(
+    model,
+):
+    """
+    Create a convex relaxation of the model.
+
+    Parameters
+    ----------
+    model: pyomo.core.base.block._BlockData or pyomo.core.base.PyomoModel.ConcreteModel
+        The model or block to be relaxed
+
+    Returns
+    -------
+    m: pyomo.core.base.block._BlockData or pyomo.core.base.PyomoModel.ConcreteModel
+        The relaxed model
+    """
+    m = clone_active_flat(model)[0]
+    _relax_cloned_model(m)
     return m
