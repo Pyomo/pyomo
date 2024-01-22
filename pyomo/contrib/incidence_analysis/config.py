@@ -65,10 +65,6 @@ _method = ConfigValue(
 )
 
 
-class _ReconstructVisitor:
-    pass
-
-
 def _amplrepnvisitor_validator(visitor):
     if not isinstance(visitor, AMPLRepnVisitor):
         raise TypeError(
@@ -82,41 +78,6 @@ _ampl_repn_visitor = ConfigValue(
     domain=_amplrepnvisitor_validator,
     description="Visitor used to generate AMPLRepn of each constraint",
 )
-
-
-class _IncidenceConfigDict(ConfigDict):
-    def __call__(
-        self,
-        value=NOTSET,
-        default=NOTSET,
-        domain=NOTSET,
-        description=NOTSET,
-        doc=NOTSET,
-        visibility=NOTSET,
-        implicit=NOTSET,
-        implicit_domain=NOTSET,
-        preserve_implicit=False,
-    ):
-        init_value = value
-        new = super().__call__(
-            value=value,
-            default=default,
-            domain=domain,
-            description=description,
-            doc=doc,
-            visibility=visibility,
-            implicit=implicit,
-            implicit_domain=implicit_domain,
-            preserve_implicit=preserve_implicit,
-        )
-
-        if (
-            new.method == IncidenceMethod.ampl_repn
-            and "_ampl_repn_visitor" not in init_value
-        ):
-            new._ampl_repn_visitor = _ReconstructVisitor
-
-        return new
 
 
 IncidenceConfig = ConfigDict()
