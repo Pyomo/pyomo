@@ -162,9 +162,9 @@ jobs:
       run: |
         pwd
         cd ..
-        curl https://www.ginac.de/CLN/cln-1.3.6.tar.bz2 >cln-1.3.6.tar.bz2
-        tar -xvf cln-1.3.6.tar.bz2
-        cd cln-1.3.6
+        curl https://www.ginac.de/CLN/cln-1.3.7.tar.bz2 >cln-1.3.7.tar.bz2
+        tar -xvf cln-1.3.7.tar.bz2
+        cd cln-1.3.7
         ./configure
         make -j 2
         sudo make install
