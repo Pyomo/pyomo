@@ -1164,7 +1164,7 @@ class SumExpression(NumericExpression):
     def args(self):
         # We unconditionally make a copy of the args to isolate the user
         # from future possible updates to the underlying list
-        return self._args_[:self._nargs]
+        return self._args_[: self._nargs]
 
     def getname(self, *args, **kwds):
         return 'sum'
@@ -1172,18 +1172,18 @@ class SumExpression(NumericExpression):
     def _trunc_append(self, other):
         _args = self._args_
         if len(_args) > self._nargs:
-            _args = _args[:self._nargs]
+            _args = _args[: self._nargs]
         _args.append(other)
         return self.__class__(_args)
 
     def _trunc_extend(self, other):
         _args = self._args_
         if len(_args) > self._nargs:
-            _args = _args[:self._nargs]
+            _args = _args[: self._nargs]
         if len(other._args_) == other._nargs:
             _args.extend(other._args_)
         else:
-            _args.extend(other._args_[:other._nargs])
+            _args.extend(other._args_[: other._nargs])
         return self.__class__(_args)
 
     def _apply_operation(self, result):
