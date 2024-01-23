@@ -618,7 +618,7 @@ jobs:
     - name: Run Pyomo tests
       if: matrix.mpi == 0
       run: |
-        $PYTHON_EXE -m pytest -rs -v \
+        $PYTHON_EXE -m pytest -v \
             -W ignore::Warning ${{matrix.category}} \
             pyomo `pwd`/pyomo-model-libraries \
             `pwd`/examples `pwd`/doc --junitxml="TEST-pyomo.xml"
