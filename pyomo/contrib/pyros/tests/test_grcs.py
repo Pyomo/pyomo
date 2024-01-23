@@ -4877,7 +4877,7 @@ class RegressionTest(unittest.TestCase):
         )
 
     @unittest.skipUnless(
-        baron_license_is_valid, "Global NLP solver is not available and licensed."
+        scip_available, "Global NLP solver is not available and licensed."
     )
     def test_coefficient_matching_solve(self):
         # Write the deterministic Pyomo model
@@ -4902,8 +4902,8 @@ class RegressionTest(unittest.TestCase):
         pyros_solver = SolverFactory("pyros")
 
         # Define subsolvers utilized in the algorithm
-        local_subsolver = SolverFactory('baron')
-        global_subsolver = SolverFactory("baron")
+        local_subsolver = SolverFactory('scip')
+        global_subsolver = SolverFactory("scip")
 
         # Call the PyROS solver
         results = pyros_solver.solve(
