@@ -4877,7 +4877,7 @@ class RegressionTest(unittest.TestCase):
         )
 
     @unittest.skipUnless(
-        scip_available, "Global NLP solver is not available and licensed."
+        scip_available, "Global NLP solver is not available."
     )
     def test_coefficient_matching_solve(self):
         # Write the deterministic Pyomo model
@@ -5010,8 +5010,8 @@ class RegressionTest(unittest.TestCase):
             )
 
     @unittest.skipUnless(
-        baron_license_is_valid and baron_version >= (23, 2, 27),
-        "BARON licensing and version requirements not met",
+        scip_available,
+        "NLP solver is not available.",
     )
     def test_coefficient_matching_partitioning_insensitive(self):
         """
@@ -5023,7 +5023,7 @@ class RegressionTest(unittest.TestCase):
         m = self.create_mitsos_4_3()
 
         # instantiate BARON subsolver and PyROS solver
-        baron = SolverFactory("baron")
+        baron = SolverFactory("scip")
         pyros_solver = SolverFactory("pyros")
 
         # solve with PyROS
@@ -5216,8 +5216,8 @@ class RegressionTest(unittest.TestCase):
 
 
 @unittest.skipUnless(
-    baron_available and baron_license_is_valid,
-    "Global NLP solver is not available and licensed.",
+    scip_available,
+    "Global NLP solver is not available.",
 )
 class testBypassingSeparation(unittest.TestCase):
     def test_bypass_global_separation(self):
@@ -5241,7 +5241,7 @@ class testBypassingSeparation(unittest.TestCase):
 
         # Define subsolvers utilized in the algorithm
         local_subsolver = SolverFactory('ipopt')
-        global_subsolver = SolverFactory("baron")
+        global_subsolver = SolverFactory("scip")
 
         # Call the PyROS solver
         with LoggingIntercept(level=logging.WARNING) as LOG:
@@ -5361,8 +5361,8 @@ class testUninitializedVars(unittest.TestCase):
 
 
 @unittest.skipUnless(
-    baron_available and baron_license_is_valid,
-    "Global NLP solver is not available and licensed.",
+    scip_available,
+    "Global NLP solver is not available.",
 )
 class testModelMultipleObjectives(unittest.TestCase):
     """
@@ -5398,7 +5398,7 @@ class testModelMultipleObjectives(unittest.TestCase):
 
         # Define subsolvers utilized in the algorithm
         local_subsolver = SolverFactory('ipopt')
-        global_subsolver = SolverFactory("baron")
+        global_subsolver = SolverFactory("scip")
 
         solve_kwargs = dict(
             model=m,
