@@ -292,6 +292,7 @@ setup_kwargs = dict(
             # will only "require" them on other (CPython) platforms:
             'casadi; implementation_name!="pypy"',  # dae
             'numdifftools; implementation_name!="pypy"',  # pynumero
+            'pyarrow; implementation_name!="pypy"', # needed for pandas
             'pandas; implementation_name!="pypy"',
             'seaborn; implementation_name!="pypy"',  # parmest.graphics
         ],
