@@ -8,7 +8,6 @@ Created on Fri Oct 20 11:55:46 2023
 import pyomo.contrib.alternative_solutions.tests.test_cases as tc
 from pyomo.contrib.alternative_solutions import lp_enum
 import pyomo.environ as pe
-import pdb
 
 m = tc.get_3d_polyhedron_problem()
 m.o.deactivate()
@@ -22,4 +21,3 @@ n.x.domain = pe.Reals
 n.y.domain = pe.Reals
 sols = lp_enum.enumerate_linear_solutions(n, solver='gurobi')
 n.pprint()
-pdb.set_trace()

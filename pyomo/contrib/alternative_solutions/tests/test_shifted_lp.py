@@ -25,7 +25,7 @@ mip_solver = 'gurobi_appsi'
 
 class TestShiftedIP(unittest.TestCase):
         
-    def mip_abs_objective(self):
+    def test_mip_abs_objective(self):
         '''COMMENT'''
         m = tc.get_indexed_pentagonal_pyramid_mip()
         m.x.domain = pe.Reals
@@ -36,7 +36,6 @@ class TestShiftedIP(unittest.TestCase):
         new_results = opt.solve(new_model, tee = True)
         new_obj = pe.value(new_model.objective)
         self.assertAlmostEqual(old_obj, new_obj)
-        pdb.set_trace()
         
     def test_polyhedron(self):
         m = tc.get_3d_polyhedron_problem()

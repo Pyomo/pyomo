@@ -14,7 +14,7 @@ import pyomo.common.unittest as unittest
 import pyomo.contrib.alternative_solutions.aos_utils as au
 import pyomo.contrib.alternative_solutions.solution as sol
 
-mip_solver = 'cplex'
+mip_solver = 'gurobi'
 
 class TestSolutionUnit(unittest.TestCase):
     def get_model(self):

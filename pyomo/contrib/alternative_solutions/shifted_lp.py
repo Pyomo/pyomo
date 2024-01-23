@@ -10,12 +10,10 @@
 #  ___________________________________________________________________________
 
 import pyomo.environ as pe
-
 from pyomo.common.collections import ComponentMap
 from pyomo.gdp.util import clone_without_expression_components
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.contrib.alternative_solutions import aos_utils
-import pdb
     
 def _get_unique_name(collection, name):
     '''Create a unique name for an item that will be added to a collection.'''
@@ -46,7 +44,7 @@ def get_shifted_linear_model(model, block=None):
     s.t.
         A_1 * x  =  b_1
         A_2 * x <= b_2
-        l <= x <= uf
+        l <= x <= u
         
     a problem of the form,
     
@@ -82,6 +80,7 @@ def get_shifted_linear_model(model, block=None):
     # Gather all variables and confirm the model is bounded
     all_vars = aos_utils.get_model_variables(model, 'all')
     new_vars = {}
+    all_vars_new = {}
     var_map = ComponentMap()
     var_range = {}
     for var in all_vars:
@@ -94,8 +93,11 @@ def get_shifted_linear_model(model, block=None):
         if var.is_continuous():
             var_name = _get_unique_name(new_vars.keys(), var.name)
             new_vars[var_name] = var
+            all_vars_new[var_name] = var
             var_map[var] = var_name
             var_range[var_name] = (0,var.ub-var.lb)
+        else:
+            all_vars_new[var.name] = var
     
     if block is None:
         block = model
@@ -118,16 +120,22 @@ def get_shifted_linear_model(model, block=None):
     var_lower_map = {id(var): shifted_lp.var_lower[i] for i, var in \
                      new_vars.items()}
     var_lower_bounds = {id(var): var.lb for var in new_vars.values()}
+    var_zeros = {id(var): 0 for var in all_vars_new.values()}
     
     # Substitute the new s variables into the objective function
+    # The c_fix_zeros calculation is used to find any constant terms that exist
+    # in the objective expression to avoid double counting
     active_objective = aos_utils._get_active_objective(model)
     c_var_lower = clone_without_expression_components(active_objective.expr, 
                                                       substitute=var_lower_map)
     c_fix_lower = clone_without_expression_components(active_objective.expr, 
                                                   substitute=var_lower_bounds)
-    shifted_lp.objective = pe.Objective(expr=c_var_lower + c_fix_lower,
-                                      name=active_objective.name + '_shifted',
-                                      sense=active_objective.sense)
+    c_fix_zeros = clone_without_expression_components(active_objective.expr, 
+                                                      substitute=var_zeros)
+    shifted_lp.objective = pe.Objective(expr=c_var_lower - c_fix_zeros + \
+                                    c_fix_lower,
+                                    name=active_objective.name + '_shifted',
+                                    sense=active_objective.sense)
     
     # Identify all of the shifted constraints and associated slack variables 
     # that will need to be created
@@ -169,21 +177,28 @@ def get_shifted_linear_model(model, block=None):
     shifted_lp.constraints = pe.Constraint(shifted_lp.constraint_index)
                         
     for constraint_name, constraint in new_constraints.items():
+        # The c_fix_zeros calculation is used to find any constant terms that
+        # exist in the constraint expression to avoid double counting
         a_sub_var_lower = clone_without_expression_components(constraint.body, 
                                                       substitute=var_lower_map)
         a_sub_fix_lower = clone_without_expression_components(constraint.body, 
                                                   substitute=var_lower_bounds)
+        a_sub_fix_zeros = clone_without_expression_components(constraint.body, 
+                                                  substitute=var_zeros)
         b_lower = constraint.lb
         b_upper = constraint.ub
         con_type = constraint_type[constraint_name]
         if con_type == 0:
-            expr = a_sub_var_lower + a_sub_fix_lower - b_lower == 0     
+            expr = a_sub_var_lower - a_sub_fix_zeros + a_sub_fix_lower \
+                - b_lower == 0     
         elif con_type == -1:
-            expr_rhs = a_sub_var_lower + a_sub_fix_lower - b_lower
+            expr_rhs = a_sub_var_lower - a_sub_fix_zeros + a_sub_fix_lower \
+                - b_lower
             expr = shifted_lp.slack_vars[constraint_name] == expr_rhs
             _set_slack_ub(expr_rhs, shifted_lp.slack_vars[constraint_name])
         elif con_type == 1:
-            expr_rhs = b_upper - a_sub_var_lower - a_sub_fix_lower
+            expr_rhs = b_upper - a_sub_var_lower + a_sub_fix_zeros \
+                - a_sub_fix_lower
             expr = shifted_lp.slack_vars[constraint_name] == expr_rhs
             _set_slack_ub(expr_rhs, shifted_lp.slack_vars[constraint_name])
         shifted_lp.constraints[constraint_name] = expr

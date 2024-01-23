@@ -85,7 +85,8 @@ def obbt_analysis(model, variables='all', rel_opt_gap=None, abs_opt_gap=None,
         results = opt.solve(model)
         condition = results.termination_condition
         optimal_tc = appsi.base.TerminationCondition.optimal
-        infeas_or_unbdd_tc = appsi.base.TerminationCondition.infeasibleOrUnbounded
+        infeas_or_unbdd_tc = appsi.base.TerminationCondition.\
+            infeasibleOrUnbounded
         unbdd_tc = appsi.base.TerminationCondition.unbounded
         use_appsi = True 
     else:
