@@ -4876,9 +4876,7 @@ class RegressionTest(unittest.TestCase):
             msg="Returned termination condition is not return robust_optimal.",
         )
 
-    @unittest.skipUnless(
-        scip_available, "Global NLP solver is not available."
-    )
+    @unittest.skipUnless(scip_available, "Global NLP solver is not available.")
     def test_coefficient_matching_solve(self):
         # Write the deterministic Pyomo model
         m = ConcreteModel()
@@ -5009,10 +5007,7 @@ class RegressionTest(unittest.TestCase):
                 ),
             )
 
-    @unittest.skipUnless(
-        scip_available,
-        "NLP solver is not available.",
-    )
+    @unittest.skipUnless(scip_available, "NLP solver is not available.")
     def test_coefficient_matching_partitioning_insensitive(self):
         """
         Check that result for instance with constraint subject to
@@ -5215,10 +5210,7 @@ class RegressionTest(unittest.TestCase):
             )
 
 
-@unittest.skipUnless(
-    scip_available,
-    "Global NLP solver is not available.",
-)
+@unittest.skipUnless(scip_available, "Global NLP solver is not available.")
 class testBypassingSeparation(unittest.TestCase):
     def test_bypass_global_separation(self):
         """Test bypassing of global separation solve calls."""
@@ -5360,10 +5352,7 @@ class testUninitializedVars(unittest.TestCase):
             )
 
 
-@unittest.skipUnless(
-    scip_available,
-    "Global NLP solver is not available.",
-)
+@unittest.skipUnless(scip_available, "Global NLP solver is not available.")
 class testModelMultipleObjectives(unittest.TestCase):
     """
     This class contains tests for models with multiple
