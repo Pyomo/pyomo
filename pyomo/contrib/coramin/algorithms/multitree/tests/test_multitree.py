@@ -13,6 +13,7 @@ from pyomo.common import download
 import pyomo.environ as pe
 from pyomo.core.base.block import _BlockData
 import importlib
+import shutil
 
 
 def _get_sol(pname):
@@ -79,15 +80,15 @@ class TestMultiTreeWithMINLPLib(Helper):
     def tearDownClass(self) -> None:
         current_dir = os.getcwd()
         for pname in self.test_problems.keys():
-            os.remove(os.path.join(current_dir, 'minlplib', 'osil', f'{pname}.osil'))
-        os.rmdir(os.path.join(current_dir, 'minlplib', 'osil'))
+            os.remove(os.path.join(current_dir, 'minlplib', 'py', f'{pname}.py'))
+        shutil.rmtree(os.path.join(current_dir, 'minlplib', 'py'))
         os.rmdir(os.path.join(current_dir, 'minlplib'))
         for pname in self.primal_sol.keys():
             os.remove(os.path.join(current_dir, f'{pname}.sol'))
 
     def get_model(self, pname):
         current_dir = os.getcwd()
-        fname = os.path.join(current_dir, 'minlplib', 'py', f'{pname}')
+        fname = os.path.join('minlplib', 'py', f'{pname}')
         fname = fname.replace('/', '.')
         m = importlib.import_module(fname).m
         return m
