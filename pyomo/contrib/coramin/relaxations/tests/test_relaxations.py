@@ -105,7 +105,11 @@ def _check_unbounded(
         sense = pe.maximize
     m.obj = pe.Objective(expr=rel.get_aux_var(), sense=sense)
 
+    unfixed_vars = list()
     for v in rel.get_rhs_vars():
+        if v.is_fixed():
+            continue
+        unfixed_vars.append(v)
         if v.has_lb() and v.has_ub():
             v.fix(0.5 * (v.lb + v.ub))
         elif v.has_lb():
@@ -121,6 +125,9 @@ def _check_unbounded(
     res = opt.solve(m)
 
     del m.obj
+
+    for v in unfixed_vars:
+        v.unfix()
 
     return res.termination_condition == appsi.base.TerminationCondition.unbounded
 
@@ -201,7 +208,7 @@ class TestRelaxationBasics(unittest.TestCase):
         check_underestimator: bool = True,
         check_overestimator: bool = True,
     ):
-        if rel.use_linear_relaxation:
+        if rel.use_linear_relaxation and all(v.lb != v.ub for v in rel.get_rhs_vars()):
             self.assertTrue(_check_linear(m))
         rhs_vars = rel.get_rhs_vars()
         sample_points = _grid_rhs_vars(rhs_vars, num_points=num_points)
