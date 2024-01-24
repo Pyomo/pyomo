@@ -13,9 +13,10 @@ import pandas as pd
 from os.path import join, abspath, dirname
 
 import pyomo.contrib.parmest.parmest as parmest
-from pyomo.contrib.parmest.examples.reactor_design.reactor_design import (
+from pyomo.contrib.parmest.deprecated.examples.reactor_design.reactor_design import (
     reactor_design_model,
 )
+from pyomo.contrib.parmest.deprecated.parmest import group_data
 
 
 def main():
@@ -31,7 +32,7 @@ def main():
 
     # Group time series data into experiments, return the mean value for sv and caf
     # Returns a list of dictionaries
-    data_ts = parmest.group_data(data, 'experiment', ['sv', 'caf'])
+    data_ts = group_data(data, 'experiment', ['sv', 'caf'])
 
     def SSE_timeseries(model, data):
         expr = 0

@@ -16,7 +16,6 @@ from pyomo.contrib.parmest.examples.reactor_design.reactor_design import (
     ReactorDesignExperiment,
 )
 
-
 def main():
 
     # Read in data
@@ -34,8 +33,17 @@ def main():
     # print(exp0_model.pprint())
 
     pest = parmest.Estimator(exp_list, obj_function='SSE')
-    
-    # Parameter estimation with covariance
-    obj, theta, cov = pest.theta_est(calc_cov=True, cov_n=17)
-    print(obj)
-    print(theta)
+
+    # Parameter estimation
+    obj, theta = pest.theta_est()
+
+    # Bootstrapping
+    bootstrap_theta = pest.theta_est_bootstrap(10)
+    print(bootstrap_theta)
+
+    # Confidence region test
+    CR = pest.confidence_region_test(bootstrap_theta, "MVN", [0.5, 0.75, 1.0])
+    print(CR)
+
+if __name__ == "__main__":
+    main()

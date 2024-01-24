@@ -12,7 +12,7 @@
 import numpy as np
 import pandas as pd
 import pyomo.contrib.parmest.parmest as parmest
-from pyomo.contrib.parmest.examples.reactor_design.reactor_design import (
+from pyomo.contrib.parmest.deprecated.examples.reactor_design.reactor_design import (
     reactor_design_model,
 )
 

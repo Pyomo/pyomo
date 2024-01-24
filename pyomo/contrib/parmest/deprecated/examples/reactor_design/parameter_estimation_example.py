@@ -12,7 +12,7 @@
 import pandas as pd
 from os.path import join, abspath, dirname
 import pyomo.contrib.parmest.parmest as parmest
-from pyomo.contrib.parmest.examples.reactor_design.reactor_design import (
+from pyomo.contrib.parmest.deprecated.examples.reactor_design.reactor_design import (
     reactor_design_model,
 )
 
@@ -41,7 +41,9 @@ def main():
 
     # Parameter estimation
     obj, theta = pest.theta_est()
-
+    print (obj)
+    print(theta)
+    
     # Assert statements compare parameter estimation (theta) to an expected value
     k1_expected = 5.0 / 6.0
     k2_expected = 5.0 / 3.0

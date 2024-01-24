@@ -11,23 +11,80 @@
 
 import numpy as np
 import pandas as pd
+import pyomo.environ as pyo
 import pyomo.contrib.parmest.parmest as parmest
 from pyomo.contrib.parmest.examples.reactor_design.reactor_design import (
     reactor_design_model,
+    ReactorDesignExperiment,
 )
 
 np.random.seed(1234)
 
 
-def reactor_design_model_for_datarec(data):
+def reactor_design_model_for_datarec():
+
     # Unfix inlet concentration for data rec
-    model = reactor_design_model(data)
+    model = reactor_design_model()
     model.caf.fixed = False
 
     return model
 
+class ReactorDesignExperimentPreDataRec(ReactorDesignExperiment):
+
+    def __init__(self, data, data_std, experiment_number):
+
+        super().__init__(data, experiment_number)    
+        self.data_std = data_std
+
+    def create_model(self):
+        self.model = m = reactor_design_model_for_datarec()
+        return m
+
+    def label_model(self):
+
+        m = self.model
+        
+        # experiment outputs
+        m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.experiment_outputs.update([(m.ca, self.data_i['ca'])])
+        m.experiment_outputs.update([(m.cb, self.data_i['cb'])])
+        m.experiment_outputs.update([(m.cc, self.data_i['cc'])])
+        m.experiment_outputs.update([(m.cd, self.data_i['cd'])])
+
+        # experiment standard deviations
+        m.experiment_outputs_std = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.experiment_outputs_std.update([(m.ca, self.data_std['ca'])])
+        m.experiment_outputs_std.update([(m.cb, self.data_std['cb'])])
+        m.experiment_outputs_std.update([(m.cc, self.data_std['cc'])])
+        m.experiment_outputs_std.update([(m.cd, self.data_std['cd'])])
+
+        # no unknowns (theta names)
+        m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+
+        return m
+
+class ReactorDesignExperimentPostDataRec(ReactorDesignExperiment):
+
+    def __init__(self, data, data_std, experiment_number):
+
+        super().__init__(data, experiment_number)    
+        self.data_std = data_std
+
+    def label_model(self):
+
+        m = super().label_model()
+
+        # add experiment standard deviations
+        m.experiment_outputs_std = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.experiment_outputs_std.update([(m.ca, self.data_std['ca'])])
+        m.experiment_outputs_std.update([(m.cb, self.data_std['cb'])])
+        m.experiment_outputs_std.update([(m.cc, self.data_std['cc'])])
+        m.experiment_outputs_std.update([(m.cd, self.data_std['cd'])])
+
+        return m
 
 def generate_data():
+
     ### Generate data based on real sv, caf, ca, cb, cc, and cd
     sv_real = 1.05
     caf_real = 10000
@@ -54,29 +111,34 @@ def generate_data():
 
 
 def main():
+
     # Generate data
     data = generate_data()
     data_std = data.std()
 
+    # Create an experiment list
+    exp_list= []
+    for i in range(data.shape[0]):
+        exp_list.append(ReactorDesignExperimentPreDataRec(data, data_std, i))
+
     # Define sum of squared error objective function for data rec
-    def SSE(model, data):
-        expr = (
-            ((float(data.iloc[0]["ca"]) - model.ca) / float(data_std["ca"])) ** 2
-            + ((float(data.iloc[0]["cb"]) - model.cb) / float(data_std["cb"])) ** 2
-            + ((float(data.iloc[0]["cc"]) - model.cc) / float(data_std["cc"])) ** 2
-            + ((float(data.iloc[0]["cd"]) - model.cd) / float(data_std["cd"])) ** 2
-        )
+    def SSE(model):
+        expr = sum(((y - yhat)/model.experiment_outputs_std[y])**2 
+            for y, yhat in model.experiment_outputs.items())
         return expr
 
-    ### Data reconciliation
-    theta_names = []  # no variables to estimate, use initialized values
+    # View one model & SSE
+    # exp0_model = exp_list[0].get_labeled_model()
+    # print(exp0_model.pprint())
+    # print(SSE(exp0_model))
 
-    pest = parmest.Estimator(reactor_design_model_for_datarec, data, theta_names, SSE)
+    ### Data reconciliation
+    pest = parmest.Estimator(exp_list, obj_function=SSE)
 
     obj, theta, data_rec = pest.theta_est(return_values=["ca", "cb", "cc", "cd", "caf"])
     print(obj)
     print(theta)
-
+    
     parmest.graphics.grouped_boxplot(
         data[["ca", "cb", "cc", "cd"]],
         data_rec[["ca", "cb", "cc", "cd"]],
@@ -84,14 +146,18 @@ def main():
     )
 
     ### Parameter estimation using reconciled data
-    theta_names = ["k1", "k2", "k3"]
     data_rec["sv"] = data["sv"]
 
-    pest = parmest.Estimator(reactor_design_model, data_rec, theta_names, SSE)
+    # make a new list of experiments using reconciled data
+    exp_list= []
+    for i in range(data_rec.shape[0]):
+        exp_list.append(ReactorDesignExperimentPostDataRec(data_rec, data_std, i))
+
+    pest = parmest.Estimator(exp_list, obj_function=SSE)
     obj, theta = pest.theta_est()
     print(obj)
     print(theta)
-
+    
     theta_real = {"k1": 5.0 / 6.0, "k2": 5.0 / 3.0, "k3": 1.0 / 6000.0}
     print(theta_real)
 

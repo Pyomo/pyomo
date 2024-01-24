@@ -15,31 +15,27 @@ from itertools import product
 from os.path import join, abspath, dirname
 import pyomo.contrib.parmest.parmest as parmest
 from pyomo.contrib.parmest.examples.reactor_design.reactor_design import (
-    reactor_design_model,
+    ReactorDesignExperiment,
 )
 
 
 def main():
-    # Vars to estimate
-    theta_names = ["k1", "k2", "k3"]
-
-    # Data
+    
+# Read in data
     file_dirname = dirname(abspath(str(__file__)))
     file_name = abspath(join(file_dirname, "reactor_data.csv"))
     data = pd.read_csv(file_name)
+    
+    # Create an experiment list
+    exp_list= []
+    for i in range(data.shape[0]):
+        exp_list.append(ReactorDesignExperiment(data, i))
+    
+    # View one model
+    # exp0_model = exp_list[0].get_labeled_model()
+    # print(exp0_model.pprint())
 
-    # Sum of squared error function
-    def SSE(model, data):
-        expr = (
-            (float(data.iloc[0]["ca"]) - model.ca) ** 2
-            + (float(data.iloc[0]["cb"]) - model.cb) ** 2
-            + (float(data.iloc[0]["cc"]) - model.cc) ** 2
-            + (float(data.iloc[0]["cd"]) - model.cd) ** 2
-        )
-        return expr
-
-    # Create an instance of the parmest estimator
-    pest = parmest.Estimator(reactor_design_model, data, theta_names, SSE)
+    pest = parmest.Estimator(exp_list, obj_function='SSE')
 
     # Parameter estimation
     obj, theta = pest.theta_est()
