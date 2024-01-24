@@ -774,6 +774,9 @@ class LazyOACallback_cplex(
             mindtpy_solver.integer_list.append(mindtpy_solver.curr_int_sol)
 
         # solve subproblem
+        # Call the NLP pre-solve callback
+        with time_code(self.timing, 'Call after subproblem solve'):
+            config.call_before_subproblem_solve(mindtpy_solver.fixed_nlp)
         # The constraint linearization happens in the handlers
         fixed_nlp, fixed_nlp_result = mindtpy_solver.solve_subproblem()
         # add oa cuts
@@ -920,6 +923,9 @@ def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, mindtpy_solver, config):
                 cut_ind = len(mindtpy_solver.mip.MindtPy_utils.cuts.oa_cuts)
 
         # solve subproblem
+        # Call the NLP pre-solve callback
+        with time_code(self.timing, 'Call after subproblem solve'):
+            config.call_before_subproblem_solve(mindtpy_solver.fixed_nlp)
         # The constraint linearization happens in the handlers
         fixed_nlp, fixed_nlp_result = mindtpy_solver.solve_subproblem()
 
