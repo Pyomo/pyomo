@@ -10,12 +10,12 @@ ex ginac_expr_from_pyomo_node(
   py::handle expr, 
   std::unordered_map<long, ex> &leaf_map, 
   std::unordered_map<ex, py::object> &ginac_pyomo_map, 
-  PyomoExprTypes &expr_types,
+  PyomoExprTypesSimp &expr_types,
   bool symbolic_solver_labels
   ) {
   ex res;
-  ExprType tmp_type =
-      expr_types.expr_type_map[py::type::of(expr)].cast<ExprType>();
+  ExprTypeSimp tmp_type =
+      expr_types.expr_type_map[py::type::of(expr)].cast<ExprTypeSimp>();
 
   switch (tmp_type) {
   case py_float: {
@@ -92,7 +92,7 @@ ex ginac_expr_from_pyomo_node(
     res = leaf_map[expr_id];
     break;
   }
-  case ExprType::power: {
+  case ExprTypeSimp::power: {
     py::list pyomo_args = expr.attr("args");
     res = pow(ginac_expr_from_pyomo_node(pyomo_args[0], leaf_map, ginac_pyomo_map, expr_types, symbolic_solver_labels), ginac_expr_from_pyomo_node(pyomo_args[1], leaf_map, ginac_pyomo_map, expr_types, symbolic_solver_labels));
     break;
@@ -165,14 +165,14 @@ ex pyomo_expr_to_ginac_expr(
   py::handle expr,
   std::unordered_map<long, ex> &leaf_map,
   std::unordered_map<ex, py::object> &ginac_pyomo_map,
-  PyomoExprTypes &expr_types,
+  PyomoExprTypesSimp &expr_types,
   bool symbolic_solver_labels
   ) {
     ex res = ginac_expr_from_pyomo_node(expr, leaf_map, ginac_pyomo_map, expr_types, symbolic_solver_labels);
     return res;
   }
 
-ex pyomo_to_ginac(py::handle expr, PyomoExprTypes &expr_types) {
+ex pyomo_to_ginac(py::handle expr, PyomoExprTypesSimp &expr_types) {
   std::unordered_map<long, ex> leaf_map;
   std::unordered_map<ex, py::object> ginac_pyomo_map;
   ex res = ginac_expr_from_pyomo_node(expr, leaf_map, ginac_pyomo_map, expr_types, true);
@@ -193,9 +193,9 @@ class GinacToPyomoVisitor
   public:
   std::unordered_map<ex, py::object> *leaf_map;
   std::unordered_map<ex, py::object> node_map;
-  PyomoExprTypes *expr_types;
+  PyomoExprTypesSimp *expr_types;
 
-  GinacToPyomoVisitor(std::unordered_map<ex, py::object> *_leaf_map, PyomoExprTypes *_expr_types) : leaf_map(_leaf_map), expr_types(_expr_types) {}
+  GinacToPyomoVisitor(std::unordered_map<ex, py::object> *_leaf_map, PyomoExprTypesSimp *_expr_types) : leaf_map(_leaf_map), expr_types(_expr_types) {}
   ~GinacToPyomoVisitor() = default;
 
   void visit(const symbol& e) {
@@ -287,7 +287,7 @@ py::object GinacInterface::from_ginac(ex &ge) {
 
 PYBIND11_MODULE(ginac_interface, m) {
   m.def("pyomo_to_ginac", &pyomo_to_ginac);
-  py::class_<PyomoExprTypes>(m, "PyomoExprTypes").def(py::init<>());
+  py::class_<PyomoExprTypesSimp>(m, "PyomoExprTypesSimp").def(py::init<>());
   py::class_<ex>(m, "ginac_expression")
     .def("expand", [](ex &ge) {
       return ge.expand();
@@ -302,19 +302,19 @@ PYBIND11_MODULE(ginac_interface, m) {
     .def(py::init<bool>())
     .def("to_ginac", &GinacInterface::to_ginac)
     .def("from_ginac", &GinacInterface::from_ginac);
-  py::enum_<ExprType>(m, "ExprType")
-      .value("py_float", ExprType::py_float)
-      .value("var", ExprType::var)
-      .value("param", ExprType::param)
-      .value("product", ExprType::product)
-      .value("sum", ExprType::sum)
-      .value("negation", ExprType::negation)
-      .value("external_func", ExprType::external_func)
-      .value("power", ExprType::power)
-      .value("division", ExprType::division)
-      .value("unary_func", ExprType::unary_func)
-      .value("linear", ExprType::linear)
-      .value("named_expr", ExprType::named_expr)
-      .value("numeric_constant", ExprType::numeric_constant)
+  py::enum_<ExprTypeSimp>(m, "ExprTypeSimp")
+      .value("py_float", ExprTypeSimp::py_float)
+      .value("var", ExprTypeSimp::var)
+      .value("param", ExprTypeSimp::param)
+      .value("product", ExprTypeSimp::product)
+      .value("sum", ExprTypeSimp::sum)
+      .value("negation", ExprTypeSimp::negation)
+      .value("external_func", ExprTypeSimp::external_func)
+      .value("power", ExprTypeSimp::power)
+      .value("division", ExprTypeSimp::division)
+      .value("unary_func", ExprTypeSimp::unary_func)
+      .value("linear", ExprTypeSimp::linear)
+      .value("named_expr", ExprTypeSimp::named_expr)
+      .value("numeric_constant", ExprTypeSimp::numeric_constant)
       .export_values();
 }

@@ -27,7 +27,7 @@ namespace py = pybind11;
 using namespace pybind11::literals;
 using namespace GiNaC;
 
-enum ExprType {
+enum ExprTypeSimp {
   py_float = 0,
   var = 1,
   param = 2,
@@ -45,9 +45,9 @@ enum ExprType {
   unary_abs = 14
 };
 
-class PyomoExprTypes {
+class PyomoExprTypesSimp {
 public:
-  PyomoExprTypes() {
+  PyomoExprTypesSimp() {
     expr_type_map[int_] = py_float;
     expr_type_map[float_] = py_float;
     expr_type_map[np_int16] = py_float;
@@ -75,8 +75,8 @@ public:
     expr_type_map[NPV_NegationExpression] = negation;
     expr_type_map[ExternalFunctionExpression] = external_func;
     expr_type_map[NPV_ExternalFunctionExpression] = external_func;
-    expr_type_map[PowExpression] = ExprType::power;
-    expr_type_map[NPV_PowExpression] = ExprType::power;
+    expr_type_map[PowExpression] = ExprTypeSimp::power;
+    expr_type_map[NPV_PowExpression] = ExprTypeSimp::power;
     expr_type_map[DivisionExpression] = division;
     expr_type_map[NPV_DivisionExpression] = division;
     expr_type_map[UnaryFunctionExpression] = unary_func;
@@ -91,7 +91,7 @@ public:
     expr_type_map[AbsExpression] = unary_abs;
     expr_type_map[NPV_AbsExpression] = unary_abs;
   }
-  ~PyomoExprTypes() = default;
+  ~PyomoExprTypesSimp() = default;
   py::int_ ione = 1;
   py::float_ fone = 1.0;
   py::type int_ = py::type::of(ione);
@@ -171,14 +171,14 @@ public:
   py::dict expr_type_map;
 };
 
-ex pyomo_to_ginac(py::handle expr, PyomoExprTypes &expr_types);
+ex pyomo_to_ginac(py::handle expr, PyomoExprTypesSimp &expr_types);
 
 
 class GinacInterface {
     public:
     std::unordered_map<long, ex> leaf_map;
     std::unordered_map<ex, py::object> ginac_pyomo_map;
-    PyomoExprTypes expr_types;
+    PyomoExprTypesSimp expr_types;
     bool symbolic_solver_labels = false;
 
     GinacInterface() = default;

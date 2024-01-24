@@ -19,6 +19,9 @@ from pyomo.core.base.block import _BlockData
 from pyomo.core.base.var import _GeneralVarData
 from pyomo.contrib.coramin.heuristics.diving import run_diving_heuristic
 from pyomo.contrib.coramin.domain_reduction.obbt import perform_obbt
+from pyomo.contrib.coramin.cutting_planes.alpha_bb_cuts import AlphaBBCutGenerator
+from pyomo.contrib.coramin.cutting_planes.base import CutGenerator
+from pyomo.contrib.coramin.utils.coramin_enums import EigenValueBounder
 from typing import Tuple, List, Sequence, Optional
 import math
 import numpy as np
@@ -62,6 +65,13 @@ def _get_clone_and_var_map(m1: _BlockData):
     return m2, var_map
 
 
+class AlphaBBConfig(ConfigDict):
+    def __init__(self, description=None, doc=None, implicit=False, implicit_domain=None, visibility=0):
+        super().__init__(description, doc, implicit, implicit_domain, visibility)
+        self.max_num_vars: int = self.declare("max_num_vars", ConfigValue(default=4))
+        self.method: EigenValueBounder = self.declare("method", ConfigValue(default=EigenValueBounder.GershgorinWithSimplification))
+
+
 class BnBConfig(MIPSolverConfig):
     def __init__(self):
         super().__init__(None, None, False, None, 0)
@@ -76,6 +86,25 @@ class BnBConfig(MIPSolverConfig):
         self.mip_gap = 1e-3
         self.num_root_obbt_iters = self.declare("num_root_obbt_iters", ConfigValue(default=3))
         self.node_obbt_frequency = self.declare("node_obbt_frequency", ConfigValue(default=2))
+        self.alphabb = self.declare("alphabb", AlphaBBConfig())
+
+
+class NodeState(object):
+    def __init__(
+        self, 
+        lbs: np.ndarray, 
+        ubs: np.ndarray, 
+        parent: Optional[pybnb.Node], 
+        sol: Optional[np.ndarray] = None, 
+        obj: Optional[float] = None
+    ) -> None:
+        self.lbs: np.ndarray = lbs
+        self.ubs: np.ndarray = ubs
+        self.parent: Optional[pybnb.Node] = parent
+        self.sol: Optional[np.ndarray] = sol
+        self.obj: Optional[float] = obj
+        self.valid_cut_indices: List[int] = list()
+        self.active_cut_indices: List[int] = list()
 
 
 def collect_vars(m: _BlockData) -> Tuple[List[_GeneralVarData], List[_GeneralVarData]]:
@@ -113,10 +142,38 @@ def impose_structure(m):
             linear_coefs.append(1)
             linear_vars.append(v)
             m.vars.append(v)
-            m.nonlinear.cons.add(v == term)
+            if c.equality or (c.lb == c.ub and c.lb is not None):
+                m.nonlinear.cons.add(v == term)
+            elif c.ub is None:
+                m.nonlinear.cons.add(v <= term)
+            elif c.lb is None:
+                m.nonlinear.cons.add(v >= term)
+            else:
+                m.nonlinear.cons.add(v == term)
         new_expr = LinearExpression(constant=repn.constant, linear_coefs=linear_coefs, linear_vars=linear_vars)
         m.linear.cons.add((c.lb, new_expr, c.ub))
         del m.nonlinear.cons[key]
+
+    if hasattr(m.nonlinear, 'obj'):
+        obj = m.nonlinear.obj
+        repn: StandardRepn = generate_standard_repn(obj.expr, quadratic=False, compute_values=True)
+        expr_list = split_expr(repn.nonlinear_expr)
+        if len(expr_list) > 1:
+            linear_coefs = list(repn.linear_coefs)
+            linear_vars = list(repn.linear_vars)
+            for term in expr_list:
+                v = m.aux_vars.add()
+                linear_coefs.append(1)
+                linear_vars.append(v)
+                m.vars.append(v)
+                if obj.sense == pe.minimize:
+                    m.nonlinear.cons.add(v >= term)
+                else:
+                    assert obj.sense == pe.maximize
+                    m.nonlinear.cons.add(v <= term)
+            new_expr = LinearExpression(constant=repn.constant, linear_coefs=linear_coefs, linear_vars=linear_vars)
+            m.linear.obj = pe.Objective(expr=new_expr, sense=obj.sense)
+            del m.nonlinear.obj
 
 
 def _fix_vars_with_close_bounds(varlist, tol=1e-12):
@@ -129,6 +186,29 @@ def _fix_vars_with_close_bounds(varlist, tol=1e-12):
             continue
         if abs(ub - lb) <= tol * min(abs(lb), abs(ub)) + tol:
             v.fix(0.5 * (lb + ub))
+
+
+def find_cut_generators(m: _BlockData, config: AlphaBBConfig) -> List[CutGenerator]:
+    cut_generators = list()
+    for c in m.nonlinear.cons.values():
+        repn: StandardRepn = generate_standard_repn(c.body, quadratic=False, compute_values=True)
+        if len(repn.nonlinear_vars) > config.max_num_vars:
+            continue
+
+        if len(repn.linear_coefs) > 0:
+            lhs = LinearExpression(constant=repn.constant, linear_coefs=repn.linear_coefs, linear_vars=repn.linear_vars)
+        else:
+            lhs = repn.constant
+
+        # alpha bb convention is lhs >= rhs
+        if c.lb is not None:
+            cg = AlphaBBCutGenerator(lhs=lhs - c.lb, rhs=-repn.nonlinear_expr, eigenvalue_opt=None, method=config.method)
+            cut_generators.append(cg)
+        if c.ub is not None:
+            cg = AlphaBBCutGenerator(lhs=c.ub - lhs, rhs=repn.nonlinear_expr, eigenvalue_opt=None, method=config.method)
+            cut_generators.append(cg)
+
+    return cut_generators
 
 
 class _BnB(pybnb.Problem):
@@ -163,8 +243,9 @@ class _BnB(pybnb.Problem):
         _fix_vars_with_close_bounds(relaxation.vars)
 
         impose_structure(relaxation)
-        #find_cut_generators(relaxation)
+        self.cut_generators: List[CutGenerator] = find_cut_generators(relaxation, self.config.alphabb)
         _relax_cloned_model(relaxation)
+        relaxation.cuts = pe.ConstraintList()
         self.relaxation_objects = list()
         for r in iterators.relaxation_data_objects(relaxation, descend_into=True, active=True):
             self.relaxation_objects.append(r)
@@ -269,6 +350,26 @@ class _BnB(pybnb.Problem):
             else:
                 break
 
+        # add all other types of cuts
+        while True:
+            added_cuts = False
+            for cg in self.cut_generators:
+                cut_expr = cg.generate(self.current_node)
+                if cut_expr is not None:
+                    new_con = self.relaxation.cuts.add(cut_expr)
+                    new_con_index = new_con.index()
+                    self.current_node.state.valid_cut_indices.append(new_con_index)
+                    self.current_node.state.active_cut_indices.append(new_con_index)
+            if added_cuts:
+                res = self.config.lp_solver.solve(self.relaxation)
+                if res.termination_condition == appsi.base.TerminationCondition.infeasible:
+                    return self.infeasible_objective()
+                if res.termination_condition != appsi.base.TerminationCondition.optimal:
+                    raise RuntimeError(f"Cannot handle termination condition {res.termination_condition} when solving relaxation")
+                res.solution_loader.load_vars()
+            else:
+                break
+
         # save the variable values to reload later
         self.relaxation_solution = res.solution_loader.get_primals()
 
@@ -287,8 +388,8 @@ class _BnB(pybnb.Problem):
                     break
         if is_feasible:
             sol = np.array([v.value for v in self.all_vars], dtype=float)
-            xl, xu, _, _ = self.current_node.state
-            self.current_node.state = (xl, xu, sol, res.best_feasible_objective)
+            self.current_node.state.sol = sol
+            self.current_node.state.obj = res.best_feasible_objective
             return res.best_feasible_objective
 
         # maybe do OBBT
@@ -323,14 +424,16 @@ class _BnB(pybnb.Problem):
                 for r in self.relaxation_objects:
                     r.rebuild()
                 res = self.config.lp_solver.solve(self.relaxation)
+                if res.termination_condition == appsi.base.TerminationCondition.infeasible:
+                    return self.infeasible_objective()
                 res.solution_loader.load_vars()
                 self.relaxation_solution = res.solution_loader.get_primals()
 
         return res.best_objective_bound
 
     def objective(self):
-        if self.current_node.state[2] is not None:
-            return self.current_node.state[3]
+        if self.current_node.state.sol is not None:
+            return self.current_node.state.obj
         if self.current_node.tree_depth % 10 != 0:
             return self.infeasible_objective()
         unfixed_vars = [v for v in self.bin_and_int_vars if not v.is_fixed()]
@@ -359,13 +462,13 @@ class _BnB(pybnb.Problem):
                 if ret > self.feasible_objective:
                     self.feasible_objective = ret
             sol = np.array([v.value for v in self.all_vars], dtype=float)
-            xl, xu, _, _ = self.current_node.state
-            self.current_node.state = (xl, xu, sol, ret)
+            self.current_node.state.sol = sol
+            self.current_node.state.obj = ret
         for v in unfixed_vars:
             v.unfix()
         return ret
 
-    def get_state(self):
+    def get_state(self) -> NodeState:
         xl = list()
         xu = list()
 
@@ -387,14 +490,15 @@ class _BnB(pybnb.Problem):
         xl = np.array(xl, dtype=float)
         xu = np.array(xu, dtype=float)
 
-        return xl, xu, None, None
+        return NodeState(xl, xu, None, None, None)
 
     def save_state(self, node):
         node.state = self.get_state()
 
     def load_state(self, node):
         self.current_node = node
-        xl, xu, _, _ = node.state
+        xl = node.state.lbs
+        xu = node.state.ubs
 
         xl = [float(i) for i in xl]
         xu = [float(i) for i in xu]
@@ -416,8 +520,16 @@ class _BnB(pybnb.Problem):
         for r in self.relaxation_objects:
             r.rebuild()
 
+        for c in self.relaxation.cuts.values():
+            c.deactivate()
+
+        for ndx in node.state.active_cut_indices:
+            self.relaxation.cuts[ndx].activate()
+
     def branch(self):
-        xl, xu, _, _ = self.get_state()
+        ns = self.get_state()
+        xl = ns.lbs
+        xu = ns.ubs
 
         # relaod the solution to the relaxation to make sure branching happens correctly
         for v, val in self.relaxation_solution.items():
@@ -441,7 +553,7 @@ class _BnB(pybnb.Problem):
         if var_to_branch_on is None:
             # the relaxation was feasible
             # no nodes in this part of the tree need explored
-            return pybnb.Node()
+            return []
 
         xl1 = xl.copy()
         xu1 = xu.copy()
@@ -458,14 +570,19 @@ class _BnB(pybnb.Problem):
         xu1[ndx_to_branch_on] = new_ub
         xl2[ndx_to_branch_on] = new_lb
         
-        child1.state = (xl1, xu1, None, None)
-        child2.state = (xl2, xu2, None, None)
+        child1.state = NodeState(xl1, xu1, self.current_node, None, None)
+        child2.state = NodeState(xl2, xu2, self.current_node, None, None)
+
+        child1.state.valid_cut_indices = list(self.current_node.state.valid_cut_indices)
+        child2.state.valid_cut_indices = list(self.current_node.state.valid_cut_indices)
+        child1.state.active_cut_indices = list(self.current_node.state.active_cut_indices)
+        child2.state.active_cut_indices = list(self.current_node.state.active_cut_indices)
 
         yield child1
         yield child2
 
 
-def solve_with_bnb(model: _BlockData, config: BnBConfig, comm=None):
+def solve_with_bnb(model: _BlockData, config: BnBConfig):
     # we don't want to modify the original model
     model, orig_var_map = _get_clone_and_var_map(model)
     diving_obj, diving_sol = run_diving_heuristic(model, config.feasibility_tol, config.integer_tol)
@@ -477,7 +594,7 @@ def solve_with_bnb(model: _BlockData, config: BnBConfig, comm=None):
         absolute_gap=config.abs_gap,
         relative_gap=config.mip_gap,
         comparison_tolerance=1e-4,
-        comm=comm,
+        comm=None,
         time_limit=config.time_limit,
         node_limit=config.node_limit,
         # log=logger,
@@ -499,7 +616,7 @@ def solve_with_bnb(model: _BlockData, config: BnBConfig, comm=None):
         if diving_obj is not None:
             ret.solution_loader = SolutionLoader(primals={id(orig_var_map[v]): (orig_var_map[v], val) for v, val in diving_sol.items()}, duals=None, slacks=None, reduced_costs=None)
     else:
-        vals = best_node.state[2]
+        vals = best_node.state.sol
         primals = dict()
         orig_vars = ComponentSet(prob.nlp.vars)
         for v, val in zip(prob.all_vars, vals):

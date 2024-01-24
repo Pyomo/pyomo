@@ -51,6 +51,9 @@ class Hessian(object):
     ):
         self.method = EigenValueBounder(method)
         self.opt = opt
+        self._constant_hessian = False
+        self._constant_hessian_min_eig = None
+        self._constant_hessian_max_eig = None
         self._expr = expr
         self._var_list = list(identify_variables(expr=expr, include_fixed=False))
         self._ndx_map = pe.ComponentMap(
@@ -129,8 +132,25 @@ class Hessian(object):
         self._eigenvalue_relaxation = relaxation
         return relaxation
 
+    def _compute_eigenvalues_of_constant_hessian(self):
+        assert self._constant_hessian
+        nvars = len(self._var_list)
+        h = np.zeros(shape=(nvars, nvars), dtype=float)
+        for v1, d1 in self._hessian.items():
+            ndx1 = self._ndx_map[v1]
+            for v2, d2 in d1.items():
+                ndx2 = self._ndx_map[v2]
+                h[ndx1, ndx2] = d2
+        eigvals = np.linalg.eigvals(h)
+        self._constant_hessian_min_eig = np.min(eigvals)
+        self._constant_hessian_max_eig = np.max(eigvals)
+
     def get_minimum_eigenvalue(self):
-        if self.method <= EigenValueBounder.GershgorinWithSimplification:
+        if self._constant_hessian:
+            if self._constant_hessian_min_eig is None:
+                self._compute_eigenvalues_of_constant_hessian()
+            res = self._constant_hessian_min_eig
+        elif self.method <= EigenValueBounder.GershgorinWithSimplification:
             res = self.bound_eigenvalues_from_interval_hessian()[0]
         elif self.method == EigenValueBounder.LinearProgram:
             m = self.formulate_eigenvalue_relaxation()
@@ -141,7 +161,11 @@ class Hessian(object):
         return res
 
     def get_maximum_eigenvalue(self):
-        if self.method <= EigenValueBounder.GershgorinWithSimplification:
+        if self._constant_hessian:
+            if self._constant_hessian_max_eig is None:
+                self._compute_eigenvalues_of_constant_hessian()
+            res = self._constant_hessian_max_eig
+        elif self.method <= EigenValueBounder.GershgorinWithSimplification:
             res = self.bound_eigenvalues_from_interval_hessian()[1]
         elif self.method == EigenValueBounder.LinearProgram:
             m = self.formulate_eigenvalue_relaxation(sense=pe.maximize)
@@ -200,6 +224,14 @@ class Hessian(object):
                         _der = der
                     res[v1][v2] = _der
                 res[v2][v1] = res[v1][v2]
+
+        self._constant_hessian = True
+        for v1, dd in res.items():
+            for v2, d2 in dd.items():
+                if is_fixed(d2):
+                    res[v1][v2] = pe.value(d2)
+                else:
+                    self._constant_hessian = False
 
         return res
 

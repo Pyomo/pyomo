@@ -1,8 +1,7 @@
 import pyomo.environ as pe
-from pyomo.core.expr.sympy_tools import sympyify_expression, sympy2pyomo_expression
 from pyomo.core.expr.numvalue import is_fixed
-from pyomo.common.collections import ComponentSet
 from pyomo.core.expr.visitor import identify_variables
+from pyomo.contrib.simplification import Simplifier
 
 
 def get_objective(m):
@@ -50,10 +49,11 @@ def active_vars(m, include_fixed=False):
                 yield v
 
 
+simplifier = Simplifier()
+
+
 def simplify_expr(expr):
-    om, se = sympyify_expression(expr)
-    se = se.simplify()
-    new_expr = sympy2pyomo_expression(se, om)
+    new_expr = simplifier.simplify(expr)
     if is_fixed(new_expr):
         new_expr = pe.value(new_expr)
     return new_expr
