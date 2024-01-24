@@ -115,7 +115,7 @@ class SuffixDirection(enum.IntEnum):
     - LOCAL: Suffix is local to Pyomo and should not be sent to or read
       from the solver.
 
-    - EXPORT: Suffix should be sent tot he solver as supplemental model
+    - EXPORT: Suffix should be sent to the solver as supplemental model
       information.
 
     - IMPORT: Suffix values will be returned from the solver and should
