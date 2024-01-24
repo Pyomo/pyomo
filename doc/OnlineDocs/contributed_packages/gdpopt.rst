@@ -175,7 +175,10 @@ To use the GDPopt-LBB solver, define your Pyomo GDP model as usual:
   >>> m.djn = Disjunction(expr=[m.y1, m.y2])
 
   Invoke the GDPopt-LBB solver
+
   >>> results = SolverFactory('gdpopt.lbb').solve(m)
+  WARNING: 09/06/22: The GDPopt LBB algorithm currently has known issues. Please
+      use the results with caution and report any bugs!
 
   >>> print(results)  # doctest: +SKIP
   >>> print(results.solver.status)
