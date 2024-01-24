@@ -1237,7 +1237,8 @@ def _relax_cloned_model(m):
     for c in m.nonlinear.cons.values():
         repn = generate_standard_repn(c.body, quadratic=False, compute_values=True)
         assert len(repn.quadratic_vars) == 0
-        assert repn.nonlinear_expr is not None
+        if repn.nonlinear_expr is None:
+            continue
 
         cl, cu = c.lb, c.ub
         if cl is not None and cu is not None:

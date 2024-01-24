@@ -76,7 +76,7 @@ class BnBConfig(MIPSolverConfig):
     def __init__(self):
         super().__init__(None, None, False, None, 0)
         self.feasibility_tol = self.declare(
-            "feasibility_tol", ConfigValue(domain=PositiveFloat, default=1e-8)
+            "feasibility_tol", ConfigValue(domain=PositiveFloat, default=1e-6)
         )
         self.lp_solver = self.declare("lp_solver", ConfigValue())
         self.nlp_solver = self.declare("nlp_solver", ConfigValue())
@@ -192,6 +192,8 @@ def find_cut_generators(m: _BlockData, config: AlphaBBConfig) -> List[CutGenerat
     cut_generators = list()
     for c in m.nonlinear.cons.values():
         repn: StandardRepn = generate_standard_repn(c.body, quadratic=False, compute_values=True)
+        if repn.nonlinear_expr is None:
+            continue
         if len(repn.nonlinear_vars) > config.max_num_vars:
             continue
 
@@ -239,7 +241,8 @@ class _BnB(pybnb.Problem):
             else:
                 relaxation.obj_ineq = pe.Constraint(expr=obj.expr >= feasible_objective)
         it.perform_fbbt(relaxation)
-        del relaxation.obj_ineq
+        if feasible_objective is not None:
+            del relaxation.obj_ineq
         _fix_vars_with_close_bounds(relaxation.vars)
 
         impose_structure(relaxation)

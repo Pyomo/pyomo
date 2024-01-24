@@ -116,7 +116,10 @@ class DivingHeuristic(pybnb.Problem):
             v.setub(ub)
 
         opt = pe.SolverFactory('ipopt')
-        res = opt.solve(self.relaxation, skip_trivial_constraints=True, load_solutions=False, tee=False)
+        try:
+            res = opt.solve(self.relaxation, skip_trivial_constraints=True, load_solutions=False, tee=False)
+        except:
+            return self.infeasible_objective()
         if not pe.check_optimal_termination(res):
             return self.infeasible_objective()
         self.relaxation.solutions.load_from(res)
