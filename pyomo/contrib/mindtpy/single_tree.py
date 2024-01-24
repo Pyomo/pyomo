@@ -775,7 +775,7 @@ class LazyOACallback_cplex(
 
         # solve subproblem
         # Call the NLP pre-solve callback
-        with time_code(self.timing, 'Call after subproblem solve'):
+        with time_code(mindtpy_solver.timing, 'Call after subproblem solve'):
             config.call_before_subproblem_solve(mindtpy_solver.fixed_nlp)
         # The constraint linearization happens in the handlers
         fixed_nlp, fixed_nlp_result = mindtpy_solver.solve_subproblem()
@@ -924,7 +924,7 @@ def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, mindtpy_solver, config):
 
         # solve subproblem
         # Call the NLP pre-solve callback
-        with time_code(self.timing, 'Call after subproblem solve'):
+        with time_code(mindtpy_solver.timing, 'Call after subproblem solve'):
             config.call_before_subproblem_solve(mindtpy_solver.fixed_nlp)
         # The constraint linearization happens in the handlers
         fixed_nlp, fixed_nlp_result = mindtpy_solver.solve_subproblem()
