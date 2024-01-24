@@ -1162,12 +1162,29 @@ class SumExpression(NumericExpression):
 
     @property
     def args(self):
-        if len(self._args_) != self._nargs:
-            self._args_ = self._args_[: self._nargs]
-        return self._args_
+        # We unconditionally make a copy of the args to isolate the user
+        # from future possible updates to the underlying list
+        return self._args_[: self._nargs]
 
     def getname(self, *args, **kwds):
         return 'sum'
+
+    def _trunc_append(self, other):
+        _args = self._args_
+        if len(_args) > self._nargs:
+            _args = _args[: self._nargs]
+        _args.append(other)
+        return self.__class__(_args)
+
+    def _trunc_extend(self, other):
+        _args = self._args_
+        if len(_args) > self._nargs:
+            _args = _args[: self._nargs]
+        if len(other._args_) == other._nargs:
+            _args.extend(other._args_)
+        else:
+            _args.extend(other._args_[: other._nargs])
+        return self.__class__(_args)
 
     def _apply_operation(self, result):
         return sum(result)
@@ -1821,17 +1838,13 @@ def _add_native_monomial(a, b):
 def _add_native_linear(a, b):
     if not a:
         return b
-    args = b.args
-    args.append(a)
-    return b.__class__(args)
+    return b._trunc_append(a)
 
 
 def _add_native_sum(a, b):
     if not a:
         return b
-    args = b.args
-    args.append(a)
-    return b.__class__(args)
+    return b._trunc_append(a)
 
 
 def _add_native_other(a, b):
@@ -1872,15 +1885,11 @@ def _add_npv_monomial(a, b):
 
 
 def _add_npv_linear(a, b):
-    args = b.args
-    args.append(a)
-    return b.__class__(args)
+    return b._trunc_append(a)
 
 
 def _add_npv_sum(a, b):
-    args = b.args
-    args.append(a)
-    return b.__class__(args)
+    return b._trunc_append(a)
 
 
 def _add_npv_other(a, b):
@@ -1942,9 +1951,7 @@ def _add_param_linear(a, b):
         a = a.value
         if not a:
             return b
-    args = b.args
-    args.append(a)
-    return b.__class__(args)
+    return b._trunc_append(a)
 
 
 def _add_param_sum(a, b):
@@ -1952,9 +1959,7 @@ def _add_param_sum(a, b):
         a = value(a)
         if not a:
             return b
-    args = b.args
-    args.append(a)
-    return b.__class__(args)
+    return b._trunc_append(a)
 
 
 def _add_param_other(a, b):
@@ -1999,15 +2004,11 @@ def _add_var_monomial(a, b):
 
 
 def _add_var_linear(a, b):
-    args = b.args
-    args.append(MonomialTermExpression((1, a)))
-    return b.__class__(args)
+    return b._trunc_append(MonomialTermExpression((1, a)))
 
 
 def _add_var_sum(a, b):
-    args = b.args
-    args.append(a)
-    return b.__class__(args)
+    return b._trunc_append(a)
 
 
 def _add_var_other(a, b):
@@ -2046,15 +2047,11 @@ def _add_monomial_monomial(a, b):
 
 
 def _add_monomial_linear(a, b):
-    args = b.args
-    args.append(a)
-    return b.__class__(args)
+    return b._trunc_append(a)
 
 
 def _add_monomial_sum(a, b):
-    args = b.args
-    args.append(a)
-    return b.__class__(args)
+    return b._trunc_append(a)
 
 
 def _add_monomial_other(a, b):
@@ -2069,15 +2066,11 @@ def _add_monomial_other(a, b):
 def _add_linear_native(a, b):
     if not b:
         return a
-    args = a.args
-    args.append(b)
-    return a.__class__(args)
+    return a._trunc_append(b)
 
 
 def _add_linear_npv(a, b):
-    args = a.args
-    args.append(b)
-    return a.__class__(args)
+    return a._trunc_append(b)
 
 
 def _add_linear_param(a, b):
@@ -2085,33 +2078,23 @@ def _add_linear_param(a, b):
         b = b.value
         if not b:
             return a
-    args = a.args
-    args.append(b)
-    return a.__class__(args)
+    return a._trunc_append(b)
 
 
 def _add_linear_var(a, b):
-    args = a.args
-    args.append(MonomialTermExpression((1, b)))
-    return a.__class__(args)
+    return a._trunc_append(MonomialTermExpression((1, b)))
 
 
 def _add_linear_monomial(a, b):
-    args = a.args
-    args.append(b)
-    return a.__class__(args)
+    return a._trunc_append(b)
 
 
 def _add_linear_linear(a, b):
-    args = a.args
-    args.extend(b.args)
-    return a.__class__(args)
+    return a._trunc_extend(b)
 
 
 def _add_linear_sum(a, b):
-    args = b.args
-    args.append(a)
-    return b.__class__(args)
+    return b._trunc_append(a)
 
 
 def _add_linear_other(a, b):
@@ -2126,15 +2109,11 @@ def _add_linear_other(a, b):
 def _add_sum_native(a, b):
     if not b:
         return a
-    args = a.args
-    args.append(b)
-    return a.__class__(args)
+    return a._trunc_append(b)
 
 
 def _add_sum_npv(a, b):
-    args = a.args
-    args.append(b)
-    return a.__class__(args)
+    return a._trunc_append(b)
 
 
 def _add_sum_param(a, b):
@@ -2142,39 +2121,27 @@ def _add_sum_param(a, b):
         b = b.value
         if not b:
             return a
-    args = a.args
-    args.append(b)
-    return a.__class__(args)
+    return a._trunc_append(b)
 
 
 def _add_sum_var(a, b):
-    args = a.args
-    args.append(b)
-    return a.__class__(args)
+    return a._trunc_append(b)
 
 
 def _add_sum_monomial(a, b):
-    args = a.args
-    args.append(b)
-    return a.__class__(args)
+    return a._trunc_append(b)
 
 
 def _add_sum_linear(a, b):
-    args = a.args
-    args.append(b)
-    return a.__class__(args)
+    return a._trunc_append(b)
 
 
 def _add_sum_sum(a, b):
-    args = a.args
-    args.extend(b.args)
-    return a.__class__(args)
+    return a._trunc_extend(b)
 
 
 def _add_sum_other(a, b):
-    args = a.args
-    args.append(b)
-    return a.__class__(args)
+    return a._trunc_append(b)
 
 
 #
@@ -2213,9 +2180,7 @@ def _add_other_linear(a, b):
 
 
 def _add_other_sum(a, b):
-    args = b.args
-    args.append(a)
-    return b.__class__(args)
+    return b._trunc_append(a)
 
 
 def _add_other_other(a, b):
@@ -2628,8 +2593,8 @@ def _neg_var(a):
 
 
 def _neg_monomial(a):
-    args = a.args
-    return MonomialTermExpression((-args[0], args[1]))
+    coef, var = a.args
+    return MonomialTermExpression((-coef, var))
 
 
 def _neg_sum(a):
