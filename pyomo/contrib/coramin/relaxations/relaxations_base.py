@@ -111,7 +111,7 @@ def _check_cut(
     res = (True, None, None, None)
     for coef_p, v in zip(cut.linear_coefs, cut.linear_vars):
         coef = coef_p.value
-        if not math.isfinite(coef) or abs(coef) >= too_large:
+        if type(coef) is complex or not math.isfinite(coef) or abs(coef) >= too_large:
             res = (False, v, coef, None)
         elif 0 < abs(coef) <= too_small and v.has_lb() and v.has_ub():
             coef_p._value = 0
@@ -133,7 +133,7 @@ def _check_cut(
         cut.constant._value -= safety_tol
     else:
         cut.constant._value += safety_tol
-    if not math.isfinite(cut.constant.value) or abs(cut.constant.value) >= too_large:
+    if type(cut.constant.value) is complex or not math.isfinite(cut.constant.value) or abs(cut.constant.value) >= too_large:
         res = (False, None, cut.constant.value, None)
     return res
 

@@ -3,17 +3,16 @@ import math
 from pyomo.contrib import coramin
 from pyomo.contrib.coramin.third_party.minlplib_tools import (
     get_minlplib,
-    get_minlplib_instancedata,
 )
 from pyomo.common import unittest
 from pyomo.contrib import appsi
 import os
 import logging
-from suspect.pyomo.osil_reader import read_osil
 import math
 from pyomo.common import download
 import pyomo.environ as pe
 from pyomo.core.base.block import _BlockData
+import importlib
 
 
 def _get_sol(pname):
@@ -68,7 +67,7 @@ class TestMultiTreeWithMINLPLib(Helper):
         self.primal_sol['autocorr_bern20-03'] = _get_sol('autocorr_bern20-03')
         self.primal_sol['chem'] = _get_sol('chem')
         for pname in self.test_problems.keys():
-            get_minlplib(problem_name=pname)
+            get_minlplib(problem_name=pname, format='py')
         mip_solver = appsi.solvers.Gurobi()
         nlp_solver = appsi.solvers.Ipopt()
         nlp_solver.config.log_level = logging.DEBUG
@@ -88,8 +87,9 @@ class TestMultiTreeWithMINLPLib(Helper):
 
     def get_model(self, pname):
         current_dir = os.getcwd()
-        fname = os.path.join(current_dir, 'minlplib', 'osil', f'{pname}.osil')
-        m = read_osil(fname, objective_prefix='obj_')
+        fname = os.path.join(current_dir, 'minlplib', 'py', f'{pname}')
+        fname = fname.replace('/', '.')
+        m = importlib.import_module(fname).m
         return m
 
     def _check_primal_sol(self, pname, m: _BlockData, res: appsi.base.Results):
