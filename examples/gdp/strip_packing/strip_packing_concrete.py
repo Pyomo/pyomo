@@ -9,6 +9,7 @@ Common applications include stamping of components from a metal sheet or
 cutting fabric.
 
 """
+
 from __future__ import division
 
 from pyomo.environ import ConcreteModel, NonNegativeReals, Objective, Param, Set, Var

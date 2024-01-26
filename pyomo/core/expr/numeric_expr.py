@@ -2355,9 +2355,9 @@ def _register_new_iadd_mutablenpvsum_handler(a, b):
     # Retrieve the appropriate handler, record it in the main
     # _iadd_mutablenpvsum_dispatcher dict (so this method is not called a second time for
     # these types)
-    _iadd_mutablenpvsum_dispatcher[
-        b.__class__
-    ] = handler = _iadd_mutablenpvsum_type_handler_mapping[types[0]]
+    _iadd_mutablenpvsum_dispatcher[b.__class__] = handler = (
+        _iadd_mutablenpvsum_type_handler_mapping[types[0]]
+    )
     # Call the appropriate handler
     return handler(a, b)
 
@@ -2454,9 +2454,9 @@ def _register_new_iadd_mutablelinear_handler(a, b):
     # Retrieve the appropriate handler, record it in the main
     # _iadd_mutablelinear_dispatcher dict (so this method is not called a second time for
     # these types)
-    _iadd_mutablelinear_dispatcher[
-        b.__class__
-    ] = handler = _iadd_mutablelinear_type_handler_mapping[types[0]]
+    _iadd_mutablelinear_dispatcher[b.__class__] = handler = (
+        _iadd_mutablelinear_type_handler_mapping[types[0]]
+    )
     # Call the appropriate handler
     return handler(a, b)
 
@@ -2555,9 +2555,9 @@ def _register_new_iadd_mutablesum_handler(a, b):
     # Retrieve the appropriate handler, record it in the main
     # _iadd_mutablesum_dispatcher dict (so this method is not called a
     # second time for these types)
-    _iadd_mutablesum_dispatcher[
-        b.__class__
-    ] = handler = _iadd_mutablesum_type_handler_mapping[types[0]]
+    _iadd_mutablesum_dispatcher[b.__class__] = handler = (
+        _iadd_mutablesum_type_handler_mapping[types[0]]
+    )
     # Call the appropriate handler
     return handler(a, b)
 

@@ -808,13 +808,9 @@ class CuttingPlane_Transformation(Transformation):
             else:
                 self.verbose = False
 
-            (
-                instance_rBigM,
-                cuts_obj,
-                instance_rHull,
-                var_info,
-                transBlockName,
-            ) = self._setup_subproblems(instance, bigM, self._config.tighten_relaxation)
+            (instance_rBigM, cuts_obj, instance_rHull, var_info, transBlockName) = (
+                self._setup_subproblems(instance, bigM, self._config.tighten_relaxation)
+            )
 
             self._generate_cuttingplanes(
                 instance_rBigM, cuts_obj, instance_rHull, var_info, transBlockName

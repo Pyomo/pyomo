@@ -181,8 +181,7 @@ class Suffix(ComponentMap, ActiveComponent):
         rule=None,
         name=None,
         doc=None
-    ):
-        ...
+    ): ...
 
     def __init__(self, **kwds):
         # Suffix type information

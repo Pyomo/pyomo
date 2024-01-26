@@ -681,7 +681,6 @@ class StreamBasedExpressionVisitor(object):
 
 
 class SimpleExpressionVisitor(object):
-
     """
     Note:
         This class is a customization of the PyUtilib :class:`SimpleVisitor

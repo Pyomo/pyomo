@@ -14,6 +14,7 @@ the first and second disjunctions, respectively.
 Pyomo model implementation by @bernalde and @qtothec.
 
 """
+
 from __future__ import division
 
 from pyomo.environ import *

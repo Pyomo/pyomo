@@ -1,4 +1,5 @@
 """Helper functions for variable reinitialization."""
+
 from __future__ import division
 
 import logging

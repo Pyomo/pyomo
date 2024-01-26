@@ -178,9 +178,11 @@ def _characterize_function(name, tol, f_rule, model, points, *index):
         # we have a step function
         step = True
         slopes = [
-            (None)
-            if (points[i] == points[i - 1])
-            else ((values[i] - values[i - 1]) / (points[i] - points[i - 1]))
+            (
+                (None)
+                if (points[i] == points[i - 1])
+                else ((values[i] - values[i - 1]) / (points[i] - points[i - 1]))
+            )
             for i in range(1, len(points))
         ]
 
@@ -193,9 +195,9 @@ def _characterize_function(name, tol, f_rule, model, points, *index):
     #           to send this warning through Pyomo
     if not all(
         itertools.starmap(
-            lambda x1, x2: (True)
-            if ((x1 is None) or (x2 is None))
-            else (abs(x1 - x2) > tol),
+            lambda x1, x2: (
+                (True) if ((x1 is None) or (x2 is None)) else (abs(x1 - x2) > tol)
+            ),
             zip(slopes, itertools.islice(slopes, 1, None)),
         )
     ):
