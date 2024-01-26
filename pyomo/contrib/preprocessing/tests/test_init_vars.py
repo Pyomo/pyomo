@@ -1,4 +1,5 @@
 """Tests initialization of uninitialized variables."""
+
 import pyomo.common.unittest as unittest
 from pyomo.environ import ConcreteModel, TransformationFactory, value, Var
 

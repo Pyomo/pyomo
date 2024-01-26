@@ -1,6 +1,7 @@
 """
 Functions for the construction and solving of the GRCS separation problem via ROsolver
 """
+
 from pyomo.core.base.constraint import Constraint, ConstraintList
 from pyomo.core.base.objective import Objective, maximize, value
 from pyomo.core.base import Var, Param

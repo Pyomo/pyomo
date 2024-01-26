@@ -1,4 +1,5 @@
 """Tests for solution pool in the MindtPy solver."""
+
 from pyomo.core.expr.calculus.diff_with_sympy import differentiate_available
 import pyomo.common.unittest as unittest
 from pyomo.contrib.mindtpy.tests.eight_process_problem import EightProcessFlowsheet

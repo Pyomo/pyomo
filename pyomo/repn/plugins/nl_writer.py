@@ -1451,9 +1451,11 @@ class _NLWriter_impl(object):
         ostream.write(
             'r%s\n'
             % (
-                "\t#%d ranges (rhs's)" % len(constraints)
-                if symbolic_solver_labels
-                else '',
+                (
+                    "\t#%d ranges (rhs's)" % len(constraints)
+                    if symbolic_solver_labels
+                    else ''
+                ),
             )
         )
         ostream.write("\n".join(r_lines))
@@ -1466,9 +1468,11 @@ class _NLWriter_impl(object):
         ostream.write(
             'b%s\n'
             % (
-                "\t#%d bounds (on variables)" % len(variables)
-                if symbolic_solver_labels
-                else '',
+                (
+                    "\t#%d bounds (on variables)" % len(variables)
+                    if symbolic_solver_labels
+                    else ''
+                ),
             )
         )
         for var_idx, _id in enumerate(variables):
@@ -1492,9 +1496,11 @@ class _NLWriter_impl(object):
             'k%d%s\n'
             % (
                 len(variables) - 1,
-                "\t#intermediate Jacobian column lengths"
-                if symbolic_solver_labels
-                else '',
+                (
+                    "\t#intermediate Jacobian column lengths"
+                    if symbolic_solver_labels
+                    else ''
+                ),
             )
         )
         ktot = 0

@@ -642,11 +642,10 @@ def ROSolver_iterative_solve(model_data, config):
                     vals.append(dvar.value)
                 dr_var_lists_original.append(vals)
 
-            (
-                polishing_results,
-                polishing_successful,
-            ) = master_problem_methods.minimize_dr_vars(
-                model_data=master_data, config=config
+            (polishing_results, polishing_successful) = (
+                master_problem_methods.minimize_dr_vars(
+                    model_data=master_data, config=config
+                )
             )
             timing_data.total_dr_polish_time += get_time_from_solver(polishing_results)
 

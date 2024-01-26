@@ -1,6 +1,7 @@
 """
 Functions for handling the construction and solving of the GRCS master problem via ROSolver
 """
+
 from pyomo.core.base import (
     ConcreteModel,
     Block,
@@ -758,12 +759,9 @@ def solver_call_master(model_data, config, solver, solve_data):
         solver_term_cond_dict[str(opt)] = str(results.solver.termination_condition)
         master_soln.termination_condition = results.solver.termination_condition
         master_soln.pyros_termination_condition = None
-        (
-            try_backup,
-            _,
-        ) = (
-            master_soln.master_subsolver_results
-        ) = process_termination_condition_master_problem(config=config, results=results)
+        (try_backup, _) = master_soln.master_subsolver_results = (
+            process_termination_condition_master_problem(config=config, results=results)
+        )
 
         master_soln.nominal_block = nlp_model.scenarios[0, 0]
         master_soln.results = results
