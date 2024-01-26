@@ -1,4 +1,3 @@
-
 import pyomo.environ as pyo
 
 model = pyo.ConcreteModel()
