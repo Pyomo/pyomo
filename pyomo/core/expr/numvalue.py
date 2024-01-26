@@ -290,6 +290,13 @@ def as_numeric(obj):
         if val is not None:
             return val
         #
+        # Coerce the value to a float, if possible
+        #
+        try:
+            obj = float(obj)
+        except:
+            pass
+        #
         # Create the numeric constant.  This really
         # should be the only place in the code
         # where these objects are constructed.
