@@ -32,10 +32,6 @@ Possible Extensions
 *) piecewise for functions of the form y = f(x1,x2,...)
 """
 
-# ****** NOTE: Nothing in this file relies on integer division *******
-#              I predict this will save numerous headaches as
-#              well as gratuitous calls to float() in this code
-from __future__ import division
 
 __all__ = ['Piecewise']
 
@@ -151,8 +147,6 @@ def _characterize_function(name, tol, f_rule, model, points, *index):
     # expression generation errors in the checks below
     points = [value(_p) for _p in points]
 
-    # we use future division to protect against the case where
-    # the user supplies integer type points for return values
     if isinstance(f_rule, types.FunctionType):
         values = [f_rule(model, *flatten_tuple((index, x))) for x in points]
     elif f_rule.__class__ is dict:
@@ -272,7 +266,6 @@ class _PiecewiseData(_BlockData):
                 yU = self._range_pts[i + 1]
                 if xL == xU:  # a step function
                     return yU
-                # using future division
                 return yL + ((yU - yL) / (xU - xL)) * (x - xL)
         raise ValueError(
             "The point %s is outside the list of domain "
@@ -299,7 +292,6 @@ class _SimpleSinglePiecewise(object):
         # create a single linear constraint
         LHS = y_var
         F_AT_XO = y_pts[0]
-        # using future division
         dF_AT_XO = (y_pts[1] - y_pts[0]) / (x_pts[1] - x_pts[0])
         X_MINUS_XO = x_var - x_pts[0]
         if bound_type == Bound.Upper:
@@ -739,7 +731,7 @@ class _MCPiecewise(object):
         # create indexers
         polytopes = range(1, len_x_pts)
 
-        # create constants (using future division)
+        # create constants
         SLOPE = {
             p: (y_pts[p] - y_pts[p - 1]) / (x_pts[p] - x_pts[p - 1]) for p in polytopes
         }
@@ -908,7 +900,6 @@ class _BIGMPiecewise(object):
                     rhs *= 0.0
                 else:
                     rhs *= OPT_M['UB'][i] * (1 - bigm_y[i])
-                # using future division
                 return (
                     y_var
                     - y_pts[i - 1]
@@ -922,7 +913,6 @@ class _BIGMPiecewise(object):
                     rhs *= 0.0
                 else:
                     rhs *= OPT_M['LB'][i] * (1 - bigm_y[i])
-                # using future division
                 return (
                     y_var
                     - y_pts[i - 1]
@@ -944,7 +934,6 @@ class _BIGMPiecewise(object):
                 rhs *= 0.0
             else:
                 rhs *= OPT_M['LB'][i] * (1 - bigm_y[i])
-            # using future division
             return (
                 y_var
                 - y_pts[i - 1]
@@ -974,7 +963,6 @@ class _BIGMPiecewise(object):
             pblock.bigm_domain_constraint_upper = Constraint(expr=x_var <= x_pts[-1])
 
     def _M_func(self, a, Fa, b, Fb, c, Fc):
-        # using future division
         return Fa - Fb - ((a - b) * ((Fc - Fb) / (c - b)))
 
     def _find_M(self, x_pts, y_pts, bound_type):

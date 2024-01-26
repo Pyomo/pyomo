@@ -9,7 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from __future__ import division
 
 import inspect
 import logging

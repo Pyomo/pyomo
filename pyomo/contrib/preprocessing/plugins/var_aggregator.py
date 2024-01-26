@@ -11,7 +11,6 @@
 
 """Transformation to aggregate equal variables."""
 
-from __future__ import division
 
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.core.base import Block, Constraint, VarList, Objective, TransformationFactory

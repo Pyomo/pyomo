@@ -17,14 +17,8 @@ import operator
 
 logger = logging.getLogger('pyomo.core')
 
-from math import isclose
-
 from pyomo.common.dependencies import attempt_import
-from pyomo.common.deprecation import (
-    deprecated,
-    deprecation_warning,
-    relocated_module_attribute,
-)
+from pyomo.common.deprecation import deprecated, relocated_module_attribute
 from pyomo.common.errors import PyomoException, DeveloperError
 from pyomo.common.formatting import tostr
 from pyomo.common.numeric_types import (

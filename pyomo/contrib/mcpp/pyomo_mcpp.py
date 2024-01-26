@@ -11,7 +11,7 @@
 # Note: the self.mcpp.* functions are all C-style functions implemented
 # in the compiled MC++ wrapper library
 # Note: argument to pow must be an integer
-from __future__ import division
+
 
 import ctypes
 import logging

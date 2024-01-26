@@ -5,8 +5,6 @@ eight_proc_model.py.
 
 """
 
-from __future__ import division
-
 from pyomo.environ import (
     ConcreteModel,
     Constraint,

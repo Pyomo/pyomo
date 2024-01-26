@@ -17,7 +17,6 @@ reformulations for some nonlinear discrete design optimization problems.
 
 """
 
-from __future__ import division
 
 import logging
 import textwrap
