@@ -420,15 +420,17 @@ class ipopt(SolverBase):
             if config.load_solution:
                 results.incumbent_objective = value(nl_info.objectives[0])
             else:
-                results.incumbent_objective = value(replace_expressions(
-                    nl_info.objectives[0].expr,
-                    substitution_map={
-                        id(v): val
-                        for v, val in results.solution_loader.get_primals().items()
-                    },
-                    descend_into_named_expressions=True,
-                    remove_named_expressions=True,
-                ))
+                results.incumbent_objective = value(
+                    replace_expressions(
+                        nl_info.objectives[0].expr,
+                        substitution_map={
+                            id(v): val
+                            for v, val in results.solution_loader.get_primals().items()
+                        },
+                        descend_into_named_expressions=True,
+                        remove_named_expressions=True,
+                    )
+                )
 
         results.solver_configuration = config
         results.solver_log = ostreams[0].getvalue()
