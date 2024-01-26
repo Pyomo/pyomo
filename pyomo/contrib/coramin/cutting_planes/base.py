@@ -7,5 +7,5 @@ import pybnb
 
 class CutGenerator(ABC):
     @abstractmethod
-    def generate(self, node: pybnb.Node):
+    def generate(self, node: Optional[pybnb.Node]):
         pass

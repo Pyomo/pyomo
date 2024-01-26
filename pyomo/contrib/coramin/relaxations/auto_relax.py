@@ -26,7 +26,7 @@ from pyomo.contrib.coramin.utils.coramin_enums import (
 from pyomo.core.base.expression import _GeneralExpressionData, SimpleExpression
 from pyomo.repn.standard_repn import generate_standard_repn
 from .iterators import relaxation_data_objects
-from pyomo.contrib.coramin.clone import clone_active_flat
+from pyomo.contrib.coramin.clone import clone_shallow_active_flat
 
 
 logger = logging.getLogger(__name__)
@@ -1332,6 +1332,6 @@ def relax(
     m: pyomo.core.base.block._BlockData or pyomo.core.base.PyomoModel.ConcreteModel
         The relaxed model
     """
-    m = clone_active_flat(model)[0]
+    m = clone_shallow_active_flat(model)[0]
     _relax_cloned_model(m)
     return m

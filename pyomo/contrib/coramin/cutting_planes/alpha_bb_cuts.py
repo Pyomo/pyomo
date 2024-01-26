@@ -41,22 +41,33 @@ class AlphaBBCutGenerator(CutGenerator):
             node = p
         return res
 
-    def generate(self, node: pybnb.Node) -> Optional[RelationalExpression]:
-        lhs_val = value(self.lhs)
+    def generate(self, node: Optional[pybnb.Node]) -> Optional[RelationalExpression]:
+        try:
+            lhs_val = value(self.lhs)
+        except ValueError:
+            return None
         if lhs_val + self.feasibility_tol >= value(self.rhs):
             return None
-        
-        mra = self._most_recent_ancestor(node)
-        if mra is not None and self._proven_convex[mra]:
+
+        if node is None:
+            mra = None
+        else:
+            mra = self._most_recent_ancestor(node)
+        if mra in self._proven_convex and self._proven_convex[mra]:
             alpha_bb_rhs = self.rhs
         else:
             alpha = max(0, -0.5 * self.hessian.get_minimum_eigenvalue())
-            alpha_sum = 0
-            for ndx, v in enumerate(self.xlist):
-                lb, ub = v.bounds
-                alpha_sum += (v - lb) * (v - ub)
-            alpha_bb_rhs = self.rhs + alpha * alpha_sum
-            if lhs_val + self.feasibility_tol >= value(alpha_bb_rhs):
-                return None
+            if alpha == 0:
+                self._proven_convex[node] = True
+                alpha_bb_rhs = self.rhs
+            else:
+                self._proven_convex[node] = False
+                alpha_sum = 0
+                for ndx, v in enumerate(self.xlist):
+                    lb, ub = v.bounds
+                    alpha_sum += (v - lb) * (v - ub)
+                alpha_bb_rhs = self.rhs + alpha * alpha_sum
+                if lhs_val + self.feasibility_tol >= value(alpha_bb_rhs):
+                    return None
         
         return self.lhs >= taylor_series_expansion(alpha_bb_rhs)

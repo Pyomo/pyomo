@@ -12,7 +12,7 @@ from pyomo.core.expr.visitor import identify_variables
 from pyomo.contrib.appsi.fbbt import IntervalTightener, InfeasibleConstraintException
 from typing import Sequence
 from .binary_multiplication_reformulation import reformulate_binary_multiplication
-from pyomo.contrib.coramin.clone import clone_active_flat
+from pyomo.contrib.coramin.clone import clone_shallow_active_flat
 from pyomo.contrib.coramin.relaxations import iterators
 
 
@@ -58,7 +58,7 @@ class DivingHeuristic(pybnb.Problem):
         super().__init__()
 
         binary_vars, integer_vars, all_vars = collect_vars(m)
-        self.relaxation = clone_active_flat(reformulate_binary_multiplication(m))[0]
+        self.relaxation = clone_shallow_active_flat(reformulate_binary_multiplication(m))[0]
 
         orig_lbs = [v.lb for v in self.relaxation.vars]
         orig_ubs = [v.ub for v in self.relaxation.vars]

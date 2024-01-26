@@ -1,28 +1,20 @@
 import pybnb
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.base.block import _BlockData
-from pyomo.common.modeling import unique_component_name
 import pyomo.environ as pe
 from pyomo.common.errors import InfeasibleConstraintException
-from pyomo.core.expr.visitor import identify_variables
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.contrib import appsi
-from pyomo.common.config import ConfigDict, ConfigValue, PositiveFloat
-from pyomo.contrib.coramin.clone import clone_active_flat
+from pyomo.common.config import ConfigValue, PositiveFloat
+from pyomo.contrib.coramin.clone import clone_shallow_active_flat, get_clone_and_var_map
 from pyomo.contrib.coramin.relaxations.auto_relax import _relax_cloned_model
-from pyomo.repn.standard_repn import generate_standard_repn, StandardRepn
-from pyomo.contrib.coramin.relaxations.split_expr import split_expr
-from pyomo.core.expr.numeric_expr import LinearExpression
 from pyomo.contrib.coramin.relaxations import iterators
 from pyomo.contrib.coramin.utils.pyomo_utils import get_objective
 from pyomo.core.base.block import _BlockData
-from pyomo.core.base.var import _GeneralVarData
 from pyomo.contrib.coramin.heuristics.diving import run_diving_heuristic
 from pyomo.contrib.coramin.domain_reduction.obbt import perform_obbt
-from pyomo.contrib.coramin.cutting_planes.alpha_bb_cuts import AlphaBBCutGenerator
 from pyomo.contrib.coramin.cutting_planes.base import CutGenerator
-from pyomo.contrib.coramin.utils.coramin_enums import EigenValueBounder
-from typing import Tuple, List, Sequence, Optional
+from typing import Tuple, List, Optional
 import math
 import numpy as np
 import logging
@@ -35,41 +27,11 @@ from pyomo.contrib.appsi.base import (
     SolverFactory,
 )
 from pyomo.core.staleflag import StaleFlagManager
+from pyomo.contrib.coramin.algorithms.alg_utils import impose_structure, collect_vars, relax_integers
+from pyomo.contrib.coramin.algorithms.cut_gen import find_cut_generators, AlphaBBConfig
 
 
 logger = logging.getLogger(__name__)
-
-
-def _get_clone_and_var_map(m1: _BlockData):
-    orig_vars = list()
-    for c in iterators.nonrelaxation_component_data_objects(
-        m1, pe.Constraint, active=True, descend_into=True
-    ):
-        for v in identify_variables(c.body, include_fixed=False):
-            orig_vars.append(v)
-    obj = get_objective(m1)
-    if obj is not None:
-        for v in identify_variables(obj.expr, include_fixed=False):
-            orig_vars.append(v)
-    for r in iterators.relaxation_data_objects(m1, descend_into=True, active=True):
-        orig_vars.extend(r.get_rhs_vars())
-        orig_vars.append(r.get_aux_var())
-    orig_vars = list(ComponentSet(orig_vars))
-    tmp_name = unique_component_name(m1, "active_vars")
-    setattr(m1, tmp_name, orig_vars)
-    m2 = m1.clone()
-    new_vars = getattr(m2, tmp_name)
-    var_map = ComponentMap(zip(new_vars, orig_vars))
-    delattr(m1, tmp_name)
-    delattr(m2, tmp_name)
-    return m2, var_map
-
-
-class AlphaBBConfig(ConfigDict):
-    def __init__(self, description=None, doc=None, implicit=False, implicit_domain=None, visibility=0):
-        super().__init__(description, doc, implicit, implicit_domain, visibility)
-        self.max_num_vars: int = self.declare("max_num_vars", ConfigValue(default=4))
-        self.method: EigenValueBounder = self.declare("method", ConfigValue(default=EigenValueBounder.GershgorinWithSimplification))
 
 
 class BnBConfig(MIPSolverConfig):
@@ -107,75 +69,6 @@ class NodeState(object):
         self.active_cut_indices: List[int] = list()
 
 
-def collect_vars(m: _BlockData) -> Tuple[List[_GeneralVarData], List[_GeneralVarData]]:
-    binary_vars = ComponentSet()
-    integer_vars = ComponentSet()
-    for v in m.vars:
-        if v.is_binary():
-            binary_vars.add(v)
-        elif v.is_integer():
-            integer_vars.add(v)
-    return list(binary_vars), list(integer_vars)
-
-
-def relax_integers(binary_vars: Sequence[_GeneralVarData], integer_vars: Sequence[_GeneralVarData]):
-    for v in list(binary_vars) + list(integer_vars):
-        lb, ub = v.bounds
-        v.domain = pe.Reals
-        v.setlb(lb)
-        v.setub(ub)
-
-
-def impose_structure(m):
-    m.aux_vars = pe.VarList()
-
-    for key, c in list(m.nonlinear.cons.items()):
-        repn: StandardRepn = generate_standard_repn(c.body, quadratic=False, compute_values=True)
-        expr_list = split_expr(repn.nonlinear_expr)
-        if len(expr_list) == 1:
-            continue
-
-        linear_coefs = list(repn.linear_coefs)
-        linear_vars = list(repn.linear_vars)
-        for term in expr_list:
-            v = m.aux_vars.add()
-            linear_coefs.append(1)
-            linear_vars.append(v)
-            m.vars.append(v)
-            if c.equality or (c.lb == c.ub and c.lb is not None):
-                m.nonlinear.cons.add(v == term)
-            elif c.ub is None:
-                m.nonlinear.cons.add(v <= term)
-            elif c.lb is None:
-                m.nonlinear.cons.add(v >= term)
-            else:
-                m.nonlinear.cons.add(v == term)
-        new_expr = LinearExpression(constant=repn.constant, linear_coefs=linear_coefs, linear_vars=linear_vars)
-        m.linear.cons.add((c.lb, new_expr, c.ub))
-        del m.nonlinear.cons[key]
-
-    if hasattr(m.nonlinear, 'obj'):
-        obj = m.nonlinear.obj
-        repn: StandardRepn = generate_standard_repn(obj.expr, quadratic=False, compute_values=True)
-        expr_list = split_expr(repn.nonlinear_expr)
-        if len(expr_list) > 1:
-            linear_coefs = list(repn.linear_coefs)
-            linear_vars = list(repn.linear_vars)
-            for term in expr_list:
-                v = m.aux_vars.add()
-                linear_coefs.append(1)
-                linear_vars.append(v)
-                m.vars.append(v)
-                if obj.sense == pe.minimize:
-                    m.nonlinear.cons.add(v >= term)
-                else:
-                    assert obj.sense == pe.maximize
-                    m.nonlinear.cons.add(v <= term)
-            new_expr = LinearExpression(constant=repn.constant, linear_coefs=linear_coefs, linear_vars=linear_vars)
-            m.linear.obj = pe.Objective(expr=new_expr, sense=obj.sense)
-            del m.nonlinear.obj
-
-
 def _fix_vars_with_close_bounds(varlist, tol=1e-12):
     for v in varlist:
         if v.is_fixed():
@@ -188,35 +81,10 @@ def _fix_vars_with_close_bounds(varlist, tol=1e-12):
             v.fix(0.5 * (lb + ub))
 
 
-def find_cut_generators(m: _BlockData, config: AlphaBBConfig) -> List[CutGenerator]:
-    cut_generators = list()
-    for c in m.nonlinear.cons.values():
-        repn: StandardRepn = generate_standard_repn(c.body, quadratic=False, compute_values=True)
-        if repn.nonlinear_expr is None:
-            continue
-        if len(repn.nonlinear_vars) > config.max_num_vars:
-            continue
-
-        if len(repn.linear_coefs) > 0:
-            lhs = LinearExpression(constant=repn.constant, linear_coefs=repn.linear_coefs, linear_vars=repn.linear_vars)
-        else:
-            lhs = repn.constant
-
-        # alpha bb convention is lhs >= rhs
-        if c.lb is not None:
-            cg = AlphaBBCutGenerator(lhs=lhs - c.lb, rhs=-repn.nonlinear_expr, eigenvalue_opt=None, method=config.method)
-            cut_generators.append(cg)
-        if c.ub is not None:
-            cg = AlphaBBCutGenerator(lhs=c.ub - lhs, rhs=repn.nonlinear_expr, eigenvalue_opt=None, method=config.method)
-            cut_generators.append(cg)
-
-    return cut_generators
-
-
 class _BnB(pybnb.Problem):
     def __init__(self, model: _BlockData, config: BnBConfig, feasible_objective=None):
         # remove all parameters, fixed variables, etc.
-        nlp, relaxation = clone_active_flat(model, 2)
+        nlp, relaxation = clone_shallow_active_flat(model, 2)
         self.nlp: _BlockData = nlp
         self.relaxation: _BlockData = relaxation
         self.config = config
@@ -538,20 +406,32 @@ class _BnB(pybnb.Problem):
         for v, val in self.relaxation_solution.items():
             v.set_value(val, skip_validation=True)
 
-        var_to_branch_on = None
+        int_var_to_branch_on = None
         max_viol = 0
         for v in self.bin_and_int_vars:
             err = abs(v.value - round(v.value))
             if err > max_viol and err > self.config.integer_tol:
-                var_to_branch_on = v
+                int_var_to_branch_on = v
                 max_viol = err
 
-        if var_to_branch_on is None:
-            for r in self.relaxation_objects:
-                err = r.get_deviation()
-                if err > max_viol and err > self.config.feasibility_tol:
-                    var_to_branch_on = r.get_rhs_vars()[0]
-                    max_viol = err
+        max_viol = 0
+        nl_var_to_branch_on = None
+        for r in self.relaxation_objects:
+            err = r.get_deviation()
+            if err > max_viol and err > self.config.feasibility_tol:
+                nl_var_to_branch_on = r.get_rhs_vars()[0]
+                max_viol = err
+
+        if self.current_node.tree_depth % 2 == 0:
+            if int_var_to_branch_on is not None:
+                var_to_branch_on = int_var_to_branch_on
+            else:
+                var_to_branch_on = nl_var_to_branch_on
+        else:
+            if nl_var_to_branch_on is not None:
+                var_to_branch_on = nl_var_to_branch_on
+            else:
+                var_to_branch_on = int_var_to_branch_on
 
         if var_to_branch_on is None:
             # the relaxation was feasible
@@ -587,7 +467,7 @@ class _BnB(pybnb.Problem):
 
 def solve_with_bnb(model: _BlockData, config: BnBConfig):
     # we don't want to modify the original model
-    model, orig_var_map = _get_clone_and_var_map(model)
+    model, orig_var_map = get_clone_and_var_map(model)
     diving_obj, diving_sol = run_diving_heuristic(model, config.feasibility_tol, config.integer_tol)
     prob = _BnB(model, config, feasible_objective=diving_obj)
     res: pybnb.SolverResults = pybnb.solve(

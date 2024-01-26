@@ -6,9 +6,36 @@ from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.core.base.block import _BlockData
 from typing import List
+from pyomo.core.expr.visitor import identify_variables
+from pyomo.common.modeling import unique_component_name
 
 
-def clone_active_flat(m1: _BlockData, num_clones: int = 1) -> List[_BlockData]:
+def get_clone_and_var_map(m1: _BlockData):
+    orig_vars = list()
+    for c in iterators.nonrelaxation_component_data_objects(
+        m1, pe.Constraint, active=True, descend_into=True
+    ):
+        for v in identify_variables(c.body, include_fixed=False):
+            orig_vars.append(v)
+    obj = get_objective(m1)
+    if obj is not None:
+        for v in identify_variables(obj.expr, include_fixed=False):
+            orig_vars.append(v)
+    for r in iterators.relaxation_data_objects(m1, descend_into=True, active=True):
+        orig_vars.extend(r.get_rhs_vars())
+        orig_vars.append(r.get_aux_var())
+    orig_vars = list(ComponentSet(orig_vars))
+    tmp_name = unique_component_name(m1, "active_vars")
+    setattr(m1, tmp_name, orig_vars)
+    m2 = m1.clone()
+    new_vars = getattr(m2, tmp_name)
+    var_map = ComponentMap(zip(new_vars, orig_vars))
+    delattr(m1, tmp_name)
+    delattr(m2, tmp_name)
+    return m2, var_map
+
+
+def clone_shallow_active_flat(m1: _BlockData, num_clones: int = 1) -> List[_BlockData]:
     clone_list = [pe.Block(concrete=True) for i in range(num_clones)]
     for m2 in clone_list:
         m2.linear = pe.Block()
