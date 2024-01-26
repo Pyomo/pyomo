@@ -17,6 +17,7 @@ import shutil
 
 
 def _get_sol(pname):
+    start_x1_set = {'batch0812', 'chem'}
     current_dir = os.getcwd()
     target_fname = os.path.join(current_dir, f'{pname}.sol')
     downloader = download.FileDownloader()
@@ -28,8 +29,20 @@ def _get_sol(pname):
         l = line.split()
         vname = l[0]
         vval = float(l[1])
-        if vname != 'objvar':
-            res[vname] = vval
+        if vname == 'objvar':
+            continue
+        assert vname.startswith('x') or vname.startswith('b')
+        if vname.startswith('x'):
+            ndx = int(vname.replace('x', '')) - 1
+            if pname in start_x1_set:
+                ndx += 1
+            vname = f'x{ndx}'
+        else:
+            ndx = int(vname.replace('b', '')) - 1
+            if pname in start_x1_set:
+                ndx += 1
+            vname = f'b{ndx}'
+        res[vname] = vval
     f.close()
     return res
 
@@ -52,7 +65,7 @@ class TestMultiTreeWithMINLPLib(Helper):
     @classmethod
     def setUpClass(self) -> None:
         self.test_problems = {
-            'batch': 285506.5082,
+            'batch0812': 2687026.784,
             'ball_mk3_10': None,
             'ball_mk2_10': 0,
             'syn05m': 837.73240090,
@@ -61,7 +74,7 @@ class TestMultiTreeWithMINLPLib(Helper):
             'alkyl': -1.76499965,
         }
         self.primal_sol = dict()
-        self.primal_sol['batch'] = _get_sol('batch')
+        self.primal_sol['batch0812'] = _get_sol('batch0812')
         self.primal_sol['alkyl'] = _get_sol('alkyl')
         self.primal_sol['ball_mk2_10'] = _get_sol('ball_mk2_10')
         self.primal_sol['syn05m'] = _get_sol('syn05m')
@@ -148,8 +161,8 @@ class TestMultiTreeWithMINLPLib(Helper):
             )
         self.opt.config.load_solution = True
 
-    def test_batch(self):
-        self.optimal_helper('batch')
+    def test_batch0812(self):
+        self.optimal_helper('batch0812')
 
     def test_ball_mk2_10(self):
         self.optimal_helper('ball_mk2_10')
@@ -171,7 +184,7 @@ class TestMultiTreeWithMINLPLib(Helper):
         self.opt.config = orig_config
 
     def test_time_limit(self):
-        self.time_limit_helper('alkyl')
+        self.time_limit_helper('chem')
 
     def test_ball_mk3_10(self):
         self.infeasible_helper('ball_mk3_10')
@@ -223,12 +236,13 @@ class TestMultiTree(Helper):
         opt = coramin.algorithms.MultiTree(mip_solver=mip_solver, nlp_solver=nlp_solver)
         opt.config.max_iter = 3
         opt.config.load_solution = False
+        opt.config.stream_solver = True
         res = opt.solve(m)
         self.assertEqual(
             res.termination_condition, appsi.base.TerminationCondition.maxIterations
         )
         self.assertIsNone(res.best_feasible_objective)
-        opt.config.max_iter = 10
+        opt.config.max_iter = 12
         res = opt.solve(m)
         self.assertEqual(
             res.termination_condition, appsi.base.TerminationCondition.maxIterations

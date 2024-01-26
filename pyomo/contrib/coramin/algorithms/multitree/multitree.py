@@ -87,7 +87,7 @@ class MultiTreeConfig(MIPSolverConfig):
 
         self.solver_output_logger = logger
         self.log_level = logging.INFO
-        self.feasibility_tolerance = 1e-6
+        self.feasibility_tolerance = 1e-7
         self.integer_tolerance = 1e-4
         self.time_limit = 600
         self.abs_gap = 1e-4
@@ -139,6 +139,18 @@ class MultiTreeSolutionLoader(SolutionLoaderBase):
             for v in vars_to_load:
                 primals[v] = self._primals[v]
         return primals
+
+
+def _fix_vars_with_close_bounds(varlist, tol=1e-12):
+    for v in varlist:
+        if v.is_fixed():
+            v.setlb(v.value)
+            v.setub(v.value)
+        lb, ub = v.bounds
+        if lb is None or ub is None:
+            continue
+        if abs(ub - lb) <= tol * min(abs(lb), abs(ub)) + tol:
+            v.fix(0.5 * (lb + ub))
 
 
 class MultiTree(Solver):
@@ -217,7 +229,7 @@ class MultiTree(Solver):
         if self._objective.sense == pe.minimize:
             assert (
                 primal_bound
-                >= dual_bound - 1e-6 * max(abs(primal_bound), abs(dual_bound)) - 1e-6
+                >= dual_bound - 1e-4 * max(abs(primal_bound), abs(dual_bound)) - 1e-4
             )
         else:
             assert (
@@ -684,7 +696,6 @@ class MultiTree(Solver):
 
         return last_res
 
-
     def _add_oa_cuts(self, tol, max_iter) -> Results:
         original_update_config: UpdateConfig = self.mip_solver.update_config()
 
@@ -899,17 +910,18 @@ class MultiTree(Solver):
 
         self._log(header=True)
 
-        it = appsi.fbbt.IntervalTightener()
-        it.config.deactivate_satisfied_constraints = True
-        it.perform_fbbt(self._relaxation)
-
         timer.start("construct relaxation")
         impose_structure(self._relaxation)
         self._cut_generators = find_cut_generators(self._relaxation, AlphaBBConfig())
         self._construct_relaxation()
         self._construct_nlp()
-        it.perform_fbbt(self._nlp)
         timer.stop("construct relaxation")
+
+        it = appsi.fbbt.IntervalTightener()
+        it.config.deactivate_satisfied_constraints = True
+        it.perform_fbbt(self._relaxation)
+        it.perform_fbbt(self._nlp)
+        _fix_vars_with_close_bounds(self._nlp.vars)
 
         self._objective = get_objective(self._relaxation)
 

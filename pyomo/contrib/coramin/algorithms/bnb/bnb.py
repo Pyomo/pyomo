@@ -38,7 +38,7 @@ class BnBConfig(MIPSolverConfig):
     def __init__(self):
         super().__init__(None, None, False, None, 0)
         self.feasibility_tol = self.declare(
-            "feasibility_tol", ConfigValue(domain=PositiveFloat, default=1e-6)
+            "feasibility_tol", ConfigValue(domain=PositiveFloat, default=1e-7)
         )
         self.lp_solver = self.declare("lp_solver", ConfigValue())
         self.nlp_solver = self.declare("nlp_solver", ConfigValue())
