@@ -15,7 +15,7 @@ Cutting plane-based GDP reformulation.
 Implements a general cutting plane-based reformulation for linear and
 convex GDPs.
 """
-from __future__ import division
+
 
 from pyomo.common.config import (
     ConfigBlock,

@@ -264,15 +264,6 @@ def polynomial_degree(obj):
 # constants get repeated many times.  KnownConstants lets us re-use /
 # share constants we have seen before.
 #
-# Note:
-#   For now, all constants are coerced to floats.  This avoids integer
-#   division in Python 2.x.  (At least some of the time.)
-#
-#   When we eliminate support for Python 2.x, we will not need this
-#   coercion.  The main difference in the following code is that we will
-#   need to index KnownConstants by both the class type and value, since
-#   INT, FLOAT and LONG values sometimes hash the same.
-#
 _KnownConstants = {}
 
 
@@ -298,13 +289,6 @@ def as_numeric(obj):
         val = _KnownConstants.get(obj, None)
         if val is not None:
             return val
-        #
-        # Coerce the value to a float, if possible
-        #
-        try:
-            obj = float(obj)
-        except:
-            pass
         #
         # Create the numeric constant.  This really
         # should be the only place in the code

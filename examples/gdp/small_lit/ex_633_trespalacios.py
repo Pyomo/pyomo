@@ -15,8 +15,6 @@ Pyomo model implementation by @bernalde and @qtothec.
 
 """
 
-from __future__ import division
-
 from pyomo.environ import *
 from pyomo.gdp import *
 

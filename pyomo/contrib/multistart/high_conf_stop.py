@@ -6,8 +6,6 @@ range, given some confidence.
 
 """
 
-from __future__ import division
-
 from collections import Counter
 from math import log, sqrt
 

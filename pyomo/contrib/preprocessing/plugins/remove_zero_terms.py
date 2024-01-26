@@ -11,7 +11,7 @@
 
 # -*- coding: UTF-8 -*-
 """Transformation to remove zero terms from constraints."""
-from __future__ import division
+
 
 from pyomo.core import quicksum
 from pyomo.core.base.constraint import Constraint

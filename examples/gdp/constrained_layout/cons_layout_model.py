@@ -10,8 +10,6 @@ with each other.
 
 """
 
-from __future__ import division
-
 from pyomo.environ import ConcreteModel, Objective, Param, RangeSet, Set, Var, value
 
 # Constrained layout model examples. These are from Nicolas Sawaya (2006).

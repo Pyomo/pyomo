@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 import pyomo.environ as pyo
 
 model = pyo.ConcreteModel()
