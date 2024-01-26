@@ -4,6 +4,7 @@ This is the more verbose formulation of the same problem given in
 eight_proc_model.py.
 
 """
+
 from __future__ import division
 
 from pyomo.environ import (
