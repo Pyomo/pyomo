@@ -301,8 +301,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         units=None,
         name=None,
         doc=None,
-    ):
-        ...
+    ): ...
 
     def __init__(self, *args, **kwd):
         _init = self._pop_from_kwargs('Param', kwd, ('rule', 'initialize'), NOTSET)

@@ -1,5 +1,5 @@
 # driveconc1.py
-from __future__ import division
+
 import pyomo.environ as pyo
 from pyomo.opt import SolverFactory
 

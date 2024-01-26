@@ -1087,12 +1087,12 @@ def latex_printer(
             for ky, vl in setInfo.items():
                 ix = int(ky[3:]) - 1
                 setInfo[ky]['setObject'] = setMap_inverse[ky]  # setList[ix]
-                setInfo[ky][
-                    'setRegEx'
-                ] = r'__S_PLACEHOLDER_8675309_GROUP_([0-9*])_%s__' % (ky)
-                setInfo[ky][
-                    'sumSetRegEx'
-                ] = r'sum_{__S_PLACEHOLDER_8675309_GROUP_([0-9*])_%s__}' % (ky)
+                setInfo[ky]['setRegEx'] = (
+                    r'__S_PLACEHOLDER_8675309_GROUP_([0-9*])_%s__' % (ky)
+                )
+                setInfo[ky]['sumSetRegEx'] = (
+                    r'sum_{__S_PLACEHOLDER_8675309_GROUP_([0-9*])_%s__}' % (ky)
+                )
                 # setInfo[ky]['idxRegEx'] = r'__I_PLACEHOLDER_8675309_GROUP_[0-9*]_%s__'%(ky)
 
             if explicit_set_summation:

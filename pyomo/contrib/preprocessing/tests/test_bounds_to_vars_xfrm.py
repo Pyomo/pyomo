@@ -1,4 +1,5 @@
 """Tests explicit bound to variable bound transformation module."""
+
 import pyomo.common.unittest as unittest
 from pyomo.environ import (
     ConcreteModel,

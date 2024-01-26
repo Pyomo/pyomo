@@ -470,9 +470,9 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                         and disj not in disjunctsVarAppearsIn[var]
                     ):
                         relaxationBlock = disj._transformation_block().parent_block()
-                        relaxationBlock._bigMConstraintMap[
-                            disaggregated_var
-                        ] = Reference(disaggregated_var_bounds[idx, :])
+                        relaxationBlock._bigMConstraintMap[disaggregated_var] = (
+                            Reference(disaggregated_var_bounds[idx, :])
+                        )
                         relaxationBlock._disaggregatedVarMap['srcVar'][
                             disaggregated_var
                         ] = var

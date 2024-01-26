@@ -33,9 +33,7 @@ def create_model(k1, k2, k3, caf):
 
     model.cc_bal = pyo.Constraint(expr=(0 == -model.sv * model.cc + k2 * model.cb))
 
-    model.cd_bal = pyo.Constraint(
-        expr=(0 == -model.sv * model.cd + k3 * model.ca**2.0)
-    )
+    model.cd_bal = pyo.Constraint(expr=(0 == -model.sv * model.cd + k3 * model.ca**2.0))
 
     return model
 
