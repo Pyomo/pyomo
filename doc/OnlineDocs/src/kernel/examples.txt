@@ -154,7 +154,7 @@
         5 Declarations: SOS2_y_index SOS2_y SOS2_constraint_index SOS2_constraint SOS2_sosconstraint
 
 1 Suffix Declarations
-    dual : Direction=Suffix.IMPORT, Datatype=Suffix.FLOAT
+    dual : Direction=IMPORT, Datatype=FLOAT
         Key : Value
 
 27 Declarations: b s q p pd v vd vl_index vl c cd_index cd cl_index cl e ed o od ol_index ol sos1 sos2 sd_index sd dual f pw

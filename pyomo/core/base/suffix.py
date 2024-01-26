@@ -189,7 +189,7 @@ class Suffix(ComponentMap, ActiveComponent):
         initialize=None,
         rule=None,
         name=None,
-        doc=None
+        doc=None,
     ): ...
 
     def __init__(self, **kwargs):
