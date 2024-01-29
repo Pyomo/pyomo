@@ -1,6 +1,7 @@
 '''
 Utility functions for the PyROS solver
 '''
+
 import copy
 from enum import Enum, auto
 from pyomo.common.collections import ComponentSet, ComponentMap

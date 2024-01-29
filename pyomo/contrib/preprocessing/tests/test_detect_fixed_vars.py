@@ -1,4 +1,5 @@
 """Tests detection of fixed variables."""
+
 import pyomo.common.unittest as unittest
 from pyomo.environ import ConcreteModel, TransformationFactory, Var, value
 

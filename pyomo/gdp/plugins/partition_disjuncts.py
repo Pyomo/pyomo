@@ -15,7 +15,7 @@ Between Steps (P-Split) reformulation for GDPs from:
 J. Kronqvist, R. Misener, and C. Tsay, "Between Steps: Intermediate 
 Relaxations between big-M and Convex Hull Reformulations," 2021.
 """
-from __future__ import division
+
 
 from pyomo.common.config import (
     ConfigBlock,

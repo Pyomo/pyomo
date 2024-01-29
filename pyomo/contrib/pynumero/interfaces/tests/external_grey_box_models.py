@@ -298,8 +298,7 @@ class PressureDropTwoEqualities(ExternalGreyBoxModel):
         P2 = self._input_values[3]
         Pout = self._input_values[4]
         return np.asarray(
-            [P2 - (Pin - 2 * c * F**2), Pout - (P2 - 2 * c * F**2)],
-            dtype=np.float64,
+            [P2 - (Pin - 2 * c * F**2), Pout - (P2 - 2 * c * F**2)], dtype=np.float64
         )
 
     def evaluate_jacobian_equality_constraints(self):
