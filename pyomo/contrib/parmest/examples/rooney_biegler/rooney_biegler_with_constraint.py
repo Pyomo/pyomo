@@ -17,6 +17,7 @@ model parameter uncertainty using nonlinear confidence regions. AIChE Journal,
 
 import pandas as pd
 import pyomo.environ as pyo
+from pyomo.contrib.parmest.experiment import Experiment
 
 
 def rooney_biegler_model_with_constraint(data):
@@ -24,6 +25,10 @@ def rooney_biegler_model_with_constraint(data):
 
     model.asymptote = pyo.Var(initialize=15)
     model.rate_constant = pyo.Var(initialize=0.5)
+
+    model.hour = pyo.Param(within=pyo.PositiveReals, mutable=True)
+    model.y = pyo.Param(within=pyo.PositiveReals, mutable=True)
+    
     model.response_function = pyo.Var(data.hour, initialize=0.0)
 
     # changed from expression to constraint
@@ -42,6 +47,43 @@ def rooney_biegler_model_with_constraint(data):
     model.SSE = pyo.Objective(rule=SSE_rule, sense=pyo.minimize)
 
     return model
+
+class RooneyBieglerExperiment(Experiment):
+
+    def __init__(self, data):
+        self.data = data
+        self.model = None
+
+    def create_model(self):
+        self.model = rooney_biegler_model_with_constraint(self.data)
+
+    def label_model(self):
+
+        m = self.model
+
+        m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.experiment_outputs.update([(m.hour, self.data.iloc[0]['hour'])])
+        m.experiment_outputs.update([(m.y, self.data.iloc[0]['y'])])
+
+
+        m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.unknown_parameters.update((k, pyo.ComponentUID(k)) 
+                                    for k in [m.asymptote, m.rate_constant])
+
+    def finalize_model(self):
+
+        m = self.model
+        
+        # Experiment output values
+        m.hour = self.data.iloc[0]['hour']
+        m.y = self.data.iloc[0]['y']
+
+    def get_labeled_model(self):
+        self.create_model()
+        self.label_model()
+        self.finalize_model()
+        
+        return self.model
 
 
 def main():
