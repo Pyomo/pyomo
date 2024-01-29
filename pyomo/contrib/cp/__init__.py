@@ -14,6 +14,7 @@ from pyomo.contrib.cp.scheduling_expr.sequence_expressions import (
     before_in_sequence,
     predecessor_to,
 )
+from pyomo.contrib.cp.scheduling_expr.scheduling_logic import alternative, spans
 from pyomo.contrib.cp.scheduling_expr.step_function_expressions import (
     AlwaysIn,
     Step,

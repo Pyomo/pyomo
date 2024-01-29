@@ -36,6 +36,10 @@ from pyomo.contrib.cp.sequence_var import (
     IndexedSequenceVar,
     _SequenceVarData,
 )
+from pyomo.contrib.cp.scheduling_expr.scheduling_logic import (
+    AlternativeExpression,
+    SpanExpression,
+)
 from pyomo.contrib.cp.scheduling_expr.precedence_expressions import (
     BeforeExpression,
     AtExpression,
@@ -462,6 +466,7 @@ def _create_docplex_interval_var(visitor, interval_var):
     nm = interval_var.name if visitor.symbolic_solver_labels else None
     cpx_interval_var = cp.interval_var(name=nm)
     visitor.var_map[id(interval_var)] = cpx_interval_var
+    visitor.pyomo_to_docplex[interval_var] = cpx_interval_var
 
     # Figure out if it exists
     if interval_var.is_present.fixed and not interval_var.is_present.value:
@@ -991,6 +996,18 @@ def _handle_predecessor_to_expression_node(
     return _GENERAL, cp.previous(seq_var[1], before_var[1], after_var[1])
 
 
+def _handle_span_expression_node(
+    visitor, node, *args
+):
+    return _GENERAL, cp.span(args[0][1], [arg[1] for arg in args[1:]])
+
+
+def _handle_alternative_expression_node(
+        visitor, node, *args
+):
+    return _GENERAL, cp.alternative(args[0][1], [arg[1] for arg in args[1:]])
+
+
 class LogicalToDoCplex(StreamBasedExpressionVisitor):
     _operator_handles = {
         EXPR.GetItemExpression: _handle_getitem,
@@ -1037,6 +1054,8 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         LastInSequenceExpression: _handle_last_in_sequence_expression_node,
         BeforeInSequenceExpression: _handle_before_in_sequence_expression_node,
         PredecessorToExpression: _handle_predecessor_to_expression_node,
+        SpanExpression: _handle_span_expression_node,
+        AlternativeExpression: _handle_alternative_expression_node,
     }
     _var_handles = {
         IntervalVarStartTime: _before_interval_var_start_time,
