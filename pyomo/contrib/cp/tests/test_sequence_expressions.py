@@ -12,6 +12,12 @@
 from io import StringIO
 import pyomo.common.unittest as unittest
 from pyomo.contrib.cp.interval_var import IntervalVar
+from pyomo.contrib.cp.scheduling_expr.scheduling_logic import (
+    AlternativeExpression,
+    SpanExpression,
+    alternative,
+    spans
+)
 from pyomo.contrib.cp.scheduling_expr.sequence_expressions import (
     NoOverlapExpression,
     FirstInSequenceExpression,
@@ -102,3 +108,50 @@ class TestSequenceVarExpressions(unittest.TestCase):
         self.assertIs(e.args[2], m.seq)
 
         self.assertEqual(str(e), "predecessor_to(i[0], i[1], seq)")
+
+
+class TestHierarchicalSchedulingExpressions(unittest.TestCase):
+    def make_model(self):
+        m = ConcreteModel()
+        def start_rule(m, i):
+            return 2*i
+        def length_rule(m, i):
+            return i
+        m.iv = IntervalVar([1, 2, 3], start=start_rule, length=length_rule,
+                           optional=True)
+        m.whole_enchilada = IntervalVar()
+
+        return m
+
+    def check_span_expression(self, m, e):
+        self.assertIsInstance(e, SpanExpression)
+        self.assertEqual(e.nargs(), 4)
+        self.assertEqual(len(e.args), 4)
+        self.assertIs(e.args[0], m.whole_enchilada)
+        for i in [1, 2, 3]:
+            self.assertIs(e.args[i], m.iv[i])
+
+        self.assertEqual(str(e), "whole_enchilada.spans(iv[1], iv[2], iv[3])")
+
+    def test_spans(self):
+        m = self.make_model()
+        e = spans(m.whole_enchilada, [m.iv[i] for i in [1, 2, 3]])
+        self.check_span_expression(m, e)
+        
+    def test_spans_method(self):
+        m = self.make_model()
+        e = m.whole_enchilada.spans(m.iv[i] for i in [1, 2, 3])
+        self.check_span_expression(m, e)
+
+    def test_alternative(self):
+        m = self.make_model()
+        e = alternative(m.whole_enchilada, [m.iv[i] for i in [1, 2, 3]])
+
+        self.assertIsInstance(e, AlternativeExpression)
+        self.assertEqual(e.nargs(), 4)
+        self.assertEqual(len(e.args), 4)
+        self.assertIs(e.args[0], m.whole_enchilada)
+        for i in [1, 2, 3]:
+            self.assertIs(e.args[i], m.iv[i])
+
+        self.assertEqual(str(e), "alternative(whole_enchilada, [iv[1], iv[2], iv[3]])")
