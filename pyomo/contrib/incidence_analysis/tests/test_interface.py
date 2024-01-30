@@ -1790,7 +1790,58 @@ class TestInterface(unittest.TestCase):
         self.assertEqual(len(matching), 2)
         self.assertIs(matching[m.eq2], m.x[2])
         self.assertIs(matching[m.eq3], m.x[3])
+        
+    def test_add_edge(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3, 4])
+        m.eq1 = pyo.Constraint(expr=m.x[1] ** 2 + m.x[2] ** 2 + m.x[3] ** 2 == 1)
+        m.eq2 = pyo.Constraint(expr=m.x[2] + pyo.sqrt(m.x[1]) + pyo.exp(m.x[3]) == 1)
+        m.eq3 = pyo.Constraint(expr=m.x[3] + m.x[2] + m.x[4] == 1)
+        m.eq4 = pyo.Constraint(expr=m.x[1] + m.x[2]**2 == 5)
+        
+        # nodes: component
+        # 0    : eq1
+        # 1    : eq2
+        # 2    : eq3
+        # 3    : eq4
+        # 4    : x[1]
+        # 5    : x[2]
+        # 6    : x[3]
+        # 7    : x[4]        
+        
+        igraph = IncidenceGraphInterface(m, linear_only=False)
+        n_edges_original = igraph.n_edges
+        
+        #Test if there already exists an edge between two nodes, nothing is added 
+        igraph.add_edge_to_graph(m.eq3, m.x[4])
+        n_edges_new = igraph.n_edges
+        self.assertEqual(n_edges_original, n_edges_new)
+        
+        igraph.add_edge_to_graph(m.x[1], m.eq3)
+        n_edges_new = igraph.n_edges
+        self.assertEqual(set(igraph._incidence_graph[2]), {6, 5, 7, 4})
+        self.assertEqual(n_edges_original +1, n_edges_new)
+        
+        igraph.add_edge_to_graph(m.eq4, m.x[4])
+        n_edges_new = igraph.n_edges
+        self.assertEqual(set(igraph._incidence_graph[3]), {4, 5, 7})
+        self.assertEqual(n_edges_original + 2, n_edges_new)
+        
+    def test_add_edge_linear_igraph(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3, 4])
+        m.eq1 = pyo.Constraint(expr=m.x[1] +  m.x[3] == 1)
+        m.eq2 = pyo.Constraint(expr=m.x[2] + pyo.sqrt(m.x[1]) + pyo.exp(m.x[3]) == 1)
+        m.eq3 = pyo.Constraint(expr=m.x[4]**2 + m.x[1] ** 3 + m.x[2] == 1)
+        
+        #Make sure error is raised when a variable is not in the igraph
+        igraph = IncidenceGraphInterface(m, linear_only=True)
+        n_edges_original = igraph.n_edges
 
+        msg = "is not a node in the incidence graph"
+        with self.assertRaisesRegex(RuntimeError, msg):
+            igraph.add_edge_to_graph(m.x[4], m.eq2)
+        
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 class TestIndexedBlock(unittest.TestCase):
