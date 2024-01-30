@@ -1,5 +1,5 @@
 import networkx as nx
-from typing import Sequence, MutableSet, Optional
+from typing import Sequence, MutableSet, Optional, Union
 from pyomo.contrib.fbbt.fbbt import fbbt, compute_bounds_on_expr
 import time
 import enum
@@ -18,6 +18,8 @@ from pyomo.contrib.coramin.relaxations.iterators import (
 from pyomo.core.expr.visitor import replace_expressions
 import logging
 import networkx
+from pyomo.contrib.coramin.clone import clone_shallow_active_flat
+from pyomo.repn.standard_repn import generate_standard_repn
 
 try:
     import metis
@@ -59,13 +61,12 @@ class TreeBlockData(_BlockData):
         _BlockData.__init__(self, component)
         self._children_index = None
         self._children = None
-        self._linking_constraints = None
+        self._coupling_vars = list()
         self._already_setup = False
         self._is_leaf = None
         self._is_root = True
-        self._allow_changes = False
 
-    def setup(self, children_keys):
+    def setup(self, children_keys, coupling_vars):
         assert not self._already_setup
         self._already_setup = True
         if len(children_keys) == 0:
@@ -74,12 +75,10 @@ class TreeBlockData(_BlockData):
             self._is_leaf = False
             del self._children_index
             del self._children
-            del self._linking_constraints
-            self._allow_changes = True
+            del self._coupling_vars
             self._children_index = pe.Set(initialize=children_keys)
             self._children = TreeBlock(self._children_index)
-            self._linking_constraints = pe.ConstraintList()
-            self._allow_changes = False
+            self._coupling_vars = list(coupling_vars)
             for key in children_keys:
                 child = self.children[key]
                 child._is_root = False
@@ -94,19 +93,6 @@ class TreeBlockData(_BlockData):
         self._assert_setup()
         return self._is_leaf
 
-    def add_component(self, name, val):
-        self._assert_setup()
-        if (
-            self.is_leaf()
-            or self._allow_changes
-            or not isinstance(val, _GeneralVarData)
-        ):
-            _BlockData.add_component(self, name, val)
-        else:
-            raise TreeBlockError(
-                'Pyomo variables cannot be added to a TreeBlock unless it is a leaf.'
-            )
-
     @property
     def children(self):
         self._assert_setup()
@@ -115,15 +101,11 @@ class TreeBlockData(_BlockData):
                 'Leaf TreeBlocks do not have children. Please check the is_leaf method'
             )
         return self._children
-
+    
     @property
-    def linking_constraints(self):
+    def coupling_vars(self):
         self._assert_setup()
-        if self.is_leaf():
-            raise TreeBlockError(
-                'leaf TreeBlocks do not have linking_constraints. Please check the is_leaf method.'
-            )
-        return self._linking_constraints
+        return list(self._coupling_vars)
 
     def _num_stages(self):
         self._assert_setup()
@@ -234,19 +216,19 @@ class _Edge(object):
 
 
 class _Tree(object):
-    def __init__(self, children=None, edges_between_children=None):
+    def __init__(self, children, coupling_vars):
         """
         Parameters
         ----------
-        children: list or collections.abc.Iterable of _Tree or networkx.Graph
-        edges_between_children: list or collections.abc.Iterable of _Edge
+        children: Sequence[networkx.Graph]
+        coupling_vars: Sequence[_VarNode]
         """
-        self.children = OrderedSet()
-        self.edges_between_children = OrderedSet()
+        self.children: MutableSet[Union[_Tree, networkx.Graph]] = OrderedSet()
+        self.coupling_vars: MutableSet[_VarNode] = OrderedSet()
         if children is not None:
             self.children.update(children)
-        if edges_between_children is not None:
-            self.edges_between_children.update(edges_between_children)
+        if coupling_vars is not None:
+            self.coupling_vars.update(coupling_vars)
 
     def build_pyomo_model(self, block):
         """
@@ -254,56 +236,20 @@ class _Tree(object):
         ----------
         block: TreeBlockData
             empty TreeBlock
-
-        Returns
-        -------
-        component_map: pe.ComponentMap
         """
-        block.setup(children_keys=list(range(len(self.children))))
-        component_map = pe.ComponentMap()
-        replacement_map_by_child = dict()
+        block.setup(children_keys=list(range(len(self.children))), coupling_vars=[i.comp for i in self.coupling_vars])
 
         for i, child in enumerate(self.children):
             if isinstance(child, _Tree):
-                tmp_component_map = child.build_pyomo_model(block=block.children[i])
+                child.build_pyomo_model(block=block.children[i])
             elif isinstance(child, networkx.Graph):
-                block.children[i].setup(children_keys=list())
-                tmp_component_map = build_pyomo_model_from_graph(
-                    graph=child, block=block.children[i]
-                )
+                block.children[i].setup(children_keys=list(), coupling_vars=list())
+                build_pyomo_model_from_graph(graph=child, block=block.children[i])
             else:
                 raise ValueError('Unexpected child type: {0}'.format(str(type(child))))
-            replacement_map_by_child[child] = tmp_component_map
-            component_map.update(tmp_component_map)
-
-        logger.debug(
-            'creating linking cons linking the children of {0}'.format(str(block))
-        )
-        for edge in self.edges_between_children:
-            logger.debug('adding linking constraint for edge {0}'.format(str(edge)))
-            if edge.node1.comp is not edge.node2.comp:
-                raise DecompositionError(
-                    'Edge {0} node1.comp is not node2.comp'.format(edge)
-                )
-            if edge.node1.comp not in component_map:
-                logger.warning(
-                    'Edge {0} node {1} is not in the component map'.format(
-                        str(edge), str(edge.node1)
-                    )
-                )
-            all_children = list(self.children)
-            assert len(all_children) == 2
-            child0 = all_children[0]
-            child1 = all_children[1]
-            v1 = replacement_map_by_child[child0][edge.node1.comp]
-            v2 = replacement_map_by_child[child1][edge.node2.comp]
-            assert v1 is not v2
-            block.linking_constraints.add(v1 == v2)
-
-        return component_map
 
     def log(self, prefix=''):
-        logger.debug(prefix + '# Edges: {0}'.format(len(self.edges_between_children)))
+        logger.debug(prefix + '# Edges: {0}'.format(len(self.coupling_vars)))
         for _child in self.children:
             if isinstance(_child, _Tree):
                 _child.log(prefix=prefix + '  ')
@@ -418,8 +364,7 @@ def evaluate_partition(original_graph, tree):
         tree_nnz += child_nnz
         child_n_vars_to_tighten = len(collect_vars_to_tighten_from_graph(graph=child))
         tree_obbt_nnz += child_nnz * child_n_vars_to_tighten
-    tree_nnz += 2 * len(tree.edges_between_children)
-    tree_obbt_nnz += tree_nnz * len(tree.edges_between_children)
+    tree_obbt_nnz += tree_nnz * len(tree.coupling_vars)
     partitioning_ratio = original_obbt_nnz / tree_obbt_nnz
     return partitioning_ratio
 
@@ -434,9 +379,11 @@ def _refine_partition(
     con_count = defaultdict(int)
     for edge in removed_edges:
         n1, n2 = edge.node1, edge.node2
+        assert n1.is_var() or n2.is_var()
         if n1.is_con():
+            assert n2.is_var()
             con_count[n1.comp] += 1
-        if n2.is_con():
+        elif n2.is_con():
             con_count[n2.comp] += 1
 
     for c, count in con_count.items():
@@ -485,44 +432,38 @@ def _refine_partition(
             )
             continue
 
-        # update the model
-        if not hasattr(model, 'dbt_partition_vars'):
-            model.dbt_partition_vars = pe.VarList()
-            model.dbt_partition_cons = pe.ConstraintList()
-
-        graph_a_var = model.dbt_partition_vars.add()
-        graph_b_var = model.dbt_partition_vars.add()
-
-        if c.lower is not None and c.upper is not None:
-            new_c1 = model.dbt_partition_cons.add(graph_a_var == sum(graph_a_args))
-            new_c2 = model.dbt_partition_cons.add(graph_b_var == sum(graph_b_args))
-            if c.equality:
-                c.set_value(graph_a_var + graph_b_var == c.lower)
-            else:
-                c.set_value((c.lower, graph_a_var + graph_b_var, c.upper))
-        elif c.lower is None:
-            assert c.upper is not None
-            new_c1 = model.dbt_partition_cons.add(graph_a_var >= sum(graph_a_args))
-            new_c2 = model.dbt_partition_cons.add(graph_b_var >= sum(graph_b_args))
-            c.set_value(graph_a_var + graph_b_var <= c.upper)
-        else:
-            assert c.upper is None
-            new_c1 = model.dbt_partition_cons.add(graph_a_var <= sum(graph_a_args))
-            new_c2 = model.dbt_partition_cons.add(graph_b_var <= sum(graph_b_args))
-            c.set_value(graph_a_var + graph_b_var >= c.lower)
-
-        # update the graph
+        graph_a_var = model.aux_vars.add()
+        graph_b_var = model.aux_vars.add()
+        model.vars.extend([graph_a_var, graph_b_var])
         graph.remove_node(_ConNode(c))
         graph.add_node(_VarNode(graph_a_var))
         graph.add_node(_VarNode(graph_b_var))
-        for new_con in [new_c1, new_c2, c]:
-            graph.add_node(_ConNode(new_con))
-            for v in identify_variables(new_con.body, include_fixed=False):
-                graph.add_edge(_VarNode(v), _ConNode(new_con))
+
+        new_cons = list()
+        for e in [sum(graph_a_args) - graph_a_var, sum(graph_b_args) - graph_b_var]:
+            repn = generate_standard_repn(e)
+            if repn.is_linear():
+                con_list = model.linear.cons
+            else:
+                con_list = model.nonlinear.cons
+            if c.lb is not None and c.ub is not None:
+                new_c = con_list.add(e == 0)
+            elif c.ub is not None:
+                new_c = con_list.add(e <= 0)
+            else:
+                new_c = con_list.add(e >= 0)
+            new_cons.append(new_c)
+        c.set_value((c.lb, graph_a_var + graph_b_var, c.ub))
+        new_cons.append(c)
+        for new_c in new_cons:
+            graph.add_node(_ConNode(new_c))
+            for v in identify_variables(new_c.body, include_fixed=False):
+                graph.add_edge(_VarNode(v), _ConNode(new_c))
 
         # update removed_edges
         new_removed_edges = list()
         for e in removed_edges:
+            assert e.node1.is_var()
             if e.node2.comp is not c:
                 new_removed_edges.append(e)
 
@@ -534,8 +475,8 @@ def _refine_partition(
         graph_b_nodes.discard(_ConNode(c))
         graph_a_nodes.add(_VarNode(graph_a_var))
         graph_b_nodes.add(_VarNode(graph_b_var))
-        graph_a_nodes.add(_ConNode(new_c1))
-        graph_b_nodes.add(_ConNode(new_c2))
+        graph_a_nodes.add(_ConNode(new_cons[0]))
+        graph_b_nodes.add(_ConNode(new_cons[1]))
         graph_b_nodes.add(_ConNode(c))
 
     return removed_edges
@@ -605,38 +546,19 @@ def split_metis(graph, model):
     graph_a_edges = list()
     graph_b_edges = list()
     for n1, n2 in graph.edges():
-        if not n1.is_var():
-            assert n2.is_var()
-            n1, n2 = n2, n1
-        else:
-            assert not n2.is_var()
-        if n1 in graph_a_nodes and n2 in graph_a_nodes:
+        assert n1.is_var()
+        assert not n2.is_var()
+        if n2 in graph_a_nodes:
             graph_a_edges.append((n1, n2))
-        elif n1 in graph_b_nodes and n2 in graph_b_nodes:
-            graph_b_edges.append((n1, n2))
         else:
-            continue
+            graph_b_edges.append((n1, n2))
 
-    linking_edges = list()
-    new_var_nodes_dict = dict()
+    linking_var_nodes = OrderedSet()
     for e in removed_edges:
         n1, n2 = e.node1, e.node2
         assert n1.is_var()
         assert not n2.is_var()
-        if n1 in new_var_nodes_dict:
-            new_var_node = new_var_nodes_dict[n1]
-        else:
-            new_var_node = _VarNode(n1.comp)
-            new_var_nodes_dict[n1] = new_var_node
-            linking_edge = _Edge(n1, new_var_node)
-            linking_edges.append(linking_edge)
-        if n1 in graph_a_nodes:
-            assert n2 in graph_b_nodes
-            graph_b_edges.append((new_var_node, n2))
-        else:
-            assert n1 in graph_b_nodes
-            assert n2 in graph_a_nodes
-            graph_a_edges.append((new_var_node, n2))
+        linking_var_nodes.add(n1)
 
     graph_a = networkx.Graph()
     graph_b = networkx.Graph()
@@ -649,9 +571,9 @@ def split_metis(graph, model):
     if (graph_a.number_of_nodes() >= 0.99 * graph.number_of_nodes()) or (
         graph_b.number_of_nodes() >= 0.99 * graph.number_of_nodes()
     ):
-        raise DecompositionError('Failed to partition graph')
+        raise DecompositionError('Partition is extremely unbalanced')
 
-    tree = _Tree(children=[graph_a, graph_b], edges_between_children=linking_edges)
+    tree = _Tree(children=[graph_a, graph_b], coupling_vars=linking_var_nodes)
 
     partitioning_ratio = evaluate_partition(original_graph=graph, tree=tree)
 
@@ -671,25 +593,23 @@ def convert_pyomo_model_to_bipartite_graph(m: _BlockData):
     graph = networkx.Graph()
     var_map = pe.ComponentMap()
 
-    for v in nonrelaxation_component_data_objects(
-        m, pe.Var, sort=True, descend_into=True
-    ):
-        if v.fixed:
-            continue
-        var_map[v] = _VarNode(v)
-        graph.add_node(var_map[v])
-
-    for b in relaxation_data_objects(m, descend_into=True, active=True, sort=True):
+    for b in relaxation_data_objects(m, descend_into=True, active=True):
         node2 = _RelNode(b)
         for v in list(b.get_rhs_vars()) + [b.get_aux_var()]:
+            if pe.is_fixed(v):
+                continue
+            if v not in var_map:
+                var_map[v] = _VarNode(v)
             node1 = var_map[v]
             graph.add_edge(node1, node2)
 
     for c in nonrelaxation_component_data_objects(
-        m, pe.Constraint, active=True, sort=True, descend_into=True
+        m, pe.Constraint, active=True, descend_into=True
     ):
         node2 = _ConNode(c)
         for v in identify_variables(c.body, include_fixed=False):
+            if v not in var_map:
+                var_map[v] = _VarNode(v)
             node1 = var_map[v]
             graph.add_edge(node1, node2)
 
@@ -710,69 +630,30 @@ def build_pyomo_model_from_graph(graph, block):
     vars = list()
     cons = list()
     rels = list()
-    var_names = list()
-    con_names = list()
-    rel_names = list()
     for node in graph.nodes():
         if node.is_var():
             vars.append(node)
-            var_names.append(node.comp.getname(fully_qualified=True).replace('.', '_'))
         elif node.is_con():
             cons.append(node)
-            con_names.append(node.comp.getname(fully_qualified=True).replace('.', '_'))
         else:
             assert node.is_rel()
             rels.append(node)
-            rel_names.append(node.comp.getname(fully_qualified=True).replace('.', '_'))
 
     assert len(vars) == len(set(vars))
     assert len(cons) == len(set(cons))
     assert len(rels) == len(set(rels))
 
-    block.var_names = pe.Set(initialize=var_names)
-    block.con_names = pe.Set(initialize=con_names)
-    block.vars = pe.Var(block.var_names)
-    block.cons = pe.Constraint(block.con_names)
+    block.cons = pe.ConstraintList()
     block.rels = pe.Block()
 
-    component_map = pe.ComponentMap()
-    for v_name, v in zip(var_names, vars):
-        new_v = block.vars[v_name]
-        component_map[v.comp] = new_v
-        new_v.setlb(v.comp.lb)
-        new_v.setub(v.comp.ub)
-        new_v.domain = v.comp.domain
-        if v.comp.is_fixed():
-            new_v.fix(v.comp.value)
-        new_v.set_value(v.comp.value, skip_validation=True)
+    for con_node in cons:
+        con = con_node.comp
+        block.cons.add((con.lb, con.body, con.ub))
 
-    var_map = {id(k): v for k, v in component_map.items()}
-
-    for c_name, c in zip(con_names, cons):
-        if c.comp.equality:
-            block.cons[c_name] = (
-                replace_expressions(
-                    c.comp.body, substitution_map=var_map, remove_named_expressions=True
-                )
-                == c.comp.lower
-            )
-        else:
-            block.cons[c_name] = pe.inequality(
-                lower=c.comp.lower,
-                body=replace_expressions(
-                    c.comp.body, substitution_map=var_map, remove_named_expressions=True
-                ),
-                upper=c.comp.upper,
-            )
-        component_map[c.comp] = block.cons[c_name]
-
-    for r_name, r in zip(rel_names, rels):
-        new_rel = copy_relaxation_with_local_data(r.comp, var_map)
-        setattr(block.rels, r_name, new_rel)
+    for ndx, rel in enumerate(rels):
+        new_rel = copy_relaxation_with_local_data(rel.comp)
+        setattr(block.rels, f'rel{ndx}', new_rel)
         new_rel.rebuild()
-        component_map[r.comp] = new_rel
-
-    return component_map
 
 
 def num_cons_in_graph(graph, include_rels=True):
@@ -802,7 +683,7 @@ def compute_partition_ratio(
 ):
     graph = convert_pyomo_model_to_bipartite_graph(original_model)
     pr_numerator = graph.number_of_edges() * len(
-        collect_vars_to_tighten(original_model)
+        collect_vars_to_tighten_from_graph(graph)
     )
 
     pr_denominator = 0
@@ -821,9 +702,10 @@ def _reformulate_objective(model):
     if current_obj is None:
         raise ValueError('No active objective found!')
     if not current_obj.expr.is_variable_type():
-        obj_var_name = unique_component_name(model, 'obj_var')
-        obj_var = pe.Var(bounds=compute_bounds_on_expr(current_obj.expr))
-        model.add_component(obj_var_name, obj_var)
+        obj_var = model.aux_vars.add()
+        lb, ub = compute_bounds_on_expr(current_obj.expr)
+        obj_var.setlb(lb)
+        obj_var.setub(ub)
         model.del_component(current_obj)
         new_objective = pe.Objective(expr=model.obj_var)
         new_obj_name = unique_component_name(model, 'objective')
@@ -835,41 +717,6 @@ def _reformulate_objective(model):
             new_objective.sense = pe.maximize
         obj_con_name = unique_component_name(model, 'obj_con')
         model.add_component(obj_con_name, obj_con)
-
-
-def _eliminate_mutable_params(model):
-    sub_map = dict()
-    for p in nonrelaxation_component_data_objects(model, pe.Param, descend_into=True):
-        sub_map[id(p)] = p.value
-
-    for c in nonrelaxation_component_data_objects(
-        model, pe.Constraint, active=True, descend_into=True
-    ):
-        if c.lower is None:
-            new_lower = None
-        else:
-            new_lower = replace_expressions(
-                c.lower,
-                sub_map,
-                descend_into_named_expressions=True,
-                remove_named_expressions=True,
-            )
-        new_body = replace_expressions(
-            c.body,
-            sub_map,
-            descend_into_named_expressions=True,
-            remove_named_expressions=True,
-        )
-        if c.upper is None:
-            new_upper = None
-        else:
-            new_upper = replace_expressions(
-                c.upper,
-                sub_map,
-                descend_into_named_expressions=True,
-                remove_named_expressions=True,
-            )
-        c.set_value((new_lower, new_body, new_upper))
 
 
 def _decompose_model(
@@ -905,8 +752,6 @@ def _decompose_model(
     # by reformulating the objective, we can make better use of the incumbent when
     # doing OBBT
     _reformulate_objective(model)
-    # we don't want the original param objects to be in the new model
-    _eliminate_mutable_params(model)
 
     graph = convert_pyomo_model_to_bipartite_graph(model)
     logger.debug('converted pyomo model to bipartite graph')
@@ -926,8 +771,8 @@ def _decompose_model(
         else:
             logger.debug('Cannot decompose graph with less than 2 constraints.')
         new_model = TreeBlock(concrete=True)
-        new_model.setup(children_keys=list())
-        component_map = build_pyomo_model_from_graph(graph=graph, block=new_model)
+        new_model.setup(children_keys=list(), coupling_vars=list())
+        build_pyomo_model_from_graph(graph=graph, block=new_model)
         termination_reason = DecompositionStatus.problem_too_small
         logger.debug('done building pyomo model from graph')
     else:
@@ -940,8 +785,8 @@ def _decompose_model(
         if partitioning_ratio < min_partition_ratio:
             logger.debug('obtained bad partitioning ratio; abandoning partition')
             new_model = TreeBlock(concrete=True)
-            new_model.setup(children_keys=list())
-            component_map = build_pyomo_model_from_graph(graph=graph, block=new_model)
+            new_model.setup(children_keys=list(), coupling_vars=list())
+            build_pyomo_model_from_graph(graph=graph, block=new_model)
             termination_reason = DecompositionStatus.bad_ratio
             logger.debug('done building pyomo model from graph')
         else:
@@ -1012,23 +857,20 @@ def _decompose_model(
             root_tree.log()
 
             new_model = TreeBlock(concrete=True)
-            component_map = root_tree.build_pyomo_model(block=new_model)
+            root_tree.build_pyomo_model(block=new_model)
             logger.debug('done building pyomo model from tree')
 
     obj = get_objective(model)
     if obj is not None:
-        var_map = {id(k): v for k, v in component_map.items()}
-        new_model.objective = pe.Objective(
-            expr=replace_expressions(
-                obj.expr, substitution_map=var_map, remove_named_expressions=True
-            ),
+        new_model.obj = pe.Objective(
+            expr=obj.expr,
             sense=obj.sense,
         )
         logger.debug('done adding objective to new model')
     else:
         logger.debug('No objective was found to add to the new model')
 
-    return new_model, component_map, termination_reason
+    return new_model, termination_reason
 
 
 def decompose_model(
@@ -1055,41 +897,12 @@ def decompose_model(
     -------
     new_model: TreeBlockData
         The decomposed model
-    component_map: pe.ComponentMap
-        A ComponentMap mapping variables and constraints in model to those in new_model
     termination_reason: DecompositionStatus
         An enum member from DecompositionStatus
     """
     # we have to clone the model because we modify it in _refine_partition
-    all_comps = list(
-        ComponentSet(
-            nonrelaxation_component_data_objects(model, pe.Var, descend_into=True)
-        )
-    )
-    all_comps.extend(
-        ComponentSet(
-            nonrelaxation_component_data_objects(
-                model, pe.Constraint, active=True, descend_into=True
-            )
-        )
-    )
-    all_comps.extend(relaxation_data_objects(model, descend_into=True, active=True))
-    all_comps.extend(
-        ComponentSet(
-            nonrelaxation_component_data_objects(
-                model, pe.Objective, active=True, descend_into=True
-            )
-        )
-    )
-    tmp_name = unique_component_name(model, 'all_comps')
-    setattr(model, tmp_name, all_comps)
-    new_model = model.clone()
-    old_to_new_comps_map = pe.ComponentMap(
-        zip(getattr(model, tmp_name), getattr(new_model, tmp_name))
-    )
-    delattr(model, tmp_name)
-    delattr(new_model, tmp_name)
-    model = new_model
+    model = clone_shallow_active_flat(model)[0]
+    model.aux_vars = pe.VarList()
 
     tmp = _decompose_model(
         model,
@@ -1097,13 +910,9 @@ def decompose_model(
         min_partition_ratio=min_partition_ratio,
         limit_num_stages=limit_num_stages,
     )
-    tree_model, component_map, termination_reason = tmp
+    tree_model, termination_reason = tmp
 
-    for orig_comp, clone_comp in list(old_to_new_comps_map.items()):
-        if clone_comp in component_map:
-            old_to_new_comps_map[orig_comp] = component_map[clone_comp]
-
-    return tree_model, old_to_new_comps_map, termination_reason
+    return tree_model, termination_reason
 
 
 def collect_vars_to_tighten_from_graph(graph):
@@ -1115,13 +924,11 @@ def collect_vars_to_tighten_from_graph(graph):
             if (
                 rel.is_rhs_convex()
                 and rel.relaxation_side == RelaxationSide.UNDER
-                and not rel.use_linear_relaxation
             ):
                 continue
             if (
                 rel.is_rhs_concave()
                 and rel.relaxation_side == RelaxationSide.OVER
-                and not rel.use_linear_relaxation
             ):
                 continue
             vars_to_tighten.update(rel.get_rhs_vars())
@@ -1155,6 +962,9 @@ def collect_vars_to_tighten_by_block(m, method):
     assert method in {'full_space', 'dbt', 'leaves'}
 
     vars_to_tighten_by_block = dict()
+    if method == 'full_space':
+        vars_to_tighten_by_block[m] = collect_vars_to_tighten(m)
+        return vars_to_tighten_by_block
 
     assert isinstance(m, TreeBlockData)
 
@@ -1169,11 +979,7 @@ def collect_vars_to_tighten_by_block(m, method):
             elif method == 'full_space':
                 vars_to_tighten_by_block[block] = ComponentSet()
             else:
-                vars_to_tighten_by_block[block] = ComponentSet()
-                for c in block.linking_constraints.values():
-                    if c.active:
-                        vars_in_con = list(identify_variables(c.body))
-                        vars_to_tighten_by_block[block].add(vars_in_con[0])
+                vars_to_tighten_by_block[block] = ComponentSet(block.coupling_vars)
 
     for block, vars_to_tighten in vars_to_tighten_by_block.items():
         for v in vars_to_tighten:
@@ -1623,44 +1429,6 @@ def perform_dbt(
                     fbbt(c)
 
     return dbt_info
-
-
-def push_integers(block):
-    """
-    Parameters
-    ----------
-    block: pyomo.core.base.block._BlockData
-        The block for which integer variables should be relaxed.
-
-    Returns
-    -------
-    relaxed_binary_vars: ComponentSet of pyomo.core.base.var._GeneralVarData
-    relaxed_integer_vars: ComponentSet or pyomo.core.base.var._GeneralVarData
-    """
-    relaxed_binary_vars = ComponentSet()
-    relaxed_integer_vars = ComponentSet()
-    for v in block.component_data_objects(pe.Var, descend_into=True, sort=True):
-        if v.fixed:
-            continue
-        if v.is_binary():
-            relaxed_binary_vars.add(v)
-            orig_lb = v.lb
-            orig_ub = v.ub
-            v.domain = pe.Reals
-            v.setlb(orig_lb)
-            v.setub(orig_ub)
-        elif v.is_integer():
-            relaxed_integer_vars.add(v)
-            v.domain = pe.Reals
-
-    return relaxed_binary_vars, relaxed_integer_vars
-
-
-def pop_integers(relaxed_binary_vars, relaxed_integer_vars):
-    for v in relaxed_binary_vars:
-        v.domain = pe.Binary
-    for v in relaxed_integer_vars:
-        v.domain = pe.Integers
 
 
 def perform_dbt_with_integers_relaxed(

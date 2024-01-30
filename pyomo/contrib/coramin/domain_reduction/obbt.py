@@ -39,7 +39,6 @@ def _bt_cleanup(
     model,
     solver: Union[appsi.base.Solver, appsi.base.PersistentSolver],
     vardatalist: Optional[List[_GeneralVarData]],
-    initial_var_values,
     deactivated_objectives,
     orig_update_config,
     orig_config,
@@ -68,11 +67,6 @@ def _bt_cleanup(
         Only needed if you want to update the bounds of the variables. Should be in the same order as
         self.vars_to_tighten.
     """
-    for v in model.component_data_objects(
-        ctype=pyo.Var, active=None, sort=True, descend_into=True
-    ):
-        v.set_value(initial_var_values[v], skip_validation=True)
-
     if hasattr(model, '__objective_ineq'):
         if solver.is_persistent():
             solver.remove_constraints([model.__objective_ineq])
@@ -282,7 +276,6 @@ def _tighten_bnds(
 def _bt_prep(model, solver, objective_bound=None):
     """
     Prepare the model for bounds tightening.
-    Gather the variable values to load back in after bounds tightening.
     Deactivate any active objectives.
     If objective_ub is not None, then add a constraint forcing the objective to be less than objective_ub
 
@@ -323,12 +316,6 @@ def _bt_prep(model, solver, objective_bound=None):
     if solver.is_persistent():
         solver.set_instance(model)
 
-    initial_var_values = ComponentMap()
-    for v in model.component_data_objects(
-        ctype=pyo.Var, active=None, sort=True, descend_into=True
-    ):
-        initial_var_values[v] = v.value
-
     deactivated_objectives = list()
     for obj in model.component_data_objects(
         pyo.Objective, active=True, sort=True, descend_into=True
@@ -359,7 +346,7 @@ def _bt_prep(model, solver, objective_bound=None):
         if solver.is_persistent():
             solver.add_constraints([model.__objective_ineq])
 
-    return initial_var_values, deactivated_objectives, orig_update_config, orig_config
+    return deactivated_objectives, orig_update_config, orig_config
 
 
 def _build_vardatalist(model, varlist=None, warning_threshold=0):
@@ -413,7 +400,7 @@ def _build_vardatalist(model, varlist=None, warning_threshold=0):
 def perform_obbt(
     model,
     solver,
-    varlist=None,
+    varlist,
     objective_bound=None,
     update_bounds=True,
     with_progress_bar=False,
@@ -470,7 +457,6 @@ def perform_obbt(
 
     t0 = time.time()
     (
-        initial_var_values,
         deactivated_objectives,
         orig_update_config,
         orig_config,
@@ -596,7 +582,6 @@ def perform_obbt(
         model=model,
         solver=solver,
         vardatalist=vardata_list,
-        initial_var_values=initial_var_values,
         deactivated_objectives=deactivated_objectives,
         orig_update_config=orig_update_config,
         orig_config=orig_config,

@@ -125,7 +125,7 @@ def aggressive_filter(
         return vars_to_minimize, vars_to_maximize
 
     tmp = _bt_prep(model=relaxation, solver=solver, objective_bound=objective_bound)
-    initial_var_values, deactivated_objectives, orig_update_config, orig_config = tmp
+    deactivated_objectives, orig_update_config, orig_config = tmp
 
     vars_unbounded_from_below = ComponentSet()
     vars_unbounded_from_above = ComponentSet()
@@ -190,7 +190,6 @@ def aggressive_filter(
         model=relaxation,
         solver=solver,
         vardatalist=None,
-        initial_var_values=initial_var_values,
         deactivated_objectives=deactivated_objectives,
         orig_update_config=orig_update_config,
         orig_config=orig_config,

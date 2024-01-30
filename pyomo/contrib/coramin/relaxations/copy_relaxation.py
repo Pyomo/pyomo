@@ -19,7 +19,7 @@ from pyomo.core.expr.visitor import replace_expressions
 from pyomo.contrib.coramin.utils.coramin_enums import FunctionShape
 
 
-def copy_relaxation_with_local_data(rel, old_var_to_new_var_map):
+def copy_relaxation_with_local_data(rel, old_var_to_new_var_map=None):
     """
     This function copies a relaxation object with new variables.
     Note that only what can be set through the set_input and build
@@ -38,6 +38,13 @@ def copy_relaxation_with_local_data(rel, old_var_to_new_var_map):
     rel: coramin.relaxations.relaxations_base.BaseRelaxationData
         The copy of rel with new variables
     """
+    if old_var_to_new_var_map is None:
+        old_var_to_new_var_map = dict()
+        for v in rel.get_rhs_vars():
+            old_var_to_new_var_map[id(v)] = v
+        aux_var = rel.get_aux_var()
+        old_var_to_new_var_map[id(aux_var)] = aux_var
+
     if isinstance(rel, PWXSquaredRelaxationData):
         new_x = old_var_to_new_var_map[id(rel.get_rhs_vars()[0])]
         new_aux_var = old_var_to_new_var_map[id(rel.get_aux_var())]
