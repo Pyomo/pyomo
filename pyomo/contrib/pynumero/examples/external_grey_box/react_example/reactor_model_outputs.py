@@ -21,7 +21,6 @@ this is included as an example of the external grey
 box model interface.
 """
 
-from __future__ import division
 
 import numpy as np
 from scipy.optimize import fsolve

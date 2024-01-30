@@ -87,16 +87,9 @@ class LinearDual_PyomoTransformation(Transformation):
         #
         # Collect linear terms from the block
         #
-        (
-            A,
-            b_coef,
-            c_rhs,
-            c_sense,
-            d_sense,
-            vnames,
-            cnames,
-            v_domain,
-        ) = collect_linear_terms(block, unfixed)
+        (A, b_coef, c_rhs, c_sense, d_sense, vnames, cnames, v_domain) = (
+            collect_linear_terms(block, unfixed)
+        )
         ##print(A)
         ##print(vnames)
         ##print(cnames)

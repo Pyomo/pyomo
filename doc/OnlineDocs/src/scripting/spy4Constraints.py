@@ -2,6 +2,7 @@
 David L. Woodruff and Mingye Yang, Spring 2018
 Code snippets for Constraints.rst in testable form
 """
+
 from pyomo.environ import *
 
 model = ConcreteModel()

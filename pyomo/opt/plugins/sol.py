@@ -242,9 +242,9 @@ class ResultsReader_sol(results.AbstractResultsReader):
                             translated_suffix_name = (
                                 suffix_name[0].upper() + suffix_name[1:]
                             )
-                            soln_constraint[key][
-                                translated_suffix_name
-                            ] = convert_function(suf_line[1])
+                            soln_constraint[key][translated_suffix_name] = (
+                                convert_function(suf_line[1])
+                            )
                     elif kind == 2:  # Obj
                         for cnt in range(nvalues):
                             suf_line = fin.readline().split()

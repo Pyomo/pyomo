@@ -344,9 +344,11 @@ def generate_lag_objective_function(
     with time_code(timing, 'PyomoNLP'):
         nlp = pyomo_nlp.PyomoNLP(temp_model)
         lam = [
-            -temp_model.dual[constr]
-            if abs(temp_model.dual[constr]) > config.zero_tolerance
-            else 0
+            (
+                -temp_model.dual[constr]
+                if abs(temp_model.dual[constr]) > config.zero_tolerance
+                else 0
+            )
             for constr in nlp.get_pyomo_constraints()
         ]
         nlp.set_duals(lam)

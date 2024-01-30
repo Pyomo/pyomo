@@ -1,4 +1,5 @@
 """Tests the Bounds Tightening module."""
+
 import pyomo.common.unittest as unittest
 from pyomo.environ import ConcreteModel, Constraint, TransformationFactory, Var, value
 

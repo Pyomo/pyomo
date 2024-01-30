@@ -700,8 +700,7 @@ class Test_dual_power(_conic_tester_base, unittest.TestCase):
         c.x[0].value = 1.2
         c.x[1].value = -5.3
         val = round(
-            (1.2**2 + (-5.3) ** 2) ** 0.5
-            - ((2.7 / 0.4) ** 0.4) * ((3.7 / 0.6) ** 0.6),
+            (1.2**2 + (-5.3) ** 2) ** 0.5 - ((2.7 / 0.4) ** 0.4) * ((3.7 / 0.6) ** 0.6),
             9,
         )
         self.assertEqual(round(c(), 9), val)

@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from __future__ import print_function
+
 import pyomo.common.unittest as unittest
 
 from pyomo.environ import Var, Set, ConcreteModel, TransformationFactory, pyomo

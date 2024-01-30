@@ -2056,8 +2056,7 @@ class Block(ActiveIndexedComponent):
     @overload
     def __init__(
         self, *indexes, rule=None, concrete=False, dense=True, name=None, doc=None
-    ):
-        ...
+    ): ...
 
     def __init__(self, *args, **kwargs):
         """Constructor"""

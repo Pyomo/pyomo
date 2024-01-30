@@ -1,6 +1,7 @@
 """Small process synthesis-inspired toy GDP example.
 
 """
+
 from pyomo.core import ConcreteModel, RangeSet, Var, Constraint, Objective
 from pyomo.core.expr.current import exp, log, sqrt
 from pyomo.gdp import Disjunction

@@ -9,7 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from __future__ import division
 
 import inspect
 import logging
@@ -681,7 +680,6 @@ class StreamBasedExpressionVisitor(object):
 
 
 class SimpleExpressionVisitor(object):
-
     """
     Note:
         This class is a customization of the PyUtilib :class:`SimpleVisitor

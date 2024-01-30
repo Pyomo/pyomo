@@ -259,11 +259,6 @@ def polynomial_degree(obj):
         )
 
 
-#
-# It is very common to have only a few constants in a model, but those
-# constants get repeated many times.  KnownConstants lets us re-use /
-# share constants we have seen before.
-#
 # Note:
 #   For now, all constants are coerced to floats.  This avoids integer
 #   division in Python 2.x.  (At least some of the time.)
@@ -272,6 +267,10 @@ def polynomial_degree(obj):
 #   coercion.  The main difference in the following code is that we will
 #   need to index KnownConstants by both the class type and value, since
 #   INT, FLOAT and LONG values sometimes hash the same.
+#
+# It is very common to have only a few constants in a model, but those
+# constants get repeated many times.  KnownConstants lets us re-use /
+# share constants we have seen before.
 #
 _KnownConstants = {}
 
