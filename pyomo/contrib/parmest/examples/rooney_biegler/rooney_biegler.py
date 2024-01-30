@@ -62,7 +62,6 @@ class RooneyBieglerExperiment(Experiment):
         m.experiment_outputs.update([(m.hour, self.data.iloc[0]['hour'])])
         m.experiment_outputs.update([(m.y, self.data.iloc[0]['y'])])
 
-
         m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.unknown_parameters.update((k, pyo.ComponentUID(k)) 
                                     for k in [m.asymptote, m.rate_constant])

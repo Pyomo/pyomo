@@ -37,7 +37,7 @@ testdir = os.path.dirname(os.path.abspath(__file__))
 class TestScenarioReactorDesign(unittest.TestCase):
     def setUp(self):
         from pyomo.contrib.parmest.examples.reactor_design.reactor_design import (
-            reactor_design_model,
+            ReactorDesignExperiment,
         )
 
         # Data from the design
@@ -65,19 +65,13 @@ class TestScenarioReactorDesign(unittest.TestCase):
             ],
             columns=["sv", "caf", "ca", "cb", "cc", "cd"],
         )
+        
+        # Create an experiment list
+        exp_list= []
+        for i in range(data.shape[0]):
+            exp_list.append(ReactorDesignExperiment(data, i))
 
-        theta_names = ["k1", "k2", "k3"]
-
-        def SSE(model, data):
-            expr = (
-                (float(data.iloc[0]["ca"]) - model.ca) ** 2
-                + (float(data.iloc[0]["cb"]) - model.cb) ** 2
-                + (float(data.iloc[0]["cc"]) - model.cc) ** 2
-                + (float(data.iloc[0]["cd"]) - model.cd) ** 2
-            )
-            return expr
-
-        self.pest = parmest.Estimator(reactor_design_model, data, theta_names, SSE)
+        self.pest = parmest.Estimator(exp_list, obj_function='SSE')
 
     def test_scen_from_exps(self):
         scenmaker = sc.ScenarioCreator(self.pest, "ipopt")
@@ -115,9 +109,6 @@ class TestScenarioSemibatch(unittest.TestCase):
         import pyomo.contrib.parmest.examples.semibatch.semibatch as sb
         import json
 
-        # Vars to estimate in parmest
-        theta_names = ["k1", "k2", "E1", "E2"]
-
         self.fbase = os.path.join(testdir, "..", "examples", "semibatch")
         # Data, list of dictionaries
         data = []
@@ -131,7 +122,12 @@ class TestScenarioSemibatch(unittest.TestCase):
         # Note, the model already includes a 'SecondStageCost' expression
         # for the sum of squared error that will be used in parameter estimation
 
-        self.pest = parmest.Estimator(sb.generate_model, data, theta_names)
+        # Create an experiment list
+        exp_list= []
+        for i in range(len(data)):
+            exp_list.append(sb.SemiBatchExperiment(data[i]))
+
+        self.pest = parmest.Estimator(exp_list)
 
     def test_semibatch_bootstrap(self):
         scenmaker = sc.ScenarioCreator(self.pest, "ipopt")

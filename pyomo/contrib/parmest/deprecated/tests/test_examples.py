@@ -32,12 +32,12 @@ class TestRooneyBieglerExamples(unittest.TestCase):
         pass
 
     def test_model(self):
-        from pyomo.contrib.parmest.examples.rooney_biegler import rooney_biegler
+        from pyomo.contrib.parmest.deprecated.examples.rooney_biegler import rooney_biegler
 
         rooney_biegler.main()
 
     def test_model_with_constraint(self):
-        from pyomo.contrib.parmest.examples.rooney_biegler import (
+        from pyomo.contrib.parmest.deprecated.examples.rooney_biegler import (
             rooney_biegler_with_constraint,
         )
 
@@ -45,7 +45,7 @@ class TestRooneyBieglerExamples(unittest.TestCase):
 
     @unittest.skipUnless(seaborn_available, "test requires seaborn")
     def test_parameter_estimation_example(self):
-        from pyomo.contrib.parmest.examples.rooney_biegler import (
+        from pyomo.contrib.parmest.deprecated.examples.rooney_biegler import (
             parameter_estimation_example,
         )
 
@@ -53,13 +53,13 @@ class TestRooneyBieglerExamples(unittest.TestCase):
 
     @unittest.skipUnless(seaborn_available, "test requires seaborn")
     def test_bootstrap_example(self):
-        from pyomo.contrib.parmest.examples.rooney_biegler import bootstrap_example
+        from pyomo.contrib.parmest.deprecated.examples.rooney_biegler import bootstrap_example
 
         bootstrap_example.main()
 
     @unittest.skipUnless(seaborn_available, "test requires seaborn")
     def test_likelihood_ratio_example(self):
-        from pyomo.contrib.parmest.examples.rooney_biegler import (
+        from pyomo.contrib.parmest.deprecated.examples.rooney_biegler import (
             likelihood_ratio_example,
         )
 
@@ -81,7 +81,7 @@ class TestReactionKineticsExamples(unittest.TestCase):
         pass
 
     def test_example(self):
-        from pyomo.contrib.parmest.examples.reaction_kinetics import (
+        from pyomo.contrib.parmest.deprecated.examples.reaction_kinetics import (
             simple_reaction_parmest_example,
         )
 
@@ -103,19 +103,19 @@ class TestSemibatchExamples(unittest.TestCase):
         pass
 
     def test_model(self):
-        from pyomo.contrib.parmest.examples.semibatch import semibatch
+        from pyomo.contrib.parmest.deprecated.examples.semibatch import semibatch
 
         semibatch.main()
 
     def test_parameter_estimation_example(self):
-        from pyomo.contrib.parmest.examples.semibatch import (
+        from pyomo.contrib.parmest.deprecated.examples.semibatch import (
             parameter_estimation_example,
         )
 
         parameter_estimation_example.main()
 
     def test_scenario_example(self):
-        from pyomo.contrib.parmest.examples.semibatch import scenario_example
+        from pyomo.contrib.parmest.deprecated.examples.semibatch import scenario_example
 
         scenario_example.main()
 
@@ -136,12 +136,12 @@ class TestReactorDesignExamples(unittest.TestCase):
 
     @unittest.pytest.mark.expensive
     def test_model(self):
-        from pyomo.contrib.parmest.examples.reactor_design import reactor_design
+        from pyomo.contrib.parmest.deprecated.examples.reactor_design import reactor_design
 
         reactor_design.main()
 
     def test_parameter_estimation_example(self):
-        from pyomo.contrib.parmest.examples.reactor_design import (
+        from pyomo.contrib.parmest.deprecated.examples.reactor_design import (
             parameter_estimation_example,
         )
 
@@ -149,13 +149,13 @@ class TestReactorDesignExamples(unittest.TestCase):
 
     @unittest.skipUnless(seaborn_available, "test requires seaborn")
     def test_bootstrap_example(self):
-        from pyomo.contrib.parmest.examples.reactor_design import bootstrap_example
+        from pyomo.contrib.parmest.deprecated.examples.reactor_design import bootstrap_example
 
         bootstrap_example.main()
 
     @unittest.pytest.mark.expensive
     def test_likelihood_ratio_example(self):
-        from pyomo.contrib.parmest.examples.reactor_design import (
+        from pyomo.contrib.parmest.deprecated.examples.reactor_design import (
             likelihood_ratio_example,
         )
 
@@ -163,19 +163,19 @@ class TestReactorDesignExamples(unittest.TestCase):
 
     @unittest.pytest.mark.expensive
     def test_leaveNout_example(self):
-        from pyomo.contrib.parmest.examples.reactor_design import leaveNout_example
+        from pyomo.contrib.parmest.deprecated.examples.reactor_design import leaveNout_example
 
         leaveNout_example.main()
 
     def test_timeseries_data_example(self):
-        from pyomo.contrib.parmest.examples.reactor_design import (
+        from pyomo.contrib.parmest.deprecated.examples.reactor_design import (
             timeseries_data_example,
         )
 
         timeseries_data_example.main()
 
     def test_multisensor_data_example(self):
-        from pyomo.contrib.parmest.examples.reactor_design import (
+        from pyomo.contrib.parmest.deprecated.examples.reactor_design import (
             multisensor_data_example,
         )
 
@@ -183,7 +183,7 @@ class TestReactorDesignExamples(unittest.TestCase):
 
     @unittest.skipUnless(matplotlib_available, "test requires matplotlib")
     def test_datarec_example(self):
-        from pyomo.contrib.parmest.examples.reactor_design import datarec_example
+        from pyomo.contrib.parmest.deprecated.examples.reactor_design import datarec_example
 
         datarec_example.main()
 

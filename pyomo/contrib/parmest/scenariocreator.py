@@ -151,13 +151,13 @@ class ScenarioCreator(object):
             
         assert isinstance(addtoSet, ScenarioSet)
 
-        scenario_numbers = list(range(len(self.pest.callback_data)))
+        scenario_numbers = list(range(len(self.pest.exp_list)))
 
         prob = 1.0 / len(scenario_numbers)
         for exp_num in scenario_numbers:
             ##print("Experiment number=", exp_num)
             model = self.pest._instance_creation_callback(
-                exp_num, self.pest.callback_data
+                exp_num,
             )
             opt = pyo.SolverFactory(self.solvername)
             results = opt.solve(model)  # solves and updates model

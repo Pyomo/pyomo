@@ -36,7 +36,7 @@ testdir = os.path.dirname(os.path.abspath(__file__))
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 class TestScenarioReactorDesign(unittest.TestCase):
     def setUp(self):
-        from pyomo.contrib.parmest.examples.reactor_design.reactor_design import (
+        from pyomo.contrib.parmest.deprecated.examples.reactor_design.reactor_design import (
             reactor_design_model,
         )
 
@@ -112,7 +112,7 @@ class TestScenarioReactorDesign(unittest.TestCase):
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 class TestScenarioSemibatch(unittest.TestCase):
     def setUp(self):
-        import pyomo.contrib.parmest.examples.semibatch.semibatch as sb
+        import pyomo.contrib.parmest.deprecated.examples.semibatch.semibatch as sb
         import json
 
         # Vars to estimate in parmest

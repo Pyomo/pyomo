@@ -12,12 +12,11 @@
 import json
 from os.path import join, abspath, dirname
 import pyomo.contrib.parmest.parmest as parmest
-from pyomo.contrib.parmest.examples.semibatch.semibatch import generate_model
-
+from pyomo.contrib.parmest.examples.semibatch.semibatch import (
+    SemiBatchExperiment,
+)
 
 def main():
-    # Vars to estimate
-    theta_names = ['k1', 'k2', 'E1', 'E2']
 
     # Data, list of dictionaries
     data = []
@@ -28,11 +27,20 @@ def main():
             d = json.load(infile)
             data.append(d)
 
+    # Create an experiment list
+    exp_list= []
+    for i in range(len(data)):
+        exp_list.append(SemiBatchExperiment(data[i]))
+
+    # View one model
+    # exp0_model = exp_list[0].get_labeled_model()
+    # print(exp0_model.pprint())
+
     # Note, the model already includes a 'SecondStageCost' expression
     # for sum of squared error that will be used in parameter estimation
 
-    pest = parmest.Estimator(generate_model, data, theta_names)
-
+    pest = parmest.Estimator(exp_list)
+    
     obj, theta = pest.theta_est()
     print(obj)
     print(theta)

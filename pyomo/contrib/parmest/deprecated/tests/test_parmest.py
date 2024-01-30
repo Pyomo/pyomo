@@ -54,7 +54,7 @@ testdir = os.path.dirname(os.path.abspath(__file__))
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 class TestRooneyBiegler(unittest.TestCase):
     def setUp(self):
-        from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
+        from pyomo.contrib.parmest.deprecated.examples.rooney_biegler.rooney_biegler import (
             rooney_biegler_model,
         )
 
@@ -605,7 +605,7 @@ class TestModelVariants(unittest.TestCase):
 @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
 class TestReactorDesign(unittest.TestCase):
     def setUp(self):
-        from pyomo.contrib.parmest.examples.reactor_design.reactor_design import (
+        from pyomo.contrib.parmest.deprecated.examples.reactor_design.reactor_design import (
             reactor_design_model,
         )
 
@@ -879,7 +879,7 @@ class TestReactorDesign_DAE(unittest.TestCase):
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
     def setUp(self):
-        from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler_with_constraint import (
+        from pyomo.contrib.parmest.deprecated.examples.rooney_biegler.rooney_biegler_with_constraint import (
             rooney_biegler_model_with_constraint,
         )
 

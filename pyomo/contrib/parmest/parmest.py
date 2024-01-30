@@ -745,7 +745,7 @@ class Estimator(object):
         for snum in scenario_numbers:
             sname = "scenario_NODE" + str(snum)
             instance = _experiment_instance_creation_callback(sname, None, dummy_cb)
-            model_theta_names = [k.name for k,v in instance.unknown_parameters.items()]
+            model_theta_names = self._expand_indexed_unknowns(instance)
 
             if initialize_parmest_model:
                 # list to store fitted parameter names that will be unfixed
@@ -1186,6 +1186,28 @@ class Estimator(object):
 
         return results
 
+    # expand indexed variables to get full list of thetas
+    def _expand_indexed_unknowns(self, model_temp):
+
+        model_theta_list = [k.name for k,v in model_temp.unknown_parameters.items()]  
+        
+        # check for indexed theta items
+        indexed_theta_list = []
+        for theta_i in model_theta_list:
+            var_cuid = ComponentUID(theta_i)
+            var_validate = var_cuid.find_component_on(model_temp)
+            for ind in var_validate.index_set():
+                if ind is not None:
+                    indexed_theta_list.append(theta_i + '['  + str(ind) + ']')
+                else:
+                    indexed_theta_list.append(theta_i)
+
+        # if we found indexed thetas, use expanded list
+        if len(indexed_theta_list) > len(model_theta_list):
+            model_theta_list = indexed_theta_list
+
+        return model_theta_list
+
     def objective_at_theta(self, theta_values=None, initialize_parmest_model=False):
         """
         Objective value for each theta
@@ -1218,8 +1240,8 @@ class Estimator(object):
         else:
             # create a local instance of the pyomo model to access model variables and parameters
             model_temp = self._create_parmest_model(0)
-            model_theta_list = [k.name for k,v in model_temp.unknown_parameters.items()]  
-
+            model_theta_list = self._expand_indexed_unknowns(model_temp)
+            
             # # iterate over original theta_names
             # for theta_i in self.theta_names:
             #     var_cuid = ComponentUID(theta_i)
@@ -1254,7 +1276,7 @@ class Estimator(object):
         if theta_values is None:
             all_thetas = {}  # dictionary to store fitted variables
             # use appropriate theta names member
-            theta_names = self.estimator_theta_names()
+            theta_names = model_theta_list
         else:
             assert isinstance(theta_values, pd.DataFrame)
             # for parallel code we need to use lists and dicts in the loop
@@ -1262,7 +1284,6 @@ class Estimator(object):
             # # check if theta_names are in model
             for theta in list(theta_names):
                 theta_temp = theta.replace("'", "")  # cleaning quotes from theta_names
-
                 assert theta_temp in [
                     t.replace("'", "") for t in model_theta_list
                 ], "Theta name {} in 'theta_values' not in 'theta_names' {}".format(

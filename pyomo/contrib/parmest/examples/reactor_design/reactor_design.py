@@ -118,7 +118,7 @@ class ReactorDesignExperiment(Experiment):
         
         return m
 
-if __name__ == "__main__":
+def main():
 
     # For a range of sv values, return ca, cb, cc, and cd
     results = []
@@ -142,4 +142,7 @@ if __name__ == "__main__":
 
     results = pd.DataFrame(results, columns=["sv", "caf", "ca", "cb", "cc", "cd"])
     print(results)
+
+if __name__ == "__main__":
+    main()
     
