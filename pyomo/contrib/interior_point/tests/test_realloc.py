@@ -67,19 +67,21 @@ class TestReallocation(unittest.TestCase):
         res = linear_solver.do_symbolic_factorization(kkt)
         predicted = linear_solver.get_infog(16)
 
+        linear_solver.set_icntl(23, 8)
+
         self._test_ip_with_reallocation(linear_solver, interface)
         # In Mumps 5.6.2 (and likely previous versions), ICNTL(23)=0
         # corresponds to "use default increase factor over prediction".
         actual = linear_solver.get_icntl(23)
         percent_increase = linear_solver.get_icntl(14)
-        increase_factor = (1.0 + percent_increase/100.0)
+        increase_factor = 1.0 + percent_increase / 100.0
 
         if actual == 0:
             actual = increase_factor * predicted
 
         # As of Mumps 5.6.2, predicted == 9, which is lower than the
         # default actual of 10.8
-        #self.assertTrue(predicted == 12 or predicted == 11)
+        # self.assertTrue(predicted == 12 or predicted == 11)
         self.assertTrue(actual > predicted)
         # NOTE: This test will break if Mumps (or your Mumps version)
         # gets more conservative at estimating memory requirement,
