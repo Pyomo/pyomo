@@ -16,7 +16,7 @@ from pyomo.contrib.cp.scheduling_expr.scheduling_logic import (
     AlternativeExpression,
     SpanExpression,
     alternative,
-    spans
+    spans,
 )
 from pyomo.contrib.cp.scheduling_expr.sequence_expressions import (
     NoOverlapExpression,
@@ -113,12 +113,16 @@ class TestSequenceVarExpressions(unittest.TestCase):
 class TestHierarchicalSchedulingExpressions(unittest.TestCase):
     def make_model(self):
         m = ConcreteModel()
+
         def start_rule(m, i):
-            return 2*i
+            return 2 * i
+
         def length_rule(m, i):
             return i
-        m.iv = IntervalVar([1, 2, 3], start=start_rule, length=length_rule,
-                           optional=True)
+
+        m.iv = IntervalVar(
+            [1, 2, 3], start=start_rule, length=length_rule, optional=True
+        )
         m.whole_enchilada = IntervalVar()
 
         return m
@@ -137,7 +141,7 @@ class TestHierarchicalSchedulingExpressions(unittest.TestCase):
         m = self.make_model()
         e = spans(m.whole_enchilada, [m.iv[i] for i in [1, 2, 3]])
         self.check_span_expression(m, e)
-        
+
     def test_spans_method(self):
         m = self.make_model()
         e = m.whole_enchilada.spans(m.iv[i] for i in [1, 2, 3])

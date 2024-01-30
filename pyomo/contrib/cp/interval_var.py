@@ -168,8 +168,7 @@ class IntervalVar(Block):
         optional=False,
         name=None,
         doc=None
-    ):
-        ...
+    ): ...
 
     def __init__(self, *args, **kwargs):
         _start_arg = kwargs.pop('start', None)

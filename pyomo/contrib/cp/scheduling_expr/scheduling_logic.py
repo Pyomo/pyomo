@@ -22,6 +22,7 @@ class SpanExpression(NaryBooleanExpression):
     args:
         args (tuple): Child nodes, of type IntervalVar
     """
+
     def _to_string(self, values, verbose, smap):
         return "%s.spans(%s)" % (values[0], ", ".join(values[1:]))
 
@@ -30,19 +31,18 @@ class AlternativeExpression(NaryBooleanExpression):
     """
     TODO/
     """
+
     def _to_string(self, values, verbose, smap):
         return "alternative(%s, [%s])" % (values[0], ", ".join(values[1:]))
-        
+
 
 def spans(*args):
-    """Creates a new SpanExpression
-    """
+    """Creates a new SpanExpression"""
 
     return SpanExpression(list(_flattened(args)))
 
 
 def alternative(*args):
-    """Creates a new AlternativeExpression
-    """
+    """Creates a new AlternativeExpression"""
 
     return AlternativeExpression(list(_flattened(args)))

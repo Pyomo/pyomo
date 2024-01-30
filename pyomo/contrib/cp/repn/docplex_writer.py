@@ -996,15 +996,11 @@ def _handle_predecessor_to_expression_node(
     return _GENERAL, cp.previous(seq_var[1], before_var[1], after_var[1])
 
 
-def _handle_span_expression_node(
-    visitor, node, *args
-):
+def _handle_span_expression_node(visitor, node, *args):
     return _GENERAL, cp.span(args[0][1], [arg[1] for arg in args[1:]])
 
 
-def _handle_alternative_expression_node(
-        visitor, node, *args
-):
+def _handle_alternative_expression_node(visitor, node, *args):
     return _GENERAL, cp.alternative(args[0][1], [arg[1] for arg in args[1:]])
 
 

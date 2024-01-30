@@ -19,7 +19,7 @@ from pyomo.contrib.cp import (
     last_in_sequence,
     before_in_sequence,
     predecessor_to,
-    alternative
+    alternative,
 )
 from pyomo.contrib.cp.scheduling_expr.step_function_expressions import (
     AlwaysIn,
@@ -1491,12 +1491,16 @@ class TestCPExpressionWalker_PrecedenceExpressions(CommonTest):
 class TestCPExpressionWalker_HierarchicalScheduling(CommonTest):
     def get_model(self):
         m = ConcreteModel()
+
         def start_rule(m, i):
-            return 2*i
+            return 2 * i
+
         def length_rule(m, i):
             return i
-        m.iv = IntervalVar([1, 2, 3], start=start_rule, length=length_rule,
-                           optional=True)
+
+        m.iv = IntervalVar(
+            [1, 2, 3], start=start_rule, length=length_rule, optional=True
+        )
         m.whole_enchilada = IntervalVar()
 
         return m
@@ -1517,8 +1521,9 @@ class TestCPExpressionWalker_HierarchicalScheduling(CommonTest):
             self.assertIn(id(m.iv[i]), visitor.var_map)
             iv[i] = visitor.var_map[id(m.iv[i])]
 
-        self.assertTrue(expr[1].equals(cp.span(whole_enchilada, [iv[i] for i in
-                                                                 [1, 2, 3]])))
+        self.assertTrue(
+            expr[1].equals(cp.span(whole_enchilada, [iv[i] for i in [1, 2, 3]]))
+        )
 
     def test_alternative(self):
         m = self.get_model()
@@ -1526,7 +1531,7 @@ class TestCPExpressionWalker_HierarchicalScheduling(CommonTest):
 
         visitor = self.get_visitor()
         expr = visitor.walk_expression((e, e, 0))
-        
+
         self.assertIn(id(m.whole_enchilada), visitor.var_map)
         whole_enchilada = visitor.var_map[id(m.whole_enchilada)]
         self.assertIs(visitor.pyomo_to_docplex[m.whole_enchilada], whole_enchilada)
@@ -1536,10 +1541,9 @@ class TestCPExpressionWalker_HierarchicalScheduling(CommonTest):
             self.assertIn(id(m.iv[i]), visitor.var_map)
             iv[i] = visitor.var_map[id(m.iv[i])]
 
-        self.assertTrue(expr[1].equals(cp.alternative(whole_enchilada, [iv[i]
-                                                                        for i in
-                                                                        [1, 2,
-                                                                         3]])))        
+        self.assertTrue(
+            expr[1].equals(cp.alternative(whole_enchilada, [iv[i] for i in [1, 2, 3]]))
+        )
 
 
 @unittest.skipIf(not docplex_available, "docplex is not available")
