@@ -179,13 +179,13 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
                     # TODO might be worthwhile to log number of nonlinear
                     # constraints in each disjunction for later branching
                     # purposes
-                    root_util_blk.disjunct_to_nonlinear_constraints[
-                        disjunct
-                    ] = nonlinear_constraints_in_disjunct
+                    root_util_blk.disjunct_to_nonlinear_constraints[disjunct] = (
+                        nonlinear_constraints_in_disjunct
+                    )
 
-            root_util_blk.disjunction_to_unfixed_disjuncts[
-                disjunction
-            ] = unfixed_disjuncts
+            root_util_blk.disjunction_to_unfixed_disjuncts[disjunction] = (
+                unfixed_disjuncts
+            )
             pass
 
         # Add the BigM suffix if it does not already exist. Used later during

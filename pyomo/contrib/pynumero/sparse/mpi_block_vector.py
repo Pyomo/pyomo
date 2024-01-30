@@ -1112,9 +1112,9 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             if ndx in block_indices:
                 blk = self.get_block(ndx)
                 if isinstance(blk, BlockVector):
-                    local_data[
-                        offset : offset + self.get_block_size(ndx)
-                    ] = blk.flatten()
+                    local_data[offset : offset + self.get_block_size(ndx)] = (
+                        blk.flatten()
+                    )
                 elif isinstance(blk, np.ndarray):
                     local_data[offset : offset + self.get_block_size(ndx)] = blk
                 else:

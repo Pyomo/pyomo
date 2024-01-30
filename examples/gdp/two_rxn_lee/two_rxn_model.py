@@ -1,5 +1,4 @@
 """Two reactor model from literature. See README.md."""
-from __future__ import division
 
 from pyomo.core import ConcreteModel, Constraint, Objective, Param, Var, maximize
 
