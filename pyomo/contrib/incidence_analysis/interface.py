@@ -932,3 +932,58 @@ class IncidenceGraphInterface(object):
             fig.update_layout(title=dict(text=title))
         if show:
             fig.show()
+    
+    def add_edge_to_graph(self, node0, node1):
+        """Adds an edge between node0 and node1 in the incidence graph
+        
+        Parameters
+        ---------
+        nodes0: VarData/ConstraintData
+            A node in the graph from the first bipartite set 
+            (``bipartite=0``)
+        node1: VarData/ConstraintData
+            A node in the graph from the second bipartite set 
+            (``bipartite=1``)
+        """
+        if self._incidence_graph is None:
+            raise RuntimeError(
+                "Attempting to add edge in an incidence graph from cached "
+                "incidence graph,\nbut no incidence graph has been cached."
+            )
+        
+        if node0 not in ComponentSet(self._variables) and node0 not in ComponentSet(self._constraints):
+            raise RuntimeError(
+                "%s is not a node in the incidence graph" % node0
+                )
+            
+        if node1 not in ComponentSet(self._variables) and node1 not in ComponentSet(self._constraints):
+            raise RuntimeError(
+                "%s is not a node in the incidence graph" % node1
+                )
+        
+        if node0 in ComponentSet(self._variables):
+            node0_idx = self._var_index_map[node0] + len(self._con_index_map) 
+            if node1 in ComponentSet(self._variables):
+                raise RuntimeError(
+                    "%s & %s are both variables. Cannot add an edge between two"
+                    "variables.\nThe resulting graph won't be bipartite" 
+                    % (node0, node1)
+                    )
+            node1_idx = self._con_index_map[node1]
+        
+        if node0 in ComponentSet(self._constraints):
+            node0_idx = self._con_index_map[node0]
+            if node1 in ComponentSet(self._constraints):
+                raise RuntimeError(
+                    "%s & %s are both constraints. Cannot add an edge between two"
+                    "constraints.\nThe resulting graph won't be bipartite" 
+                    % (node0, node1)
+                    )
+            node1_idx = self._var_index_map[node1] + len(self._con_index_map) 
+        
+        self._incidence_graph.add_edge(node0_idx, node1_idx)
+        
+        
+            
+        
+        
