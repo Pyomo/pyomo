@@ -343,6 +343,108 @@ class LegacySolverWrapper:
     def __exit__(self, t, v, traceback):
         """Exit statement - enables `with` statements."""
 
+    def _map_config(
+        self,
+        tee,
+        load_solutions,
+        symbolic_solver_labels,
+        timelimit,
+        report_timing,
+        raise_exception_on_nonoptimal_result,
+        solver_io,
+        suffixes,
+        logfile,
+        keepfiles,
+        solnfile,
+    ):
+        """Map between legacy and new interface configuration options"""
+        self.config = self.config()
+        self.config.tee = tee
+        self.config.load_solutions = load_solutions
+        self.config.symbolic_solver_labels = symbolic_solver_labels
+        self.config.time_limit = timelimit
+        self.config.report_timing = report_timing
+        # This is a new flag in the interface. To preserve backwards compatibility,
+        # its default is set to "False"
+        self.config.raise_exception_on_nonoptimal_result = (
+            raise_exception_on_nonoptimal_result
+        )
+        if solver_io is not None:
+            raise NotImplementedError('Still working on this')
+        if suffixes is not None:
+            raise NotImplementedError('Still working on this')
+        if logfile is not None:
+            raise NotImplementedError('Still working on this')
+        if 'keepfiles' in self.config:
+            self.config.keepfiles = keepfiles
+        if solnfile is not None:
+            if 'filename' in self.config:
+                filename = os.path.splitext(solnfile)[0]
+                self.config.filename = filename
+
+    def _map_results(self, model, results):
+        """Map between legacy and new Results objects"""
+        legacy_results = LegacySolverResults()
+        legacy_soln = LegacySolution()
+        legacy_results.solver.status = legacy_solver_status_map[
+            results.termination_condition
+        ]
+        legacy_results.solver.termination_condition = legacy_termination_condition_map[
+            results.termination_condition
+        ]
+        legacy_soln.status = legacy_solution_status_map[results.solution_status]
+        legacy_results.solver.termination_message = str(results.termination_condition)
+        obj = get_objective(model)
+        if len(list(obj)) > 0:
+            legacy_results.problem.sense = obj.sense
+
+            if obj.sense == minimize:
+                legacy_results.problem.lower_bound = results.objective_bound
+                legacy_results.problem.upper_bound = results.incumbent_objective
+            else:
+                legacy_results.problem.upper_bound = results.objective_bound
+                legacy_results.problem.lower_bound = results.incumbent_objective
+        if (
+            results.incumbent_objective is not None
+            and results.objective_bound is not None
+        ):
+            legacy_soln.gap = abs(results.incumbent_objective - results.objective_bound)
+        else:
+            legacy_soln.gap = None
+        return legacy_results, legacy_soln
+
+    def _solution_handler(
+        self, load_solutions, model, results, legacy_results, legacy_soln
+    ):
+        """Method to handle the preferred action for the solution"""
+        symbol_map = SymbolMap()
+        symbol_map.default_labeler = NumericLabeler('x')
+        model.solutions.add_symbol_map(symbol_map)
+        legacy_results._smap_id = id(symbol_map)
+        delete_legacy_soln = True
+        if load_solutions:
+            if hasattr(model, 'dual') and model.dual.import_enabled():
+                for c, val in results.solution_loader.get_duals().items():
+                    model.dual[c] = val
+            if hasattr(model, 'rc') and model.rc.import_enabled():
+                for v, val in results.solution_loader.get_reduced_costs().items():
+                    model.rc[v] = val
+        elif results.incumbent_objective is not None:
+            delete_legacy_soln = False
+            for v, val in results.solution_loader.get_primals().items():
+                legacy_soln.variable[symbol_map.getSymbol(v)] = {'Value': val}
+            if hasattr(model, 'dual') and model.dual.import_enabled():
+                for c, val in results.solution_loader.get_duals().items():
+                    legacy_soln.constraint[symbol_map.getSymbol(c)] = {'Dual': val}
+            if hasattr(model, 'rc') and model.rc.import_enabled():
+                for v, val in results.solution_loader.get_reduced_costs().items():
+                    legacy_soln.variable['Rc'] = val
+
+        legacy_results.solution.insert(legacy_soln)
+        if delete_legacy_soln:
+            legacy_results.solution.delete(0)
+        return legacy_results
+
     def solve(
         self,
         model: _BlockData,
@@ -369,91 +471,30 @@ class LegacySolverWrapper:
 
         """
         original_config = self.config
-        self.config = self.config()
-        self.config.tee = tee
-        self.config.load_solutions = load_solutions
-        self.config.symbolic_solver_labels = symbolic_solver_labels
-        self.config.time_limit = timelimit
-        self.config.report_timing = report_timing
-        # This is a new flag in the interface. To preserve backwards compatibility,
-        # its default is set to "False"
-        self.config.raise_exception_on_nonoptimal_result = (
-            raise_exception_on_nonoptimal_result
+        self._map_config(
+            tee,
+            load_solutions,
+            symbolic_solver_labels,
+            timelimit,
+            report_timing,
+            raise_exception_on_nonoptimal_result,
+            solver_io,
+            suffixes,
+            logfile,
+            keepfiles,
+            solnfile,
         )
-        if solver_io is not None:
-            raise NotImplementedError('Still working on this')
-        if suffixes is not None:
-            raise NotImplementedError('Still working on this')
-        if logfile is not None:
-            raise NotImplementedError('Still working on this')
-        if 'keepfiles' in self.config:
-            self.config.keepfiles = keepfiles
-        if solnfile is not None:
-            if 'filename' in self.config:
-                filename = os.path.splitext(solnfile)[0]
-                self.config.filename = filename
+
         original_options = self.options
         if options is not None:
             self.options = options
 
         results: Results = super().solve(model)
+        legacy_results, legacy_soln = self._map_results(model, results)
 
-        legacy_results = LegacySolverResults()
-        legacy_soln = LegacySolution()
-        legacy_results.solver.status = legacy_solver_status_map[
-            results.termination_condition
-        ]
-        legacy_results.solver.termination_condition = legacy_termination_condition_map[
-            results.termination_condition
-        ]
-        legacy_soln.status = legacy_solution_status_map[results.solution_status]
-        legacy_results.solver.termination_message = str(results.termination_condition)
-
-        obj = get_objective(model)
-        if len(list(obj)) > 0:
-            legacy_results.problem.sense = obj.sense
-
-            if obj.sense == minimize:
-                legacy_results.problem.lower_bound = results.objective_bound
-                legacy_results.problem.upper_bound = results.incumbent_objective
-            else:
-                legacy_results.problem.upper_bound = results.objective_bound
-                legacy_results.problem.lower_bound = results.incumbent_objective
-        if (
-            results.incumbent_objective is not None
-            and results.objective_bound is not None
-        ):
-            legacy_soln.gap = abs(results.incumbent_objective - results.objective_bound)
-        else:
-            legacy_soln.gap = None
-
-        symbol_map = SymbolMap()
-        symbol_map.default_labeler = NumericLabeler('x')
-        model.solutions.add_symbol_map(symbol_map)
-        legacy_results._smap_id = id(symbol_map)
-
-        delete_legacy_soln = True
-        if load_solutions:
-            if hasattr(model, 'dual') and model.dual.import_enabled():
-                for c, val in results.solution_loader.get_duals().items():
-                    model.dual[c] = val
-            if hasattr(model, 'rc') and model.rc.import_enabled():
-                for v, val in results.solution_loader.get_reduced_costs().items():
-                    model.rc[v] = val
-        elif results.incumbent_objective is not None:
-            delete_legacy_soln = False
-            for v, val in results.solution_loader.get_primals().items():
-                legacy_soln.variable[symbol_map.getSymbol(v)] = {'Value': val}
-            if hasattr(model, 'dual') and model.dual.import_enabled():
-                for c, val in results.solution_loader.get_duals().items():
-                    legacy_soln.constraint[symbol_map.getSymbol(c)] = {'Dual': val}
-            if hasattr(model, 'rc') and model.rc.import_enabled():
-                for v, val in results.solution_loader.get_reduced_costs().items():
-                    legacy_soln.variable['Rc'] = val
-
-        legacy_results.solution.insert(legacy_soln)
-        if delete_legacy_soln:
-            legacy_results.solution.delete(0)
+        legacy_results = self._solution_handler(
+            load_solutions, model, results, legacy_results, legacy_soln
+        )
 
         self.config = original_config
         self.options = original_options

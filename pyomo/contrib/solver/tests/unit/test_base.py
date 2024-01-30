@@ -166,5 +166,6 @@ class TestPersistentSolverBase(unittest.TestCase):
             self.assertEqual(self.instance.update_variables(None), None)
             self.assertEqual(self.instance.update_params(), None)
 
+
 class TestLegacySolverWrapper(unittest.TestCase):
     pass
