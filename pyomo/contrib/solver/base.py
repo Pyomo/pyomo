@@ -14,8 +14,6 @@ import enum
 from typing import Sequence, Dict, Optional, Mapping, NoReturn, List, Tuple
 import os
 
-from .config import SolverConfig
-
 from pyomo.core.base.constraint import _GeneralConstraintData
 from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.base.param import _ParamData
@@ -29,6 +27,7 @@ from pyomo.core.kernel.objective import minimize
 from pyomo.core.base import SymbolMap
 from pyomo.core.base.label import NumericLabeler
 from pyomo.core.staleflag import StaleFlagManager
+from pyomo.contrib.solver.config import SolverConfig
 from pyomo.contrib.solver.util import get_objective
 from pyomo.contrib.solver.results import (
     Results,
@@ -215,7 +214,7 @@ class PersistentSolverBase(SolverBase):
             A map of variables to primals.
         """
         raise NotImplementedError(
-            '{0} does not support the get_primals method'.format(type(self))
+            f'{type(self)} does not support the get_primals method'
         )
 
     def _get_duals(
@@ -235,9 +234,7 @@ class PersistentSolverBase(SolverBase):
         duals: dict
             Maps constraints to dual values
         """
-        raise NotImplementedError(
-            '{0} does not support the get_duals method'.format(type(self))
-        )
+        raise NotImplementedError(f'{type(self)} does not support the get_duals method')
 
     def _get_reduced_costs(
         self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
@@ -255,7 +252,7 @@ class PersistentSolverBase(SolverBase):
             Maps variable to reduced cost
         """
         raise NotImplementedError(
-            '{0} does not support the get_reduced_costs method'.format(type(self))
+            f'{type(self)} does not support the get_reduced_costs method'
         )
 
     @abc.abstractmethod
@@ -331,15 +328,20 @@ class PersistentSolverBase(SolverBase):
         """
 
 
-class LegacySolverInterface:
+class LegacySolverWrapper:
     """
     Class to map the new solver interface features into the legacy solver
     interface. Necessary for backwards compatibility.
     """
 
-    def set_config(self, config):
-        # TODO: Make a mapping from new config -> old config
-        pass
+    #
+    # Support "with" statements
+    #
+    def __enter__(self):
+        return self
+
+    def __exit__(self, t, v, traceback):
+        """Exit statement - enables `with` statements."""
 
     def solve(
         self,
@@ -369,7 +371,7 @@ class LegacySolverInterface:
         original_config = self.config
         self.config = self.config()
         self.config.tee = tee
-        self.config.load_solution = load_solutions
+        self.config.load_solutions = load_solutions
         self.config.symbolic_solver_labels = symbolic_solver_labels
         self.config.time_limit = timelimit
         self.config.report_timing = report_timing
@@ -489,7 +491,7 @@ class LegacySolverInterface:
         """
         Read the options for the dictated solver.
 
-        NOTE: Only the set of solvers for which the LegacySolverInterface is compatible
+        NOTE: Only the set of solvers for which the LegacySolverWrapper is compatible
         are accounted for within this property.
         Not all solvers are currently covered by this backwards compatibility
         class.
@@ -511,9 +513,3 @@ class LegacySolverInterface:
                 found = True
         if not found:
             raise NotImplementedError('Could not find the correct options')
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, t, v, traceback):
-        pass

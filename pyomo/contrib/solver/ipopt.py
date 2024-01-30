@@ -390,15 +390,15 @@ class ipopt(SolverBase):
         results.solver_name = 'ipopt'
         results.solver_version = self.version()
         if (
-            config.load_solution
+            config.load_solutions
             and results.solution_status == SolutionStatus.noSolution
         ):
             raise RuntimeError(
                 'A feasible solution was not found, so no solution can be loaded.'
-                'Please set config.load_solution=False to bypass this error.'
+                'Please set config.load_solutions=False to bypass this error.'
             )
 
-        if config.load_solution:
+        if config.load_solutions:
             results.solution_loader.load_vars()
             if (
                 hasattr(model, 'dual')
@@ -417,7 +417,7 @@ class ipopt(SolverBase):
             results.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}
             and len(nl_info.objectives) > 0
         ):
-            if config.load_solution:
+            if config.load_solutions:
                 results.incumbent_objective = value(nl_info.objectives[0])
             else:
                 results.incumbent_objective = value(

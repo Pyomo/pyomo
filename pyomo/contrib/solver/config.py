@@ -58,8 +58,8 @@ class SolverConfig(ConfigDict):
                 description="If True, the solver output gets logged.",
             ),
         )
-        self.load_solution: bool = self.declare(
-            'load_solution',
+        self.load_solutions: bool = self.declare(
+            'load_solutions',
             ConfigValue(
                 domain=bool,
                 default=True,

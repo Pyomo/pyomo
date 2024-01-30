@@ -43,7 +43,7 @@ class TestIpopt(unittest.TestCase):
     def test_ipopt_config(self):
         # Test default initialization
         config = ipoptConfig()
-        self.assertTrue(config.load_solution)
+        self.assertTrue(config.load_solutions)
         self.assertIsInstance(config.solver_options, ConfigDict)
         self.assertIsInstance(config.executable, ExecutableData)
 

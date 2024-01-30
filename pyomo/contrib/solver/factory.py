@@ -12,7 +12,7 @@
 
 from pyomo.opt.base import SolverFactory as LegacySolverFactory
 from pyomo.common.factory import Factory
-from pyomo.contrib.solver.base import LegacySolverInterface
+from pyomo.contrib.solver.base import LegacySolverWrapper
 
 
 class SolverFactoryClass(Factory):
@@ -21,7 +21,7 @@ class SolverFactoryClass(Factory):
             self._cls[name] = cls
             self._doc[name] = doc
 
-            class LegacySolver(LegacySolverInterface, cls):
+            class LegacySolver(LegacySolverWrapper, cls):
                 pass
 
             LegacySolverFactory.register(name, doc)(LegacySolver)
