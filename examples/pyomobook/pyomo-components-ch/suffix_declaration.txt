@@ -1,9 +1,9 @@
 
 *** suffixsimple ***
 2 Suffix Declarations
-    dual : Direction=Suffix.IMPORT_EXPORT, Datatype=Suffix.FLOAT
+    dual : Direction=IMPORT_EXPORT, Datatype=FLOAT
         Key : Value
-    priority : Direction=Suffix.EXPORT, Datatype=Suffix.INT
+    priority : Direction=EXPORT, Datatype=INT
         Key : Value
 
 2 Declarations: priority dual
@@ -16,7 +16,7 @@
         Not constructed
 
 1 Suffix Declarations
-    foo : Direction=Suffix.LOCAL, Datatype=Suffix.FLOAT
+    foo : Direction=LOCAL, Datatype=FLOAT
         Not constructed
 
 3 Declarations: x c foo
