@@ -1,7 +1,9 @@
 import pyomo.environ as pe
 from pyomo.core.expr.numvalue import is_fixed
 from pyomo.core.expr.visitor import identify_variables
+from pyomo.core.base.constraint import _GeneralConstraintData
 from pyomo.contrib.simplification import Simplifier
+from weakref import WeakKeyDictionary
 
 
 def get_objective(m):
@@ -26,10 +28,25 @@ def get_objective(m):
     return obj
 
 
+_var_cache = WeakKeyDictionary()
+
+
+def identify_variables_with_cache(con: _GeneralConstraintData, include_fixed=False):
+    e = con.expr
+    if con in _var_cache and _var_cache[con][1] is e:
+        vlist = _var_cache[con][0]
+    else:
+        vlist = list(identify_variables(e, include_fixed=True))
+    if not include_fixed:
+        vlist = [i for i in vlist if not i.fixed]
+    _var_cache[con] = (vlist, e)
+    return vlist
+
+
 def active_vars(m, include_fixed=False):
     seen = set()
     for c in m.component_data_objects(pe.Constraint, active=True, descend_into=True):
-        for v in identify_variables(c.body, include_fixed=include_fixed):
+        for v in identify_variables_with_cache(c, include_fixed=include_fixed):
             v_id = id(v)
             if v_id not in seen:
                 seen.add(v_id)
