@@ -349,6 +349,8 @@ class LegacySolverWrapper:
         load_solutions,
         symbolic_solver_labels,
         timelimit,
+        # Report timing is no longer a valid option. We now always return a
+        # timer object that can be inspected.
         report_timing,
         raise_exception_on_nonoptimal_result,
         solver_io,
@@ -356,6 +358,7 @@ class LegacySolverWrapper:
         logfile,
         keepfiles,
         solnfile,
+        options,
     ):
         """Map between legacy and new interface configuration options"""
         self.config = self.config()
@@ -363,7 +366,7 @@ class LegacySolverWrapper:
         self.config.load_solutions = load_solutions
         self.config.symbolic_solver_labels = symbolic_solver_labels
         self.config.time_limit = timelimit
-        self.config.report_timing = report_timing
+        self.config.solver_options.set_value(options)
         # This is a new flag in the interface. To preserve backwards compatibility,
         # its default is set to "False"
         self.config.raise_exception_on_nonoptimal_result = (
@@ -483,11 +486,8 @@ class LegacySolverWrapper:
             logfile,
             keepfiles,
             solnfile,
+            options,
         )
-
-        original_options = self.options
-        if options is not None:
-            self.options = options
 
         results: Results = super().solve(model)
         legacy_results, legacy_soln = self._map_results(model, results)
@@ -497,7 +497,6 @@ class LegacySolverWrapper:
         )
 
         self.config = original_config
-        self.options = original_options
 
         return legacy_results
 
@@ -526,31 +525,3 @@ class LegacySolverWrapper:
 
         """
         return bool(self.available())
-
-    @property
-    def options(self):
-        """
-        Read the options for the dictated solver.
-
-        NOTE: Only the set of solvers for which the LegacySolverWrapper is compatible
-        are accounted for within this property.
-        Not all solvers are currently covered by this backwards compatibility
-        class.
-        """
-        for solver_name in ['gurobi', 'ipopt', 'cplex', 'cbc', 'highs']:
-            if hasattr(self, 'solver_options'):
-                return getattr(self, 'solver_options')
-        raise NotImplementedError('Could not find the correct options')
-
-    @options.setter
-    def options(self, val):
-        """
-        Set the options for the dictated solver.
-        """
-        found = False
-        for solver_name in ['gurobi', 'ipopt', 'cplex', 'cbc', 'highs']:
-            if hasattr(self, 'solver_options'):
-                setattr(self, 'solver_options', val)
-                found = True
-        if not found:
-            raise NotImplementedError('Could not find the correct options')

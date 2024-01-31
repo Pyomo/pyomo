@@ -17,7 +17,7 @@ import sys
 from typing import Mapping, Optional, Sequence
 
 from pyomo.common import Executable
-from pyomo.common.config import ConfigValue, NonNegativeInt, NonNegativeFloat
+from pyomo.common.config import ConfigValue, NonNegativeFloat
 from pyomo.common.errors import PyomoException
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.timing import HierarchicalTimer
@@ -285,7 +285,7 @@ class ipopt(SolverBase):
                 f'Solver {self.__class__} is not available ({avail}).'
             )
         # Update configuration options, based on keywords passed to solve
-        config: ipoptConfig = self.config(value=kwds)
+        config: ipoptConfig = self.config(value=kwds, preserve_implicit=True)
         if config.threads:
             logger.log(
                 logging.WARNING,

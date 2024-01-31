@@ -41,7 +41,7 @@ def check_optimal_termination(results):
     # Look at the original version of this function to make that happen.
     """
     This function returns True if the termination condition for the solver
-    is 'optimal', 'locallyOptimal', or 'globallyOptimal', and the status is 'ok'
+    is 'optimal'.
 
     Parameters
     ----------
