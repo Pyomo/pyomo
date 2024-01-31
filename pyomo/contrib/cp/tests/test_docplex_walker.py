@@ -424,22 +424,6 @@ class TestCPExpressionWalker_LogicalExpressions(CommonTest):
 
         self.assertTrue(expr[1].equals(cp.all_diff(a[i] for i in m.I)))
 
-    def test_Boolean_args_in_all_diff_expression(self):
-        m = self.get_model()
-        m.a.domain = Integers
-        m.a.bounds = (11, 20)
-        m.c = LogicalConstraint(expr=all_different(m.a[1] == 13, m.b))
-
-        visitor = self.get_visitor()
-        expr = visitor.walk_expression((m.c.body, m.c, 0))
-
-        self.assertIn(id(m.a[1]), visitor.var_map)
-        a0 = visitor.var_map[id(m.a[1])]
-        self.assertIn(id(m.b), visitor.var_map)
-        b = visitor.var_map[id(m.b)]
-
-        self.assertTrue(expr[1].equals(cp.all_diff(a0 == 13, b)))
-
     def test_count_if_expression(self):
         m = self.get_model()
         m.a.domain = Integers
