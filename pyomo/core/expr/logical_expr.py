@@ -184,7 +184,7 @@ def _flattened(args):
 
 
 def _flattened_boolean_args(args):
-    """Flatten any potentially indexed arguments and check that they are 
+    """Flatten any potentially indexed arguments and check that they are
     Boolean-valued."""
     for arg in args:
         if arg.__class__ in native_types:
@@ -203,11 +203,12 @@ def _flattened_boolean_args(args):
             else:
                 raise ValueError(
                     "Non-Boolean-valued argument '%s' encountered when constructing "
-                    "expression of Boolean arguments" % arg)
+                    "expression of Boolean arguments" % arg
+                )
 
 
 def _flattened_numeric_args(args):
-    """Flatten any potentially indexed arguments and check that they are 
+    """Flatten any potentially indexed arguments and check that they are
     numeric."""
     for arg in args:
         if arg.__class__ in native_types:
@@ -226,7 +227,9 @@ def _flattened_numeric_args(args):
             else:
                 raise ValueError(
                     "Non-numeric argument '%s' encountered when constructing "
-                    "expression with numeric arguments" % arg)
+                    "expression with numeric arguments" % arg
+                )
+
 
 def land(*args):
     """

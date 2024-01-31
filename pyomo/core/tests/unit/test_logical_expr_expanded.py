@@ -291,8 +291,9 @@ class TestLogicalClasses(unittest.TestCase):
         self.assertEqual(str(atleast(1, m.Y1, m.Y2)), "atleast(1: [Y1, Y2])")
         self.assertEqual(str(atmost(1, m.Y1, m.Y2)), "atmost(1: [Y1, Y2])")
         self.assertEqual(str(exactly(1, m.Y1, m.Y2)), "exactly(1: [Y1, Y2])")
-        self.assertEqual(str(all_different(m.int1, m.int2)), 
-                         "all_different(int1, int2)")
+        self.assertEqual(
+            str(all_different(m.int1, m.int2)), "all_different(int1, int2)"
+        )
         self.assertEqual(str(count_if(m.Y1, m.Y2)), "count_if(Y1, Y2)")
 
         # Precedence checks
