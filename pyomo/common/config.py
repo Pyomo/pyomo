@@ -2383,11 +2383,7 @@ class ConfigDict(ConfigBase, Mapping):
 
     content_filters = {None, 'all', 'userdata'}
 
-    __slots__ = (
-        '_declared',
-        '_implicit_declaration',
-        '_implicit_domain',
-    )
+    __slots__ = ('_declared', '_implicit_declaration', '_implicit_domain')
     _all_slots = set(__slots__ + ConfigBase.__slots__)
 
     def __init__(
@@ -2608,9 +2604,7 @@ class ConfigDict(ConfigBase, Mapping):
     def value(self, accessValue=True):
         if accessValue:
             self._userAccessed = True
-        return {
-            cfg._name: cfg.value(accessValue) for cfg in self._data.values()
-        }
+        return {cfg._name: cfg.value(accessValue) for cfg in self._data.values()}
 
     def set_value(self, value, skip_implicit=False):
         if value is None:

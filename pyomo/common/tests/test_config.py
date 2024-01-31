@@ -3030,12 +3030,12 @@ option_2: int, default=5
     def test_declaration_in_init(self):
         class CustomConfig(ConfigDict):
             def __init__(
-                    self,
-                    description=None,
-                    doc=None,
-                    implicit=False,
-                    implicit_domain=None,
-                    visibility=0,
+                self,
+                description=None,
+                doc=None,
+                implicit=False,
+                implicit_domain=None,
+                visibility=0,
             ):
                 super().__init__(
                     description=description,
@@ -3051,10 +3051,7 @@ option_2: int, default=5
         cfg = CustomConfig()
         OUT = StringIO()
         cfg.display(ostream=OUT)
-        self.assertEqual(
-            "time_limit: None\nstream_solver: None\n",
-            OUT.getvalue()
-        )
+        self.assertEqual("time_limit: None\nstream_solver: None\n", OUT.getvalue())
 
         # Test that creating a copy of a ConfigDict with declared fields
         # in the __init__ does not result in duplicate outputs in the
@@ -3062,10 +3059,7 @@ option_2: int, default=5
         cfg2 = cfg({'time_limit': 10, 'stream_solver': 0})
         OUT = StringIO()
         cfg2.display(ostream=OUT)
-        self.assertEqual(
-            "time_limit: 10.0\nstream_solver: false\n",
-            OUT.getvalue()
-        )
+        self.assertEqual("time_limit: 10.0\nstream_solver: false\n", OUT.getvalue())
 
 
 if __name__ == "__main__":
