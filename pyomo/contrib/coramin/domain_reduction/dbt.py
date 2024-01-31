@@ -105,6 +105,10 @@ class TreeBlockData(_BlockData):
     @property
     def coupling_vars(self):
         self._assert_setup()
+        if self.is_leaf():
+            raise TreeBlockError(
+                'Leaf TreeBlocks do not have coupling variables. Please check the is_leaf method'
+            )
         return list(self._coupling_vars)
 
     def _num_stages(self):
@@ -248,15 +252,21 @@ class _Tree(object):
             else:
                 raise ValueError('Unexpected child type: {0}'.format(str(type(child))))
 
-    def log(self, prefix=''):
-        logger.debug(prefix + '# Edges: {0}'.format(len(self.coupling_vars)))
+    def to_string(self, prefix=''):
+        s = ''
+        s += f'{prefix}# Edges: {len(self.coupling_vars)}\n'
         for _child in self.children:
             if isinstance(_child, _Tree):
-                _child.log(prefix=prefix + '  ')
+                s += _child.to_string(prefix=prefix + '  ')
             else:
-                logger.debug(
-                    prefix + '  Leaf: # NNZ: {0}'.format(_child.number_of_edges())
-                )
+                s += f'{prefix}  Leaf: # NNZ: {_child.number_of_edges()}\n'
+        return s
+
+    def log(self, prefix=''):
+        logger.debug(self.to_string(prefix=prefix))
+
+    def __str__(self):
+        return self.to_string()
 
 
 def _is_dominated(ndx, num_cuts, balance, num_cuts_array, balance_array):
@@ -379,11 +389,10 @@ def _refine_partition(
     con_count = defaultdict(int)
     for edge in removed_edges:
         n1, n2 = edge.node1, edge.node2
-        assert n1.is_var() or n2.is_var()
-        if n1.is_con():
-            assert n2.is_var()
-            con_count[n1.comp] += 1
-        elif n2.is_con():
+        assert n1.is_var() != n2.is_var()  # xor
+        if n2.is_var():
+            n1, n2 = n2, n1
+        if n2.is_con():  # n2 might be a rel
             con_count[n2.comp] += 1
 
     for c, count in con_count.items():
@@ -523,11 +532,9 @@ def split_metis(graph, model):
 
     removed_edges = list()
     for n1, n2 in graph.edges():
-        if not n1.is_var():
-            assert n2.is_var()
+        assert n1.is_var() != n2.is_var()  # xor
+        if n2.is_var():
             n1, n2 = n2, n1
-        else:
-            assert not n2.is_var()
         if n1 in graph_a_nodes and n2 in graph_a_nodes:
             continue
         elif n1 in graph_b_nodes and n2 in graph_b_nodes:
@@ -546,18 +553,21 @@ def split_metis(graph, model):
     graph_a_edges = list()
     graph_b_edges = list()
     for n1, n2 in graph.edges():
-        assert n1.is_var()
-        assert not n2.is_var()
+        assert n1.is_var() != n2.is_var()  # xor
+        if n2.is_var():
+            n1, n2, = n2, n1
         if n2 in graph_a_nodes:
             graph_a_edges.append((n1, n2))
         else:
+            assert n2 in graph_b_nodes
             graph_b_edges.append((n1, n2))
 
     linking_var_nodes = OrderedSet()
     for e in removed_edges:
         n1, n2 = e.node1, e.node2
-        assert n1.is_var()
-        assert not n2.is_var()
+        assert n1.is_var() != n2.is_var()  # xor
+        if n2.is_var():
+            n1, n2 = n2, n1
         linking_var_nodes.add(n1)
 
     graph_a = networkx.Graph()

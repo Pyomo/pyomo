@@ -17,9 +17,9 @@ class TestECPBounder(unittest.TestCase):
         m.obj = pe.Objective(expr=0.5 * (m.x**2 + m.y**2))
         m.c1 = pe.Constraint(expr=m.y >= (m.x - 1) ** 2)
         m.c2 = pe.Constraint(expr=m.y >= pe.exp(m.x))
-        coramin.relaxations.relax(m)
+        r = coramin.relaxations.relax(m)
         opt = ECPBounder(subproblem_solver=appsi.solvers.Gurobi())
-        res = opt.solve(m)
+        res = opt.solve(r)
         self.assertEqual(
             res.termination_condition, appsi.base.TerminationCondition.optimal
         )
