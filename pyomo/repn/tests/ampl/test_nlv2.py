@@ -24,6 +24,7 @@ from pyomo.repn.util import InvalidNumber
 from pyomo.repn.tests.nl_diff import nl_diff
 
 from pyomo.common.dependencies import numpy, numpy_available
+from pyomo.common.errors import MouseTrap
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tee import capture_output
 from pyomo.common.tempfiles import TempfileManager
@@ -69,6 +70,7 @@ class INFO(object):
             self.used_named_expressions,
             self.symbolic_solver_labels,
             True,
+            None,
         )
 
     def __enter__(self):
@@ -871,6 +873,67 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn2.linear, {id(m.x): 102, id(m.y): 103})
         self.assertEqual(repn2.nonlinear, None)
 
+    def test_AMPLRepn_to_expr(self):
+        m = ConcreteModel()
+        m.p = Param([2, 3, 4], mutable=True, initialize=lambda m, i: i**2)
+        m.x = Var([2, 3, 4], initialize=lambda m, i: i)
+
+        e = 10
+        info = INFO()
+        with LoggingIntercept() as LOG:
+            repn = info.visitor.walk_expression((e, None, None, 1))
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(repn.nl, None)
+        self.assertEqual(repn.mult, 1)
+        self.assertEqual(repn.const, 10)
+        self.assertEqual(repn.linear, {})
+        self.assertEqual(repn.nonlinear, None)
+        ee = repn.to_expr(info.var_map)
+        self.assertExpressionsEqual(ee, 10)
+
+        e += sum(m.x[i] * m.p[i] for i in m.x)
+        info = INFO()
+        with LoggingIntercept() as LOG:
+            repn = info.visitor.walk_expression((e, None, None, 1))
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(repn.nl, None)
+        self.assertEqual(repn.mult, 1)
+        self.assertEqual(repn.const, 10)
+        self.assertEqual(repn.linear, {id(m.x[2]): 4, id(m.x[3]): 9, id(m.x[4]): 16})
+        self.assertEqual(repn.nonlinear, None)
+        ee = repn.to_expr(info.var_map)
+        self.assertExpressionsEqual(ee, 4 * m.x[2] + 9 * m.x[3] + 16 * m.x[4] + 10)
+        self.assertEqual(ee(), 10 + 8 + 27 + 64)
+
+        e = sum(m.x[i] * m.p[i] for i in m.x)
+        info = INFO()
+        with LoggingIntercept() as LOG:
+            repn = info.visitor.walk_expression((e, None, None, 1))
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(repn.nl, None)
+        self.assertEqual(repn.mult, 1)
+        self.assertEqual(repn.const, 0)
+        self.assertEqual(repn.linear, {id(m.x[2]): 4, id(m.x[3]): 9, id(m.x[4]): 16})
+        self.assertEqual(repn.nonlinear, None)
+        ee = repn.to_expr(info.var_map)
+        self.assertExpressionsEqual(ee, 4 * m.x[2] + 9 * m.x[3] + 16 * m.x[4])
+        self.assertEqual(ee(), 8 + 27 + 64)
+
+        e += m.x[2] ** 2
+        info = INFO()
+        with LoggingIntercept() as LOG:
+            repn = info.visitor.walk_expression((e, None, None, 1))
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(repn.nl, None)
+        self.assertEqual(repn.mult, 1)
+        self.assertEqual(repn.const, 0)
+        self.assertEqual(repn.linear, {id(m.x[2]): 4, id(m.x[3]): 9, id(m.x[4]): 16})
+        self.assertEqual(repn.nonlinear, ('o5\n%s\nn2\n', [id(m.x[2])]))
+        with self.assertRaisesRegex(
+            MouseTrap, "Cannot convert nonlinear AMPLRepn to Pyomo Expression"
+        ):
+            ee = repn.to_expr(info.var_map)
+
 
 class Test_NLWriter(unittest.TestCase):
     def test_external_function_str_args(self):
@@ -1060,9 +1123,7 @@ class Test_NLWriter(unittest.TestCase):
         m.x = Var([1, 2])
         m.p = Param(initialize=5, mutable=True)
         m.o = Objective(expr=1)
-        m.c = Constraint(
-            expr=LinearExpression([m.p**2, 5 * m.x[1], 10 * m.x[2]]) <= 0
-        )
+        m.c = Constraint(expr=LinearExpression([m.p**2, 5 * m.x[1], 10 * m.x[2]]) <= 0)
 
         OUT = io.StringIO()
         nl_writer.NLWriter().write(m, OUT)
@@ -1262,12 +1323,7 @@ G0 4   #value
 
         self.assertEqual(
             nlinfo.eliminated_vars,
-            [
-                (m.x[3], nl_writer.AMPLRepn(-4.0, {}, None)),
-                (m.x[1], nl_writer.AMPLRepn(4.0, {}, None)),
-                (m.x[2], nl_writer.AMPLRepn(3.0, {}, None)),
-                (m.x[0], nl_writer.AMPLRepn(5.0, {}, None)),
-            ],
+            [(m.x[3], -4.0), (m.x[1], 4.0), (m.x[2], 3.0), (m.x[0], 5.0)],
         )
         self.assertEqual(
             *nl_diff(
@@ -1313,12 +1369,7 @@ G0 1
 
         self.assertEqual(
             nlinfo.eliminated_vars,
-            [
-                (m.x[3], nl_writer.AMPLRepn(-4.0, {}, None)),
-                (m.x[1], nl_writer.AMPLRepn(4.0, {}, None)),
-                (m.x[2], nl_writer.AMPLRepn(3.0, {}, None)),
-                (m.x[0], nl_writer.AMPLRepn(5.0, {}, None)),
-            ],
+            [(m.x[3], -4.0), (m.x[1], 4.0), (m.x[2], 3.0), (m.x[0], 5.0)],
         )
         self.assertEqual(
             *nl_diff(
@@ -1366,11 +1417,11 @@ G0 1
         self.assertEqual(
             nlinfo.eliminated_vars,
             [
-                (m.x[1], nl_writer.AMPLRepn(4.0, {}, None)),
-                (m.x[5], nl_writer.AMPLRepn(5.0, {}, None)),
-                (m.x[3], nl_writer.AMPLRepn(-4.0, {}, None)),
-                (m.x[2], nl_writer.AMPLRepn(3.0, {}, None)),
-                (m.x[0], nl_writer.AMPLRepn(5.0, {}, None)),
+                (m.x[1], 4.0),
+                (m.x[5], 5.0),
+                (m.x[3], -4.0),
+                (m.x[2], 3.0),
+                (m.x[0], 5.0),
             ],
         )
         self.assertEqual(
@@ -1414,15 +1465,18 @@ G0 1
             nlinfo = nl_writer.NLWriter().write(m, OUT, linear_presolve=True)
         self.assertEqual(LOG.getvalue(), "")
 
-        self.assertEqual(
-            nlinfo.eliminated_vars,
-            [
-                (m.x[4], nl_writer.AMPLRepn(-12, {id(m.x[1]): 3}, None)),
-                (m.x[3], nl_writer.AMPLRepn(-72, {id(m.x[1]): 17}, None)),
-                (m.x[2], nl_writer.AMPLRepn(-13, {id(m.x[1]): 4}, None)),
-                (m.x[0], nl_writer.AMPLRepn(29, {id(m.x[1]): -6}, None)),
-            ],
-        )
+        self.assertIs(nlinfo.eliminated_vars[0][0], m.x[4])
+        self.assertExpressionsEqual(nlinfo.eliminated_vars[0][1], 3.0 * m.x[1] - 12.0)
+
+        self.assertIs(nlinfo.eliminated_vars[1][0], m.x[3])
+        self.assertExpressionsEqual(nlinfo.eliminated_vars[1][1], 17.0 * m.x[1] - 72.0)
+
+        self.assertIs(nlinfo.eliminated_vars[2][0], m.x[2])
+        self.assertExpressionsEqual(nlinfo.eliminated_vars[2][1], 4.0 * m.x[1] - 13.0)
+
+        self.assertIs(nlinfo.eliminated_vars[3][0], m.x[0])
+        self.assertExpressionsEqual(nlinfo.eliminated_vars[3][1], -6.0 * m.x[1] + 29.0)
+
         # Note: bounds on x[1] are:
         #   min(22/3, 82/17, 23/4, -39/-6) == 4.823529411764706
         #   max(2/3, 62/17, 3/4, -19/-6) == 3.6470588235294117
@@ -1468,19 +1522,21 @@ G0 1
             nlinfo = nl_writer.NLWriter().write(m, OUT, linear_presolve=True)
         self.assertEqual(LOG.getvalue(), "")
 
-        self.assertEqual(
-            nlinfo.eliminated_vars,
-            [
-                (m.x[4], nl_writer.AMPLRepn(-12, {id(m.x[1]): 3}, None)),
-                (m.x[3], nl_writer.AMPLRepn(-72, {id(m.x[1]): 17}, None)),
-                (m.x[2], nl_writer.AMPLRepn(-13, {id(m.x[1]): 4}, None)),
-                (m.x[0], nl_writer.AMPLRepn(29, {id(m.x[1]): -6}, None)),
-            ],
-        )
+        self.assertIs(nlinfo.eliminated_vars[0][0], m.x[4])
+        self.assertExpressionsEqual(nlinfo.eliminated_vars[0][1], 3.0 * m.x[1] - 12.0)
+
+        self.assertIs(nlinfo.eliminated_vars[1][0], m.x[3])
+        self.assertExpressionsEqual(nlinfo.eliminated_vars[1][1], 17.0 * m.x[1] - 72.0)
+
+        self.assertIs(nlinfo.eliminated_vars[2][0], m.x[2])
+        self.assertExpressionsEqual(nlinfo.eliminated_vars[2][1], 4.0 * m.x[1] - 13.0)
+
+        self.assertIs(nlinfo.eliminated_vars[3][0], m.x[0])
+        self.assertExpressionsEqual(nlinfo.eliminated_vars[3][1], -6.0 * m.x[1] + 29.0)
+
         # Note: bounds on x[1] are:
         #   min(22/3, 82/17, 23/4, -39/-6) == 4.823529411764706
         #   max(2/3, 62/17, 3/4, -19/-6) == 3.6470588235294117
-        print(OUT.getvalue())
         self.assertEqual(
             *nl_diff(
                 """g3 1 1 0	# problem unknown
@@ -1556,6 +1612,81 @@ G0 1
             with LoggingIntercept() as LOG:
                 nlinfo = nl_writer.NLWriter().write(m, OUT, linear_presolve=True)
         self.assertEqual(LOG.getvalue(), "")
+
+    def test_presolve_named_expressions(self):
+        # Test from #3055
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3], initialize=1, bounds=(0, 10))
+        m.subexpr = pyo.Expression(pyo.Integers)
+        m.subexpr[1] = m.x[1] + m.x[2]
+        m.eq = pyo.Constraint(pyo.Integers)
+        m.eq[1] = m.x[1] == 7
+        m.eq[2] = m.x[3] == 0.1 * m.subexpr[1] * m.x[2]
+        m.obj = pyo.Objective(expr=m.x[1] ** 2 + m.x[2] ** 2 + m.x[3] ** 3)
+
+        OUT = io.StringIO()
+        with LoggingIntercept() as LOG:
+            nlinfo = nl_writer.NLWriter().write(
+                m, OUT, symbolic_solver_labels=True, linear_presolve=True
+            )
+        self.assertEqual(LOG.getvalue(), "")
+
+        self.assertEqual(nlinfo.eliminated_vars, [(m.x[1], 7)])
+
+        self.assertEqual(
+            *nl_diff(
+                """g3 1 1 0	# problem unknown
+ 2 1 1 0 1 	# vars, constraints, objectives, ranges, eqns
+ 1 1 0 0 0 0	# nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0	# network constraints: nonlinear, linear
+ 1 2 1 	# nonlinear vars in constraints, objectives, both
+ 0 0 0 1	# linear network variables; functions; arith, flags
+ 0 0 0 0 0 	# discrete variables: binary, integer, nonlinear (b,c,o)
+ 2 2 	# nonzeros in Jacobian, obj. gradient
+ 5 4	# max name lengths: constraints, variables
+ 0 0 0 1 0	# common exprs: b,c,o,c1,o1
+V2 1 1	#subexpr[1]
+0 1
+n7.0
+C0	#eq[2]
+o16	#-
+o2	#*
+o2	#*
+n0.1
+v2	#subexpr[1]
+v0	#x[2]
+O0 0	#obj
+o54	# sumlist
+3	# (n)
+o5	#^
+n7.0
+n2
+o5	#^
+v0	#x[2]
+n2
+o5	#^
+v1	#x[3]
+n3
+x2	# initial guess
+0 1	#x[2]
+1 1	#x[3]
+r	#1 ranges (rhs's)
+4 0	#eq[2]
+b	#2 bounds (on variables)
+0 0 10	#x[2]
+0 0 10	#x[3]
+k1	#intermediate Jacobian column lengths
+1
+J0 2	#eq[2]
+0 0
+1 1
+G0 2	#obj
+0 0
+1 0
+""",
+                OUT.getvalue(),
+            )
+        )
 
     def test_scaling(self):
         m = pyo.ConcreteModel()
@@ -1664,7 +1795,7 @@ G0 3
         self.assertEqual(LOG.getvalue(), "")
 
         nl2 = OUT.getvalue()
-        print(nl2)
+
         self.assertEqual(
             *nl_diff(
                 """g3 1 1 0	# problem unknown
@@ -1758,7 +1889,7 @@ G0 3
 
         OUT = io.StringIO()
         nl_writer.NLWriter().write(m, OUT, symbolic_solver_labels=True)
-        print(OUT.getvalue())
+
         self.assertEqual(
             *nl_diff(
                 """g3 1 1 0	# problem unknown

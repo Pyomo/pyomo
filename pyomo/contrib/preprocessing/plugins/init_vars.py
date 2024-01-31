@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 """Automatically initialize variables."""
-from __future__ import division
+
 
 from pyomo.core.base.var import Var
 from pyomo.core.base.transformation import TransformationFactory

@@ -10,8 +10,6 @@
 #  ___________________________________________________________________________
 
 
-from __future__ import division
-
 import logging
 
 from pyomo.common.config import (

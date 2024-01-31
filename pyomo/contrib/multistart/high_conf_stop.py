@@ -5,7 +5,6 @@ and stops once the estimated mass of missing optima is within an acceptable
 range, given some confidence.
 
 """
-from __future__ import division
 
 from collections import Counter
 from math import log, sqrt

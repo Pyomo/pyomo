@@ -13,7 +13,7 @@
 """
 Testing for the logical expression system
 """
-from __future__ import division
+
 import operator
 from itertools import permutations, product
 

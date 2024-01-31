@@ -11,8 +11,6 @@ DOI: 10.1002/aic.14088
 
 """
 
-from __future__ import division
-
 from pyomo.environ import (
     ConcreteModel,
     NonNegativeReals,

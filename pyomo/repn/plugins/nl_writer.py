@@ -26,7 +26,7 @@ from pyomo.common.config import (
     document_kwargs_from_configdict,
 )
 from pyomo.common.deprecation import deprecation_warning
-from pyomo.common.errors import DeveloperError, InfeasibleConstraintException
+from pyomo.common.errors import DeveloperError, InfeasibleConstraintException, MouseTrap
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.numeric_types import (
     native_complex_types,
@@ -529,6 +529,7 @@ class _NLWriter_impl(object):
         self.external_functions = {}
         self.used_named_expressions = set()
         self.var_map = {}
+        self.sorter = FileDeterminism_to_SortComponents(config.file_determinism)
         self.visitor = AMPLRepnVisitor(
             self.template,
             self.subexpression_cache,
@@ -538,6 +539,7 @@ class _NLWriter_impl(object):
             self.used_named_expressions,
             self.symbolic_solver_labels,
             self.config.export_defined_variables,
+            self.sorter,
         )
         self.next_V_line_id = 0
         self.pause_gc = None
@@ -815,8 +817,12 @@ class _NLWriter_impl(object):
 
         if self.config.export_nonlinear_variables:
             for v in self.config.export_nonlinear_variables:
+                # Note that because we have already walked all the
+                # expressions, we have already "seen" all the variables
+                # we will see, so we don't need to fill in any VarData
+                # from IndexedVar containers here.
                 if v.is_indexed():
-                    _iter = v.values()
+                    _iter = v.values(sorter)
                 else:
                     _iter = (v,)
                 for _v in _iter:
@@ -1445,9 +1451,11 @@ class _NLWriter_impl(object):
         ostream.write(
             'r%s\n'
             % (
-                "\t#%d ranges (rhs's)" % len(constraints)
-                if symbolic_solver_labels
-                else '',
+                (
+                    "\t#%d ranges (rhs's)" % len(constraints)
+                    if symbolic_solver_labels
+                    else ''
+                ),
             )
         )
         ostream.write("\n".join(r_lines))
@@ -1460,9 +1468,11 @@ class _NLWriter_impl(object):
         ostream.write(
             'b%s\n'
             % (
-                "\t#%d bounds (on variables)" % len(variables)
-                if symbolic_solver_labels
-                else '',
+                (
+                    "\t#%d bounds (on variables)" % len(variables)
+                    if symbolic_solver_labels
+                    else ''
+                ),
             )
         )
         for var_idx, _id in enumerate(variables):
@@ -1486,9 +1496,11 @@ class _NLWriter_impl(object):
             'k%d%s\n'
             % (
                 len(variables) - 1,
-                "\t#intermediate Jacobian column lengths"
-                if symbolic_solver_labels
-                else '',
+                (
+                    "\t#intermediate Jacobian column lengths"
+                    if symbolic_solver_labels
+                    else ''
+                ),
             )
         )
         ktot = 0
@@ -1530,7 +1542,8 @@ class _NLWriter_impl(object):
 
         # Generate the return information
         eliminated_vars = [
-            (var_map[_id], expr_info) for _id, expr_info in eliminated_vars.items()
+            (var_map[_id], expr_info.to_expr(var_map))
+            for _id, expr_info in eliminated_vars.items()
         ]
         eliminated_vars.reverse()
         if scale_model:
@@ -1684,6 +1697,15 @@ class _NLWriter_impl(object):
         eliminated_cons = set()
         if not self.config.linear_presolve:
             return eliminated_cons, eliminated_vars
+
+        # We need to record all named expressions with linear components
+        # so that any eliminated variables are removed from them.
+        for expr, info, _ in self.subexpression_cache.values():
+            if not info.linear:
+                continue
+            expr_id = id(expr)
+            for _id in info.linear:
+                comp_by_linear_var[_id].append((expr_id, info))
 
         fixed_vars = [
             _id for _id, (lb, ub) in var_bounds.items() if lb == ub and lb is not None
@@ -2116,6 +2138,24 @@ class AMPLRepn(object):
                         self.nonlinear.append(other.nonlinear)
         elif _type is _CONSTANT:
             self.const += other[1]
+
+    def to_expr(self, var_map):
+        if self.nl is not None or self.nonlinear is not None:
+            # TODO: support converting general nonlinear expressiosn
+            # back to Pyomo expressions.  This will require an AMPL
+            # parser.
+            raise MouseTrap("Cannot convert nonlinear AMPLRepn to Pyomo Expression")
+        if self.linear:
+            # Explicitly generate the LinearExpression.  At time of
+            # writing, this is about 40% faster than standard operator
+            # overloading for O(1000) element sums
+            ans = LinearExpression(
+                [coef * var_map[vid] for vid, coef in self.linear.items()]
+            )
+            ans += self.const
+        else:
+            ans = self.const
+        return ans * self.mult
 
 
 def _create_strict_inequality_map(vars_):
@@ -2597,6 +2637,25 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
         self[SumExpression] = self._before_general_expression
 
     @staticmethod
+    def _record_var(visitor, var):
+        # We always add all indices to the var_map at once so that
+        # we can honor deterministic ordering of unordered sets
+        # (because the user could have iterated over an unordered
+        # set when constructing an expression, thereby altering the
+        # order in which we would see the variables)
+        vm = visitor.var_map
+        try:
+            _iter = var.parent_component().values(visitor.sorter)
+        except AttributeError:
+            # Note that this only works for the AML, as kernel does not
+            # provide a parent_component()
+            _iter = (var,)
+        for v in _iter:
+            if v.fixed:
+                continue
+            vm[id(v)] = v
+
+    @staticmethod
     def _before_string(visitor, child):
         visitor.encountered_string_arguments = True
         ans = AMPLRepn(child, None, None)
@@ -2611,7 +2670,7 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
                 if _id not in visitor.fixed_vars:
                     visitor.cache_fixed_var(_id, child)
                 return False, (_CONSTANT, visitor.fixed_vars[_id])
-            visitor.var_map[_id] = child
+            _before_child_handlers._record_var(visitor, child)
         return False, (_MONOMIAL, _id, 1)
 
     @staticmethod
@@ -2650,7 +2709,7 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
                 if _id not in visitor.fixed_vars:
                     visitor.cache_fixed_var(_id, arg2)
                 return False, (_CONSTANT, arg1 * visitor.fixed_vars[_id])
-            visitor.var_map[_id] = arg2
+            _before_child_handlers._record_var(visitor, arg2)
         return False, (_MONOMIAL, _id, arg1)
 
     @staticmethod
@@ -2691,7 +2750,7 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
                             visitor.cache_fixed_var(_id, arg2)
                         const += arg1 * visitor.fixed_vars[_id]
                         continue
-                    var_map[_id] = arg2
+                    _before_child_handlers._record_var(visitor, arg2)
                     linear[_id] = arg1
                 elif _id in linear:
                     linear[_id] += arg1
@@ -2739,6 +2798,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         used_named_expressions,
         symbolic_solver_labels,
         use_named_exprs,
+        sorter,
     ):
         super().__init__()
         self.template = template
@@ -2754,6 +2814,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         self.fixed_vars = {}
         self._eval_expr_visitor = _EvaluationVisitor(True)
         self.evaluate = self._eval_expr_visitor.dfs_postorder_stack
+        self.sorter = sorter
 
     def check_constant(self, ans, obj):
         if ans.__class__ not in native_numeric_types:

@@ -33,7 +33,6 @@ class TraversalStrategy(enum.Enum, **strictEnum):
 
 
 class SortComponents(enum.Flag, **strictEnum):
-
     """
     This class is a convenient wrapper for specifying various sort
     ordering.  We pass these objects to the "sort" argument to various
@@ -59,7 +58,7 @@ class SortComponents(enum.Flag, **strictEnum):
     alphabeticalOrder = alphaOrder
     alphabetical = alphaOrder
     # both alpha and decl orders are deterministic, so only must sort indices
-    deterministic = indices
+    deterministic = ORDERED_INDICES
     sortBoth = indices | alphabeticalOrder  # Same as True
     alphabetizeComponentAndIndex = sortBoth
 
