@@ -35,7 +35,7 @@ def get_clone_and_var_map(m1: _BlockData):
     return m2, var_map
 
 
-def clone_shallow_active_flat(m1: _BlockData, num_clones: int = 1) -> List[_BlockData]:
+def clone_shallow_active_flat(m1: _BlockData, num_clones: int = 1, clone_expressions: bool = False) -> List[_BlockData]:
     clone_list = [pe.Block(concrete=True) for i in range(num_clones)]
     for m2 in clone_list:
         m2.linear = pe.Block()
@@ -52,6 +52,8 @@ def clone_shallow_active_flat(m1: _BlockData, num_clones: int = 1) -> List[_Bloc
         all_vars.update(repn.linear_vars)
         all_vars.update(repn.nonlinear_vars)
         body = repn.to_expression()
+        if clone_expressions:
+            body = body.clone()
         if repn.nonlinear_expr is None:
             for m2 in clone_list:
                 m2.linear.cons.add((c.lb, body, c.ub))
@@ -66,6 +68,8 @@ def clone_shallow_active_flat(m1: _BlockData, num_clones: int = 1) -> List[_Bloc
         all_vars.update(repn.linear_vars)
         all_vars.update(repn.nonlinear_vars)
         obj_expr = repn.to_expression()
+        if clone_expressions:
+            obj_expr = obj_expr.clone()
         if repn.nonlinear_expr is None:
             for m2 in clone_list:
                 m2.linear.obj = pe.Objective(expr=obj_expr, sense=obj.sense)

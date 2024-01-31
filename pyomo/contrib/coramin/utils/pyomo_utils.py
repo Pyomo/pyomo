@@ -26,12 +26,6 @@ def get_objective(m):
     return obj
 
 
-def unfixed_vars(m, descend_into=True, active=True):
-    for v in m.component_data_objects(pe.Var, descend_into=descend_into, active=active):
-        if not v.is_fixed():
-            yield v
-
-
 def active_vars(m, include_fixed=False):
     seen = set()
     for c in m.component_data_objects(pe.Constraint, active=True, descend_into=True):
@@ -47,6 +41,11 @@ def active_vars(m, include_fixed=False):
             if v_id not in seen:
                 seen.add(v_id)
                 yield v
+
+
+def active_cons(m):
+    for c in m.component_data_objects(pe.Constraint, active=True, descend_into=True):
+        yield c
 
 
 simplifier = Simplifier()

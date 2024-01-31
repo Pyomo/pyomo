@@ -375,7 +375,10 @@ def evaluate_partition(original_graph, tree):
         child_n_vars_to_tighten = len(collect_vars_to_tighten_from_graph(graph=child))
         tree_obbt_nnz += child_nnz * child_n_vars_to_tighten
     tree_obbt_nnz += tree_nnz * len(tree.coupling_vars)
-    partitioning_ratio = original_obbt_nnz / tree_obbt_nnz
+    if tree_obbt_nnz > 0:
+        partitioning_ratio = original_obbt_nnz / tree_obbt_nnz
+    else:
+        partitioning_ratio = None
     return partitioning_ratio
 
 
@@ -401,7 +404,7 @@ def _refine_partition(
 
         new_body = flatten_expr(c.body)
 
-        if type(new_body) is not numeric_expr.SumExpression:
+        if type(new_body) not in {numeric_expr.SumExpression, numeric_expr.LinearExpression}:
             logger.info(
                 f'Constraint {str(c)} is contributing to {count} removed '
                 f'edges, but we cannot split the constraint because the '
@@ -710,7 +713,7 @@ def compute_partition_ratio(
 def _reformulate_objective(model):
     current_obj = get_objective(model)
     if current_obj is None:
-        raise ValueError('No active objective found!')
+        return None
     if not current_obj.expr.is_variable_type():
         obj_var = model.aux_vars.add()
         lb, ub = compute_bounds_on_expr(current_obj.expr)
@@ -732,7 +735,7 @@ def _reformulate_objective(model):
 def _decompose_model(
     model: _BlockData,
     max_leaf_nnz: Optional[int] = None,
-    min_partition_ratio: float = 1.25,
+    min_partition_ratio: float = 0,
     limit_num_stages: bool = True,
 ):
     """
@@ -762,6 +765,9 @@ def _decompose_model(
     # by reformulating the objective, we can make better use of the incumbent when
     # doing OBBT
     _reformulate_objective(model)
+    new_model = TreeBlock(concrete=True)
+    new_model.aux_vars = pe.VarList()
+    object.__setattr__(model, 'aux_vars', new_model.aux_vars)
 
     graph = convert_pyomo_model_to_bipartite_graph(model)
     logger.debug('converted pyomo model to bipartite graph')
@@ -780,7 +786,6 @@ def _decompose_model(
             logger.debug('too few NNZ in original graph; not decomposing')
         else:
             logger.debug('Cannot decompose graph with less than 2 constraints.')
-        new_model = TreeBlock(concrete=True)
         new_model.setup(children_keys=list(), coupling_vars=list())
         build_pyomo_model_from_graph(graph=graph, block=new_model)
         termination_reason = DecompositionStatus.problem_too_small
@@ -792,9 +797,8 @@ def _decompose_model(
                 ratio=partitioning_ratio
             )
         )
-        if partitioning_ratio < min_partition_ratio:
+        if min_partition_ratio > 0 and partitioning_ratio < min_partition_ratio:
             logger.debug('obtained bad partitioning ratio; abandoning partition')
-            new_model = TreeBlock(concrete=True)
             new_model.setup(children_keys=list(), coupling_vars=list())
             build_pyomo_model_from_graph(graph=graph, block=new_model)
             termination_reason = DecompositionStatus.bad_ratio
@@ -835,7 +839,7 @@ def _decompose_model(
                     logger.debug(
                         'partitioning ratio: {ratio}'.format(ratio=partitioning_ratio)
                     )
-                    if partitioning_ratio > min_partition_ratio:
+                    if min_partition_ratio <= 0 or partitioning_ratio > min_partition_ratio:
                         logger.debug('partitioned {0}'.format(str(_graph)))
                         _parent.children.discard(_graph)
                         _parent.children.add(sub_tree)
@@ -866,7 +870,6 @@ def _decompose_model(
             logger.debug('Tree Info:')
             root_tree.log()
 
-            new_model = TreeBlock(concrete=True)
             root_tree.build_pyomo_model(block=new_model)
             logger.debug('done building pyomo model from tree')
 
@@ -886,7 +889,7 @@ def _decompose_model(
 def decompose_model(
     model: _BlockData,
     max_leaf_nnz: Optional[int] = None,
-    min_partition_ratio: float = 1.25,
+    min_partition_ratio: float = 0,
     limit_num_stages: bool = True,
 ):
     """
@@ -912,7 +915,6 @@ def decompose_model(
     """
     # we have to clone the model because we modify it in _refine_partition
     model = clone_shallow_active_flat(model)[0]
-    model.aux_vars = pe.VarList()
 
     tmp = _decompose_model(
         model,

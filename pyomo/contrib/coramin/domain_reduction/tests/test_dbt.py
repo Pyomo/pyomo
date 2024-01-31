@@ -12,6 +12,7 @@ from pyomo.contrib.coramin.domain_reduction.dbt import (
     perform_dbt,
     OBBTMethod,
     FilterMethod,
+    DecompositionStatus,
 )
 from pyomo.common import unittest
 import pyomo.environ as pe
@@ -29,6 +30,111 @@ from pyomo.contrib.coramin.utils.pyomo_utils import get_objective
 import filecmp
 from pyomo.contrib import appsi
 import pytest
+from pyomo.contrib.coramin.utils.compare_models import is_relaxation, is_equivalent
+from pyomo.contrib.coramin.utils.pyomo_utils import active_cons, active_vars
+
+
+class TestDecomposition(unittest.TestCase):
+    def test_decomp1(self):
+        m1 = pe.ConcreteModel()
+        m1.x = x = pe.Var([1, 2, 3, 4, 5, 6], bounds=(-10, 10))
+        m1.c = c = pe.ConstraintList()
+
+        c.add(x[1] == x[2] + x[3])
+        c.add(x[4] == x[5] + x[6])
+        c.add(x[2] <= 2*x[3] + 1)
+        c.add(x[5] >= 2*x[6] + 1)
+
+        m2, reason = decompose_model(m1)
+        self.assertEqual(reason, DecompositionStatus.normal)
+        self.assertTrue(is_equivalent(m1, m2, appsi.solvers.Highs()))
+        self.assertEqual(len(m2.children), 2)
+        self.assertEqual(len(list(active_cons(m2.children[0]))), 2)
+        self.assertEqual(len(list(active_cons(m2.children[1]))), 2)
+        self.assertEqual(len(list(active_vars(m2.children[0]))), 3)
+        self.assertEqual(len(list(active_vars(m2.children[1]))), 3)
+        self.assertEqual(m2.get_block_stage(m2), 0)
+        self.assertEqual(m2.get_block_stage(m2.children[0]), 1)
+        self.assertEqual(m2.get_block_stage(m2.children[1]), 1)
+        self.assertEqual(list(m2.stage_blocks(0)), [m2])
+        self.assertEqual(list(m2.stage_blocks(1)), [m2.children[0], m2.children[1]])
+
+    def test_decomp2(self):
+        m1 = pe.ConcreteModel()
+        m1.x = x = pe.Var([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], bounds=(-10, 10))
+        m1.c = c = pe.ConstraintList()
+
+        c.add(x[1] == x[2] + x[3])
+        c.add(x[4] == x[5] + x[6])
+        c.add(x[2] <= 2*x[3] + 1)
+        c.add(x[5] >= 2*x[6] + 1)
+        c.add(x[1] == x[4])
+
+        c.add(x[7] == x[8] + x[9])
+        c.add(x[10] == x[11] + x[12])
+        c.add(x[8] <= 2*x[9] + 1)
+        c.add(x[11] >= 2*x[12] + 1)
+        c.add(x[7] == x[10])
+
+        m2, reason = decompose_model(m1, limit_num_stages=False)
+        self.assertEqual(reason, DecompositionStatus.normal)
+        self.assertTrue(is_equivalent(m1, m2, appsi.solvers.Highs()))
+        self.assertEqual(len(m2.children), 2)
+        self.assertEqual(len(list(active_cons(m2.children[0]))), 5)
+        self.assertEqual(len(list(active_cons(m2.children[1]))), 5)
+        self.assertEqual(len(list(active_vars(m2.children[0]))), 6)
+        self.assertEqual(len(list(active_vars(m2.children[1]))), 6)
+        self.assertEqual(m2.get_block_stage(m2), 0)
+        self.assertEqual(m2.get_block_stage(m2.children[0]), 1)
+        self.assertEqual(m2.get_block_stage(m2.children[1]), 1)
+        self.assertEqual(list(m2.stage_blocks(0)), [m2])
+        self.assertEqual(list(m2.stage_blocks(1)), [m2.children[0], m2.children[1]])
+        self.assertEqual(list(m2.stage_blocks(2)), [m2.children[0].children[0], m2.children[0].children[1], m2.children[1].children[0], m2.children[1].children[1]])
+
+        for b in [m2.children[0], m2.children[1]]:
+            self.assertEqual(len(b.children), 2)
+            self.assertIn(len(list(active_cons(b.children[0]))), {2, 3})
+            self.assertIn(len(list(active_cons(b.children[1]))), {2, 3})
+            self.assertIn(len(list(active_vars(b.children[0]))), {3, 4})
+            self.assertIn(len(list(active_vars(b.children[1]))), {3, 4})
+            self.assertEqual(m2.get_block_stage(b), 1)
+            self.assertEqual(m2.get_block_stage(b.children[0]), 2)
+            self.assertEqual(m2.get_block_stage(b.children[1]), 2)
+            self.assertEqual(len(b.coupling_vars), 1)
+
+    def test_refine_partition(self):
+        m1 = pe.ConcreteModel()
+        m1.x = x = pe.Var([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], bounds=(-10, 10))
+        m1.c = c = pe.ConstraintList()
+
+        c.add(x[1] == x[2] + x[3])
+        c.add(x[4] == x[5] + x[6])
+        c.add(x[2] <= 2*x[3] + 1)
+        c.add(x[5] >= 2*x[6] + 1)
+        c.add(x[1] == x[4])
+
+        c.add(x[7] == x[8] + x[9])
+        c.add(x[10] == x[11] + x[12])
+        c.add(x[8] <= 2*x[9] + 1)
+        c.add(x[11] >= 2*x[12] + 1)
+        c.add(x[7] == x[10])
+
+        c.add(sum(x.values()) == 1)
+        m2, reason = decompose_model(m1)
+        m2.pprint()
+        self.assertEqual(reason, DecompositionStatus.normal)
+        opt = appsi.solvers.Highs()
+        opt.config.stream_solver = True
+        self.assertTrue(is_relaxation(m1, m2, appsi.solvers.Highs(), bigM=1000))
+        self.assertTrue(is_relaxation(m2, m1, opt, bigM=1000))
+        self.assertTrue(is_equivalent(m1, m2, appsi.solvers.Highs(), bigM=1000))
+        self.assertEqual(len(m2.children), 2)
+        self.assertEqual(len(m2.coupling_vars), 1)
+        self.assertIn(len(list(active_cons(m2.children[0]))), {6, 7})
+        self.assertIn(len(list(active_cons(m2.children[1]))), {6, 7})
+        self.assertEqual(len(m2.coupling_vars), 1)
+        self.assertIn(len(list(active_vars(m2.children[0]))), {7, 8})
+        self.assertIn(len(list(active_vars(m2.children[1]))), {7, 8})
 
 
 class TestTreeBlock(unittest.TestCase):
@@ -37,25 +143,23 @@ class TestTreeBlock(unittest.TestCase):
         with self.assertRaises(TreeBlockError):
             b.is_leaf()
         with self.assertRaises(TreeBlockError):
-            b.x = pe.Var()
+            b.children
         with self.assertRaises(TreeBlockError):
-            children = b.children
+            b.coupling_vars
         with self.assertRaises(TreeBlockError):
-            linking_constraints = b.linking_constraints
+            b.num_stages()
         with self.assertRaises(TreeBlockError):
-            num_stages = b.num_stages()
+            list(b.stage_blocks(0))
         with self.assertRaises(TreeBlockError):
-            stage_blocks = list(b.stage_blocks(0))
-        with self.assertRaises(TreeBlockError):
-            stage = b.get_block_stage(b)
-        b.setup(children_keys=list())
+            b.get_block_stage(b)
+        b.setup(children_keys=list(), coupling_vars=list())
         self.assertTrue(b.is_leaf())
         b.x = pe.Var()  # make sure we can add components just like a regular block
         b.x.setlb(-1)
         with self.assertRaises(TreeBlockError):
-            linking_constraints = b.linking_constraints
+            b.coupling_vars
         with self.assertRaises(TreeBlockError):
-            children = b.children
+            b.children
         self.assertEqual(b.num_stages(), 1)
         stage0_blocks = list(b.stage_blocks(0))
         self.assertEqual(len(stage0_blocks), 1)
@@ -65,22 +169,18 @@ class TestTreeBlock(unittest.TestCase):
         self.assertEqual(b.get_block_stage(b), 0)
 
         b = TreeBlock(concrete=True)
-        b.setup(children_keys=[1, 2])
-        b.children[1].setup(children_keys=list())
-        b.children[2].setup(children_keys=['a', 'b'])
-        b.children[2].children['a'].setup(children_keys=list())
-        b.children[2].children['b'].setup(children_keys=list())
+        b.setup(children_keys=[1, 2], coupling_vars=list())
+        b.children[1].setup(children_keys=list(), coupling_vars=list())
+        b.children[2].setup(children_keys=['a', 'b'], coupling_vars=list())
+        b.children[2].children['a'].setup(children_keys=list(), coupling_vars=list())
+        b.children[2].children['b'].setup(children_keys=list(), coupling_vars=list())
         self.assertFalse(b.is_leaf())
         self.assertTrue(b.children[1].is_leaf())
         self.assertFalse(b.children[2].is_leaf())
         self.assertTrue(b.children[2].children['a'].is_leaf())
         self.assertTrue(b.children[2].children['b'].is_leaf())
 
-        with self.assertRaises(TreeBlockError):
-            b.x = pe.Var()
         b.children[1].x = pe.Var()
-        with self.assertRaises(TreeBlockError):
-            b.children[2].x = pe.Var()
         b.children[2].children['a'].x = pe.Var()
         b.children[2].children['b'].x = pe.Var()
         self.assertEqual(
@@ -131,7 +231,7 @@ class TestTreeBlock(unittest.TestCase):
         with self.assertRaises(TreeBlockError):
             b.children[2].get_block_stage(b.children[2].children['a'])
 
-        self.assertEqual(len(list(b.linking_constraints.values())), 0)
+        self.assertEqual(len(b.coupling_vars), 0)
 
 
 class TestGraphConversion(unittest.TestCase):
@@ -245,7 +345,7 @@ class TestSplit(unittest.TestCase):
         g.add_edge(v6, c2)
 
         tree, partitioning_ratio = split_metis(graph=g, model=m)
-        self.assertAlmostEqual(partitioning_ratio, 3 * 12 / (14 * 1 + 6 * 2 + 6 * 2))
+        self.assertAlmostEqual(partitioning_ratio, 3 * 12 / (12 * 1 + 6 * 2 + 6 * 2))
 
         children = list(tree.children)
         self.assertEqual(len(children), 2)
@@ -287,13 +387,10 @@ class TestSplit(unittest.TestCase):
         self.assertEqual(len(graph_a_edges), 6)
         self.assertEqual(len(graph_b_edges), 6)
 
-        edges_between_children = list(tree.edges_between_children)
-        self.assertEqual(len(edges_between_children), 1)
-        edge = edges_between_children[0]
-        self.assertTrue(
-            (v4 is edge.node1 and v4_hat is edge.node2)
-            or (v4 is edge.node2 and v4_hat is edge.node1)
-        )
+        coupling_vars = list(tree.coupling_vars)
+        self.assertEqual(len(coupling_vars), 1)
+        cv = coupling_vars[0]
+        self.assertEqual(v4, cv)
 
         new_model = TreeBlock(concrete=True)
         component_map = tree.build_pyomo_model(block=new_model)
