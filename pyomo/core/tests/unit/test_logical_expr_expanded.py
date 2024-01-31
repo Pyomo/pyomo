@@ -280,6 +280,8 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y2 = BooleanVar()
         m.Y3 = BooleanVar()
         m.Y4 = BooleanVar()
+        m.int1 = Var(domain=Integers)
+        m.int2 = Var(domain=Integers)
 
         self.assertEqual(str(land(m.Y1, m.Y2, m.Y3)), "Y1 ∧ Y2 ∧ Y3")
         self.assertEqual(str(lor(m.Y1, m.Y2, m.Y3)), "Y1 ∨ Y2 ∨ Y3")
@@ -289,7 +291,8 @@ class TestLogicalClasses(unittest.TestCase):
         self.assertEqual(str(atleast(1, m.Y1, m.Y2)), "atleast(1: [Y1, Y2])")
         self.assertEqual(str(atmost(1, m.Y1, m.Y2)), "atmost(1: [Y1, Y2])")
         self.assertEqual(str(exactly(1, m.Y1, m.Y2)), "exactly(1: [Y1, Y2])")
-        self.assertEqual(str(all_different(m.Y1, m.Y2)), "all_different(Y1, Y2)")
+        self.assertEqual(str(all_different(m.int1, m.int2)), 
+                         "all_different(int1, int2)")
         self.assertEqual(str(count_if(m.Y1, m.Y2)), "count_if(Y1, Y2)")
 
         # Precedence checks
@@ -308,12 +311,15 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y1 = BooleanVar()
         m.Y2 = BooleanVar()
         m.Y3 = BooleanVar()
+        m.int1 = Var(domain=Integers)
+        m.int2 = Var(domain=Integers)
+        m.int3 = Var(domain=Integers)
 
         self.assertFalse(m.Y1.is_expression_type())
         self.assertTrue(lnot(m.Y1).is_expression_type())
         self.assertTrue(equivalent(m.Y1, m.Y2).is_expression_type())
         self.assertTrue(atmost(1, [m.Y1, m.Y2, m.Y3]).is_expression_type())
-        self.assertTrue(all_different(m.Y1, m.Y2, m.Y3).is_expression_type())
+        self.assertTrue(all_different(m.int1, m.int2, m.int3).is_expression_type())
         self.assertTrue(count_if(m.Y1, m.Y2, m.Y3).is_expression_type())
 
     def test_numeric_invalid(self):

@@ -183,12 +183,57 @@ def _flattened(args):
                 yield arg
 
 
+def _flattened_boolean_args(args):
+    """Flatten any potentially indexed arguments and check that they are 
+    Boolean-valued."""
+    for arg in args:
+        if arg.__class__ in native_types:
+            myiter = (arg,)
+        elif isinstance(arg, (types.GeneratorType, list)):
+            myiter = arg
+        elif arg.is_indexed():
+            myiter = arg.values()
+        else:
+            myiter = (arg,)
+        for _argdata in myiter:
+            if _argdata.__class__ in native_logical_types:
+                yield _argdata
+            elif hasattr(_argdata, 'is_logical_type') and _argdata.is_logical_type():
+                yield _argdata
+            else:
+                raise ValueError(
+                    "Non-Boolean-valued argument '%s' encountered when constructing "
+                    "expression of Boolean arguments" % arg)
+
+
+def _flattened_numeric_args(args):
+    """Flatten any potentially indexed arguments and check that they are 
+    numeric."""
+    for arg in args:
+        if arg.__class__ in native_types:
+            myiter = (arg,)
+        elif isinstance(arg, (types.GeneratorType, list)):
+            myiter = arg
+        elif arg.is_indexed():
+            myiter = arg.values()
+        else:
+            myiter = (arg,)
+        for _argdata in myiter:
+            if _argdata.__class__ in native_numeric_types:
+                yield _argdata
+            elif hasattr(_argdata, 'is_numeric_type') and _argdata.is_numeric_type():
+                yield _argdata
+            else:
+                raise ValueError(
+                    "Non-numeric argument '%s' encountered when constructing "
+                    "expression with numeric arguments" % arg)
+
 def land(*args):
     """
     Construct an AndExpression between passed arguments.
     """
     result = AndExpression([])
-    for argdata in _flattened(args):
+    for argdata in _flattened_boolean_args(args):
         result = result.add(argdata)
     return result
 
@@ -198,7 +243,7 @@ def lor(*args):
     Construct an OrExpression between passed arguments.
     """
     result = OrExpression([])
-    for argdata in _flattened(args):
+    for argdata in _flattened_boolean_args(args):
         result = result.add(argdata)
     return result
 
@@ -211,7 +256,7 @@ def exactly(n, *args):
     Usage: exactly(2, m.Y1, m.Y2, m.Y3, ...)
 
     """
-    result = ExactlyExpression([n] + list(_flattened(args)))
+    result = ExactlyExpression([n] + list(_flattened_boolean_args(args)))
     return result
 
 
@@ -223,7 +268,7 @@ def atmost(n, *args):
     Usage: atmost(2, m.Y1, m.Y2, m.Y3, ...)
 
     """
-    result = AtMostExpression([n] + list(_flattened(args)))
+    result = AtMostExpression([n] + list(_flattened_boolean_args(args)))
     return result
 
 
@@ -235,7 +280,7 @@ def atleast(n, *args):
     Usage: atleast(2, m.Y1, m.Y2, m.Y3, ...)
 
     """
-    result = AtLeastExpression([n] + list(_flattened(args)))
+    result = AtLeastExpression([n] + list(_flattened_boolean_args(args)))
     return result
 
 
@@ -246,7 +291,7 @@ def all_different(*args):
 
     Usage: all_different(m.X1, m.X2, ...)
     """
-    return AllDifferentExpression(list(_flattened(args)))
+    return AllDifferentExpression(list(_flattened_numeric_args(args)))
 
 
 def count_if(*args):
@@ -256,7 +301,7 @@ def count_if(*args):
 
     Usage: count_if(m.Y1, m.Y2, ...)
     """
-    return CountIfExpression(list(_flattened(args)))
+    return CountIfExpression(list(_flattened_boolean_args(args)))
 
 
 class UnaryBooleanExpression(BooleanExpression):
