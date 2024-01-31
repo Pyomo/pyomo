@@ -200,6 +200,8 @@ def _flattened_boolean_args(args):
                 yield _argdata
             elif hasattr(_argdata, 'is_logical_type') and _argdata.is_logical_type():
                 yield _argdata
+            elif isinstance(_argdata, BooleanValue):
+                yield _argdata
             else:
                 raise ValueError(
                     "Non-Boolean-valued argument '%s' encountered when constructing "
@@ -626,7 +628,7 @@ class CountIfExpression(NumericExpression):
         return "count_if(%s)" % (", ".join(values))
 
     def _apply_operation(self, result):
-        return sum(r for r in result)
+        return sum(value(r) for r in result)
 
 
 special_boolean_atom_types = {ExactlyExpression, AtMostExpression, AtLeastExpression}
