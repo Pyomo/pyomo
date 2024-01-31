@@ -539,7 +539,7 @@ class AllDifferentExpression(NaryBooleanExpression):
 
     __slots__ = ()
 
-    PRECEDENCE = 9  # TODO: maybe?
+    PRECEDENCE = None
 
     def getname(self, *arg, **kwd):
         return 'all_different'
@@ -548,9 +548,13 @@ class AllDifferentExpression(NaryBooleanExpression):
         return "all_different(%s)" % (", ".join(values))
 
     def _apply_operation(self, result):
-        for val1, val2 in combinations(result, 2):
-            if val1 == val2:
+        last = None
+        # we know these are integer-valued, so we can just sort them an make
+        # sure that no adjacent pairs have the same value.
+        for val in sorted(result):
+            if last == val:
                 return False
+            last = val
         return True
 
 
@@ -561,13 +565,7 @@ class CountIfExpression(NumericExpression):
     """
 
     __slots__ = ()
-    PRECEDENCE = 10  # TODO: maybe?
-
-    def __init__(self, args):
-        # require a list, a la SumExpression
-        if args.__class__ is not list:
-            args = list(args)
-        self._args_ = args
+    PRECEDENCE = None
 
     # NumericExpression assumes binary operator, so we have to override.
     def nargs(self):
@@ -580,7 +578,7 @@ class CountIfExpression(NumericExpression):
         return "count_if(%s)" % (", ".join(values))
 
     def _apply_operation(self, result):
-        return sum(value(r) for r in result)
+        return sum(r for r in result)
 
 
 special_boolean_atom_types = {ExactlyExpression, AtMostExpression, AtLeastExpression}
