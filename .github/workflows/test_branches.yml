@@ -648,7 +648,7 @@ jobs:
         coverage xml -i
 
     - name: Record build artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{github.job}}_${{env.GHA_JOBGROUP}}-${{env.GHA_JOBNAME}}
         path: |
