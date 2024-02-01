@@ -599,6 +599,9 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             bigmConstraint = Constraint(transBlock.lbub)
             relaxationBlock.add_component(conName, bigmConstraint)
 
+            parent_block = var.parent_block()
+            disaggregated_var_map = self._get_disaggregated_var_map(parent_block)
+
             print("Adding bounds constraints for local var '%s'" % var)
             # TODO: This gets mapped in a place where we can't find it if we ask
             # for it from the local var itself.
@@ -610,7 +613,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 'lb',
                 'ub',
                 obj.indicator_var.get_associated_binary(),
-                transBlock,
+                disaggregated_var_map,
             )
 
         var_substitute_map = dict(
@@ -647,10 +650,8 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         lb_idx,
         ub_idx,
         var_free_indicator,
-        transBlock=None,
+        disaggregated_var_map,
     ):
-        # If transBlock is None then this is a disaggregated variable for
-        # multiple Disjuncts and we will handle the mappings separately.
         lb = original_var.lb
         ub = original_var.ub
         if lb is None or ub is None:
@@ -669,13 +670,18 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             bigmConstraint.add(ub_idx, disaggregatedVar <= ub * var_free_indicator)
 
         # store the mappings from variables to their disaggregated selves on
-        # the transformation block.
-        if transBlock is not None:
-            transBlock._disaggregatedVarMap['disaggregatedVar'][disjunct][
-                original_var
-            ] = disaggregatedVar
-            transBlock._disaggregatedVarMap['srcVar'][disaggregatedVar] = original_var
-            transBlock._bigMConstraintMap[disaggregatedVar] = bigmConstraint
+        # the transformation block
+        disaggregated_var_map['disaggregatedVar'][disjunct][
+            original_var] = disaggregatedVar
+        disaggregated_var_map['srcVar'][disaggregatedVar] = original_var
+        bigMConstraintMap[disaggregatedVar] = bigmConstraint
+
+        # if transBlock is not None:
+        #     transBlock._disaggregatedVarMap['disaggregatedVar'][disjunct][
+        #         original_var
+        #     ] = disaggregatedVar
+        #     transBlock._disaggregatedVarMap['srcVar'][disaggregatedVar] = original_var
+        #     transBlock._bigMConstraintMap[disaggregatedVar] = bigmConstraint
 
     def _get_local_var_list(self, parent_disjunct):
         # Add or retrieve Suffix from parent_disjunct so that, if this is
@@ -916,7 +922,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
         Parameters
         ----------
-        disaggregated_var: a Var which was created by the hull
+        disaggregated_var: a Var that was created by the hull
                            transformation as a disaggregated variable
                            (and so appears on a transformation block
                            of some Disjunct)
@@ -925,17 +931,14 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             "'%s' does not appear to be a "
             "disaggregated variable" % disaggregated_var.name
         )
-        # There are two possibilities: It is declared on a Disjunct
-        # transformation Block, or it is declared on the parent of a Disjunct
-        # transformation block (if it is a single variable for multiple
-        # Disjuncts the original doesn't appear in)
+        # We always put a dictionary called '_disaggregatedVarMap' on the parent
+        # block of the variable. If it's not there, then this probably isn't a
+        # disaggregated Var (or if it is it's a developer error). Similarly, if
+        # the var isn't in the dictionary, if we're doing what we should, then
+        # it's not a disaggregated var.
         transBlock = disaggregated_var.parent_block()
         if not hasattr(transBlock, '_disaggregatedVarMap'):
-            try:
-                transBlock = transBlock.parent_block().parent_block()
-            except:
-                logger.error(msg)
-                raise
+            raise GDP_Error(msg)
         try:
             return transBlock._disaggregatedVarMap['srcVar'][disaggregated_var]
         except:
