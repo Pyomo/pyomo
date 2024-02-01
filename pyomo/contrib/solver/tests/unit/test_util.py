@@ -11,9 +11,18 @@
 
 from pyomo.common import unittest
 import pyomo.environ as pyo
-from pyomo.contrib.solver.util import collect_vars_and_named_exprs, get_objective
+from pyomo.contrib.solver.util import (
+    collect_vars_and_named_exprs,
+    get_objective,
+    check_optimal_termination,
+    assert_optimal_termination,
+    SolverStatus,
+    LegacyTerminationCondition,
+)
+from pyomo.contrib.solver.results import Results, SolutionStatus, TerminationCondition
 from typing import Callable
 from pyomo.common.gsl import find_GSL
+from pyomo.opt.results import SolverResults
 
 
 class TestGenericUtils(unittest.TestCase):
@@ -73,3 +82,35 @@ class TestGenericUtils(unittest.TestCase):
         model.OBJ2 = pyo.Objective(expr=model.x[1] - 4 * model.x[2])
         with self.assertRaises(ValueError):
             get_objective(model)
+
+    def test_check_optimal_termination_new_interface(self):
+        results = Results()
+        results.solution_status = SolutionStatus.optimal
+        results.termination_condition = (
+            TerminationCondition.convergenceCriteriaSatisfied
+        )
+        # Both items satisfied
+        self.assertTrue(check_optimal_termination(results))
+        # Termination condition not satisfied
+        results.termination_condition = TerminationCondition.iterationLimit
+        self.assertFalse(check_optimal_termination(results))
+        # Both not satisfied
+        results.solution_status = SolutionStatus.noSolution
+        self.assertFalse(check_optimal_termination(results))
+
+    def test_check_optimal_termination_condition_legacy_interface(self):
+        results = SolverResults()
+        results.solver.status = SolverStatus.ok
+        results.solver.termination_condition = LegacyTerminationCondition.optimal
+        self.assertTrue(check_optimal_termination(results))
+        results.solver.termination_condition = LegacyTerminationCondition.unknown
+        self.assertFalse(check_optimal_termination(results))
+        results.solver.termination_condition = SolverStatus.aborted
+        self.assertFalse(check_optimal_termination(results))
+
+    # TODO: Left off here; need to make these tests
+    def test_assert_optimal_termination_new_interface(self):
+        pass
+
+    def test_assert_optimal_termination_legacy_interface(self):
+        pass

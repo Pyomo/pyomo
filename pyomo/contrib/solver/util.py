@@ -22,10 +22,20 @@ from pyomo.core.base.objective import Objective, _GeneralObjectiveData
 from pyomo.common.collections import ComponentMap
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.expr.numvalue import NumericConstant
+from pyomo.opt.results.solver import (
+    SolverStatus,
+    TerminationCondition as LegacyTerminationCondition,
+)
+
+
 from pyomo.contrib.solver.results import TerminationCondition, SolutionStatus
 
 
 def get_objective(block):
+    """
+    Get current active objective on a block. If there is more than one active,
+    return an error.
+    """
     obj = None
     for o in block.component_data_objects(
         Objective, descend_into=True, active=True, sort=True
@@ -37,8 +47,6 @@ def get_objective(block):
 
 
 def check_optimal_termination(results):
-    # TODO: Make work for legacy and new results objects.
-    # Look at the original version of this function to make that happen.
     """
     This function returns True if the termination condition for the solver
     is 'optimal'.
@@ -51,11 +59,21 @@ def check_optimal_termination(results):
     -------
     `bool`
     """
-    if results.solution_status == SolutionStatus.optimal and (
-        results.termination_condition
-        == TerminationCondition.convergenceCriteriaSatisfied
-    ):
-        return True
+    if hasattr(results, 'solution_status'):
+        if results.solution_status == SolutionStatus.optimal and (
+            results.termination_condition
+            == TerminationCondition.convergenceCriteriaSatisfied
+        ):
+            return True
+    else:
+        if results.solver.status == SolverStatus.ok and (
+            results.solver.termination_condition == LegacyTerminationCondition.optimal
+            or results.solver.termination_condition
+            == LegacyTerminationCondition.locallyOptimal
+            or results.solver.termination_condition
+            == LegacyTerminationCondition.globallyOptimal
+        ):
+            return True
     return False
 
 
@@ -70,12 +88,20 @@ def assert_optimal_termination(results):
     results : Pyomo Results object returned from solver.solve
     """
     if not check_optimal_termination(results):
-        msg = (
-            'Solver failed to return an optimal solution. '
-            'Solution status: {}, Termination condition: {}'.format(
-                results.solution_status, results.termination_condition
+        if hasattr(results, 'solution_status'):
+            msg = (
+                'Solver failed to return an optimal solution. '
+                'Solution status: {}, Termination condition: {}'.format(
+                    results.solution_status, results.termination_condition
+                )
             )
-        )
+        else:
+            msg = (
+                'Solver failed to return an optimal solution. '
+                'Solver status: {}, Termination condition: {}'.format(
+                    results.solver.status, results.solver.termination_condition
+                )
+            )
         raise RuntimeError(msg)
 
 
