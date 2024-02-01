@@ -1,10 +1,22 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """
 This script is intended to query the GitHub REST API and get contributor
 information for a given time period.
 """
 
 import sys
-import pprint
+import re
+import json
 
 from datetime import datetime
 from os import environ
@@ -57,6 +69,14 @@ def collect_contributors(repository, start_date, end_date):
         for commit in commits
         if commit.commit.message.startswith("Merge pull request")
     ]
+    if not merged_prs:
+        regex_pattern = '\(#.*\)'
+        for commit in commits:
+            results = re.search(regex_pattern, commit.commit.message)
+            try:
+                merged_prs.append(int(results.group().replace('(#', '').split(')')[0]))
+            except AttributeError:
+                continue
     # Count the number of commits from each person within the two dates
     for commit in commits:
         try:
@@ -115,6 +135,7 @@ def collect_contributors(repository, start_date, end_date):
     # so as to remove the step of "Who does that handle belong to?"
     all_tags = author_tags.union(reviewer_tags)
     tag_name_map = {}
+    only_tag_available = []
     for tag in all_tags:
         if tag in tag_name_map.keys():
             continue
@@ -122,6 +143,8 @@ def collect_contributors(repository, start_date, end_date):
         # If they don't have a name listed, just keep the tag
         if name is not None:
             tag_name_map[tag] = name
+        else:
+            only_tag_available.append(tag)
     for key in tag_name_map.keys():
         if key in contributor_information['Authors'].keys():
             contributor_information['Authors'][tag_name_map[key]] = (
@@ -131,7 +154,16 @@ def collect_contributors(repository, start_date, end_date):
             contributor_information['Reviewers'][tag_name_map[key]] = (
                 contributor_information['Reviewers'].pop(key)
             )
-    return contributor_information
+    return contributor_information, tag_name_map, only_tag_available
+
+
+def set_default(obj):
+    """
+    Converts sets to list for JSON dump
+    """
+    if isinstance(obj, set):
+        return list(obj)
+    raise TypeError
 
 
 if __name__ == '__main__':
@@ -183,9 +215,19 @@ if __name__ == '__main__':
     except:
         print("Ensure that the end date is in YYYY-MM-DD format.")
         sys.exit(1)
+    print('BEGIN DATA COLLECTION... (this can take some time)')
     tic = perf_counter()
-    contrib_info = collect_contributors(repository, start_date, end_date)
+    contrib_info, author_name_map, tags_only = collect_contributors(
+        repository, start_date, end_date
+    )
     toc = perf_counter()
     print(f"\nCOLLECTION COMPLETE. Time to completion: {toc - tic:0.4f} seconds")
     print(f"\nContributors between {sys.argv[2]} and {sys.argv[3]}:")
-    pprint.pprint(contrib_info)
+    for item in author_name_map.values():
+        print(item)
+    print("\nOnly GitHub handles are available for the following contributors:")
+    for tag in tags_only:
+        print(tag)
+    json_filename = f"contributors-{sys.argv[2]}-{sys.argv[3]}.json"
+    with open(json_filename, 'w') as file:
+        json.dump(contrib_info, file, default=set_default)
