@@ -170,4 +170,6 @@ def copy_relaxation_with_local_data(rel, old_var_to_new_var_map=None):
     new_rel.large_coef = rel.large_coef
     new_rel.safety_tol = rel.safety_tol
 
+    new_rel.rebuild()
+
     return new_rel

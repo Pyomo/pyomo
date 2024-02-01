@@ -102,6 +102,35 @@ class TestDecomposition(unittest.TestCase):
             self.assertEqual(m2.get_block_stage(b.children[1]), 2)
             self.assertEqual(len(b.coupling_vars), 1)
 
+    def test_decomp3(self):
+        m1 = pe.ConcreteModel()
+        m1.x = x = pe.Var([1, 2, 3, 4, 5, 6], bounds=(-10, 10))
+        m1.c = c = pe.ConstraintList()
+        m1.rels = pe.Block()
+
+        c.add(x[1] == x[2] + x[3])
+        c.add(x[4] == x[5] + x[6])
+        m1.rels.rel1 = coramin.relaxations.PWMcCormickRelaxation()
+        m1.rels.rel1.build(x[2], x[3], aux_var=x[1])
+        m1.rels.rel2 = coramin.relaxations.PWMcCormickRelaxation()
+        m1.rels.rel2.build(x[5], x[6], aux_var=x[4])
+
+        m2, reason = decompose_model(m1)
+        self.assertEqual(reason, DecompositionStatus.normal)
+        self.assertTrue(is_equivalent(m1, m2, appsi.solvers.Highs()))
+        self.assertEqual(len(m2.children), 2)
+        self.assertEqual(len(list(coramin.relaxations.iterators.nonrelaxation_component_data_objects(m2.children[0], pe.Constraint, descend_into=True, active=True))), 1)
+        self.assertEqual(len(list(coramin.relaxations.iterators.nonrelaxation_component_data_objects(m2.children[1], pe.Constraint, descend_into=True, active=True))), 1)
+        self.assertEqual(len(list(coramin.relaxations.iterators.relaxation_data_objects(m2.children[0], descend_into=True, active=True))), 1)
+        self.assertEqual(len(list(coramin.relaxations.iterators.relaxation_data_objects(m2.children[1], descend_into=True, active=True))), 1)
+        self.assertEqual(len(list(active_vars(m2.children[0]))), 3)
+        self.assertEqual(len(list(active_vars(m2.children[1]))), 3)
+        self.assertEqual(m2.get_block_stage(m2), 0)
+        self.assertEqual(m2.get_block_stage(m2.children[0]), 1)
+        self.assertEqual(m2.get_block_stage(m2.children[1]), 1)
+        self.assertEqual(list(m2.stage_blocks(0)), [m2])
+        self.assertEqual(list(m2.stage_blocks(1)), [m2.children[0], m2.children[1]])
+
     def test_refine_partition(self):
         m1 = pe.ConcreteModel()
         m1.x = x = pe.Var([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], bounds=(-10, 10))
