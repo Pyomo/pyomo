@@ -723,11 +723,11 @@ For this example, we obtain the following price of robustness results:
     +==========================================+==============================+=============================+
     |   0.00                                   | 35,837,659.18                | 0.00 %                      |
     +------------------------------------------+------------------------------+-----------------------------+
-    |   0.10                                   | 36,135,191.59                | 0.82 %                      |
+    |   0.10                                   | 36,135,182.66                | 0.83 %                      |
     +------------------------------------------+------------------------------+-----------------------------+
-    |   0.20                                   | 36,437,979.81                | 1.64 %                      |
+    |   0.20                                   | 36,437,979.81                | 1.68 %                      |
     +------------------------------------------+------------------------------+-----------------------------+
-    |   0.30                                   | 43,478,190.92                | 17.57 %                     |
+    |   0.30                                   | 43,478,190.91                | 21.32 %                     |
     +------------------------------------------+------------------------------+-----------------------------+
     |   0.40                                   | ``robust_infeasible``        | :math:`\text{-----}`        |
     +------------------------------------------+------------------------------+-----------------------------+
@@ -854,10 +854,10 @@ Observe that the log contains the following information:
    :linenos:
 
    ==============================================================================
-   PyROS: The Pyomo Robust Optimization Solver, v1.2.8.
+   PyROS: The Pyomo Robust Optimization Solver, v1.2.9.
           Pyomo version: 6.7.0
           Commit hash: unknown
-          Invoked at UTC 2023-11-03T04:27:42.954101
+          Invoked at UTC 2023-12-16T00:00:00.000000
 
    Developed by: Natalie M. Isenberg (1), Jason A. F. Sherman (1),
                  John D. Siirola (2), Chrysanthos E. Gounaris (1)
@@ -912,16 +912,13 @@ Observe that the log contains the following information:
          First-stage inequalities (incl. certain var bounds) : 10
          Performance constraints (incl. var bounds) : 47
    ------------------------------------------------------------------------------
-   Itn  Objective    1-Stg Shift  DR Shift     #CViol  Max Viol     Wall Time (s)
+   Itn  Objective    1-Stg Shift  2-Stg Shift  #CViol  Max Viol     Wall Time (s)
    ------------------------------------------------------------------------------
-   0     3.5838e+07  -            -            5       1.8832e+04   1.198        
-   1     3.5838e+07  7.4506e-09   1.6105e+03   7       3.7766e+04   2.893        
-   2     3.6116e+07  2.7803e+05   1.2918e+03   8       1.3466e+06   4.732        
-   3     3.6285e+07  1.6957e+05   5.8386e+03   6       4.8734e+03   6.740        
-   4     3.6285e+07  1.4901e-08   3.3097e+03   1       3.5036e+01   9.099        
-   5     3.6285e+07  2.9786e-10   3.3597e+03   6       2.9103e+00   11.588       
-   6     3.6285e+07  7.4506e-07   8.7228e+02   5       4.1726e-01   14.360       
-   7     3.6285e+07  7.4506e-07   8.1995e+02   0       9.3279e-10g  21.597       
+   0     3.5838e+07  -            -            5       1.8832e+04   1.741        
+   1     3.5838e+07  3.5184e-15   3.9404e-15   10      4.2516e+06   3.766        
+   2     3.5993e+07  1.8105e-01   7.1406e-01   13      5.2004e+06   6.288
+   3     3.6285e+07  5.1968e-01   7.7753e-01   4       1.7892e+04   8.247
+   4     3.6285e+07  9.1166e-13   1.9702e-15   0       7.1157e-10g  11.456
    ------------------------------------------------------------------------------
    Robust optimal solution identified.
    ------------------------------------------------------------------------------
@@ -929,22 +926,22 @@ Observe that the log contains the following information:
 
    Identifier                ncalls   cumtime   percall      %
    -----------------------------------------------------------
-   main                           1    21.598    21.598  100.0
+   main                           1    11.457    11.457  100.0
         ------------------------------------------------------
-        dr_polishing              7     1.502     0.215    7.0
-        global_separation        47     1.300     0.028    6.0
-        local_separation        376     9.779     0.026   45.3
-        master                    8     5.385     0.673   24.9
-        master_feasibility        7     0.531     0.076    2.5
-        preprocessing             1     0.175     0.175    0.8
-        other                   n/a     2.926       n/a   13.5
+        dr_polishing              4     0.682     0.171    6.0
+        global_separation        47     1.109     0.024    9.7
+        local_separation        235     5.810     0.025   50.7
+        master                    5     1.353     0.271   11.8
+        master_feasibility        4     0.247     0.062    2.2
+        preprocessing             1     0.429     0.429    3.7
+        other                   n/a     1.828       n/a   16.0
         ======================================================
    ===========================================================
 
    ------------------------------------------------------------------------------
    Termination stats:
-    Iterations            : 8
-    Solve time (wall s)   : 21.598
+    Iterations            : 5
+    Solve time (wall s)   : 11.457
     Final objective value : 3.6285e+07
     Termination condition : pyrosTerminationCondition.robust_optimal
    ------------------------------------------------------------------------------
@@ -983,7 +980,7 @@ The constituent columns are defined in the
        A dash ("-") is produced in lieu of a value if the master
        problem of the current iteration is not solved successfully.
    * - 1-Stg Shift
-     - Infinity norm of the difference between the first-stage
+     - Infinity norm of the relative difference between the first-stage
        variable vectors of the master solutions of the current
        and previous iterations. Expect this value to trend
        downward as the iteration number increases.
@@ -991,16 +988,15 @@ The constituent columns are defined in the
        if the current iteration number is 0,
        there are no first-stage variables,
        or the master problem of the current iteration is not solved successfully.
-   * - DR Shift
-     - Infinity norm of the difference between the decision rule
-       variable vectors of the master solutions of the current
-       and previous iterations.
-       Expect this value to trend downward as the iteration number increases.
-       An asterisk ("*") is appended to this value if the decision rules are
-       not successfully polished.
+   * - 2-Stg Shift
+     - Infinity norm of the relative difference between the second-stage
+       variable vectors (evaluated subject to the nominal uncertain
+       parameter realization) of the master solutions of the current
+       and previous iterations. Expect this value to trend
+       downward as the iteration number increases.
        A dash ("-") is produced in lieu of a value
        if the current iteration number is 0,
-       there are no decision rule variables,
+       there are no second-stage variables,
        or the master problem of the current iteration is not solved successfully.
    * - #CViol
      - Number of performance constraints found to be violated during

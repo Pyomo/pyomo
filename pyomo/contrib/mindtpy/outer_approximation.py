@@ -16,7 +16,7 @@ from pyomo.core import ConstraintList
 from pyomo.opt import SolverFactory
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_OA_config
 from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
-from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts
+from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts, add_oa_cuts_for_grey_box
 
 
 @SolverFactory.register(
@@ -102,7 +102,12 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
         )
 
     def add_cuts(
-        self, dual_values, linearize_active=True, linearize_violated=True, cb_opt=None
+        self,
+        dual_values,
+        linearize_active=True,
+        linearize_violated=True,
+        cb_opt=None,
+        nlp=None,
     ):
         add_oa_cuts(
             self.mip,
@@ -117,6 +122,10 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
             linearize_active,
             linearize_violated,
         )
+        if len(self.mip.MindtPy_utils.grey_box_list) > 0:
+            add_oa_cuts_for_grey_box(
+                self.mip, nlp, self.config, self.objective_sense, self.mip_iter, cb_opt
+            )
 
     def deactivate_no_good_cuts_when_fixing_bound(self, no_good_cuts):
         # Only deactivate the last OA cuts may not be correct.

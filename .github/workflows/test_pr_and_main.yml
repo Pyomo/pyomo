@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
@@ -60,7 +60,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python: [ 3.8, 3.9, '3.10', '3.11' ]
+        python: [ 3.8, 3.9, '3.10', '3.11', '3.12' ]
         other: [""]
         category: [""]
 
@@ -76,15 +76,15 @@ jobs:
         - os: windows-latest
           TARGET: win
           PYENV: conda
-          PACKAGES: glpk
+          PACKAGES: glpk pytest-qt
 
         - os: ubuntu-latest
-          python: 3.9
+          python: '3.11'
           other: /conda
           skip_doctest: 1
           TARGET: linux
           PYENV: conda
-          PACKAGES:
+          PACKAGES: pytest-qt
 
         - os: ubuntu-latest
           python: 3.9
@@ -96,7 +96,7 @@ jobs:
           PACKAGES: mpi4py
 
         - os: ubuntu-latest
-          python: 3.11
+          python: '3.11'
           other: /singletest
           category: "-m 'neos or importtest'"
           skip_doctest: 1
@@ -142,7 +142,7 @@ jobs:
 
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Configure job parameters
       run: |
@@ -243,6 +243,15 @@ jobs:
         auto-update-conda: false
         python-version: ${{ matrix.python }}
 
+    # This is necessary for qt (UI) tests; the package utilized here does not
+    # have support for OSX.
+    - name: Set up UI testing infrastructure
+      if: ${{ matrix.TARGET != 'osx' }}
+      uses: pyvista/setup-headless-display-action@v2
+      with:
+        qt: true
+        pyvista: false
+
     # GitHub actions is very fragile when it comes to setting up various
     # Python interpreters, expecially the setup-miniconda interface.
     # Per the setup-miniconda documentation, it is important to always
@@ -265,6 +274,7 @@ jobs:
       run: |
         python -c 'import sys;print(sys.executable)'
         python -m pip install --cache-dir cache/pip --upgrade pip
+        python -m pip install --cache-dir cache/pip setuptools
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "$EXTRAS" | tail -1`
         PACKAGES="${PYTHON_CORE_PKGS} ${PYTHON_PACKAGES} ${PYOMO_DEPENDENCIES} "
@@ -284,10 +294,16 @@ jobs:
             python -m pip install --cache-dir cache/pip cplex docplex \
                 || echo "WARNING: CPLEX Community Edition is not available"
             python -m pip install --cache-dir cache/pip \
-                -i https://pypi.gurobi.com gurobipy \
+                -i https://pypi.gurobi.com gurobipy==10.0.3 \
                 || echo "WARNING: Gurobi is not available"
             python -m pip install --cache-dir cache/pip xpress \
                 || echo "WARNING: Xpress Community Edition is not available"
+            if [[ ${{matrix.python}} == pypy* ]]; then
+                echo "skipping wntr for pypy"
+            else
+                python -m pip install wntr \
+                    || echo "WARNING: WNTR is not available"
+            fi
         fi
         python -c 'import sys; print("PYTHON_EXE=%s" \
             % (sys.executable,))' >> $GITHUB_ENV
@@ -332,7 +348,7 @@ jobs:
         fi
         # HACK: Remove problem packages on conda+Linux
         if test "${{matrix.TARGET}}" == linux; then
-            EXCLUDE="casadi numdifftools pint $EXCLUDE"
+            EXCLUDE="casadi numdifftools $EXCLUDE"
         fi
         EXCLUDE=`echo "$EXCLUDE" | xargs`
         if test -n "$EXCLUDE"; then
@@ -354,7 +370,7 @@ jobs:
         if test -z "${{matrix.slim}}"; then
             PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
             echo "Installing for $PYVER"
-            for PKG in 'cplex>=12.10' docplex gurobi xpress cyipopt pymumps scip; do
+            for PKG in 'cplex>=12.10' docplex 'gurobi=10.0.3' xpress cyipopt pymumps scip; do
                 echo ""
                 echo "*** Install $PKG ***"
                 # conda can literally take an hour to determine that a
@@ -369,10 +385,11 @@ jobs:
                     | sed -r 's/\s+/ /g' | cut -d\  -f3) || echo ""
                 if test -n "$_BUILDS"; then
                     _ISPY=$(echo "$_BUILDS" | grep "^py") \
-                        || echo "No python build detected"
-                    _PYOK=$(echo "$_BUILDS" | grep "^$PYVER") \
-                        || echo "No python build matching $PYVER detected"
+                        || echo "INFO: No python build detected."
+                    _PYOK=$(echo "$_BUILDS" | grep -E "^($PYVER|pyh)") \
+                        || echo "INFO: No python build matching $PYVER detected."
                     if test -z "$_ISPY" -o -n "$_PYOK"; then
+                        echo ""
                         echo "... INSTALLING $PKG"
                         conda install -y "$PKG" || _BUILDS=""
                     fi
@@ -380,18 +397,6 @@ jobs:
                 if test -z "$_BUILDS"; then
                     echo "WARNING: $PKG is not available"
                 fi
-            done
-            # TODO: This is a hack to stop test_qt.py from running until we
-            # can better troubleshoot why it fails on GHA
-            for QTPACKAGE in qt pyqt; do
-                # Because conda is insane, removing packages can cause
-                # unrelated packages to be updated (breaking version
-                # specifications specified previously, e.g., in
-                # setup.py).  There doesn't appear to be a good
-                # workaround, so we will just force-remove (recognizing
-                # that it may break other conda cruft).
-                conda remove --force-remove $QTPACKAGE \
-                    || echo "$QTPACKAGE not in this environment"
             done
         fi
         # Re-try Pyomo (optional) dependencies with pip
@@ -615,8 +620,8 @@ jobs:
         echo "COVERAGE_PROCESS_START=$COVERAGE_RC" >> $GITHUB_ENV
         cp ${GITHUB_WORKSPACE}/.coveragerc ${COVERAGE_RC}
         echo "data_file=${COVERAGE_BASE}age" >> ${COVERAGE_RC}
-        SITE_PACKAGES=$($PYTHON_EXE -c "from distutils.sysconfig import \
-            get_python_lib; print(get_python_lib())")
+        SITE_PACKAGES=$($PYTHON_EXE -c \
+            "import sysconfig; print(sysconfig.get_path('purelib'))")
         echo "Python site-packages: $SITE_PACKAGES"
         echo 'import coverage; coverage.process_startup()' \
             > ${SITE_PACKAGES}/run_coverage_at_startup.pth
@@ -646,7 +651,7 @@ jobs:
         $PYTHON_EXE -m pytest -v \
             -W ignore::Warning ${{matrix.category}} \
             pyomo `pwd`/pyomo-model-libraries \
-            `pwd`/examples/pyomobook --junitxml="TEST-pyomo.xml"
+            `pwd`/examples `pwd`/doc --junitxml="TEST-pyomo.xml"
 
     - name: Run Pyomo MPI tests
       if: matrix.mpi != 0
@@ -691,7 +696,7 @@ jobs:
     timeout-minutes: 10
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Set up Python 3.8
       uses: actions/setup-python@v4
@@ -746,7 +751,7 @@ jobs:
 
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       # We need the source for .codecov.yml and running "coverage xml"
 
     #- name: Pip package cache

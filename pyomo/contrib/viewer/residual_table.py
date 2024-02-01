@@ -102,10 +102,12 @@ class ResidualDataModel(myqt.QAbstractTableModel):
         self._items.sort(
             key=lambda o: (
                 o is None,
-                get_residual(self.ui_data, o)
-                if get_residual(self.ui_data, o) is not None
-                and not isinstance(get_residual(self.ui_data, o), str)
-                else _inactive_to_back(o),
+                (
+                    get_residual(self.ui_data, o)
+                    if get_residual(self.ui_data, o) is not None
+                    and not isinstance(get_residual(self.ui_data, o), str)
+                    else _inactive_to_back(o)
+                ),
             ),
             reverse=True,
         )

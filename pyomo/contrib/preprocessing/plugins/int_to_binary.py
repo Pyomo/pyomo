@@ -1,5 +1,4 @@
 """Transformation to reformulate integer variables into binary."""
-from __future__ import division
 
 from math import floor, log
 import logging

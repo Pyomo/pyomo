@@ -81,12 +81,10 @@ class ExternalFunction(Component):
             return super().__new__(AMPLExternalFunction)
 
     @overload
-    def __init__(self, function=None, gradient=None, hessian=None, *, fgh=None):
-        ...
+    def __init__(self, function=None, gradient=None, hessian=None, *, fgh=None): ...
 
     @overload
-    def __init__(self, *, library: str, function: str):
-        ...
+    def __init__(self, *, library: str, function: str): ...
 
     def __init__(self, *args, **kwargs):
         """Construct a reference to an external function.
@@ -457,9 +455,11 @@ class AMPLExternalFunction(ExternalFunction):
                 ('units', str(self._units)),
                 (
                     'arg_units',
-                    [str(u) for u in self._arg_units]
-                    if self._arg_units is not None
-                    else None,
+                    (
+                        [str(u) for u in self._arg_units]
+                        if self._arg_units is not None
+                        else None
+                    ),
                 ),
             ],
             (),
@@ -609,9 +609,11 @@ class PythonCallbackFunction(ExternalFunction):
                 ('units', str(self._units)),
                 (
                     'arg_units',
-                    [str(u) for u in self._arg_units[:-1]]
-                    if self._arg_units is not None
-                    else None,
+                    (
+                        [str(u) for u in self._arg_units[:-1]]
+                        if self._arg_units is not None
+                        else None
+                    ),
                 ),
             ],
             (),

@@ -1,7 +1,7 @@
 import sys
 import pyomo.environ as pyo
 import numpy.random as rnd
-import pandas as pd
+from pyomo.common.dependencies import pandas as pd
 import pyomo.contrib.pynumero.examples.external_grey_box.param_est.models as po
 
 

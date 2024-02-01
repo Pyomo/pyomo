@@ -40,9 +40,7 @@ class Nonconvex3(ConcreteModel):
 
         m.objective = Objective(expr=7 * m.x1 + 10 * m.x2, sense=minimize)
 
-        m.c1 = Constraint(
-            expr=(m.x1**1.2) * (m.x2**1.7) - 7 * m.x1 - 9 * m.x2 <= -24
-        )
+        m.c1 = Constraint(expr=(m.x1**1.2) * (m.x2**1.7) - 7 * m.x1 - 9 * m.x2 <= -24)
         m.c2 = Constraint(expr=-m.x1 - 2 * m.x2 <= 5)
         m.c3 = Constraint(expr=-3 * m.x1 + m.x2 <= 1)
         m.c4 = Constraint(expr=4 * m.x1 - 3 * m.x2 <= 11)

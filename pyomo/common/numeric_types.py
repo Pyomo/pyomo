@@ -12,6 +12,7 @@
 import logging
 import sys
 
+from pyomo.common.dependencies import numpy_available
 from pyomo.common.deprecation import deprecated, relocated_module_attribute
 from pyomo.common.errors import TemplateExpressionError
 
@@ -206,6 +207,13 @@ def check_if_numeric_type(obj):
     # Do not re-evaluate known native types
     if obj_class in native_types:
         return obj_class in native_numeric_types
+
+    if 'numpy' in obj_class.__module__:
+        # trigger the resolution of numpy_available and check if this
+        # type was automatically registered
+        bool(numpy_available)
+        if obj_class in native_types:
+            return obj_class in native_numeric_types
 
     try:
         obj_plus_0 = obj + 0

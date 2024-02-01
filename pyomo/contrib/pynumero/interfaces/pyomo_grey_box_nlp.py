@@ -426,7 +426,13 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
         # not we are minimizing or maximizing - this is done in the ASL interface
         # for ipopt, but does not appear to be done in cyipopt.
         obj_sign = 1.0
-        objs = list(m.component_data_objects(ctype=pyo.Objective, descend_into=True))
+        # since we will assert the number of objective functions,
+        # we only focus on active objective function.
+        objs = list(
+            m.component_data_objects(
+                ctype=pyo.Objective, active=True, descend_into=True
+            )
+        )
         assert len(objs) == 1
         if objs[0].sense == pyo.maximize:
             obj_sign = -1.0

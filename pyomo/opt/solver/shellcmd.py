@@ -260,7 +260,7 @@ class SystemCallSolver(OptSolver):
                 print("Solver log file: '%s'" % self._log_file)
             if self._soln_file is not None:
                 print("Solver solution file: '%s'" % self._soln_file)
-            if self._problem_files is not []:
+            if self._problem_files != []:
                 print("Solver problem files: %s" % str(self._problem_files))
 
         sys.stdout.flush()
