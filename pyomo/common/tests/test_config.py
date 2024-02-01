@@ -3027,6 +3027,47 @@ option_2: int, default=5
             self.assertEqual(add_docstring_list("", ExampleClass.CONFIG), ref)
         self.assertIn('add_docstring_list is deprecated', LOG.getvalue())
 
+    def test_declaration_in_init(self):
+        class CustomConfig(ConfigDict):
+            def __init__(
+                self,
+                description=None,
+                doc=None,
+                implicit=False,
+                implicit_domain=None,
+                visibility=0,
+            ):
+                super().__init__(
+                    description=description,
+                    doc=doc,
+                    implicit=implicit,
+                    implicit_domain=implicit_domain,
+                    visibility=visibility,
+                )
+
+                self.declare('time_limit', ConfigValue(domain=NonNegativeFloat))
+                self.declare('stream_solver', ConfigValue(domain=bool))
+
+        cfg = CustomConfig()
+        OUT = StringIO()
+        cfg.display(ostream=OUT)
+        # Note: pypy outputs "None" as "null"
+        self.assertEqual(
+            "time_limit: None\nstream_solver: None\n",
+            OUT.getvalue().replace('null', 'None'),
+        )
+
+        # Test that creating a copy of a ConfigDict with declared fields
+        # in the __init__ does not result in duplicate outputs in the
+        # display (reported in PR #3113)
+        cfg2 = cfg({'time_limit': 10, 'stream_solver': 0})
+        OUT = StringIO()
+        cfg2.display(ostream=OUT)
+        self.assertEqual(
+            "time_limit: 10.0\nstream_solver: false\n",
+            OUT.getvalue().replace('null', 'None'),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
