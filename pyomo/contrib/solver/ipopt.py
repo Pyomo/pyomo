@@ -441,6 +441,7 @@ class ipopt(SolverBase):
         results.timing_info.wall_time = (
             end_timestamp - start_timestamp
         ).total_seconds()
+        results.timing_info.timer = timer
         return results
 
     def _parse_ipopt_output(self, stream: io.StringIO):
