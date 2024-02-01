@@ -1,0 +1,191 @@
+"""
+This script is intended to query the GitHub REST API and get contributor
+information for a given time period.
+"""
+
+import sys
+import pprint
+
+from datetime import datetime
+from os import environ
+from time import perf_counter
+from github import Github, Auth
+
+
+def collect_contributors(repository, start_date, end_date):
+    """
+    Return contributor information for a repository in a given timeframe
+
+    Parameters
+    ----------
+    repository : String
+        The org/repo combination for target repository (GitHub). E.g.,
+        IDAES/idaes-pse
+    start_date : String
+        Start date in YYYY-MM-DD.
+    end_date : String
+        End date in YYYY-MM-DD.
+
+    Returns
+    -------
+    contributor_information : Dict
+        A dictionary with contributor information including Authors, Reviewers,
+        Committers, and Pull Requests.
+
+    """
+    # Create data structure
+    contributor_information = {}
+    contributor_information['Pull Requests'] = {}
+    contributor_information['Authors'] = {}
+    contributor_information['Reviewers'] = {}
+    contributor_information['Commits'] = {}
+    # Collect the authorization token from the user's environment
+    token = environ.get('GH_TOKEN')
+    auth_token = Auth.Token(token)
+    # Create a connection to GitHub
+    gh = Github(auth=auth_token)
+    # Create a repository object for the requested repository
+    repo = gh.get_repo(repository)
+    commits = repo.get_commits(since=start_date, until=end_date)
+    # Search the commits between the two dates for those that match the string;
+    # this is the default pull request merge message. If a team uses a custom
+    # message, this will not work.
+    merged_prs = [
+        int(
+            commit.commit.message.replace('Merge pull request #', '').split(' from ')[0]
+        )
+        for commit in commits
+        if commit.commit.message.startswith("Merge pull request")
+    ]
+    # Count the number of commits from each person within the two dates
+    for commit in commits:
+        try:
+            if commit.author.login in contributor_information['Commits'].keys():
+                contributor_information['Commits'][commit.author.login] += 1
+            else:
+                contributor_information['Commits'][commit.author.login] = 1
+        except AttributeError:
+            # Sometimes GitHub returns an author who doesn't have a handle,
+            # which seems impossible but happens. In that case, we just record
+            # their "human-readable" name
+            if commit.commit.author.name in contributor_information['Commits'].keys():
+                contributor_information['Commits'][commit.commit.author.name] += 1
+            else:
+                contributor_information['Commits'][commit.commit.author.name] = 1
+
+    author_tags = set()
+    reviewer_tags = set()
+    for num in merged_prs:
+        try:
+            # sometimes the commit messages can lie and give a PR number
+            # for a different repository fork/branch.
+            # We try to query it, and if it doesn't work, whatever, move on.
+            pr = repo.get_pull(num)
+        except:
+            continue
+        # Sometimes the user does not have a handle recorded by GitHub.
+        # In this case, we replace it with "NOTFOUND" so the person running
+        # the code knows to go inspect it manually.
+        author_tag = pr.user.login
+        if author_tag is None:
+            author_tag = "NOTFOUND"
+        # Count the number of PRs authored by each person
+        if author_tag in author_tags:
+            contributor_information['Authors'][author_tag] += 1
+        else:
+            contributor_information['Authors'][author_tag] = 1
+        author_tags.add(author_tag)
+
+        # Now we inspect all of the reviews to see who engaged in reviewing
+        # this specific PR
+        reviews = pr.get_reviews()
+        review_tags = set(review.user.login for review in reviews)
+        # Count how many PRs this person has reviewed
+        for tag in review_tags:
+            if tag in reviewer_tags:
+                contributor_information['Reviewers'][tag] += 1
+            else:
+                contributor_information['Reviewers'][tag] = 1
+        reviewer_tags.update(review_tags)
+        contributor_information['Pull Requests'][num] = {
+            'author': author_tag,
+            'reviewers': review_tags,
+        }
+    # This portion replaces tags with human-readable names, if they are present,
+    # so as to remove the step of "Who does that handle belong to?"
+    all_tags = author_tags.union(reviewer_tags)
+    tag_name_map = {}
+    for tag in all_tags:
+        if tag in tag_name_map.keys():
+            continue
+        name = gh.search_users(tag + ' in:login')[0].name
+        # If they don't have a name listed, just keep the tag
+        if name is not None:
+            tag_name_map[tag] = name
+    for key in tag_name_map.keys():
+        if key in contributor_information['Authors'].keys():
+            contributor_information['Authors'][tag_name_map[key]] = (
+                contributor_information['Authors'].pop(key)
+            )
+        if key in contributor_information['Reviewers'].keys():
+            contributor_information['Reviewers'][tag_name_map[key]] = (
+                contributor_information['Reviewers'].pop(key)
+            )
+    return contributor_information
+
+
+if __name__ == '__main__':
+    if len(sys.argv) != 4:
+        print(f"Usage: {sys.argv[0]} <Org/Repo> <start_date> <end_date>")
+        print(
+            "   <Org/Repo>   : the GitHub organization/repository combo (e.g., Pyomo/pyomo)"
+        )
+        print(
+            "   <start_date> : date from which to start exploring contributors in YYYY-MM-DD"
+        )
+        print(
+            "   <end_date>   : date at which to stop exploring contributors in YYYY-MM-DD"
+        )
+        print("")
+        print(
+            "ALSO REQUIRED: Please generate a GitHub token (with repo permissions) and export to the environment variable GH_TOKEN."
+        )
+        print("   Visit GitHub's official documentation for more details.")
+        sys.exit(1)
+    repository = sys.argv[1]
+    try:
+        start = sys.argv[2].split('-')
+        year = int(start[0])
+        try:
+            month = int(start[1])
+        except SyntaxError:
+            month = int(start[1][1])
+        try:
+            day = int(start[2])
+        except SyntaxError:
+            day = int(start[2][1])
+        start_date = datetime(year, month, day)
+    except:
+        print("Ensure that the start date is in YYYY-MM-DD format.")
+        sys.exit(1)
+    try:
+        end = sys.argv[3].split('-')
+        year = int(end[0])
+        try:
+            month = int(end[1])
+        except SyntaxError:
+            month = int(end[1][1])
+        try:
+            day = int(end[2])
+        except SyntaxError:
+            day = int(end[2][1])
+        end_date = datetime(year, month, day)
+    except:
+        print("Ensure that the end date is in YYYY-MM-DD format.")
+        sys.exit(1)
+    tic = perf_counter()
+    contrib_info = collect_contributors(repository, start_date, end_date)
+    toc = perf_counter()
+    print(f"\nCOLLECTION COMPLETE. Time to completion: {toc - tic:0.4f} seconds")
+    print(f"\nContributors between {sys.argv[2]} and {sys.argv[3]}:")
+    pprint.pprint(contrib_info)
