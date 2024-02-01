@@ -17,6 +17,7 @@ information for a given time period.
 import sys
 import re
 import json
+import os
 
 from datetime import datetime
 from os import environ
@@ -43,6 +44,12 @@ def collect_contributors(repository, start_date, end_date):
     contributor_information : Dict
         A dictionary with contributor information including Authors, Reviewers,
         Committers, and Pull Requests.
+    tag_name_map : Dict
+        A dictionary that maps GitHub handles to GitHub display names (if they
+        exist).
+    only_tag_available : List
+        A list of the handles for contributors who do not have GitHub display names
+        available.
 
     """
     # Create data structure
@@ -60,8 +67,8 @@ def collect_contributors(repository, start_date, end_date):
     repo = gh.get_repo(repository)
     commits = repo.get_commits(since=start_date, until=end_date)
     # Search the commits between the two dates for those that match the string;
-    # this is the default pull request merge message. If a team uses a custom
-    # message, this will not work.
+    # this is the default pull request merge message. This works assuming that
+    # a repo does not squash commits
     merged_prs = [
         int(
             commit.commit.message.replace('Merge pull request #', '').split(' from ')[0]
@@ -69,6 +76,8 @@ def collect_contributors(repository, start_date, end_date):
         for commit in commits
         if commit.commit.message.startswith("Merge pull request")
     ]
+    # If the search above returned nothing, it's likely that the repo squashes
+    # commits when merging PRs. This is a different regex for that case.
     if not merged_prs:
         regex_pattern = '\(#.*\)'
         for commit in commits:
@@ -185,6 +194,7 @@ if __name__ == '__main__':
         print("   Visit GitHub's official documentation for more details.")
         sys.exit(1)
     repository = sys.argv[1]
+    repository_name = sys.argv[1].split('/')[1]
     try:
         start = sys.argv[2].split('-')
         year = int(start[0])
@@ -215,6 +225,9 @@ if __name__ == '__main__':
     except:
         print("Ensure that the end date is in YYYY-MM-DD format.")
         sys.exit(1)
+    json_filename = f"contributors-{repository_name}-{sys.argv[2]}-{sys.argv[3]}.json"
+    if os.path.isfile(json_filename):
+        raise FileExistsError(f'ERROR: The file {json_filename} already exists!')
     print('BEGIN DATA COLLECTION... (this can take some time)')
     tic = perf_counter()
     contrib_info, author_name_map, tags_only = collect_contributors(
@@ -228,7 +241,6 @@ if __name__ == '__main__':
     print("\nOnly GitHub handles are available for the following contributors:")
     for tag in tags_only:
         print(tag)
-    json_filename = f"contributors-{sys.argv[2]}-{sys.argv[3]}.json"
     with open(json_filename, 'w') as file:
         json.dump(contrib_info, file, default=set_default)
     print(f"\nDetailed information can be found in {json_filename}.")
