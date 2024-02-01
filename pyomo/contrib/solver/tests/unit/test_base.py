@@ -168,4 +168,20 @@ class TestPersistentSolverBase(unittest.TestCase):
 
 
 class TestLegacySolverWrapper(unittest.TestCase):
-    pass
+    def test_class_method_list(self):
+        expected_list = [
+            'available',
+            'license_is_valid',
+            'solve'
+        ]
+        method_list = [
+            method for method in dir(base.LegacySolverWrapper) if method.startswith('_') is False
+        ]
+        self.assertEqual(sorted(expected_list), sorted(method_list))
+
+    def test_context_manager(self):
+        with base.LegacySolverWrapper() as instance:
+            with self.assertRaises(AttributeError) as context:
+                instance.available()
+
+    
