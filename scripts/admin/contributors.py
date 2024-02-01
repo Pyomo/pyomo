@@ -231,3 +231,4 @@ if __name__ == '__main__':
     json_filename = f"contributors-{sys.argv[2]}-{sys.argv[3]}.json"
     with open(json_filename, 'w') as file:
         json.dump(contrib_info, file, default=set_default)
+    print(f"\nDetailed information can be found in {json_filename}.")
