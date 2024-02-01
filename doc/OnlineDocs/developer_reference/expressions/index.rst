@@ -21,7 +21,7 @@ nodes contain operators.  Pyomo relies on so-called magic methods
 to automate the construction of symbolic expressions.  For example,
 consider an expression ``e`` declared as follows:
 
-.. literalinclude:: ../../tests/expr/index_simple.spy
+.. literalinclude:: ../../src/expr/index_simple.spy
 
 Python determines that the magic method ``__mul__`` is called on
 the ``M.v`` object, with the argument ``2``.  This method returns

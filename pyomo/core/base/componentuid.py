@@ -144,9 +144,11 @@ class ComponentUID(object):
                     (
                         name,
                         tuple(
-                            (slice, x.start, x.stop, x.step)
-                            if x.__class__ is slice
-                            else x
+                            (
+                                (slice, x.start, x.stop, x.step)
+                                if x.__class__ is slice
+                                else x
+                            )
                             for x in idx
                         ),
                     )

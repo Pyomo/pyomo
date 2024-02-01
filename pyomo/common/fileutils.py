@@ -32,7 +32,6 @@
    PathData
 """
 
-import ctypes.util
 import glob
 import inspect
 import logging
@@ -42,6 +41,7 @@ import importlib.util
 import sys
 
 from . import envvar
+from .dependencies import ctypes
 from .deprecation import deprecated, relocated_module_attribute
 
 relocated_module_attribute('StreamIndenter', 'pyomo.common.formatting', version='6.2')
