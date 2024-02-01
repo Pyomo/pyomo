@@ -58,6 +58,14 @@ class SolverConfig(ConfigDict):
                 description="If True, the solver output gets logged.",
             ),
         )
+        self.working_dir: str = self.declare(
+            'working_dir',
+            ConfigValue(
+                domain=str,
+                default=None,
+                description="The directory in which generated files should be saved. This replaced the `keepfiles` option.",
+            ),
+        )
         self.load_solutions: bool = self.declare(
             'load_solutions',
             ConfigValue(
@@ -79,7 +87,8 @@ class SolverConfig(ConfigDict):
             ConfigValue(
                 domain=bool,
                 default=False,
-                description="If True, the names given to the solver will reflect the names of the Pyomo components. Cannot be changed after set_instance is called.",
+                description="If True, the names given to the solver will reflect the names of the Pyomo components."
+                "Cannot be changed after set_instance is called.",
             ),
         )
         self.timer: HierarchicalTimer = self.declare(

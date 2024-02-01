@@ -68,11 +68,6 @@ class ipoptConfig(SolverConfig):
         self.executable = self.declare(
             'executable', ConfigValue(default=Executable('ipopt'))
         )
-        # TODO: Add in a deprecation here for keepfiles
-        # M.B.: Is the above TODO still relevant?
-        self.temp_dir: str = self.declare(
-            'temp_dir', ConfigValue(domain=str, default=None)
-        )
         self.writer_config = self.declare(
             'writer_config', ConfigValue(default=NLWriter.CONFIG())
         )
@@ -262,7 +257,7 @@ class ipopt(SolverBase):
             cmd.append('option_file_name=' + basename + '.opt')
         if 'option_file_name' in config.solver_options:
             raise ValueError(
-                'Pyomo generates the ipopt options file as part of the solve method. '
+                'Pyomo generates the ipopt options file as part of the `solve` method. '
                 'Add all options to ipopt.config.solver_options instead.'
             )
         if (
@@ -298,10 +293,10 @@ class ipopt(SolverBase):
         StaleFlagManager.mark_all_as_stale()
         results = ipoptResults()
         with TempfileManager.new_context() as tempfile:
-            if config.temp_dir is None:
+            if config.working_dir is None:
                 dname = tempfile.mkdtemp()
             else:
-                dname = config.temp_dir
+                dname = config.working_dir
             if not os.path.exists(dname):
                 os.mkdir(dname)
             basename = os.path.join(dname, model.name)

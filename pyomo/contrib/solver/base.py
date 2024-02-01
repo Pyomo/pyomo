@@ -21,6 +21,7 @@ from pyomo.core.base.block import _BlockData
 from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.errors import ApplicationError
+from pyomo.common.deprecation import deprecation_warning
 from pyomo.opt.results.results_ import SolverResults as LegacySolverResults
 from pyomo.opt.results.solution import Solution as LegacySolution
 from pyomo.core.kernel.objective import minimize
@@ -378,8 +379,17 @@ class LegacySolverWrapper:
             raise NotImplementedError('Still working on this')
         if logfile is not None:
             raise NotImplementedError('Still working on this')
-        if 'keepfiles' in self.config:
-            self.config.keepfiles = keepfiles
+        if keepfiles or 'keepfiles' in self.config:
+            cwd = os.getcwd()
+            deprecation_warning(
+                "`keepfiles` has been deprecated in the new solver interface. "
+                "Use `working_dir` instead to designate a directory in which "
+                f"files should be generated and saved. Setting `working_dir` to `{cwd}`.",
+                version='6.7.1.dev0',
+            )
+            self.config.working_dir = cwd
+        # I believe this currently does nothing; however, it is unclear what
+        # our desired behavior is for this.
         if solnfile is not None:
             if 'filename' in self.config:
                 filename = os.path.splitext(solnfile)[0]

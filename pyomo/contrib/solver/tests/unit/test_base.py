@@ -9,7 +9,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import os
+
 from pyomo.common import unittest
+from pyomo.common.config import ConfigDict
 from pyomo.contrib.solver import base
 
 
@@ -169,13 +172,11 @@ class TestPersistentSolverBase(unittest.TestCase):
 
 class TestLegacySolverWrapper(unittest.TestCase):
     def test_class_method_list(self):
-        expected_list = [
-            'available',
-            'license_is_valid',
-            'solve'
-        ]
+        expected_list = ['available', 'license_is_valid', 'solve']
         method_list = [
-            method for method in dir(base.LegacySolverWrapper) if method.startswith('_') is False
+            method
+            for method in dir(base.LegacySolverWrapper)
+            if method.startswith('_') is False
         ]
         self.assertEqual(sorted(expected_list), sorted(method_list))
 
@@ -184,4 +185,87 @@ class TestLegacySolverWrapper(unittest.TestCase):
             with self.assertRaises(AttributeError) as context:
                 instance.available()
 
-    
+    def test_map_config(self):
+        # Create a fake/empty config structure that can be added to an empty
+        # instance of LegacySolverWrapper
+        self.config = ConfigDict(implicit=True)
+        self.config.declare(
+            'solver_options',
+            ConfigDict(implicit=True, description="Options to pass to the solver."),
+        )
+        instance = base.LegacySolverWrapper()
+        instance.config = self.config
+        instance._map_config(
+            True, False, False, 20, True, False, None, None, None, False, None, None
+        )
+        self.assertTrue(instance.config.tee)
+        self.assertFalse(instance.config.load_solutions)
+        self.assertEqual(instance.config.time_limit, 20)
+        # Report timing shouldn't be created because it no longer exists
+        with self.assertRaises(AttributeError) as context:
+            print(instance.config.report_timing)
+        # Keepfiles should not be created because we did not declare keepfiles on
+        # the original config
+        with self.assertRaises(AttributeError) as context:
+            print(instance.config.keepfiles)
+        # We haven't implemented solver_io, suffixes, or logfile
+        with self.assertRaises(NotImplementedError) as context:
+            instance._map_config(
+                False,
+                False,
+                False,
+                20,
+                False,
+                False,
+                None,
+                None,
+                '/path/to/bogus/file',
+                False,
+                None,
+                None,
+            )
+        with self.assertRaises(NotImplementedError) as context:
+            instance._map_config(
+                False,
+                False,
+                False,
+                20,
+                False,
+                False,
+                None,
+                '/path/to/bogus/file',
+                None,
+                False,
+                None,
+                None,
+            )
+        with self.assertRaises(NotImplementedError) as context:
+            instance._map_config(
+                False,
+                False,
+                False,
+                20,
+                False,
+                False,
+                '/path/to/bogus/file',
+                None,
+                None,
+                False,
+                None,
+                None,
+            )
+        # If they ask for keepfiles, we redirect them to working_dir
+        instance._map_config(
+            False, False, False, 20, False, False, None, None, None, True, None, None
+        )
+        self.assertEqual(instance.config.working_dir, os.getcwd())
+        with self.assertRaises(AttributeError) as context:
+            print(instance.config.keepfiles)
+
+    def test_map_results(self):
+        # Unclear how to test this
+        pass
+
+    def test_solution_handler(self):
+        # Unclear how to test this
+        pass
