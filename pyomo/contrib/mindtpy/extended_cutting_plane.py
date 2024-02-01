@@ -66,12 +66,6 @@ class MindtPy_ECP_Solver(_MindtPyAlgorithm):
 
             add_ecp_cuts(self.mip, self.jacobians, self.config, self.timing)
 
-        # if add_no_good_cuts is True, the bound obtained in the last iteration is no reliable.
-        # we correct it after the iteration.
-        if (
-            self.config.add_no_good_cuts or self.config.use_tabu_list
-        ) and not self.should_terminate:
-            self.fix_dual_bound(self.last_iter_cuts)
         self.config.logger.info(
             ' ==============================================================================================='
         )
