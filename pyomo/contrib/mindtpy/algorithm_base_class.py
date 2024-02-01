@@ -1561,7 +1561,7 @@ class _MindtPyAlgorithm(object):
                 self.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result)
 
             MindtPy = self.mip.MindtPy_utils
-            # deactivate the integer cuts generated after the best solution was found.
+            # Deactivate the integer cuts generated after the best solution was found.
             self.deactivate_no_good_cuts_when_fixing_bound(MindtPy.cuts.no_good_cuts)
             if (
                 config.add_regularization is not None
@@ -3013,10 +3013,12 @@ class _MindtPyAlgorithm(object):
 
         # if add_no_good_cuts is True, the bound obtained in the last iteration is no reliable.
         # we correct it after the iteration.
+        # There is no need to fix the dual bound if no feasible solution has been found.
         if (
             (config.add_no_good_cuts or config.use_tabu_list)
             and not self.should_terminate
             and config.add_regularization is None
+            and self.best_solution_found is not None
         ):
             self.fix_dual_bound(self.last_iter_cuts)
         config.logger.info(
