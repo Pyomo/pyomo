@@ -47,7 +47,7 @@ from pyomo.contrib.incidence_analysis.incidence import get_incident_variables
 from pyomo.contrib.pynumero.asl import AmplInterface
 
 pyomo_nlp, pyomo_nlp_available = attempt_import(
-    'pyomo.contrib.pynumero.interfaces.pyomo_nlp'
+    "pyomo.contrib.pynumero.interfaces.pyomo_nlp"
 )
 asl_available = pyomo_nlp_available & AmplInterface.available()
 
@@ -886,9 +886,9 @@ class IncidenceGraphInterface(object):
         edge_trace = plotly.graph_objects.Scatter(
             x=edge_x,
             y=edge_y,
-            line=dict(width=0.5, color='#888'),
-            hoverinfo='none',
-            mode='lines',
+            line=dict(width=0.5, color="#888"),
+            hoverinfo="none",
+            mode="lines",
         )
 
         node_x = []
@@ -902,28 +902,28 @@ class IncidenceGraphInterface(object):
             if node < M:
                 # According to convention, we are a constraint node
                 c = constraints[node]
-                node_color.append('red')
-                body_text = '<br>'.join(
+                node_color.append("red")
+                body_text = "<br>".join(
                     textwrap.wrap(str(c.body), width=120, subsequent_indent="    ")
                 )
                 node_text.append(
-                    f'{str(c)}<br>lb: {str(c.lower)}<br>body: {body_text}<br>'
-                    f'ub: {str(c.upper)}<br>active: {str(c.active)}'
+                    f"{str(c)}<br>lb: {str(c.lower)}<br>body: {body_text}<br>"
+                    f"ub: {str(c.upper)}<br>active: {str(c.active)}"
                 )
             else:
                 # According to convention, we are a variable node
                 v = variables[node - M]
-                node_color.append('blue')
+                node_color.append("blue")
                 node_text.append(
-                    f'{str(v)}<br>lb: {str(v.lb)}<br>ub: {str(v.ub)}<br>'
-                    f'value: {str(v.value)}<br>domain: {str(v.domain)}<br>'
-                    f'fixed: {str(v.is_fixed())}'
+                    f"{str(v)}<br>lb: {str(v.lb)}<br>ub: {str(v.ub)}<br>"
+                    f"value: {str(v.value)}<br>domain: {str(v.domain)}<br>"
+                    f"fixed: {str(v.is_fixed())}"
                 )
         node_trace = plotly.graph_objects.Scatter(
             x=node_x,
             y=node_y,
-            mode='markers',
-            hoverinfo='text',
+            mode="markers",
+            hoverinfo="text",
             text=node_text,
             marker=dict(color=node_color, size=10),
         )
@@ -932,17 +932,17 @@ class IncidenceGraphInterface(object):
             fig.update_layout(title=dict(text=title))
         if show:
             fig.show()
-    
+
     def add_edge_to_graph(self, node0, node1):
         """Adds an edge between node0 and node1 in the incidence graph
-        
+
         Parameters
         ---------
         nodes0: VarData/ConstraintData
-            A node in the graph from the first bipartite set 
+            A node in the graph from the first bipartite set
             (``bipartite=0``)
         node1: VarData/ConstraintData
-            A node in the graph from the second bipartite set 
+            A node in the graph from the second bipartite set
             (``bipartite=1``)
         """
         if self._incidence_graph is None:
@@ -950,40 +950,35 @@ class IncidenceGraphInterface(object):
                 "Attempting to add edge in an incidence graph from cached "
                 "incidence graph,\nbut no incidence graph has been cached."
             )
-        
-        if node0 not in ComponentSet(self._variables) and node0 not in ComponentSet(self._constraints):
-            raise RuntimeError(
-                "%s is not a node in the incidence graph" % node0
-                )
-            
-        if node1 not in ComponentSet(self._variables) and node1 not in ComponentSet(self._constraints):
-            raise RuntimeError(
-                "%s is not a node in the incidence graph" % node1
-                )
-        
+
+        if node0 not in ComponentSet(self._variables) and node0 not in ComponentSet(
+            self._constraints
+        ):
+            raise RuntimeError("%s is not a node in the incidence graph" % node0)
+
+        if node1 not in ComponentSet(self._variables) and node1 not in ComponentSet(
+            self._constraints
+        ):
+            raise RuntimeError("%s is not a node in the incidence graph" % node1)
+
         if node0 in ComponentSet(self._variables):
-            node0_idx = self._var_index_map[node0] + len(self._con_index_map) 
+            node0_idx = self._var_index_map[node0] + len(self._con_index_map)
             if node1 in ComponentSet(self._variables):
                 raise RuntimeError(
                     "%s & %s are both variables. Cannot add an edge between two"
-                    "variables.\nThe resulting graph won't be bipartite" 
+                    "variables.\nThe resulting graph won't be bipartite"
                     % (node0, node1)
-                    )
+                )
             node1_idx = self._con_index_map[node1]
-        
+
         if node0 in ComponentSet(self._constraints):
             node0_idx = self._con_index_map[node0]
             if node1 in ComponentSet(self._constraints):
                 raise RuntimeError(
                     "%s & %s are both constraints. Cannot add an edge between two"
-                    "constraints.\nThe resulting graph won't be bipartite" 
+                    "constraints.\nThe resulting graph won't be bipartite"
                     % (node0, node1)
-                    )
-            node1_idx = self._var_index_map[node1] + len(self._con_index_map) 
-        
+                )
+            node1_idx = self._var_index_map[node1] + len(self._con_index_map)
+
         self._incidence_graph.add_edge(node0_idx, node1_idx)
-        
-        
-            
-        
-        
