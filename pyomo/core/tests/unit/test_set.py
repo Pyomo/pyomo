@@ -1238,6 +1238,10 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         # Test types that cannot be case to set
         self.assertNotEqual(SetOf({3}), 3)
 
+        # Test floats
+        self.assertEqual(RangeSet(0.0, 2.0), RangeSet(0.0, 2.0))
+        self.assertEqual(RangeSet(0.0, 2.0), RangeSet(0, 2))
+
     def test_inequality(self):
         self.assertTrue(SetOf([1, 2, 3]) <= SetOf({1, 2, 3}))
         self.assertFalse(SetOf([1, 2, 3]) < SetOf({1, 2, 3}))

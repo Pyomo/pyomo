@@ -2668,7 +2668,7 @@ class _FiniteRangeSetData(
             if r.start == r.end:
                 return 1
             else:
-                return (r.end - r.start) // r.step + 1
+                return int((r.end - r.start) // r.step) + 1
         else:
             return sum(1 for _ in self)
 
