@@ -202,6 +202,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         super().__init__(logger)
         self._arg_list = {}
         self._set_up_expr_bound_visitor()
+        self.handlers[Suffix] = self._warn_for_active_suffix
 
     def _apply_to(self, instance, **kwds):
         self.used_args = ComponentMap()
@@ -692,6 +693,24 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             blk.parent_block().del_component(blk)
 
         return arg_Ms
+
+    def _warn_for_active_suffix(self, suffix, disjunct, active_disjuncts, Ms):
+        if suffix.local_name == 'BigM':
+            logger.debug(
+                "Found active 'BigM' Suffix on '{0}'. "
+                "The multiple bigM transformation does not currently "
+                "support specifying M's with Suffixes and is ignoring "
+                "this Suffix.".format(disjunct.name)
+            )
+        elif suffix.local_name == 'LocalVars':
+            # This is fine, but this transformation doesn't need anything from it
+            pass
+        else:
+            raise GDP_Error(
+                "Found active Suffix '{0}' on Disjunct '{1}'. "
+                "The multiple bigM transformation does not currently "
+                "support Suffixes.".format(suffix.name, disjunct.name)
+            )
 
     # These are all functions to retrieve transformed components from
     # original ones and vice versa.
