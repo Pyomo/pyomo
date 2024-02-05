@@ -19,7 +19,10 @@ from pyomo.repn import generate_standard_repn
 from pyomo.repn.plugins.nl_writer import AMPLRepnVisitor, AMPLRepn, text_nl_template
 from pyomo.repn.util import FileDeterminism, FileDeterminism_to_SortComponents
 from pyomo.util.subsystems import TemporarySubsystemManager
-from pyomo.contrib.incidence_analysis.config import IncidenceMethod, IncidenceConfig
+from pyomo.contrib.incidence_analysis.config import (
+    IncidenceMethod,
+    get_config_from_kwds,
+)
 
 
 #
@@ -148,17 +151,24 @@ def get_incident_variables(expr, **kwds):
        ['x[1]', 'x[2]']
 
     """
-    config = IncidenceConfig(kwds)
+    config = get_config_from_kwds(**kwds)
     method = config.method
     include_fixed = config.include_fixed
     linear_only = config.linear_only
-    amplrepnvisitor = config.ampl_repn_visitor
+    amplrepnvisitor = config._ampl_repn_visitor
+
+    # Check compatibility of arguments
     if linear_only and method is IncidenceMethod.identify_variables:
         raise RuntimeError(
             "linear_only=True is not supported when using identify_variables"
         )
     if include_fixed and method is IncidenceMethod.ampl_repn:
         raise RuntimeError("include_fixed=True is not supported when using ampl_repn")
+    if method is IncidenceMethod.ampl_repn and amplrepnvisitor is None:
+        # Developer error, this should never happen!
+        raise RuntimeError("_ampl_repn_visitor must be provided when using ampl_repn")
+
+    # Dispatch to correct method
     if method is IncidenceMethod.identify_variables:
         return _get_incident_via_identify_variables(expr, include_fixed)
     elif method is IncidenceMethod.standard_repn:
@@ -174,6 +184,5 @@ def get_incident_variables(expr, **kwds):
     else:
         raise ValueError(
             f"Unrecognized value {method} for the method used to identify incident"
-            f" variables. Valid options are {IncidenceMethod.identify_variables}"
-            f" and {IncidenceMethod.standard_repn}."
+            f" variables. See the IncidenceMethod enum for valid methods."
         )
