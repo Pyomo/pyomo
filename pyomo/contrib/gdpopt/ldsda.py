@@ -108,7 +108,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         """
         logger = config.logger
         self.log_formatter = (
-            '{:>9}   {:>15}  {:>20}  {:>11.5f}   {:>11.5f}   {:>8.2%}   {:>7.2f}  {}'
+            '{:>9}   {:>15}   {:>20}   {:>11.5f}   {:>11.5f}   {:>8.2%}   {:>7.2f}  {}'
         )
         self.best_direction = None
         self.current_point = tuple(config.starting_point)
