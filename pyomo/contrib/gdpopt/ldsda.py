@@ -40,6 +40,7 @@ from pyomo.core.expr.logical_expr import ExactlyExpression
 from pyomo.common.dependencies import attempt_import
 
 it, it_available = attempt_import('itertools')
+tabulate, tabulate_available = attempt_import('tabulate')
 
 # Data tuple for external variables.
 ExternalVarInfo = namedtuple(
@@ -133,8 +134,6 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         # ).create_using(model)
         # Now that logical_to_disjunctive has been called.
         add_transformed_boolean_variable_list(self.working_model_util_block)
-
-        self._log_header(logger)
         self._get_external_information(self.working_model_util_block, config)
         self.directions = self._get_directions(
             self.number_of_external_variables, config
@@ -144,7 +143,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         # nonlinear constraint activation.
         if not hasattr(self.working_model_util_block, 'BigM'):
             self.working_model_util_block.BigM = Suffix()
-
+        self._log_header(logger)
         # Solve the initial point
         _ = self._solve_GDP_subproblem(self.current_point, 'Initial point', config)
 
@@ -234,6 +233,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         """
         util_block.external_var_info_list = []
         model = util_block.parent_block()
+        reformulation_summary = []
         # Identify the variables that can be reformulated by performing a loop over logical constraints
         # TODO: we can automatically find all Exactly logical constraints in the model.
         # However, we cannot link the starting point and the logical constraint.
@@ -260,6 +260,22 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
                     LB=1,
                 )
             )
+            reformulation_summary.append(
+                [
+                    1,
+                    len(sorted_boolean_var_list),
+                    [boolean_var.name for boolean_var in sorted_boolean_var_list],
+                ]
+            )
+        config.logger.info("Reformulation Summary:")
+        config.logger.info(
+            tabulate.tabulate(
+                reformulation_summary,
+                headers=["Ext Var Index", "LB", "UB", "Associated Boolean Vars"],
+                showindex="always",
+                tablefmt="simple_outline",
+            )
+        )
         self.number_of_external_variables = sum(
             external_var_info.exactly_number
             for external_var_info in util_block.external_var_info_list
