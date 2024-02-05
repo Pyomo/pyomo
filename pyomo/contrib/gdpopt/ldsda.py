@@ -106,6 +106,9 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         add_algebraic_variable_list(util_block)
         add_boolean_variable_lists(util_block)
 
+        # We will use the working_model to clone the model and perform
+        # to transform the ordered boolean variables into external integer variables,
+        # fix the disjunctions.
         self.working_model = model.clone()
         # TODO: I don't like the name way, try something else?
         self.working_model_util_block = self.working_model.component(util_block.name)
@@ -135,7 +138,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         self.fix_disjunctions_with_external_var(
             self.working_model_util_block, self.current_point
         )
-        _ = self._solve_rnGDP_subproblem(self.working_model, config, 'Initial point')
+        _ = self._solve_GDP_subproblem(self.working_model, config, 'Initial point')
 
         # Main loop
         locally_optimal = False
@@ -152,7 +155,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
     def any_termination_criterion_met(self, config):
         return self.reached_iteration_limit(config) or self.reached_time_limit(config)
 
-    def _solve_rnGDP_subproblem(self, model, config, search_type):
+    def _solve_GDP_subproblem(self, model, config, search_type):
         subproblem = model.clone()
         TransformationFactory('core.logical_to_linear').apply_to(subproblem)
         TransformationFactory('gdp.bigm').apply_to(subproblem)
@@ -340,7 +343,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
                 self.fix_disjunctions_with_external_var(
                     self.working_model_util_block, neighbor
                 )
-                primal_improved = self._solve_rnGDP_subproblem(
+                primal_improved = self._solve_GDP_subproblem(
                     model, config, 'Neighbor search'
                 )
                 if primal_improved:
@@ -368,7 +371,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
                 self.fix_disjunctions_with_external_var(
                     self.working_model_util_block, next_point
                 )
-                primal_improved = self._solve_rnGDP_subproblem(
+                primal_improved = self._solve_GDP_subproblem(
                     model, config, 'Line search'
                 )
                 if primal_improved:
