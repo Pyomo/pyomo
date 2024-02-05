@@ -73,12 +73,12 @@ ExternalVarInfo = namedtuple(
 
 @SolverFactory.register(
     'gdpopt.ldsda',
-    doc="The LBB (logic-based branch and bound) Generalized Disjunctive "
-    "Programming (GDP) solver",
+    doc="The LD-SDA (Logic-based Discrete-Steepest Descent Algorithm)"
+    "Generalized Disjunctive Programming (GDP) solver",
 )
 class GDP_LDSDA_Solver(_GDPoptAlgorithm):
-    """The GDPopt (Generalized Disjunctive Programming optimizer) logic-based
-    branch and bound (LBB) solver.
+    """The GDPopt (Generalized Disjunctive Programming optimizer)
+    LD-SDA (Logic-based Discrete-Steepest Descent (LD-SDA) solver.
 
     Accepts models that can include nonlinear, continuous variables and
     constraints, as well as logical conditions.
@@ -124,22 +124,20 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
 
         self.working_model = model.clone()
         # TODO: I don't like the name way, try something else?
-        self.working_model_util_block = working_model_util_block = (
-            self.working_model.component(util_block.name)
-        )
+        self.working_model_util_block = self.working_model.component(util_block.name)
 
-        add_disjunction_list(working_model_util_block)
+        add_disjunction_list(self.working_model_util_block)
         # TODO: do we need to apply logical_to_disjunctive here?
         # This is applied in LBB.
         # root_node = TransformationFactory(
         #     'contrib.logical_to_disjunctive'
         # ).create_using(model)
         # Now that logical_to_disjunctive has been called.
-        add_transformed_boolean_variable_list(working_model_util_block)
+        add_transformed_boolean_variable_list(self.working_model_util_block)
 
         self._log_header(logger)
         self.working_model_external_var_info_list = self.get_external_information(
-            working_model_util_block, config
+            self.working_model_util_block, config
         )
         self.directions = self.get_directions(self.number_of_external_variables, config)
         self.best_direction = None
@@ -148,8 +146,8 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
 
         # Add the BigM suffix if it does not already exist. Used later during
         # nonlinear constraint activation.
-        if not hasattr(working_model_util_block, 'BigM'):
-            working_model_util_block.BigM = Suffix()
+        if not hasattr(self.working_model_util_block, 'BigM'):
+            self.working_model_util_block.BigM = Suffix()
 
         locally_optimal = False
         # Solve the initial point
@@ -226,9 +224,6 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         ValueError
             exactly_number is greater than 1
         """
-
-        # self.working_model_util_block = []
-        # util_block = self.working_model_util_block
         util_block.external_var_info_list = []
         model = util_block.parent_block()
         # Identify the variables that can be reformulated by performing a loop over logical constraints
@@ -350,8 +345,6 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
 
         Parameters
         ----------
-        neighbor_list : list
-            the list of neighbors
         model : ConcreteModel
             the subproblem model
         config : ConfigBlock
@@ -387,8 +380,6 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         ----------
         model : ConcreteModel
             the subproblem model
-        direction : list
-            the direction
         config : ConfigBlock
             GDPopt configuration block
         """
@@ -403,9 +394,6 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
                 self.working_model_util_block, next_point
             )
             primal_improved = self._solve_rnGDP_subproblem(model, config, 'Line search')
-            # line_search_improved = self.handle_subproblem_result(
-            #     subproblem_result, subproblem, config, 'Line search'
-            # )
             if primal_improved:
                 self.current_point = next_point
         print("Line search finished.")
