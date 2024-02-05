@@ -41,7 +41,7 @@ jobs:
             CIBW_BUILD_VERBOSITY: 1
             CIBW_BEFORE_BUILD: pip install cython pybind11
             CIBW_CONFIG_SETTINGS: '--global-option="--with-cython --with-distributable-extensions"'
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: native_wheels
           path: dist/*.whl
@@ -72,7 +72,7 @@ jobs:
             CIBW_BUILD_VERBOSITY: 1
             CIBW_BEFORE_BUILD: pip install cython pybind11
             CIBW_CONFIG_SETTINGS: '--global-option="--with-cython --with-distributable-extensions"'
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: alt_wheels
           path: dist/*.whl
@@ -91,7 +91,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
@@ -102,7 +102,7 @@ jobs:
       run: |
         python setup.py --without-cython sdist --format=gztar
     - name: Upload artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: generictarball
         path: dist

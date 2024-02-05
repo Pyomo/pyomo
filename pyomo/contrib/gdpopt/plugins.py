@@ -16,3 +16,4 @@ def load():
     import pyomo.contrib.gdpopt.branch_and_bound
     import pyomo.contrib.gdpopt.loa
     import pyomo.contrib.gdpopt.ric
+    import pyomo.contrib.gdpopt.enumerate

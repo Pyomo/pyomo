@@ -5,10 +5,15 @@ One class per function being tested, minimum one test per class
 
 import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
-from pyomo.common.collections import ComponentSet
+from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.core.base.set_types import NonNegativeIntegers
-from pyomo.core.expr import identify_variables, identify_mutable_parameters
+from pyomo.core.expr import (
+    identify_variables,
+    identify_mutable_parameters,
+    MonomialTermExpression,
+    SumExpression,
+)
 from pyomo.contrib.pyros.util import (
     selective_clone,
     add_decision_rule_variables,
@@ -27,8 +32,21 @@ from pyomo.contrib.pyros.util import get_vars_from_component
 from pyomo.contrib.pyros.util import identify_objective_functions
 from pyomo.common.collections import Bunch
 import time
+import math
 from pyomo.contrib.pyros.util import time_code
-from pyomo.contrib.pyros.uncertainty_sets import *
+from pyomo.contrib.pyros.uncertainty_sets import (
+    UncertaintySet,
+    BoxSet,
+    CardinalitySet,
+    BudgetSet,
+    FactorModelSet,
+    PolyhedralSet,
+    EllipsoidalSet,
+    AxisAlignedEllipsoidalSet,
+    IntersectionSet,
+    DiscreteScenarioSet,
+    Geometry,
+)
 from pyomo.contrib.pyros.master_problem_methods import (
     add_scenario_to_master,
     initial_construct_master,
@@ -48,6 +66,11 @@ from pyomo.opt import (
     Solution,
 )
 from pyomo.environ import (
+    Reals,
+    Set,
+    Block,
+    ConstraintList,
+    ConcreteModel,
     Constraint,
     Expression,
     Objective,
@@ -60,8 +83,11 @@ from pyomo.environ import (
     sin,
     sqrt,
     value,
+    maximize,
+    minimize,
 )
 import logging
+from itertools import chain
 
 
 logger = logging.getLogger(__name__)
@@ -237,183 +263,351 @@ class testSelectiveClone(unittest.TestCase):
 
 
 class testAddDecisionRuleVars(unittest.TestCase):
-    '''
-    Testing the method to add decision rule variables to a Pyomo model. This function should add decision rule
-    variables to the list of first_stage_variables in a model object. The number of decision rule variables added
-    depends on the number of control variables in the model and the number of uncertain parameters in the model.
-    '''
+    """
+    Test method for adding decision rule variables to working model.
+    The number of decision rule variables per control variable
+    should depend on:
+
+    - the number of uncertain parameters in the model
+    - the decision rule order specified by the user.
+    """
+
+    def make_simple_test_model(self):
+        """
+        Make simple test model for DR variable
+        declaration testing.
+        """
+        m = ConcreteModel()
+
+        # uncertain parameters
+        m.p = Param(range(3), initialize=0, mutable=True)
+
+        # second-stage variables
+        m.z = Var([0, 1], initialize=0)
+
+        # util block
+        m.util = Block()
+        m.util.first_stage_variables = []
+        m.util.second_stage_variables = list(m.z.values())
+        m.util.uncertain_params = list(m.p.values())
+
+        return m
 
     @unittest.skipIf(not scipy_available, 'Scipy is not available.')
-    def test_add_decision_rule_vars_positive_case(self):
-        '''
-        Testing whether the correct number of decision rule variables is created in each DR type case
-        '''
-        m = ConcreteModel()
-        m.p1 = Param(initialize=0, mutable=True)
-        m.p2 = Param(initialize=0, mutable=True)
-        m.z1 = Var(initialize=0)
-        m.z2 = Var(initialize=0)
+    def test_correct_num_dr_vars_static(self):
+        """
+        Test DR variable setup routines declare the correct
+        number of DR coefficient variables, static DR case.
+        """
+        model_data = ROSolveResults()
+        model_data.working_model = m = self.make_simple_test_model()
 
-        m.working_model = ConcreteModel()
-        m.working_model.util = Block()
-
-        m.working_model.util.second_stage_variables = [m.z1, m.z2]
-        m.working_model.util.uncertain_params = [m.p1, m.p2]
-        m.working_model.util.first_stage_variables = []
-
-        m.working_model.util.first_stage_variables = []
-        config = Block()
+        config = Bunch()
         config.decision_rule_order = 0
 
-        add_decision_rule_variables(model_data=m, config=config)
+        add_decision_rule_variables(model_data=model_data, config=config)
+
+        for indexed_dr_var in m.util.decision_rule_vars:
+            self.assertEqual(
+                len(indexed_dr_var),
+                1,
+                msg=(
+                    "Number of decision rule coefficient variables "
+                    f"in indexed Var object {indexed_dr_var.name!r}"
+                    "does not match correct value."
+                ),
+            )
 
         self.assertEqual(
-            len(m.working_model.util.first_stage_variables),
-            len(m.working_model.util.second_stage_variables),
-            msg="For static approximation decision rule the number of decision rule variables"
-            "added to the list of design variables should equal the number of control variables.",
+            len(ComponentSet(m.util.decision_rule_vars)),
+            len(m.util.second_stage_variables),
+            msg=(
+                "Number of unique indexed DR variable components should equal "
+                "number of second-stage variables."
+            ),
         )
 
-        m.working_model.util.first_stage_variables = []
+    @unittest.skipIf(not scipy_available, 'Scipy is not available.')
+    def test_correct_num_dr_vars_affine(self):
+        """
+        Test DR variable setup routines declare the correct
+        number of DR coefficient variables, affine DR case.
+        """
+        model_data = ROSolveResults()
+        model_data.working_model = m = self.make_simple_test_model()
 
-        m.working_model.del_component(m.working_model.decision_rule_var_0)
-        m.working_model.del_component(m.working_model.decision_rule_var_1)
-
+        config = Bunch()
         config.decision_rule_order = 1
 
-        add_decision_rule_variables(m, config=config)
+        add_decision_rule_variables(model_data=model_data, config=config)
+
+        for indexed_dr_var in m.util.decision_rule_vars:
+            self.assertEqual(
+                len(indexed_dr_var),
+                1 + len(m.util.uncertain_params),
+                msg=(
+                    "Number of decision rule coefficient variables "
+                    f"in indexed Var object {indexed_dr_var.name!r}"
+                    "does not match correct value."
+                ),
+            )
 
         self.assertEqual(
-            len(m.working_model.util.first_stage_variables),
-            len(m.working_model.util.second_stage_variables)
-            * (1 + len(m.working_model.util.uncertain_params)),
-            msg="For affine decision rule the number of decision rule variables add to the "
-            "list of design variables should equal the number of control variables"
-            "multiplied by the number of uncertain parameters plus 1.",
+            len(ComponentSet(m.util.decision_rule_vars)),
+            len(m.util.second_stage_variables),
+            msg=(
+                "Number of unique indexed DR variable components should equal "
+                "number of second-stage variables."
+            ),
         )
 
-        m.working_model.util.first_stage_variables = []
+    @unittest.skipIf(not scipy_available, 'Scipy is not available.')
+    def test_correct_num_dr_vars_quadratic(self):
+        """
+        Test DR variable setup routines declare the correct
+        number of DR coefficient variables, quadratic DR case.
+        """
+        model_data = ROSolveResults()
+        model_data.working_model = m = self.make_simple_test_model()
 
-        m.working_model.del_component(m.working_model.decision_rule_var_0)
-        m.working_model.del_component(m.working_model.decision_rule_var_1)
-        m.working_model.del_component(m.working_model.decision_rule_var_0_index)
-        m.working_model.del_component(m.working_model.decision_rule_var_1_index)
-
+        config = Bunch()
         config.decision_rule_order = 2
 
-        add_decision_rule_variables(m, config=config)
+        add_decision_rule_variables(model_data=model_data, config=config)
+
+        num_params = len(m.util.uncertain_params)
+        correct_num_dr_vars = (
+            1  # static term
+            + num_params  # affine terms
+            + sp.special.comb(num_params, 2, repetition=True, exact=True)
+            #   quadratic terms
+        )
+        for indexed_dr_var in m.util.decision_rule_vars:
+            self.assertEqual(
+                len(indexed_dr_var),
+                correct_num_dr_vars,
+                msg=(
+                    "Number of decision rule coefficient variables "
+                    f"in indexed Var object {indexed_dr_var.name!r}"
+                    "does not match correct value."
+                ),
+            )
 
         self.assertEqual(
-            len(m.working_model.util.first_stage_variables),
-            len(m.working_model.util.second_stage_variables)
-            * int(
-                2 * len(m.working_model.util.uncertain_params)
-                + sp.special.comb(N=len(m.working_model.util.uncertain_params), k=2)
-                + 1
+            len(ComponentSet(m.util.decision_rule_vars)),
+            len(m.util.second_stage_variables),
+            msg=(
+                "Number of unique indexed DR variable components should equal "
+                "number of second-stage variables."
             ),
-            msg="For quadratic decision rule the number of decision rule variables add to the "
-            "list of design variables should equal the number of control variables"
-            "multiplied by 2 time the number of uncertain parameters plus all 2-combinations"
-            "of uncertain parameters plus 1.",
         )
 
 
 class testAddDecisionRuleConstraints(unittest.TestCase):
-    '''
-    Testing the addition of decision rule constraints functionally relating second-stage (control) variables to
-    uncertain parameters and decision rule variables. This method should add constraints to the model object equal
-    to the number of control variables. These constraints should reference the uncertain parameters and unique
-    decision rule variables per control variable.
-    '''
+    """
+    Test method for adding decision rule equality constraints
+    to the working model. There should be as many decision
+    rule equality constraints as there are second-stage
+    variables, and each constraint should relate a second-stage
+    variable to the uncertain parameters and corresponding
+    decision rule variables.
+    """
 
-    def test_correct_number_of_decision_rule_constraints(self):
-        '''
-        Number of decision rule constraints added to the model should equal number of control variables in
-        list "second_stage_variables".
-        '''
+    def make_simple_test_model(self):
+        """
+        Make simple model for DR constraint testing.
+        """
         m = ConcreteModel()
-        m.p1 = Param(initialize=0, mutable=True)
-        m.p2 = Param(initialize=0, mutable=True)
-        m.z1 = Var(initialize=0)
-        m.z2 = Var(initialize=0)
 
-        m.working_model = ConcreteModel()
-        m.working_model.util = Block()
+        # uncertain parameters
+        m.p = Param(range(3), initialize=0, mutable=True)
+
+        # second-stage variables
+        m.z = Var([0, 1], initialize=0)
+
+        # util block
+        m.util = Block()
+        m.util.first_stage_variables = []
+        m.util.second_stage_variables = list(m.z.values())
+        m.util.uncertain_params = list(m.p.values())
+
+        return m
+
+    @unittest.skipIf(not scipy_available, 'Scipy is not available.')
+    def test_num_dr_eqns_added_correct(self):
+        """
+        Check that number of DR equality constraints added
+        by constraint declaration routines matches the number
+        of second-stage variables in the model.
+        """
+        model_data = ROSolveResults()
+        model_data.working_model = m = self.make_simple_test_model()
 
         # === Decision rule vars have been added
-        m.working_model.decision_rule_var_0 = Var(initialize=0)
-        m.working_model.decision_rule_var_1 = Var(initialize=0)
+        m.decision_rule_var_0 = Var([0], initialize=0)
+        m.decision_rule_var_1 = Var([0], initialize=0)
+        m.util.decision_rule_vars = [m.decision_rule_var_0, m.decision_rule_var_1]
 
-        m.working_model.util.second_stage_variables = [m.z1, m.z2]
-        m.working_model.util.uncertain_params = [m.p1, m.p2]
-
-        decision_rule_cons = []
-        config = Block()
+        # set up simple config-like object
+        config = Bunch()
         config.decision_rule_order = 0
 
-        add_decision_rule_constraints(model_data=m, config=config)
-
-        for c in m.working_model.component_data_objects(Constraint, descend_into=True):
-            if "decision_rule_eqn_" in c.name:
-                decision_rule_cons.append(c)
-                m.working_model.del_component(c)
+        add_decision_rule_constraints(model_data=model_data, config=config)
 
         self.assertEqual(
-            len(decision_rule_cons),
-            len(m.working_model.util.second_stage_variables),
+            len(m.util.decision_rule_eqns),
+            len(m.util.second_stage_variables),
             msg="The number of decision rule constraints added to model should equal"
             "the number of control variables in the model.",
         )
 
-        decision_rule_cons = []
-        config.decision_rule_order = 1
+    @unittest.skipIf(not scipy_available, 'Scipy is not available.')
+    def test_dr_eqns_form_correct(self):
+        """
+        Check that form of decision rule equality constraints
+        is as expected.
 
-        # === Decision rule vars have been added
-        m.working_model.del_component(m.working_model.decision_rule_var_0)
-        m.working_model.del_component(m.working_model.decision_rule_var_1)
+        Decision rule equations should be of the standard form:
+            (sum of DR monomial terms) - (second-stage variable) == 0
+        where each monomial term should be of form:
+            (product of uncertain parameters) * (decision rule variable)
 
-        m.working_model.decision_rule_var_0 = Var([0, 1, 2], initialize=0)
-        m.working_model.decision_rule_var_1 = Var([0, 1, 2], initialize=0)
+        This test checks that the equality constraints are of this
+        standard form.
+        """
+        # set up simple model data like object
+        model_data = ROSolveResults()
+        model_data.working_model = m = self.make_simple_test_model()
 
-        add_decision_rule_constraints(model_data=m, config=config)
-
-        for c in m.working_model.component_data_objects(Constraint, descend_into=True):
-            if "decision_rule_eqn_" in c.name:
-                decision_rule_cons.append(c)
-                m.working_model.del_component(c)
-
-        self.assertEqual(
-            len(decision_rule_cons),
-            len(m.working_model.util.second_stage_variables),
-            msg="The number of decision rule constraints added to model should equal"
-            "the number of control variables in the model.",
-        )
-
-        decision_rule_cons = []
+        # set up simple config-like object
+        config = Bunch()
         config.decision_rule_order = 2
 
-        # === Decision rule vars have been added
-        m.working_model.del_component(m.working_model.decision_rule_var_0)
-        m.working_model.del_component(m.working_model.decision_rule_var_1)
-        m.working_model.del_component(m.working_model.decision_rule_var_0_index)
-        m.working_model.del_component(m.working_model.decision_rule_var_1_index)
+        # add DR variables and constraints
+        add_decision_rule_variables(model_data, config)
+        add_decision_rule_constraints(model_data, config)
 
-        m.working_model.decision_rule_var_0 = Var([0, 1, 2, 3, 4, 5], initialize=0)
-        m.working_model.decision_rule_var_1 = Var([0, 1, 2, 3, 4, 5], initialize=0)
+        # DR polynomial terms and order in which they should
+        # appear depends on number of uncertain parameters
+        # and order in which the parameters are listed.
+        # so uncertain parameters participating in each term
+        # of the monomial is known, and listed out here.
+        dr_monomial_param_combos = [
+            (1,),
+            (m.p[0],),
+            (m.p[1],),
+            (m.p[2],),
+            (m.p[0], m.p[0]),
+            (m.p[0], m.p[1]),
+            (m.p[0], m.p[2]),
+            (m.p[1], m.p[1]),
+            (m.p[1], m.p[2]),
+            (m.p[2], m.p[2]),
+        ]
 
-        add_decision_rule_constraints(model_data=m, config=config)
-
-        for c in m.working_model.component_data_objects(Constraint, descend_into=True):
-            if "decision_rule_eqn_" in c.name:
-                decision_rule_cons.append(c)
-                m.working_model.del_component(c)
-
-        self.assertEqual(
-            len(decision_rule_cons),
-            len(m.working_model.util.second_stage_variables),
-            msg="The number of decision rule constraints added to model should equal"
-            "the number of control variables in the model.",
+        dr_zip = zip(
+            m.util.second_stage_variables,
+            m.util.decision_rule_vars,
+            m.util.decision_rule_eqns,
         )
+        for ss_var, indexed_dr_var, dr_eq in dr_zip:
+            dr_eq_terms = dr_eq.body.args
+
+            # check constraint body is sum expression
+            self.assertTrue(
+                isinstance(dr_eq.body, SumExpression),
+                msg=(
+                    f"Body of DR constraint {dr_eq.name!r} is not of type "
+                    f"{SumExpression.__name__}."
+                ),
+            )
+
+            # ensure DR equation has correct number of (additive) terms
+            self.assertEqual(
+                len(dr_eq_terms),
+                len(dr_monomial_param_combos) + 1,
+                msg=(
+                    "Number of additive terms in the DR expression of "
+                    f"DR constraint with name {dr_eq.name!r} does not match "
+                    "expected value."
+                ),
+            )
+
+            # check last term is negative of second-stage variable
+            second_stage_var_term = dr_eq_terms[-1]
+            last_term_is_neg_ss_var = (
+                isinstance(second_stage_var_term, MonomialTermExpression)
+                and (second_stage_var_term.args[0] == -1)
+                and (second_stage_var_term.args[1] is ss_var)
+                and len(second_stage_var_term.args) == 2
+            )
+            self.assertTrue(
+                last_term_is_neg_ss_var,
+                msg=(
+                    "Last argument of last term in second-stage variable"
+                    f"term of DR constraint with name {dr_eq.name!r} "
+                    "is not the negative corresponding second-stage variable "
+                    f"{ss_var.name!r}"
+                ),
+            )
+
+            # now we check the other terms.
+            # these should comprise the DR polynomial expression
+            dr_polynomial_terms = dr_eq_terms[:-1]
+            dr_polynomial_zip = zip(
+                dr_polynomial_terms, indexed_dr_var.values(), dr_monomial_param_combos
+            )
+            for idx, (term, dr_var, param_combo) in enumerate(dr_polynomial_zip):
+                # term should be a monomial expression of form
+                # (uncertain parameter product) * (decision rule variable)
+                # so length of expression object should be 2
+                self.assertEqual(
+                    len(term.args),
+                    2,
+                    msg=(
+                        f"Length of `args` attribute of term {str(term)} "
+                        f"of DR equation {dr_eq.name!r} is not as expected. "
+                        f"Args: {term.args}"
+                    ),
+                )
+
+                # check that uncertain parameters participating in
+                # the monomial are as expected
+                param_product_multiplicand = term.args[0]
+                if idx == 0:
+                    # static DR term
+                    param_combo_found_in_term = (param_product_multiplicand,)
+                    param_names = (str(param) for param in param_combo)
+                elif len(param_combo) == 1:
+                    # affine DR terms
+                    param_combo_found_in_term = (param_product_multiplicand,)
+                    param_names = (param.name for param in param_combo)
+                else:
+                    # higher-order DR terms
+                    param_combo_found_in_term = param_product_multiplicand.args
+                    param_names = (param.name for param in param_combo)
+
+                self.assertEqual(
+                    param_combo_found_in_term,
+                    param_combo,
+                    msg=(
+                        f"All but last multiplicand of DR monomial {str(term)} "
+                        f"is not the uncertain parameter tuple "
+                        f"({', '.join(param_names)})."
+                    ),
+                )
+
+                # check that DR variable participating in the monomial
+                # is as expected
+                dr_var_multiplicand = term.args[1]
+                self.assertIs(
+                    dr_var_multiplicand,
+                    dr_var,
+                    msg=(
+                        f"Last multiplicand of DR monomial {str(term)} "
+                        f"is not the DR variable {dr_var.name!r}."
+                    ),
+                )
 
 
 class testModelIsValid(unittest.TestCase):
@@ -3572,6 +3766,9 @@ class testSolveMaster(unittest.TestCase):
         master_data.master_model.scenarios[0, 0].second_stage_objective = Expression(
             expr=master_data.master_model.scenarios[0, 0].x
         )
+        master_data.master_model.scenarios[0, 0].util.dr_var_to_exponent_map = (
+            ComponentMap()
+        )
         master_data.iteration = 0
         master_data.timing = TimingData()
 
@@ -4679,9 +4876,7 @@ class RegressionTest(unittest.TestCase):
             msg="Returned termination condition is not return robust_optimal.",
         )
 
-    @unittest.skipUnless(
-        baron_license_is_valid, "Global NLP solver is not available and licensed."
-    )
+    @unittest.skipUnless(scip_available, "Global NLP solver is not available.")
     def test_coefficient_matching_solve(self):
         # Write the deterministic Pyomo model
         m = ConcreteModel()
@@ -4705,8 +4900,8 @@ class RegressionTest(unittest.TestCase):
         pyros_solver = SolverFactory("pyros")
 
         # Define subsolvers utilized in the algorithm
-        local_subsolver = SolverFactory('baron')
-        global_subsolver = SolverFactory("baron")
+        local_subsolver = SolverFactory('scip')
+        global_subsolver = SolverFactory("scip")
 
         # Call the PyROS solver
         results = pyros_solver.solve(
@@ -4812,10 +5007,7 @@ class RegressionTest(unittest.TestCase):
                 ),
             )
 
-    @unittest.skipUnless(
-        baron_license_is_valid and baron_version >= (23, 2, 27),
-        "BARON licensing and version requirements not met",
-    )
+    @unittest.skipUnless(scip_available, "NLP solver is not available.")
     def test_coefficient_matching_partitioning_insensitive(self):
         """
         Check that result for instance with constraint subject to
@@ -4826,7 +5018,7 @@ class RegressionTest(unittest.TestCase):
         m = self.create_mitsos_4_3()
 
         # instantiate BARON subsolver and PyROS solver
-        baron = SolverFactory("baron")
+        baron = SolverFactory("scip")
         pyros_solver = SolverFactory("pyros")
 
         # solve with PyROS
@@ -5018,10 +5210,7 @@ class RegressionTest(unittest.TestCase):
             )
 
 
-@unittest.skipUnless(
-    baron_available and baron_license_is_valid,
-    "Global NLP solver is not available and licensed.",
-)
+@unittest.skipUnless(scip_available, "Global NLP solver is not available.")
 class testBypassingSeparation(unittest.TestCase):
     def test_bypass_global_separation(self):
         """Test bypassing of global separation solve calls."""
@@ -5044,7 +5233,7 @@ class testBypassingSeparation(unittest.TestCase):
 
         # Define subsolvers utilized in the algorithm
         local_subsolver = SolverFactory('ipopt')
-        global_subsolver = SolverFactory("baron")
+        global_subsolver = SolverFactory("scip")
 
         # Call the PyROS solver
         with LoggingIntercept(level=logging.WARNING) as LOG:
@@ -5163,10 +5352,7 @@ class testUninitializedVars(unittest.TestCase):
             )
 
 
-@unittest.skipUnless(
-    baron_available and baron_license_is_valid,
-    "Global NLP solver is not available and licensed.",
-)
+@unittest.skipUnless(scip_available, "Global NLP solver is not available.")
 class testModelMultipleObjectives(unittest.TestCase):
     """
     This class contains tests for models with multiple
@@ -5201,7 +5387,7 @@ class testModelMultipleObjectives(unittest.TestCase):
 
         # Define subsolvers utilized in the algorithm
         local_subsolver = SolverFactory('ipopt')
-        global_subsolver = SolverFactory("baron")
+        global_subsolver = SolverFactory("scip")
 
         solve_kwargs = dict(
             model=m,

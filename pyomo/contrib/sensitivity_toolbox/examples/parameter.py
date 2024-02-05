@@ -13,7 +13,7 @@
 #
 # Original implementation by Hans Pirany is in pyomo/examples/pyomo/suffixes
 #
-from __future__ import print_function
+
 from pyomo.environ import (
     ConcreteModel,
     Param,
