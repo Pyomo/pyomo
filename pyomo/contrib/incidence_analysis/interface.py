@@ -495,7 +495,9 @@ class IncidenceGraphInterface(object):
 
         """
         nx_subgraph = self._extract_subgraph(variables, constraints)
-        subgraph = IncidenceGraphInterface((nx_subgraph, variables, constraints), **self._config)
+        subgraph = IncidenceGraphInterface(
+            (nx_subgraph, variables, constraints), **self._config
+        )
         return subgraph
 
     @property

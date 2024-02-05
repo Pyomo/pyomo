@@ -1815,7 +1815,8 @@ class TestInterface(unittest.TestCase):
             ComponentSet([m.v[1], m.v[3]]),
         )
         self.assertEqual(
-            ComponentSet(subgraph.get_adjacent_to(m.eq1)), ComponentSet([m.v[1]]),
+            ComponentSet(subgraph.get_adjacent_to(m.eq1)),
+            ComponentSet([m.v[1]]),
         )
 
 
