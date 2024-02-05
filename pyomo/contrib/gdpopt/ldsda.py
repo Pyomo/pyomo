@@ -137,10 +137,6 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         add_disjunct_list(util_block)
         add_algebraic_variable_list(util_block)
         add_boolean_variable_lists(util_block)
-        # TODO: LBB uses logical_to_disjunctive, I am not sure if it is necessary for LDSDA.
-        # util_block.logical_constraint_list_to_be_tranformed = (
-        #     config.logical_constraint_list
-        # )
 
         self.working_model = model.clone()
         # TODO: I don't like the name way, try something else?
