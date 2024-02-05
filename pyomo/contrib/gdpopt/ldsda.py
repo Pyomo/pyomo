@@ -57,30 +57,13 @@ from pyomo.common.dependencies import attempt_import
 
 it, it_available = attempt_import('itertools')
 
-_linear_degrees = {1, 0}
-
-# Data tuple for each node that also functions as the sort key.
-# Therefore, ordering of the arguments below matters.
-BBNodeData = namedtuple(
-    'BBNodeData',
-    [
-        'obj_lb',  # lower bound on objective value, sign corrected to minimize
-        'obj_ub',  # upper bound on objective value, sign corrected to minimize
-        'is_screened',  # True if the node has been screened; False if not.
-        'is_evaluated',  # True if node has been evaluated; False if not.
-        'num_unbranched_disjunctions',  # number of unbranched disjunctions
-        'node_count',  # cumulative node counter
-        'unbranched_disjunction_indices',  # list of unbranched disjunction indices
-    ],
-)
-
+# Data tuple for external variables.
 ExternalVarInfo = namedtuple(
     'ExternalVarInfo',
     [
         'exactly_number',  # number of external variables for this type
         'Boolean_vars',  # list with names of the ordered Boolean variables to be reformulated
         'Disjuncts',  # list of disjuncts that are associated with the external variables
-        # 'Boolean_vars_ordered_index',  # Indexes where the external reformulation is applied
         'LogicExpression',  # Logic expression that defines the external variables
         'UB',  # upper bound on external variable
         'LB',  # lower bound on external variable
