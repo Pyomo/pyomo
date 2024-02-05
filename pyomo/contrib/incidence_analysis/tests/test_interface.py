@@ -1651,14 +1651,13 @@ class TestGetIncidenceGraph(unittest.TestCase):
         variables = list(m.v.values())
         graph = get_bipartite_incidence_graph(variables, constraints)
 
-        # TODO: Fix this test
-        #sg_cons = [0, 2, 5]
-        #sg_vars = [i + len(constraints) for i in [2, 3]]
-        #msg = "Subgraph is not bipartite"
-        #with self.assertRaisesRegex(RuntimeError, msg):
-        #    subgraph = extract_bipartite_subgraph(graph, sg_cons, sg_vars)
-
         sg_cons = [0, 2, 5]
+        sg_vars = [i + len(constraints) for i in [2, 3]]
+        msg = "Invalid bipartite sets."
+        with self.assertRaisesRegex(RuntimeError, msg):
+            subgraph = extract_bipartite_subgraph(graph, sg_cons, sg_vars)
+
+        sg_cons = [0, 2, 0]
         sg_vars = [i + len(constraints) for i in [2, 0, 3]]
         msg = "provided more than once"
         with self.assertRaisesRegex(RuntimeError, msg):

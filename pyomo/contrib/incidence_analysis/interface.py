@@ -140,6 +140,20 @@ def extract_bipartite_subgraph(graph, nodes0, nodes1):
     """
     subgraph = graph.subgraph(nodes0 + nodes1)
     # TODO: Any error checking that nodes are valid bipartition?
+    for node in nodes0:
+        bipartite = graph.nodes[node]["bipartite"]
+        if bipartite != 0:
+            raise RuntimeError(
+                "Invalid bipartite sets. Node {node} in set 0 has"
+                " bipartite={bipartite}"
+            )
+    for node in nodes1:
+        bipartite = graph.nodes[node]["bipartite"]
+        if bipartite != 1:
+            raise RuntimeError(
+                "Invalid bipartite sets. Node {node} in set 1 has"
+                " bipartite={bipartite}"
+            )
     old_new_map = {}
     for i, node in enumerate(nodes0 + nodes1):
         if node in old_new_map:
