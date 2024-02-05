@@ -723,6 +723,27 @@ class Component(_ComponentBase):
         else:
             return suffix_or_name.get(self, default)
 
+    def _pop_from_kwargs(self, name, kwargs, namelist, notset=None):
+        args = [
+            arg
+            for arg in (kwargs.pop(name, notset) for name in namelist)
+            if arg is not notset
+        ]
+        if len(args) == 1:
+            return args[0]
+        elif not args:
+            return notset
+        else:
+            argnames = "%s%s '%s='" % (
+                ', '.join("'%s='" % _ for _ in namelist[:-1]),
+                ',' if len(namelist) > 2 else '',
+                namelist[-1],
+            )
+            raise ValueError(
+                "Duplicate initialization: %s() only accepts one of %s"
+                % (name, argnames)
+            )
+
 
 class ActiveComponent(Component):
     """A Component that makes semantic sense to activate or deactivate

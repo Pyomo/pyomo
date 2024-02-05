@@ -1,7 +1,7 @@
 # stochastic pde model for natural gas network
 # victor m. zavala / 2013
 
-# from __future__ import division
+#
 
 from pyomo.environ import *
 from pyomo.dae import *

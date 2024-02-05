@@ -2607,9 +2607,9 @@ class _MindtPyAlgorithm(object):
             if config.mip_regularization_solver == 'gams':
                 self.regularization_mip_opt.options['add_options'] = []
             if config.regularization_mip_threads > 0:
-                self.regularization_mip_opt.options[
-                    'threads'
-                ] = config.regularization_mip_threads
+                self.regularization_mip_opt.options['threads'] = (
+                    config.regularization_mip_threads
+                )
             else:
                 self.regularization_mip_opt.options['threads'] = config.threads
 
@@ -2619,9 +2619,9 @@ class _MindtPyAlgorithm(object):
                 'cplex_persistent',
             }:
                 if config.solution_limit is not None:
-                    self.regularization_mip_opt.options[
-                        'mip_limits_solutions'
-                    ] = config.solution_limit
+                    self.regularization_mip_opt.options['mip_limits_solutions'] = (
+                        config.solution_limit
+                    )
                 # We don't need to solve the regularization problem to optimality.
                 # We will choose to perform aggressive node probing during presolve.
                 self.regularization_mip_opt.options['mip_strategy_presolvenode'] = 3
@@ -2634,9 +2634,9 @@ class _MindtPyAlgorithm(object):
                     self.regularization_mip_opt.options['optimalitytarget'] = 3
             elif config.mip_regularization_solver == 'gurobi':
                 if config.solution_limit is not None:
-                    self.regularization_mip_opt.options[
-                        'SolutionLimit'
-                    ] = config.solution_limit
+                    self.regularization_mip_opt.options['SolutionLimit'] = (
+                        config.solution_limit
+                    )
                 # Same reason as mip_strategy_presolvenode.
                 self.regularization_mip_opt.options['Presolve'] = 2
 
@@ -2983,10 +2983,9 @@ class _MindtPyAlgorithm(object):
             # The main problem might be unbounded, regularization is activated only when a valid bound is provided.
             if self.dual_bound != self.dual_bound_progress[0]:
                 with time_code(self.timing, 'regularization main'):
-                    (
-                        regularization_main_mip,
-                        regularization_main_mip_results,
-                    ) = self.solve_regularization_main()
+                    (regularization_main_mip, regularization_main_mip_results) = (
+                        self.solve_regularization_main()
+                    )
                 self.handle_regularization_main_tc(
                     regularization_main_mip, regularization_main_mip_results
                 )

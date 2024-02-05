@@ -44,7 +44,6 @@ Classes
     ``UncertaintySet`` object.
 """
 
-
 import abc
 import math
 import functools

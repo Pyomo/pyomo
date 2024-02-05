@@ -11,14 +11,14 @@ Expression Generation
 Pyomo expressions can be constructed using native binary operators
 in Python.  For example, a sum can be created in a simple loop:
 
-.. literalinclude:: ../../tests/expr/performance_loop1.spy
+.. literalinclude:: ../../src/expr/performance_loop1.spy
 
 Additionally, Pyomo expressions can be constructed using functions
 that iteratively apply Python binary operators.  For example, the
 Python :func:`sum` function can be used to replace the previous
 loop:
 
-.. literalinclude:: ../../tests/expr/performance_loop2.spy
+.. literalinclude:: ../../src/expr/performance_loop2.spy
 
 The :func:`sum` function is both more compact and more efficient.
 Using :func:`sum` avoids the creation of temporary variables, and
@@ -47,7 +47,7 @@ expressions.
 
 For example, consider the following quadratic polynomial:
 
-.. literalinclude:: ../../tests/expr/performance_loop3.spy
+.. literalinclude:: ../../src/expr/performance_loop3.spy
 
 This quadratic polynomial is treated as a nonlinear expression
 unless the expression is explicitly processed to identify quadratic
@@ -78,7 +78,7 @@ The :func:`prod <pyomo.core.util.prod>` function is analogous to the builtin
 argument list, :attr:`args`, which represents expressions that are multiplied
 together.  For example:
 
-.. literalinclude:: ../../tests/expr/performance_prod.spy
+.. literalinclude:: ../../src/expr/performance_prod.spy
 
 quicksum
 ~~~~~~~~
@@ -89,7 +89,7 @@ generates a more compact Pyomo expression. Its main argument is a
 variable length argument list, :attr:`args`, which represents
 expressions that are summed together.  For example:
 
-.. literalinclude:: ../../tests/expr/performance_quicksum.spy
+.. literalinclude:: ../../src/expr/performance_quicksum.spy
 
 The summation is customized based on the :attr:`start` and
 :attr:`linear` arguments.  The :attr:`start` defines the initial
@@ -111,13 +111,13 @@ more quickly.
 
 Consider the following example:
 
-.. literalinclude:: ../../tests/expr/quicksum_runtime.spy
+.. literalinclude:: ../../src/expr/quicksum_runtime.spy
 
 The sum consists of linear terms because the exponents are one.
 The following output illustrates that quicksum can identify this
 linear structure to generate expressions more quickly:
 
-.. literalinclude:: ../../tests/expr/quicksum.log
+.. literalinclude:: ../../src/expr/quicksum.log
     :language: none
 
 If :attr:`start` is not a numeric value, then the :func:`quicksum
@@ -134,7 +134,7 @@ to be stored in an object that is passed into the function (e.g. the linear cont
     term in :attr:`args` is misleading.  Consider the following
     example:
 
-    .. literalinclude:: ../../tests/expr/performance_warning.spy
+    .. literalinclude:: ../../src/expr/performance_warning.spy
 
     The first term created by the generator is linear, but the
     subsequent terms are nonlinear.  Pyomo gracefully transitions
@@ -153,12 +153,12 @@ calling :func:`quicksum <pyomo.core.util.quicksum>`.  If two or more components 
 provided, then the result is the summation of their terms multiplied
 together.  For example:
 
-.. literalinclude:: ../../tests/expr/performance_sum_product1.spy
+.. literalinclude:: ../../src/expr/performance_sum_product1.spy
 
 The :attr:`denom` argument specifies components whose terms are in 
 the denominator.  For example:
 
-.. literalinclude:: ../../tests/expr/performance_sum_product2.spy
+.. literalinclude:: ../../src/expr/performance_sum_product2.spy
 
 The terms summed by this function are explicitly specified, so
 :func:`sum_product <pyomo.core.util.sum_product>` can identify

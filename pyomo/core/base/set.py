@@ -1584,28 +1584,26 @@ class _OrderedSetMixin(object):
         # implementation does not guarantee that the index is valid (it
         # could be outside of abs(i) <= len(self)).
         try:
-            if item != int(item):
-                raise IndexError(
-                    "%s indices must be integers, not %s"
-                    % (self.name, type(item).__name__)
-                )
-            item = int(item)
+            _item = int(item)
+            if item != _item:
+                raise IndexError()
         except:
             raise IndexError(
-                "%s indices must be integers, not %s" % (self.name, type(item).__name__)
-            )
+                f"Set '{self.name}' positional indices must be integers, "
+                f"not {type(item).__name__}"
+            ) from None
 
-        if item >= 1:
-            return item - 1
-        elif item < 0:
-            item += len(self)
-            if item < 0:
-                raise IndexError("%s index out of range" % (self.name,))
-            return item
+        if _item >= 1:
+            return _item - 1
+        elif _item < 0:
+            _item += len(self)
+            if _item < 0:
+                raise IndexError(f"{self.name} index out of range")
+            return _item
         else:
             raise IndexError(
-                "Pyomo Sets are 1-indexed: valid index values for Sets are "
-                "[1 .. len(Set)] or [-1 .. -len(Set)]"
+                "Accessing Pyomo Sets by position is 1-based: valid Set positional "
+                "index values are [1 .. len(Set)] or [-1 .. -len(Set)]"
             )
 
 
@@ -1683,7 +1681,7 @@ class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
         try:
             return self._ordered_values[i]
         except IndexError:
-            raise IndexError("%s index out of range" % (self.name))
+            raise IndexError(f"{self.name} index out of range") from None
 
     def ord(self, item):
         """
@@ -2023,9 +2021,8 @@ class Set(IndexedComponent):
         filter=None,
         validate=None,
         name=None,
-        doc=None
-    ):
-        ...
+        doc=None,
+    ): ...
 
     def __init__(self, *args, **kwds):
         kwds.setdefault('ctype', Set)
@@ -2240,9 +2237,11 @@ class Set(IndexedComponent):
                     % (
                         self.name,
                         ("[%s]" % (index,) if self.is_indexed() else ""),
-                        _values
-                        if _values.__class__ is type
-                        else type(_values).__name__,
+                        (
+                            _values
+                            if _values.__class__ is type
+                            else type(_values).__name__
+                        ),
                     )
                 )
                 raise
@@ -2545,7 +2544,7 @@ class OrderedSetOf(_ScalarOrderedSetMixin, _OrderedSetMixin, FiniteSetOf):
         try:
             return self._ref[i]
         except IndexError:
-            raise IndexError("%s index out of range" % (self.name))
+            raise IndexError(f"{self.name} index out of range") from None
 
     def ord(self, item):
         # The bulk of single-value set members are stored as scalars.
@@ -2669,7 +2668,7 @@ class _FiniteRangeSetData(
             if r.start == r.end:
                 return 1
             else:
-                return (r.end - r.start) // r.step + 1
+                return int((r.end - r.start) // r.step) + 1
         else:
             return sum(1 for _ in self)
 
@@ -2686,7 +2685,7 @@ class _FiniteRangeSetData(
                 if not idx:
                     return ans
                 idx -= 1
-        raise IndexError("%s index out of range" % (self.name,))
+        raise IndexError(f"{self.name} index out of range")
 
     def ord(self, item):
         if len(self._ranges) == 1:
@@ -2861,9 +2860,8 @@ class RangeSet(Component):
         filter=None,
         validate=None,
         name=None,
-        doc=None
-    ):
-        ...
+        doc=None,
+    ): ...
 
     @overload
     def __init__(
@@ -2878,9 +2876,8 @@ class RangeSet(Component):
         filter=None,
         validate=None,
         name=None,
-        doc=None
-    ):
-        ...
+        doc=None,
+    ): ...
 
     @overload
     def __init__(
@@ -2892,9 +2889,8 @@ class RangeSet(Component):
         filter=None,
         validate=None,
         name=None,
-        doc=None
-    ):
-        ...
+        doc=None,
+    ): ...
 
     def __init__(self, *args, **kwds):
         # Finite was processed by __new__
@@ -3505,7 +3501,7 @@ class SetUnion_OrderedSet(_ScalarOrderedSetMixin, _OrderedSetMixin, SetUnion_Fin
                     if val not in self._sets[0]:
                         idx -= 1
             except StopIteration:
-                raise IndexError("%s index out of range" % (self.name,))
+                raise IndexError(f"{self.name} index out of range") from None
             return val
 
     def ord(self, item):
@@ -3642,7 +3638,7 @@ class SetIntersection_OrderedSet(
                 idx -= 1
             return next(_iter)
         except StopIteration:
-            raise IndexError("%s index out of range" % (self.name,))
+            raise IndexError(f"{self.name} index out of range") from None
 
     def ord(self, item):
         """
@@ -3736,7 +3732,7 @@ class SetDifference_OrderedSet(
                 idx -= 1
             return next(_iter)
         except StopIteration:
-            raise IndexError("%s index out of range" % (self.name,))
+            raise IndexError(f"{self.name} index out of range") from None
 
     def ord(self, item):
         """
@@ -3846,7 +3842,7 @@ class SetSymmetricDifference_OrderedSet(
                 idx -= 1
             return next(_iter)
         except StopIteration:
-            raise IndexError("%s index out of range" % (self.name,))
+            raise IndexError(f"{self.name} index out of range") from None
 
     def ord(self, item):
         """
@@ -4128,7 +4124,7 @@ class SetProduct_OrderedSet(
             i -= 1
             _ord[i], _idx = _idx % _ord[i], _idx // _ord[i]
         if _idx:
-            raise IndexError("%s index out of range" % (self.name,))
+            raise IndexError(f"{self.name} index out of range")
         ans = tuple(s.at(i + 1) for s, i in zip(self._sets, _ord))
         if FLATTEN_CROSS_PRODUCT and normalize_index.flatten and self.dimen != len(ans):
             return self._flatten_product(ans)

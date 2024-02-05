@@ -1,0 +1,9 @@
+sin(x) + 2*x
+sum(sin(x), mon(2, x))
+sin(x1) + 2*x2
+True
+x[0] + 5*x[1]
+x[0] + 5*x[1]
+True
+True
+p[0]*x[0] + p[1]*x[1] + p[2]*x[2] + p[3]*x[3] + p[4]*x[4]

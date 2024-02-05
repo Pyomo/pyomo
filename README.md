@@ -71,7 +71,7 @@ version, we will remove testing for that Python version.
 
 ### Tutorials and Examples
 
-* [Pyomo Workshop Slides](https://software.sandia.gov/downloads/pub/pyomo/Pyomo-Workshop-Summer-2018.pdf)
+* [Pyomo Workshop Slides](https://github.com/Pyomo/pyomo-tutorials/blob/main/Pyomo-Workshop-December-2023.pdf)
 * [Prof. Jeffrey Kantor's Pyomo Cookbook](https://jckantor.github.io/ND-Pyomo-Cookbook/)
 * [Pyomo Gallery](https://github.com/Pyomo/PyomoGallery)
 

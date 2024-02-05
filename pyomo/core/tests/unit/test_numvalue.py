@@ -12,8 +12,12 @@
 # Unit Tests for Python numeric values
 #
 
+import subprocess
+import sys
 from math import nan, inf
+
 import pyomo.common.unittest as unittest
+from pyomo.common.dependencies import numpy, numpy_available
 
 from pyomo.environ import (
     value,
@@ -37,13 +41,6 @@ from pyomo.core.expr.numvalue import (
     native_integer_types,
 )
 from pyomo.common.numeric_types import _native_boolean_types
-
-try:
-    import numpy
-
-    numpy_available = True
-except:
-    numpy_available = False
 
 
 class MyBogusType(object):
@@ -541,29 +538,50 @@ class Test_as_numeric(unittest.TestCase):
             native_numeric_types.remove(MyBogusNumericType)
             native_types.remove(MyBogusNumericType)
 
+    @unittest.skipUnless(numpy_available, "This test requires NumPy")
     def test_numpy_basic_float_registration(self):
-        if not numpy_available:
-            self.skipTest("This test requires NumPy")
         self.assertIn(numpy.float_, native_numeric_types)
         self.assertNotIn(numpy.float_, native_integer_types)
         self.assertIn(numpy.float_, _native_boolean_types)
         self.assertIn(numpy.float_, native_types)
 
+    @unittest.skipUnless(numpy_available, "This test requires NumPy")
     def test_numpy_basic_int_registration(self):
-        if not numpy_available:
-            self.skipTest("This test requires NumPy")
         self.assertIn(numpy.int_, native_numeric_types)
         self.assertIn(numpy.int_, native_integer_types)
         self.assertIn(numpy.int_, _native_boolean_types)
         self.assertIn(numpy.int_, native_types)
 
+    @unittest.skipUnless(numpy_available, "This test requires NumPy")
     def test_numpy_basic_bool_registration(self):
-        if not numpy_available:
-            self.skipTest("This test requires NumPy")
         self.assertNotIn(numpy.bool_, native_numeric_types)
         self.assertNotIn(numpy.bool_, native_integer_types)
         self.assertIn(numpy.bool_, _native_boolean_types)
         self.assertIn(numpy.bool_, native_types)
+
+    @unittest.skipUnless(numpy_available, "This test requires NumPy")
+    def test_automatic_numpy_registration(self):
+        cmd = (
+            'import pyomo; from pyomo.core.base import Var, Param; import numpy as np; '
+            'print(np.float64 in pyomo.common.numeric_types.native_numeric_types); '
+            '%s; print(np.float64 in pyomo.common.numeric_types.native_numeric_types)'
+        )
+
+        def _tester(expr):
+            rc = subprocess.run(
+                [sys.executable, '-c', cmd % expr],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+            )
+            self.assertEqual((rc.returncode, rc.stdout), (0, "False\nTrue\n"))
+
+        _tester('Var() <= np.float64(5)')
+        _tester('np.float64(5) <= Var()')
+        _tester('np.float64(5) + Var()')
+        _tester('Var() + np.float64(5)')
+        _tester('v = Var(); v.construct(); v.value = np.float64(5)')
+        _tester('p = Param(mutable=True); p.construct(); p.value = np.float64(5)')
 
 
 if __name__ == "__main__":
