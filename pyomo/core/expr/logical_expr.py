@@ -11,7 +11,7 @@
 #  ___________________________________________________________________________
 
 import types
-from itertools import combinations, islice
+from itertools import islice
 
 import logging
 import traceback
