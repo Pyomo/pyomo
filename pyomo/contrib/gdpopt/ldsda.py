@@ -123,8 +123,10 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         add_transformed_boolean_variable_list(self.working_model_util_block)
 
         self._log_header(logger)
-        self.get_external_information(self.working_model_util_block, config)
-        self.directions = self.get_directions(self.number_of_external_variables, config)
+        self._get_external_information(self.working_model_util_block, config)
+        self.directions = self._get_directions(
+            self.number_of_external_variables, config
+        )
         self.best_direction = None
         self.current_point = config.starting_point
         self.explored_point_set = set()
@@ -183,7 +185,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
                 result = SolverFactory(config.minlp_solver).solve(
                     subproblem, **minlp_args
                 )
-                primal_improved = self.handle_subproblem_result(
+                primal_improved = self._handle_subproblem_result(
                     result, subproblem, config, search_type
                 )
             return primal_improved
@@ -194,7 +196,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
             )
             return False
 
-    def get_external_information(self, util_block, config):
+    def _get_external_information(self, util_block, config):
         """Function that obtains information from the model to perform the reformulation with external variables.
 
         Parameters
@@ -271,7 +273,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
                     disjunct.deactivate()
         self.explored_point_set.add(tuple(external_var_values_list))
 
-    def get_directions(self, dimension, config):
+    def _get_directions(self, dimension, config):
         """Function creates the search directions of the given dimension.
 
         Parameters
@@ -297,7 +299,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
             directions.remove((0,) * dimension)
             return directions
 
-    def check_valid_neighbor(self, neighbor):
+    def _check_valid_neighbor(self, neighbor):
         """Function that checks if a given neighbor is valid.
 
         Parameters
@@ -339,7 +341,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         self.best_direction = None
         for direction in self.directions:
             neighbor = tuple(map(sum, zip(self.current_point, direction)))
-            if self.check_valid_neighbor(neighbor):
+            if self._check_valid_neighbor(neighbor):
                 self.fix_disjunctions_with_external_var(
                     self.working_model_util_block, neighbor
                 )
@@ -367,7 +369,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         primal_improved = True
         while primal_improved:
             next_point = tuple(map(sum, zip(self.current_point, self.best_direction)))
-            if self.check_valid_neighbor(next_point):
+            if self._check_valid_neighbor(next_point):
                 self.fix_disjunctions_with_external_var(
                     self.working_model_util_block, next_point
                 )
@@ -380,7 +382,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
                 break
         print("Line search finished.")
 
-    def handle_subproblem_result(
+    def _handle_subproblem_result(
         self, subproblem_result, subproblem, config, search_type
     ):
         """Function that handles the result of the subproblem
