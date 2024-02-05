@@ -482,7 +482,18 @@ class IncidenceGraphInterface(object):
             return subgraph
 
     def subgraph(self, variables, constraints):
-        # TODO: copy=True argument we can use to optionally modify in-place?
+        """Extract a subgraph defined by the provided variables and constraints
+
+        Underlying data structures are copied, and constraints are not reinspected
+        for incidence variables (the edges from this incidence graph are used).
+
+        Returns
+        -------
+        ``IncidenceGraphInterface``
+            A new incidence graph containing only the specified variables and
+            constraints, and the edges between pairs thereof.
+
+        """
         nx_subgraph = self._extract_subgraph(variables, constraints)
         subgraph = IncidenceGraphInterface((nx_subgraph, variables, constraints), **self._config)
         return subgraph
