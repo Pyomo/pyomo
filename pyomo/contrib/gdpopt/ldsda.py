@@ -10,10 +10,7 @@
 #  ___________________________________________________________________________
 
 from collections import namedtuple
-from heapq import heappush, heappop
 import traceback
-
-from pyomo.common.collections import ComponentMap
 from pyomo.common.config import document_kwargs_from_configdict
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt
@@ -28,29 +25,16 @@ from pyomo.contrib.gdpopt.create_oa_subproblems import (
 )
 from pyomo.contrib.gdpopt.config_options import (
     _add_nlp_solver_configs,
-    _add_BB_configs,
     _add_ldsda_configs,
     _add_mip_solver_configs,
     _add_tolerance_configs,
     _add_nlp_solve_configs,
 )
 from pyomo.contrib.gdpopt.nlp_initialization import restore_vars_to_original_values
-from pyomo.contrib.gdpopt.util import (
-    copy_var_list_values,
-    SuppressInfeasibleWarning,
-    get_main_elapsed_time,
-)
+from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, get_main_elapsed_time
 from pyomo.contrib.satsolver.satsolver import satisfiable
-from pyomo.core import (
-    minimize,
-    Suffix,
-    Constraint,
-    TransformationFactory,
-    BooleanVar,
-    Var,
-    Objective,
-)
-from pyomo.opt import SolverFactory, SolverStatus
+from pyomo.core import minimize, Suffix, TransformationFactory
+from pyomo.opt import SolverFactory
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core.expr.logical_expr import ExactlyExpression
 from pyomo.common.dependencies import attempt_import
