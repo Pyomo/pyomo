@@ -53,8 +53,9 @@ from pyomo.core import (
 from pyomo.opt import SolverFactory, SolverStatus
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core.expr.logical_expr import ExactlyExpression
-import numpy as np  # attempt_import
-import itertools as it  # attempt_import
+from pyomo.common.dependencies import attempt_import
+
+it, it_available = attempt_import('itertools')
 
 _linear_degrees = {1, 0}
 
