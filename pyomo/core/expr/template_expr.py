@@ -120,9 +120,11 @@ class GetItemExpression(ExpressionBase):
 
     def _apply_operation(self, result):
         args = tuple(
-            arg
-            if arg.__class__ in native_types or not arg.is_numeric_type()
-            else value(arg)
+            (
+                arg
+                if arg.__class__ in native_types or not arg.is_numeric_type()
+                else value(arg)
+            )
             for arg in result[1:]
         )
         return result[0].__getitem__(tuple(result[1:]))

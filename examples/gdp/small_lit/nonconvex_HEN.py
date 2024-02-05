@@ -7,7 +7,6 @@
     Pyomo model implementation by @RomeoV
 """
 
-
 from pyomo.environ import (
     ConcreteModel,
     Constraint,

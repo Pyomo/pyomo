@@ -15,7 +15,7 @@ model parameter uncertainty using nonlinear confidence regions. AIChE Journal,
 47(8), 1794-1804.
 """
 
-import pandas as pd
+from pyomo.common.dependencies import pandas as pd
 import pyomo.environ as pyo
 
 

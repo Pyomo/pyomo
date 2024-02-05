@@ -11,7 +11,6 @@
 
 """Transformation to convert explicit bounds to variable bounds."""
 
-from __future__ import division
 
 from math import fabs
 import math

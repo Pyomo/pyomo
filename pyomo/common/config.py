@@ -31,6 +31,8 @@ import sys
 import textwrap
 import types
 
+from operator import attrgetter
+
 from pyomo.common.collections import Sequence, Mapping
 from pyomo.common.deprecation import (
     deprecated,
@@ -1396,9 +1398,11 @@ class numpydoc_ConfigFormatter(ConfigFormatter):
                 None,
                 [
                     'dict' if isinstance(obj, ConfigDict) else obj.domain_name(),
-                    'optional'
-                    if obj._default is None
-                    else f'default={repr(obj._default)}',
+                    (
+                        'optional'
+                        if obj._default is None
+                        else f'default={repr(obj._default)}'
+                    ),
                 ],
             )
         )
@@ -1686,11 +1690,9 @@ class ConfigBase(object):
             ans.reset()
         else:
             # Copy over any Dict definitions
-            for k in self._decl_order:
+            for k, v in self._data.items():
                 if preserve_implicit or k in self._declared:
-                    v = self._data[k]
                     ans._data[k] = _tmp = v(preserve_implicit=preserve_implicit)
-                    ans._decl_order.append(k)
                     if k in self._declared:
                         ans._declared.add(k)
                     _tmp._parent = ans
@@ -2381,12 +2383,7 @@ class ConfigDict(ConfigBase, Mapping):
 
     content_filters = {None, 'all', 'userdata'}
 
-    __slots__ = (
-        '_decl_order',
-        '_declared',
-        '_implicit_declaration',
-        '_implicit_domain',
-    )
+    __slots__ = ('_declared', '_implicit_declaration', '_implicit_domain')
     _all_slots = set(__slots__ + ConfigBase.__slots__)
 
     def __init__(
@@ -2397,7 +2394,6 @@ class ConfigDict(ConfigBase, Mapping):
         implicit_domain=None,
         visibility=0,
     ):
-        self._decl_order = []
         self._declared = set()
         self._implicit_declaration = implicit
         if (
@@ -2476,7 +2472,6 @@ class ConfigDict(ConfigBase, Mapping):
         _key = str(key).replace(' ', '_')
         del self._data[_key]
         # Clean up the other data structures
-        self._decl_order.remove(_key)
         self._declared.discard(_key)
 
     def __contains__(self, key):
@@ -2484,10 +2479,10 @@ class ConfigDict(ConfigBase, Mapping):
         return _key in self._data
 
     def __len__(self):
-        return self._decl_order.__len__()
+        return len(self._data)
 
     def __iter__(self):
-        return (self._data[key]._name for key in self._decl_order)
+        return map(attrgetter('_name'), self._data.values())
 
     def __getattr__(self, name):
         # Note: __getattr__ is only called after all "usual" attribute
@@ -2524,13 +2519,12 @@ class ConfigDict(ConfigBase, Mapping):
 
     def values(self):
         self._userAccessed = True
-        for key in self._decl_order:
-            yield self[key]
+        return map(self.__getitem__, self._data)
 
     def items(self):
         self._userAccessed = True
-        for key in self._decl_order:
-            yield (self._data[key]._name, self[key])
+        for key, val in self._data.items():
+            yield (val._name, self[key])
 
     @deprecated('The iterkeys method is deprecated. Use dict.keys().', version='6.0')
     def iterkeys(self):
@@ -2559,7 +2553,6 @@ class ConfigDict(ConfigBase, Mapping):
                 % (name, self.name(True))
             )
         self._data[_name] = config
-        self._decl_order.append(_name)
         config._parent = self
         config._name = name
         return config
@@ -2611,10 +2604,7 @@ class ConfigDict(ConfigBase, Mapping):
     def value(self, accessValue=True):
         if accessValue:
             self._userAccessed = True
-        return {
-            cfg._name: cfg.value(accessValue)
-            for cfg in map(self._data.__getitem__, self._decl_order)
-        }
+        return {cfg._name: cfg.value(accessValue) for cfg in self._data.values()}
 
     def set_value(self, value, skip_implicit=False):
         if value is None:
@@ -2634,7 +2624,7 @@ class ConfigDict(ConfigBase, Mapping):
             _key = str(key).replace(' ', '_')
             if _key in self._data:
                 # str(key) may not be key... store the mapping so that
-                # when we later iterate over the _decl_order, we can map
+                # when we later iterate over the _data, we can map
                 # the local keys back to the incoming value keys.
                 _decl_map[_key] = key
             else:
@@ -2657,7 +2647,7 @@ class ConfigDict(ConfigBase, Mapping):
             # We want to set the values in declaration order (so that
             # things are deterministic and in case a validation depends
             # on the order)
-            for key in self._decl_order:
+            for key in self._data:
                 if key in _decl_map:
                     self[key] = value[_decl_map[key]]
             # implicit data is declared at the end (in sorted order)
@@ -2673,16 +2663,11 @@ class ConfigDict(ConfigBase, Mapping):
     def reset(self):
         # Reset the values in the order they were declared.  This
         # allows reset functions to have a deterministic ordering.
-        def _keep(self, key):
-            keep = key in self._declared
-            if keep:
-                self._data[key].reset()
+        for key, val in list(self._data.items()):
+            if key in self._declared:
+                val.reset()
             else:
                 del self._data[key]
-            return keep
-
-        # this is an in-place slice of a list...
-        self._decl_order[:] = [x for x in self._decl_order if _keep(self, x)]
         self._userAccessed = False
         self._userSet = False
 
@@ -2693,8 +2678,7 @@ class ConfigDict(ConfigBase, Mapping):
             yield (level, prefix, None, self)
             if level is not None:
                 level += 1
-        for key in self._decl_order:
-            cfg = self._data[key]
+        for cfg in self._data.values():
             yield from cfg._data_collector(level, cfg._name + ': ', visibility, docMode)
 
 

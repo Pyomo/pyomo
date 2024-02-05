@@ -244,9 +244,9 @@ class BoundPretransformation(Transformation):
                 disjunction, transformation_blocks
             )
             if self.transformation_name not in disjunction._transformation_map:
-                disjunction._transformation_map[
-                    self.transformation_name
-                ] = ComponentMap()
+                disjunction._transformation_map[self.transformation_name] = (
+                    ComponentMap()
+                )
             trans_map = disjunction._transformation_map[self.transformation_name]
 
             for disj in disjunction.disjuncts:

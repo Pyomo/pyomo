@@ -1,5 +1,6 @@
 """Transformation from BooleanVar and LogicalConstraint to Binary and
 Constraints."""
+
 from pyomo.common.collections import ComponentMap
 from pyomo.common.errors import MouseTrap, DeveloperError
 from pyomo.common.modeling import unique_component_name

@@ -2022,8 +2022,7 @@ class Set(IndexedComponent):
         validate=None,
         name=None,
         doc=None,
-    ):
-        ...
+    ): ...
 
     def __init__(self, *args, **kwds):
         kwds.setdefault('ctype', Set)
@@ -2238,9 +2237,11 @@ class Set(IndexedComponent):
                     % (
                         self.name,
                         ("[%s]" % (index,) if self.is_indexed() else ""),
-                        _values
-                        if _values.__class__ is type
-                        else type(_values).__name__,
+                        (
+                            _values
+                            if _values.__class__ is type
+                            else type(_values).__name__
+                        ),
                     )
                 )
                 raise
@@ -2667,7 +2668,7 @@ class _FiniteRangeSetData(
             if r.start == r.end:
                 return 1
             else:
-                return (r.end - r.start) // r.step + 1
+                return int((r.end - r.start) // r.step) + 1
         else:
             return sum(1 for _ in self)
 
@@ -2860,8 +2861,7 @@ class RangeSet(Component):
         validate=None,
         name=None,
         doc=None,
-    ):
-        ...
+    ): ...
 
     @overload
     def __init__(
@@ -2877,8 +2877,7 @@ class RangeSet(Component):
         validate=None,
         name=None,
         doc=None,
-    ):
-        ...
+    ): ...
 
     @overload
     def __init__(
@@ -2891,8 +2890,7 @@ class RangeSet(Component):
         validate=None,
         name=None,
         doc=None,
-    ):
-        ...
+    ): ...
 
     def __init__(self, *args, **kwds):
         # Finite was processed by __new__
