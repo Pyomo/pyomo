@@ -138,31 +138,39 @@ def extract_bipartite_subgraph(graph, nodes0, nodes1):
         in the original graph.
 
     """
-    subgraph = nx.Graph()
-    sub_M = len(nodes0)
-    sub_N = len(nodes1)
-    subgraph.add_nodes_from(range(sub_M), bipartite=0)
-    subgraph.add_nodes_from(range(sub_M, sub_M + sub_N), bipartite=1)
-
+    subgraph = graph.subgraph(nodes0 + nodes1)
     old_new_map = {}
     for i, node in enumerate(nodes0 + nodes1):
         if node in old_new_map:
             raise RuntimeError("Node %s provided more than once.")
         old_new_map[node] = i
+    relabeled_subgraph = nx.relabel_nodes(subgraph, old_new_map)
+    return relabeled_subgraph
+    #subgraph = nx.Graph()
+    #sub_M = len(nodes0)
+    #sub_N = len(nodes1)
+    #subgraph.add_nodes_from(range(sub_M), bipartite=0)
+    #subgraph.add_nodes_from(range(sub_M, sub_M + sub_N), bipartite=1)
 
-    for node1, node2 in graph.edges():
-        if node1 in old_new_map and node2 in old_new_map:
-            new_node_1 = old_new_map[node1]
-            new_node_2 = old_new_map[node2]
-            if (
-                subgraph.nodes[new_node_1]["bipartite"]
-                == subgraph.nodes[new_node_2]["bipartite"]
-            ):
-                raise RuntimeError(
-                    "Subgraph is not bipartite. Found an edge between nodes"
-                    " %s and %s (in the original graph)." % (node1, node2)
-                )
-            subgraph.add_edge(new_node_1, new_node_2)
+    #old_new_map = {}
+    #for i, node in enumerate(nodes0 + nodes1):
+    #    if node in old_new_map:
+    #        raise RuntimeError("Node %s provided more than once.")
+    #    old_new_map[node] = i
+
+    #for node1, node2 in graph.edges():
+    #    if node1 in old_new_map and node2 in old_new_map:
+    #        new_node_1 = old_new_map[node1]
+    #        new_node_2 = old_new_map[node2]
+    #        if (
+    #            subgraph.nodes[new_node_1]["bipartite"]
+    #            == subgraph.nodes[new_node_2]["bipartite"]
+    #        ):
+    #            raise RuntimeError(
+    #                "Subgraph is not bipartite. Found an edge between nodes"
+    #                " %s and %s (in the original graph)." % (node1, node2)
+    #            )
+    #        subgraph.add_edge(new_node_1, new_node_2)
     return subgraph
 
 
@@ -334,6 +342,22 @@ class IncidenceGraphInterface(object):
                 incidence_matrix = nlp.evaluate_jacobian_eq()
             nxb = nx.algorithms.bipartite
             self._incidence_graph = nxb.from_biadjacency_matrix(incidence_matrix)
+        elif isinstance(model, tuple):
+            # model is a tuple of (nx.Graph, list[pyo.Var], list[pyo.Constraint])
+            # We could potentially accept a tuple (variables, constraints).
+            # TODO: Disallow kwargs if this type of "model" is provided?
+            nx_graph, variables, constraints = model
+            self._variables = list(variables)
+            self._constraints = list(constraints)
+            self._var_index_map = ComponentMap(
+                (var, i) for i, var in enumerate(self._variables)
+            )
+            self._con_index_map = ComponentMap(
+                (con, i) for i, con in enumerate(self._constraints)
+            )
+            # For now, don't check any properties of this graph. We could check
+            # for a bipartition that matches the variable and constraint lists.
+            self._incidence_graph = nx_graph
         else:
             raise TypeError(
                 "Unsupported type for incidence graph. Expected PyomoNLP"
@@ -467,6 +491,12 @@ class IncidenceGraphInterface(object):
                 self._incidence_graph, constraint_nodes, variable_nodes
             )
             return subgraph
+
+    def subgraph(self, variables, constraints):
+        # TODO: copy=True argument we can use to optionally modify in-place?
+        nx_subgraph = self._extract_subgraph(variables, constraints)
+        subgraph = IncidenceGraphInterface((nx_subgraph, variables, constraints), **self._config)
+        return subgraph
 
     @property
     def incidence_matrix(self):
