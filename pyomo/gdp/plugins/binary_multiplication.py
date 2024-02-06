@@ -79,8 +79,7 @@ class GDPBinaryMultiplicationTransformation(GDP_to_MIP_Transformation):
             or_expr += disjunct.binary_indicator_var
             self._transform_disjunct(disjunct, transBlock)
 
-        # rhs = 1 if parent_disjunct is None else parent_disjunct.binary_indicator_var
-        rhs = 1
+        rhs = 1 if parent_disjunct is None else parent_disjunct.binary_indicator_var
         if obj.xor:
             xorConstraint[index] = or_expr == rhs
         else:
