@@ -13,7 +13,13 @@
 import logging
 from textwrap import indent, dedent, wrap
 from pyomo.common.collections import Bunch, ComponentSet
-from pyomo.common.config import ConfigDict, ConfigValue, In, NonNegativeFloat
+from pyomo.common.config import (
+    ConfigDict,
+    ConfigValue,
+    document_kwargs_from_configdict,
+    In,
+    NonNegativeFloat,
+)
 from pyomo.core.base.block import Block
 from pyomo.core.expr import value
 from pyomo.core.base.var import Var, _VarData
@@ -147,68 +153,6 @@ class InputDataStandardizer(object):
         return ans
 
 
-class PyROSConfigValue(ConfigValue):
-    """
-    Subclass of ``common.collections.ConfigValue``,
-    with a few attributes added to facilitate documentation
-    of the PyROS solver.
-    An instance of this class is used for storing and
-    documenting an argument to the PyROS solver.
-
-    Attributes
-    ----------
-    is_optional : bool
-        Argument is optional.
-    document_default : bool, optional
-        Document the default value of the argument
-        in any docstring generated from this instance,
-        or a `ConfigDict` object containing this instance.
-    dtype_spec_str : None or str, optional
-        String documenting valid types for this argument.
-        If `None` is provided, then this string is automatically
-        determined based on the `domain` argument to the
-        constructor.
-
-    NOTES
-    -----
-    Cleaner way to access protected attributes
-    (particularly _doc, _description) inherited from ConfigValue?
-
-    """
-
-    def __init__(
-        self,
-        default=None,
-        domain=None,
-        description=None,
-        doc=None,
-        visibility=0,
-        is_optional=True,
-        document_default=True,
-        dtype_spec_str=None,
-    ):
-        """Initialize self (see class docstring)."""
-
-        # initialize base class attributes
-        super(self.__class__, self).__init__(
-            default=default,
-            domain=domain,
-            description=description,
-            doc=doc,
-            visibility=visibility,
-        )
-
-        self.is_optional = is_optional
-        self.document_default = document_default
-
-        if dtype_spec_str is None:
-            self.dtype_spec_str = self.domain_name()
-            # except AttributeError:
-            #     self.dtype_spec_str = repr(self._domain)
-        else:
-            self.dtype_spec_str = dtype_spec_str
-
-
 def pyros_config():
     CONFIG = ConfigDict('PyROS')
 
@@ -217,7 +161,7 @@ def pyros_config():
     # ================================================
     CONFIG.declare(
         'time_limit',
-        PyROSConfigValue(
+        ConfigValue(
             default=None,
             domain=NonNegativeFloat,
             doc=(
@@ -227,14 +171,11 @@ def pyros_config():
                 If `None` is provided, then no time limit is enforced.
                 """
             ),
-            is_optional=True,
-            document_default=False,
-            dtype_spec_str="None or NonNegativeFloat",
         ),
     )
     CONFIG.declare(
         'keepfiles',
-        PyROSConfigValue(
+        ConfigValue(
             default=False,
             domain=bool,
             description=(
@@ -245,25 +186,19 @@ def pyros_config():
                 must also be specified.
                 """
             ),
-            is_optional=True,
-            document_default=True,
-            dtype_spec_str=None,
         ),
     )
     CONFIG.declare(
         'tee',
-        PyROSConfigValue(
+        ConfigValue(
             default=False,
             domain=bool,
             description="Output subordinate solver logs for all subproblems.",
-            is_optional=True,
-            document_default=True,
-            dtype_spec_str=None,
         ),
     )
     CONFIG.declare(
         'load_solution',
-        PyROSConfigValue(
+        ConfigValue(
             default=True,
             domain=bool,
             description=(
@@ -272,9 +207,6 @@ def pyros_config():
                 provided.
                 """
             ),
-            is_optional=True,
-            document_default=True,
-            dtype_spec_str=None,
         ),
     )
 
@@ -283,27 +215,25 @@ def pyros_config():
     # ================================================
     CONFIG.declare(
         "first_stage_variables",
-        PyROSConfigValue(
+        ConfigValue(
             default=[],
             domain=InputDataStandardizer(Var, _VarData),
             description="First-stage (or design) variables.",
-            is_optional=False,
-            dtype_spec_str="list of Var",
+            visibility=1,
         ),
     )
     CONFIG.declare(
         "second_stage_variables",
-        PyROSConfigValue(
+        ConfigValue(
             default=[],
             domain=InputDataStandardizer(Var, _VarData),
             description="Second-stage (or control) variables.",
-            is_optional=False,
-            dtype_spec_str="list of Var",
+            visibility=1,
         ),
     )
     CONFIG.declare(
         "uncertain_params",
-        PyROSConfigValue(
+        ConfigValue(
             default=[],
             domain=InputDataStandardizer(Param, _ParamData),
             description=(
@@ -313,13 +243,12 @@ def pyros_config():
                 objects should be set to True.
                 """
             ),
-            is_optional=False,
-            dtype_spec_str="list of Param",
+            visibility=1,
         ),
     )
     CONFIG.declare(
         "uncertainty_set",
-        PyROSConfigValue(
+        ConfigValue(
             default=None,
             domain=uncertainty_sets,
             description=(
@@ -329,28 +258,25 @@ def pyros_config():
                 to be robust.
                 """
             ),
-            is_optional=False,
-            dtype_spec_str="UncertaintySet",
+            visibility=1,
         ),
     )
     CONFIG.declare(
         "local_solver",
-        PyROSConfigValue(
+        ConfigValue(
             default=None,
             domain=SolverResolvable(),
             description="Subordinate local NLP solver.",
-            is_optional=False,
-            dtype_spec_str="Solver",
+            visibility=1,
         ),
     )
     CONFIG.declare(
         "global_solver",
-        PyROSConfigValue(
+        ConfigValue(
             default=None,
             domain=SolverResolvable(),
             description="Subordinate global NLP solver.",
-            is_optional=False,
-            dtype_spec_str="Solver",
+            visibility=1,
         ),
     )
     # ================================================
@@ -358,7 +284,7 @@ def pyros_config():
     # ================================================
     CONFIG.declare(
         "objective_focus",
-        PyROSConfigValue(
+        ConfigValue(
             default=ObjectiveType.nominal,
             domain=ValidEnum(ObjectiveType),
             description=(
@@ -388,14 +314,11 @@ def pyros_config():
                 feasibility is guaranteed.
                 """
             ),
-            is_optional=True,
-            document_default=False,
-            dtype_spec_str="ObjectiveType",
         ),
     )
     CONFIG.declare(
         "nominal_uncertain_param_vals",
-        PyROSConfigValue(
+        ConfigValue(
             default=[],
             domain=list,
             doc=(
@@ -407,14 +330,11 @@ def pyros_config():
                 objects specified through `uncertain_params` are chosen.
                 """
             ),
-            is_optional=True,
-            document_default=True,
-            dtype_spec_str="list of float",
         ),
     )
     CONFIG.declare(
         "decision_rule_order",
-        PyROSConfigValue(
+        ConfigValue(
             default=0,
             domain=In([0, 1, 2]),
             description=(
@@ -437,14 +357,11 @@ def pyros_config():
                 - 2: quadratic recourse
                 """
             ),
-            is_optional=True,
-            document_default=True,
-            dtype_spec_str=None,
         ),
     )
     CONFIG.declare(
         "solve_master_globally",
-        PyROSConfigValue(
+        ConfigValue(
             default=False,
             domain=bool,
             doc=(
@@ -460,14 +377,11 @@ def pyros_config():
                 by PyROS. Otherwise, only robust feasibility is guaranteed.
                 """
             ),
-            is_optional=True,
-            document_default=True,
-            dtype_spec_str=None,
         ),
     )
     CONFIG.declare(
         "max_iter",
-        PyROSConfigValue(
+        ConfigValue(
             default=-1,
             domain=PositiveIntOrMinusOne,
             description=(
@@ -476,14 +390,11 @@ def pyros_config():
                 limit is enforced.
                 """
             ),
-            is_optional=True,
-            document_default=True,
-            dtype_spec_str="int",
         ),
     )
     CONFIG.declare(
         "robust_feasibility_tolerance",
-        PyROSConfigValue(
+        ConfigValue(
             default=1e-4,
             domain=NonNegativeFloat,
             description=(
@@ -492,14 +403,11 @@ def pyros_config():
                 constraint violations during the GRCS separation step.
                 """
             ),
-            is_optional=True,
-            document_default=True,
-            dtype_spec_str=None,
         ),
     )
     CONFIG.declare(
         "separation_priority_order",
-        PyROSConfigValue(
+        ConfigValue(
             default={},
             domain=dict,
             doc=(
@@ -514,14 +422,11 @@ def pyros_config():
                 priority.
                 """
             ),
-            is_optional=True,
-            document_default=True,
-            dtype_spec_str=None,
         ),
     )
     CONFIG.declare(
         "progress_logger",
-        PyROSConfigValue(
+        ConfigValue(
             default=default_pyros_solver_logger,
             domain=a_logger,
             doc=(
@@ -534,14 +439,11 @@ def pyros_config():
                 object of level ``logging.INFO``.
                 """
             ),
-            is_optional=True,
-            document_default=True,
-            dtype_spec_str="str or logging.Logger",
         ),
     )
     CONFIG.declare(
         "backup_local_solvers",
-        PyROSConfigValue(
+        ConfigValue(
             default=[],
             domain=SolverResolvable(),
             doc=(
@@ -551,14 +453,11 @@ def pyros_config():
                 to solve a subproblem to an acceptable termination condition.
                 """
             ),
-            is_optional=True,
-            document_default=True,
-            dtype_spec_str="list of Solver",
         ),
     )
     CONFIG.declare(
         "backup_global_solvers",
-        PyROSConfigValue(
+        ConfigValue(
             default=[],
             domain=SolverResolvable(),
             doc=(
@@ -568,14 +467,11 @@ def pyros_config():
                 to solve a subproblem to an acceptable termination condition.
                 """
             ),
-            is_optional=True,
-            document_default=True,
-            dtype_spec_str="list of Solver",
         ),
     )
     CONFIG.declare(
         "subproblem_file_directory",
-        PyROSConfigValue(
+        ConfigValue(
             default=None,
             domain=str,
             description=(
@@ -587,9 +483,6 @@ def pyros_config():
                 provided.
                 """
             ),
-            is_optional=True,
-            document_default=True,
-            dtype_spec_str="None, str, or path-like",
         ),
     )
 
@@ -598,7 +491,7 @@ def pyros_config():
     # ================================================
     CONFIG.declare(
         "bypass_local_separation",
-        PyROSConfigValue(
+        ConfigValue(
             default=False,
             domain=bool,
             description=(
@@ -611,14 +504,11 @@ def pyros_config():
                 can quickly solve separation subproblems to global optimality.
                 """
             ),
-            is_optional=True,
-            document_default=True,
-            dtype_spec_str=None,
         ),
     )
     CONFIG.declare(
         "bypass_global_separation",
-        PyROSConfigValue(
+        ConfigValue(
             default=False,
             domain=bool,
             doc=(
@@ -635,14 +525,11 @@ def pyros_config():
                 optimality.
                 """
             ),
-            is_optional=True,
-            document_default=True,
-            dtype_spec_str=None,
         ),
     )
     CONFIG.declare(
         "p_robustness",
-        PyROSConfigValue(
+        ConfigValue(
             default={},
             domain=dict,
             doc=(
@@ -660,9 +547,6 @@ def pyros_config():
                 the nominal parameter realization.
                 """
             ),
-            is_optional=True,
-            document_default=True,
-            dtype_spec_str=None,
         ),
     )
 
@@ -836,6 +720,13 @@ class PyROS(object):
                 logger.log(msg=f" {key}={val!r}", **log_kwargs)
         logger.log(msg="-" * self._LOG_LINE_LENGTH, **log_kwargs)
 
+    @document_kwargs_from_configdict(
+        config=CONFIG,
+        section="Keyword Arguments",
+        indent_spacing=4,
+        width=72,
+        visibility=0,
+    )
     def solve(
         self,
         model,
@@ -1085,131 +976,3 @@ class PyROS(object):
         config.progress_logger.info("=" * self._LOG_LINE_LENGTH)
 
         return return_soln
-
-
-def _generate_filtered_docstring():
-    """
-    Add Numpy-style 'Keyword arguments' section to `PyROS.solve()`
-    docstring.
-    """
-    cfg = PyROS.CONFIG()
-
-    # mandatory args already documented
-    exclude_args = [
-        "first_stage_variables",
-        "second_stage_variables",
-        "uncertain_params",
-        "uncertainty_set",
-        "local_solver",
-        "global_solver",
-    ]
-
-    indent_by = 8
-    width = 72
-    before = PyROS.solve.__doc__
-    section_name = "Keyword Arguments"
-
-    indent_str = ' ' * indent_by
-    wrap_width = width - indent_by
-    cfg = pyros_config()
-
-    arg_docs = []
-
-    def wrap_doc(doc, indent_by, width):
-        """
-        Wrap a string, accounting for paragraph
-        breaks ('\n\n') and bullet points (paragraphs
-        which, when dedented, are such that each line
-        starts with '- ' or '  ').
-        """
-        paragraphs = doc.split("\n\n")
-        wrapped_pars = []
-        for par in paragraphs:
-            lines = dedent(par).split("\n")
-            has_bullets = all(
-                line.startswith("- ") or line.startswith("  ")
-                for line in lines
-                if line != ""
-            )
-            if has_bullets:
-                # obtain strings of each bullet point
-                # (dedented, bullet dash and bullet indent removed)
-                bullet_groups = []
-                new_group = False
-                group = ""
-                for line in lines:
-                    new_group = line.startswith("- ")
-                    if new_group:
-                        bullet_groups.append(group)
-                        group = ""
-                    new_line = line[2:]
-                    group += f"{new_line}\n"
-                if group != "":
-                    # ensure last bullet not skipped
-                    bullet_groups.append(group)
-
-                # first entry is just ''; remove
-                bullet_groups = bullet_groups[1:]
-
-                # wrap each bullet point, then add bullet
-                # and indents as necessary
-                wrapped_groups = []
-                for group in bullet_groups:
-                    wrapped_groups.append(
-                        "\n".join(
-                            f"{'- ' if idx == 0 else '  '}{line}"
-                            for idx, line in enumerate(
-                                wrap(group, width - 2 - indent_by)
-                            )
-                        )
-                    )
-
-                # now combine bullets into single 'paragraph'
-                wrapped_pars.append(
-                    indent("\n".join(wrapped_groups), prefix=' ' * indent_by)
-                )
-            else:
-                wrapped_pars.append(
-                    indent(
-                        "\n".join(wrap(dedent(par), width=width - indent_by)),
-                        prefix=' ' * indent_by,
-                    )
-                )
-
-        return "\n\n".join(wrapped_pars)
-
-    section_header = indent(f"{section_name}\n" + "-" * len(section_name), indent_str)
-    for key, itm in cfg._data.items():
-        if key in exclude_args:
-            continue
-        arg_name = key
-        arg_dtype = itm.dtype_spec_str
-
-        if itm.is_optional:
-            if itm.document_default:
-                optional_str = f", default={repr(itm._default)}"
-            else:
-                optional_str = ", optional"
-        else:
-            optional_str = ""
-
-        arg_header = f"{indent_str}{arg_name} : {arg_dtype}{optional_str}"
-
-        # dedented_doc_str = dedent(itm.doc).replace("\n", ' ').strip()
-        if itm._doc is not None:
-            raw_arg_desc = itm._doc
-        else:
-            raw_arg_desc = itm._description
-
-        arg_description = wrap_doc(
-            raw_arg_desc, width=wrap_width, indent_by=indent_by + 4
-        )
-
-        arg_docs.append(f"{arg_header}\n{arg_description}")
-
-    kwargs_section_doc = "\n".join([section_header] + arg_docs)
-
-    return f"{before}\n{kwargs_section_doc}\n"
-
-
-PyROS.solve.__doc__ = _generate_filtered_docstring()
