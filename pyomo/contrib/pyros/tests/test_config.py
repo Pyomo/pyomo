@@ -14,7 +14,9 @@ from pyomo.core.base.param import Param, _ParamData
 from pyomo.contrib.pyros.config import (
     InputDataStandardizer,
     mutable_param_validator,
+    UncertaintySetDomain,
 )
+from pyomo.contrib.pyros.uncertainty_sets import BoxSet
 
 
 class testInputDataStandardizer(unittest.TestCase):
@@ -261,6 +263,32 @@ class testInputDataStandardizer(unittest.TestCase):
                     f"(id {id(output)})"
                 ),
             )
+
+
+class TestUncertaintySetDomain(unittest.TestCase):
+    """
+    Test domain validator for uncertainty set arguments.
+    """
+    def test_uncertainty_set_domain_valid_set(self):
+        """
+        Test validator works for valid argument.
+        """
+        standardizer_func = UncertaintySetDomain()
+        bset = BoxSet([[0, 1]])
+        self.assertIs(
+            bset,
+            standardizer_func(bset),
+            msg="Output of uncertainty set domain not as expected.",
+        )
+
+    def test_uncertainty_set_domain_invalid_type(self):
+        """
+        Test validator works for valid argument.
+        """
+        standardizer_func = UncertaintySetDomain()
+        exc_str = "Expected an .*UncertaintySet object.*received object 2"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            standardizer_func(2)
 
 
 if __name__ == "__main__":

@@ -16,7 +16,7 @@ from pyomo.contrib.pyros.util import (
     setup_pyros_logger,
     ValidEnum,
 )
-from pyomo.contrib.pyros.uncertainty_sets import uncertainty_sets
+from pyomo.contrib.pyros.uncertainty_sets import UncertaintySetDomain
 
 
 default_pyros_solver_logger = setup_pyros_logger()
@@ -330,7 +330,7 @@ def pyros_config():
         "uncertainty_set",
         ConfigValue(
             default=None,
-            domain=uncertainty_sets,
+            domain=UncertaintySetDomain(),
             description=(
                 """
                 Uncertainty set against which the
