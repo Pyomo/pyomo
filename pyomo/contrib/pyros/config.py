@@ -4,9 +4,10 @@ Interfaces for managing PyROS solver options.
 
 
 from collections.abc import Iterable
+import os
 
 from pyomo.common.collections import ComponentSet
-from pyomo.common.config import ConfigDict, ConfigValue, In, NonNegativeFloat, InEnum
+from pyomo.common.config import ConfigDict, ConfigValue, In, NonNegativeFloat, InEnum, Path
 from pyomo.common.errors import ApplicationError
 from pyomo.core.base import Var, _VarData
 from pyomo.core.base.param import Param, _ParamData
@@ -44,6 +45,57 @@ def PositiveIntOrMinusOne(obj):
     if ans != float(obj) or (ans <= 0 and ans != -1):
         raise ValueError("Expected positive int, but received %s" % (obj,))
     return ans
+
+
+class PathLikeOrNone:
+    """
+    Validator for path-like objects.
+
+    This interface is a wrapper around the domain validator
+    ``common.config.Path``, and extends the domain of interest to
+    to include:
+        - None
+        - objects following the Python ``os.PathLike`` protocol.
+
+    Parameters
+    ----------
+    **config_path_kwargs : dict
+        Keyword arguments to ``common.config.Path``.
+    """
+
+    def __init__(self, **config_path_kwargs):
+        """Initialize self (see class docstring)."""
+        self.config_path = Path(**config_path_kwargs)
+
+    def __call__(self, path):
+        """
+        Cast path to expanded string representation.
+
+        Parameters
+        ----------
+        path : None str, bytes, or path-like
+            Object to be cast.
+
+        Returns
+        -------
+        None
+            If obj is None.
+        str
+            String representation of path-like object.
+        """
+        if path is None:
+            return path
+
+        # prevent common.config.Path from invoking
+        # str() on the path-like object
+        path_str = os.fsdecode(path)
+
+        # standardize path str as necessary
+        return self.config_path(path_str)
+
+    def domain_name(self):
+        """Return str briefly describing domain encompassed by self."""
+        return "path-like or None"
 
 
 def mutable_param_validator(param_obj):
@@ -784,7 +836,7 @@ def pyros_config():
         "subproblem_file_directory",
         ConfigValue(
             default=None,
-            domain=str,
+            domain=PathLikeOrNone(),
             description=(
                 """
                 Directory to which to export subproblems not successfully
