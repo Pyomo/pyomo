@@ -7,11 +7,7 @@ import logging
 import os
 import unittest
 
-from pyomo.core.base import (
-    ConcreteModel,
-    Var,
-    _VarData,
-)
+from pyomo.core.base import ConcreteModel, Var, _VarData
 from pyomo.common.config import Path
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.errors import ApplicationError
@@ -281,6 +277,7 @@ class TestUncertaintySetDomain(unittest.TestCase):
     """
     Test domain validator for uncertainty set arguments.
     """
+
     def test_uncertainty_set_domain_valid_set(self):
         """
         Test validator works for valid argument.
@@ -465,17 +462,12 @@ class TestSolverIterable(unittest.TestCase):
             standardizer_func(solvers, filter_by_availability=False)
 
         standardized_solver_list = standardizer_func(
-            solvers,
-            filter_by_availability=True,
-            require_available=False,
+            solvers, filter_by_availability=True, require_available=False
         )
         self.assertEqual(
             len(standardized_solver_list),
             1,
-            msg=(
-                "Length of filtered standardized solver list not as "
-                "expected."
-            ),
+            msg=("Length of filtered standardized solver list not as " "expected."),
         )
         self.assertIs(
             standardized_solver_list[0],
@@ -484,17 +476,12 @@ class TestSolverIterable(unittest.TestCase):
         )
 
         standardized_solver_list = standardizer_func(
-            solvers,
-            filter_by_availability=False,
-            require_available=False,
+            solvers, filter_by_availability=False, require_available=False
         )
         self.assertEqual(
             len(standardized_solver_list),
             2,
-            msg=(
-                "Length of filtered standardized solver list not as "
-                "expected."
-            ),
+            msg=("Length of filtered standardized solver list not as " "expected."),
         )
         self.assertEqual(
             standardized_solver_list,
@@ -536,7 +523,7 @@ class TestPyROSConfig(unittest.TestCase):
             self.assertEqual(
                 config.objective_focus,
                 ObjectiveType[obj_focus_name],
-                msg="Objective focus not set as expected."
+                msg="Objective focus not set as expected.",
             )
 
         for obj_focus in ObjectiveType:
@@ -544,7 +531,7 @@ class TestPyROSConfig(unittest.TestCase):
             self.assertEqual(
                 config.objective_focus,
                 obj_focus,
-                msg="Objective focus not set as expected."
+                msg="Objective focus not set as expected.",
             )
 
         invalid_focus = "test_example"

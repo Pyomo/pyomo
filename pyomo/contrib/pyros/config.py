@@ -7,16 +7,19 @@ from collections.abc import Iterable
 import os
 
 from pyomo.common.collections import ComponentSet
-from pyomo.common.config import ConfigDict, ConfigValue, In, NonNegativeFloat, InEnum, Path
+from pyomo.common.config import (
+    ConfigDict,
+    ConfigValue,
+    In,
+    NonNegativeFloat,
+    InEnum,
+    Path,
+)
 from pyomo.common.errors import ApplicationError
 from pyomo.core.base import Var, _VarData
 from pyomo.core.base.param import Param, _ParamData
 from pyomo.opt import SolverFactory
-from pyomo.contrib.pyros.util import (
-    a_logger,
-    ObjectiveType,
-    setup_pyros_logger,
-)
+from pyomo.contrib.pyros.util import a_logger, ObjectiveType, setup_pyros_logger
 from pyomo.contrib.pyros.uncertainty_sets import UncertaintySetDomain
 
 
@@ -126,9 +129,7 @@ def mutable_param_validator(param_obj):
             "have been initialized."
         )
     if not param_obj.mutable:
-        raise ValueError(
-            f"Param object with name {param_obj.name!r} is immutable."
-        )
+        raise ValueError(f"Param object with name {param_obj.name!r} is immutable.")
 
 
 class InputDataStandardizer(object):
@@ -409,25 +410,16 @@ class SolverIterable(object):
     """
 
     def __init__(
-            self,
-            require_available=True,
-            filter_by_availability=True,
-            solver_desc="solver",
-            ):
-        """Initialize self (see class docstring).
-
-        """
+        self, require_available=True, filter_by_availability=True, solver_desc="solver"
+    ):
+        """Initialize self (see class docstring)."""
         self.require_available = require_available
         self.filter_by_availability = filter_by_availability
         self.solver_desc = solver_desc
 
     def __call__(
-            self,
-            obj,
-            require_available=None,
-            filter_by_availability=None,
-            solver_desc=None,
-            ):
+        self, obj, require_available=None, filter_by_availability=None, solver_desc=None
+    ):
         """
         Cast iterable object to a list of Pyomo solver objects.
 
@@ -627,8 +619,7 @@ def pyros_config():
         ConfigValue(
             default=None,
             domain=SolverResolvable(
-                solver_desc="global solver",
-                require_available=True,
+                solver_desc="global solver", require_available=True
             ),
             description="Subordinate global NLP solver.",
             visibility=1,
