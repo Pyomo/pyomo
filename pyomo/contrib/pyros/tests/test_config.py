@@ -643,16 +643,14 @@ class TestPositiveIntOrMinusOne(unittest.TestCase):
             standardizer_func(1.0),
             1,
             msg=(
-                f"{PositiveIntOrMinusOne.__name__} "
-                "does not standardize as expected."
+                f"{PositiveIntOrMinusOne.__name__} does not standardize as expected."
             ),
         )
         self.assertEqual(
             standardizer_func(-1.00),
             -1,
             msg=(
-                f"{PositiveIntOrMinusOne.__name__} "
-                "does not standardize as expected."
+                f"{PositiveIntOrMinusOne.__name__} does not standardize as expected."
             ),
         )
 

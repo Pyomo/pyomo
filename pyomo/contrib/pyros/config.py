@@ -86,10 +86,7 @@ class PositiveIntOrMinusOne:
         """
         ans = int(obj)
         if ans != float(obj) or (ans <= 0 and ans != -1):
-            raise ValueError(
-                "Expected positive int or -1, "
-                f"but received value {obj!r}"
-            )
+            raise ValueError(f"Expected positive int or -1, but received value {obj!r}")
         return ans
 
     def domain_name(self):
