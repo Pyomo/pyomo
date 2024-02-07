@@ -95,7 +95,7 @@ class PathLikeOrNone:
 
     def domain_name(self):
         """Return str briefly describing domain encompassed by self."""
-        return "path-like or None"
+        return "str, bytes, path-like or None"
 
 
 def mutable_param_validator(param_obj):
