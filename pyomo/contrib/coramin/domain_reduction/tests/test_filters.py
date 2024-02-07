@@ -11,9 +11,9 @@ class TestFilters(unittest.TestCase):
         m.x = pe.Var(bounds=(-2, -1))
         m.obj = pe.Objective(expr=m.y)
         m.c = pe.Constraint(expr=m.y == -m.x**2)
-        coramin.relaxations.relax(m, in_place=True)
-        opt = appsi.solvers.Gurobi()
-        res = opt.solve(m)
+        r = coramin.relaxations.relax(m)
+        opt = appsi.solvers.Highs()
+        res = opt.solve(r)
         (
             vars_to_min,
             vars_to_max,
@@ -27,10 +27,10 @@ class TestFilters(unittest.TestCase):
         m.x = pe.Var(bounds=(-2, -1))
         m.obj = pe.Objective(expr=m.y)
         m.c = pe.Constraint(expr=m.y == -m.x**2)
-        coramin.relaxations.relax(m, in_place=True)
-        opt = appsi.solvers.Gurobi()
+        r = coramin.relaxations.relax(m)
+        opt = appsi.solvers.Highs()
         vars_to_min, vars_to_max = coramin.domain_reduction.aggressive_filter(
-            candidate_variables=[m.x], relaxation=m, solver=opt
+            candidate_variables=[m.x], relaxation=r, solver=opt
         )
         self.assertNotIn(m.x, vars_to_max)
         self.assertNotIn(m.x, vars_to_min)
