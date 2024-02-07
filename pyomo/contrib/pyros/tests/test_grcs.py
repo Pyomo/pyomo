@@ -6383,7 +6383,7 @@ class TestPyROSResolveKwargs(unittest.TestCase):
         """
         Test PyROS works as expected when there is overlap between
         keyword arguments passed explicitly and implicitly
-        through `options` or `dev_options`.
+        through `options`.
         """
         # define model
         m = ConcreteModel()
