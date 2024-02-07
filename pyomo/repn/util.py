@@ -418,18 +418,20 @@ class ExitNodeDispatcher(collections.defaultdict):
                     "expression tree."
                 )
         if fcn is None:
-            if type(key) is tuple:
-                node_class = key[0]
-            else:
-                node_class = key
-            raise DeveloperError(
-                f"Unexpected expression node type '{node_class.__name__}' "
-                f"found while walking expression tree."
-            )
             return self.unexpected_expression_type(key)
         if cache:
             self[key] = fcn
         return fcn
+
+    def unexpected_expression_type(self, key):
+        if type(key) is tuple:
+            node_class = key[0]
+        else:
+            node_class = key
+        raise DeveloperError(
+            f"Unexpected expression node type '{node_class.__name__}' "
+            f"found while walking expression tree."
+        )
 
 
 def apply_node_operation(node, args):
