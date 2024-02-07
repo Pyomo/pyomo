@@ -6389,5 +6389,145 @@ class TestPyROSUnavailableSubsolvers(unittest.TestCase):
         )
 
 
+class TestPyROSResolveKwargs(unittest.TestCase):
+    """
+    Test PyROS resolves kwargs as expected.
+    """
+
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
+    def test_pyros_kwargs_with_overlap(self):
+        """
+        Test PyROS works as expected when there is overlap between
+        keyword arguments passed explicitly and implicitly
+        through `options` or `dev_options`.
+        """
+        # define model
+        m = ConcreteModel()
+        m.x1 = Var(initialize=0, bounds=(0, None))
+        m.x2 = Var(initialize=0, bounds=(0, None))
+        m.x3 = Var(initialize=0, bounds=(None, None))
+        m.u1 = Param(initialize=1.125, mutable=True)
+        m.u2 = Param(initialize=1, mutable=True)
+
+        m.con1 = Constraint(expr=m.x1 * m.u1 ** (0.5) - m.x2 * m.u1 <= 2)
+        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u1 == m.x3)
+
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - m.u2) ** 2)
+
+        # Define the uncertainty set
+        # we take the parameter `u2` to be 'fixed'
+        ellipsoid = AxisAlignedEllipsoidalSet(center=[1.125, 1], half_lengths=[1, 0])
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        local_subsolver = SolverFactory('ipopt')
+        global_subsolver = SolverFactory("baron")
+
+        # Call the PyROS solver
+        with LoggingIntercept(level=logging.WARNING) as LOG:
+            results = pyros_solver.solve(
+                model=m,
+                first_stage_variables=[m.x1, m.x2],
+                second_stage_variables=[],
+                uncertain_params=[m.u1, m.u2],
+                uncertainty_set=ellipsoid,
+                local_solver=local_subsolver,
+                global_solver=global_subsolver,
+                bypass_local_separation=True,
+                solve_master_globally=True,
+                options={
+                    "objective_focus": ObjectiveType.worst_case,
+                    "solve_master_globally": False,
+                },
+                dev_options={
+                    "objective_focus": ObjectiveType.nominal,
+                    "solve_master_globally": False,
+                    "max_iter": 1,
+                    "time_limit": 1e3,
+                },
+            )
+
+        # extract warning-level messages.
+        warning_msgs = LOG.getvalue().split("\n")[:-1]
+        resolve_kwargs_warning_msgs = [
+            msg
+            for msg in warning_msgs
+            if msg.startswith("Arguments [")
+            and "Consider modifying your arguments" in msg
+        ]
+        self.assertEqual(
+            len(resolve_kwargs_warning_msgs),
+            3,
+            msg="Number of warning-level messages not as expected.",
+        )
+
+        self.assertRegex(
+            resolve_kwargs_warning_msgs[0],
+            expected_regex=(
+                r"Arguments \['solve_master_globally'\] passed "
+                r"implicitly through argument 'options' "
+                r"already passed .*explicitly.*"
+            ),
+        )
+        self.assertRegex(
+            resolve_kwargs_warning_msgs[1],
+            expected_regex=(
+                r"Arguments \['solve_master_globally'\] passed "
+                r"implicitly through argument 'dev_options' "
+                r"already passed .*explicitly.*"
+            ),
+        )
+        self.assertRegex(
+            resolve_kwargs_warning_msgs[2],
+            expected_regex=(
+                r"Arguments \['objective_focus'\] passed "
+                r"implicitly through argument 'dev_options' "
+                r"already passed .*implicitly through argument 'options'.*"
+            ),
+        )
+
+        # check termination status as expected
+        self.assertEqual(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.max_iter,
+            msg="Termination condition not as expected",
+        )
+        self.assertEqual(
+            results.iterations, 1, msg="Number of iterations not as expected"
+        )
+
+        # check config resolved as expected
+        config = results.config
+        self.assertEqual(
+            config.bypass_local_separation,
+            True,
+            msg="Resolved value of kwarg `bypass_local_separation` not as expected.",
+        )
+        self.assertEqual(
+            config.solve_master_globally,
+            True,
+            msg="Resolved value of kwarg `solve_master_globally` not as expected.",
+        )
+        self.assertEqual(
+            config.max_iter,
+            1,
+            msg="Resolved value of kwarg `max_iter` not as expected.",
+        )
+        self.assertEqual(
+            config.objective_focus,
+            ObjectiveType.worst_case,
+            msg="Resolved value of kwarg `objective_focus` not as expected.",
+        )
+        self.assertEqual(
+            config.time_limit,
+            1e3,
+            msg="Resolved value of kwarg `time_limit` not as expected.",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

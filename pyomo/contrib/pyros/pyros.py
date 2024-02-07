@@ -20,7 +20,7 @@ from pyomo.core.base.objective import Objective
 from pyomo.contrib.pyros.util import time_code
 from pyomo.common.modeling import unique_component_name
 from pyomo.opt import SolverFactory
-from pyomo.contrib.pyros.config import pyros_config
+from pyomo.contrib.pyros.config import pyros_config, resolve_keyword_arguments
 from pyomo.contrib.pyros.util import (
     model_is_valid,
     recast_to_min_obj,
@@ -249,6 +249,48 @@ class PyROS(object):
                 logger.log(msg=f" {key}={val!r}", **log_kwargs)
         logger.log(msg="-" * self._LOG_LINE_LENGTH, **log_kwargs)
 
+    def _resolve_and_validate_pyros_args(self, model, **kwds):
+        """
+        Resolve and validate arguments to ``self.solve()``.
+
+        Parameters
+        ----------
+        model : ConcreteModel
+            Deterministic model object passed to ``self.solve()``.
+        **kwds : dict
+            All other arguments to ``self.solve()``.
+
+        Returns
+        -------
+        config : ConfigDict
+            Standardized arguments.
+
+        Note
+        ----
+        This method can be broken down into three steps:
+
+        1. Resolve user arguments based on how they were passed
+           and order of precedence of the various means by which
+           they could be passed.
+        2. Cast resolved arguments to ConfigDict. Argument-wise
+           validation is performed automatically.
+        3. Inter-argument validation.
+        """
+        options_dict = kwds.pop("options", {})
+        dev_options_dict = kwds.pop("dev_options", {})
+        resolved_kwds = resolve_keyword_arguments(
+            prioritized_kwargs_dicts={
+                "explicitly": kwds,
+                "implicitly through argument 'options'": options_dict,
+                "implicitly through argument 'dev_options'": dev_options_dict,
+            },
+            func=self.solve,
+        )
+        config = self.CONFIG(resolved_kwds)
+        validate_kwarg_inputs(model, config)
+
+        return config
+
     @document_kwargs_from_configdict(
         config=CONFIG,
         section="Keyword Arguments",
@@ -299,24 +341,15 @@ class PyROS(object):
             Summary of PyROS termination outcome.
 
         """
-
-        # === Add the explicit arguments to the config
-        config = self.CONFIG(kwds.pop('options', {}))
-        config.first_stage_variables = first_stage_variables
-        config.second_stage_variables = second_stage_variables
-        config.uncertain_params = uncertain_params
-        config.uncertainty_set = uncertainty_set
-        config.local_solver = local_solver
-        config.global_solver = global_solver
-
-        dev_options = kwds.pop('dev_options', {})
-        config.set_value(kwds)
-        config.set_value(dev_options)
-
-        model = model
-
-        # === Validate kwarg inputs
-        validate_kwarg_inputs(model, config)
+        kwds.update(dict(
+            first_stage_variables=first_stage_variables,
+            second_stage_variables=second_stage_variables,
+            uncertain_params=uncertain_params,
+            uncertainty_set=uncertainty_set,
+            local_solver=local_solver,
+            global_solver=global_solver,
+        ))
+        config = self._resolve_and_validate_pyros_args(model, **kwds)
 
         # === Validate ability of grcs RO solver to handle this model
         if not model_is_valid(model):
