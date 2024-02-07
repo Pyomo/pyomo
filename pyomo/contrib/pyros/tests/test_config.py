@@ -3,6 +3,7 @@ Test objects for construction of PyROS ConfigDict.
 """
 
 
+import logging
 import unittest
 
 from pyomo.core.base import (
@@ -10,12 +11,18 @@ from pyomo.core.base import (
     Var,
     _VarData,
 )
+from pyomo.common.log import LoggingIntercept
+from pyomo.common.errors import ApplicationError
 from pyomo.core.base.param import Param, _ParamData
 from pyomo.contrib.pyros.config import (
     InputDataStandardizer,
     mutable_param_validator,
+    NotSolverResolvable,
+    SolverIterable,
+    SolverResolvable,
     UncertaintySetDomain,
 )
+from pyomo.opt import SolverFactory, SolverResults
 from pyomo.contrib.pyros.uncertainty_sets import BoxSet
 
 
@@ -289,6 +296,221 @@ class TestUncertaintySetDomain(unittest.TestCase):
         exc_str = "Expected an .*UncertaintySet object.*received object 2"
         with self.assertRaisesRegex(ValueError, exc_str):
             standardizer_func(2)
+
+
+class UnavailableSolver:
+    def available(self, exception_flag=True):
+        if exception_flag:
+            raise ApplicationError(f"Solver {self.__class__} not available")
+        return False
+
+    def solve(self, model, *args, **kwargs):
+        return SolverResults()
+
+
+class TestSolverResolvable(unittest.TestCase):
+    """
+    Test PyROS standardizer for solver-type objects.
+    """
+
+    def test_solver_resolvable_valid_str(self):
+        """
+        Test solver resolvable class is valid for string
+        type.
+        """
+        solver_str = "ipopt"
+        standardizer_func = SolverResolvable()
+        solver = standardizer_func(solver_str)
+        expected_solver_type = type(SolverFactory(solver_str))
+
+        self.assertIsInstance(
+            solver,
+            type(SolverFactory(solver_str)),
+            msg=(
+                "SolverResolvable object should be of type "
+                f"{expected_solver_type.__name__}, "
+                f"but got object of type {solver.__class__.__name__}."
+            ),
+        )
+
+    def test_solver_resolvable_valid_solver_type(self):
+        """
+        Test solver resolvable class is valid for string
+        type.
+        """
+        solver = SolverFactory("ipopt")
+        standardizer_func = SolverResolvable()
+        standardized_solver = standardizer_func(solver)
+
+        self.assertIs(
+            solver,
+            standardized_solver,
+            msg=(
+                f"Test solver {solver} and standardized solver "
+                f"{standardized_solver} are not identical."
+            ),
+        )
+
+    def test_solver_resolvable_invalid_type(self):
+        """
+        Test solver resolvable object raises expected
+        exception when invalid entry is provided.
+        """
+        invalid_object = 2
+        standardizer_func = SolverResolvable(solver_desc="local solver")
+
+        exc_str = (
+            r"Cannot cast object `2` to a Pyomo optimizer.*"
+            r"local solver.*got type int.*"
+        )
+        with self.assertRaisesRegex(NotSolverResolvable, exc_str):
+            standardizer_func(invalid_object)
+
+    def test_solver_resolvable_unavailable_solver(self):
+        """
+        Test solver standardizer fails in event solver is
+        unavaiable.
+        """
+        unavailable_solver = UnavailableSolver()
+        standardizer_func = SolverResolvable(
+            solver_desc="local solver", require_available=True
+        )
+
+        exc_str = r"Solver.*UnavailableSolver.*not available"
+        with self.assertRaisesRegex(ApplicationError, exc_str):
+            with LoggingIntercept(level=logging.ERROR) as LOG:
+                standardizer_func(unavailable_solver)
+
+        error_msgs = LOG.getvalue()[:-1]
+        self.assertRegex(
+            error_msgs, r"Output of `available\(\)` method.*local solver.*"
+        )
+
+
+class TestSolverIterable(unittest.TestCase):
+    """
+    Test standardizer method for iterable of solvers,
+    used to validate `backup_local_solvers` and `backup_global_solvers`
+    arguments.
+    """
+
+    def test_solver_iterable_valid_list(self):
+        """
+        Test solver type standardizer works for list of valid
+        objects castable to solver.
+        """
+        solver_list = ["ipopt", SolverFactory("ipopt")]
+        expected_solver_types = [type(SolverFactory("ipopt"))] * 2
+        standardizer_func = SolverIterable()
+
+        standardized_solver_list = standardizer_func(solver_list)
+
+        # check list of solver types returned
+        for idx, standardized_solver in enumerate(standardized_solver_list):
+            self.assertIsInstance(
+                standardized_solver,
+                expected_solver_types[idx],
+                msg=(
+                    f"Standardized solver {standardized_solver} "
+                    f"(index {idx}) expected to be of type "
+                    f"{expected_solver_types[idx].__name__}, "
+                    f"but is of type {standardized_solver.__class__.__name__}"
+                ),
+            )
+
+        # second entry of standardized solver list should be the same
+        # object as that of input list, since the input solver is a Pyomo
+        # solver type
+        self.assertIs(
+            standardized_solver_list[1],
+            solver_list[1],
+            msg=(
+                f"Test solver {solver_list[1]} and standardized solver "
+                f"{standardized_solver_list[1]} should be identical."
+            ),
+        )
+
+    def test_solver_iterable_valid_str(self):
+        """
+        Test SolverIterable raises exception when str passed.
+        """
+        solver_str = "ipopt"
+        standardizer_func = SolverIterable()
+
+        solver_list = standardizer_func(solver_str)
+        self.assertEqual(
+            len(solver_list), 1, "Standardized solver list is not of expected length"
+        )
+
+    def test_solver_iterable_unavailable_solver(self):
+        """
+        Test SolverIterable addresses unavailable solvers appropriately.
+        """
+        solvers = (SolverFactory("ipopt"), UnavailableSolver())
+
+        standardizer_func = SolverIterable(
+            require_available=True,
+            filter_by_availability=True,
+            solver_desc="example solver list",
+        )
+        exc_str = r"Solver.*UnavailableSolver.* not available"
+        with self.assertRaisesRegex(ApplicationError, exc_str):
+            standardizer_func(solvers)
+        with self.assertRaisesRegex(ApplicationError, exc_str):
+            standardizer_func(solvers, filter_by_availability=False)
+
+        standardized_solver_list = standardizer_func(
+            solvers,
+            filter_by_availability=True,
+            require_available=False,
+        )
+        self.assertEqual(
+            len(standardized_solver_list),
+            1,
+            msg=(
+                "Length of filtered standardized solver list not as "
+                "expected."
+            ),
+        )
+        self.assertIs(
+            standardized_solver_list[0],
+            solvers[0],
+            msg="Entry of filtered standardized solver list not as expected.",
+        )
+
+        standardized_solver_list = standardizer_func(
+            solvers,
+            filter_by_availability=False,
+            require_available=False,
+        )
+        self.assertEqual(
+            len(standardized_solver_list),
+            2,
+            msg=(
+                "Length of filtered standardized solver list not as "
+                "expected."
+            ),
+        )
+        self.assertEqual(
+            standardized_solver_list,
+            list(solvers),
+            msg="Entry of filtered standardized solver list not as expected.",
+        )
+
+    def test_solver_iterable_invalid_list(self):
+        """
+        Test SolverIterable raises exception if iterable contains
+        at least one invalid object.
+        """
+        invalid_object = ["ipopt", 2]
+        standardizer_func = SolverIterable(solver_desc="backup solver")
+
+        exc_str = (
+            r"Cannot cast object `2` to a Pyomo optimizer.*"
+            r"backup solver.*index 1.*got type int.*"
+        )
+        with self.assertRaisesRegex(NotSolverResolvable, exc_str):
+            standardizer_func(invalid_object)
 
 
 if __name__ == "__main__":

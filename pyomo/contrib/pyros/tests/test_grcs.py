@@ -137,7 +137,7 @@ class TimeDelaySolver(object):
         self.num_calls = 0
         self.options = Bunch()
 
-    def available(self):
+    def available(self, exception_flag=True):
         return True
 
     def license_is_valid(self):
@@ -6299,6 +6299,93 @@ class TestPyROSSolverLogIntros(unittest.TestCase):
         self.assertRegex(
             " ".join(disclaimer_msg_lines[1:-1]),
             r"PyROS is still under development.*ticket at.*",
+        )
+
+
+class UnavailableSolver:
+    def available(self, exception_flag=True):
+        if exception_flag:
+            raise ApplicationError(f"Solver {self.__class__} not available")
+        return False
+
+    def solve(self, model, *args, **kwargs):
+        return SolverResults()
+
+
+class TestPyROSUnavailableSubsolvers(unittest.TestCase):
+    """
+    Check that appropriate exceptionsa are raised if
+    PyROS is invoked with unavailable subsolvers.
+    """
+
+    def test_pyros_unavailable_subsolver(self):
+        """
+        Test PyROS raises expected error message when
+        unavailable subsolver is passed.
+        """
+        m = ConcreteModel()
+        m.p = Param(range(3), initialize=0, mutable=True)
+        m.z = Var([0, 1], initialize=0)
+        m.con = Constraint(expr=m.z[0] + m.z[1] >= m.p[0])
+        m.obj = Objective(expr=m.z[0] + m.z[1])
+
+        pyros_solver = SolverFactory("pyros")
+
+        exc_str = r".*Solver.*UnavailableSolver.*not available"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            # note: ConfigDict interface raises ValueError
+            #       once any exception is triggered,
+            #       so we check for that instead of ApplicationError
+            with LoggingIntercept(level=logging.ERROR) as LOG:
+                pyros_solver.solve(
+                    model=m,
+                    first_stage_variables=[m.z[0]],
+                    second_stage_variables=[m.z[1]],
+                    uncertain_params=[m.p[0]],
+                    uncertainty_set=BoxSet([[0, 1]]),
+                    local_solver=SolverFactory("ipopt"),
+                    global_solver=UnavailableSolver(),
+                )
+
+        error_msgs = LOG.getvalue()[:-1]
+        self.assertRegex(
+            error_msgs, r"Output of `available\(\)` method.*global solver.*"
+        )
+
+    def test_pyros_unavailable_backup_subsolver(self):
+        """
+        Test PyROS raises expected error message when
+        unavailable backup subsolver is passed.
+        """
+        m = ConcreteModel()
+        m.p = Param(range(3), initialize=0, mutable=True)
+        m.z = Var([0, 1], initialize=0)
+        m.con = Constraint(expr=m.z[0] + m.z[1] >= m.p[0])
+        m.obj = Objective(expr=m.z[0] + m.z[1])
+
+        pyros_solver = SolverFactory("pyros")
+
+        # note: ConfigDict interface raises ValueError
+        #       once any exception is triggered,
+        #       so we check for that instead of ApplicationError
+        with LoggingIntercept(level=logging.WARNING) as LOG:
+            pyros_solver.solve(
+                model=m,
+                first_stage_variables=[m.z[0]],
+                second_stage_variables=[m.z[1]],
+                uncertain_params=[m.p[0]],
+                uncertainty_set=BoxSet([[0, 1]]),
+                local_solver=SolverFactory("ipopt"),
+                global_solver=SolverFactory("ipopt"),
+                backup_global_solvers=[UnavailableSolver()],
+                bypass_global_separation=True,
+            )
+
+        error_msgs = LOG.getvalue()[:-1]
+        self.assertRegex(
+            error_msgs,
+            r"Output of `available\(\)` method.*backup global solver.*"
+            r"Removing from list.*"
         )
 
 

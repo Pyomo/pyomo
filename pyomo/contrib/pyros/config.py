@@ -7,6 +7,7 @@ from collections.abc import Iterable
 
 from pyomo.common.collections import ComponentSet
 from pyomo.common.config import ConfigDict, ConfigValue, In, NonNegativeFloat
+from pyomo.common.errors import ApplicationError
 from pyomo.core.base import Var, _VarData
 from pyomo.core.base.param import Param, _ParamData
 from pyomo.opt import SolverFactory
@@ -44,27 +45,6 @@ def PositiveIntOrMinusOne(obj):
     if ans != float(obj) or (ans <= 0 and ans != -1):
         raise ValueError("Expected positive int, but received %s" % (obj,))
     return ans
-
-
-class SolverResolvable(object):
-    def __call__(self, obj):
-        '''
-        if obj is a string, return the Solver object for that solver name
-        if obj is a Solver object, return a copy of the Solver
-        if obj is a list, and each element of list is solver resolvable,
-        return list of solvers
-        '''
-        if isinstance(obj, str):
-            return SolverFactory(obj.lower())
-        elif callable(getattr(obj, "solve", None)):
-            return obj
-        elif isinstance(obj, list):
-            return [self(o) for o in obj]
-        else:
-            raise ValueError(
-                "Expected a Pyomo solver or string object, "
-                "instead received {0}".format(obj.__class__.__name__)
-            )
 
 
 def mutable_param_validator(param_obj):
@@ -228,6 +208,247 @@ class InputDataStandardizer(object):
         )
 
 
+class NotSolverResolvable(Exception):
+    """
+    Exception type for failure to cast an object to a Pyomo solver.
+    """
+
+
+class SolverResolvable(object):
+    """
+    Callable for casting an object (such as a str)
+    to a Pyomo solver.
+
+    Parameters
+    ----------
+    require_available : bool, optional
+        True if `available()` method of a standardized solver
+        object obtained through `self` must return `True`,
+        False otherwise.
+    solver_desc : str, optional
+        Descriptor for the solver obtained through `self`,
+        such as 'local solver'
+        or 'global solver'. This argument is used
+        for constructing error/exception messages.
+
+    Attributes
+    ----------
+    require_available
+    solver_desc
+    """
+
+    def __init__(self, require_available=True, solver_desc="solver"):
+        """Initialize self (see class docstring)."""
+        self.require_available = require_available
+        self.solver_desc = solver_desc
+
+    @staticmethod
+    def is_solver_type(obj):
+        """
+        Return True if object is considered a Pyomo solver,
+        False otherwise.
+
+        An object is considered a Pyomo solver provided that
+        it has callable attributes named 'solve' and
+        'available'.
+        """
+        return callable(getattr(obj, "solve", None)) and callable(
+            getattr(obj, "available", None)
+        )
+
+    def __call__(self, obj, require_available=None, solver_desc=None):
+        """
+        Cast object to a Pyomo solver.
+
+        If `obj` is a string, then ``SolverFactory(obj.lower())``
+        is returned. If `obj` is a Pyomo solver type, then
+        `obj` is returned.
+
+        Parameters
+        ----------
+        obj : object
+            Object to be cast to Pyomo solver type.
+        require_available : bool or None, optional
+            True if `available()` method of the resolved solver
+            object must return True, False otherwise.
+            If `None` is passed, then ``self.require_available``
+            is used.
+        solver_desc : str or None, optional
+            Brief description of the solver, such as 'local solver'
+            or 'backup global solver'. This argument is used
+            for constructing error/exception messages.
+            If `None` is passed, then ``self.solver_desc``
+            is used.
+
+        Returns
+        -------
+        Solver
+            Pyomo solver.
+
+        Raises
+        ------
+        NotSolverResolvable
+            If `obj` cannot be cast to a Pyomo solver because
+            it is neither a str nor a Pyomo solver type.
+        ApplicationError
+            In event that solver is not available, the
+            method `available(exception_flag=True)` of the
+            solver to which `obj` is cast should raise an
+            exception of this type. The present method
+            will also emit a more detailed error message
+            through the default PyROS logger.
+        """
+        # resort to defaults if necessary
+        if require_available is None:
+            require_available = self.require_available
+        if solver_desc is None:
+            solver_desc = self.solver_desc
+
+        # perform casting
+        if isinstance(obj, str):
+            solver = SolverFactory(obj.lower())
+        elif self.is_solver_type(obj):
+            solver = obj
+        else:
+            raise NotSolverResolvable(
+                f"Cannot cast object `{obj!r}` to a Pyomo optimizer for use as "
+                f"{solver_desc}, as the object is neither a str nor a "
+                f"Pyomo Solver type (got type {type(obj).__name__})."
+            )
+
+        # availability check, if so desired
+        if require_available:
+            try:
+                solver.available(exception_flag=True)
+            except ApplicationError:
+                default_pyros_solver_logger.exception(
+                    f"Output of `available()` method for {solver_desc} "
+                    f"with repr {solver!r} resolved from object {obj} "
+                    "is not `True`. "
+                    "Check solver and any required dependencies "
+                    "have been set up properly."
+                )
+                raise
+
+        return solver
+
+    def domain_name(self):
+        """Return str briefly describing domain encompassed by self."""
+        return "str or Solver"
+
+
+class SolverIterable(object):
+    """
+    Callable for casting an iterable (such as a list of strs)
+    to a list of Pyomo solvers.
+
+    Parameters
+    ----------
+    require_available : bool, optional
+        True if `available()` method of a standardized solver
+        object obtained through `self` must return `True`,
+        False otherwise.
+    filter_by_availability : bool, optional
+        True to remove standardized solvers for which `available()`
+        does not return True, False otherwise.
+    solver_desc : str, optional
+        Descriptor for the solver obtained through `self`,
+        such as 'backup local solver'
+        or 'backup global solver'.
+    """
+
+    def __init__(
+            self,
+            require_available=True,
+            filter_by_availability=True,
+            solver_desc="solver",
+            ):
+        """Initialize self (see class docstring).
+
+        """
+        self.require_available = require_available
+        self.filter_by_availability = filter_by_availability
+        self.solver_desc = solver_desc
+
+    def __call__(
+            self,
+            obj,
+            require_available=None,
+            filter_by_availability=None,
+            solver_desc=None,
+            ):
+        """
+        Cast iterable object to a list of Pyomo solver objects.
+
+        Parameters
+        ----------
+        obj : str, Solver, or Iterable of str/Solver
+            Object of interest.
+        require_available : bool or None, optional
+            True if `available()` method of each solver
+            object must return True, False otherwise.
+            If `None` is passed, then ``self.require_available``
+            is used.
+        solver_desc : str or None, optional
+            Descriptor for the solver, such as 'backup local solver'
+            or 'backup global solver'. This argument is used
+            for constructing error/exception messages.
+            If `None` is passed, then ``self.solver_desc``
+            is used.
+
+        Returns
+        -------
+        solvers : list of solver type
+            List of solver objects to which obj is cast.
+
+        Raises
+        ------
+        TypeError
+            If `obj` is a str.
+        """
+        if require_available is None:
+            require_available = self.require_available
+        if filter_by_availability is None:
+            filter_by_availability = self.filter_by_availability
+        if solver_desc is None:
+            solver_desc = self.solver_desc
+
+        solver_resolve_func = SolverResolvable()
+
+        if isinstance(obj, str) or solver_resolve_func.is_solver_type(obj):
+            # single solver resolvable is cast to singleton list.
+            # perform explicit check for str, otherwise this method
+            # would attempt to resolve each character.
+            obj_as_list = [obj]
+        else:
+            obj_as_list = list(obj)
+
+        solvers = []
+        for idx, val in enumerate(obj_as_list):
+            solver_desc_str = f"{solver_desc} " f"(index {idx})"
+            opt = solver_resolve_func(
+                obj=val,
+                require_available=require_available,
+                solver_desc=solver_desc_str,
+            )
+            if filter_by_availability and not opt.available(exception_flag=False):
+                default_pyros_solver_logger.warning(
+                    f"Output of `available()` method for solver object {opt} "
+                    f"resolved from object {val} of sequence {obj_as_list} "
+                    f"to be used as {self.solver_desc} "
+                    "is not `True`. "
+                    "Removing from list of standardized solvers."
+                )
+            else:
+                solvers.append(opt)
+
+        return solvers
+
+    def domain_name(self):
+        """Return str briefly describing domain encompassed by self."""
+        return "str, solver type, or Iterable of str/solver type"
+
+
 def pyros_config():
     CONFIG = ConfigDict('PyROS')
 
@@ -345,7 +566,7 @@ def pyros_config():
         "local_solver",
         ConfigValue(
             default=None,
-            domain=SolverResolvable(),
+            domain=SolverResolvable(solver_desc="local solver", require_available=True),
             description="Subordinate local NLP solver.",
             visibility=1,
         ),
@@ -354,7 +575,10 @@ def pyros_config():
         "global_solver",
         ConfigValue(
             default=None,
-            domain=SolverResolvable(),
+            domain=SolverResolvable(
+                solver_desc="global solver",
+                require_available=True,
+            ),
             description="Subordinate global NLP solver.",
             visibility=1,
         ),
@@ -525,7 +749,11 @@ def pyros_config():
         "backup_local_solvers",
         ConfigValue(
             default=[],
-            domain=SolverResolvable(),
+            domain=SolverIterable(
+                solver_desc="backup local solver",
+                require_available=False,
+                filter_by_availability=True,
+            ),
             doc=(
                 """
                 Additional subordinate local NLP optimizers to invoke
@@ -539,7 +767,11 @@ def pyros_config():
         "backup_global_solvers",
         ConfigValue(
             default=[],
-            domain=SolverResolvable(),
+            domain=SolverIterable(
+                solver_desc="backup global solver",
+                require_available=False,
+                filter_by_availability=True,
+            ),
             doc=(
                 """
                 Additional subordinate global NLP optimizers to invoke
