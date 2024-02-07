@@ -3,6 +3,9 @@ Interfaces for managing PyROS solver options.
 """
 
 
+from collections.abc import Iterable
+
+from pyomo.common.collections import ComponentSet
 from pyomo.common.config import ConfigDict, ConfigValue, In, NonNegativeFloat
 from pyomo.core.base import Var, _VarData
 from pyomo.core.base.param import Param, _ParamData
@@ -64,22 +67,165 @@ class SolverResolvable(object):
             )
 
 
+def mutable_param_validator(param_obj):
+    """
+    Check that Param-like object has attribute `mutable=True`.
+
+    Parameters
+    ----------
+    param_obj : Param or _ParamData
+        Param-like object of interest.
+
+    Raises
+    ------
+    ValueError
+        If lengths of the param object and the accompanying
+        index set do not match. This may occur if some entry
+        of the Param is not initialized.
+    ValueError
+        If attribute `mutable` is of value False.
+    """
+    if len(param_obj) != len(param_obj.index_set()):
+        raise ValueError(
+            f"Length of Param component object with "
+            f"name {param_obj.name!r} is {len(param_obj)}, "
+            "and does not match that of its index set, "
+            f"which is of length {len(param_obj.index_set())}. "
+            "Check that all entries of the component object "
+            "have been initialized."
+        )
+    if not param_obj.mutable:
+        raise ValueError(
+            f"Param object with name {param_obj.name!r} is immutable."
+        )
+
+
 class InputDataStandardizer(object):
-    def __init__(self, ctype, cdatatype):
+    """
+    Standardizer for objects castable to a list of Pyomo
+    component types.
+
+    Parameters
+    ----------
+    ctype : type
+        Pyomo component type, such as Component, Var or Param.
+    cdatatype : type
+        Corresponding Pyomo component data type, such as
+        _ComponentData, _VarData, or _ParamData.
+    ctype_validator : callable, optional
+        Validator function for objects of type `ctype`.
+    cdatatype_validator : callable, optional
+        Validator function for objects of type `cdatatype`.
+    allow_repeats : bool, optional
+        True to allow duplicate component data entries in final
+        list to which argument is cast, False otherwise.
+
+    Attributes
+    ----------
+    ctype
+    cdatatype
+    ctype_validator
+    cdatatype_validator
+    allow_repeats
+    """
+
+    def __init__(
+        self,
+        ctype,
+        cdatatype,
+        ctype_validator=None,
+        cdatatype_validator=None,
+        allow_repeats=False,
+    ):
+        """Initialize self (see class docstring)."""
         self.ctype = ctype
         self.cdatatype = cdatatype
+        self.ctype_validator = ctype_validator
+        self.cdatatype_validator = cdatatype_validator
+        self.allow_repeats = allow_repeats
 
-    def __call__(self, obj):
+    def standardize_ctype_obj(self, obj):
+        """
+        Standardize object of type ``self.ctype`` to list
+        of objects of type ``self.cdatatype``.
+        """
+        if self.ctype_validator is not None:
+            self.ctype_validator(obj)
+        return list(obj.values())
+
+    def standardize_cdatatype_obj(self, obj):
+        """
+        Standarize object of type ``self.cdatatype`` to
+        ``[obj]``.
+        """
+        if self.cdatatype_validator is not None:
+            self.cdatatype_validator(obj)
+        return [obj]
+
+    def __call__(self, obj, from_iterable=None, allow_repeats=None):
+        """
+        Cast object to a flat list of Pyomo component data type
+        entries.
+
+        Parameters
+        ----------
+        obj : object
+            Object to be cast.
+        from_iterable : Iterable or None, optional
+            Iterable from which `obj` obtained, if any.
+        allow_repeats : bool or None, optional
+            True if list can contain repeated entries,
+            False otherwise.
+
+        Raises
+        ------
+        TypeError
+            If all entries in the resulting list
+            are not of type ``self.cdatatype``.
+        ValueError
+            If the resulting list contains duplicate entries.
+        """
+        if allow_repeats is None:
+            allow_repeats = self.allow_repeats
+
         if isinstance(obj, self.ctype):
-            return list(obj.values())
-        if isinstance(obj, self.cdatatype):
-            return [obj]
-        ans = []
-        for item in obj:
-            ans.extend(self.__call__(item))
-        for _ in ans:
-            assert isinstance(_, self.cdatatype)
+            ans = self.standardize_ctype_obj(obj)
+        elif isinstance(obj, self.cdatatype):
+            ans = self.standardize_cdatatype_obj(obj)
+        elif isinstance(obj, Iterable) and not isinstance(obj, str):
+            ans = []
+            for item in obj:
+                ans.extend(self.__call__(item, from_iterable=obj))
+        else:
+            from_iterable_qual = (
+                f" (entry of iterable {from_iterable})"
+                if from_iterable is not None
+                else ""
+            )
+            raise TypeError(
+                f"Input object {obj!r}{from_iterable_qual} "
+                "is not of valid component type "
+                f"{self.ctype.__name__} or component data type "
+                f"{self.cdatatype.__name__}."
+            )
+
+        # check for duplicates if desired
+        if not allow_repeats and len(ans) != len(ComponentSet(ans)):
+            comp_name_list = [comp.name for comp in ans]
+            raise ValueError(
+                f"Standardized component list {comp_name_list} "
+                f"derived from input {obj} "
+                "contains duplicate entries."
+            )
+
         return ans
+
+    def domain_name(self):
+        """Return str briefly describing domain encompassed by self."""
+        return (
+            f"{self.cdatatype.__name__}, {self.ctype.__name__}, "
+            f"or Iterable of {self.cdatatype.__name__}/{self.ctype.__name__}"
+        )
 
 
 def pyros_config():
@@ -146,7 +292,7 @@ def pyros_config():
         "first_stage_variables",
         ConfigValue(
             default=[],
-            domain=InputDataStandardizer(Var, _VarData),
+            domain=InputDataStandardizer(Var, _VarData, allow_repeats=False),
             description="First-stage (or design) variables.",
             visibility=1,
         ),
@@ -155,7 +301,7 @@ def pyros_config():
         "second_stage_variables",
         ConfigValue(
             default=[],
-            domain=InputDataStandardizer(Var, _VarData),
+            domain=InputDataStandardizer(Var, _VarData, allow_repeats=False),
             description="Second-stage (or control) variables.",
             visibility=1,
         ),
@@ -164,7 +310,12 @@ def pyros_config():
         "uncertain_params",
         ConfigValue(
             default=[],
-            domain=InputDataStandardizer(Param, _ParamData),
+            domain=InputDataStandardizer(
+                ctype=Param,
+                cdatatype=_ParamData,
+                ctype_validator=mutable_param_validator,
+                allow_repeats=False,
+            ),
             description=(
                 """
                 Uncertain model parameters.
