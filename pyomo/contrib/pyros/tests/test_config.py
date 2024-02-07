@@ -30,7 +30,7 @@ from pyomo.opt import SolverFactory, SolverResults
 from pyomo.contrib.pyros.uncertainty_sets import BoxSet
 
 
-class testInputDataStandardizer(unittest.TestCase):
+class TestInputDataStandardizer(unittest.TestCase):
     """
     Test standardizer method for Pyomo component-type inputs.
     """
@@ -543,7 +543,7 @@ class TestPyROSConfig(unittest.TestCase):
             config.objective_focus = invalid_focus
 
 
-class testPathLikeOrNone(unittest.TestCase):
+class TestPathLikeOrNone(unittest.TestCase):
     """
     Test interface for validating path-like arguments.
     """
