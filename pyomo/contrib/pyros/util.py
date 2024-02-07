@@ -839,9 +839,8 @@ def get_state_vars(blk, first_stage_variables, second_stage_variables):
     _VarData
         State variable.
     """
-    dof_var_set = (
-        ComponentSet(first_stage_variables)
-        | ComponentSet(second_stage_variables)
+    dof_var_set = ComponentSet(first_stage_variables) | ComponentSet(
+        second_stage_variables
     )
     for var in get_vars_from_component(blk, (Objective, Constraint)):
         is_state_var = not var.fixed and var not in dof_var_set
@@ -977,11 +976,13 @@ def validate_variable_partitioning(model, config):
             "contain at least one common Var object."
         )
 
-    state_vars = list(get_state_vars(
-        model,
-        first_stage_variables=config.first_stage_variables,
-        second_stage_variables=config.second_stage_variables,
-    ))
+    state_vars = list(
+        get_state_vars(
+            model,
+            first_stage_variables=config.first_stage_variables,
+            second_stage_variables=config.second_stage_variables,
+        )
+    )
     var_type_list_map = {
         "first-stage variables": config.first_stage_variables,
         "second-stage variables": config.second_stage_variables,
@@ -989,17 +990,10 @@ def validate_variable_partitioning(model, config):
     }
     for desc, vars in var_type_list_map.items():
         check_components_descended_from_model(
-            model=model,
-            components=vars,
-            components_name=desc,
-            config=config,
+            model=model, components=vars, components_name=desc, config=config
         )
 
-    all_vars = (
-        config.first_stage_variables
-        + config.second_stage_variables
-        + state_vars
-    )
+    all_vars = config.first_stage_variables + config.second_stage_variables + state_vars
     check_variables_continuous(model, all_vars, config)
 
     return state_vars

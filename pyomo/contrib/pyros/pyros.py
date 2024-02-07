@@ -339,14 +339,16 @@ class PyROS(object):
             Summary of PyROS termination outcome.
 
         """
-        kwds.update(dict(
-            first_stage_variables=first_stage_variables,
-            second_stage_variables=second_stage_variables,
-            uncertain_params=uncertain_params,
-            uncertainty_set=uncertainty_set,
-            local_solver=local_solver,
-            global_solver=global_solver,
-        ))
+        kwds.update(
+            dict(
+                first_stage_variables=first_stage_variables,
+                second_stage_variables=second_stage_variables,
+                uncertain_params=uncertain_params,
+                uncertainty_set=uncertainty_set,
+                local_solver=local_solver,
+                global_solver=global_solver,
+            )
+        )
         config, state_vars = self._resolve_and_validate_pyros_args(model, **kwds)
 
         # === Create data containers

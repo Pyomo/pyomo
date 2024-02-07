@@ -643,16 +643,12 @@ class TestPositiveIntOrMinusOne(unittest.TestCase):
         self.assertIs(
             standardizer_func(1.0),
             1,
-            msg=(
-                f"{PositiveIntOrMinusOne.__name__} does not standardize as expected."
-            ),
+            msg=(f"{PositiveIntOrMinusOne.__name__} does not standardize as expected."),
         )
         self.assertEqual(
             standardizer_func(-1.00),
             -1,
-            msg=(
-                f"{PositiveIntOrMinusOne.__name__} does not standardize as expected."
-            ),
+            msg=(f"{PositiveIntOrMinusOne.__name__} does not standardize as expected."),
         )
 
         exc_str = r"Expected positive int or -1, but received value.*"
