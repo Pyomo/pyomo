@@ -275,12 +275,10 @@ class PyROS(object):
         3. Inter-argument validation.
         """
         options_dict = kwds.pop("options", {})
-        dev_options_dict = kwds.pop("dev_options", {})
         resolved_kwds = resolve_keyword_arguments(
             prioritized_kwargs_dicts={
                 "explicitly": kwds,
                 "implicitly through argument 'options'": options_dict,
-                "implicitly through argument 'dev_options'": dev_options_dict,
             },
             func=self.solve,
         )

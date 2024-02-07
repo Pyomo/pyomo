@@ -6424,12 +6424,8 @@ class TestPyROSResolveKwargs(unittest.TestCase):
                 options={
                     "objective_focus": ObjectiveType.worst_case,
                     "solve_master_globally": False,
-                },
-                dev_options={
-                    "objective_focus": ObjectiveType.nominal,
-                    "solve_master_globally": False,
                     "max_iter": 1,
-                    "time_limit": 1e3,
+                    "time_limit": 1000,
                 },
             )
 
@@ -6443,7 +6439,7 @@ class TestPyROSResolveKwargs(unittest.TestCase):
         ]
         self.assertEqual(
             len(resolve_kwargs_warning_msgs),
-            3,
+            1,
             msg="Number of warning-level messages not as expected.",
         )
 
@@ -6453,22 +6449,6 @@ class TestPyROSResolveKwargs(unittest.TestCase):
                 r"Arguments \['solve_master_globally'\] passed "
                 r"implicitly through argument 'options' "
                 r"already passed .*explicitly.*"
-            ),
-        )
-        self.assertRegex(
-            resolve_kwargs_warning_msgs[1],
-            expected_regex=(
-                r"Arguments \['solve_master_globally'\] passed "
-                r"implicitly through argument 'dev_options' "
-                r"already passed .*explicitly.*"
-            ),
-        )
-        self.assertRegex(
-            resolve_kwargs_warning_msgs[2],
-            expected_regex=(
-                r"Arguments \['objective_focus'\] passed "
-                r"implicitly through argument 'dev_options' "
-                r"already passed .*implicitly through argument 'options'.*"
             ),
         )
 
