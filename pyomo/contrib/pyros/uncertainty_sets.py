@@ -276,6 +276,7 @@ class UncertaintySetDomain:
     """
     Domain validator for uncertainty set argument.
     """
+
     def __call__(self, obj):
         """
         Type validate uncertainty set object.

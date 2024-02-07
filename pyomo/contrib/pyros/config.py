@@ -2,7 +2,6 @@
 Interfaces for managing PyROS solver options.
 """
 
-
 from collections.abc import Iterable
 import logging
 import os

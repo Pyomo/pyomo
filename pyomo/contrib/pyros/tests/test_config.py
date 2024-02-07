@@ -2,7 +2,6 @@
 Test objects for construction of PyROS ConfigDict.
 """
 
-
 import logging
 import os
 import unittest

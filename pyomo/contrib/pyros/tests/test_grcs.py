@@ -3750,9 +3750,9 @@ class testSolveMaster(unittest.TestCase):
         master_data.master_model.scenarios[0, 0].second_stage_objective = Expression(
             expr=master_data.master_model.scenarios[0, 0].x
         )
-        master_data.master_model.scenarios[
-            0, 0
-        ].util.dr_var_to_exponent_map = ComponentMap()
+        master_data.master_model.scenarios[0, 0].util.dr_var_to_exponent_map = (
+            ComponentMap()
+        )
         master_data.iteration = 0
         master_data.timing = TimingData()
 
