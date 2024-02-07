@@ -17,6 +17,7 @@ from pyomo.contrib.pyros.config import (
     mutable_param_validator,
     NotSolverResolvable,
     PathLikeOrNone,
+    PositiveIntOrMinusOne,
     pyros_config,
     SolverIterable,
     SolverResolvable,
@@ -625,6 +626,40 @@ class testPathLikeOrNone(unittest.TestCase):
                 "derived from bytes does not match expected value."
             ),
         )
+
+
+class TestPositiveIntOrMinusOne(unittest.TestCase):
+    """
+    Test validator for -1 or positive int works as expected.
+    """
+
+    def test_positive_int_or_minus_one(self):
+        """
+        Test positive int or -1 validator works as expected.
+        """
+        standardizer_func = PositiveIntOrMinusOne()
+        self.assertIs(
+            standardizer_func(1.0),
+            1,
+            msg=(
+                f"{PositiveIntOrMinusOne.__name__} "
+                "does not standardize as expected."
+            ),
+        )
+        self.assertEqual(
+            standardizer_func(-1.00),
+            -1,
+            msg=(
+                f"{PositiveIntOrMinusOne.__name__} "
+                "does not standardize as expected."
+            ),
+        )
+
+        exc_str = r"Expected positive int or -1, but received value.*"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            standardizer_func(1.5)
+        with self.assertRaisesRegex(ValueError, exc_str):
+            standardizer_func(0)
 
 
 if __name__ == "__main__":
