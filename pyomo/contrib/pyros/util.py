@@ -461,24 +461,6 @@ def a_logger(str_or_logger):
         return logging.getLogger(str_or_logger)
 
 
-def ValidEnum(enum_class):
-    '''
-    Python 3 dependent format string
-    '''
-
-    def fcn(obj):
-        if obj not in enum_class:
-            raise ValueError(
-                "Expected an {0} object, "
-                "instead received {1}".format(
-                    enum_class.__name__, obj.__class__.__name__
-                )
-            )
-        return obj
-
-    return fcn
-
-
 class pyrosTerminationCondition(Enum):
     """Enumeration of all possible PyROS termination conditions."""
 

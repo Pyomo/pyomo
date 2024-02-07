@@ -6,7 +6,7 @@ Interfaces for managing PyROS solver options.
 from collections.abc import Iterable
 
 from pyomo.common.collections import ComponentSet
-from pyomo.common.config import ConfigDict, ConfigValue, In, NonNegativeFloat
+from pyomo.common.config import ConfigDict, ConfigValue, In, NonNegativeFloat, InEnum
 from pyomo.common.errors import ApplicationError
 from pyomo.core.base import Var, _VarData
 from pyomo.core.base.param import Param, _ParamData
@@ -15,7 +15,6 @@ from pyomo.contrib.pyros.util import (
     a_logger,
     ObjectiveType,
     setup_pyros_logger,
-    ValidEnum,
 )
 from pyomo.contrib.pyros.uncertainty_sets import UncertaintySetDomain
 
@@ -590,7 +589,7 @@ def pyros_config():
         "objective_focus",
         ConfigValue(
             default=ObjectiveType.nominal,
-            domain=ValidEnum(ObjectiveType),
+            domain=InEnum(ObjectiveType),
             description=(
                 """
                 Choice of objective focus to optimize in the master problems.
