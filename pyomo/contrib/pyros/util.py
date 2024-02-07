@@ -434,33 +434,6 @@ def setup_pyros_logger(name=DEFAULT_LOGGER_NAME):
     return logger
 
 
-def a_logger(str_or_logger):
-    """
-    Standardize a string or logger object to a logger object.
-
-    Parameters
-    ----------
-    str_or_logger : str or logging.Logger
-        String or logger object to normalize.
-
-    Returns
-    -------
-    logging.Logger
-        If `str_or_logger` is of type `logging.Logger`,then
-        `str_or_logger` is returned.
-        Otherwise, ``logging.getLogger(str_or_logger)``
-        is returned. In the event `str_or_logger` is
-        the name of the default PyROS logger, the logger level
-        is set to `logging.INFO`, and a `PreformattedLogger`
-        instance is returned in lieu of a standard `Logger`
-        instance.
-    """
-    if isinstance(str_or_logger, logging.Logger):
-        return logging.getLogger(str_or_logger.name)
-    else:
-        return logging.getLogger(str_or_logger)
-
-
 class pyrosTerminationCondition(Enum):
     """Enumeration of all possible PyROS termination conditions."""
 

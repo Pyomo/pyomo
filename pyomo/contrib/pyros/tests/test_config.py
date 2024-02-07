@@ -15,6 +15,7 @@ from pyomo.core.base.param import Param, _ParamData
 from pyomo.contrib.pyros.config import (
     InputDataStandardizer,
     mutable_param_validator,
+    LoggerType,
     NotSolverResolvable,
     PathLikeOrNone,
     PositiveIntOrMinusOne,
@@ -660,6 +661,33 @@ class TestPositiveIntOrMinusOne(unittest.TestCase):
             standardizer_func(1.5)
         with self.assertRaisesRegex(ValueError, exc_str):
             standardizer_func(0)
+
+
+class TestLoggerType(unittest.TestCase):
+    """
+    Test logger type validator.
+    """
+
+    def test_logger_type(self):
+        """
+        Test logger type validator.
+        """
+        standardizer_func = LoggerType()
+        mylogger = logging.getLogger("example")
+        self.assertIs(
+            standardizer_func(mylogger),
+            mylogger,
+            msg=f"{LoggerType.__name__} output not as expected",
+        )
+        self.assertIs(
+            standardizer_func(mylogger.name),
+            mylogger,
+            msg=f"{LoggerType.__name__} output not as expected",
+        )
+
+        exc_str = r"A logger name must be a string"
+        with self.assertRaisesRegex(Exception, exc_str):
+            standardizer_func(2)
 
 
 if __name__ == "__main__":

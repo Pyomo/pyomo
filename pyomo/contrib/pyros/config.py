@@ -4,6 +4,7 @@ Interfaces for managing PyROS solver options.
 
 
 from collections.abc import Iterable
+import logging
 import os
 
 from pyomo.common.collections import ComponentSet
@@ -19,11 +20,43 @@ from pyomo.common.errors import ApplicationError
 from pyomo.core.base import Var, _VarData
 from pyomo.core.base.param import Param, _ParamData
 from pyomo.opt import SolverFactory
-from pyomo.contrib.pyros.util import a_logger, ObjectiveType, setup_pyros_logger
+from pyomo.contrib.pyros.util import ObjectiveType, setup_pyros_logger
 from pyomo.contrib.pyros.uncertainty_sets import UncertaintySetDomain
 
 
 default_pyros_solver_logger = setup_pyros_logger()
+
+
+class LoggerType:
+    """
+    Domain validator for objects castable to logging.Logger.
+    """
+
+    def __call__(self, obj):
+        """
+        Cast object to logger.
+
+        Parameters
+        ----------
+        obj : object
+            Object to be cast.
+
+        Returns
+        -------
+        logging.Logger
+            If `str_or_logger` is of type `logging.Logger`,then
+            `str_or_logger` is returned.
+            Otherwise, ``logging.getLogger(str_or_logger)``
+            is returned.
+        """
+        if isinstance(obj, logging.Logger):
+            return obj
+        else:
+            return logging.getLogger(obj)
+
+    def domain_name(self):
+        """Return str briefly describing domain encompassed by self."""
+        return "None, str or logging.Logger"
 
 
 class PositiveIntOrMinusOne:
@@ -788,11 +821,12 @@ def pyros_config():
         "progress_logger",
         ConfigValue(
             default=default_pyros_solver_logger,
-            domain=a_logger,
+            domain=LoggerType(),
             doc=(
                 """
                 Logger (or name thereof) used for reporting PyROS solver
-                progress. If a `str` is specified, then ``progress_logger``
+                progress. If `None` or a `str` is provided, then
+                ``progress_logger``
                 is cast to ``logging.getLogger(progress_logger)``.
                 In the default case, `progress_logger` is set to
                 a :class:`pyomo.contrib.pyros.util.PreformattedLogger`
