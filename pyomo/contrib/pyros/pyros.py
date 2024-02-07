@@ -22,16 +22,14 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.opt import SolverFactory
 from pyomo.contrib.pyros.config import pyros_config, resolve_keyword_arguments
 from pyomo.contrib.pyros.util import (
-    model_is_valid,
     recast_to_min_obj,
     add_decision_rule_constraints,
     add_decision_rule_variables,
     load_final_solution,
     pyrosTerminationCondition,
     ObjectiveType,
-    validate_uncertainty_set,
     identify_objective_functions,
-    validate_kwarg_inputs,
+    validate_pyros_inputs,
     transform_to_standard_form,
     turn_bounds_to_constraints,
     replace_uncertain_bounds_with_constraints,
@@ -287,7 +285,7 @@ class PyROS(object):
             func=self.solve,
         )
         config = self.CONFIG(resolved_kwds)
-        validate_kwarg_inputs(model, config)
+        validate_pyros_inputs(model, config)
 
         return config
 
@@ -351,23 +349,6 @@ class PyROS(object):
         ))
         config = self._resolve_and_validate_pyros_args(model, **kwds)
 
-        # === Validate ability of grcs RO solver to handle this model
-        if not model_is_valid(model):
-            raise AttributeError(
-                "This model structure is not currently handled by the ROSolver."
-            )
-
-        # === Define nominal point if not specified
-        if len(config.nominal_uncertain_param_vals) == 0:
-            config.nominal_uncertain_param_vals = list(
-                p.value for p in config.uncertain_params
-            )
-        elif len(config.nominal_uncertain_param_vals) != len(config.uncertain_params):
-            raise AttributeError(
-                "The nominal_uncertain_param_vals list must be the same length"
-                "as the uncertain_params list"
-            )
-
         # === Create data containers
         model_data = ROSolveResults()
         model_data.timing = Bunch()
@@ -402,9 +383,6 @@ class PyROS(object):
             model_data.util_block = unique_component_name(model, 'util')
             model.add_component(model_data.util_block, util)
             # Note:  model.component(model_data.util_block) is util
-
-            # === Validate uncertainty set happens here, requires util block for Cardinality and FactorModel sets
-            validate_uncertainty_set(config=config)
 
             # === Leads to a logger warning here for inactive obj when cloning
             model_data.original_model = model

@@ -18,7 +18,6 @@ from pyomo.contrib.pyros.util import (
     selective_clone,
     add_decision_rule_variables,
     add_decision_rule_constraints,
-    model_is_valid,
     turn_bounds_to_constraints,
     transform_to_standard_form,
     ObjectiveType,
@@ -608,21 +607,6 @@ class testAddDecisionRuleConstraints(unittest.TestCase):
                         f"is not the DR variable {dr_var.name!r}."
                     ),
                 )
-
-
-class testModelIsValid(unittest.TestCase):
-    def test_model_is_valid_via_possible_inputs(self):
-        m = ConcreteModel()
-        m.x = Var()
-        m.obj1 = Objective(expr=m.x**2)
-        self.assertTrue(model_is_valid(m))
-        m.obj2 = Objective(expr=m.x)
-        self.assertFalse(model_is_valid(m))
-        m.obj2.deactivate()
-        self.assertTrue(model_is_valid(m))
-        m.del_component("obj1")
-        m.del_component("obj2")
-        self.assertFalse(model_is_valid(m))
 
 
 class testTurnBoundsToConstraints(unittest.TestCase):
@@ -5406,16 +5390,14 @@ class testModelMultipleObjectives(unittest.TestCase):
 
         # check validation error raised due to multiple objectives
         with self.assertRaisesRegex(
-            AttributeError,
-            "This model structure is not currently handled by the ROSolver.",
+            ValueError, r"Expected model with exactly 1 active objective.*has 3"
         ):
             pyros_solver.solve(**solve_kwargs)
 
         # check validation error raised due to multiple objectives
         m.b.obj.deactivate()
         with self.assertRaisesRegex(
-            AttributeError,
-            "This model structure is not currently handled by the ROSolver.",
+            ValueError, r"Expected model with exactly 1 active objective.*has 2"
         ):
             pyros_solver.solve(**solve_kwargs)
 
@@ -6527,6 +6509,411 @@ class TestPyROSResolveKwargs(unittest.TestCase):
             1e3,
             msg="Resolved value of kwarg `time_limit` not as expected.",
         )
+
+
+class SimpleTestSolver:
+    """
+    Simple test solver class with no actual solve()
+    functionality. Written to test unrelated aspects
+    of PyROS functionality.
+    """
+
+    def available(self, exception_flag=False):
+        """
+        Check solver available.
+        """
+        return True
+
+    def solve(self, model, **kwds):
+        """
+        Return SolverResults object with 'unknown' termination
+        condition. Model remains unchanged.
+        """
+        res = SolverResults()
+        res.solver.termination_condition = TerminationCondition.unknown
+
+        return res
+
+
+class TestPyROSSolverAdvancedValidation(unittest.TestCase):
+    """
+    Test PyROS solver returns expected exception messages
+    when arguments are invalid.
+    """
+
+    def build_simple_test_model(self):
+        """
+        Build simple valid test model.
+        """
+        m = ConcreteModel(name="test_model")
+
+        m.x1 = Var(initialize=0, bounds=(0, None))
+        m.x2 = Var(initialize=0, bounds=(0, None))
+        m.u = Param(initialize=1.125, mutable=True)
+
+        m.con1 = Constraint(expr=m.x1 * m.u ** (0.5) - m.x2 * m.u <= 2)
+
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
+
+        return m
+
+    def test_pyros_invalid_model_type(self):
+        """
+        Test PyROS fails if model is not of correct class.
+        """
+        mdl = self.build_simple_test_model()
+
+        local_solver = SimpleTestSolver()
+        global_solver = SimpleTestSolver()
+
+        pyros = SolverFactory("pyros")
+
+        exc_str = "Model should be of type.*but is of type.*"
+        with self.assertRaisesRegex(TypeError, exc_str):
+            pyros.solve(
+                model=2,
+                first_stage_variables=[mdl.x1],
+                second_stage_variables=[mdl.x2],
+                uncertain_params=[mdl.u],
+                uncertainty_set=BoxSet([[1 / 4, 2]]),
+                local_solver=local_solver,
+                global_solver=global_solver,
+            )
+
+    def test_pyros_multiple_objectives(self):
+        """
+        Test PyROS raises exception if input model has multiple
+        objectives.
+        """
+        mdl = self.build_simple_test_model()
+        mdl.obj2 = Objective(expr=(mdl.x1 + mdl.x2))
+
+        local_solver = SimpleTestSolver()
+        global_solver = SimpleTestSolver()
+
+        pyros = SolverFactory("pyros")
+
+        exc_str = "Expected model with exactly 1 active.*but.*has 2"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            pyros.solve(
+                model=mdl,
+                first_stage_variables=[mdl.x1],
+                second_stage_variables=[mdl.x2],
+                uncertain_params=[mdl.u],
+                uncertainty_set=BoxSet([[1 / 4, 2]]),
+                local_solver=local_solver,
+                global_solver=global_solver,
+            )
+
+    def test_pyros_empty_dof_vars(self):
+        """
+        Test PyROS solver raises exception raised if there are no
+        first-stage variables or second-stage variables.
+        """
+        # build model
+        mdl = self.build_simple_test_model()
+
+        # prepare solvers
+        pyros = SolverFactory("pyros")
+        local_solver = SimpleTestSolver()
+        global_solver = SimpleTestSolver()
+
+        # perform checks
+        exc_str = (
+            "Arguments `first_stage_variables` and "
+            "`second_stage_variables` are both empty lists."
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            pyros.solve(
+                model=mdl,
+                first_stage_variables=[],
+                second_stage_variables=[],
+                uncertain_params=[mdl.u],
+                uncertainty_set=BoxSet([[1 / 4, 2]]),
+                local_solver=local_solver,
+                global_solver=global_solver,
+            )
+
+    def test_pyros_overlap_dof_vars(self):
+        """
+        Test PyROS solver raises exception raised if there are Vars
+        passed as both first-stage and second-stage.
+        """
+        # build model
+        mdl = self.build_simple_test_model()
+
+        # prepare solvers
+        pyros = SolverFactory("pyros")
+        local_solver = SimpleTestSolver()
+        global_solver = SimpleTestSolver()
+
+        # perform checks
+        exc_str = (
+            "Arguments `first_stage_variables` and `second_stage_variables` "
+            "contain at least one common Var object."
+        )
+        with LoggingIntercept(level=logging.ERROR) as LOG:
+            with self.assertRaisesRegex(ValueError, exc_str):
+                pyros.solve(
+                    model=mdl,
+                    first_stage_variables=[mdl.x1],
+                    second_stage_variables=[mdl.x1, mdl.x2],
+                    uncertain_params=[mdl.u],
+                    uncertainty_set=BoxSet([[1 / 4, 2]]),
+                    local_solver=local_solver,
+                    global_solver=global_solver,
+                )
+
+        # check logger output is as expected
+        log_msgs = LOG.getvalue().split("\n")[:-1]
+        self.assertEqual(
+            len(log_msgs), 3, "Error message does not contain expected number of lines."
+        )
+        self.assertRegex(
+            text=log_msgs[0],
+            expected_regex=(
+                "The following Vars were found in both `first_stage_variables`"
+                "and `second_stage_variables`.*"
+            ),
+        )
+        self.assertRegex(text=log_msgs[1], expected_regex=" 'x1'")
+        self.assertRegex(
+            text=log_msgs[2],
+            expected_regex="Ensure no Vars are included in both arguments.",
+        )
+
+    def test_pyros_vars_not_in_model(self):
+        """
+        Test PyROS appropriately raises exception if there are
+        variables not included in active model objective
+        or constraints which are not descended from model.
+        """
+        # set up model
+        mdl = self.build_simple_test_model()
+        mdl.name = "model1"
+        mdl2 = self.build_simple_test_model()
+        mdl2.name = "model2"
+
+        # set up solvers
+        local_solver = SimpleTestSolver()
+        global_solver = SimpleTestSolver()
+        pyros = SolverFactory("pyros")
+
+        mdl.bad_con = Constraint(expr=mdl2.x1 + mdl2.x2 >= 1)
+
+        desc_dof_map = [
+            ("first-stage", [mdl2.x1], [], 2),
+            ("second-stage", [], [mdl2.x2], 2),
+            ("state", [mdl.x1], [], 3),
+        ]
+
+        # now perform checks
+        for vardesc, first_stage_vars, second_stage_vars, numlines in desc_dof_map:
+            with LoggingIntercept(level=logging.ERROR) as LOG:
+                exc_str = (
+                    "Found entries of "
+                    f"{vardesc} variables not descended from.*model.*"
+                )
+                with self.assertRaisesRegex(ValueError, exc_str):
+                    pyros.solve(
+                        model=mdl,
+                        first_stage_variables=first_stage_vars,
+                        second_stage_variables=second_stage_vars,
+                        uncertain_params=[mdl.u],
+                        uncertainty_set=BoxSet([[1 / 4, 2]]),
+                        local_solver=local_solver,
+                        global_solver=global_solver,
+                    )
+
+            log_msgs = LOG.getvalue().split("\n")[:-1]
+
+            # check detailed log message is as expected
+            self.assertEqual(
+                len(log_msgs),
+                numlines,
+                "Error-level log message does not contain expected number of lines.",
+            )
+            self.assertRegex(
+                text=log_msgs[0],
+                expected_regex=(
+                    f"The following {vardesc} variables"
+                    ".*not descended from.*model with name 'model1'"
+                ),
+            )
+
+    def test_pyros_non_continuous_vars(self):
+        """
+        Test PyROS raises exception if model contains
+        non-continuous variables.
+        """
+        # build model; make one variable discrete
+        mdl = self.build_simple_test_model()
+        mdl.x2.domain = NonNegativeIntegers
+
+        # prepare solvers
+        pyros = SolverFactory("pyros")
+        local_solver = SimpleTestSolver()
+        global_solver = SimpleTestSolver()
+
+        # perform checks
+        exc_str = "Model with name 'test_model' contains non-continuous Vars."
+        with LoggingIntercept(level=logging.ERROR) as LOG:
+            with self.assertRaisesRegex(ValueError, exc_str):
+                pyros.solve(
+                    model=mdl,
+                    first_stage_variables=[mdl.x1],
+                    second_stage_variables=[mdl.x2],
+                    uncertain_params=[mdl.u],
+                    uncertainty_set=BoxSet([[1 / 4, 2]]),
+                    local_solver=local_solver,
+                    global_solver=global_solver,
+                )
+
+        # check logger output is as expected
+        log_msgs = LOG.getvalue().split("\n")[:-1]
+        self.assertEqual(
+            len(log_msgs), 3, "Error message does not contain expected number of lines."
+        )
+        self.assertRegex(
+            text=log_msgs[0],
+            expected_regex=(
+                "The following Vars of model with name 'test_model' "
+                "are non-continuous:"
+            ),
+        )
+        self.assertRegex(text=log_msgs[1], expected_regex=" 'x2'")
+        self.assertRegex(
+            text=log_msgs[2],
+            expected_regex=(
+                "Ensure all model variables passed to " "PyROS solver are continuous."
+            ),
+        )
+
+    def test_pyros_uncertainty_dimension_mismatch(self):
+        """
+        Test PyROS solver raises exception if uncertainty
+        set dimension does not match the number
+        of uncertain parameters.
+        """
+        # build model
+        mdl = self.build_simple_test_model()
+
+        # prepare solvers
+        pyros = SolverFactory("pyros")
+        local_solver = SimpleTestSolver()
+        global_solver = SimpleTestSolver()
+
+        # perform checks
+        exc_str = (
+            r"Length of argument `uncertain_params` does not match dimension "
+            r"of argument `uncertainty_set` \(1 != 2\)."
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            pyros.solve(
+                model=mdl,
+                first_stage_variables=[mdl.x1],
+                second_stage_variables=[mdl.x2],
+                uncertain_params=[mdl.u],
+                uncertainty_set=BoxSet([[1 / 4, 2], [0, 1]]),
+                local_solver=local_solver,
+                global_solver=global_solver,
+            )
+
+    def test_pyros_nominal_point_not_in_set(self):
+        """
+        Test PyROS raises exception if nominal point is not in the
+        uncertainty set.
+
+        NOTE: need executable solvers to solve set bounding problems
+              for validity checks.
+        """
+        # build model
+        mdl = self.build_simple_test_model()
+
+        # prepare solvers
+        pyros = SolverFactory("pyros")
+        local_solver = SolverFactory("ipopt")
+        global_solver = SolverFactory("ipopt")
+
+        # perform checks
+        exc_str = (
+            r"Nominal uncertain parameter realization \[0\] "
+            "is not a point in the uncertainty set.*"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            pyros.solve(
+                model=mdl,
+                first_stage_variables=[mdl.x1],
+                second_stage_variables=[mdl.x2],
+                uncertain_params=[mdl.u],
+                uncertainty_set=BoxSet([[1 / 4, 2]]),
+                local_solver=local_solver,
+                global_solver=global_solver,
+                nominal_uncertain_param_vals=[0],
+            )
+
+    def test_pyros_nominal_point_len_mismatch(self):
+        """
+        Test PyROS raises exception if there is mismatch between length
+        of nominal uncertain parameter specification and number
+        of uncertain parameters.
+        """
+        # build model
+        mdl = self.build_simple_test_model()
+
+        # prepare solvers
+        pyros = SolverFactory("pyros")
+        local_solver = SolverFactory("ipopt")
+        global_solver = SolverFactory("ipopt")
+
+        # perform checks
+        exc_str = (
+            r"Lengths of arguments `uncertain_params` "
+            r"and `nominal_uncertain_param_vals` "
+            r"do not match \(1 != 2\)."
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            pyros.solve(
+                model=mdl,
+                first_stage_variables=[mdl.x1],
+                second_stage_variables=[mdl.x2],
+                uncertain_params=[mdl.u],
+                uncertainty_set=BoxSet([[1 / 4, 2]]),
+                local_solver=local_solver,
+                global_solver=global_solver,
+                nominal_uncertain_param_vals=[0, 1],
+            )
+
+    def test_pyros_invalid_bypass_separation(self):
+        """
+        Test PyROS raises exception if both local and
+        global separation are set to be bypassed.
+        """
+        # build model
+        mdl = self.build_simple_test_model()
+
+        # prepare solvers
+        pyros = SolverFactory("pyros")
+        local_solver = SolverFactory("ipopt")
+        global_solver = SolverFactory("ipopt")
+
+        # perform checks
+        exc_str = (
+            r"Arguments `bypass_local_separation` and `bypass_global_separation` "
+            r"cannot both be True."
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            pyros.solve(
+                model=mdl,
+                first_stage_variables=[mdl.x1],
+                second_stage_variables=[mdl.x2],
+                uncertain_params=[mdl.u],
+                uncertainty_set=BoxSet([[1 / 4, 2]]),
+                local_solver=local_solver,
+                global_solver=global_solver,
+                bypass_local_separation=True,
+                bypass_global_separation=True,
+            )
 
 
 if __name__ == "__main__":
