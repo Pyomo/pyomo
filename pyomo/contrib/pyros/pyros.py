@@ -12,7 +12,7 @@
 # pyros.py: Generalized Robust Cutting-Set Algorithm for Pyomo
 import logging
 from pyomo.common.config import document_kwargs_from_configdict
-from pyomo.common.collections import Bunch, ComponentSet
+from pyomo.common.collections import Bunch
 from pyomo.core.base.block import Block
 from pyomo.core.expr import value
 from pyomo.core.base.var import Var
@@ -285,9 +285,9 @@ class PyROS(object):
             func=self.solve,
         )
         config = self.CONFIG(resolved_kwds)
-        validate_pyros_inputs(model, config)
+        state_vars = validate_pyros_inputs(model, config)
 
-        return config
+        return config, state_vars
 
     @document_kwargs_from_configdict(
         config=CONFIG,
@@ -347,7 +347,7 @@ class PyROS(object):
             local_solver=local_solver,
             global_solver=global_solver,
         ))
-        config = self._resolve_and_validate_pyros_args(model, **kwds)
+        config, state_vars = self._resolve_and_validate_pyros_args(model, **kwds)
 
         # === Create data containers
         model_data = ROSolveResults()
@@ -378,6 +378,7 @@ class PyROS(object):
             util = Block(concrete=True)
             util.first_stage_variables = config.first_stage_variables
             util.second_stage_variables = config.second_stage_variables
+            util.state_vars = state_vars
             util.uncertain_params = config.uncertain_params
 
             model_data.util_block = unique_component_name(model, 'util')
@@ -425,22 +426,10 @@ class PyROS(object):
             # === Move bounds on control variables to explicit ineq constraints
             wm_util = model_data.working_model
 
-            # === Every non-fixed variable that is neither first-stage
-            #     nor second-stage is taken to be a state variable
-            fsv = ComponentSet(model_data.working_model.util.first_stage_variables)
-            ssv = ComponentSet(model_data.working_model.util.second_stage_variables)
-            sv = ComponentSet()
-            model_data.working_model.util.state_vars = []
-            for v in model_data.working_model.component_data_objects(Var):
-                if not v.fixed and v not in fsv | ssv | sv:
-                    model_data.working_model.util.state_vars.append(v)
-                    sv.add(v)
-
-            # Bounds on second stage variables and state variables are separation objectives,
-            #  they are brought in this was as explicit constraints
+            # cast bounds on second-stage and state variables to
+            # explicit constraints for separation objectives
             for c in model_data.working_model.util.second_stage_variables:
                 turn_bounds_to_constraints(c, wm_util, config)
-
             for c in model_data.working_model.util.state_vars:
                 turn_bounds_to_constraints(c, wm_util, config)
 
