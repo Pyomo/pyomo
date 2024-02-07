@@ -273,21 +273,25 @@ class PyROS(object):
         ----------
         model: ConcreteModel
             The deterministic model.
-        first_stage_variables: list of Var
+        first_stage_variables: VarData, Var, or iterable of VarData/Var
             First-stage model variables (or design variables).
-        second_stage_variables: list of Var
+        second_stage_variables: VarData, Var, or iterable of VarData/Var
             Second-stage model variables (or control variables).
-        uncertain_params: list of Param
+        uncertain_params: ParamData, Param, or iterable of ParamData/Param
             Uncertain model parameters.
-            The `mutable` attribute for every uncertain parameter
-            objects must be set to True.
+            The `mutable` attribute for all uncertain parameter objects
+            must be set to True.
         uncertainty_set: UncertaintySet
             Uncertainty set against which the solution(s) returned
             will be confirmed to be robust.
-        local_solver: Solver
+        local_solver: str or solver type
             Subordinate local NLP solver.
-        global_solver: Solver
+            If a `str` is passed, then the `str` is cast to
+            ``SolverFactory(local_solver)``.
+        global_solver: str or solver type
             Subordinate global NLP solver.
+            If a `str` is passed, then the `str` is cast to
+            ``SolverFactory(global_solver)``.
 
         Returns
         -------
