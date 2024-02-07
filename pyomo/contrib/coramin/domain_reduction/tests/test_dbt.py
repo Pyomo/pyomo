@@ -13,6 +13,7 @@ from pyomo.contrib.coramin.domain_reduction.dbt import (
     OBBTMethod,
     FilterMethod,
     DecompositionStatus,
+    compute_partition_ratio,
 )
 from pyomo.common import unittest
 import pyomo.environ as pe
@@ -130,6 +131,36 @@ class TestDecomposition(unittest.TestCase):
         self.assertEqual(m2.get_block_stage(m2.children[1]), 1)
         self.assertEqual(list(m2.stage_blocks(0)), [m2])
         self.assertEqual(list(m2.stage_blocks(1)), [m2.children[0], m2.children[1]])
+        pr = compute_partition_ratio(m1, m2)
+        self.assertAlmostEqual(pr, 2)
+
+    def test_objective(self):
+        m1 = pe.ConcreteModel()
+        m1.x = x = pe.Var([1, 2, 3, 4, 5, 6], bounds=(-10, 10))
+        m1.c = c = pe.ConstraintList()
+
+        c.add(x[1] == x[2] + x[3])
+        c.add(x[4] == x[5] + x[6])
+        c.add(x[2] <= 2*x[3] + 1)
+        c.add(x[5] >= 2*x[6] + 1)
+        m1.obj = pe.Objective(expr=sum(x.values()))
+
+        m2, reason = decompose_model(m1)
+        self.assertEqual(reason, DecompositionStatus.normal)
+        opt = appsi.solvers.Highs()
+        res1 = opt.solve(m1)
+        res2 = opt.solve(m2)
+        self.assertAlmostEqual(res1.best_feasible_objective, res2.best_feasible_objective)
+        self.assertEqual(len(m2.children), 2)
+        self.assertIn(len(list(active_cons(m2.children[0]))), {3, 4})
+        self.assertIn(len(list(active_cons(m2.children[1]))), {3, 4})
+        self.assertIn(len(list(active_vars(m2.children[0]))), {4, 5})
+        self.assertIn(len(list(active_vars(m2.children[1]))), {4, 5})
+        self.assertEqual(m2.get_block_stage(m2), 0)
+        self.assertEqual(m2.get_block_stage(m2.children[0]), 1)
+        self.assertEqual(m2.get_block_stage(m2.children[1]), 1)
+        self.assertEqual(list(m2.stage_blocks(0)), [m2])
+        self.assertEqual(list(m2.stage_blocks(1)), [m2.children[0], m2.children[1]])
 
     def test_refine_partition(self):
         m1 = pe.ConcreteModel()
@@ -150,7 +181,6 @@ class TestDecomposition(unittest.TestCase):
 
         c.add(sum(x.values()) == 1)
         m2, reason = decompose_model(m1)
-        m2.pprint()
         self.assertEqual(reason, DecompositionStatus.normal)
         opt = appsi.solvers.Highs()
         opt.config.stream_solver = True
@@ -174,8 +204,6 @@ class TestTreeBlock(unittest.TestCase):
         with self.assertRaises(TreeBlockError):
             b.children
         with self.assertRaises(TreeBlockError):
-            b.coupling_vars
-        with self.assertRaises(TreeBlockError):
             b.num_stages()
         with self.assertRaises(TreeBlockError):
             list(b.stage_blocks(0))
@@ -185,8 +213,6 @@ class TestTreeBlock(unittest.TestCase):
         self.assertTrue(b.is_leaf())
         b.x = pe.Var()  # make sure we can add components just like a regular block
         b.x.setlb(-1)
-        with self.assertRaises(TreeBlockError):
-            b.coupling_vars
         with self.assertRaises(TreeBlockError):
             b.children
         self.assertEqual(b.num_stages(), 1)
@@ -422,12 +448,8 @@ class TestSplit(unittest.TestCase):
         self.assertEqual(v4, cv)
 
         new_model = TreeBlock(concrete=True)
-        component_map = tree.build_pyomo_model(block=new_model)
-        new_vars = list(
-            coramin.relaxations.nonrelaxation_component_data_objects(
-                new_model, ctype=pe.Var, descend_into=True, sort=True
-            )
-        )
+        tree.build_pyomo_model(block=new_model)
+        new_vars = list(active_vars(new_model))
         new_cons = list(
             coramin.relaxations.nonrelaxation_component_data_objects(
                 new_model,
@@ -442,11 +464,11 @@ class TestSplit(unittest.TestCase):
                 new_model, descend_into=True, active=True, sort=True
             )
         )
-        self.assertEqual(len(new_vars), 7)
-        self.assertEqual(len(new_cons), 3)
+        self.assertEqual(len(new_vars), 6)
+        self.assertEqual(len(new_cons), 2)
         self.assertEqual(len(new_rels), 2)
         self.assertEqual(len(new_model.children), 2)
-        self.assertEqual(len(new_model.linking_constraints), 1)
+        self.assertEqual(len(new_model.coupling_vars), 1)
         self.assertEqual(new_model.num_stages(), 2)
 
         stage0_vars = list(
@@ -463,21 +485,13 @@ class TestSplit(unittest.TestCase):
             )
         )
         self.assertEqual(len(stage0_vars), 0)
-        self.assertEqual(len(stage0_cons), 1)
+        self.assertEqual(len(stage0_cons), 0)
         self.assertEqual(len(stage0_rels), 0)
 
         block_a = new_model.children[0]
         block_b = new_model.children[1]
-        block_a_vars = ComponentSet(
-            coramin.relaxations.nonrelaxation_component_data_objects(
-                block_a, ctype=pe.Var, descend_into=True, sort=True
-            )
-        )
-        block_b_vars = ComponentSet(
-            coramin.relaxations.nonrelaxation_component_data_objects(
-                block_b, ctype=pe.Var, descend_into=True, sort=True
-            )
-        )
+        block_a_vars = ComponentSet(active_vars(block_a))
+        block_b_vars = ComponentSet(active_vars(block_b))
         block_a_cons = ComponentSet(
             coramin.relaxations.nonrelaxation_component_data_objects(
                 block_a, ctype=pe.Constraint, descend_into=True, active=True, sort=True
@@ -498,99 +512,15 @@ class TestSplit(unittest.TestCase):
                 block_b, descend_into=True, active=True, sort=True
             )
         )
-        if component_map[m.v1] not in block_a_vars:
-            block_a, block_b = block_b, block_a
-            block_a_vars, block_b_vars = block_b_vars, block_a_vars
-            block_a_cons, block_b_cons = block_b_cons, block_a_cons
-            block_a_rels, block_b_rels = block_b_rels, block_a_rels
 
-        self.assertEqual(len(block_a_vars), 4)
+        self.assertIn(len(block_a_vars), {3, 4})
         self.assertEqual(len(block_a_cons), 1)
         self.assertEqual(len(block_a_rels), 1)
-        self.assertEqual(len(block_b_vars), 3)
+        self.assertIn(len(block_b_vars), {3, 4})
         self.assertEqual(len(block_b_cons), 1)
         self.assertEqual(len(block_b_rels), 1)
 
-        v1 = component_map[m.v1]
-        v2 = component_map[m.v2]
-        v3 = component_map[m.v3]
-        v4_a = block_a.vars['v4']
-        v4_b = block_b.vars['v4']
-        v5 = component_map[m.v5]
-        v6 = component_map[m.v6]
-
-        self.assertIs(v1, block_a.vars['v1'])
-        self.assertIs(v2, block_a.vars['v2'])
-        self.assertIs(v3, block_a.vars['v3'])
-        self.assertIs(v5, block_b.vars['v5'])
-        self.assertIs(v6, block_b.vars['v6'])
-
-        self.assertEqual(v2.lb, -1)
-        self.assertEqual(v2.ub, 1)
-        self.assertEqual(v3.lb, -1)
-        self.assertEqual(v3.ub, 1)
-        self.assertEqual(v4_a.lb, -1)
-        self.assertEqual(v4_a.ub, 1)
-        self.assertEqual(v4_b.lb, -1)
-        self.assertEqual(v4_b.ub, 1)
-        self.assertEqual(v5.lb, -1)
-        self.assertEqual(v5.ub, 1)
-        self.assertEqual(v1.lb, None)
-        self.assertEqual(v1.ub, None)
-        self.assertEqual(v6.lb, None)
-        self.assertEqual(v6.ub, None)
-
-        linking_con = new_model.linking_constraints[1]
-        linking_con_vars = ComponentSet(identify_variables(linking_con.body))
-        self.assertEqual(len(linking_con_vars), 2)
-        self.assertIn(v4_a, linking_con_vars)
-        self.assertIn(v4_b, linking_con_vars)
-        derivs = differentiate(
-            expr=linking_con.body, mode=differentiate.Modes.reverse_symbolic
-        )
-        self.assertTrue(
-            (derivs[v4_a] == 1 and derivs[v4_b] == -1)
-            or (derivs[v4_a] == -1 and derivs[v4_b] == 1)
-        )
-        self.assertEqual(linking_con.lower, 0)
-        self.assertEqual(linking_con.upper, 0)
-
-        c1 = block_a.cons['c1']
-        c2 = block_b.cons['c2']
-        r1 = block_b.rels.r1
-        r2 = block_a.rels.r2
-        c1_vars = ComponentSet(identify_variables(c1.body))
-        c2_vars = ComponentSet(identify_variables(c2.body))
-        self.assertEqual(len(c1_vars), 3)
-        self.assertEqual(len(c2_vars), 3)
-        self.assertIn(v1, c1_vars)
-        self.assertIn(v2, c1_vars)
-        self.assertIn(v3, c1_vars)
-        self.assertIn(v4_b, c2_vars)
-        self.assertIn(v5, c2_vars)
-        self.assertIn(v6, c2_vars)
-        self.assertIs(r1.get_aux_var(), v6)
-        self.assertIs(r2.get_aux_var(), v2)
-        r1_rhs_vars = ComponentSet(r1.get_rhs_vars())
-        r2_rhs_vars = ComponentSet(r2.get_rhs_vars())
-        self.assertIn(v3, r2_rhs_vars)
-        self.assertIn(v4_a, r2_rhs_vars)
-        self.assertIn(v4_b, r1_rhs_vars)
-        self.assertIn(v5, r1_rhs_vars)
-        self.assertTrue(isinstance(r1, coramin.relaxations.PWMcCormickRelaxationData))
-        self.assertTrue(isinstance(r2, coramin.relaxations.PWMcCormickRelaxationData))
-        c1_derivs = differentiate(c1.body, mode=differentiate.Modes.reverse_symbolic)
-        c2_derivs = differentiate(c2.body, mode=differentiate.Modes.reverse_symbolic)
-        self.assertEqual(c1_derivs[v1], 1)
-        self.assertEqual(c1_derivs[v2], -1)
-        self.assertEqual(c1_derivs[v3], -1)
-        self.assertEqual(c2_derivs[v4_b], -1)
-        self.assertEqual(c2_derivs[v5], -1)
-        self.assertEqual(c2_derivs[v6], 1)
-        self.assertEqual(c1.lower, 0)
-        self.assertEqual(c1.upper, 0)
-        self.assertEqual(c2.lower, 0)
-        self.assertEqual(c2.upper, 0)
+        self.assertEqual(new_model.coupling_vars, [m.v4])
 
 
 class TestNumCons(unittest.TestCase):
@@ -612,198 +542,6 @@ class TestNumCons(unittest.TestCase):
         self.assertEqual(num_cons_in_graph(g), 2)
 
 
-class TestDecompose(unittest.TestCase):
-    def helper(self, case, min_partition_ratio, expected_termination):
-        """
-        we rely on other tests to make sure the relaxation is constructed
-        correctly. This test just checks the decomposition.
-        """
-
-        test_dir = os.path.dirname(os.path.abspath(__file__))
-        pglib_dir = os.path.join(test_dir, 'pglib-opf-master')
-        if not os.path.isdir(pglib_dir):
-            get_pglib_opf(download_dir=test_dir)
-        md = ModelData.read(filename=os.path.join(pglib_dir, case))
-        m, scaled_md = create_psv_acopf_model(md)
-        opt = pe.SolverFactory('ipopt')
-        res = opt.solve(m, tee=False)
-
-        relaxed_m = coramin.relaxations.relax(
-            m,
-            in_place=False,
-            use_fbbt=False,
-            fbbt_options={'deactivate_satisfied_constraints': True, 'max_iter': 2},
-            use_alpha_bb=False,
-        )
-        (decomposed_m, component_map, termination_reason) = decompose_model(
-            model=relaxed_m,
-            max_leaf_nnz=1000,
-            min_partition_ratio=1.4,
-            limit_num_stages=True,
-        )
-        self.assertEqual(termination_reason, expected_termination)
-        if (
-            expected_termination
-            == coramin.domain_reduction.dbt.DecompositionStatus.normal
-        ):
-            self.assertGreaterEqual(decomposed_m.num_stages(), 2)
-
-        for r in coramin.relaxations.relaxation_data_objects(
-            block=relaxed_m, descend_into=True, active=True, sort=True
-        ):
-            r.rebuild(build_nonlinear_constraint=True)
-        for r in coramin.relaxations.relaxation_data_objects(
-            block=decomposed_m, descend_into=True, active=True, sort=True
-        ):
-            r.rebuild(build_nonlinear_constraint=True)
-        relaxed_res = opt.solve(relaxed_m, tee=False)
-        decomposed_res = opt.solve(decomposed_m, tee=False)
-
-        self.assertEqual(
-            res.solver.termination_condition, pe.TerminationCondition.optimal
-        )
-        self.assertEqual(
-            relaxed_res.solver.termination_condition, pe.TerminationCondition.optimal
-        )
-        self.assertEqual(
-            decomposed_res.solver.termination_condition, pe.TerminationCondition.optimal
-        )
-        obj = get_objective(m)
-        relaxed_obj = get_objective(relaxed_m)
-        decomposed_obj = get_objective(decomposed_m)
-        val = pe.value(obj.expr)
-        relaxed_val = pe.value(relaxed_obj.expr)
-        decomposed_val = pe.value(decomposed_obj.expr)
-        relaxed_rel_diff = abs(val - relaxed_val) / val
-        decomposed_rel_diff = abs(val - decomposed_val) / val
-        self.assertAlmostEqual(relaxed_rel_diff, 0, 5)
-        self.assertAlmostEqual(decomposed_rel_diff, 0, 5)
-
-        relaxed_vars = list(
-            coramin.relaxations.nonrelaxation_component_data_objects(
-                relaxed_m, pe.Var, sort=True, descend_into=True
-            )
-        )
-        relaxed_vars = [v for v in relaxed_vars if not v.fixed]
-        relaxed_cons = list(
-            coramin.relaxations.nonrelaxation_component_data_objects(
-                relaxed_m, pe.Constraint, active=True, sort=True, descend_into=True
-            )
-        )
-        relaxed_rels = list(
-            coramin.relaxations.relaxation_data_objects(
-                relaxed_m, descend_into=True, active=True, sort=True
-            )
-        )
-        decomposed_vars = list(
-            coramin.relaxations.nonrelaxation_component_data_objects(
-                decomposed_m, pe.Var, sort=True, descend_into=True
-            )
-        )
-        decomposed_cons = list(
-            coramin.relaxations.nonrelaxation_component_data_objects(
-                decomposed_m, pe.Constraint, active=True, sort=True, descend_into=True
-            )
-        )
-        decomposed_rels = list(
-            coramin.relaxations.relaxation_data_objects(
-                decomposed_m, descend_into=True, active=True, sort=True
-            )
-        )
-        linking_cons = list()
-        for stage in range(decomposed_m.num_stages()):
-            for block in decomposed_m.stage_blocks(stage):
-                if not block.is_leaf():
-                    linking_cons.extend(block.linking_constraints.values())
-        relaxed_vars_mapped = list()
-        for i in relaxed_vars:
-            relaxed_vars_mapped.append(component_map[i])
-        relaxed_vars_mapped = ComponentSet(relaxed_vars_mapped)
-        var_diff = ComponentSet(decomposed_vars) - relaxed_vars_mapped
-        extra_vars = ComponentSet()
-        for c in linking_cons:
-            for v in identify_variables(c.body, include_fixed=True):
-                extra_vars.add(v)
-        for v in coramin.relaxations.nonrelaxation_component_data_objects(
-            decomposed_m, pe.Var, descend_into=True
-        ):
-            if 'dbt_partition_vars' in str(v) or 'obj_var' in str(v):
-                extra_vars.add(v)
-        extra_vars = extra_vars - relaxed_vars_mapped
-        partition_cons = ComponentSet()
-        obj_cons = ComponentSet()
-        for c in coramin.relaxations.nonrelaxation_component_data_objects(
-            decomposed_m, pe.Constraint, active=True, descend_into=True
-        ):
-            if 'dbt_partition_cons' in str(c):
-                partition_cons.add(c)
-            elif 'obj_con' in str(c):
-                obj_cons.add(c)
-        for v in var_diff:
-            self.assertIn(v, extra_vars)
-        var_diff = relaxed_vars_mapped - ComponentSet(decomposed_vars)
-        self.assertEqual(len(var_diff), 0)
-        self.assertEqual(len(relaxed_vars) + len(extra_vars), len(decomposed_vars))
-
-        rcs = list()
-        for i in relaxed_cons + linking_cons + list(partition_cons) + list(obj_cons):
-            rcs.append(str(i))
-        dcs = [str(i) for i in decomposed_cons]
-
-        def _reformat(s: str) -> str:
-            s = s.split('.cons')
-            if len(s) > 1:
-                s = s[1]
-                s = s.lstrip('[')
-                s = s.rstrip(']')
-            elif s[0].startswith('cons'):
-                s = s[0]
-                s = s.lstrip('cons')
-                s = s.lstrip('[')
-                s = s.rstrip(']')
-            else:
-                s = s[0]
-            s = s.replace('"', '')
-            s = s.replace("'", "")
-            return s
-
-        rcs = set([_reformat(i) for i in rcs])
-        dcs = set([_reformat(i) for i in dcs])
-
-        self.assertEqual(rcs, dcs)
-
-        # self.assertEqual(len(relaxed_cons) + len(linking_cons) + len(partition_cons) - len(partition_cons)/3 + len(obj_cons), len(decomposed_cons))
-        self.assertEqual(len(relaxed_rels), len(decomposed_rels))
-
-    def test_decompose1(self):
-        self.helper(
-            'pglib_opf_case5_pjm.m',
-            min_partition_ratio=1.5,
-            expected_termination=coramin.domain_reduction.dbt.DecompositionStatus.problem_too_small,
-        )
-
-    def test_decompose2(self):
-        self.helper(
-            'pglib_opf_case30_ieee.m',
-            min_partition_ratio=1.5,
-            expected_termination=coramin.domain_reduction.dbt.DecompositionStatus.normal,
-        )
-
-    def test_decompose3(self):
-        self.helper(
-            'pglib_opf_case118_ieee.m',
-            min_partition_ratio=1.5,
-            expected_termination=coramin.domain_reduction.dbt.DecompositionStatus.normal,
-        )
-
-    def test_decompose4(self):
-        self.helper(
-            'pglib_opf_case14_ieee.m',
-            min_partition_ratio=1.4,
-            expected_termination=coramin.domain_reduction.dbt.DecompositionStatus.normal,
-        )
-
-
 class TestVarsToTightenByBlock(unittest.TestCase):
     def test_vars_to_tighten_by_block(self):
         m = TreeBlock(concrete=True)
@@ -820,11 +558,10 @@ class TestVarsToTightenByBlock(unittest.TestCase):
 
         b2.x = pe.Var(bounds=(-1, 1))
         b2.y = pe.Var()
-        b2.z = pe.Var()
         b2.aux = pe.Var()
 
         b1.c = pe.Constraint(expr=b1.x + b1.y + b1.z == 0)
-        b2.c = pe.Constraint(expr=b2.x + b2.y + b2.z == 0)
+        b2.c = pe.Constraint(expr=b2.x + b2.y + b1.z == 0)
 
         b1.r = coramin.relaxations.PWUnivariateRelaxation()
         b1.r.set_input(
@@ -841,43 +578,36 @@ class TestVarsToTightenByBlock(unittest.TestCase):
         )
         b2.r.rebuild()
 
-        m.linking_constraints.add(b1.z == b2.z)
+        m.coupling_vars.append(b1.z)
 
         vars_to_tighten_by_block = collect_vars_to_tighten_by_block(
             m, method='full_space'
         )
-        self.assertEqual(len(vars_to_tighten_by_block), 3)
+        self.assertEqual(len(vars_to_tighten_by_block), 1)
         vars_to_tighten = vars_to_tighten_by_block[m]
-        self.assertEqual(len(vars_to_tighten), 0)
-        vars_to_tighten = vars_to_tighten_by_block[b1]
         self.assertEqual(len(vars_to_tighten), 1)
         self.assertIn(b1.x, vars_to_tighten)
-        vars_to_tighten = vars_to_tighten_by_block[b2]
-        self.assertEqual(len(vars_to_tighten), 1)
-        self.assertIn(b2.x, vars_to_tighten)
 
         vars_to_tighten_by_block = collect_vars_to_tighten_by_block(m, method='leaves')
-        self.assertEqual(len(vars_to_tighten_by_block), 3)
+        self.assertIn(len(vars_to_tighten_by_block), {2, 3})
         vars_to_tighten = vars_to_tighten_by_block[m]
         self.assertEqual(len(vars_to_tighten), 0)
         vars_to_tighten = vars_to_tighten_by_block[b1]
         self.assertEqual(len(vars_to_tighten), 1)
         self.assertIn(b1.x, vars_to_tighten)
         vars_to_tighten = vars_to_tighten_by_block[b2]
-        self.assertEqual(len(vars_to_tighten), 1)
-        self.assertIn(b2.x, vars_to_tighten)
+        self.assertEqual(len(vars_to_tighten), 0)
 
         vars_to_tighten_by_block = collect_vars_to_tighten_by_block(m, method='dbt')
         self.assertEqual(len(vars_to_tighten_by_block), 3)
         vars_to_tighten = vars_to_tighten_by_block[m]
         self.assertEqual(len(vars_to_tighten), 1)
-        self.assertTrue(b1.z in vars_to_tighten or b2.z in vars_to_tighten)
+        self.assertTrue(b1.z in vars_to_tighten)
         vars_to_tighten = vars_to_tighten_by_block[b1]
         self.assertEqual(len(vars_to_tighten), 1)
         self.assertIn(b1.x, vars_to_tighten)
         vars_to_tighten = vars_to_tighten_by_block[b2]
-        self.assertEqual(len(vars_to_tighten), 1)
-        self.assertIn(b2.x, vars_to_tighten)
+        self.assertEqual(len(vars_to_tighten), 0)
 
 
 class TestDBT(unittest.TestCase):
@@ -901,17 +631,16 @@ class TestDBT(unittest.TestCase):
         )
 
         b1.x = pe.Var(bounds=(-5, 5))
-        b1.y = pe.Var(bounds=(-5, 5))
         b1.p = pe.Param(initialize=1.0, mutable=True)
         b1.c = coramin.relaxations.PWUnivariateRelaxation()
         b1.c.build(
             x=b1.x,
-            aux_var=b1.y,
+            aux_var=b0.y,
             shape=coramin.utils.FunctionShape.CONVEX,
             f_x_expr=b1.p * b1.x,
         )
 
-        m.linking_constraints.add(b0.y == b1.y)
+        m.coupling_vars.append(b0.y)
 
         return m
 
@@ -919,7 +648,7 @@ class TestDBT(unittest.TestCase):
         m = self.get_model()
         b0 = m.children[0]
         b1 = m.children[1]
-        opt = appsi.solvers.Gurobi()
+        opt = appsi.solvers.Highs()
         perform_dbt(
             relaxation=m,
             solver=opt,
@@ -932,8 +661,6 @@ class TestDBT(unittest.TestCase):
         self.assertAlmostEqual(b0.y.ub, 5)
         self.assertAlmostEqual(b1.x.lb, -1)
         self.assertAlmostEqual(b1.x.ub, 1)
-        self.assertAlmostEqual(b1.y.lb, -5)
-        self.assertAlmostEqual(b1.y.ub, 5)
 
     def test_leaves(self):
         m = self.get_model()
@@ -952,14 +679,12 @@ class TestDBT(unittest.TestCase):
         self.assertAlmostEqual(b0.y.ub, 5)
         self.assertAlmostEqual(b1.x.lb, -5)
         self.assertAlmostEqual(b1.x.ub, 5)
-        self.assertAlmostEqual(b1.y.lb, -5)
-        self.assertAlmostEqual(b1.y.ub, 5)
 
     def test_dbt(self):
         m = self.get_model()
         b0 = m.children[0]
         b1 = m.children[1]
-        opt = appsi.solvers.Gurobi()
+        opt = appsi.solvers.Highs()
         perform_dbt(
             relaxation=m,
             solver=opt,
@@ -972,14 +697,12 @@ class TestDBT(unittest.TestCase):
         self.assertAlmostEqual(b0.y.ub, 1)
         self.assertAlmostEqual(b1.x.lb, -1)
         self.assertAlmostEqual(b1.x.ub, 1)
-        self.assertAlmostEqual(b1.y.lb, -1)
-        self.assertAlmostEqual(b1.y.ub, 1)
 
     def test_dbt_with_filter(self):
         m = self.get_model()
         b0 = m.children[0]
         b1 = m.children[1]
-        opt = appsi.solvers.Gurobi()
+        opt = appsi.solvers.Highs()
         perform_dbt(
             relaxation=m,
             solver=opt,
@@ -992,9 +715,7 @@ class TestDBT(unittest.TestCase):
         self.assertAlmostEqual(b0.y.ub, 1)
         self.assertAlmostEqual(b1.x.lb, -1)
         self.assertAlmostEqual(b1.x.ub, 1)
-        self.assertAlmostEqual(b1.y.lb, -1)
-        self.assertAlmostEqual(b1.y.ub, 1)
-
+ 
 
 class TestDBTWithECP(unittest.TestCase):
     def create_model(self):

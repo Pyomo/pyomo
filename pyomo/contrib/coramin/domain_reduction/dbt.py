@@ -61,12 +61,16 @@ class TreeBlockData(_BlockData):
         _BlockData.__init__(self, component)
         self._children_index = None
         self._children = None
-        self._coupling_vars = list()
+        self.coupling_vars = list()
         self._already_setup = False
         self._is_leaf = None
         self._is_root = True
 
-    def setup(self, children_keys, coupling_vars):
+    def is_root(self):
+        self._assert_setup()
+        return self._is_root
+
+    def setup(self, children_keys, coupling_vars=None):
         assert not self._already_setup
         self._already_setup = True
         if len(children_keys) == 0:
@@ -75,10 +79,12 @@ class TreeBlockData(_BlockData):
             self._is_leaf = False
             del self._children_index
             del self._children
-            del self._coupling_vars
             self._children_index = pe.Set(initialize=children_keys)
             self._children = TreeBlock(self._children_index)
-            self._coupling_vars = list(coupling_vars)
+            if coupling_vars is None:
+                self.coupling_vars = list()
+            else:
+                self.coupling_vars = list(coupling_vars)
             for key in children_keys:
                 child = self.children[key]
                 child._is_root = False
@@ -101,15 +107,6 @@ class TreeBlockData(_BlockData):
                 'Leaf TreeBlocks do not have children. Please check the is_leaf method'
             )
         return self._children
-    
-    @property
-    def coupling_vars(self):
-        self._assert_setup()
-        if self.is_leaf():
-            raise TreeBlockError(
-                'Leaf TreeBlocks do not have coupling variables. Please check the is_leaf method'
-            )
-        return list(self._coupling_vars)
 
     def _num_stages(self):
         self._assert_setup()
@@ -719,14 +716,16 @@ def _reformulate_objective(model):
         lb, ub = compute_bounds_on_expr(current_obj.expr)
         obj_var.setlb(lb)
         obj_var.setub(ub)
-        model.del_component(current_obj)
-        new_objective = pe.Objective(expr=model.obj_var)
+        current_obj_expr = current_obj.expr
+        current_obj_sense = current_obj.sense
+        current_obj.parent_block().del_component(current_obj)
+        new_objective = pe.Objective(expr=obj_var)
         new_obj_name = unique_component_name(model, 'objective')
         model.add_component(new_obj_name, new_objective)
-        if current_obj.sense == pe.minimize:
-            obj_con = pe.Constraint(expr=current_obj.expr <= obj_var)
+        if current_obj_sense == pe.minimize:
+            obj_con = pe.Constraint(expr=current_obj_expr <= obj_var)
         else:
-            obj_con = pe.Constraint(expr=current_obj.expr >= obj_var)
+            obj_con = pe.Constraint(expr=current_obj_expr >= obj_var)
             new_objective.sense = pe.maximize
         obj_con_name = unique_component_name(model, 'obj_con')
         model.add_component(obj_con_name, obj_con)
@@ -761,13 +760,13 @@ def _decompose_model(
     termination_reason: DecompositionStatus
         An enum member from DecompositionStatus
     """
+    new_model = TreeBlock(concrete=True)
+    new_model.aux_vars = pe.VarList()
+    object.__setattr__(model, 'aux_vars', new_model.aux_vars)
 
     # by reformulating the objective, we can make better use of the incumbent when
     # doing OBBT
     _reformulate_objective(model)
-    new_model = TreeBlock(concrete=True)
-    new_model.aux_vars = pe.VarList()
-    object.__setattr__(model, 'aux_vars', new_model.aux_vars)
 
     graph = convert_pyomo_model_to_bipartite_graph(model)
     logger.debug('converted pyomo model to bipartite graph')
@@ -1255,7 +1254,10 @@ def perform_dbt(
     for stage in range(num_stages):
         stage_blocks = list(relaxation.stage_blocks(stage))
         for block in stage_blocks:
-            vars_to_tighten = vars_to_tighten_by_block[block]
+            if block in vars_to_tighten_by_block:
+                vars_to_tighten = vars_to_tighten_by_block[block]
+            else:
+                vars_to_tighten = list()
             if obbt_method == OBBTMethod.FULL_SPACE or block.is_leaf():
                 dbt_info.num_vars_to_tighten += 2 * len(vars_to_tighten)
             else:
@@ -1302,9 +1304,9 @@ def perform_dbt(
             if time.time() - t0 >= time_limit:
                 break
 
-            if obbt_method in {OBBTMethod.LEAVES, OBBTMethod.FULL_SPACE} and (
-                not block.is_leaf()
-            ):
+            if obbt_method == OBBTMethod.LEAVES and not block.is_leaf():
+                continue
+            if obbt_method == OBBTMethod.FULL_SPACE and not block.is_root():
                 continue
             if obbt_method == OBBTMethod.FULL_SPACE:
                 block_to_tighten_with = relaxation
@@ -1316,7 +1318,10 @@ def perform_dbt(
                 else:
                     _ub = None
 
-            vars_to_tighten = vars_to_tighten_by_block[block]
+            if block in vars_to_tighten_by_block:
+                vars_to_tighten = vars_to_tighten_by_block[block]
+            else:
+                vars_to_tighten = list()
 
             if filter_method == FilterMethod.AGGRESSIVE:
                 logger.debug('starting filter')
@@ -1435,10 +1440,6 @@ def perform_dbt(
                             r.rebuild()
 
             logger.debug('done tightening ubs')
-
-            if not block.is_leaf():
-                for c in block.linking_constraints.values():
-                    fbbt(c)
 
     return dbt_info
 

@@ -94,7 +94,7 @@ def is_relaxation(a: _BlockData, b: _BlockData, opt: appsi.base.Solver, feasibil
     b_vars = ComponentSet(active_vars(b))
     vars_to_presolve = a_vars - b_vars
     if len(vars_to_presolve) > 0:
-        a = clone_shallow_active_flat(a, clone_expressions=True)[0]
+        a = clone_shallow_active_flat(a)[0]
         if not _attempt_presolve(a, vars_to_presolve):
             raise RuntimeError('a has variables that b does not, which makes the following analysis invalid')
 
