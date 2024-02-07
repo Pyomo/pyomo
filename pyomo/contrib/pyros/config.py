@@ -3,20 +3,9 @@ Interfaces for managing PyROS solver options.
 """
 
 
-from pyomo.common.config import (
-    ConfigDict,
-    ConfigValue,
-    In,
-    NonNegativeFloat,
-)
-from pyomo.core.base import (
-    Var,
-    _VarData,
-)
-from pyomo.core.base.param import (
-    Param,
-    _ParamData,
-)
+from pyomo.common.config import ConfigDict, ConfigValue, In, NonNegativeFloat
+from pyomo.core.base import Var, _VarData
+from pyomo.core.base.param import Param, _ParamData
 from pyomo.opt import SolverFactory
 from pyomo.contrib.pyros.util import (
     a_logger,
@@ -122,8 +111,8 @@ def pyros_config():
                 """
                 Export subproblems with a non-acceptable termination status
                 for debugging purposes.
-                If True is provided, then the argument `subproblem_file_directory`
-                must also be specified.
+                If True is provided, then the argument
+                `subproblem_file_directory` must also be specified.
                 """
             ),
         ),
@@ -143,8 +132,8 @@ def pyros_config():
             domain=bool,
             description=(
                 """
-                Load final solution(s) found by PyROS to the deterministic model
-                provided.
+                Load final solution(s) found by PyROS to the deterministic
+                model provided.
                 """
             ),
         ),
@@ -246,7 +235,7 @@ def pyros_config():
                   uncertain parameter realization.
 
                 By default, `ObjectiveType.nominal` is chosen.
-    
+
                 A worst-case objective focus is required for certification
                 of robust optimality of the final solution(s) returned
                 by PyROS.
@@ -279,19 +268,19 @@ def pyros_config():
             domain=In([0, 1, 2]),
             description=(
                 """
-                Order (or degree) of the polynomial decision rule functions used
-                for approximating the adjustability of the second stage
+                Order (or degree) of the polynomial decision rule functions
+                used for approximating the adjustability of the second stage
                 variables with respect to the uncertain parameters.
                 """
             ),
             doc=(
                 """
-                Order (or degree) of the polynomial decision rule functions used
+                Order (or degree) of the polynomial decision rule functions
                 for approximating the adjustability of the second stage
                 variables with respect to the uncertain parameters.
-    
+
                 Choices are:
-    
+
                 - 0: static recourse
                 - 1: affine recourse
                 - 2: quadratic recourse
