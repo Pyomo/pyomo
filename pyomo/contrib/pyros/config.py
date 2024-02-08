@@ -230,7 +230,7 @@ class InputDataStandardizer(object):
 
     def standardize_cdatatype_obj(self, obj):
         """
-        Standarize object of type ``self.cdatatype`` to
+        Standardize object of type ``self.cdatatype`` to
         ``[obj]``.
         """
         if self.cdatatype_validator is not None:
