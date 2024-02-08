@@ -44,7 +44,7 @@ from pyomo.core.base import Constraint
 from datetime import datetime
 
 
-__version__ = "1.2.9"
+__version__ = "1.2.10"
 
 
 default_pyros_solver_logger = setup_pyros_logger()
