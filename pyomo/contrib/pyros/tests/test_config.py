@@ -199,7 +199,7 @@ class TestInputDataStandardizer(unittest.TestCase):
         with self.assertRaisesRegex(TypeError, exc_str):
             standardizer_func("abcd")
 
-    def test_standardizer_invalid_unintialized_params(self):
+    def test_standardizer_invalid_uninitialized_params(self):
         """
         Test standardizer raises exception when Param with
         uninitialized entries passed.
@@ -373,7 +373,7 @@ class TestSolverResolvable(unittest.TestCase):
     def test_solver_resolvable_unavailable_solver(self):
         """
         Test solver standardizer fails in event solver is
-        unavaiable.
+        unavailable.
         """
         unavailable_solver = UnavailableSolver()
         standardizer_func = SolverResolvable(

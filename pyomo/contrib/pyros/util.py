@@ -892,7 +892,7 @@ def validate_model(model, config):
     Parameters
     ----------
     model : ConcreteModel
-        Determinstic model. Should have only one active Objective.
+        Deterministic model. Should have only one active Objective.
     config : ConfigDict
         PyROS solver options.
 

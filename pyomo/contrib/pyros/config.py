@@ -1001,7 +1001,7 @@ def resolve_keyword_arguments(prioritized_kwargs_dicts, func=None):
         overlapping_args_set = set()
 
         for prev_desc, prev_kwargs in prev_prioritized_kwargs_dicts.items():
-            # determine overlap between currrent and previous
+            # determine overlap between current and previous
             # set of kwargs, and remove overlap of current
             # and higher priority sets from the result
             curr_prev_overlapping_args = (
