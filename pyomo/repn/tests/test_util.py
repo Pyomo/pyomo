@@ -19,6 +19,7 @@ from pyomo.common.collections import ComponentMap
 from pyomo.common.errors import DeveloperError, InvalidValueError
 from pyomo.common.log import LoggingIntercept
 from pyomo.core.expr import (
+    NumericExpression,
     ProductExpression,
     NPV_ProductExpression,
     SumExpression,
@@ -671,16 +672,6 @@ class TestRepnUtils(unittest.TestCase):
         self.assertEqual(len(end), 4)
         self.assertIn(NPV_ProductExpression, end)
 
-        class NewProductExpression(ProductExpression):
-            pass
-
-        node = NewProductExpression((6, 7))
-        with self.assertRaisesRegex(
-            DeveloperError, r".*Unexpected expression node type 'NewProductExpression'"
-        ):
-            end[node.__class__](None, node, *node.args)
-        self.assertEqual(len(end), 4)
-
         end[SumExpression, 2] = lambda v, n, *d: 2 * sum(d)
         self.assertEqual(len(end), 5)
 
@@ -709,6 +700,31 @@ class TestRepnUtils(unittest.TestCase):
         self.assertEqual(end[node.__class__, 3, 4, 5, 6](None, node, *node.args), 6)
         self.assertEqual(len(end), 7)
         self.assertNotIn((SumExpression, 3, 4, 5, 6), end)
+
+        class NewProductExpression(ProductExpression):
+            pass
+
+        node = NewProductExpression((6, 7))
+        self.assertEqual(end[node.__class__](None, node, *node.args), 42)
+        self.assertEqual(len(end), 8)
+        self.assertIn(NewProductExpression, end)
+
+        class UnknownExpression(NumericExpression):
+            pass
+
+        node = UnknownExpression((6, 7))
+        with self.assertRaisesRegex(
+            DeveloperError, r".*Unexpected expression node type 'UnknownExpression'"
+        ):
+            end[node.__class__](None, node, *node.args)
+        self.assertEqual(len(end), 8)
+
+        node = UnknownExpression((6, 7))
+        with self.assertRaisesRegex(
+            DeveloperError, r".*Unexpected expression node type 'UnknownExpression'"
+        ):
+            end[node.__class__, 6, 7](None, node, *node.args)
+        self.assertEqual(len(end), 8)
 
     def test_BeforeChildDispatcher_registration(self):
         class BeforeChildDispatcherTester(BeforeChildDispatcher):
