@@ -305,7 +305,6 @@ class TestUncertaintySetDomain(unittest.TestCase):
 AVAILABLE_SOLVER_TYPE_NAME = "available_pyros_test_solver"
 
 
-@SolverFactory.register(name=AVAILABLE_SOLVER_TYPE_NAME)
 class AvailableSolver:
     """
     Perennially available placeholder solver.
@@ -339,6 +338,12 @@ class TestSolverResolvable(unittest.TestCase):
     """
     Test PyROS standardizer for solver-type objects.
     """
+
+    def setUp(self):
+        SolverFactory.register(AVAILABLE_SOLVER_TYPE_NAME)(AvailableSolver)
+
+    def tearDown(self):
+        SolverFactory.unregister(AVAILABLE_SOLVER_TYPE_NAME)
 
     def test_solver_resolvable_valid_str(self):
         """
@@ -420,6 +425,12 @@ class TestSolverIterable(unittest.TestCase):
     used to validate `backup_local_solvers` and `backup_global_solvers`
     arguments.
     """
+
+    def setUp(self):
+        SolverFactory.register(AVAILABLE_SOLVER_TYPE_NAME)(AvailableSolver)
+
+    def tearDown(self):
+        SolverFactory.unregister(AVAILABLE_SOLVER_TYPE_NAME)
 
     def test_solver_iterable_valid_list(self):
         """
