@@ -102,13 +102,11 @@ class suffix(ISuffix):
     # Interface
     #
 
-    @property
     def export_enabled(self):
         """Returns :const:`True` when this suffix is enabled
         for export to solvers."""
         return bool(self._direction & suffix.EXPORT)
 
-    @property
     def import_enabled(self):
         """Returns :const:`True` when this suffix is enabled
         for import from solutions."""
@@ -233,7 +231,7 @@ def export_suffix_generator(blk, datatype=_noarg, active=True, descend_into=True
     """
     for suf in filter(
         lambda x: (
-            x.export_enabled and ((datatype is _noarg) or (x.datatype is datatype))
+            x.export_enabled() and ((datatype is _noarg) or (x.datatype is datatype))
         ),
         blk.components(ctype=suffix._ctype, active=active, descend_into=descend_into),
     ):
@@ -267,7 +265,7 @@ def import_suffix_generator(blk, datatype=_noarg, active=True, descend_into=True
     """
     for suf in filter(
         lambda x: (
-            x.import_enabled and ((datatype is _noarg) or (x.datatype is datatype))
+            x.import_enabled() and ((datatype is _noarg) or (x.datatype is datatype))
         ),
         blk.components(ctype=suffix._ctype, active=active, descend_into=descend_into),
     ):

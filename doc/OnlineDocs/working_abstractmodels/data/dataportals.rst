@@ -62,14 +62,14 @@ can be used to initialize both concrete and abstract Pyomo models.
 Consider the file ``A.tab``, which defines a simple set with a tabular
 format:
 
-.. literalinclude:: ../../tests/dataportal/A.tab
+.. literalinclude:: ../../src/dataportal/A.tab
     :language: none
 
 The ``load`` method is used to load data into a :class:`~pyomo.environ.DataPortal` object.  Components in a
 concrete model can be explicitly initialized with data loaded by a
 :class:`~pyomo.environ.DataPortal` object:
 
-.. literalinclude:: ../../tests/dataportal/dataportal_tab_concrete1.spy
+.. literalinclude:: ../../src/dataportal/dataportal_tab_concrete1.spy
     :language: python
 
 All data needed to initialize an abstract model *must* be provided by a
@@ -77,7 +77,7 @@ All data needed to initialize an abstract model *must* be provided by a
 and the use of the :class:`~pyomo.environ.DataPortal` object to initialize components
 is automated for the user:
 
-.. literalinclude:: ../../tests/dataportal/dataportal_tab_load.spy
+.. literalinclude:: ../../src/dataportal/dataportal_tab_load.spy
     :language: python
 
 Note the difference in the execution of the ``load`` method in these two
@@ -126,7 +126,7 @@ that are loaded from different data sources.  The ``[]`` operator is
 used to access set and parameter values.  Consider the following
 example, which loads data and prints the value of the ``[]`` operator:
 
-.. literalinclude:: ../../tests/dataportal/dataportal_tab_getitem.spy
+.. literalinclude:: ../../src/dataportal/dataportal_tab_getitem.spy
     :language: python
 
 The :class:`~pyomo.environ.DataPortal`
@@ -162,12 +162,12 @@ with lists and dictionaries:
 
 For example, consider the following JSON file:
 
-.. literalinclude:: ../../tests/dataportal/T.json
+.. literalinclude:: ../../src/dataportal/T.json
     :language: none
 
 The data in this file can be used to load the following model:
 
-.. literalinclude:: ../../tests/dataportal/dataportal_tab_json1.spy
+.. literalinclude:: ../../src/dataportal/dataportal_tab_json1.spy
     :language: python
 
 Note that no ``set`` or ``param`` option needs to be specified when
@@ -178,13 +178,13 @@ needed for model construction is used.
 
 The following YAML file has a similar structure:
 
-.. literalinclude:: ../../tests/dataportal/T.yaml
+.. literalinclude:: ../../src/dataportal/T.yaml
     :language: none
 
 The data in this file can be used to load a Pyomo model with the
 same syntax as a JSON file:
 
-.. literalinclude:: ../../tests/dataportal/dataportal_tab_yaml1.spy
+.. literalinclude:: ../../src/dataportal/dataportal_tab_yaml1.spy
     :language: python
 
 
@@ -212,7 +212,7 @@ TAB files represent tabular data in an ascii file using whitespace as a
 delimiter.  A TAB file consists of rows of values, where each row has
 the same length.  For example, the file ``PP.tab`` has the format:
 
-.. literalinclude:: ../../tests/dataportal/PP.tab
+.. literalinclude:: ../../src/dataportal/PP.tab
     :language: none
 
 CSV files represent tabular data in a format that is very similar to TAB
@@ -220,7 +220,7 @@ files.  Pyomo assumes that a CSV file consists of rows of values, where
 each row has the same length.  For example, the file ``PP.csv`` has the
 format:
 
-.. literalinclude:: ../../tests/dataportal/PP.csv
+.. literalinclude:: ../../src/dataportal/PP.csv
     :language: none
 
 Excel spreadsheets can express complex data relationships.  A *range* is
@@ -242,7 +242,7 @@ sub-element of a ``row`` element represents a different column, where
 each row has the same length.  For example, the file ``PP.xml`` has the
 format:
 
-.. literalinclude:: ../../tests/dataportal/PP.xml
+.. literalinclude:: ../../src/dataportal/PP.xml
     :language: none
 
 Loading Set Data
@@ -256,13 +256,13 @@ Loading a Simple Set
 
 Consider the file ``A.tab``, which defines a simple set:
 
-.. literalinclude:: ../../tests/dataportal/A.tab
+.. literalinclude:: ../../src/dataportal/A.tab
     :language: none
 
 In the following example, a :class:`~pyomo.environ.DataPortal` object loads data for a simple
 set ``A``:
 
-.. literalinclude:: ../../tests/dataportal/dataportal_tab_set1.spy
+.. literalinclude:: ../../src/dataportal/dataportal_tab_set1.spy
     :language: python
 
 Loading a Set of Tuples
@@ -270,13 +270,13 @@ Loading a Set of Tuples
 
 Consider the file ``C.tab``:
 
-.. literalinclude:: ../../tests/dataportal/C.tab
+.. literalinclude:: ../../src/dataportal/C.tab
     :language: none
 
 In the following example, a :class:`~pyomo.environ.DataPortal` object loads data for a
 two-dimensional set ``C``:
 
-.. literalinclude:: ../../tests/dataportal/dataportal_tab_set2.spy
+.. literalinclude:: ../../src/dataportal/dataportal_tab_set2.spy
     :language: python
 
 In this example, the column titles do not directly impact the process of
@@ -289,13 +289,13 @@ Loading a Set Array
 Consider the file ``D.tab``, which defines an array representation of a
 two-dimensional set:
 
-.. literalinclude:: ../../tests/dataportal/D.tab
+.. literalinclude:: ../../src/dataportal/D.tab
     :language: none
 
 In the following example, a :class:`~pyomo.environ.DataPortal` object loads data for a
 two-dimensional set ``D``:
 
-.. literalinclude:: ../../tests/dataportal/dataportal_tab_set3.spy
+.. literalinclude:: ../../src/dataportal/dataportal_tab_set3.spy
     :language: python
 
 The ``format`` option indicates that the set data is declared in a array
@@ -313,13 +313,13 @@ Loading a Simple Parameter
 The simplest parameter is simply a singleton value.  Consider the file
 ``Z.tab``:
 
-.. literalinclude:: ../../tests/dataportal/Z.tab
+.. literalinclude:: ../../src/dataportal/Z.tab
     :language: none
 
 In the following example, a :class:`~pyomo.environ.DataPortal` object loads data for a simple
 parameter ``z``:
 
-.. literalinclude:: ../../tests/dataportal/dataportal_tab_param1.spy
+.. literalinclude:: ../../src/dataportal/dataportal_tab_param1.spy
     :language: python
 
 Loading an Indexed Parameter
@@ -328,13 +328,13 @@ Loading an Indexed Parameter
 An indexed parameter can be defined by a single column in a table.  For
 example, consider the file ``Y.tab``:
 
-.. literalinclude:: ../../tests/dataportal/Y.tab
+.. literalinclude:: ../../src/dataportal/Y.tab
     :language: none
 
 In the following example, a :class:`~pyomo.environ.DataPortal` object loads data for an indexed
 parameter ``y``:
 
-.. literalinclude:: ../../tests/dataportal/dataportal_tab_param2.spy
+.. literalinclude:: ../../src/dataportal/dataportal_tab_param2.spy
     :language: python
 
 When column names are not used to specify the index and parameter data,
@@ -351,19 +351,19 @@ The index set can be loaded with the parameter data using the ``index``
 option.  In the following example, a :class:`~pyomo.environ.DataPortal` object loads data for set ``A``
 and the indexed parameter ``y``
 
-.. literalinclude:: ../../tests/dataportal/dataportal_tab_param3.spy
+.. literalinclude:: ../../src/dataportal/dataportal_tab_param3.spy
     :language: python
 
 An index set with multiple dimensions can also be loaded with an indexed
 parameter.  Consider the file ``PP.tab``:
 
-.. literalinclude:: ../../tests/dataportal/PP.tab
+.. literalinclude:: ../../src/dataportal/PP.tab
     :language: none
 
 In the following example, a :class:`~pyomo.environ.DataPortal` object loads data for a tuple
 set and an indexed parameter:
 
-.. literalinclude:: ../../tests/dataportal/dataportal_tab_param10.spy
+.. literalinclude:: ../../src/dataportal/dataportal_tab_param10.spy
     :language: python
 
 Loading a Parameter with Missing Values
@@ -373,7 +373,7 @@ Missing parameter data can be expressed in two ways.  First, parameter
 data can be defined with indices that are a subset of valid indices in
 the model.  The following example loads the indexed parameter ``y``:
 
-.. literalinclude:: ../../tests/dataportal/dataportal_tab_param9.spy
+.. literalinclude:: ../../src/dataportal/dataportal_tab_param9.spy
     :language: python
 
 The model defines an index set with four values, but only three
@@ -382,13 +382,13 @@ parameter values are declared in the data file ``Y.tab``.
 Parameter data can also be declared with missing values using the period
 (``.``) symbol.  For example, consider the file ``S.tab``:
 
-.. literalinclude:: ../../tests/dataportal/PP.tab
+.. literalinclude:: ../../src/dataportal/PP.tab
     :language: none
 
 In the following example, a :class:`~pyomo.environ.DataPortal` object loads data for the index
 set ``A`` and indexed parameter ``y``:
 
-.. literalinclude:: ../../tests/dataportal/dataportal_tab_param8.spy
+.. literalinclude:: ../../src/dataportal/dataportal_tab_param8.spy
     :language: python
 
 The period (``.``) symbol indicates a missing parameter value, but the
@@ -400,13 +400,13 @@ Loading Multiple Parameters
 Multiple parameters can be initialized at once by specifying a list (or
 tuple) of component parameters.  Consider the file ``XW.tab``:
 
-.. literalinclude:: ../../tests/dataportal/XW.tab
+.. literalinclude:: ../../src/dataportal/XW.tab
     :language: none
 
 In the following example, a :class:`~pyomo.environ.DataPortal` object loads data for parameters
 ``x`` and ``w``:
 
-.. literalinclude:: ../../tests/dataportal/dataportal_tab_param4.spy
+.. literalinclude:: ../../src/dataportal/dataportal_tab_param4.spy
     :language: python
 
 Selecting Parameter Columns
@@ -421,7 +421,7 @@ component data.
 
 For example, consider the following load declaration:
 
-.. literalinclude:: ../../tests/dataportal/dataportal_tab_param5.spy
+.. literalinclude:: ../../src/dataportal/dataportal_tab_param5.spy
     :language: python
 
 The columns ``A`` and ``W`` are selected from the file ``XW.tab``, and a
@@ -433,20 +433,20 @@ Loading a Parameter Array
 Consider the file ``U.tab``, which defines an array representation of a
 multiply-indexed parameter:
 
-.. literalinclude:: ../../tests/dataportal/U.tab
+.. literalinclude:: ../../src/dataportal/U.tab
     :language: none
 
 In the following example, a :class:`~pyomo.environ.DataPortal` object loads data for a
 two-dimensional parameter ``u``:
 
-.. literalinclude:: ../../tests/dataportal/dataportal_tab_param6.spy
+.. literalinclude:: ../../src/dataportal/dataportal_tab_param6.spy
     :language: python
 
 The ``format`` option indicates that the parameter data is declared in a
 array format.  The ``format`` option can also indicate that the
 parameter data should be transposed.
 
-.. literalinclude:: ../../tests/dataportal/dataportal_tab_param7.spy
+.. literalinclude:: ../../src/dataportal/dataportal_tab_param7.spy
     :language: python
 
 Note that the transposed parameter data changes the index set for the
@@ -467,7 +467,7 @@ the following range of cells, which is named ``PPtable``:
 In the following example, a :class:`~pyomo.environ.DataPortal` object loads the named range
 ``PPtable`` from the file ``excel.xls``:
 
-.. literalinclude:: ../../tests/dataportal/dataportal_tab_excel1.spy
+.. literalinclude:: ../../src/dataportal/dataportal_tab_excel1.spy
     :language: python
 
 Note that the ``range`` option is required to specify the table of cell
@@ -477,14 +477,14 @@ There are a variety of ways that data can be loaded from a relational
 database.  In the simplest case, a table can be specified within a
 database:
 
-.. literalinclude:: ../../tests/dataportal/dataportal_tab_db1.spy
+.. literalinclude:: ../../src/dataportal/dataportal_tab_db1.spy
     :language: python
 
 In this example, the interface ``sqlite3`` is used to load data from an
 SQLite database in the file ``PP.sqlite``.  More generally, an SQL query
 can be specified to dynamically generate a table.  For example:
 
-.. literalinclude:: ../../tests/dataportal/dataportal_tab_db2.spy
+.. literalinclude:: ../../src/dataportal/dataportal_tab_db2.spy
     :language: python
 
 Data Namespaces
@@ -524,7 +524,7 @@ components.  For example, the following script generates two model
 instances from an abstract model using data loaded into different
 namespaces:
 
-.. literalinclude:: ../../tests/dataportal/dataportal_tab_namespaces1.spy
+.. literalinclude:: ../../src/dataportal/dataportal_tab_namespaces1.spy
     :language: python
 
 

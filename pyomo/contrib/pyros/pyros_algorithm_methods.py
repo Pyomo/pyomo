@@ -11,14 +11,14 @@ from pyomo.contrib.pyros.util import (
     ObjectiveType,
     get_time_from_solver,
     pyrosTerminationCondition,
+    IterationLogRecord,
 )
-from pyomo.contrib.pyros.util import (
-    get_main_elapsed_time,
-    output_logger,
-    coefficient_matching,
-)
+from pyomo.contrib.pyros.util import get_main_elapsed_time, coefficient_matching
 from pyomo.core.base import value
-from pyomo.common.collections import ComponentSet
+from pyomo.common.collections import ComponentSet, ComponentMap
+from pyomo.core.base.var import _VarData as VarData
+from itertools import chain
+from pyomo.common.dependencies import numpy as np
 
 
 def update_grcs_solve_data(
@@ -45,6 +45,286 @@ def update_grcs_solve_data(
     pyros_soln.master_soln = master_soln
 
     return
+
+
+def get_dr_var_to_scaled_expr_map(
+    decision_rule_eqns, second_stage_vars, uncertain_params, decision_rule_vars
+):
+    """
+    Generate mapping from decision rule variables
+    to their terms in a model's DR expression.
+    """
+    var_to_scaled_expr_map = ComponentMap()
+    ssv_dr_eq_zip = zip(second_stage_vars, decision_rule_eqns)
+    for ssv_idx, (ssv, dr_eq) in enumerate(ssv_dr_eq_zip):
+        for term in dr_eq.body.args:
+            is_ssv_term = (
+                isinstance(term.args[0], int)
+                and term.args[0] == -1
+                and isinstance(term.args[1], VarData)
+            )
+            if not is_ssv_term:
+                dr_var = term.args[1]
+                var_to_scaled_expr_map[dr_var] = term
+
+    return var_to_scaled_expr_map
+
+
+def evaluate_and_log_component_stats(model_data, separation_model, config):
+    """
+    Evaluate and log model component statistics.
+    """
+    IterationLogRecord.log_header_rule(config.progress_logger.info)
+    config.progress_logger.info("Model statistics:")
+    # print model statistics
+    dr_var_set = ComponentSet(
+        chain(
+            *tuple(
+                indexed_dr_var.values()
+                for indexed_dr_var in model_data.working_model.util.decision_rule_vars
+            )
+        )
+    )
+    first_stage_vars = [
+        var
+        for var in model_data.working_model.util.first_stage_variables
+        if var not in dr_var_set
+    ]
+
+    # account for epigraph constraint
+    sep_model_epigraph_con = getattr(separation_model, "epigraph_constr", None)
+    has_epigraph_con = sep_model_epigraph_con is not None
+
+    num_fsv = len(first_stage_vars)
+    num_ssv = len(model_data.working_model.util.second_stage_variables)
+    num_sv = len(model_data.working_model.util.state_vars)
+    num_dr_vars = len(dr_var_set)
+    num_vars = int(has_epigraph_con) + num_fsv + num_ssv + num_sv + num_dr_vars
+
+    num_uncertain_params = len(model_data.working_model.util.uncertain_params)
+
+    eq_cons = [
+        con
+        for con in model_data.working_model.component_data_objects(
+            Constraint, active=True
+        )
+        if con.equality
+    ]
+    dr_eq_set = ComponentSet(
+        chain(
+            *tuple(
+                indexed_dr_eq.values()
+                for indexed_dr_eq in model_data.working_model.util.decision_rule_eqns
+            )
+        )
+    )
+    num_eq_cons = len(eq_cons)
+    num_dr_cons = len(dr_eq_set)
+    num_coefficient_matching_cons = len(
+        getattr(model_data.working_model, "coefficient_matching_constraints", [])
+    )
+    num_other_eq_cons = num_eq_cons - num_dr_cons - num_coefficient_matching_cons
+
+    # get performance constraints as referenced in the separation
+    # model object
+    new_sep_con_map = separation_model.util.map_new_constraint_list_to_original_con
+    perf_con_set = ComponentSet(
+        new_sep_con_map.get(con, con)
+        for con in separation_model.util.performance_constraints
+    )
+    is_epigraph_con_first_stage = (
+        has_epigraph_con and sep_model_epigraph_con not in perf_con_set
+    )
+    working_model_perf_con_set = ComponentSet(
+        model_data.working_model.find_component(new_sep_con_map.get(con, con))
+        for con in separation_model.util.performance_constraints
+        if con is not None
+    )
+
+    num_perf_cons = len(separation_model.util.performance_constraints)
+    num_fsv_bounds = sum(
+        int(var.lower is not None) + int(var.upper is not None)
+        for var in first_stage_vars
+    )
+    ineq_con_set = [
+        con
+        for con in model_data.working_model.component_data_objects(
+            Constraint, active=True
+        )
+        if not con.equality
+    ]
+    num_fsv_ineqs = (
+        num_fsv_bounds
+        + len([con for con in ineq_con_set if con not in working_model_perf_con_set])
+        + is_epigraph_con_first_stage
+    )
+    num_ineq_cons = len(ineq_con_set) + has_epigraph_con + num_fsv_bounds
+
+    config.progress_logger.info(f"{'  Number of variables'} : {num_vars}")
+    config.progress_logger.info(f"{'    Epigraph variable'} : {int(has_epigraph_con)}")
+    config.progress_logger.info(f"{'    First-stage variables'} : {num_fsv}")
+    config.progress_logger.info(f"{'    Second-stage variables'} : {num_ssv}")
+    config.progress_logger.info(f"{'    State variables'} : {num_sv}")
+    config.progress_logger.info(f"{'    Decision rule variables'} : {num_dr_vars}")
+    config.progress_logger.info(
+        f"{'  Number of uncertain parameters'} : {num_uncertain_params}"
+    )
+    config.progress_logger.info(
+        f"{'  Number of constraints'} : " f"{num_ineq_cons + num_eq_cons}"
+    )
+    config.progress_logger.info(f"{'    Equality constraints'} : {num_eq_cons}")
+    config.progress_logger.info(
+        f"{'      Coefficient matching constraints'} : "
+        f"{num_coefficient_matching_cons}"
+    )
+    config.progress_logger.info(f"{'      Decision rule equations'} : {num_dr_cons}")
+    config.progress_logger.info(
+        f"{'      All other equality constraints'} : " f"{num_other_eq_cons}"
+    )
+    config.progress_logger.info(f"{'    Inequality constraints'} : {num_ineq_cons}")
+    config.progress_logger.info(
+        f"{'      First-stage inequalities (incl. certain var bounds)'} : "
+        f"{num_fsv_ineqs}"
+    )
+    config.progress_logger.info(
+        f"{'      Performance constraints (incl. var bounds)'} : {num_perf_cons}"
+    )
+
+
+def evaluate_first_stage_var_shift(
+    current_master_fsv_vals, previous_master_fsv_vals, first_iter_master_fsv_vals
+):
+    """
+    Evaluate first-stage variable "shift": the maximum relative
+    difference between first-stage variable values from the current
+    and previous master iterations.
+
+    Parameters
+    ----------
+    current_master_fsv_vals : ComponentMap
+        First-stage variable values from the current master
+        iteration.
+    previous_master_fsv_vals : ComponentMap
+        First-stage variable values from the previous master
+        iteration.
+    first_iter_master_fsv_vals : ComponentMap
+        First-stage variable values from the first master
+        iteration.
+
+    Returns
+    -------
+    None
+        Returned only if `current_master_fsv_vals` is empty,
+        which should occur only if the problem has no first-stage
+        variables.
+    float
+        The maximum relative difference
+        Returned only if `current_master_fsv_vals` is not empty.
+    """
+    if not current_master_fsv_vals:
+        # there are no first-stage variables
+        return None
+    else:
+        return max(
+            abs(current_master_fsv_vals[var] - previous_master_fsv_vals[var])
+            / max((abs(first_iter_master_fsv_vals[var]), 1))
+            for var in previous_master_fsv_vals
+        )
+
+
+def evaluate_second_stage_var_shift(
+    current_master_nom_ssv_vals,
+    previous_master_nom_ssv_vals,
+    first_iter_master_nom_ssv_vals,
+):
+    """
+    Evaluate second-stage variable "shift": the maximum relative
+    difference between second-stage variable values from the current
+    and previous master iterations as evaluated subject to the
+    nominal uncertain parameter realization.
+
+    Parameters
+    ----------
+    current_master_nom_ssv_vals : ComponentMap
+        Second-stage variable values from the current master
+        iteration, evaluated subject to the nominal uncertain
+        parameter realization.
+    previous_master_nom_ssv_vals : ComponentMap
+        Second-stage variable values from the previous master
+        iteration, evaluated subject to the nominal uncertain
+        parameter realization.
+    first_iter_master_nom_ssv_vals : ComponentMap
+        Second-stage variable values from the first master
+        iteration, evaluated subject to the nominal uncertain
+        parameter realization.
+
+    Returns
+    -------
+    None
+        Returned only if `current_master_nom_ssv_vals` is empty,
+        which should occur only if the problem has no second-stage
+        variables.
+    float
+        The maximum relative difference.
+        Returned only if `current_master_nom_ssv_vals` is not empty.
+    """
+    if not current_master_nom_ssv_vals:
+        return None
+    else:
+        return max(
+            abs(current_master_nom_ssv_vals[ssv] - previous_master_nom_ssv_vals[ssv])
+            / max((abs(first_iter_master_nom_ssv_vals[ssv]), 1))
+            for ssv in previous_master_nom_ssv_vals
+        )
+
+
+def evaluate_dr_var_shift(
+    current_master_dr_var_vals,
+    previous_master_dr_var_vals,
+    first_iter_master_nom_ssv_vals,
+    dr_var_to_ssv_map,
+):
+    """
+    Evaluate decision rule variable "shift": the maximum relative
+    difference between scaled decision rule (DR) variable expressions
+    (terms in the DR equations) from the current
+    and previous master iterations.
+
+    Parameters
+    ----------
+    current_master_dr_var_vals : ComponentMap
+        DR variable values from the current master
+        iteration.
+    previous_master_dr_var_vals : ComponentMap
+        DR variable values from the previous master
+        iteration.
+    first_iter_master_nom_ssv_vals : ComponentMap
+        Second-stage variable values (evaluated subject to the
+        nominal uncertain parameter realization)
+        from the first master iteration.
+    dr_var_to_ssv_map : ComponentMap
+        Mapping from each DR variable to the
+        second-stage variable whose value is a function of the
+        DR variable.
+
+    Returns
+    -------
+    None
+        Returned only if `current_master_dr_var_vals` is empty,
+        which should occur only if the problem has no decision rule
+        (or equivalently, second-stage) variables.
+    float
+        The maximum relative difference.
+        Returned only if `current_master_dr_var_vals` is not empty.
+    """
+    if not current_master_dr_var_vals:
+        return None
+    else:
+        return max(
+            abs(current_master_dr_var_vals[drvar] - previous_master_dr_var_vals[drvar])
+            / max((1, abs(first_iter_master_nom_ssv_vals[dr_var_to_ssv_map[drvar]])))
+            for drvar in previous_master_dr_var_vals
+        )
 
 
 def ROSolver_iterative_solve(model_data, config):
@@ -75,20 +355,23 @@ def ROSolver_iterative_solve(model_data, config):
             config=config,
         )
         if not coeff_matching_success and not robust_infeasible:
-            raise ValueError(
-                "Equality constraint \"%s\" cannot be guaranteed to be robustly feasible, "
-                "given the current partitioning between first-stage, second-stage and state variables. "
-                "You might consider editing this constraint to reference some second-stage "
-                "and/or state variable(s)." % c.name
+            config.progress_logger.error(
+                f"Equality constraint {c.name!r} cannot be guaranteed to "
+                "be robustly feasible, given the current partitioning "
+                "among first-stage, second-stage, and state variables. "
+                "Consider editing this constraint to reference some "
+                "second-stage and/or state variable(s)."
             )
+            raise ValueError("Coefficient matching unsuccessful. See the solver logs.")
         elif not coeff_matching_success and robust_infeasible:
             config.progress_logger.info(
                 "PyROS has determined that the model is robust infeasible. "
-                "One reason for this is that equality constraint \"%s\" cannot be satisfied "
-                "against all realizations of uncertainty, "
-                "given the current partitioning between first-stage, second-stage and state variables. "
-                "You might consider editing this constraint to reference some (additional) second-stage "
-                "and/or state variable(s)." % c.name
+                f"One reason for this is that the equality constraint {c.name} "
+                "cannot be satisfied against all realizations of uncertainty, "
+                "given the current partitioning between "
+                "first-stage, second-stage, and state variables. "
+                "Consider editing this constraint to reference some (additional) "
+                "second-stage and/or state variable(s)."
             )
             return None, None
         else:
@@ -156,6 +439,10 @@ def ROSolver_iterative_solve(model_data, config):
         model_data=master_data, config=config
     )
 
+    evaluate_and_log_component_stats(
+        model_data=model_data, separation_model=separation_model, config=config
+    )
+
     # === Create separation problem data container object and add information to catalog during solve
     separation_data = SeparationProblemData()
     separation_data.separation_model = separation_model
@@ -204,6 +491,53 @@ def ROSolver_iterative_solve(model_data, config):
     dr_var_lists_original = []
     dr_var_lists_polished = []
 
+    # set up first-stage variable and DR variable sets
+    master_dr_var_set = ComponentSet(
+        chain(
+            *tuple(
+                indexed_var.values()
+                for indexed_var in master_data.master_model.scenarios[
+                    0, 0
+                ].util.decision_rule_vars
+            )
+        )
+    )
+    master_fsv_set = ComponentSet(
+        var
+        for var in master_data.master_model.scenarios[0, 0].util.first_stage_variables
+        if var not in master_dr_var_set
+    )
+    master_nom_ssv_set = ComponentSet(
+        master_data.master_model.scenarios[0, 0].util.second_stage_variables
+    )
+    previous_master_fsv_vals = ComponentMap((var, None) for var in master_fsv_set)
+    previous_master_dr_var_vals = ComponentMap((var, None) for var in master_dr_var_set)
+    previous_master_nom_ssv_vals = ComponentMap(
+        (var, None) for var in master_nom_ssv_set
+    )
+
+    first_iter_master_fsv_vals = ComponentMap((var, None) for var in master_fsv_set)
+    first_iter_master_nom_ssv_vals = ComponentMap(
+        (var, None) for var in master_nom_ssv_set
+    )
+    first_iter_dr_var_vals = ComponentMap((var, None) for var in master_dr_var_set)
+    nom_master_util_blk = master_data.master_model.scenarios[0, 0].util
+    dr_var_scaled_expr_map = get_dr_var_to_scaled_expr_map(
+        decision_rule_vars=nom_master_util_blk.decision_rule_vars,
+        decision_rule_eqns=nom_master_util_blk.decision_rule_eqns,
+        second_stage_vars=nom_master_util_blk.second_stage_variables,
+        uncertain_params=nom_master_util_blk.uncertain_params,
+    )
+    dr_var_to_ssv_map = ComponentMap()
+    dr_ssv_zip = zip(
+        nom_master_util_blk.decision_rule_vars,
+        nom_master_util_blk.second_stage_variables,
+    )
+    for indexed_dr_var, ssv in dr_ssv_zip:
+        for drvar in indexed_dr_var.values():
+            dr_var_to_ssv_map[drvar] = ssv
+
+    IterationLogRecord.log_header(config.progress_logger.info)
     k = 0
     master_statuses = []
     while config.max_iter == -1 or k < config.max_iter:
@@ -216,7 +550,7 @@ def ROSolver_iterative_solve(model_data, config):
             )
 
         # === Solve Master Problem
-        config.progress_logger.info("PyROS working on iteration %s..." % k)
+        config.progress_logger.debug(f"PyROS working on iteration {k}...")
         master_soln = master_problem_methods.solve_master(
             model_data=master_data, config=config
         )
@@ -239,7 +573,6 @@ def ROSolver_iterative_solve(model_data, config):
             is pyrosTerminationCondition.robust_infeasible
         ):
             term_cond = pyrosTerminationCondition.robust_infeasible
-            output_logger(config=config, robust_infeasible=True)
         elif (
             master_soln.pyros_termination_condition
             is pyrosTerminationCondition.subsolver_error
@@ -257,6 +590,20 @@ def ROSolver_iterative_solve(model_data, config):
             pyrosTerminationCondition.time_out,
             pyrosTerminationCondition.robust_infeasible,
         }:
+            log_record = IterationLogRecord(
+                iteration=k,
+                objective=None,
+                first_stage_var_shift=None,
+                second_stage_var_shift=None,
+                dr_var_shift=None,
+                num_violated_cons=None,
+                max_violation=None,
+                dr_polishing_success=None,
+                all_sep_problems_solved=None,
+                global_separation=None,
+                elapsed_time=get_main_elapsed_time(model_data.timing),
+            )
+            log_record.log(config.progress_logger.info)
             update_grcs_solve_data(
                 pyros_soln=model_data,
                 k=k,
@@ -280,6 +627,7 @@ def ROSolver_iterative_solve(model_data, config):
             nominal_data.nom_second_stage_cost = master_soln.second_stage_objective
             nominal_data.nom_obj = value(master_data.master_model.obj)
 
+        polishing_successful = True
         if (
             config.decision_rule_order != 0
             and len(config.second_stage_variables) > 0
@@ -294,8 +642,10 @@ def ROSolver_iterative_solve(model_data, config):
                     vals.append(dvar.value)
                 dr_var_lists_original.append(vals)
 
-            polishing_results = master_problem_methods.minimize_dr_vars(
-                model_data=master_data, config=config
+            (polishing_results, polishing_successful) = (
+                master_problem_methods.minimize_dr_vars(
+                    model_data=master_data, config=config
+                )
             )
             timing_data.total_dr_polish_time += get_time_from_solver(polishing_results)
 
@@ -308,11 +658,63 @@ def ROSolver_iterative_solve(model_data, config):
                     vals.append(dvar.value)
                 dr_var_lists_polished.append(vals)
 
-        # === Check if time limit reached
-        elapsed = get_main_elapsed_time(model_data.timing)
+        # get current first-stage and DR variable values
+        # and compare with previous first-stage and DR variable
+        # values
+        current_master_fsv_vals = ComponentMap(
+            (var, value(var)) for var in master_fsv_set
+        )
+        current_master_nom_ssv_vals = ComponentMap(
+            (var, value(var)) for var in master_nom_ssv_set
+        )
+        current_master_dr_var_vals = ComponentMap(
+            (var, value(expr)) for var, expr in dr_var_scaled_expr_map.items()
+        )
+        if k > 0:
+            first_stage_var_shift = evaluate_first_stage_var_shift(
+                current_master_fsv_vals=current_master_fsv_vals,
+                previous_master_fsv_vals=previous_master_fsv_vals,
+                first_iter_master_fsv_vals=first_iter_master_fsv_vals,
+            )
+            second_stage_var_shift = evaluate_second_stage_var_shift(
+                current_master_nom_ssv_vals=current_master_nom_ssv_vals,
+                previous_master_nom_ssv_vals=previous_master_nom_ssv_vals,
+                first_iter_master_nom_ssv_vals=first_iter_master_nom_ssv_vals,
+            )
+            dr_var_shift = evaluate_dr_var_shift(
+                current_master_dr_var_vals=current_master_dr_var_vals,
+                previous_master_dr_var_vals=previous_master_dr_var_vals,
+                first_iter_master_nom_ssv_vals=first_iter_master_nom_ssv_vals,
+                dr_var_to_ssv_map=dr_var_to_ssv_map,
+            )
+        else:
+            for fsv in first_iter_master_fsv_vals:
+                first_iter_master_fsv_vals[fsv] = value(fsv)
+            for ssv in first_iter_master_nom_ssv_vals:
+                first_iter_master_nom_ssv_vals[ssv] = value(ssv)
+            for drvar in first_iter_dr_var_vals:
+                first_iter_dr_var_vals[drvar] = value(dr_var_scaled_expr_map[drvar])
+            first_stage_var_shift = None
+            second_stage_var_shift = None
+            dr_var_shift = None
+
+        # === Check if time limit reached after polishing
         if config.time_limit:
+            elapsed = get_main_elapsed_time(model_data.timing)
             if elapsed >= config.time_limit:
-                output_logger(config=config, time_out=True, elapsed=elapsed)
+                iter_log_record = IterationLogRecord(
+                    iteration=k,
+                    objective=value(master_data.master_model.obj),
+                    first_stage_var_shift=first_stage_var_shift,
+                    second_stage_var_shift=second_stage_var_shift,
+                    dr_var_shift=dr_var_shift,
+                    num_violated_cons=None,
+                    max_violation=None,
+                    dr_polishing_success=polishing_successful,
+                    all_sep_problems_solved=None,
+                    global_separation=None,
+                    elapsed_time=elapsed,
+                )
                 update_grcs_solve_data(
                     pyros_soln=model_data,
                     k=k,
@@ -322,6 +724,7 @@ def ROSolver_iterative_solve(model_data, config):
                     separation_data=separation_data,
                     master_soln=master_soln,
                 )
+                iter_log_record.log(config.progress_logger.info)
                 return model_data, []
 
         # === Set up for the separation problem
@@ -376,10 +779,40 @@ def ROSolver_iterative_solve(model_data, config):
             separation_results.violating_param_realization
         )
 
+        scaled_violations = [
+            solve_call_res.scaled_violations[con]
+            for con, solve_call_res in separation_results.main_loop_results.solver_call_results.items()
+            if solve_call_res.scaled_violations is not None
+        ]
+        if scaled_violations:
+            max_sep_con_violation = max(scaled_violations)
+        else:
+            max_sep_con_violation = None
+        num_violated_cons = len(separation_results.violated_performance_constraints)
+
+        all_sep_problems_solved = (
+            len(scaled_violations) == len(separation_model.util.performance_constraints)
+            and not separation_results.subsolver_error
+            and not separation_results.time_out
+        )
+
+        iter_log_record = IterationLogRecord(
+            iteration=k,
+            objective=value(master_data.master_model.obj),
+            first_stage_var_shift=first_stage_var_shift,
+            second_stage_var_shift=second_stage_var_shift,
+            dr_var_shift=dr_var_shift,
+            num_violated_cons=num_violated_cons,
+            max_violation=max_sep_con_violation,
+            dr_polishing_success=polishing_successful,
+            all_sep_problems_solved=all_sep_problems_solved,
+            global_separation=separation_results.solved_globally,
+            elapsed_time=get_main_elapsed_time(model_data.timing),
+        )
+
         # terminate on time limit
         elapsed = get_main_elapsed_time(model_data.timing)
         if separation_results.time_out:
-            output_logger(config=config, time_out=True, elapsed=elapsed)
             termination_condition = pyrosTerminationCondition.time_out
             update_grcs_solve_data(
                 pyros_soln=model_data,
@@ -390,6 +823,7 @@ def ROSolver_iterative_solve(model_data, config):
                 separation_data=separation_data,
                 master_soln=master_soln,
             )
+            iter_log_record.log(config.progress_logger.info)
             return model_data, separation_results
 
         # terminate on separation subsolver error
@@ -404,24 +838,26 @@ def ROSolver_iterative_solve(model_data, config):
                 separation_data=separation_data,
                 master_soln=master_soln,
             )
+            iter_log_record.log(config.progress_logger.info)
             return model_data, separation_results
 
         # === Check if we terminate due to robust optimality or feasibility,
         #     or in the event of bypassing global separation, no violations
         robustness_certified = separation_results.robustness_certified
         if robustness_certified:
-            output_logger(
-                config=config, bypass_global_separation=config.bypass_global_separation
-            )
+            if config.bypass_global_separation:
+                config.progress_logger.warning(
+                    "Option to bypass global separation was chosen. "
+                    "Robust feasibility and optimality of the reported "
+                    "solution are not guaranteed."
+                )
             robust_optimal = (
                 config.solve_master_globally
                 and config.objective_focus is ObjectiveType.worst_case
             )
             if robust_optimal:
-                output_logger(config=config, robust_optimal=True)
                 termination_condition = pyrosTerminationCondition.robust_optimal
             else:
-                output_logger(config=config, robust_feasible=True)
                 termination_condition = pyrosTerminationCondition.robust_feasible
             update_grcs_solve_data(
                 pyros_soln=model_data,
@@ -432,6 +868,7 @@ def ROSolver_iterative_solve(model_data, config):
                 separation_data=separation_data,
                 master_soln=master_soln,
             )
+            iter_log_record.log(config.progress_logger.info)
             return model_data, separation_results
 
         # === Add block to master at violation
@@ -443,13 +880,32 @@ def ROSolver_iterative_solve(model_data, config):
             separation_results.violating_param_realization
         )
 
+        config.progress_logger.debug("Points added to master:")
+        config.progress_logger.debug(
+            np.array([pt for pt in separation_data.points_added_to_master])
+        )
+
+        # initialize second-stage and state variables
+        # for new master block to separation
+        # solution chosen by heuristic. consequently,
+        # equality constraints should all be satisfied (up to tolerances).
+        for var, val in separation_results.violating_separation_variable_values.items():
+            master_var = master_data.master_model.scenarios[k + 1, 0].find_component(
+                var
+            )
+            master_var.set_value(val)
+
         k += 1
 
+        iter_log_record.log(config.progress_logger.info)
+        previous_master_fsv_vals = current_master_fsv_vals
+        previous_master_nom_ssv_vals = current_master_nom_ssv_vals
+        previous_master_dr_var_vals = current_master_dr_var_vals
+
     # Iteration limit reached
-    output_logger(config=config, max_iter=True)
     update_grcs_solve_data(
         pyros_soln=model_data,
-        k=k,
+        k=k - 1,  # remove last increment to fix iteration count
         term_cond=pyrosTerminationCondition.max_iter,
         nominal_data=nominal_data,
         timing_data=timing_data,

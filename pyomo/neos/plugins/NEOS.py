@@ -50,7 +50,7 @@ class NEOSRemoteSolver(SystemCallSolver):
                 logger.info("Solver log file: '%s'" % (self._log_file,))
             if self._soln_file is not None:
                 logger.info("Solver solution file: '%s'" % (self._soln_file,))
-            if self._problem_files is not []:
+            if self._problem_files != []:
                 logger.info("Solver problem files: %s" % (self._problem_files,))
 
         return Bunch(cmd="", log_file=self._log_file, env="")

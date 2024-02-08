@@ -20,14 +20,14 @@ import textwrap
 from copy import deepcopy
 
 import pyomo.core.expr as EXPR
-from pyomo.core.expr.numeric_expr import NumericNDArray
-from pyomo.core.expr.numvalue import native_types
+import pyomo.core.base as BASE
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 from pyomo.core.base.initializer import Initializer
 from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
 from pyomo.core.base.enums import SortComponents
 from pyomo.core.base.global_set import UnindexedComponent_set
+from pyomo.core.expr.numeric_expr import _ndarray
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.common import DeveloperError
 from pyomo.common.autoslots import fast_deepcopy
@@ -35,6 +35,7 @@ from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.errors import DeveloperError, TemplateExpressionError
 from pyomo.common.modeling import NOTSET
+from pyomo.common.numeric_types import native_types
 from pyomo.common.sorting import sorted_robust
 
 from collections.abc import Sequence
@@ -42,6 +43,7 @@ from collections.abc import Sequence
 logger = logging.getLogger('pyomo.core')
 
 sequence_types = {tuple, list}
+slicer_types = {slice, Ellipsis.__class__, IndexedComponent_slice}
 
 
 def normalize_index(x):
@@ -296,8 +298,6 @@ class IndexedComponent(Component):
     _DEFAULT_INDEX_CHECKING_ENABLED = True
 
     def __init__(self, *args, **kwds):
-        from pyomo.core.base.set import process_setarg
-
         #
         kwds.pop('noruleinit', None)
         Component.__init__(self, **kwds)
@@ -315,7 +315,7 @@ class IndexedComponent(Component):
             # If a single indexing set is provided, just process it.
             #
             self._implicit_subsets = None
-            self._index_set = process_setarg(args[0])
+            self._index_set = BASE.set.process_setarg(args[0])
         else:
             #
             # If multiple indexing sets are provided, process them all,
@@ -332,7 +332,7 @@ class IndexedComponent(Component):
             # is assigned to a model (where the implicit subsets can be
             # "transferred" to the model).
             #
-            tmp = [process_setarg(x) for x in args]
+            tmp = [BASE.set.process_setarg(x) for x in args]
             self._implicit_subsets = tmp
             self._index_set = tmp[0].cross(*tmp[1:])
 
@@ -746,27 +746,6 @@ You can silence this warning by one of three ways:
                 self._data[index]._component = None
             del self._data[index]
 
-    def _pop_from_kwargs(self, name, kwargs, namelist, notset=None):
-        args = [
-            arg
-            for arg in (kwargs.pop(name, notset) for name in namelist)
-            if arg is not notset
-        ]
-        if len(args) == 1:
-            return args[0]
-        elif not args:
-            return notset
-        else:
-            argnames = "%s%s '%s='" % (
-                ', '.join("'%s='" % _ for _ in namelist[:-1]),
-                ',' if len(namelist) > 2 else '',
-                namelist[-1],
-            )
-            raise ValueError(
-                "Duplicate initialization: %s() only accepts one of %s"
-                % (name, argnames)
-            )
-
     def _construct_from_rule_using_setitem(self):
         if self._rule is None:
             return
@@ -833,16 +812,23 @@ You can silence this warning by one of three ways:
             return idx
 
         # This is only called through __{get,set,del}item__, which has
-        # already trapped unhashable objects.
-        validated_idx = self._index_set.get(idx, _NotFound)
-        if validated_idx is not _NotFound:
-            # If the index is in the underlying index set, then return it
-            #  Note: This check is potentially expensive (e.g., when the
-            # indexing set is a complex set operation)!
-            return validated_idx
-
-        if idx.__class__ is IndexedComponent_slice:
-            return idx
+        # already trapped unhashable objects.  Unfortunately, Python
+        # 3.12 made slices hashable.  This means that slices will get
+        # here and potentially be looked up in the index_set.  This will
+        # cause problems with Any, where Any will happily return the
+        # index as a valid set.  We will only validate the index for
+        # non-Any sets.  Any will pass through so that normalize_index
+        # can be called (which can generate the TypeError for slices)
+        _any = isinstance(self._index_set, BASE.set._AnySet)
+        if _any:
+            validated_idx = _NotFound
+        else:
+            validated_idx = self._index_set.get(idx, _NotFound)
+            if validated_idx is not _NotFound:
+                # If the index is in the underlying index set, then return it
+                #  Note: This check is potentially expensive (e.g., when the
+                # indexing set is a complex set operation)!
+                return validated_idx
 
         if normalize_index.flatten:
             # Now we normalize the index and check again.  Usually,
@@ -850,16 +836,24 @@ You can silence this warning by one of three ways:
             # "automatic" call to normalize_index until now for the
             # sake of efficiency.
             normalized_idx = normalize_index(idx)
-            if normalized_idx is not idx:
-                idx = normalized_idx
-                if idx in self._data:
-                    return idx
-                if idx in self._index_set:
-                    return idx
+            if normalized_idx is not idx and not _any:
+                if normalized_idx in self._data:
+                    return normalized_idx
+                if normalized_idx in self._index_set:
+                    return normalized_idx
+        else:
+            normalized_idx = idx
+
         # There is the chance that the index contains an Ellipsis,
         # so we should generate a slicer
-        if idx is Ellipsis or idx.__class__ is tuple and Ellipsis in idx:
-            return self._processUnhashableIndex(idx)
+        if (
+            normalized_idx.__class__ in slicer_types
+            or normalized_idx.__class__ is tuple
+            and any(_.__class__ in slicer_types for _ in normalized_idx)
+        ):
+            return self._processUnhashableIndex(normalized_idx)
+        if _any:
+            return idx
         #
         # Generate different errors, depending on the state of the index.
         #
@@ -872,7 +866,8 @@ You can silence this warning by one of three ways:
         # Raise an exception
         #
         raise KeyError(
-            "Index '%s' is not valid for indexed component '%s'" % (idx, self.name)
+            "Index '%s' is not valid for indexed component '%s'"
+            % (normalized_idx, self.name)
         )
 
     def _processUnhashableIndex(self, idx):
@@ -881,7 +876,7 @@ You can silence this warning by one of three ways:
         There are three basic ways to get here:
           1) the index contains one or more slices or ellipsis
           2) the index contains an unhashable type (e.g., a Pyomo
-             (Scalar)Component
+             (Scalar)Component)
           3) the index contains an IndexTemplate
         """
         #
@@ -1200,7 +1195,7 @@ class IndexedComponent_NDArrayMixin(object):
 
     def __array__(self, dtype=None):
         if not self.is_indexed():
-            ans = NumericNDArray(shape=(1,), dtype=object)
+            ans = _ndarray.NumericNDArray(shape=(1,), dtype=object)
             ans[0] = self
             return ans
 
@@ -1220,10 +1215,12 @@ class IndexedComponent_NDArrayMixin(object):
                 % (self, bounds[0], bounds[1])
             )
         shape = tuple(b + 1 for b in bounds[1])
-        ans = NumericNDArray(shape=shape, dtype=object)
+        ans = _ndarray.NumericNDArray(shape=shape, dtype=object)
         for k, v in self.items():
             ans[k] = v
         return ans
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        return NumericNDArray.__array_ufunc__(None, ufunc, method, *inputs, **kwargs)
+        return _ndarray.NumericNDArray.__array_ufunc__(
+            None, ufunc, method, *inputs, **kwargs
+        )

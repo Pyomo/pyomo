@@ -31,7 +31,10 @@ from tempfile import mkdtemp
 opt_py = SolverFactory('gams', solver_io='python')
 gamspy_available = opt_py.available(exception_flag=False)
 if gamspy_available:
-    from gams.workspace import GamsExceptionExecution
+    try:
+        from gams import GamsExceptionExecution
+    except:
+        from gams.workspace import GamsExceptionExecution
 
 opt_gms = SolverFactory('gams', solver_io='gms')
 gamsgms_available = opt_gms.available(exception_flag=False)
@@ -209,12 +212,12 @@ class GAMSTests(unittest.TestCase):
     def test_long_var_py(self):
         with SolverFactory("gams", solver_io="python") as opt:
             m = ConcreteModel()
-            x = (
-                m.a23456789012345678901234567890123456789012345678901234567890123
-            ) = Var()
-            y = (
-                m.b234567890123456789012345678901234567890123456789012345678901234
-            ) = Var()
+            x = m.a23456789012345678901234567890123456789012345678901234567890123 = (
+                Var()
+            )
+            y = m.b234567890123456789012345678901234567890123456789012345678901234 = (
+                Var()
+            )
             z = (
                 m.c23456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
             ) = Var()
@@ -233,12 +236,12 @@ class GAMSTests(unittest.TestCase):
     def test_long_var_gms(self):
         with SolverFactory("gams", solver_io="gms") as opt:
             m = ConcreteModel()
-            x = (
-                m.a23456789012345678901234567890123456789012345678901234567890123
-            ) = Var()
-            y = (
-                m.b234567890123456789012345678901234567890123456789012345678901234
-            ) = Var()
+            x = m.a23456789012345678901234567890123456789012345678901234567890123 = (
+                Var()
+            )
+            y = m.b234567890123456789012345678901234567890123456789012345678901234 = (
+                Var()
+            )
             z = (
                 m.c23456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
             ) = Var()

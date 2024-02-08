@@ -9,13 +9,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import copy
 import itertools
 import logging
 import sys
 import builtins
+from contextlib import nullcontext
 
-from pyomo.common.backports import nullcontext
 from pyomo.common.errors import TemplateExpressionError
 from pyomo.core.expr.base import ExpressionBase, ExpressionArgs_Mixin, NPV_Mixin
 from pyomo.core.expr.logical_expr import BooleanExpression
@@ -25,6 +24,7 @@ from pyomo.core.expr.numeric_expr import (
     Numeric_NPV_Mixin,
     register_arg_type,
     ARG_TYPE,
+    _balanced_parens,
 )
 from pyomo.core.expr.numvalue import (
     NumericValue,
@@ -34,6 +34,7 @@ from pyomo.core.expr.numvalue import (
     value,
     is_constant,
 )
+from pyomo.core.expr.relational_expr import tuple_to_relational_expr
 from pyomo.core.expr.visitor import (
     ExpressionReplacementVisitor,
     StreamBasedExpressionVisitor,
@@ -119,9 +120,11 @@ class GetItemExpression(ExpressionBase):
 
     def _apply_operation(self, result):
         args = tuple(
-            arg
-            if arg.__class__ in native_types or not arg.is_numeric_type()
-            else value(arg)
+            (
+                arg
+                if arg.__class__ in native_types or not arg.is_numeric_type()
+                else value(arg)
+            )
             for arg in result[1:]
         )
         return result[0].__getitem__(tuple(result[1:]))
@@ -1173,4 +1176,7 @@ def templatize_rule(block, rule, index_set):
 
 
 def templatize_constraint(con):
-    return templatize_rule(con.parent_block(), con.rule, con.index_set())
+    expr, indices = templatize_rule(con.parent_block(), con.rule, con.index_set())
+    if expr.__class__ is tuple:
+        expr = tuple_to_relational_expr(expr)
+    return expr, indices

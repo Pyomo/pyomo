@@ -361,7 +361,7 @@ class OptSolver(object):
         # multiple methods.
         self._smap_id = None
 
-        # These are ephimeral options that can be set by the user during
+        # These are ephemeral options that can be set by the user during
         # the call to solve, but will be reset to defaults if not given
         self._load_solutions = True
         self._select_index = 0
@@ -641,9 +641,9 @@ class OptSolver(object):
                         result.solution(0).symbol_map = getattr(
                             _model, "._symbol_maps"
                         )[result._smap_id]
-                        result.solution(
-                            0
-                        ).default_variable_value = self._default_variable_value
+                        result.solution(0).default_variable_value = (
+                            self._default_variable_value
+                        )
                         if self._load_solutions:
                             _model.load_solution(result.solution(0))
                     else:
@@ -699,12 +699,10 @@ class OptSolver(object):
 
         if self._problem_format:
             write_start_time = time.time()
-            (
-                self._problem_files,
-                self._problem_format,
-                self._smap_id,
-            ) = self._convert_problem(
-                args, self._problem_format, self._valid_problem_formats, **kwds
+            (self._problem_files, self._problem_format, self._smap_id) = (
+                self._convert_problem(
+                    args, self._problem_format, self._valid_problem_formats, **kwds
+                )
             )
             total_time = time.time() - write_start_time
             if self._report_timing:

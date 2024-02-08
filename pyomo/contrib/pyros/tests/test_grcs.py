@@ -5,10 +5,15 @@ One class per function being tested, minimum one test per class
 
 import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
-from pyomo.common.collections import ComponentSet
+from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.core.base.set_types import NonNegativeIntegers
-from pyomo.core.expr import identify_variables, identify_mutable_parameters
+from pyomo.core.expr import (
+    identify_variables,
+    identify_mutable_parameters,
+    MonomialTermExpression,
+    SumExpression,
+)
 from pyomo.contrib.pyros.util import (
     selective_clone,
     add_decision_rule_variables,
@@ -19,21 +24,36 @@ from pyomo.contrib.pyros.util import (
     ObjectiveType,
     pyrosTerminationCondition,
     coefficient_matching,
+    TimingData,
+    IterationLogRecord,
 )
 from pyomo.contrib.pyros.util import replace_uncertain_bounds_with_constraints
 from pyomo.contrib.pyros.util import get_vars_from_component
 from pyomo.contrib.pyros.util import identify_objective_functions
 from pyomo.common.collections import Bunch
 import time
+import math
 from pyomo.contrib.pyros.util import time_code
-from pyomo.contrib.pyros.uncertainty_sets import *
+from pyomo.contrib.pyros.uncertainty_sets import (
+    UncertaintySet,
+    BoxSet,
+    CardinalitySet,
+    BudgetSet,
+    FactorModelSet,
+    PolyhedralSet,
+    EllipsoidalSet,
+    AxisAlignedEllipsoidalSet,
+    IntersectionSet,
+    DiscreteScenarioSet,
+    Geometry,
+)
 from pyomo.contrib.pyros.master_problem_methods import (
     add_scenario_to_master,
     initial_construct_master,
     solve_master,
     minimize_dr_vars,
 )
-from pyomo.contrib.pyros.solve_data import MasterProblemData
+from pyomo.contrib.pyros.solve_data import MasterProblemData, ROSolveResults
 from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.dependencies import scipy as sp, scipy_available
 from pyomo.environ import maximize as pyo_max
@@ -46,6 +66,11 @@ from pyomo.opt import (
     Solution,
 )
 from pyomo.environ import (
+    Reals,
+    Set,
+    Block,
+    ConstraintList,
+    ConcreteModel,
     Constraint,
     Expression,
     Objective,
@@ -58,7 +83,14 @@ from pyomo.environ import (
     sin,
     sqrt,
     value,
+    maximize,
+    minimize,
 )
+import logging
+from itertools import chain
+
+
+logger = logging.getLogger(__name__)
 
 
 if not (numpy_available and scipy_available):
@@ -231,183 +263,351 @@ class testSelectiveClone(unittest.TestCase):
 
 
 class testAddDecisionRuleVars(unittest.TestCase):
-    '''
-    Testing the method to add decision rule variables to a Pyomo model. This function should add decision rule
-    variables to the list of first_stage_variables in a model object. The number of decision rule variables added
-    depends on the number of control variables in the model and the number of uncertain parameters in the model.
-    '''
+    """
+    Test method for adding decision rule variables to working model.
+    The number of decision rule variables per control variable
+    should depend on:
+
+    - the number of uncertain parameters in the model
+    - the decision rule order specified by the user.
+    """
+
+    def make_simple_test_model(self):
+        """
+        Make simple test model for DR variable
+        declaration testing.
+        """
+        m = ConcreteModel()
+
+        # uncertain parameters
+        m.p = Param(range(3), initialize=0, mutable=True)
+
+        # second-stage variables
+        m.z = Var([0, 1], initialize=0)
+
+        # util block
+        m.util = Block()
+        m.util.first_stage_variables = []
+        m.util.second_stage_variables = list(m.z.values())
+        m.util.uncertain_params = list(m.p.values())
+
+        return m
 
     @unittest.skipIf(not scipy_available, 'Scipy is not available.')
-    def test_add_decision_rule_vars_positive_case(self):
-        '''
-        Testing whether the correct number of decision rule variables is created in each DR type case
-        '''
-        m = ConcreteModel()
-        m.p1 = Param(initialize=0, mutable=True)
-        m.p2 = Param(initialize=0, mutable=True)
-        m.z1 = Var(initialize=0)
-        m.z2 = Var(initialize=0)
+    def test_correct_num_dr_vars_static(self):
+        """
+        Test DR variable setup routines declare the correct
+        number of DR coefficient variables, static DR case.
+        """
+        model_data = ROSolveResults()
+        model_data.working_model = m = self.make_simple_test_model()
 
-        m.working_model = ConcreteModel()
-        m.working_model.util = Block()
-
-        m.working_model.util.second_stage_variables = [m.z1, m.z2]
-        m.working_model.util.uncertain_params = [m.p1, m.p2]
-        m.working_model.util.first_stage_variables = []
-
-        m.working_model.util.first_stage_variables = []
-        config = Block()
+        config = Bunch()
         config.decision_rule_order = 0
 
-        add_decision_rule_variables(model_data=m, config=config)
+        add_decision_rule_variables(model_data=model_data, config=config)
+
+        for indexed_dr_var in m.util.decision_rule_vars:
+            self.assertEqual(
+                len(indexed_dr_var),
+                1,
+                msg=(
+                    "Number of decision rule coefficient variables "
+                    f"in indexed Var object {indexed_dr_var.name!r}"
+                    "does not match correct value."
+                ),
+            )
 
         self.assertEqual(
-            len(m.working_model.util.first_stage_variables),
-            len(m.working_model.util.second_stage_variables),
-            msg="For static approximation decision rule the number of decision rule variables"
-            "added to the list of design variables should equal the number of control variables.",
+            len(ComponentSet(m.util.decision_rule_vars)),
+            len(m.util.second_stage_variables),
+            msg=(
+                "Number of unique indexed DR variable components should equal "
+                "number of second-stage variables."
+            ),
         )
 
-        m.working_model.util.first_stage_variables = []
+    @unittest.skipIf(not scipy_available, 'Scipy is not available.')
+    def test_correct_num_dr_vars_affine(self):
+        """
+        Test DR variable setup routines declare the correct
+        number of DR coefficient variables, affine DR case.
+        """
+        model_data = ROSolveResults()
+        model_data.working_model = m = self.make_simple_test_model()
 
-        m.working_model.del_component(m.working_model.decision_rule_var_0)
-        m.working_model.del_component(m.working_model.decision_rule_var_1)
-
+        config = Bunch()
         config.decision_rule_order = 1
 
-        add_decision_rule_variables(m, config=config)
+        add_decision_rule_variables(model_data=model_data, config=config)
+
+        for indexed_dr_var in m.util.decision_rule_vars:
+            self.assertEqual(
+                len(indexed_dr_var),
+                1 + len(m.util.uncertain_params),
+                msg=(
+                    "Number of decision rule coefficient variables "
+                    f"in indexed Var object {indexed_dr_var.name!r}"
+                    "does not match correct value."
+                ),
+            )
 
         self.assertEqual(
-            len(m.working_model.util.first_stage_variables),
-            len(m.working_model.util.second_stage_variables)
-            * (1 + len(m.working_model.util.uncertain_params)),
-            msg="For affine decision rule the number of decision rule variables add to the "
-            "list of design variables should equal the number of control variables"
-            "multiplied by the number of uncertain parameters plus 1.",
+            len(ComponentSet(m.util.decision_rule_vars)),
+            len(m.util.second_stage_variables),
+            msg=(
+                "Number of unique indexed DR variable components should equal "
+                "number of second-stage variables."
+            ),
         )
 
-        m.working_model.util.first_stage_variables = []
+    @unittest.skipIf(not scipy_available, 'Scipy is not available.')
+    def test_correct_num_dr_vars_quadratic(self):
+        """
+        Test DR variable setup routines declare the correct
+        number of DR coefficient variables, quadratic DR case.
+        """
+        model_data = ROSolveResults()
+        model_data.working_model = m = self.make_simple_test_model()
 
-        m.working_model.del_component(m.working_model.decision_rule_var_0)
-        m.working_model.del_component(m.working_model.decision_rule_var_1)
-        m.working_model.del_component(m.working_model.decision_rule_var_0_index)
-        m.working_model.del_component(m.working_model.decision_rule_var_1_index)
-
+        config = Bunch()
         config.decision_rule_order = 2
 
-        add_decision_rule_variables(m, config=config)
+        add_decision_rule_variables(model_data=model_data, config=config)
+
+        num_params = len(m.util.uncertain_params)
+        correct_num_dr_vars = (
+            1  # static term
+            + num_params  # affine terms
+            + sp.special.comb(num_params, 2, repetition=True, exact=True)
+            #   quadratic terms
+        )
+        for indexed_dr_var in m.util.decision_rule_vars:
+            self.assertEqual(
+                len(indexed_dr_var),
+                correct_num_dr_vars,
+                msg=(
+                    "Number of decision rule coefficient variables "
+                    f"in indexed Var object {indexed_dr_var.name!r}"
+                    "does not match correct value."
+                ),
+            )
 
         self.assertEqual(
-            len(m.working_model.util.first_stage_variables),
-            len(m.working_model.util.second_stage_variables)
-            * int(
-                2 * len(m.working_model.util.uncertain_params)
-                + sp.special.comb(N=len(m.working_model.util.uncertain_params), k=2)
-                + 1
+            len(ComponentSet(m.util.decision_rule_vars)),
+            len(m.util.second_stage_variables),
+            msg=(
+                "Number of unique indexed DR variable components should equal "
+                "number of second-stage variables."
             ),
-            msg="For quadratic decision rule the number of decision rule variables add to the "
-            "list of design variables should equal the number of control variables"
-            "multiplied by 2 time the number of uncertain parameters plus all 2-combinations"
-            "of uncertain parameters plus 1.",
         )
 
 
 class testAddDecisionRuleConstraints(unittest.TestCase):
-    '''
-    Testing the addition of decision rule constraints functionally relating second-stage (control) variables to
-    uncertain parameters and decision rule variables. This method should add constraints to the model object equal
-    to the number of control variables. These constraints should reference the uncertain parameters and unique
-    decision rule variables per control variable.
-    '''
+    """
+    Test method for adding decision rule equality constraints
+    to the working model. There should be as many decision
+    rule equality constraints as there are second-stage
+    variables, and each constraint should relate a second-stage
+    variable to the uncertain parameters and corresponding
+    decision rule variables.
+    """
 
-    def test_correct_number_of_decision_rule_constraints(self):
-        '''
-        Number of decision rule constraints added to the model should equal number of control variables in
-        list "second_stage_variables".
-        '''
+    def make_simple_test_model(self):
+        """
+        Make simple model for DR constraint testing.
+        """
         m = ConcreteModel()
-        m.p1 = Param(initialize=0, mutable=True)
-        m.p2 = Param(initialize=0, mutable=True)
-        m.z1 = Var(initialize=0)
-        m.z2 = Var(initialize=0)
 
-        m.working_model = ConcreteModel()
-        m.working_model.util = Block()
+        # uncertain parameters
+        m.p = Param(range(3), initialize=0, mutable=True)
+
+        # second-stage variables
+        m.z = Var([0, 1], initialize=0)
+
+        # util block
+        m.util = Block()
+        m.util.first_stage_variables = []
+        m.util.second_stage_variables = list(m.z.values())
+        m.util.uncertain_params = list(m.p.values())
+
+        return m
+
+    @unittest.skipIf(not scipy_available, 'Scipy is not available.')
+    def test_num_dr_eqns_added_correct(self):
+        """
+        Check that number of DR equality constraints added
+        by constraint declaration routines matches the number
+        of second-stage variables in the model.
+        """
+        model_data = ROSolveResults()
+        model_data.working_model = m = self.make_simple_test_model()
 
         # === Decision rule vars have been added
-        m.working_model.decision_rule_var_0 = Var(initialize=0)
-        m.working_model.decision_rule_var_1 = Var(initialize=0)
+        m.decision_rule_var_0 = Var([0], initialize=0)
+        m.decision_rule_var_1 = Var([0], initialize=0)
+        m.util.decision_rule_vars = [m.decision_rule_var_0, m.decision_rule_var_1]
 
-        m.working_model.util.second_stage_variables = [m.z1, m.z2]
-        m.working_model.util.uncertain_params = [m.p1, m.p2]
-
-        decision_rule_cons = []
-        config = Block()
+        # set up simple config-like object
+        config = Bunch()
         config.decision_rule_order = 0
 
-        add_decision_rule_constraints(model_data=m, config=config)
-
-        for c in m.working_model.component_data_objects(Constraint, descend_into=True):
-            if "decision_rule_eqn_" in c.name:
-                decision_rule_cons.append(c)
-                m.working_model.del_component(c)
+        add_decision_rule_constraints(model_data=model_data, config=config)
 
         self.assertEqual(
-            len(decision_rule_cons),
-            len(m.working_model.util.second_stage_variables),
+            len(m.util.decision_rule_eqns),
+            len(m.util.second_stage_variables),
             msg="The number of decision rule constraints added to model should equal"
             "the number of control variables in the model.",
         )
 
-        decision_rule_cons = []
-        config.decision_rule_order = 1
+    @unittest.skipIf(not scipy_available, 'Scipy is not available.')
+    def test_dr_eqns_form_correct(self):
+        """
+        Check that form of decision rule equality constraints
+        is as expected.
 
-        # === Decision rule vars have been added
-        m.working_model.del_component(m.working_model.decision_rule_var_0)
-        m.working_model.del_component(m.working_model.decision_rule_var_1)
+        Decision rule equations should be of the standard form:
+            (sum of DR monomial terms) - (second-stage variable) == 0
+        where each monomial term should be of form:
+            (product of uncertain parameters) * (decision rule variable)
 
-        m.working_model.decision_rule_var_0 = Var([0, 1, 2], initialize=0)
-        m.working_model.decision_rule_var_1 = Var([0, 1, 2], initialize=0)
+        This test checks that the equality constraints are of this
+        standard form.
+        """
+        # set up simple model data like object
+        model_data = ROSolveResults()
+        model_data.working_model = m = self.make_simple_test_model()
 
-        add_decision_rule_constraints(model_data=m, config=config)
-
-        for c in m.working_model.component_data_objects(Constraint, descend_into=True):
-            if "decision_rule_eqn_" in c.name:
-                decision_rule_cons.append(c)
-                m.working_model.del_component(c)
-
-        self.assertEqual(
-            len(decision_rule_cons),
-            len(m.working_model.util.second_stage_variables),
-            msg="The number of decision rule constraints added to model should equal"
-            "the number of control variables in the model.",
-        )
-
-        decision_rule_cons = []
+        # set up simple config-like object
+        config = Bunch()
         config.decision_rule_order = 2
 
-        # === Decision rule vars have been added
-        m.working_model.del_component(m.working_model.decision_rule_var_0)
-        m.working_model.del_component(m.working_model.decision_rule_var_1)
-        m.working_model.del_component(m.working_model.decision_rule_var_0_index)
-        m.working_model.del_component(m.working_model.decision_rule_var_1_index)
+        # add DR variables and constraints
+        add_decision_rule_variables(model_data, config)
+        add_decision_rule_constraints(model_data, config)
 
-        m.working_model.decision_rule_var_0 = Var([0, 1, 2, 3, 4, 5], initialize=0)
-        m.working_model.decision_rule_var_1 = Var([0, 1, 2, 3, 4, 5], initialize=0)
+        # DR polynomial terms and order in which they should
+        # appear depends on number of uncertain parameters
+        # and order in which the parameters are listed.
+        # so uncertain parameters participating in each term
+        # of the monomial is known, and listed out here.
+        dr_monomial_param_combos = [
+            (1,),
+            (m.p[0],),
+            (m.p[1],),
+            (m.p[2],),
+            (m.p[0], m.p[0]),
+            (m.p[0], m.p[1]),
+            (m.p[0], m.p[2]),
+            (m.p[1], m.p[1]),
+            (m.p[1], m.p[2]),
+            (m.p[2], m.p[2]),
+        ]
 
-        add_decision_rule_constraints(model_data=m, config=config)
-
-        for c in m.working_model.component_data_objects(Constraint, descend_into=True):
-            if "decision_rule_eqn_" in c.name:
-                decision_rule_cons.append(c)
-                m.working_model.del_component(c)
-
-        self.assertEqual(
-            len(decision_rule_cons),
-            len(m.working_model.util.second_stage_variables),
-            msg="The number of decision rule constraints added to model should equal"
-            "the number of control variables in the model.",
+        dr_zip = zip(
+            m.util.second_stage_variables,
+            m.util.decision_rule_vars,
+            m.util.decision_rule_eqns,
         )
+        for ss_var, indexed_dr_var, dr_eq in dr_zip:
+            dr_eq_terms = dr_eq.body.args
+
+            # check constraint body is sum expression
+            self.assertTrue(
+                isinstance(dr_eq.body, SumExpression),
+                msg=(
+                    f"Body of DR constraint {dr_eq.name!r} is not of type "
+                    f"{SumExpression.__name__}."
+                ),
+            )
+
+            # ensure DR equation has correct number of (additive) terms
+            self.assertEqual(
+                len(dr_eq_terms),
+                len(dr_monomial_param_combos) + 1,
+                msg=(
+                    "Number of additive terms in the DR expression of "
+                    f"DR constraint with name {dr_eq.name!r} does not match "
+                    "expected value."
+                ),
+            )
+
+            # check last term is negative of second-stage variable
+            second_stage_var_term = dr_eq_terms[-1]
+            last_term_is_neg_ss_var = (
+                isinstance(second_stage_var_term, MonomialTermExpression)
+                and (second_stage_var_term.args[0] == -1)
+                and (second_stage_var_term.args[1] is ss_var)
+                and len(second_stage_var_term.args) == 2
+            )
+            self.assertTrue(
+                last_term_is_neg_ss_var,
+                msg=(
+                    "Last argument of last term in second-stage variable"
+                    f"term of DR constraint with name {dr_eq.name!r} "
+                    "is not the negative corresponding second-stage variable "
+                    f"{ss_var.name!r}"
+                ),
+            )
+
+            # now we check the other terms.
+            # these should comprise the DR polynomial expression
+            dr_polynomial_terms = dr_eq_terms[:-1]
+            dr_polynomial_zip = zip(
+                dr_polynomial_terms, indexed_dr_var.values(), dr_monomial_param_combos
+            )
+            for idx, (term, dr_var, param_combo) in enumerate(dr_polynomial_zip):
+                # term should be a monomial expression of form
+                # (uncertain parameter product) * (decision rule variable)
+                # so length of expression object should be 2
+                self.assertEqual(
+                    len(term.args),
+                    2,
+                    msg=(
+                        f"Length of `args` attribute of term {str(term)} "
+                        f"of DR equation {dr_eq.name!r} is not as expected. "
+                        f"Args: {term.args}"
+                    ),
+                )
+
+                # check that uncertain parameters participating in
+                # the monomial are as expected
+                param_product_multiplicand = term.args[0]
+                if idx == 0:
+                    # static DR term
+                    param_combo_found_in_term = (param_product_multiplicand,)
+                    param_names = (str(param) for param in param_combo)
+                elif len(param_combo) == 1:
+                    # affine DR terms
+                    param_combo_found_in_term = (param_product_multiplicand,)
+                    param_names = (param.name for param in param_combo)
+                else:
+                    # higher-order DR terms
+                    param_combo_found_in_term = param_product_multiplicand.args
+                    param_names = (param.name for param in param_combo)
+
+                self.assertEqual(
+                    param_combo_found_in_term,
+                    param_combo,
+                    msg=(
+                        f"All but last multiplicand of DR monomial {str(term)} "
+                        f"is not the uncertain parameter tuple "
+                        f"({', '.join(param_names)})."
+                    ),
+                )
+
+                # check that DR variable participating in the monomial
+                # is as expected
+                dr_var_multiplicand = term.args[1]
+                self.assertIs(
+                    dr_var_multiplicand,
+                    dr_var,
+                    msg=(
+                        f"Last multiplicand of DR monomial {str(term)} "
+                        f"is not the DR variable {dr_var.name!r}."
+                    ),
+                )
 
 
 class testModelIsValid(unittest.TestCase):
@@ -3566,8 +3766,11 @@ class testSolveMaster(unittest.TestCase):
         master_data.master_model.scenarios[0, 0].second_stage_objective = Expression(
             expr=master_data.master_model.scenarios[0, 0].x
         )
+        master_data.master_model.scenarios[0, 0].util.dr_var_to_exponent_map = (
+            ComponentMap()
+        )
         master_data.iteration = 0
-        master_data.timing = Bunch()
+        master_data.timing = TimingData()
 
         box_set = BoxSet(bounds=[(0, 2)])
         solver = SolverFactory(global_solver)
@@ -3589,8 +3792,11 @@ class testSolveMaster(unittest.TestCase):
         )
         config.declare("subproblem_file_directory", ConfigValue(default=None))
         config.declare("time_limit", ConfigValue(default=None))
+        config.declare(
+            "progress_logger", ConfigValue(default=logging.getLogger(__name__))
+        )
 
-        with time_code(master_data.timing, "total", is_main_timer=True):
+        with time_code(master_data.timing, "main", is_main_timer=True):
             master_soln = solve_master(master_data, config)
             self.assertEqual(
                 master_soln.termination_condition,
@@ -3866,7 +4072,7 @@ class RegressionTest(unittest.TestCase):
         m.working_model.util.state_vars = []
 
         m.working_model.util.first_stage_variables = []
-        config = Block()
+        config = Bunch()
         config.decision_rule_order = 1
         config.objective_focus = ObjectiveType.nominal
         config.global_solver = SolverFactory('baron')
@@ -3874,6 +4080,7 @@ class RegressionTest(unittest.TestCase):
         config.tee = False
         config.solve_master_globally = True
         config.time_limit = None
+        config.progress_logger = logging.getLogger(__name__)
 
         add_decision_rule_variables(model_data=m, config=config)
         add_decision_rule_constraints(model_data=m, config=config)
@@ -3892,14 +4099,18 @@ class RegressionTest(unittest.TestCase):
         master_data.master_model = master
         master_data.master_model.const_efficiency_applied = False
         master_data.master_model.linear_efficiency_applied = False
+        master_data.iteration = 0
 
-        master_data.timing = Bunch()
-        with time_code(master_data.timing, "total", is_main_timer=True):
-            results = minimize_dr_vars(model_data=master_data, config=config)
+        master_data.timing = TimingData()
+        with time_code(master_data.timing, "main", is_main_timer=True):
+            results, success = minimize_dr_vars(model_data=master_data, config=config)
             self.assertEqual(
                 results.solver.termination_condition,
                 TerminationCondition.optimal,
                 msg="Minimize dr norm did not solve to optimality.",
+            )
+            self.assertTrue(
+                success, msg=f"DR polishing success {success}, expected True."
             )
 
     @unittest.skipUnless(
@@ -3957,7 +4168,8 @@ class RegressionTest(unittest.TestCase):
         baron_license_is_valid, "Global NLP solver is not available and licensed."
     )
     @unittest.skipUnless(
-        baron_version < (23, 1, 5), "Test known to fail beginning with Baron 23.1.5"
+        baron_version < (23, 1, 5) or baron_version >= (23, 6, 23),
+        "Test known to fail for BARON 23.1.5 and versions preceding 23.6.23",
     )
     def test_terminate_with_max_iter(self):
         m = ConcreteModel()
@@ -4002,6 +4214,15 @@ class RegressionTest(unittest.TestCase):
             results.pyros_termination_condition,
             pyrosTerminationCondition.max_iter,
             msg="Returned termination condition is not return max_iter.",
+        )
+
+        self.assertEqual(
+            results.iterations,
+            1,
+            msg=(
+                f"Number of iterations in results object is {results.iterations}, "
+                f"but expected value 1."
+            ),
         )
 
     @unittest.skipUnless(
@@ -4655,9 +4876,7 @@ class RegressionTest(unittest.TestCase):
             msg="Returned termination condition is not return robust_optimal.",
         )
 
-    @unittest.skipUnless(
-        baron_license_is_valid, "Global NLP solver is not available and licensed."
-    )
+    @unittest.skipUnless(scip_available, "Global NLP solver is not available.")
     def test_coefficient_matching_solve(self):
         # Write the deterministic Pyomo model
         m = ConcreteModel()
@@ -4681,8 +4900,8 @@ class RegressionTest(unittest.TestCase):
         pyros_solver = SolverFactory("pyros")
 
         # Define subsolvers utilized in the algorithm
-        local_subsolver = SolverFactory('baron')
-        global_subsolver = SolverFactory("baron")
+        local_subsolver = SolverFactory('scip')
+        global_subsolver = SolverFactory("scip")
 
         # Call the PyROS solver
         results = pyros_solver.solve(
@@ -4788,10 +5007,7 @@ class RegressionTest(unittest.TestCase):
                 ),
             )
 
-    @unittest.skipUnless(
-        baron_license_is_valid and baron_version >= (23, 2, 27),
-        "BARON licensing and version requirements not met",
-    )
+    @unittest.skipUnless(scip_available, "NLP solver is not available.")
     def test_coefficient_matching_partitioning_insensitive(self):
         """
         Check that result for instance with constraint subject to
@@ -4802,7 +5018,7 @@ class RegressionTest(unittest.TestCase):
         m = self.create_mitsos_4_3()
 
         # instantiate BARON subsolver and PyROS solver
-        baron = SolverFactory("baron")
+        baron = SolverFactory("scip")
         pyros_solver = SolverFactory("pyros")
 
         # solve with PyROS
@@ -4864,14 +5080,16 @@ class RegressionTest(unittest.TestCase):
         # solve with PyROS
         dr_orders = [1, 2]
         for dr_order in dr_orders:
-            with self.assertRaisesRegex(
+            regex_assert_mgr = self.assertRaisesRegex(
                 ValueError,
                 expected_regex=(
-                    "Equality constraint.*cannot be guaranteed to be robustly "
-                    "feasible.*"
+                    "Coefficient matching unsuccessful. See the solver logs."
                 ),
-            ):
-                res = pyros_solver.solve(
+            )
+            logging_intercept_mgr = LoggingIntercept(level=logging.ERROR)
+
+            with regex_assert_mgr, logging_intercept_mgr as LOG:
+                pyros_solver.solve(
                     model=m,
                     first_stage_variables=[],
                     second_stage_variables=[m.x1, m.x2, m.x3],
@@ -4885,6 +5103,16 @@ class RegressionTest(unittest.TestCase):
                     bypass_local_separation=True,
                     robust_feasibility_tolerance=1e-4,
                 )
+
+            detailed_error_msg = LOG.getvalue()
+            self.assertRegex(
+                detailed_error_msg[:-1],
+                (
+                    r"Equality constraint.*cannot be guaranteed to "
+                    r"be robustly feasible.*"
+                    r"Consider editing this constraint.*"
+                ),
+            )
 
     def test_coefficient_matching_robust_infeasible_proof_in_pyros(self):
         # Write the deterministic Pyomo model
@@ -4982,10 +5210,7 @@ class RegressionTest(unittest.TestCase):
             )
 
 
-@unittest.skipUnless(
-    baron_available and baron_license_is_valid,
-    "Global NLP solver is not available and licensed.",
-)
+@unittest.skipUnless(scip_available, "Global NLP solver is not available.")
 class testBypassingSeparation(unittest.TestCase):
     def test_bypass_global_separation(self):
         """Test bypassing of global separation solve calls."""
@@ -5008,29 +5233,43 @@ class testBypassingSeparation(unittest.TestCase):
 
         # Define subsolvers utilized in the algorithm
         local_subsolver = SolverFactory('ipopt')
-        global_subsolver = SolverFactory("baron")
+        global_subsolver = SolverFactory("scip")
 
         # Call the PyROS solver
-        results = pyros_solver.solve(
-            model=m,
-            first_stage_variables=[m.x1],
-            second_stage_variables=[m.x2],
-            uncertain_params=[m.u],
-            uncertainty_set=interval,
-            local_solver=local_subsolver,
-            global_solver=global_subsolver,
-            options={
-                "objective_focus": ObjectiveType.worst_case,
-                "solve_master_globally": True,
-                "decision_rule_order": 0,
-                "bypass_global_separation": True,
-            },
-        )
+        with LoggingIntercept(level=logging.WARNING) as LOG:
+            results = pyros_solver.solve(
+                model=m,
+                first_stage_variables=[m.x1],
+                second_stage_variables=[m.x2],
+                uncertain_params=[m.u],
+                uncertainty_set=interval,
+                local_solver=local_subsolver,
+                global_solver=global_subsolver,
+                options={
+                    "objective_focus": ObjectiveType.worst_case,
+                    "solve_master_globally": True,
+                    "decision_rule_order": 0,
+                    "bypass_global_separation": True,
+                },
+            )
 
+        # check termination robust optimal
         self.assertEqual(
             results.pyros_termination_condition,
             pyrosTerminationCondition.robust_optimal,
             msg="Returned termination condition is not return robust_optimal.",
+        )
+
+        # since robust optimal, we also expect warning-level logger
+        # message about bypassing of global separation subproblems
+        warning_msgs = LOG.getvalue()
+        self.assertRegex(
+            warning_msgs,
+            (
+                r".*Option to bypass global separation was chosen\. "
+                r"Robust feasibility and optimality of the reported "
+                r"solution are not guaranteed\."
+            ),
         )
 
 
@@ -5113,10 +5352,7 @@ class testUninitializedVars(unittest.TestCase):
             )
 
 
-@unittest.skipUnless(
-    baron_available and baron_license_is_valid,
-    "Global NLP solver is not available and licensed.",
-)
+@unittest.skipUnless(scip_available, "Global NLP solver is not available.")
 class testModelMultipleObjectives(unittest.TestCase):
     """
     This class contains tests for models with multiple
@@ -5151,7 +5387,7 @@ class testModelMultipleObjectives(unittest.TestCase):
 
         # Define subsolvers utilized in the algorithm
         local_subsolver = SolverFactory('ipopt')
-        global_subsolver = SolverFactory("baron")
+        global_subsolver = SolverFactory("scip")
 
         solve_kwargs = dict(
             model=m,
@@ -5199,11 +5435,25 @@ class testModelMultipleObjectives(unittest.TestCase):
         # and solve again
         m.obj_max = Objective(expr=-m.obj.expr, sense=pyo_max)
         m.obj.deactivate()
-        res = pyros_solver.solve(**solve_kwargs)
+        max_obj_res = pyros_solver.solve(**solve_kwargs)
 
         # check active objectives
         self.assertEqual(len(list(m.component_data_objects(Objective, active=True))), 1)
         self.assertTrue(m.obj_max.active)
+
+        self.assertTrue(
+            math.isclose(
+                res.final_objective_value,
+                -max_obj_res.final_objective_value,
+                abs_tol=2e-4,  # 2x the default robust feasibility tolerance
+            ),
+            msg=(
+                f"Robust optimal objective value {res.final_objective_value} "
+                "for problem with minimization objective not close to "
+                f"negative of value {max_obj_res.final_objective_value} "
+                "of equivalent maximization objective."
+            ),
+        )
 
 
 class testModelIdentifyObjectives(unittest.TestCase):
@@ -5628,6 +5878,427 @@ class TestSubsolverTiming(unittest.TestCase):
             results.iterations,
             0,
             msg="Robust infeasible model terminated in 0 iterations (nominal case).",
+        )
+
+
+class TestIterationLogRecord(unittest.TestCase):
+    """
+    Test the PyROS `IterationLogRecord` class.
+    """
+
+    def test_log_header(self):
+        """Test method for logging iteration log table header."""
+        ans = (
+            "------------------------------------------------------------------------------\n"
+            "Itn  Objective    1-Stg Shift  2-Stg Shift  #CViol  Max Viol     Wall Time (s)\n"
+            "------------------------------------------------------------------------------\n"
+        )
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            IterationLogRecord.log_header(logger.info)
+
+        self.assertEqual(
+            LOG.getvalue(),
+            ans,
+            msg="Messages logged for iteration table header do not match expected result",
+        )
+
+    def test_log_standard_iter_record(self):
+        """Test logging function for PyROS IterationLogRecord."""
+
+        # for some fields, we choose floats with more than four
+        # four decimal points to ensure rounding also matches
+        iter_record = IterationLogRecord(
+            iteration=4,
+            objective=1.234567,
+            first_stage_var_shift=2.3456789e-8,
+            second_stage_var_shift=3.456789e-7,
+            dr_var_shift=1.234567e-7,
+            num_violated_cons=10,
+            max_violation=7.654321e-3,
+            elapsed_time=21.2,
+            dr_polishing_success=True,
+            all_sep_problems_solved=True,
+            global_separation=False,
+        )
+
+        # now check record logged as expected
+        ans = (
+            "4     1.2346e+00  2.3457e-08   3.4568e-07   10      7.6543e-03   "
+            "21.200       \n"
+        )
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            iter_record.log(logger.info)
+        result = LOG.getvalue()
+
+        self.assertEqual(
+            ans,
+            result,
+            msg="Iteration log record message does not match expected result",
+        )
+
+    def test_log_iter_record_polishing_failed(self):
+        """Test iteration log record in event of polishing failure."""
+        # for some fields, we choose floats with more than four
+        # four decimal points to ensure rounding also matches
+        iter_record = IterationLogRecord(
+            iteration=4,
+            objective=1.234567,
+            first_stage_var_shift=2.3456789e-8,
+            second_stage_var_shift=3.456789e-7,
+            dr_var_shift=1.234567e-7,
+            num_violated_cons=10,
+            max_violation=7.654321e-3,
+            elapsed_time=21.2,
+            dr_polishing_success=False,
+            all_sep_problems_solved=True,
+            global_separation=False,
+        )
+
+        # now check record logged as expected
+        ans = (
+            "4     1.2346e+00  2.3457e-08   3.4568e-07*  10      7.6543e-03   "
+            "21.200       \n"
+        )
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            iter_record.log(logger.info)
+        result = LOG.getvalue()
+
+        self.assertEqual(
+            ans,
+            result,
+            msg="Iteration log record message does not match expected result",
+        )
+
+    def test_log_iter_record_global_separation(self):
+        """
+        Test iteration log record in event global separation performed.
+        In this case, a 'g' should be appended to the max violation
+        reported. Useful in the event neither local nor global separation
+        was bypassed.
+        """
+        # for some fields, we choose floats with more than four
+        # four decimal points to ensure rounding also matches
+        iter_record = IterationLogRecord(
+            iteration=4,
+            objective=1.234567,
+            first_stage_var_shift=2.3456789e-8,
+            second_stage_var_shift=3.456789e-7,
+            dr_var_shift=1.234567e-7,
+            num_violated_cons=10,
+            max_violation=7.654321e-3,
+            elapsed_time=21.2,
+            dr_polishing_success=True,
+            all_sep_problems_solved=True,
+            global_separation=True,
+        )
+
+        # now check record logged as expected
+        ans = (
+            "4     1.2346e+00  2.3457e-08   3.4568e-07   10      7.6543e-03g  "
+            "21.200       \n"
+        )
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            iter_record.log(logger.info)
+        result = LOG.getvalue()
+
+        self.assertEqual(
+            ans,
+            result,
+            msg="Iteration log record message does not match expected result",
+        )
+
+    def test_log_iter_record_not_all_sep_solved(self):
+        """
+        Test iteration log record in event not all separation problems
+        were solved successfully. This may have occurred if the PyROS
+        solver time limit was reached, or the user-provides subordinate
+        optimizer(s) were unable to solve a separation subproblem
+        to an acceptable level.
+        A '+' should be appended to the number of performance constraints
+        found to be violated.
+        """
+        # for some fields, we choose floats with more than four
+        # four decimal points to ensure rounding also matches
+        iter_record = IterationLogRecord(
+            iteration=4,
+            objective=1.234567,
+            first_stage_var_shift=2.3456789e-8,
+            second_stage_var_shift=3.456789e-7,
+            dr_var_shift=1.234567e-7,
+            num_violated_cons=10,
+            max_violation=7.654321e-3,
+            elapsed_time=21.2,
+            dr_polishing_success=True,
+            all_sep_problems_solved=False,
+            global_separation=False,
+        )
+
+        # now check record logged as expected
+        ans = (
+            "4     1.2346e+00  2.3457e-08   3.4568e-07   10+     7.6543e-03   "
+            "21.200       \n"
+        )
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            iter_record.log(logger.info)
+        result = LOG.getvalue()
+
+        self.assertEqual(
+            ans,
+            result,
+            msg="Iteration log record message does not match expected result",
+        )
+
+    def test_log_iter_record_all_special(self):
+        """
+        Test iteration log record in event DR polishing and global
+        separation failed.
+        """
+        # for some fields, we choose floats with more than four
+        # four decimal points to ensure rounding also matches
+        iter_record = IterationLogRecord(
+            iteration=4,
+            objective=1.234567,
+            first_stage_var_shift=2.3456789e-8,
+            second_stage_var_shift=3.456789e-7,
+            dr_var_shift=1.234567e-7,
+            num_violated_cons=10,
+            max_violation=7.654321e-3,
+            elapsed_time=21.2,
+            dr_polishing_success=False,
+            all_sep_problems_solved=False,
+            global_separation=True,
+        )
+
+        # now check record logged as expected
+        ans = (
+            "4     1.2346e+00  2.3457e-08   3.4568e-07*  10+     7.6543e-03g  "
+            "21.200       \n"
+        )
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            iter_record.log(logger.info)
+        result = LOG.getvalue()
+
+        self.assertEqual(
+            ans,
+            result,
+            msg="Iteration log record message does not match expected result",
+        )
+
+    def test_log_iter_record_attrs_none(self):
+        """
+        Test logging of iteration record in event some
+        attributes are of value `None`. In this case, a '-'
+        should be printed in lieu of a numerical value.
+        Example where this occurs: the first iteration,
+        in which there is no first-stage shift or DR shift.
+        """
+        # for some fields, we choose floats with more than four
+        # four decimal points to ensure rounding also matches
+        iter_record = IterationLogRecord(
+            iteration=0,
+            objective=-1.234567,
+            first_stage_var_shift=None,
+            second_stage_var_shift=None,
+            dr_var_shift=None,
+            num_violated_cons=10,
+            max_violation=7.654321e-3,
+            elapsed_time=21.2,
+            dr_polishing_success=True,
+            all_sep_problems_solved=False,
+            global_separation=True,
+        )
+
+        # now check record logged as expected
+        ans = (
+            "0    -1.2346e+00  -            -            10+     7.6543e-03g  "
+            "21.200       \n"
+        )
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            iter_record.log(logger.info)
+        result = LOG.getvalue()
+
+        self.assertEqual(
+            ans,
+            result,
+            msg="Iteration log record message does not match expected result",
+        )
+
+
+class TestROSolveResults(unittest.TestCase):
+    """
+    Test PyROS solver results object.
+    """
+
+    def test_ro_solve_results_str(self):
+        """
+        Test string representation of RO solve results object.
+        """
+        res = ROSolveResults(
+            config=SolverFactory("pyros").CONFIG(),
+            iterations=4,
+            final_objective_value=123.456789,
+            time=300.34567,
+            pyros_termination_condition=pyrosTerminationCondition.robust_optimal,
+        )
+        ans = (
+            "Termination stats:\n"
+            " Iterations            : 4\n"
+            " Solve time (wall s)   : 300.346\n"
+            " Final objective value : 1.2346e+02\n"
+            " Termination condition : pyrosTerminationCondition.robust_optimal"
+        )
+        self.assertEqual(
+            str(res),
+            ans,
+            msg=(
+                "String representation of PyROS results object does not "
+                "match expected value"
+            ),
+        )
+
+    def test_ro_solve_results_str_attrs_none(self):
+        """
+        Test string representation of PyROS solve results in event
+        one of the printed attributes is of value `None`.
+        This may occur at instantiation or, for example,
+        whenever the PyROS solver confirms robust infeasibility through
+        coefficient matching.
+        """
+        res = ROSolveResults(
+            config=SolverFactory("pyros").CONFIG(),
+            iterations=0,
+            final_objective_value=None,
+            time=300.34567,
+            pyros_termination_condition=pyrosTerminationCondition.robust_optimal,
+        )
+        ans = (
+            "Termination stats:\n"
+            " Iterations            : 0\n"
+            " Solve time (wall s)   : 300.346\n"
+            " Final objective value : None\n"
+            " Termination condition : pyrosTerminationCondition.robust_optimal"
+        )
+        self.assertEqual(
+            str(res),
+            ans,
+            msg=(
+                "String representation of PyROS results object does not "
+                "match expected value"
+            ),
+        )
+
+
+class TestPyROSSolverLogIntros(unittest.TestCase):
+    """
+    Test logging of introductory information by PyROS solver.
+    """
+
+    def test_log_config(self):
+        """
+        Test method for logging PyROS solver config dict.
+        """
+        pyros_solver = SolverFactory("pyros")
+        config = pyros_solver.CONFIG(dict(nominal_uncertain_param_vals=[0.5]))
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            pyros_solver._log_config(logger=logger, config=config, level=logging.INFO)
+
+        ans = (
+            "Solver options:\n"
+            " time_limit=None\n"
+            " keepfiles=False\n"
+            " tee=False\n"
+            " load_solution=True\n"
+            " objective_focus=<ObjectiveType.nominal: 2>\n"
+            " nominal_uncertain_param_vals=[0.5]\n"
+            " decision_rule_order=0\n"
+            " solve_master_globally=False\n"
+            " max_iter=-1\n"
+            " robust_feasibility_tolerance=0.0001\n"
+            " separation_priority_order={}\n"
+            " progress_logger=<PreformattedLogger pyomo.contrib.pyros (INFO)>\n"
+            " backup_local_solvers=[]\n"
+            " backup_global_solvers=[]\n"
+            " subproblem_file_directory=None\n"
+            " bypass_local_separation=False\n"
+            " bypass_global_separation=False\n"
+            " p_robustness={}\n" + "-" * 78 + "\n"
+        )
+
+        logged_str = LOG.getvalue()
+        self.assertEqual(
+            logged_str,
+            ans,
+            msg=(
+                "Logger output for PyROS solver config (default case) "
+                "does not match expected result."
+            ),
+        )
+
+    def test_log_intro(self):
+        """
+        Test logging of PyROS solver introductory messages.
+        """
+        pyros_solver = SolverFactory("pyros")
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            pyros_solver._log_intro(logger=logger, level=logging.INFO)
+
+        intro_msgs = LOG.getvalue()
+
+        # last character should be newline; disregard it
+        intro_msg_lines = intro_msgs.split("\n")[:-1]
+
+        # check number of lines is as expected
+        self.assertEqual(
+            len(intro_msg_lines),
+            14,
+            msg=(
+                "PyROS solver introductory message does not contain"
+                "the expected number of lines."
+            ),
+        )
+
+        # first and last lines of the introductory section
+        self.assertEqual(intro_msg_lines[0], "=" * 78)
+        self.assertEqual(intro_msg_lines[-1], "=" * 78)
+
+        # check regex main text
+        self.assertRegex(
+            " ".join(intro_msg_lines[1:-1]),
+            r"PyROS: The Pyomo Robust Optimization Solver, v.* \(IDAES\)\.",
+        )
+
+    def test_log_disclaimer(self):
+        """
+        Test logging of PyROS solver disclaimer messages.
+        """
+        pyros_solver = SolverFactory("pyros")
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            pyros_solver._log_disclaimer(logger=logger, level=logging.INFO)
+
+        disclaimer_msgs = LOG.getvalue()
+
+        # last character should be newline; disregard it
+        disclaimer_msg_lines = disclaimer_msgs.split("\n")[:-1]
+
+        # check number of lines is as expected
+        self.assertEqual(
+            len(disclaimer_msg_lines),
+            5,
+            msg=(
+                "PyROS solver disclaimer message does not contain"
+                "the expected number of lines."
+            ),
+        )
+
+        # regex first line of disclaimer section
+        self.assertRegex(disclaimer_msg_lines[0], r"=.* DISCLAIMER .*=")
+        # check last line of disclaimer section
+        self.assertEqual(disclaimer_msg_lines[-1], "=" * 78)
+
+        # check regex main text
+        self.assertRegex(
+            " ".join(disclaimer_msg_lines[1:-1]),
+            r"PyROS is still under development.*ticket at.*",
         )
 
 

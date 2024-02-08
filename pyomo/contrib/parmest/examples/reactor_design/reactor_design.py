@@ -12,7 +12,7 @@
 Continuously stirred tank reactor model, based on
 pyomo/examples/doc/pyomobook/nonlinear-ch/react_design/ReactorDesign.py
 """
-import pandas as pd
+from pyomo.common.dependencies import pandas as pd
 from pyomo.environ import (
     ConcreteModel,
     Param,
@@ -37,10 +37,20 @@ def reactor_design_model(data):
     )  # m^3/(gmol min)
 
     # Inlet concentration of A, gmol/m^3
-    model.caf = Param(initialize=float(data['caf']), within=PositiveReals)
+    if isinstance(data, dict) or isinstance(data, pd.Series):
+        model.caf = Param(initialize=float(data["caf"]), within=PositiveReals)
+    elif isinstance(data, pd.DataFrame):
+        model.caf = Param(initialize=float(data.iloc[0]["caf"]), within=PositiveReals)
+    else:
+        raise ValueError("Unrecognized data type.")
 
     # Space velocity (flowrate/volume)
-    model.sv = Param(initialize=float(data['sv']), within=PositiveReals)
+    if isinstance(data, dict) or isinstance(data, pd.Series):
+        model.sv = Param(initialize=float(data["sv"]), within=PositiveReals)
+    elif isinstance(data, pd.DataFrame):
+        model.sv = Param(initialize=float(data.iloc[0]["sv"]), within=PositiveReals)
+    else:
+        raise ValueError("Unrecognized data type.")
 
     # Outlet concentration of each component
     model.ca = Var(initialize=5000.0, within=PositiveReals)
@@ -81,12 +91,12 @@ def main():
     sv_values = [1.0 + v * 0.05 for v in range(1, 20)]
     caf = 10000
     for sv in sv_values:
-        model = reactor_design_model({'caf': caf, 'sv': sv})
-        solver = SolverFactory('ipopt')
+        model = reactor_design_model(pd.DataFrame(data={"caf": [caf], "sv": [sv]}))
+        solver = SolverFactory("ipopt")
         solver.solve(model)
         results.append([sv, caf, model.ca(), model.cb(), model.cc(), model.cd()])
 
-    results = pd.DataFrame(results, columns=['sv', 'caf', 'ca', 'cb', 'cc', 'cd'])
+    results = pd.DataFrame(results, columns=["sv", "caf", "ca", "cb", "cc", "cd"])
     print(results)
 
 

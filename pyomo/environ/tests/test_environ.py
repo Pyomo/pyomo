@@ -16,13 +16,7 @@ import re
 import sys
 import subprocess
 
-from collections import namedtuple
-
 import pyomo.common.unittest as unittest
-
-from pyomo.common.dependencies import numpy_available, attempt_import
-
-pyro4, pyro4_available = attempt_import('Pyro4')
 
 
 class ImportData(object):
@@ -93,9 +87,6 @@ class TestPyomoEnviron(unittest.TestCase):
             )
 
     @unittest.skipIf(
-        sys.version_info[:2] < (3, 7), "Import timing introduced in python 3.7"
-    )
-    @unittest.skipIf(
         'pypy_version_info' in dir(sys), "PyPy does not support '-X importtime"
     )
     def test_tpl_import_time(self):
@@ -148,21 +139,21 @@ class TestPyomoEnviron(unittest.TestCase):
             'base64',  # Imported on Windows
             'cPickle',
             'csv',
-            'ctypes',
+            'ctypes',  # mandatory import in core/base/external.py; TODO: fix this
             'decimal',
             'gc',  # Imported on MacOS, Windows; Linux in 3.10
             'glob',
             'heapq',  # Added in Python 3.10
-            'importlib',  # Imported on Windows
+            'importlib',
             'inspect',
             'json',  # Imported on Windows
             'locale',  # Added in Python 3.9
             'logging',
             'pickle',
             'platform',
-            'random',  # Imported on MacOS, Windows
             'shlex',
             'socket',  # Imported on MacOS, Windows; Linux in 3.10
+            'subprocess',
             'tempfile',  # Imported on MacOS, Windows
             'textwrap',
             'typing',
@@ -171,9 +162,6 @@ class TestPyomoEnviron(unittest.TestCase):
         }
         # Non-standard-library TPLs that Pyomo will load unconditionally
         ref.add('ply')
-        ref.add('pyutilib')
-        if numpy_available:
-            ref.add('numpy')
         diff = set(_[0] for _ in tpl_by_time[-5:]).difference(ref)
         self.assertEqual(
             diff, set(), "Unexpected module found in 5 slowest-loading TPL modules"

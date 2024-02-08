@@ -1514,6 +1514,19 @@ class _DeferredUnitsSingleton(PyomoUnitsContainer):
         # present, at which point this instance __class__ will fall back
         # to PyomoUnitsContainer (where this method is not declared, OR
         # pint is not available and an ImportError will be raised.
+        #
+        # We need special case handling for __class__: gurobipy
+        # interrogates things by looking at their __class__ during
+        # python shutdown.  Unfortunately, interrogating this
+        # singleton's __class__ evaluates `pint_available`, which - if
+        # DASK is installed - imports dask.  Importing dask creates
+        # threading objects.  Unfortunately, creating threading objects
+        # during interpreter shutdown generates a RuntimeError.  So, our
+        # solution is to special-case the resolution of __class__ here
+        # to avoid accidentally triggering the imports.
+        if attr == "__class__":
+            return _DeferredUnitsSingleton
+        #
         if pint_available:
             # If the first thing that is being called is
             # "units.set_pint_registry(...)", then we will call __init__

@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.collections import ComponentMap
+from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.common.modeling import unique_component_name
 from pyomo.core import (
@@ -136,13 +136,15 @@ class BoundPretransformation(Transformation):
     def _get_bound_dict_for_var(self, bound_dict, v):
         v_bounds = bound_dict.get(v)
         if v_bounds is None:
-            v_bounds = bound_dict[v] = {None: (v.lb, v.ub), 'to_deactivate': set()}
+            v_bounds = bound_dict[v] = {
+                None: (v.lb, v.ub),
+                'to_deactivate': ComponentMap(),
+            }
         return v_bounds
 
     def _update_bounds_from_constraints(
         self, disjunct, bound_dict, gdp_forest, is_root=False
     ):
-        bound_dict_key = None if is_root else disjunct
         for constraint in disjunct.component_data_objects(
             Constraint,
             active=True,
@@ -164,54 +166,55 @@ class BoundPretransformation(Transformation):
             except StopIteration:
                 # There was one but not two: This is what we want.
                 repn = generate_standard_repn(constraint.body)
-                if not repn.is_linear():
+                # If this is a trivial constraint, repn could actually be empty,
+                # so we check that we really do have one linear var now
+                if not repn.is_linear() or len(repn.linear_vars) != 1:
                     continue
                 v = repn.linear_vars[0]
-                v_bounds = self._get_bound_dict_for_var(bound_dict, v)
                 coef = repn.linear_coefs[0]
                 constant = repn.constant
-                self._update_bounds_dict(
-                    v_bounds,
+                lower = (
                     (value(constraint.lower) - constant) / coef
                     if constraint.lower is not None
-                    else None,
+                    else None
+                )
+                upper = (
                     (value(constraint.upper) - constant) / coef
                     if constraint.upper is not None
-                    else None,
-                    bound_dict_key,
+                    else None
+                )
+                if coef < 0:
+                    # we divided by a negative coef above, so flip the constraint
+                    (lower, upper) = (upper, lower)
+                v_bounds = self._get_bound_dict_for_var(bound_dict, v)
+                self._update_bounds_dict(
+                    v_bounds,
+                    lower,
+                    upper,
+                    disjunct if not is_root else None,
                     gdp_forest,
                 )
                 if not is_root:
-                    v_bounds['to_deactivate'].add(constraint)
-
-    def _return_nonNone_bounds(self, parent_lb, parent_ub, lb, ub):
-        if lb is None:
-            # either we replace None with None, or we fill in the parent value
-            # (which we know if the tightest of the ancestral values because
-            # we've already come down the tree once.)
-            lb = parent_lb
-        if ub is None:
-            ub = parent_ub
-        return (lb, ub)
+                    if disjunct in v_bounds['to_deactivate']:
+                        v_bounds['to_deactivate'][disjunct].add(constraint)
+                    else:
+                        v_bounds['to_deactivate'][disjunct] = ComponentSet([constraint])
 
     def _get_tightest_ancestral_bounds(self, v_bounds, disjunct, gdp_forest):
         lb = None
         ub = None
         parent = disjunct
-        ancestors = set()
         while lb is None or ub is None:
             if parent in v_bounds:
-                lb, ub = self._return_nonNone_bounds(*v_bounds[parent], lb, ub)
+                l, u = v_bounds[parent]
+                if lb is None and l is not None:
+                    lb = l
+                if ub is None and u is not None:
+                    ub = u
             if parent is None:
                 break
-            ancestors.add(parent)
             parent = gdp_forest.parent_disjunct(parent)
-        # we fill in the bounds not only for 'disjunct', but also for all the
-        # ancestors we passed on the way up to finding the bounds. That way this
-        # is a shorter traversal the next time up, if there is a next time.
-        for ancestor in ancestors:
-            v_bounds[ancestor] = (lb, ub)
-        return v_bounds[disjunct]
+        return lb, ub
 
     def _update_bounds_dict(self, v_bounds, lower, upper, disjunct, gdp_forest):
         (lb, ub) = self._get_tightest_ancestral_bounds(v_bounds, disjunct, gdp_forest)
@@ -230,77 +233,107 @@ class BoundPretransformation(Transformation):
         v_bounds[disjunct] = (lb, ub)
 
     def _create_transformation_constraints(
-        self, disjunction, bound_dict, gdp_forest, transformation_blocks
+        self, root_disjunction, bound_dict, gdp_forest, transformation_blocks
     ):
-        trans_block = self._add_transformation_block(disjunction, transformation_blocks)
-        if self.transformation_name not in disjunction._transformation_map:
-            disjunction._transformation_map[self.transformation_name] = ComponentMap()
-        trans_map = disjunction._transformation_map[self.transformation_name]
-        for v, v_bounds in bound_dict.items():
-            unique_id = len(trans_block.transformed_bound_constraints)
-            lb_expr = 0
-            ub_expr = 0
-            all_lbs = True
-            all_ubs = True
-            for disjunct in gdp_forest.leaves:
-                indicator_var = disjunct.binary_indicator_var
-                need_lb = True
-                need_ub = True
-                while need_lb or need_ub:
-                    if disjunct in v_bounds:
-                        (lb, ub) = v_bounds[disjunct]
-                        if need_lb and lb is not None:
-                            lb_expr += lb * indicator_var
-                            need_lb = False
-                        if need_ub and ub is not None:
-                            ub_expr += ub * indicator_var
-                            need_ub = False
-                    if disjunct is None:
-                        break
-                    disjunct = gdp_forest.parent_disjunct(disjunct)
-                if need_lb:
-                    all_lbs = False
-                if need_ub:
-                    all_ubs = False
-            deactivate_lower = set()
-            deactivate_upper = set()
-            if all_lbs:
-                idx = (v.local_name + '_lb', unique_id)
-                trans_block.transformed_bound_constraints[idx] = lb_expr <= v
-                trans_map[v] = [trans_block.transformed_bound_constraints[idx]]
-                for c in v_bounds['to_deactivate']:
-                    if c.upper is None:
-                        c.deactivate()
-                    elif c.lower is not None:
-                        deactivate_lower.add(c)
-                disjunction._transformation_map
-            if all_ubs:
-                idx = (v.local_name + '_ub', unique_id + 1)
-                trans_block.transformed_bound_constraints[idx] = ub_expr >= v
-                if v in trans_map:
-                    trans_map[v].append(trans_block.transformed_bound_constraints[idx])
-                else:
+        to_transform = ComponentSet([root_disjunction])
+
+        while to_transform:
+            disjunction = to_transform.pop()
+
+            trans_block = self._add_transformation_block(
+                disjunction, transformation_blocks
+            )
+            if self.transformation_name not in disjunction._transformation_map:
+                disjunction._transformation_map[self.transformation_name] = (
+                    ComponentMap()
+                )
+            trans_map = disjunction._transformation_map[self.transformation_name]
+
+            for disj in disjunction.disjuncts:
+                to_transform.update(gdp_forest.children(disj))
+
+            for v, v_bounds in bound_dict.items():
+                unique_id = len(trans_block.transformed_bound_constraints)
+                if not any(disj in v_bounds for disj in disjunction.disjuncts):
+                    # There are no bound Constraints on this Disjunction. We
+                    # don't want to create a bunch of empty Blocks and things as
+                    # if there were, so we continue to the next.
+                    continue
+                all_lbs = True
+                all_ubs = True
+                lb_expr = 0
+                ub_expr = 0
+                deactivate_lower = ComponentSet()
+                deactivate_upper = ComponentSet()
+                for disj in disjunction.disjuncts:
+                    (lb, ub) = self._get_tightest_ancestral_bounds(
+                        v_bounds, disj, gdp_forest
+                    )
+                    if lb is None:
+                        all_lbs = False
+                        if not all_ubs:
+                            # We're not going to get all of either: we're done.
+                            break
+                    if ub is None:
+                        all_ubs = False
+                        if not all_lbs:
+                            break
+                    if all_lbs:
+                        lb_expr += lb * disj.binary_indicator_var
+                        # If these bounds came from above here in the GDP
+                        # hierarchy, this disjunct might not actually have
+                        # constraints to deactivate. If it does, we add them to
+                        # our list to take care of if we end up being able to
+                        # make a constraint
+                        if disj in v_bounds['to_deactivate']:
+                            deactivate_lower.update(v_bounds['to_deactivate'][disj])
+                    if all_ubs:
+                        ub_expr += ub * disj.binary_indicator_var
+                        if disj in v_bounds['to_deactivate']:
+                            deactivate_upper.update(v_bounds['to_deactivate'][disj])
+
+                # actually make the constraint(s) now
+                if all_lbs:
+                    idx = (v.local_name + '_lb', unique_id)
+                    trans_block.transformed_bound_constraints[idx] = lb_expr <= v
                     trans_map[v] = [trans_block.transformed_bound_constraints[idx]]
-                for c in v_bounds['to_deactivate']:
-                    if c.lower is None or c in deactivate_lower:
-                        c.deactivate()
-                        deactivate_lower.discard(c)
-                    elif c.upper is not None:
-                        deactivate_upper.add(c)
-            # Now we mess up the user's model, if we are only deactivating the
-            # lower or upper part of a constraint that has both
-            for c in deactivate_lower:
-                c.deactivate()
-                c.parent_block().add_component(
-                    unique_component_name(c.parent_block(), c.local_name + '_ub'),
-                    Constraint(expr=v <= c.upper),
-                )
-            for c in deactivate_upper:
-                c.deactivate()
-                c.parent_block().add_component(
-                    unique_component_name(c.parent_block(), c.local_name + '_lb'),
-                    Constraint(expr=v >= c.lower),
-                )
+                    for c in deactivate_lower:
+                        if c.lower is None:
+                            # There's nothing to do
+                            continue
+                        if c.upper is None or (all_ubs and c in deactivate_upper):
+                            c.deactivate()
+                        else:
+                            c.deactivate()
+                            c.parent_block().add_component(
+                                unique_component_name(
+                                    c.parent_block(), c.local_name + '_ub'
+                                ),
+                                Constraint(expr=v <= c.upper),
+                            )
+                if all_ubs:
+                    idx = (v.local_name + '_ub', unique_id + 1)
+                    trans_block.transformed_bound_constraints[idx] = ub_expr >= v
+                    if v in trans_map:
+                        trans_map[v].append(
+                            trans_block.transformed_bound_constraints[idx]
+                        )
+                    else:
+                        trans_map[v] = [trans_block.transformed_bound_constraints[idx]]
+                    for c in deactivate_upper:
+                        if c.upper is None:
+                            # There's nothing to do
+                            continue
+                        if c.lower is None or (all_lbs and c in deactivate_lower):
+                            c.deactivate()
+                        else:
+                            c.deactivate()
+                            c.parent_block().add_component(
+                                unique_component_name(
+                                    c.parent_block(), c.local_name + '_lb'
+                                ),
+                                Constraint(expr=v >= c.lower),
+                            )
 
     def _add_transformation_block(self, disjunction, transformation_blocks):
         to_block = disjunction.parent_block()

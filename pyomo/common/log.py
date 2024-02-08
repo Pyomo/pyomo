@@ -107,11 +107,14 @@ class WrappingFormatter(logging.Formatter):
         super(WrappingFormatter, self).__init__(**kwds)
 
     def format(self, record):
+        msg = record.getMessage()
+        if record.msg.__class__ is not str and isinstance(record.msg, Preformatted):
+            return msg
+
         _orig = {
             k: getattr(record, k) for k in ('msg', 'args', 'pathname', 'levelname')
         }
         _id = getattr(record, 'id', None)
-        msg = record.getMessage()
         record.msg = self._flag
         record.args = None
         if _id:
@@ -136,7 +139,8 @@ class WrappingFormatter(logging.Formatter):
         #
         # A standard approach is to use inspect.cleandoc, which
         # allows for the first line to have 0 indent.
-        msg = inspect.cleandoc(msg)
+        if getattr(record, 'cleandoc', True):
+            msg = inspect.cleandoc(msg)
 
         # Split the formatted log message (that currently has _flag in
         # lieu of the actual message content) into lines, then
@@ -210,6 +214,19 @@ class StdoutHandler(logging.StreamHandler):
     def emit(self, record):
         self.stream = sys.stdout
         super(StdoutHandler, self).emit(record)
+
+
+class Preformatted(object):
+    __slots__ = ('msg',)
+
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __str__(self):
+        return str(self.msg)
+
+    def __repr__(self):
+        return f'Preformatted({self.msg!r})'
 
 
 class _GlobalLogFilter(object):

@@ -3,6 +3,30 @@ PyROS CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+PyROS 1.2.9    15 Dec 2023
+-------------------------------------------------------------------------------
+- Fix DR polishing optimality constraint for case of nominal objective focus
+- Use previous separation solution to initialize second-stage and state
+  variables of new master block; simplify the master feasibility problem
+- Use best known solution from master to initialize separation problems
+  per performance constraint
+- Refactor DR variable and constraint declaration routines.
+- Refactor DR polishing routine; initialize auxiliary variables
+  to values they are meant to represent
+
+-------------------------------------------------------------------------------
+PyROS 1.2.8    12 Oct 2023
+-------------------------------------------------------------------------------
+- Refactor PyROS separation routine, fix scenario selection heuristic
+- Add efficiency for discrete uncertainty set separation
+- Fix coefficient matching routine
+- Fix subproblem timers and time accumulators
+- Update and document PyROS solver logging system
+- Fix iteration overcounting in event of `max_iter` termination status
+- Fixes to (assembly of) PyROS `ROSolveResults` object
+
+
+-------------------------------------------------------------------------------
 PyROS 1.2.7    26 Apr 2023
 -------------------------------------------------------------------------------
 - Refurbish separation problem routines and data structures
