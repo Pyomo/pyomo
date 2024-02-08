@@ -119,6 +119,9 @@ else:
     scip_license_is_valid = False
     scip_version = (0, 0, 0)
 
+_ipopt = SolverFactory("ipopt")
+ipopt_available = _ipopt.available(exception_flag=False)
+
 
 # @SolverFactory.register("time_delay_solver")
 class TimeDelaySolver(object):
@@ -3533,10 +3536,7 @@ class testIntersectionSetClass(unittest.TestCase):
         # assigning to slices should work fine
         all_sets[3:] = [BoxSet([[1, 1.5]]), BoxSet([[1, 3]])]
 
-    @unittest.skipUnless(
-        SolverFactory('ipopt').available(exception_flag=False),
-        "Local NLP solver is not available.",
-    )
+    @unittest.skipUnless(ipopt_available, "IPOPT is not available.")
     def test_uncertainty_set_with_correct_params(self):
         '''
         Case in which the UncertaintySet is constructed using the uncertain_param objects from the model to
@@ -3575,10 +3575,7 @@ class testIntersectionSetClass(unittest.TestCase):
             " be the same uncertain param Var objects in the original model.",
         )
 
-    @unittest.skipUnless(
-        SolverFactory('ipopt').available(exception_flag=False),
-        "Local NLP solver is not available.",
-    )
+    @unittest.skipUnless(ipopt_available, "IPOPT is not available.")
     def test_uncertainty_set_with_incorrect_params(self):
         '''
         Case in which the set is constructed using  uncertain_param objects which are Params instead of
@@ -6799,6 +6796,7 @@ class TestPyROSSolverAdvancedValidation(unittest.TestCase):
                 global_solver=global_solver,
             )
 
+    @unittest.skipUnless(ipopt_available, "IPOPT is not available.")
     def test_pyros_nominal_point_not_in_set(self):
         """
         Test PyROS raises exception if nominal point is not in the
@@ -6832,6 +6830,7 @@ class TestPyROSSolverAdvancedValidation(unittest.TestCase):
                 nominal_uncertain_param_vals=[0],
             )
 
+    @unittest.skipUnless(ipopt_available, "IPOPT is not available.")
     def test_pyros_nominal_point_len_mismatch(self):
         """
         Test PyROS raises exception if there is mismatch between length
@@ -6864,6 +6863,7 @@ class TestPyROSSolverAdvancedValidation(unittest.TestCase):
                 nominal_uncertain_param_vals=[0, 1],
             )
 
+    @unittest.skipUnless(ipopt_available, "IPOPT is not available.")
     def test_pyros_invalid_bypass_separation(self):
         """
         Test PyROS raises exception if both local and
