@@ -10,10 +10,33 @@
 #  ___________________________________________________________________________
 
 import math
-from pyomo.environ import exp, log, log10, sin, cos, tan, asin, acos, atan, sqrt
 import pyomo.common.unittest as unittest
-from pyomo.contrib.fbbt.expression_bounds_walker import ExpressionBoundsVisitor
-from pyomo.core import Any, ConcreteModel, Expression, Param, Var
+
+from pyomo.environ import (
+    exp,
+    log,
+    log10,
+    sin,
+    cos,
+    tan,
+    asin,
+    acos,
+    atan,
+    sqrt,
+    inequality,
+    Expr_if,
+    Any,
+    ConcreteModel,
+    Expression,
+    Param,
+    Var,
+)
+
+from pyomo.common.errors import DeveloperError
+from pyomo.common.log import LoggingIntercept
+from pyomo.contrib.fbbt.expression_bounds_walker import ExpressionBoundsVisitor, inf
+from pyomo.contrib.fbbt.interval import _true, _false
+from pyomo.core.expr import ExpressionBase, NumericExpression, BooleanExpression
 
 
 class TestExpressionBoundsWalker(unittest.TestCase):
