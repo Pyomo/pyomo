@@ -302,6 +302,29 @@ class TestUncertaintySetDomain(unittest.TestCase):
             standardizer_func(2)
 
 
+AVAILABLE_SOLVER_TYPE_NAME = "available_pyros_test_solver"
+
+
+@SolverFactory.register(name=AVAILABLE_SOLVER_TYPE_NAME)
+class AvailableSolver:
+    """
+    Perenially avaiable placeholder solver.
+    """
+
+    def available(self, exception_flag=False):
+        """
+        Check solver available.
+        """
+        return True
+
+    def solve(self, model, **kwds):
+        """
+        Return SolverResults object with 'unknown' termination
+        condition. Model remains unchanged.
+        """
+        return SolverResults()
+
+
 class UnavailableSolver:
     def available(self, exception_flag=True):
         if exception_flag:
@@ -322,7 +345,7 @@ class TestSolverResolvable(unittest.TestCase):
         Test solver resolvable class is valid for string
         type.
         """
-        solver_str = "ipopt"
+        solver_str = AVAILABLE_SOLVER_TYPE_NAME
         standardizer_func = SolverResolvable()
         solver = standardizer_func(solver_str)
         expected_solver_type = type(SolverFactory(solver_str))
@@ -342,7 +365,7 @@ class TestSolverResolvable(unittest.TestCase):
         Test solver resolvable class is valid for string
         type.
         """
-        solver = SolverFactory("ipopt")
+        solver = SolverFactory(AVAILABLE_SOLVER_TYPE_NAME)
         standardizer_func = SolverResolvable()
         standardized_solver = standardizer_func(solver)
 
@@ -403,8 +426,11 @@ class TestSolverIterable(unittest.TestCase):
         Test solver type standardizer works for list of valid
         objects castable to solver.
         """
-        solver_list = ["ipopt", SolverFactory("ipopt")]
-        expected_solver_types = [type(SolverFactory("ipopt"))] * 2
+        solver_list = [
+            AVAILABLE_SOLVER_TYPE_NAME,
+            SolverFactory(AVAILABLE_SOLVER_TYPE_NAME),
+        ]
+        expected_solver_types = [AvailableSolver] * 2
         standardizer_func = SolverIterable()
 
         standardized_solver_list = standardizer_func(solver_list)
@@ -438,7 +464,7 @@ class TestSolverIterable(unittest.TestCase):
         """
         Test SolverIterable raises exception when str passed.
         """
-        solver_str = "ipopt"
+        solver_str = AVAILABLE_SOLVER_TYPE_NAME
         standardizer_func = SolverIterable()
 
         solver_list = standardizer_func(solver_str)
@@ -450,7 +476,7 @@ class TestSolverIterable(unittest.TestCase):
         """
         Test SolverIterable addresses unavailable solvers appropriately.
         """
-        solvers = (SolverFactory("ipopt"), UnavailableSolver())
+        solvers = (AvailableSolver(), UnavailableSolver())
 
         standardizer_func = SolverIterable(
             require_available=True,
@@ -496,7 +522,7 @@ class TestSolverIterable(unittest.TestCase):
         Test SolverIterable raises exception if iterable contains
         at least one invalid object.
         """
-        invalid_object = ["ipopt", 2]
+        invalid_object = [AVAILABLE_SOLVER_TYPE_NAME, 2]
         standardizer_func = SolverIterable(solver_desc="backup solver")
 
         exc_str = (
