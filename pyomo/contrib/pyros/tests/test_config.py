@@ -27,6 +27,7 @@ from pyomo.contrib.pyros.config import (
 from pyomo.contrib.pyros.util import ObjectiveType
 from pyomo.opt import SolverFactory, SolverResults
 from pyomo.contrib.pyros.uncertainty_sets import BoxSet
+from pyomo.common.dependencies import numpy_available
 
 
 class TestInputDataStandardizer(unittest.TestCase):
@@ -280,6 +281,7 @@ class TestUncertaintySetDomain(unittest.TestCase):
     Test domain validator for uncertainty set arguments.
     """
 
+    @unittest.skipUnless(numpy_available, "Numpy is not available.")
     def test_uncertainty_set_domain_valid_set(self):
         """
         Test validator works for valid argument.
