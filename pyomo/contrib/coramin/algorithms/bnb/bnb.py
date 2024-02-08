@@ -261,7 +261,12 @@ class _BnB(pybnb.Problem):
             sol = np.array([v.value for v in self.all_vars], dtype=float)
             self.current_node.state.sol = sol
             self.current_node.state.obj = res.best_feasible_objective
-            return res.best_feasible_objective
+            ret = res.best_feasible_objective
+            if self.sense() == pybnb.minimize:
+                ret -= min(abs(ret) * 0.001 * self.config.mip_gap, 0.01)
+            else:
+                ret += min(abs(ret) * 0.001 * self.config.mip_gap, 0.01)
+            return ret
 
         # maybe do OBBT
         if self.current_node.tree_depth % self.config.node_obbt_frequency == 0 and self.current_node.tree_depth != 0:
@@ -300,7 +305,12 @@ class _BnB(pybnb.Problem):
                 res.solution_loader.load_vars()
                 self.relaxation_solution = res.solution_loader.get_primals()
 
-        return res.best_objective_bound
+        ret = res.best_objective_bound
+        if self.sense() == pybnb.minimize:
+            ret -= min(abs(ret) * 0.001 * self.config.mip_gap, 0.01)
+        else:
+            ret += min(abs(ret) * 0.001 * self.config.mip_gap, 0.01)
+        return ret
 
     def objective(self):
         if self.current_node.state.sol is not None:
@@ -327,16 +337,20 @@ class _BnB(pybnb.Problem):
             self.nlp.solutions.load_from(res)
             ret = pe.value(self.obj.expr)
             if self.sense == pybnb.minimize:
-                if ret < self.feasible_objective:
+                if self.feasible_objective is None or ret < self.feasible_objective:
                     self.feasible_objective = ret
             else:
-                if ret > self.feasible_objective:
+                if self.feasible_objective is None or ret > self.feasible_objective:
                     self.feasible_objective = ret
             sol = np.array([v.value for v in self.all_vars], dtype=float)
             self.current_node.state.sol = sol
             self.current_node.state.obj = ret
         for v in unfixed_vars:
             v.unfix()
+        if self.sense() == pybnb.minimize:
+            ret += min(abs(ret) * 0.001 * self.config.mip_gap, 0.01)
+        else:
+            ret -= min(abs(ret) * 0.001 * self.config.mip_gap, 0.01)
         return ret
 
     def get_state(self) -> NodeState:
@@ -437,7 +451,7 @@ class _BnB(pybnb.Problem):
             # the relaxation was feasible
             # no nodes in this part of the tree need explored
             return []
-
+        
         xl1 = xl.copy()
         xu1 = xu.copy()
         xl2 = xl.copy()
@@ -468,7 +482,7 @@ class _BnB(pybnb.Problem):
 def solve_with_bnb(model: _BlockData, config: BnBConfig):
     # we don't want to modify the original model
     model, orig_var_map = get_clone_and_var_map(model)
-    diving_obj, diving_sol = run_diving_heuristic(model, config.feasibility_tol, config.integer_tol)
+    diving_obj, diving_sol = run_diving_heuristic(model, config.feasibility_tol, config.integer_tol, node_limit=100)
     prob = _BnB(model, config, feasible_objective=diving_obj)
     res: pybnb.SolverResults = pybnb.solve(
         prob,
@@ -486,12 +500,21 @@ def solve_with_bnb(model: _BlockData, config: BnBConfig):
     ret.best_feasible_objective = res.objective
     ret.best_objective_bound = res.bound
     ss = pybnb.SolutionStatus
+    tc = pybnb.TerminationCondition
     if res.solution_status == ss.optimal:
         ret.termination_condition = TerminationCondition.optimal
     elif res.solution_status == ss.infeasible:
         ret.termination_condition = TerminationCondition.infeasible
     elif res.solution_status == ss.unbounded:
         ret.termination_condition = TerminationCondition.unbounded
+    elif res.termination_condition == tc.time_limit:
+        ret.termination_condition = TerminationCondition.maxTimeLimit
+    elif res.termination_condition == tc.objective_limit:
+        ret.termination_condition = TerminationCondition.objectiveLimit
+    elif res.termination_condition == tc.node_limit:
+        ret.termination_condition = TerminationCondition.maxIterations
+    elif res.termination_condition == tc.interrupted:
+        ret.termination_condition = TerminationCondition.interrupted
     else:
         ret.termination_condition = TerminationCondition.unknown
     best_node = res.best_node
