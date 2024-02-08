@@ -61,18 +61,29 @@ class ExpressionBoundsBeforeChildDispatcher(BeforeChildDispatcher):
         return False, (-inf, inf)
 
     @staticmethod
+    def _before_native_numeric(visitor, child):
+        return False, (child, child)
+
+    @staticmethod
+    def _before_native_logical(visitor, child):
+        return False, (Bool(child), Bool(child))
+
+    @staticmethod
     def _before_var(visitor, child):
         leaf_bounds = visitor.leaf_bounds
         if child in leaf_bounds:
             pass
         elif child.is_fixed() and visitor.use_fixed_var_values_as_bounds:
             val = child.value
-            if val is None:
+            try:
+                ans = visitor._before_child_handlers[val.__class__](visitor, val)
+            except ValueError:
                 raise ValueError(
                     "Var '%s' is fixed to None. This value cannot be used to "
                     "calculate bounds." % child.name
-                )
-            leaf_bounds[child] = (child.value, child.value)
+                ) from None
+            leaf_bounds[child] = ans[1]
+            return ans
         else:
             lb = child.lb
             ub = child.ub
@@ -93,23 +104,20 @@ class ExpressionBoundsBeforeChildDispatcher(BeforeChildDispatcher):
 
     @staticmethod
     def _before_param(visitor, child):
-        return False, (child.value, child.value)
-
-    @staticmethod
-    def _before_native(visitor, child):
-        return False, (child, child)
+        val = child.value
+        return visitor._before_child_handlers[val.__class__](visitor, val)
 
     @staticmethod
     def _before_string(visitor, child):
         raise ValueError(
-            f"{child!r} ({type(child)}) is not a valid numeric type. "
+            f"{child!r} ({type(child).__name__}) is not a valid numeric type. "
             f"Cannot compute bounds on expression."
         )
 
     @staticmethod
     def _before_invalid(visitor, child):
         raise ValueError(
-            f"{child!r} ({type(child)}) is not a valid numeric type. "
+            f"{child!r} ({type(child).__name__}) is not a valid numeric type. "
             f"Cannot compute bounds on expression."
         )
 
@@ -123,10 +131,7 @@ class ExpressionBoundsBeforeChildDispatcher(BeforeChildDispatcher):
     @staticmethod
     def _before_npv(visitor, child):
         val = value(child)
-        return False, (val, val)
-
-
-_before_child_handlers = ExpressionBoundsBeforeChildDispatcher()
+        return visitor._before_child_handlers[val.__class__](visitor, val)
 
 
 def _handle_ProductExpression(visitor, node, arg1, arg2):
@@ -277,7 +282,7 @@ class ExpressionBoundsVisitor(StreamBasedExpressionVisitor):
         return True, expr
 
     def beforeChild(self, node, child, child_idx):
-        return _before_child_handlers[child.__class__](self, child)
+        return self._before_child_handlers[child.__class__](self, child)
 
     def exitNode(self, node, data):
-        return _operator_dispatcher[node.__class__](self, node, *data)
+        return self._operator_dispatcher[node.__class__](self, node, *data)

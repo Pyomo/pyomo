@@ -750,7 +750,7 @@ class TestRepnUtils(unittest.TestCase):
 
         node = 5
         self.assertEqual(bcd[node.__class__](None, node), (False, (_CONSTANT, 5)))
-        self.assertIs(bcd[int], bcd._before_native)
+        self.assertIs(bcd[int], bcd._before_native_numeric)
         self.assertEqual(len(bcd), 1)
 
         node = 'string'
@@ -787,7 +787,7 @@ class TestRepnUtils(unittest.TestCase):
 
         node = new_int(5)
         self.assertEqual(bcd[node.__class__](None, node), (False, (_CONSTANT, 5)))
-        self.assertIs(bcd[new_int], bcd._before_native)
+        self.assertIs(bcd[new_int], bcd._before_native_numeric)
         self.assertEqual(len(bcd), 5)
 
         node = []

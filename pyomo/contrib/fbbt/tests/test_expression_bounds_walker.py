@@ -273,11 +273,19 @@ class TestExpressionBoundsWalker(unittest.TestCase):
 
     def test_invalid_numeric_type(self):
         m = self.make_model()
-        m.p = Param(initialize=True, domain=Any)
+        m.p = Param(initialize=True, mutable=True, domain=Any)
         visitor = ExpressionBoundsVisitor()
         with self.assertRaisesRegex(
             ValueError,
-            r"True \(<class 'bool'>\) is not a valid numeric type. "
+            r"True \(bool\) is not a valid numeric type. "
+            r"Cannot compute bounds on expression.",
+        ):
+            lb, ub = visitor.walk_expression(m.p + m.y)
+
+        m.p.set_value(None)
+        with self.assertRaisesRegex(
+            ValueError,
+            r"None \(NoneType\) is not a valid numeric type. "
             r"Cannot compute bounds on expression.",
         ):
             lb, ub = visitor.walk_expression(m.p + m.y)
@@ -288,7 +296,7 @@ class TestExpressionBoundsWalker(unittest.TestCase):
         visitor = ExpressionBoundsVisitor()
         with self.assertRaisesRegex(
             ValueError,
-            r"'True' \(<class 'str'>\) is not a valid numeric type. "
+            r"'True' \(str\) is not a valid numeric type. "
             r"Cannot compute bounds on expression.",
         ):
             lb, ub = visitor.walk_expression(m.p + m.y)
