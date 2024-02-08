@@ -308,7 +308,7 @@ AVAILABLE_SOLVER_TYPE_NAME = "available_pyros_test_solver"
 @SolverFactory.register(name=AVAILABLE_SOLVER_TYPE_NAME)
 class AvailableSolver:
     """
-    Perenially avaiable placeholder solver.
+    Perennially available placeholder solver.
     """
 
     def available(self, exception_flag=False):
