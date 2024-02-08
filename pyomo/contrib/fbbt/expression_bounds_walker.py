@@ -13,6 +13,11 @@ import logging
 from math import pi
 from pyomo.common.collections import ComponentMap
 from pyomo.contrib.fbbt.interval import (
+    Bool,
+    eq,
+    ineq,
+    ranged,
+    if_,
     add,
     acos,
     asin,
@@ -220,6 +225,26 @@ def _handle_UnaryFunctionExpression(visitor, node, arg):
 def _handle_named_expression(visitor, node, arg):
     visitor.leaf_bounds[node] = arg
     return arg
+
+
+def _handle_unknowable_bounds(visitor, node, arg):
+    return -inf, inf
+
+
+def _handle_equality(visitor, node, arg1, arg2):
+    return eq(*arg1, *arg2)
+
+
+def _handle_inequality(visitor, node, arg1, arg2):
+    return ineq(*arg1, *arg2)
+
+
+def _handle_ranged(visitor, node, arg1, arg2, arg3):
+    return ranged(*arg1, *arg2, *arg3)
+
+
+def _handle_expr_if(visitor, node, arg1, arg2, arg3):
+    return if_(*arg1, *arg2, *arg3)
 
 
 _unary_function_dispatcher = {

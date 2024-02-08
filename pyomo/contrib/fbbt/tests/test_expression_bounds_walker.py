@@ -334,3 +334,82 @@ class TestExpressionBoundsWalker(unittest.TestCase):
             r"complex numbers. Encountered when processing \(4\+5j\)",
         ):
             lb, ub = visitor.walk_expression(m.p + m.y)
+
+    def test_inequality(self):
+        m = self.make_model()
+        visitor = ExpressionBoundsVisitor()
+        self.assertEqual(visitor.walk_expression(m.z <= m.y), (_true, _true))
+        self.assertEqual(visitor.walk_expression(m.y <= m.z), (_false, _false))
+        self.assertEqual(visitor.walk_expression(m.y <= m.x), (_false, _true))
+
+    def test_equality(self):
+        m = self.make_model()
+        m.p = Param(initialize=5)
+        visitor = ExpressionBoundsVisitor()
+        self.assertEqual(visitor.walk_expression(m.y == m.z), (_false, _false))
+        self.assertEqual(visitor.walk_expression(m.y == m.x), (_false, _true))
+        self.assertEqual(visitor.walk_expression(m.p == m.p), (_true, _true))
+
+    def test_ranged(self):
+        m = self.make_model()
+        visitor = ExpressionBoundsVisitor()
+        self.assertEqual(
+            visitor.walk_expression(inequality(m.z, m.y, 5)), (_true, _true)
+        )
+        self.assertEqual(
+            visitor.walk_expression(inequality(m.y, m.z, m.y)), (_false, _false)
+        )
+        self.assertEqual(
+            visitor.walk_expression(inequality(m.y, m.x, m.y)), (_false, _true)
+        )
+
+    def test_expr_if(self):
+        m = self.make_model()
+        visitor = ExpressionBoundsVisitor()
+        self.assertEqual(
+            visitor.walk_expression(Expr_if(IF=m.z <= m.y, THEN=m.z, ELSE=m.y)),
+            m.z.bounds,
+        )
+        self.assertEqual(
+            visitor.walk_expression(Expr_if(IF=m.z >= m.y, THEN=m.z, ELSE=m.y)),
+            m.y.bounds,
+        )
+        self.assertEqual(
+            visitor.walk_expression(Expr_if(IF=m.y <= m.x, THEN=m.y, ELSE=m.x)), (-2, 5)
+        )
+
+    def test_unknown_classes(self):
+        class UnknownNumeric(NumericExpression):
+            pass
+
+        class UnknownLogic(BooleanExpression):
+            def nargs(self):
+                return 0
+
+        class UnknownOther(ExpressionBase):
+            @property
+            def args(self):
+                return ()
+
+            def nargs(self):
+                return 0
+
+        visitor = ExpressionBoundsVisitor()
+        with LoggingIntercept() as LOG:
+            self.assertEqual(visitor.walk_expression(UnknownNumeric(())), (-inf, inf))
+        self.assertEqual(
+            LOG.getvalue(),
+            "Unexpected expression node type 'UnknownNumeric' found while walking "
+            "expression tree; returning (-inf, inf) for the expression bounds.\n",
+        )
+        with LoggingIntercept() as LOG:
+            self.assertEqual(visitor.walk_expression(UnknownLogic(())), (_false, _true))
+        self.assertEqual(
+            LOG.getvalue(),
+            "Unexpected expression node type 'UnknownLogic' found while walking "
+            "expression tree; returning (False, True) for the expression bounds.\n",
+        )
+        with self.assertRaisesRegex(
+            DeveloperError, "Unexpected expression node type 'UnknownOther' found"
+        ):
+            visitor.walk_expression(UnknownOther())
