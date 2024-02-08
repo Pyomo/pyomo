@@ -6376,8 +6376,7 @@ class TestPyROSResolveKwargs(unittest.TestCase):
 
     @unittest.skipUnless(ipopt_available, "IPOPT is not available.")
     @unittest.skipUnless(
-        baron_license_is_valid,
-        "Global NLP solver is not available and licensed."
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
     )
     def test_pyros_kwargs_with_overlap(self):
         """
