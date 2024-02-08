@@ -6322,7 +6322,7 @@ class TestPyROSUnavailableSubsolvers(unittest.TestCase):
                     second_stage_variables=[m.z[1]],
                     uncertain_params=[m.p[0]],
                     uncertainty_set=BoxSet([[0, 1]]),
-                    local_solver=SolverFactory("ipopt"),
+                    local_solver=SimpleTestSolver(),
                     global_solver=UnavailableSolver(),
                 )
 
@@ -6331,6 +6331,7 @@ class TestPyROSUnavailableSubsolvers(unittest.TestCase):
             error_msgs, r"Output of `available\(\)` method.*global solver.*"
         )
 
+    @unittest.skipUnless(ipopt_available, "IPOPT is not available.")
     def test_pyros_unavailable_backup_subsolver(self):
         """
         Test PyROS raises expected error message when
@@ -6373,8 +6374,10 @@ class TestPyROSResolveKwargs(unittest.TestCase):
     Test PyROS resolves kwargs as expected.
     """
 
+    @unittest.skipUnless(ipopt_available, "IPOPT is not available.")
     @unittest.skipUnless(
-        baron_license_is_valid, "Global NLP solver is not available and licensed."
+        baron_license_is_valid,
+        "Global NLP solver is not available and licensed."
     )
     def test_pyros_kwargs_with_overlap(self):
         """
