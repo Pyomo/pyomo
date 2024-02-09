@@ -44,6 +44,13 @@ class TestReallocation(unittest.TestCase):
 
         predicted = linear_solver.get_infog(16)
 
+        # We predict that factorization will take 2 MB
+        self.assertEqual(predicted, 2)
+
+        # Explicitly set maximum memory to less than the predicted
+        # requirement.
+        linear_solver.set_icntl(23, 1)
+
         res = linear_solver.do_numeric_factorization(matrix, raise_on_error=False)
         self.assertEqual(res.status, LinearSolverStatus.not_enough_memory)
 

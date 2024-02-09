@@ -33,7 +33,6 @@ class TraversalStrategy(enum.Enum, **strictEnum):
 
 
 class SortComponents(enum.Flag, **strictEnum):
-
     """
     This class is a convenient wrapper for specifying various sort
     ordering.  We pass these objects to the "sort" argument to various

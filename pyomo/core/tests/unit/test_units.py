@@ -920,8 +920,7 @@ class TestPyomoUnit(unittest.TestCase):
         model = ConcreteModel()
         model.acc = Var()
         model.obj = Objective(
-            expr=(model.acc * units.m / units.s**2 - 9.81 * units.m / units.s**2)
-            ** 2
+            expr=(model.acc * units.m / units.s**2 - 9.81 * units.m / units.s**2) ** 2
         )
         self.assertEqual('m**2/s**4', str(units.get_units(model.obj.expr)))
 

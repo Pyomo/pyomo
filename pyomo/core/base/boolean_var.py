@@ -283,9 +283,11 @@ class _GeneralBooleanVarData(_BooleanVarData):
                 "with '%s') with '%s' is not allowed"
                 % (
                     self.name,
-                    self._associated_binary().name
-                    if self._associated_binary is not None
-                    else None,
+                    (
+                        self._associated_binary().name
+                        if self._associated_binary is not None
+                        else None
+                    ),
                     binary_var.name if binary_var is not None else None,
                 )
             )
@@ -496,7 +498,6 @@ class BooleanVar(IndexedComponent):
 
 
 class ScalarBooleanVar(_GeneralBooleanVarData, BooleanVar):
-
     """A single variable."""
 
     def __init__(self, *args, **kwd):

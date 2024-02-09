@@ -212,8 +212,8 @@ def check_if_numeric_type(obj):
         # trigger the resolution of numpy_available and check if this
         # type was automatically registered
         bool(numpy_available)
-        if obj_class in native_numeric_types:
-            return True
+        if obj_class in native_types:
+            return obj_class in native_numeric_types
 
     try:
         obj_plus_0 = obj + 0

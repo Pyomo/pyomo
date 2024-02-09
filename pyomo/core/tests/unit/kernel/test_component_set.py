@@ -264,6 +264,14 @@ class TestComponentSet(unittest.TestCase):
         self.assertTrue(cset1 != cset2)
         self.assertNotEqual(cset1, cset2)
 
+        cset2.add(variable())
+        self.assertFalse(cset2 == cset1)
+        self.assertTrue(cset2 != cset1)
+        self.assertNotEqual(cset2, cset1)
+        self.assertFalse(cset1 == cset2)
+        self.assertTrue(cset1 != cset2)
+        self.assertNotEqual(cset1, cset2)
+
 
 if __name__ == "__main__":
     unittest.main()

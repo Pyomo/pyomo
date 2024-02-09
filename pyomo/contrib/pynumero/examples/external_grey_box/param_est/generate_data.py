@@ -1,7 +1,7 @@
 import pyomo.environ as pyo
 import numpy.random as rnd
 import pyomo.contrib.pynumero.examples.external_grey_box.param_est.models as pm
-import pandas as pd
+from pyomo.common.dependencies import pandas as pd
 
 
 def generate_data(N, UA_mean, UA_std, seed=42):

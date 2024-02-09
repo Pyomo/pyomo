@@ -642,11 +642,10 @@ def ROSolver_iterative_solve(model_data, config):
                     vals.append(dvar.value)
                 dr_var_lists_original.append(vals)
 
-            (
-                polishing_results,
-                polishing_successful,
-            ) = master_problem_methods.minimize_dr_vars(
-                model_data=master_data, config=config
+            (polishing_results, polishing_successful) = (
+                master_problem_methods.minimize_dr_vars(
+                    model_data=master_data, config=config
+                )
             )
             timing_data.total_dr_polish_time += get_time_from_solver(polishing_results)
 
@@ -885,6 +884,16 @@ def ROSolver_iterative_solve(model_data, config):
         config.progress_logger.debug(
             np.array([pt for pt in separation_data.points_added_to_master])
         )
+
+        # initialize second-stage and state variables
+        # for new master block to separation
+        # solution chosen by heuristic. consequently,
+        # equality constraints should all be satisfied (up to tolerances).
+        for var, val in separation_results.violating_separation_variable_values.items():
+            master_var = master_data.master_model.scenarios[k + 1, 0].find_component(
+                var
+            )
+            master_var.set_value(val)
 
         k += 1
 
