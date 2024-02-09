@@ -945,6 +945,7 @@ def pyros_config():
                 the nominal parameter realization.
                 """
             ),
+            visibility=1,
         ),
     )
 
