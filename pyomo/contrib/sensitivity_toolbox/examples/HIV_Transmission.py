@@ -14,7 +14,7 @@
 # 	and D.K. Owen 1998, Interfaces
 #
 
-from __future__ import division
+
 from pyomo.environ import (
     ConcreteModel,
     Param,

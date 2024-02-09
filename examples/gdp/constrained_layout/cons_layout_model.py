@@ -9,7 +9,6 @@ between the rectangle centers. It is assumed that the circles do not overlap
 with each other.
 
 """
-from __future__ import division
 
 from pyomo.environ import ConcreteModel, Objective, Param, RangeSet, Set, Var, value
 

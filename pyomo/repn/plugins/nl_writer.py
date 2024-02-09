@@ -26,7 +26,7 @@ from pyomo.common.config import (
     document_kwargs_from_configdict,
 )
 from pyomo.common.deprecation import deprecation_warning
-from pyomo.common.errors import DeveloperError, InfeasibleConstraintException
+from pyomo.common.errors import DeveloperError, InfeasibleConstraintException, MouseTrap
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.numeric_types import (
     native_complex_types,
@@ -1451,9 +1451,11 @@ class _NLWriter_impl(object):
         ostream.write(
             'r%s\n'
             % (
-                "\t#%d ranges (rhs's)" % len(constraints)
-                if symbolic_solver_labels
-                else '',
+                (
+                    "\t#%d ranges (rhs's)" % len(constraints)
+                    if symbolic_solver_labels
+                    else ''
+                ),
             )
         )
         ostream.write("\n".join(r_lines))
@@ -1466,9 +1468,11 @@ class _NLWriter_impl(object):
         ostream.write(
             'b%s\n'
             % (
-                "\t#%d bounds (on variables)" % len(variables)
-                if symbolic_solver_labels
-                else '',
+                (
+                    "\t#%d bounds (on variables)" % len(variables)
+                    if symbolic_solver_labels
+                    else ''
+                ),
             )
         )
         for var_idx, _id in enumerate(variables):
@@ -1492,9 +1496,11 @@ class _NLWriter_impl(object):
             'k%d%s\n'
             % (
                 len(variables) - 1,
-                "\t#intermediate Jacobian column lengths"
-                if symbolic_solver_labels
-                else '',
+                (
+                    "\t#intermediate Jacobian column lengths"
+                    if symbolic_solver_labels
+                    else ''
+                ),
             )
         )
         ktot = 0
@@ -1536,7 +1542,8 @@ class _NLWriter_impl(object):
 
         # Generate the return information
         eliminated_vars = [
-            (var_map[_id], expr_info) for _id, expr_info in eliminated_vars.items()
+            (var_map[_id], expr_info.to_expr(var_map))
+            for _id, expr_info in eliminated_vars.items()
         ]
         eliminated_vars.reverse()
         if scale_model:
@@ -2131,6 +2138,24 @@ class AMPLRepn(object):
                         self.nonlinear.append(other.nonlinear)
         elif _type is _CONSTANT:
             self.const += other[1]
+
+    def to_expr(self, var_map):
+        if self.nl is not None or self.nonlinear is not None:
+            # TODO: support converting general nonlinear expressiosn
+            # back to Pyomo expressions.  This will require an AMPL
+            # parser.
+            raise MouseTrap("Cannot convert nonlinear AMPLRepn to Pyomo Expression")
+        if self.linear:
+            # Explicitly generate the LinearExpression.  At time of
+            # writing, this is about 40% faster than standard operator
+            # overloading for O(1000) element sums
+            ans = LinearExpression(
+                [coef * var_map[vid] for vid, coef in self.linear.items()]
+            )
+            ans += self.const
+        else:
+            ans = self.const
+        return ans * self.mult
 
 
 def _create_strict_inequality_map(vars_):

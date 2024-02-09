@@ -9,8 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import numpy as np
-import pandas as pd
+from pyomo.common.dependencies import numpy as np, pandas as pd
 from itertools import product
 import pyomo.contrib.parmest.parmest as parmest
 from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (

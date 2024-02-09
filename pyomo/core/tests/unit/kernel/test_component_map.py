@@ -234,6 +234,20 @@ class TestComponentMap(unittest.TestCase):
         self.assertTrue(cmap1 != cmap2)
         self.assertNotEqual(cmap1, cmap2)
 
+        cmap2 = ComponentMap(self._components)
+        o = objective()
+        cmap1[o] = 10
+        cmap2[o] = 10
+        self.assertEqual(cmap1, cmap2)
+        cmap2[o] = 20
+        self.assertNotEqual(cmap1, cmap2)
+        cmap2[o] = 10
+        self.assertEqual(cmap1, cmap2)
+        del cmap2[o]
+        self.assertNotEqual(cmap1, cmap2)
+        cmap2[objective()] = 10
+        self.assertNotEqual(cmap1, cmap2)
+
 
 if __name__ == "__main__":
     unittest.main()

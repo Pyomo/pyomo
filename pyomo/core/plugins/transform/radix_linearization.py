@@ -237,10 +237,7 @@ class RadixLinearization(Transformation):
         K = max(b.DISCRETIZATION)
 
         _dw = Var(
-            bounds=(
-                min(0, _lb * 2**-K, _ub * 2**-K),
-                max(0, _lb * 2**-K, _ub * 2**-K),
-            )
+            bounds=(min(0, _lb * 2**-K, _ub * 2**-K), max(0, _lb * 2**-K, _ub * 2**-K))
         )
         b.add_component("dw%s_v%s" % (u_idx, v_idx), _dw)
 

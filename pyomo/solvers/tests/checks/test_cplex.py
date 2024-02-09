@@ -129,16 +129,14 @@ class CPLEXShellWritePrioritiesFile(unittest.TestCase):
 
     def get_mock_cplex_shell(self, mock_model):
         solver = MockCPLEX()
-        (
-            solver._problem_files,
-            solver._problem_format,
-            solver._smap_id,
-        ) = convert_problem(
-            (mock_model,),
-            ProblemFormat.cpxlp,
-            [ProblemFormat.cpxlp],
-            has_capability=lambda x: True,
-            symbolic_solver_labels=True,
+        (solver._problem_files, solver._problem_format, solver._smap_id) = (
+            convert_problem(
+                (mock_model,),
+                ProblemFormat.cpxlp,
+                [ProblemFormat.cpxlp],
+                has_capability=lambda x: True,
+                symbolic_solver_labels=True,
+            )
         )
         return solver
 

@@ -581,14 +581,13 @@ class Estimator(object):
                 for ndname, Var, solval in ef_nonants(ef):
                     ind_vars.append(Var)
                 # calculate the reduced hessian
-                (
-                    solve_result,
-                    inv_red_hes,
-                ) = inverse_reduced_hessian.inv_reduced_hessian_barrier(
-                    self.ef_instance,
-                    independent_variables=ind_vars,
-                    solver_options=self.solver_options,
-                    tee=self.tee,
+                (solve_result, inv_red_hes) = (
+                    inverse_reduced_hessian.inv_reduced_hessian_barrier(
+                        self.ef_instance,
+                        independent_variables=ind_vars,
+                        solver_options=self.solver_options,
+                        tee=self.tee,
+                    )
                 )
 
             if self.diagnostic_mode:
@@ -779,14 +778,10 @@ class Estimator(object):
                 if self.diagnostic_mode:
                     print('      Experiment = ', snum)
                     print('     First solve with special diagnostics wrapper')
-                    (
-                        status_obj,
-                        solved,
-                        iters,
-                        time,
-                        regu,
-                    ) = utils.ipopt_solve_with_stats(
-                        instance, optimizer, max_iter=500, max_cpu_time=120
+                    (status_obj, solved, iters, time, regu) = (
+                        utils.ipopt_solve_with_stats(
+                            instance, optimizer, max_iter=500, max_cpu_time=120
+                        )
                     )
                     print(
                         "   status_obj, solved, iters, time, regularization_stat = ",

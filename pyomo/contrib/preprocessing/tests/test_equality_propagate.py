@@ -1,4 +1,5 @@
 """Tests the equality set propagation module."""
+
 import pyomo.common.unittest as unittest
 from pyomo.common.errors import InfeasibleConstraintException
 

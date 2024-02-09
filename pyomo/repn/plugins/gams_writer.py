@@ -180,9 +180,11 @@ class ToGamsVisitor(_ToStringVisitor):
 
     def _linear_to_string(self, node):
         values = [
-            self._monomial_to_string(arg)
-            if arg.__class__ is EXPR.MonomialTermExpression
-            else ftoa(arg, True)
+            (
+                self._monomial_to_string(arg)
+                if arg.__class__ is EXPR.MonomialTermExpression
+                else ftoa(arg, True)
+            )
             for arg in node.args
         ]
         return node._to_string(values, False, self.smap)
