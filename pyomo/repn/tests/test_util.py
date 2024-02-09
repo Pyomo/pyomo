@@ -757,8 +757,7 @@ class TestRepnUtils(unittest.TestCase):
         ans = bcd[node.__class__](None, node)
         self.assertEqual(ans, (False, (_CONSTANT, InvalidNumber(node))))
         self.assertEqual(
-            ''.join(ans[1][1].causes),
-            "'string' (str) is not a valid numeric type",
+            ''.join(ans[1][1].causes), "'string' (str) is not a valid numeric type"
         )
         self.assertIs(bcd[str], bcd._before_string)
         self.assertEqual(len(bcd), 2)
@@ -767,8 +766,7 @@ class TestRepnUtils(unittest.TestCase):
         ans = bcd[node.__class__](None, node)
         self.assertEqual(ans, (False, (_CONSTANT, InvalidNumber(node))))
         self.assertEqual(
-            ''.join(ans[1][1].causes),
-            "True (bool) is not a valid numeric type",
+            ''.join(ans[1][1].causes), "True (bool) is not a valid numeric type"
         )
         self.assertIs(bcd[bool], bcd._before_native_logical)
         self.assertEqual(len(bcd), 3)
