@@ -668,7 +668,7 @@ a keyword argument ``options``, whose value must be a :class:`dict`
 mapping names of arguments to :meth:`~pyomo.contrib.pyros.PyROS.solve`
 to their desired values.
 For example, the ``solve()`` statement in the
-:ref:`two-stage problem example <example-two-stg>`
+:ref:`two-stage problem snippet <example-two-stg>`
 could have been equivalently written as:
 
 .. doctest::
