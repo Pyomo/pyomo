@@ -69,12 +69,12 @@ class GurobiConfig(PersistentBranchAndBoundConfig):
             visibility=visibility,
         )
         self.use_mipstart: bool = self.declare(
-            'use_mipstart', 
+            'use_mipstart',
             ConfigValue(
-                default=False, 
-                domain=bool, 
+                default=False,
+                domain=bool,
                 description="If True, the values of the integer variables will be passed to Gurobi.",
-            )
+            ),
         )
 
 
@@ -339,9 +339,12 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
                     self._solver_model.setParam('MIPGap', config.rel_gap)
                 if config.abs_gap is not None:
                     self._solver_model.setParam('MIPGapAbs', config.abs_gap)
-                
+
                 if config.use_mipstart:
-                    for pyomo_var_id, gurobi_var in self._pyomo_var_to_solver_var_map.items():
+                    for (
+                        pyomo_var_id,
+                        gurobi_var,
+                    ) in self._pyomo_var_to_solver_var_map.items():
                         pyomo_var = self._vars[pyomo_var_id][0]
                         if pyomo_var.is_integer() and pyomo_var.value is not None:
                             self.set_var_attr(pyomo_var, 'Start', pyomo_var.value)
@@ -866,7 +869,9 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         if status == grb.LOADED:  # problem is loaded, but no solution
             results.termination_condition = TerminationCondition.unknown
         elif status == grb.OPTIMAL:  # optimal
-            results.termination_condition = TerminationCondition.convergenceCriteriaSatisfied
+            results.termination_condition = (
+                TerminationCondition.convergenceCriteriaSatisfied
+            )
         elif status == grb.INFEASIBLE:
             results.termination_condition = TerminationCondition.provenInfeasible
         elif status == grb.INF_OR_UNBD:
@@ -894,7 +899,11 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         else:
             results.termination_condition = TerminationCondition.unknown
 
-        if results.termination_condition != TerminationCondition.convergenceCriteriaSatisfied and config.raise_exception_on_nonoptimal_result:
+        if (
+            results.termination_condition
+            != TerminationCondition.convergenceCriteriaSatisfied
+            and config.raise_exception_on_nonoptimal_result
+        ):
             raise RuntimeError(
                 'Solver did not find the optimal solution. Set opt.config.raise_exception_on_nonoptimal_result = False to bypass this error.'
             )
