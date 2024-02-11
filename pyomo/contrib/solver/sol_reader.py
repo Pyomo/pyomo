@@ -122,7 +122,7 @@ developers.
         # TODO: this is solver dependent
         # But this was the way in the previous version - and has been fine thus far?
         result.solution_status = SolutionStatus.infeasible
-        result.termination_condition = TerminationCondition.iterationLimit
+        result.termination_condition = TerminationCondition.iterationLimit  # this is not always correct
     elif (exit_code[1] >= 500) and (exit_code[1] <= 599):
         exit_code_message = (
             "FAILURE: the solver stopped by an error condition "
@@ -205,4 +205,4 @@ developers.
                     )
             line = sol_file.readline()
 
-        return result, sol_data
+    return result, sol_data
