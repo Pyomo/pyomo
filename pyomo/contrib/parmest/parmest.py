@@ -333,7 +333,7 @@ class Estimator(object):
 
     Parameters
     ----------
-    experiement_list: list of Experiments
+    experiment_list: list of Experiments
         A list of experiment objects which creates one labeled model for
         each expeirment
     obj_function: string or function (optional)
