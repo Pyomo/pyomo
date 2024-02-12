@@ -283,11 +283,11 @@ class SemiBatchExperiment(Experiment):
     def label_model(self):
 
         m = self.model
-        
-        m.unknown_parameters = Suffix(direction=Suffix.LOCAL)
-        m.unknown_parameters.update((k, ComponentUID(k))
-                                    for k in [m.k1, m.k2, m.E1, m.E2])
 
+        m.unknown_parameters = Suffix(direction=Suffix.LOCAL)
+        m.unknown_parameters.update(
+            (k, ComponentUID(k)) for k in [m.k1, m.k2, m.E1, m.E2]
+        )
 
     def finalize_model(self):
         pass
@@ -296,7 +296,7 @@ class SemiBatchExperiment(Experiment):
         self.create_model()
         self.label_model()
         self.finalize_model()
-        
+
         return self.model
 
 

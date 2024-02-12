@@ -309,9 +309,11 @@ def _experiment_instance_creation_callback(
 
 #     return grouped_data
 
+
 def SSE(model):
-    expr = sum((y - yhat)**2 for y, yhat in model.experiment_outputs.items())
+    expr = sum((y - yhat) ** 2 for y, yhat in model.experiment_outputs.items())
     return expr
+
 
 class _SecondStageCostExpr(object):
     """
@@ -332,10 +334,10 @@ class Estimator(object):
     Parameters
     ----------
     experiement_list: list of Experiments
-        A list of experiment objects which creates one labeled model for 
+        A list of experiment objects which creates one labeled model for
         each expeirment
     obj_function: string or function (optional)
-        Built in objective (currently only "SSE") or custom function used to 
+        Built in objective (currently only "SSE") or custom function used to
         formulate parameter estimation objective.
         If no function is specified, the model is used
         "as is" and should be defined with a "FirstStageCost" and
@@ -351,50 +353,54 @@ class Estimator(object):
     # backwards compatible constructor will accept the old inputs
     # from parmest_deprecated as well as the new inputs using experiment lists
     def __init__(self, *args, **kwargs):
-        
+
         # check that we have at least one argument
-        assert(len(args) > 0)
+        assert len(args) > 0
 
         # use deprecated interface
         self.pest_deprecated = None
         if callable(args[0]):
-            logger.warning('Using deprecated parmest inputs (model_function, ' +
-                 'data, theta_names), please use experiment lists instead.')
+            logger.warning(
+                'Using deprecated parmest inputs (model_function, '
+                + 'data, theta_names), please use experiment lists instead.'
+            )
             self.pest_deprecated = parmest_deprecated.Estimator(*args, **kwargs)
             return
 
         # check that we have a (non-empty) list of experiments
-        assert (isinstance(args[0], list))
-        assert (len(args[0]) > 0)
+        assert isinstance(args[0], list)
+        assert len(args[0]) > 0
         self.exp_list = args[0]
 
         # check that an experiment has experiment_outputs and unknown_parameters
         model = self.exp_list[0].get_labeled_model()
         try:
-            outputs = [k.name for k,v in model.experiment_outputs.items()]
+            outputs = [k.name for k, v in model.experiment_outputs.items()]
         except:
-            RuntimeError('Experiment list model does not have suffix ' + 
-                '"experiment_outputs".')
+            RuntimeError(
+                'Experiment list model does not have suffix ' + '"experiment_outputs".'
+            )
         try:
-            parms = [k.name for k,v in model.unknown_parameters.items()]
+            parms = [k.name for k, v in model.unknown_parameters.items()]
         except:
-            RuntimeError('Experiment list model does not have suffix ' + 
-                '"unknown_parameters".')
-        
+            RuntimeError(
+                'Experiment list model does not have suffix ' + '"unknown_parameters".'
+            )
+
         # populate keyword argument options
         self.obj_function = kwargs.get('obj_function', None)
         self.tee = kwargs.get('tee', False)
         self.diagnostic_mode = kwargs.get('diagnostic_mode', False)
         self.solver_options = kwargs.get('solver_options', None)
 
-        # TODO This might not be needed here.  
+        # TODO This might not be needed here.
         # We could collect the union (or intersect?) of thetas when the models are built
         theta_names = []
         for experiment in self.exp_list:
             model = experiment.get_labeled_model()
-            theta_names.extend([k.name for k,v in model.unknown_parameters.items()])
+            theta_names.extend([k.name for k, v in model.unknown_parameters.items()])
         self.estimator_theta_names = list(set(theta_names))
-        
+
         self._second_stage_cost_exp = "SecondStageCost"
         # boolean to indicate if model is initialized using a square solve
         self.model_initialized = False
@@ -406,7 +412,7 @@ class Estimator(object):
         # check for deprecated inputs
         if self.pest_deprecated is not None:
 
-            # if fitted model parameter names differ from theta_names 
+            # if fitted model parameter names differ from theta_names
             # created when Estimator object is created
             if hasattr(self, 'theta_names_updated'):
                 return self.pest_deprecated.theta_names_updated
@@ -418,7 +424,7 @@ class Estimator(object):
 
         else:
 
-            # if fitted model parameter names differ from theta_names 
+            # if fitted model parameter names differ from theta_names
             # created when Estimator object is created
             if hasattr(self, 'theta_names_updated'):
                 return self.theta_names_updated
@@ -434,7 +440,7 @@ class Estimator(object):
         """
 
         model = self.exp_list[experiment_number].get_labeled_model()
-        self.theta_names = [k.name for k,v in model.unknown_parameters.items()]
+        self.theta_names = [k.name for k, v in model.unknown_parameters.items()]
 
         if len(model.unknown_parameters) == 0:
             model.parmest_dummy_var = pyo.Var(initialize=1.0)
@@ -458,14 +464,13 @@ class Estimator(object):
 
             # TODO, this needs to be turned a enum class of options that still support custom functions
             if self.obj_function == 'SSE':
-                second_stage_rule=_SecondStageCostExpr(SSE)
+                second_stage_rule = _SecondStageCostExpr(SSE)
             else:
                 # A custom function uses model.experiment_outputs as data
                 second_stage_rule = _SecondStageCostExpr(self.obj_function)
 
             model.FirstStageCost = pyo.Expression(expr=0)
             model.SecondStageCost = pyo.Expression(rule=second_stage_rule)
-
 
             def TotalCost_rule(model):
                 return model.FirstStageCost + model.SecondStageCost
@@ -534,7 +539,7 @@ class Estimator(object):
             outer_cb_data["ThetaVals"] = ThetaVals
         if bootlist is not None:
             outer_cb_data["BootList"] = bootlist
-        outer_cb_data["cb_data"] = None # None is OK
+        outer_cb_data["cb_data"] = None  # None is OK
         outer_cb_data["theta_names"] = self.estimator_theta_names
 
         options = {"solver": "ipopt"}
@@ -581,14 +586,13 @@ class Estimator(object):
                 for ndname, Var, solval in ef_nonants(ef):
                     ind_vars.append(Var)
                 # calculate the reduced hessian
-                (
-                    solve_result,
-                    inv_red_hes,
-                ) = inverse_reduced_hessian.inv_reduced_hessian_barrier(
-                    self.ef_instance,
-                    independent_variables=ind_vars,
-                    solver_options=self.solver_options,
-                    tee=self.tee,
+                (solve_result, inv_red_hes) = (
+                    inverse_reduced_hessian.inv_reduced_hessian_barrier(
+                        self.ef_instance,
+                        independent_variables=ind_vars,
+                        solver_options=self.solver_options,
+                        tee=self.tee,
+                    )
                 )
 
             if self.diagnostic_mode:
@@ -710,13 +714,13 @@ class Estimator(object):
                 "callback": self._instance_creation_callback,
                 "ThetaVals": thetavals,
                 "theta_names": self._return_theta_names(),
-                "cb_data": None, 
+                "cb_data": None,
             }
         else:
             dummy_cb = {
                 "callback": self._instance_creation_callback,
                 "theta_names": self._return_theta_names(),
-                "cb_data": None, 
+                "cb_data": None,
             }
 
         if self.diagnostic_mode:
@@ -779,14 +783,10 @@ class Estimator(object):
                 if self.diagnostic_mode:
                     print('      Experiment = ', snum)
                     print('     First solve with special diagnostics wrapper')
-                    (
-                        status_obj,
-                        solved,
-                        iters,
-                        time,
-                        regu,
-                    ) = utils.ipopt_solve_with_stats(
-                        instance, optimizer, max_iter=500, max_cpu_time=120
+                    (status_obj, solved, iters, time, regu) = (
+                        utils.ipopt_solve_with_stats(
+                            instance, optimizer, max_iter=500, max_cpu_time=120
+                        )
                     )
                     print(
                         "   status_obj, solved, iters, time, regularization_stat = ",
@@ -944,21 +944,28 @@ class Estimator(object):
         # check if we are using deprecated parmest
         if self.pest_deprecated is not None:
             return self.pest_deprecated.theta_est(
-                solver=solver, 
+                solver=solver,
                 return_values=return_values,
                 calc_cov=calc_cov,
-                cov_n=cov_n)
-        
+                cov_n=cov_n,
+            )
+
         assert isinstance(solver, str)
         assert isinstance(return_values, list)
         assert isinstance(calc_cov, bool)
         if calc_cov:
-            num_unknowns = max([len(experiment.get_labeled_model().unknown_parameters) 
-                                for experiment in self.exp_list])
-            assert isinstance(cov_n, int), \
-                "The number of datapoints that are used in the objective function is required to calculate the covariance matrix"
-            assert cov_n > num_unknowns, \
-                "The number of datapoints must be greater than the number of parameters to estimate"
+            num_unknowns = max(
+                [
+                    len(experiment.get_labeled_model().unknown_parameters)
+                    for experiment in self.exp_list
+                ]
+            )
+            assert isinstance(
+                cov_n, int
+            ), "The number of datapoints that are used in the objective function is required to calculate the covariance matrix"
+            assert (
+                cov_n > num_unknowns
+            ), "The number of datapoints must be greater than the number of parameters to estimate"
 
         return self._Q_opt(
             solver=solver,
@@ -1007,7 +1014,8 @@ class Estimator(object):
                 samplesize=samplesize,
                 replacement=replacement,
                 seed=seed,
-                return_samples=return_samples)
+                return_samples=return_samples,
+            )
 
         assert isinstance(bootstrap_samples, int)
         assert isinstance(samplesize, (type(None), int))
@@ -1068,10 +1076,8 @@ class Estimator(object):
         # check if we are using deprecated parmest
         if self.pest_deprecated is not None:
             return self.pest_deprecated.theta_est_leaveNout(
-                lNo, 
-                lNo_samples=lNo_samples,
-                seed=seed, 
-                return_samples=return_samples)
+                lNo, lNo_samples=lNo_samples, seed=seed, return_samples=return_samples
+            )
 
         assert isinstance(lNo, int)
         assert isinstance(lNo_samples, (type(None), int))
@@ -1150,11 +1156,8 @@ class Estimator(object):
         # check if we are using deprecated parmest
         if self.pest_deprecated is not None:
             return self.pest_deprecated.leaveNout_bootstrap_test(
-                lNo, 
-                lNo_samples, 
-                bootstrap_samples, 
-                distribution, alphas, 
-                seed=seed)
+                lNo, lNo_samples, bootstrap_samples, distribution, alphas, seed=seed
+            )
 
         assert isinstance(lNo, int)
         assert isinstance(lNo_samples, (type(None), int))
@@ -1189,8 +1192,8 @@ class Estimator(object):
     # expand indexed variables to get full list of thetas
     def _expand_indexed_unknowns(self, model_temp):
 
-        model_theta_list = [k.name for k,v in model_temp.unknown_parameters.items()]  
-        
+        model_theta_list = [k.name for k, v in model_temp.unknown_parameters.items()]
+
         # check for indexed theta items
         indexed_theta_list = []
         for theta_i in model_theta_list:
@@ -1198,7 +1201,7 @@ class Estimator(object):
             var_validate = var_cuid.find_component_on(model_temp)
             for ind in var_validate.index_set():
                 if ind is not None:
-                    indexed_theta_list.append(theta_i + '['  + str(ind) + ']')
+                    indexed_theta_list.append(theta_i + '[' + str(ind) + ']')
                 else:
                     indexed_theta_list.append(theta_i)
 
@@ -1233,15 +1236,16 @@ class Estimator(object):
         if self.pest_deprecated is not None:
             return self.pest_deprecated.objective_at_theta(
                 theta_values=theta_values,
-                initialize_parmest_model=initialize_parmest_model)
+                initialize_parmest_model=initialize_parmest_model,
+            )
 
-        if len(self.estimator_theta_names) == 0:            
+        if len(self.estimator_theta_names) == 0:
             pass  # skip assertion if model has no fitted parameters
         else:
             # create a local instance of the pyomo model to access model variables and parameters
             model_temp = self._create_parmest_model(0)
             model_theta_list = self._expand_indexed_unknowns(model_temp)
-            
+
             # # iterate over original theta_names
             # for theta_i in self.theta_names:
             #     var_cuid = ComponentUID(theta_i)
@@ -1354,10 +1358,8 @@ class Estimator(object):
         # check if we are using deprecated parmest
         if self.pest_deprecated is not None:
             return self.pest_deprecated.likelihood_ratio_test(
-                obj_at_theta, 
-                obj_value, 
-                alphas, 
-                return_thresholds=return_thresholds)
+                obj_at_theta, obj_value, alphas, return_thresholds=return_thresholds
+            )
 
         assert isinstance(obj_at_theta, pd.DataFrame)
         assert isinstance(obj_value, (int, float))
@@ -1415,10 +1417,8 @@ class Estimator(object):
         # check if we are using deprecated parmest
         if self.pest_deprecated is not None:
             return self.pest_deprecated.confidence_region_test(
-                theta_values, 
-                distribution, 
-                alphas, 
-                test_theta_values=test_theta_values)
+                theta_values, distribution, alphas, test_theta_values=test_theta_values
+            )
 
         assert isinstance(theta_values, pd.DataFrame)
         assert distribution in ['Rect', 'MVN', 'KDE']

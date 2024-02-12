@@ -32,7 +32,9 @@ class TestRooneyBieglerExamples(unittest.TestCase):
         pass
 
     def test_model(self):
-        from pyomo.contrib.parmest.deprecated.examples.rooney_biegler import rooney_biegler
+        from pyomo.contrib.parmest.deprecated.examples.rooney_biegler import (
+            rooney_biegler,
+        )
 
         rooney_biegler.main()
 
@@ -53,7 +55,9 @@ class TestRooneyBieglerExamples(unittest.TestCase):
 
     @unittest.skipUnless(seaborn_available, "test requires seaborn")
     def test_bootstrap_example(self):
-        from pyomo.contrib.parmest.deprecated.examples.rooney_biegler import bootstrap_example
+        from pyomo.contrib.parmest.deprecated.examples.rooney_biegler import (
+            bootstrap_example,
+        )
 
         bootstrap_example.main()
 
@@ -136,7 +140,9 @@ class TestReactorDesignExamples(unittest.TestCase):
 
     @unittest.pytest.mark.expensive
     def test_model(self):
-        from pyomo.contrib.parmest.deprecated.examples.reactor_design import reactor_design
+        from pyomo.contrib.parmest.deprecated.examples.reactor_design import (
+            reactor_design,
+        )
 
         reactor_design.main()
 
@@ -149,7 +155,9 @@ class TestReactorDesignExamples(unittest.TestCase):
 
     @unittest.skipUnless(seaborn_available, "test requires seaborn")
     def test_bootstrap_example(self):
-        from pyomo.contrib.parmest.deprecated.examples.reactor_design import bootstrap_example
+        from pyomo.contrib.parmest.deprecated.examples.reactor_design import (
+            bootstrap_example,
+        )
 
         bootstrap_example.main()
 
@@ -163,7 +171,9 @@ class TestReactorDesignExamples(unittest.TestCase):
 
     @unittest.pytest.mark.expensive
     def test_leaveNout_example(self):
-        from pyomo.contrib.parmest.deprecated.examples.reactor_design import leaveNout_example
+        from pyomo.contrib.parmest.deprecated.examples.reactor_design import (
+            leaveNout_example,
+        )
 
         leaveNout_example.main()
 
@@ -183,7 +193,9 @@ class TestReactorDesignExamples(unittest.TestCase):
 
     @unittest.skipUnless(matplotlib_available, "test requires matplotlib")
     def test_datarec_example(self):
-        from pyomo.contrib.parmest.deprecated.examples.reactor_design import datarec_example
+        from pyomo.contrib.parmest.deprecated.examples.reactor_design import (
+            datarec_example,
+        )
 
         datarec_example.main()
 

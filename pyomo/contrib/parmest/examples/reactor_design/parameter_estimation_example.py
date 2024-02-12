@@ -23,18 +23,18 @@ def main():
     file_dirname = dirname(abspath(str(__file__)))
     file_name = abspath(join(file_dirname, "reactor_data.csv"))
     data = pd.read_csv(file_name)
-    
+
     # Create an experiment list
-    exp_list= []
+    exp_list = []
     for i in range(data.shape[0]):
         exp_list.append(ReactorDesignExperiment(data, i))
-    
+
     # View one model
     # exp0_model = exp_list[0].get_labeled_model()
     # print(exp0_model.pprint())
 
     pest = parmest.Estimator(exp_list, obj_function='SSE')
-    
+
     # Parameter estimation with covariance
     obj, theta, cov = pest.theta_est(calc_cov=True, cov_n=17)
     print(obj)

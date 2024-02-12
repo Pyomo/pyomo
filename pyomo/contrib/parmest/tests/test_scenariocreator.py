@@ -65,9 +65,9 @@ class TestScenarioReactorDesign(unittest.TestCase):
             ],
             columns=["sv", "caf", "ca", "cb", "cc", "cd"],
         )
-        
+
         # Create an experiment list
-        exp_list= []
+        exp_list = []
         for i in range(data.shape[0]):
             exp_list.append(ReactorDesignExperiment(data, i))
 
@@ -123,7 +123,7 @@ class TestScenarioSemibatch(unittest.TestCase):
         # for the sum of squared error that will be used in parameter estimation
 
         # Create an experiment list
-        exp_list= []
+        exp_list = []
         for i in range(len(data)):
             exp_list.append(sb.SemiBatchExperiment(data[i]))
 

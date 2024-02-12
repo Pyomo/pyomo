@@ -12,9 +12,7 @@
 import json
 from os.path import join, abspath, dirname
 import pyomo.contrib.parmest.parmest as parmest
-from pyomo.contrib.parmest.examples.semibatch.semibatch import (
-    SemiBatchExperiment,
-)
+from pyomo.contrib.parmest.examples.semibatch.semibatch import SemiBatchExperiment
 import pyomo.contrib.parmest.scenariocreator as sc
 
 
@@ -30,7 +28,7 @@ def main():
             data.append(d)
 
     # Create an experiment list
-    exp_list= []
+    exp_list = []
     for i in range(len(data)):
         exp_list.append(SemiBatchExperiment(data[i]))
 

@@ -98,32 +98,32 @@ class SimpleReactionExperiment(Experiment):
     def get_labeled_model(self):
         self.create_model()
         m = self.label_model()
-        
+
         return m
+
 
 # k[2] fixed
 class SimpleReactionExperimentK2Fixed(SimpleReactionExperiment):
 
     def label_model(self):
-         
+
         m = super().label_model()
 
         m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.unknown_parameters.update((k, pyo.ComponentUID(k)) 
-                                    for k in [m.k[1]])
+        m.unknown_parameters.update((k, pyo.ComponentUID(k)) for k in [m.k[1]])
 
         return m
+
 
 # k[2] variable
 class SimpleReactionExperimentK2Variable(SimpleReactionExperiment):
 
     def label_model(self):
-         
+
         m = super().label_model()
 
         m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.unknown_parameters.update((k, pyo.ComponentUID(k)) 
-                                    for k in [m.k[1], m.k[2]])
+        m.unknown_parameters.update((k, pyo.ComponentUID(k)) for k in [m.k[1], m.k[2]])
 
         return m
 
@@ -150,7 +150,7 @@ def main():
     ]
 
     # Create an experiment list with k[2] fixed
-    exp_list= []
+    exp_list = []
     for i in range(len(data)):
         exp_list.append(SimpleReactionExperimentK2Fixed(data[i]))
 
@@ -162,7 +162,7 @@ def main():
     # Parameter estimation without covariance estimate
     # Only estimate the parameter k[1]. The parameter k[2] will remain fixed
     # at its initial value
-    
+
     pest = parmest.Estimator(exp_list)
     obj, theta = pest.theta_est()
     print(obj)
@@ -170,7 +170,7 @@ def main():
     print()
 
     # Create an experiment list with k[2] variable
-    exp_list= []
+    exp_list = []
     for i in range(len(data)):
         exp_list.append(SimpleReactionExperimentK2Variable(data[i]))
 

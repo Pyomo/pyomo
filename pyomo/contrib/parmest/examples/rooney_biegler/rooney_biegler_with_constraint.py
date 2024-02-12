@@ -28,7 +28,7 @@ def rooney_biegler_model_with_constraint(data):
 
     model.hour = pyo.Param(within=pyo.PositiveReals, mutable=True)
     model.y = pyo.Param(within=pyo.PositiveReals, mutable=True)
-    
+
     model.response_function = pyo.Var(data.hour, initialize=0.0)
 
     # changed from expression to constraint
@@ -48,6 +48,7 @@ def rooney_biegler_model_with_constraint(data):
 
     return model
 
+
 class RooneyBieglerExperiment(Experiment):
 
     def __init__(self, data):
@@ -65,15 +66,15 @@ class RooneyBieglerExperiment(Experiment):
         m.experiment_outputs.update([(m.hour, self.data.iloc[0]['hour'])])
         m.experiment_outputs.update([(m.y, self.data.iloc[0]['y'])])
 
-
         m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.unknown_parameters.update((k, pyo.ComponentUID(k)) 
-                                    for k in [m.asymptote, m.rate_constant])
+        m.unknown_parameters.update(
+            (k, pyo.ComponentUID(k)) for k in [m.asymptote, m.rate_constant]
+        )
 
     def finalize_model(self):
 
         m = self.model
-        
+
         # Experiment output values
         m.hour = self.data.iloc[0]['hour']
         m.y = self.data.iloc[0]['y']
@@ -82,7 +83,7 @@ class RooneyBieglerExperiment(Experiment):
         self.create_model()
         self.label_model()
         self.finalize_model()
-        
+
         return self.model
 
 

@@ -21,19 +21,26 @@ import pyomo.contrib.parmest.parmest as parmest
 
 from pyomo.contrib.parmest.experiment import Experiment
 
+
 def reactor_design_model():
 
     # Create the concrete model
     model = pyo.ConcreteModel()
 
     # Rate constants
-    model.k1 = pyo.Param(initialize=5.0 / 6.0, within=pyo.PositiveReals, mutable=True)  # min^-1
-    model.k2 = pyo.Param(initialize=5.0 / 3.0, within=pyo.PositiveReals, mutable=True)  # min^-1
-    model.k3 = pyo.Param(initialize=1.0 / 6000.0, within=pyo.PositiveReals, mutable=True)  # m^3/(gmol min)
+    model.k1 = pyo.Param(
+        initialize=5.0 / 6.0, within=pyo.PositiveReals, mutable=True
+    )  # min^-1
+    model.k2 = pyo.Param(
+        initialize=5.0 / 3.0, within=pyo.PositiveReals, mutable=True
+    )  # min^-1
+    model.k3 = pyo.Param(
+        initialize=1.0 / 6000.0, within=pyo.PositiveReals, mutable=True
+    )  # m^3/(gmol min)
 
     # Inlet concentration of A, gmol/m^3
     model.caf = pyo.Param(initialize=10000, within=pyo.PositiveReals, mutable=True)
-     
+
     # Space velocity (flowrate/volume)
     model.sv = pyo.Param(initialize=1.0, within=pyo.PositiveReals, mutable=True)
 
@@ -61,62 +68,67 @@ def reactor_design_model():
         expr=(0 == -model.sv * model.cb + model.k1 * model.ca - model.k2 * model.cb)
     )
 
-    model.cc_bal = pyo.Constraint(expr=(0 == -model.sv * model.cc + model.k2 * model.cb))
+    model.cc_bal = pyo.Constraint(
+        expr=(0 == -model.sv * model.cc + model.k2 * model.cb)
+    )
 
     model.cd_bal = pyo.Constraint(
         expr=(0 == -model.sv * model.cd + model.k3 * model.ca**2.0)
     )
 
     return model
-            
+
+
 class ReactorDesignExperiment(Experiment):
-    
-    def __init__(self, data, experiment_number):    
+
+    def __init__(self, data, experiment_number):
         self.data = data
         self.experiment_number = experiment_number
-        self.data_i = data.loc[experiment_number,:]
+        self.data_i = data.loc[experiment_number, :]
         self.model = None
-    
+
     def create_model(self):
         self.model = m = reactor_design_model()
         return m
-    
+
     def finalize_model(self):
         m = self.model
-        
+
         # Experiment inputs values
         m.sv = self.data_i['sv']
         m.caf = self.data_i['caf']
-        
+
         # Experiment output values
         m.ca = self.data_i['ca']
         m.cb = self.data_i['cb']
         m.cc = self.data_i['cc']
         m.cd = self.data_i['cd']
-        
+
         return m
 
     def label_model(self):
         m = self.model
-        
+
         m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.experiment_outputs.update([(m.ca, self.data_i['ca'])])
         m.experiment_outputs.update([(m.cb, self.data_i['cb'])])
         m.experiment_outputs.update([(m.cc, self.data_i['cc'])])
         m.experiment_outputs.update([(m.cd, self.data_i['cd'])])
-        
+
         m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.unknown_parameters.update((k, pyo.ComponentUID(k)) 
-                                    for k in [m.k1, m.k2, m.k3])
+        m.unknown_parameters.update(
+            (k, pyo.ComponentUID(k)) for k in [m.k1, m.k2, m.k3]
+        )
 
         return m
-    
+
     def get_labeled_model(self):
         m = self.create_model()
         m = self.finalize_model()
         m = self.label_model()
-        
+
         return m
+
 
 def main():
 
@@ -143,6 +155,6 @@ def main():
     results = pd.DataFrame(results, columns=["sv", "caf", "ca", "cb", "cc", "cd"])
     print(results)
 
+
 if __name__ == "__main__":
     main()
-    

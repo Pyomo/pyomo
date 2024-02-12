@@ -28,11 +28,11 @@ def rooney_biegler_model(data):
 
     model.hour = pyo.Param(within=pyo.PositiveReals, mutable=True)
     model.y = pyo.Param(within=pyo.PositiveReals, mutable=True)
-    
+
     def response_rule(m, h):
         expr = m.asymptote * (1 - pyo.exp(-m.rate_constant * h))
         return expr
-    
+
     model.response_function = pyo.Expression(data.hour, rule=response_rule)
 
     def SSE_rule(m):
@@ -63,13 +63,14 @@ class RooneyBieglerExperiment(Experiment):
         m.experiment_outputs.update([(m.y, self.data.iloc[0]['y'])])
 
         m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.unknown_parameters.update((k, pyo.ComponentUID(k)) 
-                                    for k in [m.asymptote, m.rate_constant])
+        m.unknown_parameters.update(
+            (k, pyo.ComponentUID(k)) for k in [m.asymptote, m.rate_constant]
+        )
 
     def finalize_model(self):
 
         m = self.model
-        
+
         # Experiment output values
         m.hour = self.data.iloc[0]['hour']
         m.y = self.data.iloc[0]['y']
@@ -78,7 +79,7 @@ class RooneyBieglerExperiment(Experiment):
         self.create_model()
         self.label_model()
         self.finalize_model()
-        
+
         return self.model
 
 

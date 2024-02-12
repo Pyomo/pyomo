@@ -411,9 +411,7 @@ class TestModelVariants(unittest.TestCase):
             model.theta = pyo.Var(
                 model.var_names, initialize={"asymptote": 15, "rate_constant": 0.5}
             )
-            model.theta[
-                "asymptote"
-            ].fixed = (
+            model.theta["asymptote"].fixed = (
                 True  # parmest will unfix theta variables, even when they are indexed
             )
             model.theta["rate_constant"].fixed = True

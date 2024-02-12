@@ -41,9 +41,9 @@ def main():
 
     # Parameter estimation
     obj, theta = pest.theta_est()
-    print (obj)
+    print(obj)
     print(theta)
-    
+
     # Assert statements compare parameter estimation (theta) to an expected value
     k1_expected = 5.0 / 6.0
     k2_expected = 5.0 / 3.0

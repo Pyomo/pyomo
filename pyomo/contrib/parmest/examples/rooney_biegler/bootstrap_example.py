@@ -26,14 +26,16 @@ def main():
 
     # Sum of squared error function
     def SSE(model):
-        expr = (model.experiment_outputs[model.y] - \
-            model.response_function[model.experiment_outputs[model.hour]]) ** 2
+        expr = (
+            model.experiment_outputs[model.y]
+            - model.response_function[model.experiment_outputs[model.hour]]
+        ) ** 2
         return expr
 
     # Create an experiment list
-    exp_list= []
+    exp_list = []
     for i in range(data.shape[0]):
-        exp_list.append(RooneyBieglerExperiment(data.loc[i,:].to_frame().transpose()))
+        exp_list.append(RooneyBieglerExperiment(data.loc[i, :].to_frame().transpose()))
 
     # View one model
     # exp0_model = exp_list[0].get_labeled_model()

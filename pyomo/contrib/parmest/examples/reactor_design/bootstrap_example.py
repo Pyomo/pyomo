@@ -16,18 +16,19 @@ from pyomo.contrib.parmest.examples.reactor_design.reactor_design import (
     ReactorDesignExperiment,
 )
 
+
 def main():
 
     # Read in data
     file_dirname = dirname(abspath(str(__file__)))
     file_name = abspath(join(file_dirname, "reactor_data.csv"))
     data = pd.read_csv(file_name)
-    
+
     # Create an experiment list
-    exp_list= []
+    exp_list = []
     for i in range(data.shape[0]):
         exp_list.append(ReactorDesignExperiment(data, i))
-    
+
     # View one model
     # exp0_model = exp_list[0].get_labeled_model()
     # print(exp0_model.pprint())
@@ -49,6 +50,7 @@ def main():
         ["MVN", "KDE", "Rect"],
         title="Bootstrap theta with confidence regions",
     )
+
 
 if __name__ == "__main__":
     main()

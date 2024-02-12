@@ -24,7 +24,7 @@ def main():
     file_dirname = dirname(abspath(str(__file__)))
     file_name = abspath(join(file_dirname, "reactor_data.csv"))
     data = pd.read_csv(file_name)
-    
+
     # Create more data for the example
     N = 50
     df_std = data.std().to_frame().transpose()
@@ -33,10 +33,10 @@ def main():
     data = df_sample + df_rand.dot(df_std) / 10
 
     # Create an experiment list
-    exp_list= []
+    exp_list = []
     for i in range(data.shape[0]):
         exp_list.append(ReactorDesignExperiment(data, i))
-    
+
     # View one model
     # exp0_model = exp_list[0].get_labeled_model()
     # print(exp0_model.pprint())
@@ -88,6 +88,7 @@ def main():
     r = [results[i][1].loc[0, alpha] for i in range(lNo_samples)]
     percent_true = sum(r) / len(r)
     print(percent_true)
+
 
 if __name__ == "__main__":
     main()

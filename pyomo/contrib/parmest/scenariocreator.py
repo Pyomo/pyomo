@@ -17,7 +17,9 @@ import pyomo.environ as pyo
 import pyomo.contrib.parmest.deprecated.scenariocreator as scen_deprecated
 
 import logging
+
 logger = logging.getLogger(__name__)
+
 
 class ScenarioSet(object):
     """
@@ -127,10 +129,13 @@ class ScenarioCreator(object):
         # is this a deprecated pest object?
         self.scen_deprecated = None
         if pest.pest_deprecated is not None:
-            logger.warning("Using a deprecated parmest object for scenario " +
-                "creator, please recreate object using experiment lists.")
+            logger.warning(
+                "Using a deprecated parmest object for scenario "
+                + "creator, please recreate object using experiment lists."
+            )
             self.scen_deprecated = scen_deprecated.ScenarioCreator(
-                pest.pest_deprecated, solvername)
+                pest.pest_deprecated, solvername
+            )
         else:
             self.pest = pest
             self.solvername = solvername
@@ -148,7 +153,7 @@ class ScenarioCreator(object):
         if self.scen_deprecated is not None:
             self.scen_deprecated.ScenariosFromExperiments(addtoSet)
             return
-            
+
         assert isinstance(addtoSet, ScenarioSet)
 
         scenario_numbers = list(range(len(self.pest.exp_list)))
@@ -156,9 +161,7 @@ class ScenarioCreator(object):
         prob = 1.0 / len(scenario_numbers)
         for exp_num in scenario_numbers:
             ##print("Experiment number=", exp_num)
-            model = self.pest._instance_creation_callback(
-                exp_num,
-            )
+            model = self.pest._instance_creation_callback(exp_num)
             opt = pyo.SolverFactory(self.solvername)
             results = opt.solve(model)  # solves and updates model
             ## pyo.check_termination_optimal(results)
@@ -180,8 +183,7 @@ class ScenarioCreator(object):
 
         # check if using deprecated pest object
         if self.scen_deprecated is not None:
-            self.scen_deprecated.ScenariosFromBootstrap(
-                addtoSet, numtomake, seed=seed)
+            self.scen_deprecated.ScenariosFromBootstrap(addtoSet, numtomake, seed=seed)
             return
 
         assert isinstance(addtoSet, ScenarioSet)

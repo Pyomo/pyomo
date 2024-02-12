@@ -47,6 +47,7 @@ pynumero_ASL_available = False if find_library("pynumero_ASL") is None else True
 
 testdir = os.path.dirname(os.path.abspath(__file__))
 
+
 @unittest.skipIf(
     not parmest.parmest_available,
     "Cannot test parmest: required dependencies are missing",
@@ -66,14 +67,18 @@ class TestRooneyBiegler(unittest.TestCase):
 
         # Sum of squared error function
         def SSE(model):
-            expr = (model.experiment_outputs[model.y] - \
-                model.response_function[model.experiment_outputs[model.hour]]) ** 2
+            expr = (
+                model.experiment_outputs[model.y]
+                - model.response_function[model.experiment_outputs[model.hour]]
+            ) ** 2
             return expr
 
         # Create an experiment list
-        exp_list= []
+        exp_list = []
         for i in range(data.shape[0]):
-            exp_list.append(RooneyBieglerExperiment(data.loc[i,:].to_frame().transpose()))
+            exp_list.append(
+                RooneyBieglerExperiment(data.loc[i, :].to_frame().transpose())
+            )
 
         # Create an instance of the parmest estimator
         pest = parmest.Estimator(exp_list, obj_function=SSE)
@@ -82,10 +87,7 @@ class TestRooneyBiegler(unittest.TestCase):
 
         self.data = data
         self.pest = parmest.Estimator(
-            exp_list,
-            obj_function=SSE,
-            solver_options=solver_options,
-            tee=True,
+            exp_list, obj_function=SSE, solver_options=solver_options, tee=True
         )
 
     def test_theta_est(self):
@@ -372,7 +374,7 @@ class TestModelVariants(unittest.TestCase):
 
             model.hour = pyo.Param(within=pyo.PositiveReals, mutable=True)
             model.y = pyo.Param(within=pyo.PositiveReals, mutable=True)
-    
+
             def response_rule(m, h):
                 expr = m.asymptote * (1 - pyo.exp(-m.rate_constant * h))
                 return expr
@@ -389,7 +391,9 @@ class TestModelVariants(unittest.TestCase):
         rooney_biegler_params_exp_list = []
         for i in range(self.data.shape[0]):
             rooney_biegler_params_exp_list.append(
-                RooneyBieglerExperimentParams(self.data.loc[i,:].to_frame().transpose())
+                RooneyBieglerExperimentParams(
+                    self.data.loc[i, :].to_frame().transpose()
+                )
             )
 
         def rooney_biegler_indexed_params(data):
@@ -429,13 +433,14 @@ class TestModelVariants(unittest.TestCase):
                 m.experiment_outputs.update([(m.y, self.data.iloc[0]['y'])])
 
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.unknown_parameters.update((k, pyo.ComponentUID(k)) 
-                                            for k in [m.theta])
+                m.unknown_parameters.update((k, pyo.ComponentUID(k)) for k in [m.theta])
 
         rooney_biegler_indexed_params_exp_list = []
         for i in range(self.data.shape[0]):
             rooney_biegler_indexed_params_exp_list.append(
-                RooneyBieglerExperimentIndexedParams(self.data.loc[i,:].to_frame().transpose())
+                RooneyBieglerExperimentIndexedParams(
+                    self.data.loc[i, :].to_frame().transpose()
+                )
             )
 
         def rooney_biegler_vars(data):
@@ -465,7 +470,7 @@ class TestModelVariants(unittest.TestCase):
         rooney_biegler_vars_exp_list = []
         for i in range(self.data.shape[0]):
             rooney_biegler_vars_exp_list.append(
-                RooneyBieglerExperimentVars(self.data.loc[i,:].to_frame().transpose())
+                RooneyBieglerExperimentVars(self.data.loc[i, :].to_frame().transpose())
             )
 
         def rooney_biegler_indexed_vars(data):
@@ -475,9 +480,7 @@ class TestModelVariants(unittest.TestCase):
             model.theta = pyo.Var(
                 model.var_names, initialize={"asymptote": 15, "rate_constant": 0.5}
             )
-            model.theta[
-                "asymptote"
-            ].fixed = (
+            model.theta["asymptote"].fixed = (
                 True  # parmest will unfix theta variables, even when they are indexed
             )
             model.theta["rate_constant"].fixed = True
@@ -509,20 +512,22 @@ class TestModelVariants(unittest.TestCase):
                 m.experiment_outputs.update([(m.y, self.data.iloc[0]['y'])])
 
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.unknown_parameters.update((k, pyo.ComponentUID(k)) 
-                                            for k in [m.theta])
-
+                m.unknown_parameters.update((k, pyo.ComponentUID(k)) for k in [m.theta])
 
         rooney_biegler_indexed_vars_exp_list = []
         for i in range(self.data.shape[0]):
             rooney_biegler_indexed_vars_exp_list.append(
-                RooneyBieglerExperimentIndexedVars(self.data.loc[i,:].to_frame().transpose())
+                RooneyBieglerExperimentIndexedVars(
+                    self.data.loc[i, :].to_frame().transpose()
+                )
             )
 
         # Sum of squared error function
         def SSE(model):
-            expr = (model.experiment_outputs[model.y] - \
-                model.response_function[model.experiment_outputs[model.hour]]) ** 2
+            expr = (
+                model.experiment_outputs[model.y]
+                - model.response_function[model.experiment_outputs[model.hour]]
+            ) ** 2
             return expr
 
         self.objective_function = SSE
@@ -570,13 +575,14 @@ class TestModelVariants(unittest.TestCase):
         not parmest.inverse_reduced_hessian_available,
         "Cannot test covariance matrix: required ASL dependency is missing",
     )
-
     def check_rooney_biegler_results(self, objval, cov):
 
         # get indices in covariance matrix
         cov_cols = cov.columns.to_list()
         asymptote_index = [idx for idx, s in enumerate(cov_cols) if 'asymptote' in s][0]
-        rate_constant_index = [idx for idx, s in enumerate(cov_cols) if 'rate_constant' in s][0]
+        rate_constant_index = [
+            idx for idx, s in enumerate(cov_cols) if 'rate_constant' in s
+        ][0]
 
         self.assertAlmostEqual(objval, 4.3317112, places=2)
         self.assertAlmostEqual(
@@ -596,8 +602,7 @@ class TestModelVariants(unittest.TestCase):
 
         for model_type, parmest_input in self.input.items():
             pest = parmest.Estimator(
-                parmest_input["exp_list"],
-                obj_function=self.objective_function,
+                parmest_input["exp_list"], obj_function=self.objective_function
             )
 
             objval, thetavals, cov = pest.theta_est(calc_cov=True, cov_n=6)
@@ -608,10 +613,9 @@ class TestModelVariants(unittest.TestCase):
 
     def test_parmest_basics_with_initialize_parmest_model_option(self):
 
-        for model_type, parmest_input in self.input.items():  
+        for model_type, parmest_input in self.input.items():
             pest = parmest.Estimator(
-                parmest_input["exp_list"],
-                obj_function=self.objective_function,
+                parmest_input["exp_list"], obj_function=self.objective_function
             )
 
             objval, thetavals, cov = pest.theta_est(calc_cov=True, cov_n=6)
@@ -627,8 +631,7 @@ class TestModelVariants(unittest.TestCase):
 
         for model_type, parmest_input in self.input.items():
             pest = parmest.Estimator(
-                parmest_input["exp_list"],
-                obj_function=self.objective_function,
+                parmest_input["exp_list"], obj_function=self.objective_function
             )
 
             obj_at_theta = pest.objective_at_theta(
@@ -643,16 +646,16 @@ class TestModelVariants(unittest.TestCase):
     def test_parmest_basics_with_square_problem_solve_no_theta_vals(self):
 
         for model_type, parmest_input in self.input.items():
-   
+
             pest = parmest.Estimator(
-                parmest_input["exp_list"],
-                obj_function=self.objective_function,
+                parmest_input["exp_list"], obj_function=self.objective_function
             )
 
             obj_at_theta = pest.objective_at_theta(initialize_parmest_model=True)
 
             objval, thetavals, cov = pest.theta_est(calc_cov=True, cov_n=6)
             self.check_rooney_biegler_results(objval, cov)
+
 
 @unittest.skipIf(
     not parmest.parmest_available,
@@ -692,13 +695,15 @@ class TestReactorDesign(unittest.TestCase):
         )
 
         # Create an experiment list
-        exp_list= []
+        exp_list = []
         for i in range(data.shape[0]):
             exp_list.append(ReactorDesignExperiment(data, i))
 
         solver_options = {"max_iter": 6000}
 
-        self.pest = parmest.Estimator(exp_list, obj_function='SSE', solver_options=solver_options)
+        self.pest = parmest.Estimator(
+            exp_list, obj_function='SSE', solver_options=solver_options
+        )
 
     def test_theta_est(self):
         # used in data reconciliation
@@ -820,15 +825,16 @@ class TestReactorDesign_DAE(unittest.TestCase):
             def label_model(self):
 
                 m = self.model
-                
+
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.unknown_parameters.update((k, pyo.ComponentUID(k)) 
-                                            for k in [m.k1, m.k2])
+                m.unknown_parameters.update(
+                    (k, pyo.ComponentUID(k)) for k in [m.k1, m.k2]
+                )
 
             def get_labeled_model(self):
                 self.create_model()
                 self.label_model()
-                
+
                 return self.model
 
         # This example tests data formatted in 3 ways
@@ -873,10 +879,14 @@ class TestReactorDesign_DAE(unittest.TestCase):
         self.pest_dict = parmest.Estimator(exp_list_dict)
 
         # Estimator object with multiple scenarios
-        exp_list_df_multiple = [ReactorDesignExperimentDAE(data_df),
-                                ReactorDesignExperimentDAE(data_df)]
-        exp_list_dict_multiple = [ReactorDesignExperimentDAE(data_dict),
-                                  ReactorDesignExperimentDAE(data_dict)]
+        exp_list_df_multiple = [
+            ReactorDesignExperimentDAE(data_df),
+            ReactorDesignExperimentDAE(data_df),
+        ]
+        exp_list_dict_multiple = [
+            ReactorDesignExperimentDAE(data_dict),
+            ReactorDesignExperimentDAE(data_dict),
+        ]
 
         self.pest_df_multiple = parmest.Estimator(exp_list_df_multiple)
         self.pest_dict_multiple = parmest.Estimator(exp_list_dict_multiple)
@@ -963,27 +973,26 @@ class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
             data=[[1, 8.3], [2, 10.3], [3, 19.0], [4, 16.0], [5, 15.6], [7, 19.8]],
             columns=["hour", "y"],
         )
-            
+
         # Sum of squared error function
         def SSE(model):
-            expr = (model.experiment_outputs[model.y] - \
-                model.response_function[model.experiment_outputs[model.hour]]) ** 2
+            expr = (
+                model.experiment_outputs[model.y]
+                - model.response_function[model.experiment_outputs[model.hour]]
+            ) ** 2
             return expr
 
         exp_list = []
         for i in range(data.shape[0]):
             exp_list.append(
-                RooneyBieglerExperiment(data.loc[i,:].to_frame().transpose())
+                RooneyBieglerExperiment(data.loc[i, :].to_frame().transpose())
             )
 
         solver_options = {"tol": 1e-8}
 
         self.data = data
         self.pest = parmest.Estimator(
-            exp_list,
-            obj_function=SSE,
-            solver_options=solver_options,
-            tee=True,
+            exp_list, obj_function=SSE, solver_options=solver_options, tee=True
         )
 
     def test_theta_est_with_square_initialization(self):

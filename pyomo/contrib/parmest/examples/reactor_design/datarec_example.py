@@ -29,11 +29,12 @@ def reactor_design_model_for_datarec():
 
     return model
 
+
 class ReactorDesignExperimentPreDataRec(ReactorDesignExperiment):
 
     def __init__(self, data, data_std, experiment_number):
 
-        super().__init__(data, experiment_number)    
+        super().__init__(data, experiment_number)
         self.data_std = data_std
 
     def create_model(self):
@@ -43,7 +44,7 @@ class ReactorDesignExperimentPreDataRec(ReactorDesignExperiment):
     def label_model(self):
 
         m = self.model
-        
+
         # experiment outputs
         m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.experiment_outputs.update([(m.ca, self.data_i['ca'])])
@@ -63,11 +64,12 @@ class ReactorDesignExperimentPreDataRec(ReactorDesignExperiment):
 
         return m
 
+
 class ReactorDesignExperimentPostDataRec(ReactorDesignExperiment):
 
     def __init__(self, data, data_std, experiment_number):
 
-        super().__init__(data, experiment_number)    
+        super().__init__(data, experiment_number)
         self.data_std = data_std
 
     def label_model(self):
@@ -82,6 +84,7 @@ class ReactorDesignExperimentPostDataRec(ReactorDesignExperiment):
         m.experiment_outputs_std.update([(m.cd, self.data_std['cd'])])
 
         return m
+
 
 def generate_data():
 
@@ -117,14 +120,16 @@ def main():
     data_std = data.std()
 
     # Create an experiment list
-    exp_list= []
+    exp_list = []
     for i in range(data.shape[0]):
         exp_list.append(ReactorDesignExperimentPreDataRec(data, data_std, i))
 
     # Define sum of squared error objective function for data rec
     def SSE(model):
-        expr = sum(((y - yhat)/model.experiment_outputs_std[y])**2 
-            for y, yhat in model.experiment_outputs.items())
+        expr = sum(
+            ((y - yhat) / model.experiment_outputs_std[y]) ** 2
+            for y, yhat in model.experiment_outputs.items()
+        )
         return expr
 
     # View one model & SSE
@@ -138,7 +143,7 @@ def main():
     obj, theta, data_rec = pest.theta_est(return_values=["ca", "cb", "cc", "cd", "caf"])
     print(obj)
     print(theta)
-    
+
     parmest.graphics.grouped_boxplot(
         data[["ca", "cb", "cc", "cd"]],
         data_rec[["ca", "cb", "cc", "cd"]],
@@ -149,7 +154,7 @@ def main():
     data_rec["sv"] = data["sv"]
 
     # make a new list of experiments using reconciled data
-    exp_list= []
+    exp_list = []
     for i in range(data_rec.shape[0]):
         exp_list.append(ReactorDesignExperimentPostDataRec(data_rec, data_std, i))
 
@@ -157,7 +162,7 @@ def main():
     obj, theta = pest.theta_est()
     print(obj)
     print(theta)
-    
+
     theta_real = {"k1": 5.0 / 6.0, "k2": 5.0 / 3.0, "k3": 1.0 / 6000.0}
     print(theta_real)
 

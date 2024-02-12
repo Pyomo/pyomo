@@ -20,25 +20,25 @@ from pyomo.contrib.parmest.examples.reactor_design.reactor_design import (
 
 class TimeSeriesReactorDesignExperiment(ReactorDesignExperiment):
 
-    def __init__(self, data, experiment_number):    
+    def __init__(self, data, experiment_number):
         self.data = data
         self.experiment_number = experiment_number
         self.data_i = data[experiment_number]
         self.model = None
-    
+
     def finalize_model(self):
         m = self.model
-        
+
         # Experiment inputs values
         m.sv = self.data_i['sv']
         m.caf = self.data_i['caf']
-        
+
         # Experiment output values
         m.ca = self.data_i['ca'][0]
         m.cb = self.data_i['cb'][0]
         m.cc = self.data_i['cc'][0]
         m.cd = self.data_i['cd'][0]
-        
+
         return m
 
 
@@ -92,7 +92,7 @@ def main():
     data_ts = group_data(data, 'experiment', ['sv', 'caf'])
 
     # Create an experiment list
-    exp_list= []
+    exp_list = []
     for i in range(len(data_ts)):
         exp_list.append(TimeSeriesReactorDesignExperiment(data_ts, i))
 
@@ -102,7 +102,7 @@ def main():
         for y, yhat in model.experiment_outputs.items():
             num_time_points = len(yhat)
             for i in range(num_time_points):
-                expr += ((y - yhat[i])**2) * (1 / num_time_points)
+                expr += ((y - yhat[i]) ** 2) * (1 / num_time_points)
 
         return expr
 

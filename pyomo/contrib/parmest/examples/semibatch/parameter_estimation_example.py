@@ -12,9 +12,8 @@
 import json
 from os.path import join, abspath, dirname
 import pyomo.contrib.parmest.parmest as parmest
-from pyomo.contrib.parmest.examples.semibatch.semibatch import (
-    SemiBatchExperiment,
-)
+from pyomo.contrib.parmest.examples.semibatch.semibatch import SemiBatchExperiment
+
 
 def main():
 
@@ -28,7 +27,7 @@ def main():
             data.append(d)
 
     # Create an experiment list
-    exp_list= []
+    exp_list = []
     for i in range(len(data)):
         exp_list.append(SemiBatchExperiment(data[i]))
 
@@ -40,7 +39,7 @@ def main():
     # for sum of squared error that will be used in parameter estimation
 
     pest = parmest.Estimator(exp_list)
-    
+
     obj, theta = pest.theta_est()
     print(obj)
     print(theta)
