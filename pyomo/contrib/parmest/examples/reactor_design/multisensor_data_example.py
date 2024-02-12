@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pandas as pd
+from pyomo.common.dependencies import pandas as pd
 from os.path import join, abspath, dirname
 import pyomo.environ as pyo
 import pyomo.contrib.parmest.parmest as parmest

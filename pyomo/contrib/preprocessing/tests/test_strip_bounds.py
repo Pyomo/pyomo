@@ -1,4 +1,5 @@
 """Tests stripping of variable bounds."""
+
 import pyomo.common.unittest as unittest
 
 from pyomo.environ import (

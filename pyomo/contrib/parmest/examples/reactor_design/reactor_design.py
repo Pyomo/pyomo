@@ -12,13 +12,10 @@
 Continuously stirred tank reactor model, based on
 pyomo/examples/doc/pyomobook/nonlinear-ch/react_design/ReactorDesign.py
 """
-from os.path import join, abspath, dirname
-from itertools import product
-import pandas as pd
 
+from pyomo.common.dependencies import pandas as pd
 import pyomo.environ as pyo
 import pyomo.contrib.parmest.parmest as parmest
-
 from pyomo.contrib.parmest.experiment import Experiment
 
 
