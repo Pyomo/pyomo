@@ -1802,13 +1802,13 @@ class TestInterface(unittest.TestCase):
         igraph = IncidenceGraphInterface(m, linear_only=False)
         n_edges_original = igraph.n_edges
 
-        #Test edge is added between previously unconnectes nodes
+        # Test edge is added between previously unconnectes nodes
         igraph.add_edge(m.x[1], m.eq3)
         n_edges_new = igraph.n_edges
         assert ComponentSet(igraph.get_adjacent_to(m.eq3)) == ComponentSet(m.x[:])
         self.assertEqual(n_edges_original + 1, n_edges_new)
 
-        #Test no edge is added if there exists a previous edge between nodes
+        # Test no edge is added if there exists a previous edge between nodes
         igraph.add_edge(m.x[2], m.eq3)
         n_edges2 = igraph.n_edges
         self.assertEqual(n_edges_new, n_edges2)
@@ -1818,7 +1818,7 @@ class TestInterface(unittest.TestCase):
         m.x = pyo.Var([1, 2, 3, 4])
         m.eq1 = pyo.Constraint(expr=m.x[1] + m.x[3] == 1)
         m.eq2 = pyo.Constraint(expr=m.x[2] + pyo.sqrt(m.x[1]) + pyo.exp(m.x[3]) == 1)
-        m.eq3 = pyo.Constraint(expr=m.x[4] ** 2 + m.x[1] ** 3 + m.x[2]**2 == 1)
+        m.eq3 = pyo.Constraint(expr=m.x[4] ** 2 + m.x[1] ** 3 + m.x[2] ** 2 == 1)
 
         # Make sure error is raised when a variable is not in the igraph
         igraph = IncidenceGraphInterface(m, linear_only=True)
@@ -1826,32 +1826,30 @@ class TestInterface(unittest.TestCase):
         msg = "is not a variable in the incidence graph"
         with self.assertRaisesRegex(RuntimeError, msg):
             igraph.add_edge(m.x[4], m.eq2)
-    
+
     def test_var_elim(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3, 4])
         m.eq1 = pyo.Constraint(expr=m.x[1] ** 2 + m.x[2] ** 2 + m.x[3] ** 2 == 1)
         m.eq2 = pyo.Constraint(expr=pyo.sqrt(m.x[1]) + pyo.exp(m.x[3]) == 1)
         m.eq3 = pyo.Constraint(expr=m.x[3] + m.x[2] + m.x[4] == 1)
-        m.eq4 = pyo.Constraint(expr=m.x[1] == 5*m.x[2])
-        
-        igraph =  IncidenceGraphInterface(m)
-        #Eliminate x[1] usinf eq4
+        m.eq4 = pyo.Constraint(expr=m.x[1] == 5 * m.x[2])
+
+        igraph = IncidenceGraphInterface(m)
+        # Eliminate x[1] usinf eq4
         for adj_con in igraph.get_adjacent_to(m.x[1]):
             for adj_var in igraph.get_adjacent_to(m.eq4):
                 igraph.add_edge(adj_var, adj_con)
         igraph.remove_nodes([m.x[1], m.eq4])
-                
+
         assert ComponentSet(igraph.variables) == ComponentSet([m.x[2], m.x[3], m.x[4]])
         assert ComponentSet(igraph.constraints) == ComponentSet([m.eq1, m.eq2, m.eq3])
         self.assertEqual(7, igraph.n_edges)
-        
+
         assert m.x[2] in ComponentSet(igraph.get_adjacent_to(m.eq1))
         assert m.x[2] in ComponentSet(igraph.get_adjacent_to(m.eq2))
-        
-        
-        
-       
+
+
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 class TestIndexedBlock(unittest.TestCase):
     def test_block_data_obj(self):

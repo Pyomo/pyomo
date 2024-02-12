@@ -939,9 +939,9 @@ class IncidenceGraphInterface(object):
         Parameters
         ---------
         variable: VarData
-            A variable in the graph 
+            A variable in the graph
         constraint: ConstraintData
-            A constraint in the graph 
+            A constraint in the graph
         """
         if self._incidence_graph is None:
             raise RuntimeError(
@@ -953,9 +953,11 @@ class IncidenceGraphInterface(object):
             raise RuntimeError("%s is not a variable in the incidence graph" % variable)
 
         if constraint not in self._con_index_map:
-            raise RuntimeError("%s is not a constraint in the incidence graph" % constraint)
+            raise RuntimeError(
+                "%s is not a constraint in the incidence graph" % constraint
+            )
 
-        var_id = self._var_index_map[variable] + len(self._con_index_map) 
+        var_id = self._var_index_map[variable] + len(self._con_index_map)
         con_id = self._con_index_map[constraint]
-            
+
         self._incidence_graph.add_edge(var_id, con_id)
