@@ -689,8 +689,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         units=None,
         name=None,
         doc=None
-    ):
-        ...
+    ): ...
 
     def __init__(self, *args, **kwargs):
         #

@@ -293,8 +293,7 @@ class Expression(IndexedComponent):
     @overload
     def __init__(
         self, *indexes, rule=None, expr=None, initialize=None, name=None, doc=None
-    ):
-        ...
+    ): ...
 
     def __init__(self, *args, **kwds):
         _init = self._pop_from_kwargs(

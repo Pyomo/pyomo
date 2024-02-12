@@ -1139,11 +1139,12 @@ Components must now specify their rules explicitly using 'rule=' keywords."""
             except:
                 err = sys.exc_info()[1]
                 logger.error(
-                    "Constructing component '%s' from data=%s failed:\n%s: %s",
+                    "Constructing component '%s' from data=%s failed:\n    %s: %s",
                     str(val.name),
                     str(data).strip(),
                     type(err).__name__,
                     err,
+                    extra={'cleandoc': False},
                 )
                 raise
             if generate_debug_messages:
@@ -2012,8 +2013,7 @@ class Block(ActiveIndexedComponent):
     @overload
     def __init__(
         self, *indexes, rule=None, concrete=False, dense=True, name=None, doc=None
-    ):
-        ...
+    ): ...
 
     def __init__(self, *args, **kwargs):
         """Constructor"""
