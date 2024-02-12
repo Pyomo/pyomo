@@ -2958,7 +2958,7 @@ class RangeSet(Component):
             pass
 
     def __str__(self):
-        # Named, components should return their name e.g., Reals
+        # Named components should return their name e.g., Reals
         if self._name is not None:
             return self.name
         # Unconstructed floating components return their type
