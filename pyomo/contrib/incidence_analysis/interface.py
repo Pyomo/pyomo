@@ -29,7 +29,7 @@ from pyomo.common.dependencies import (
     plotly,
 )
 from pyomo.common.deprecation import deprecated
-from pyomo.contrib.incidence_analysis.config import IncidenceConfig
+from pyomo.contrib.incidence_analysis.config import get_config_from_kwds
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
 from pyomo.contrib.incidence_analysis.connected import get_independent_submatrices
 from pyomo.contrib.incidence_analysis.triangularize import (
@@ -62,7 +62,7 @@ def _check_unindexed(complist):
 
 
 def get_incidence_graph(variables, constraints, **kwds):
-    config = IncidenceConfig(kwds)
+    config = get_config_from_kwds(**kwds)
     return get_bipartite_incidence_graph(variables, constraints, **config)
 
 
@@ -91,7 +91,9 @@ def get_bipartite_incidence_graph(variables, constraints, **kwds):
     ``networkx.Graph``
 
     """
-    config = IncidenceConfig(kwds)
+    # Note that this ConfigDict contains the visitor that we will re-use
+    # when constructing constraints.
+    config = get_config_from_kwds(**kwds)
     _check_unindexed(variables + constraints)
     N = len(variables)
     M = len(constraints)
@@ -163,7 +165,8 @@ def extract_bipartite_subgraph(graph, nodes0, nodes1):
 
 
 def _generate_variables_in_constraints(constraints, **kwds):
-    config = IncidenceConfig(kwds)
+    # Note: We construct a visitor here
+    config = get_config_from_kwds(**kwds)
     known_vars = ComponentSet()
     for con in constraints:
         for var in get_incident_variables(con.body, **config):
@@ -191,7 +194,7 @@ def get_structural_incidence_matrix(variables, constraints, **kwds):
         Entries are 1.0.
 
     """
-    config = IncidenceConfig(kwds)
+    config = get_config_from_kwds(**kwds)
     _check_unindexed(variables + constraints)
     N, M = len(variables), len(constraints)
     var_idx_map = ComponentMap((v, i) for i, v in enumerate(variables))
@@ -266,7 +269,6 @@ class IncidenceGraphInterface(object):
         ``evaluate_jacobian_eq`` method instead of ``evaluate_jacobian``
         rather than checking constraint expression types.
 
-
     """
 
     def __init__(self, model=None, active=True, include_inequality=True, **kwds):
@@ -275,7 +277,7 @@ class IncidenceGraphInterface(object):
         # to cache the incidence graph for fast analysis later on.
         # WARNING: This cache will become invalid if the user alters their
         # model.
-        self._config = IncidenceConfig(kwds)
+        self._config = get_config_from_kwds(**kwds)
         if model is None:
             self._incidence_graph = None
             self._variables = None
