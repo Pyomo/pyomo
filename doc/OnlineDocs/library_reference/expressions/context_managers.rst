@@ -8,6 +8,6 @@ Context Managers
 .. autoclass:: pyomo.core.expr.linear_expression
     :members:
 
-.. autoclass:: pyomo.core.expr.clone_counter
+.. autoclass:: pyomo.core.expr.current.clone_counter
     :members:
 

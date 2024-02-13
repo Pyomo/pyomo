@@ -99,10 +99,9 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
         # We'll need these to get dual info after solving subproblems
         add_constraint_list(self.original_util_block)
 
-        (
-            discrete_problem_util_block,
-            subproblem_util_block,
-        ) = _get_discrete_problem_and_subproblem(self, config)
+        (discrete_problem_util_block, subproblem_util_block) = (
+            _get_discrete_problem_and_subproblem(self, config)
+        )
 
         discrete = discrete_problem_util_block.parent_block()
         subproblem = subproblem_util_block.parent_block()

@@ -309,10 +309,10 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
 
         Ms = arg_Ms
         if not self._config.only_mbigm_bound_constraints:
-            Ms = (
-                transBlock.calculated_missing_m_values
-            ) = self._calculate_missing_M_values(
-                active_disjuncts, arg_Ms, transBlock, transformed_constraints
+            Ms = transBlock.calculated_missing_m_values = (
+                self._calculate_missing_M_values(
+                    active_disjuncts, arg_Ms, transBlock, transformed_constraints
+                )
             )
 
         # Now we can deactivate the constraints we deferred, so that we don't

@@ -9,6 +9,7 @@ Solution is 2.99 with (x1,x2) = (-0.1, 3.01)
 
 Pyomo model implementation by @RomeoV
 """
+
 from pyomo.environ import *
 from pyomo.gdp import *
 from pyomo.gdp.basic_step import apply_basic_step
