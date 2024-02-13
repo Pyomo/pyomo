@@ -729,7 +729,6 @@ class TestRepnUtils(unittest.TestCase):
         self.assertEqual(len(end), 10)
         self.assertIn((UnknownExpression, 6, 7), end)
 
-
     def test_BeforeChildDispatcher_registration(self):
         class BeforeChildDispatcherTester(BeforeChildDispatcher):
             @staticmethod
