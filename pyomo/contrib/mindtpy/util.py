@@ -944,7 +944,7 @@ def copy_var_list_values(
     Sets to zero for NonNegativeReals if necessary
 
     from_list : list
-        The variables that provides the values to copy from.
+        The variables that provide the values to copy from.
     to_list : list
         The variables that need to set value.
     config : ConfigBlock
