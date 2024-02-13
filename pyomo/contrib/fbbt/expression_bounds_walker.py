@@ -13,7 +13,7 @@ import logging
 from math import pi
 from pyomo.common.collections import ComponentMap
 from pyomo.contrib.fbbt.interval import (
-    Bool,
+    BoolFlag,
     eq,
     ineq,
     ranged,
@@ -81,7 +81,7 @@ class ExpressionBoundsBeforeChildDispatcher(BeforeChildDispatcher):
 
     @staticmethod
     def _before_native_logical(visitor, child):
-        return False, (Bool(child), Bool(child))
+        return False, (BoolFlag(child), BoolFlag(child))
 
     @staticmethod
     def _before_var(visitor, child):
@@ -266,7 +266,7 @@ class ExpressionBoundsExitNodeDispatcher(ExitNodeDispatcher):
         if isinstance(node, NumericExpression):
             ans = -inf, inf
         elif isinstance(node, BooleanExpression):
-            ans = Bool(False), Bool(True)
+            ans = BoolFlag(False), BoolFlag(True)
         else:
             super().unexpected_expression_type(visitor, node, *args)
         logger.warning(

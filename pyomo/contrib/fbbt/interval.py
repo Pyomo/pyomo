@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 inf = float('inf')
 
 
-class bool_(object):
+class _bool_flag(object):
     def __init__(self, val):
         self._val = val
 
@@ -49,11 +49,11 @@ class bool_(object):
     __rpow__ = _op
 
 
-_true = bool_(True)
-_false = bool_(False)
+_true = _bool_flag(True)
+_false = _bool_flag(False)
 
 
-def Bool(val):
+def BoolFlag(val):
     return _true if val else _false
 
 
