@@ -699,6 +699,7 @@ class TestRepnUtils(unittest.TestCase):
 
         self.assertEqual(end[node.__class__, 3, 4, 5, 6](None, node, *node.args), 6)
         self.assertEqual(len(end), 7)
+        # We don't cache etypes with more than 3 arguments
         self.assertNotIn((SumExpression, 3, 4, 5, 6), end)
 
         class NewProductExpression(ProductExpression):
@@ -717,14 +718,16 @@ class TestRepnUtils(unittest.TestCase):
             DeveloperError, r".*Unexpected expression node type 'UnknownExpression'"
         ):
             end[node.__class__](None, node, *node.args)
-        self.assertEqual(len(end), 8)
+        self.assertEqual(len(end), 9)
+        self.assertIn(UnknownExpression, end)
 
         node = UnknownExpression((6, 7))
         with self.assertRaisesRegex(
             DeveloperError, r".*Unexpected expression node type 'UnknownExpression'"
         ):
             end[node.__class__, 6, 7](None, node, *node.args)
-        self.assertEqual(len(end), 8)
+        self.assertEqual(len(end), 10)
+        self.assertIn((UnknownExpression, 6, 7), end)
 
     def test_BeforeChildDispatcher_registration(self):
         class BeforeChildDispatcherTester(BeforeChildDispatcher):
@@ -750,15 +753,14 @@ class TestRepnUtils(unittest.TestCase):
 
         node = 5
         self.assertEqual(bcd[node.__class__](None, node), (False, (_CONSTANT, 5)))
-        self.assertIs(bcd[int], bcd._before_native)
+        self.assertIs(bcd[int], bcd._before_native_numeric)
         self.assertEqual(len(bcd), 1)
 
         node = 'string'
         ans = bcd[node.__class__](None, node)
         self.assertEqual(ans, (False, (_CONSTANT, InvalidNumber(node))))
         self.assertEqual(
-            ''.join(ans[1][1].causes),
-            "'string' (<class 'str'>) is not a valid numeric type",
+            ''.join(ans[1][1].causes), "'string' (str) is not a valid numeric type"
         )
         self.assertIs(bcd[str], bcd._before_string)
         self.assertEqual(len(bcd), 2)
@@ -767,10 +769,9 @@ class TestRepnUtils(unittest.TestCase):
         ans = bcd[node.__class__](None, node)
         self.assertEqual(ans, (False, (_CONSTANT, InvalidNumber(node))))
         self.assertEqual(
-            ''.join(ans[1][1].causes),
-            "True (<class 'bool'>) is not a valid numeric type",
+            ''.join(ans[1][1].causes), "True (bool) is not a valid numeric type"
         )
-        self.assertIs(bcd[bool], bcd._before_invalid)
+        self.assertIs(bcd[bool], bcd._before_native_logical)
         self.assertEqual(len(bcd), 3)
 
         node = 1j
@@ -787,14 +788,14 @@ class TestRepnUtils(unittest.TestCase):
 
         node = new_int(5)
         self.assertEqual(bcd[node.__class__](None, node), (False, (_CONSTANT, 5)))
-        self.assertIs(bcd[new_int], bcd._before_native)
+        self.assertIs(bcd[new_int], bcd._before_native_numeric)
         self.assertEqual(len(bcd), 5)
 
         node = []
         ans = bcd[node.__class__](None, node)
         self.assertEqual(ans, (False, (_CONSTANT, InvalidNumber([]))))
         self.assertEqual(
-            ''.join(ans[1][1].causes), "[] (<class 'list'>) is not a valid numeric type"
+            ''.join(ans[1][1].causes), "[] (list) is not a valid numeric type"
         )
         self.assertIs(bcd[list], bcd._before_invalid)
         self.assertEqual(len(bcd), 6)
