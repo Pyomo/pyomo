@@ -1024,6 +1024,6 @@ def set_var_valid_value(
         var.set_value(0)
     else:
         raise ValueError(
-            "copy_var_list_values failed with variable {}, value = {} and rounded value = {}"
+            "set_var_valid_value failed with variable {}, value = {} and rounded value = {}"
             "".format(var.name, var_val, rounded_val)
         )
