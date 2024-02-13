@@ -350,8 +350,8 @@ class NLWriter(object):
             # This exception is included for compatibility with the
             # original NL writer v1.
             os.remove(filename)
-            os.remove(row_filename)
-            os.remove(col_filename)
+            os.remove(row_fname)
+            os.remove(col_fname)
             raise ValueError(
                 "No variables appear in the Pyomo model constraints or"
                 " objective. This is not supported by the NL file interface"
