@@ -699,6 +699,7 @@ class TestRepnUtils(unittest.TestCase):
 
         self.assertEqual(end[node.__class__, 3, 4, 5, 6](None, node, *node.args), 6)
         self.assertEqual(len(end), 7)
+        # We don't cache etypes with more than 3 arguments
         self.assertNotIn((SumExpression, 3, 4, 5, 6), end)
 
         class NewProductExpression(ProductExpression):
@@ -718,6 +719,7 @@ class TestRepnUtils(unittest.TestCase):
         ):
             end[node.__class__](None, node, *node.args)
         self.assertEqual(len(end), 9)
+        self.assertIn(UnknownExpression, end)
 
         node = UnknownExpression((6, 7))
         with self.assertRaisesRegex(
@@ -725,6 +727,8 @@ class TestRepnUtils(unittest.TestCase):
         ):
             end[node.__class__, 6, 7](None, node, *node.args)
         self.assertEqual(len(end), 10)
+        self.assertIn((UnknownExpression, 6, 7), end)
+
 
     def test_BeforeChildDispatcher_registration(self):
         class BeforeChildDispatcherTester(BeforeChildDispatcher):
