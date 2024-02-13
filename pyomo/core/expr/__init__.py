@@ -56,6 +56,7 @@ from .logical_expr import (
     #
     BooleanValue,
     BooleanConstant,
+    BooleanExpression,
     BooleanExpressionBase,
     #
     UnaryBooleanExpression,
