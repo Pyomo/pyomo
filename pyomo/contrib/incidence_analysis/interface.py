@@ -934,10 +934,10 @@ class IncidenceGraphInterface(object):
             fig.show()
 
     def add_edge(self, variable, constraint):
-        """Adds an edge between node0 and node1 in the incidence graph
+        """Adds an edge between variable and constraint in the incidence graph
 
         Parameters
-        ---------
+        ----------
         variable: VarData
             A variable in the graph
         constraint: ConstraintData
