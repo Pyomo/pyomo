@@ -57,10 +57,7 @@ def calc_jacobians(constraint_list, differentiate_mode):
     # Map nonlinear_constraint --> Map(
     #     variable --> jacobian of constraint w.r.t. variable)
     jacobians = ComponentMap()
-    if differentiate_mode == 'reverse_symbolic':
-        mode = EXPR.differentiate.Modes.reverse_symbolic
-    elif differentiate_mode == 'sympy':
-        mode = EXPR.differentiate.Modes.sympy
+    mode = EXPR.differentiate.Modes(differentiate_mode)
     for c in constraint_list:
         vars_in_constr = list(EXPR.identify_variables(c.body))
         jac_list = EXPR.differentiate(c.body, wrt_list=vars_in_constr, mode=mode)
