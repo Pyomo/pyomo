@@ -189,7 +189,7 @@ class TestLegacySolverWrapper(unittest.TestCase):
 
     def test_context_manager(self):
         with base.LegacySolverWrapper() as instance:
-            with self.assertRaises(AttributeError) as context:
+            with self.assertRaises(AttributeError):
                 instance.available()
 
     def test_map_config(self):
@@ -209,14 +209,14 @@ class TestLegacySolverWrapper(unittest.TestCase):
         self.assertFalse(instance.config.load_solutions)
         self.assertEqual(instance.config.time_limit, 20)
         # Report timing shouldn't be created because it no longer exists
-        with self.assertRaises(AttributeError) as context:
+        with self.assertRaises(AttributeError):
             print(instance.config.report_timing)
         # Keepfiles should not be created because we did not declare keepfiles on
         # the original config
-        with self.assertRaises(AttributeError) as context:
+        with self.assertRaises(AttributeError):
             print(instance.config.keepfiles)
         # We haven't implemented solver_io, suffixes, or logfile
-        with self.assertRaises(NotImplementedError) as context:
+        with self.assertRaises(NotImplementedError):
             instance._map_config(
                 False,
                 False,
@@ -231,7 +231,7 @@ class TestLegacySolverWrapper(unittest.TestCase):
                 None,
                 None,
             )
-        with self.assertRaises(NotImplementedError) as context:
+        with self.assertRaises(NotImplementedError):
             instance._map_config(
                 False,
                 False,
@@ -246,7 +246,7 @@ class TestLegacySolverWrapper(unittest.TestCase):
                 None,
                 None,
             )
-        with self.assertRaises(NotImplementedError) as context:
+        with self.assertRaises(NotImplementedError):
             instance._map_config(
                 False,
                 False,
@@ -266,7 +266,7 @@ class TestLegacySolverWrapper(unittest.TestCase):
             False, False, False, 20, False, False, None, None, None, True, None, None
         )
         self.assertEqual(instance.config.working_dir, os.getcwd())
-        with self.assertRaises(AttributeError) as context:
+        with self.assertRaises(AttributeError):
             print(instance.config.keepfiles)
 
     def test_map_results(self):

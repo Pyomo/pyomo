@@ -28,7 +28,7 @@ from pyomo.contrib.solver.base import SolverBase
 from pyomo.contrib.solver.config import SolverConfig
 from pyomo.contrib.solver.factory import SolverFactory
 from pyomo.contrib.solver.results import Results, TerminationCondition, SolutionStatus
-from .sol_reader import parse_sol_file
+from pyomo.contrib.solver.sol_reader import parse_sol_file
 from pyomo.contrib.solver.solution import SolSolutionLoader, SolutionLoader
 from pyomo.common.tee import TeeStream
 from pyomo.common.log import LogStream

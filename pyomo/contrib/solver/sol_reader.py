@@ -15,7 +15,7 @@ import io
 
 from pyomo.common.errors import DeveloperError, PyomoException
 from pyomo.repn.plugins.nl_writer import NLWriterInfo
-from .results import Results, SolutionStatus, TerminationCondition
+from pyomo.contrib.solver.results import Results, SolutionStatus, TerminationCondition
 
 
 class SolFileData:

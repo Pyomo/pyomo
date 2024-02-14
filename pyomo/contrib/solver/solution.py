@@ -16,7 +16,7 @@ from pyomo.core.base.constraint import _GeneralConstraintData
 from pyomo.core.base.var import _GeneralVarData
 from pyomo.common.collections import ComponentMap
 from pyomo.core.staleflag import StaleFlagManager
-from .sol_reader import SolFileData
+from pyomo.contrib.solver.sol_reader import SolFileData
 from pyomo.repn.plugins.nl_writer import NLWriterInfo
 from pyomo.core.expr.numvalue import value
 from pyomo.core.expr.visitor import replace_expressions
