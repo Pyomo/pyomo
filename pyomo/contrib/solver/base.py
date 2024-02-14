@@ -54,6 +54,13 @@ class SolverBase(abc.ABC):
     CONFIG = SolverConfig()
 
     def __init__(self, **kwds) -> None:
+        # We allow the user and/or developer to name the solver something else,
+        # if they really desire. Otherwise it defaults to the class name (all lowercase)
+        if "name" in kwds:
+            self.name = kwds["name"]
+            kwds.pop('name')
+        else:
+            self.name = type(self).__name__.lower()
         self.config = self.CONFIG(value=kwds)
 
     #

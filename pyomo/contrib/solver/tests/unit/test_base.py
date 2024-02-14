@@ -41,6 +41,7 @@ class TestSolverBase(unittest.TestCase):
         self.instance = base.SolverBase()
         self.assertFalse(self.instance.is_persistent())
         self.assertEqual(self.instance.version(), None)
+        self.assertEqual(self.instance.name, 'solverbase')
         self.assertEqual(self.instance.CONFIG, self.instance.config)
         self.assertEqual(self.instance.solve(None), None)
         self.assertEqual(self.instance.available(), None)
@@ -50,6 +51,7 @@ class TestSolverBase(unittest.TestCase):
         with base.SolverBase() as self.instance:
             self.assertFalse(self.instance.is_persistent())
             self.assertEqual(self.instance.version(), None)
+            self.assertEqual(self.instance.name, 'solverbase')
             self.assertEqual(self.instance.CONFIG, self.instance.config)
             self.assertEqual(self.instance.solve(None), None)
             self.assertEqual(self.instance.available(), None)
@@ -68,6 +70,11 @@ class TestSolverBase(unittest.TestCase):
         self.assertFalse(
             self.instance.Availability.__bool__(self.instance.Availability)
         )
+
+    @unittest.mock.patch.multiple(base.SolverBase, __abstractmethods__=set())
+    def test_custom_solver_name(self):
+        self.instance = base.SolverBase(name='my_unique_name')
+        self.assertEqual(self.instance.name, 'my_unique_name')
 
 
 class TestPersistentSolverBase(unittest.TestCase):
