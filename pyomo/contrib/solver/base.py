@@ -176,7 +176,7 @@ class PersistentSolverBase(SolverBase):
     methods from the direct solver base and adds those methods that are necessary
     for persistent solvers.
 
-    Example usage can be seen in solvers within APPSI.
+    Example usage can be seen in the GUROBI solver.
     """
 
     def is_persistent(self):
