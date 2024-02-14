@@ -90,9 +90,7 @@ developers.
             )
         exit_code = [int(exit_code_line[1]), int(exit_code_line[2])]
     else:
-        raise Exception(
-            f"ERROR READING `sol` FILE. Expected `objno`; received {line}."
-        )
+        raise Exception(f"ERROR READING `sol` FILE. Expected `objno`; received {line}.")
     result.extra_info.solver_message = message.strip().replace('\n', '; ')
     exit_code_message = ''
     if (exit_code[1] >= 0) and (exit_code[1] <= 99):

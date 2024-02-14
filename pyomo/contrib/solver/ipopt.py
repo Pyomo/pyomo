@@ -89,15 +89,15 @@ class ipoptResults(Results):
             implicit_domain=implicit_domain,
             visibility=visibility,
         )
-        self.timing_info.no_function_solve_time: Optional[
-            float
-        ] = self.timing_info.declare(
-            'no_function_solve_time', ConfigValue(domain=NonNegativeFloat)
+        self.timing_info.no_function_solve_time: Optional[float] = (
+            self.timing_info.declare(
+                'no_function_solve_time', ConfigValue(domain=NonNegativeFloat)
+            )
         )
-        self.timing_info.function_solve_time: Optional[
-            float
-        ] = self.timing_info.declare(
-            'function_solve_time', ConfigValue(domain=NonNegativeFloat)
+        self.timing_info.function_solve_time: Optional[float] = (
+            self.timing_info.declare(
+                'function_solve_time', ConfigValue(domain=NonNegativeFloat)
+            )
         )
 
 

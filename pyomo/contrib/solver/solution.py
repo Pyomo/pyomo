@@ -28,6 +28,7 @@ class SolutionLoaderBase(abc.ABC):
 
     Intent of this class and its children is to load the solution back into the model.
     """
+
     def load_vars(
         self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
     ) -> NoReturn:

@@ -19,9 +19,7 @@ class TestSolutionLoaderBase(unittest.TestCase):
         member_list = list(SolutionLoaderBase.__abstractmethods__)
         self.assertEqual(sorted(expected_list), sorted(member_list))
 
-    @unittest.mock.patch.multiple(
-        SolutionLoaderBase, __abstractmethods__=set()
-    )
+    @unittest.mock.patch.multiple(SolutionLoaderBase, __abstractmethods__=set())
     def test_solution_loader_base(self):
         self.instance = SolutionLoaderBase()
         self.assertEqual(self.instance.get_primals(), None)
