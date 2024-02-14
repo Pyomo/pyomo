@@ -1802,7 +1802,7 @@ class TestInterface(unittest.TestCase):
         igraph = IncidenceGraphInterface(m, linear_only=False)
         n_edges_original = igraph.n_edges
 
-        # Test edge is added between previously unconnectes nodes
+        # Test edge is added between previously unconnected nodes
         igraph.add_edge(m.x[1], m.eq3)
         n_edges_new = igraph.n_edges
         assert ComponentSet(igraph.get_adjacent_to(m.eq3)) == ComponentSet(m.x[:])
