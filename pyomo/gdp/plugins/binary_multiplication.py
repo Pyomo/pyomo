@@ -23,7 +23,9 @@ logger = logging.getLogger(__name__)
 
 @TransformationFactory.register(
     'gdp.binary_multiplication',
-    doc="Reformulate the GDP as an MINLP by multiplying f(x) <= 0 by y to get f(x) * y <= 0 where y is the binary corresponding to the Boolean indicator var of the Disjunct containing f(x) <= 0.",
+    doc="Reformulate the GDP as an MINLP by multiplying f(x) <= 0 by y to get "
+    "f(x) * y <= 0 where y is the binary corresponding to the Boolean indicator "
+    "var of the Disjunct containing f(x) <= 0.",
 )
 class GDPBinaryMultiplicationTransformation(GDP_to_MIP_Transformation):
     CONFIG = ConfigDict("gdp.binary_multiplication")
