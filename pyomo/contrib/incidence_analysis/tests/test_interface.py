@@ -1836,7 +1836,7 @@ class TestInterface(unittest.TestCase):
         m.eq4 = pyo.Constraint(expr=m.x[1] == 5 * m.x[2])
 
         igraph = IncidenceGraphInterface(m)
-        # Eliminate x[1] usinf eq4
+        # Eliminate x[1] using eq4
         for adj_con in igraph.get_adjacent_to(m.x[1]):
             for adj_var in igraph.get_adjacent_to(m.eq4):
                 igraph.add_edge(adj_var, adj_con)
