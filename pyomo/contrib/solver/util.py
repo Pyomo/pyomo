@@ -166,7 +166,7 @@ class DirectSolverUtils:
 
 
 class PersistentSolverUtils(abc.ABC):
-    def __init__(self, only_child_vars=False):
+    def __init__(self):
         self._model = None
         self._active_constraints = {}  # maps constraint to (lower, body, upper)
         self._vars = {}  # maps var id to (var, lb, ub, fixed, domain, value)
@@ -185,11 +185,10 @@ class PersistentSolverUtils(abc.ABC):
         self._vars_referenced_by_con = {}
         self._vars_referenced_by_obj = []
         self._expr_types = None
-        self._only_child_vars = only_child_vars
 
     def set_instance(self, model):
         saved_config = self.config
-        self.__init__(only_child_vars=self._only_child_vars)
+        self.__init__()
         self.config = saved_config
         self._model = model
         self.add_block(model)
@@ -257,8 +256,7 @@ class PersistentSolverUtils(abc.ABC):
             self._active_constraints[con] = (con.lower, con.body, con.upper)
             tmp = collect_vars_and_named_exprs(con.body)
             named_exprs, variables, fixed_vars, external_functions = tmp
-            if not self._only_child_vars:
-                self._check_for_new_vars(variables)
+            self._check_for_new_vars(variables)
             self._named_expressions[con] = [(e, e.expr) for e in named_exprs]
             if len(external_functions) > 0:
                 self._external_functions[con] = external_functions
@@ -285,8 +283,7 @@ class PersistentSolverUtils(abc.ABC):
                 )
             self._active_constraints[con] = tuple()
             variables = con.get_variables()
-            if not self._only_child_vars:
-                self._check_for_new_vars(variables)
+            self._check_for_new_vars(variables)
             self._named_expressions[con] = []
             self._vars_referenced_by_con[con] = variables
             for v in variables:
@@ -301,8 +298,7 @@ class PersistentSolverUtils(abc.ABC):
         if self._objective is not None:
             for v in self._vars_referenced_by_obj:
                 self._referenced_variables[id(v)][2] = None
-            if not self._only_child_vars:
-                self._check_to_remove_vars(self._vars_referenced_by_obj)
+            self._check_to_remove_vars(self._vars_referenced_by_obj)
             self._external_functions.pop(self._objective, None)
         if obj is not None:
             self._objective = obj
@@ -310,8 +306,7 @@ class PersistentSolverUtils(abc.ABC):
             self._objective_sense = obj.sense
             tmp = collect_vars_and_named_exprs(obj.expr)
             named_exprs, variables, fixed_vars, external_functions = tmp
-            if not self._only_child_vars:
-                self._check_for_new_vars(variables)
+            self._check_for_new_vars(variables)
             self._obj_named_expressions = [(i, i.expr) for i in named_exprs]
             if len(external_functions) > 0:
                 self._external_functions[obj] = external_functions
@@ -339,15 +334,6 @@ class PersistentSolverUtils(abc.ABC):
                 for _p in p.values():
                     param_dict[id(_p)] = _p
         self.add_params(list(param_dict.values()))
-        if self._only_child_vars:
-            self.add_variables(
-                list(
-                    dict(
-                        (id(var), var)
-                        for var in block.component_data_objects(Var, descend_into=True)
-                    ).values()
-                )
-            )
         self.add_constraints(
             list(
                 block.component_data_objects(Constraint, descend_into=True, active=True)
@@ -379,8 +365,7 @@ class PersistentSolverUtils(abc.ABC):
                 )
             for v in self._vars_referenced_by_con[con]:
                 self._referenced_variables[id(v)][0].pop(con)
-            if not self._only_child_vars:
-                self._check_to_remove_vars(self._vars_referenced_by_con[con])
+            self._check_to_remove_vars(self._vars_referenced_by_con[con])
             del self._active_constraints[con]
             del self._named_expressions[con]
             self._external_functions.pop(con, None)
@@ -454,17 +439,6 @@ class PersistentSolverUtils(abc.ABC):
                 )
             )
         )
-        if self._only_child_vars:
-            self.remove_variables(
-                list(
-                    dict(
-                        (id(var), var)
-                        for var in block.component_data_objects(
-                            ctype=Var, descend_into=True
-                        )
-                    ).values()
-                )
-            )
         self.remove_params(
             list(
                 dict(
@@ -512,20 +486,7 @@ class PersistentSolverUtils(abc.ABC):
         current_cons_dict = {}
         current_sos_dict = {}
         timer.start('vars')
-        if self._only_child_vars and (
-            config.check_for_new_or_removed_vars or config.update_vars
-        ):
-            current_vars_dict = {
-                id(v): v
-                for v in self._model.component_data_objects(Var, descend_into=True)
-            }
-            for v_id, v in current_vars_dict.items():
-                if v_id not in self._vars:
-                    new_vars.append(v)
-            for v_id, v_tuple in self._vars.items():
-                if v_id not in current_vars_dict:
-                    old_vars.append(v_tuple[0])
-        elif config.update_vars:
+        if config.update_vars:
             start_vars = {v_id: v_tuple[0] for v_id, v_tuple in self._vars.items()}
         timer.stop('vars')
         timer.start('params')
@@ -636,12 +597,7 @@ class PersistentSolverUtils(abc.ABC):
             self.add_sos_constraints(sos_to_update)
         timer.stop('cons')
         timer.start('vars')
-        if self._only_child_vars and config.update_vars:
-            vars_to_check = []
-            for v_id, v in current_vars_dict.items():
-                if v_id not in new_vars_set:
-                    vars_to_check.append(v)
-        elif config.update_vars:
+        if config.update_vars:
             end_vars = {v_id: v_tuple[0] for v_id, v_tuple in self._vars.items()}
             vars_to_check = [v for v_id, v in end_vars.items() if v_id in start_vars]
         if config.update_vars:
