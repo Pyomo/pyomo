@@ -139,6 +139,11 @@ class TestSolvers(unittest.TestCase):
         rc = res.solution_loader.get_reduced_costs()
         self.assertAlmostEqual(rc[m.x], 3)
         self.assertAlmostEqual(rc[m.y], 4)
+        m.obj.expr *= -1
+        res = opt.solve(m)
+        rc = res.solution_loader.get_reduced_costs()
+        self.assertAlmostEqual(rc[m.x], -3)
+        self.assertAlmostEqual(rc[m.y], -4)
 
     @parameterized.expand(input=_load_tests(all_solvers))
     def test_reduced_costs2(self, name: str, opt_class: Type[SolverBase]):
