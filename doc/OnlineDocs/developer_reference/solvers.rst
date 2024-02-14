@@ -9,8 +9,19 @@ Pyomo offers interfaces into multiple solvers, both commercial and open source.
 Interface Implementation
 ------------------------
 
-TBD: How to add a new interface; the pieces.
+All new interfaces should be built upon one of two classes (currently):
+``pyomo.contrib.solver.base.SolverBase`` or ``pyomo.contrib.solver.base.PersistentSolverBase``.
 
+All solvers should have the following:
+
+.. autoclass:: pyomo.contrib.solver.base.SolverBase
+   :members:
+
+Persistent solvers should also include:
+
+.. autoclass:: pyomo.contrib.solver.base.PersistentSolverBase
+   :show-inheritance:
+   :members:
 
 Results
 -------
@@ -56,4 +67,10 @@ returned solver messages or logs for more information.
 Solution
 --------
 
-TBD: How to load/parse a solution.
+Solutions can be loaded back into a model using a ``SolutionLoader``. A specific
+loader should be written for each unique case. Several have already been
+implemented. For example, for ``ipopt``:
+
+.. autoclass:: pyomo.contrib.solver.solution.SolSolutionLoader
+   :show-inheritance:
+   :members:
