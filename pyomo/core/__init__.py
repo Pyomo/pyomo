@@ -33,6 +33,8 @@ from pyomo.core.expr import (
     exactly,
     atleast,
     atmost,
+    all_different,
+    count_if,
     implies,
     lnot,
     xor,

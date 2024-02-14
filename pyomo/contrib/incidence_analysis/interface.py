@@ -45,8 +45,6 @@ from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import (
 )
 from pyomo.contrib.incidence_analysis.incidence import get_incident_variables
 from pyomo.contrib.pynumero.asl import AmplInterface
-from pyomo.repn.plugins.nl_writer import AMPLRepnVisitor, AMPLRepn, text_nl_template
-from pyomo.repn.util import FileDeterminism, FileDeterminism_to_SortComponents
 
 pyomo_nlp, pyomo_nlp_available = attempt_import(
     'pyomo.contrib.pynumero.interfaces.pyomo_nlp'

@@ -14,7 +14,7 @@
 import enum
 from pyomo.common.config import ConfigDict, ConfigValue, InEnum
 from pyomo.common.modeling import NOTSET
-from pyomo.repn.plugins.nl_writer import AMPLRepnVisitor, AMPLRepn, text_nl_template
+from pyomo.repn.plugins.nl_writer import AMPLRepnVisitor, text_nl_template
 from pyomo.repn.util import FileDeterminism, FileDeterminism_to_SortComponents
 
 

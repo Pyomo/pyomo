@@ -327,6 +327,7 @@ class TestMindtPy(unittest.TestCase):
                     value(model.objective.expr), model.optimal_value, places=1
                 )
 
+    # CYIPOPT will raise WARNING (W1002) during loading solution.
     @unittest.skipUnless(
         SolverFactory('cyipopt').available(exception_flag=False),
         "APPSI_IPOPT not available.",
