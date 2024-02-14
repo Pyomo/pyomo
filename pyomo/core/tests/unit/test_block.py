@@ -3407,6 +3407,21 @@ class TestBlock(unittest.TestCase):
             ],
         )
 
+    def test_private_data(self):
+        m = ConcreteModel()
+        m.b = Block()
+        m.b.b = Block([1, 2])
+
+        mfe = m.private_data('my_scope')
+        self.assertIsInstance(mfe, dict)
+        mfe2 = m.private_data('another_scope')
+        self.assertIsInstance(mfe2, dict)
+        self.assertEqual(len(m._private_data), 2)
+
+        mfe = m.b.private_data('my_scope')
+        self.assertIsInstance(mfe, dict)
+        
+
 
 if __name__ == "__main__":
     unittest.main()

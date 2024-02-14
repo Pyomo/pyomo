@@ -550,6 +550,7 @@ class _BlockData(ActiveComponentData):
         super(_BlockData, self).__setattr__('_ctypes', {})
         super(_BlockData, self).__setattr__('_decl', {})
         super(_BlockData, self).__setattr__('_decl_order', [])
+        self._private_data_dict = None
 
     def __getattr__(self, val):
         if val in ModelComponentFactory:
@@ -2240,6 +2241,17 @@ class Block(ActiveIndexedComponent):
 
         for key in sorted(self):
             _BlockData.display(self[key], filename, ostream, prefix)
+
+    @property
+    def _private_data(self):
+        if self._private_data_dict is None:
+            self._private_data_dict = {}
+        return self._private_data_dict
+
+    def private_data(self, scope):
+        if scope not in self._private_data:
+            self._private_data[scope] = {}
+        return self._private_data[scope]
 
 
 class ScalarBlock(_BlockData, Block):
