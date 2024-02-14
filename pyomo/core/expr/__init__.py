@@ -56,6 +56,7 @@ from .logical_expr import (
     #
     BooleanValue,
     BooleanConstant,
+    BooleanExpression,
     BooleanExpressionBase,
     #
     UnaryBooleanExpression,
@@ -70,6 +71,8 @@ from .logical_expr import (
     ExactlyExpression,
     AtMostExpression,
     AtLeastExpression,
+    AllDifferentExpression,
+    CountIfExpression,
     #
     land,
     lnot,
@@ -79,6 +82,8 @@ from .logical_expr import (
     exactly,
     atleast,
     atmost,
+    all_different,
+    count_if,
     implies,
 )
 from .numeric_expr import (

@@ -17,7 +17,7 @@ from pyomo.util.infeasible import log_infeasible_constraints
 from pyomo.contrib.mindtpy.tests.feasibility_pump1 import FeasPump1
 from pyomo.contrib.mindtpy.tests.feasibility_pump2 import FeasPump2
 
-required_solvers = ('ipopt', 'cplex')
+required_solvers = ('ipopt', 'glpk')
 # TODO: 'appsi_highs' will fail here.
 if all(SolverFactory(s).available(exception_flag=False) for s in required_solvers):
     subsolvers_available = True
@@ -65,6 +65,22 @@ class TestMindtPy(unittest.TestCase):
                     mip_solver=required_solvers[1],
                     nlp_solver=required_solvers[0],
                     absolute_bound_tolerance=1e-5,
+                )
+                log_infeasible_constraints(model)
+                self.assertTrue(is_feasible(model, self.get_config(opt)))
+
+    def test_FP_L1_norm(self):
+        """Test the feasibility pump algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            for model in model_list:
+                model = model.clone()
+                results = opt.solve(
+                    model,
+                    strategy='FP',
+                    mip_solver=required_solvers[1],
+                    nlp_solver=required_solvers[0],
+                    absolute_bound_tolerance=1e-5,
+                    fp_main_norm='L1',
                 )
                 log_infeasible_constraints(model)
                 self.assertTrue(is_feasible(model, self.get_config(opt)))
