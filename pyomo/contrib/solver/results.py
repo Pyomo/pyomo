@@ -22,18 +22,12 @@ from pyomo.common.config import (
     NonNegativeFloat,
     ADVANCED_OPTION,
 )
-from pyomo.common.errors import PyomoException
 from pyomo.opt.results.solution import SolutionStatus as LegacySolutionStatus
 from pyomo.opt.results.solver import (
     TerminationCondition as LegacyTerminationCondition,
     SolverStatus as LegacySolverStatus,
 )
-
-
-class SolverResultsError(PyomoException):
-    """
-    General exception to catch solver system errors
-    """
+from pyomo.common.timing import HierarchicalTimer
 
 
 class TerminationCondition(enum.Enum):
@@ -167,12 +161,16 @@ class Results(ConfigDict):
     iteration_count: int
         The total number of iterations.
     timing_info: ConfigDict
-        A ConfigDict containing three pieces of information:
-            start_time: UTC timestamp of when run was initiated
+        A ConfigDict containing two pieces of information:
+            start_timestamp: UTC timestamp of when run was initiated
             wall_time: elapsed wall clock time for entire process
-            solver_wall_time: elapsed wall clock time for solve call
+            timer: a HierarchicalTimer object containing timing data about the solve
     extra_info: ConfigDict
         A ConfigDict to store extra information such as solver messages.
+    solver_configuration: ConfigDict
+        A copy of the SolverConfig ConfigDict, for later inspection/reproducibility.
+    solver_log: str
+        (ADVANCED OPTION) Any solver log messages.
     """
 
     def __init__(
@@ -191,41 +189,85 @@ class Results(ConfigDict):
             visibility=visibility,
         )
 
-        self.solution_loader = self.declare('solution_loader', ConfigValue())
+        self.solution_loader = self.declare(
+            'solution_loader',
+            ConfigValue(
+                description="Object for loading the solution back into the model."
+            ),
+        )
         self.termination_condition: TerminationCondition = self.declare(
             'termination_condition',
             ConfigValue(
-                domain=In(TerminationCondition), default=TerminationCondition.unknown
+                domain=In(TerminationCondition),
+                default=TerminationCondition.unknown,
+                description="The reason the solver exited. This is a member of the "
+                "TerminationCondition enum.",
             ),
         )
         self.solution_status: SolutionStatus = self.declare(
             'solution_status',
-            ConfigValue(domain=In(SolutionStatus), default=SolutionStatus.noSolution),
+            ConfigValue(
+                domain=In(SolutionStatus),
+                default=SolutionStatus.noSolution,
+                description="The result of the solve call. This is a member of "
+                "the SolutionStatus enum.",
+            ),
         )
         self.incumbent_objective: Optional[float] = self.declare(
-            'incumbent_objective', ConfigValue(domain=float, default=None)
+            'incumbent_objective',
+            ConfigValue(
+                domain=float,
+                default=None,
+                description="If a feasible solution was found, this is the objective "
+                "value of the best solution found. If no feasible solution was found, this is None.",
+            ),
         )
         self.objective_bound: Optional[float] = self.declare(
-            'objective_bound', ConfigValue(domain=float, default=None)
+            'objective_bound',
+            ConfigValue(
+                domain=float,
+                default=None,
+                description="The best objective bound found. For minimization problems, "
+                "this is the lower bound. For maximization problems, this is the "
+                "upper bound. For solvers that do not provide an objective bound, "
+                "this should be -inf (minimization) or inf (maximization)",
+            ),
         )
         self.solver_name: Optional[str] = self.declare(
-            'solver_name', ConfigValue(domain=str)
+            'solver_name',
+            ConfigValue(domain=str, description="The name of the solver in use."),
         )
         self.solver_version: Optional[Tuple[int, ...]] = self.declare(
-            'solver_version', ConfigValue(domain=tuple)
+            'solver_version',
+            ConfigValue(
+                domain=tuple,
+                description="A tuple representing the version of the solver in use.",
+            ),
         )
         self.iteration_count: Optional[int] = self.declare(
-            'iteration_count', ConfigValue(domain=NonNegativeInt, default=None)
+            'iteration_count',
+            ConfigValue(
+                domain=NonNegativeInt,
+                default=None,
+                description="The total number of iterations.",
+            ),
         )
         self.timing_info: ConfigDict = self.declare(
             'timing_info', ConfigDict(implicit=True)
         )
 
         self.timing_info.start_timestamp: datetime = self.timing_info.declare(
-            'start_timestamp', ConfigValue(domain=Datetime)
+            'start_timestamp',
+            ConfigValue(
+                domain=Datetime, description="UTC timestamp of when run was initiated."
+            ),
         )
         self.timing_info.wall_time: Optional[float] = self.timing_info.declare(
-            'wall_time', ConfigValue(domain=NonNegativeFloat)
+            'wall_time',
+            ConfigValue(
+                domain=NonNegativeFloat,
+                description="Elapsed wall clock time for entire process.",
+            ),
         )
         self.extra_info: ConfigDict = self.declare(
             'extra_info', ConfigDict(implicit=True)
@@ -233,31 +275,24 @@ class Results(ConfigDict):
         self.solver_configuration: ConfigDict = self.declare(
             'solver_configuration',
             ConfigValue(
-                description="A copy of the config object used in the solve",
+                description="A copy of the config object used in the solve call.",
                 visibility=ADVANCED_OPTION,
             ),
         )
         self.solver_log: str = self.declare(
             'solver_log',
-            ConfigValue(domain=str, default=None, visibility=ADVANCED_OPTION),
+            ConfigValue(
+                domain=str,
+                default=None,
+                visibility=ADVANCED_OPTION,
+                description="Any solver log messages.",
+            ),
         )
 
     def display(
         self, content_filter=None, indent_spacing=2, ostream=None, visibility=0
     ):
         return super().display(content_filter, indent_spacing, ostream, visibility)
-
-
-class ResultsReader:
-    pass
-
-
-def parse_yaml():
-    pass
-
-
-def parse_json():
-    pass
 
 
 # Everything below here preserves backwards compatibility

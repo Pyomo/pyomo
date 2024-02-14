@@ -69,7 +69,7 @@ class TestSolutionStatus(unittest.TestCase):
 
 
 class TestResults(unittest.TestCase):
-    def test_declared_items(self):
+    def test_member_list(self):
         res = results.Results()
         expected_declared = {
             'extra_info',
@@ -88,7 +88,7 @@ class TestResults(unittest.TestCase):
         actual_declared = res._declared
         self.assertEqual(expected_declared, actual_declared)
 
-    def test_uninitialized(self):
+    def test_default_initialization(self):
         res = results.Results()
         self.assertIsNone(res.incumbent_objective)
         self.assertIsNone(res.objective_bound)
@@ -118,7 +118,7 @@ class TestResults(unittest.TestCase):
         ):
             res.solution_loader.get_reduced_costs()
 
-    def test_results(self):
+    def test_generated_results(self):
         m = pyo.ConcreteModel()
         m.x = ScalarVar()
         m.y = ScalarVar()

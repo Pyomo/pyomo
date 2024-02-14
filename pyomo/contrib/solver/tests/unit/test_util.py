@@ -102,15 +102,41 @@ class TestGenericUtils(unittest.TestCase):
         results = SolverResults()
         results.solver.status = SolverStatus.ok
         results.solver.termination_condition = LegacyTerminationCondition.optimal
+        # Both items satisfied
         self.assertTrue(check_optimal_termination(results))
+        # Termination condition not satisfied
         results.solver.termination_condition = LegacyTerminationCondition.unknown
         self.assertFalse(check_optimal_termination(results))
+        # Both not satisfied
         results.solver.termination_condition = SolverStatus.aborted
         self.assertFalse(check_optimal_termination(results))
 
-    # TODO: Left off here; need to make these tests
     def test_assert_optimal_termination_new_interface(self):
-        pass
+        results = Results()
+        results.solution_status = SolutionStatus.optimal
+        results.termination_condition = (
+            TerminationCondition.convergenceCriteriaSatisfied
+        )
+        assert_optimal_termination(results)
+        # Termination condition not satisfied
+        results.termination_condition = TerminationCondition.iterationLimit
+        with self.assertRaises(RuntimeError):
+            assert_optimal_termination(results)
+        # Both not satisfied
+        results.solution_status = SolutionStatus.noSolution
+        with self.assertRaises(RuntimeError):
+            assert_optimal_termination(results)
 
     def test_assert_optimal_termination_legacy_interface(self):
-        pass
+        results = SolverResults()
+        results.solver.status = SolverStatus.ok
+        results.solver.termination_condition = LegacyTerminationCondition.optimal
+        assert_optimal_termination(results)
+        # Termination condition not satisfied
+        results.solver.termination_condition = LegacyTerminationCondition.unknown
+        with self.assertRaises(RuntimeError):
+            assert_optimal_termination(results)
+        # Both not satisfied
+        results.solver.termination_condition = SolverStatus.aborted
+        with self.assertRaises(RuntimeError):
+            assert_optimal_termination(results)

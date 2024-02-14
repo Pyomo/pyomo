@@ -10,22 +10,30 @@
 #  ___________________________________________________________________________
 
 from pyomo.common import unittest
-from pyomo.contrib.solver import solution
+from pyomo.contrib.solver.solution import SolutionLoaderBase, PersistentSolutionLoader
 
 
-class TestPersistentSolverBase(unittest.TestCase):
+class TestSolutionLoaderBase(unittest.TestCase):
     def test_abstract_member_list(self):
         expected_list = ['get_primals']
-        member_list = list(solution.SolutionLoaderBase.__abstractmethods__)
+        member_list = list(SolutionLoaderBase.__abstractmethods__)
         self.assertEqual(sorted(expected_list), sorted(member_list))
 
     @unittest.mock.patch.multiple(
-        solution.SolutionLoaderBase, __abstractmethods__=set()
+        SolutionLoaderBase, __abstractmethods__=set()
     )
     def test_solution_loader_base(self):
-        self.instance = solution.SolutionLoaderBase()
+        self.instance = SolutionLoaderBase()
         self.assertEqual(self.instance.get_primals(), None)
         with self.assertRaises(NotImplementedError):
             self.instance.get_duals()
         with self.assertRaises(NotImplementedError):
             self.instance.get_reduced_costs()
+
+
+class TestPersistentSolutionLoader(unittest.TestCase):
+    def test_abstract_member_list(self):
+        # We expect no abstract members at this point because it's a real-life
+        # instantiation of SolutionLoaderBase
+        member_list = list(PersistentSolutionLoader('ipopt').__abstractmethods__)
+        self.assertEqual(member_list, [])

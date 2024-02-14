@@ -15,7 +15,7 @@ import io
 
 from pyomo.common.errors import DeveloperError
 from pyomo.repn.plugins.nl_writer import NLWriterInfo
-from .results import Results, SolverResultsError, SolutionStatus, TerminationCondition
+from .results import Results, SolutionStatus, TerminationCondition
 
 
 class SolFileData:
@@ -69,7 +69,7 @@ developers.
             line = sol_file.readline()
             model_objects.append(int(line))
     else:
-        raise SolverResultsError("ERROR READING `sol` FILE. No 'Options' line found.")
+        raise Exception("ERROR READING `sol` FILE. No 'Options' line found.")
     # Identify the total number of variables and constraints
     number_of_cons = model_objects[number_of_options + 1]
     number_of_vars = model_objects[number_of_options + 3]
@@ -85,12 +85,12 @@ developers.
     if line and ('objno' in line):
         exit_code_line = line.split()
         if len(exit_code_line) != 3:
-            raise SolverResultsError(
+            raise Exception(
                 f"ERROR READING `sol` FILE. Expected two numbers in `objno` line; received {line}."
             )
         exit_code = [int(exit_code_line[1]), int(exit_code_line[2])]
     else:
-        raise SolverResultsError(
+        raise Exception(
             f"ERROR READING `sol` FILE. Expected `objno`; received {line}."
         )
     result.extra_info.solver_message = message.strip().replace('\n', '; ')

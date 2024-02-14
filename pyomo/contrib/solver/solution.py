@@ -23,6 +23,11 @@ from pyomo.core.expr.visitor import replace_expressions
 
 
 class SolutionLoaderBase(abc.ABC):
+    """
+    Base class for all future SolutionLoader classes.
+
+    Intent of this class and its children is to load the solution back into the model.
+    """
     def load_vars(
         self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
     ) -> NoReturn:
@@ -58,7 +63,6 @@ class SolutionLoaderBase(abc.ABC):
         primals: ComponentMap
             Maps variables to solution values
         """
-        pass
 
     def get_duals(
         self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None
