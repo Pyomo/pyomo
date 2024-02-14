@@ -157,30 +157,21 @@ class GDPBinaryMultiplicationTransformation(GDP_to_MIP_Transformation):
         # over the constraint indices, but I don't think it matters a lot.)
         unique = len(newConstraint)
         name = c.local_name + "_%s" % unique
+        transformed = constraintMap['transformedConstraints'][c] = []
 
         lb, ub = c.lower, c.upper
         if (c.equality or lb is ub) and lb is not None:
             # equality
             newConstraint.add((name, i, 'eq'), (c.body - lb) * indicator_var == 0)
-            constraintMap['transformedConstraints'][c] = [newConstraint[name, i, 'eq']]
+            transformed.append(newConstraint[name, i, 'eq'])
             constraintMap['srcConstraints'][newConstraint[name, i, 'eq']] = c
         else:
             # inequality
             if lb is not None:
                 newConstraint.add((name, i, 'lb'), 0 <= (c.body - lb) * indicator_var)
-                constraintMap['transformedConstraints'][c] = [
-                    newConstraint[name, i, 'lb']
-                ]
+                transformed.append(newConstraint[name, i, 'lb'])
                 constraintMap['srcConstraints'][newConstraint[name, i, 'lb']] = c
             if ub is not None:
                 newConstraint.add((name, i, 'ub'), (c.body - ub) * indicator_var <= 0)
-                transformed = constraintMap['transformedConstraints'].get(c)
-                if transformed is not None:
-                    constraintMap['transformedConstraints'][c].append(
-                        newConstraint[name, i, 'ub']
-                    )
-                else:
-                    constraintMap['transformedConstraints'][c] = [
-                        newConstraint[name, i, 'ub']
-                    ]
+                transformed.append(newConstraint[name, i, 'ub'])
                 constraintMap['srcConstraints'][newConstraint[name, i, 'ub']] = c
