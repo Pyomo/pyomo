@@ -1653,11 +1653,11 @@ class TestGetIncidenceGraph(unittest.TestCase):
 
         sg_cons = [0, 2, 5]
         sg_vars = [i + len(constraints) for i in [2, 3]]
-        msg = "Subgraph is not bipartite"
+        msg = "Invalid bipartite sets."
         with self.assertRaisesRegex(RuntimeError, msg):
             subgraph = extract_bipartite_subgraph(graph, sg_cons, sg_vars)
 
-        sg_cons = [0, 2, 5]
+        sg_cons = [0, 2, 0]
         sg_vars = [i + len(constraints) for i in [2, 0, 3]]
         msg = "provided more than once"
         with self.assertRaisesRegex(RuntimeError, msg):
@@ -1848,6 +1848,33 @@ class TestInterface(unittest.TestCase):
 
         assert m.x[2] in ComponentSet(igraph.get_adjacent_to(m.eq1))
         assert m.x[2] in ComponentSet(igraph.get_adjacent_to(m.eq2))
+
+    def test_subgraph(self):
+        m = pyo.ConcreteModel()
+        m.I = pyo.Set(initialize=[1, 2, 3, 4])
+        m.v = pyo.Var(m.I, bounds=(0, None))
+        m.eq1 = pyo.Constraint(expr=m.v[1] ** 2 + m.v[2] ** 2 == 1.0)
+        m.eq2 = pyo.Constraint(expr=m.v[1] + 2.0 == m.v[3])
+        m.ineq1 = pyo.Constraint(expr=m.v[2] - m.v[3] ** 0.5 + m.v[4] ** 2 <= 1.0)
+        m.ineq2 = pyo.Constraint(expr=m.v[2] * m.v[4] >= 1.0)
+        m.ineq3 = pyo.Constraint(expr=m.v[1] >= m.v[4] ** 4)
+        m.obj = pyo.Objective(expr=-m.v[1] - m.v[2] + m.v[3] ** 2 + m.v[4] ** 2)
+        igraph = IncidenceGraphInterface(m)
+        eq_igraph = igraph.subgraph(igraph.variables, [m.eq1, m.eq2])
+        for i in range(len(igraph.variables)):
+            self.assertIs(igraph.variables[i], eq_igraph.variables[i])
+        self.assertEqual(
+            ComponentSet(eq_igraph.constraints), ComponentSet([m.eq1, m.eq2])
+        )
+
+        subgraph = eq_igraph.subgraph([m.v[1], m.v[3]], [m.eq1, m.eq2])
+        self.assertEqual(
+            ComponentSet(subgraph.get_adjacent_to(m.eq2)),
+            ComponentSet([m.v[1], m.v[3]]),
+        )
+        self.assertEqual(
+            ComponentSet(subgraph.get_adjacent_to(m.eq1)), ComponentSet([m.v[1]])
+        )
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
