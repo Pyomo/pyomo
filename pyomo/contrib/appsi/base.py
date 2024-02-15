@@ -1685,7 +1685,7 @@ class SolverFactoryClass(Factory):
             class LegacySolver(LegacySolverInterface, cls):
                 pass
 
-            LegacySolverFactory.register(name, doc)(LegacySolver)
+            LegacySolverFactory.register('appsi_' + name, doc)(LegacySolver)
 
             return cls
 
