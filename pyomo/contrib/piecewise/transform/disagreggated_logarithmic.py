@@ -101,11 +101,13 @@ class DisaggregatedLogarithmicInnerMIPTransformation(PiecewiseLinearTransformati
         # {P \in \mathcal{P} | B(P)_l = 0}
         def P_0_init(m, l):
             return [p for p in transBlock.simplex_indices if B[p][l] == 0]
+
         transBlock.P_0 = Set(transBlock.log_simplex_indices, initialize=P_0_init)
 
         # {P \in \mathcal{P} | B(P)_l = 1}
         def P_plus_init(m, l):
             return [p for p in transBlock.simplex_indices if B[p][l] == 1]
+
         transBlock.P_plus = Set(transBlock.log_simplex_indices, initialize=P_plus_init)
 
         # The lambda variables \lambda_{P,v} are indexed by the simplex and the point in it
@@ -128,6 +130,7 @@ class DisaggregatedLogarithmicInnerMIPTransformation(PiecewiseLinearTransformati
 
         # The branching rules, establishing using the binaries that only one simplex's lambda
         # coefficients may be nonzero
+        # Enabling lambdas when binaries are on
         @transBlock.Constraint(transBlock.log_simplex_indices)  # (6c.1)
         def simplex_choice_1(b, l):
             return (
@@ -139,6 +142,7 @@ class DisaggregatedLogarithmicInnerMIPTransformation(PiecewiseLinearTransformati
                 <= transBlock.binaries[l]
             )
 
+        # Disabling lambdas when binaries are on
         @transBlock.Constraint(transBlock.log_simplex_indices)  # (6c.2)
         def simplex_choice_2(b, l):
             return (
