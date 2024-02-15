@@ -253,7 +253,7 @@ setup_kwargs = dict(
             'sphinx_rtd_theme>0.5',
             'sphinxcontrib-jsmath',
             'sphinxcontrib-napoleon',
-            'enum-tools',
+            'enum_tools',
             'numpy',  # Needed by autodoc for pynumero
             'scipy',  # Needed by autodoc for pynumero
         ],
