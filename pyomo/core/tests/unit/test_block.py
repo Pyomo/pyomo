@@ -3407,6 +3407,39 @@ class TestBlock(unittest.TestCase):
             ],
         )
 
+    def test_private_data(self):
+        m = ConcreteModel()
+        m.b = Block()
+        m.b.b = Block([1, 2])
+
+        mfe = m.private_data()
+        self.assertIsInstance(mfe, dict)
+        self.assertEqual(len(mfe), 0)
+        self.assertEqual(len(m._private_data), 1)
+        self.assertIn('pyomo.core.tests.unit.test_block', m._private_data)
+        self.assertIs(mfe, m._private_data['pyomo.core.tests.unit.test_block'])
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "All keys in the 'private_data' dictionary must "
+            "be substrings of the caller's module name. "
+            "Received 'no mice here' when calling private_data on Block "
+            "'b'.",
+        ):
+            mfe2 = m.b.private_data('no mice here')
+
+        mfe3 = m.b.b[1].private_data('pyomo.core.tests')
+        self.assertIsInstance(mfe3, dict)
+        self.assertEqual(len(mfe3), 0)
+        self.assertIsInstance(m.b.b[1]._private_data, dict)
+        self.assertEqual(len(m.b.b[1]._private_data), 1)
+        self.assertIn('pyomo.core.tests', m.b.b[1]._private_data)
+        self.assertIs(mfe3, m.b.b[1]._private_data['pyomo.core.tests'])
+        mfe3['there are cookies'] = 'but no mice'
+
+        mfe4 = m.b.b[1].private_data('pyomo.core.tests')
+        self.assertIs(mfe4, mfe3)
+
 
 if __name__ == "__main__":
     unittest.main()
