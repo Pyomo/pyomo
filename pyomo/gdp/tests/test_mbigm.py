@@ -992,8 +992,7 @@ class IndexedDisjunction(unittest.TestCase):
 
 
 class EdgeCases(unittest.TestCase):
-    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
-    def test_calculate_Ms_infeasible_Disjunct(self):
+    def make_infeasible_disjunct_model(self):
         m = ConcreteModel()
         m.x = Var(bounds=(1, 12))
         m.y = Var(bounds=(19, 22))
@@ -1004,7 +1003,11 @@ class EdgeCases(unittest.TestCase):
                 [m.x == m.y - 9],  # x in interval [10, 12]
             ]
         )
+        return m
 
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    def test_calculate_Ms_infeasible_Disjunct(self):
+        m = self.make_infeasible_disjunct_model()
         out = StringIO()
         mbm = TransformationFactory('gdp.mbigm')
         with LoggingIntercept(out, 'pyomo.gdp.mbigm', logging.DEBUG):
@@ -1049,4 +1052,36 @@ class EdgeCases(unittest.TestCase):
             m.x - (m.y - 9)
             <= 0.0 * m.disjunction_disjuncts[0].binary_indicator_var
             - 12.0 * m.disjunction_disjuncts[1].binary_indicator_var,
+        )
+
+    @unittest.skipUnless(SolverFactory('ipopt').available(exception_flag=False),
+                         "Ipopt is not available")
+    def test_calculate_Ms_infeasible_Disjunct_local_solver(self):
+        m = self.make_infeasible_disjunct_model()
+        with self.assertRaisesRegex(
+                GDP_Error,
+                r"Unsuccessful solve to calculate M value to "
+                r"relax constraint 'disjunction_disjuncts\[1\].constraint\[1\]' "
+                r"on Disjunct 'disjunction_disjuncts\[1\]' when "
+                r"Disjunct 'disjunction_disjuncts\[0\]' is selected."):
+            TransformationFactory('gdp.mbigm').apply_to(
+                m, solver=SolverFactory('ipopt'),
+                reduce_bound_constraints=False)
+
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    def test_politely_ignore_BigM_Suffix(self):
+        m = self.make_infeasible_disjunct_model()
+        m.disjunction.disjuncts[0].deactivate()
+        m.disjunction.disjuncts[1].BigM = Suffix(direction=Suffix.LOCAL)
+        out = StringIO()
+        with LoggingIntercept(out, 'pyomo.gdp.mbigm', logging.DEBUG):
+            TransformationFactory('gdp.mbigm').apply_to(
+                m, reduce_bound_constraints=False)
+        warnings = out.getvalue()
+        self.assertIn(
+            r"Found active 'BigM' Suffix on 'disjunction_disjuncts[1]'. " 
+            r"The multiple bigM transformation does not currently " 
+            r"support specifying M's with Suffixes and is ignoring " 
+            r"this Suffix.",
+            warnings,
         )

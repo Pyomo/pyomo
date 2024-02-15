@@ -59,6 +59,8 @@ from weakref import ref as weakref_ref
 
 logger = logging.getLogger('pyomo.gdp.mbigm')
 
+_trusted_solvers = {'gurobi', 'cplex', 'cbc', 'glpk', 'scip', 'xpress_direct',
+                    'mosek_direct', 'baron', 'apsi_highs'}
 
 @TransformationFactory.register(
     'gdp.mbigm',
@@ -623,68 +625,25 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                     self.used_args[constraint, other_disjunct] = (lower_M, upper_M)
                 else:
                     (lower_M, upper_M) = (None, None)
+                unsuccessful_solve_msg = (
+                    "Unsuccessful solve to calculate M value to "
+                    "relax constraint '%s' on Disjunct '%s' when "
+                    "Disjunct '%s' is selected."
+                    % (constraint.name, disjunct.name, other_disjunct.name))
                 if constraint.lower is not None and lower_M is None:
                     # last resort: calculate
                     if lower_M is None:
                         scratch.obj.expr = constraint.body - constraint.lower
                         scratch.obj.sense = minimize
-                        results = self._config.solver.solve(
-                            other_disjunct, load_solutions=False
-                        )
-                        if (
-                            results.solver.termination_condition
-                            is TerminationCondition.infeasible
-                        ):
-                            logger.debug(
-                                "Disjunct '%s' is infeasible, deactivating."
-                                % other_disjunct.name
-                            )
-                            other_disjunct.deactivate()
-                            lower_M = 0
-                        elif (
-                            results.solver.termination_condition
-                            is not TerminationCondition.optimal
-                        ):
-                            raise GDP_Error(
-                                "Unsuccessful solve to calculate M value to "
-                                "relax constraint '%s' on Disjunct '%s' when "
-                                "Disjunct '%s' is selected."
-                                % (constraint.name, disjunct.name, other_disjunct.name)
-                            )
-                        else:
-                            other_disjunct.solutions.load_from(results)
-                            lower_M = value(scratch.obj.expr)
+                        lower_M = self._solve_disjunct_for_M(other_disjunct, scratch,
+                                                             unsuccessful_solve_msg)
                 if constraint.upper is not None and upper_M is None:
                     # last resort: calculate
                     if upper_M is None:
                         scratch.obj.expr = constraint.body - constraint.upper
                         scratch.obj.sense = maximize
-                        results = self._config.solver.solve(
-                            other_disjunct, load_solutions=False
-                        )
-                        if (
-                            results.solver.termination_condition
-                            is TerminationCondition.infeasible
-                        ):
-                            logger.debug(
-                                "Disjunct '%s' is infeasible, deactivating."
-                                % other_disjunct.name
-                            )
-                            other_disjunct.deactivate()
-                            upper_M = 0
-                        elif (
-                            results.solver.termination_condition
-                            is not TerminationCondition.optimal
-                        ):
-                            raise GDP_Error(
-                                "Unsuccessful solve to calculate M value to "
-                                "relax constraint '%s' on Disjunct '%s' when "
-                                "Disjunct '%s' is selected."
-                                % (constraint.name, disjunct.name, other_disjunct.name)
-                            )
-                        else:
-                            other_disjunct.solutions.load_from(results)
-                            upper_M = value(scratch.obj.expr)
+                        upper_M = self._solve_disjunct_for_M(other_disjunct, scratch,
+                                                             unsuccessful_solve_msg)
                 arg_Ms[constraint, other_disjunct] = (lower_M, upper_M)
                 transBlock._mbm_values[constraint, other_disjunct] = (lower_M, upper_M)
 
@@ -693,6 +652,37 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             blk.parent_block().del_component(blk)
 
         return arg_Ms
+
+    def _solve_disjunct_for_M(self, other_disjunct, scratch_block,
+                              unsuccessful_solve_msg):
+        solver = self._config.solver
+        solver_trusted = solver.name in _trusted_solvers
+        results = solver.solve(other_disjunct, load_solutions=False)
+        if (results.solver.termination_condition is
+            TerminationCondition.infeasible ):
+            if solver_trusted:
+                logger.debug(
+                    "Disjunct '%s' is infeasible, deactivating."
+                    % other_disjunct.name
+                )
+                other_disjunct.deactivate()
+                M = 0
+            else:
+                # This is a solver that might report
+                # 'infeasible' for local infeasibility, so we
+                # can't deactivate with confidence. To be
+                # conservative, we'll just complain about
+                # it. Post-solver-rewrite we will want to change
+                # this so that we check for 'proven_infeasible'
+                # and then we can abandon this hack
+                raise GDP_Error(unsuccessful_solve_msg)
+        elif (results.solver.termination_condition is not
+              TerminationCondition.optimal):
+            raise GDP_Error(unsuccessful_solve_msg)
+        else:
+            other_disjunct.solutions.load_from(results)
+            M = value(scratch_block.obj.expr)
+        return M
 
     def _warn_for_active_suffix(self, suffix, disjunct, active_disjuncts, Ms):
         if suffix.local_name == 'BigM':
