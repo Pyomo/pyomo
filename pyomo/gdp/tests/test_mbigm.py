@@ -1088,3 +1088,19 @@ class EdgeCases(unittest.TestCase):
             r"this Suffix.",
             warnings,
         )
+
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    def test_complain_for_unrecognized_Suffix(self):
+        m = self.make_infeasible_disjunct_model()
+        m.disjunction.disjuncts[0].deactivate()
+        m.disjunction.disjuncts[1].HiThere = Suffix(direction=Suffix.LOCAL)
+        out = StringIO()
+        with self.assertRaisesRegex(
+            GDP_Error,
+            r"Found active Suffix 'disjunction_disjuncts\[1\].HiThere' "
+            r"on Disjunct 'disjunction_disjuncts\[1\]'. The multiple bigM "
+            r"transformation does not support this Suffix.",
+        ):
+            TransformationFactory('gdp.mbigm').apply_to(
+                m, reduce_bound_constraints=False
+            )

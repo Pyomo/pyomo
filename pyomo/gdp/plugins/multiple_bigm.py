@@ -709,8 +709,8 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         else:
             raise GDP_Error(
                 "Found active Suffix '{0}' on Disjunct '{1}'. "
-                "The multiple bigM transformation does not currently "
-                "support Suffixes.".format(suffix.name, disjunct.name)
+                "The multiple bigM transformation does not "
+                "support this Suffix.".format(suffix.name, disjunct.name)
             )
 
     # These are all functions to retrieve transformed components from
