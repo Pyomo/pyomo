@@ -25,6 +25,7 @@
 #  ___________________________________________________________________________
 
 import argparse
+import datetime
 import enum
 import os
 import os.path
@@ -47,6 +48,7 @@ from pyomo.common.config import (
     ConfigDict,
     ConfigValue,
     ConfigList,
+    Datetime,
     MarkImmutable,
     ImmutableConfigValue,
     Bool,
@@ -737,6 +739,22 @@ class TestConfigDomains(unittest.TestCase):
                     'fail': {'option_f': 20},
                 }
             )
+
+    def test_Datetime(self):
+        c = ConfigDict()
+        c.declare('a', ConfigValue(domain=Datetime, default=None))
+        self.assertEqual(c.get('a').domain_name(), 'Datetime')
+
+        self.assertEqual(c.a, None)
+        c.a = datetime.datetime(2022, 1, 1)
+        self.assertEqual(c.a, datetime.datetime(2022, 1, 1))
+
+        with self.assertRaises(ValueError):
+            c.a = 5
+        with self.assertRaises(ValueError):
+            c.a = 'Hello'
+        with self.assertRaises(ValueError):
+            c.a = False
 
 
 class TestImmutableConfigValue(unittest.TestCase):

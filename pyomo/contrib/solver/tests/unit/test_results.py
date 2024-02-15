@@ -9,6 +9,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import sys
+from io import StringIO
+
 from pyomo.common import unittest
 from pyomo.common.config import ConfigDict
 from pyomo.contrib.solver import results
@@ -117,6 +120,25 @@ class TestResults(unittest.TestCase):
             RuntimeError, '.*does not currently have valid reduced costs.*'
         ):
             res.solution_loader.get_reduced_costs()
+
+    def test_display(self):
+        res = results.Results()
+        stream = StringIO()
+        res.display(ostream=stream)
+        expected_print = """solution_loader: None
+termination_condition: TerminationCondition.unknown
+solution_status: SolutionStatus.noSolution
+incumbent_objective: None
+objective_bound: None
+solver_name: None
+solver_version: None
+iteration_count: None
+timing_info:
+  start_timestamp: None
+  wall_time: None
+extra_info:
+"""
+        self.assertEqual(expected_print, stream.getvalue())
 
     def test_generated_results(self):
         m = pyo.ConcreteModel()

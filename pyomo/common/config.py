@@ -211,6 +211,8 @@ def Datetime(val):
 
     This domain will return the original object, assuming it is of the right type.
     """
+    if val is None:
+        return val
     if not isinstance(val, datetime.datetime):
         raise ValueError(f"Expected datetime object, but received {type(val)}.")
     return val
