@@ -12,15 +12,15 @@
 import pyomo.environ as _environ
 
 __doc__ = """
-Preview capabilities through `pyomo.__future__`
-===============================================
+Preview capabilities through ``pyomo.__future__``
+=================================================
 
 This module provides a uniform interface for gaining access to future
 ("preview") capabilities that are either slightly incompatible with the
 current official offering, or are still under development with the
 intent to replace the current offering.
 
-Currently supported `__future__` offerings include:
+Currently supported ``__future__`` offerings include:
 
 .. autosummary::
 
