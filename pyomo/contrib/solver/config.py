@@ -89,7 +89,7 @@ class SolverConfig(ConfigDict):
             ConfigValue(
                 domain=bool,
                 default=False,
-                description="If True, the names given to the solver will reflect the names of the Pyomo components."
+                description="If True, the names given to the solver will reflect the names of the Pyomo components. "
                 "Cannot be changed after set_instance is called.",
             ),
         )
