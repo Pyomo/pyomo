@@ -3412,18 +3412,44 @@ class TestBlock(unittest.TestCase):
         m.b = Block()
         m.b.b = Block([1, 2])
 
-        mfe = m.private_data('my_scope')
+        mfe = m.private_data()
         self.assertIsInstance(mfe, dict)
-        mfe2 = m.private_data('another_scope')
-        self.assertIsInstance(mfe2, dict)
-        self.assertEqual(len(m._private_data), 2)
+        self.assertEqual(len(mfe), 0)
+        self.assertEqual(len(m._private_data), 1)
+        self.assertIn('pyomo.core.tests.unit.test_block', m._private_data)
+        self.assertIs(mfe, m._private_data['pyomo.core.tests.unit.test_block'])
 
-        mfe = m.b.private_data('my_scope')
-        self.assertIsInstance(mfe, dict)
-        mfe1 = m.b.b[1].private_data('no mice here')
-        self.assertIsInstance(mfe1, dict)
-        mfe2 = m.b.b[2].private_data('no mice here')
-        self.assertIsInstance(mfe2, dict)
+        with self.assertRaisesRegex(
+            ValueError,
+            "All keys in the 'private_data' dictionary must "
+            "be substrings of the caller's module name. "
+            "Received 'no mice here' when calling private_data on Block "
+            "'b'.",
+        ):
+            mfe2 = m.b.private_data('no mice here')
+
+        mfe3 = m.b.b[1].private_data('pyomo.core.tests')
+        self.assertIsInstance(mfe3, dict)
+        self.assertEqual(len(mfe3), 0)
+        self.assertIsInstance(m.b.b[1]._private_data, dict)
+        self.assertEqual(len(m.b.b[1]._private_data), 1)
+        self.assertIn('pyomo.core.tests', m.b.b[1]._private_data)
+        self.assertIs(mfe3, m.b.b[1]._private_data['pyomo.core.tests'])
+        mfe3['there are cookies'] = 'but no mice'
+
+        mfe4 = m.b.b[1].private_data('pyomo.core.tests')
+        self.assertIs(mfe4, mfe3)
+
+        # mfe2 = m.private_data('another_scope')
+        # self.assertIsInstance(mfe2, dict)
+        # self.assertEqual(len(m._private_data), 2)
+
+        # mfe = m.b.private_data('my_scope')
+        # self.assertIsInstance(mfe, dict)
+        # mfe1 = m.b.b[1].private_data('no mice here')
+        # self.assertIsInstance(mfe1, dict)
+        # mfe2 = m.b.b[2].private_data('no mice here')
+        # self.assertIsInstance(mfe2, dict)
 
 
 if __name__ == "__main__":

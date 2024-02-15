@@ -29,7 +29,7 @@ import weakref
 import textwrap
 from contextlib import contextmanager
 
-from inspect import isclass
+from inspect import isclass, currentframe
 from itertools import filterfalse, chain
 from operator import itemgetter, attrgetter
 from io import StringIO
@@ -2029,7 +2029,17 @@ Components must now specify their rules explicitly using 'rule=' keywords."""
                 comp._create_objects_for_deepcopy(memo, component_list)
         return _ans
 
-    def private_data(self, scope):
+    def private_data(self, scope=None):
+        mod = currentframe().f_back.f_globals['__name__']
+        if scope is None:
+            scope = mod
+        elif not mod.startswith(scope):
+            raise ValueError(
+                "All keys in the 'private_data' dictionary must "
+                "be substrings of the caller's module name. "
+                "Received '%s' when calling private_data on Block "
+                "'%s'." % (scope, self.name)
+            )
         if self._private_data is None:
             self._private_data = {}
         if scope not in self._private_data:
