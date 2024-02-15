@@ -55,7 +55,7 @@ class TestSolvers(unittest.TestCase):
         # this test is for issue #2888
         opt: SolverBase = opt_class()
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
         m = pe.ConcreteModel()
         m.x = pe.Var(bounds=(2, None))
         m.obj = pe.Objective(expr=m.x)
@@ -75,7 +75,7 @@ class TestSolvers(unittest.TestCase):
     def test_stale_vars(self, name: str, opt_class: Type[SolverBase]):
         opt: SolverBase = opt_class()
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.y = pe.Var()
@@ -116,7 +116,7 @@ class TestSolvers(unittest.TestCase):
     def test_range_constraint(self, name: str, opt_class: Type[SolverBase]):
         opt: SolverBase = opt_class()
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.obj = pe.Objective(expr=m.x)
@@ -137,7 +137,7 @@ class TestSolvers(unittest.TestCase):
     def test_reduced_costs(self, name: str, opt_class: Type[SolverBase]):
         opt: SolverBase = opt_class()
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
         m = pe.ConcreteModel()
         m.x = pe.Var(bounds=(-1, 1))
         m.y = pe.Var(bounds=(-2, 2))
@@ -159,7 +159,7 @@ class TestSolvers(unittest.TestCase):
     def test_reduced_costs2(self, name: str, opt_class: Type[SolverBase]):
         opt: SolverBase = opt_class()
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
         m = pe.ConcreteModel()
         m.x = pe.Var(bounds=(-1, 1))
         m.obj = pe.Objective(expr=m.x)
@@ -179,7 +179,7 @@ class TestSolvers(unittest.TestCase):
     def test_param_changes(self, name: str, opt_class: Type[SolverBase]):
         opt: SolverBase = opt_class()
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.y = pe.Var()
@@ -219,7 +219,7 @@ class TestSolvers(unittest.TestCase):
         """
         opt: SolverBase = opt_class()
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.y = pe.Var()
@@ -255,7 +255,7 @@ class TestSolvers(unittest.TestCase):
     def test_equality(self, name: str, opt_class: Type[SolverBase]):
         opt: SolverBase = opt_class()
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
         if isinstance(opt, ipopt):
             opt.config.writer_config.linear_presolve = False
         m = pe.ConcreteModel()
@@ -293,7 +293,7 @@ class TestSolvers(unittest.TestCase):
     def test_linear_expression(self, name: str, opt_class: Type[SolverBase]):
         opt: SolverBase = opt_class()
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.y = pe.Var()
@@ -331,7 +331,7 @@ class TestSolvers(unittest.TestCase):
     def test_no_objective(self, name: str, opt_class: Type[SolverBase]):
         opt: SolverBase = opt_class()
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.y = pe.Var()
@@ -362,7 +362,7 @@ class TestSolvers(unittest.TestCase):
     def test_add_remove_cons(self, name: str, opt_class: Type[SolverBase]):
         opt: SolverBase = opt_class()
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.y = pe.Var()
@@ -416,7 +416,7 @@ class TestSolvers(unittest.TestCase):
     def test_results_infeasible(self, name: str, opt_class: Type[SolverBase]):
         opt: SolverBase = opt_class()
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.y = pe.Var()
@@ -465,7 +465,7 @@ class TestSolvers(unittest.TestCase):
     def test_duals(self, name: str, opt_class: Type[SolverBase]):
         opt: SolverBase = opt_class()
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.y = pe.Var()
@@ -490,7 +490,7 @@ class TestSolvers(unittest.TestCase):
     ):
         opt: SolverBase = opt_class()
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.y = pe.Var()
@@ -512,7 +512,7 @@ class TestSolvers(unittest.TestCase):
     def test_mutable_quadratic_objective(self, name: str, opt_class: Type[SolverBase]):
         opt: SolverBase = opt_class()
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.y = pe.Var()
@@ -542,7 +542,7 @@ class TestSolvers(unittest.TestCase):
                     treat_fixed_vars_as_params
                 )
             if not opt.available():
-                raise unittest.SkipTest
+                raise unittest.SkipTest(f'Solver {opt.name} not available.')
             m = pe.ConcreteModel()
             m.x = pe.Var()
             m.x.fix(0)
@@ -580,7 +580,7 @@ class TestSolvers(unittest.TestCase):
         if opt.is_persistent():
             opt.config.auto_updates.treat_fixed_vars_as_params = True
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.x.fix(0)
@@ -618,7 +618,7 @@ class TestSolvers(unittest.TestCase):
         if opt.is_persistent():
             opt.config.auto_updates.treat_fixed_vars_as_params = True
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.y = pe.Var()
@@ -634,7 +634,7 @@ class TestSolvers(unittest.TestCase):
         if opt.is_persistent():
             opt.config.auto_updates.treat_fixed_vars_as_params = True
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.y = pe.Var()
@@ -652,7 +652,7 @@ class TestSolvers(unittest.TestCase):
     def test_mutable_param_with_range(self, name: str, opt_class: Type[SolverBase]):
         opt: SolverBase = opt_class()
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
         try:
             import numpy as np
         except:
@@ -746,7 +746,7 @@ class TestSolvers(unittest.TestCase):
     def test_add_and_remove_vars(self, name: str, opt_class: Type[SolverBase]):
         opt = opt_class()
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
         m = pe.ConcreteModel()
         m.y = pe.Var(bounds=(-1, None))
         m.obj = pe.Objective(expr=m.y)
@@ -792,7 +792,7 @@ class TestSolvers(unittest.TestCase):
     def test_exp(self, name: str, opt_class: Type[SolverBase]):
         opt = opt_class()
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.y = pe.Var()
@@ -806,7 +806,7 @@ class TestSolvers(unittest.TestCase):
     def test_log(self, name: str, opt_class: Type[SolverBase]):
         opt = opt_class()
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
         m = pe.ConcreteModel()
         m.x = pe.Var(initialize=1)
         m.y = pe.Var()
@@ -820,7 +820,7 @@ class TestSolvers(unittest.TestCase):
     def test_with_numpy(self, name: str, opt_class: Type[SolverBase]):
         opt: SolverBase = opt_class()
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.y = pe.Var()
@@ -848,7 +848,7 @@ class TestSolvers(unittest.TestCase):
     def test_bounds_with_params(self, name: str, opt_class: Type[SolverBase]):
         opt: SolverBase = opt_class()
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
         m = pe.ConcreteModel()
         m.y = pe.Var()
         m.p = pe.Param(mutable=True)
@@ -880,7 +880,7 @@ class TestSolvers(unittest.TestCase):
     def test_solution_loader(self, name: str, opt_class: Type[SolverBase]):
         opt: SolverBase = opt_class()
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
         m = pe.ConcreteModel()
         m.x = pe.Var(bounds=(1, None))
         m.y = pe.Var()
@@ -930,7 +930,7 @@ class TestSolvers(unittest.TestCase):
     def test_time_limit(self, name: str, opt_class: Type[SolverBase]):
         opt: SolverBase = opt_class()
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
         from sys import platform
 
         if platform == 'win32':
@@ -986,7 +986,7 @@ class TestSolvers(unittest.TestCase):
     def test_objective_changes(self, name: str, opt_class: Type[SolverBase]):
         opt: SolverBase = opt_class()
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.y = pe.Var()
@@ -1050,7 +1050,7 @@ class TestSolvers(unittest.TestCase):
     def test_domain(self, name: str, opt_class: Type[SolverBase]):
         opt: SolverBase = opt_class()
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
         m = pe.ConcreteModel()
         m.x = pe.Var(bounds=(1, None), domain=pe.NonNegativeReals)
         m.obj = pe.Objective(expr=m.x)
@@ -1074,7 +1074,7 @@ class TestSolvers(unittest.TestCase):
     def test_domain_with_integers(self, name: str, opt_class: Type[SolverBase]):
         opt: SolverBase = opt_class()
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
         m = pe.ConcreteModel()
         m.x = pe.Var(bounds=(-1, None), domain=pe.NonNegativeIntegers)
         m.obj = pe.Objective(expr=m.x)
@@ -1098,7 +1098,7 @@ class TestSolvers(unittest.TestCase):
     def test_fixed_binaries(self, name: str, opt_class: Type[SolverBase]):
         opt: SolverBase = opt_class()
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
         m = pe.ConcreteModel()
         m.x = pe.Var(domain=pe.Binary)
         m.y = pe.Var()
@@ -1125,7 +1125,7 @@ class TestSolvers(unittest.TestCase):
     def test_with_gdp(self, name: str, opt_class: Type[SolverBase]):
         opt: SolverBase = opt_class()
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
 
         m = pe.ConcreteModel()
         m.x = pe.Var(bounds=(-10, 10))
@@ -1156,7 +1156,7 @@ class TestSolvers(unittest.TestCase):
     def test_variables_elsewhere(self, name: str, opt_class: Type[SolverBase]):
         opt: SolverBase = opt_class()
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
 
         m = pe.ConcreteModel()
         m.x = pe.Var()
@@ -1183,7 +1183,7 @@ class TestSolvers(unittest.TestCase):
     def test_variables_elsewhere2(self, name: str, opt_class: Type[SolverBase]):
         opt: SolverBase = opt_class()
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
 
         m = pe.ConcreteModel()
         m.x = pe.Var()
@@ -1218,7 +1218,7 @@ class TestSolvers(unittest.TestCase):
     def test_bug_1(self, name: str, opt_class: Type[SolverBase]):
         opt: SolverBase = opt_class()
         if not opt.available():
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
 
         m = pe.ConcreteModel()
         m.x = pe.Var(bounds=(3, 7))
@@ -1246,7 +1246,7 @@ class TestSolvers(unittest.TestCase):
         for fixed_var_option in [True, False]:
             opt: SolverBase = opt_class()
             if not opt.available():
-                raise unittest.SkipTest
+                raise unittest.SkipTest(f'Solver {opt.name} not available.')
             if opt.is_persistent():
                 opt.config.auto_updates.treat_fixed_vars_as_params = fixed_var_option
 
@@ -1272,7 +1272,7 @@ class TestLegacySolverInterface(unittest.TestCase):
     def test_param_updates(self, name: str, opt_class: Type[SolverBase]):
         opt = pe.SolverFactory(name + '_v2')
         if not opt.available(exception_flag=False):
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.y = pe.Var()
@@ -1302,7 +1302,7 @@ class TestLegacySolverInterface(unittest.TestCase):
     def test_load_solutions(self, name: str, opt_class: Type[SolverBase]):
         opt = pe.SolverFactory(name + '_v2')
         if not opt.available(exception_flag=False):
-            raise unittest.SkipTest
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.obj = pe.Objective(expr=m.x)
