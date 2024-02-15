@@ -23,7 +23,7 @@ from pyomo.common.timing import HierarchicalTimer
 
 class SolverConfig(ConfigDict):
     """
-    Base config values for all solver interfaces
+    Base config for all direct solver interfaces
     """
 
     def __init__(
@@ -118,13 +118,14 @@ class SolverConfig(ConfigDict):
 
 class BranchAndBoundConfig(SolverConfig):
     """
+    Base config for all direct MIP solver interfaces
+
     Attributes
     ----------
-    mip_gap: float
-        Solver will terminate if the mip gap is less than mip_gap
-    relax_integrality: bool
-        If True, all integer variables will be relaxed to continuous
-        variables before solving
+    rel_gap: float
+        The relative value of the gap in relation to the best bound
+    abs_gap: float
+        The absolute value of the difference between the incumbent and best bound
     """
 
     def __init__(
@@ -144,10 +145,20 @@ class BranchAndBoundConfig(SolverConfig):
         )
 
         self.rel_gap: Optional[float] = self.declare(
-            'rel_gap', ConfigValue(domain=NonNegativeFloat)
+            'rel_gap',
+            ConfigValue(
+                domain=NonNegativeFloat,
+                description="Optional termination condition; the relative value of the "
+                "gap in relation to the best bound",
+            ),
         )
         self.abs_gap: Optional[float] = self.declare(
-            'abs_gap', ConfigValue(domain=NonNegativeFloat)
+            'abs_gap',
+            ConfigValue(
+                domain=NonNegativeFloat,
+                description="Optional termination condition; the absolute value of the "
+                "difference between the incumbent and best bound",
+            ),
         )
 
 
@@ -315,6 +326,9 @@ class AutoUpdateConfig(ConfigDict):
 
 
 class PersistentSolverConfig(SolverConfig):
+    """
+    Base config for all persistent solver interfaces
+    """
     def __init__(
         self,
         description=None,
@@ -337,6 +351,9 @@ class PersistentSolverConfig(SolverConfig):
 
 
 class PersistentBranchAndBoundConfig(BranchAndBoundConfig):
+    """
+    Base config for all persistent MIP solver interfaces
+    """
     def __init__(
         self,
         description=None,

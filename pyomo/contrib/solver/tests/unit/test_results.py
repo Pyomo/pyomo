@@ -137,7 +137,10 @@ timing_info:
   wall_time: None
 extra_info:
 """
-        self.assertEqual(expected_print, stream.getvalue())
+        out = stream.getvalue()
+        if 'null' in out:
+            out = out.replace('null', 'None')
+        self.assertEqual(expected_print, out)
 
     def test_generated_results(self):
         m = pyo.ConcreteModel()
