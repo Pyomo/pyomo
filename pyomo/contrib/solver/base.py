@@ -177,6 +177,7 @@ class PersistentSolverBase(SolverBase):
 
     Example usage can be seen in the Gurobi interface.
     """
+
     CONFIG = PersistentSolverConfig()
 
     def __init__(self, **kwds):
