@@ -22,8 +22,8 @@ available are:
    :header-rows: 1
 
    * - Solver
-     - ``SolverFactory``([1]) Name
-     - ``SolverFactory``([3]) Name
+     - ``SolverFactory`` ([1]) Name
+     - ``SolverFactory`` ([3]) Name
    * - ipopt
      - ``ipopt_v2``
      - ``ipopt``
