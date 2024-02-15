@@ -41,14 +41,6 @@ from pyomo.contrib.solver.results import (
 class SolverBase(abc.ABC):
     """
     Base class upon which direct solver interfaces can be built.
-
-    This base class contains the required methods for all direct solvers:
-        - available: Determines whether the solver is able to be run, combining
-        both whether it can be found on the system and if the license is valid.
-        - config: The configuration method for solver objects.
-        - solve: The main method of every solver
-        - version: The version of the solver
-        - is_persistent: Set to false for all direct solvers.
     """
 
     CONFIG = SolverConfig()

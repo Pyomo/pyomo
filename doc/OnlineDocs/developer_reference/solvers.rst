@@ -1,9 +1,79 @@
-Solver Interfaces
-=================
+Future Solver Interface Changes
+===============================
 
 Pyomo offers interfaces into multiple solvers, both commercial and open source.
+To support better capabilities for solver interfaces, the Pyomo team is actively
+redesigning the existing interfaces to make them more maintainable and intuitive
+for use. Redesigned interfaces can be found in ``pyomo.contrib.solver``.
 
 .. currentmodule:: pyomo.contrib.solver
+
+
+New Interface Usage
+-------------------
+
+The new interfaces have two modes: backwards compatible and future capability.
+To use the backwards compatible version, simply use the ``SolverFactory``
+as usual and replace the solver name with the new version. Currently, the new
+versions available are:
+
+.. list-table:: Available Redesigned Solvers
+   :widths: 25 25
+   :header-rows: 1
+
+   * - Solver
+     - ``SolverFactory`` Name
+   * - ipopt
+     - ``ipopt_v2``
+   * - GUROBI
+     - ``gurobi_v2``
+
+Backwards Compatible Mode
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+   import pyomo.environ as pyo
+   from pyomo.contrib.solver.util import assert_optimal_termination
+
+   model = pyo.ConcreteModel()
+   model.x = pyo.Var(initialize=1.5)
+   model.y = pyo.Var(initialize=1.5)
+
+   def rosenbrock(model):
+       return (1.0 - model.x) ** 2 + 100.0 * (model.y - model.x**2) ** 2
+
+   model.obj = pyo.Objective(rule=rosenbrock, sense=pyo.minimize)
+
+   status = pyo.SolverFactory('ipopt_v2').solve(model)
+   assert_optimal_termination(status)
+   model.pprint()
+
+Future Capability Mode
+^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+   import pyomo.environ as pyo
+   from pyomo.contrib.solver.util import assert_optimal_termination
+   from pyomo.contrib.solver.ipopt import ipopt
+
+   model = pyo.ConcreteModel()
+   model.x = pyo.Var(initialize=1.5)
+   model.y = pyo.Var(initialize=1.5)
+
+   def rosenbrock(model):
+       return (1.0 - model.x) ** 2 + 100.0 * (model.y - model.x**2) ** 2
+
+   model.obj = pyo.Objective(rule=rosenbrock, sense=pyo.minimize)
+
+   opt = ipopt()
+   status = opt.solve(model)
+   assert_optimal_termination(status)
+   # Displays important results information; only available in future capability mode
+   status.display()
+   model.pprint()
+
 
 
 Interface Implementation
