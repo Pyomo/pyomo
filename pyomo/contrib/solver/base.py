@@ -41,8 +41,7 @@ from pyomo.contrib.solver.results import (
 class SolverBase(abc.ABC):
     """
     This base class defines the methods required for all solvers:
-        - available: Determines whether the solver is able to be run, 
-          combining both whether it can be found on the system and if the license is valid.
+        - available: Determines whether the solver is able to be run, combining both whether it can be found on the system and if the license is valid.
         - solve: The main method of every solver
         - version: The version of the solver
         - is_persistent: Set to false for all non-persistent solvers.

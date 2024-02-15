@@ -104,7 +104,6 @@ class TestPersistentSolverBase(unittest.TestCase):
         expected_list = [
             'Availability',
             'CONFIG',
-            '_abc_impl',
             '_get_duals',
             '_get_primals',
             '_get_reduced_costs',
@@ -129,7 +128,7 @@ class TestPersistentSolverBase(unittest.TestCase):
         method_list = [
             method
             for method in dir(base.PersistentSolverBase)
-            if method.startswith('__') is False
+            if (method.startswith('__') or method.startswith('_abc')) is False
         ]
         self.assertEqual(sorted(expected_list), sorted(method_list))
 

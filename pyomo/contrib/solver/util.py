@@ -16,7 +16,7 @@ from pyomo.core.expr.visitor import ExpressionValueVisitor, nonpyomo_leaf_types
 import pyomo.core.expr as EXPR
 from pyomo.core.base.constraint import _GeneralConstraintData, Constraint
 from pyomo.core.base.sos import _SOSConstraintData, SOSConstraint
-from pyomo.core.base.var import _GeneralVarData, Var
+from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.base.param import _ParamData, Param
 from pyomo.core.base.objective import Objective, _GeneralObjectiveData
 from pyomo.common.collections import ComponentMap

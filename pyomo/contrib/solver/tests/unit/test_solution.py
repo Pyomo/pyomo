@@ -80,3 +80,9 @@ class TestPersistentSolutionLoader(unittest.TestCase):
         self.instance = PersistentSolutionLoader('ipopt')
         self.assertTrue(self.instance._valid)
         self.assertEqual(self.instance._solver, 'ipopt')
+
+    def test_invalid(self):
+        self.instance = PersistentSolutionLoader('ipopt')
+        self.instance.invalidate()
+        with self.assertRaises(RuntimeError):
+            self.instance.get_primals()

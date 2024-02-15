@@ -1,7 +1,18 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 from collections.abc import Iterable
 import logging
 import math
-from typing import List, Dict, Optional
+from typing import List, Optional
 from pyomo.common.collections import ComponentSet, ComponentMap, OrderedSet
 from pyomo.common.log import LogStream
 from pyomo.common.dependencies import attempt_import
@@ -9,10 +20,10 @@ from pyomo.common.errors import PyomoException
 from pyomo.common.tee import capture_output, TeeStream
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.shutdown import python_is_shutting_down
-from pyomo.common.config import ConfigValue, NonNegativeInt
+from pyomo.common.config import ConfigValue
 from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
-from pyomo.core.base.var import Var, _GeneralVarData
+from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.base.constraint import _GeneralConstraintData
 from pyomo.core.base.sos import _SOSConstraintData
 from pyomo.core.base.param import _ParamData
@@ -28,7 +39,6 @@ from pyomo.core.staleflag import StaleFlagManager
 import sys
 import datetime
 import io
-from pyomo.contrib.solver.factory import SolverFactory
 
 logger = logging.getLogger(__name__)
 
@@ -1137,9 +1147,9 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         """
         if attr in {'Sense', 'RHS', 'ConstrName'}:
             raise ValueError(
-                'Linear constraint attr {0} cannot be set with'
+                'Linear constraint attr {0} cannot be set with'.format(attr)
                 + ' the set_linear_constraint_attr method. Please use'
-                + ' the remove_constraint and add_constraint methods.'.format(attr)
+                + ' the remove_constraint and add_constraint methods.'
             )
         self._pyomo_con_to_solver_con_map[con].setAttr(attr, val)
         self._needs_updated = True
@@ -1166,9 +1176,9 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         """
         if attr in {'LB', 'UB', 'VType', 'VarName'}:
             raise ValueError(
-                'Var attr {0} cannot be set with'
+                'Var attr {0} cannot be set with'.format(attr)
                 + ' the set_var_attr method. Please use'
-                + ' the update_var method.'.format(attr)
+                + ' the update_var method.'
             )
         if attr == 'Obj':
             raise ValueError(
