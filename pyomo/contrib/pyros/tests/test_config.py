@@ -19,7 +19,6 @@ from pyomo.contrib.pyros.config import (
     PathLikeOrNone,
     PositiveIntOrMinusOne,
     pyros_config,
-    resolve_keyword_arguments,
     SolverIterable,
     SolverResolvable,
     UncertaintySetDomain,
@@ -721,71 +720,6 @@ class TestLoggerType(unittest.TestCase):
         exc_str = r"A logger name must be a string"
         with self.assertRaisesRegex(Exception, exc_str):
             standardizer_func(2)
-
-
-class TestResolveKeywordArguments(unittest.TestCase):
-    """
-    Test keyword argument resolution function works as expected.
-    """
-
-    def test_resolve_kwargs_simple_dict(self):
-        """
-        Test resolve kwargs works, simple example
-        where there is overlap.
-        """
-        explicit_kwargs = dict(arg1=1)
-        implicit_kwargs_1 = dict(arg1=2, arg2=3)
-        implicit_kwargs_2 = dict(arg1=4, arg2=4, arg3=5)
-
-        # expected answer
-        expected_resolved_kwargs = dict(arg1=1, arg2=3, arg3=5)
-
-        # attempt kwargs resolve
-        with LoggingIntercept(level=logging.WARNING) as LOG:
-            resolved_kwargs = resolve_keyword_arguments(
-                prioritized_kwargs_dicts={
-                    "explicitly": explicit_kwargs,
-                    "implicitly through set 1": implicit_kwargs_1,
-                    "implicitly through set 2": implicit_kwargs_2,
-                }
-            )
-
-        # check kwargs resolved as expected
-        self.assertEqual(
-            resolved_kwargs,
-            expected_resolved_kwargs,
-            msg="Resolved kwargs do not match expected value.",
-        )
-
-        # extract logger warning messages
-        warning_msgs = LOG.getvalue().split("\n")[:-1]
-
-        self.assertEqual(
-            len(warning_msgs), 3, msg="Number of warning messages is not as expected."
-        )
-
-        # check contents of warning msgs
-        self.assertRegex(
-            warning_msgs[0],
-            expected_regex=(
-                r"Arguments \['arg1'\] passed implicitly through set 1 "
-                r"already passed explicitly.*"
-            ),
-        )
-        self.assertRegex(
-            warning_msgs[1],
-            expected_regex=(
-                r"Arguments \['arg1'\] passed implicitly through set 2 "
-                r"already passed explicitly.*"
-            ),
-        )
-        self.assertRegex(
-            warning_msgs[2],
-            expected_regex=(
-                r"Arguments \['arg2'\] passed implicitly through set 2 "
-                r"already passed implicitly through set 1.*"
-            ),
-        )
 
 
 if __name__ == "__main__":

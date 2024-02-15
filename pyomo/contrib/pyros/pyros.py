@@ -20,7 +20,7 @@ from pyomo.core.base.objective import Objective
 from pyomo.contrib.pyros.util import time_code
 from pyomo.common.modeling import unique_component_name
 from pyomo.opt import SolverFactory
-from pyomo.contrib.pyros.config import pyros_config, resolve_keyword_arguments
+from pyomo.contrib.pyros.config import pyros_config
 from pyomo.contrib.pyros.util import (
     recast_to_min_obj,
     add_decision_rule_constraints,
@@ -267,22 +267,15 @@ class PyROS(object):
         ----
         This method can be broken down into three steps:
 
-        1. Resolve user arguments based on how they were passed
-           and order of precedence of the various means by which
-           they could be passed.
-        2. Cast resolved arguments to ConfigDict. Argument-wise
+        1. Cast arguments to ConfigDict. Argument-wise
            validation is performed automatically.
-        3. Inter-argument validation.
+           Note that arguments specified directly take
+           precedence over arguments specified indirectly
+           through direct argument 'options'.
+        2. Inter-argument validation.
         """
-        options_dict = kwds.pop("options", {})
-        resolved_kwds = resolve_keyword_arguments(
-            prioritized_kwargs_dicts={
-                "explicitly": kwds,
-                "implicitly through argument 'options'": options_dict,
-            },
-            func=self.solve,
-        )
-        config = self.CONFIG(resolved_kwds)
+        config = self.CONFIG(kwds.pop("options", {}))
+        config = config(kwds)
         state_vars = validate_pyros_inputs(model, config)
 
         return config, state_vars

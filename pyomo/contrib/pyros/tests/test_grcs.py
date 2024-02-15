@@ -6409,46 +6409,22 @@ class TestPyROSResolveKwargs(unittest.TestCase):
         global_subsolver = SolverFactory("baron")
 
         # Call the PyROS solver
-        with LoggingIntercept(level=logging.WARNING) as LOG:
-            results = pyros_solver.solve(
-                model=m,
-                first_stage_variables=[m.x1, m.x2],
-                second_stage_variables=[],
-                uncertain_params=[m.u1, m.u2],
-                uncertainty_set=ellipsoid,
-                local_solver=local_subsolver,
-                global_solver=global_subsolver,
-                bypass_local_separation=True,
-                solve_master_globally=True,
-                options={
-                    "objective_focus": ObjectiveType.worst_case,
-                    "solve_master_globally": False,
-                    "max_iter": 1,
-                    "time_limit": 1000,
-                },
-            )
-
-        # extract warning-level messages.
-        warning_msgs = LOG.getvalue().split("\n")[:-1]
-        resolve_kwargs_warning_msgs = [
-            msg
-            for msg in warning_msgs
-            if msg.startswith("Arguments [")
-            and "Consider modifying your arguments" in msg
-        ]
-        self.assertEqual(
-            len(resolve_kwargs_warning_msgs),
-            1,
-            msg="Number of warning-level messages not as expected.",
-        )
-
-        self.assertRegex(
-            resolve_kwargs_warning_msgs[0],
-            expected_regex=(
-                r"Arguments \['solve_master_globally'\] passed "
-                r"implicitly through argument 'options' "
-                r"already passed .*explicitly.*"
-            ),
+        results = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1, m.x2],
+            second_stage_variables=[],
+            uncertain_params=[m.u1, m.u2],
+            uncertainty_set=ellipsoid,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            bypass_local_separation=True,
+            solve_master_globally=True,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": False,
+                "max_iter": 1,
+                "time_limit": 1000,
+            },
         )
 
         # check termination status as expected
