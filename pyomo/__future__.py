@@ -43,9 +43,9 @@ def solver_factory(version=None):
     This allows users to query / set the current implementation of the
     SolverFactory that should be used throughout Pyomo.  Valid options are:
 
-      1: the original Pyomo SolverFactor
-      2: the SolverFactory from APPSI
-      3: the SolverFactory from pyomo.contrib.solver
+    - ``1``: the original Pyomo SolverFactor
+    - ``2``: the SolverFactory from APPSI
+    - ``3``: the SolverFactory from pyomo.contrib.solver
 
     The current active version can be obtained by calling the method
     with no arguments
