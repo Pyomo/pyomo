@@ -68,7 +68,7 @@ _trusted_solvers = {
     'xpress_direct',
     'mosek_direct',
     'baron',
-    'apsi_highs',
+    'appsi_highs',
 }
 
 
