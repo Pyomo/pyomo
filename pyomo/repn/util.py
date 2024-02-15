@@ -25,6 +25,7 @@ from pyomo.common.numeric_types import (
     native_types,
     native_numeric_types,
     native_complex_types,
+    native_logical_types,
 )
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.base import (
@@ -265,7 +266,9 @@ class BeforeChildDispatcher(collections.defaultdict):
     def register_dispatcher(self, visitor, child):
         child_type = type(child)
         if child_type in native_numeric_types:
-            self[child_type] = self._before_native
+            self[child_type] = self._before_native_numeric
+        elif child_type in native_logical_types:
+            self[child_type] = self._before_native_logical
         elif issubclass(child_type, str):
             self[child_type] = self._before_string
         elif child_type in native_types:
@@ -275,7 +278,7 @@ class BeforeChildDispatcher(collections.defaultdict):
                 self[child_type] = self._before_invalid
         elif not hasattr(child, 'is_expression_type'):
             if check_if_numeric_type(child):
-                self[child_type] = self._before_native
+                self[child_type] = self._before_native_numeric
             else:
                 self[child_type] = self._before_invalid
         elif not child.is_expression_type():
@@ -306,8 +309,17 @@ class BeforeChildDispatcher(collections.defaultdict):
         return True, None
 
     @staticmethod
-    def _before_native(visitor, child):
+    def _before_native_numeric(visitor, child):
         return False, (_CONSTANT, child)
+
+    @staticmethod
+    def _before_native_logical(visitor, child):
+        return False, (
+            _CONSTANT,
+            InvalidNumber(
+                child, f"{child!r} ({type(child).__name__}) is not a valid numeric type"
+            ),
+        )
 
     @staticmethod
     def _before_complex(visitor, child):
@@ -318,7 +330,7 @@ class BeforeChildDispatcher(collections.defaultdict):
         return False, (
             _CONSTANT,
             InvalidNumber(
-                child, f"{child!r} ({type(child)}) is not a valid numeric type"
+                child, f"{child!r} ({type(child).__name__}) is not a valid numeric type"
             ),
         )
 
@@ -327,7 +339,7 @@ class BeforeChildDispatcher(collections.defaultdict):
         return False, (
             _CONSTANT,
             InvalidNumber(
-                child, f"{child!r} ({type(child)}) is not a valid numeric type"
+                child, f"{child!r} ({type(child).__name__}) is not a valid numeric type"
             ),
         )
 
@@ -418,19 +430,15 @@ class ExitNodeDispatcher(collections.defaultdict):
                     "expression tree."
                 )
         if fcn is None:
-            return self.unexpected_expression_type(key)
+            fcn = self.unexpected_expression_type
         if cache:
             self[key] = fcn
         return fcn
 
-    def unexpected_expression_type(self, key):
-        if type(key) is tuple:
-            node_class = key[0]
-        else:
-            node_class = key
+    def unexpected_expression_type(self, visitor, node, *arg):
         raise DeveloperError(
-            f"Unexpected expression node type '{node_class.__name__}' "
-            f"found while walking expression tree."
+            f"Unexpected expression node type '{type(node).__name__}' "
+            f"found while walking expression tree in {type(visitor).__name__}."
         )
 
 
