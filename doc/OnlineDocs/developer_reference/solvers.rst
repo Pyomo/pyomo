@@ -13,20 +13,23 @@ New Interface Usage
 -------------------
 
 The new interfaces have two modes: backwards compatible and future capability.
-To use the backwards compatible version, simply use the ``SolverFactory``
-as usual and replace the solver name with the new version. Currently, the new
-versions available are:
+The future capability mode can be accessed directly or by switching the default
+``SolverFactory`` version (see :doc:`future`). Currently, the new versions
+available are:
 
 .. list-table:: Available Redesigned Solvers
-   :widths: 25 25
+   :widths: 25 25 25
    :header-rows: 1
 
    * - Solver
-     - ``SolverFactory`` Name
+     - ``SolverFactory``([1]) Name
+     - ``SolverFactory``([3]) Name
    * - ipopt
      - ``ipopt_v2``
-   * - GUROBI
+     - ``ipopt``
+   * - Gurobi
      - ``gurobi_v2``
+     - ``gurobi``
 
 Backwards Compatible Mode
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -52,8 +55,12 @@ Backwards Compatible Mode
 Future Capability Mode
 ^^^^^^^^^^^^^^^^^^^^^^
 
+There are multiple ways to utilize the future compatibility mode: direct import
+or changed ``SolverFactory`` version.
+
 .. code-block:: python
 
+    # Direct import
    import pyomo.environ as pyo
    from pyomo.contrib.solver.util import assert_optimal_termination
    from pyomo.contrib.solver.ipopt import ipopt
@@ -74,6 +81,29 @@ Future Capability Mode
    status.display()
    model.pprint()
 
+Changing the ``SolverFactory`` version:
+
+.. code-block:: python
+
+    # Change SolverFactory version
+   import pyomo.environ as pyo
+   from pyomo.contrib.solver.util import assert_optimal_termination
+   from pyomo.__future__ import solver_factory_v3
+
+   model = pyo.ConcreteModel()
+   model.x = pyo.Var(initialize=1.5)
+   model.y = pyo.Var(initialize=1.5)
+
+   def rosenbrock(model):
+       return (1.0 - model.x) ** 2 + 100.0 * (model.y - model.x**2) ** 2
+
+   model.obj = pyo.Objective(rule=rosenbrock, sense=pyo.minimize)
+
+   status = pyo.SolverFactory('ipopt').solve(model)
+   assert_optimal_termination(status)
+   # Displays important results information; only available in future capability mode
+   status.display()
+   model.pprint()
 
 Interface Implementation
 ------------------------
