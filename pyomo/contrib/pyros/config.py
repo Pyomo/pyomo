@@ -15,7 +15,7 @@ from pyomo.common.config import (
     InEnum,
     Path,
 )
-from pyomo.common.errors import ApplicationError
+from pyomo.common.errors import ApplicationError, PyomoException
 from pyomo.core.base import Var, _VarData
 from pyomo.core.base.param import Param, _ParamData
 from pyomo.opt import SolverFactory
@@ -303,7 +303,7 @@ class InputDataStandardizer(object):
         )
 
 
-class NotSolverResolvable(Exception):
+class SolverNotResolvable(PyomoException):
     """
     Exception type for failure to cast an object to a Pyomo solver.
     """
@@ -382,7 +382,7 @@ class SolverResolvable(object):
 
         Raises
         ------
-        NotSolverResolvable
+        SolverNotResolvable
             If `obj` cannot be cast to a Pyomo solver because
             it is neither a str nor a Pyomo solver type.
         ApplicationError
@@ -405,7 +405,7 @@ class SolverResolvable(object):
         elif self.is_solver_type(obj):
             solver = obj
         else:
-            raise NotSolverResolvable(
+            raise SolverNotResolvable(
                 f"Cannot cast object `{obj!r}` to a Pyomo optimizer for use as "
                 f"{solver_desc}, as the object is neither a str nor a "
                 f"Pyomo Solver type (got type {type(obj).__name__})."

@@ -15,7 +15,7 @@ from pyomo.contrib.pyros.config import (
     InputDataStandardizer,
     mutable_param_validator,
     LoggerType,
-    NotSolverResolvable,
+    SolverNotResolvable,
     PathLikeOrNone,
     PositiveIntOrMinusOne,
     pyros_config,
@@ -397,7 +397,7 @@ class TestSolverResolvable(unittest.TestCase):
             r"Cannot cast object `2` to a Pyomo optimizer.*"
             r"local solver.*got type int.*"
         )
-        with self.assertRaisesRegex(NotSolverResolvable, exc_str):
+        with self.assertRaisesRegex(SolverNotResolvable, exc_str):
             standardizer_func(invalid_object)
 
     def test_solver_resolvable_unavailable_solver(self):
@@ -542,7 +542,7 @@ class TestSolverIterable(unittest.TestCase):
             r"Cannot cast object `2` to a Pyomo optimizer.*"
             r"backup solver.*index 1.*got type int.*"
         )
-        with self.assertRaisesRegex(NotSolverResolvable, exc_str):
+        with self.assertRaisesRegex(SolverNotResolvable, exc_str):
             standardizer_func(invalid_object)
 
 
