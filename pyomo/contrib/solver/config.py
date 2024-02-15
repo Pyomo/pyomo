@@ -64,7 +64,7 @@ class SolverConfig(ConfigDict):
                 domain=str,
                 default=None,
                 description="The directory in which generated files should be saved. "
-                "This replaced the `keepfiles` option.",
+                "This replaces the `keepfiles` option.",
             ),
         )
         self.load_solutions: bool = self.declare(

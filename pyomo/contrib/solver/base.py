@@ -19,7 +19,7 @@ from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.objective import _GeneralObjectiveData
-from pyomo.common.timing import HierarchicalTimer
+from pyomo.common.config import document_kwargs_from_configdict
 from pyomo.common.errors import ApplicationError
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.opt.results.results_ import SolverResults as LegacySolverResults
@@ -28,7 +28,7 @@ from pyomo.core.kernel.objective import minimize
 from pyomo.core.base import SymbolMap
 from pyomo.core.base.label import NumericLabeler
 from pyomo.core.staleflag import StaleFlagManager
-from pyomo.contrib.solver.config import SolverConfig
+from pyomo.contrib.solver.config import SolverConfig, PersistentSolverConfig
 from pyomo.contrib.solver.util import get_objective
 from pyomo.contrib.solver.results import (
     Results,
@@ -104,6 +104,7 @@ class SolverBase(abc.ABC):
             # preserve the previous behavior
             return self.name
 
+    @document_kwargs_from_configdict(CONFIG)
     @abc.abstractmethod
     def solve(self, model: _BlockData, **kwargs) -> Results:
         """
@@ -176,6 +177,14 @@ class PersistentSolverBase(SolverBase):
 
     Example usage can be seen in the Gurobi interface.
     """
+    CONFIG = PersistentSolverConfig()
+
+    def __init__(self, kwds):
+        super().__init__(kwds)
+
+    @document_kwargs_from_configdict(CONFIG)
+    def solve(self, model: _BlockData, **kwargs) -> Results:
+        super().solve(model, kwargs)
 
     def is_persistent(self):
         """

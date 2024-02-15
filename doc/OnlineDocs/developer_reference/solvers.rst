@@ -75,7 +75,6 @@ Future Capability Mode
    model.pprint()
 
 
-
 Interface Implementation
 ------------------------
 
@@ -88,7 +87,7 @@ All solvers should have the following:
 .. autoclass:: pyomo.contrib.solver.base.SolverBase
    :members:
 
-Persistent solvers should also include:
+Persistent solvers include additional members as well as other configuration options:
 
 .. autoclass:: pyomo.contrib.solver.base.PersistentSolverBase
    :show-inheritance:
