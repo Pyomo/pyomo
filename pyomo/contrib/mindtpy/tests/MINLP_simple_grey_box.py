@@ -114,7 +114,7 @@ if egb_available:
             """Evaluate the Jacobian of the equality constraints."""
             return None
 
-        '''
+        """
         def _extract_and_assemble_fim(self):
             M = np.zeros((self.n_parameters, self.n_parameters))
             for i in range(self.n_parameters):
@@ -122,7 +122,7 @@ if egb_available:
                     M[i,k] = self._input_values[self.ele_to_order[(i,k)]]
 
             return M
-        '''
+        """
 
         def evaluate_jacobian_outputs(self):
             """Evaluate the Jacobian of the outputs."""
