@@ -3420,7 +3420,10 @@ class TestBlock(unittest.TestCase):
 
         mfe = m.b.private_data('my_scope')
         self.assertIsInstance(mfe, dict)
-        
+        mfe1 = m.b.b[1].private_data('no mice here')
+        self.assertIsInstance(mfe1, dict)
+        mfe2 = m.b.b[2].private_data('no mice here')
+        self.assertIsInstance(mfe2, dict)
 
 
 if __name__ == "__main__":

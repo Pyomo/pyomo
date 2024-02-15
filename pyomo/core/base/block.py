@@ -2029,6 +2029,17 @@ Components must now specify their rules explicitly using 'rule=' keywords."""
                 comp._create_objects_for_deepcopy(memo, component_list)
         return _ans
 
+    @property
+    def _private_data(self):
+        if self._private_data_dict is None:
+            self._private_data_dict = {}
+        return self._private_data_dict
+
+    def private_data(self, scope):
+        if scope not in self._private_data:
+            self._private_data[scope] = {}
+        return self._private_data[scope]
+
 
 @ModelComponentFactory.register(
     "A component that contains one or more model components."
@@ -2241,17 +2252,6 @@ class Block(ActiveIndexedComponent):
 
         for key in sorted(self):
             _BlockData.display(self[key], filename, ostream, prefix)
-
-    @property
-    def _private_data(self):
-        if self._private_data_dict is None:
-            self._private_data_dict = {}
-        return self._private_data_dict
-
-    def private_data(self, scope):
-        if scope not in self._private_data:
-            self._private_data[scope] = {}
-        return self._private_data[scope]
 
 
 class ScalarBlock(_BlockData, Block):
