@@ -69,7 +69,6 @@ class TestDerivativeVar(unittest.TestCase):
         del m.dv
         del m.dv2
         del m.v
-        del m.v_index
 
         m.v = Var(m.x, m.t)
         m.dv = DerivativeVar(m.v, wrt=m.x)

@@ -296,14 +296,18 @@ class Arc(ActiveIndexedComponent):
 
     def construct(self, data=None):
         """Initialize the Arc"""
+        if self._constructed:
+            return
+        self._constructed = True
+
         if is_debug_set(logger):
             logger.debug("Constructing Arc %s" % self.name)
 
-        if self._constructed:
-            return
-
         timer = ConstructionTimer(self)
-        self._constructed = True
+
+        if self._anonymous_sets is not None:
+            for _set in self._anonymous_sets:
+                _set.construct()
 
         if self._rule is None and self._init_vals is None:
             # No construction rule or values specified

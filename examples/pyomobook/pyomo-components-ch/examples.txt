@@ -1,20 +1,17 @@
 indexed1
-3 Set Declarations
+2 Set Declarations
     A : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    3 : {1, 2, 3}
     B : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    2 : {'Q', 'R'}
-    y_index : Size=1, Index=None, Ordered=True
-        Key  : Dimen : Domain : Size : Members
-        None :     2 :    A*B :    6 : {(1, 'Q'), (1, 'R'), (2, 'Q'), (2, 'R'), (3, 'Q'), (3, 'R')}
 
 2 Var Declarations
     x : Size=1, Index=None
         Key  : Lower : Value : Upper : Fixed : Stale : Domain
         None :  None :  None :  None : False :  True :  Reals
-    y : Size=6, Index=y_index
+    y : Size=6, Index=A*B
         Key      : Lower : Value : Upper : Fixed : Stale : Domain
         (1, 'Q') :  None :  None :  None : False :  True :  Reals
         (1, 'R') :  None :  None :  None : False :  True :  Reals
@@ -38,4 +35,4 @@ indexed1
           2 :  -Inf :  2*x :   0.0 :   True
           3 :  -Inf :  3*x :   0.0 :   True
 
-8 Declarations: A B x y_index y o c d
+7 Declarations: A B x y o c d
