@@ -329,6 +329,7 @@ class PersistentSolverConfig(SolverConfig):
     """
     Base config for all persistent solver interfaces
     """
+
     def __init__(
         self,
         description=None,
@@ -354,6 +355,7 @@ class PersistentBranchAndBoundConfig(BranchAndBoundConfig):
     """
     Base config for all persistent MIP solver interfaces
     """
+
     def __init__(
         self,
         description=None,
