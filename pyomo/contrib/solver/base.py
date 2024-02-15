@@ -46,11 +46,11 @@ class SolverBase(abc.ABC):
         - version: The version of the solver
         - is_persistent: Set to false for all non-persistent solvers.
 
-    Additionally, solvers should have a :attr:`config<SolverBase.config>` attribute that 
-    inherits from one of :class:`SolverConfig<pyomo.contrib.solver.config.SolverConfig>`, 
-    :class:`BranchAndBoundConfig<pyomo.contrib.solver.config.BranchAndBoundConfig>`, 
-    :class:`PersistentSolverConfig<pyomo.contrib.solver.config.PersistentSolverConfig>`, or 
-    :class:`PersistentBranchAndBoundConfig<pyomo.contrib.solver.config.PersistentBranchAndBoundConfig>`. 
+    Additionally, solvers should have a :attr:`config<SolverBase.config>` attribute that
+    inherits from one of :class:`SolverConfig<pyomo.contrib.solver.config.SolverConfig>`,
+    :class:`BranchAndBoundConfig<pyomo.contrib.solver.config.BranchAndBoundConfig>`,
+    :class:`PersistentSolverConfig<pyomo.contrib.solver.config.PersistentSolverConfig>`, or
+    :class:`PersistentBranchAndBoundConfig<pyomo.contrib.solver.config.PersistentBranchAndBoundConfig>`.
     """
 
     CONFIG = SolverConfig()
@@ -105,9 +105,7 @@ class SolverBase(abc.ABC):
             return self.name
 
     @abc.abstractmethod
-    def solve(
-        self, model: _BlockData, **kwargs
-    ) -> Results:
+    def solve(self, model: _BlockData, **kwargs) -> Results:
         """
         Solve a Pyomo model.
 
