@@ -36,6 +36,6 @@ from pyomo.contrib.piecewise.transform.convex_combination import (
 from pyomo.contrib.piecewise.transform.nested_inner_repn import (
     NestedInnerRepresentationGDPTransformation,
 )
-from pyomo.contrib.piecewise.transform.disagreggated_logarithmic import (
+from pyomo.contrib.piecewise.transform.disaggreggated_logarithmic import (
     DisaggregatedLogarithmicInnerMIPTransformation,
 )

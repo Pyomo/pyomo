@@ -279,10 +279,3 @@ class TestTransformPiecewiseModelToNestedInnerRepnMIP(unittest.TestCase):
         TransformationFactory("contrib.piecewise.disaggregated_logarithmic").apply_to(m)
         SolverFactory("gurobi").solve(m)
         ct.check_log_x_model_soln(self, m)
-
-    @unittest.skipIf(True, reason="because")
-    def test_test(self):
-        m = models.make_log_x_model()
-        TransformationFactory("contrib.piecewise.disaggregated_logarithmic").apply_to(m)
-        m.pprint()
-        assert False
