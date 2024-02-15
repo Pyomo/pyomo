@@ -550,7 +550,7 @@ class _BlockData(ActiveComponentData):
         super(_BlockData, self).__setattr__('_ctypes', {})
         super(_BlockData, self).__setattr__('_decl', {})
         super(_BlockData, self).__setattr__('_decl_order', [])
-        self._private_data_dict = None
+        self._private_data = None
 
     def __getattr__(self, val):
         if val in ModelComponentFactory:
@@ -2029,13 +2029,9 @@ Components must now specify their rules explicitly using 'rule=' keywords."""
                 comp._create_objects_for_deepcopy(memo, component_list)
         return _ans
 
-    @property
-    def _private_data(self):
-        if self._private_data_dict is None:
-            self._private_data_dict = {}
-        return self._private_data_dict
-
     def private_data(self, scope):
+        if self._private_data is None:
+            self._private_data = {}
         if scope not in self._private_data:
             self._private_data[scope] = {}
         return self._private_data[scope]
