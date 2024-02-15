@@ -59,8 +59,18 @@ from weakref import ref as weakref_ref
 
 logger = logging.getLogger('pyomo.gdp.mbigm')
 
-_trusted_solvers = {'gurobi', 'cplex', 'cbc', 'glpk', 'scip', 'xpress_direct',
-                    'mosek_direct', 'baron', 'apsi_highs'}
+_trusted_solvers = {
+    'gurobi',
+    'cplex',
+    'cbc',
+    'glpk',
+    'scip',
+    'xpress_direct',
+    'mosek_direct',
+    'baron',
+    'apsi_highs',
+}
+
 
 @TransformationFactory.register(
     'gdp.mbigm',
@@ -629,21 +639,24 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                     "Unsuccessful solve to calculate M value to "
                     "relax constraint '%s' on Disjunct '%s' when "
                     "Disjunct '%s' is selected."
-                    % (constraint.name, disjunct.name, other_disjunct.name))
+                    % (constraint.name, disjunct.name, other_disjunct.name)
+                )
                 if constraint.lower is not None and lower_M is None:
                     # last resort: calculate
                     if lower_M is None:
                         scratch.obj.expr = constraint.body - constraint.lower
                         scratch.obj.sense = minimize
-                        lower_M = self._solve_disjunct_for_M(other_disjunct, scratch,
-                                                             unsuccessful_solve_msg)
+                        lower_M = self._solve_disjunct_for_M(
+                            other_disjunct, scratch, unsuccessful_solve_msg
+                        )
                 if constraint.upper is not None and upper_M is None:
                     # last resort: calculate
                     if upper_M is None:
                         scratch.obj.expr = constraint.body - constraint.upper
                         scratch.obj.sense = maximize
-                        upper_M = self._solve_disjunct_for_M(other_disjunct, scratch,
-                                                             unsuccessful_solve_msg)
+                        upper_M = self._solve_disjunct_for_M(
+                            other_disjunct, scratch, unsuccessful_solve_msg
+                        )
                 arg_Ms[constraint, other_disjunct] = (lower_M, upper_M)
                 transBlock._mbm_values[constraint, other_disjunct] = (lower_M, upper_M)
 
@@ -653,17 +666,16 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
 
         return arg_Ms
 
-    def _solve_disjunct_for_M(self, other_disjunct, scratch_block,
-                              unsuccessful_solve_msg):
+    def _solve_disjunct_for_M(
+        self, other_disjunct, scratch_block, unsuccessful_solve_msg
+    ):
         solver = self._config.solver
         solver_trusted = solver.name in _trusted_solvers
         results = solver.solve(other_disjunct, load_solutions=False)
-        if (results.solver.termination_condition is
-            TerminationCondition.infeasible ):
+        if results.solver.termination_condition is TerminationCondition.infeasible:
             if solver_trusted:
                 logger.debug(
-                    "Disjunct '%s' is infeasible, deactivating."
-                    % other_disjunct.name
+                    "Disjunct '%s' is infeasible, deactivating." % other_disjunct.name
                 )
                 other_disjunct.deactivate()
                 M = 0
@@ -676,8 +688,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                 # this so that we check for 'proven_infeasible'
                 # and then we can abandon this hack
                 raise GDP_Error(unsuccessful_solve_msg)
-        elif (results.solver.termination_condition is not
-              TerminationCondition.optimal):
+        elif results.solver.termination_condition is not TerminationCondition.optimal:
             raise GDP_Error(unsuccessful_solve_msg)
         else:
             other_disjunct.solutions.load_from(results)
