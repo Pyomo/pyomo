@@ -11,6 +11,25 @@
 
 import pyomo.environ as _environ
 
+__doc__ = """
+Preview capabilities through `pyomo.__future__`
+===============================================
+
+This module provides a uniform interface for gaining access to future
+("preview") capabilities that are either slightly incompatible with the
+current official offering, or are still under development with the
+intent to replace the current offering.
+
+Currently supported `__future__` offerings include:
+
+.. autosummary::
+
+   solver_factory
+
+.. autofunction:: solver_factory
+
+"""
+
 
 def __getattr__(name):
     if name in ('solver_factory_v1', 'solver_factory_v2', 'solver_factory_v3'):
@@ -23,15 +42,39 @@ def solver_factory(version=None):
 
     This allows users to query / set the current implementation of the
     SolverFactory that should be used throughout Pyomo.  Valid options are:
-    
+
       1: the original Pyomo SolverFactor
       2: the SolverFactory from APPSI
       3: the SolverFactory from pyomo.contrib.solver
+
+    The current active version can be obtained by calling the method
+    with no arguments
+
+    .. doctest::
+
+        >>> from pyomo.__future__ import solver_factory
+        >>> solver_factory()
+        1
+
+    The active factory can be set either by passing the appropriate
+    version to this function:
+
+    .. doctest::
+
+        >>> solver_factory(3)
+        <pyomo.contrib.solver.factory.SolverFactoryClass object ...>
+
+    or by importing the "special" name:
+
+    .. doctest::
+
+        >>> from pyomo.__future__ import solver_factory_v3
 
     """
     import pyomo.opt.base.solvers as _solvers
     import pyomo.contrib.solver.factory as _contrib
     import pyomo.contrib.appsi.base as _appsi
+
     versions = {
         1: _solvers.LegacySolverFactory,
         2: _appsi.SolverFactory,
@@ -65,5 +108,6 @@ def solver_factory(version=None):
             f"received {version}"
         )
     return src
+
 
 solver_factory._active_version = solver_factory()
