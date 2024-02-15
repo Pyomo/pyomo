@@ -139,10 +139,10 @@ class Results(ConfigDict):
     ----------
     solution_loader: SolutionLoaderBase
         Object for loading the solution back into the model.
-    termination_condition: TerminationCondition
+    termination_condition: :class:`TerminationCondition<pyomo.contrib.solver.results.TerminationCondition>`
         The reason the solver exited. This is a member of the
         TerminationCondition enum.
-    solution_status: SolutionStatus
+    solution_status: :class:`SolutionStatus<pyomo.contrib.solver.results.SolutionStatus>`
         The result of the solve call. This is a member of the SolutionStatus
         enum.
     incumbent_objective: float

@@ -40,7 +40,17 @@ from pyomo.contrib.solver.results import (
 
 class SolverBase(abc.ABC):
     """
-    Base class upon which direct solver interfaces can be built.
+    This base class defines the methods required for all solvers:
+        - available: Determines whether the solver is able to be run, combining both whether it can be found on the system and if the license is valid.
+        - solve: The main method of every solver
+        - version: The version of the solver
+        - is_persistent: Set to false for all non-persistent solvers.
+
+    Additionally, solvers should have a :attr:`config<SolverBase.config>` attribute that 
+    inherits from one of :class:`SolverConfig<pyomo.contrib.solver.config.SolverConfig>`, 
+    :class:`BranchAndBoundConfig<pyomo.contrib.solver.config.BranchAndBoundConfig>`, 
+    :class:`PersistentSolverConfig<pyomo.contrib.solver.config.PersistentSolverConfig>`, or 
+    :class:`PersistentBranchAndBoundConfig<pyomo.contrib.solver.config.PersistentBranchAndBoundConfig>`. 
     """
 
     CONFIG = SolverConfig()
@@ -96,7 +106,7 @@ class SolverBase(abc.ABC):
 
     @abc.abstractmethod
     def solve(
-        self, model: _BlockData, timer: HierarchicalTimer = None, **kwargs
+        self, model: _BlockData, **kwargs
     ) -> Results:
         """
         Solve a Pyomo model.
@@ -105,15 +115,13 @@ class SolverBase(abc.ABC):
         ----------
         model: _BlockData
             The Pyomo model to be solved
-        timer: HierarchicalTimer
-            An option timer for reporting timing
         **kwargs
             Additional keyword arguments (including solver_options - passthrough
             options; delivered directly to the solver (with no validation))
 
         Returns
         -------
-        results: Results
+        results: :class:`Results<pyomo.contrib.solver.results.Results>`
             A results object
         """
 
@@ -136,7 +144,7 @@ class SolverBase(abc.ABC):
 
         Returns
         -------
-        available: Solver.Availability
+        available: SolverBase.Availability
             An enum that indicates "how available" the solver is.
             Note that the enum can be cast to bool, which will
             be True if the solver is runable at all and False
@@ -165,10 +173,10 @@ class SolverBase(abc.ABC):
 class PersistentSolverBase(SolverBase):
     """
     Base class upon which persistent solvers can be built. This inherits the
-    methods from the direct solver base and adds those methods that are necessary
+    methods from the solver base class and adds those methods that are necessary
     for persistent solvers.
 
-    Example usage can be seen in the GUROBI solver.
+    Example usage can be seen in the Gurobi interface.
     """
 
     def is_persistent(self):
