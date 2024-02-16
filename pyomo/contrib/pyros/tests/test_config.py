@@ -3,11 +3,9 @@ Test objects for construction of PyROS ConfigDict.
 """
 
 import logging
-import os
 import unittest
 
 from pyomo.core.base import ConcreteModel, Var, _VarData
-from pyomo.common.config import Path
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.errors import ApplicationError
 from pyomo.core.base.param import Param, _ParamData
@@ -16,12 +14,10 @@ from pyomo.contrib.pyros.config import (
     mutable_param_validator,
     LoggerType,
     SolverNotResolvable,
-    PathLikeOrNone,
     PositiveIntOrMinusOne,
     pyros_config,
     SolverIterable,
     SolverResolvable,
-    UncertaintySetDomain,
 )
 from pyomo.contrib.pyros.util import ObjectiveType
 from pyomo.opt import SolverFactory, SolverResults
@@ -273,34 +269,6 @@ class TestInputDataStandardizer(unittest.TestCase):
                     f"(id {id(output)})"
                 ),
             )
-
-
-class TestUncertaintySetDomain(unittest.TestCase):
-    """
-    Test domain validator for uncertainty set arguments.
-    """
-
-    @unittest.skipUnless(numpy_available, "Numpy is not available.")
-    def test_uncertainty_set_domain_valid_set(self):
-        """
-        Test validator works for valid argument.
-        """
-        standardizer_func = UncertaintySetDomain()
-        bset = BoxSet([[0, 1]])
-        self.assertIs(
-            bset,
-            standardizer_func(bset),
-            msg="Output of uncertainty set domain not as expected.",
-        )
-
-    def test_uncertainty_set_domain_invalid_type(self):
-        """
-        Test validator works for valid argument.
-        """
-        standardizer_func = UncertaintySetDomain()
-        exc_str = "Expected an .*UncertaintySet object.*received object 2"
-        with self.assertRaisesRegex(ValueError, exc_str):
-            standardizer_func(2)
 
 
 AVAILABLE_SOLVER_TYPE_NAME = "available_pyros_test_solver"
@@ -578,93 +546,6 @@ class TestPyROSConfig(unittest.TestCase):
         exc_str = f".*{invalid_focus!r} is not a valid ObjectiveType"
         with self.assertRaisesRegex(ValueError, exc_str):
             config.objective_focus = invalid_focus
-
-
-class TestPathLikeOrNone(unittest.TestCase):
-    """
-    Test interface for validating path-like arguments.
-    """
-
-    def test_none_valid(self):
-        """
-        Test `None` is valid.
-        """
-        standardizer_func = PathLikeOrNone()
-
-        self.assertIs(
-            standardizer_func(None),
-            None,
-            msg="Output of `PathLikeOrNone` standardizer not as expected.",
-        )
-
-    def test_str_bytes_path_like_valid(self):
-        """
-        Check path-like validator handles str, bytes, and path-like
-        inputs correctly.
-        """
-
-        class ExamplePathLike(os.PathLike):
-            """
-            Path-like class for testing. Key feature: __fspath__
-            and __str__ return different outputs.
-            """
-
-            def __init__(self, path_str_or_bytes):
-                self.path = path_str_or_bytes
-
-            def __fspath__(self):
-                return self.path
-
-            def __str__(self):
-                path_str = os.fsdecode(self.path)
-                return f"{type(self).__name__}({path_str})"
-
-        path_standardization_func = PathLikeOrNone()
-
-        # construct path arguments of different type
-        path_as_str = "example_output_dir/"
-        path_as_bytes = os.fsencode(path_as_str)
-        path_like_from_str = ExamplePathLike(path_as_str)
-        path_like_from_bytes = ExamplePathLike(path_as_bytes)
-
-        # for all possible arguments, output should be
-        # the str returned by ``common.config.Path`` when
-        # string representation of the path is input.
-        expected_output = Path()(path_as_str)
-
-        # check output is as expected in all cases
-        self.assertEqual(
-            path_standardization_func(path_as_str),
-            expected_output,
-            msg=(
-                "Path-like validator output from str input "
-                "does not match expected value."
-            ),
-        )
-        self.assertEqual(
-            path_standardization_func(path_as_bytes),
-            expected_output,
-            msg=(
-                "Path-like validator output from bytes input "
-                "does not match expected value."
-            ),
-        )
-        self.assertEqual(
-            path_standardization_func(path_like_from_str),
-            expected_output,
-            msg=(
-                "Path-like validator output from path-like input "
-                "derived from str does not match expected value."
-            ),
-        )
-        self.assertEqual(
-            path_standardization_func(path_like_from_bytes),
-            expected_output,
-            msg=(
-                "Path-like validator output from path-like input "
-                "derived from bytes does not match expected value."
-            ),
-        )
 
 
 class TestPositiveIntOrMinusOne(unittest.TestCase):

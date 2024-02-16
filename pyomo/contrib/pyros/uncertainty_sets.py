@@ -283,48 +283,6 @@ def validate_array(
         )
 
 
-class UncertaintySetDomain:
-    """
-    Domain validator for uncertainty set argument.
-    """
-
-    def __call__(self, obj):
-        """
-        Type validate uncertainty set object.
-
-        Parameters
-        ----------
-        obj : object
-            Object to validate.
-
-        Returns
-        -------
-        obj : object
-            Object that was passed, provided type validation successful.
-
-        Raises
-        ------
-        ValueError
-            If type validation failed.
-        """
-        if not isinstance(obj, UncertaintySet):
-            raise ValueError(
-                f"Expected an {UncertaintySet.__name__} object, "
-                f"instead received object {obj}"
-            )
-        return obj
-
-    def domain_name(self):
-        """
-        Domain name of self.
-        """
-        return UncertaintySet.__name__
-
-
-# maintain compatibility with prior versions
-uncertainty_sets = UncertaintySetDomain()
-
-
 def column(matrix, i):
     # Get column i of a given multi-dimensional list
     return [row[i] for row in matrix]
