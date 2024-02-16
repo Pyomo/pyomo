@@ -70,6 +70,11 @@ def solver_factory(version=None):
 
         >>> from pyomo.__future__ import solver_factory_v3
 
+    .. doctest::
+       :hide:
+
+       >>> from pyomo.__future__ import solver_factory_v1
+
     """
     import pyomo.opt.base.solvers as _solvers
     import pyomo.contrib.solver.factory as _contrib
