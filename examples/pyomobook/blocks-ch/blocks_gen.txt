@@ -9,13 +9,8 @@
 1 Block Declarations
     Generator : Size=2, Index=GEN_UNITS, Active=True
         Generator[G_EAST] : Active=True
-            1 Set Declarations
-                CostCoef_index : Size=1, Index=None, Ordered=Insertion
-                    Key  : Dimen : Domain : Size : Members
-                    None :     1 :    Any :    2 : {1, 2}
-
             3 Param Declarations
-                CostCoef : Size=0, Index=Generator[G_EAST].CostCoef_index, Domain=Any, Default=None, Mutable=False
+                CostCoef : Size=0, Index={1, 2}, Domain=Any, Default=None, Mutable=False
                     Key : Value
                 MaxPower : Size=1, Index=None, Domain=NonNegativeReals, Default=None, Mutable=False
                     Key  : Value
@@ -27,11 +22,11 @@
             2 Var Declarations
                 Power : Size=5, Index=TIME
                     Key : Lower : Value : Upper : Fixed : Stale : Domain
-                      0 :     0 : 120.0 :   500 : False : False :  Reals
-                      1 :     0 : 145.0 :   500 : False : False :  Reals
-                      2 :     0 : 119.0 :   500 : False : False :  Reals
-                      3 :     0 :  42.0 :   500 : False : False :  Reals
-                      4 :     0 : 190.0 :   500 : False : False :  Reals
+                      0 :     0 : 120.0 : 500.0 : False : False :  Reals
+                      1 :     0 : 145.0 : 500.0 : False : False :  Reals
+                      2 :     0 : 119.0 : 500.0 : False : False :  Reals
+                      3 :     0 :  42.0 : 500.0 : False : False :  Reals
+                      4 :     0 : 190.0 : 500.0 : False : False :  Reals
                 UnitOn : Size=5, Index=TIME
                     Key : Lower : Value : Upper : Fixed : Stale : Domain
                       0 :     0 :  None :     1 : False :  True : Binary
@@ -57,15 +52,10 @@
                       3 : -50.0 : Generator[G_EAST].Power[3] - Generator[G_EAST].Power[2] : Generator[G_EAST].RampLimit :   True
                       4 : -50.0 : Generator[G_EAST].Power[4] - Generator[G_EAST].Power[3] : Generator[G_EAST].RampLimit :   True
 
-            8 Declarations: MaxPower RampLimit Power UnitOn limit_ramp CostCoef_index CostCoef Cost
+            7 Declarations: MaxPower RampLimit Power UnitOn limit_ramp CostCoef Cost
         Generator[G_MAIN] : Active=True
-            1 Set Declarations
-                CostCoef_index : Size=1, Index=None, Ordered=Insertion
-                    Key  : Dimen : Domain : Size : Members
-                    None :     1 :    Any :    2 : {1, 2}
-
             3 Param Declarations
-                CostCoef : Size=0, Index=Generator[G_MAIN].CostCoef_index, Domain=Any, Default=None, Mutable=False
+                CostCoef : Size=0, Index={1, 2}, Domain=Any, Default=None, Mutable=False
                     Key : Value
                 MaxPower : Size=1, Index=None, Domain=NonNegativeReals, Default=None, Mutable=False
                     Key  : Value
@@ -77,11 +67,11 @@
             2 Var Declarations
                 Power : Size=5, Index=TIME
                     Key : Lower : Value : Upper : Fixed : Stale : Domain
-                      0 :     0 : 120.0 :   500 : False : False :  Reals
-                      1 :     0 : 145.0 :   500 : False : False :  Reals
-                      2 :     0 : 119.0 :   500 : False : False :  Reals
-                      3 :     0 :  42.0 :   500 : False : False :  Reals
-                      4 :     0 : 190.0 :   500 : False : False :  Reals
+                      0 :     0 : 120.0 : 500.0 : False : False :  Reals
+                      1 :     0 : 145.0 : 500.0 : False : False :  Reals
+                      2 :     0 : 119.0 : 500.0 : False : False :  Reals
+                      3 :     0 :  42.0 : 500.0 : False : False :  Reals
+                      4 :     0 : 190.0 : 500.0 : False : False :  Reals
                 UnitOn : Size=5, Index=TIME
                     Key : Lower : Value : Upper : Fixed : Stale : Domain
                       0 :     0 :  None :     1 : False :  True : Binary
@@ -107,7 +97,7 @@
                       3 : -50.0 : Generator[G_MAIN].Power[3] - Generator[G_MAIN].Power[2] : Generator[G_MAIN].RampLimit :   True
                       4 : -50.0 : Generator[G_MAIN].Power[4] - Generator[G_MAIN].Power[3] : Generator[G_MAIN].RampLimit :   True
 
-            8 Declarations: MaxPower RampLimit Power UnitOn limit_ramp CostCoef_index CostCoef Cost
+            7 Declarations: MaxPower RampLimit Power UnitOn limit_ramp CostCoef Cost
 
 3 Declarations: TIME GEN_UNITS Generator
 2 Set Declarations
@@ -121,13 +111,8 @@
 1 Block Declarations
     Generator : Size=2, Index=GEN_UNITS, Active=True
         Generator[G_EAST] : Active=True
-            1 Set Declarations
-                CostCoef_index : Size=1, Index=None, Ordered=Insertion
-                    Key  : Dimen : Domain : Size : Members
-                    None :     1 :    Any :    2 : {1, 2}
-
             3 Param Declarations
-                CostCoef : Size=0, Index=Generator[G_EAST].CostCoef_index, Domain=Any, Default=None, Mutable=False
+                CostCoef : Size=0, Index={1, 2}, Domain=Any, Default=None, Mutable=False
                     Key : Value
                 MaxPower : Size=1, Index=None, Domain=NonNegativeReals, Default=None, Mutable=False
                     Key  : Value
@@ -139,11 +124,11 @@
             2 Var Declarations
                 Power : Size=5, Index=TIME
                     Key : Lower : Value : Upper : Fixed : Stale : Domain
-                      0 :     0 : 120.0 :   500 : False : False :  Reals
-                      1 :     0 : 145.0 :   500 : False : False :  Reals
-                      2 :     0 : 119.0 :   500 : False : False :  Reals
-                      3 :     0 :  42.0 :   500 : False : False :  Reals
-                      4 :     0 : 190.0 :   500 : False : False :  Reals
+                      0 :     0 : 120.0 : 500.0 : False : False :  Reals
+                      1 :     0 : 145.0 : 500.0 : False : False :  Reals
+                      2 :     0 : 119.0 : 500.0 : False : False :  Reals
+                      3 :     0 :  42.0 : 500.0 : False : False :  Reals
+                      4 :     0 : 190.0 : 500.0 : False : False :  Reals
                 UnitOn : Size=5, Index=TIME
                     Key : Lower : Value : Upper : Fixed : Stale : Domain
                       0 :     0 :  None :     1 : False :  True : Binary
@@ -169,15 +154,10 @@
                       3 : -50.0 : Generator[G_EAST].Power[3] - Generator[G_EAST].Power[2] : Generator[G_EAST].RampLimit :   True
                       4 : -50.0 : Generator[G_EAST].Power[4] - Generator[G_EAST].Power[3] : Generator[G_EAST].RampLimit :   True
 
-            8 Declarations: MaxPower RampLimit Power UnitOn limit_ramp CostCoef_index CostCoef Cost
+            7 Declarations: MaxPower RampLimit Power UnitOn limit_ramp CostCoef Cost
         Generator[G_MAIN] : Active=True
-            1 Set Declarations
-                CostCoef_index : Size=1, Index=None, Ordered=Insertion
-                    Key  : Dimen : Domain : Size : Members
-                    None :     1 :    Any :    2 : {1, 2}
-
             3 Param Declarations
-                CostCoef : Size=0, Index=Generator[G_MAIN].CostCoef_index, Domain=Any, Default=None, Mutable=False
+                CostCoef : Size=0, Index={1, 2}, Domain=Any, Default=None, Mutable=False
                     Key : Value
                 MaxPower : Size=1, Index=None, Domain=NonNegativeReals, Default=None, Mutable=False
                     Key  : Value
@@ -189,11 +169,11 @@
             2 Var Declarations
                 Power : Size=5, Index=TIME
                     Key : Lower : Value : Upper : Fixed : Stale : Domain
-                      0 :     0 : 120.0 :   500 : False : False :  Reals
-                      1 :     0 : 145.0 :   500 : False : False :  Reals
-                      2 :     0 : 119.0 :   500 : False : False :  Reals
-                      3 :     0 :  42.0 :   500 : False : False :  Reals
-                      4 :     0 : 190.0 :   500 : False : False :  Reals
+                      0 :     0 : 120.0 : 500.0 : False : False :  Reals
+                      1 :     0 : 145.0 : 500.0 : False : False :  Reals
+                      2 :     0 : 119.0 : 500.0 : False : False :  Reals
+                      3 :     0 :  42.0 : 500.0 : False : False :  Reals
+                      4 :     0 : 190.0 : 500.0 : False : False :  Reals
                 UnitOn : Size=5, Index=TIME
                     Key : Lower : Value : Upper : Fixed : Stale : Domain
                       0 :     0 :  None :     1 : False :  True : Binary
@@ -219,7 +199,7 @@
                       3 : -50.0 : Generator[G_MAIN].Power[3] - Generator[G_MAIN].Power[2] : Generator[G_MAIN].RampLimit :   True
                       4 : -50.0 : Generator[G_MAIN].Power[4] - Generator[G_MAIN].Power[3] : Generator[G_MAIN].RampLimit :   True
 
-            8 Declarations: MaxPower RampLimit Power UnitOn limit_ramp CostCoef_index CostCoef Cost
+            7 Declarations: MaxPower RampLimit Power UnitOn limit_ramp CostCoef Cost
 
 3 Declarations: TIME GEN_UNITS Generator
 Generator[G_MAIN].Power[4] = 190.0

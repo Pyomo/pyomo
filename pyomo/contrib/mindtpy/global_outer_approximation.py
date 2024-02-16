@@ -3,7 +3,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -67,7 +67,7 @@ class MindtPy_GOA_Solver(_MindtPyAlgorithm):
         super().check_config()
 
     def initialize_mip_problem(self):
-        '''Deactivate the nonlinear constraints to create the MIP problem.'''
+        """Deactivate the nonlinear constraints to create the MIP problem."""
         super().initialize_mip_problem()
         self.mip.MindtPy_utils.cuts.aff_cuts = ConstraintList(doc='Affine cuts')
 
@@ -108,4 +108,5 @@ class MindtPy_GOA_Solver(_MindtPyAlgorithm):
             if self.config.use_tabu_list:
                 self.integer_list = self.integer_list[:valid_no_good_cuts_num]
         except KeyError as e:
-            self.config.logger.error(str(e) + '\nDeactivating no-good cuts failed.')
+            self.config.logger.error(e, exc_info=True)
+            self.config.logger.error('Deactivating no-good cuts failed.')
