@@ -303,6 +303,15 @@ class InEnum(object):
 
 
 class IsInstance(object):
+    """
+    Domain validator for type checking.
+
+    Parameters
+    ----------
+    *bases : tuple of type
+        Valid types.
+    """
+
     def __init__(self, *bases):
         assert bases
         self.baseClasses = bases
@@ -749,6 +758,7 @@ validators for common use cases:
    NonNegativeFloat
    In
    InEnum
+   IsInstance
    ListOf
    Module
    Path

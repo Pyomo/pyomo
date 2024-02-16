@@ -475,15 +475,18 @@ class TestConfigDomains(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, exc_str):
             c.val2 = 2.4
 
-        c.declare("val3", ConfigValue(None, IsInstance(int, str)))
+        c.declare("val3", ConfigValue(None, IsInstance(int, TestClass)))
+        self.assertRegex(
+            c.get("val3").domain_name(), r"IsInstance\(int, .*\.TestClass\)"
+        )
         c.val3 = 2
         self.assertEqual(c.val3, 2)
         exc_str = (
-            r"Expected an instance of one of these types: 'int', 'str'"
-            r", but received value TestClass\(\) of type '.*\.TestClass'"
+            r"Expected an instance of one of these types: 'int', '.*\.TestClass'"
+            r", but received value 2.4 of type 'float'"
         )
         with self.assertRaisesRegex(ValueError, exc_str):
-            c.val3 = TestClass()
+            c.val3 = 2.4
 
     def test_Path(self):
         def norm(x):
