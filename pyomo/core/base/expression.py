@@ -393,6 +393,10 @@ class Expression(IndexedComponent):
                 % (self.name, str(data))
             )
 
+        if self._anonymous_sets is not None:
+            for _set in self._anonymous_sets:
+                _set.construct()
+
         try:
             # We do not (currently) accept data for constructing Constraints
             assert data is None

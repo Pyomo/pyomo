@@ -357,12 +357,17 @@ class ComplementarityList(IndexedComplementarity):
         """
         Construct the expression(s) for this complementarity condition.
         """
-        if is_debug_set(logger):
-            logger.debug("Constructing complementarity list %s", self.name)
         if self._constructed:
             return
-        timer = ConstructionTimer(self)
         self._constructed = True
+
+        timer = ConstructionTimer(self)
+        if is_debug_set(logger):
+            logger.debug("Constructing complementarity list %s", self.name)
+
+        if self._anonymous_sets is not None:
+            for _set in self._anonymous_sets:
+                _set.construct()
 
         if self._init_rule is not None:
             _init = self._init_rule(self.parent_block(), ())

@@ -330,7 +330,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         if _domain_rule is None:
             self.domain = _ImplicitAny(owner=self, name='Any')
         else:
-            self.domain = SetInitializer(_domain_rule)(self.parent_block(), None)
+            self.domain = SetInitializer(_domain_rule)(self.parent_block(), None, self)
         # After IndexedComponent.__init__ so we can call is_indexed().
         self._rule = Initializer(
             _init,
@@ -782,6 +782,10 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
                     f"Converting Param '{self.name}' to mutable."
                 )
                 self._mutable = True
+
+        if self._anonymous_sets is not None:
+            for _set in self._anonymous_sets:
+                _set.construct()
 
         try:
             #

@@ -47,7 +47,7 @@ from pyomo.contrib.incidence_analysis.incidence import get_incident_variables
 from pyomo.contrib.pynumero.asl import AmplInterface
 
 pyomo_nlp, pyomo_nlp_available = attempt_import(
-    'pyomo.contrib.pynumero.interfaces.pyomo_nlp'
+    "pyomo.contrib.pynumero.interfaces.pyomo_nlp"
 )
 asl_available = pyomo_nlp_available & AmplInterface.available()
 
@@ -920,9 +920,9 @@ class IncidenceGraphInterface(object):
         edge_trace = plotly.graph_objects.Scatter(
             x=edge_x,
             y=edge_y,
-            line=dict(width=0.5, color='#888'),
-            hoverinfo='none',
-            mode='lines',
+            line=dict(width=0.5, color="#888"),
+            hoverinfo="none",
+            mode="lines",
         )
 
         node_x = []
@@ -936,28 +936,28 @@ class IncidenceGraphInterface(object):
             if node < M:
                 # According to convention, we are a constraint node
                 c = constraints[node]
-                node_color.append('red')
-                body_text = '<br>'.join(
+                node_color.append("red")
+                body_text = "<br>".join(
                     textwrap.wrap(str(c.body), width=120, subsequent_indent="    ")
                 )
                 node_text.append(
-                    f'{str(c)}<br>lb: {str(c.lower)}<br>body: {body_text}<br>'
-                    f'ub: {str(c.upper)}<br>active: {str(c.active)}'
+                    f"{str(c)}<br>lb: {str(c.lower)}<br>body: {body_text}<br>"
+                    f"ub: {str(c.upper)}<br>active: {str(c.active)}"
                 )
             else:
                 # According to convention, we are a variable node
                 v = variables[node - M]
-                node_color.append('blue')
+                node_color.append("blue")
                 node_text.append(
-                    f'{str(v)}<br>lb: {str(v.lb)}<br>ub: {str(v.ub)}<br>'
-                    f'value: {str(v.value)}<br>domain: {str(v.domain)}<br>'
-                    f'fixed: {str(v.is_fixed())}'
+                    f"{str(v)}<br>lb: {str(v.lb)}<br>ub: {str(v.ub)}<br>"
+                    f"value: {str(v.value)}<br>domain: {str(v.domain)}<br>"
+                    f"fixed: {str(v.is_fixed())}"
                 )
         node_trace = plotly.graph_objects.Scatter(
             x=node_x,
             y=node_y,
-            mode='markers',
-            hoverinfo='text',
+            mode="markers",
+            hoverinfo="text",
             text=node_text,
             marker=dict(color=node_color, size=10),
         )
@@ -966,3 +966,32 @@ class IncidenceGraphInterface(object):
             fig.update_layout(title=dict(text=title))
         if show:
             fig.show()
+
+    def add_edge(self, variable, constraint):
+        """Adds an edge between variable and constraint in the incidence graph
+
+        Parameters
+        ----------
+        variable: VarData
+            A variable in the graph
+        constraint: ConstraintData
+            A constraint in the graph
+        """
+        if self._incidence_graph is None:
+            raise RuntimeError(
+                "Attempting to add edge in an incidence graph from cached "
+                "incidence graph,\nbut no incidence graph has been cached."
+            )
+
+        if variable not in self._var_index_map:
+            raise RuntimeError("%s is not a variable in the incidence graph" % variable)
+
+        if constraint not in self._con_index_map:
+            raise RuntimeError(
+                "%s is not a constraint in the incidence graph" % constraint
+            )
+
+        var_id = self._var_index_map[variable] + len(self._con_index_map)
+        con_id = self._con_index_map[constraint]
+
+        self._incidence_graph.add_edge(var_id, con_id)
