@@ -105,6 +105,45 @@ Changing the ``SolverFactory`` version:
    status.display()
    model.pprint()
 
+Linear Presolve and Scaling
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The new interface will allow for direct manipulation of linear presolve and scaling
+options for certain solvers. Currently, these options are only available for
+``ipopt``.
+
+.. autoclass:: pyomo.contrib.solver.ipopt.ipopt
+   :members: solve
+
+The ``writer_config`` configuration option can be used to manipulate presolve
+and scaling options:
+
+.. code-block:: python
+
+   >>> from pyomo.contrib.solver.ipopt import ipopt
+   >>> opt = ipopt()
+   >>> opt.config.writer_config.display()
+
+   show_section_timing: false
+   skip_trivial_constraints: true
+   file_determinism: FileDeterminism.ORDERED
+   symbolic_solver_labels: false
+   scale_model: true
+   export_nonlinear_variables: None
+   row_order: None
+   column_order: None
+   export_defined_variables: true
+   linear_presolve: true
+
+Note that, by default, both ``linear_presolve`` and ``scale_model`` are enabled.
+Users can manipulate ``linear_presolve`` and ``scale_model`` to their preferred
+states by changing their values.
+
+.. code-block:: python
+
+   >>> opt.config.writer_config.linear_presolve = False
+
+
 Interface Implementation
 ------------------------
 

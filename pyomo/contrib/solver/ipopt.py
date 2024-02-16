@@ -17,7 +17,12 @@ import sys
 from typing import Mapping, Optional, Sequence
 
 from pyomo.common import Executable
-from pyomo.common.config import ConfigValue, NonNegativeFloat
+from pyomo.common.config import (
+    ConfigValue,
+    NonNegativeFloat,
+    document_kwargs_from_configdict,
+    ConfigDict,
+)
 from pyomo.common.errors import PyomoException
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.timing import HierarchicalTimer
@@ -65,11 +70,20 @@ class ipoptConfig(SolverConfig):
             visibility=visibility,
         )
 
-        self.executable = self.declare(
-            'executable', ConfigValue(default=Executable('ipopt'))
+        self.executable: Executable = self.declare(
+            'executable',
+            ConfigValue(
+                default=Executable('ipopt'),
+                description="Preferred executable for ipopt. Defaults to searching the "
+                "``PATH`` for the first available ``ipopt``.",
+            ),
         )
-        self.writer_config = self.declare(
-            'writer_config', ConfigValue(default=NLWriter.CONFIG())
+        self.writer_config: ConfigDict = self.declare(
+            'writer_config',
+            ConfigValue(
+                default=NLWriter.CONFIG(),
+                description="For the manipulation of NL writer options.",
+            ),
         )
 
 
@@ -270,6 +284,7 @@ class ipopt(SolverBase):
                 cmd.append(str(k) + '=' + str(val))
         return cmd
 
+    @document_kwargs_from_configdict(CONFIG)
     def solve(self, model, **kwds):
         # Begin time tracking
         start_timestamp = datetime.datetime.now(datetime.timezone.utc)
