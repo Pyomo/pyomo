@@ -12,8 +12,6 @@
 # the purpose of this file is to collect all utility methods that compute
 # attributes of blocks, based on their contents.
 
-__all__ = ['has_discrete_variables']
-
 from pyomo.common import deprecated
 from pyomo.core.base import Var
 

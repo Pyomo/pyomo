@@ -9,16 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = (
-    'Objective',
-    'simple_objective_rule',
-    '_ObjectiveData',
-    'minimize',
-    'maximize',
-    'simple_objectivelist_rule',
-    'ObjectiveList',
-)
-
 import sys
 import logging
 from weakref import ref as weakref_ref

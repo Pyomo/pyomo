@@ -13,8 +13,6 @@
 Management of Pyomo commands
 """
 
-__all__ = ['pyomo_command', 'get_pyomo_commands']
-
 import logging
 
 logger = logging.getLogger('pyomo.common')

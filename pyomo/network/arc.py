@@ -9,8 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['Arc']
-
 from pyomo.network.port import Port
 from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory
 from pyomo.core.base.indexed_component import (

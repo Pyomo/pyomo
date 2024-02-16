@@ -9,8 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['ProblemInformation', 'ProblemSense']
-
 import enum
 from pyomo.opt.results.container import MapContainer
 

@@ -13,24 +13,12 @@
 # Utility functions
 #
 
-__all__ = [
-    'sum_product',
-    'summation',
-    'dot_product',
-    'sequence',
-    'prod',
-    'quicksum',
-    'target_list',
-]
-
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.core.expr.numvalue import native_numeric_types
 from pyomo.core.expr.numeric_expr import (
     mutable_expression,
-    nonlinear_expression,
     NPV_SumExpression,
 )
-import pyomo.core.expr as EXPR
 from pyomo.core.base.var import Var
 from pyomo.core.base.expression import Expression
 from pyomo.core.base.component import _ComponentBase

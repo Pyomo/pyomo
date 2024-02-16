@@ -9,20 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = [
-    'Block',
-    'TraversalStrategy',
-    'SortComponents',
-    'active_components',
-    'components',
-    'active_components_data',
-    'components_data',
-    'SimpleBlock',
-    'ScalarBlock',
-]
-
 import copy
-import enum
 import logging
 import sys
 import weakref
@@ -41,7 +28,6 @@ from pyomo.common.deprecation import deprecated, deprecation_warning, RenamedCla
 from pyomo.common.formatting import StreamIndenter
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.log import is_debug_set
-from pyomo.common.sorting import sorted_robust
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.component import (
     Component,
