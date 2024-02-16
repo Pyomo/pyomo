@@ -52,15 +52,17 @@ class RooneyBieglerExperiment(Experiment):
         self.model = None
 
     def create_model(self):
-        self.model = rooney_biegler_model(self.data)
+        # rooney_biegler_model expects a dataframe
+        data_df = self.data.to_frame().transpose()
+        self.model = rooney_biegler_model(data_df)
 
     def label_model(self):
 
         m = self.model
 
         m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.experiment_outputs.update([(m.hour, self.data.iloc[0]['hour'])])
-        m.experiment_outputs.update([(m.y, self.data.iloc[0]['y'])])
+        m.experiment_outputs.update([(m.hour, self.data['hour'])])
+        m.experiment_outputs.update([(m.y, self.data['y'])])
 
         m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.unknown_parameters.update(
@@ -72,8 +74,8 @@ class RooneyBieglerExperiment(Experiment):
         m = self.model
 
         # Experiment output values
-        m.hour = self.data.iloc[0]['hour']
-        m.y = self.data.iloc[0]['y']
+        m.hour = self.data['hour']
+        m.y = self.data['y']
 
     def get_labeled_model(self):
         self.create_model()
