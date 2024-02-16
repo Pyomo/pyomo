@@ -540,7 +540,7 @@ correspond to first-stage degrees of freedom.
   ...     load_solution=False,
   ... )
   ==============================================================================
-  PyROS: The Pyomo Robust Optimization Solver.
+  PyROS: The Pyomo Robust Optimization Solver...
   ...
   ------------------------------------------------------------------------------
   Robust optimal solution identified.

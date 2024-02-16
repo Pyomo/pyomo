@@ -1,4 +1,4 @@
-cc : Size=3, Index=cc_index, Active=True
+cc : Size=3, Index={0, 1, 2}, Active=True
     Key : Arg0   : Arg1             : Active
       0 : y + x3 : x1 + 2*x2  ==  0 :   True
       1 : y + x3 : x1 + 2*x2  ==  1 :  False
