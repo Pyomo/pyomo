@@ -454,7 +454,7 @@ class Path(object):
         self.expandPath = expandPath
 
     def __call__(self, path):
-        path = str(path)
+        path = os.fsdecode(path)
         _expand = self.expandPath
         if _expand is None:
             _expand = not Path.SuppressPathExpansion
