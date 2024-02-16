@@ -302,6 +302,46 @@ class InEnum(object):
         return f'InEnum[{self._domain.__name__}]'
 
 
+class IsInstance(object):
+    def __init__(self, *bases):
+        assert bases
+        self.baseClasses = bases
+
+    @staticmethod
+    def _fullname(klass):
+        """
+        Get full name of class, including appropriate module qualifier.
+        """
+        module_name = klass.__module__
+        module_qual = "" if module_name == "builtins" else f"{module_name}."
+        return f"{module_qual}{klass.__name__}"
+
+    def __call__(self, obj):
+        if isinstance(obj, self.baseClasses):
+            return obj
+        if len(self.baseClasses) > 1:
+            class_names = ", ".join(
+                f"{self._fullname(kls)!r}" for kls in self.baseClasses
+            )
+            msg = (
+                "Expected an instance of one of these types: "
+                f"{class_names}, but received value {obj!r} of type "
+                f"{self._fullname(type(obj))!r}"
+            )
+        else:
+            msg = (
+                f"Expected an instance of "
+                f"{self._fullname(self.baseClasses[0])!r}, "
+                f"but received value {obj!r} of type {self._fullname(type(obj))!r}"
+            )
+        raise ValueError(msg)
+
+    def domain_name(self):
+        return (
+            f"IsInstance({', '.join(self._fullname(kls) for kls in self.baseClasses)})"
+        )
+
+
 class ListOf(object):
     """Domain validator for lists of a specified type
 

@@ -60,6 +60,7 @@ from pyomo.common.config import (
     NonPositiveFloat,
     NonNegativeFloat,
     In,
+    IsInstance,
     ListOf,
     Module,
     Path,
@@ -447,6 +448,42 @@ class TestConfigDomains(unittest.TestCase):
             cfg.enum = 3
         with self.assertRaisesRegex(ValueError, '.*invalid value'):
             cfg.enum = 'ITEM_THREE'
+
+    def test_IsInstance(self):
+        c = ConfigDict()
+        c.declare("val", ConfigValue(None, IsInstance(int)))
+        c.val = 1
+        self.assertEqual(c.val, 1)
+        exc_str = (
+            "Expected an instance of 'int', but received value 2.4 of type 'float'"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            c.val = 2.4
+
+        class TestClass:
+            def __repr__(self):
+                return f"{TestClass.__name__}()"
+
+        c.declare("val2", ConfigValue(None, IsInstance(TestClass)))
+        testinst = TestClass()
+        c.val2 = testinst
+        self.assertEqual(c.val2, testinst)
+        exc_str = (
+            r"Expected an instance of '.*\.TestClass', "
+            "but received value 2.4 of type 'float'"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            c.val2 = 2.4
+
+        c.declare("val3", ConfigValue(None, IsInstance(int, str)))
+        c.val3 = 2
+        self.assertEqual(c.val3, 2)
+        exc_str = (
+            r"Expected an instance of one of these types: 'int', 'str'"
+            r", but received value TestClass\(\) of type '.*\.TestClass'"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            c.val3 = TestClass()
 
     def test_Path(self):
         def norm(x):
