@@ -239,7 +239,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
     def __init__(self, **kwds):
         PersistentSolverUtils.__init__(self)
         PersistentSolverBase.__init__(self, **kwds)
-        self._num_instances += 1
+        Gurobi._num_instances += 1
         self._solver_model = None
         self._symbol_map = SymbolMap()
         self._labeler = None
@@ -310,8 +310,8 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
 
     def __del__(self):
         if not python_is_shutting_down():
-            self._num_instances -= 1
-            if self._num_instances == 0:
+            Gurobi._num_instances -= 1
+            if Gurobi._num_instances == 0:
                 self.release_license()
 
     def version(self):
