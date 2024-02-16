@@ -15,10 +15,7 @@
 
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.core.expr.numvalue import native_numeric_types
-from pyomo.core.expr.numeric_expr import (
-    mutable_expression,
-    NPV_SumExpression,
-)
+from pyomo.core.expr.numeric_expr import mutable_expression, NPV_SumExpression
 from pyomo.core.base.var import Var
 from pyomo.core.base.expression import Expression
 from pyomo.core.base.component import _ComponentBase

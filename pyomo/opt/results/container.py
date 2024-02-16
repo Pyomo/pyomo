@@ -16,6 +16,7 @@ from math import inf
 
 from pyomo.common.collections import Bunch
 
+
 class ScalarType(str, enum.Enum):
     int = 'int'
     time = 'time'

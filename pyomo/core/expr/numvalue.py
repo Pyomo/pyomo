@@ -32,6 +32,7 @@ from pyomo.common.numeric_types import (
     check_if_numeric_type,
     value,
 )
+from pyomo.core.pyomoobject import PyomoObject
 
 relocated_module_attribute(
     'native_boolean_types',
