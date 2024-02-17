@@ -57,6 +57,7 @@ logger = logging.getLogger('pyomo.gdp.hull')
 
 from pytest import set_trace
 
+
 @TransformationFactory.register(
     'gdp.hull', doc="Relax disjunctive model by forming the hull reformulation."
 )
@@ -226,9 +227,10 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 # first look beneath where we are (there could be Blocks on this
                 # disjunct)
                 for b in t.component_data_objects(
-                        Block, descend_into=Block,
-                        active=True,
-                        sort=SortComponents.deterministic
+                    Block,
+                    descend_into=Block,
+                    active=True,
+                    sort=SortComponents.deterministic,
                 ):
                     if b not in seen_blocks:
                         self._collect_local_vars_from_block(b, user_defined_local_vars)
@@ -237,8 +239,9 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 blk = t
                 while blk is not None:
                     if blk not in seen_blocks:
-                        self._collect_local_vars_from_block(blk,
-                                                            user_defined_local_vars)
+                        self._collect_local_vars_from_block(
+                            blk, user_defined_local_vars
+                        )
                         seen_blocks.add(blk)
                     blk = blk.parent_block()
         return user_defined_local_vars
@@ -285,16 +288,12 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         # parent Disjuncts as we transform their child Disjunctions.
         preprocessed_targets = gdp_tree.reverse_topological_sort()
         # Get all LocalVars from Suffixes ahead of time
-        local_vars_by_disjunct = self._get_user_defined_local_vars(
-            preprocessed_targets)
+        local_vars_by_disjunct = self._get_user_defined_local_vars(preprocessed_targets)
 
         for t in preprocessed_targets:
             if t.ctype is Disjunction:
                 self._transform_disjunctionData(
-                    t,
-                    t.index(),
-                    gdp_tree.parent(t),
-                    local_vars_by_disjunct
+                    t, t.index(), gdp_tree.parent(t), local_vars_by_disjunct
                 )
             # We skip disjuncts now, because we need information from the
             # disjunctions to transform them (which variables to disaggregate),
@@ -322,8 +321,9 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
         return transBlock, True
 
-    def _transform_disjunctionData(self, obj, index, parent_disjunct,
-                                   local_vars_by_disjunct):
+    def _transform_disjunctionData(
+        self, obj, index, parent_disjunct, local_vars_by_disjunct
+    ):
         print("Transforming Disjunction %s" % obj)
         # Hull reformulation doesn't work if this is an OR constraint. So if
         # xor is false, give up
@@ -364,12 +364,12 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             # create the key for each disjunct now
             disjunct_disaggregated_var_map[disjunct] = ComponentMap()
             for var in get_vars_from_components(
-                    disjunct,
-                    Constraint,
-                    include_fixed=not self._config.assume_fixed_vars_permanent,
-                    active=True,
-                    sort=SortComponents.deterministic,
-                    descend_into=Block
+                disjunct,
+                Constraint,
+                include_fixed=not self._config.assume_fixed_vars_permanent,
+                active=True,
+                sort=SortComponents.deterministic,
+                descend_into=Block,
             ):
                 # [ESJ 02/14/2020] By default, we disaggregate fixed variables
                 # on the philosophy that fixing is not a promise for the future
@@ -378,7 +378,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 # with their transformed model. However, the user may have set
                 # assume_fixed_vars_permanent to True in which case we will skip
                 # them
-                
+
                 # Note that, because ComponentSets are ordered, we will
                 # eventually disaggregate the vars in a deterministic order
                 # (the order that we found them)
@@ -411,7 +411,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 for disj in disjuncts:
                     vars_to_disaggregate[disj].add(var)
                     all_vars_to_disaggregate.add(var)
-            else: # var only appears in one disjunct
+            else:  # var only appears in one disjunct
                 disjunct = next(iter(disjuncts))
                 # We check if the user declared it as local
                 if disjunct in local_vars_by_disjunct:
@@ -440,7 +440,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                     local_vars=local_vars[disjunct],
                     parent_local_var_suffix=parent_local_var_list,
                     parent_disjunct_local_vars=local_vars_by_disjunct[parent_disjunct],
-                    disjunct_disaggregated_var_map=disjunct_disaggregated_var_map
+                    disjunct_disaggregated_var_map=disjunct_disaggregated_var_map,
                 )
         xorConstraint.add(index, (or_expr, 1))
         # map the DisjunctionData to its XOR constraint to mark it as
@@ -476,7 +476,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                     bigmConstraint=disaggregated_var_bounds,
                     lb_idx=(idx, 'lb'),
                     ub_idx=(idx, 'ub'),
-                    var_free_indicator=var_free
+                    var_free_indicator=var_free,
                 )
                 # Update mappings:
                 var_info = var.parent_block().private_data()
@@ -493,8 +493,8 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
                 if disaggregated_var not in bigm_constraint_map:
                     bigm_constraint_map[disaggregated_var] = {}
-                bigm_constraint_map[disaggregated_var][obj] = (
-                    Reference(disaggregated_var_bounds[idx, :])
+                bigm_constraint_map[disaggregated_var][obj] = Reference(
+                    disaggregated_var_bounds[idx, :]
                 )
                 original_var_map[disaggregated_var] = var
 
@@ -540,9 +540,16 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         # deactivate for the writers
         obj.deactivate()
 
-    def _transform_disjunct(self, obj, transBlock, vars_to_disaggregate, local_vars,
-                            parent_local_var_suffix, parent_disjunct_local_vars,
-                            disjunct_disaggregated_var_map):
+    def _transform_disjunct(
+        self,
+        obj,
+        transBlock,
+        vars_to_disaggregate,
+        local_vars,
+        parent_local_var_suffix,
+        parent_disjunct_local_vars,
+        disjunct_disaggregated_var_map,
+    ):
         print("\nTransforming Disjunct '%s'" % obj.name)
         relaxationBlock = self._get_disjunct_transformation_block(obj, transBlock)
 
@@ -578,9 +585,11 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 disaggregatedVarName + "_bounds", bigmConstraint
             )
 
-            print("Adding bounds constraints for '%s', the disaggregated var "
-                  "corresponding to Var '%s' on Disjunct '%s'" % 
-                  (disaggregatedVar, var, obj))
+            print(
+                "Adding bounds constraints for '%s', the disaggregated var "
+                "corresponding to Var '%s' on Disjunct '%s'"
+                % (disaggregatedVar, var, obj)
+            )
             self._declare_disaggregated_var_bounds(
                 original_var=var,
                 disaggregatedVar=disaggregatedVar,
@@ -633,10 +642,13 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             data_dict['bigm_constraint_map'][var][obj] = bigmConstraint
             disjunct_disaggregated_var_map[obj][var] = var
 
-        var_substitute_map = dict((id(v), newV) for v, newV in
-                                  disjunct_disaggregated_var_map[obj].items() )
-        zero_substitute_map = dict((id(v), ZeroConstant) for v, newV in
-                                   disjunct_disaggregated_var_map[obj].items() )
+        var_substitute_map = dict(
+            (id(v), newV) for v, newV in disjunct_disaggregated_var_map[obj].items()
+        )
+        zero_substitute_map = dict(
+            (id(v), ZeroConstant)
+            for v, newV in disjunct_disaggregated_var_map[obj].items()
+        )
 
         # Transform each component within this disjunct
         self._transform_block_components(
@@ -690,8 +702,10 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         # the transformation block
         if disjunct not in disaggregated_var_map:
             disaggregated_var_map[disjunct] = ComponentMap()
-        print("DISAGGREGATED VAR MAP (%s, %s) : %s" % (disjunct, original_var,
-                                                       disaggregatedVar))
+        print(
+            "DISAGGREGATED VAR MAP (%s, %s) : %s"
+            % (disjunct, original_var, disaggregatedVar)
+        )
         disaggregated_var_map[disjunct][original_var] = disaggregatedVar
         original_var_map[disaggregatedVar] = original_var
 
@@ -915,8 +929,10 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         """
         if disjunct._transformation_block is None:
             raise GDP_Error("Disjunct '%s' has not been transformed" % disjunct.name)
-        msg = ("It does not appear '%s' is a "
-               "variable that appears in disjunct '%s'" % (v.name, disjunct.name))
+        msg = (
+            "It does not appear '%s' is a "
+            "variable that appears in disjunct '%s'" % (v.name, disjunct.name)
+        )
         var_map = v.parent_block().private_data()
         if 'disaggregated_var_map' in var_map:
             try:
@@ -947,12 +963,14 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 return var_map['original_var_map'][disaggregated_var]
         raise GDP_Error(
             "'%s' does not appear to be a "
-            "disaggregated variable" % disaggregated_var.name)
+            "disaggregated variable" % disaggregated_var.name
+        )
 
     # retrieves the disaggregation constraint for original_var resulting from
     # transforming disjunction
-    def get_disaggregation_constraint(self, original_var, disjunction,
-                                      raise_exception=True):
+    def get_disaggregation_constraint(
+        self, original_var, disjunction, raise_exception=True
+    ):
         """
         Returns the disaggregation (re-aggregation?) constraint
         (which links the disaggregated variables to their original)
@@ -976,11 +994,9 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             )
 
         try:
-            cons = (
-                transBlock
-                .parent_block()
-                ._disaggregationConstraintMap[original_var][disjunction]
-            )
+            cons = transBlock.parent_block()._disaggregationConstraintMap[original_var][
+                disjunction
+            ]
         except:
             if raise_exception:
                 logger.error(
@@ -1006,7 +1022,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         v: a Var that was created by the hull transformation as a
            disaggregated variable (and so appears on a transformation
            block of some Disjunct)
-        disjunct: (For nested Disjunctions) Which Disjunct in the 
+        disjunct: (For nested Disjunctions) Which Disjunct in the
            hierarchy the bounds Constraint should correspond to.
            Optional since for non-nested models this can be inferred.
         """
@@ -1025,8 +1041,8 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                         "within a nested GDP hierarchy, and no "
                         "'disjunct' argument was specified. Please "
                         "specify for which Disjunct the bounds "
-                        "constraint for '%s' should be returned."
-                        % (v, v))
+                        "constraint for '%s' should be returned." % (v, v)
+                    )
         raise GDP_Error(
             "Either '%s' is not a disaggregated variable, or "
             "the disjunction that disaggregates it has not "

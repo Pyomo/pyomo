@@ -1745,9 +1745,7 @@ def check_transformation_blocks_nestedDisjunctions(self, m, transformation):
         # "extra" disaggregated var that gets created when it need to be
         # disaggregated for d1, but it's not used in d2
         assertExpressionsEqual(
-            self,
-            cons_expr,
-            d32 + m.d1.binary_indicator_var - 1 <= 0.0
+            self, cons_expr, d32 + m.d1.binary_indicator_var - 1 <= 0.0
         )
 
         cons = hull.get_var_bounds_constraint(d42)
@@ -1758,33 +1756,25 @@ def check_transformation_blocks_nestedDisjunctions(self, m, transformation):
         # "extra" disaggregated var that gets created when it need to be
         # disaggregated for d1, but it's not used in d2
         assertExpressionsEqual(
-            self,
-            cons_expr,
-            d42 + m.d1.binary_indicator_var - 1 <= 0.0
+            self, cons_expr, d42 + m.d1.binary_indicator_var - 1 <= 0.0
         )
         # check the aggregation constraints for the disaggregated indicator vars
-        cons = hull.get_disaggregation_constraint(m.d1.d3.binary_indicator_var,
-                                                  m.disj)
+        cons = hull.get_disaggregation_constraint(m.d1.d3.binary_indicator_var, m.disj)
         check_obj_in_active_tree(self, cons)
         cons_expr = self.simplify_cons(cons)
         assertExpressionsEqual(
-            self,
-            cons_expr,
-            m.d1.d3.binary_indicator_var - d32 - d3 == 0.0
+            self, cons_expr, m.d1.d3.binary_indicator_var - d32 - d3 == 0.0
         )
-        cons = hull.get_disaggregation_constraint(m.d1.d4.binary_indicator_var,
-                                                  m.disj)
+        cons = hull.get_disaggregation_constraint(m.d1.d4.binary_indicator_var, m.disj)
         check_obj_in_active_tree(self, cons)
         cons_expr = self.simplify_cons(cons)
         assertExpressionsEqual(
-            self,
-            cons_expr,
-            m.d1.d4.binary_indicator_var - d42 - d4 == 0.0
+            self, cons_expr, m.d1.d4.binary_indicator_var - d42 - d4 == 0.0
         )
 
-        num_cons = len(list(m.component_data_objects(Constraint,
-                                                     active=True,
-                                                     descend_into=Block)))
+        num_cons = len(
+            list(m.component_data_objects(Constraint, active=True, descend_into=Block))
+        )
         # 30 total constraints in transformed model minus 10 trivial bounds
         # (lower bounds of 0) gives us 20 constraints total:
         self.assertEqual(num_cons, 20)
