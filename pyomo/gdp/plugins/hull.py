@@ -324,7 +324,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
     def _transform_disjunctionData(
         self, obj, index, parent_disjunct, local_vars_by_disjunct
     ):
-        print("Transforming Disjunction %s" % obj)
         # Hull reformulation doesn't work if this is an OR constraint. So if
         # xor is false, give up
         if not obj.xor:
@@ -459,7 +458,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 # create one more disaggregated var
                 idx = len(disaggregatedVars)
                 disaggregated_var = disaggregatedVars[idx]
-                print("Creating extra disaggregated var: '%s'" % disaggregated_var)
                 # mark this as local because we won't re-disaggregate it if this
                 # is a nested disjunction
                 if parent_local_var_list is not None:
@@ -550,7 +548,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         parent_disjunct_local_vars,
         disjunct_disaggregated_var_map,
     ):
-        print("\nTransforming Disjunct '%s'" % obj.name)
         relaxationBlock = self._get_disjunct_transformation_block(obj, transBlock)
 
         # Put the disaggregated variables all on their own block so that we can
@@ -585,11 +582,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 disaggregatedVarName + "_bounds", bigmConstraint
             )
 
-            print(
-                "Adding bounds constraints for '%s', the disaggregated var "
-                "corresponding to Var '%s' on Disjunct '%s'"
-                % (disaggregatedVar, var, obj)
-            )
             self._declare_disaggregated_var_bounds(
                 original_var=var,
                 disaggregatedVar=disaggregatedVar,
@@ -623,7 +615,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
             parent_block = var.parent_block()
 
-            print("Adding bounds constraints for local var '%s'" % var)
             self._declare_disaggregated_var_bounds(
                 original_var=var,
                 disaggregatedVar=var,
@@ -702,10 +693,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         # the transformation block
         if disjunct not in disaggregated_var_map:
             disaggregated_var_map[disjunct] = ComponentMap()
-        print(
-            "DISAGGREGATED VAR MAP (%s, %s) : %s"
-            % (disjunct, original_var, disaggregatedVar)
-        )
         disaggregated_var_map[disjunct][original_var] = disaggregatedVar
         original_var_map[disaggregatedVar] = original_var
 
