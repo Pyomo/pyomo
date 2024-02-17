@@ -55,8 +55,6 @@ from weakref import ref as weakref_ref
 
 logger = logging.getLogger('pyomo.gdp.hull')
 
-from pytest import set_trace
-
 
 @TransformationFactory.register(
     'gdp.hull', doc="Relax disjunctive model by forming the hull reformulation."

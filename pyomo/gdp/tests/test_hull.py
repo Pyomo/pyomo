@@ -52,8 +52,6 @@ from io import StringIO
 import os
 from os.path import abspath, dirname, join
 
-##DEBUG
-from pytest import set_trace
 
 currdir = dirname(abspath(__file__))
 from filecmp import cmp
