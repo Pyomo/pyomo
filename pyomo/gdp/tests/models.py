@@ -463,7 +463,7 @@ def makeNestedDisjunctions():
 
     (makeNestedDisjunctions_NestedDisjuncts is a much simpler model. All
     this adds is that it has a nested disjunction on a DisjunctData as well
-    as on a SimpleDisjunct. So mostly it exists for historical reasons.)
+    as on a ScalarDisjunct. So mostly it exists for historical reasons.)
     """
     m = ConcreteModel()
     m.x = Var(bounds=(-9, 9))
