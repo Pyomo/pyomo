@@ -80,19 +80,11 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         list of blocks and Disjunctions [default: the instance]
 
     The transformation will create a new Block with a unique
-    name beginning "_pyomo_gdp_hull_reformulation".
-    The block will have a dictionary "_disaggregatedVarMap:
-        'srcVar': ComponentMap(<src var>:<disaggregated var>),
-        'disaggregatedVar': ComponentMap(<disaggregated var>:<src var>)
-
-    It will also have a ComponentMap "_bigMConstraintMap":
-
-        <disaggregated var>:<bounds constraint>
-
-    Last, it will contain an indexed Block named "relaxedDisjuncts",
-    which will hold the relaxed disjuncts.  This block is indexed by
-    an integer indicating the order in which the disjuncts were relaxed.
-    Each block has a dictionary "_constraintMap":
+    name beginning "_pyomo_gdp_hull_reformulation". It will contain an
+    indexed Block named "relaxedDisjuncts" that will hold the relaxed
+    disjuncts.  This block is indexed by an integer indicating the order
+    in which the disjuncts were relaxed. Each block has a dictionary
+    "_constraintMap":
 
         'srcConstraints': ComponentMap(<transformed constraint>:
                                        <src constraint>),
@@ -108,7 +100,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
     The _pyomo_gdp_hull_reformulation block will have a ComponentMap
     "_disaggregationConstraintMap":
         <src var>:ComponentMap(<srcDisjunction>: <disaggregation constraint>)
-
     """
 
     CONFIG = cfg.ConfigDict('gdp.hull')
@@ -243,23 +234,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                         seen_blocks.add(blk)
                     blk = blk.parent_block()
         return user_defined_local_vars
-
-    # def _get_local_vars_from_suffixes(self, block, local_var_dict):
-    #     # You can specify suffixes on any block (disjuncts included). This
-    #     # method starts from a Disjunct (presumably) and checks for a LocalVar
-    #     # suffixes going both up and down the tree, adding them into the
-    #     # dictionary that is the second argument.
-
-    #     # first look beneath where we are (there could be Blocks on this
-    #     # disjunct)
-    #     for b in block.component_data_objects(
-    #         Block, descend_into=Block, active=True, sort=SortComponents.deterministic
-    #     ):
-    #         self._collect_local_vars_from_block(b, local_var_dict)
-    #     # now traverse upwards and get what's above
-    #     while block is not None:
-    #         self._collect_local_vars_from_block(block, local_var_dict)
-    #         block = block.parent_block()
 
     def _apply_to(self, instance, **kwds):
         try:
