@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -357,12 +357,17 @@ class ComplementarityList(IndexedComplementarity):
         """
         Construct the expression(s) for this complementarity condition.
         """
-        if is_debug_set(logger):
-            logger.debug("Constructing complementarity list %s", self.name)
         if self._constructed:
             return
-        timer = ConstructionTimer(self)
         self._constructed = True
+
+        timer = ConstructionTimer(self)
+        if is_debug_set(logger):
+            logger.debug("Constructing complementarity list %s", self.name)
+
+        if self._anonymous_sets is not None:
+            for _set in self._anonymous_sets:
+                _set.construct()
 
         if self._init_rule is not None:
             _init = self._init_rule(self.parent_block(), ())

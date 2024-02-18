@@ -189,7 +189,7 @@ a tracking cost expression.
    >>> m.setpoint_idx = var_set
    >>> m.tracking_cost = tr_cost
    >>> m.tracking_cost.pprint()
-   tracking_cost : Size=6, Index=tracking_cost_index
+   tracking_cost : Size=6, Index=setpoint_idx*time
        Key    : Expression
        (0, 0) : (var[0,A] - 0.5)**2
        (0, 1) : (var[1,A] - 0.5)**2

@@ -1,13 +1,10 @@
-4 Set Declarations
+3 Set Declarations
     A : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    3 : {'A1', 'A2', 'A3'}
     B : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    3 : {'B1', 'B2', 'B3'}
-    N_index : Size=1, Index=None, Ordered=True
-        Key  : Dimen : Domain : Size : Members
-        None :     2 :    A*B :    9 : {('A1', 'B1'), ('A1', 'B2'), ('A1', 'B3'), ('A2', 'B1'), ('A2', 'B2'), ('A2', 'B3'), ('A3', 'B1'), ('A3', 'B2'), ('A3', 'B3')}
     Z : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     2 :    Any :    3 : {('A1', 'B1'), ('A2', 'B2'), ('A3', 'B3')}
@@ -18,10 +15,10 @@
          A1 :   4.3
          A2 :   4.4
          A3 :   4.5
-    N : Size=3, Index=N_index, Domain=Any, Default=None, Mutable=False
+    N : Size=3, Index=A*B, Domain=Any, Default=None, Mutable=False
         Key          : Value
         ('A1', 'B1') :   5.3
         ('A2', 'B2') :   5.4
         ('A3', 'B3') :   5.5
 
-6 Declarations: A B Z M N_index N
+5 Declarations: A B Z M N

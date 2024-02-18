@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -302,6 +302,55 @@ class InEnum(object):
         return f'InEnum[{self._domain.__name__}]'
 
 
+class IsInstance(object):
+    """
+    Domain validator for type checking.
+
+    Parameters
+    ----------
+    *bases : tuple of type
+        Valid types.
+    """
+
+    def __init__(self, *bases):
+        assert bases
+        self.baseClasses = bases
+
+    @staticmethod
+    def _fullname(klass):
+        """
+        Get full name of class, including appropriate module qualifier.
+        """
+        module_name = klass.__module__
+        module_qual = "" if module_name == "builtins" else f"{module_name}."
+        return f"{module_qual}{klass.__name__}"
+
+    def __call__(self, obj):
+        if isinstance(obj, self.baseClasses):
+            return obj
+        if len(self.baseClasses) > 1:
+            class_names = ", ".join(
+                f"{self._fullname(kls)!r}" for kls in self.baseClasses
+            )
+            msg = (
+                "Expected an instance of one of these types: "
+                f"{class_names}, but received value {obj!r} of type "
+                f"{self._fullname(type(obj))!r}"
+            )
+        else:
+            msg = (
+                f"Expected an instance of "
+                f"{self._fullname(self.baseClasses[0])!r}, "
+                f"but received value {obj!r} of type {self._fullname(type(obj))!r}"
+            )
+        raise ValueError(msg)
+
+    def domain_name(self):
+        return (
+            f"IsInstance({', '.join(self._fullname(kls) for kls in self.baseClasses)})"
+        )
+
+
 class ListOf(object):
     """Domain validator for lists of a specified type
 
@@ -454,7 +503,7 @@ class Path(object):
         self.expandPath = expandPath
 
     def __call__(self, path):
-        path = str(path)
+        path = os.fsdecode(path)
         _expand = self.expandPath
         if _expand is None:
             _expand = not Path.SuppressPathExpansion
@@ -709,6 +758,7 @@ validators for common use cases:
    NonNegativeFloat
    In
    InEnum
+   IsInstance
    ListOf
    Module
    Path
