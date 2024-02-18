@@ -490,9 +490,14 @@ class Module(object):
 
 
 class Path(object):
-    """Domain validator for path-like options.
+    """
+    Domain validator for a
+    :py:term:`path-like object <path-like object>`.
 
-    This will admit any object and convert it to a string.  It will then
+    This will admit a path-like object
+    and get the object's file system representation
+    through :py:obj:`os.fsdecode`.
+    It will then
     expand any environment variables and leading usernames (e.g.,
     "~myuser" or "~/") appearing in either the value or the base path
     before concatenating the base path and value, expanding the path to
