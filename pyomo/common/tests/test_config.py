@@ -526,6 +526,8 @@ class TestConfigDomains(unittest.TestCase):
                 path_str = str(self.path)
                 return f"{type(self).__name__}({path_str})"
 
+        self.assertEqual(Path().domain_name(), "Path")
+
         cwd = os.getcwd() + os.path.sep
         c = ConfigDict()
 

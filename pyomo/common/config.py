@@ -555,6 +555,9 @@ class Path(object):
         )
         return ans
 
+    def domain_name(self):
+        return type(self).__name__
+
 
 class PathList(Path):
     """Domain validator for a list of path-like objects.
