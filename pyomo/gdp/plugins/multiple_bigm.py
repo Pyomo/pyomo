@@ -336,8 +336,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         for disjunct in active_disjuncts:
             or_expr += disjunct.indicator_var.get_associated_binary()
             self._transform_disjunct(disjunct, transBlock, active_disjuncts, Ms)
-        rhs = 1 if parent_disjunct is None else parent_disjunct.binary_indicator_var
-        algebraic_constraint.add(index, (or_expr, rhs))
+        algebraic_constraint.add(index, or_expr == 1)
         # map the DisjunctionData to its XOR constraint to mark it as
         # transformed
         obj._algebraic_constraint = weakref_ref(algebraic_constraint[index])
