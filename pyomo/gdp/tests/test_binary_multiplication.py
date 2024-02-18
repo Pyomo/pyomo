@@ -306,7 +306,10 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
 class TestNestedGDP(unittest.TestCase):
     @unittest.skipUnless(gurobi_available, "Gurobi is not available")
     def test_do_not_assume_nested_indicators_local(self):
-        ct.check_do_not_assume_nested_indicators_local(self, 'gdp.binary_multiplication')
+        ct.check_do_not_assume_nested_indicators_local(
+            self, 'gdp.binary_multiplication'
+        )
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -566,27 +566,33 @@ def makeNestedDisjunctions_NestedDisjuncts():
 def why_indicator_vars_are_not_always_local():
     m = ConcreteModel()
     m.x = Var(bounds=(1, 10))
+
     @m.Disjunct()
     def Z1(d):
         m = d.model()
         d.c = Constraint(expr=m.x >= 1.1)
+
     @m.Disjunct()
     def Z2(d):
         m = d.model()
         d.c = Constraint(expr=m.x >= 1.2)
+
     @m.Disjunct()
     def Y1(d):
         m = d.model()
         d.c = Constraint(expr=(1.15, m.x, 8))
         d.disjunction = Disjunction(expr=[m.Z1, m.Z2])
+
     @m.Disjunct()
     def Y2(d):
         m = d.model()
-        d.c = Constraint(expr=m.x==9)
+        d.c = Constraint(expr=m.x == 9)
+
     m.disjunction = Disjunction(expr=[m.Y1, m.Y2])
 
-    m.logical_cons = LogicalConstraint(expr=m.Y2.indicator_var.implies(
-        m.Z1.indicator_var.land(m.Z2.indicator_var)))
+    m.logical_cons = LogicalConstraint(
+        expr=m.Y2.indicator_var.implies(m.Z1.indicator_var.land(m.Z2.indicator_var))
+    )
 
     # optimal value is 9, but it will be 8 if we wrongly assume that the nested
     # indicator_vars are local.

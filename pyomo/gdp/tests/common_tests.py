@@ -1945,6 +1945,7 @@ def check_nested_disjuncts_in_flat_gdp(self, transformation):
         self.assertTrue(value(m.disj1[t].indicator_var))
         self.assertTrue(value(m.disj1[t].sub1.indicator_var))
 
+
 def check_do_not_assume_nested_indicators_local(self, transformation):
     m = models.why_indicator_vars_are_not_always_local()
     TransformationFactory(transformation).apply_to(m)
