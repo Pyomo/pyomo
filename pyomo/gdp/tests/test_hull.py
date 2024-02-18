@@ -2030,6 +2030,10 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         cons_expr = self.simplify_cons(cons)
         assertExpressionsEqual(self, cons_expr, m.y - y_y2 - y_y1 == 0.0)
 
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    def test_do_not_assume_nested_indicators_local(self):
+        ct.check_do_not_assume_nested_indicators_local(self, 'gdp.hull')
+
 
 class TestSpecialCases(unittest.TestCase):
     def test_local_vars(self):

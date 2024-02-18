@@ -2200,6 +2200,10 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         # the same check to make sure everything is transformed correctly.
         self.check_hierarchical_nested_model(m, bigm)
 
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    def test_do_not_assume_nested_indicators_local(self):
+        ct.check_do_not_assume_nested_indicators_local(self, 'gdp.bigm')
+
 
 class IndexedDisjunction(unittest.TestCase):
     # this tests that if the targets are a subset of the
