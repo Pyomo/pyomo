@@ -1,7 +1,7 @@
 Model 'Linear (H)'
 
   Variables:
-    x : Size=2, Index=x_index
+    x : Size=2, Index={I_C_Scoops, Peanuts}
         Key        : Lower : Value : Upper : Fixed : Stale : Domain
         I_C_Scoops :     0 :   0.0 :   100 : False : False :  Reals
            Peanuts :     0 :  40.6 :  40.6 : False : False :  Reals
@@ -9,7 +9,7 @@ Model 'Linear (H)'
   Objectives:
     z : Size=1, Index=None, Active=True
         Key  : Active : Value
-        None :   True : 3.83388751715
+        None :   True : 3.8338875171467763
 
   Constraints:
     budgetconstr : Size=1

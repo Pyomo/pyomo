@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -2626,19 +2626,16 @@ class TestBlock(unittest.TestCase):
         m = HierarchicalModel().model
         buf = StringIO()
         m.pprint(ostream=buf)
-        ref = """3 Set Declarations
+        ref = """2 Set Declarations
     a1_IDX : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    2 : {5, 4}
     a3_IDX : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    2 : {6, 7}
-    a_index : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :    3 : {1, 2, 3}
 
 3 Block Declarations
-    a : Size=3, Index=a_index, Active=True
+    a : Size=3, Index={1, 2, 3}, Active=True
         a[1] : Active=True
             2 Block Declarations
                 c : Size=2, Index=a1_IDX, Active=True
@@ -2668,9 +2665,9 @@ class TestBlock(unittest.TestCase):
     c : Size=1, Index=None, Active=True
         0 Declarations: 
 
-6 Declarations: a1_IDX a3_IDX c a_index a b
+5 Declarations: a1_IDX a3_IDX c a b
 """
-        print(buf.getvalue())
+        self.maxDiff = None
         self.assertEqual(ref, buf.getvalue())
 
     @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")

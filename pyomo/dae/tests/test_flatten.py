@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -48,6 +48,12 @@ class TestAssumedBehavior(unittest.TestCase):
     These are some behaviors we rely on that weren't
     immediately obvious would be the case.
     """
+
+    def setUp(self):
+        self._orig_flatten = normalize_index.flatten
+
+    def tearDown(self):
+        normalize_index.flatten = self._orig_flatten
 
     def test_cross(self):
         m = ConcreteModel()
@@ -313,6 +319,12 @@ class TestCategorize(_TestFlattenBase, unittest.TestCase):
 
 
 class TestFlatten(_TestFlattenBase, unittest.TestCase):
+    def setUp(self):
+        self._orig_flatten = normalize_index.flatten
+
+    def tearDown(self):
+        normalize_index.flatten = self._orig_flatten
+
     def _model1_1d_sets(self):
         # One-dimensional sets, no skipping.
         m = ConcreteModel()
