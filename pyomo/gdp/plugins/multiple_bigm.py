@@ -65,10 +65,10 @@ _trusted_solvers = {
     'cbc',
     'glpk',
     'scip',
-    'xpress_direct',
-    'mosek_direct',
+    'xpress',
+    'mosek',
     'baron',
-    'appsi_highs',
+    'highs',
 }
 
 
@@ -670,10 +670,17 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         self, other_disjunct, scratch_block, unsuccessful_solve_msg
     ):
         solver = self._config.solver
-        solver_trusted = solver.name in _trusted_solvers
         results = solver.solve(other_disjunct, load_solutions=False)
         if results.solver.termination_condition is TerminationCondition.infeasible:
-            if solver_trusted:
+            # [2/18/24]: TODO: After the solver rewrite is complete, we will not
+            # need this check since we can actually determine from the
+            # termination condition whether or not the solver proved
+            # infeasibility or just terminated at local infeasiblity. For now,
+            # while this is not complete, it catches most of the solvers we
+            # trust, and, unless someone is so pathological as to *rename* an
+            # untrusted solver using a trusted solver name, it will never do the
+            # *wrong* thing.
+            if any(s in solver.name for s in _trusted_solvers):
                 logger.debug(
                     "Disjunct '%s' is infeasible, deactivating." % other_disjunct.name
                 )
