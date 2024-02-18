@@ -214,11 +214,11 @@ class GDP_to_MIP_Transformation(Transformation):
             )
 
         # We always need to create or fetch a transformation block on the parent block.
-        trans_block, new_block = self._add_transformation_block(
-            obj.parent_block())
+        trans_block, new_block = self._add_transformation_block(obj.parent_block())
         # This is where we put exactly_one/or constraint
-        algebraic_constraint = self._add_xor_constraint(obj.parent_component(),
-                                                        trans_block)
+        algebraic_constraint = self._add_xor_constraint(
+            obj.parent_component(), trans_block
+        )
 
         # If requested, create or fetch the transformation block above the
         # nested hierarchy
@@ -229,7 +229,8 @@ class GDP_to_MIP_Transformation(Transformation):
             # root_disjunct=None. BigM can't put the exactly-one constraint up
             # here, but it can put everything else.)
             trans_block, new_block = self._add_transformation_block(
-                root_disjunct.parent_block() )
+                root_disjunct.parent_block()
+            )
 
         return trans_block, algebraic_constraint
 

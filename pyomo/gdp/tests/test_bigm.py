@@ -1897,17 +1897,12 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         ct.check_linear_coef(self, repn, variable, 1)
         ct.check_linear_coef(self, repn, indicator_var, M)
 
-    def check_inner_xor_constraint(
-        self, inner_disjunction, outer_disjunct, bigm
-    ):
+    def check_inner_xor_constraint(self, inner_disjunction, outer_disjunct, bigm):
         inner_xor = inner_disjunction.algebraic_constraint
-        sum_indicators = sum(d.binary_indicator_var for d in
-                             inner_disjunction.disjuncts)
-        assertExpressionsEqual(
-            self,
-            inner_xor.expr,
-            sum_indicators == 1
+        sum_indicators = sum(
+            d.binary_indicator_var for d in inner_disjunction.disjuncts
         )
+        assertExpressionsEqual(self, inner_xor.expr, sum_indicators == 1)
         # this guy has been transformed
         self.assertFalse(inner_xor.active)
         cons = bigm.get_transformed_constraints(inner_xor)
@@ -1918,9 +1913,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         assertExpressionsEqual(
             self,
             lb_expr,
-            1.0 <=
-            sum_indicators
-            - outer_disjunct.binary_indicator_var + 1.0
+            1.0 <= sum_indicators - outer_disjunct.binary_indicator_var + 1.0,
         )
         ub = cons[1]
         ct.check_obj_in_active_tree(self, ub)
@@ -1928,8 +1921,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         assertExpressionsEqual(
             self,
             ub_expr,
-            sum_indicators
-            + outer_disjunct.binary_indicator_var - 1 <= 1.0
+            sum_indicators + outer_disjunct.binary_indicator_var - 1 <= 1.0,
         )
 
     def test_transformed_constraints(self):
@@ -2012,8 +2004,9 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
 
         # Here we check that the xor constraint from
         # simpledisjunct.innerdisjunction is transformed.
-        self.check_inner_xor_constraint(m.simpledisjunct.innerdisjunction,
-                                        m.simpledisjunct, bigm)
+        self.check_inner_xor_constraint(
+            m.simpledisjunct.innerdisjunction, m.simpledisjunct, bigm
+        )
 
         cons6 = bigm.get_transformed_constraints(m.disjunct[0].c)
         self.assertEqual(len(cons6), 2)
@@ -2029,8 +2022,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         # now we check that the xor constraint from disjunct[1].innerdisjunction
         # is correct.
         self.check_inner_xor_constraint(
-            m.disjunct[1].innerdisjunction[0],
-            m.disjunct[1], bigm
+            m.disjunct[1].innerdisjunction[0], m.disjunct[1], bigm
         )
 
         cons8 = bigm.get_transformed_constraints(m.disjunct[1].c)
@@ -2155,8 +2147,9 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
             self, outer_xor, m.disj1, m.disjunct_block.disj2
         )
 
-        self.check_inner_xor_constraint(m.disjunct_block.disj2.disjunction,
-                                        m.disjunct_block.disj2, bigm)
+        self.check_inner_xor_constraint(
+            m.disjunct_block.disj2.disjunction, m.disjunct_block.disj2, bigm
+        )
 
         # outer disjunction constraints
         disj1c = bigm.get_transformed_constraints(m.disj1.c)
