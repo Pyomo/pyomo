@@ -1,4 +1,4 @@
-16 Set Declarations
+10 Set Declarations
     A : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    3 : {'A1', 'A2', 'A3'}
@@ -9,27 +9,15 @@
         Key  : Dimen : Domain : Size : Members
         None :     2 :    A*B :    9 : {('A1', 1.0), ('A1', 2.0), ('A1', 3.0), ('A2', 1.0), ('A2', 2.0), ('A2', 3.0), ('A3', 1.0), ('A3', 2.0), ('A3', 3.0)}
     D : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain   : Size : Members
-        None :     2 : D_domain :    3 : {('A1', 1.0), ('A2', 2.0), ('A3', 3.0)}
-    D_domain : Size=1, Index=None, Ordered=True
         Key  : Dimen : Domain : Size : Members
-        None :     2 :    A*B :    9 : {('A1', 1.0), ('A1', 2.0), ('A1', 3.0), ('A2', 1.0), ('A2', 2.0), ('A2', 3.0), ('A3', 1.0), ('A3', 2.0), ('A3', 3.0)}
+        None :     2 :    A*B :    3 : {('A1', 1.0), ('A2', 2.0), ('A3', 3.0)}
     E : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain   : Size : Members
-        None :     3 : E_domain :    6 : {('A1', 1.0, 'A1'), ('A1', 1.0, 'A2'), ('A2', 2.0, 'A2'), ('A2', 2.0, 'A3'), ('A3', 3.0, 'A1'), ('A3', 3.0, 'A3')}
-    E_domain : Size=1, Index=None, Ordered=True
-        Key  : Dimen : Domain             : Size : Members
-        None :     3 : E_domain_index_0*A :   27 : {('A1', 1.0, 'A1'), ('A1', 1.0, 'A2'), ('A1', 1.0, 'A3'), ('A1', 2.0, 'A1'), ('A1', 2.0, 'A2'), ('A1', 2.0, 'A3'), ('A1', 3.0, 'A1'), ('A1', 3.0, 'A2'), ('A1', 3.0, 'A3'), ('A2', 1.0, 'A1'), ('A2', 1.0, 'A2'), ('A2', 1.0, 'A3'), ('A2', 2.0, 'A1'), ('A2', 2.0, 'A2'), ('A2', 2.0, 'A3'), ('A2', 3.0, 'A1'), ('A2', 3.0, 'A2'), ('A2', 3.0, 'A3'), ('A3', 1.0, 'A1'), ('A3', 1.0, 'A2'), ('A3', 1.0, 'A3'), ('A3', 2.0, 'A1'), ('A3', 2.0, 'A2'), ('A3', 2.0, 'A3'), ('A3', 3.0, 'A1'), ('A3', 3.0, 'A2'), ('A3', 3.0, 'A3')}
-    E_domain_index_0 : Size=1, Index=None, Ordered=True
         Key  : Dimen : Domain : Size : Members
-        None :     2 :    A*B :    9 : {('A1', 1.0), ('A1', 2.0), ('A1', 3.0), ('A2', 1.0), ('A2', 2.0), ('A2', 3.0), ('A3', 1.0), ('A3', 2.0), ('A3', 3.0)}
+        None :     3 :    A*B :    6 : {('A1', 1.0, 'A1'), ('A1', 1.0, 'A2'), ('A2', 2.0, 'A2'), ('A2', 2.0, 'A3'), ('A3', 3.0, 'A1'), ('A3', 3.0, 'A3')}
     F : Size=0, Index=A, Ordered=Insertion
         Key : Dimen : Domain : Size : Members
-    G : Size=0, Index=G_index, Ordered=Insertion
+    G : Size=0, Index=A*B, Ordered=Insertion
         Key : Dimen : Domain : Size : Members
-    G_index : Size=1, Index=None, Ordered=True
-        Key  : Dimen : Domain : Size : Members
-        None :     2 :    A*B :    9 : {('A1', 1.0), ('A1', 2.0), ('A1', 3.0), ('A2', 1.0), ('A2', 2.0), ('A2', 3.0), ('A3', 1.0), ('A3', 2.0), ('A3', 3.0)}
     H : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    3 : {'H1', 'H2', 'H3'}
@@ -39,12 +27,6 @@
     J : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     2 :    Any :    3 : {('A1', 'B1'), ('A2', 'B2'), ('A3', 'B3')}
-    T_index : Size=1, Index=None, Ordered=True
-        Key  : Dimen : Domain : Size : Members
-        None :     2 :    A*I :   12 : {('A1', 'I1'), ('A1', 'I2'), ('A1', 'I3'), ('A1', 'I4'), ('A2', 'I1'), ('A2', 'I2'), ('A2', 'I3'), ('A2', 'I4'), ('A3', 'I1'), ('A3', 'I2'), ('A3', 'I3'), ('A3', 'I4')}
-    U_index : Size=1, Index=None, Ordered=True
-        Key  : Dimen : Domain : Size : Members
-        None :     2 :    I*A :   12 : {('I1', 'A1'), ('I1', 'A2'), ('I1', 'A3'), ('I2', 'A1'), ('I2', 'A2'), ('I2', 'A3'), ('I3', 'A1'), ('I3', 'A2'), ('I3', 'A3'), ('I4', 'A1'), ('I4', 'A2'), ('I4', 'A3')}
 
 12 Param Declarations
     O : Size=3, Index=J, Domain=Reals, Default=None, Mutable=False
@@ -76,7 +58,7 @@
         Key : Value
          A1 :   3.3
          A3 :   3.5
-    T : Size=12, Index=T_index, Domain=Any, Default=None, Mutable=False
+    T : Size=12, Index=A*I, Domain=Any, Default=None, Mutable=False
         Key          : Value
         ('A1', 'I1') :   1.3
         ('A1', 'I2') :   1.4
@@ -90,7 +72,7 @@
         ('A3', 'I2') :   3.4
         ('A3', 'I3') :   3.5
         ('A3', 'I4') :   3.6
-    U : Size=12, Index=U_index, Domain=Any, Default=None, Mutable=False
+    U : Size=12, Index=I*A, Domain=Any, Default=None, Mutable=False
         Key          : Value
         ('I1', 'A1') :   1.3
         ('I1', 'A2') :   2.3
@@ -123,4 +105,4 @@
         Key  : Value
         None :  1.01
 
-28 Declarations: A B C D_domain D E_domain_index_0 E_domain E F G_index G H I J Z Y X W U_index U T_index T S R Q P PP O
+22 Declarations: A B C D E F G H I J Z Y X W U T S R Q P PP O

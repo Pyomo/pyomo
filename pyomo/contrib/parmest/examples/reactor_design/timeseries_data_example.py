@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -23,15 +23,16 @@ class TimeSeriesReactorDesignExperiment(ReactorDesignExperiment):
     def __init__(self, data, experiment_number):
         self.data = data
         self.experiment_number = experiment_number
-        self.data_i = data[experiment_number]
+        data_i = data.loc[data['experiment'] == experiment_number,:]
+        self.data_i = data_i.reset_index()
         self.model = None
 
     def finalize_model(self):
         m = self.model
 
         # Experiment inputs values
-        m.sv = self.data_i['sv']
-        m.caf = self.data_i['caf']
+        m.sv = self.data_i['sv'].mean()
+        m.caf = self.data_i['caf'].mean()
 
         # Experiment output values
         m.ca = self.data_i['ca'][0]
@@ -42,59 +43,18 @@ class TimeSeriesReactorDesignExperiment(ReactorDesignExperiment):
         return m
 
 
-def group_data(data, groupby_column_name, use_mean=None):
-    """
-    Group data by scenario
-
-    Parameters
-    ----------
-    data: DataFrame
-        Data
-    groupby_column_name: strings
-        Name of data column which contains scenario numbers
-    use_mean: list of column names or None, optional
-        Name of data columns which should be reduced to a single value per
-        scenario by taking the mean
-
-    Returns
-    ----------
-    grouped_data: list of dictionaries
-        Grouped data
-    """
-    if use_mean is None:
-        use_mean_list = []
-    else:
-        use_mean_list = use_mean
-
-    grouped_data = []
-    for exp_num, group in data.groupby(data[groupby_column_name]):
-        d = {}
-        for col in group.columns:
-            if col in use_mean_list:
-                d[col] = group[col].mean()
-            else:
-                d[col] = list(group[col])
-        grouped_data.append(d)
-
-    return grouped_data
-
-
 def main():
-    # Parameter estimation using timeseries data
+    # Parameter estimation using timeseries data, grouped by experiment number
 
     # Data, includes multiple sensors for ca and cc
     file_dirname = dirname(abspath(str(__file__)))
     file_name = abspath(join(file_dirname, 'reactor_data_timeseries.csv'))
     data = pd.read_csv(file_name)
 
-    # Group time series data into experiments, return the mean value for sv and caf
-    # Returns a list of dictionaries
-    data_ts = group_data(data, 'experiment', ['sv', 'caf'])
-
     # Create an experiment list
     exp_list = []
-    for i in range(len(data_ts)):
-        exp_list.append(TimeSeriesReactorDesignExperiment(data_ts, i))
+    for i in data['experiment'].unique():
+        exp_list.append(TimeSeriesReactorDesignExperiment(data, i))
 
     def SSE_timeseries(model):
 

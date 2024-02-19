@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -36,7 +36,7 @@ def main():
     # Create an experiment list
     exp_list = []
     for i in range(data.shape[0]):
-        exp_list.append(RooneyBieglerExperiment(data.loc[i, :].to_frame().transpose()))
+        exp_list.append(RooneyBieglerExperiment(data.loc[i, :]))
 
     # View one model
     # exp0_model = exp_list[0].get_labeled_model()

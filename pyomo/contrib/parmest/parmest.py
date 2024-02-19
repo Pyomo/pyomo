@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -16,7 +16,6 @@
 # TODO: move use_mpisppy to a Pyomo configuration option
 
 # Redesign TODOS
-# TODO: remove group_data,this is only used in 1 example and should be handled by the user in Experiment
 # TODO: _treemaker is not used in parmest, the code could be moved to scenario tree if needed
 # TODO: Create additional built in objective expressions in an Enum class which includes SSE (see SSE function below)
 # TODO: Clean up the use of theta_names through out the code.  The Experiment returns the CUID of each theta and this can be used directly (instead of the name)
@@ -271,44 +270,6 @@ def _experiment_instance_creation_callback(
 #             m.ScenarioLeafNode[node.replace('LeafNode_', '')] = node
 
 #     return m
-
-
-# def group_data(data, groupby_column_name, use_mean=None):
-#     """
-#     Group data by scenario
-
-#     Parameters
-#     ----------
-#     data: DataFrame
-#         Data
-#     groupby_column_name: strings
-#         Name of data column which contains scenario numbers
-#     use_mean: list of column names or None, optional
-#         Name of data columns which should be reduced to a single value per
-#         scenario by taking the mean
-
-#     Returns
-#     ----------
-#     grouped_data: list of dictionaries
-#         Grouped data
-#     """
-#     if use_mean is None:
-#         use_mean_list = []
-#     else:
-#         use_mean_list = use_mean
-
-#     grouped_data = []
-#     for exp_num, group in data.groupby(data[groupby_column_name]):
-#         d = {}
-#         for col in group.columns:
-#             if col in use_mean_list:
-#                 d[col] = group[col].mean()
-#             else:
-#                 d[col] = list(group[col])
-#         grouped_data.append(d)
-
-#     return grouped_data
-
 
 def SSE(model):
     expr = sum((y - yhat) ** 2 for y, yhat in model.experiment_outputs.items())

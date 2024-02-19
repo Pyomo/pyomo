@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -77,7 +77,7 @@ class TestRooneyBiegler(unittest.TestCase):
         exp_list = []
         for i in range(data.shape[0]):
             exp_list.append(
-                RooneyBieglerExperiment(data.loc[i, :].to_frame().transpose())
+                RooneyBieglerExperiment(data.loc[i, :])
             )
 
         # Create an instance of the parmest estimator
@@ -386,13 +386,14 @@ class TestModelVariants(unittest.TestCase):
         class RooneyBieglerExperimentParams(RooneyBieglerExperiment):
 
             def create_model(self):
-                self.model = rooney_biegler_params(self.data)
+                data_df = self.data.to_frame().transpose()
+                self.model = rooney_biegler_params(data_df)
 
         rooney_biegler_params_exp_list = []
         for i in range(self.data.shape[0]):
             rooney_biegler_params_exp_list.append(
                 RooneyBieglerExperimentParams(
-                    self.data.loc[i, :].to_frame().transpose()
+                    self.data.loc[i, :]
                 )
             )
 
@@ -422,15 +423,16 @@ class TestModelVariants(unittest.TestCase):
         class RooneyBieglerExperimentIndexedParams(RooneyBieglerExperiment):
 
             def create_model(self):
-                self.model = rooney_biegler_indexed_params(self.data)
+                data_df = self.data.to_frame().transpose()
+                self.model = rooney_biegler_indexed_params(data_df)
 
             def label_model(self):
 
                 m = self.model
 
                 m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.experiment_outputs.update([(m.hour, self.data.iloc[0]['hour'])])
-                m.experiment_outputs.update([(m.y, self.data.iloc[0]['y'])])
+                m.experiment_outputs.update([(m.hour, self.data['hour'])])
+                m.experiment_outputs.update([(m.y, self.data['y'])])
 
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
                 m.unknown_parameters.update((k, pyo.ComponentUID(k)) for k in [m.theta])
@@ -439,7 +441,7 @@ class TestModelVariants(unittest.TestCase):
         for i in range(self.data.shape[0]):
             rooney_biegler_indexed_params_exp_list.append(
                 RooneyBieglerExperimentIndexedParams(
-                    self.data.loc[i, :].to_frame().transpose()
+                    self.data.loc[i, :]
                 )
             )
 
@@ -465,12 +467,13 @@ class TestModelVariants(unittest.TestCase):
         class RooneyBieglerExperimentVars(RooneyBieglerExperiment):
 
             def create_model(self):
-                self.model = rooney_biegler_vars(self.data)
+                data_df = self.data.to_frame().transpose()
+                self.model = rooney_biegler_vars(data_df)
 
         rooney_biegler_vars_exp_list = []
         for i in range(self.data.shape[0]):
             rooney_biegler_vars_exp_list.append(
-                RooneyBieglerExperimentVars(self.data.loc[i, :].to_frame().transpose())
+                RooneyBieglerExperimentVars(self.data.loc[i, :])
             )
 
         def rooney_biegler_indexed_vars(data):
@@ -501,15 +504,16 @@ class TestModelVariants(unittest.TestCase):
         class RooneyBieglerExperimentIndexedVars(RooneyBieglerExperiment):
 
             def create_model(self):
-                self.model = rooney_biegler_indexed_vars(self.data)
+                data_df = self.data.to_frame().transpose()
+                self.model = rooney_biegler_indexed_vars(data_df)
 
             def label_model(self):
 
                 m = self.model
 
                 m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.experiment_outputs.update([(m.hour, self.data.iloc[0]['hour'])])
-                m.experiment_outputs.update([(m.y, self.data.iloc[0]['y'])])
+                m.experiment_outputs.update([(m.hour, self.data['hour'])])
+                m.experiment_outputs.update([(m.y, self.data['y'])])
 
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
                 m.unknown_parameters.update((k, pyo.ComponentUID(k)) for k in [m.theta])
@@ -518,7 +522,7 @@ class TestModelVariants(unittest.TestCase):
         for i in range(self.data.shape[0]):
             rooney_biegler_indexed_vars_exp_list.append(
                 RooneyBieglerExperimentIndexedVars(
-                    self.data.loc[i, :].to_frame().transpose()
+                    self.data.loc[i, :]
                 )
             )
 
@@ -985,7 +989,7 @@ class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
         exp_list = []
         for i in range(data.shape[0]):
             exp_list.append(
-                RooneyBieglerExperiment(data.loc[i, :].to_frame().transpose())
+                RooneyBieglerExperiment(data.loc[i, :])
             )
 
         solver_options = {"tol": 1e-8}
