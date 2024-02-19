@@ -33,7 +33,7 @@ from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.contrib.solver.base import PersistentSolverBase
 from pyomo.contrib.solver.results import Results, TerminationCondition, SolutionStatus
 from pyomo.contrib.solver.config import PersistentBranchAndBoundConfig
-from pyomo.contrib.solver.util import PersistentSolverUtils
+from pyomo.contrib.solver.persistent import PersistentSolverUtils
 from pyomo.contrib.solver.solution import PersistentSolutionLoader
 from pyomo.core.staleflag import StaleFlagManager
 import sys
