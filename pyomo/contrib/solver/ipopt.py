@@ -53,7 +53,7 @@ class ipoptSolverError(PyomoException):
     """
 
 
-class ipoptConfig(SolverConfig):
+class IpoptConfig(SolverConfig):
     def __init__(
         self,
         description=None,
@@ -79,12 +79,11 @@ class ipoptConfig(SolverConfig):
             ),
         )
         self.writer_config: ConfigDict = self.declare(
-            'writer_config',
-            NLWriter.CONFIG(),
+            'writer_config', NLWriter.CONFIG()
         )
 
 
-class ipoptResults(Results):
+class IpoptResults(Results):
     def __init__(
         self,
         description=None,
@@ -112,7 +111,7 @@ class ipoptResults(Results):
         )
 
 
-class ipoptSolutionLoader(SolSolutionLoader):
+class IpoptSolutionLoader(SolSolutionLoader):
     def get_reduced_costs(
         self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
     ) -> Mapping[_GeneralVarData, float]:
@@ -214,8 +213,8 @@ ipopt_command_line_options = {
 
 
 @SolverFactory.register('ipopt_v2', doc='The ipopt NLP solver (new interface)')
-class ipopt(SolverBase):
-    CONFIG = ipoptConfig()
+class Ipopt(SolverBase):
+    CONFIG = IpoptConfig()
 
     def __init__(self, **kwds):
         super().__init__(**kwds)
@@ -263,7 +262,7 @@ class ipopt(SolverBase):
                     opt_file.write(str(k) + ' ' + str(val) + '\n')
         return opt_file_exists
 
-    def _create_command_line(self, basename: str, config: ipoptConfig, opt_file: bool):
+    def _create_command_line(self, basename: str, config: IpoptConfig, opt_file: bool):
         cmd = [str(self.executable), basename + '.nl', '-AMPL']
         if opt_file:
             cmd.append('option_file_name=' + basename + '.opt')
@@ -293,7 +292,7 @@ class ipopt(SolverBase):
                 f'Solver {self.__class__} is not available ({avail}).'
             )
         # Update configuration options, based on keywords passed to solve
-        config: ipoptConfig = self.config(value=kwds, preserve_implicit=True)
+        config: IpoptConfig = self.config(value=kwds, preserve_implicit=True)
         self.executable = config.executable
         if config.threads:
             logger.log(
@@ -377,7 +376,7 @@ class ipopt(SolverBase):
                 )
 
             if process.returncode != 0:
-                results = ipoptResults()
+                results = IpoptResults()
                 results.extra_info.return_code = process.returncode
                 results.termination_condition = TerminationCondition.error
                 results.solution_loader = SolSolutionLoader(None, None)
@@ -485,7 +484,7 @@ class ipopt(SolverBase):
         return iters, nofunc_time, func_time
 
     def _parse_solution(self, instream: io.TextIOBase, nl_info: NLWriterInfo):
-        results = ipoptResults()
+        results = IpoptResults()
         res, sol_data = parse_sol_file(
             sol_file=instream, nl_info=nl_info, result=results
         )
@@ -493,7 +492,7 @@ class ipopt(SolverBase):
         if res.solution_status == SolutionStatus.noSolution:
             res.solution_loader = SolSolutionLoader(None, None)
         else:
-            res.solution_loader = ipoptSolutionLoader(
+            res.solution_loader = IpoptSolutionLoader(
                 sol_data=sol_data, nl_info=nl_info
             )
 
