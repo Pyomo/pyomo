@@ -45,7 +45,7 @@ jobs:
         with:
           name: native_wheels
           path: dist/*.whl
-          overwrite: true
+          merge-multiple: true
 
   alternative_wheels:
     name: Build wheels (${{ matrix.wheel-version }}) on ${{ matrix.os }} for aarch64
@@ -77,7 +77,7 @@ jobs:
         with:
           name: alt_wheels
           path: dist/*.whl
-          overwrite: true
+          merge-multiple: true
 
   generictarball:
     name: ${{ matrix.TARGET }}
@@ -108,5 +108,5 @@ jobs:
       with:
         name: generictarball
         path: dist
-        overwrite: true
+        merge-multiple: true
 
