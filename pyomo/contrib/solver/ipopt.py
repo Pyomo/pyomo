@@ -134,10 +134,20 @@ class IpoptSolutionLoader(SolSolutionLoader):
     def get_reduced_costs(
         self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
     ) -> Mapping[_GeneralVarData, float]:
+        if self._nl_info is None:
+            raise RuntimeError(
+                'Solution loader does not currently have a valid solution. Please '
+                'check the termination condition.'
+            )
+        if len(self._nl_info.eliminated_vars) > 0:
+            raise NotImplementedError('For now, turn presolve off (opt.config.writer_config.linear_presolve=False) to get reduced costs.')
+        assert self._sol_data is not None
         if self._nl_info.scaling is None:
             scale_list = [1] * len(self._nl_info.variables)
+            obj_scale = 1
         else:
             scale_list = self._nl_info.scaling.variables
+            obj_scale = self._nl_info.scaling.objectives[0]
         sol_data = self._sol_data
         nl_info = self._nl_info
         zl_map = sol_data.var_suffixes['ipopt_zL_out']
@@ -148,11 +158,11 @@ class IpoptSolutionLoader(SolSolutionLoader):
             v_id = id(v)
             rc[v_id] = (v, 0)
             if ndx in zl_map:
-                zl = zl_map[ndx] * scale
+                zl = zl_map[ndx] * scale / obj_scale
                 if abs(zl) > abs(rc[v_id][1]):
                     rc[v_id] = (v, zl)
             if ndx in zu_map:
-                zu = zu_map[ndx] * scale
+                zu = zu_map[ndx] * scale / obj_scale
                 if abs(zu) > abs(rc[v_id][1]):
                     rc[v_id] = (v, zu)
 
@@ -353,68 +363,82 @@ class Ipopt(SolverBase):
                     symbolic_solver_labels=config.symbolic_solver_labels,
                 )
                 timer.stop('write_nl_file')
-            # Get a copy of the environment to pass to the subprocess
-            env = os.environ.copy()
-            if nl_info.external_function_libraries:
-                if env.get('AMPLFUNC'):
-                    nl_info.external_function_libraries.append(env.get('AMPLFUNC'))
-                env['AMPLFUNC'] = "\n".join(nl_info.external_function_libraries)
-            # Write the opt_file, if there should be one; return a bool to say
-            # whether or not we have one (so we can correctly build the command line)
-            opt_file = self._write_options_file(
-                filename=basename, options=config.solver_options
-            )
-            # Call ipopt - passing the files via the subprocess
-            cmd = self._create_command_line(
-                basename=basename, config=config, opt_file=opt_file
-            )
-            # this seems silly, but we have to give the subprocess slightly longer to finish than
-            # ipopt
-            if config.time_limit is not None:
-                timeout = config.time_limit + min(
-                    max(1.0, 0.01 * config.time_limit), 100
+            if len(nl_info.variables) > 0:
+                # Get a copy of the environment to pass to the subprocess
+                env = os.environ.copy()
+                if nl_info.external_function_libraries:
+                    if env.get('AMPLFUNC'):
+                        nl_info.external_function_libraries.append(env.get('AMPLFUNC'))
+                    env['AMPLFUNC'] = "\n".join(nl_info.external_function_libraries)
+                # Write the opt_file, if there should be one; return a bool to say
+                # whether or not we have one (so we can correctly build the command line)
+                opt_file = self._write_options_file(
+                    filename=basename, options=config.solver_options
                 )
-            else:
-                timeout = None
+                # Call ipopt - passing the files via the subprocess
+                cmd = self._create_command_line(
+                    basename=basename, config=config, opt_file=opt_file
+                )
+                # this seems silly, but we have to give the subprocess slightly longer to finish than
+                # ipopt
+                if config.time_limit is not None:
+                    timeout = config.time_limit + min(
+                        max(1.0, 0.01 * config.time_limit), 100
+                    )
+                else:
+                    timeout = None
 
-            ostreams = [io.StringIO()]
-            if config.tee:
-                ostreams.append(sys.stdout)
-            if config.log_solver_output:
-                ostreams.append(LogStream(level=logging.INFO, logger=logger))
-            with TeeStream(*ostreams) as t:
-                timer.start('subprocess')
-                process = subprocess.run(
-                    cmd,
-                    timeout=timeout,
-                    env=env,
-                    universal_newlines=True,
-                    stdout=t.STDOUT,
-                    stderr=t.STDERR,
-                )
-                timer.stop('subprocess')
-                # This is the stuff we need to parse to get the iterations
-                # and time
-                iters, ipopt_time_nofunc, ipopt_time_func, ipopt_total_time = (
-                    self._parse_ipopt_output(ostreams[0])
-                )
+                ostreams = [io.StringIO()]
+                if config.tee:
+                    ostreams.append(sys.stdout)
+                if config.log_solver_output:
+                    ostreams.append(LogStream(level=logging.INFO, logger=logger))
+                with TeeStream(*ostreams) as t:
+                    timer.start('subprocess')
+                    process = subprocess.run(
+                        cmd,
+                        timeout=timeout,
+                        env=env,
+                        universal_newlines=True,
+                        stdout=t.STDOUT,
+                        stderr=t.STDERR,
+                    )
+                    timer.stop('subprocess')
+                    # This is the stuff we need to parse to get the iterations
+                    # and time
+                    iters, ipopt_time_nofunc, ipopt_time_func, ipopt_total_time = (
+                        self._parse_ipopt_output(ostreams[0])
+                    )
 
-            if os.path.isfile(basename + '.sol'):
-                with open(basename + '.sol', 'r') as sol_file:
-                    timer.start('parse_sol')
-                    results = self._parse_solution(sol_file, nl_info)
-                    timer.stop('parse_sol')
+            if len(nl_info.variables) == 0:
+                if len(nl_info.eliminated_vars) == 0:
+                    results = IpoptResults()
+                    results.termination_condition = TerminationCondition.emptyModel
+                    results.solution_loader = SolSolutionLoader(None, None)
+                else:
+                    results = IpoptResults()
+                    results.termination_condition = TerminationCondition.convergenceCriteriaSatisfied
+                    results.solution_status = SolutionStatus.optimal
+                    results.solution_loader = SolSolutionLoader(None, nl_info=nl_info)
+                    results.iteration_count = 0
+                    results.timing_info.total_seconds = 0
             else:
-                results = IpoptResults()
-            if process.returncode != 0:
-                results.extra_info.return_code = process.returncode
-                results.termination_condition = TerminationCondition.error
-                results.solution_loader = SolSolutionLoader(None, None)
-            else:
-                results.iteration_count = iters
-                results.timing_info.ipopt_excluding_nlp_functions = ipopt_time_nofunc
-                results.timing_info.nlp_function_evaluations = ipopt_time_func
-                results.timing_info.total_seconds = ipopt_total_time
+                if os.path.isfile(basename + '.sol'):
+                    with open(basename + '.sol', 'r') as sol_file:
+                        timer.start('parse_sol')
+                        results = self._parse_solution(sol_file, nl_info)
+                        timer.stop('parse_sol')
+                else:
+                    results = IpoptResults()
+                if process.returncode != 0:
+                    results.extra_info.return_code = process.returncode
+                    results.termination_condition = TerminationCondition.error
+                    results.solution_loader = SolSolutionLoader(None, None)
+                else:
+                    results.iteration_count = iters
+                    results.timing_info.ipopt_excluding_nlp_functions = ipopt_time_nofunc
+                    results.timing_info.nlp_function_evaluations = ipopt_time_func
+                    results.timing_info.total_seconds = ipopt_total_time
         if (
             config.raise_exception_on_nonoptimal_result
             and results.solution_status != SolutionStatus.optimal
@@ -470,7 +494,8 @@ class Ipopt(SolverBase):
                 )
 
         results.solver_configuration = config
-        results.solver_log = ostreams[0].getvalue()
+        if len(nl_info.variables) > 0:
+            results.solver_log = ostreams[0].getvalue()
 
         # Capture/record end-time / wall-time
         end_timestamp = datetime.datetime.now(datetime.timezone.utc)
