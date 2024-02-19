@@ -24,7 +24,7 @@ def _rehash_keys(encode, val):
         #
         # here, then we get a strange failure when deepcopying
         # ComponentSets containing an _ImplicitAny domain.  We could
-        # track it down to teh implementation of
+        # track it down to the implementation of
         # autoslots.fast_deepcopy, but couldn't find an obvious bug.
         # There is no error if we just return the original dict, or if
         # we return a tuple(val.values)
