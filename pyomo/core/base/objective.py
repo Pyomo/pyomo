@@ -1,23 +1,13 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-
-__all__ = (
-    'Objective',
-    'simple_objective_rule',
-    '_ObjectiveData',
-    'minimize',
-    'maximize',
-    'simple_objectivelist_rule',
-    'ObjectiveList',
-)
 
 import sys
 import logging
@@ -242,8 +232,6 @@ class Objective(ActiveIndexedComponent):
             A dictionary from the index set to component data objects
         _index
             The set of valid indices
-        _implicit_subsets
-            A tuple of set objects that represents the index set
         _model
             A weakref to the model that owns this component
         _parent
@@ -266,8 +254,7 @@ class Objective(ActiveIndexedComponent):
     @overload
     def __init__(
         self, *indexes, expr=None, rule=None, sense=minimize, name=None, doc=None
-    ):
-        ...
+    ): ...
 
     def __init__(self, *args, **kwargs):
         _sense = kwargs.pop('sense', minimize)
@@ -290,6 +277,10 @@ class Objective(ActiveIndexedComponent):
         timer = ConstructionTimer(self)
         if is_debug_set(logger):
             logger.debug("Constructing objective %s" % (self.name))
+
+        if self._anonymous_sets is not None:
+            for _set in self._anonymous_sets:
+                _set.construct()
 
         rule = self.rule
         try:
@@ -565,8 +556,7 @@ class ObjectiveList(IndexedObjective):
         _rule = kwargs.pop('rule', None)
         self._starting_index = kwargs.pop('starting_index', 1)
 
-        args = (Set(dimen=1),)
-        super().__init__(*args, **kwargs)
+        super().__init__(Set(dimen=1), **kwargs)
 
         self.rule = Initializer(_rule, allow_generators=True)
         # HACK to make the "counted call" syntax work.  We wait until
@@ -586,7 +576,9 @@ class ObjectiveList(IndexedObjective):
         if is_debug_set(logger):
             logger.debug("Constructing objective list %s" % (self.name))
 
-        self.index_set().construct()
+        if self._anonymous_sets is not None:
+            for _set in self._anonymous_sets:
+                _set.construct()
 
         if self.rule is not None:
             _rule = self.rule(self.parent_block(), ())

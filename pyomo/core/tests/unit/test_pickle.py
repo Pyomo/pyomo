@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -35,7 +35,7 @@ from pyomo.environ import (
 )
 
 
-using_pypy = platform.python_implementation() == "PyPy"
+is_pypy = platform.python_implementation().lower().startswith("pypy")
 
 
 def obj_rule(model):
@@ -322,7 +322,7 @@ class Test(unittest.TestCase):
         model.con = Constraint(rule=rule1)
         model.con2 = Constraint(model.a, rule=rule2)
         instance = model.create_instance()
-        if using_pypy:
+        if is_pypy:
             str_ = pickle.dumps(instance)
             tmp_ = pickle.loads(str_)
         else:

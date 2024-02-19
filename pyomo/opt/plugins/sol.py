@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -241,9 +241,9 @@ class ResultsReader_sol(results.AbstractResultsReader):
                             translated_suffix_name = (
                                 suffix_name[0].upper() + suffix_name[1:]
                             )
-                            soln_constraint[key][
-                                translated_suffix_name
-                            ] = convert_function(suf_line[1])
+                            soln_constraint[key][translated_suffix_name] = (
+                                convert_function(suf_line[1])
+                            )
                     elif kind == 2:  # Obj
                         for cnt in range(nvalues):
                             suf_line = fin.readline().split()

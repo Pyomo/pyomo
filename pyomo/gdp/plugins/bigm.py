@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -409,10 +409,9 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
     )
     def get_m_value_src(self, constraint):
         transBlock = _get_constraint_transBlock(constraint)
-        (
-            (lower_val, lower_source, lower_key),
-            (upper_val, upper_source, upper_key),
-        ) = transBlock.bigm_src[constraint]
+        ((lower_val, lower_source, lower_key), (upper_val, upper_source, upper_key)) = (
+            transBlock.bigm_src[constraint]
+        )
 
         if (
             constraint.lower is not None

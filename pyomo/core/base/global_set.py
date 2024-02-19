@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -72,8 +72,11 @@ class GlobalSetBase(PyomoObject):
 class _UnindexedComponent_set(GlobalSetBase):
     local_name = 'UnindexedComponent_set'
 
+    _anonymous_sets = GlobalSetBase
+
     def __init__(self, name):
         self.name = name
+        self._constructed = True
 
     def __contains__(self, val):
         return val is None
@@ -179,6 +182,12 @@ class _UnindexedComponent_set(GlobalSetBase):
 
     def prevw(self, item, step=1):
         return self.nextw(item, -step)
+
+    def parent_block(self):
+        return None
+
+    def parent_component(self):
+        return self
 
 
 UnindexedComponent_set = _UnindexedComponent_set('UnindexedComponent_set')

@@ -1,16 +1,13 @@
-3 Set Declarations
+2 Set Declarations
     A : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    3 : {1, 2, 3}
     B : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    2 : {'A', 'B'}
-    T_index : Size=1, Index=None, Ordered=True
-        Key  : Dimen : Domain : Size : Members
-        None :     2 :    A*B :    6 : {(1, 'A'), (1, 'B'), (2, 'A'), (2, 'B'), (3, 'A'), (3, 'B')}
 
 3 Param Declarations
-    T : Size=3, Index=T_index, Domain=Any, Default=None, Mutable=False
+    T : Size=3, Index=A*B, Domain=Any, Default=None, Mutable=False
         Key      : Value
         (1, 'A') :    10
         (2, 'B') :    20
@@ -24,4 +21,4 @@
         Key  : Value
         None :    32
 
-6 Declarations: Z A B U T_index T
+5 Declarations: Z A B U T

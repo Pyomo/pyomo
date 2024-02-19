@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -56,6 +56,24 @@ def check_linear_coef(self, repn, var, coef):
             var_id = i
     self.assertIsNotNone(var_id)
     self.assertAlmostEqual(repn.linear_coefs[var_id], coef)
+
+
+def check_quadratic_coef(self, repn, v1, v2, coef):
+    if isinstance(v1, BooleanVar):
+        v1 = v1.get_associated_binary()
+    if isinstance(v2, BooleanVar):
+        v2 = v2.get_associated_binary()
+
+    v1id = id(v1)
+    v2id = id(v2)
+
+    qcoef_map = dict()
+    for (_v1, _v2), _coef in zip(repn.quadratic_vars, repn.quadratic_coefs):
+        qcoef_map[id(_v1), id(_v2)] = _coef
+        qcoef_map[id(_v2), id(_v1)] = _coef
+
+    self.assertIn((v1id, v2id), qcoef_map)
+    self.assertAlmostEqual(qcoef_map[v1id, v2id], coef)
 
 
 def check_squared_term_coef(self, repn, var, coef):

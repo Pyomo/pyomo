@@ -1,15 +1,13 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-
-__all__ = ['LogicalConstraint', '_LogicalConstraintData', 'LogicalConstraintList']
 
 import inspect
 import sys
@@ -22,7 +20,6 @@ from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
 from pyomo.common.timing import ConstructionTimer
 
-from pyomo.core.base.constraint import Constraint
 from pyomo.core.expr.boolean_value import as_boolean, BooleanConstant
 from pyomo.core.expr.numvalue import native_types, native_logical_types
 from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory
@@ -210,8 +207,6 @@ class LogicalConstraint(ActiveIndexedComponent):
             A dictionary from the index set to component data objects
         _index_set
             The set of valid indices
-        _implicit_subsets
-            A tuple of set objects that represents the index set
         _model
             A weakref to the model that owns this component
         _parent
@@ -279,6 +274,10 @@ class LogicalConstraint(ActiveIndexedComponent):
             return
         timer = ConstructionTimer(self)
         self._constructed = True
+
+        if self._anonymous_sets is not None:
+            for _set in self._anonymous_sets:
+                _set.construct()
 
         _init_expr = self._init_expr
         _init_rule = self.rule
@@ -516,22 +515,25 @@ class LogicalConstraintList(IndexedLogicalConstraint):
 
     def __init__(self, **kwargs):
         """Constructor"""
-        args = (Set(),)
         if 'expr' in kwargs:
             raise ValueError("LogicalConstraintList does not accept the 'expr' keyword")
-        LogicalConstraint.__init__(self, *args, **kwargs)
+        LogicalConstraint.__init__(self, Set(dimen=1), **kwargs)
 
     def construct(self, data=None):
         """
         Construct the expression(s) for this logical constraint.
         """
+        if self._constructed:
+            return
+        self._constructed = True
+
         generate_debug_messages = is_debug_set(logger)
         if generate_debug_messages:
             logger.debug("Constructing logical constraint list %s" % self.name)
 
-        if self._constructed:
-            return
-        self._constructed = True
+        if self._anonymous_sets is not None:
+            for _set in self._anonymous_sets:
+                _set.construct()
 
         assert self._init_expr is None
         _init_rule = self.rule

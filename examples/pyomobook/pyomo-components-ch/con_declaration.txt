@@ -1,10 +1,5 @@
-1 Set Declarations
-    x_index : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :    2 : {1, 2}
-
 1 Var Declarations
-    x : Size=2, Index=x_index
+    x : Size=2, Index={1, 2}
         Key : Lower : Value : Upper : Fixed : Stale : Domain
           1 :  None :   1.0 :  None : False : False :  Reals
           2 :  None :   1.0 :  None : False : False :  Reals
@@ -14,14 +9,9 @@
         Key  : Lower : Body        : Upper : Active
         None :  -Inf : x[2] - x[1] :   7.5 :   True
 
-3 Declarations: x_index x diff
-1 Set Declarations
-    x_index : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :    2 : {1, 2}
-
+2 Declarations: x diff
 1 Var Declarations
-    x : Size=2, Index=x_index
+    x : Size=2, Index={1, 2}
         Key : Lower : Value : Upper : Fixed : Stale : Domain
           1 :  None :   1.0 :  None : False : False :  Reals
           2 :  None :   1.0 :  None : False : False :  Reals
@@ -31,40 +21,24 @@
         Key  : Lower : Body        : Upper : Active
         None :  -Inf : x[2] - x[1] :   7.5 :   True
 
-3 Declarations: x_index x diff
-2 Set Declarations
-    CoverConstr_index : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :    3 : {1, 2, 3}
-    y_index : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :    3 : {1, 2, 3}
-
+2 Declarations: x diff
 1 Var Declarations
-    y : Size=3, Index=y_index
+    y : Size=3, Index={1, 2, 3}
         Key : Lower : Value : Upper : Fixed : Stale : Domain
           1 :     0 :   0.0 :  None : False : False : NonNegativeReals
           2 :     0 :   0.0 :  None : False : False : NonNegativeReals
           3 :     0 :   0.0 :  None : False : False : NonNegativeReals
 
 1 Constraint Declarations
-    CoverConstr : Size=3, Index=CoverConstr_index, Active=True
+    CoverConstr : Size=3, Index={1, 2, 3}, Active=True
         Key : Lower : Body     : Upper : Active
           1 :   1.0 :     y[1] :  +Inf :   True
           2 :   2.9 : 3.1*y[2] :  +Inf :   True
           3 :   3.1 : 4.5*y[3] :  +Inf :   True
 
-4 Declarations: y_index y CoverConstr_index CoverConstr
-2 Set Declarations
-    Pred_index : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :    5 : {1, 2, 3, 4, 5}
-    StartTime_index : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :    5 : {1, 2, 3, 4, 5}
-
+2 Declarations: y CoverConstr
 1 Var Declarations
-    StartTime : Size=5, Index=StartTime_index
+    StartTime : Size=5, Index={1, 2, 3, 4, 5}
         Key : Lower : Value : Upper : Fixed : Stale : Domain
           1 :  None :   1.0 :  None : False : False :  Reals
           2 :  None :   1.0 :  None : False : False :  Reals
@@ -73,14 +47,14 @@
           5 :  None :   1.0 :  None : False : False :  Reals
 
 1 Constraint Declarations
-    Pred : Size=4, Index=Pred_index, Active=True
+    Pred : Size=4, Index={1, 2, 3, 4, 5}, Active=True
         Key : Lower : Body                        : Upper : Active
           1 :  -Inf : StartTime[1] - StartTime[2] :   0.0 :   True
           2 :  -Inf : StartTime[2] - StartTime[3] :   0.0 :   True
           3 :  -Inf : StartTime[3] - StartTime[4] :   0.0 :   True
           4 :  -Inf : StartTime[4] - StartTime[5] :   0.0 :   True
 
-4 Declarations: StartTime_index StartTime Pred_index Pred
+2 Declarations: StartTime Pred
 0.0
 inf
 7.5

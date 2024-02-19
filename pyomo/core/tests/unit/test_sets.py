@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -3395,7 +3395,9 @@ class TestSetErrors(PyomoModel):
         with self.assertRaisesRegex(RuntimeError, ".*before it has been constructed"):
             a[0]
         a.construct()
-        with self.assertRaisesRegex(IndexError, "Pyomo Sets are 1-indexed"):
+        with self.assertRaisesRegex(
+            IndexError, "Accessing Pyomo Sets by position is 1-based"
+        ):
             a[0]
         self.assertEqual(a[1], 2)
 

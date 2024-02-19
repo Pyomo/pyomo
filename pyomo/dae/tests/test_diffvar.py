@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -69,7 +69,6 @@ class TestDerivativeVar(unittest.TestCase):
         del m.dv
         del m.dv2
         del m.v
-        del m.v_index
 
         m.v = Var(m.x, m.t)
         m.dv = DerivativeVar(m.v, wrt=m.x)

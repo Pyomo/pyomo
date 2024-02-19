@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -11,6 +11,8 @@
 
 import functools
 import pickle
+import platform
+import sys
 import types
 
 import pyomo.common.unittest as unittest
@@ -35,6 +37,9 @@ from pyomo.core.base.initializer import (
     DefaultInitializer,
 )
 from pyomo.environ import ConcreteModel, Var
+
+
+is_pypy = platform.python_implementation().lower().startswith("pypy")
 
 
 def _init_scalar(m):
@@ -561,12 +566,20 @@ class Test_Initializer(unittest.TestCase):
         self.assertFalse(a.contains_indices())
         self.assertEqual(a('111', 2), 7)
 
-        # Special case: getfullargspec fails on int, so we assume it is
-        # always an IndexedCallInitializer
+        # Special case: getfullargspec fails for int under CPython and
+        # PyPy<7.3.14, so we assume it is an IndexedCallInitializer.
         basetwo = functools.partial(int, '101', base=2)
         a = Initializer(basetwo)
-        self.assertIs(type(a), IndexedCallInitializer)
-        self.assertFalse(a.constant())
+        if is_pypy and sys.pypy_version_info[:3] >= (7, 3, 14):
+            # PyPy behavior diverged from CPython in 7.3.14.  Arguably
+            # this is "more correct", so we will allow the difference to
+            # persist through Pyomo's Initializer handling (and not
+            # special case it there)
+            self.assertIs(type(a), ScalarCallInitializer)
+            self.assertTrue(a.constant())
+        else:
+            self.assertIs(type(a), IndexedCallInitializer)
+            self.assertFalse(a.constant())
         self.assertFalse(a.verified)
         self.assertFalse(a.contains_indices())
         # but this is not callable, as int won't accept the 'model'

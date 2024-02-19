@@ -1,15 +1,13 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-
-__all__ = ['Param']
 
 import sys
 import types
@@ -301,8 +299,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         units=None,
         name=None,
         doc=None,
-    ):
-        ...
+    ): ...
 
     def __init__(self, *args, **kwd):
         _init = self._pop_from_kwargs('Param', kwd, ('rule', 'initialize'), NOTSET)
@@ -331,7 +328,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         if _domain_rule is None:
             self.domain = _ImplicitAny(owner=self, name='Any')
         else:
-            self.domain = SetInitializer(_domain_rule)(self.parent_block(), None)
+            self.domain = SetInitializer(_domain_rule)(self.parent_block(), None, self)
         # After IndexedComponent.__init__ so we can call is_indexed().
         self._rule = Initializer(
             _init,
@@ -783,6 +780,10 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
                     f"Converting Param '{self.name}' to mutable."
                 )
                 self._mutable = True
+
+        if self._anonymous_sets is not None:
+            for _set in self._anonymous_sets:
+                _set.construct()
 
         try:
             #

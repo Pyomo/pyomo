@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 import logging
+import math
 
 # If the user has numpy then the collocation points and the a matrix for
 # the Runge-Kutta basis formulation will be calculated as needed.
@@ -156,7 +157,7 @@ def conv(a, b):
 
 def calc_cp(alpha, beta, k):
     gamma = []
-    factorial = numpy.math.factorial
+    factorial = math.factorial
 
     for i in range(k + 1):
         num = factorial(alpha + k) * factorial(alpha + beta + k + i)

@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 # -*- coding: utf-8 -*-
 """Problem C in paper 'Outer approximation algorithms for separable nonconvex mixed-integer nonlinear programs'.
 The problem in the paper has two optimal solution. Variable y4 and y6 are symmetric. Therefore, we remove variable y6 for simplification.
@@ -40,9 +51,7 @@ class Nonconvex3(ConcreteModel):
 
         m.objective = Objective(expr=7 * m.x1 + 10 * m.x2, sense=minimize)
 
-        m.c1 = Constraint(
-            expr=(m.x1**1.2) * (m.x2**1.7) - 7 * m.x1 - 9 * m.x2 <= -24
-        )
+        m.c1 = Constraint(expr=(m.x1**1.2) * (m.x2**1.7) - 7 * m.x1 - 9 * m.x2 <= -24)
         m.c2 = Constraint(expr=-m.x1 - 2 * m.x2 <= 5)
         m.c3 = Constraint(expr=-3 * m.x1 + m.x2 <= 1)
         m.c4 = Constraint(expr=4 * m.x1 - 3 * m.x2 <= 11)

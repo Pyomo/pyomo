@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -22,7 +22,7 @@ from pyomo.common.fileutils import import_file
 from pyomo.core.base import Var
 from pyomo.core.base.objective import minimize, maximize
 from pyomo.core.base.piecewise import Bound, PWRepn
-from pyomo.solvers.tests.solvers import test_solver_cases
+from pyomo.solvers.tests.solvers import test_solver_cases as _test_solver_cases
 
 smoke_problems = ['convex_var', 'step_var', 'step_vararray']
 
@@ -50,8 +50,8 @@ testing_solvers['gurobi', 'lp'] = False
 # testing_solvers['ipopt','nl'] = False
 # testing_solvers['cplex','python'] = False
 # testing_solvers['_cplex_persistent','python'] = False
-for _solver, _io in test_solver_cases():
-    if (_solver, _io) in testing_solvers and test_solver_cases(_solver, _io).available:
+for _solver, _io in _test_solver_cases():
+    if (_solver, _io) in testing_solvers and _test_solver_cases(_solver, _io).available:
         testing_solvers[_solver, _io] = True
 
 

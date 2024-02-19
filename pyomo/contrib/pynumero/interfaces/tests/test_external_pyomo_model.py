@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -901,11 +901,9 @@ class TestUpdatedHessianCalculationMethods(unittest.TestCase):
             # multipliers won't necessarily correspond).
             external_model.set_external_constraint_multipliers(lam)
             hlxx, hlxy, hlyy = external_model.get_full_space_lagrangian_hessians()
-            (
-                pred_hlxx,
-                pred_hlxy,
-                pred_hlyy,
-            ) = model.calculate_full_space_lagrangian_hessians(lam, x)
+            (pred_hlxx, pred_hlxy, pred_hlyy) = (
+                model.calculate_full_space_lagrangian_hessians(lam, x)
+            )
 
             # TODO: Is comparing the array representation sufficient here?
             # Should I make sure I get the sparse representation I expect?

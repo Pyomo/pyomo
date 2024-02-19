@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -47,9 +47,9 @@ class mock_all(unittest.TestCase):
     def setUpClass(cls):
         global cplexamp_available
         import pyomo.environ
-        from pyomo.solvers.tests.solvers import test_solver_cases
+        from pyomo.solvers.tests.solvers import test_solver_cases as _test_solver_cases
 
-        cplexamp_available = test_solver_cases('cplex', 'nl').available
+        cplexamp_available = _test_solver_cases('cplex', 'nl').available
 
     def setUp(self):
         self.do_setup(False)
