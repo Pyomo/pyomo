@@ -16,6 +16,7 @@ from pyomo.core.base.constraint import _GeneralConstraintData
 from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.expr import value
 from pyomo.common.collections import ComponentMap
+from pyomo.common.errors import DeveloperError
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.contrib.solver.sol_reader import SolFileData
 from pyomo.repn.plugins.nl_writer import NLWriterInfo
@@ -146,7 +147,7 @@ class SolSolutionLoader(SolutionLoaderBase):
         if self._nl_info is None:
             raise RuntimeError(
                 'Solution loader does not currently have a valid solution. Please '
-                'check the termination condition.'
+                'check results.TerminationCondition and/or results.SolutionStatus.'
             )
         if self._sol_data is None:
             assert len(self._nl_info.variables) == 0
@@ -173,7 +174,7 @@ class SolSolutionLoader(SolutionLoaderBase):
         if self._nl_info is None:
             raise RuntimeError(
                 'Solution loader does not currently have a valid solution. Please '
-                'check the termination condition.'
+                'check results.TerminationCondition and/or results.SolutionStatus.'
             )
         val_map = dict()
         if self._sol_data is None:
@@ -209,13 +210,18 @@ class SolSolutionLoader(SolutionLoaderBase):
         if self._nl_info is None:
             raise RuntimeError(
                 'Solution loader does not currently have a valid solution. Please '
-                'check the termination condition.'
+                'check results.TerminationCondition and/or results.SolutionStatus.'
             )
         if len(self._nl_info.eliminated_vars) > 0:
             raise NotImplementedError(
-                'For now, turn presolve off (opt.config.writer_config.linear_presolve=False) to get dual variable values.'
+                'For now, turn presolve off (opt.config.writer_config.linear_presolve=False) '
+                'to get dual variable values.'
             )
-        assert self._sol_data is not None, "report this to the Pyomo developers"
+        if self._sol_data is None:
+            raise DeveloperError(
+                "Solution data is empty. This should not "
+                "have happened. Report this error to the Pyomo Developers."
+            )
         res = dict()
         if self._nl_info.scaling is None:
             scale_list = [1] * len(self._nl_info.constraints)
