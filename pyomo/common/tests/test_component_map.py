@@ -11,8 +11,8 @@
 
 import pyomo.common.unittest as unittest
 
-from pyomo.common.collections import ComponentMap
-from pyomo.environ import ConcreteModel, Var, Constraint
+from pyomo.common.collections import ComponentMap, ComponentSet, DefaultComponentMap
+from pyomo.environ import ConcreteModel, Block, Var, Constraint
 
 
 class TestComponentMap(unittest.TestCase):
@@ -48,3 +48,43 @@ class TestComponentMap(unittest.TestCase):
         self.assertNotIn((1, (2, i.v)), m.cm)
         self.assertIn((1, (2, m.v)), m.cm)
         self.assertNotIn((1, (2, m.v)), i.cm)
+
+
+class TestDefaultComponentMap(unittest.TestCase):
+    def test_default_component_map(self):
+        dcm = DefaultComponentMap(ComponentSet)
+
+        m = ConcreteModel()
+        m.x = Var()
+        m.b = Block()
+        m.b.y = Var()
+
+        self.assertEqual(len(dcm), 0)
+
+        dcm[m.x].add(m)
+        self.assertEqual(len(dcm), 1)
+        self.assertIn(m.x, dcm)
+        self.assertIn(m, dcm[m.x])
+
+        dcm[m.b.y].add(m.b)
+        self.assertEqual(len(dcm), 2)
+        self.assertIn(m.b.y, dcm)
+        self.assertNotIn(m, dcm[m.b.y])
+        self.assertIn(m.b, dcm[m.b.y])
+
+        dcm[m.b.y].add(m)
+        self.assertEqual(len(dcm), 2)
+        self.assertIn(m.b.y, dcm)
+        self.assertIn(m, dcm[m.b.y])
+        self.assertIn(m.b, dcm[m.b.y])
+
+    def test_no_default_factory(self):
+        dcm = DefaultComponentMap()
+
+        dcm['found'] = 5
+        self.assertEqual(len(dcm), 1)
+        self.assertIn('found', dcm)
+        self.assertEqual(dcm['found'], 5)
+
+        with self.assertRaisesRegex(KeyError, "'missing'"):
+            dcm["missing"]
