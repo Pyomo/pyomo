@@ -12,8 +12,20 @@
 from collections.abc import MutableSet as collections_MutableSet
 from collections.abc import Set as collections_Set
 
+from pyomo.common.autoslots import AutoSlots
+from pyomo.common.collections.component_map import _hasher
 
-class ComponentSet(collections_MutableSet):
+
+def _rehash_keys(encode, val):
+    if encode:
+        return list(val.values())
+    else:
+        # object id() may have changed after unpickling,
+        # so we rebuild the dictionary keys
+        return {_hasher[obj.__class__](obj): obj for obj in val}
+
+
+class ComponentSet(AutoSlots.Mixin, collections_MutableSet):
     """
     This class is a replacement for set that allows Pyomo
     modeling components to be used as entries. The
@@ -38,16 +50,12 @@ class ComponentSet(collections_MutableSet):
     """
 
     __slots__ = ("_data",)
+    __autoslot_mappers__ = {'_data': _rehash_keys}
 
-    def __init__(self, *args):
-        self._data = dict()
-        if len(args) > 0:
-            if len(args) > 1:
-                raise TypeError(
-                    "%s expected at most 1 arguments, "
-                    "got %s" % (self.__class__.__name__, len(args))
-                )
-            self.update(args[0])
+    def __init__(self, iterable=None):
+        self._data = {}
+        if iterable is not None:
+            self.update(iterable)
 
     def __str__(self):
         """String representation of the mapping."""
@@ -56,29 +64,19 @@ class ComponentSet(collections_MutableSet):
             tmp.append(str(obj) + " (id=" + str(objid) + ")")
         return "ComponentSet(" + str(tmp) + ")"
 
-    def update(self, args):
+    def update(self, iterable):
         """Update a set with the union of itself and others."""
-        self._data.update((id(obj), obj) for obj in args)
-
-    #
-    # This method must be defined for deepcopy/pickling
-    # because this class relies on Python ids.
-    #
-    def __setstate__(self, state):
-        # object id() may have changed after unpickling,
-        # so we rebuild the dictionary keys
-        assert len(state) == 1
-        self._data = {id(obj): obj for obj in state['_data']}
-
-    def __getstate__(self):
-        return {'_data': tuple(self._data.values())}
+        if isinstance(iterable, ComponentSet):
+            self._data.update(iterable._data)
+        else:
+            self._data.update((_hasher[val.__class__](val), val) for val in iterable)
 
     #
     # Implement MutableSet abstract methods
     #
 
     def __contains__(self, val):
-        return self._data.__contains__(id(val))
+        return _hasher[val.__class__](val) in self._data
 
     def __iter__(self):
         return iter(self._data.values())
@@ -88,27 +86,26 @@ class ComponentSet(collections_MutableSet):
 
     def add(self, val):
         """Add an element."""
-        self._data[id(val)] = val
+        self._data[_hasher[val.__class__](val)] = val
 
     def discard(self, val):
         """Remove an element. Do not raise an exception if absent."""
-        if id(val) in self._data:
-            del self._data[id(val)]
+        _id = _hasher[val.__class__](val)
+        if _id in self._data:
+            del self._data[_id]
 
     #
     # Overload MutableSet default implementations
     #
 
-    # We want to avoid generating Pyomo expressions due to
-    # comparison of values, so we convert both objects to a
-    # plain dictionary mapping key->(type(val), id(val)) and
-    # compare that instead.
     def __eq__(self, other):
         if self is other:
             return True
         if not isinstance(other, collections_Set):
             return False
-        return len(self) == len(other) and all(id(key) in self._data for key in other)
+        return len(self) == len(other) and all(
+            _hasher[val.__class__](val) in self._data for val in other
+        )
 
     def __ne__(self, other):
         return not (self == other)
@@ -125,6 +122,7 @@ class ComponentSet(collections_MutableSet):
     def remove(self, val):
         """Remove an element. If not a member, raise a KeyError."""
         try:
-            del self._data[id(val)]
+            del self._data[_hasher[val.__class__](val)]
         except KeyError:
-            raise KeyError("Component with id '%s': %s" % (id(val), str(val)))
+            _id = _hasher[val.__class__](val)
+            raise KeyError("Component with id '%s': %s" % (_id, val))
