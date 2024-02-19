@@ -73,6 +73,8 @@ class TerminationCondition(enum.Enum):
         license was found, the license is of the wrong type for the problem (e.g.,
         problem is too big for type of license), or there was an issue contacting
         a licensing server.
+    emptyModel: 12
+        The model being solved did not have any variables
     unknown: 42
         All other unrecognized exit statuses fall in this category.
     """
@@ -100,6 +102,8 @@ class TerminationCondition(enum.Enum):
     interrupted = 10
 
     licensingProblems = 11
+
+    emptyModel = 12
 
     unknown = 42
 
