@@ -589,15 +589,11 @@ class PathList(Path):
     """
 
     def __call__(self, data):
-        try:
-            pathlist = [super(PathList, self).__call__(data)]
-        except TypeError as err:
-            is_not_path_like = "expected str, bytes or os.PathLike" in str(err)
-            if is_not_path_like and hasattr(data, "__iter__"):
-                pathlist = [super(PathList, self).__call__(i) for i in data]
-            else:
-                raise
-        return pathlist
+        is_path_like = isinstance(data, (str, bytes)) or hasattr(data, "__fspath__")
+        if hasattr(data, "__iter__") and not is_path_like:
+            return [super(PathList, self).__call__(i) for i in data]
+        else:
+            return [super(PathList, self).__call__(data)]
 
 
 class DynamicImplicitDomain(object):
