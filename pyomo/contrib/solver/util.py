@@ -153,18 +153,6 @@ def collect_vars_and_named_exprs(expr):
     )
 
 
-class SolverUtils:
-    pass
-
-
-class SubprocessSolverUtils:
-    pass
-
-
-class DirectSolverUtils:
-    pass
-
-
 class PersistentSolverUtils(abc.ABC):
     def __init__(self):
         self._model = None
