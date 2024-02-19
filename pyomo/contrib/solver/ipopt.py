@@ -47,7 +47,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class ipoptSolverError(PyomoException):
+class IpoptSolverError(PyomoException):
     """
     General exception to catch solver system errors
     """
@@ -315,7 +315,7 @@ class Ipopt(SolverBase):
         # Check if solver is available
         avail = self.available(config)
         if not avail:
-            raise ipoptSolverError(
+            raise IpoptSolverError(
                 f'Solver {self.__class__} is not available ({avail}).'
             )
         if config.threads:
