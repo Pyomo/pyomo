@@ -80,10 +80,7 @@ class ipoptConfig(SolverConfig):
         )
         self.writer_config: ConfigDict = self.declare(
             'writer_config',
-            ConfigValue(
-                default=NLWriter.CONFIG(),
-                description="For the manipulation of NL writer options.",
-            ),
+            NLWriter.CONFIG(),
         )
 
 
