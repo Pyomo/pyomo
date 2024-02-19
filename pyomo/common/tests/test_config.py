@@ -62,6 +62,7 @@ from pyomo.common.config import (
     NonPositiveFloat,
     NonNegativeFloat,
     In,
+    IsInstance,
     ListOf,
     Module,
     Path,
@@ -450,11 +451,61 @@ class TestConfigDomains(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, '.*invalid value'):
             cfg.enum = 'ITEM_THREE'
 
+    def test_IsInstance(self):
+        c = ConfigDict()
+        c.declare("val", ConfigValue(None, IsInstance(int)))
+        c.val = 1
+        self.assertEqual(c.val, 1)
+        exc_str = (
+            "Expected an instance of 'int', but received value 2.4 of type 'float'"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            c.val = 2.4
+
+        class TestClass:
+            def __repr__(self):
+                return f"{TestClass.__name__}()"
+
+        c.declare("val2", ConfigValue(None, IsInstance(TestClass)))
+        testinst = TestClass()
+        c.val2 = testinst
+        self.assertEqual(c.val2, testinst)
+        exc_str = (
+            r"Expected an instance of '.*\.TestClass', "
+            "but received value 2.4 of type 'float'"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            c.val2 = 2.4
+
+        c.declare("val3", ConfigValue(None, IsInstance(int, TestClass)))
+        self.assertRegex(
+            c.get("val3").domain_name(), r"IsInstance\(int, .*\.TestClass\)"
+        )
+        c.val3 = 2
+        self.assertEqual(c.val3, 2)
+        exc_str = (
+            r"Expected an instance of one of these types: 'int', '.*\.TestClass'"
+            r", but received value 2.4 of type 'float'"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            c.val3 = 2.4
+
     def test_Path(self):
         def norm(x):
             if cwd[1] == ':' and x[0] == '/':
                 x = cwd[:2] + x
             return x.replace('/', os.path.sep)
+
+        class ExamplePathLike:
+            def __init__(self, path_str_or_bytes):
+                self.path = path_str_or_bytes
+
+            def __fspath__(self):
+                return self.path
+
+            def __str__(self):
+                path_str = str(self.path)
+                return f"{type(self).__name__}({path_str})"
 
         cwd = os.getcwd() + os.path.sep
         c = ConfigDict()
@@ -464,10 +515,28 @@ class TestConfigDomains(unittest.TestCase):
         c.a = "/a/b/c"
         self.assertTrue(os.path.sep in c.a)
         self.assertEqual(c.a, norm('/a/b/c'))
+        c.a = b"/a/b/c"
+        self.assertTrue(os.path.sep in c.a)
+        self.assertEqual(c.a, norm('/a/b/c'))
+        c.a = ExamplePathLike("/a/b/c")
+        self.assertTrue(os.path.sep in c.a)
+        self.assertEqual(c.a, norm('/a/b/c'))
         c.a = "a/b/c"
         self.assertTrue(os.path.sep in c.a)
         self.assertEqual(c.a, norm(cwd + 'a/b/c'))
+        c.a = b'a/b/c'
+        self.assertTrue(os.path.sep in c.a)
+        self.assertEqual(c.a, norm(cwd + 'a/b/c'))
+        c.a = ExamplePathLike('a/b/c')
+        self.assertTrue(os.path.sep in c.a)
+        self.assertEqual(c.a, norm(cwd + 'a/b/c'))
         c.a = "${CWD}/a/b/c"
+        self.assertTrue(os.path.sep in c.a)
+        self.assertEqual(c.a, norm(cwd + 'a/b/c'))
+        c.a = b'${CWD}/a/b/c'
+        self.assertTrue(os.path.sep in c.a)
+        self.assertEqual(c.a, norm(cwd + 'a/b/c'))
+        c.a = ExamplePathLike('${CWD}/a/b/c')
         self.assertTrue(os.path.sep in c.a)
         self.assertEqual(c.a, norm(cwd + 'a/b/c'))
         c.a = None
@@ -478,10 +547,28 @@ class TestConfigDomains(unittest.TestCase):
         c.b = "/a/b/c"
         self.assertTrue(os.path.sep in c.b)
         self.assertEqual(c.b, norm('/a/b/c'))
+        c.b = b"/a/b/c"
+        self.assertTrue(os.path.sep in c.b)
+        self.assertEqual(c.b, norm('/a/b/c'))
+        c.b = ExamplePathLike("/a/b/c")
+        self.assertTrue(os.path.sep in c.b)
+        self.assertEqual(c.b, norm('/a/b/c'))
         c.b = "a/b/c"
         self.assertTrue(os.path.sep in c.b)
         self.assertEqual(c.b, norm(cwd + 'rel/path/a/b/c'))
+        c.b = b"a/b/c"
+        self.assertTrue(os.path.sep in c.b)
+        self.assertEqual(c.b, norm(cwd + 'rel/path/a/b/c'))
+        c.b = ExamplePathLike("a/b/c")
+        self.assertTrue(os.path.sep in c.b)
+        self.assertEqual(c.b, norm(cwd + "rel/path/a/b/c"))
         c.b = "${CWD}/a/b/c"
+        self.assertTrue(os.path.sep in c.b)
+        self.assertEqual(c.b, norm(cwd + 'a/b/c'))
+        c.b = b"${CWD}/a/b/c"
+        self.assertTrue(os.path.sep in c.b)
+        self.assertEqual(c.b, norm(cwd + 'a/b/c'))
+        c.b = ExamplePathLike("${CWD}/a/b/c")
         self.assertTrue(os.path.sep in c.b)
         self.assertEqual(c.b, norm(cwd + 'a/b/c'))
         c.b = None
@@ -492,10 +579,28 @@ class TestConfigDomains(unittest.TestCase):
         c.c = "/a/b/c"
         self.assertTrue(os.path.sep in c.c)
         self.assertEqual(c.c, norm('/a/b/c'))
+        c.c = b"/a/b/c"
+        self.assertTrue(os.path.sep in c.c)
+        self.assertEqual(c.c, norm('/a/b/c'))
+        c.c = ExamplePathLike("/a/b/c")
+        self.assertTrue(os.path.sep in c.c)
+        self.assertEqual(c.c, norm('/a/b/c'))
         c.c = "a/b/c"
         self.assertTrue(os.path.sep in c.c)
         self.assertEqual(c.c, norm('/my/dir/a/b/c'))
+        c.c = b"a/b/c"
+        self.assertTrue(os.path.sep in c.c)
+        self.assertEqual(c.c, norm('/my/dir/a/b/c'))
+        c.c = ExamplePathLike("a/b/c")
+        self.assertTrue(os.path.sep in c.c)
+        self.assertEqual(c.c, norm("/my/dir/a/b/c"))
         c.c = "${CWD}/a/b/c"
+        self.assertTrue(os.path.sep in c.c)
+        self.assertEqual(c.c, norm(cwd + 'a/b/c'))
+        c.c = b"${CWD}/a/b/c"
+        self.assertTrue(os.path.sep in c.c)
+        self.assertEqual(c.c, norm(cwd + 'a/b/c'))
+        c.c = ExamplePathLike("${CWD}/a/b/c")
         self.assertTrue(os.path.sep in c.c)
         self.assertEqual(c.c, norm(cwd + 'a/b/c'))
         c.c = None
@@ -507,10 +612,28 @@ class TestConfigDomains(unittest.TestCase):
         c.d = "/a/b/c"
         self.assertTrue(os.path.sep in c.d)
         self.assertEqual(c.d, norm('/a/b/c'))
+        c.d = b"/a/b/c"
+        self.assertTrue(os.path.sep in c.d)
+        self.assertEqual(c.d, norm('/a/b/c'))
+        c.d = ExamplePathLike("/a/b/c")
+        self.assertTrue(os.path.sep in c.d)
+        self.assertEqual(c.d, norm('/a/b/c'))
         c.d = "a/b/c"
         self.assertTrue(os.path.sep in c.d)
         self.assertEqual(c.d, norm(cwd + 'a/b/c'))
+        c.d = b"a/b/c"
+        self.assertTrue(os.path.sep in c.d)
+        self.assertEqual(c.d, norm(cwd + 'a/b/c'))
+        c.d = ExamplePathLike("a/b/c")
+        self.assertTrue(os.path.sep in c.d)
+        self.assertEqual(c.d, norm(cwd + 'a/b/c'))
         c.d = "${CWD}/a/b/c"
+        self.assertTrue(os.path.sep in c.d)
+        self.assertEqual(c.d, norm(cwd + 'a/b/c'))
+        c.d = b"${CWD}/a/b/c"
+        self.assertTrue(os.path.sep in c.d)
+        self.assertEqual(c.d, norm(cwd + 'a/b/c'))
+        c.d = ExamplePathLike("${CWD}/a/b/c")
         self.assertTrue(os.path.sep in c.d)
         self.assertEqual(c.d, norm(cwd + 'a/b/c'))
 
@@ -529,10 +652,28 @@ class TestConfigDomains(unittest.TestCase):
         c.d = "/a/b/c"
         self.assertTrue(os.path.sep in c.d)
         self.assertEqual(c.d, norm('/a/b/c'))
+        c.d = b"/a/b/c"
+        self.assertTrue(os.path.sep in c.d)
+        self.assertEqual(c.d, norm('/a/b/c'))
+        c.d = ExamplePathLike("/a/b/c")
+        self.assertTrue(os.path.sep in c.d)
+        self.assertEqual(c.d, norm('/a/b/c'))
         c.d = "a/b/c"
         self.assertTrue(os.path.sep in c.d)
         self.assertEqual(c.d, norm(cwd + 'rel/path/a/b/c'))
+        c.d = b"a/b/c"
+        self.assertTrue(os.path.sep in c.d)
+        self.assertEqual(c.d, norm(cwd + 'rel/path/a/b/c'))
+        c.d = ExamplePathLike("a/b/c")
+        self.assertTrue(os.path.sep in c.d)
+        self.assertEqual(c.d, norm(cwd + 'rel/path/a/b/c'))
         c.d = "${CWD}/a/b/c"
+        self.assertTrue(os.path.sep in c.d)
+        self.assertEqual(c.d, norm(cwd + 'a/b/c'))
+        c.d = b"${CWD}/a/b/c"
+        self.assertTrue(os.path.sep in c.d)
+        self.assertEqual(c.d, norm(cwd + 'a/b/c'))
+        c.d = ExamplePathLike("${CWD}/a/b/c")
         self.assertTrue(os.path.sep in c.d)
         self.assertEqual(c.d, norm(cwd + 'a/b/c'))
 
@@ -542,11 +683,35 @@ class TestConfigDomains(unittest.TestCase):
             self.assertTrue('/' in c.d)
             self.assertTrue('\\' not in c.d)
             self.assertEqual(c.d, '/a/b/c')
+            c.d = b"/a/b/c"
+            self.assertTrue('/' in c.d)
+            self.assertTrue('\\' not in c.d)
+            self.assertEqual(c.d, '/a/b/c')
+            c.d = ExamplePathLike("/a/b/c")
+            self.assertTrue('/' in c.d)
+            self.assertTrue('\\' not in c.d)
+            self.assertEqual(c.d, '/a/b/c')
             c.d = "a/b/c"
             self.assertTrue('/' in c.d)
             self.assertTrue('\\' not in c.d)
             self.assertEqual(c.d, 'a/b/c')
+            c.d = b"a/b/c"
+            self.assertTrue('/' in c.d)
+            self.assertTrue('\\' not in c.d)
+            self.assertEqual(c.d, 'a/b/c')
+            c.d = ExamplePathLike("a/b/c")
+            self.assertTrue('/' in c.d)
+            self.assertTrue('\\' not in c.d)
+            self.assertEqual(c.d, 'a/b/c')
             c.d = "${CWD}/a/b/c"
+            self.assertTrue('/' in c.d)
+            self.assertTrue('\\' not in c.d)
+            self.assertEqual(c.d, "${CWD}/a/b/c")
+            c.d = b"${CWD}/a/b/c"
+            self.assertTrue('/' in c.d)
+            self.assertTrue('\\' not in c.d)
+            self.assertEqual(c.d, "${CWD}/a/b/c")
+            c.d = ExamplePathLike("${CWD}/a/b/c")
             self.assertTrue('/' in c.d)
             self.assertTrue('\\' not in c.d)
             self.assertEqual(c.d, "${CWD}/a/b/c")
