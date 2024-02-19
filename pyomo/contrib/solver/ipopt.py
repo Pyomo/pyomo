@@ -101,13 +101,32 @@ class IpoptResults(Results):
         )
         self.timing_info.ipopt_excluding_nlp_functions: Optional[float] = (
             self.timing_info.declare(
-                'ipopt_excluding_nlp_functions', ConfigValue(domain=NonNegativeFloat)
+                'ipopt_excluding_nlp_functions',
+                ConfigValue(
+                    domain=NonNegativeFloat,
+                    default=None,
+                    description="Total CPU seconds in IPOPT without function evaluations.",
+                ),
             )
         )
         self.timing_info.nlp_function_evaluations: Optional[float] = (
             self.timing_info.declare(
-                'nlp_function_evaluations', ConfigValue(domain=NonNegativeFloat)
+                'nlp_function_evaluations',
+                ConfigValue(
+                    domain=NonNegativeFloat,
+                    default=None,
+                    description="Total CPU seconds in NLP function evaluations.",
+                ),
             )
+        )
+        self.timing_info.total_seconds: Optional[float] = self.timing_info.declare(
+            'total_seconds',
+            ConfigValue(
+                domain=NonNegativeFloat,
+                default=None,
+                description="Total seconds in IPOPT. NOTE: Newer versions of IPOPT (3.14+) "
+                "no longer separate timing information.",
+            ),
         )
 
 
@@ -376,8 +395,8 @@ class Ipopt(SolverBase):
                 timer.stop('subprocess')
                 # This is the stuff we need to parse to get the iterations
                 # and time
-                iters, ipopt_time_nofunc, ipopt_time_func = self._parse_ipopt_output(
-                    ostreams[0]
+                iters, ipopt_time_nofunc, ipopt_time_func, ipopt_total_time = (
+                    self._parse_ipopt_output(ostreams[0])
                 )
 
             if os.path.isfile(basename + '.sol'):
@@ -395,12 +414,14 @@ class Ipopt(SolverBase):
                 results.iteration_count = iters
                 results.timing_info.ipopt_excluding_nlp_functions = ipopt_time_nofunc
                 results.timing_info.nlp_function_evaluations = ipopt_time_func
+                results.timing_info.total_seconds = ipopt_total_time
         if (
             config.raise_exception_on_nonoptimal_result
             and results.solution_status != SolutionStatus.optimal
         ):
             raise RuntimeError(
-                'Solver did not find the optimal solution. Set opt.config.raise_exception_on_nonoptimal_result = False to bypass this error.'
+                'Solver did not find the optimal solution. Set '
+                'opt.config.raise_exception_on_nonoptimal_result = False to bypass this error.'
             )
 
         results.solver_name = self.name
@@ -411,7 +432,7 @@ class Ipopt(SolverBase):
         ):
             raise RuntimeError(
                 'A feasible solution was not found, so no solution can be loaded.'
-                'Please set config.load_solutions=False to bypass this error.'
+                'Please set opt.config.load_solutions=False to bypass this error.'
             )
 
         if config.load_solutions:
@@ -472,23 +493,30 @@ class Ipopt(SolverBase):
         iters = None
         nofunc_time = None
         func_time = None
+        total_time = None
         # parse the output stream to get the iteration count and solver time
         for line in stream.getvalue().splitlines():
             if line.startswith("Number of Iterations....:"):
                 tokens = line.split()
                 iters = int(tokens[3])
             elif line.startswith(
+                "Total seconds in IPOPT                               ="
+            ):
+                # Newer versions of IPOPT no longer separate the
+                tokens = line.split()
+                total_time = float(tokens[-1])
+            elif line.startswith(
                 "Total CPU secs in IPOPT (w/o function evaluations)   ="
             ):
                 tokens = line.split()
-                nofunc_time = float(tokens[9])
+                nofunc_time = float(tokens[-1])
             elif line.startswith(
                 "Total CPU secs in NLP function evaluations           ="
             ):
                 tokens = line.split()
-                func_time = float(tokens[8])
+                func_time = float(tokens[-1])
 
-        return iters, nofunc_time, func_time
+        return iters, nofunc_time, func_time, total_time
 
     def _parse_solution(self, instream: io.TextIOBase, nl_info: NLWriterInfo):
         results = IpoptResults()
