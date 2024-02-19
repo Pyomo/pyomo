@@ -43,9 +43,9 @@ jobs:
             CIBW_CONFIG_SETTINGS: '--global-option="--with-cython --with-distributable-extensions"'
       - uses: actions/upload-artifact@v4
         with:
-          name: native_wheels
+          name: alt_wheels-${{ matrix.os }}-${{ matrix.wheel-version }}
           path: dist/*.whl
-          merge-multiple: true
+          overwrite: true
 
   alternative_wheels:
     name: Build wheels (${{ matrix.wheel-version }}) on ${{ matrix.os }} for aarch64
@@ -75,9 +75,9 @@ jobs:
             CIBW_CONFIG_SETTINGS: '--global-option="--with-cython --with-distributable-extensions"'
       - uses: actions/upload-artifact@v4
         with:
-          name: alt_wheels
+          name: alt_wheels-${{ matrix.os }}-${{ matrix.wheel-version }}
           path: dist/*.whl
-          merge-multiple: true
+          overwrite: true
 
   generictarball:
     name: ${{ matrix.TARGET }}
@@ -108,5 +108,5 @@ jobs:
       with:
         name: generictarball
         path: dist
-        merge-multiple: true
+        overwrite: true
 
