@@ -140,7 +140,9 @@ class IpoptSolutionLoader(SolSolutionLoader):
                 'check the termination condition.'
             )
         if len(self._nl_info.eliminated_vars) > 0:
-            raise NotImplementedError('For now, turn presolve off (opt.config.writer_config.linear_presolve=False) to get reduced costs.')
+            raise NotImplementedError(
+                'For now, turn presolve off (opt.config.writer_config.linear_presolve=False) to get reduced costs.'
+            )
         assert self._sol_data is not None
         if self._nl_info.scaling is None:
             scale_list = [1] * len(self._nl_info.variables)
@@ -417,7 +419,9 @@ class Ipopt(SolverBase):
                     results.solution_loader = SolSolutionLoader(None, None)
                 else:
                     results = IpoptResults()
-                    results.termination_condition = TerminationCondition.convergenceCriteriaSatisfied
+                    results.termination_condition = (
+                        TerminationCondition.convergenceCriteriaSatisfied
+                    )
                     results.solution_status = SolutionStatus.optimal
                     results.solution_loader = SolSolutionLoader(None, nl_info=nl_info)
                     results.iteration_count = 0
@@ -436,7 +440,9 @@ class Ipopt(SolverBase):
                     results.solution_loader = SolSolutionLoader(None, None)
                 else:
                     results.iteration_count = iters
-                    results.timing_info.ipopt_excluding_nlp_functions = ipopt_time_nofunc
+                    results.timing_info.ipopt_excluding_nlp_functions = (
+                        ipopt_time_nofunc
+                    )
                     results.timing_info.nlp_function_evaluations = ipopt_time_func
                     results.timing_info.total_seconds = ipopt_total_time
         if (

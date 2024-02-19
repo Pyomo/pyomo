@@ -89,7 +89,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.x.value, 2)
 
     @parameterized.expand(input=_load_tests(all_solvers))
-    def test_stale_vars(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+    def test_stale_vars(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
         opt: SolverBase = opt_class()
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
@@ -135,7 +137,9 @@ class TestSolvers(unittest.TestCase):
         self.assertFalse(m.y.stale)
 
     @parameterized.expand(input=_load_tests(all_solvers))
-    def test_range_constraint(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+    def test_range_constraint(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
         opt: SolverBase = opt_class()
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
@@ -161,7 +165,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(duals[m.c], 1)
 
     @parameterized.expand(input=_load_tests(all_solvers))
-    def test_reduced_costs(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+    def test_reduced_costs(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
         opt: SolverBase = opt_class()
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
@@ -188,7 +194,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(rc[m.y], -4)
 
     @parameterized.expand(input=_load_tests(all_solvers))
-    def test_reduced_costs2(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+    def test_reduced_costs2(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
         opt: SolverBase = opt_class()
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
@@ -213,7 +221,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(rc[m.x], 1)
 
     @parameterized.expand(input=_load_tests(all_solvers))
-    def test_param_changes(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+    def test_param_changes(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
         opt: SolverBase = opt_class()
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
@@ -254,7 +264,9 @@ class TestSolvers(unittest.TestCase):
             self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
 
     @parameterized.expand(input=_load_tests(all_solvers))
-    def test_immutable_param(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+    def test_immutable_param(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
         """
         This test is important because component_data_objects returns immutable params as floats.
         We want to make sure we process these correctly.
@@ -343,7 +355,9 @@ class TestSolvers(unittest.TestCase):
                 self.assertAlmostEqual(duals[m.c2], -a1 / (a2 - a1))
 
     @parameterized.expand(input=_load_tests(all_solvers))
-    def test_linear_expression(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+    def test_linear_expression(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
         opt: SolverBase = opt_class()
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
@@ -386,7 +400,9 @@ class TestSolvers(unittest.TestCase):
             self.assertTrue(bound <= m.y.value)
 
     @parameterized.expand(input=_load_tests(all_solvers))
-    def test_no_objective(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+    def test_no_objective(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
         opt: SolverBase = opt_class()
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
@@ -425,7 +441,9 @@ class TestSolvers(unittest.TestCase):
                 self.assertAlmostEqual(duals[m.c2], 0)
 
     @parameterized.expand(input=_load_tests(all_solvers))
-    def test_add_remove_cons(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+    def test_add_remove_cons(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
         opt: SolverBase = opt_class()
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
@@ -484,7 +502,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
 
     @parameterized.expand(input=_load_tests(all_solvers))
-    def test_results_infeasible(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+    def test_results_infeasible(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
         opt: SolverBase = opt_class()
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
@@ -595,7 +615,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, 0.0869525991355825, 4)
 
     @parameterized.expand(input=_load_tests(qcp_solvers))
-    def test_mutable_quadratic_objective(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+    def test_mutable_quadratic_objective(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
         opt: SolverBase = opt_class()
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
@@ -625,7 +647,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, 0.09227926676152151, 4)
 
     @parameterized.expand(input=_load_tests(all_solvers))
-    def test_fixed_vars(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+    def test_fixed_vars(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
         for treat_fixed_vars_as_params in [True, False]:
             opt: SolverBase = opt_class()
             if opt.is_persistent():
@@ -671,7 +695,9 @@ class TestSolvers(unittest.TestCase):
             self.assertAlmostEqual(m.y.value, 2)
 
     @parameterized.expand(input=_load_tests(all_solvers))
-    def test_fixed_vars_2(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+    def test_fixed_vars_2(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
         opt: SolverBase = opt_class()
         if opt.is_persistent():
             opt.config.auto_updates.treat_fixed_vars_as_params = True
@@ -714,7 +740,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, 2)
 
     @parameterized.expand(input=_load_tests(all_solvers))
-    def test_fixed_vars_3(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+    def test_fixed_vars_3(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
         opt: SolverBase = opt_class()
         if opt.is_persistent():
             opt.config.auto_updates.treat_fixed_vars_as_params = True
@@ -736,7 +764,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.x.value, 2)
 
     @parameterized.expand(input=_load_tests(nlp_solvers))
-    def test_fixed_vars_4(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+    def test_fixed_vars_4(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
         opt: SolverBase = opt_class()
         if opt.is_persistent():
             opt.config.auto_updates.treat_fixed_vars_as_params = True
@@ -761,7 +791,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, 2**0.5)
 
     @parameterized.expand(input=_load_tests(all_solvers))
-    def test_mutable_param_with_range(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+    def test_mutable_param_with_range(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
         opt: SolverBase = opt_class()
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
@@ -860,7 +892,9 @@ class TestSolvers(unittest.TestCase):
                 self.assertAlmostEqual(duals[m.con2], -a1 / (a2 - a1), 6)
 
     @parameterized.expand(input=_load_tests(all_solvers))
-    def test_add_and_remove_vars(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+    def test_add_and_remove_vars(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
         opt = opt_class()
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
@@ -949,7 +983,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, -0.42630274815985264)
 
     @parameterized.expand(input=_load_tests(all_solvers))
-    def test_with_numpy(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+    def test_with_numpy(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
         opt: SolverBase = opt_class()
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
@@ -982,7 +1018,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
 
     @parameterized.expand(input=_load_tests(all_solvers))
-    def test_bounds_with_params(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+    def test_bounds_with_params(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
         opt: SolverBase = opt_class()
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
@@ -1019,7 +1057,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, 3)
 
     @parameterized.expand(input=_load_tests(all_solvers))
-    def test_solution_loader(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+    def test_solution_loader(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
         opt: SolverBase = opt_class()
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
@@ -1074,7 +1114,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(duals[m.c1], 1)
 
     @parameterized.expand(input=_load_tests(all_solvers))
-    def test_time_limit(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+    def test_time_limit(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
         opt: SolverBase = opt_class()
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
@@ -1135,7 +1177,9 @@ class TestSolvers(unittest.TestCase):
         )
 
     @parameterized.expand(input=_load_tests(all_solvers))
-    def test_objective_changes(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+    def test_objective_changes(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
         opt: SolverBase = opt_class()
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
@@ -1233,7 +1277,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(res.incumbent_objective, 0)
 
     @parameterized.expand(input=_load_tests(mip_solvers))
-    def test_domain_with_integers(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+    def test_domain_with_integers(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
         opt: SolverBase = opt_class()
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
@@ -1262,7 +1308,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(res.incumbent_objective, 1)
 
     @parameterized.expand(input=_load_tests(all_solvers))
-    def test_fixed_binaries(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+    def test_fixed_binaries(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
         opt: SolverBase = opt_class()
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
@@ -1330,7 +1378,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, 1)
 
     @parameterized.expand(input=_load_tests(all_solvers))
-    def test_variables_elsewhere(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+    def test_variables_elsewhere(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
         opt: SolverBase = opt_class()
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
@@ -1362,7 +1412,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, 2)
 
     @parameterized.expand(input=_load_tests(all_solvers))
-    def test_variables_elsewhere2(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+    def test_variables_elsewhere2(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
         opt: SolverBase = opt_class()
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
