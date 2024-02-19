@@ -2,7 +2,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -11,7 +11,7 @@
 #  ___________________________________________________________________________
 
 import types
-from itertools import combinations, islice
+from itertools import islice
 
 import logging
 import traceback
@@ -183,12 +183,62 @@ def _flattened(args):
                 yield arg
 
 
+def _flattened_boolean_args(args):
+    """Flatten any potentially indexed arguments and check that they are
+    Boolean-valued."""
+    for arg in args:
+        if arg.__class__ in native_types:
+            myiter = (arg,)
+        elif isinstance(arg, (types.GeneratorType, list)):
+            myiter = arg
+        elif arg.is_indexed():
+            myiter = arg.values()
+        else:
+            myiter = (arg,)
+        for _argdata in myiter:
+            if _argdata.__class__ in native_logical_types:
+                yield _argdata
+            elif hasattr(_argdata, 'is_logical_type') and _argdata.is_logical_type():
+                yield _argdata
+            elif isinstance(_argdata, BooleanValue):
+                yield _argdata
+            else:
+                raise ValueError(
+                    "Non-Boolean-valued argument '%s' encountered when constructing "
+                    "expression of Boolean arguments" % arg
+                )
+
+
+def _flattened_numeric_args(args):
+    """Flatten any potentially indexed arguments and check that they are
+    numeric."""
+    for arg in args:
+        if arg.__class__ in native_types:
+            myiter = (arg,)
+        elif isinstance(arg, (types.GeneratorType, list)):
+            myiter = arg
+        elif arg.is_indexed():
+            myiter = arg.values()
+        else:
+            myiter = (arg,)
+        for _argdata in myiter:
+            if _argdata.__class__ in native_numeric_types:
+                yield _argdata
+            elif hasattr(_argdata, 'is_numeric_type') and _argdata.is_numeric_type():
+                yield _argdata
+            else:
+                raise ValueError(
+                    "Non-numeric argument '%s' encountered when constructing "
+                    "expression with numeric arguments" % arg
+                )
+
+
 def land(*args):
     """
     Construct an AndExpression between passed arguments.
     """
     result = AndExpression([])
-    for argdata in _flattened(args):
+    for argdata in _flattened_boolean_args(args):
         result = result.add(argdata)
     return result
 
@@ -198,7 +248,7 @@ def lor(*args):
     Construct an OrExpression between passed arguments.
     """
     result = OrExpression([])
-    for argdata in _flattened(args):
+    for argdata in _flattened_boolean_args(args):
         result = result.add(argdata)
     return result
 
@@ -211,7 +261,7 @@ def exactly(n, *args):
     Usage: exactly(2, m.Y1, m.Y2, m.Y3, ...)
 
     """
-    result = ExactlyExpression([n] + list(_flattened(args)))
+    result = ExactlyExpression([n] + list(_flattened_boolean_args(args)))
     return result
 
 
@@ -223,7 +273,7 @@ def atmost(n, *args):
     Usage: atmost(2, m.Y1, m.Y2, m.Y3, ...)
 
     """
-    result = AtMostExpression([n] + list(_flattened(args)))
+    result = AtMostExpression([n] + list(_flattened_boolean_args(args)))
     return result
 
 
@@ -235,7 +285,7 @@ def atleast(n, *args):
     Usage: atleast(2, m.Y1, m.Y2, m.Y3, ...)
 
     """
-    result = AtLeastExpression([n] + list(_flattened(args)))
+    result = AtLeastExpression([n] + list(_flattened_boolean_args(args)))
     return result
 
 
@@ -246,7 +296,7 @@ def all_different(*args):
 
     Usage: all_different(m.X1, m.X2, ...)
     """
-    return AllDifferentExpression(list(_flattened(args)))
+    return AllDifferentExpression(list(_flattened_numeric_args(args)))
 
 
 def count_if(*args):
@@ -256,7 +306,7 @@ def count_if(*args):
 
     Usage: count_if(m.Y1, m.Y2, ...)
     """
-    return CountIfExpression(list(_flattened(args)))
+    return CountIfExpression(list(_flattened_boolean_args(args)))
 
 
 class UnaryBooleanExpression(BooleanExpression):
@@ -539,7 +589,7 @@ class AllDifferentExpression(NaryBooleanExpression):
 
     __slots__ = ()
 
-    PRECEDENCE = 9  # TODO: maybe?
+    PRECEDENCE = None
 
     def getname(self, *arg, **kwd):
         return 'all_different'
@@ -548,9 +598,13 @@ class AllDifferentExpression(NaryBooleanExpression):
         return "all_different(%s)" % (", ".join(values))
 
     def _apply_operation(self, result):
-        for val1, val2 in combinations(result, 2):
-            if val1 == val2:
+        last = None
+        # we know these are integer-valued, so we can just sort them an make
+        # sure that no adjacent pairs have the same value.
+        for val in sorted(result):
+            if last == val:
                 return False
+            last = val
         return True
 
 
@@ -561,13 +615,7 @@ class CountIfExpression(NumericExpression):
     """
 
     __slots__ = ()
-    PRECEDENCE = 10  # TODO: maybe?
-
-    def __init__(self, args):
-        # require a list, a la SumExpression
-        if args.__class__ is not list:
-            args = list(args)
-        self._args_ = args
+    PRECEDENCE = None
 
     # NumericExpression assumes binary operator, so we have to override.
     def nargs(self):

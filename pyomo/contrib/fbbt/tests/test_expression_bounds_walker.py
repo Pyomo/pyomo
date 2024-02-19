@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -10,10 +10,33 @@
 #  ___________________________________________________________________________
 
 import math
-from pyomo.environ import exp, log, log10, sin, cos, tan, asin, acos, atan, sqrt
 import pyomo.common.unittest as unittest
-from pyomo.contrib.fbbt.expression_bounds_walker import ExpressionBoundsVisitor
-from pyomo.core import Any, ConcreteModel, Expression, Param, Var
+
+from pyomo.environ import (
+    exp,
+    log,
+    log10,
+    sin,
+    cos,
+    tan,
+    asin,
+    acos,
+    atan,
+    sqrt,
+    inequality,
+    Expr_if,
+    Any,
+    ConcreteModel,
+    Expression,
+    Param,
+    Var,
+)
+
+from pyomo.common.errors import DeveloperError
+from pyomo.common.log import LoggingIntercept
+from pyomo.contrib.fbbt.expression_bounds_walker import ExpressionBoundsVisitor, inf
+from pyomo.contrib.fbbt.interval import _true, _false
+from pyomo.core.expr import ExpressionBase, NumericExpression, BooleanExpression
 
 
 class TestExpressionBoundsWalker(unittest.TestCase):
@@ -273,11 +296,19 @@ class TestExpressionBoundsWalker(unittest.TestCase):
 
     def test_invalid_numeric_type(self):
         m = self.make_model()
-        m.p = Param(initialize=True, domain=Any)
+        m.p = Param(initialize=True, mutable=True, domain=Any)
         visitor = ExpressionBoundsVisitor()
         with self.assertRaisesRegex(
             ValueError,
-            r"True \(<class 'bool'>\) is not a valid numeric type. "
+            r"True \(bool\) is not a valid numeric type. "
+            r"Cannot compute bounds on expression.",
+        ):
+            lb, ub = visitor.walk_expression(m.p + m.y)
+
+        m.p.set_value(None)
+        with self.assertRaisesRegex(
+            ValueError,
+            r"None \(NoneType\) is not a valid numeric type. "
             r"Cannot compute bounds on expression.",
         ):
             lb, ub = visitor.walk_expression(m.p + m.y)
@@ -288,7 +319,7 @@ class TestExpressionBoundsWalker(unittest.TestCase):
         visitor = ExpressionBoundsVisitor()
         with self.assertRaisesRegex(
             ValueError,
-            r"'True' \(<class 'str'>\) is not a valid numeric type. "
+            r"'True' \(str\) is not a valid numeric type. "
             r"Cannot compute bounds on expression.",
         ):
             lb, ub = visitor.walk_expression(m.p + m.y)
@@ -303,3 +334,82 @@ class TestExpressionBoundsWalker(unittest.TestCase):
             r"complex numbers. Encountered when processing \(4\+5j\)",
         ):
             lb, ub = visitor.walk_expression(m.p + m.y)
+
+    def test_inequality(self):
+        m = self.make_model()
+        visitor = ExpressionBoundsVisitor()
+        self.assertEqual(visitor.walk_expression(m.z <= m.y), (_true, _true))
+        self.assertEqual(visitor.walk_expression(m.y <= m.z), (_false, _false))
+        self.assertEqual(visitor.walk_expression(m.y <= m.x), (_false, _true))
+
+    def test_equality(self):
+        m = self.make_model()
+        m.p = Param(initialize=5)
+        visitor = ExpressionBoundsVisitor()
+        self.assertEqual(visitor.walk_expression(m.y == m.z), (_false, _false))
+        self.assertEqual(visitor.walk_expression(m.y == m.x), (_false, _true))
+        self.assertEqual(visitor.walk_expression(m.p == m.p), (_true, _true))
+
+    def test_ranged(self):
+        m = self.make_model()
+        visitor = ExpressionBoundsVisitor()
+        self.assertEqual(
+            visitor.walk_expression(inequality(m.z, m.y, 5)), (_true, _true)
+        )
+        self.assertEqual(
+            visitor.walk_expression(inequality(m.y, m.z, m.y)), (_false, _false)
+        )
+        self.assertEqual(
+            visitor.walk_expression(inequality(m.y, m.x, m.y)), (_false, _true)
+        )
+
+    def test_expr_if(self):
+        m = self.make_model()
+        visitor = ExpressionBoundsVisitor()
+        self.assertEqual(
+            visitor.walk_expression(Expr_if(IF=m.z <= m.y, THEN=m.z, ELSE=m.y)),
+            m.z.bounds,
+        )
+        self.assertEqual(
+            visitor.walk_expression(Expr_if(IF=m.z >= m.y, THEN=m.z, ELSE=m.y)),
+            m.y.bounds,
+        )
+        self.assertEqual(
+            visitor.walk_expression(Expr_if(IF=m.y <= m.x, THEN=m.y, ELSE=m.x)), (-2, 5)
+        )
+
+    def test_unknown_classes(self):
+        class UnknownNumeric(NumericExpression):
+            pass
+
+        class UnknownLogic(BooleanExpression):
+            def nargs(self):
+                return 0
+
+        class UnknownOther(ExpressionBase):
+            @property
+            def args(self):
+                return ()
+
+            def nargs(self):
+                return 0
+
+        visitor = ExpressionBoundsVisitor()
+        with LoggingIntercept() as LOG:
+            self.assertEqual(visitor.walk_expression(UnknownNumeric(())), (-inf, inf))
+        self.assertEqual(
+            LOG.getvalue(),
+            "Unexpected expression node type 'UnknownNumeric' found while walking "
+            "expression tree; returning (-inf, inf) for the expression bounds.\n",
+        )
+        with LoggingIntercept() as LOG:
+            self.assertEqual(visitor.walk_expression(UnknownLogic(())), (_false, _true))
+        self.assertEqual(
+            LOG.getvalue(),
+            "Unexpected expression node type 'UnknownLogic' found while walking "
+            "expression tree; returning (False, True) for the expression bounds.\n",
+        )
+        with self.assertRaisesRegex(
+            DeveloperError, "Unexpected expression node type 'UnknownOther' found"
+        ):
+            visitor.walk_expression(UnknownOther())

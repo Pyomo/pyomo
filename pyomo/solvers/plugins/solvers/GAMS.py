@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -605,9 +605,9 @@ class GAMSDirect(_GAMSSolver):
                 results.solution(0).symbol_map = getattr(model, "._symbol_maps")[
                     results._smap_id
                 ]
-                results.solution(
-                    0
-                ).default_variable_value = self._default_variable_value
+                results.solution(0).default_variable_value = (
+                    self._default_variable_value
+                )
                 if load_solutions:
                     model.load_solution(results.solution(0))
             else:
@@ -1187,9 +1187,9 @@ class GAMSShell(_GAMSSolver):
                 results.solution(0).symbol_map = getattr(model, "._symbol_maps")[
                     results._smap_id
                 ]
-                results.solution(
-                    0
-                ).default_variable_value = self._default_variable_value
+                results.solution(0).default_variable_value = (
+                    self._default_variable_value
+                )
                 if load_solutions:
                     model.load_solution(results.solution(0))
             else:

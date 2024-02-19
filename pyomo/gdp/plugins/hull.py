@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -470,9 +470,9 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                         and disj not in disjunctsVarAppearsIn[var]
                     ):
                         relaxationBlock = disj._transformation_block().parent_block()
-                        relaxationBlock._bigMConstraintMap[
-                            disaggregated_var
-                        ] = Reference(disaggregated_var_bounds[idx, :])
+                        relaxationBlock._bigMConstraintMap[disaggregated_var] = (
+                            Reference(disaggregated_var_bounds[idx, :])
+                        )
                         relaxationBlock._disaggregatedVarMap['srcVar'][
                             disaggregated_var
                         ] = var

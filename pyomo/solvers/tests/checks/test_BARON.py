@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -20,9 +20,9 @@ from pyomo.environ import ConcreteModel, Constraint, Objective, Var, log10, mini
 from pyomo.opt import SolverFactory, TerminationCondition
 
 # check if BARON is available
-from pyomo.solvers.tests.solvers import test_solver_cases
+from pyomo.solvers.tests.solvers import test_solver_cases as _test_solver_cases
 
-baron_available = test_solver_cases('baron', 'bar').available
+baron_available = _test_solver_cases('baron', 'bar').available
 
 
 @unittest.skipIf(not baron_available, "The 'BARON' solver is not available")

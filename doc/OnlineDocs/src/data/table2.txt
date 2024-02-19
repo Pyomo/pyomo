@@ -1,0 +1,21 @@
+2 Set Declarations
+    A : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {'A1', 'A2', 'A3'}
+    B : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {'B1', 'B2', 'B3'}
+
+2 Param Declarations
+    M : Size=3, Index=A, Domain=Any, Default=None, Mutable=False
+        Key : Value
+         A1 :   4.3
+         A2 :   4.4
+         A3 :   4.5
+    N : Size=3, Index=A*B, Domain=Any, Default=None, Mutable=False
+        Key          : Value
+        ('A1', 'B1') :   5.3
+        ('A2', 'B2') :   5.4
+        ('A3', 'B3') :   5.5
+
+4 Declarations: A B M N

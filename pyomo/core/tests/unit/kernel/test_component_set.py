@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -257,6 +257,14 @@ class TestComponentSet(unittest.TestCase):
         self.assertEqual(cset1, cset2)
 
         cset2.remove(self._components[0])
+        self.assertFalse(cset2 == cset1)
+        self.assertTrue(cset2 != cset1)
+        self.assertNotEqual(cset2, cset1)
+        self.assertFalse(cset1 == cset2)
+        self.assertTrue(cset1 != cset2)
+        self.assertNotEqual(cset1, cset2)
+
+        cset2.add(variable())
         self.assertFalse(cset2 == cset1)
         self.assertTrue(cset2 != cset1)
         self.assertNotEqual(cset2, cset1)

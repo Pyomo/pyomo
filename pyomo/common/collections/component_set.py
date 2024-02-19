@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -104,11 +104,11 @@ class ComponentSet(collections_MutableSet):
     # plain dictionary mapping key->(type(val), id(val)) and
     # compare that instead.
     def __eq__(self, other):
+        if self is other:
+            return True
         if not isinstance(other, collections_Set):
             return False
-        return set((type(val), id(val)) for val in self) == set(
-            (type(val), id(val)) for val in other
-        )
+        return len(self) == len(other) and all(id(key) in self._data for key in other)
 
     def __ne__(self, other):
         return not (self == other)

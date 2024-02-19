@@ -1,0 +1,16 @@
+3 Param Declarations
+    a : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
+        Key  : Value
+        None :   1.1
+    b : Size=3, Index={1, 2, 3}, Domain=Any, Default=None, Mutable=False
+        Key : Value
+          1 :     1
+          2 :     2
+          3 :     3
+    c : Size=3, Index={1, 2, 3}, Domain=Any, Default=None, Mutable=False
+        Key : Value
+          1 :     1
+          2 :     2
+          3 :     3
+
+3 Declarations: a b c

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -9,8 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from random import random
 import sys
+from .dependencies import random
 
 
 def randint(a, b):
@@ -21,7 +21,7 @@ def randint(a, b):
     can support deterministic testing (i.e., setting the random.seed and
     expecting the same sequence), we will implement a simple, but stable
     version of randint()."""
-    return int((b - a + 1) * random())
+    return int((b - a + 1) * random.random())
 
 
 def unique_component_name(instance, name):

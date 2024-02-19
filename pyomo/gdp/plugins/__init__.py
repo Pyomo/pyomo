@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -22,3 +22,4 @@ def load():
     import pyomo.gdp.plugins.multiple_bigm
     import pyomo.gdp.plugins.transform_current_disjunctive_state
     import pyomo.gdp.plugins.bound_pretransformation
+    import pyomo.gdp.plugins.binary_multiplication

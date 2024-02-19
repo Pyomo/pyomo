@@ -3,7 +3,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -50,6 +50,14 @@
 - Add single-tree implementation.
 - Add support for cplex_persistent solver.
 - Fix bug in OA cut expression in cut_generation.py.
+
+24.1.11 changes:
+- fix gurobi single tree termination check bug
+- fix Gurobi single tree cycle handling
+- fix bug in feasibility pump method
+- add special handling for infeasible relaxed NLP
+- update the log format of infeasible fixed NLP subproblems
+- create a new copy_var_list_values function
 """
 
 from pyomo.contrib.mindtpy import __version__

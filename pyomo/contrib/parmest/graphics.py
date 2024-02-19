@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -152,7 +152,7 @@ def _add_scipy_dist_CI(
                 data_slice.append(np.array([[theta_star[var]] * ncells] * ncells))
         data_slice = np.dstack(tuple(data_slice))
 
-    elif isinstance(dist, stats.kde.gaussian_kde):
+    elif isinstance(dist, stats.gaussian_kde):
         for var in theta_star.index:
             if var == xvar:
                 data_slice.append(X.ravel())

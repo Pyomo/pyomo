@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Analytical example from Section 6.3.3 of F. Trespalacions Ph.D. Thesis (2015)
 
 Analytical example for a nonconvex GDP with 2 disjunctions, each with 2 disjuncts.
@@ -14,7 +25,6 @@ the first and second disjunctions, respectively.
 Pyomo model implementation by @bernalde and @qtothec.
 
 """
-from __future__ import division
 
 from pyomo.environ import *
 from pyomo.gdp import *
