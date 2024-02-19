@@ -63,7 +63,7 @@ or changed ``SolverFactory`` version.
     # Direct import
    import pyomo.environ as pyo
    from pyomo.contrib.solver.util import assert_optimal_termination
-   from pyomo.contrib.solver.ipopt import ipopt
+   from pyomo.contrib.solver.ipopt import Ipopt
 
    model = pyo.ConcreteModel()
    model.x = pyo.Var(initialize=1.5)
@@ -74,7 +74,7 @@ or changed ``SolverFactory`` version.
 
    model.obj = pyo.Objective(rule=rosenbrock, sense=pyo.minimize)
 
-   opt = ipopt()
+   opt = Ipopt()
    status = opt.solve(model)
    assert_optimal_termination(status)
    # Displays important results information; only available in future capability mode
@@ -112,7 +112,7 @@ The new interface will allow for direct manipulation of linear presolve and scal
 options for certain solvers. Currently, these options are only available for
 ``ipopt``.
 
-.. autoclass:: pyomo.contrib.solver.ipopt.ipopt
+.. autoclass:: pyomo.contrib.solver.ipopt.Ipopt
    :members: solve
 
 The ``writer_config`` configuration option can be used to manipulate presolve
@@ -120,8 +120,8 @@ and scaling options:
 
 .. code-block:: python
 
-   >>> from pyomo.contrib.solver.ipopt import ipopt
-   >>> opt = ipopt()
+   >>> from pyomo.contrib.solver.ipopt import Ipopt
+   >>> opt = Ipopt()
    >>> opt.config.writer_config.display()
 
    show_section_timing: false
@@ -213,7 +213,7 @@ Solutions can be loaded back into a model using a ``SolutionLoader``. A specific
 loader should be written for each unique case. Several have already been
 implemented. For example, for ``ipopt``:
 
-.. autoclass:: pyomo.contrib.solver.ipopt.ipoptSolutionLoader
+.. autoclass:: pyomo.contrib.solver.ipopt.IpoptSolutionLoader
    :show-inheritance:
    :members:
    :inherited-members:

@@ -11,14 +11,14 @@
 
 
 from .factory import SolverFactory
-from .ipopt import ipopt
+from .ipopt import Ipopt
 from .gurobi import Gurobi
 
 
 def load():
     SolverFactory.register(
         name='ipopt', legacy_name='ipopt_v2', doc='The IPOPT NLP solver (new interface)'
-    )(ipopt)
+    )(Ipopt)
     SolverFactory.register(
         name='gurobi', legacy_name='gurobi_v2', doc='New interface to Gurobi'
     )(Gurobi)

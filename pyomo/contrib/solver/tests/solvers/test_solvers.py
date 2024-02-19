@@ -17,7 +17,7 @@ parameterized, param_available = attempt_import('parameterized')
 parameterized = parameterized.parameterized
 from pyomo.contrib.solver.results import TerminationCondition, SolutionStatus, Results
 from pyomo.contrib.solver.base import SolverBase
-from pyomo.contrib.solver.ipopt import ipopt
+from pyomo.contrib.solver.ipopt import Ipopt
 from pyomo.contrib.solver.gurobi import Gurobi
 from typing import Type
 from pyomo.core.expr.numeric_expr import LinearExpression
@@ -31,10 +31,10 @@ from pyomo import gdp
 if not param_available:
     raise unittest.SkipTest('Parameterized is not available.')
 
-all_solvers = [('gurobi', Gurobi), ('ipopt', ipopt)]
+all_solvers = [('gurobi', Gurobi), ('ipopt', Ipopt)]
 mip_solvers = [('gurobi', Gurobi)]
-nlp_solvers = [('ipopt', ipopt)]
-qcp_solvers = [('gurobi', Gurobi), ('ipopt', ipopt)]
+nlp_solvers = [('ipopt', Ipopt)]
+qcp_solvers = [('gurobi', Gurobi), ('ipopt', Ipopt)]
 miqcqp_solvers = [('gurobi', Gurobi)]
 
 
@@ -256,7 +256,7 @@ class TestSolvers(unittest.TestCase):
         opt: SolverBase = opt_class()
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
-        if isinstance(opt, ipopt):
+        if isinstance(opt, Ipopt):
             opt.config.writer_config.linear_presolve = False
         m = pe.ConcreteModel()
         m.x = pe.Var()
@@ -429,7 +429,7 @@ class TestSolvers(unittest.TestCase):
         opt.config.raise_exception_on_nonoptimal_result = False
         res = opt.solve(m)
         self.assertNotEqual(res.solution_status, SolutionStatus.optimal)
-        if isinstance(opt, ipopt):
+        if isinstance(opt, Ipopt):
             acceptable_termination_conditions = {
                 TerminationCondition.locallyInfeasible,
                 TerminationCondition.unbounded,
@@ -444,7 +444,7 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, None)
         self.assertTrue(res.incumbent_objective is None)
 
-        if not isinstance(opt, ipopt):
+        if not isinstance(opt, Ipopt):
             # ipopt can return the values of the variables/duals at the last iterate
             # even if it did not converge; raise_exception_on_nonoptimal_result
             # is set to False, so we are free to load infeasible solutions
@@ -970,7 +970,7 @@ class TestSolvers(unittest.TestCase):
                 constant=0,
             )
             m.c2[t] = expr == 1
-        if isinstance(opt, ipopt):
+        if isinstance(opt, Ipopt):
             opt.config.time_limit = 1e-6
         else:
             opt.config.time_limit = 0

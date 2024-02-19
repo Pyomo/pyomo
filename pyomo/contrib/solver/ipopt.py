@@ -221,20 +221,26 @@ class Ipopt(SolverBase):
         self._writer = NLWriter()
         self._available_cache = None
         self._version_cache = None
-        self.executable = self.config.executable
+        self._executable = self.config.executable
 
-    def available(self):
-        if self._available_cache is None:
-            if self.executable.path() is None:
-                self._available_cache = self.Availability.NotFound
+    def available(self, config=None):
+        if config is None:
+            config = self.config
+        pth = config.executable.path()
+        if self._available_cache is None or self._available_cache[0] != pth:
+            if pth is None:
+                self._available_cache = (None, self.Availability.NotFound)
             else:
-                self._available_cache = self.Availability.FullLicense
-        return self._available_cache
+                self._available_cache = (pth, self.Availability.FullLicense)
+        return self._available_cache[1]
 
-    def version(self):
-        if self._version_cache is None:
+    def version(self, config=None):
+        if config is None:
+            config = self.config
+        pth = config.executable.path()
+        if self._version_cache is None or self._version_cache[0] != pth:
             results = subprocess.run(
-                [str(self.executable), '--version'],
+                [str(pth), '--version'],
                 timeout=1,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
@@ -243,8 +249,8 @@ class Ipopt(SolverBase):
             version = results.stdout.splitlines()[0]
             version = version.split(' ')[1].strip()
             version = tuple(int(i) for i in version.split('.'))
-            self._version_cache = version
-        return self._version_cache
+            self._version_cache = (pth, version)
+        return self._version_cache[1]
 
     def _write_options_file(self, filename: str, options: Mapping):
         # First we need to determine if we even need to create a file.
@@ -263,7 +269,7 @@ class Ipopt(SolverBase):
         return opt_file_exists
 
     def _create_command_line(self, basename: str, config: IpoptConfig, opt_file: bool):
-        cmd = [str(self.executable), basename + '.nl', '-AMPL']
+        cmd = [str(self._executable), basename + '.nl', '-AMPL']
         if opt_file:
             cmd.append('option_file_name=' + basename + '.opt')
         if 'option_file_name' in config.solver_options:
@@ -285,15 +291,14 @@ class Ipopt(SolverBase):
     def solve(self, model, **kwds):
         # Begin time tracking
         start_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        # Update configuration options, based on keywords passed to solve
+        config: IpoptConfig = self.config(value=kwds, preserve_implicit=True)
         # Check if solver is available
-        avail = self.available()
+        avail = self.available(config)
         if not avail:
             raise ipoptSolverError(
                 f'Solver {self.__class__} is not available ({avail}).'
             )
-        # Update configuration options, based on keywords passed to solve
-        config: IpoptConfig = self.config(value=kwds, preserve_implicit=True)
-        self.executable = config.executable
         if config.threads:
             logger.log(
                 logging.WARNING,
@@ -397,7 +402,7 @@ class Ipopt(SolverBase):
             )
 
         results.solver_name = self.name
-        results.solver_version = self.version()
+        results.solver_version = self.version(config)
         if (
             config.load_solutions
             and results.solution_status == SolutionStatus.noSolution
