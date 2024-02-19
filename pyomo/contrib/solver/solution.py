@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 import abc
-from typing import Sequence, Dict, Optional, Mapping, MutableMapping, NoReturn
+from typing import Sequence, Dict, Optional, Mapping, NoReturn
 
 from pyomo.core.base.constraint import _GeneralConstraintData
 from pyomo.core.base.var import _GeneralVarData
@@ -18,7 +18,6 @@ from pyomo.common.collections import ComponentMap
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.contrib.solver.sol_reader import SolFileData
 from pyomo.repn.plugins.nl_writer import NLWriterInfo
-from pyomo.core.expr.numvalue import value
 from pyomo.core.expr.visitor import replace_expressions
 
 
@@ -106,78 +105,33 @@ class SolutionLoaderBase(abc.ABC):
         )
 
 
-# TODO: This is for development uses only; not to be released to the wild
-# May turn into documentation someday
-class SolutionLoader(SolutionLoaderBase):
-    def __init__(
-        self,
-        primals: Optional[MutableMapping],
-        duals: Optional[MutableMapping],
-        reduced_costs: Optional[MutableMapping],
-    ):
-        """
-        Parameters
-        ----------
-        primals: dict
-            maps id(Var) to (var, value)
-        duals: dict
-            maps Constraint to dual value
-        reduced_costs: dict
-            maps id(Var) to (var, reduced_cost)
-        """
-        self._primals = primals
-        self._duals = duals
-        self._reduced_costs = reduced_costs
+class PersistentSolutionLoader(SolutionLoaderBase):
+    def __init__(self, solver):
+        self._solver = solver
+        self._valid = True
 
-    def get_primals(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
-        if self._primals is None:
-            raise RuntimeError(
-                'Solution loader does not currently have a valid solution. Please '
-                'check the termination condition.'
-            )
-        if vars_to_load is None:
-            return ComponentMap(self._primals.values())
-        else:
-            primals = ComponentMap()
-            for v in vars_to_load:
-                primals[v] = self._primals[id(v)][1]
-            return primals
+    def _assert_solution_still_valid(self):
+        if not self._valid:
+            raise RuntimeError('The results in the solver are no longer valid.')
+
+    def get_primals(self, vars_to_load=None):
+        self._assert_solution_still_valid()
+        return self._solver._get_primals(vars_to_load=vars_to_load)
 
     def get_duals(
         self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None
     ) -> Dict[_GeneralConstraintData, float]:
-        if self._duals is None:
-            raise RuntimeError(
-                'Solution loader does not currently have valid duals. Please '
-                'check the termination condition and ensure the solver returns duals '
-                'for the given problem type.'
-            )
-        if cons_to_load is None:
-            duals = dict(self._duals)
-        else:
-            duals = {}
-            for c in cons_to_load:
-                duals[c] = self._duals[c]
-        return duals
+        self._assert_solution_still_valid()
+        return self._solver._get_duals(cons_to_load=cons_to_load)
 
     def get_reduced_costs(
         self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
     ) -> Mapping[_GeneralVarData, float]:
-        if self._reduced_costs is None:
-            raise RuntimeError(
-                'Solution loader does not currently have valid reduced costs. Please '
-                'check the termination condition and ensure the solver returns reduced '
-                'costs for the given problem type.'
-            )
-        if vars_to_load is None:
-            rc = ComponentMap(self._reduced_costs.values())
-        else:
-            rc = ComponentMap()
-            for v in vars_to_load:
-                rc[v] = self._reduced_costs[id(v)][1]
-        return rc
+        self._assert_solution_still_valid()
+        return self._solver._get_reduced_costs(vars_to_load=vars_to_load)
+
+    def invalidate(self):
+        self._valid = False
 
 
 class SolSolutionLoader(SolutionLoaderBase):
@@ -188,17 +142,14 @@ class SolSolutionLoader(SolutionLoaderBase):
     def load_vars(
         self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
     ) -> NoReturn:
-        if self._nl_info.scaling is None:
-            scale_list = [1] * len(self._nl_info.variables)
+        if self._nl_info.scaling:
+            for v, val, scale in zip(
+                self._nl_info.variables, self._sol_data.primals, self._nl_info.scaling
+            ):
+                v.set_value(val / scale, skip_validation=True)
         else:
-            scale_list = self._nl_info.scaling.variables
-        for v, val, scale in zip(
-            self._nl_info.variables, self._sol_data.primals, scale_list
-        ):
-            v.set_value(val / scale, skip_validation=True)
-
-        for v, v_expr in self._nl_info.eliminated_vars:
-            v.set_value(value(v_expr), skip_validation=True)
+            for v, val in zip(self._nl_info.variables, self._sol_data.primals):
+                v.set_value(val, skip_validation=True)
 
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
@@ -248,32 +199,3 @@ class SolSolutionLoader(SolutionLoaderBase):
             if c in cons_to_load:
                 res[c] = val * scale
         return res
-
-
-class PersistentSolutionLoader(SolutionLoaderBase):
-    def __init__(self, solver):
-        self._solver = solver
-        self._valid = True
-
-    def _assert_solution_still_valid(self):
-        if not self._valid:
-            raise RuntimeError('The results in the solver are no longer valid.')
-
-    def get_primals(self, vars_to_load=None):
-        self._assert_solution_still_valid()
-        return self._solver._get_primals(vars_to_load=vars_to_load)
-
-    def get_duals(
-        self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None
-    ) -> Dict[_GeneralConstraintData, float]:
-        self._assert_solution_still_valid()
-        return self._solver._get_duals(cons_to_load=cons_to_load)
-
-    def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
-        self._assert_solution_still_valid()
-        return self._solver._get_reduced_costs(vars_to_load=vars_to_load)
-
-    def invalidate(self):
-        self._valid = False

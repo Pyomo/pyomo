@@ -283,11 +283,8 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
 
         if avail:
             if self._available is None:
-                res = Gurobi._check_full_license()
-                self._available = res
-                return res
-            else:
-                return self._available
+                self._available = Gurobi._check_full_license()
+            return self._available
         else:
             return self.Availability.BadLicense
 

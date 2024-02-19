@@ -40,7 +40,6 @@ from pyomo.common.deprecation import (
     deprecation_warning,
     relocated_module_attribute,
 )
-from pyomo.common.errors import DeveloperError
 from pyomo.common.fileutils import import_file
 from pyomo.common.formatting import wrap_reStructuredText
 from pyomo.common.modeling import NOTSET
@@ -767,6 +766,7 @@ validators for common use cases:
    NegativeFloat
    NonPositiveFloat
    NonNegativeFloat
+   Datetime
    In
    InEnum
    IsInstance

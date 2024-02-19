@@ -27,7 +27,6 @@ from pyomo.opt.results.solver import (
     TerminationCondition as LegacyTerminationCondition,
     SolverStatus as LegacySolverStatus,
 )
-from pyomo.common.timing import HierarchicalTimer
 
 
 class TerminationCondition(enum.Enum):

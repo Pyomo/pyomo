@@ -180,9 +180,6 @@ class PersistentSolverBase(SolverBase):
 
     CONFIG = PersistentSolverConfig()
 
-    def __init__(self, **kwds):
-        super().__init__(**kwds)
-
     @document_kwargs_from_configdict(CONFIG)
     @abc.abstractmethod
     def solve(self, model: _BlockData, **kwargs) -> Results:

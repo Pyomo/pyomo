@@ -34,7 +34,7 @@ from pyomo.contrib.solver.config import SolverConfig
 from pyomo.contrib.solver.factory import SolverFactory
 from pyomo.contrib.solver.results import Results, TerminationCondition, SolutionStatus
 from pyomo.contrib.solver.sol_reader import parse_sol_file
-from pyomo.contrib.solver.solution import SolSolutionLoader, SolutionLoader
+from pyomo.contrib.solver.solution import SolSolutionLoader
 from pyomo.common.tee import TeeStream
 from pyomo.common.log import LogStream
 from pyomo.core.expr.visitor import replace_expressions
@@ -103,14 +103,14 @@ class ipoptResults(Results):
             implicit_domain=implicit_domain,
             visibility=visibility,
         )
-        self.timing_info.no_function_solve_time: Optional[float] = (
+        self.timing_info.ipopt_excluding_nlp_functions: Optional[float] = (
             self.timing_info.declare(
-                'no_function_solve_time', ConfigValue(domain=NonNegativeFloat)
+                'ipopt_excluding_nlp_functions', ConfigValue(domain=NonNegativeFloat)
             )
         )
-        self.timing_info.function_solve_time: Optional[float] = (
+        self.timing_info.nlp_function_evaluations: Optional[float] = (
             self.timing_info.declare(
-                'function_solve_time', ConfigValue(domain=NonNegativeFloat)
+                'nlp_function_evaluations', ConfigValue(domain=NonNegativeFloat)
             )
         )
 
@@ -225,10 +225,11 @@ class ipopt(SolverBase):
         self._writer = NLWriter()
         self._available_cache = None
         self._version_cache = None
+        self.executable = self.config.executable
 
     def available(self):
         if self._available_cache is None:
-            if self.config.executable.path() is None:
+            if self.executable.path() is None:
                 self._available_cache = self.Availability.NotFound
             else:
                 self._available_cache = self.Availability.FullLicense
@@ -237,7 +238,7 @@ class ipopt(SolverBase):
     def version(self):
         if self._version_cache is None:
             results = subprocess.run(
-                [str(self.config.executable), '--version'],
+                [str(self.executable), '--version'],
                 timeout=1,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
@@ -266,7 +267,7 @@ class ipopt(SolverBase):
         return opt_file_exists
 
     def _create_command_line(self, basename: str, config: ipoptConfig, opt_file: bool):
-        cmd = [str(config.executable), basename + '.nl', '-AMPL']
+        cmd = [str(self.executable), basename + '.nl', '-AMPL']
         if opt_file:
             cmd.append('option_file_name=' + basename + '.opt')
         if 'option_file_name' in config.solver_options:
@@ -296,6 +297,7 @@ class ipopt(SolverBase):
             )
         # Update configuration options, based on keywords passed to solve
         config: ipoptConfig = self.config(value=kwds, preserve_implicit=True)
+        self.executable = config.executable
         if config.threads:
             logger.log(
                 logging.WARNING,
@@ -306,7 +308,6 @@ class ipopt(SolverBase):
         else:
             timer = config.timer
         StaleFlagManager.mark_all_as_stale()
-        results = ipoptResults()
         with TempfileManager.new_context() as tempfile:
             if config.working_dir is None:
                 dname = tempfile.mkdtemp()
@@ -379,16 +380,18 @@ class ipopt(SolverBase):
                 )
 
             if process.returncode != 0:
+                results = ipoptResults()
+                results.extra_info.return_code = process.returncode
                 results.termination_condition = TerminationCondition.error
-                results.solution_loader = SolutionLoader(None, None, None)
+                results.solution_loader = SolSolutionLoader(None, None)
             else:
                 with open(basename + '.sol', 'r') as sol_file:
                     timer.start('parse_sol')
-                    results = self._parse_solution(sol_file, nl_info, results)
+                    results = self._parse_solution(sol_file, nl_info)
                     timer.stop('parse_sol')
                 results.iteration_count = iters
-                results.timing_info.no_function_solve_time = ipopt_time_nofunc
-                results.timing_info.function_solve_time = ipopt_time_func
+                results.timing_info.ipopt_excluding_nlp_functions = ipopt_time_nofunc
+                results.timing_info.nlp_function_evaluations = ipopt_time_func
         if (
             config.raise_exception_on_nonoptimal_result
             and results.solution_status != SolutionStatus.optimal
@@ -397,7 +400,7 @@ class ipopt(SolverBase):
                 'Solver did not find the optimal solution. Set opt.config.raise_exception_on_nonoptimal_result = False to bypass this error.'
             )
 
-        results.solver_name = 'ipopt'
+        results.solver_name = self.name
         results.solver_version = self.version()
         if (
             config.load_solutions
@@ -484,15 +487,14 @@ class ipopt(SolverBase):
 
         return iters, nofunc_time, func_time
 
-    def _parse_solution(
-        self, instream: io.TextIOBase, nl_info: NLWriterInfo, result: ipoptResults
-    ):
+    def _parse_solution(self, instream: io.TextIOBase, nl_info: NLWriterInfo):
+        results = ipoptResults()
         res, sol_data = parse_sol_file(
-            sol_file=instream, nl_info=nl_info, result=result
+            sol_file=instream, nl_info=nl_info, result=results
         )
 
         if res.solution_status == SolutionStatus.noSolution:
-            res.solution_loader = SolutionLoader(None, None, None)
+            res.solution_loader = SolSolutionLoader(None, None)
         else:
             res.solution_loader = ipoptSolutionLoader(
                 sol_data=sol_data, nl_info=nl_info

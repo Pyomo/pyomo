@@ -94,7 +94,11 @@ class SolverConfig(ConfigDict):
             ),
         )
         self.timer: HierarchicalTimer = self.declare(
-            'timer', ConfigValue(default=None, description="A HierarchicalTimer.")
+            'timer',
+            ConfigValue(
+                default=None,
+                description="A timer object for recording relevant process timing data.",
+            ),
         )
         self.threads: Optional[int] = self.declare(
             'threads',

@@ -10,13 +10,95 @@
 #  ___________________________________________________________________________
 
 from io import StringIO
+from typing import Sequence, Dict, Optional, Mapping, MutableMapping
+
 
 from pyomo.common import unittest
 from pyomo.common.config import ConfigDict
+from pyomo.core.base.constraint import _GeneralConstraintData
+from pyomo.core.base.var import _GeneralVarData
+from pyomo.common.collections import ComponentMap
 from pyomo.contrib.solver import results
 from pyomo.contrib.solver import solution
 import pyomo.environ as pyo
 from pyomo.core.base.var import ScalarVar
+
+
+class SolutionLoaderExample(solution.SolutionLoaderBase):
+    """
+    This is an example instantiation of a SolutionLoader that is used for
+    testing generated results.
+    """
+
+    def __init__(
+        self,
+        primals: Optional[MutableMapping],
+        duals: Optional[MutableMapping],
+        reduced_costs: Optional[MutableMapping],
+    ):
+        """
+        Parameters
+        ----------
+        primals: dict
+            maps id(Var) to (var, value)
+        duals: dict
+            maps Constraint to dual value
+        reduced_costs: dict
+            maps id(Var) to (var, reduced_cost)
+        """
+        self._primals = primals
+        self._duals = duals
+        self._reduced_costs = reduced_costs
+
+    def get_primals(
+        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
+    ) -> Mapping[_GeneralVarData, float]:
+        if self._primals is None:
+            raise RuntimeError(
+                'Solution loader does not currently have a valid solution. Please '
+                'check the termination condition.'
+            )
+        if vars_to_load is None:
+            return ComponentMap(self._primals.values())
+        else:
+            primals = ComponentMap()
+            for v in vars_to_load:
+                primals[v] = self._primals[id(v)][1]
+            return primals
+
+    def get_duals(
+        self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None
+    ) -> Dict[_GeneralConstraintData, float]:
+        if self._duals is None:
+            raise RuntimeError(
+                'Solution loader does not currently have valid duals. Please '
+                'check the termination condition and ensure the solver returns duals '
+                'for the given problem type.'
+            )
+        if cons_to_load is None:
+            duals = dict(self._duals)
+        else:
+            duals = {}
+            for c in cons_to_load:
+                duals[c] = self._duals[c]
+        return duals
+
+    def get_reduced_costs(
+        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
+    ) -> Mapping[_GeneralVarData, float]:
+        if self._reduced_costs is None:
+            raise RuntimeError(
+                'Solution loader does not currently have valid reduced costs. Please '
+                'check the termination condition and ensure the solver returns reduced '
+                'costs for the given problem type.'
+            )
+        if vars_to_load is None:
+            rc = ComponentMap(self._reduced_costs.values())
+        else:
+            rc = ComponentMap()
+            for v in vars_to_load:
+                rc[v] = self._reduced_costs[id(v)][1]
+        return rc
 
 
 class TestTerminationCondition(unittest.TestCase):
@@ -92,6 +174,7 @@ class TestResults(unittest.TestCase):
 
     def test_default_initialization(self):
         res = results.Results()
+        self.assertIsNone(res.solution_loader)
         self.assertIsNone(res.incumbent_objective)
         self.assertIsNone(res.objective_bound)
         self.assertEqual(
@@ -105,20 +188,6 @@ class TestResults(unittest.TestCase):
         self.assertIsInstance(res.extra_info, ConfigDict)
         self.assertIsNone(res.timing_info.start_timestamp)
         self.assertIsNone(res.timing_info.wall_time)
-        res.solution_loader = solution.SolutionLoader(None, None, None)
-
-        with self.assertRaisesRegex(
-            RuntimeError, '.*does not currently have a valid solution.*'
-        ):
-            res.solution_loader.load_vars()
-        with self.assertRaisesRegex(
-            RuntimeError, '.*does not currently have valid duals.*'
-        ):
-            res.solution_loader.get_duals()
-        with self.assertRaisesRegex(
-            RuntimeError, '.*does not currently have valid reduced costs.*'
-        ):
-            res.solution_loader.get_reduced_costs()
 
     def test_display(self):
         res = results.Results()
@@ -160,7 +229,7 @@ extra_info:
         rc[id(m.y)] = (m.y, 6)
 
         res = results.Results()
-        res.solution_loader = solution.SolutionLoader(
+        res.solution_loader = SolutionLoaderExample(
             primals=primals, duals=duals, reduced_costs=rc
         )
 
