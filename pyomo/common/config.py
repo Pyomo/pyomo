@@ -363,9 +363,7 @@ class IsInstance(object):
 
     def domain_name(self):
         class_names = (self._get_class_name(kls) for kls in self.baseClasses)
-        return (
-            f"IsInstance({', '.join(class_names)})"
-        )
+        return f"IsInstance({', '.join(class_names)})"
 
 
 class ListOf(object):
@@ -594,7 +592,7 @@ class PathList(Path):
         try:
             pathlist = [super(PathList, self).__call__(data)]
         except TypeError as err:
-            is_not_path_like = ("expected str, bytes or os.PathLike" in str(err))
+            is_not_path_like = "expected str, bytes or os.PathLike" in str(err)
             if is_not_path_like and hasattr(data, "__iter__"):
                 pathlist = [super(PathList, self).__call__(i) for i in data]
             else:
