@@ -9,8 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['Var', '_VarData', '_GeneralVarData', 'VarList', 'SimpleVar', 'ScalarVar']
-
 import logging
 import sys
 from pyomo.common.pyomo_typing import overload
@@ -29,7 +27,6 @@ from pyomo.core.expr.numvalue import (
     value,
     is_potentially_variable,
     native_numeric_types,
-    native_types,
 )
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
@@ -44,7 +41,6 @@ from pyomo.core.base.initializer import (
     DefaultInitializer,
     BoundInitializer,
 )
-from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.set import (
     Reals,
     Binary,
@@ -54,7 +50,6 @@ from pyomo.core.base.set import (
     integer_global_set_ids,
 )
 from pyomo.core.base.units_container import units
-from pyomo.core.base.util import is_functor
 
 logger = logging.getLogger('pyomo.core')
 

@@ -17,20 +17,14 @@
 #  the U.S. Government retains certain rights in this software.
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
-from pyomo.core.base import Constraint, Param, value, Suffix, Block
+import logging
 
+from pyomo.core.base import Constraint, Param, value, Suffix, Block
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.diffvar import DAE_Error
-
 import pyomo.core.expr as EXPR
 from pyomo.core.expr.numvalue import native_numeric_types
 from pyomo.core.expr.template_expr import IndexTemplate, _GetItemIndexer
-
-import logging
-
-__all__ = ('Simulator',)
-logger = logging.getLogger('pyomo.core')
-
 from pyomo.common.dependencies import (
     numpy as np,
     numpy_available,
@@ -38,6 +32,8 @@ from pyomo.common.dependencies import (
     scipy_available,
     attempt_import,
 )
+
+logger = logging.getLogger('pyomo.core')
 
 casadi_intrinsic = {}
 

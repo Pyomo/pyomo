@@ -9,15 +9,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['IndexedComponent', 'ActiveIndexedComponent']
-
-import enum
 import inspect
 import logging
 import sys
 import textwrap
-
-from copy import deepcopy
 
 import pyomo.core.expr as EXPR
 import pyomo.core.base as BASE
@@ -32,9 +27,8 @@ from pyomo.core.pyomoobject import PyomoObject
 from pyomo.common import DeveloperError
 from pyomo.common.autoslots import fast_deepcopy
 from pyomo.common.collections import ComponentSet
-from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.deprecation import deprecated, deprecation_warning
-from pyomo.common.errors import DeveloperError, TemplateExpressionError
+from pyomo.common.errors import TemplateExpressionError
 from pyomo.common.modeling import NOTSET
 from pyomo.common.numeric_types import native_types
 from pyomo.common.sorting import sorted_robust

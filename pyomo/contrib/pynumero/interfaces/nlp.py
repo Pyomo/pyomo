@@ -50,9 +50,8 @@ evaluate_jacobian_ineq.
 .. rubric:: Contents
 
 """
-import abc
 
-__all__ = ['NLP']
+import abc
 
 
 class NLP(object, metaclass=abc.ABCMeta):
