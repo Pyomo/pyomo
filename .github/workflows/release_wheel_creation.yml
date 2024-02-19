@@ -29,7 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2
+        uses: pypa/cibuildwheel@v2.16.5
         with:
           output-dir: dist
         env:
@@ -63,7 +63,7 @@ jobs:
         with:
           platforms: all
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2
+        uses: pypa/cibuildwheel@v2.16.5
         with:
           output-dir: dist
         env:
