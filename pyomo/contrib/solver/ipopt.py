@@ -380,16 +380,18 @@ class Ipopt(SolverBase):
                     ostreams[0]
                 )
 
-            if process.returncode != 0:
-                results = IpoptResults()
-                results.extra_info.return_code = process.returncode
-                results.termination_condition = TerminationCondition.error
-                results.solution_loader = SolSolutionLoader(None, None)
-            else:
+            if os.path.isfile(basename + '.sol'):
                 with open(basename + '.sol', 'r') as sol_file:
                     timer.start('parse_sol')
                     results = self._parse_solution(sol_file, nl_info)
                     timer.stop('parse_sol')
+            else:
+                results = IpoptResults()
+            if process.returncode != 0:
+                results.extra_info.return_code = process.returncode
+                results.termination_condition = TerminationCondition.error
+                results.solution_loader = SolSolutionLoader(None, None)
+            else:
                 results.iteration_count = iters
                 results.timing_info.ipopt_excluding_nlp_functions = ipopt_time_nofunc
                 results.timing_info.nlp_function_evaluations = ipopt_time_func
