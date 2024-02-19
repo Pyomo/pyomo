@@ -1,6 +1,6 @@
 WARNING: Initializing ordered Set B with a fundamentally unordered data source
 (type: set).  This WILL potentially lead to nondeterministic behavior in Pyomo
-9 Set Declarations
+8 Set Declarations
     A : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    3 : {2, 3, 5}
@@ -22,13 +22,10 @@ WARNING: Initializing ordered Set B with a fundamentally unordered data source
     G : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    3 : {2, 3, 5}
-    H : Size=3, Index=H_index, Ordered=Insertion
+    H : Size=3, Index={2, 3, 4}, Ordered=Insertion
         Key : Dimen : Domain : Size : Members
           2 :     1 :    Any :    3 : {1, 3, 5}
           3 :     1 :    Any :    3 : {2, 4, 6}
           4 :     1 :    Any :    3 : {3, 5, 7}
-    H_index : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :    3 : {2, 3, 4}
 
-9 Declarations: A B C D E F G H_index H
+8 Declarations: A B C D E F G H

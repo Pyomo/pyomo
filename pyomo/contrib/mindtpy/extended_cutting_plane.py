@@ -3,7 +3,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -66,12 +66,6 @@ class MindtPy_ECP_Solver(_MindtPyAlgorithm):
 
             add_ecp_cuts(self.mip, self.jacobians, self.config, self.timing)
 
-        # if add_no_good_cuts is True, the bound obtained in the last iteration is no reliable.
-        # we correct it after the iteration.
-        if (
-            self.config.add_no_good_cuts or self.config.use_tabu_list
-        ) and not self.should_terminate:
-            self.fix_dual_bound(self.last_iter_cuts)
         self.config.logger.info(
             ' ==============================================================================================='
         )
@@ -84,9 +78,12 @@ class MindtPy_ECP_Solver(_MindtPyAlgorithm):
         super().check_config()
 
     def initialize_mip_problem(self):
-        '''Deactivate the nonlinear constraints to create the MIP problem.'''
+        """Deactivate the nonlinear constraints to create the MIP problem."""
         super().initialize_mip_problem()
-        self.jacobians = calc_jacobians(self.mip, self.config)  # preload jacobians
+        self.jacobians = calc_jacobians(
+            self.mip.MindtPy_utils.nonlinear_constraint_list,
+            self.config.differentiate_mode,
+        )  # preload jacobians
         self.mip.MindtPy_utils.cuts.ecp_cuts = ConstraintList(
             doc='Extended Cutting Planes'
         )
@@ -140,7 +137,7 @@ class MindtPy_ECP_Solver(_MindtPyAlgorithm):
                     lower_slack = nlc.lslack()
                 except (ValueError, OverflowError) as e:
                     # Set lower_slack (upper_slack below) less than -config.ecp_tolerance in this case.
-                    config.logger.error(e)
+                    config.logger.error(e, exc_info=True)
                     lower_slack = -10 * config.ecp_tolerance
                 if lower_slack < -config.ecp_tolerance:
                     config.logger.debug(
@@ -153,7 +150,7 @@ class MindtPy_ECP_Solver(_MindtPyAlgorithm):
                 try:
                     upper_slack = nlc.uslack()
                 except (ValueError, OverflowError) as e:
-                    config.logger.error(e)
+                    config.logger.error(e, exc_info=True)
                     upper_slack = -10 * config.ecp_tolerance
                 if upper_slack < -config.ecp_tolerance:
                     config.logger.debug(

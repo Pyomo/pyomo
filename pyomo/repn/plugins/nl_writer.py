@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -346,6 +346,18 @@ class NLWriter(object):
             row_fname
         ) as ROWFILE, _open(col_fname) as COLFILE:
             info = self.write(model, FILE, ROWFILE, COLFILE, config=config)
+        if not info.variables:
+            # This exception is included for compatibility with the
+            # original NL writer v1.
+            os.remove(filename)
+            if config.symbolic_solver_labels:
+                os.remove(row_fname)
+                os.remove(col_fname)
+            raise ValueError(
+                "No variables appear in the Pyomo model constraints or"
+                " objective. This is not supported by the NL file interface"
+            )
+
         # Historically, the NL writer communicated the external function
         # libraries back to the ASL interface through the PYOMO_AMPLFUNC
         # environment variable.
@@ -854,13 +866,6 @@ class _NLWriter_impl(object):
         con_vars = con_vars_linear | con_vars_nonlinear
         all_vars = con_vars | obj_vars
         n_vars = len(all_vars)
-        if n_vars < 1:
-            # TODO: Remove this.  This exception is included for
-            # compatibility with the original NL writer v1.
-            raise ValueError(
-                "No variables appear in the Pyomo model constraints or"
-                " objective. This is not supported by the NL file interface"
-            )
 
         continuous_vars = set()
         binary_vars = set()

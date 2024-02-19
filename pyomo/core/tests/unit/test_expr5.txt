@@ -1,11 +1,8 @@
-2 Set Declarations
+1 Set Declarations
     A : set A
         Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    3 : {1, 2, 3}
-    c3_index : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :    1 :    {1,}
 
 2 Param Declarations
     B : param B
@@ -49,8 +46,8 @@
           2 :  -Inf : B[2]*x[2] :   1.0 :   True
           3 :  -Inf : B[3]*x[3] :   1.0 :   True
     c3 : con c3
-        Size=1, Index=c3_index, Active=True
+        Size=1, Index={1}, Active=True
         Key : Lower : Body : Upper : Active
           1 :  -Inf :    y :   0.0 :   True
 
-10 Declarations: A B C x y o c1 c2 c3_index c3
+9 Declarations: A B C x y o c1 c2 c3

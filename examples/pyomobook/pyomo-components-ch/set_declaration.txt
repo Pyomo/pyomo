@@ -5,22 +5,16 @@
 
 1 Declarations: A
 0 Declarations: 
-4 Set Declarations
-    E : Size=1, Index=E_index, Ordered=Insertion
+2 Set Declarations
+    E : Size=1, Index={1, 2, 3}, Ordered=Insertion
         Key : Dimen : Domain : Size : Members
           2 :     1 :    Any :    3 : {21, 22, 23}
-    E_index : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :    3 : {1, 2, 3}
-    F : Size=2, Index=F_index, Ordered=Insertion
+    F : Size=2, Index={1, 2, 3}, Ordered=Insertion
         Key : Dimen : Domain : Size : Members
           1 :     1 :    Any :    3 : {11, 12, 13}
           3 :     1 :    Any :    3 : {31, 32, 33}
-    F_index : Size=1, Index=None, Ordered=False
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :    3 : {1, 2, 3}
 
-4 Declarations: E_index E F_index F
+2 Declarations: E F
 6 Set Declarations
     A : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members

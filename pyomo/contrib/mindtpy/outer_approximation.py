@@ -3,7 +3,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -94,9 +94,12 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
         _MindtPyAlgorithm.check_config(self)
 
     def initialize_mip_problem(self):
-        '''Deactivate the nonlinear constraints to create the MIP problem.'''
+        """Deactivate the nonlinear constraints to create the MIP problem."""
         super().initialize_mip_problem()
-        self.jacobians = calc_jacobians(self.mip, self.config)  # preload jacobians
+        self.jacobians = calc_jacobians(
+            self.mip.MindtPy_utils.nonlinear_constraint_list,
+            self.config.differentiate_mode,
+        )  # preload jacobians
         self.mip.MindtPy_utils.cuts.oa_cuts = ConstraintList(
             doc='Outer approximation cuts'
         )
