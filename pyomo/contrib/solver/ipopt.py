@@ -498,11 +498,13 @@ class Ipopt(SolverBase):
         for line in stream.getvalue().splitlines():
             if line.startswith("Number of Iterations....:"):
                 tokens = line.split()
-                iters = int(tokens[3])
+                iters = int(tokens[-1])
             elif line.startswith(
                 "Total seconds in IPOPT                               ="
             ):
-                # Newer versions of IPOPT no longer separate the
+                # Newer versions of IPOPT no longer separate timing into
+                # two different values. This is so we have compatibility with
+                # both new and old versions
                 tokens = line.split()
                 total_time = float(tokens[-1])
             elif line.startswith(
