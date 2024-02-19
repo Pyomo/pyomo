@@ -59,7 +59,7 @@ class SolverConfig(ConfigDict):
                 description="If True, the solver output gets logged.",
             ),
         )
-        self.working_dir: str = self.declare(
+        self.working_dir: Optional[str] = self.declare(
             'working_dir',
             ConfigValue(
                 domain=str,
@@ -94,7 +94,7 @@ class SolverConfig(ConfigDict):
                 "Cannot be changed after set_instance is called.",
             ),
         )
-        self.timer: HierarchicalTimer = self.declare(
+        self.timer: Optional[HierarchicalTimer] = self.declare(
             'timer',
             ConfigValue(
                 default=None,
