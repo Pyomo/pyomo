@@ -22,24 +22,24 @@ class TestComponentMap(unittest.TestCase):
         m.c = Constraint(expr=m.v >= 0)
         m.cm = cm = ComponentMap()
 
-        cm[(1,2)] = 5
+        cm[(1, 2)] = 5
         self.assertEqual(len(cm), 1)
-        self.assertIn((1,2), cm)
-        self.assertEqual(cm[1,2], 5)
+        self.assertIn((1, 2), cm)
+        self.assertEqual(cm[1, 2], 5)
 
-        cm[(1,2)] = 50
+        cm[(1, 2)] = 50
         self.assertEqual(len(cm), 1)
-        self.assertIn((1,2), cm)
-        self.assertEqual(cm[1,2], 50)
+        self.assertIn((1, 2), cm)
+        self.assertEqual(cm[1, 2], 50)
 
         cm[(1, (2, m.v))] = 10
         self.assertEqual(len(cm), 2)
-        self.assertIn((1,(2, m.v)), cm)
+        self.assertIn((1, (2, m.v)), cm)
         self.assertEqual(cm[1, (2, m.v)], 10)
 
         cm[(1, (2, m.v))] = 100
         self.assertEqual(len(cm), 2)
-        self.assertIn((1,(2, m.v)), cm)
+        self.assertIn((1, (2, m.v)), cm)
         self.assertEqual(cm[1, (2, m.v)], 100)
 
         i = m.clone()
