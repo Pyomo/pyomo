@@ -18,7 +18,17 @@ from pyomo.common.collections.component_map import _hasher
 
 def _rehash_keys(encode, val):
     if encode:
-        return list(val.values())
+        # TBD [JDS 2/2024]: if we
+        #
+        # return list(val.values())
+        #
+        # here, then we get a strange failure when deepcopying
+        # ComponentSets containing an _ImplicitAny domain.  We could
+        # track it down to teh implementation of
+        # autoslots.fast_deepcopy, but couldn't find an obvious bug.
+        # There is no error if we just return the original dict, or if
+        # we return a tuple(val.values)
+        return tuple(val.values())
     else:
         # object id() may have changed after unpickling,
         # so we rebuild the dictionary keys

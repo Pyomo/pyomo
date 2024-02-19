@@ -16,7 +16,7 @@ from pyomo.common.autoslots import AutoSlots
 
 def _rehash_keys(encode, val):
     if encode:
-        return list(val.values())
+        return tuple(val.values())
     else:
         # object id() may have changed after unpickling,
         # so we rebuild the dictionary keys
