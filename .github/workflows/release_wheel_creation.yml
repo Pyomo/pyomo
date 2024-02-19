@@ -68,6 +68,18 @@ jobs:
         os: [ubuntu-22.04]
         arch: [all]
         wheel-version: ['cp38*', 'cp39*', 'cp310*', 'cp311*', 'cp312*']
+
+        include:
+        - wheel-version: 'cp38*'
+          TARGET: 'py38'
+        - wheel-version: 'cp39*'
+          TARGET: 'py39'
+        - wheel-version: 'cp310*'
+          TARGET: 'py310'
+        - wheel-version: 'cp311*'
+          TARGET: 'py311'
+        - wheel-version: 'cp312*'
+          TARGET: 'py312'
     steps:
       - uses: actions/checkout@v4
       - name: Set up QEMU
