@@ -9,8 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ('Suffix', 'active_export_suffix_generator', 'active_import_suffix_generator')
-
 import enum
 import logging
 

@@ -9,12 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = (
-    "_LinearConstraintData",
-    "MatrixConstraint",
-    "compile_block_linear_constraints",
-)
-
 import time
 import logging
 import array
