@@ -6,7 +6,7 @@ using Pyomo models. Please see the
 for more detailed information.
 
 Pyomo MPC helps with, among other things, the following use cases:
-- Transfering values between different points in time in a dynamic model
+- Transferring values between different points in time in a dynamic model
 (e.g. to initialize a dynamic model to its initial conditions)
 - Extracting or loading disturbances and inputs from or to models, and storing
 these in model-agnostic, easily JSON-serializable data structures
