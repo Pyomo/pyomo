@@ -10,6 +10,10 @@
 #  ___________________________________________________________________________
 
 import logging
+from collections import namedtuple
+from pyomo.common.collections import ComponentSet, ComponentMap
+from pyomo.core.base.var import Var
+from pyomo.core.base.constraint import Constraint
 
 
 logger = logging.getLogger("pyomo")
@@ -44,6 +48,105 @@ class CyIpoptIntermediateCallbackBase(object):
         raise NotImplementedError("Subclasses must define the __call__ method")
 
 
+InfeasibilityTuple = namedtuple(
+    "InfeasibilityTuple",
+    [
+        "x_L_viol",
+        "x_U_viol",
+        "compl_x_L",
+        "compl_x_U",
+        "dual_infeas",
+        "primal_infeas",
+        "compl_g",
+    ],
+)
+
+
+class TrackingCallback(CyIpoptIntermediateCallbackBase):
+
+    def __init__(self, components, scaled=False):
+        self._variables = [comp for comp in components if comp.ctype is Var]
+        self._constraints = [comp for comp in components if comp.ctype is Constraint]
+        self._scaled = scaled
+        self._var_to_idx = None
+        self._con_to_idx = None
+        self.iter_data = []
+
+        self.infeasibilities = InfeasibilityTuple(
+            *[
+                ComponentMap((var, []) for var in self._variables),
+                ComponentMap((var, []) for var in self._variables),
+                ComponentMap((var, []) for var in self._variables),
+                ComponentMap((var, []) for var in self._variables),
+                ComponentMap((var, []) for var in self._variables),
+                ComponentMap((con, []) for con in self._constraints),
+                ComponentMap((con, []) for con in self._constraints),
+            ]
+        )
+
+
+    def __call__(
+        self,
+        nlp,
+        ipopt_problem,
+        alg_mod,
+        iter_count,
+        obj_value,
+        inf_pr,
+        inf_du,
+        mu,
+        d_norm,
+        regularization_size,
+        alpha_du,
+        alpha_pr,
+        ls_trials,
+    ):
+        infeas = ipopt_problem.get_current_violations(scaled=self._scaled)
+
+        x_L_viol = infeas["x_L_violation"]
+        x_U_viol = infeas["x_U_violation"]
+        compl_x_L = infeas["compl_x_L"]
+        compl_x_U = infeas["compl_x_U"]
+        dual_infeas = infeas["grad_lag_x"]
+        primal_infeas = infeas["g_violation"]
+        compl_g = infeas["compl_g"]
+
+        if self._var_to_idx is None:
+            self._var_to_idx = ComponentMap(
+                (var, i) for i, var in enumerate(nlp.get_pyomo_variables())
+            )
+        if self._con_to_idx is None:
+            self._con_to_idx = ComponentMap(
+                (con, i) for i, con in enumerate(nlp.get_pyomo_constraints())
+            )
+
+        # TODO: Named tuple for basic iteration data
+        self.iter_data.append(
+            (
+                alg_mod,
+                iter_count,
+                inf_pr,
+                inf_du,
+                mu,
+                d_norm,
+                regularization_size,
+                alpha_du,
+                alpha_pr,
+                ls_trials,
+            )
+        )
+
+        for var in self._variables:
+            self.infeasibilities.x_L_viol[var].append(x_L_viol[self._var_to_idx[var]])
+            self.infeasibilities.x_U_viol[var].append(x_U_viol[self._var_to_idx[var]])
+            self.infeasibilities.compl_x_L[var].append(compl_x_L[self._var_to_idx[var]])
+            self.infeasibilities.compl_x_U[var].append(compl_x_U[self._var_to_idx[var]])
+            self.infeasibilities.dual_infeas[var].append(dual_infeas[self._var_to_idx[var]])
+        for con in self._constraints:
+            self.infeasibilities.primal_infeas[con].append(primal_infeas[self._con_to_idx[con]])
+            self.infeasibilities.compl_g[con].append(compl_g[self._con_to_idx[con]])
+
+
 class InfeasibilityCallback(CyIpoptIntermediateCallbackBase):
     """An intermediate callback for displaying the constraints and variables
     with the largest primal and dual infeasibilities at each iteration of
@@ -67,6 +170,15 @@ class InfeasibilityCallback(CyIpoptIntermediateCallbackBase):
         self._dual_infeas = None
         self._primal_infeas = None
         self._compl_g = None
+
+        # Store dicts mapping names to the number of times implicated in each
+        # infeasibility category.
+        self.count = InfeasibilityTuple({}, {}, {}, {}, {}, {}, {})
+        # Each item in these lists will be a tuple (iter, name, infeas)
+        self.infeasibilities = InfeasibilityTuple([], [], [], [], [], [], [])
+
+        # This is getting to be quite a lot to cache. Do we want to enforce that
+        # we don't re-use this for different models?
 
         # TODO: Allow a custom file to write callback information to, and handle
         # output through a logger. This should probably go in the base class
@@ -164,6 +276,7 @@ class InfeasibilityCallback(CyIpoptIntermediateCallbackBase):
                 infeas_str = f"{infeas:.2e}"
                 msg = infeas_str + " " + name
                 logger.info(msg)
+                self.infeasibilities.x_L_viol.append((iter_count, name, infeas))
             logger.info("---------------------")
 
         i_max_xU = sorted_coords_x_U_viol[0]
@@ -177,10 +290,11 @@ class InfeasibilityCallback(CyIpoptIntermediateCallbackBase):
                 infeas_str = f"{infeas:.2e}"
                 msg = infeas_str + " " + name
                 logger.info(msg)
+                self.infeasibilities.x_U_viol.append((iter_count, name, infeas))
             logger.info("---------------------")
 
         i_max_compl_xL = sorted_coords_compl_x_L[0]
-        if abs(x_L_viol[i_max_compl_xL]) >= threshold:
+        if abs(compl_x_L[i_max_compl_xL]) >= threshold:
             logger.info("Lower bound complementarity")
             logger.info("---------------------------")
             logger.info(self._get_header())
@@ -190,10 +304,11 @@ class InfeasibilityCallback(CyIpoptIntermediateCallbackBase):
                 infeas_str = f"{infeas:.2e}"
                 msg = infeas_str + " " + name
                 logger.info(msg)
+                self.infeasibilities.compl_x_L.append((iter_count, name, infeas))
             logger.info("---------------------------")
 
         i_max_compl_xU = sorted_coords_compl_x_U[0]
-        if abs(x_U_viol[i_max_xU]) >= threshold:
+        if abs(compl_x_U[i_max_compl_xU]) >= threshold:
             logger.info("Upper bound complementarity")
             logger.info("---------------------------")
             logger.info(self._get_header())
@@ -203,6 +318,7 @@ class InfeasibilityCallback(CyIpoptIntermediateCallbackBase):
                 infeas_str = f"{infeas:.2e}"
                 msg = infeas_str + " " + name
                 logger.info(msg)
+                self.infeasibilities.compl_x_U.append((iter_count, name, infeas))
             logger.info("---------------------------")
 
         i_max_primal = sorted_coords_primal_infeas[0]
@@ -216,6 +332,7 @@ class InfeasibilityCallback(CyIpoptIntermediateCallbackBase):
                 infeas_str = f"{infeas:.2e}"
                 msg = infeas_str + " " + name
                 logger.info(msg)
+                self.infeasibilities.primal_infeas.append((iter_count, name, infeas))
             logger.info("--------------------")
 
         i_max_dual = sorted_coords_dual_infeas[0]
@@ -229,6 +346,19 @@ class InfeasibilityCallback(CyIpoptIntermediateCallbackBase):
                 infeas_str = f"{infeas:.2e}"
                 msg = infeas_str + " " + name
                 logger.info(msg)
+                self.infeasibilities.dual_infeas.append((iter_count, name, infeas))
             logger.info("------------------")
 
         logger.info("==============================" + "=" * len(str(iter_count)))
+
+    def infeas_by_component(self):
+        # Initialize an empty dict for every infeasibility category
+        init = tuple({} for _ in self.infeasibilities)
+        by_comp = InfeasibilityTuple(*init)
+        for i, categ in enumerate(self.infeasibilities):
+            for itr, name, infeas in categ:
+                if name in by_comp[i]:
+                    by_comp[i][name].append((itr, infeas))
+                else:
+                    by_comp[i][name] = [(itr, infeas)]
+        return by_comp
