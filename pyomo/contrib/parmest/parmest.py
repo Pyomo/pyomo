@@ -271,6 +271,7 @@ def _experiment_instance_creation_callback(
 
 #     return m
 
+
 def SSE(model):
     expr = sum((y - yhat) ** 2 for y, yhat in model.experiment_outputs.items())
     return expr

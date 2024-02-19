@@ -23,7 +23,7 @@ class TimeSeriesReactorDesignExperiment(ReactorDesignExperiment):
     def __init__(self, data, experiment_number):
         self.data = data
         self.experiment_number = experiment_number
-        data_i = data.loc[data['experiment'] == experiment_number,:]
+        data_i = data.loc[data['experiment'] == experiment_number, :]
         self.data_i = data_i.reset_index()
         self.model = None
 

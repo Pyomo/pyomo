@@ -76,9 +76,7 @@ class TestRooneyBiegler(unittest.TestCase):
         # Create an experiment list
         exp_list = []
         for i in range(data.shape[0]):
-            exp_list.append(
-                RooneyBieglerExperiment(data.loc[i, :])
-            )
+            exp_list.append(RooneyBieglerExperiment(data.loc[i, :]))
 
         # Create an instance of the parmest estimator
         pest = parmest.Estimator(exp_list, obj_function=SSE)
@@ -392,9 +390,7 @@ class TestModelVariants(unittest.TestCase):
         rooney_biegler_params_exp_list = []
         for i in range(self.data.shape[0]):
             rooney_biegler_params_exp_list.append(
-                RooneyBieglerExperimentParams(
-                    self.data.loc[i, :]
-                )
+                RooneyBieglerExperimentParams(self.data.loc[i, :])
             )
 
         def rooney_biegler_indexed_params(data):
@@ -440,9 +436,7 @@ class TestModelVariants(unittest.TestCase):
         rooney_biegler_indexed_params_exp_list = []
         for i in range(self.data.shape[0]):
             rooney_biegler_indexed_params_exp_list.append(
-                RooneyBieglerExperimentIndexedParams(
-                    self.data.loc[i, :]
-                )
+                RooneyBieglerExperimentIndexedParams(self.data.loc[i, :])
             )
 
         def rooney_biegler_vars(data):
@@ -521,9 +515,7 @@ class TestModelVariants(unittest.TestCase):
         rooney_biegler_indexed_vars_exp_list = []
         for i in range(self.data.shape[0]):
             rooney_biegler_indexed_vars_exp_list.append(
-                RooneyBieglerExperimentIndexedVars(
-                    self.data.loc[i, :]
-                )
+                RooneyBieglerExperimentIndexedVars(self.data.loc[i, :])
             )
 
         # Sum of squared error function
@@ -988,9 +980,7 @@ class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
 
         exp_list = []
         for i in range(data.shape[0]):
-            exp_list.append(
-                RooneyBieglerExperiment(data.loc[i, :])
-            )
+            exp_list.append(RooneyBieglerExperiment(data.loc[i, :]))
 
         solver_options = {"tol": 1e-8}
 
