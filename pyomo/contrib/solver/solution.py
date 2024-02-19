@@ -211,7 +211,7 @@ class SolSolutionLoader(SolutionLoaderBase):
             )
         if len(self._nl_info.eliminated_vars) > 0:
             raise NotImplementedError('For now, turn presolve off (opt.config.writer_config.linear_presolve=False) to get dual variable values.')
-        assert self._sol_data is not None
+        assert self._sol_data is not None, "report this to the Pyomo developers"
         res = dict()
         if self._nl_info.scaling is None:
             scale_list = [1] * len(self._nl_info.constraints)
