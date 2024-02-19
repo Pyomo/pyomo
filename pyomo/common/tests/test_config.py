@@ -748,6 +748,8 @@ class TestConfigDomains(unittest.TestCase):
         cwd = os.getcwd() + os.path.sep
         c = ConfigDict()
 
+        self.assertEqual(PathList().domain_name(), "PathList")
+
         c.declare('a', ConfigValue(None, PathList()))
         self.assertEqual(c.a, None)
         c.a = "/a/b/c"
@@ -769,6 +771,13 @@ class TestConfigDomains(unittest.TestCase):
         c.a = ()
         self.assertEqual(len(c.a), 0)
         self.assertIs(type(c.a), list)
+
+        exc_str = r".*expected str, bytes or os.PathLike.*int"
+
+        with self.assertRaisesRegex(ValueError, exc_str):
+            c.a = 2
+        with self.assertRaisesRegex(ValueError, exc_str):
+            c.a = ["/a/b/c", 2]
 
     def test_ListOf(self):
         c = ConfigDict()

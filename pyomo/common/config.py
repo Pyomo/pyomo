@@ -565,12 +565,16 @@ class Path(object):
 
 
 class PathList(Path):
-    """Domain validator for a list of path-like objects.
+    """
+    Domain validator for a list of
+    :py:term:`path-like objects <path-like object>`.
 
-    This will admit any iterable or object convertible to a string.
-    Iterable objects (other than strings) will have each member
-    normalized using :py:class:`Path`.  Other types will be passed to
-    :py:class:`Path`, returning a list with the single resulting path.
+    This admits a path-like object or iterable of such.
+    If a path-like object is passed, then
+    a singleton list containing the object normalized through
+    :py:class:`Path` is returned.
+    An iterable of path-like objects is cast to a list, each
+    entry of which is normalized through :py:class:`Path`.
 
     Parameters
     ----------
@@ -587,10 +591,15 @@ class PathList(Path):
     """
 
     def __call__(self, data):
-        if hasattr(data, "__iter__") and not isinstance(data, str):
-            return [super(PathList, self).__call__(i) for i in data]
-        else:
-            return [super(PathList, self).__call__(data)]
+        try:
+            pathlist = [super(PathList, self).__call__(data)]
+        except TypeError as err:
+            is_not_path_like = ("expected str, bytes or os.PathLike" in str(err))
+            if is_not_path_like and hasattr(data, "__iter__"):
+                pathlist = [super(PathList, self).__call__(i) for i in data]
+            else:
+                raise
+        return pathlist
 
 
 class DynamicImplicitDomain(object):
