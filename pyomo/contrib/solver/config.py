@@ -17,6 +17,7 @@ from pyomo.common.config import (
     NonNegativeFloat,
     NonNegativeInt,
     ADVANCED_OPTION,
+    Bool,
 )
 from pyomo.common.timing import HierarchicalTimer
 
@@ -45,7 +46,7 @@ class SolverConfig(ConfigDict):
         self.tee: bool = self.declare(
             'tee',
             ConfigValue(
-                domain=bool,
+                domain=Bool,
                 default=False,
                 description="If True, the solver log prints to stdout.",
             ),
@@ -53,7 +54,7 @@ class SolverConfig(ConfigDict):
         self.log_solver_output: bool = self.declare(
             'log_solver_output',
             ConfigValue(
-                domain=bool,
+                domain=Bool,
                 default=False,
                 description="If True, the solver output gets logged.",
             ),
@@ -70,7 +71,7 @@ class SolverConfig(ConfigDict):
         self.load_solutions: bool = self.declare(
             'load_solutions',
             ConfigValue(
-                domain=bool,
+                domain=Bool,
                 default=True,
                 description="If True, the values of the primal variables will be loaded into the model.",
             ),
@@ -78,7 +79,7 @@ class SolverConfig(ConfigDict):
         self.raise_exception_on_nonoptimal_result: bool = self.declare(
             'raise_exception_on_nonoptimal_result',
             ConfigValue(
-                domain=bool,
+                domain=Bool,
                 default=True,
                 description="If False, the `solve` method will continue processing "
                 "even if the returned result is nonoptimal.",
@@ -87,7 +88,7 @@ class SolverConfig(ConfigDict):
         self.symbolic_solver_labels: bool = self.declare(
             'symbolic_solver_labels',
             ConfigValue(
-                domain=bool,
+                domain=Bool,
                 default=False,
                 description="If True, the names given to the solver will reflect the names of the Pyomo components. "
                 "Cannot be changed after set_instance is called.",
