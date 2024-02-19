@@ -31,7 +31,7 @@ utilities to generate all components indexed, explicitly or implicitly, by
 user-provided sets.
 
 **When we say "flatten a model," we mean "recursively generate all components in
-the model, where a component can be indexed only by user-specified indexing
+the model," where a component can be indexed only by user-specified indexing
 sets (or is not indexed at all)**.
 
 Data structures
