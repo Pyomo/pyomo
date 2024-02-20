@@ -16,7 +16,7 @@ from datetime import datetime
 from pyomo.common.config import (
     ConfigDict,
     ConfigValue,
-    Datetime,
+    IsInstance,
     NonNegativeInt,
     In,
     NonNegativeFloat,
@@ -262,7 +262,8 @@ class Results(ConfigDict):
         self.timing_info.start_timestamp: datetime = self.timing_info.declare(
             'start_timestamp',
             ConfigValue(
-                domain=Datetime, description="UTC timestamp of when run was initiated."
+                domain=IsInstance(datetime),
+                description="UTC timestamp of when run was initiated.",
             ),
         )
         self.timing_info.wall_time: Optional[float] = self.timing_info.declare(

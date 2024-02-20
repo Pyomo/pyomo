@@ -47,6 +47,7 @@ def TextIO_or_Logger(val):
             )
     return ans
 
+
 class SolverConfig(ConfigDict):
     """
     Base config for all direct solver interfaces

@@ -18,7 +18,6 @@
 
 import argparse
 import builtins
-import datetime
 import enum
 import importlib
 import inspect
@@ -203,16 +202,6 @@ def NonNegativeFloat(val):
     if ans < 0:
         raise ValueError("Expected non-negative float, but received %s" % (val,))
     return ans
-
-
-def Datetime(val):
-    """Domain validation function to check for datetime.datetime type.
-
-    This domain will return the original object, assuming it is of the right type.
-    """
-    if not isinstance(val, datetime.datetime):
-        raise ValueError(f"Expected datetime object, but received {type(val)}.")
-    return val
 
 
 class In(object):
@@ -794,7 +783,6 @@ validators for common use cases:
    NegativeFloat
    NonPositiveFloat
    NonNegativeFloat
-   Datetime
    In
    InEnum
    IsInstance
