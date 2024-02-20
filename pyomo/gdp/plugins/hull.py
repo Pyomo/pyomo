@@ -56,17 +56,18 @@ from weakref import ref as weakref_ref
 
 logger = logging.getLogger('pyomo.gdp.hull')
 
+
 class _HullTransformationData(AutoSlots.Mixin):
-    __slots__ = ('disaggregated_var_map',
-                 'original_var_map',
-                 'bigm_constraint_map')
+    __slots__ = ('disaggregated_var_map', 'original_var_map', 'bigm_constraint_map')
 
     def __init__(self):
         self.disaggregated_var_map = DefaultComponentMap(ComponentMap)
         self.original_var_map = ComponentMap()
         self.bigm_constraint_map = DefaultComponentMap(ComponentMap)
 
+
 Block.register_private_data_initializer(_HullTransformationData)
+
 
 @TransformationFactory.register(
     'gdp.hull', doc="Relax disjunctive model by forming the hull reformulation."
