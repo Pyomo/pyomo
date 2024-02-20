@@ -63,6 +63,7 @@ class ComponentSet(AutoSlots.Mixin, collections_MutableSet):
     __autoslot_mappers__ = {'_data': _rehash_keys}
 
     def __init__(self, iterable=None):
+        # maps id_hash(obj) -> obj
         self._data = {}
         if iterable is not None:
             self.update(iterable)

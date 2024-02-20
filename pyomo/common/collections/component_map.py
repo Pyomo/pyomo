@@ -80,7 +80,7 @@ class ComponentMap(AutoSlots.Mixin, collections.abc.MutableMapping):
     __autoslot_mappers__ = {'_dict': _rehash_keys}
 
     def __init__(self, *args, **kwds):
-        # maps id(obj) -> (obj,val)
+        # maps id_hash(obj) -> (obj,val)
         self._dict = {}
         # handle the dict-style initialization scenarios
         self.update(*args, **kwds)

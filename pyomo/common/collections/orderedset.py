@@ -18,8 +18,8 @@ class OrderedSet(AutoSlots.Mixin, MutableSet):
     __slots__ = ('_dict',)
 
     def __init__(self, iterable=None):
-        # TODO: Starting in Python 3.7, dict is ordered (and is faster
-        # than OrderedDict).  dict began supporting reversed() in 3.8.
+        # Starting in Python 3.7, dict is ordered (and is faster than
+        # OrderedDict).  dict began supporting reversed() in 3.8.
         self._dict = {}
         if iterable is not None:
             self.update(iterable)
