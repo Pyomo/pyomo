@@ -42,7 +42,6 @@ results, and fit distributions to theta values.
 .. autosummary::
    :nosignatures:
 
-   ~pyomo.contrib.parmest.parmest.group_data
    ~pyomo.contrib.parmest.graphics.pairwise_plot
    ~pyomo.contrib.parmest.graphics.grouped_boxplot
    ~pyomo.contrib.parmest.graphics.grouped_violinplot
