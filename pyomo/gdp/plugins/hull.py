@@ -15,7 +15,7 @@ from collections import defaultdict
 
 import pyomo.common.config as cfg
 from pyomo.common import deprecated
-from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.common.collections import ComponentMap, ComponentSet, DefaultComponentMap
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.expr.numvalue import ZeroConstant
 import pyomo.core.expr as EXPR
@@ -457,11 +457,9 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                     dis_var_info['original_var_map'] = ComponentMap()
                 original_var_map = dis_var_info['original_var_map']
                 if 'bigm_constraint_map' not in dis_var_info:
-                    dis_var_info['bigm_constraint_map'] = ComponentMap()
+                    dis_var_info['bigm_constraint_map'] = DefaultComponentMap(dict)
                 bigm_constraint_map = dis_var_info['bigm_constraint_map']
 
-                if disaggregated_var not in bigm_constraint_map:
-                    bigm_constraint_map[disaggregated_var] = {}
                 bigm_constraint_map[disaggregated_var][obj] = Reference(
                     disaggregated_var_bounds[idx, :]
                 )
@@ -565,9 +563,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             # update the bigm constraint mappings
             data_dict = disaggregatedVar.parent_block().private_data()
             if 'bigm_constraint_map' not in data_dict:
-                data_dict['bigm_constraint_map'] = ComponentMap()
-            if disaggregatedVar not in data_dict['bigm_constraint_map']:
-                data_dict['bigm_constraint_map'][disaggregatedVar] = {}
+                data_dict['bigm_constraint_map'] = DefaultComponentMap(dict)
             data_dict['bigm_constraint_map'][disaggregatedVar][obj] = bigmConstraint
             disjunct_disaggregated_var_map[obj][var] = disaggregatedVar
 
@@ -598,9 +594,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             # update the bigm constraint mappings
             data_dict = var.parent_block().private_data()
             if 'bigm_constraint_map' not in data_dict:
-                data_dict['bigm_constraint_map'] = ComponentMap()
-            if var not in data_dict['bigm_constraint_map']:
-                data_dict['bigm_constraint_map'][var] = {}
+                data_dict['bigm_constraint_map'] = DefaultComponentMap(dict)
             data_dict['bigm_constraint_map'][var][obj] = bigmConstraint
             disjunct_disaggregated_var_map[obj][var] = var
 
