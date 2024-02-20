@@ -212,7 +212,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         # we cache what Blocks/Disjuncts we've already looked on so that we
         # don't duplicate effort.
         for t in targets:
-            if t.ctype is Disjunct or isinstance(t, _DisjunctData):
+            if t.ctype is Disjunct:
                 # first look beneath where we are (there could be Blocks on this
                 # disjunct)
                 for b in t.component_data_objects(
