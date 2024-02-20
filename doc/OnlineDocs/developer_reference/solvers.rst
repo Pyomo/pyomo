@@ -35,6 +35,7 @@ Backwards Compatible Mode
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. testcode::
+   :skipif: not ipopt_available
 
    import pyomo.environ as pyo
    from pyomo.contrib.solver.util import assert_optimal_termination
@@ -53,6 +54,7 @@ Backwards Compatible Mode
    model.pprint()
 
 .. testoutput::
+   :skipif: not ipopt_available
    :hide:
 
    2 Var Declarations
@@ -66,6 +68,7 @@ There are multiple ways to utilize the future capability mode: direct import
 or changed ``SolverFactory`` version.
 
 .. testcode::
+   :skipif: not ipopt_available
 
     # Direct import
    import pyomo.environ as pyo
@@ -89,6 +92,7 @@ or changed ``SolverFactory`` version.
    model.pprint()
 
 .. testoutput::
+   :skipif: not ipopt_available
    :hide:
 
    solution_loader: ...
@@ -98,6 +102,7 @@ or changed ``SolverFactory`` version.
 Changing the ``SolverFactory`` version:
 
 .. testcode::
+   :skipif: not ipopt_available
 
     # Change SolverFactory version
    import pyomo.environ as pyo
@@ -120,6 +125,7 @@ Changing the ``SolverFactory`` version:
    model.pprint()
 
 .. testoutput::
+   :skipif: not ipopt_available
    :hide:
 
    solution_loader: ...
@@ -127,6 +133,7 @@ Changing the ``SolverFactory`` version:
    3 Declarations: x y obj
 
 .. testcode::
+   :skipif: not ipopt_available
    :hide:
 
    from pyomo.__future__ import solver_factory_v1
