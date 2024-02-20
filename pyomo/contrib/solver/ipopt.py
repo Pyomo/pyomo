@@ -23,7 +23,7 @@ from pyomo.common.config import (
     document_kwargs_from_configdict,
     ConfigDict,
 )
-from pyomo.common.errors import PyomoException
+from pyomo.common.errors import PyomoException, DeveloperError
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.base.var import _GeneralVarData
@@ -137,13 +137,18 @@ class IpoptSolutionLoader(SolSolutionLoader):
         if self._nl_info is None:
             raise RuntimeError(
                 'Solution loader does not currently have a valid solution. Please '
-                'check the termination condition.'
+                'check results.TerminationCondition and/or results.SolutionStatus.'
             )
         if len(self._nl_info.eliminated_vars) > 0:
             raise NotImplementedError(
-                'For now, turn presolve off (opt.config.writer_config.linear_presolve=False) to get reduced costs.'
+                'For now, turn presolve off (opt.config.writer_config.linear_presolve=False) '
+                'to get dual variable values.'
             )
-        assert self._sol_data is not None
+        if self._sol_data is None:
+            raise DeveloperError(
+                "Solution data is empty. This should not "
+                "have happened. Report this error to the Pyomo Developers."
+            )
         if self._nl_info.scaling is None:
             scale_list = [1] * len(self._nl_info.variables)
             obj_scale = 1
@@ -252,7 +257,6 @@ class Ipopt(SolverBase):
         self._writer = NLWriter()
         self._available_cache = None
         self._version_cache = None
-        self._executable = self.config.executable
 
     def available(self, config=None):
         if config is None:
@@ -270,17 +274,20 @@ class Ipopt(SolverBase):
             config = self.config
         pth = config.executable.path()
         if self._version_cache is None or self._version_cache[0] != pth:
-            results = subprocess.run(
-                [str(pth), '--version'],
-                timeout=1,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                universal_newlines=True,
-            )
-            version = results.stdout.splitlines()[0]
-            version = version.split(' ')[1].strip()
-            version = tuple(int(i) for i in version.split('.'))
-            self._version_cache = (pth, version)
+            if pth is None:
+                self._version_cache = (None, None)
+            else:
+                results = subprocess.run(
+                    [str(pth), '--version'],
+                    timeout=1,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    universal_newlines=True,
+                )
+                version = results.stdout.splitlines()[0]
+                version = version.split(' ')[1].strip()
+                version = tuple(int(i) for i in version.split('.'))
+                self._version_cache = (pth, version)
         return self._version_cache[1]
 
     def _write_options_file(self, filename: str, options: Mapping):
@@ -292,15 +299,15 @@ class Ipopt(SolverBase):
         # If it has options in it, parse them and write them to a file.
         # If they are command line options, ignore them; they will be
         # parsed during _create_command_line
-        with open(filename + '.opt', 'w') as opt_file:
-            for k, val in options.items():
-                if k not in ipopt_command_line_options:
-                    opt_file_exists = True
+        for k, val in options.items():
+            if k not in ipopt_command_line_options:
+                opt_file_exists = True
+                with open(filename + '.opt', 'a+') as opt_file:
                     opt_file.write(str(k) + ' ' + str(val) + '\n')
         return opt_file_exists
 
     def _create_command_line(self, basename: str, config: IpoptConfig, opt_file: bool):
-        cmd = [str(self._executable), basename + '.nl', '-AMPL']
+        cmd = [str(config.executable), basename + '.nl', '-AMPL']
         if opt_file:
             cmd.append('option_file_name=' + basename + '.opt')
         if 'option_file_name' in config.solver_options:
