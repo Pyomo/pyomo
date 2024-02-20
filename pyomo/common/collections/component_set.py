@@ -28,11 +28,11 @@ def _rehash_keys(encode, val):
         # autoslots.fast_deepcopy, but couldn't find an obvious bug.
         # There is no error if we just return the original dict, or if
         # we return a tuple(val.values)
-        return tuple(val.values())
+        return val
     else:
         # object id() may have changed after unpickling,
         # so we rebuild the dictionary keys
-        return {_hasher[obj.__class__](obj): obj for obj in val}
+        return {_hasher[obj.__class__](obj): obj for obj in val.values()}
 
 
 class ComponentSet(AutoSlots.Mixin, collections_MutableSet):

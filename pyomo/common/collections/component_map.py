@@ -16,11 +16,11 @@ from pyomo.common.autoslots import AutoSlots
 
 def _rehash_keys(encode, val):
     if encode:
-        return tuple(val.values())
+        return val
     else:
         # object id() may have changed after unpickling,
         # so we rebuild the dictionary keys
-        return {_hasher[obj.__class__](obj): (obj, v) for obj, v in val}
+        return {_hasher[obj.__class__](obj): (obj, v) for obj, v in val.values()}
 
 
 class _Hasher(collections.defaultdict):
