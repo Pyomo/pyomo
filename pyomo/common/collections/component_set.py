@@ -70,10 +70,8 @@ class ComponentSet(AutoSlots.Mixin, collections_MutableSet):
 
     def __str__(self):
         """String representation of the mapping."""
-        tmp = []
-        for objid, obj in self._data.items():
-            tmp.append(str(obj) + " (id=" + str(objid) + ")")
-        return "ComponentSet(" + str(tmp) + ")"
+        tmp = [f"{v} (key={k})" for k, v in self._data.items()]
+        return f"ComponentSet({tmp})"
 
     def update(self, iterable):
         """Update a set with the union of itself and others."""
@@ -136,4 +134,4 @@ class ComponentSet(AutoSlots.Mixin, collections_MutableSet):
             del self._data[_hasher[val.__class__](val)]
         except KeyError:
             _id = _hasher[val.__class__](val)
-            raise KeyError("Component with id '%s': %s" % (_id, val))
+            raise KeyError(f"{val} (key={_id})") from None
