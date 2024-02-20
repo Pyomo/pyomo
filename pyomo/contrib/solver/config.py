@@ -14,7 +14,7 @@ import logging
 import sys
 
 from collections.abc import Sequence
-from typing import Optional
+from typing import Optional, List, TextIO
 
 from pyomo.common.config import (
     ConfigDict,
