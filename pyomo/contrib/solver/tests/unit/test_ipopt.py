@@ -227,7 +227,7 @@ class TestIpoptInterface(unittest.TestCase):
         self.assertEqual(
             result,
             [
-                '/Users/mmundt/Documents/idaes/venv-pyomo/bin/ipopt',
+                str(opt.config.executable),
                 'myfile.nl',
                 '-AMPL',
                 'option_file_name=myfile.opt',
