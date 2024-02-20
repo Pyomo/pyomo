@@ -471,13 +471,18 @@ class TestConfigDomains(unittest.TestCase):
         c.val2 = testinst
         self.assertEqual(c.val2, testinst)
         exc_str = (
-            r"Expected an instance of '.*\.TestClass', "
+            r"Expected an instance of 'TestClass', "
             "but received value 2.4 of type 'float'"
         )
         with self.assertRaisesRegex(ValueError, exc_str):
             c.val2 = 2.4
 
-        c.declare("val3", ConfigValue(None, IsInstance(int, TestClass)))
+        c.declare(
+            "val3",
+            ConfigValue(
+                None, IsInstance(int, TestClass, document_full_base_names=True)
+            ),
+        )
         self.assertRegex(
             c.get("val3").domain_name(), r"IsInstance\(int, .*\.TestClass\)"
         )
@@ -489,6 +494,22 @@ class TestConfigDomains(unittest.TestCase):
         )
         with self.assertRaisesRegex(ValueError, exc_str):
             c.val3 = 2.4
+
+        c.declare(
+            "val4",
+            ConfigValue(
+                None, IsInstance(int, TestClass, document_full_base_names=False)
+            ),
+        )
+        self.assertEqual(c.get("val4").domain_name(), "IsInstance(int, TestClass)")
+        c.val4 = 2
+        self.assertEqual(c.val4, 2)
+        exc_str = (
+            r"Expected an instance of one of these types: 'int', 'TestClass'"
+            r", but received value 2.4 of type 'float'"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            c.val4 = 2.4
 
     def test_Path(self):
         def norm(x):
@@ -506,6 +527,8 @@ class TestConfigDomains(unittest.TestCase):
             def __str__(self):
                 path_str = str(self.path)
                 return f"{type(self).__name__}({path_str})"
+
+        self.assertEqual(Path().domain_name(), "Path")
 
         cwd = os.getcwd() + os.path.sep
         c = ConfigDict()
@@ -727,6 +750,8 @@ class TestConfigDomains(unittest.TestCase):
         cwd = os.getcwd() + os.path.sep
         c = ConfigDict()
 
+        self.assertEqual(PathList().domain_name(), "PathList")
+
         c.declare('a', ConfigValue(None, PathList()))
         self.assertEqual(c.a, None)
         c.a = "/a/b/c"
@@ -748,6 +773,13 @@ class TestConfigDomains(unittest.TestCase):
         c.a = ()
         self.assertEqual(len(c.a), 0)
         self.assertIs(type(c.a), list)
+
+        exc_str = r".*expected str, bytes or os.PathLike.*int"
+
+        with self.assertRaisesRegex(ValueError, exc_str):
+            c.a = 2
+        with self.assertRaisesRegex(ValueError, exc_str):
+            c.a = ["/a/b/c", 2]
 
     def test_ListOf(self):
         c = ConfigDict()
