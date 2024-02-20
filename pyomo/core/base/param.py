@@ -162,16 +162,31 @@ class _ParamData(ComponentData, NumericValue):
         # required to be mutable.
         #
         _comp = self.parent_component()
-        if type(value) in native_types:
+        if value.__class__ in native_types:
             # TODO: warn/error: check if this Param has units: assigning
             # a dimensionless value to a united param should be an error
             pass
         elif _comp._units is not None:
             _src_magnitude = expr_value(value)
-            _src_units = units.get_units(value)
-            value = units.convert_value(
-                num_value=_src_magnitude, from_units=_src_units, to_units=_comp._units
-            )
+            # Note: expr_value() could have just registered a new numeric type
+            if value.__class__ in native_types:
+                value = _src_magnitude
+            else:
+                _src_units = units.get_units(value)
+                value = units.convert_value(
+                    num_value=_src_magnitude,
+                    from_units=_src_units,
+                    to_units=_comp._units,
+                )
+        # FIXME: we should call value() here [to ensure types get
+        # registered], but doing so breaks non-numeric Params (which we
+        # allow).  The real fix will be to follow the precedent from
+        # GetItemExpression and have separate types based on which
+        # expression "system" the Param should participate in (numeric,
+        # logical, or structural).
+        #
+        # else:
+        #     value = expr_value(value)
 
         old_value, self._value = self._value, value
         try:
