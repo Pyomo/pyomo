@@ -90,7 +90,7 @@ def simple_constraint_rule(rule):
     for l_type in native_logical_types:
         result_map[l_type(True)] = Constraint.Feasible
         result_map[l_type(False)] = Constraint.Infeasible
-    # Note: some logical types has the same as bool (e.g., np.bool_), so
+    # Note: some logical types hash the same as bool (e.g., np.bool_), so
     # we will pass the set of all logical types in addition to the
     # result_map
     return rule_wrapper(rule, result_map, map_types=map_types)
@@ -116,7 +116,7 @@ def simple_constraintlist_rule(rule):
     for l_type in native_logical_types:
         result_map[l_type(True)] = Constraint.Feasible
         result_map[l_type(False)] = Constraint.Infeasible
-    # Note: some logical types has the same as bool (e.g., np.bool_), so
+    # Note: some logical types hash the same as bool (e.g., np.bool_), so
     # we will pass the set of all logical types in addition to the
     # result_map
     return rule_wrapper(rule, result_map, map_types=map_types)
