@@ -9,9 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-
-__all__ = ['items', 'display_items', 'display_name']
-
 from pyomo.core.base.set import Set, RangeSet
 from pyomo.core.base.param import Param
 from pyomo.core.base.var import Var

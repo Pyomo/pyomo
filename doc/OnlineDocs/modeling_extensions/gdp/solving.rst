@@ -140,6 +140,10 @@ For example, to apply the transformation and store the M values, use:
 
 From the Pyomo command line, include the ``--transform pyomo.gdp.mbigm`` option.
 
+.. warning::
+   The Multiple Big-M transformation does not currently support Suffixes and will
+   ignore "BigM" Suffixes.
+
 Hull Reformulation (HR)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
