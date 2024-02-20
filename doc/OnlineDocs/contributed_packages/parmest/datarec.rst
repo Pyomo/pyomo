@@ -38,9 +38,7 @@ is the response function that is defined in the model file):
    
    >>> import pandas as pd   
    >>> import pyomo.contrib.parmest.parmest as parmest
-   >>> from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import rooney_biegler_model
-
-   >>> theta_names = ['asymptote', 'rate_constant']
+   >>> from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import RooneyBieglerExperiment
 
    >>> data = pd.DataFrame(data=[[1,8.3],[2,10.3],[3,19.0],
    ...                           [4,16.0],[5,15.6],[7,19.8]],
@@ -51,8 +49,13 @@ is the response function that is defined in the model file):
    ...                 - model.response_function[data.hour[i]])**2 for i in data.index)
    ...     return expr
 
-   >>> pest = parmest.Estimator(rooney_biegler_model, data, theta_names, SSE,
-   ...                          solver_options=None)
+   >>> def SSE(model):
+   ...     expr = (model.experiment_outputs[model.y]
+   ...             - model.response_function[model.experiment_outputs[model.hour]]
+   ...            ) ** 2
+            return expr
+
+   >>> pest = parmest.Estimator(exp_list, obj_function=SSE, solver_options=None)
    >>> obj, theta, var_values = pest.theta_est(return_values=['response_function'])
    >>> #print(var_values)
    

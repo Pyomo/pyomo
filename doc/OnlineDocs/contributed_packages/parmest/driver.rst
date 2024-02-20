@@ -57,21 +57,33 @@ Section.
 .. testsetup:: *
     :skipif: not __import__('pyomo.contrib.parmest.parmest').contrib.parmest.parmest.parmest_available
 
+    # Data
     import pandas as pd
-    from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import rooney_biegler_model as model_function
-    data = pd.DataFrame(data=[[1,8.3],[2,10.3],[3,19.0],
-                              [4,16.0],[5,15.6],[6,19.8]],
-                        columns=['hour', 'y'])
-    theta_names = ['asymptote', 'rate_constant']
-    def objective_function(model, data):
-        expr = sum((data.y[i] - model.response_function[data.hour[i]])**2 for i in data.index)
+    data = pd.DataFrame(
+        data=[[1, 8.3], [2, 10.3], [3, 19.0], 
+              [4, 16.0], [5, 15.6], [7, 19.8]],
+        columns=['hour', 'y'],
+    )
+
+    # Sum of squared error function
+    def SSE(model):
+        expr = (
+            model.experiment_outputs[model.y]
+            - model.response_function[model.experiment_outputs[model.hour]]
+        ) ** 2
         return expr
+
+    # Create an experiment list
+    from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import RooneyBieglerExperiment
+    exp_list = []
+    for i in range(data.shape[0]):
+        exp_list.append(RooneyBieglerExperiment(data.loc[i, :]))
 
 .. doctest::
     :skipif: not __import__('pyomo.contrib.parmest.parmest').contrib.parmest.parmest.parmest_available
 
     >>> import pyomo.contrib.parmest.parmest as parmest
-    >>> pest = parmest.Estimator(model_function, data, theta_names, objective_function)
+    >>> pest = parmest.Estimator(exp_list, obj_function=SSE)
 
 Optionally, solver options can be supplied, e.g.,
 
@@ -79,7 +91,7 @@ Optionally, solver options can be supplied, e.g.,
     :skipif: not __import__('pyomo.contrib.parmest.parmest').contrib.parmest.parmest.parmest_available
 
     >>> solver_options = {"max_iter": 6000}
-    >>> pest = parmest.Estimator(model_function, data, theta_names, objective_function, solver_options)
+    >>> pest = parmest.Estimator(exp_list, obj_function=SSE, solver_options=solver_options)
         
 
 
