@@ -179,9 +179,9 @@ class _ParamData(ComponentData, NumericValue):
                     to_units=_comp._units,
                 )
         # FIXME: we should call value() here [to ensure types get
-        # registered], but doing so breks non-numeric Params (which we
+        # registered], but doing so breaks non-numeric Params (which we
         # allow).  The real fix will be to follow the precedent from
-        # GetItemExpressiona and have separate types based on which
+        # GetItemExpression and have separate types based on which
         # expression "system" the Param should participate in (numeric,
         # logical, or structural).
         #
