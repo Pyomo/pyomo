@@ -3437,6 +3437,64 @@ class TestBlock(unittest.TestCase):
         mfe4 = m.b.b[1].private_data('pyomo.core.tests')
         self.assertIs(mfe4, mfe3)
 
+    def test_register_private_data(self):
+        _save = Block._private_data_initializers
+
+        Block._private_data_initializers = pdi = _save.copy()
+        pdi.clear()
+        try:
+            self.assertEqual(len(pdi), 0)
+            b = Block(concrete=True)
+            ps = b.private_data()
+            self.assertEqual(ps, {})
+            self.assertEqual(len(pdi), 1)
+        finally:
+            Block._private_data_initializers = _save
+
+        def init():
+            return {'a': None, 'b': 1}
+
+        Block._private_data_initializers = pdi = _save.copy()
+        pdi.clear()
+        try:
+            self.assertEqual(len(pdi), 0)
+            Block.register_private_data_initializer(init)
+            self.assertEqual(len(pdi), 1)
+
+            b = Block(concrete=True)
+            ps = b.private_data()
+            self.assertEqual(ps, {'a': None, 'b': 1})
+            self.assertEqual(len(pdi), 1)
+        finally:
+            Block._private_data_initializers = _save
+
+        Block._private_data_initializers = pdi = _save.copy()
+        pdi.clear()
+        try:
+            Block.register_private_data_initializer(init)
+            self.assertEqual(len(pdi), 1)
+            Block.register_private_data_initializer(init, 'pyomo')
+            self.assertEqual(len(pdi), 2)
+
+            with self.assertRaisesRegex(
+                RuntimeError,
+                r"Duplicate initializer registration for 'private_data' "
+                r"dictionary \(scope=pyomo.core.tests.unit.test_block\)",
+            ):
+                Block.register_private_data_initializer(init)
+
+            with self.assertRaisesRegex(
+                ValueError,
+                r"'private_data' scope must be substrings of the caller's "
+                r"module name. Received 'invalid' when calling "
+                r"register_private_data_initializer\(\).",
+            ):
+                Block.register_private_data_initializer(init, 'invalid')
+
+            self.assertEqual(len(pdi), 2)
+        finally:
+            Block._private_data_initializers = _save
+
 
 if __name__ == "__main__":
     unittest.main()
