@@ -27,6 +27,7 @@ from pyomo.core.expr.numvalue import (
     as_numeric,
     is_fixed,
     native_numeric_types,
+    native_logical_types,
     native_types,
 )
 from pyomo.core.expr import (
@@ -84,14 +85,14 @@ def simple_constraint_rule(rule):
 
     model.c = Constraint(rule=simple_constraint_rule(...))
     """
-    return rule_wrapper(
-        rule,
-        {
-            None: Constraint.Skip,
-            True: Constraint.Feasible,
-            False: Constraint.Infeasible,
-        },
-    )
+    result_map = {None: Constraint.Skip}
+    for l_type in native_logical_types:
+        result_map[l_type(True)] = Constraint.Feasible
+        result_map[l_type(False)] = Constraint.Infeasible
+    # Note: some logical types has the same as bool (e.g., np.bool_), so
+    # we will pass the set of all logical types in addition to the
+    # result_map
+    return rule_wrapper(rule, result_map, map_types=native_logical_types)
 
 
 def simple_constraintlist_rule(rule):
@@ -109,14 +110,14 @@ def simple_constraintlist_rule(rule):
 
     model.c = ConstraintList(expr=simple_constraintlist_rule(...))
     """
-    return rule_wrapper(
-        rule,
-        {
-            None: ConstraintList.End,
-            True: Constraint.Feasible,
-            False: Constraint.Infeasible,
-        },
-    )
+    result_map = {None: ConstraintList.End}
+    for l_type in native_logical_types:
+        result_map[l_type(True)] = Constraint.Feasible
+        result_map[l_type(False)] = Constraint.Infeasible
+    # Note: some logical types has the same as bool (e.g., np.bool_), so
+    # we will pass the set of all logical types in addition to the
+    # result_map
+    return rule_wrapper(rule, result_map, map_types=native_logical_types)
 
 
 #
