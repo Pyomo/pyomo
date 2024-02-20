@@ -206,7 +206,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 local_var_dict[disj].update(var_list)
 
     def _get_user_defined_local_vars(self, targets):
-        user_defined_local_vars = defaultdict(lambda: ComponentSet())
+        user_defined_local_vars = defaultdict(ComponentSet)
         seen_blocks = set()
         # we go through the targets looking both up and down the hierarchy, but
         # we cache what Blocks/Disjuncts we've already looked on so that we
@@ -369,7 +369,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         # actually appear in any Constraints on that Disjunct, but in order to
         # do this, we will explicitly collect the set of local_vars in this
         # loop.
-        local_vars = defaultdict(lambda: ComponentSet())
+        local_vars = defaultdict(ComponentSet)
         for var in var_order:
             disjuncts = disjuncts_var_appears_in[var]
             # clearly not local if used in more than one disjunct
