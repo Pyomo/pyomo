@@ -85,6 +85,7 @@ def simple_constraint_rule(rule):
 
     model.c = Constraint(rule=simple_constraint_rule(...))
     """
+    map_types = set([type(None)]) | native_logical_types
     result_map = {None: Constraint.Skip}
     for l_type in native_logical_types:
         result_map[l_type(True)] = Constraint.Feasible
@@ -92,7 +93,7 @@ def simple_constraint_rule(rule):
     # Note: some logical types has the same as bool (e.g., np.bool_), so
     # we will pass the set of all logical types in addition to the
     # result_map
-    return rule_wrapper(rule, result_map, map_types=native_logical_types)
+    return rule_wrapper(rule, result_map, map_types=map_types)
 
 
 def simple_constraintlist_rule(rule):
@@ -110,6 +111,7 @@ def simple_constraintlist_rule(rule):
 
     model.c = ConstraintList(expr=simple_constraintlist_rule(...))
     """
+    map_types = set([type(None)]) | native_logical_types
     result_map = {None: ConstraintList.End}
     for l_type in native_logical_types:
         result_map[l_type(True)] = Constraint.Feasible
@@ -117,7 +119,7 @@ def simple_constraintlist_rule(rule):
     # Note: some logical types has the same as bool (e.g., np.bool_), so
     # we will pass the set of all logical types in addition to the
     # result_map
-    return rule_wrapper(rule, result_map, map_types=native_logical_types)
+    return rule_wrapper(rule, result_map, map_types=map_types)
 
 
 #
