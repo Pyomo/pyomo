@@ -40,20 +40,22 @@ is the response function that is defined in the model file):
    >>> import pyomo.contrib.parmest.parmest as parmest
    >>> from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import RooneyBieglerExperiment
 
+   >>> # Generate data
    >>> data = pd.DataFrame(data=[[1,8.3],[2,10.3],[3,19.0],
    ...                           [4,16.0],[5,15.6],[7,19.8]],
    ...                     columns=['hour', 'y'])
 
-   >>> def SSE(model, data):  
-   ...     expr = sum((data.y[i]\
-   ...                 - model.response_function[data.hour[i]])**2 for i in data.index)
-   ...     return expr
+   >>> # Create an experiment list
+   >>> exp_list = []
+   >>> for i in range(data.shape[0]):
+   ...     exp_list.append(RooneyBieglerExperiment(data.loc[i, :]))
 
+   >>> # Define objective
    >>> def SSE(model):
    ...     expr = (model.experiment_outputs[model.y]
    ...             - model.response_function[model.experiment_outputs[model.hour]]
    ...            ) ** 2
-            return expr
+   ...     return expr
 
    >>> pest = parmest.Estimator(exp_list, obj_function=SSE, solver_options=None)
    >>> obj, theta, var_values = pest.theta_est(return_values=['response_function'])
