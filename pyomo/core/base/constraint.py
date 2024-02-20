@@ -9,18 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = [
-    'Constraint',
-    '_ConstraintData',
-    'ConstraintList',
-    'simple_constraint_rule',
-    'simple_constraintlist_rule',
-]
-
-import io
 import sys
 import logging
-import math
 from weakref import ref as weakref_ref
 from pyomo.common.pyomo_typing import overload
 

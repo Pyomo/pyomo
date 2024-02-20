@@ -13,8 +13,6 @@
 # AMPL Problem Writer Plugin
 #
 
-__all__ = ['ProblemWriter_nl']
-
 import itertools
 import logging
 import operator

@@ -17,7 +17,6 @@ from pyomo.core.base.set import SortedScalarSet
 from pyomo.core.base.component import ModelComponentFactory
 
 logger = logging.getLogger('pyomo.dae')
-__all__ = ['ContinuousSet']
 
 
 @ModelComponentFactory.register(
