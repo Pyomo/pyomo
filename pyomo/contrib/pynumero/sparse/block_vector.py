@@ -27,8 +27,6 @@ import operator
 from ..dependencies import numpy as np
 from .base_block import BaseBlockVector
 
-__all__ = ['BlockVector', 'NotFullyDefinedBlockVectorError']
-
 
 class NotFullyDefinedBlockVectorError(Exception):
     pass

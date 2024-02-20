@@ -10,9 +10,6 @@
 #  ___________________________________________________________________________
 
 
-__all__ = ['StandardRepn', 'generate_standard_repn']
-
-
 import sys
 import logging
 import itertools

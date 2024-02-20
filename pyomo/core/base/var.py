@@ -9,8 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['Var', '_VarData', '_GeneralVarData', 'VarList', 'SimpleVar', 'ScalarVar']
-
 import logging
 import sys
 from pyomo.common.pyomo_typing import overload
@@ -29,7 +27,6 @@ from pyomo.core.expr.numvalue import (
     value,
     is_potentially_variable,
     native_numeric_types,
-    native_types,
 )
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
@@ -44,7 +41,6 @@ from pyomo.core.base.initializer import (
     DefaultInitializer,
     BoundInitializer,
 )
-from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.set import (
     Reals,
     Binary,
@@ -54,7 +50,6 @@ from pyomo.core.base.set import (
     integer_global_set_ids,
 )
 from pyomo.core.base.units_container import units
-from pyomo.core.base.util import is_functor
 
 logger = logging.getLogger('pyomo.core')
 
@@ -389,17 +384,22 @@ class _GeneralVarData(_VarData):
         #
         # Check if this Var has units: assigning dimensionless
         # values to a variable with units should be an error
-        if type(val) not in native_numeric_types:
-            if self.parent_component()._units is not None:
-                _src_magnitude = value(val)
+        if val.__class__ in native_numeric_types:
+            pass
+        elif self.parent_component()._units is not None:
+            _src_magnitude = value(val)
+            # Note: value() could have just registered a new numeric type
+            if val.__class__ in native_numeric_types:
+                val = _src_magnitude
+            else:
                 _src_units = units.get_units(val)
                 val = units.convert_value(
                     num_value=_src_magnitude,
                     from_units=_src_units,
                     to_units=self.parent_component()._units,
                 )
-            else:
-                val = value(val)
+        else:
+            val = value(val)
 
         if not skip_validation:
             if val not in self.domain:
