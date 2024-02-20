@@ -36,7 +36,6 @@ from pyomo.contrib.solver.results import Results, TerminationCondition, Solution
 from pyomo.contrib.solver.sol_reader import parse_sol_file
 from pyomo.contrib.solver.solution import SolSolutionLoader
 from pyomo.common.tee import TeeStream
-from pyomo.common.log import LogStream
 from pyomo.core.expr.visitor import replace_expressions
 from pyomo.core.expr.numvalue import value
 from pyomo.core.base.suffix import Suffix
@@ -397,11 +396,7 @@ class Ipopt(SolverBase):
                 else:
                     timeout = None
 
-                ostreams = [io.StringIO()]
-                if config.tee:
-                    ostreams.append(sys.stdout)
-                if config.log_solver_output:
-                    ostreams.append(LogStream(level=logging.INFO, logger=logger))
+                ostreams = [io.StringIO()] + config.tee
                 with TeeStream(*ostreams) as t:
                     timer.start('subprocess')
                     process = subprocess.run(

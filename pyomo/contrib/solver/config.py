@@ -9,6 +9,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import io
+import logging
+import sys
+
+from collections.abc import Sequence
 from typing import Optional
 
 from pyomo.common.config import (
@@ -19,8 +24,28 @@ from pyomo.common.config import (
     ADVANCED_OPTION,
     Bool,
 )
+from pyomo.common.log import LogStream
+from pyomo.common.numeric_types import native_logical_types
 from pyomo.common.timing import HierarchicalTimer
 
+
+def TextIO_or_Logger(val):
+    ans = []
+    if not isinstance(val, Sequence):
+        val = [val]
+    for v in val:
+        if v.__class__ in native_logical_types:
+            if v:
+                ans.append(sys.stdout)
+        elif isinstance(v, io.TextIOBase):
+            ans.append(v)
+        elif isinstance(v, logging.Logger):
+            ans.append(LogStream(level=logging.INFO, logger=v))
+        else:
+            raise ValueError(
+                "Expected bool, TextIOBase, or Logger, but received {v.__class__}"
+            )
+    return ans
 
 class SolverConfig(ConfigDict):
     """
@@ -43,20 +68,16 @@ class SolverConfig(ConfigDict):
             visibility=visibility,
         )
 
-        self.tee: bool = self.declare(
+        self.tee: List[TextIO] = self.declare(
             'tee',
             ConfigValue(
-                domain=Bool,
+                domain=TextIO_or_Logger,
                 default=False,
-                description="If True, the solver log prints to stdout.",
-            ),
-        )
-        self.log_solver_output: bool = self.declare(
-            'log_solver_output',
-            ConfigValue(
-                domain=Bool,
-                default=False,
-                description="If True, the solver output gets logged.",
+                description="""`tee` accepts :py:class:`bool`,
+                :py:class:`io.TextIOBase`, or :py:class:`logging.Logger`
+                (or a list of these types).  ``True`` is mapped to
+                ``sys.stdout``.  The solver log will be printed to each of
+                these streams / destinations.  """,
             ),
         )
         self.working_dir: Optional[str] = self.declare(

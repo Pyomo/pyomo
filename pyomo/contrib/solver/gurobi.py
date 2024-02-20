@@ -14,7 +14,6 @@ import logging
 import math
 from typing import List, Optional
 from pyomo.common.collections import ComponentSet, ComponentMap, OrderedSet
-from pyomo.common.log import LogStream
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import PyomoException
 from pyomo.common.tee import capture_output, TeeStream
@@ -326,42 +325,37 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
     def _solve(self):
         config = self._config
         timer = config.timer
-        ostreams = [io.StringIO()]
-        if config.tee:
-            ostreams.append(sys.stdout)
-        if config.log_solver_output:
-            ostreams.append(LogStream(level=logging.INFO, logger=logger))
+        ostreams = [io.StringIO()] + config.tee
 
-        with TeeStream(*ostreams) as t:
-            with capture_output(output=t.STDOUT, capture_fd=False):
-                options = config.solver_options
+        with TeeStream(*ostreams) as t, capture_output(t.STDOUT, capture_fd=False):
+            options = config.solver_options
 
-                self._solver_model.setParam('LogToConsole', 1)
+            self._solver_model.setParam('LogToConsole', 1)
 
-                if config.threads is not None:
-                    self._solver_model.setParam('Threads', config.threads)
-                if config.time_limit is not None:
-                    self._solver_model.setParam('TimeLimit', config.time_limit)
-                if config.rel_gap is not None:
-                    self._solver_model.setParam('MIPGap', config.rel_gap)
-                if config.abs_gap is not None:
-                    self._solver_model.setParam('MIPGapAbs', config.abs_gap)
+            if config.threads is not None:
+                self._solver_model.setParam('Threads', config.threads)
+            if config.time_limit is not None:
+                self._solver_model.setParam('TimeLimit', config.time_limit)
+            if config.rel_gap is not None:
+                self._solver_model.setParam('MIPGap', config.rel_gap)
+            if config.abs_gap is not None:
+                self._solver_model.setParam('MIPGapAbs', config.abs_gap)
 
-                if config.use_mipstart:
-                    for (
-                        pyomo_var_id,
-                        gurobi_var,
-                    ) in self._pyomo_var_to_solver_var_map.items():
-                        pyomo_var = self._vars[pyomo_var_id][0]
-                        if pyomo_var.is_integer() and pyomo_var.value is not None:
-                            self.set_var_attr(pyomo_var, 'Start', pyomo_var.value)
+            if config.use_mipstart:
+                for (
+                    pyomo_var_id,
+                    gurobi_var,
+                ) in self._pyomo_var_to_solver_var_map.items():
+                    pyomo_var = self._vars[pyomo_var_id][0]
+                    if pyomo_var.is_integer() and pyomo_var.value is not None:
+                        self.set_var_attr(pyomo_var, 'Start', pyomo_var.value)
 
-                for key, option in options.items():
-                    self._solver_model.setParam(key, option)
+            for key, option in options.items():
+                self._solver_model.setParam(key, option)
 
-                timer.start('optimize')
-                self._solver_model.optimize(self._callback)
-                timer.stop('optimize')
+            timer.start('optimize')
+            self._solver_model.optimize(self._callback)
+            timer.stop('optimize')
 
         self._needs_updated = False
         res = self._postsolve(timer)
