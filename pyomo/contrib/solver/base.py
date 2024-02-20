@@ -288,7 +288,7 @@ class PersistentSolverBase(SolverBase):
         """
 
     @abc.abstractmethod
-    def add_params(self, params: List[_ParamData]):
+    def add_parameters(self, params: List[_ParamData]):
         """
         Add parameters to the model
         """

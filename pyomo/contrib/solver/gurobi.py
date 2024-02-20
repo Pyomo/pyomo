@@ -475,7 +475,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         self._vars_added_since_update.update(variables)
         self._needs_updated = True
 
-    def _add_params(self, params: List[_ParamData]):
+    def _add_parameters(self, params: List[_ParamData]):
         pass
 
     def _reinit(self):

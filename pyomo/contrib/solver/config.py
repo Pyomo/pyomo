@@ -234,7 +234,7 @@ class AutoUpdateConfig(ConfigDict):
                 default=True,
                 description="""
                 If False, new/old parameters will not be automatically detected on subsequent 
-                solves. Use False only when manually updating the solver with opt.add_params() and 
+                solves. Use False only when manually updating the solver with opt.add_parameters() and 
                 opt.remove_params() or when you are certain parameters are not being added to /
                 removed from the model.""",
             ),

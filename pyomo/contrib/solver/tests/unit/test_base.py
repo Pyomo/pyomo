@@ -92,7 +92,7 @@ class TestPersistentSolverBase(unittest.TestCase):
             'remove_block',
             'add_block',
             'available',
-            'add_params',
+            'add_parameters',
             'remove_constraints',
             'add_variables',
             'solve',
@@ -110,7 +110,7 @@ class TestPersistentSolverBase(unittest.TestCase):
             '_load_vars',
             'add_block',
             'add_constraints',
-            'add_params',
+            'add_parameters',
             'add_variables',
             'available',
             'is_persistent',
@@ -138,7 +138,7 @@ class TestPersistentSolverBase(unittest.TestCase):
         self.assertTrue(self.instance.is_persistent())
         self.assertEqual(self.instance.set_instance(None), None)
         self.assertEqual(self.instance.add_variables(None), None)
-        self.assertEqual(self.instance.add_params(None), None)
+        self.assertEqual(self.instance.add_parameters(None), None)
         self.assertEqual(self.instance.add_constraints(None), None)
         self.assertEqual(self.instance.add_block(None), None)
         self.assertEqual(self.instance.remove_variables(None), None)
@@ -164,7 +164,7 @@ class TestPersistentSolverBase(unittest.TestCase):
             self.assertTrue(self.instance.is_persistent())
             self.assertEqual(self.instance.set_instance(None), None)
             self.assertEqual(self.instance.add_variables(None), None)
-            self.assertEqual(self.instance.add_params(None), None)
+            self.assertEqual(self.instance.add_parameters(None), None)
             self.assertEqual(self.instance.add_constraints(None), None)
             self.assertEqual(self.instance.add_block(None), None)
             self.assertEqual(self.instance.remove_variables(None), None)

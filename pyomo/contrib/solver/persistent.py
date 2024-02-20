@@ -75,13 +75,13 @@ class PersistentSolverUtils(abc.ABC):
         self._add_variables(variables)
 
     @abc.abstractmethod
-    def _add_params(self, params: List[_ParamData]):
+    def _add_parameters(self, params: List[_ParamData]):
         pass
 
-    def add_params(self, params: List[_ParamData]):
+    def add_parameters(self, params: List[_ParamData]):
         for p in params:
             self._params[id(p)] = p
-        self._add_params(params)
+        self._add_parameters(params)
 
     @abc.abstractmethod
     def _add_constraints(self, cons: List[_GeneralConstraintData]):
@@ -191,7 +191,7 @@ class PersistentSolverUtils(abc.ABC):
             if p.mutable:
                 for _p in p.values():
                     param_dict[id(_p)] = _p
-        self.add_params(list(param_dict.values()))
+        self.add_parameters(list(param_dict.values()))
         self.add_constraints(
             list(
                 block.component_data_objects(Constraint, descend_into=True, active=True)
@@ -403,7 +403,7 @@ class PersistentSolverUtils(abc.ABC):
         if config.update_params:
             self.update_params()
 
-        self.add_params(new_params)
+        self.add_parameters(new_params)
         timer.stop('params')
         timer.start('vars')
         self.add_variables(new_vars)

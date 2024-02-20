@@ -36,7 +36,7 @@ def parse_sol_file(
 
     #
     # Some solvers (minto) do not write a message.  We will assume
-    # all non-blank lines up the 'Options' line is the message.
+    # all non-blank lines up to the 'Options' line is the message.
     # For backwards compatibility and general safety, we will parse all
     # lines until "Options" appears. Anything before "Options" we will
     # consider to be the solver message.
@@ -168,7 +168,7 @@ developers.
             # The fourth entry is table "length", e.g., memory size.
             number_of_string_lines = int(line[5])
             suffix_name = sol_file.readline().strip()
-            # Add any of arbitrary string lines to the "other" list
+            # Add any arbitrary string lines to the "other" list
             for line in range(number_of_string_lines):
                 sol_data.other.append(sol_file.readline())
             if data_type == 0:  # Var

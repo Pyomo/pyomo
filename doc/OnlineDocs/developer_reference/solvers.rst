@@ -34,7 +34,7 @@ available are:
 Backwards Compatible Mode
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. code-block:: python
+.. testcode::
 
    import pyomo.environ as pyo
    from pyomo.contrib.solver.util import assert_optimal_termination
@@ -52,13 +52,20 @@ Backwards Compatible Mode
    assert_optimal_termination(status)
    model.pprint()
 
+.. testoutput::
+   :hide:
+
+   2 Var Declarations
+   ...
+   3 Declarations: x y obj
+
 Future Capability Mode
 ^^^^^^^^^^^^^^^^^^^^^^
 
-There are multiple ways to utilize the future compatibility mode: direct import
+There are multiple ways to utilize the future capability mode: direct import
 or changed ``SolverFactory`` version.
 
-.. code-block:: python
+.. testcode::
 
     # Direct import
    import pyomo.environ as pyo
@@ -81,9 +88,16 @@ or changed ``SolverFactory`` version.
    status.display()
    model.pprint()
 
+.. testoutput::
+   :hide:
+
+   solution_loader: ...
+   ...
+   3 Declarations: x y obj
+
 Changing the ``SolverFactory`` version:
 
-.. code-block:: python
+.. testcode::
 
     # Change SolverFactory version
    import pyomo.environ as pyo
@@ -105,6 +119,18 @@ Changing the ``SolverFactory`` version:
    status.display()
    model.pprint()
 
+.. testoutput::
+   :hide:
+
+   solution_loader: ...
+   ...
+   3 Declarations: x y obj
+
+.. testcode::
+   :hide:
+
+   from pyomo.__future__ import solver_factory_v1
+
 Linear Presolve and Scaling
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -118,11 +144,13 @@ options for certain solvers. Currently, these options are only available for
 The ``writer_config`` configuration option can be used to manipulate presolve
 and scaling options:
 
-.. code-block:: python
+.. testcode::
 
-   >>> from pyomo.contrib.solver.ipopt import Ipopt
-   >>> opt = Ipopt()
-   >>> opt.config.writer_config.display()
+   from pyomo.contrib.solver.ipopt import Ipopt
+   opt = Ipopt()
+   opt.config.writer_config.display()
+
+.. testoutput::
 
    show_section_timing: false
    skip_trivial_constraints: true
