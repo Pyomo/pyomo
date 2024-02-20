@@ -227,11 +227,12 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 # now look up in the tree
                 blk = t
                 while blk is not None:
-                    if blk not in seen_blocks:
-                        self._collect_local_vars_from_block(
-                            blk, user_defined_local_vars
-                        )
-                        seen_blocks.add(blk)
+                    if blk in seen_blocks:
+                        break
+                    self._collect_local_vars_from_block(
+                        blk, user_defined_local_vars
+                    )
+                    seen_blocks.add(blk)
                     blk = blk.parent_block()
         return user_defined_local_vars
 
