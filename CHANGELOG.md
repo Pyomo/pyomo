@@ -77,6 +77,7 @@ Pyomo 6.7.1   (21 Feb 2024)
   - PyROS: Update Solver Argument Resolution and Validation Routines (#3126)
   - PyROS: Update Subproblem Initialization Routines (#3071)
   - PyROS: Fix DR polishing under nominal objective focus (#3060)
+  - solver: Solver Refactor Part 1: Introducing the new solver interface (#3137)
 
 -------------------------------------------------------------------------------
 Pyomo 6.7.0   (29 Nov 2023)
