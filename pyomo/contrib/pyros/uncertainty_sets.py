@@ -283,14 +283,6 @@ def validate_array(
         )
 
 
-def uncertainty_sets(obj):
-    if not isinstance(obj, UncertaintySet):
-        raise ValueError(
-            "Expected an UncertaintySet object, instead received %s" % (obj,)
-        )
-    return obj
-
-
 def column(matrix, i):
     # Get column i of a given multi-dimensional list
     return [row[i] for row in matrix]
