@@ -4876,9 +4876,7 @@ class RegressionTest(unittest.TestCase):
             msg="Returned termination condition is not return robust_optimal.",
         )
 
-    @unittest.skipUnless(
-        baron_license_is_valid, "Global NLP solver is not available and licensed."
-    )
+    @unittest.skipUnless(scip_available, "Global NLP solver is not available.")
     def test_coefficient_matching_solve(self):
         # Write the deterministic Pyomo model
         m = ConcreteModel()
@@ -4902,8 +4900,8 @@ class RegressionTest(unittest.TestCase):
         pyros_solver = SolverFactory("pyros")
 
         # Define subsolvers utilized in the algorithm
-        local_subsolver = SolverFactory('baron')
-        global_subsolver = SolverFactory("baron")
+        local_subsolver = SolverFactory('scip')
+        global_subsolver = SolverFactory("scip")
 
         # Call the PyROS solver
         results = pyros_solver.solve(
@@ -5009,10 +5007,7 @@ class RegressionTest(unittest.TestCase):
                 ),
             )
 
-    @unittest.skipUnless(
-        baron_license_is_valid and baron_version >= (23, 2, 27),
-        "BARON licensing and version requirements not met",
-    )
+    @unittest.skipUnless(scip_available, "NLP solver is not available.")
     def test_coefficient_matching_partitioning_insensitive(self):
         """
         Check that result for instance with constraint subject to
@@ -5023,7 +5018,7 @@ class RegressionTest(unittest.TestCase):
         m = self.create_mitsos_4_3()
 
         # instantiate BARON subsolver and PyROS solver
-        baron = SolverFactory("baron")
+        baron = SolverFactory("scip")
         pyros_solver = SolverFactory("pyros")
 
         # solve with PyROS
@@ -5215,10 +5210,7 @@ class RegressionTest(unittest.TestCase):
             )
 
 
-@unittest.skipUnless(
-    baron_available and baron_license_is_valid,
-    "Global NLP solver is not available and licensed.",
-)
+@unittest.skipUnless(scip_available, "Global NLP solver is not available.")
 class testBypassingSeparation(unittest.TestCase):
     def test_bypass_global_separation(self):
         """Test bypassing of global separation solve calls."""
@@ -5241,7 +5233,7 @@ class testBypassingSeparation(unittest.TestCase):
 
         # Define subsolvers utilized in the algorithm
         local_subsolver = SolverFactory('ipopt')
-        global_subsolver = SolverFactory("baron")
+        global_subsolver = SolverFactory("scip")
 
         # Call the PyROS solver
         with LoggingIntercept(level=logging.WARNING) as LOG:
@@ -5360,10 +5352,7 @@ class testUninitializedVars(unittest.TestCase):
             )
 
 
-@unittest.skipUnless(
-    baron_available and baron_license_is_valid,
-    "Global NLP solver is not available and licensed.",
-)
+@unittest.skipUnless(scip_available, "Global NLP solver is not available.")
 class testModelMultipleObjectives(unittest.TestCase):
     """
     This class contains tests for models with multiple
@@ -5398,7 +5387,7 @@ class testModelMultipleObjectives(unittest.TestCase):
 
         # Define subsolvers utilized in the algorithm
         local_subsolver = SolverFactory('ipopt')
-        global_subsolver = SolverFactory("baron")
+        global_subsolver = SolverFactory("scip")
 
         solve_kwargs = dict(
             model=m,
