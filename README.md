@@ -83,7 +83,7 @@ To get help from the Pyomo community ask a question on one of the following:
 
 ### Developers
 
-Pyomo development moved to this repository in June, 2016 from
+Pyomo development moved to this repository in June 2016 from
 Sandia National Laboratories. Developer discussions are hosted by
 [Google Groups](https://groups.google.com/forum/#!forum/pyomo-developers).
 

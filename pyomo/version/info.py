@@ -27,8 +27,8 @@ _init_url = "$URL$"
 major = 6
 minor = 7
 micro = 1
-releaselevel = 'invalid'
-# releaselevel = 'final'
+# releaselevel = 'invalid'
+releaselevel = 'final'
 serial = 0
 
 if releaselevel == 'final':
