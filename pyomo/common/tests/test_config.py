@@ -3265,6 +3265,41 @@ option_2: int, default=5
             OUT.getvalue().replace('null', 'None'),
         )
 
+    def test_domain_name(self):
+        cfg = ConfigDict()
+
+        cfg.declare('none', ConfigValue())
+        self.assertEqual(cfg.get('none').domain_name(), '')
+
+        def fcn(val):
+            return val
+
+        cfg.declare('fcn', ConfigValue(domain=fcn))
+        self.assertEqual(cfg.get('fcn').domain_name(), 'fcn')
+
+        fcn.domain_name = 'custom fcn'
+        self.assertEqual(cfg.get('fcn').domain_name(), 'custom fcn')
+
+        class functor:
+            def __call__(self, val):
+                return val
+
+        cfg.declare('functor', ConfigValue(domain=functor()))
+        self.assertEqual(cfg.get('functor').domain_name(), 'functor')
+
+        class cfunctor:
+            def __call__(self, val):
+                return val
+
+            def domain_name(self):
+                return 'custom functor'
+
+        cfg.declare('cfunctor', ConfigValue(domain=cfunctor()))
+        self.assertEqual(cfg.get('cfunctor').domain_name(), 'custom functor')
+
+        cfg.declare('type', ConfigValue(domain=int))
+        self.assertEqual(cfg.get('type').domain_name(), 'int')
+
 
 if __name__ == "__main__":
     unittest.main()
