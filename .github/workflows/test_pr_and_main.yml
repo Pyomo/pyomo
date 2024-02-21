@@ -179,7 +179,7 @@ jobs:
     #    path: cache/os
     #    key: pkg-${{env.CACHE_VER}}.0-${{runner.os}}
 
-    - name: install ginac
+    - name: install GiNaC
       if: matrix.other == '/singletest'
       run: |
         cd ..
