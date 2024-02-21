@@ -35,6 +35,7 @@ Pyomo 6.7.1   (21 Feb 2024)
   - Fix `range_difference` for Sets with nonzero anchor points (#3063)
   - Clarify errors raised by accessing Sets by positional index (#3062)
 - Documentation
+  - Update intersphinx links, remove docs for nonfunctional code (#3155)
   - Update MPC documentation and citation (#3148)
   - Fix an error in the documentation for LinearExpression (#3090)
   - Fix bugs in the documentation of Pyomo.DoE (#3070)
