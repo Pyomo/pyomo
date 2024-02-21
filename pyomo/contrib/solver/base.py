@@ -396,7 +396,7 @@ class LegacySolverWrapper:
                 "`keepfiles` has been deprecated in the new solver interface. "
                 "Use `working_dir` instead to designate a directory in which "
                 f"files should be generated and saved. Setting `working_dir` to `{cwd}`.",
-                version='6.7.1.dev0',
+                version='6.7.1',
             )
             self.config.working_dir = cwd
         # I believe this currently does nothing; however, it is unclear what
