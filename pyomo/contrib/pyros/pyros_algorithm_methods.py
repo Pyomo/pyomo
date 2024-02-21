@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 '''
 Methods for the execution of the grcs algorithm
 '''
@@ -642,11 +653,10 @@ def ROSolver_iterative_solve(model_data, config):
                     vals.append(dvar.value)
                 dr_var_lists_original.append(vals)
 
-            (
-                polishing_results,
-                polishing_successful,
-            ) = master_problem_methods.minimize_dr_vars(
-                model_data=master_data, config=config
+            (polishing_results, polishing_successful) = (
+                master_problem_methods.minimize_dr_vars(
+                    model_data=master_data, config=config
+                )
             )
             timing_data.total_dr_polish_time += get_time_from_solver(polishing_results)
 

@@ -1,15 +1,13 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-
-__all__ = ['SolverResults']
 
 import math
 import sys
@@ -18,7 +16,7 @@ import json
 import logging
 import os.path
 
-from pyomo.common.dependencies import yaml, yaml_load_args, yaml_available
+from pyomo.common.dependencies import yaml, yaml_load_args
 import pyomo.opt
 from pyomo.opt.results.container import undefined, ignore, ListContainer, MapContainer
 import pyomo.opt.results.solution

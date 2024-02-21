@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -402,8 +402,7 @@ class _slice_generator(object):
         self.last_index = ()
 
         self.tuplize_unflattened_index = (
-            self.component._implicit_subsets is None
-            or len(self.component._implicit_subsets) == 1
+            len(list(self.component.index_set().subsets())) <= 1
         )
 
         if fixed is None and sliced is None and ellipsis is None:

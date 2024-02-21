@@ -1,6 +1,18 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """
 Functions for the construction and solving of the GRCS separation problem via ROsolver
 """
+
 from pyomo.core.base.constraint import Constraint, ConstraintList
 from pyomo.core.base.objective import Objective, maximize, value
 from pyomo.core.base import Var, Param

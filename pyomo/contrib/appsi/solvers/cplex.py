@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.contrib.appsi.base import (
     PersistentSolver,
@@ -330,9 +341,11 @@ class Cplex(PersistentSolver):
         if config.load_solution:
             if cpxprob.solution.get_solution_type() == cpxprob.solution.type.none:
                 raise RuntimeError(
-                    'A feasible solution was not found, so no solution can be loades. '
-                    'Please set opt.config.load_solution=False and check '
-                    'results.termination_condition and '
+                    'A feasible solution was not found, so no solution can be loaded. '
+                    'If using the appsi.solvers.Cplex interface, you can '
+                    'set opt.config.load_solution=False. If using the environ.SolverFactory '
+                    'interface, you can set opt.solve(model, load_solutions = False). '
+                    'Then you can check results.termination_condition and '
                     'results.best_feasible_objective before loading a solution.'
                 )
             else:

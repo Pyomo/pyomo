@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -327,6 +327,7 @@ class TestMindtPy(unittest.TestCase):
                     value(model.objective.expr), model.optimal_value, places=1
                 )
 
+    # CYIPOPT will raise WARNING (W1002) during loading solution.
     @unittest.skipUnless(
         SolverFactory('cyipopt').available(exception_flag=False),
         "APPSI_IPOPT not available.",

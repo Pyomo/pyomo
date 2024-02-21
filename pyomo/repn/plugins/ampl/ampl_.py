@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -12,8 +12,6 @@
 #
 # AMPL Problem Writer Plugin
 #
-
-__all__ = ['ProblemWriter_nl']
 
 import itertools
 import logging
@@ -1964,9 +1962,9 @@ class ProblemWriter_nl(AbstractProblemWriter):
         for obj_ID, (obj, wrapped_repn) in Objectives_dict.items():
             grad_entries = {}
             for idx, obj_var in enumerate(wrapped_repn.linear_vars):
-                grad_entries[
-                    self_ampl_var_id[obj_var]
-                ] = wrapped_repn.repn.linear_coefs[idx]
+                grad_entries[self_ampl_var_id[obj_var]] = (
+                    wrapped_repn.repn.linear_coefs[idx]
+                )
             for obj_var in wrapped_repn.nonlinear_vars:
                 if obj_var not in wrapped_repn.linear_vars:
                     grad_entries[self_ampl_var_id[obj_var]] = 0

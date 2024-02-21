@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -1618,9 +1618,9 @@ class TestGenerate_ProductExpression(unittest.TestCase):
             ),
         )
         # Verify shared args...
-        self.assertIsNot(e1._args_, e2._args_)
-        self.assertIs(e1._args_, e3._args_)
-        self.assertIs(e1._args_, e.arg(1)._args_)
+        self.assertIs(e1._args_, e2._args_)
+        self.assertIsNot(e1._args_, e3._args_)
+        self.assertIs(e1._args_, e.arg(0)._args_)
         self.assertIs(e.arg(0).arg(0), e.arg(1).arg(0))
         self.assertIs(e.arg(0).arg(1), e.arg(1).arg(1))
 

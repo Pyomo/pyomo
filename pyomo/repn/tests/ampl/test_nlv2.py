@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -1123,9 +1123,7 @@ class Test_NLWriter(unittest.TestCase):
         m.x = Var([1, 2])
         m.p = Param(initialize=5, mutable=True)
         m.o = Objective(expr=1)
-        m.c = Constraint(
-            expr=LinearExpression([m.p**2, 5 * m.x[1], 10 * m.x[2]]) <= 0
-        )
+        m.c = Constraint(expr=LinearExpression([m.p**2, 5 * m.x[1], 10 * m.x[2]]) <= 0)
 
         OUT = io.StringIO()
         nl_writer.NLWriter().write(m, OUT)

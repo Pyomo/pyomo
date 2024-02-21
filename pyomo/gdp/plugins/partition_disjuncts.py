@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -15,7 +15,7 @@ Between Steps (P-Split) reformulation for GDPs from:
 J. Kronqvist, R. Misener, and C. Tsay, "Between Steps: Intermediate 
 Relaxations between big-M and Convex Hull Reformulations," 2021.
 """
-from __future__ import division
+
 
 from pyomo.common.config import (
     ConfigBlock,

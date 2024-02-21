@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -232,6 +232,20 @@ class TestComponentMap(unittest.TestCase):
         self.assertNotEqual(cmap2, cmap1)
         self.assertFalse(cmap1 == cmap2)
         self.assertTrue(cmap1 != cmap2)
+        self.assertNotEqual(cmap1, cmap2)
+
+        cmap2 = ComponentMap(self._components)
+        o = objective()
+        cmap1[o] = 10
+        cmap2[o] = 10
+        self.assertEqual(cmap1, cmap2)
+        cmap2[o] = 20
+        self.assertNotEqual(cmap1, cmap2)
+        cmap2[o] = 10
+        self.assertEqual(cmap1, cmap2)
+        del cmap2[o]
+        self.assertNotEqual(cmap1, cmap2)
+        cmap2[objective()] = 10
         self.assertNotEqual(cmap1, cmap2)
 
 

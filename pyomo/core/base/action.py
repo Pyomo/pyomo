@@ -1,15 +1,13 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-
-__all__ = ['BuildAction']
 
 import logging
 import types
@@ -24,7 +22,8 @@ logger = logging.getLogger('pyomo.core')
 
 
 @ModelComponentFactory.register(
-    "A component that performs arbitrary actions during model construction.  The action rule is applied to every index value."
+    "A component that performs arbitrary actions during model construction.  "
+    "The action rule is applied to every index value."
 )
 class BuildAction(IndexedComponent):
     """A build action, which executes a rule for all valid indices.

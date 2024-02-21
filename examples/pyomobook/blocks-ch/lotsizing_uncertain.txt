@@ -1,20 +1,3 @@
-5 Set Declarations
-    i_index : Size=1, Index=None, Ordered=True
-        Key  : Dimen : Domain : Size : Members
-        None :     2 :    T*S :   25 : {(1, 1), (1, 2), (1, 3), (1, 4), (1, 5), (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (3, 1), (3, 2), (3, 3), (3, 4), (3, 5), (4, 1), (4, 2), (4, 3), (4, 4), (4, 5), (5, 1), (5, 2), (5, 3), (5, 4), (5, 5)}
-    i_neg_index : Size=1, Index=None, Ordered=True
-        Key  : Dimen : Domain : Size : Members
-        None :     2 :    T*S :   25 : {(1, 1), (1, 2), (1, 3), (1, 4), (1, 5), (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (3, 1), (3, 2), (3, 3), (3, 4), (3, 5), (4, 1), (4, 2), (4, 3), (4, 4), (4, 5), (5, 1), (5, 2), (5, 3), (5, 4), (5, 5)}
-    i_pos_index : Size=1, Index=None, Ordered=True
-        Key  : Dimen : Domain : Size : Members
-        None :     2 :    T*S :   25 : {(1, 1), (1, 2), (1, 3), (1, 4), (1, 5), (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (3, 1), (3, 2), (3, 3), (3, 4), (3, 5), (4, 1), (4, 2), (4, 3), (4, 4), (4, 5), (5, 1), (5, 2), (5, 3), (5, 4), (5, 5)}
-    x_index : Size=1, Index=None, Ordered=True
-        Key  : Dimen : Domain : Size : Members
-        None :     2 :    T*S :   25 : {(1, 1), (1, 2), (1, 3), (1, 4), (1, 5), (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (3, 1), (3, 2), (3, 3), (3, 4), (3, 5), (4, 1), (4, 2), (4, 3), (4, 4), (4, 5), (5, 1), (5, 2), (5, 3), (5, 4), (5, 5)}
-    y_index : Size=1, Index=None, Ordered=True
-        Key  : Dimen : Domain : Size : Members
-        None :     2 :    T*S :   25 : {(1, 1), (1, 2), (1, 3), (1, 4), (1, 5), (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (3, 1), (3, 2), (3, 3), (3, 4), (3, 5), (4, 1), (4, 2), (4, 3), (4, 4), (4, 5), (5, 1), (5, 2), (5, 3), (5, 4), (5, 5)}
-
 2 RangeSet Declarations
     S : Dimen=1, Size=5, Bounds=(1, 5)
         Key  : Finite : Members
@@ -24,7 +7,7 @@
         None :   True :   [1:5]
 
 5 Var Declarations
-    i : Size=25, Index=i_index
+    i : Size=25, Index=T*S
         Key    : Lower : Value : Upper : Fixed : Stale : Domain
         (1, 1) :  None :  None :  None : False :  True :  Reals
         (1, 2) :  None :  None :  None : False :  True :  Reals
@@ -51,7 +34,7 @@
         (5, 3) :  None :  None :  None : False :  True :  Reals
         (5, 4) :  None :  None :  None : False :  True :  Reals
         (5, 5) :  None :  None :  None : False :  True :  Reals
-    i_neg : Size=25, Index=i_neg_index
+    i_neg : Size=25, Index=T*S
         Key    : Lower : Value : Upper : Fixed : Stale : Domain
         (1, 1) :     0 :  None :  None : False :  True : NonNegativeReals
         (1, 2) :     0 :  None :  None : False :  True : NonNegativeReals
@@ -78,7 +61,7 @@
         (5, 3) :     0 :  None :  None : False :  True : NonNegativeReals
         (5, 4) :     0 :  None :  None : False :  True : NonNegativeReals
         (5, 5) :     0 :  None :  None : False :  True : NonNegativeReals
-    i_pos : Size=25, Index=i_pos_index
+    i_pos : Size=25, Index=T*S
         Key    : Lower : Value : Upper : Fixed : Stale : Domain
         (1, 1) :     0 :  None :  None : False :  True : NonNegativeReals
         (1, 2) :     0 :  None :  None : False :  True : NonNegativeReals
@@ -105,7 +88,7 @@
         (5, 3) :     0 :  None :  None : False :  True : NonNegativeReals
         (5, 4) :     0 :  None :  None : False :  True : NonNegativeReals
         (5, 5) :     0 :  None :  None : False :  True : NonNegativeReals
-    x : Size=25, Index=x_index
+    x : Size=25, Index=T*S
         Key    : Lower : Value : Upper : Fixed : Stale : Domain
         (1, 1) :     0 :  None :  None : False :  True : NonNegativeReals
         (1, 2) :     0 :  None :  None : False :  True : NonNegativeReals
@@ -132,7 +115,7 @@
         (5, 3) :     0 :  None :  None : False :  True : NonNegativeReals
         (5, 4) :     0 :  None :  None : False :  True : NonNegativeReals
         (5, 5) :     0 :  None :  None : False :  True : NonNegativeReals
-    y : Size=25, Index=y_index
+    y : Size=25, Index=T*S
         Key    : Lower : Value : Upper : Fixed : Stale : Domain
         (1, 1) :     0 :  None :     1 : False :  True : Binary
         (1, 2) :     0 :  None :     1 : False :  True : Binary
@@ -160,4 +143,4 @@
         (5, 4) :     0 :  None :     1 : False :  True : Binary
         (5, 5) :     0 :  None :     1 : False :  True : Binary
 
-12 Declarations: T S y_index y x_index x i_index i i_pos_index i_pos i_neg_index i_neg
+7 Declarations: T S y x i i_pos i_neg

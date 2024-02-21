@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 # Source: https://docs.mosek.com/9.0/pythonapi/tutorial-pow-shared.html
 
 import pyomo.kernel as pmo
@@ -12,9 +23,7 @@ def solve_nonlinear():
 
     m.c = pmo.constraint(body=m.x + m.y + 0.5 * m.z, rhs=2)
 
-    m.o = pmo.objective(
-        (m.x**0.2) * (m.y**0.8) + (m.z**0.4) - m.x, sense=pmo.maximize
-    )
+    m.o = pmo.objective((m.x**0.2) * (m.y**0.8) + (m.z**0.4) - m.x, sense=pmo.maximize)
 
     m.x.value, m.y.value, m.z.value = (1, 1, 1)
     ipopt = pmo.SolverFactory("ipopt")

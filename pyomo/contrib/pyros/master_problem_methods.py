@@ -1,6 +1,18 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """
 Functions for handling the construction and solving of the GRCS master problem via ROSolver
 """
+
 from pyomo.core.base import (
     ConcreteModel,
     Block,
@@ -758,12 +770,9 @@ def solver_call_master(model_data, config, solver, solve_data):
         solver_term_cond_dict[str(opt)] = str(results.solver.termination_condition)
         master_soln.termination_condition = results.solver.termination_condition
         master_soln.pyros_termination_condition = None
-        (
-            try_backup,
-            _,
-        ) = (
-            master_soln.master_subsolver_results
-        ) = process_termination_condition_master_problem(config=config, results=results)
+        (try_backup, _) = master_soln.master_subsolver_results = (
+            process_termination_condition_master_problem(config=config, results=results)
+        )
 
         master_soln.nominal_block = nlp_model.scenarios[0, 0]
         master_soln.results = results

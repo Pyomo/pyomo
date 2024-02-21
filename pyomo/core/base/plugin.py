@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -20,30 +20,6 @@ deprecation_warning(
     version='6.0',
     calling_frame=inspect.currentframe().f_back,
 )
-
-__all__ = [
-    'pyomo_callback',
-    'IPyomoExpression',
-    'ExpressionFactory',
-    'ExpressionRegistration',
-    'IPyomoPresolver',
-    'IPyomoPresolveAction',
-    'IParamRepresentation',
-    'ParamRepresentationFactory',
-    'IPyomoScriptPreprocess',
-    'IPyomoScriptCreateModel',
-    'IPyomoScriptCreateDataPortal',
-    'IPyomoScriptModifyInstance',
-    'IPyomoScriptPrintModel',
-    'IPyomoScriptPrintInstance',
-    'IPyomoScriptSaveInstance',
-    'IPyomoScriptPrintResults',
-    'IPyomoScriptSaveResults',
-    'IPyomoScriptPostprocess',
-    'ModelComponentFactory',
-    'Transformation',
-    'TransformationFactory',
-]
 
 from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.transformation import (

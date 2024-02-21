@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
@@ -46,8 +57,8 @@ intersphinx_mapping = {
     'numpy': ('https://numpy.org/doc/stable/', None),
     'pandas': ('https://pandas.pydata.org/docs/', None),
     'scikit-learn': ('https://scikit-learn.org/stable/', None),
-    'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),
-    'Sphinx': ('https://www.sphinx-doc.org/en/stable/', None),
+    'scipy': ('https://docs.scipy.org/doc/scipy/', None),
+    'Sphinx': ('https://www.sphinx-doc.org/en/master/', None),
 }
 
 # -- General configuration ------------------------------------------------

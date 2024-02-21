@@ -1,15 +1,13 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-
-__all__ = ['Var', '_VarData', '_GeneralVarData', 'VarList', 'SimpleVar', 'ScalarVar']
 
 import logging
 import sys
@@ -29,7 +27,6 @@ from pyomo.core.expr.numvalue import (
     value,
     is_potentially_variable,
     native_numeric_types,
-    native_types,
 )
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
@@ -44,7 +41,6 @@ from pyomo.core.base.initializer import (
     DefaultInitializer,
     BoundInitializer,
 )
-from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.set import (
     Reals,
     Binary,
@@ -54,7 +50,6 @@ from pyomo.core.base.set import (
     integer_global_set_ids,
 )
 from pyomo.core.base.units_container import units
-from pyomo.core.base.util import is_functor
 
 logger = logging.getLogger('pyomo.core')
 
@@ -66,8 +61,7 @@ _known_global_real_domains = dict(
     + [(_, False) for _ in integer_global_set_ids]
 )
 _VARDATA_API = (
-    # including 'domain' runs afoul of logic in Block._add_implicit_sets()
-    # 'domain',
+    'domain',
     'bounds',
     'lower',
     'upper',
@@ -390,17 +384,22 @@ class _GeneralVarData(_VarData):
         #
         # Check if this Var has units: assigning dimensionless
         # values to a variable with units should be an error
-        if type(val) not in native_numeric_types:
-            if self.parent_component()._units is not None:
-                _src_magnitude = value(val)
+        if val.__class__ in native_numeric_types:
+            pass
+        elif self.parent_component()._units is not None:
+            _src_magnitude = value(val)
+            # Note: value() could have just registered a new numeric type
+            if val.__class__ in native_numeric_types:
+                val = _src_magnitude
+            else:
                 _src_units = units.get_units(val)
                 val = units.convert_value(
                     num_value=_src_magnitude,
                     from_units=_src_units,
                     to_units=self.parent_component()._units,
                 )
-            else:
-                val = value(val)
+        else:
+            val = value(val)
 
         if not skip_validation:
             if val not in self.domain:
@@ -436,7 +435,9 @@ class _GeneralVarData(_VarData):
     @domain.setter
     def domain(self, domain):
         try:
-            self._domain = SetInitializer(domain)(self.parent_block(), self.index())
+            self._domain = SetInitializer(domain)(
+                self.parent_block(), self.index(), self
+            )
         except:
             logger.error(
                 "%s is not a valid domain. Variable domains must be an "
@@ -688,8 +689,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         units=None,
         name=None,
         doc=None
-    ):
-        ...
+    ): ...
 
     def __init__(self, *args, **kwargs):
         #
@@ -774,6 +774,10 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         if is_debug_set(logger):
             logger.debug("Constructing Variable %s" % (self.name,))
 
+        if self._anonymous_sets is not None:
+            for _set in self._anonymous_sets:
+                _set.construct()
+
         # Note: define 'index' to avoid 'variable referenced before
         # assignment' in the error message generated in the 'except:'
         # block below.
@@ -854,7 +858,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
                         # We can directly set the attribute (not the
                         # property) because the SetInitializer ensures
                         # that the value is a proper Set.
-                        obj._domain = self._rule_domain(block, index)
+                        obj._domain = self._rule_domain(block, index, self)
                 if call_bounds_rule:
                     for index, obj in self._data.items():
                         obj.lower, obj.upper = self._rule_bounds(block, index)
@@ -891,7 +895,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         obj._index = index
         # We can directly set the attribute (not the property) because
         # the SetInitializer ensures that the value is a proper Set.
-        obj._domain = self._rule_domain(parent, index)
+        obj._domain = self._rule_domain(parent, index, self)
         if self._rule_bounds is not None:
             obj.lower, obj.upper = self._rule_bounds(parent, index)
         if self._rule_init is not None:
@@ -1013,17 +1017,17 @@ class IndexedVar(Var):
         try:
             domain_rule = SetInitializer(domain)
             if domain_rule.constant():
-                domain = domain_rule(self.parent_block(), None)
+                domain = domain_rule(self.parent_block(), None, self)
                 for vardata in self.values():
                     vardata._domain = domain
             elif domain_rule.contains_indices():
                 parent = self.parent_block()
                 for index in domain_rule.indices():
-                    self[index]._domain = domain_rule(parent, index)
+                    self[index]._domain = domain_rule(parent, index, self)
             else:
                 parent = self.parent_block()
                 for index, vardata in self.items():
-                    vardata._domain = domain_rule(parent, index)
+                    vardata._domain = domain_rule(parent, index, self)
         except:
             logger.error(
                 "%s is not a valid domain. Variable domains must be an "
