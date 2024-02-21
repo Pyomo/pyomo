@@ -747,7 +747,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
             self._mutable_bounds.pop(v_id, None)
         self._needs_updated = True
 
-    def _remove_params(self, params: List[_ParamData]):
+    def _remove_parameters(self, params: List[_ParamData]):
         pass
 
     def _update_variables(self, variables: List[_GeneralVarData]):
@@ -770,7 +770,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
             gurobipy_var.setAttr('vtype', vtype)
         self._needs_updated = True
 
-    def update_params(self):
+    def update_parameters(self):
         for con, helpers in self._mutable_helpers.items():
             for helper in helpers:
                 helper.update()

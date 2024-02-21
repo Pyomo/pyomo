@@ -21,7 +21,7 @@ from pyomo.common.collections import ComponentMap
 from pyomo.contrib.solver import results
 from pyomo.contrib.solver import solution
 import pyomo.environ as pyo
-from pyomo.core.base.var import ScalarVar
+from pyomo.core.base.var import Var
 
 
 class SolutionLoaderExample(solution.SolutionLoaderBase):
@@ -213,8 +213,8 @@ extra_info:
 
     def test_generated_results(self):
         m = pyo.ConcreteModel()
-        m.x = ScalarVar()
-        m.y = ScalarVar()
+        m.x = Var()
+        m.y = Var()
         m.c1 = pyo.Constraint(expr=m.x == 1)
         m.c2 = pyo.Constraint(expr=m.y == 2)
 

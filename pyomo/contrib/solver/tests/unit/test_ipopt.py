@@ -44,7 +44,7 @@ class TestIpoptSolverConfig(unittest.TestCase):
         config.tee = True
         self.assertTrue(config.tee)
         self.assertEqual(config._description, "A description")
-        self.assertFalse(config.time_limit)
+        self.assertIsNone(config.time_limit)
         # Default should be `ipopt`
         self.assertIsNotNone(str(config.executable))
         self.assertIn('ipopt', str(config.executable))
@@ -52,24 +52,6 @@ class TestIpoptSolverConfig(unittest.TestCase):
         config.executable = Executable('/bogus/path')
         self.assertIsNone(config.executable.executable)
         self.assertFalse(config.executable.available())
-
-
-class TestIpoptResults(unittest.TestCase):
-    def test_default_instantiation(self):
-        res = ipopt.IpoptResults()
-        # Inherited methods/attributes
-        self.assertIsNone(res.solution_loader)
-        self.assertIsNone(res.incumbent_objective)
-        self.assertIsNone(res.objective_bound)
-        self.assertIsNone(res.solver_name)
-        self.assertIsNone(res.solver_version)
-        self.assertIsNone(res.iteration_count)
-        self.assertIsNone(res.timing_info.start_timestamp)
-        self.assertIsNone(res.timing_info.wall_time)
-        # Unique to this object
-        self.assertIsNone(res.timing_info.ipopt_excluding_nlp_functions)
-        self.assertIsNone(res.timing_info.nlp_function_evaluations)
-        self.assertIsNone(res.timing_info.total_seconds)
 
 
 class TestIpoptSolutionLoader(unittest.TestCase):

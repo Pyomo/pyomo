@@ -9,23 +9,24 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import random
+import math
+from typing import Type
+
 import pyomo.environ as pe
+from pyomo import gdp
 from pyomo.common.dependencies import attempt_import
 import pyomo.common.unittest as unittest
-
-parameterized, param_available = attempt_import('parameterized')
-parameterized = parameterized.parameterized
 from pyomo.contrib.solver.results import TerminationCondition, SolutionStatus, Results
 from pyomo.contrib.solver.base import SolverBase
 from pyomo.contrib.solver.ipopt import Ipopt
 from pyomo.contrib.solver.gurobi import Gurobi
-from typing import Type
 from pyomo.core.expr.numeric_expr import LinearExpression
-import math
 
-numpy, numpy_available = attempt_import('numpy')
-import random
-from pyomo import gdp
+
+np, numpy_available = attempt_import('numpy')
+parameterized, param_available = attempt_import('parameterized')
+parameterized = parameterized.parameterized
 
 
 if not param_available:
@@ -802,10 +803,6 @@ class TestSolvers(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = True
             else:
                 opt.config.writer_config.linear_presolve = False
-        try:
-            import numpy as np
-        except:
-            raise unittest.SkipTest('numpy is not available')
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.y = pe.Var()
@@ -907,7 +904,7 @@ class TestSolvers(unittest.TestCase):
         m.y = pe.Var(bounds=(-1, None))
         m.obj = pe.Objective(expr=m.y)
         if opt.is_persistent():
-            opt.config.auto_updates.update_params = False
+            opt.config.auto_updates.update_parameters = False
             opt.config.auto_updates.update_vars = False
             opt.config.auto_updates.update_constraints = False
             opt.config.auto_updates.update_named_expressions = False
@@ -1003,14 +1000,10 @@ class TestSolvers(unittest.TestCase):
         a2 = -2
         b2 = 1
         m.c1 = pe.Constraint(
-            expr=(numpy.float64(0), m.y - numpy.int64(1) * m.x - numpy.float32(3), None)
+            expr=(np.float64(0), m.y - np.int64(1) * m.x - np.float32(3), None)
         )
         m.c2 = pe.Constraint(
-            expr=(
-                None,
-                -m.y + numpy.int32(-2) * m.x + numpy.float64(1),
-                numpy.float16(0),
-            )
+            expr=(None, -m.y + np.int32(-2) * m.x + np.float64(1), np.float16(0))
         )
         res = opt.solve(m)
         self.assertEqual(res.solution_status, SolutionStatus.optimal)

@@ -80,7 +80,7 @@ class TestSolverBase(unittest.TestCase):
 class TestPersistentSolverBase(unittest.TestCase):
     def test_abstract_member_list(self):
         expected_list = [
-            'remove_params',
+            'remove_parameters',
             'version',
             'update_variables',
             'remove_variables',
@@ -88,7 +88,7 @@ class TestPersistentSolverBase(unittest.TestCase):
             '_get_primals',
             'set_instance',
             'set_objective',
-            'update_params',
+            'update_parameters',
             'remove_block',
             'add_block',
             'available',
@@ -116,12 +116,12 @@ class TestPersistentSolverBase(unittest.TestCase):
             'is_persistent',
             'remove_block',
             'remove_constraints',
-            'remove_params',
+            'remove_parameters',
             'remove_variables',
             'set_instance',
             'set_objective',
             'solve',
-            'update_params',
+            'update_parameters',
             'update_variables',
             'version',
         ]
@@ -142,12 +142,12 @@ class TestPersistentSolverBase(unittest.TestCase):
         self.assertEqual(self.instance.add_constraints(None), None)
         self.assertEqual(self.instance.add_block(None), None)
         self.assertEqual(self.instance.remove_variables(None), None)
-        self.assertEqual(self.instance.remove_params(None), None)
+        self.assertEqual(self.instance.remove_parameters(None), None)
         self.assertEqual(self.instance.remove_constraints(None), None)
         self.assertEqual(self.instance.remove_block(None), None)
         self.assertEqual(self.instance.set_objective(None), None)
         self.assertEqual(self.instance.update_variables(None), None)
-        self.assertEqual(self.instance.update_params(), None)
+        self.assertEqual(self.instance.update_parameters(), None)
 
         with self.assertRaises(NotImplementedError):
             self.instance._get_primals()
@@ -168,12 +168,12 @@ class TestPersistentSolverBase(unittest.TestCase):
             self.assertEqual(self.instance.add_constraints(None), None)
             self.assertEqual(self.instance.add_block(None), None)
             self.assertEqual(self.instance.remove_variables(None), None)
-            self.assertEqual(self.instance.remove_params(None), None)
+            self.assertEqual(self.instance.remove_parameters(None), None)
             self.assertEqual(self.instance.remove_constraints(None), None)
             self.assertEqual(self.instance.remove_block(None), None)
             self.assertEqual(self.instance.set_objective(None), None)
             self.assertEqual(self.instance.update_variables(None), None)
-            self.assertEqual(self.instance.update_params(), None)
+            self.assertEqual(self.instance.update_parameters(), None)
 
 
 class TestLegacySolverWrapper(unittest.TestCase):

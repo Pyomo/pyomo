@@ -487,7 +487,7 @@ class TestManualModel(unittest.TestCase):
         opt.config.auto_updates.check_for_new_or_removed_params = False
         opt.config.auto_updates.check_for_new_or_removed_vars = False
         opt.config.auto_updates.check_for_new_or_removed_constraints = False
-        opt.config.auto_updates.update_params = False
+        opt.config.auto_updates.update_parameters = False
         opt.config.auto_updates.update_vars = False
         opt.config.auto_updates.update_constraints = False
         opt.config.auto_updates.update_named_expressions = False

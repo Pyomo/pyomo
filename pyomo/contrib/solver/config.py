@@ -23,6 +23,7 @@ from pyomo.common.config import (
     NonNegativeInt,
     ADVANCED_OPTION,
     Bool,
+    Path,
 )
 from pyomo.common.log import LogStream
 from pyomo.common.numeric_types import native_logical_types
@@ -74,17 +75,17 @@ class SolverConfig(ConfigDict):
             ConfigValue(
                 domain=TextIO_or_Logger,
                 default=False,
-                description="""`tee` accepts :py:class:`bool`,
+                description="""``tee`` accepts :py:class:`bool`,
                 :py:class:`io.TextIOBase`, or :py:class:`logging.Logger`
                 (or a list of these types).  ``True`` is mapped to
                 ``sys.stdout``.  The solver log will be printed to each of
-                these streams / destinations.  """,
+                these streams / destinations.""",
             ),
         )
-        self.working_dir: Optional[str] = self.declare(
+        self.working_dir: Optional[Path] = self.declare(
             'working_dir',
             ConfigValue(
-                domain=str,
+                domain=Path(),
                 default=None,
                 description="The directory in which generated files should be saved. "
                 "This replaces the `keepfiles` option.",
@@ -134,7 +135,8 @@ class SolverConfig(ConfigDict):
         self.time_limit: Optional[float] = self.declare(
             'time_limit',
             ConfigValue(
-                domain=NonNegativeFloat, description="Time limit applied to the solver."
+                domain=NonNegativeFloat,
+                description="Time limit applied to the solver (in seconds).",
             ),
         )
         self.solver_options: ConfigDict = self.declare(
@@ -201,7 +203,7 @@ class AutoUpdateConfig(ConfigDict):
     check_for_new_objective: bool
     update_constraints: bool
     update_vars: bool
-    update_params: bool
+    update_parameters: bool
     update_named_expressions: bool
     update_objective: bool
     treat_fixed_vars_as_params: bool
@@ -257,7 +259,7 @@ class AutoUpdateConfig(ConfigDict):
                 description="""
                 If False, new/old parameters will not be automatically detected on subsequent 
                 solves. Use False only when manually updating the solver with opt.add_parameters() and 
-                opt.remove_params() or when you are certain parameters are not being added to /
+                opt.remove_parameters() or when you are certain parameters are not being added to /
                 removed from the model.""",
             ),
         )
@@ -297,15 +299,15 @@ class AutoUpdateConfig(ConfigDict):
                 opt.update_variables() or when you are certain variables are not being modified.""",
             ),
         )
-        self.update_params: bool = self.declare(
-            'update_params',
+        self.update_parameters: bool = self.declare(
+            'update_parameters',
             ConfigValue(
                 domain=bool,
                 default=True,
                 description="""
                 If False, changes to parameter values will not be automatically detected on 
                 subsequent solves. Use False only when manually updating the solver with 
-                opt.update_params() or when you are certain parameters are not being modified.""",
+                opt.update_parameters() or when you are certain parameters are not being modified.""",
             ),
         )
         self.update_named_expressions: bool = self.declare(

@@ -274,11 +274,11 @@ class PersistentSolverUtils(abc.ABC):
             del self._vars[v_id]
 
     @abc.abstractmethod
-    def _remove_params(self, params: List[_ParamData]):
+    def _remove_parameters(self, params: List[_ParamData]):
         pass
 
-    def remove_params(self, params: List[_ParamData]):
-        self._remove_params(params)
+    def remove_parameters(self, params: List[_ParamData]):
+        self._remove_parameters(params)
         for p in params:
             del self._params[id(p)]
 
@@ -297,7 +297,7 @@ class PersistentSolverUtils(abc.ABC):
                 )
             )
         )
-        self.remove_params(
+        self.remove_parameters(
             list(
                 dict(
                     (id(p), p)
@@ -325,7 +325,7 @@ class PersistentSolverUtils(abc.ABC):
         self._update_variables(variables)
 
     @abc.abstractmethod
-    def update_params(self):
+    def update_parameters(self):
         pass
 
     def update(self, timer: HierarchicalTimer = None):
@@ -396,12 +396,12 @@ class PersistentSolverUtils(abc.ABC):
         self.remove_sos_constraints(old_sos)
         timer.stop('cons')
         timer.start('params')
-        self.remove_params(old_params)
+        self.remove_parameters(old_params)
 
         # sticking this between removal and addition
         # is important so that we don't do unnecessary work
-        if config.update_params:
-            self.update_params()
+        if config.update_parameters:
+            self.update_parameters()
 
         self.add_parameters(new_params)
         timer.stop('params')

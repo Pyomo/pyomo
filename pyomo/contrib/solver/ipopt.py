@@ -13,16 +13,10 @@ import os
 import subprocess
 import datetime
 import io
-import sys
 from typing import Mapping, Optional, Sequence
 
 from pyomo.common import Executable
-from pyomo.common.config import (
-    ConfigValue,
-    NonNegativeFloat,
-    document_kwargs_from_configdict,
-    ConfigDict,
-)
+from pyomo.common.config import ConfigValue, document_kwargs_from_configdict, ConfigDict
 from pyomo.common.errors import PyomoException, DeveloperError
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.timing import HierarchicalTimer
@@ -78,54 +72,7 @@ class IpoptConfig(SolverConfig):
             ),
         )
         self.writer_config: ConfigDict = self.declare(
-            'writer_config', NLWriter.CONFIG()
-        )
-
-
-class IpoptResults(Results):
-    def __init__(
-        self,
-        description=None,
-        doc=None,
-        implicit=False,
-        implicit_domain=None,
-        visibility=0,
-    ):
-        super().__init__(
-            description=description,
-            doc=doc,
-            implicit=implicit,
-            implicit_domain=implicit_domain,
-            visibility=visibility,
-        )
-        self.timing_info.ipopt_excluding_nlp_functions: Optional[float] = (
-            self.timing_info.declare(
-                'ipopt_excluding_nlp_functions',
-                ConfigValue(
-                    domain=NonNegativeFloat,
-                    default=None,
-                    description="Total CPU seconds in IPOPT without function evaluations.",
-                ),
-            )
-        )
-        self.timing_info.nlp_function_evaluations: Optional[float] = (
-            self.timing_info.declare(
-                'nlp_function_evaluations',
-                ConfigValue(
-                    domain=NonNegativeFloat,
-                    default=None,
-                    description="Total CPU seconds in NLP function evaluations.",
-                ),
-            )
-        )
-        self.timing_info.total_seconds: Optional[float] = self.timing_info.declare(
-            'total_seconds',
-            ConfigValue(
-                domain=NonNegativeFloat,
-                default=None,
-                description="Total seconds in IPOPT. NOTE: Newer versions of IPOPT (3.14+) "
-                "no longer separate timing information.",
-            ),
+            'writer_config', ConfigValue(default=NLWriter.CONFIG(), description="Configuration that controls options in the NL writer.")
         )
 
 
@@ -416,11 +363,11 @@ class Ipopt(SolverBase):
 
             if len(nl_info.variables) == 0:
                 if len(nl_info.eliminated_vars) == 0:
-                    results = IpoptResults()
+                    results = Results()
                     results.termination_condition = TerminationCondition.emptyModel
                     results.solution_loader = SolSolutionLoader(None, None)
                 else:
-                    results = IpoptResults()
+                    results = Results()
                     results.termination_condition = (
                         TerminationCondition.convergenceCriteriaSatisfied
                     )
@@ -435,18 +382,22 @@ class Ipopt(SolverBase):
                         results = self._parse_solution(sol_file, nl_info)
                         timer.stop('parse_sol')
                 else:
-                    results = IpoptResults()
+                    results = Results()
                 if process.returncode != 0:
                     results.extra_info.return_code = process.returncode
                     results.termination_condition = TerminationCondition.error
                     results.solution_loader = SolSolutionLoader(None, None)
                 else:
                     results.iteration_count = iters
-                    results.timing_info.ipopt_excluding_nlp_functions = (
-                        ipopt_time_nofunc
-                    )
-                    results.timing_info.nlp_function_evaluations = ipopt_time_func
-                    results.timing_info.total_seconds = ipopt_total_time
+                    if ipopt_time_nofunc is not None:
+                        results.timing_info.ipopt_excluding_nlp_functions = (
+                            ipopt_time_nofunc
+                        )
+
+                    if ipopt_time_func is not None:
+                        results.timing_info.nlp_function_evaluations = ipopt_time_func
+                    if ipopt_total_time is not None:
+                        results.timing_info.total_seconds = ipopt_total_time
         if (
             config.raise_exception_on_nonoptimal_result
             and results.solution_status != SolutionStatus.optimal
@@ -554,7 +505,7 @@ class Ipopt(SolverBase):
         return iters, nofunc_time, func_time, total_time
 
     def _parse_solution(self, instream: io.TextIOBase, nl_info: NLWriterInfo):
-        results = IpoptResults()
+        results = Results()
         res, sol_data = parse_sol_file(
             sol_file=instream, nl_info=nl_info, result=results
         )

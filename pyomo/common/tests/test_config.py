@@ -25,7 +25,6 @@
 #  ___________________________________________________________________________
 
 import argparse
-import datetime
 import enum
 import os
 import os.path

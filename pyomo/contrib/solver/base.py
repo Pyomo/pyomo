@@ -125,7 +125,7 @@ class SolverBase(abc.ABC):
         """
 
     @abc.abstractmethod
-    def available(self):
+    def available(self) -> bool:
         """Test if the solver is available on this system.
 
         Nominally, this will return True if the solver interface is
@@ -159,7 +159,7 @@ class SolverBase(abc.ABC):
             A tuple representing the version
         """
 
-    def is_persistent(self):
+    def is_persistent(self) -> bool:
         """
         Returns
         -------
@@ -178,9 +178,7 @@ class PersistentSolverBase(SolverBase):
     Example usage can be seen in the Gurobi interface.
     """
 
-    CONFIG = PersistentSolverConfig()
-
-    @document_kwargs_from_configdict(CONFIG)
+    @document_kwargs_from_configdict(PersistentSolverConfig())
     @abc.abstractmethod
     def solve(self, model: _BlockData, **kwargs) -> Results:
         super().solve(model, kwargs)
@@ -312,7 +310,7 @@ class PersistentSolverBase(SolverBase):
         """
 
     @abc.abstractmethod
-    def remove_params(self, params: List[_ParamData]):
+    def remove_parameters(self, params: List[_ParamData]):
         """
         Remove parameters from the model
         """
@@ -336,7 +334,7 @@ class PersistentSolverBase(SolverBase):
         """
 
     @abc.abstractmethod
-    def update_params(self):
+    def update_parameters(self):
         """
         Update parameters on the model
         """
