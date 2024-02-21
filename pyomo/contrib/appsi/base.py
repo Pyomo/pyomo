@@ -597,7 +597,6 @@ class UpdateConfig(ConfigDict):
 
 class Solver(abc.ABC):
     class Availability(enum.IntEnum):
-        """Docstring"""
         NotFound = 0
         BadVersion = -1
         BadLicense = -2
