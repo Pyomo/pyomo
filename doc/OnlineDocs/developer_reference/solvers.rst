@@ -1,6 +1,16 @@
 Future Solver Interface Changes
 ===============================
 
+.. note::
+
+   The new solver interfaces are still under active development.  They
+   are included in the releases as development previews.  Please be
+   aware that APIs and functionality may change with no notice.
+
+   We welcome any feedback and ideas as we develop this capability.
+   Please post feedback on
+   `Issue 1030 <https://github.com/Pyomo/pyomo/issues/1030>`_.
+
 Pyomo offers interfaces into multiple solvers, both commercial and open
 source.  To support better capabilities for solver interfaces, the Pyomo
 team is actively redesigning the existing interfaces to make them more
