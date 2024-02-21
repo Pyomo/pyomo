@@ -9,8 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['RangeSet']
-
 from .set import RangeSet
 
 from pyomo.common.deprecation import deprecation_warning

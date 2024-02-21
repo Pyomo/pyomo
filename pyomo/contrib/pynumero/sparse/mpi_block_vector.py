@@ -17,8 +17,6 @@ from .block_vector import assert_block_structure as block_vector_assert_block_st
 import numpy as np
 import operator
 
-__all__ = ['MPIBlockVector']
-
 
 def assert_block_structure(vec):
     if vec.has_none:

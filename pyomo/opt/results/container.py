@@ -9,24 +9,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = [
-    'UndefinedData',
-    'undefined',
-    'ignore',
-    'ScalarData',
-    'ListContainer',
-    'MapContainer',
-    'default_print_options',
-    'ScalarType',
-]
-
 import copy
-
-from math import inf
-from pyomo.common.collections import Bunch
-
 import enum
 from io import StringIO
+from math import inf
+
+from pyomo.common.collections import Bunch
 
 
 class ScalarType(str, enum.Enum):
