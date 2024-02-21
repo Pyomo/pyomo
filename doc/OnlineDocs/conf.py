@@ -83,6 +83,7 @@ extensions = [
     'sphinx.ext.doctest',
     'sphinx.ext.todo',
     'sphinx_copybutton',
+    'enum_tools.autoenum',
     #'sphinx.ext.githubpages',
 ]
 

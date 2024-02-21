@@ -214,7 +214,7 @@ class NLWriter(object):
     CONFIG.declare(
         'skip_trivial_constraints',
         ConfigValue(
-            default=False,
+            default=True,
             domain=bool,
             description='Skip writing constraints whose body is constant',
         ),
@@ -338,6 +338,9 @@ class NLWriter(object):
         config.scale_model = False
         config.linear_presolve = False
 
+        # just for backwards compatibility
+        config.skip_trivial_constraints = False
+
         if config.symbolic_solver_labels:
             _open = lambda fname: open(fname, 'w')
         else:
@@ -369,7 +372,9 @@ class NLWriter(object):
         return filename, symbol_map
 
     @document_kwargs_from_configdict(CONFIG)
-    def write(self, model, ostream, rowstream=None, colstream=None, **options):
+    def write(
+        self, model, ostream, rowstream=None, colstream=None, **options
+    ) -> NLWriterInfo:
         """Write a model in NL format.
 
         Returns
