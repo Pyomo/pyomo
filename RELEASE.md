@@ -11,6 +11,7 @@ The following are highlights of the 6.7 release series:
  - New writer for converting linear models to matrix form
  - New packages:
     - latex_printer (print Pyomo models to a LaTeX compatible format)
+    - contrib.solve: Part 1 of refactoring Pyomo's solver interfaces
  - ...and of course numerous minor bug fixes and performance enhancements
 
 A full list of updates and changes is available in the
