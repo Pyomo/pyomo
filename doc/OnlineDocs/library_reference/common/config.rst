@@ -36,6 +36,7 @@ Domain validators
    NonPositiveFloat
    NonNegativeFloat
    In
+   IsInstance
    InEnum
    ListOf
    Module
@@ -75,6 +76,7 @@ Domain validators
 .. autofunction:: NonPositiveFloat
 .. autofunction:: NonNegativeFloat
 .. autoclass:: In
+.. autoclass:: IsInstance
 .. autoclass:: InEnum
 .. autoclass:: ListOf
 .. autoclass:: Module

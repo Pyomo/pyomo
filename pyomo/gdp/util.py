@@ -169,7 +169,10 @@ class GDPTree:
         Arg:
             u : A node in the forest
         """
-        return self.parent(self.parent(u))
+        if u.ctype is Disjunct:
+            return self.parent(self.parent(u))
+        else:
+            return self.parent(u)
 
     def root_disjunct(self, u):
         """Returns the highest parent Disjunct in the hierarchy, or None if
@@ -183,7 +186,7 @@ class GDPTree:
         while True:
             if parent is None:
                 return rootmost_disjunct
-            if isinstance(parent, _DisjunctData) or parent.ctype is Disjunct:
+            if parent.ctype is Disjunct:
                 rootmost_disjunct = parent
             parent = self.parent(parent)
 
@@ -243,7 +246,7 @@ class GDPTree:
     @property
     def disjunct_nodes(self):
         for v in self._vertices:
-            if isinstance(v, _DisjunctData) or v.ctype is Disjunct:
+            if v.ctype is Disjunct:
                 yield v
 
 

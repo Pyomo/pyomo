@@ -9,9 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-
-__all__ = ['AsynchronousSolverManager', 'SolverManagerFactory']
-
 from pyomo.common import Factory
 from pyomo.opt.parallel.manager import AsynchronousActionManager
 

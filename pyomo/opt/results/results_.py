@@ -9,8 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['SolverResults']
-
 import math
 import sys
 import copy
@@ -18,7 +16,7 @@ import json
 import logging
 import os.path
 
-from pyomo.common.dependencies import yaml, yaml_load_args, yaml_available
+from pyomo.common.dependencies import yaml, yaml_load_args
 import pyomo.opt
 from pyomo.opt.results.container import undefined, ignore, ListContainer, MapContainer
 import pyomo.opt.results.solution

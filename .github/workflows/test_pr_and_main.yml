@@ -76,7 +76,7 @@ jobs:
         - os: windows-latest
           TARGET: win
           PYENV: conda
-          PACKAGES: glpk pytest-qt
+          PACKAGES: glpk pytest-qt filelock
 
         - os: ubuntu-latest
           python: '3.11'

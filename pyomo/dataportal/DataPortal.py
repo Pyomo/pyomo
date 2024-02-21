@@ -9,8 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['DataPortal']
-
 import logging
 from pyomo.common.log import is_debug_set
 from pyomo.dataportal.factory import DataManagerFactory, UnknownDataManager

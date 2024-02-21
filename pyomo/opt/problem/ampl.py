@@ -14,8 +14,6 @@ Utilities to support the definition of optimization applications that
 can be optimized with the Acro COLIN optimizers.
 """
 
-__all__ = ['AmplModel']
-
 import os
 
 from pyomo.opt.base import ProblemFormat, convert_problem, guess_format

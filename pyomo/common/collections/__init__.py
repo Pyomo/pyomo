@@ -14,6 +14,6 @@ from collections.abc import MutableMapping, MutableSet, Mapping, Set, Sequence
 from collections import UserDict
 
 from .orderedset import OrderedDict, OrderedSet
-from .component_map import ComponentMap
+from .component_map import ComponentMap, DefaultComponentMap
 from .component_set import ComponentSet
 from .bunch import Bunch

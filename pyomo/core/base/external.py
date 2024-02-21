@@ -43,8 +43,6 @@ import pyomo.core.expr as EXPR
 from pyomo.core.base.component import Component
 from pyomo.core.base.units_container import units
 
-__all__ = ('ExternalFunction',)
-
 logger = logging.getLogger('pyomo.core')
 nan = float('nan')
 
