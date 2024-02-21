@@ -92,11 +92,10 @@ class GDPBinaryMultiplicationTransformation(GDP_to_MIP_Transformation):
             or_expr += disjunct.binary_indicator_var
             self._transform_disjunct(disjunct, transBlock)
 
-        rhs = 1 if parent_disjunct is None else parent_disjunct.binary_indicator_var
         if obj.xor:
-            xorConstraint[index] = or_expr == rhs
+            xorConstraint[index] = or_expr == 1
         else:
-            xorConstraint[index] = or_expr >= rhs
+            xorConstraint[index] = or_expr >= 1
         # Mark the DisjunctionData as transformed by mapping it to its XOR
         # constraint.
         obj._algebraic_constraint = weakref_ref(xorConstraint[index])
