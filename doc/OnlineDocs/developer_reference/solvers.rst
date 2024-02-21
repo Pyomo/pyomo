@@ -82,7 +82,7 @@ Here we use the new interface by importing it directly:
 .. testcode::
    :skipif: not ipopt_available
 
-    # Direct import
+   # Direct import
    import pyomo.environ as pyo
    from pyomo.contrib.solver.util import assert_optimal_termination
    from pyomo.contrib.solver.ipopt import Ipopt
@@ -119,7 +119,7 @@ Here we use the new interface by retrieving it from the new ``SolverFactory``:
 .. testcode::
    :skipif: not ipopt_available
 
-    # Direct import
+   # Import through new SolverFactory
    import pyomo.environ as pyo
    from pyomo.contrib.solver.util import assert_optimal_termination
    from pyomo.contrib.solver.factory import SolverFactory
@@ -151,14 +151,14 @@ Here we use the new interface by retrieving it from the new ``SolverFactory``:
 Switching all of Pyomo to use the new interfaces
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-We also provide a mechansim to get a "preview" of the future where we
+We also provide a mechanism to get a "preview" of the future where we
 replace the existing (legacy) SolverFactory and utilities with the new
 (development) version:
 
 .. testcode::
    :skipif: not ipopt_available
 
-    # Change SolverFactory version
+   # Change default SolverFactory version
    import pyomo.environ as pyo
    from pyomo.contrib.solver.util import assert_optimal_termination
    from pyomo.__future__ import solver_factory_v3
