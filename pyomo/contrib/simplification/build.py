@@ -9,15 +9,16 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pybind11.setup_helpers import Pybind11Extension, build_ext
-from pyomo.common.fileutils import this_file_dir, find_library
-import os
-from distutils.dist import Distribution
-import sys
-import shutil
 import glob
+import os
+import shutil
+import sys
 import tempfile
+from distutils.dist import Distribution
+
+from pybind11.setup_helpers import Pybind11Extension, build_ext
 from pyomo.common.envvar import PYOMO_CONFIG_DIR
+from pyomo.common.fileutils import find_library, this_file_dir
 
 
 def build_ginac_interface(args=[]):
