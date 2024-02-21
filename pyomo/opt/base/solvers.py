@@ -178,7 +178,11 @@ class SolverFactoryClass(Factory):
         return opt
 
 
+LegacySolverFactory = SolverFactoryClass('solver type')
+
 SolverFactory = SolverFactoryClass('solver type')
+SolverFactory._cls = LegacySolverFactory._cls
+SolverFactory._doc = LegacySolverFactory._doc
 
 
 #

@@ -786,7 +786,7 @@ arguments (which have been ignored):"""
             profile_memory = kwds.get('profile_memory', 0)
 
             if profile_memory >= 2 and pympler_available:
-                mem_used = pympler.muppy.get_size(muppy.get_objects())
+                mem_used = pympler.muppy.get_size(pympler.muppy.get_objects())
                 print("")
                 print(
                     "      Total memory = %d bytes prior to model "
@@ -795,7 +795,7 @@ arguments (which have been ignored):"""
 
                 if profile_memory >= 3:
                     gc.collect()
-                    mem_used = pympler.muppy.get_size(muppy.get_objects())
+                    mem_used = pympler.muppy.get_size(pympler.muppy.get_objects())
                     print(
                         "      Total memory = %d bytes prior to model "
                         "construction (after garbage collection)" % mem_used

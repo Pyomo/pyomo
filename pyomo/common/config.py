@@ -39,7 +39,6 @@ from pyomo.common.deprecation import (
     deprecation_warning,
     relocated_module_attribute,
 )
-from pyomo.common.errors import DeveloperError
 from pyomo.common.fileutils import import_file
 from pyomo.common.formatting import wrap_reStructuredText
 from pyomo.common.modeling import NOTSET
@@ -1106,8 +1105,11 @@ The defaults generate LaTeX documentation:
 
 
 def _dump(*args, **kwds):
+    # TODO: Change the default behavior to no longer be YAML.
+    # This was a legacy decision that may no longer be the best
+    # decision, given changes to technology over the years.
     try:
-        from yaml import dump
+        from yaml import safe_dump as dump
     except ImportError:
         # dump = lambda x,**y: str(x)
         # YAML uses lowercase True/False
@@ -1168,7 +1170,9 @@ def _value2string(prefix, value, obj):
         try:
             _data = value._data if value is obj else value
             if getattr(builtins, _data.__class__.__name__, None) is not None:
-                _str += _dump(_data, default_flow_style=True).rstrip()
+                _str += _dump(
+                    _data, default_flow_style=True, allow_unicode=True
+                ).rstrip()
                 if _str.endswith("..."):
                     _str = _str[:-3].rstrip()
             else:
