@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -237,10 +237,7 @@ class RadixLinearization(Transformation):
         K = max(b.DISCRETIZATION)
 
         _dw = Var(
-            bounds=(
-                min(0, _lb * 2**-K, _ub * 2**-K),
-                max(0, _lb * 2**-K, _ub * 2**-K),
-            )
+            bounds=(min(0, _lb * 2**-K, _ub * 2**-K), max(0, _lb * 2**-K, _ub * 2**-K))
         )
         b.add_component("dw%s_v%s" % (u_idx, v_idx), _dw)
 

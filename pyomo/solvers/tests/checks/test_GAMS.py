@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -212,12 +212,12 @@ class GAMSTests(unittest.TestCase):
     def test_long_var_py(self):
         with SolverFactory("gams", solver_io="python") as opt:
             m = ConcreteModel()
-            x = (
-                m.a23456789012345678901234567890123456789012345678901234567890123
-            ) = Var()
-            y = (
-                m.b234567890123456789012345678901234567890123456789012345678901234
-            ) = Var()
+            x = m.a23456789012345678901234567890123456789012345678901234567890123 = (
+                Var()
+            )
+            y = m.b234567890123456789012345678901234567890123456789012345678901234 = (
+                Var()
+            )
             z = (
                 m.c23456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
             ) = Var()
@@ -236,12 +236,12 @@ class GAMSTests(unittest.TestCase):
     def test_long_var_gms(self):
         with SolverFactory("gams", solver_io="gms") as opt:
             m = ConcreteModel()
-            x = (
-                m.a23456789012345678901234567890123456789012345678901234567890123
-            ) = Var()
-            y = (
-                m.b234567890123456789012345678901234567890123456789012345678901234
-            ) = Var()
+            x = m.a23456789012345678901234567890123456789012345678901234567890123 = (
+                Var()
+            )
+            y = m.b234567890123456789012345678901234567890123456789012345678901234 = (
+                Var()
+            )
             z = (
                 m.c23456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
             ) = Var()

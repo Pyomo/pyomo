@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -547,9 +547,9 @@ class PersistentSolver(DirectOrPersistentSolver):
                             result.solution(0).symbol_map = getattr(
                                 _model, "._symbol_maps"
                             )[result._smap_id]
-                            result.solution(
-                                0
-                            ).default_variable_value = self._default_variable_value
+                            result.solution(0).default_variable_value = (
+                                self._default_variable_value
+                            )
                             if self._load_solutions:
                                 _model.load_solution(result.solution(0))
                         else:

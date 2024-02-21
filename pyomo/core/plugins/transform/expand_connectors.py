@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -180,9 +180,11 @@ class ExpandConnectors(Transformation):
                     # -3 if v is None else
                     -2
                     if k in c.aggregators
-                    else -1
-                    if not hasattr(v, 'is_indexed') or not v.is_indexed()
-                    else len(v)
+                    else (
+                        -1
+                        if not hasattr(v, 'is_indexed') or not v.is_indexed()
+                        else len(v)
+                    )
                 )
                 ref[k] = (v, _len, c)
 
@@ -220,11 +222,15 @@ class ExpandConnectors(Transformation):
                 _len = (
                     -3
                     if _v is None
-                    else -2
-                    if k in c.aggregators
-                    else -1
-                    if not hasattr(_v, 'is_indexed') or not _v.is_indexed()
-                    else len(_v)
+                    else (
+                        -2
+                        if k in c.aggregators
+                        else (
+                            -1
+                            if not hasattr(_v, 'is_indexed') or not _v.is_indexed()
+                            else len(_v)
+                        )
+                    )
                 )
                 if (_len >= 0) ^ (v[1] >= 0):
                     raise ValueError(

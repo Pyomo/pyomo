@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 from .gdp_to_mip_transformation import GDP_to_MIP_Transformation
 from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.core.base import TransformationFactory
@@ -12,7 +23,9 @@ logger = logging.getLogger(__name__)
 
 @TransformationFactory.register(
     'gdp.binary_multiplication',
-    doc="Reformulate the GDP as an MINLP by multiplying f(x) <= 0 by y to get f(x) * y <= 0 where y is the binary corresponding to the Boolean indicator var of the Disjunct containing f(x) <= 0.",
+    doc="Reformulate the GDP as an MINLP by multiplying f(x) <= 0 by y to get "
+    "f(x) * y <= 0 where y is the binary corresponding to the Boolean indicator "
+    "var of the Disjunct containing f(x) <= 0.",
 )
 class GDPBinaryMultiplicationTransformation(GDP_to_MIP_Transformation):
     CONFIG = ConfigDict("gdp.binary_multiplication")
@@ -79,12 +92,10 @@ class GDPBinaryMultiplicationTransformation(GDP_to_MIP_Transformation):
             or_expr += disjunct.binary_indicator_var
             self._transform_disjunct(disjunct, transBlock)
 
-        # rhs = 1 if parent_disjunct is None else parent_disjunct.binary_indicator_var
-        rhs = 1
         if obj.xor:
-            xorConstraint[index] = or_expr == rhs
+            xorConstraint[index] = or_expr == 1
         else:
-            xorConstraint[index] = or_expr >= rhs
+            xorConstraint[index] = or_expr >= 1
         # Mark the DisjunctionData as transformed by mapping it to its XOR
         # constraint.
         obj._algebraic_constraint = weakref_ref(xorConstraint[index])
@@ -145,30 +156,21 @@ class GDPBinaryMultiplicationTransformation(GDP_to_MIP_Transformation):
         # over the constraint indices, but I don't think it matters a lot.)
         unique = len(newConstraint)
         name = c.local_name + "_%s" % unique
+        transformed = constraintMap['transformedConstraints'][c] = []
 
         lb, ub = c.lower, c.upper
         if (c.equality or lb is ub) and lb is not None:
             # equality
             newConstraint.add((name, i, 'eq'), (c.body - lb) * indicator_var == 0)
-            constraintMap['transformedConstraints'][c] = [newConstraint[name, i, 'eq']]
+            transformed.append(newConstraint[name, i, 'eq'])
             constraintMap['srcConstraints'][newConstraint[name, i, 'eq']] = c
         else:
             # inequality
             if lb is not None:
                 newConstraint.add((name, i, 'lb'), 0 <= (c.body - lb) * indicator_var)
-                constraintMap['transformedConstraints'][c] = [
-                    newConstraint[name, i, 'lb']
-                ]
+                transformed.append(newConstraint[name, i, 'lb'])
                 constraintMap['srcConstraints'][newConstraint[name, i, 'lb']] = c
             if ub is not None:
                 newConstraint.add((name, i, 'ub'), (c.body - ub) * indicator_var <= 0)
-                transformed = constraintMap['transformedConstraints'].get(c)
-                if transformed is not None:
-                    constraintMap['transformedConstraints'][c].append(
-                        newConstraint[name, i, 'ub']
-                    )
-                else:
-                    constraintMap['transformedConstraints'][c] = [
-                        newConstraint[name, i, 'ub']
-                    ]
+                transformed.append(newConstraint[name, i, 'ub'])
                 constraintMap['srcConstraints'][newConstraint[name, i, 'ub']] = c

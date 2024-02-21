@@ -1,8 +1,3 @@
-1 Set Declarations
-    cc_index : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :    3 : {0, 1, 2}
-
 4 Var Declarations
     x1 : Size=1, Index=None
         Key  : Lower : Value : Upper : Fixed : Stale : Domain
@@ -23,7 +18,7 @@
         None :   0.5 :   x1 :   0.5 :   True
 
 1 Block Declarations
-    cc : Size=0, Index=cc_index, Active=True
+    cc : Size=0, Index={0, 1, 2}, Active=True
         Key : Arg0 : Arg1 : Active
 
-7 Declarations: y x1 x2 x3 cc_index cc keep_var_con
+6 Declarations: y x1 x2 x3 cc keep_var_con

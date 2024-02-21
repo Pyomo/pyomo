@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -176,12 +176,14 @@ class ToBaronVisitor(_ToStringVisitor):
 
     def _linear_to_string(self, node):
         values = [
-            self._monomial_to_string(arg)
-            if (
-                arg.__class__ is EXPR.MonomialTermExpression
-                and not arg.arg(1).is_fixed()
+            (
+                self._monomial_to_string(arg)
+                if (
+                    arg.__class__ is EXPR.MonomialTermExpression
+                    and not arg.arg(1).is_fixed()
+                )
+                else ftoa(value(arg))
             )
-            else ftoa(value(arg))
             for arg in node.args
         ]
         return node._to_string(values, False, self.smap)
@@ -644,19 +646,18 @@ class ProblemWriter_bar(AbstractProblemWriter):
         # variables.
         #
         equation_section_stream = StringIO()
-        (
-            referenced_variable_ids,
-            branching_priorities_suffixes,
-        ) = self._write_equations_section(
-            model,
-            equation_section_stream,
-            all_blocks_list,
-            active_components_data_var,
-            symbol_map,
-            c_labeler,
-            output_fixed_variable_bounds,
-            skip_trivial_constraints,
-            sorter,
+        (referenced_variable_ids, branching_priorities_suffixes) = (
+            self._write_equations_section(
+                model,
+                equation_section_stream,
+                all_blocks_list,
+                active_components_data_var,
+                symbol_map,
+                c_labeler,
+                output_fixed_variable_bounds,
+                skip_trivial_constraints,
+                sorter,
+            )
         )
 
         #

@@ -1,21 +1,13 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-
-#
-# The definition of __all__ is a bit funky here, because we want to
-# expose symbols in pyomo.core.expr.current that are not included in
-# pyomo.core.expr.  The idea is that pyomo.core.expr provides symbols
-# that are used by general users, but pyomo.core.expr.current provides
-# symbols that are used by developers.
-#
 
 from . import (
     numvalue,
@@ -56,6 +48,7 @@ from .logical_expr import (
     #
     BooleanValue,
     BooleanConstant,
+    BooleanExpression,
     BooleanExpressionBase,
     #
     UnaryBooleanExpression,
@@ -70,6 +63,8 @@ from .logical_expr import (
     ExactlyExpression,
     AtMostExpression,
     AtLeastExpression,
+    AllDifferentExpression,
+    CountIfExpression,
     #
     land,
     lnot,
@@ -79,6 +74,8 @@ from .logical_expr import (
     exactly,
     atleast,
     atmost,
+    all_different,
+    count_if,
     implies,
 )
 from .numeric_expr import (

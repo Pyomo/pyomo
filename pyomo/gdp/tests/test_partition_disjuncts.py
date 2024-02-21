@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -227,14 +227,18 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         aux22ub,
         partitions,
     ):
-        (
-            b,
-            disj1,
-            disj2,
-            aux_vars1,
-            aux_vars2,
-        ) = self.check_transformation_block_structure(
-            m, aux11lb, aux11ub, aux12lb, aux12ub, aux21lb, aux21ub, aux22lb, aux22ub
+        (b, disj1, disj2, aux_vars1, aux_vars2) = (
+            self.check_transformation_block_structure(
+                m,
+                aux11lb,
+                aux11ub,
+                aux12lb,
+                aux12ub,
+                aux21lb,
+                aux21ub,
+                aux22lb,
+                aux22ub,
+            )
         )
 
         self.check_disjunct_constraints(disj1, disj2, aux_vars1, aux_vars2)
@@ -351,14 +355,12 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         else:
             block_prefix = disjunction_block + "."
             disjunction_parent = m.component(disjunction_block)
-        (
-            inner_b,
-            inner_disj1,
-            inner_disj2,
-        ) = self.check_transformation_block_disjuncts_and_constraints(
-            disj2,
-            disjunction_parent.disj2.disjunction,
-            "%sdisj2.disjunction" % block_prefix,
+        (inner_b, inner_disj1, inner_disj2) = (
+            self.check_transformation_block_disjuncts_and_constraints(
+                disj2,
+                disjunction_parent.disj2.disjunction,
+                "%sdisj2.disjunction" % block_prefix,
+            )
         )
 
         # Has it's own indicator var, the aux vars, and the Reference to the
@@ -753,13 +755,9 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         # This actually changes the structure of the model because fixed vars
         # move to the constants. I think this is fair, and we should allow it
         # because it will allow for a tighter relaxation.
-        (
-            b,
-            disj1,
-            disj2,
-            aux_vars1,
-            aux_vars2,
-        ) = self.check_transformation_block_structure(m, 0, 36, 0, 72, -9, 16, -18, 32)
+        (b, disj1, disj2, aux_vars1, aux_vars2) = (
+            self.check_transformation_block_structure(m, 0, 36, 0, 72, -9, 16, -18, 32)
+        )
 
         # check disjunct constraints
         self.check_disjunct_constraints(disj1, disj2, aux_vars1, aux_vars2)
@@ -1702,9 +1700,7 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
             compute_bounds_method=compute_fbbt_bounds,
         )
 
-        self.check_transformation_block(
-            m, 0, (2 * 6**4) ** 0.25, 0, (2 * 5**4) ** 0.25
-        )
+        self.check_transformation_block(m, 0, (2 * 6**4) ** 0.25, 0, (2 * 5**4) ** 0.25)
 
     def test_invalid_partition_error(self):
         m = models.makeNonQuadraticNonlinearGDP()

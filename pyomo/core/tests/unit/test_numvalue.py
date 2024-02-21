@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -562,7 +562,8 @@ class Test_as_numeric(unittest.TestCase):
     @unittest.skipUnless(numpy_available, "This test requires NumPy")
     def test_automatic_numpy_registration(self):
         cmd = (
-            'import pyomo; from pyomo.core.base import Var, Param; import numpy as np; '
+            'import pyomo; from pyomo.core.base import Var, Param; '
+            'from pyomo.core.base.units_container import units; import numpy as np; '
             'print(np.float64 in pyomo.common.numeric_types.native_numeric_types); '
             '%s; print(np.float64 in pyomo.common.numeric_types.native_numeric_types)'
         )
@@ -582,6 +583,11 @@ class Test_as_numeric(unittest.TestCase):
         _tester('Var() + np.float64(5)')
         _tester('v = Var(); v.construct(); v.value = np.float64(5)')
         _tester('p = Param(mutable=True); p.construct(); p.value = np.float64(5)')
+        _tester('v = Var(units=units.m); v.construct(); v.value = np.float64(5)')
+        _tester(
+            'p = Param(mutable=True, units=units.m); p.construct(); '
+            'p.value = np.float64(5)'
+        )
 
 
 if __name__ == "__main__":

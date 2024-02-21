@@ -1,15 +1,13 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-
-__all__ = ('OptSolver', 'SolverFactory', 'UnknownSolver', 'check_available_solvers')
 
 import re
 import sys
@@ -18,12 +16,11 @@ import logging
 import shlex
 
 from pyomo.common import Factory
-from pyomo.common.config import ConfigDict
 from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import Bunch
 
 from pyomo.opt.base.convert import convert_problem
-from pyomo.opt.base.formats import ResultsFormat, ProblemFormat
+from pyomo.opt.base.formats import ResultsFormat
 import pyomo.opt.base.results
 
 logger = logging.getLogger('pyomo.opt')
@@ -181,7 +178,11 @@ class SolverFactoryClass(Factory):
         return opt
 
 
+LegacySolverFactory = SolverFactoryClass('solver type')
+
 SolverFactory = SolverFactoryClass('solver type')
+SolverFactory._cls = LegacySolverFactory._cls
+SolverFactory._doc = LegacySolverFactory._doc
 
 
 #
@@ -641,9 +642,9 @@ class OptSolver(object):
                         result.solution(0).symbol_map = getattr(
                             _model, "._symbol_maps"
                         )[result._smap_id]
-                        result.solution(
-                            0
-                        ).default_variable_value = self._default_variable_value
+                        result.solution(0).default_variable_value = (
+                            self._default_variable_value
+                        )
                         if self._load_solutions:
                             _model.load_solution(result.solution(0))
                     else:
@@ -699,12 +700,10 @@ class OptSolver(object):
 
         if self._problem_format:
             write_start_time = time.time()
-            (
-                self._problem_files,
-                self._problem_format,
-                self._smap_id,
-            ) = self._convert_problem(
-                args, self._problem_format, self._valid_problem_formats, **kwds
+            (self._problem_files, self._problem_format, self._smap_id) = (
+                self._convert_problem(
+                    args, self._problem_format, self._valid_problem_formats, **kwds
+                )
             )
             total_time = time.time() - write_start_time
             if self._report_timing:

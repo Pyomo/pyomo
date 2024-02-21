@@ -1,15 +1,29 @@
-from pybind11.setup_helpers import Pybind11Extension, build_ext
-from pyomo.common.fileutils import this_file_dir, find_library
-import os
-from distutils.dist import Distribution
-import sys
-import shutil
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import glob
+import os
+import shutil
+import sys
 import tempfile
+from distutils.dist import Distribution
+
+from pybind11.setup_helpers import Pybind11Extension, build_ext
 from pyomo.common.envvar import PYOMO_CONFIG_DIR
+from pyomo.common.fileutils import find_library, this_file_dir
 
 
-def build_ginac_interface(args=[]):
+def build_ginac_interface(args=None):
+    if args is None:
+        args = list()
     dname = this_file_dir()
     _sources = ['ginac_interface.cpp']
     sources = list()
@@ -17,7 +31,6 @@ def build_ginac_interface(args=[]):
         sources.append(os.path.join(dname, fname))
 
     ginac_lib = find_library('ginac')
-    print(ginac_lib)
     if ginac_lib is None:
         raise RuntimeError(
             'could not find GiNaC library; please make sure it is in the LD_LIBRARY_PATH environment variable'
@@ -50,7 +63,7 @@ def build_ginac_interface(args=[]):
         extra_compile_args=extra_args,
     )
 
-    class ginac_build_ext(build_ext):
+    class ginacBuildExt(build_ext):
         def run(self):
             basedir = os.path.abspath(os.path.curdir)
             if self.inplace:
@@ -60,7 +73,7 @@ def build_ginac_interface(args=[]):
             print("Building in '%s'" % tmpdir)
             os.chdir(tmpdir)
             try:
-                super(ginac_build_ext, self).run()
+                super(ginacBuildExt, self).run()
                 if not self.inplace:
                     library = glob.glob("build/*/ginac_interface.*")[0]
                     target = os.path.join(
@@ -82,7 +95,7 @@ def build_ginac_interface(args=[]):
         'name': 'ginac_interface',
         'packages': [],
         'ext_modules': [ext],
-        'cmdclass': {"build_ext": ginac_build_ext},
+        'cmdclass': {"build_ext": ginacBuildExt},
     }
 
     dist = Distribution(package_config)
