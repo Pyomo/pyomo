@@ -153,7 +153,7 @@ Switching all of Pyomo to use the new interfaces
 
 We also provide a mechanism to get a "preview" of the future where we
 replace the existing (legacy) SolverFactory and utilities with the new
-(development) version:
+(development) version (see :doc:`future`):
 
 .. testcode::
    :skipif: not ipopt_available
