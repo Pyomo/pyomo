@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -919,38 +919,38 @@ def _prop_bnds_root_to_leaf_GeneralExpression(node, bnds_dict, feasibility_tol):
 
 
 _prop_bnds_root_to_leaf_map = dict()
-_prop_bnds_root_to_leaf_map[
-    numeric_expr.ProductExpression
-] = _prop_bnds_root_to_leaf_ProductExpression
-_prop_bnds_root_to_leaf_map[
-    numeric_expr.DivisionExpression
-] = _prop_bnds_root_to_leaf_DivisionExpression
-_prop_bnds_root_to_leaf_map[
-    numeric_expr.PowExpression
-] = _prop_bnds_root_to_leaf_PowExpression
-_prop_bnds_root_to_leaf_map[
-    numeric_expr.SumExpression
-] = _prop_bnds_root_to_leaf_SumExpression
-_prop_bnds_root_to_leaf_map[
-    numeric_expr.MonomialTermExpression
-] = _prop_bnds_root_to_leaf_ProductExpression
-_prop_bnds_root_to_leaf_map[
-    numeric_expr.NegationExpression
-] = _prop_bnds_root_to_leaf_NegationExpression
-_prop_bnds_root_to_leaf_map[
-    numeric_expr.UnaryFunctionExpression
-] = _prop_bnds_root_to_leaf_UnaryFunctionExpression
-_prop_bnds_root_to_leaf_map[
-    numeric_expr.LinearExpression
-] = _prop_bnds_root_to_leaf_SumExpression
+_prop_bnds_root_to_leaf_map[numeric_expr.ProductExpression] = (
+    _prop_bnds_root_to_leaf_ProductExpression
+)
+_prop_bnds_root_to_leaf_map[numeric_expr.DivisionExpression] = (
+    _prop_bnds_root_to_leaf_DivisionExpression
+)
+_prop_bnds_root_to_leaf_map[numeric_expr.PowExpression] = (
+    _prop_bnds_root_to_leaf_PowExpression
+)
+_prop_bnds_root_to_leaf_map[numeric_expr.SumExpression] = (
+    _prop_bnds_root_to_leaf_SumExpression
+)
+_prop_bnds_root_to_leaf_map[numeric_expr.MonomialTermExpression] = (
+    _prop_bnds_root_to_leaf_ProductExpression
+)
+_prop_bnds_root_to_leaf_map[numeric_expr.NegationExpression] = (
+    _prop_bnds_root_to_leaf_NegationExpression
+)
+_prop_bnds_root_to_leaf_map[numeric_expr.UnaryFunctionExpression] = (
+    _prop_bnds_root_to_leaf_UnaryFunctionExpression
+)
+_prop_bnds_root_to_leaf_map[numeric_expr.LinearExpression] = (
+    _prop_bnds_root_to_leaf_SumExpression
+)
 _prop_bnds_root_to_leaf_map[numeric_expr.AbsExpression] = _prop_bnds_root_to_leaf_abs
 
-_prop_bnds_root_to_leaf_map[
-    _GeneralExpressionData
-] = _prop_bnds_root_to_leaf_GeneralExpression
-_prop_bnds_root_to_leaf_map[
-    ScalarExpression
-] = _prop_bnds_root_to_leaf_GeneralExpression
+_prop_bnds_root_to_leaf_map[_GeneralExpressionData] = (
+    _prop_bnds_root_to_leaf_GeneralExpression
+)
+_prop_bnds_root_to_leaf_map[ScalarExpression] = (
+    _prop_bnds_root_to_leaf_GeneralExpression
+)
 
 
 def _check_and_reset_bounds(var, lb, ub):
@@ -1033,9 +1033,9 @@ def _register_new_before_child_handler(visitor, child):
 
 
 _before_child_handlers = defaultdict(lambda: _register_new_before_child_handler)
-_before_child_handlers[
-    numeric_expr.ExternalFunctionExpression
-] = _before_external_function
+_before_child_handlers[numeric_expr.ExternalFunctionExpression] = (
+    _before_external_function
+)
 for _type in nonpyomo_leaf_types:
     _before_child_handlers[_type] = _before_constant
 

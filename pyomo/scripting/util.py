@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -146,7 +146,7 @@ def setup_environment(data):
             if valueStr[0] == valueStr[-1] and valueStr[0] in "\"'":
                 valueStr = valueStr[1:-1]
 
-        logger.error(msg + valueStr)
+        logger.error(msg + valueStr, extra={'cleandoc': False})
 
         tb_list = traceback.extract_tb(tb, None)
         i = 0
@@ -1129,7 +1129,7 @@ def _run_command_impl(command, parser, args, name, data, options):
             if type(err) == KeyError and errStr != "None":
                 errStr = str(err).replace(r"\n", "\n")[1:-1]
 
-            logger.error(msg + errStr)
+            logger.error(msg + errStr, extra={'cleandoc': False})
             errorcode = 1
 
     return retval, errorcode

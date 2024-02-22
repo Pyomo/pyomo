@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -11,6 +11,8 @@
 
 import math
 from collections.abc import Sequence
+
+from pyomo.common.numeric_types import check_if_numeric_type
 
 try:
     from math import remainder
@@ -180,35 +182,40 @@ class NumericRange(object):
     def __contains__(self, value):
         # NumericRanges must hold items that are comparable to ints
         if value.__class__ not in self._types_comparable_to_int:
-            # Special case: because numpy is fond of returning scalars
-            # as length-1 ndarrays, we will include a special case that
-            # will unpack things that look like single element arrays.
-            try:
-                # Note: trap "value[0] is not value" to catch things like
-                # single-character strings
-                if (
-                    hasattr(value, '__len__')
-                    and hasattr(value, '__getitem__')
-                    and len(value) == 1
-                    and value[0] is not value
-                ):
-                    return value[0] in self
-            except:
-                pass
-            # See if this class behaves like a "normal" number: both
-            # comparable and creatable
-            try:
-                if not (bool(value - 0 > 0) ^ bool(value - 0 <= 0)):
+            # Build on numeric_type.check_if_numeric_type to cleanly
+            # handle numpy registrations
+            if check_if_numeric_type(value):
+                self._types_comparable_to_int.add(value.__class__)
+            else:
+                # Special case: because numpy is fond of returning scalars
+                # as length-1 ndarrays, we will include a special case that
+                # will unpack things that look like single element arrays.
+                try:
+                    # Note: trap "value[0] is not value" to catch things like
+                    # single-character strings
+                    if (
+                        hasattr(value, '__len__')
+                        and hasattr(value, '__getitem__')
+                        and len(value) == 1
+                        and value[0] is not value
+                    ):
+                        return value[0] in self
+                except:
+                    pass
+                # See if this class behaves like a "normal" number: both
+                # comparable and creatable
+                try:
+                    if not (bool(value - 0 > 0) ^ bool(value - 0 <= 0)):
+                        return False
+                    elif value.__class__(0) != 0 or not value.__class__(0) == 0:
+                        return False
+                    else:
+                        self._types_comparable_to_int.add(value.__class__)
+                except:
                     return False
-                elif value.__class__(0) != 0 or not value.__class__(0) == 0:
-                    return False
-                else:
-                    self._types_comparable_to_int.add(value.__class__)
-            except:
-                return False
 
         if self.step:
-            _dir = math.copysign(1, self.step)
+            _dir = int(math.copysign(1, self.step))
             _from_start = value - self.start
             return (
                 0 <= _dir * _from_start <= _dir * (self.end - self.start)
@@ -411,14 +418,13 @@ class NumericRange(object):
 
         assert new_step >= abs(cnr.step)
         assert new_step % cnr.step == 0
-        _dir = math.copysign(1, cnr.step)
+        _dir = int(math.copysign(1, cnr.step))
         _subranges = []
         for i in range(int(abs(new_step // cnr.step))):
             if _dir * (cnr.start + i * cnr.step) > _dir * cnr.end:
                 # Once we walk past the end of the range, we are done
                 # (all remaining offsets will be farther past the end)
                 break
-
             _subranges.append(
                 NumericRange(cnr.start + i * cnr.step, cnr.end, _dir * new_step)
             )
@@ -458,7 +464,7 @@ class NumericRange(object):
             else:
                 # one of the steps was 0: add to preserve the non-zero step
                 a += b
-        return abs(a)
+        return int(abs(a))
 
     def _push_to_discrete_element(self, val, push_to_next_larger_value):
         if not self.step or val in _infinite:
@@ -557,9 +563,14 @@ class NumericRange(object):
                             NumericRange(t.start, start, 0, (t.closed[0], False))
                         )
                     if s.step:  # i.e., not a single point
-                        for i in range(int(start // s.step), int(end // s.step)):
+                        for i in range(int((end - start) // s.step)):
                             _new_subranges.append(
-                                NumericRange(i * s.step, (i + 1) * s.step, 0, '()')
+                                NumericRange(
+                                    start + i * s.step,
+                                    start + (i + 1) * s.step,
+                                    0,
+                                    '()',
+                                )
                             )
                     if t.end > end:
                         _new_subranges.append(
@@ -605,7 +616,7 @@ class NumericRange(object):
                         )
                     elif t_max == s_max and t_c[1] and not s_c[1]:
                         _new_subranges.append(NumericRange(t_max, t_max, 0))
-                _this = _new_subranges
+            _this = _new_subranges
         return _this
 
     def range_intersection(self, other_ranges):

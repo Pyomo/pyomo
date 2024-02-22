@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -193,13 +193,9 @@ class SolverManager_NEOS(AsynchronousSolverManager):
                 del self._ah[jobNumber]
                 ah.status = ActionStatus.done
 
-                (
-                    opt,
-                    smap_id,
-                    load_solutions,
-                    select_index,
-                    default_variable_value,
-                ) = self._opt_data[jobNumber]
+                (opt, smap_id, load_solutions, select_index, default_variable_value) = (
+                    self._opt_data[jobNumber]
+                )
                 del self._opt_data[jobNumber]
 
                 args = self._args[jobNumber]
@@ -262,11 +258,10 @@ class SolverManager_NEOS(AsynchronousSolverManager):
                 # minutes.  If NEOS doesn't produce intermediate results
                 # by then we will need to catch (and eat) the exception
                 try:
-                    (
-                        message_fragment,
-                        new_offset,
-                    ) = self.kestrel.neos.getIntermediateResults(
-                        jobNumber, self._ah[jobNumber].password, current_offset
+                    (message_fragment, new_offset) = (
+                        self.kestrel.neos.getIntermediateResults(
+                            jobNumber, self._ah[jobNumber].password, current_offset
+                        )
                     )
                     logger.info(message_fragment)
                     self._neos_log[jobNumber] = (

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -15,7 +15,7 @@ Cutting plane-based GDP reformulation.
 Implements a general cutting plane-based reformulation for linear and
 convex GDPs.
 """
-from __future__ import division
+
 
 from pyomo.common.config import (
     ConfigBlock,
@@ -808,13 +808,9 @@ class CuttingPlane_Transformation(Transformation):
             else:
                 self.verbose = False
 
-            (
-                instance_rBigM,
-                cuts_obj,
-                instance_rHull,
-                var_info,
-                transBlockName,
-            ) = self._setup_subproblems(instance, bigM, self._config.tighten_relaxation)
+            (instance_rBigM, cuts_obj, instance_rHull, var_info, transBlockName) = (
+                self._setup_subproblems(instance, bigM, self._config.tighten_relaxation)
+            )
 
             self._generate_cuttingplanes(
                 instance_rBigM, cuts_obj, instance_rHull, var_info, transBlockName

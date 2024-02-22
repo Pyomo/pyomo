@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -213,21 +213,26 @@ class GDP_to_MIP_Transformation(Transformation):
                 "likely indicative of a modeling error." % obj.name
             )
 
-        # Create or fetch the transformation block
+        # We always need to create or fetch a transformation block on the parent block.
+        trans_block, new_block = self._add_transformation_block(obj.parent_block())
+        # This is where we put exactly_one/or constraint
+        algebraic_constraint = self._add_xor_constraint(
+            obj.parent_component(), trans_block
+        )
+
+        # If requested, create or fetch the transformation block above the
+        # nested hierarchy
         if root_disjunct is not None:
-            # We want to put all the transformed things on the root
-            # Disjunct's parent's block so that they do not get
-            # re-transformed
-            transBlock, new_block = self._add_transformation_block(
+            # We want to put some transformed things on the root Disjunct's
+            # parent's block so that they do not get re-transformed. (Note this
+            # is never true for hull, but it calls this method with
+            # root_disjunct=None. BigM can't put the exactly-one constraint up
+            # here, but it can put everything else.)
+            trans_block, new_block = self._add_transformation_block(
                 root_disjunct.parent_block()
             )
-        else:
-            # This isn't nested--just put it on the parent block.
-            transBlock, new_block = self._add_transformation_block(obj.parent_block())
 
-        xorConstraint = self._add_xor_constraint(obj.parent_component(), transBlock)
-
-        return transBlock, xorConstraint
+        return trans_block, algebraic_constraint
 
     def _get_disjunct_transformation_block(self, disjunct, transBlock):
         if disjunct.transformation_block is not None:

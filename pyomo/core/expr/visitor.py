@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -9,7 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from __future__ import division
 
 import inspect
 import logging
@@ -82,11 +81,13 @@ class RevertToNonrecursive(Exception):
 class StreamBasedExpressionVisitor(object):
     """This class implements a generic stream-based expression walker.
 
-     This visitor walks an expression tree using a depth-first strategy
-     and generates a full event stream similar to other tree visitors
-     (e.g., the expat XML parser).  The following events are triggered
-     through callback functions as the traversal enters and leaves nodes
-     in the tree:
+    This visitor walks an expression tree using a depth-first strategy
+    and generates a full event stream similar to other tree visitors
+    (e.g., the expat XML parser).  The following events are triggered
+    through callback functions as the traversal enters and leaves nodes
+    in the tree:
+
+    ::
 
        initializeWalker(expr) -> walk, result
        enterNode(N1) -> args, data
@@ -100,7 +101,7 @@ class StreamBasedExpressionVisitor(object):
        exitNode(N1, data) -> N1_result
        finalizeWalker(result) -> result
 
-     Individual event callbacks match the following signatures:
+    Individual event callbacks match the following signatures:
 
     walk, result = initializeWalker(self, expr):
 
@@ -123,7 +124,7 @@ class StreamBasedExpressionVisitor(object):
          not defined, the default behavior is equivalent to returning
          (None, []).
 
-     node_result = exitNode(self, node, data):
+    node_result = exitNode(self, node, data):
 
          exitNode() is called after the node is completely processed (as
          the walker returns up the tree to the parent node).  It is
@@ -133,7 +134,7 @@ class StreamBasedExpressionVisitor(object):
          this node.  If not specified, the default action is to return
          the data object from enterNode().
 
-     descend, child_result = beforeChild(self, node, child, child_idx):
+    descend, child_result = beforeChild(self, node, child, child_idx):
 
          beforeChild() is called by a node for every child before
          entering the child node.  The node, child node, and child index
@@ -145,7 +146,7 @@ class StreamBasedExpressionVisitor(object):
          equivalent to (True, None).  The default behavior if not
          specified is equivalent to (True, None).
 
-     data = acceptChildResult(self, node, data, child_result, child_idx):
+    data = acceptChildResult(self, node, data, child_result, child_idx):
 
          acceptChildResult() is called for each child result being
          returned to a node.  This callback is responsible for recording
@@ -156,7 +157,7 @@ class StreamBasedExpressionVisitor(object):
          returned.  If acceptChildResult is not specified, it does
          nothing if data is None, otherwise it calls data.append(result).
 
-     afterChild(self, node, child, child_idx):
+    afterChild(self, node, child, child_idx):
 
          afterChild() is called by a node for every child node
          immediately after processing the node is complete before control
@@ -165,7 +166,7 @@ class StreamBasedExpressionVisitor(object):
          are passed, and nothing is returned.  If afterChild is not
          specified, no action takes place.
 
-     finalizeResult(self, result):
+    finalizeResult(self, result):
 
          finalizeResult() is called once after the entire expression tree
          has been walked.  It is passed the result returned by the root
@@ -173,10 +174,10 @@ class StreamBasedExpressionVisitor(object):
          the walker returns the result obtained from the exitNode
          callback on the root node.
 
-     Clients interact with this class by either deriving from it and
-     implementing the necessary callbacks (see above), assigning callable
-     functions to an instance of this class, or passing the callback
-     functions as arguments to this class' constructor.
+    Clients interact with this class by either deriving from it and
+    implementing the necessary callbacks (see above), assigning callable
+    functions to an instance of this class, or passing the callback
+    functions as arguments to this class' constructor.
 
     """
 
@@ -254,7 +255,14 @@ class StreamBasedExpressionVisitor(object):
         )
 
     def walk_expression(self, expr):
-        """Walk an expression, calling registered callbacks."""
+        """Walk an expression, calling registered callbacks.
+
+        This is the standard interface for running the visitor.  It
+        defaults to using an efficient recursive implementation of the
+        visitor, falling back on :py:meth:`walk_expression_nonrecursive`
+        if the recursion stack gets too deep.
+
+        """
         if self.initializeWalker is not None:
             walk, root = self.initializeWalker(expr)
             if not walk:
@@ -496,7 +504,13 @@ class StreamBasedExpressionVisitor(object):
         )
 
     def walk_expression_nonrecursive(self, expr):
-        """Walk an expression, calling registered callbacks."""
+        """Nonrecursively walk an expression, calling registered callbacks.
+
+        This routine is safer than the recursive walkers for deep (or
+        unbalanced) trees.  It is, however, slightly slower than the
+        recursive implementations.
+
+        """
         #
         # This walker uses a linked list to store the stack (instead of
         # an array).  The nodes of the linked list are 6-member tuples:
@@ -666,7 +680,6 @@ class StreamBasedExpressionVisitor(object):
 
 
 class SimpleExpressionVisitor(object):
-
     """
     Note:
         This class is a customization of the PyUtilib :class:`SimpleVisitor

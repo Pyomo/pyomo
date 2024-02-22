@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -29,9 +29,10 @@ class VisitorConfig(object):
         self.subexpr = {}
         self.var_map = {}
         self.var_order = {}
+        self.sorter = None
 
     def __iter__(self):
-        return iter((self.subexpr, self.var_map, self.var_order))
+        return iter((self.subexpr, self.var_map, self.var_order, self.sorter))
 
 
 class TestQuadratic(unittest.TestCase):

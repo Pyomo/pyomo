@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -9,24 +9,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = [
-    'UndefinedData',
-    'undefined',
-    'ignore',
-    'ScalarData',
-    'ListContainer',
-    'MapContainer',
-    'default_print_options',
-    'ScalarType',
-]
-
 import copy
-
-from math import inf
-from pyomo.common.collections import Bunch
-
 import enum
 from io import StringIO
+from math import inf
+
+from pyomo.common.collections import Bunch
 
 
 class ScalarType(str, enum.Enum):

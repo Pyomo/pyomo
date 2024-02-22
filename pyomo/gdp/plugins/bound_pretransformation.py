@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -244,9 +244,9 @@ class BoundPretransformation(Transformation):
                 disjunction, transformation_blocks
             )
             if self.transformation_name not in disjunction._transformation_map:
-                disjunction._transformation_map[
-                    self.transformation_name
-                ] = ComponentMap()
+                disjunction._transformation_map[self.transformation_name] = (
+                    ComponentMap()
+                )
             trans_map = disjunction._transformation_map[self.transformation_name]
 
             for disj in disjunction.disjuncts:

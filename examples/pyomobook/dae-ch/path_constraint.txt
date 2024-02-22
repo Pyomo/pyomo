@@ -1,8 +1,3 @@
-1 RangeSet Declarations
-    t_domain : Dimen=1, Size=Inf, Bounds=(0, 1)
-        Key  : Finite : Members
-        None :  False :  [0..1]
-
 1 Param Declarations
     tf : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
         Key  : Value
@@ -68,4 +63,4 @@
           0 :  None :  None :  None : False :  True :  Reals
           1 :  None :  None :  None : False :  True :  Reals
 
-15 Declarations: tf t_domain t u x1 x2 x3 dx1 dx2 dx3 x1dotcon x2dotcon x3dotcon obj con
+14 Declarations: tf t u x1 x2 x3 dx1 dx2 dx3 x1dotcon x2dotcon x3dotcon obj con

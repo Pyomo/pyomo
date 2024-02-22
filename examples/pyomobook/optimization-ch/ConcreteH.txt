@@ -1,10 +1,5 @@
-1 Set Declarations
-    x_index : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :    2 : {'I_C_Scoops', 'Peanuts'}
-
 1 Var Declarations
-    x : Size=2, Index=x_index
+    x : Size=2, Index={I_C_Scoops, Peanuts}
         Key        : Lower : Value : Upper : Fixed : Stale : Domain
         I_C_Scoops :     0 :  None :   100 : False :  True :  Reals
            Peanuts :     0 :  None :  40.6 : False :  True :  Reals
@@ -19,4 +14,4 @@
         Key  : Lower : Body                                   : Upper : Active
         None :  -Inf : 3.14*x[I_C_Scoops] + 0.2718*x[Peanuts] :  12.0 :   True
 
-4 Declarations: x_index x z budgetconstr
+3 Declarations: x z budgetconstr

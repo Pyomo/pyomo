@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -68,12 +68,8 @@ def _make_external_model():
     m.y_out = pyo.Var()
     m.c_out_1 = pyo.Constraint(expr=m.x_out - m.x == 0)
     m.c_out_2 = pyo.Constraint(expr=m.y_out - m.y == 0)
-    m.c_ex_1 = pyo.Constraint(
-        expr=m.x**3 - 2 * m.y == m.a**2 + m.b**3 - m.r**3 - 2
-    )
-    m.c_ex_2 = pyo.Constraint(
-        expr=m.x + m.y**3 == m.a**3 + 2 * m.b**2 + m.r**2 + 1
-    )
+    m.c_ex_1 = pyo.Constraint(expr=m.x**3 - 2 * m.y == m.a**2 + m.b**3 - m.r**3 - 2)
+    m.c_ex_2 = pyo.Constraint(expr=m.x + m.y**3 == m.a**3 + 2 * m.b**2 + m.r**2 + 1)
     return m
 
 

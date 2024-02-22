@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -742,7 +742,7 @@ sum(prod(e{sum(mon(1, x), 2)}, pow(x, 2)), E[1]{sum(pow(x, 2), 1)})
 e : Size=1, Index=None
     Key  : Expression
     None : sum(mon(1, x), 2)
-E : Size=2, Index=E_index
+E : Size=2, Index={1, 2}
     Key : Expression
       1 : sum(pow(x, 2), 1)
       2 : sum(pow(x, 2), 1)
@@ -761,7 +761,7 @@ sum(prod(e{1.0}, pow(x, 2)), E[1]{2.0})
 e : Size=1, Index=None
     Key  : Expression
     None :        1.0
-E : Size=2, Index=E_index
+E : Size=2, Index={1, 2}
     Key : Expression
       1 : 2.0
       2 : sum(pow(x, 2), 1)
@@ -780,7 +780,7 @@ sum(prod(e{Undefined}, pow(x, 2)), E[1]{Undefined})
 e : Size=1, Index=None
     Key  : Expression
     None :  Undefined
-E : Size=2, Index=E_index
+E : Size=2, Index={1, 2}
     Key : Expression
       1 : Undefined
       2 : sum(pow(x, 2), 1)
@@ -806,7 +806,7 @@ E : Size=2, Index=E_index
 e : Size=1, Index=None
     Key  : Expression
     None : x + 2
-E : Size=2, Index=E_index
+E : Size=2, Index={1, 2}
     Key : Expression
       1 : x**2 + 1
       2 : x**2 + 1
@@ -830,7 +830,7 @@ x**2 + 2.0
 e : Size=1, Index=None
     Key  : Expression
     None :        1.0
-E : Size=2, Index=E_index
+E : Size=2, Index={1, 2}
     Key : Expression
       1 : 2.0
       2 : x**2 + 1
@@ -849,7 +849,7 @@ e{None}*x**2 + E[1]{None}
 e : Size=1, Index=None
     Key  : Expression
     None :  Undefined
-E : Size=2, Index=E_index
+E : Size=2, Index={1, 2}
     Key : Expression
       1 : Undefined
       2 : x**2 + 1

@@ -1,6 +1,18 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """
 Functions for the construction and solving of the GRCS separation problem via ROsolver
 """
+
 from pyomo.core.base.constraint import Constraint, ConstraintList
 from pyomo.core.base.objective import Objective, maximize, value
 from pyomo.core.base import Var, Param
@@ -882,13 +894,33 @@ def initialize_separation(perf_con_to_maximize, model_data, config):
     discrete geometry (as there is no master model block corresponding
     to any of the remaining discrete scenarios against which we
     separate).
+
+    This method assumes that the master model has only one block
+    per iteration.
     """
-    # initialize to values from nominal block if nominal objective.
-    # else, initialize to values from latest block added to master
-    if config.objective_focus == ObjectiveType.nominal:
-        block_num = 0
-    else:
-        block_num = model_data.iteration
+
+    def eval_master_violation(block_idx):
+        """
+        Evaluate violation of `perf_con` by variables of
+        specified master block.
+        """
+        new_con_map = (
+            model_data.separation_model.util.map_new_constraint_list_to_original_con
+        )
+        in_new_cons = perf_con_to_maximize in new_con_map
+        if in_new_cons:
+            sep_con = new_con_map[perf_con_to_maximize]
+        else:
+            sep_con = perf_con_to_maximize
+        master_con = model_data.master_model.scenarios[block_idx, 0].find_component(
+            sep_con
+        )
+        return value(master_con)
+
+    # initialize from master block with max violation of the
+    # performance constraint of interest. This gives the best known
+    # feasible solution (for case of non-discrete uncertainty sets).
+    block_num = max(range(model_data.iteration + 1), key=eval_master_violation)
 
     master_blk = model_data.master_model.scenarios[block_num, 0]
     master_blks = list(model_data.master_model.scenarios.values())

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -30,17 +30,13 @@ import pyomo.common.unittest as unittest
 
 import pyomo.common.tempfiles as tempfiles
 
+from pyomo.common.dependencies import pyutilib_available
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import (
     TempfileManager,
     TempfileManagerClass,
     TempfileContextError,
 )
-
-try:
-    from pyutilib.component.config.tempfiles import TempfileManager as pyutilib_mngr
-except ImportError:
-    pyutilib_mngr = None
 
 old_tempdir = TempfileManager.tempdir
 tempdir = None
@@ -528,13 +524,13 @@ class Test_TempfileManager(unittest.TestCase):
             f.close()
             os.remove(fname)
 
-    @unittest.skipIf(pyutilib_mngr is None, "deprecation test requires pyutilib")
+    @unittest.skipUnless(pyutilib_available, "deprecation test requires pyutilib")
     def test_deprecated_tempdir(self):
         self.TM.push()
         try:
             tmpdir = self.TM.create_tempdir()
-            _orig = pyutilib_mngr.tempdir
-            pyutilib_mngr.tempdir = tmpdir
+            _orig = tempfiles.pyutilib_tempfiles.TempfileManager.tempdir
+            tempfiles.pyutilib_tempfiles.TempfileManager.tempdir = tmpdir
             self.TM.tempdir = None
 
             with LoggingIntercept() as LOG:
@@ -556,7 +552,7 @@ class Test_TempfileManager(unittest.TestCase):
             )
         finally:
             self.TM.pop()
-            pyutilib_mngr.tempdir = _orig
+            tempfiles.pyutilib_tempfiles.TempfileManager.tempdir = _orig
 
     def test_context(self):
         with self.assertRaisesRegex(

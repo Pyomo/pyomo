@@ -3,6 +3,143 @@ Pyomo CHANGELOG
 
 
 -------------------------------------------------------------------------------
+Pyomo 6.7.1   (21 Feb 2024)
+-------------------------------------------------------------------------------
+
+- General
+  - Add support for tuples in `ComponentMap`; add `DefaultComponentMap` (#3150)
+  - Update `Path`, `PathList`, and `IsInstance` Domain Validators (#3144)
+  - Remove usage of `__all__` (#3142)
+  - Extend Path and Type Checking Validators of `common.config` (#3140)
+  - Update Copyright Statements (#3139)
+  - Update `ExitNodeDispatcher` to better support extensibility (#3125)
+  - Create contributors data gathering script (#3117)
+  - Prevent duplicate entries in ConfigDict declaration order (#3116)
+  - Remove unnecessary `__future__` imports (#3109)
+  - Import pandas through pyomo.common.dependencies (#3102)
+  - Update links to workshop slides (#3079)
+  - Remove incorrect use of identity (is) comparisons (#3061)
+- Core
+  - Add `Block.register_private_data_initializer()` (#3153)
+  - Generalize the simple_constraint_rule decorator (#3152)
+  - Fix edge case assigning new numeric types to Var/Param with units (#3151)
+  - Add private_data to `_BlockData` (#3138)
+  - IndexComponent create implicit sets as "anonymous" sets (#3075)
+  - Add `all_different` and `count_if` to the logical expression system (#3058)
+  - Fix RangeSet.__len__ when defined by floats (#3119)
+  - Overhaul the `Suffix` component (#3072)
+  - Enforce expression immutability in `expr.args` (#3099)
+  - Improve NumPy registration when assigning numpy to Param (#3093)
+  - Track changes in PyPy behavior introduced in 7.3.14 (#3087)
+  - Remove automatic numpy import (#3077)
+  - Fix `range_difference` for Sets with nonzero anchor points (#3063)
+  - Clarify errors raised by accessing Sets by positional index (#3062)
+- Documentation
+  - Update intersphinx links, remove docs for nonfunctional code (#3155)
+  - Update MPC documentation and citation (#3148)
+  - Fix an error in the documentation for LinearExpression (#3090)
+  - Fix Pyomo.DoE documentation (#3070)
+  - Fix latex_printer documentation (#3066)
+- Solver Interfaces
+  - Preview release of new solver interfaces as pyomo.contrib.solver
+    (#3137, #3156)
+  - Make error msg more explicit wrt different interfaces (#3141)
+  - NLv2: only raise exception for empty models in the legacy API (#3135)
+  - Add `to_expr()` to AMPLRepn, fix NLWriterInfo return type (#3095)
+- Testing
+  - Update Release Wheel Builder Action (#3149)
+  - Actions Version Update: Address node.js deprecations (#3118)
+  - New Black Major Release (24.1.0) (#3108)
+  - Use scip for PyROS tests (#3104)
+  - Add missing solver dependency flags for OnlineDocs tests (#3094)
+  - Re-enable `contrib.viewer.tests.test_qt.py` (#3085)
+  - Add automated testing of OnlineDocs examples (#3080)
+  - Silence deprecation warnings emitted by Pyomo tests (#3076)
+  - Fix Python 3.12 tests (manage `pyutilib`, `distutils` dependencies) (#3065)
+- DAE
+  - Replace deprecated `numpy.math` alias with standard `math` module (#3074)
+- GDP
+  - Handle nested GDPs correctly in all the transformations (#3145)
+  - Fix bugs in nested models in gdp.hull transformation (#3143)
+  - Various bug fixes in gdp.mbigm transformation (#3073)
+  - Add GDP => MINLP Transformation (#3082)
+- Contributed Packages
+  - GDPopt: Fix lbb solve_data bug (#3133)
+  - GDPopt: Adding missing import for gdpopt.enumerate (#3105)
+  - FBBT: Extend `fbbt.ExpressionBoundsVisitor` to handle relational
+    expressions and Expr_if (#3129)
+  - incidence_analysis: Method to add an edge in IncidenceGraphInterface (#3120)
+  - incidence_analysis: Add subgraph method to IncidencegraphInterface (#3122)
+  - incidence_analysis: Add `ampl_repn` option (#3069)
+  - incidence_analysis: Update documentation (#3067)
+  - interior_point: Resolve test failure due to Mumps update (#3114)
+  - MindtPy: Various bug fixes (#3034)
+  - PyROS: Update Solver Argument Resolution and Validation Routines (#3126)
+  - PyROS: Update Subproblem Initialization Routines (#3071)
+  - PyROS: Fix DR polishing under nominal objective focus (#3060)
+
+-------------------------------------------------------------------------------
+Pyomo 6.7.0   (29 Nov 2023)
+-------------------------------------------------------------------------------
+
+- General
+  - Remove Python 3.7, add Python 3.12 Support (#3050, #2956)
+  - Update report_timing() to support context manager API (#3039)
+  - Add `Preformatted` class for logging preformatted messages (#2998)
+  - QuadraticRepnVisitor: Improve nonlinear expression expansion (#2997)
+  - Add `CITATION` file to main repository (#2992)
+  - Minor typo / formatting fixes (#3010, #2975)
+- Core
+  - Fix exception from interaction of Gurobi, Pint, Dask, and Threading (#3026)
+  - Fix differentiation of `Expressions` with `native_numeric_types` (#3017)
+  - Warn for explicit declaration of immutable params with units (#3004)
+  - Use `SetInitializer` for initializing `Param` domains; reinitializing
+    `IndexedVar` domains (#3001)
+  - Ensure templatize_constraint returns an expression (#2983)
+  - Prevent multiple applications of the scaling transform (#2979)
+- Solver Interfaces
+  - Remove presolve-eliminated variables from named expressions (#3056)
+  - Improve LP/NL writer determinism (#3054)
+  - Add "writer" for converting linear models to standard matrix form (#3046)
+  - NLv2/LPv2: Log which suffix values were skipped at the DEBUG level (#3043)
+  - NLv2: add linear presolve and general problem scaling support (#3037)
+  - Adjust mps writer format for integer variable declaration (#2946)
+  - Fix scip results processing (#3023)
+  - Fix quadratic objective off-diagonal-terms in cplex_direct interface (#3025)
+  - Consolidate walker logic in LP/NL representations (#3015)
+  - LP writer: warn user for ignored suffixes (#2982)
+  - Update handling of `0*` in linear, quadratic walkers (#2981)
+- Testing
+  - Pin `gurobipy` version for testing to 10.0.3 (#3053)
+  - Update Performance Plot URL (#3033)
+  - Track change in Black rules (#3021)
+  - Resolve build infrastructure errors (with mpi4py, gams, networkx) (#3018)
+  - Improve GHA conda env package setup (#3013, #2967)
+  - Update Gurobi license checks in tests (#3011)
+  - Skip `fileutils` test failure that persists in OSX 12.7 (#3008)
+  - LINTING: New Version of `crate-ci/typos` (#2987)
+- GDP
+  - Improve Disjunction construction error for invalid types (#3042)
+  - Adding new walker for compute_bounds_on_expr (#3027)
+  - Fix bugs in gdp.bound_pretransformation (#2973)
+  - Fix various bugs in GDP transformations (#3009)
+  - Add a few more GDP examples (#2932)
+- Contributed Packages
+  - APPSI: Add interface to WNTR (#2902)
+  - APPSI: Capture HiGHS output when initializing model (#3005)
+  - APPSI: Fix auto-update when unfixing variable and changing bounds (#2996)
+  - APPSI: Fix reference bug in HiGHS interface (#2995)
+  - FBBT: Add new walker for compute_bounds_on_expr (#3027)
+  - incidence_analysis: Fix bugs with subset ordering and 0 coefficients (#3041)
+  - incidence_analysis: Update paper reference (#2969)
+  - latex_printer: Add contrib.latex_printer package (#2984)
+  - MindtPy: Add support for GreyBox models (#2988)
+  - parmest: Cleanup examples and tests (#3028)
+  - PyNumero: Handle evaluation errors in CyIpopt solver (#2994)
+  - PyROS: Report relative variable shifts in solver logs (#3035)
+  - PyROS: Update logging system (#2990)
+
+-------------------------------------------------------------------------------
 Pyomo 6.6.2   (23 Aug 2023)
 -------------------------------------------------------------------------------
 

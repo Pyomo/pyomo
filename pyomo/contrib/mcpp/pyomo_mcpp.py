@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -11,7 +11,7 @@
 # Note: the self.mcpp.* functions are all C-style functions implemented
 # in the compiled MC++ wrapper library
 # Note: argument to pow must be an integer
-from __future__ import division
+
 
 import ctypes
 import logging
@@ -383,7 +383,6 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
 
 
 class McCormick(object):
-
     """
     This class takes the constructed expression from MCPP_Visitor and
     allows for MC methods to be performed on pyomo expressions.

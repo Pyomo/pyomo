@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -139,7 +139,8 @@ class WrappingFormatter(logging.Formatter):
         #
         # A standard approach is to use inspect.cleandoc, which
         # allows for the first line to have 0 indent.
-        msg = inspect.cleandoc(msg)
+        if getattr(record, 'cleandoc', True):
+            msg = inspect.cleandoc(msg)
 
         # Split the formatted log message (that currently has _flag in
         # lieu of the actual message content) into lines, then

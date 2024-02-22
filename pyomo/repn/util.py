@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -17,7 +17,7 @@ import logging
 import operator
 import sys
 
-from pyomo.common.collections import Sequence, ComponentMap
+from pyomo.common.collections import Sequence, ComponentMap, ComponentSet
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.errors import DeveloperError, InvalidValueError
 from pyomo.common.numeric_types import (
@@ -25,6 +25,7 @@ from pyomo.common.numeric_types import (
     native_types,
     native_numeric_types,
     native_complex_types,
+    native_logical_types,
 )
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.base import (
@@ -265,7 +266,9 @@ class BeforeChildDispatcher(collections.defaultdict):
     def register_dispatcher(self, visitor, child):
         child_type = type(child)
         if child_type in native_numeric_types:
-            self[child_type] = self._before_native
+            self[child_type] = self._before_native_numeric
+        elif child_type in native_logical_types:
+            self[child_type] = self._before_native_logical
         elif issubclass(child_type, str):
             self[child_type] = self._before_string
         elif child_type in native_types:
@@ -275,7 +278,7 @@ class BeforeChildDispatcher(collections.defaultdict):
                 self[child_type] = self._before_invalid
         elif not hasattr(child, 'is_expression_type'):
             if check_if_numeric_type(child):
-                self[child_type] = self._before_native
+                self[child_type] = self._before_native_numeric
             else:
                 self[child_type] = self._before_invalid
         elif not child.is_expression_type():
@@ -306,8 +309,17 @@ class BeforeChildDispatcher(collections.defaultdict):
         return True, None
 
     @staticmethod
-    def _before_native(visitor, child):
+    def _before_native_numeric(visitor, child):
         return False, (_CONSTANT, child)
+
+    @staticmethod
+    def _before_native_logical(visitor, child):
+        return False, (
+            _CONSTANT,
+            InvalidNumber(
+                child, f"{child!r} ({type(child).__name__}) is not a valid numeric type"
+            ),
+        )
 
     @staticmethod
     def _before_complex(visitor, child):
@@ -318,7 +330,7 @@ class BeforeChildDispatcher(collections.defaultdict):
         return False, (
             _CONSTANT,
             InvalidNumber(
-                child, f"{child!r} ({type(child)}) is not a valid numeric type"
+                child, f"{child!r} ({type(child).__name__}) is not a valid numeric type"
             ),
         )
 
@@ -327,7 +339,7 @@ class BeforeChildDispatcher(collections.defaultdict):
         return False, (
             _CONSTANT,
             InvalidNumber(
-                child, f"{child!r} ({type(child)}) is not a valid numeric type"
+                child, f"{child!r} ({type(child).__name__}) is not a valid numeric type"
             ),
         )
 
@@ -336,14 +348,14 @@ class BeforeChildDispatcher(collections.defaultdict):
         try:
             return False, (
                 _CONSTANT,
-                visitor.handle_constant(visitor.evaluate(child), child),
+                visitor.check_constant(visitor.evaluate(child), child),
             )
         except (ValueError, ArithmeticError):
             return True, None
 
     @staticmethod
     def _before_param(visitor, child):
-        return False, (_CONSTANT, visitor.handle_constant(child.value, child))
+        return False, (_CONSTANT, visitor.check_constant(child.value, child))
 
     #
     # The following methods must be defined by derivative classes (along
@@ -387,42 +399,47 @@ class ExitNodeDispatcher(collections.defaultdict):
         super().__init__(None, *args, **kwargs)
 
     def __missing__(self, key):
-        return functools.partial(self.register_dispatcher, key=key)
-
-    def register_dispatcher(self, visitor, node, *data, key=None):
+        if type(key) is tuple:
+            node_class = key[0]
+        else:
+            node_class = key
+        bases = node_class.__mro__
+        # Note: if we add an `etype`, then this special-case can be removed
         if (
-            isinstance(node, _named_subexpression_types)
-            or type(node) is kernel.expression.noclone
+            issubclass(node_class, _named_subexpression_types)
+            or node_class is kernel.expression.noclone
         ):
-            base_type = Expression
-        elif not node.is_potentially_variable():
-            base_type = node.potentially_variable_base_class()
-        else:
-            base_type = node.__class__
-        if isinstance(key, tuple):
-            base_key = (base_type,) + key[1:]
-            # Only cache handlers for unary, binary and ternary operators
-            cache = len(key) <= 4
-        else:
-            base_key = base_type
-            cache = True
-        if base_key in self:
-            fcn = self[base_key]
-        elif base_type in self:
-            fcn = self[base_type]
-        elif any((k[0] if k.__class__ is tuple else k) is base_type for k in self):
-            raise DeveloperError(
-                f"Base expression key '{base_key}' not found when inserting dispatcher"
-                f" for node '{type(node).__name__}' while walking expression tree."
-            )
-        else:
-            raise DeveloperError(
-                f"Unexpected expression node type '{type(node).__name__}' "
-                "found while walking expression tree."
-            )
+            bases = [Expression]
+        fcn = None
+        for base_type in bases:
+            if isinstance(key, tuple):
+                base_key = (base_type,) + key[1:]
+                # Only cache handlers for unary, binary and ternary operators
+                cache = len(key) <= 4
+            else:
+                base_key = base_type
+                cache = True
+            if base_key in self:
+                fcn = self[base_key]
+            elif base_type in self:
+                fcn = self[base_type]
+            elif any((k[0] if type(k) is tuple else k) is base_type for k in self):
+                raise DeveloperError(
+                    f"Base expression key '{base_key}' not found when inserting "
+                    f"dispatcher for node '{node_class.__name__}' while walking "
+                    "expression tree."
+                )
+        if fcn is None:
+            fcn = self.unexpected_expression_type
         if cache:
             self[key] = fcn
-        return fcn(visitor, node, *data)
+        return fcn
+
+    def unexpected_expression_type(self, visitor, node, *arg):
+        raise DeveloperError(
+            f"Unexpected expression node type '{type(node).__name__}' "
+            f"found while walking expression tree in {type(visitor).__name__}."
+        )
 
 
 def apply_node_operation(node, args):
@@ -544,12 +561,13 @@ def categorize_valid_components(
 
 
 def FileDeterminism_to_SortComponents(file_determinism):
-    sorter = SortComponents.unsorted
+    if file_determinism >= FileDeterminism.SORT_SYMBOLS:
+        return SortComponents.ALPHABETICAL | SortComponents.SORTED_INDICES
     if file_determinism >= FileDeterminism.SORT_INDICES:
-        sorter = sorter | SortComponents.indices
-        if file_determinism >= FileDeterminism.SORT_SYMBOLS:
-            sorter = sorter | SortComponents.alphabetical
-    return sorter
+        return SortComponents.SORTED_INDICES
+    if file_determinism >= FileDeterminism.ORDERED:
+        return SortComponents.ORDERED_INDICES
+    return SortComponents.UNSORTED
 
 
 def initialize_var_map_from_column_order(model, config, var_map):
@@ -581,13 +599,33 @@ def initialize_var_map_from_column_order(model, config, var_map):
     if column_order is not None:
         # Note that Vars that appear twice (e.g., through a
         # Reference) will be sorted with the FIRST occurrence.
+        fill_in = ComponentSet()
         for var in column_order:
             if var.is_indexed():
                 for _v in var.values(sorter):
                     if not _v.fixed:
                         var_map[id(_v)] = _v
             elif not var.fixed:
+                pc = var.parent_component()
+                if pc is not var and pc not in fill_in:
+                    # For any VarData in an IndexedVar, remember the
+                    # IndexedVar so that after all the VarData that the
+                    # user has specified in the column ordering have
+                    # been processed (and added to the var_map) we can
+                    # go back and fill in any missing VarData from that
+                    # IndexedVar.  This is needed because later when
+                    # walking expressions we assume that any VarData
+                    # that is not in the var_map will be the first
+                    # VarData from its Var container (indexed or scalar).
+                    fill_in.add(pc)
                 var_map[id(var)] = var
+        # Note that ComponentSet iteration is deterministic, and
+        # re-inserting _v into the var_map will not change the ordering
+        # for any pre-existing variables
+        for pc in fill_in:
+            for _v in pc.values(sorter):
+                if not _v.fixed:
+                    var_map[id(_v)] = _v
     return var_map
 
 

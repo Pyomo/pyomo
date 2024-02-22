@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -43,8 +43,6 @@ import pyomo.core.expr as EXPR
 from pyomo.core.base.component import Component
 from pyomo.core.base.units_container import units
 
-__all__ = ('ExternalFunction',)
-
 logger = logging.getLogger('pyomo.core')
 nan = float('nan')
 
@@ -81,12 +79,10 @@ class ExternalFunction(Component):
             return super().__new__(AMPLExternalFunction)
 
     @overload
-    def __init__(self, function=None, gradient=None, hessian=None, *, fgh=None):
-        ...
+    def __init__(self, function=None, gradient=None, hessian=None, *, fgh=None): ...
 
     @overload
-    def __init__(self, *, library: str, function: str):
-        ...
+    def __init__(self, *, library: str, function: str): ...
 
     def __init__(self, *args, **kwargs):
         """Construct a reference to an external function.
@@ -457,9 +453,11 @@ class AMPLExternalFunction(ExternalFunction):
                 ('units', str(self._units)),
                 (
                     'arg_units',
-                    [str(u) for u in self._arg_units]
-                    if self._arg_units is not None
-                    else None,
+                    (
+                        [str(u) for u in self._arg_units]
+                        if self._arg_units is not None
+                        else None
+                    ),
                 ),
             ],
             (),
@@ -609,9 +607,11 @@ class PythonCallbackFunction(ExternalFunction):
                 ('units', str(self._units)),
                 (
                     'arg_units',
-                    [str(u) for u in self._arg_units[:-1]]
-                    if self._arg_units is not None
-                    else None,
+                    (
+                        [str(u) for u in self._arg_units[:-1]]
+                        if self._arg_units is not None
+                        else None
+                    ),
                 ),
             ],
             (),

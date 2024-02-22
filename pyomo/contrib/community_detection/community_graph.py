@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Model Graph Generator Code"""
 
 from pyomo.common.dependencies import networkx as nx
@@ -116,9 +127,9 @@ def generate_model_graph(
         ]
 
         # Update constraint_variable_map
-        constraint_variable_map[
-            numbered_constraint
-        ] = numbered_variables_in_constraint_equation
+        constraint_variable_map[numbered_constraint] = (
+            numbered_variables_in_constraint_equation
+        )
 
         # Create a list of all the edges that need to be created based on the variables in this constraint equation
         edges_between_nodes = [
@@ -145,9 +156,9 @@ def generate_model_graph(
             ]
 
             # Update constraint_variable_map
-            constraint_variable_map[
-                numbered_objective
-            ] = numbered_variables_in_objective
+            constraint_variable_map[numbered_objective] = (
+                numbered_variables_in_objective
+            )
 
             # Create a list of all the edges that need to be created based on the variables in the objective function
             edges_between_nodes = [

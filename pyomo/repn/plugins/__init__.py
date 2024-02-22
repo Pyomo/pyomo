@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -18,6 +18,7 @@ def load():
     import pyomo.repn.plugins.gams_writer
     import pyomo.repn.plugins.lp_writer
     import pyomo.repn.plugins.nl_writer
+    import pyomo.repn.plugins.standard_form
 
     from pyomo.opt import WriterFactory
 
