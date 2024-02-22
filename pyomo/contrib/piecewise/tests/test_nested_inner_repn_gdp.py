@@ -12,6 +12,7 @@
 import pyomo.common.unittest as unittest
 from pyomo.contrib.piecewise.tests import models
 import pyomo.contrib.piecewise.tests.common_tests as ct
+import pyomo.contrib.piecewise.tests.common_inner_repn_tests as inner_repn_tests
 from pyomo.core.base import TransformationFactory
 from pyomo.environ import SolverFactory, Var, Constraint
 from pyomo.gdp import Disjunction, Disjunct
@@ -20,71 +21,6 @@ from pyomo.core.expr.compare import assertExpressionsEqual
 
 # Test the nested inner repn gdp model using the common_tests code
 class TestTransformPiecewiseModelToNestedInnerRepnGDP(unittest.TestCase):
-    # Check one disjunct for proper contents. Disjunct structure should be
-    # identical to the version for the inner representation gdp
-    def check_log_disjunct(self, d, pts, f, substitute_var, x):
-        self.assertEqual(len(d.component_map(Constraint)), 3)
-        # lambdas and indicator_var
-        self.assertEqual(len(d.component_map(Var)), 2)
-        self.assertIsInstance(d.lambdas, Var)
-        self.assertEqual(len(d.lambdas), 2)
-        for lamb in d.lambdas.values():
-            self.assertEqual(lamb.lb, 0)
-            self.assertEqual(lamb.ub, 1)
-        self.assertIsInstance(d.convex_combo, Constraint)
-        assertExpressionsEqual(
-            self, d.convex_combo.expr, d.lambdas[0] + d.lambdas[1] == 1
-        )
-        self.assertIsInstance(d.set_substitute, Constraint)
-        assertExpressionsEqual(
-            self, d.set_substitute.expr, substitute_var == f(x), places=7
-        )
-        self.assertIsInstance(d.linear_combo, Constraint)
-        self.assertEqual(len(d.linear_combo), 1)
-        assertExpressionsEqual(
-            self,
-            d.linear_combo[0].expr,
-            x == pts[0] * d.lambdas[0] + pts[1] * d.lambdas[1],
-        )
-
-    # Check one disjunct from the paraboloid block for proper contents. This should
-    # be identical to the inner_representation_gdp one
-    def check_paraboloid_disjunct(self, d, pts, f, substitute_var, x1, x2):
-        self.assertEqual(len(d.component_map(Constraint)), 3)
-        # lambdas and indicator_var
-        self.assertEqual(len(d.component_map(Var)), 2)
-        self.assertIsInstance(d.lambdas, Var)
-        self.assertEqual(len(d.lambdas), 3)
-        for lamb in d.lambdas.values():
-            self.assertEqual(lamb.lb, 0)
-            self.assertEqual(lamb.ub, 1)
-        self.assertIsInstance(d.convex_combo, Constraint)
-        assertExpressionsEqual(
-            self, d.convex_combo.expr, d.lambdas[0] + d.lambdas[1] + d.lambdas[2] == 1
-        )
-        self.assertIsInstance(d.set_substitute, Constraint)
-        assertExpressionsEqual(
-            self, d.set_substitute.expr, substitute_var == f(x1, x2), places=7
-        )
-        self.assertIsInstance(d.linear_combo, Constraint)
-        self.assertEqual(len(d.linear_combo), 2)
-        assertExpressionsEqual(
-            self,
-            d.linear_combo[0].expr,
-            x1
-            == pts[0][0] * d.lambdas[0]
-            + pts[1][0] * d.lambdas[1]
-            + pts[2][0] * d.lambdas[2],
-        )
-        assertExpressionsEqual(
-            self,
-            d.linear_combo[1].expr,
-            x2
-            == pts[0][1] * d.lambdas[0]
-            + pts[1][1] * d.lambdas[1]
-            + pts[2][1] * d.lambdas[2],
-        )
-
     # Check the structure of the log PWLF Block
     def check_pw_log(self, m):
         z = m.pw_log.get_transformation_var(m.log_expr)
@@ -110,8 +46,8 @@ class TestTransformPiecewiseModelToNestedInnerRepnGDP(unittest.TestCase):
 
         # Left disjunct with constraints
         self.assertIsInstance(log_block.d_l, Disjunct)
-        self.check_log_disjunct(
-            log_block.d_l, (1, 3), m.f1, log_block.substitute_var, m.x
+        inner_repn_tests.check_log_disjunct(
+            self, log_block.d_l, (1, 3), m.f1, log_block.substitute_var, m.x
         )
 
         # Right disjunct with disjunction
@@ -121,12 +57,12 @@ class TestTransformPiecewiseModelToNestedInnerRepnGDP(unittest.TestCase):
 
         # Left and right child disjuncts with constraints
         self.assertIsInstance(log_block.d_r.d_l, Disjunct)
-        self.check_log_disjunct(
-            log_block.d_r.d_l, (3, 6), m.f2, log_block.substitute_var, m.x
+        inner_repn_tests.check_log_disjunct(
+            self, log_block.d_r.d_l, (3, 6), m.f2, log_block.substitute_var, m.x
         )
         self.assertIsInstance(log_block.d_r.d_r, Disjunct)
-        self.check_log_disjunct(
-            log_block.d_r.d_r, (6, 10), m.f3, log_block.substitute_var, m.x
+        inner_repn_tests.check_log_disjunct(
+            self, log_block.d_r.d_r, (6, 10), m.f3, log_block.substitute_var, m.x
         )
 
         # Check that this also became the objective
@@ -155,8 +91,8 @@ class TestTransformPiecewiseModelToNestedInnerRepnGDP(unittest.TestCase):
             paraboloid_block.d_r.d_r: ([(0, 7), (0, 4), (3, 4)], m.g2),
         }
         for d, (pts, f) in disjuncts_dict.items():
-            self.check_paraboloid_disjunct(
-                d, pts, f, paraboloid_block.substitute_var, m.x1, m.x2
+            inner_repn_tests.check_paraboloid_disjunct(
+                self, d, pts, f, paraboloid_block.substitute_var, m.x1, m.x2
             )
 
         # And check the substitute Var is in the objective now.
