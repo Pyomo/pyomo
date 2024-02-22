@@ -1768,8 +1768,14 @@ class _NLWriter_impl(object):
                     # In an attempt to improve numerical stability, we will
                     # solve for (and substitute out) the variable with the
                     # coefficient closer to +/-1)
-                    log_coef = _log10(abs(coef))
-                    log_coef2 = _log10(abs(coef2))
+                    if coef == 0:
+                        log_coef = -inf
+                    else:
+                        log_coef = _log10(abs(coef))
+                    if coef2 == 0:
+                        log_coef2 = -inf
+                    else:
+                        log_coef2 = _log10(abs(coef2))
                     if abs(log_coef2) < abs(log_coef) or (
                         log_coef2 == -log_coef and log_coef2 < log_coef
                     ):
@@ -1790,21 +1796,25 @@ class _NLWriter_impl(object):
                     b,
                 )
                 # Tighten variable bounds
-                x_lb, x_ub = var_bounds[x]
                 lb, ub = var_bounds[_id]
-                if lb is not None:
-                    lb = (lb - b) / a
-                if ub is not None:
-                    ub = (ub - b) / a
-                if a < 0:
-                    lb, ub = ub, lb
-                if x_lb is None or (lb is not None and lb > x_lb):
-                    x_lb = lb
-                if x_ub is None or (ub is not None and ub < x_ub):
-                    x_ub = ub
-                var_bounds[x] = x_lb, x_ub
-                if x_lb == x_ub and x_lb is not None:
-                    fixed_vars.append(x)
+                if a == 0:
+                    if (lb is not None and lb > b) or (ub is not None and ub < b):
+                        raise InfeasibleConstraintException(f'Model is infeasible: {lb} <= {var_map[_id]} <= {ub} and {var_map[_id]} == {a}*{var_map[x]} + {b} cannot both be satisfied')
+                else:
+                    x_lb, x_ub = var_bounds[x]
+                    if lb is not None:
+                        lb = (lb - b) / a
+                    if ub is not None:
+                        ub = (ub - b) / a
+                    if a < 0:
+                        lb, ub = ub, lb
+                    if x_lb is None or (lb is not None and lb > x_lb):
+                        x_lb = lb
+                    if x_ub is None or (ub is not None and ub < x_ub):
+                        x_ub = ub
+                    var_bounds[x] = x_lb, x_ub
+                    if x_lb == x_ub and x_lb is not None:
+                        fixed_vars.append(x)
                 eliminated_cons.add(con_id)
             else:
                 return eliminated_cons, eliminated_vars
