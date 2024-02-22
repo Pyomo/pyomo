@@ -143,17 +143,11 @@ class TestTransformPiecewiseModelToNestedInnerRepnMIP(unittest.TestCase):
 
         # Substitute var
         self.assertIsInstance(paraboloid_block.substitute_var, Var)
-        # assertExpressionsEqual(
-        #    self,
-        #    m.indexed_c[0].expr,
-        #    m.x >= paraboloid_block.substitute_var
-        # )
         # Binaries
         self.assertIsInstance(paraboloid_block.binaries, Var)
         self.assertEqual(len(paraboloid_block.binaries), log_simplex_count)
         # Lambdas
         self.assertIsInstance(paraboloid_block.lambdas, Var)
-        # print(f"the lambdas are: {paraboloid_block.lambdas.pprint()}")
         self.assertEqual(
             len(paraboloid_block.lambdas), simplex_count * simplex_point_count
         )
