@@ -1508,6 +1508,31 @@ class TestSolvers(unittest.TestCase):
             res = opt.solve(m)
             self.assertAlmostEqual(res.incumbent_objective, -18, 5)
 
+    @parameterized.expand(input=_load_tests(nl_solvers))
+    def test_presolve_with_zero_coef(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+        opt: SolverBase = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
+        
+        """
+        when c2 gets presolved out, c1 becomes 
+        x - y + y = 0 which becomes
+        x - 0*y == 0 which is the zero we are testing for
+        """
+        m = pe.ConcreteModel()
+        m.x = pe.Var()
+        m.y = pe.Var()
+        m.z = pe.Var()
+        m.obj = pe.Objective(expr=m.x**2 + m.y**2 + m.z**2)
+        m.c1 = pe.Constraint(expr=m.x == m.y + m.z + 1.5)
+        m.c2 = pe.Constraint(expr=m.z == -m.y)
+
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.incumbent_objective, 2.25)
+        self.assertAlmostEqual(m.x.value, 1.5)
+        self.assertAlmostEqual(m.y.value, 0)
+        self.assertAlmostEqual(m.z.value, 0)
+
     @parameterized.expand(input=_load_tests(all_solvers))
     def test_scaling(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
         opt: SolverBase = opt_class()
