@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.contrib.piecewise.transform.piecewise_to_gdp_transformation import (
     PiecewiseLinearToGDP,
@@ -72,7 +83,11 @@ class IncrementalInnerGDPTransformation(PiecewiseLinearToGDP):
 
 
         # Ordering of simplices to follow Vielma
-        # TODO: this enumeration must satisfy O1 (Vielma): each T_i \cap T_{i-1} is nonempty
+        # TODO: assumption: this enumeration must satisfy O1 (Vielma): each T_i \cap T_{i-1} 
+        # is nonempty
+        # TODO: One way to make this true will be to use the union_jack__triangulate.py 
+        # script to generate the triangulation, but it is also possible for other 
+        # triangulations to be correct. This should be checkable using a MIP.
         self.simplex_ordering = {
             n: n for n in transBlock.simplex_indices
         }
