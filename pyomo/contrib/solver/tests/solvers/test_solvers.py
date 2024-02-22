@@ -1509,11 +1509,13 @@ class TestSolvers(unittest.TestCase):
             self.assertAlmostEqual(res.incumbent_objective, -18, 5)
 
     @parameterized.expand(input=_load_tests(nl_solvers))
-    def test_presolve_with_zero_coef(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+    def test_presolve_with_zero_coef(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
         opt: SolverBase = opt_class()
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
-        
+
         """
         when c2 gets presolved out, c1 becomes 
         x - y + y = 0 which becomes
