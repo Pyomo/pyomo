@@ -1799,7 +1799,9 @@ class _NLWriter_impl(object):
                 lb, ub = var_bounds[_id]
                 if a == 0:
                     if (lb is not None and lb > b) or (ub is not None and ub < b):
-                        raise InfeasibleConstraintException(f'Model is infeasible: {lb} <= {var_map[_id]} <= {ub} and {var_map[_id]} == {a}*{var_map[x]} + {b} cannot both be satisfied')
+                        raise InfeasibleConstraintException(
+                            f'Model is infeasible: {lb} <= {var_map[_id]} <= {ub} and {var_map[_id]} == {a}*{var_map[x]} + {b} cannot both be satisfied'
+                        )
                 else:
                     x_lb, x_ub = var_bounds[x]
                     if lb is not None:
