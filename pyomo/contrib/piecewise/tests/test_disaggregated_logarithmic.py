@@ -69,10 +69,10 @@ class TestTransformPiecewiseModelToNestedInnerRepnMIP(unittest.TestCase):
             log_block.set_substitute.expr,
             log_block.substitute_var
             == log_block.lambdas[0, 0] * m.f1(1)
-            + log_block.lambdas[0, 1] * m.f1(3)
             + log_block.lambdas[1, 0] * m.f2(3)
-            + log_block.lambdas[1, 1] * m.f2(6)
             + log_block.lambdas[2, 0] * m.f3(6)
+            + log_block.lambdas[0, 1] * m.f1(3)
+            + log_block.lambdas[1, 1] * m.f2(6)
             + log_block.lambdas[2, 1] * m.f3(10),
             places=7,
         )
@@ -188,16 +188,16 @@ class TestTransformPiecewiseModelToNestedInnerRepnMIP(unittest.TestCase):
             paraboloid_block.set_substitute.expr,
             paraboloid_block.substitute_var
             == paraboloid_block.lambdas[0, 0] * m.g1(0, 1)
-            + paraboloid_block.lambdas[0, 1] * m.g1(0, 4)
-            + paraboloid_block.lambdas[0, 2] * m.g1(3, 4)
             + paraboloid_block.lambdas[1, 0] * m.g1(0, 1)
-            + paraboloid_block.lambdas[1, 1] * m.g1(3, 4)
-            + paraboloid_block.lambdas[1, 2] * m.g1(3, 1)
             + paraboloid_block.lambdas[2, 0] * m.g2(3, 4)
-            + paraboloid_block.lambdas[2, 1] * m.g2(3, 7)
-            + paraboloid_block.lambdas[2, 2] * m.g2(0, 7)
             + paraboloid_block.lambdas[3, 0] * m.g2(0, 7)
+            + paraboloid_block.lambdas[0, 1] * m.g1(0, 4)
+            + paraboloid_block.lambdas[1, 1] * m.g1(3, 4)
+            + paraboloid_block.lambdas[2, 1] * m.g2(3, 7)
             + paraboloid_block.lambdas[3, 1] * m.g2(0, 4)
+            + paraboloid_block.lambdas[0, 2] * m.g1(3, 4)
+            + paraboloid_block.lambdas[1, 2] * m.g1(3, 1)
+            + paraboloid_block.lambdas[2, 2] * m.g2(0, 7)
             + paraboloid_block.lambdas[3, 2] * m.g2(3, 4),
             places=7,
         )
