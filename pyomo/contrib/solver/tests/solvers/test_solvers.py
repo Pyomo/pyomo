@@ -1508,6 +1508,71 @@ class TestSolvers(unittest.TestCase):
             res = opt.solve(m)
             self.assertAlmostEqual(res.incumbent_objective, -18, 5)
 
+    @parameterized.expand(input=_load_tests(nl_solvers))
+    def test_presolve_with_zero_coef(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
+        opt: SolverBase = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
+        if use_presolve:
+            opt.config.writer_config.linear_presolve = True
+        else:
+            opt.config.writer_config.linear_presolve = False
+
+        """
+        when c2 gets presolved out, c1 becomes 
+        x - y + y = 0 which becomes
+        x - 0*y == 0 which is the zero we are testing for
+        """
+        m = pe.ConcreteModel()
+        m.x = pe.Var()
+        m.y = pe.Var()
+        m.z = pe.Var()
+        m.obj = pe.Objective(expr=m.x**2 + m.y**2 + m.z**2)
+        m.c1 = pe.Constraint(expr=m.x == m.y + m.z + 1.5)
+        m.c2 = pe.Constraint(expr=m.z == -m.y)
+
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.incumbent_objective, 2.25)
+        self.assertAlmostEqual(m.x.value, 1.5)
+        self.assertAlmostEqual(m.y.value, 0)
+        self.assertAlmostEqual(m.z.value, 0)
+
+        m.x.setlb(2)
+        res = opt.solve(
+            m, load_solutions=False, raise_exception_on_nonoptimal_result=False
+        )
+        if use_presolve:
+            exp = TerminationCondition.provenInfeasible
+        else:
+            exp = TerminationCondition.locallyInfeasible
+        self.assertEqual(res.termination_condition, exp)
+
+        m = pe.ConcreteModel()
+        m.w = pe.Var()
+        m.x = pe.Var()
+        m.y = pe.Var()
+        m.z = pe.Var()
+        m.obj = pe.Objective(expr=m.x**2 + m.y**2 + m.z**2 + m.w**2)
+        m.c1 = pe.Constraint(expr=m.x + m.w == m.y + m.z)
+        m.c2 = pe.Constraint(expr=m.z == -m.y)
+        m.c3 = pe.Constraint(expr=m.x == -m.w)
+
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.incumbent_objective, 0)
+        self.assertAlmostEqual(m.w.value, 0)
+        self.assertAlmostEqual(m.x.value, 0)
+        self.assertAlmostEqual(m.y.value, 0)
+        self.assertAlmostEqual(m.z.value, 0)
+
+        del m.c1
+        m.c1 = pe.Constraint(expr=m.x + m.w == m.y + m.z + 1.5)
+        res = opt.solve(
+            m, load_solutions=False, raise_exception_on_nonoptimal_result=False
+        )
+        self.assertEqual(res.termination_condition, exp)
+
     @parameterized.expand(input=_load_tests(all_solvers))
     def test_scaling(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
         opt: SolverBase = opt_class()
