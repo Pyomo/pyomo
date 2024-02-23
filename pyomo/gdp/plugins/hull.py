@@ -752,7 +752,8 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                     newConstraint.add((name, i, 'eq'), newConsExpr)
                     # map the _ConstraintDatas (we mapped the container above)
                     constraint_map.transformed_constraints[c].append(
-                        newConstraint[name, i, 'eq'])
+                        newConstraint[name, i, 'eq']
+                    )
                     constraint_map.src_constraint[newConstraint[name, i, 'eq']] = c
                 else:
                     newConstraint.add((name, 'eq'), newConsExpr)

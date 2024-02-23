@@ -254,7 +254,8 @@ class _BigM_MixIn(object):
             M_expr = M[0] * (1 - indicator_var)
             newConstraint.add((name, i, 'lb'), c.lower <= c.body - M_expr)
             constraint_map.transformed_constraints[c].append(
-                newConstraint[name, i, 'lb'])
+                newConstraint[name, i, 'lb']
+            )
             constraint_map.src_constraint[newConstraint[name, i, 'lb']] = c
         if c.upper is not None:
             if M[1] is None:

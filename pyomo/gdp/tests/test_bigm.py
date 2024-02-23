@@ -1317,8 +1317,7 @@ class ScalarDisjIndexedConstraints(unittest.TestCase, CommonTests):
 
         # the real test: This wasn't transformed
         with self.assertRaisesRegex(
-            GDP_Error,
-            r"Constraint 'b.simpledisj1.c\[1\]' has not been transformed."
+            GDP_Error, r"Constraint 'b.simpledisj1.c\[1\]' has not been transformed."
         ):
             bigm.get_transformed_constraints(m.b.simpledisj1.c[1])
 
@@ -2267,8 +2266,7 @@ class BlocksOnDisjuncts(unittest.TestCase):
         self.assertIs(evil1[1].parent_block(), disjBlock[1])
         with self.assertRaisesRegex(
             GDP_Error,
-            r"Constraint 'evil\[1\].b.anotherblock.c' has not been "
-            r"transformed.",
+            r"Constraint 'evil\[1\].b.anotherblock.c' has not been transformed.",
         ):
             bigm.get_transformed_constraints(m.evil[1].b.anotherblock.c)
 

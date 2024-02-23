@@ -898,8 +898,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         hull.apply_to(m)
         # can't ask for simpledisj1.c[1]: it wasn't transformed
         with self.assertRaisesRegex(
-            GDP_Error,
-            r"Constraint 'b.simpledisj1.c\[1\]' has not been transformed."
+            GDP_Error, r"Constraint 'b.simpledisj1.c\[1\]' has not been transformed."
         ):
             hull.get_transformed_constraints(m.b.simpledisj1.c[1])
 

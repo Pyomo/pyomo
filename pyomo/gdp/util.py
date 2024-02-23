@@ -539,12 +539,14 @@ def get_transformed_constraints(srcConstraint):
         )
     transBlock = _get_constraint_transBlock(srcConstraint)
     transformed_constraints = transBlock.private_data(
-        'pyomo.gdp').transformed_constraints
+        'pyomo.gdp'
+    ).transformed_constraints
     if srcConstraint in transformed_constraints:
         return transformed_constraints[srcConstraint]
     else:
-        raise GDP_Error("Constraint '%s' has not been transformed." % 
-                        srcConstraint.name)
+        raise GDP_Error(
+            "Constraint '%s' has not been transformed." % srcConstraint.name
+        )
 
 
 def _warn_for_active_disjunct(innerdisjunct, outerdisjunct):
