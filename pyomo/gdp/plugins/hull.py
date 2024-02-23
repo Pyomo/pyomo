@@ -58,12 +58,14 @@ logger = logging.getLogger('pyomo.gdp.hull')
 
 
 class _HullTransformationData(AutoSlots.Mixin):
-    __slots__ = ('disaggregated_var_map', 'original_var_map', 'bigm_constraint_map')
+    __slots__ = ('disaggregated_var_map', 'original_var_map', 'bigm_constraint_map',
+                 'disaggregation_constraint_map')
 
     def __init__(self):
         self.disaggregated_var_map = DefaultComponentMap(ComponentMap)
         self.original_var_map = ComponentMap()
         self.bigm_constraint_map = DefaultComponentMap(ComponentMap)
+        self.disaggregation_constraint_map = DefaultComponentMap(ComponentMap)
 
 
 Block.register_private_data_initializer(_HullTransformationData)
@@ -100,10 +102,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
     have a pointer to the block their transformed constraints are on,
     and all transformed Disjunctions will have a pointer to the
     corresponding OR or XOR constraint.
-
-    The _pyomo_gdp_hull_reformulation block will have a ComponentMap
-    "_disaggregationConstraintMap":
-        <src var>:ComponentMap(<srcDisjunction>: <disaggregation constraint>)
     """
 
     CONFIG = cfg.ConfigDict('gdp.hull')
@@ -285,10 +283,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         # Disjunctions we transform onto this block here.
         transBlock.disaggregationConstraints = Constraint(NonNegativeIntegers)
 
-        # This will map from srcVar to a map of srcDisjunction to the
-        # disaggregation constraint corresponding to srcDisjunction
-        transBlock._disaggregationConstraintMap = ComponentMap()
-
         # we are going to store some of the disaggregated vars directly here
         # when we have vars that don't appear in every disjunct
         transBlock._disaggregatedVars = Var(NonNegativeIntegers, dense=False)
@@ -321,7 +315,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         )
 
         disaggregationConstraint = transBlock.disaggregationConstraints
-        disaggregationConstraintMap = transBlock._disaggregationConstraintMap
+        disaggregationConstraintMap = transBlock.private_data().disaggregation_constraint_map
         disaggregatedVars = transBlock._disaggregatedVars
         disaggregated_var_bounds = transBlock._boundsConstraints
 
@@ -490,13 +484,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             # and update the map so that we can find this later. We index by
             # variable and the particular disjunction because there is a
             # different one for each disjunction
-            if var in disaggregationConstraintMap:
-                disaggregationConstraintMap[var][obj] = disaggregationConstraint[
-                    cons_idx
-                ]
-            else:
-                thismap = disaggregationConstraintMap[var] = ComponentMap()
-                thismap[obj] = disaggregationConstraint[cons_idx]
+            disaggregationConstraintMap[var][obj] = disaggregationConstraint[cons_idx]
 
         # deactivate for the writers
         obj.deactivate()
@@ -922,9 +910,8 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             )
 
         try:
-            cons = transBlock.parent_block()._disaggregationConstraintMap[original_var][
-                disjunction
-            ]
+            cons = transBlock.parent_block().private_data().disaggregation_constraint_map[
+                original_var][disjunction]
         except:
             if raise_exception:
                 logger.error(
