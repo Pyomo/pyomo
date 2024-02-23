@@ -58,8 +58,12 @@ logger = logging.getLogger('pyomo.gdp.hull')
 
 
 class _HullTransformationData(AutoSlots.Mixin):
-    __slots__ = ('disaggregated_var_map', 'original_var_map', 'bigm_constraint_map',
-                 'disaggregation_constraint_map')
+    __slots__ = (
+        'disaggregated_var_map',
+        'original_var_map',
+        'bigm_constraint_map',
+        'disaggregation_constraint_map',
+    )
 
     def __init__(self):
         self.disaggregated_var_map = DefaultComponentMap(ComponentMap)
@@ -315,7 +319,9 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         )
 
         disaggregationConstraint = transBlock.disaggregationConstraints
-        disaggregationConstraintMap = transBlock.private_data().disaggregation_constraint_map
+        disaggregationConstraintMap = (
+            transBlock.private_data().disaggregation_constraint_map
+        )
         disaggregatedVars = transBlock._disaggregatedVars
         disaggregated_var_bounds = transBlock._boundsConstraints
 
@@ -910,8 +916,11 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             )
 
         try:
-            cons = transBlock.parent_block().private_data().disaggregation_constraint_map[
-                original_var][disjunction]
+            cons = (
+                transBlock.parent_block()
+                .private_data()
+                .disaggregation_constraint_map[original_var][disjunction]
+            )
         except:
             if raise_exception:
                 logger.error(
