@@ -359,7 +359,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
     def _transform_constraint(self, obj, disjunct, active_disjuncts, Ms):
         # we will put a new transformed constraint on the relaxation block.
         relaxationBlock = disjunct._transformation_block()
-        constraintMap = relaxationBlock._constraintMap
+        constraint_map = relaxationBlock.private_data('pyomo.gdp')
         transBlock = relaxationBlock.parent_block()
 
         # Though rare, it is possible to get naming conflicts here
@@ -397,8 +397,8 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                     newConstraint.add((i, 'ub'), c.body - c.upper <= rhs)
                     transformed.append(newConstraint[i, 'ub'])
                 for c_new in transformed:
-                    constraintMap['srcConstraints'][c_new] = [c]
-                constraintMap['transformedConstraints'][c] = transformed
+                    constraint_map.src_constraint[c_new] = [c]
+                constraint_map.transformed_constraint[c] = transformed
             else:
                 lower = (None, None, None)
                 upper = (None, None, None)
@@ -427,7 +427,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                     M,
                     disjunct.indicator_var.get_associated_binary(),
                     newConstraint,
-                    constraintMap,
+                    constraint_map,
                 )
 
             # deactivate now that we have transformed
@@ -496,6 +496,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                 relaxationBlock = self._get_disjunct_transformation_block(
                     disj, transBlock
                 )
+                constraint_map = relaxationBlock.private_data('pyomo.gdp')
                 if len(lower_dict) > 0:
                     M = lower_dict.get(disj, None)
                     if M is None:
@@ -527,39 +528,36 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             idx = i + offset
             if len(lower_dict) > 0:
                 transformed.add((idx, 'lb'), v >= lower_rhs)
-                relaxationBlock._constraintMap['srcConstraints'][
+                constraint_map.src_constraint[
                     transformed[idx, 'lb']
                 ] = []
                 for c, disj in lower_bound_constraints_by_var[v]:
-                    relaxationBlock._constraintMap['srcConstraints'][
+                    constraint_map.src_constraint[
                         transformed[idx, 'lb']
                     ].append(c)
-                    disj.transformation_block._constraintMap['transformedConstraints'][
+                    disj.transformation_block.private_data(
+                        'pyomo.gdp').transformed_constraint[
                         c
                     ] = [transformed[idx, 'lb']]
             if len(upper_dict) > 0:
                 transformed.add((idx, 'ub'), v <= upper_rhs)
-                relaxationBlock._constraintMap['srcConstraints'][
+                constraint_map.src_constraint[
                     transformed[idx, 'ub']
                 ] = []
                 for c, disj in upper_bound_constraints_by_var[v]:
-                    relaxationBlock._constraintMap['srcConstraints'][
+                    constraint_map.src_constraint[
                         transformed[idx, 'ub']
                     ].append(c)
                     # might already be here if it had an upper bound
-                    if (
-                        c
-                        in disj.transformation_block._constraintMap[
-                            'transformedConstraints'
-                        ]
-                    ):
-                        disj.transformation_block._constraintMap[
-                            'transformedConstraints'
-                        ][c].append(transformed[idx, 'ub'])
+                    disj_constraint_map = disj.transformation_block.private_data(
+                        'pyomo.gdp')
+                    if c in disj_constraint_map.transformed_constraint:
+                        disj_constraint_map.transformed_constraint[c].append(
+                            transformed[idx, 'ub'])
                     else:
-                        disj.transformation_block._constraintMap[
-                            'transformedConstraints'
-                        ][c] = [transformed[idx, 'ub']]
+                        disj_constraint_map.transformed_constraint[c] = [
+                            transformed[idx, 'ub']
+                        ]
 
         return transformed_constraints
 

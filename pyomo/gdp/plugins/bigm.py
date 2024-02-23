@@ -94,15 +94,8 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
     name beginning "_pyomo_gdp_bigm_reformulation".  That Block will
     contain an indexed Block named "relaxedDisjuncts", which will hold
     the relaxed disjuncts.  This block is indexed by an integer
-    indicating the order in which the disjuncts were relaxed.
-    Each block has a dictionary "_constraintMap":
-
-        'srcConstraints': ComponentMap(<transformed constraint>:
-                                       <src constraint>)
-        'transformedConstraints': ComponentMap(<src constraint>:
-                                               <transformed constraint>)
-
-    All transformed Disjuncts will have a pointer to the block their transformed
+    indicating the order in which the disjuncts were relaxed. All
+    transformed Disjuncts will have a pointer to the block their transformed
     constraints are on, and all transformed Disjunctions will have a
     pointer to the corresponding 'Or' or 'ExactlyOne' constraint.
 
@@ -279,7 +272,7 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         # add constraint to the transformation block, we'll transform it there.
         transBlock = disjunct._transformation_block()
         bigm_src = transBlock.bigm_src
-        constraintMap = transBlock._constraintMap
+        constraint_map = transBlock.private_data('pyomo.gdp')
 
         disjunctionRelaxationBlock = transBlock.parent_block()
 
@@ -346,7 +339,7 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             bigm_src[c] = (lower, upper)
 
             self._add_constraint_expressions(
-                c, i, M, disjunct.binary_indicator_var, newConstraint, constraintMap
+                c, i, M, disjunct.binary_indicator_var, newConstraint, constraint_map
             )
 
             # deactivate because we relaxed

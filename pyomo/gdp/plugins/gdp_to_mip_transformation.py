@@ -254,14 +254,7 @@ class GDP_to_MIP_Transformation(Transformation):
         relaxationBlock = relaxedDisjuncts[len(relaxedDisjuncts)]
 
         relaxationBlock.transformedConstraints = Constraint(Any)
-
         relaxationBlock.localVarReferences = Block()
-        # add the map that will link back and forth between transformed
-        # constraints and their originals.
-        relaxationBlock._constraintMap = {
-            'srcConstraints': ComponentMap(),
-            'transformedConstraints': ComponentMap(),
-        }
 
         # add mappings to source disjunct (so we'll know we've relaxed)
         disjunct._transformation_block = weakref_ref(relaxationBlock)
