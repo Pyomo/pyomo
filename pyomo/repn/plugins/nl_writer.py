@@ -1833,7 +1833,7 @@ class _NLWriter_impl(object):
                             if abs(expr_info.const) > TOL:
                                 # constraint is trivially infeasible
                                 raise InfeasibleConstraintException(
-                                    "model contains a trivially infeasible constrint "
+                                    "model contains a trivially infeasible constraint "
                                     f"{expr_info.const} == {coef}*{var_map[x]}"
                                 )
                             # constraint is trivially feasible
