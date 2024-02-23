@@ -95,20 +95,11 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
     The transformation will create a new Block with a unique
     name beginning "_pyomo_gdp_hull_reformulation". It will contain an
     indexed Block named "relaxedDisjuncts" that will hold the relaxed
-    disjuncts.  This block is indexed by an integer indicating the order
-    in which the disjuncts were relaxed. Each block has a dictionary
-    "_constraintMap":
-
-        'srcConstraints': ComponentMap(<transformed constraint>:
-                                       <src constraint>),
-        'transformedConstraints':
-            ComponentMap(<src constraint container> :
-                         <transformed constraint container>,
-                         <src constraintData> : [<transformed constraintDatas>])
-
-    All transformed Disjuncts will have a pointer to the block their transformed
-    constraints are on, and all transformed Disjunctions will have a
-    pointer to the corresponding OR or XOR constraint.
+    disjuncts. This block is indexed by an integer indicating the order
+    in which the disjuncts were relaxed. All transformed Disjuncts will
+    have a pointer to the block their transformed constraints are on,
+    and all transformed Disjunctions will have a pointer to the
+    corresponding OR or XOR constraint.
 
     The _pyomo_gdp_hull_reformulation block will have a ComponentMap
     "_disaggregationConstraintMap":
@@ -675,7 +666,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
     ):
         # we will put a new transformed constraint on the relaxation block.
         relaxationBlock = disjunct._transformation_block()
-        constraintMap = relaxationBlock._constraintMap
+        constraint_map = relaxationBlock.private_data('pyomo.gdp')
 
         # We will make indexes from ({obj.local_name} x obj.index_set() x ['lb',
         # 'ub']), but don't bother construct that set here, as taking Cartesian
@@ -757,19 +748,19 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                         # this variable, so I'm going to return
                         # it. Alternatively we could return an empty list, but I
                         # think I like this better.
-                        constraintMap['transformedConstraints'][c] = [v[0]]
+                        constraint_map.transformed_constraint[c] = [v[0]]
                         # Reverse map also (this is strange)
-                        constraintMap['srcConstraints'][v[0]] = c
+                        constraint_map.src_constraint[v[0]] = c
                         continue
                     newConsExpr = expr - (1 - y) * h_0 == c.lower * y
 
                 if obj.is_indexed():
                     newConstraint.add((name, i, 'eq'), newConsExpr)
                     # map the _ConstraintDatas (we mapped the container above)
-                    constraintMap['transformedConstraints'][c] = [
+                    constraint_map.transformed_constraint[c] = [
                         newConstraint[name, i, 'eq']
                     ]
-                    constraintMap['srcConstraints'][newConstraint[name, i, 'eq']] = c
+                    constraint_map.src_constraint[newConstraint[name, i, 'eq']] = c
                 else:
                     newConstraint.add((name, 'eq'), newConsExpr)
                     # map to the _ConstraintData (And yes, for
@@ -779,10 +770,10 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                     # IndexedConstraints, we can map the container to the
                     # container, but more importantly, we are mapping the
                     # _ConstraintDatas to each other above)
-                    constraintMap['transformedConstraints'][c] = [
+                    constraint_map.transformed_constraint[c] = [
                         newConstraint[name, 'eq']
                     ]
-                    constraintMap['srcConstraints'][newConstraint[name, 'eq']] = c
+                    constraint_map.src_constraint[newConstraint[name, 'eq']] = c
 
                 continue
 
@@ -797,16 +788,16 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
                 if obj.is_indexed():
                     newConstraint.add((name, i, 'lb'), newConsExpr)
-                    constraintMap['transformedConstraints'][c] = [
+                    constraint_map.transformed_constraint[c] = [
                         newConstraint[name, i, 'lb']
                     ]
-                    constraintMap['srcConstraints'][newConstraint[name, i, 'lb']] = c
+                    constraint_map.src_constraint[newConstraint[name, i, 'lb']] = c
                 else:
                     newConstraint.add((name, 'lb'), newConsExpr)
-                    constraintMap['transformedConstraints'][c] = [
+                    constraint_map.transformed_constraint[c] = [
                         newConstraint[name, 'lb']
                     ]
-                    constraintMap['srcConstraints'][newConstraint[name, 'lb']] = c
+                    constraint_map.src_constraint[newConstraint[name, 'lb']] = c
 
             if c.upper is not None:
                 if self._generate_debug_messages:
@@ -821,24 +812,24 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                     newConstraint.add((name, i, 'ub'), newConsExpr)
                     # map (have to account for fact we might have created list
                     # above
-                    transformed = constraintMap['transformedConstraints'].get(c)
+                    transformed = constraint_map.transformed_constraint.get(c)
                     if transformed is not None:
                         transformed.append(newConstraint[name, i, 'ub'])
                     else:
-                        constraintMap['transformedConstraints'][c] = [
+                        constraint_map.transformed_constraint[c] = [
                             newConstraint[name, i, 'ub']
                         ]
-                    constraintMap['srcConstraints'][newConstraint[name, i, 'ub']] = c
+                    constraint_map.src_constraint[newConstraint[name, i, 'ub']] = c
                 else:
                     newConstraint.add((name, 'ub'), newConsExpr)
-                    transformed = constraintMap['transformedConstraints'].get(c)
+                    transformed = constraint_map.transformed_constraint.get(c)
                     if transformed is not None:
                         transformed.append(newConstraint[name, 'ub'])
                     else:
-                        constraintMap['transformedConstraints'][c] = [
+                        constraint_map.transformed_constraint[c] = [
                             newConstraint[name, 'ub']
                         ]
-                    constraintMap['srcConstraints'][newConstraint[name, 'ub']] = c
+                    constraint_map.src_constraint[newConstraint[name, 'ub']] = c
 
         # deactivate now that we have transformed
         obj.deactivate()
