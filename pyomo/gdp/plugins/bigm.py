@@ -61,6 +61,7 @@ logger = logging.getLogger('pyomo.gdp.bigm')
 
 class _BigMData(AutoSlots.Mixin):
     __slots__ = ('bigm_src',)
+
     def __init__(self):
         # we will keep a map of constraints (hashable, ha!) to a tuple to
         # indicate what their M value is and where it came from, of the form:
@@ -74,7 +75,9 @@ class _BigMData(AutoSlots.Mixin):
         # information for both.)
         self.bigm_src = {}
 
+
 Block.register_private_data_initializer(_BigMData)
+
 
 @TransformationFactory.register(
     'gdp.bigm', doc="Relax disjunctive model using big-M terms."
