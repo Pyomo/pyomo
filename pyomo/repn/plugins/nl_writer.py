@@ -1760,7 +1760,7 @@ class _NLWriter_impl(object):
                 id2_isdiscrete = var_map[id2].domain.isdiscrete()
                 if var_map[_id].domain.isdiscrete() ^ id2_isdiscrete:
                     # if only one variable is discrete, then we need to
-                    # substiitute out the other
+                    # substitute out the other
                     if id2_isdiscrete:
                         _id, id2 = id2, _id
                         coef, coef2 = coef2, coef
