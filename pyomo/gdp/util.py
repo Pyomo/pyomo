@@ -540,7 +540,8 @@ def get_transformed_constraints(srcConstraint):
     transBlock = _get_constraint_transBlock(srcConstraint)
     try:
         return transBlock.private_data('pyomo.gdp').transformed_constraint[
-            srcConstraint]
+            srcConstraint
+        ]
     except:
         logger.error("Constraint '%s' has not been transformed." % srcConstraint.name)
         raise

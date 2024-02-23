@@ -51,6 +51,7 @@ from weakref import ref as weakref_ref
 
 class _GDPTransformationData(AutoSlots.Mixin):
     __slots__ = ('src_constraint', 'transformed_constraint')
+
     def __init__(self):
         self.src_constraint = ComponentMap()
         self.transformed_constraint = ComponentMap()

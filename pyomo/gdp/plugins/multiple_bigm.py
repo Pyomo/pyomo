@@ -528,32 +528,25 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             idx = i + offset
             if len(lower_dict) > 0:
                 transformed.add((idx, 'lb'), v >= lower_rhs)
-                constraint_map.src_constraint[
-                    transformed[idx, 'lb']
-                ] = []
+                constraint_map.src_constraint[transformed[idx, 'lb']] = []
                 for c, disj in lower_bound_constraints_by_var[v]:
-                    constraint_map.src_constraint[
-                        transformed[idx, 'lb']
-                    ].append(c)
+                    constraint_map.src_constraint[transformed[idx, 'lb']].append(c)
                     disj.transformation_block.private_data(
-                        'pyomo.gdp').transformed_constraint[
-                        c
-                    ] = [transformed[idx, 'lb']]
+                        'pyomo.gdp'
+                    ).transformed_constraint[c] = [transformed[idx, 'lb']]
             if len(upper_dict) > 0:
                 transformed.add((idx, 'ub'), v <= upper_rhs)
-                constraint_map.src_constraint[
-                    transformed[idx, 'ub']
-                ] = []
+                constraint_map.src_constraint[transformed[idx, 'ub']] = []
                 for c, disj in upper_bound_constraints_by_var[v]:
-                    constraint_map.src_constraint[
-                        transformed[idx, 'ub']
-                    ].append(c)
+                    constraint_map.src_constraint[transformed[idx, 'ub']].append(c)
                     # might already be here if it had an upper bound
                     disj_constraint_map = disj.transformation_block.private_data(
-                        'pyomo.gdp')
+                        'pyomo.gdp'
+                    )
                     if c in disj_constraint_map.transformed_constraint:
                         disj_constraint_map.transformed_constraint[c].append(
-                            transformed[idx, 'ub'])
+                            transformed[idx, 'ub']
+                        )
                     else:
                         disj_constraint_map.transformed_constraint[c] = [
                             transformed[idx, 'ub']
