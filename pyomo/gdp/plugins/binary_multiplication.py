@@ -156,7 +156,7 @@ class GDPBinaryMultiplicationTransformation(GDP_to_MIP_Transformation):
         # over the constraint indices, but I don't think it matters a lot.)
         unique = len(newConstraint)
         name = c.local_name + "_%s" % unique
-        transformed = constraint_map.transformed_constraint[c] = []
+        transformed = constraint_map.transformed_constraints[c]
 
         lb, ub = c.lower, c.upper
         if (c.equality or lb is ub) and lb is not None:

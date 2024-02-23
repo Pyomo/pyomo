@@ -378,7 +378,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                 continue
 
             if not self._config.only_mbigm_bound_constraints:
-                transformed = []
+                transformed = constraint_map.transformed_constraints[c]
                 if c.lower is not None:
                     rhs = sum(
                         Ms[c, disj][0] * disj.indicator_var.get_associated_binary()
@@ -398,7 +398,6 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                     transformed.append(newConstraint[i, 'ub'])
                 for c_new in transformed:
                     constraint_map.src_constraint[c_new] = [c]
-                constraint_map.transformed_constraint[c] = transformed
             else:
                 lower = (None, None, None)
                 upper = (None, None, None)
@@ -533,7 +532,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                     constraint_map.src_constraint[transformed[idx, 'lb']].append(c)
                     disj.transformation_block.private_data(
                         'pyomo.gdp'
-                    ).transformed_constraint[c] = [transformed[idx, 'lb']]
+                    ).transformed_constraints[c].append(transformed[idx, 'lb'])
             if len(upper_dict) > 0:
                 transformed.add((idx, 'ub'), v <= upper_rhs)
                 constraint_map.src_constraint[transformed[idx, 'ub']] = []
@@ -543,14 +542,9 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                     disj_constraint_map = disj.transformation_block.private_data(
                         'pyomo.gdp'
                     )
-                    if c in disj_constraint_map.transformed_constraint:
-                        disj_constraint_map.transformed_constraint[c].append(
-                            transformed[idx, 'ub']
-                        )
-                    else:
-                        disj_constraint_map.transformed_constraint[c] = [
-                            transformed[idx, 'ub']
-                        ]
+                    disj_constraint_map.transformed_constraints[c].append(
+                        transformed[idx, 'ub']
+                    )
 
         return transformed_constraints
 

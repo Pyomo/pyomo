@@ -742,7 +742,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                         # this variable, so I'm going to return
                         # it. Alternatively we could return an empty list, but I
                         # think I like this better.
-                        constraint_map.transformed_constraint[c] = [v[0]]
+                        constraint_map.transformed_constraints[c].append(v[0])
                         # Reverse map also (this is strange)
                         constraint_map.src_constraint[v[0]] = c
                         continue
@@ -751,9 +751,8 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 if obj.is_indexed():
                     newConstraint.add((name, i, 'eq'), newConsExpr)
                     # map the _ConstraintDatas (we mapped the container above)
-                    constraint_map.transformed_constraint[c] = [
-                        newConstraint[name, i, 'eq']
-                    ]
+                    constraint_map.transformed_constraints[c].append(
+                        newConstraint[name, i, 'eq'])
                     constraint_map.src_constraint[newConstraint[name, i, 'eq']] = c
                 else:
                     newConstraint.add((name, 'eq'), newConsExpr)
@@ -764,9 +763,9 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                     # IndexedConstraints, we can map the container to the
                     # container, but more importantly, we are mapping the
                     # _ConstraintDatas to each other above)
-                    constraint_map.transformed_constraint[c] = [
+                    constraint_map.transformed_constraints[c].append(
                         newConstraint[name, 'eq']
-                    ]
+                    )
                     constraint_map.src_constraint[newConstraint[name, 'eq']] = c
 
                 continue
@@ -782,15 +781,15 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
                 if obj.is_indexed():
                     newConstraint.add((name, i, 'lb'), newConsExpr)
-                    constraint_map.transformed_constraint[c] = [
+                    constraint_map.transformed_constraints[c].append(
                         newConstraint[name, i, 'lb']
-                    ]
+                    )
                     constraint_map.src_constraint[newConstraint[name, i, 'lb']] = c
                 else:
                     newConstraint.add((name, 'lb'), newConsExpr)
-                    constraint_map.transformed_constraint[c] = [
+                    constraint_map.transformed_constraints[c].append(
                         newConstraint[name, 'lb']
-                    ]
+                    )
                     constraint_map.src_constraint[newConstraint[name, 'lb']] = c
 
             if c.upper is not None:
@@ -806,23 +805,15 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                     newConstraint.add((name, i, 'ub'), newConsExpr)
                     # map (have to account for fact we might have created list
                     # above
-                    transformed = constraint_map.transformed_constraint.get(c)
-                    if transformed is not None:
-                        transformed.append(newConstraint[name, i, 'ub'])
-                    else:
-                        constraint_map.transformed_constraint[c] = [
-                            newConstraint[name, i, 'ub']
-                        ]
+                    constraint_map.transformed_constraints[c].append(
+                        newConstraint[name, i, 'ub']
+                    )
                     constraint_map.src_constraint[newConstraint[name, i, 'ub']] = c
                 else:
                     newConstraint.add((name, 'ub'), newConsExpr)
-                    transformed = constraint_map.transformed_constraint.get(c)
-                    if transformed is not None:
-                        transformed.append(newConstraint[name, 'ub'])
-                    else:
-                        constraint_map.transformed_constraint[c] = [
-                            newConstraint[name, 'ub']
-                        ]
+                    constraint_map.transformed_constraints[c].append(
+                        newConstraint[name, 'ub']
+                    )
                     constraint_map.src_constraint[newConstraint[name, 'ub']] = c
 
         # deactivate now that we have transformed

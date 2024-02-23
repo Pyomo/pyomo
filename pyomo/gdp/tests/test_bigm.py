@@ -1316,18 +1316,11 @@ class ScalarDisjIndexedConstraints(unittest.TestCase, CommonTests):
         bigm.apply_to(m)
 
         # the real test: This wasn't transformed
-        log = StringIO()
-        with LoggingIntercept(log, 'pyomo.gdp', logging.ERROR):
-            self.assertRaisesRegex(
-                KeyError,
-                r".*b.simpledisj1.c\[1\]",
-                bigm.get_transformed_constraints,
-                m.b.simpledisj1.c[1],
-            )
-        self.assertRegex(
-            log.getvalue(),
-            r".*Constraint 'b.simpledisj1.c\[1\]' has not been transformed.",
-        )
+        with self.assertRaisesRegex(
+            GDP_Error,
+            r"Constraint 'b.simpledisj1.c\[1\]' has not been transformed."
+        ):
+            bigm.get_transformed_constraints(m.b.simpledisj1.c[1])
 
         # and the rest of the container was transformed
         cons_list = bigm.get_transformed_constraints(m.b.simpledisj1.c[2])
@@ -2272,18 +2265,13 @@ class BlocksOnDisjuncts(unittest.TestCase):
         self.assertEqual(len(evil1), 2)
         self.assertIs(evil1[0].parent_block(), disjBlock[1])
         self.assertIs(evil1[1].parent_block(), disjBlock[1])
-        out = StringIO()
-        with LoggingIntercept(out, 'pyomo.gdp', logging.ERROR):
-            self.assertRaisesRegex(
-                KeyError,
-                r".*.evil\[1\].b.anotherblock.c",
-                bigm.get_transformed_constraints,
-                m.evil[1].b.anotherblock.c,
-            )
-        self.assertRegex(
-            out.getvalue(),
-            r".*Constraint 'evil\[1\].b.anotherblock.c' has not been transformed.",
-        )
+        with self.assertRaisesRegex(
+            GDP_Error,
+            r"Constraint 'evil\[1\].b.anotherblock.c' has not been "
+            r"transformed.",
+        ):
+            bigm.get_transformed_constraints(m.evil[1].b.anotherblock.c)
+
         evil1 = bigm.get_transformed_constraints(m.evil[1].bb[1].c)
         self.assertEqual(len(evil1), 2)
         self.assertIs(evil1[0].parent_block(), disjBlock[1])
