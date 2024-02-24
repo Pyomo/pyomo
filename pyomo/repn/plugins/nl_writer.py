@@ -1829,15 +1829,6 @@ class _NLWriter_impl(object):
                     if expr_info.linear[x] == 0:
                         nnz -= 1
                         coef = expr_info.linear.pop(x)
-                        if not nnz:
-                            if abs(expr_info.const) > TOL:
-                                # constraint is trivially infeasible
-                                raise InfeasibleConstraintException(
-                                    "model contains a trivially infeasible constraint "
-                                    f"{expr_info.const} == {coef}*{var_map[x]}"
-                                )
-                            # constraint is trivially feasible
-                            eliminated_cons.add(con_id)
                 elif a:
                     expr_info.linear[x] = c * a
                     # replacing _id with x... NNZ is not changing,
@@ -1847,6 +1838,15 @@ class _NLWriter_impl(object):
                     continue
                 _old = lcon_by_linear_nnz[old_nnz]
                 if con_id in _old:
+                    if not nnz:
+                        if abs(expr_info.const) > TOL:
+                            # constraint is trivially infeasible
+                            raise InfeasibleConstraintException(
+                                "model contains a trivially infeasible constraint "
+                                f"{expr_info.const} == {coef}*{var_map[x]}"
+                            )
+                        # constraint is trivially feasible
+                        eliminated_cons.add(con_id)
                     lcon_by_linear_nnz[nnz][con_id] = _old.pop(con_id)
             # If variables were replaced by the variable that
             # we are currently eliminating, then we need to update
