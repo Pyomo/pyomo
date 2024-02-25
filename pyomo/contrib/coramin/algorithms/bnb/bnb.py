@@ -462,7 +462,7 @@ class _BnB(pybnb.Problem):
         xl = ns.lbs
         xu = ns.ubs
 
-        # relaod the solution to the relaxation to make sure branching happens correctly
+        # reload the solution to the relaxation to make sure branching happens correctly
         for v, val in self.relaxation_solution.items():
             v.set_value(val, skip_validation=True)
 
