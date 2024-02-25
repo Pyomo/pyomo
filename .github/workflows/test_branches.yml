@@ -361,6 +361,8 @@ jobs:
                 CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES $PKG"
             fi
         done
+        CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES metis"
+        PYPI_DEPENDENCIES="$PYPI_DEPENDENCIES metis"
         echo "*** Install Pyomo dependencies ***"
         # Note: this will fail the build if any installation fails (or
         # possibly if it outputs messages to stderr)
