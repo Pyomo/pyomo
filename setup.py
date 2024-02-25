@@ -285,6 +285,7 @@ setup_kwargs = dict(
             'sympy',  # differentiation
             'xlrd',  # dataportals
             'z3-solver',  # community_detection
+            'pybnb',  # coramin
             #
             # subprocess output is merged more reliably if
             # 'PeekNamedPipe' is available from pywin32
