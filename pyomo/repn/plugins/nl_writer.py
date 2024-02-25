@@ -1760,7 +1760,7 @@ class _NLWriter_impl(object):
                 id2_isdiscrete = var_map[id2].domain.isdiscrete()
                 if var_map[_id].domain.isdiscrete() ^ id2_isdiscrete:
                     # if only one variable is discrete, then we need to
-                    # substiitute out the other
+                    # substitute out the other
                     if id2_isdiscrete:
                         _id, id2 = id2, _id
                         coef, coef2 = coef2, coef
@@ -1768,14 +1768,8 @@ class _NLWriter_impl(object):
                     # In an attempt to improve numerical stability, we will
                     # solve for (and substitute out) the variable with the
                     # coefficient closer to +/-1)
-                    if coef == 0:
-                        log_coef = -inf
-                    else:
-                        log_coef = _log10(abs(coef))
-                    if coef2 == 0:
-                        log_coef2 = -inf
-                    else:
-                        log_coef2 = _log10(abs(coef2))
+                    log_coef = _log10(abs(coef))
+                    log_coef2 = _log10(abs(coef2))
                     if abs(log_coef2) < abs(log_coef) or (
                         log_coef2 == -log_coef and log_coef2 < log_coef
                     ):
@@ -1796,27 +1790,21 @@ class _NLWriter_impl(object):
                     b,
                 )
                 # Tighten variable bounds
+                x_lb, x_ub = var_bounds[x]
                 lb, ub = var_bounds[_id]
-                if a == 0:
-                    if (lb is not None and lb > b) or (ub is not None and ub < b):
-                        raise InfeasibleConstraintException(
-                            f'Model is infeasible: {lb} <= {var_map[_id]} <= {ub} and {var_map[_id]} == {a}*{var_map[x]} + {b} cannot both be satisfied'
-                        )
-                else:
-                    x_lb, x_ub = var_bounds[x]
-                    if lb is not None:
-                        lb = (lb - b) / a
-                    if ub is not None:
-                        ub = (ub - b) / a
-                    if a < 0:
-                        lb, ub = ub, lb
-                    if x_lb is None or (lb is not None and lb > x_lb):
-                        x_lb = lb
-                    if x_ub is None or (ub is not None and ub < x_ub):
-                        x_ub = ub
-                    var_bounds[x] = x_lb, x_ub
-                    if x_lb == x_ub and x_lb is not None:
-                        fixed_vars.append(x)
+                if lb is not None:
+                    lb = (lb - b) / a
+                if ub is not None:
+                    ub = (ub - b) / a
+                if a < 0:
+                    lb, ub = ub, lb
+                if x_lb is None or (lb is not None and lb > x_lb):
+                    x_lb = lb
+                if x_ub is None or (ub is not None and ub < x_ub):
+                    x_ub = ub
+                var_bounds[x] = x_lb, x_ub
+                if x_lb == x_ub and x_lb is not None:
+                    fixed_vars.append(x)
                 eliminated_cons.add(con_id)
             else:
                 return eliminated_cons, eliminated_vars
@@ -1832,10 +1820,15 @@ class _NLWriter_impl(object):
                 # appropriately (that expr_info is persisting in the
                 # eliminated_vars dict - and we will use that to
                 # update other linear expressions later.)
+                old_nnz = len(expr_info.linear)
                 c = expr_info.linear.pop(_id, 0)
+                nnz = old_nnz - 1
                 expr_info.const += c * b
                 if x in expr_info.linear:
                     expr_info.linear[x] += c * a
+                    if expr_info.linear[x] == 0:
+                        nnz -= 1
+                        coef = expr_info.linear.pop(x)
                 elif a:
                     expr_info.linear[x] = c * a
                     # replacing _id with x... NNZ is not changing,
@@ -1843,10 +1836,17 @@ class _NLWriter_impl(object):
                     # this constraint
                     comp_by_linear_var[x].append((con_id, expr_info))
                     continue
-                # NNZ has been reduced by 1
-                nnz = len(expr_info.linear)
-                _old = lcon_by_linear_nnz[nnz + 1]
+                _old = lcon_by_linear_nnz[old_nnz]
                 if con_id in _old:
+                    if not nnz:
+                        if abs(expr_info.const) > TOL:
+                            # constraint is trivially infeasible
+                            raise InfeasibleConstraintException(
+                                "model contains a trivially infeasible constraint "
+                                f"{expr_info.const} == {coef}*{var_map[x]}"
+                            )
+                        # constraint is trivially feasible
+                        eliminated_cons.add(con_id)
                     lcon_by_linear_nnz[nnz][con_id] = _old.pop(con_id)
             # If variables were replaced by the variable that
             # we are currently eliminating, then we need to update
