@@ -1641,7 +1641,7 @@ class LegacySolverInterface(object):
 
         return legacy_results
 
-    def available(self, exception_flag=True):
+    def available(self, exception_flag=False):
         ans = super(LegacySolverInterface, self).available()
         if exception_flag and not ans:
             raise ApplicationError(f'Solver {self.__class__} is not available ({ans}).')
