@@ -46,7 +46,11 @@ import numpy as np
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.contrib.coramin.clone import clone_shallow_active_flat, get_clone_and_var_map
 from pyomo.contrib.coramin.algorithms.cut_gen import AlphaBBConfig, find_cut_generators
-from pyomo.contrib.coramin.algorithms.alg_utils import impose_structure, collect_vars, relax_integers
+from pyomo.contrib.coramin.algorithms.alg_utils import (
+    impose_structure,
+    collect_vars,
+    relax_integers,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -569,9 +573,7 @@ class MultiTree(Solver):
                 nlp_res.best_feasible_objective = pe.value(nlp_obj)
                 nlp_res.best_objective_bound = nlp_res.best_feasible_objective
                 nlp_res.solution_loader = MultiTreeSolutionLoader(
-                    pe.ComponentMap(
-                        (v, v.value) for v in self._nlp.vars
-                    )
+                    pe.ComponentMap((v, v.value) for v in self._nlp.vars)
                 )
 
         self._update_primal_bound(nlp_res)
@@ -967,7 +969,9 @@ class MultiTree(Solver):
             )
 
         vars_to_tighten = ComponentSet()
-        for r in relaxation_data_objects(self._relaxation, descend_into=True, active=True):
+        for r in relaxation_data_objects(
+            self._relaxation, descend_into=True, active=True
+        ):
             vars_to_tighten.update(r.get_rhs_vars())
         vars_to_tighten = list(vars_to_tighten)
         for obbt_iter in range(self.config.root_obbt_max_iter):

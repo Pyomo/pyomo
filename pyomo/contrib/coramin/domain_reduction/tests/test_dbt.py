@@ -43,8 +43,8 @@ class TestDecomposition(unittest.TestCase):
 
         c.add(x[1] == x[2] + x[3])
         c.add(x[4] == x[5] + x[6])
-        c.add(x[2] <= 2*x[3] + 1)
-        c.add(x[5] >= 2*x[6] + 1)
+        c.add(x[2] <= 2 * x[3] + 1)
+        c.add(x[5] >= 2 * x[6] + 1)
 
         m2, reason = decompose_model(m1)
         self.assertEqual(reason, DecompositionStatus.normal)
@@ -67,14 +67,14 @@ class TestDecomposition(unittest.TestCase):
 
         c.add(x[1] == x[2] + x[3])
         c.add(x[4] == x[5] + x[6])
-        c.add(x[2] <= 2*x[3] + 1)
-        c.add(x[5] >= 2*x[6] + 1)
+        c.add(x[2] <= 2 * x[3] + 1)
+        c.add(x[5] >= 2 * x[6] + 1)
         c.add(x[1] == x[4])
 
         c.add(x[7] == x[8] + x[9])
         c.add(x[10] == x[11] + x[12])
-        c.add(x[8] <= 2*x[9] + 1)
-        c.add(x[11] >= 2*x[12] + 1)
+        c.add(x[8] <= 2 * x[9] + 1)
+        c.add(x[11] >= 2 * x[12] + 1)
         c.add(x[7] == x[10])
 
         m2, reason = decompose_model(m1, limit_num_stages=False)
@@ -90,7 +90,15 @@ class TestDecomposition(unittest.TestCase):
         self.assertEqual(m2.get_block_stage(m2.children[1]), 1)
         self.assertEqual(list(m2.stage_blocks(0)), [m2])
         self.assertEqual(list(m2.stage_blocks(1)), [m2.children[0], m2.children[1]])
-        self.assertEqual(list(m2.stage_blocks(2)), [m2.children[0].children[0], m2.children[0].children[1], m2.children[1].children[0], m2.children[1].children[1]])
+        self.assertEqual(
+            list(m2.stage_blocks(2)),
+            [
+                m2.children[0].children[0],
+                m2.children[0].children[1],
+                m2.children[1].children[0],
+                m2.children[1].children[1],
+            ],
+        )
 
         for b in [m2.children[0], m2.children[1]]:
             self.assertEqual(len(b.children), 2)
@@ -120,10 +128,46 @@ class TestDecomposition(unittest.TestCase):
         self.assertEqual(reason, DecompositionStatus.normal)
         self.assertTrue(is_equivalent(m1, m2, appsi.solvers.Highs()))
         self.assertEqual(len(m2.children), 2)
-        self.assertEqual(len(list(coramin.relaxations.iterators.nonrelaxation_component_data_objects(m2.children[0], pe.Constraint, descend_into=True, active=True))), 1)
-        self.assertEqual(len(list(coramin.relaxations.iterators.nonrelaxation_component_data_objects(m2.children[1], pe.Constraint, descend_into=True, active=True))), 1)
-        self.assertEqual(len(list(coramin.relaxations.iterators.relaxation_data_objects(m2.children[0], descend_into=True, active=True))), 1)
-        self.assertEqual(len(list(coramin.relaxations.iterators.relaxation_data_objects(m2.children[1], descend_into=True, active=True))), 1)
+        self.assertEqual(
+            len(
+                list(
+                    coramin.relaxations.iterators.nonrelaxation_component_data_objects(
+                        m2.children[0], pe.Constraint, descend_into=True, active=True
+                    )
+                )
+            ),
+            1,
+        )
+        self.assertEqual(
+            len(
+                list(
+                    coramin.relaxations.iterators.nonrelaxation_component_data_objects(
+                        m2.children[1], pe.Constraint, descend_into=True, active=True
+                    )
+                )
+            ),
+            1,
+        )
+        self.assertEqual(
+            len(
+                list(
+                    coramin.relaxations.iterators.relaxation_data_objects(
+                        m2.children[0], descend_into=True, active=True
+                    )
+                )
+            ),
+            1,
+        )
+        self.assertEqual(
+            len(
+                list(
+                    coramin.relaxations.iterators.relaxation_data_objects(
+                        m2.children[1], descend_into=True, active=True
+                    )
+                )
+            ),
+            1,
+        )
         self.assertEqual(len(list(active_vars(m2.children[0]))), 3)
         self.assertEqual(len(list(active_vars(m2.children[1]))), 3)
         self.assertEqual(m2.get_block_stage(m2), 0)
@@ -141,8 +185,8 @@ class TestDecomposition(unittest.TestCase):
 
         c.add(x[1] == x[2] + x[3])
         c.add(x[4] == x[5] + x[6])
-        c.add(x[2] <= 2*x[3] + 1)
-        c.add(x[5] >= 2*x[6] + 1)
+        c.add(x[2] <= 2 * x[3] + 1)
+        c.add(x[5] >= 2 * x[6] + 1)
         m1.obj = pe.Objective(expr=sum(x.values()))
 
         m2, reason = decompose_model(m1)
@@ -150,7 +194,9 @@ class TestDecomposition(unittest.TestCase):
         opt = appsi.solvers.Highs()
         res1 = opt.solve(m1)
         res2 = opt.solve(m2)
-        self.assertAlmostEqual(res1.best_feasible_objective, res2.best_feasible_objective)
+        self.assertAlmostEqual(
+            res1.best_feasible_objective, res2.best_feasible_objective
+        )
         self.assertEqual(len(m2.children), 2)
         self.assertIn(len(list(active_cons(m2.children[0]))), {3, 4})
         self.assertIn(len(list(active_cons(m2.children[1]))), {3, 4})
@@ -169,14 +215,14 @@ class TestDecomposition(unittest.TestCase):
 
         c.add(x[1] == x[2] + x[3])
         c.add(x[4] == x[5] + x[6])
-        c.add(x[2] <= 2*x[3] + 1)
-        c.add(x[5] >= 2*x[6] + 1)
+        c.add(x[2] <= 2 * x[3] + 1)
+        c.add(x[5] >= 2 * x[6] + 1)
         c.add(x[1] == x[4])
 
         c.add(x[7] == x[8] + x[9])
         c.add(x[10] == x[11] + x[12])
-        c.add(x[8] <= 2*x[9] + 1)
-        c.add(x[11] >= 2*x[12] + 1)
+        c.add(x[8] <= 2 * x[9] + 1)
+        c.add(x[11] >= 2 * x[12] + 1)
         c.add(x[7] == x[10])
 
         c.add(sum(x.values()) == 1)
@@ -715,7 +761,7 @@ class TestDBT(unittest.TestCase):
         self.assertAlmostEqual(b0.y.ub, 1)
         self.assertAlmostEqual(b1.x.lb, -1)
         self.assertAlmostEqual(b1.x.ub, 1)
- 
+
 
 class TestDBTWithECP(unittest.TestCase):
     def create_model(self):

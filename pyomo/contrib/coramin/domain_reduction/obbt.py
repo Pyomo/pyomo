@@ -456,11 +456,9 @@ def perform_obbt(
     obbt_info.num_successful_problems = 0
 
     t0 = time.time()
-    (
-        deactivated_objectives,
-        orig_update_config,
-        orig_config,
-    ) = _bt_prep(model=model, solver=solver, objective_bound=objective_bound)
+    (deactivated_objectives, orig_update_config, orig_config) = _bt_prep(
+        model=model, solver=solver, objective_bound=objective_bound
+    )
 
     vardata_list = _build_vardatalist(
         model=model, varlist=varlist, warning_threshold=warning_threshold

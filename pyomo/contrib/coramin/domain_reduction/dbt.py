@@ -238,7 +238,10 @@ class _Tree(object):
         block: TreeBlockData
             empty TreeBlock
         """
-        block.setup(children_keys=list(range(len(self.children))), coupling_vars=[i.comp for i in self.coupling_vars])
+        block.setup(
+            children_keys=list(range(len(self.children))),
+            coupling_vars=[i.comp for i in self.coupling_vars],
+        )
 
         for i, child in enumerate(self.children):
             if isinstance(child, _Tree):
@@ -401,7 +404,10 @@ def _refine_partition(
 
         new_body = flatten_expr(c.body)
 
-        if type(new_body) not in {numeric_expr.SumExpression, numeric_expr.LinearExpression}:
+        if type(new_body) not in {
+            numeric_expr.SumExpression,
+            numeric_expr.LinearExpression,
+        }:
             logger.info(
                 f'Constraint {str(c)} is contributing to {count} removed '
                 f'edges, but we cannot split the constraint because the '
@@ -555,7 +561,7 @@ def split_metis(graph, model):
     for n1, n2 in graph.edges():
         assert n1.is_var() != n2.is_var()  # xor
         if n2.is_var():
-            n1, n2, = n2, n1
+            n1, n2 = n2, n1
         if n2 in graph_a_nodes:
             graph_a_edges.append((n1, n2))
         else:
@@ -838,7 +844,10 @@ def _decompose_model(
                     logger.debug(
                         'partitioning ratio: {ratio}'.format(ratio=partitioning_ratio)
                     )
-                    if min_partition_ratio <= 0 or partitioning_ratio > min_partition_ratio:
+                    if (
+                        min_partition_ratio <= 0
+                        or partitioning_ratio > min_partition_ratio
+                    ):
                         logger.debug('partitioned {0}'.format(str(_graph)))
                         _parent.children.discard(_graph)
                         _parent.children.add(sub_tree)
@@ -874,10 +883,7 @@ def _decompose_model(
 
     obj = get_objective(model)
     if obj is not None:
-        new_model.obj = pe.Objective(
-            expr=obj.expr,
-            sense=obj.sense,
-        )
+        new_model.obj = pe.Objective(expr=obj.expr, sense=obj.sense)
         logger.debug('done adding objective to new model')
     else:
         logger.debug('No objective was found to add to the new model')
@@ -932,15 +938,9 @@ def collect_vars_to_tighten_from_graph(graph):
     for n in graph.nodes():
         if n.is_rel():
             rel: BaseRelaxationData = n.comp
-            if (
-                rel.is_rhs_convex()
-                and rel.relaxation_side == RelaxationSide.UNDER
-            ):
+            if rel.is_rhs_convex() and rel.relaxation_side == RelaxationSide.UNDER:
                 continue
-            if (
-                rel.is_rhs_concave()
-                and rel.relaxation_side == RelaxationSide.OVER
-            ):
+            if rel.is_rhs_concave() and rel.relaxation_side == RelaxationSide.OVER:
                 continue
             vars_to_tighten.update(rel.get_rhs_vars())
         elif n.is_var():

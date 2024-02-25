@@ -686,14 +686,16 @@ class TestAutoRelax(unittest.TestCase):
         self.assertEqual(len(rels), 2)
         rel0 = m.relaxations.rel0  # log
         rel1 = m.relaxations.rel1  # sqrt
-        self.assertEqual(sympyify_expression(rel0.get_rhs_expr() - pe.log(orig.x))[1], 0)
+        self.assertEqual(
+            sympyify_expression(rel0.get_rhs_expr() - pe.log(orig.x))[1], 0
+        )
         self.assertEqual(
             sympyify_expression(rel1.get_rhs_expr() - m.aux_vars[3] ** 0.5)[1], 0
         )
         self.assertEqual(
-            sympyify_expression(m.linear.cons[1].body - m.aux_vars[3] + 2 * m.aux_vars[1])[
-                1
-            ],
+            sympyify_expression(
+                m.linear.cons[1].body - m.aux_vars[3] + 2 * m.aux_vars[1]
+            )[1],
             0,
         )
         self.assertEqual(
@@ -1150,7 +1152,9 @@ class TestDegree0(unittest.TestCase):
         self.assertEqual(len(rels), 1)
         r = rels[0]
         self.assertIsInstance(r, coramin.relaxations.PWXSquaredRelaxationData)
-        assertExpressionsEqual(self, m.linear.cons[1].body, orig.aux - func(param_val)*m.aux_vars[1])
+        assertExpressionsEqual(
+            self, m.linear.cons[1].body, orig.aux - func(param_val) * m.aux_vars[1]
+        )
         self.assertEqual(m.linear.cons[1].lb, 0)
         self.assertEqual(m.linear.cons[1].ub, 0)
 

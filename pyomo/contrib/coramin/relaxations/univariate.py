@@ -296,11 +296,9 @@ def pw_sin_relaxation(
     if xub > np.pi / 2.0:
         return
 
-    (
-        OE_tangent_x,
-        OE_tangent_slope,
-        OE_tangent_intercept,
-    ) = _compute_sine_overestimator_tangent_point(xlb)
+    (OE_tangent_x, OE_tangent_slope, OE_tangent_intercept) = (
+        _compute_sine_overestimator_tangent_point(xlb)
+    )
     (
         under_estimator_tangent_x,
         under_estimator_tangent_slope,
@@ -375,11 +373,9 @@ def pw_sin_relaxation(
                     b.w[i] <= slope * b.x[i] + (intercept + safety_tol) * b.lam[i]
                 )
             elif (x0 < 0) and (x1 > 0):
-                (
-                    tangent_x,
-                    tangent_slope,
-                    tangent_intercept,
-                ) = _compute_sine_overestimator_tangent_point(x0)
+                (tangent_x, tangent_slope, tangent_intercept) = (
+                    _compute_sine_overestimator_tangent_point(x0)
+                )
                 if tangent_x <= x1:
                     b.overestimators.add(
                         b.w[i]
@@ -418,11 +414,9 @@ def pw_sin_relaxation(
                     b.w[i] >= slope * b.x[i] + (intercept - safety_tol) * b.lam[i]
                 )
             elif (x1 > 0) and (x0 < 0):
-                (
-                    tangent_x,
-                    tangent_slope,
-                    tangent_intercept,
-                ) = _compute_sine_underestimator_tangent_point(x1)
+                (tangent_x, tangent_slope, tangent_intercept) = (
+                    _compute_sine_underestimator_tangent_point(x1)
+                )
                 if tangent_x >= x0:
                     b.underestimators.add(
                         b.w[i]
@@ -494,11 +488,9 @@ def pw_arctan_relaxation(
     if xlb == -math.inf or xub == math.inf:
         return
 
-    (
-        OE_tangent_x,
-        OE_tangent_slope,
-        OE_tangent_intercept,
-    ) = _compute_arctan_overestimator_tangent_point(xlb)
+    (OE_tangent_x, OE_tangent_slope, OE_tangent_intercept) = (
+        _compute_arctan_overestimator_tangent_point(xlb)
+    )
     (
         under_estimator_tangent_x,
         under_estimator_tangent_slope,
@@ -573,11 +565,9 @@ def pw_arctan_relaxation(
                     b.w[i] <= slope * b.x[i] + (intercept + safety_tol) * b.lam[i]
                 )
             elif (x0 < 0) and (x1 > 0):
-                (
-                    tangent_x,
-                    tangent_slope,
-                    tangent_intercept,
-                ) = _compute_arctan_overestimator_tangent_point(x0)
+                (tangent_x, tangent_slope, tangent_intercept) = (
+                    _compute_arctan_overestimator_tangent_point(x0)
+                )
                 if tangent_x <= x1:
                     b.overestimators.add(
                         b.w[i]
@@ -616,11 +606,9 @@ def pw_arctan_relaxation(
                     b.w[i] >= slope * b.x[i] + (intercept - safety_tol) * b.lam[i]
                 )
             elif (x1 > 0) and (x0 < 0):
-                (
-                    tangent_x,
-                    tangent_slope,
-                    tangent_intercept,
-                ) = _compute_arctan_underestimator_tangent_point(x1)
+                (tangent_x, tangent_slope, tangent_intercept) = (
+                    _compute_arctan_underestimator_tangent_point(x1)
+                )
                 if tangent_x >= x0:
                     b.underestimators.add(
                         b.w[i]

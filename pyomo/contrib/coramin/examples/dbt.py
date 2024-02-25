@@ -2,6 +2,7 @@
 This example demonstrates how to used decomposed bounds
 tightening. The example problem is an ACOPF problem.
 """
+
 import pyomo.environ as pe
 from pyomo.contrib import coramin
 from egret.data.model_data import ModelData
@@ -25,11 +26,9 @@ relaxation, scaled_md2 = create_polar_acopf_relaxation(md)
 
 # perform decomposition
 print('Decomposing relaxation')
-(
-    relaxation,
-    component_map,
-    termination_reason,
-) = coramin.domain_reduction.decompose_model(relaxation, max_leaf_nnz=1000)
+(relaxation, component_map, termination_reason) = (
+    coramin.domain_reduction.decompose_model(relaxation, max_leaf_nnz=1000)
+)
 
 # Add more outer approximation points for the second order cone constraints
 print('Adding extra outer-approximation points for SOC constraints')

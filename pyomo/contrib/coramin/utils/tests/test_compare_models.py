@@ -1,7 +1,11 @@
 import pyomo.environ as pe
 from pyomo.contrib import appsi
 from pyomo.common import unittest
-from pyomo.contrib.coramin.utils.compare_models import is_relaxation, is_equivalent, _attempt_presolve
+from pyomo.contrib.coramin.utils.compare_models import (
+    is_relaxation,
+    is_equivalent,
+    _attempt_presolve,
+)
 from pyomo.core.expr.compare import assertExpressionsEqual, compare_expressions
 
 
@@ -36,7 +40,7 @@ class TestCompareModels(unittest.TestCase):
         m.c3 = pe.Constraint(expr=m.x3 + m.x4 == 1)
         m.c4 = pe.Constraint(expr=m.x4 == 1)
         return m
-    
+
     def _compare_expressions(self, got, options):
         success = False
         for exp in options:
@@ -53,14 +57,18 @@ class TestCompareModels(unittest.TestCase):
         self.assertTrue(m.c2.active)
         self.assertFalse(m.c3.active)
         self.assertTrue(m.c4.active)
-        self.assertTrue(self._compare_expressions(m.c1.body, [m.x1 + m.x2 + 1, m.x2 + m.x1 + 1]))
+        self.assertTrue(
+            self._compare_expressions(m.c1.body, [m.x1 + m.x2 + 1, m.x2 + m.x1 + 1])
+        )
         self.assertTrue(self._compare_expressions(m.c2.body, [m.x2 + 1]))
         self.assertEqual(m.c1.lb, 1)
         self.assertEqual(m.c1.ub, 1)
         self.assertEqual(m.c2.lb, 1)
         self.assertEqual(m.c2.ub, 1)
         self.assertEqual(len(m.bound_constraints), 1)
-        self.assertTrue(self._compare_expressions(m.bound_constraints[1].body, [1 - m.x4]))
+        self.assertTrue(
+            self._compare_expressions(m.bound_constraints[1].body, [1 - m.x4])
+        )
         self.assertEqual(m.bound_constraints[1].lb, -3)
         self.assertEqual(m.bound_constraints[1].ub, 3)
 
@@ -72,7 +80,9 @@ class TestCompareModels(unittest.TestCase):
         self.assertTrue(m.c2.active)
         self.assertFalse(m.c3.active)
         self.assertFalse(m.c4.active)
-        self.assertTrue(self._compare_expressions(m.c1.body, [m.x1 + m.x2 + 1, m.x2 + m.x1 + 1]))
+        self.assertTrue(
+            self._compare_expressions(m.c1.body, [m.x1 + m.x2 + 1, m.x2 + m.x1 + 1])
+        )
         self.assertTrue(self._compare_expressions(m.c2.body, [m.x2 + 1]))
         self.assertEqual(m.c1.lb, 1)
         self.assertEqual(m.c1.ub, 1)

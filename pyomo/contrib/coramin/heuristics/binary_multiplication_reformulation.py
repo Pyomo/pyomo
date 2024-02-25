@@ -24,8 +24,8 @@ class BinaryMultiplicationInfo(object):
 
 
 def handle_var(
-    node: Union[NumericValue, float], 
-    args: Sequence[Union[NumericValue, float]], 
+    node: Union[NumericValue, float],
+    args: Sequence[Union[NumericValue, float]],
     info: BinaryMultiplicationInfo,
 ):
     if node.is_fixed():
@@ -36,40 +36,40 @@ def handle_var(
 
 
 def handle_float(
-    node: Union[NumericValue, float], 
-    args: Sequence[Union[NumericValue, float]], 
+    node: Union[NumericValue, float],
+    args: Sequence[Union[NumericValue, float]],
     info: BinaryMultiplicationInfo,
 ):
     return node
 
 
 def handle_param(
-    node: Union[NumericValue, float], 
-    args: Sequence[Union[NumericValue, float]], 
+    node: Union[NumericValue, float],
+    args: Sequence[Union[NumericValue, float]],
     info: BinaryMultiplicationInfo,
 ):
     return node.value
 
 
 def handle_sum(
-    node: Union[NumericValue, float], 
-    args: Sequence[Union[NumericValue, float]], 
+    node: Union[NumericValue, float],
+    args: Sequence[Union[NumericValue, float]],
     info: BinaryMultiplicationInfo,
 ):
     return sum(args)
 
 
 def handle_monomial(
-    node: Union[NumericValue, float], 
-    args: Sequence[Union[NumericValue, float]], 
+    node: Union[NumericValue, float],
+    args: Sequence[Union[NumericValue, float]],
     info: BinaryMultiplicationInfo,
 ):
-    return args[0]*args[1]
+    return args[0] * args[1]
 
 
 def handle_product(
-    node: Union[NumericValue, float], 
-    args: Sequence[Union[NumericValue, float]], 
+    node: Union[NumericValue, float],
+    args: Sequence[Union[NumericValue, float]],
     info: BinaryMultiplicationInfo,
 ):
     x, y = args
@@ -78,7 +78,9 @@ def handle_product(
 
     if xtype in native_numeric_types or ytype in native_numeric_types:
         return x * y
-    if ((x.is_variable_type() and x.is_binary()) or (y.is_variable_type() and y.is_binary())):
+    if (x.is_variable_type() and x.is_binary()) or (
+        y.is_variable_type() and y.is_binary()
+    ):
 
         def get_new_rel(m):
             ndx = len(m.relaxations)
@@ -101,14 +103,20 @@ def handle_product(
             clb, cub = info.constraint_bounds
             if clb == cub and clb is not None:
                 rel = get_new_rel(info.m)
-                rel.build(_x, _y, clb, relaxation_side=RelaxationSide.BOTH, safety_tol=0)
+                rel.build(
+                    _x, _y, clb, relaxation_side=RelaxationSide.BOTH, safety_tol=0
+                )
             else:
                 if clb is not None:
                     rel = get_new_rel(info.m)
-                    rel.build(_x, _y, clb, relaxation_side=RelaxationSide.OVER, safety_tol=0)
+                    rel.build(
+                        _x, _y, clb, relaxation_side=RelaxationSide.OVER, safety_tol=0
+                    )
                 if cub is not None:
                     rel = get_new_rel(info.m)
-                    rel.build(_x, _y, cub, relaxation_side=RelaxationSide.UNDER, safety_tol=0)
+                    rel.build(
+                        _x, _y, cub, relaxation_side=RelaxationSide.UNDER, safety_tol=0
+                    )
             return None
         else:
             z = info.m.vars.add()
@@ -122,96 +130,96 @@ def handle_product(
 
 
 def handle_exp(
-    node: Union[NumericValue, float], 
-    args: Sequence[Union[NumericValue, float]], 
+    node: Union[NumericValue, float],
+    args: Sequence[Union[NumericValue, float]],
     info: BinaryMultiplicationInfo,
 ):
     return pe.exp(args[0])
 
 
 def handle_log(
-    node: Union[NumericValue, float], 
-    args: Sequence[Union[NumericValue, float]], 
+    node: Union[NumericValue, float],
+    args: Sequence[Union[NumericValue, float]],
     info: BinaryMultiplicationInfo,
 ):
     return pe.log(args[0])
 
 
 def handle_log10(
-    node: Union[NumericValue, float], 
-    args: Sequence[Union[NumericValue, float]], 
+    node: Union[NumericValue, float],
+    args: Sequence[Union[NumericValue, float]],
     info: BinaryMultiplicationInfo,
 ):
     return pe.log10(args[0])
 
 
 def handle_sin(
-    node: Union[NumericValue, float], 
-    args: Sequence[Union[NumericValue, float]], 
+    node: Union[NumericValue, float],
+    args: Sequence[Union[NumericValue, float]],
     info: BinaryMultiplicationInfo,
 ):
     return pe.sin(args[0])
 
 
 def handle_cos(
-    node: Union[NumericValue, float], 
-    args: Sequence[Union[NumericValue, float]], 
+    node: Union[NumericValue, float],
+    args: Sequence[Union[NumericValue, float]],
     info: BinaryMultiplicationInfo,
 ):
     return pe.cos(args[0])
 
 
 def handle_tan(
-    node: Union[NumericValue, float], 
-    args: Sequence[Union[NumericValue, float]], 
+    node: Union[NumericValue, float],
+    args: Sequence[Union[NumericValue, float]],
     info: BinaryMultiplicationInfo,
 ):
     return pe.tan(args[0])
 
 
 def handle_asin(
-    node: Union[NumericValue, float], 
-    args: Sequence[Union[NumericValue, float]], 
+    node: Union[NumericValue, float],
+    args: Sequence[Union[NumericValue, float]],
     info: BinaryMultiplicationInfo,
 ):
     return pe.asin(args[0])
 
 
 def handle_acos(
-    node: Union[NumericValue, float], 
-    args: Sequence[Union[NumericValue, float]], 
+    node: Union[NumericValue, float],
+    args: Sequence[Union[NumericValue, float]],
     info: BinaryMultiplicationInfo,
 ):
     return pe.acos(args[0])
 
 
 def handle_atan(
-    node: Union[NumericValue, float], 
-    args: Sequence[Union[NumericValue, float]], 
+    node: Union[NumericValue, float],
+    args: Sequence[Union[NumericValue, float]],
     info: BinaryMultiplicationInfo,
 ):
     return pe.atan(args[0])
 
 
 def handle_sqrt(
-    node: Union[NumericValue, float], 
-    args: Sequence[Union[NumericValue, float]], 
+    node: Union[NumericValue, float],
+    args: Sequence[Union[NumericValue, float]],
     info: BinaryMultiplicationInfo,
 ):
     return pe.sqrt(args[0])
 
 
 def handle_abs(
-    node: Union[NumericValue, float], 
-    args: Sequence[Union[NumericValue, float]], 
+    node: Union[NumericValue, float],
+    args: Sequence[Union[NumericValue, float]],
     info: BinaryMultiplicationInfo,
 ):
     return pe.abs(args[0])
 
 
 def handle_div(
-    node: Union[NumericValue, float], 
-    args: Sequence[Union[NumericValue, float]], 
+    node: Union[NumericValue, float],
+    args: Sequence[Union[NumericValue, float]],
     info: BinaryMultiplicationInfo,
 ):
     x, y = args
@@ -219,25 +227,25 @@ def handle_div(
 
 
 def handle_pow(
-    node: Union[NumericValue, float], 
-    args: Sequence[Union[NumericValue, float]], 
+    node: Union[NumericValue, float],
+    args: Sequence[Union[NumericValue, float]],
     info: BinaryMultiplicationInfo,
 ):
     x, y = args
-    return x ** y
+    return x**y
 
 
 def handle_negation(
-    node: Union[NumericValue, float], 
-    args: Sequence[Union[NumericValue, float]], 
+    node: Union[NumericValue, float],
+    args: Sequence[Union[NumericValue, float]],
     info: BinaryMultiplicationInfo,
 ):
     return -args[0]
 
 
 def handle_named_expression(
-    node: Union[NumericValue, float], 
-    args: Sequence[Union[NumericValue, float]], 
+    node: Union[NumericValue, float],
+    args: Sequence[Union[NumericValue, float]],
     info: BinaryMultiplicationInfo,
 ):
     return args[0]
@@ -258,8 +266,8 @@ unary_handlers['abs'] = handle_abs
 
 
 def handle_unary(
-    node: Union[NumericValue, float], 
-    args: Sequence[Union[NumericValue, float]], 
+    node: Union[NumericValue, float],
+    args: Sequence[Union[NumericValue, float]],
     info: BinaryMultiplicationInfo,
 ):
     return unary_handlers[node.getname()](node, args, info)
@@ -305,7 +313,7 @@ class BinaryMultiplicationWalker(StreamBasedExpressionVisitor):
 def reformulate_binary_multiplication(m: _BlockData):
     """
     The goal of this function is to replace f(x) * y = 0 with
-    a McCormick relaxation when y is binary (in which case the 
+    a McCormick relaxation when y is binary (in which case the
     McCormick relaxation is equivalent).
     """
     r = pe.ConcreteModel()
@@ -317,7 +325,7 @@ def reformulate_binary_multiplication(m: _BlockData):
     info = walker.info
 
     for c in iterators.nonrelaxation_component_data_objects(
-        m, pe.Constraint, active=True, descend_into=True,
+        m, pe.Constraint, active=True, descend_into=True
     ):
         repn = generate_standard_repn(c.body, compute_values=True, quadratic=False)
         if repn.nonlinear_expr is None:
@@ -332,7 +340,7 @@ def reformulate_binary_multiplication(m: _BlockData):
                 r.cons.add((c.lb, new_body, c.ub))
 
     for obj in iterators.nonrelaxation_component_data_objects(
-        m, pe.Objective, active=True, descend_into=True,
+        m, pe.Objective, active=True, descend_into=True
     ):
         repn = generate_standard_repn(obj.expr, compute_values=True, quadratic=False)
         if repn.nonlinear_expr is None:

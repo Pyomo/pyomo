@@ -19,15 +19,19 @@ import math
 import numpy as np
 import logging
 from pyomo.contrib.appsi.base import (
-    Solver, 
-    MIPSolverConfig, 
-    Results, 
-    TerminationCondition, 
-    SolutionLoader, 
+    Solver,
+    MIPSolverConfig,
+    Results,
+    TerminationCondition,
+    SolutionLoader,
     SolverFactory,
 )
 from pyomo.core.staleflag import StaleFlagManager
-from pyomo.contrib.coramin.algorithms.alg_utils import impose_structure, collect_vars, relax_integers
+from pyomo.contrib.coramin.algorithms.alg_utils import (
+    impose_structure,
+    collect_vars,
+    relax_integers,
+)
 from pyomo.contrib.coramin.algorithms.cut_gen import find_cut_generators, AlphaBBConfig
 
 
@@ -46,19 +50,23 @@ class BnBConfig(MIPSolverConfig):
         self.integer_tol = self.declare("integer_tol", ConfigValue(default=1e-4))
         self.node_limit = self.declare("node_limit", ConfigValue(default=1000000000))
         self.mip_gap = 1e-3
-        self.num_root_obbt_iters = self.declare("num_root_obbt_iters", ConfigValue(default=3))
-        self.node_obbt_frequency = self.declare("node_obbt_frequency", ConfigValue(default=2))
+        self.num_root_obbt_iters = self.declare(
+            "num_root_obbt_iters", ConfigValue(default=3)
+        )
+        self.node_obbt_frequency = self.declare(
+            "node_obbt_frequency", ConfigValue(default=2)
+        )
         self.alphabb = self.declare("alphabb", AlphaBBConfig())
 
 
 class NodeState(object):
     def __init__(
-        self, 
-        lbs: np.ndarray, 
-        ubs: np.ndarray, 
-        parent: Optional[pybnb.Node], 
-        sol: Optional[np.ndarray] = None, 
-        obj: Optional[float] = None
+        self,
+        lbs: np.ndarray,
+        ubs: np.ndarray,
+        parent: Optional[pybnb.Node],
+        sol: Optional[np.ndarray] = None,
+        obj: Optional[float] = None,
     ) -> None:
         self.lbs: np.ndarray = lbs
         self.ubs: np.ndarray = ubs
@@ -114,11 +122,15 @@ class _BnB(pybnb.Problem):
         _fix_vars_with_close_bounds(relaxation.vars)
 
         impose_structure(relaxation)
-        self.cut_generators: List[CutGenerator] = find_cut_generators(relaxation, self.config.alphabb)
+        self.cut_generators: List[CutGenerator] = find_cut_generators(
+            relaxation, self.config.alphabb
+        )
         _relax_cloned_model(relaxation)
         relaxation.cuts = pe.ConstraintList()
         self.relaxation_objects = list()
-        for r in iterators.relaxation_data_objects(relaxation, descend_into=True, active=True):
+        for r in iterators.relaxation_data_objects(
+            relaxation, descend_into=True, active=True
+        ):
             self.relaxation_objects.append(r)
             r.rebuild(build_nonlinear_constraint=True)
         self.interval_tightener.perform_fbbt(self.relaxation)
@@ -139,9 +151,13 @@ class _BnB(pybnb.Problem):
         other_vars = ComponentSet(i for i in relaxation.vars if i not in var_set)
         self.other_vars = other_vars = list(other_vars)
 
-        self.all_branching_vars = list(binary_vars) + list(integer_vars) + list(self.rhs_vars)
+        self.all_branching_vars = (
+            list(binary_vars) + list(integer_vars) + list(self.rhs_vars)
+        )
         self.all_vars = self.all_branching_vars + self.other_vars
-        self.var_to_ndx_map = ComponentMap((v, ndx) for ndx, v in enumerate(self.all_vars))
+        self.var_to_ndx_map = ComponentMap(
+            (v, ndx) for ndx, v in enumerate(self.all_vars)
+        )
 
         self.current_node: Optional[pybnb.Node] = None
         self.feasible_objective = feasible_objective
@@ -201,22 +217,33 @@ class _BnB(pybnb.Problem):
         if res.termination_condition == appsi.base.TerminationCondition.infeasible:
             return self.infeasible_objective()
         if res.termination_condition != appsi.base.TerminationCondition.optimal:
-            raise RuntimeError(f"Cannot handle termination condition {res.termination_condition} when solving relaxation")
+            raise RuntimeError(
+                f"Cannot handle termination condition {res.termination_condition} when solving relaxation"
+            )
         res.solution_loader.load_vars()
 
         # add OA cuts for convex constraints
         while True:
             added_cuts = False
             for r in self.relaxation_objects:
-                new_con = r.add_cut(keep_cut=True, check_violation=True, feasibility_tol=self.config.feasibility_tol)
+                new_con = r.add_cut(
+                    keep_cut=True,
+                    check_violation=True,
+                    feasibility_tol=self.config.feasibility_tol,
+                )
                 if new_con is not None:
                     added_cuts = True
             if added_cuts:
                 res = self.config.lp_solver.solve(self.relaxation)
-                if res.termination_condition == appsi.base.TerminationCondition.infeasible:
+                if (
+                    res.termination_condition
+                    == appsi.base.TerminationCondition.infeasible
+                ):
                     return self.infeasible_objective()
                 if res.termination_condition != appsi.base.TerminationCondition.optimal:
-                    raise RuntimeError(f"Cannot handle termination condition {res.termination_condition} when solving relaxation")
+                    raise RuntimeError(
+                        f"Cannot handle termination condition {res.termination_condition} when solving relaxation"
+                    )
                 res.solution_loader.load_vars()
             else:
                 break
@@ -233,10 +260,15 @@ class _BnB(pybnb.Problem):
                     self.current_node.state.active_cut_indices.append(new_con_index)
             if added_cuts:
                 res = self.config.lp_solver.solve(self.relaxation)
-                if res.termination_condition == appsi.base.TerminationCondition.infeasible:
+                if (
+                    res.termination_condition
+                    == appsi.base.TerminationCondition.infeasible
+                ):
                     return self.infeasible_objective()
                 if res.termination_condition != appsi.base.TerminationCondition.optimal:
-                    raise RuntimeError(f"Cannot handle termination condition {res.termination_condition} when solving relaxation")
+                    raise RuntimeError(
+                        f"Cannot handle termination condition {res.termination_condition} when solving relaxation"
+                    )
                 res.solution_loader.load_vars()
             else:
                 break
@@ -269,7 +301,10 @@ class _BnB(pybnb.Problem):
             return ret
 
         # maybe do OBBT
-        if self.current_node.tree_depth % self.config.node_obbt_frequency == 0 and self.current_node.tree_depth != 0:
+        if (
+            self.current_node.tree_depth % self.config.node_obbt_frequency == 0
+            and self.current_node.tree_depth != 0
+        ):
             should_obbt = True
             if self._sense == pybnb.minimize:
                 if self.feasible_objective is None:
@@ -277,7 +312,10 @@ class _BnB(pybnb.Problem):
                 else:
                     feasible_objective = self.feasible_objective
                 feasible_objective += abs(feasible_objective) * 1e-3 + 1e-3
-                if feasible_objective - res.best_objective_bound <= self.config.mip_gap * feasible_objective + self.config.abs_gap:
+                if (
+                    feasible_objective - res.best_objective_bound
+                    <= self.config.mip_gap * feasible_objective + self.config.abs_gap
+                ):
                     should_obbt = False
             else:
                 if self.feasible_objective is None:
@@ -285,7 +323,10 @@ class _BnB(pybnb.Problem):
                 else:
                     feasible_objective = self.feasible_objective
                 feasible_objective -= abs(feasible_objective) * 1e-3 + 1e-3
-                if res.best_objective_bound - feasible_objective <= self.config.mip_gap * feasible_objective + self.config.abs_gap:
+                if (
+                    res.best_objective_bound - feasible_objective
+                    <= self.config.mip_gap * feasible_objective + self.config.abs_gap
+                ):
                     should_obbt = False
             if not math.isfinite(feasible_objective):
                 feasible_objective = None
@@ -300,7 +341,10 @@ class _BnB(pybnb.Problem):
                 for r in self.relaxation_objects:
                     r.rebuild()
                 res = self.config.lp_solver.solve(self.relaxation)
-                if res.termination_condition == appsi.base.TerminationCondition.infeasible:
+                if (
+                    res.termination_condition
+                    == appsi.base.TerminationCondition.infeasible
+                ):
                     return self.infeasible_objective()
                 res.solution_loader.load_vars()
                 self.relaxation_solution = res.solution_loader.get_primals()
@@ -327,7 +371,9 @@ class _BnB(pybnb.Problem):
             assert v.lb <= val <= v.ub
             v.fix(val)
         try:
-            res = self.config.nlp_solver.solve(self.nlp, load_solutions=False, skip_trivial_constraints=True, tee=False)
+            res = self.config.nlp_solver.solve(
+                self.nlp, load_solutions=False, skip_trivial_constraints=True, tee=False
+            )
             success = True
         except:
             success = False
@@ -451,7 +497,7 @@ class _BnB(pybnb.Problem):
             # the relaxation was feasible
             # no nodes in this part of the tree need explored
             return []
-        
+
         xl1 = xl.copy()
         xu1 = xu.copy()
         xl2 = xl.copy()
@@ -466,14 +512,18 @@ class _BnB(pybnb.Problem):
             new_lb = math.ceil(new_lb)
         xu1[ndx_to_branch_on] = new_ub
         xl2[ndx_to_branch_on] = new_lb
-        
+
         child1.state = NodeState(xl1, xu1, self.current_node, None, None)
         child2.state = NodeState(xl2, xu2, self.current_node, None, None)
 
         child1.state.valid_cut_indices = list(self.current_node.state.valid_cut_indices)
         child2.state.valid_cut_indices = list(self.current_node.state.valid_cut_indices)
-        child1.state.active_cut_indices = list(self.current_node.state.active_cut_indices)
-        child2.state.active_cut_indices = list(self.current_node.state.active_cut_indices)
+        child1.state.active_cut_indices = list(
+            self.current_node.state.active_cut_indices
+        )
+        child2.state.active_cut_indices = list(
+            self.current_node.state.active_cut_indices
+        )
 
         yield child1
         yield child2
@@ -482,7 +532,9 @@ class _BnB(pybnb.Problem):
 def solve_with_bnb(model: _BlockData, config: BnBConfig):
     # we don't want to modify the original model
     model, orig_var_map = get_clone_and_var_map(model)
-    diving_obj, diving_sol = run_diving_heuristic(model, config.feasibility_tol, config.integer_tol, node_limit=100)
+    diving_obj, diving_sol = run_diving_heuristic(
+        model, config.feasibility_tol, config.integer_tol, node_limit=100
+    )
     prob = _BnB(model, config, feasible_objective=diving_obj)
     res: pybnb.SolverResults = pybnb.solve(
         prob,
@@ -520,7 +572,15 @@ def solve_with_bnb(model: _BlockData, config: BnBConfig):
     best_node = res.best_node
     if best_node is None:
         if diving_obj is not None:
-            ret.solution_loader = SolutionLoader(primals={id(orig_var_map[v]): (orig_var_map[v], val) for v, val in diving_sol.items()}, duals=None, slacks=None, reduced_costs=None)
+            ret.solution_loader = SolutionLoader(
+                primals={
+                    id(orig_var_map[v]): (orig_var_map[v], val)
+                    for v, val in diving_sol.items()
+                },
+                duals=None,
+                slacks=None,
+                reduced_costs=None,
+            )
     else:
         vals = best_node.state.sol
         primals = dict()
@@ -529,7 +589,9 @@ def solve_with_bnb(model: _BlockData, config: BnBConfig):
             if v in orig_vars:
                 ov = orig_var_map[v]
                 primals[id(ov)] = (ov, val)
-        ret.solution_loader = SolutionLoader(primals=primals, duals=None, slacks=None, reduced_costs=None)
+        ret.solution_loader = SolutionLoader(
+            primals=primals, duals=None, slacks=None, reduced_costs=None
+        )
     return ret
 
 
@@ -540,24 +602,26 @@ class BnBSolver(Solver):
 
     def available(self):
         return self.Availability.FullLicense
-    
+
     def version(self) -> Tuple:
         return (1, 0, 0)
 
     @property
     def config(self):
         return self._config
-    
+
     @property
     def symbol_map(self):
         raise NotImplementedError('do this')
-    
+
     def solve(self, model: _BlockData, timer: HierarchicalTimer = None) -> Results:
         StaleFlagManager.mark_all_as_stale()
         res = solve_with_bnb(model, self.config)
         if self.config.load_solution:
             res.solution_loader.load_vars()
         return res
-    
 
-SolverFactory.register(name="coramin_bnb", doc="Coramin Branch and Bound Solver")(BnBSolver)
+
+SolverFactory.register(name="coramin_bnb", doc="Coramin Branch and Bound Solver")(
+    BnBSolver
+)

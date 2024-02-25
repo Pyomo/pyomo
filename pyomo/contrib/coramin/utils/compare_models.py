@@ -35,11 +35,15 @@ def _attempt_presolve(m, vars_to_presolve):
                 continue
             if not c.active:
                 continue
-            repn: StandardRepn = generate_standard_repn(c.body - c.lb, compute_values=True, quadratic=False)
+            repn: StandardRepn = generate_standard_repn(
+                c.body - c.lb, compute_values=True, quadratic=False
+            )
             lin_vars = ComponentSet(repn.linear_vars)
             nonlin_vars = ComponentSet(repn.nonlinear_vars)
             if v in lin_vars and v not in nonlin_vars:
-                n_vars = len(ComponentSet(list(repn.linear_vars) + list(repn.nonlinear_vars)))
+                n_vars = len(
+                    ComponentSet(list(repn.linear_vars) + list(repn.nonlinear_vars))
+                )
                 if density is None or n_vars < density:
                     v_expr = -repn.constant
                     for coef, other in zip(repn.linear_coefs, repn.linear_vars):
@@ -52,25 +56,31 @@ def _attempt_presolve(m, vars_to_presolve):
                     v_expr /= v_coef
                     v_con = c
                     v_repn = repn
-                    v_vars = ComponentSet([i for i in v_repn.linear_vars if i in var_to_con_map])
-                    v_vars.update([i for i in v_repn.nonlinear_vars if i in var_to_con_map])
+                    v_vars = ComponentSet(
+                        [i for i in v_repn.linear_vars if i in var_to_con_map]
+                    )
+                    v_vars.update(
+                        [i for i in v_repn.nonlinear_vars if i in var_to_con_map]
+                    )
                     v_vars.remove(v)
                     density = n_vars
         if v_expr is None:
             return False
-        
+
         v_con.deactivate()
-        
+
         if v.lb is not None or v.ub is not None:
             new_con = bound_cons.add((v.lb, v_expr, v.ub))
             for _v in v_vars:
                 var_to_con_map[_v].add(new_con)
-        
+
         for c in con_list:
             if c is v_con:
                 continue
             sub_map = {id(v): v_expr}
-            new_body = simplify_expr(replace_expressions(c.body, substitution_map=sub_map))
+            new_body = simplify_expr(
+                replace_expressions(c.body, substitution_map=sub_map)
+            )
             c.set_value((c.lb, new_body, c.ub))
             for _v in v_vars:
                 var_to_con_map[_v].add(c)
@@ -78,7 +88,13 @@ def _attempt_presolve(m, vars_to_presolve):
     return True
 
 
-def is_relaxation(a: _BlockData, b: _BlockData, opt: appsi.base.Solver, feasibility_tol: float = 1e-6, bigM: Optional[float] = None):
+def is_relaxation(
+    a: _BlockData,
+    b: _BlockData,
+    opt: appsi.base.Solver,
+    feasibility_tol: float = 1e-6,
+    bigM: Optional[float] = None,
+):
     """
     Returns True if every feasible point in b is feasible for a
     (a is a relaxation of b)
@@ -96,7 +112,9 @@ def is_relaxation(a: _BlockData, b: _BlockData, opt: appsi.base.Solver, feasibil
     if len(vars_to_presolve) > 0:
         a = clone_shallow_active_flat(a)[0]
         if not _attempt_presolve(a, vars_to_presolve):
-            raise RuntimeError('a has variables that b does not, which makes the following analysis invalid')
+            raise RuntimeError(
+                'a has variables that b does not, which makes the following analysis invalid'
+            )
 
     m = clone_shallow_active_flat(b)[0]
     if hasattr(m.linear, 'obj'):
@@ -146,7 +164,13 @@ def is_relaxation(a: _BlockData, b: _BlockData, opt: appsi.base.Solver, feasibil
     return passed
 
 
-def is_equivalent(a: _BlockData, b: _BlockData, opt: appsi.base.Solver, feasibility_tol: float = 1e-6, bigM: Optional[float] = None):
+def is_equivalent(
+    a: _BlockData,
+    b: _BlockData,
+    opt: appsi.base.Solver,
+    feasibility_tol: float = 1e-6,
+    bigM: Optional[float] = None,
+):
     """
     Returns True if the feasible regions of a and b are the same
     a and b should share variables

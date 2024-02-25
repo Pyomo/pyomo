@@ -1,8 +1,6 @@
 from pyomo.contrib.coramin.utils.coramin_enums import RelaxationSide, FunctionShape
 from pyomo.contrib.coramin.relaxations.custom_block import declare_custom_block
-from pyomo.contrib.coramin.relaxations.relaxations_base import (
-    BaseRelaxationData,
-)
+from pyomo.contrib.coramin.relaxations.relaxations_base import BaseRelaxationData
 from pyomo.core.expr.visitor import identify_variables
 import math
 import pyomo.environ as pe

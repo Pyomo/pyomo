@@ -15,16 +15,18 @@ import pybnb
 
 class AlphaBBCutGenerator(CutGenerator):
     def __init__(
-        self, 
-        lhs: Union[float, int, NumericValue], 
-        rhs: NumericExpression, 
-        eigenvalue_opt: Optional[Solver] = None, 
+        self,
+        lhs: Union[float, int, NumericValue],
+        rhs: NumericExpression,
+        eigenvalue_opt: Optional[Solver] = None,
         method: EigenValueBounder = EigenValueBounder.GershgorinWithSimplification,
         feasibility_tol: float = 1e-6,
     ) -> None:
         self.lhs = lhs
         self.rhs = rhs
-        self.xlist: List[_GeneralVarData] = list(identify_variables(rhs, include_fixed=False))
+        self.xlist: List[_GeneralVarData] = list(
+            identify_variables(rhs, include_fixed=False)
+        )
         self.hessian = Hessian(expr=rhs, opt=eigenvalue_opt, method=method)
         self.feasibility_tol = feasibility_tol
         self._proven_convex = dict()
@@ -69,5 +71,5 @@ class AlphaBBCutGenerator(CutGenerator):
                 alpha_bb_rhs = self.rhs + alpha * alpha_sum
                 if lhs_val + self.feasibility_tol >= value(alpha_bb_rhs):
                     return None
-        
+
         return self.lhs >= taylor_series_expansion(alpha_bb_rhs)

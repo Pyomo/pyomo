@@ -12,7 +12,7 @@ class TestDiving(unittest.TestCase):
         m.z2 = pe.Var(domain=pe.Binary)
         m.obj = pe.Objective(expr=m.x**2 + m.y**2)
         m.c1 = pe.Constraint(expr=(m.y - pe.exp(m.x)) * m.z1 >= 0)
-        m.c2 = pe.Constraint(expr=(m.y - (m.x - 1)**2) * m.z1 >= 0)
+        m.c2 = pe.Constraint(expr=(m.y - (m.x - 1) ** 2) * m.z1 >= 0)
         m.c3 = pe.Constraint(expr=(m.y - m.x - 2) * m.z2 >= 0)
         m.c4 = pe.Constraint(expr=(m.y + m.x - 2) * m.z2 >= 0)
         m.c5 = pe.Constraint(expr=m.z1 + m.z2 == 1)

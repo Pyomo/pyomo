@@ -19,7 +19,9 @@ def collect_vars(m: _BlockData) -> Tuple[List[_GeneralVarData], List[_GeneralVar
     return list(binary_vars), list(integer_vars)
 
 
-def relax_integers(binary_vars: Sequence[_GeneralVarData], integer_vars: Sequence[_GeneralVarData]):
+def relax_integers(
+    binary_vars: Sequence[_GeneralVarData], integer_vars: Sequence[_GeneralVarData]
+):
     for v in list(binary_vars) + list(integer_vars):
         lb, ub = v.bounds
         v.domain = pe.Reals
@@ -31,7 +33,9 @@ def impose_structure(m):
     m.aux_vars = pe.VarList()
 
     for key, c in list(m.nonlinear.cons.items()):
-        repn: StandardRepn = generate_standard_repn(c.body, quadratic=False, compute_values=True)
+        repn: StandardRepn = generate_standard_repn(
+            c.body, quadratic=False, compute_values=True
+        )
         expr_list = split_expr(repn.nonlinear_expr)
         if len(expr_list) == 1:
             continue
@@ -51,13 +55,17 @@ def impose_structure(m):
                 m.nonlinear.cons.add(v >= term)
             else:
                 m.nonlinear.cons.add(v == term)
-        new_expr = LinearExpression(constant=repn.constant, linear_coefs=linear_coefs, linear_vars=linear_vars)
+        new_expr = LinearExpression(
+            constant=repn.constant, linear_coefs=linear_coefs, linear_vars=linear_vars
+        )
         m.linear.cons.add((c.lb, new_expr, c.ub))
         del m.nonlinear.cons[key]
 
     if hasattr(m.nonlinear, 'obj'):
         obj = m.nonlinear.obj
-        repn: StandardRepn = generate_standard_repn(obj.expr, quadratic=False, compute_values=True)
+        repn: StandardRepn = generate_standard_repn(
+            obj.expr, quadratic=False, compute_values=True
+        )
         expr_list = split_expr(repn.nonlinear_expr)
         if len(expr_list) > 1:
             linear_coefs = list(repn.linear_coefs)
@@ -72,6 +80,10 @@ def impose_structure(m):
                 else:
                     assert obj.sense == pe.maximize
                     m.nonlinear.cons.add(v <= term)
-            new_expr = LinearExpression(constant=repn.constant, linear_coefs=linear_coefs, linear_vars=linear_vars)
+            new_expr = LinearExpression(
+                constant=repn.constant,
+                linear_coefs=linear_coefs,
+                linear_vars=linear_vars,
+            )
             m.linear.obj = pe.Objective(expr=new_expr, sense=obj.sense)
             del m.nonlinear.obj

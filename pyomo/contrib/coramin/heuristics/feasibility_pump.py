@@ -13,10 +13,14 @@ import random
 import numpy as np
 
 
-def collect_integer_vars(m: _BlockData) -> Tuple[List[_GeneralVarData], List[_GeneralVarData]]:
+def collect_integer_vars(
+    m: _BlockData,
+) -> Tuple[List[_GeneralVarData], List[_GeneralVarData]]:
     binary_vars = ComponentSet()
     integer_vars = ComponentSet()
-    for c in m.component_data_objects(pe.Constraint, active=True, descend_into=pe.Block):
+    for c in m.component_data_objects(
+        pe.Constraint, active=True, descend_into=pe.Block
+    ):
         for v in identify_variables(c.body, include_fixed=False):
             if v.is_binary():
                 binary_vars.add(v)
@@ -32,7 +36,9 @@ def collect_integer_vars(m: _BlockData) -> Tuple[List[_GeneralVarData], List[_Ge
     return list(binary_vars), list(integer_vars)
 
 
-def relax_integers(binary_vars: Sequence[_GeneralVarData], integer_vars: Sequence[_GeneralVarData]):
+def relax_integers(
+    binary_vars: Sequence[_GeneralVarData], integer_vars: Sequence[_GeneralVarData]
+):
     for v in list(binary_vars) + list(integer_vars):
         lb, ub = v.bounds
         v.domain = pe.Reals
@@ -40,14 +46,20 @@ def relax_integers(binary_vars: Sequence[_GeneralVarData], integer_vars: Sequenc
         v.setub(ub)
 
 
-def restore_integers(binary_vars: Sequence[_GeneralVarData], integer_vars: Sequence[_GeneralVarData]):
+def restore_integers(
+    binary_vars: Sequence[_GeneralVarData], integer_vars: Sequence[_GeneralVarData]
+):
     for v in binary_vars:
         v.domain = pe.Binary
     for v in integer_vars:
         v.domain = pe.Integers
 
 
-def check_feasible(binary_vars: Sequence[_GeneralVarData], integer_vars: Sequence[_GeneralVarData], integer_tol=1e-4):
+def check_feasible(
+    binary_vars: Sequence[_GeneralVarData],
+    integer_vars: Sequence[_GeneralVarData],
+    integer_tol=1e-4,
+):
     feas = True
     for v in list(binary_vars) + list(integer_vars):
         v_val = v.value
@@ -57,7 +69,16 @@ def check_feasible(binary_vars: Sequence[_GeneralVarData], integer_vars: Sequenc
             break
     return feas
 
-def run_feasibility_pump(m: _BlockData, nlp_solver: Solver, time_limit: float = math.inf, iter_limit=300, integer_tol=1e-4, use_fixing: bool = False, use_flip: bool = True):
+
+def run_feasibility_pump(
+    m: _BlockData,
+    nlp_solver: Solver,
+    time_limit: float = math.inf,
+    iter_limit=300,
+    integer_tol=1e-4,
+    use_fixing: bool = False,
+    use_flip: bool = True,
+):
     t0 = time.time()
 
     binary_vars, integer_vars = collect_integer_vars(m)
@@ -127,11 +148,14 @@ def run_feasibility_pump(m: _BlockData, nlp_solver: Solver, time_limit: float = 
                 integer_vars[_ndx].fix(target_integer_vals[_ndx])
 
         if last_target_binary_vals is not None and use_flip:
-            if target_binary_vals == last_target_binary_vals and target_integer_vals == last_target_integer_vals:
+            if (
+                target_binary_vals == last_target_binary_vals
+                and target_integer_vals == last_target_integer_vals
+            ):
                 print('flipping')
-                T = math.floor(0.5*(len(binary_vars) + len(integer_vars)))
+                T = math.floor(0.5 * (len(binary_vars) + len(integer_vars)))
                 T = 10
-                num_flip = random.randint(math.floor(0.5*T), math.ceil(1.5*T))
+                num_flip = random.randint(math.floor(0.5 * T), math.ceil(1.5 * T))
                 dist_list = list()
                 ndx = 0
                 for v, val in zip(binary_vars, target_binary_vals):
@@ -166,10 +190,10 @@ def run_feasibility_pump(m: _BlockData, nlp_solver: Solver, time_limit: float = 
                 obj_expr += v
             else:
                 assert val == 1
-                obj_expr += (1 - v)
+                obj_expr += 1 - v
         for v, val in zip(integer_vars, target_integer_vals):
-            obj_expr += (v - val)**2
-        setattr(m, new_obj_name, pe.Objective(expr=obj_expr))        
+            obj_expr += (v - val) ** 2
+        setattr(m, new_obj_name, pe.Objective(expr=obj_expr))
 
         res = nlp_solver.solve(m)
         if res.best_feasible_objective is None:
@@ -177,7 +201,7 @@ def run_feasibility_pump(m: _BlockData, nlp_solver: Solver, time_limit: float = 
             break
         res.solution_loader.load_vars([v for v in binary_vars if not v.is_fixed()])
         res.solution_loader.load_vars([v for v in integer_vars if not v.is_fixed()])
-        
+
         is_feas = check_feasible(binary_vars, integer_vars, integer_tol)
         if is_feas:
             feasible_results = res

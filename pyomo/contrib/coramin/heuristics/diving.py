@@ -16,11 +16,15 @@ from pyomo.contrib.coramin.clone import clone_shallow_active_flat
 from pyomo.contrib.coramin.relaxations import iterators
 
 
-def collect_vars(m: _BlockData) -> Tuple[List[_GeneralVarData], List[_GeneralVarData], List[_GeneralVarData]]:
+def collect_vars(
+    m: _BlockData,
+) -> Tuple[List[_GeneralVarData], List[_GeneralVarData], List[_GeneralVarData]]:
     binary_vars = ComponentSet()
     integer_vars = ComponentSet()
     all_vars = ComponentSet()
-    for c in m.component_data_objects(pe.Constraint, active=True, descend_into=pe.Block):
+    for c in m.component_data_objects(
+        pe.Constraint, active=True, descend_into=pe.Block
+    ):
         for v in identify_variables(c.body, include_fixed=False):
             all_vars.add(v)
             if v.is_binary():
@@ -38,7 +42,9 @@ def collect_vars(m: _BlockData) -> Tuple[List[_GeneralVarData], List[_GeneralVar
     return list(binary_vars), list(integer_vars), list(all_vars)
 
 
-def relax_integers(binary_vars: Sequence[_GeneralVarData], integer_vars: Sequence[_GeneralVarData]):
+def relax_integers(
+    binary_vars: Sequence[_GeneralVarData], integer_vars: Sequence[_GeneralVarData]
+):
     for v in list(binary_vars) + list(integer_vars):
         lb, ub = v.bounds
         v.domain = pe.Reals
@@ -46,7 +52,9 @@ def relax_integers(binary_vars: Sequence[_GeneralVarData], integer_vars: Sequenc
         v.setub(ub)
 
 
-def restore_integers(binary_vars: Sequence[_GeneralVarData], integer_vars: Sequence[_GeneralVarData]):
+def restore_integers(
+    binary_vars: Sequence[_GeneralVarData], integer_vars: Sequence[_GeneralVarData]
+):
     for v in binary_vars:
         v.domain = pe.Binary
     for v in integer_vars:
@@ -58,11 +66,15 @@ class DivingHeuristic(pybnb.Problem):
         super().__init__()
 
         binary_vars, integer_vars, all_vars = collect_vars(m)
-        self.relaxation = clone_shallow_active_flat(reformulate_binary_multiplication(m))[0]
+        self.relaxation = clone_shallow_active_flat(
+            reformulate_binary_multiplication(m)
+        )[0]
 
         orig_lbs = [v.lb for v in self.relaxation.vars]
         orig_ubs = [v.ub for v in self.relaxation.vars]
-        for r in iterators.relaxation_data_objects(self.relaxation, descend_into=True, active=True):
+        for r in iterators.relaxation_data_objects(
+            self.relaxation, descend_into=True, active=True
+        ):
             r.rebuild(build_nonlinear_constraint=True)
         tightener = IntervalTightener()
         tightener.config.deactivate_satisfied_constraints = False
@@ -95,7 +107,7 @@ class DivingHeuristic(pybnb.Problem):
 
     def sense(self):
         return self._sense
-    
+
     def bound(self):
         orig_lbs = [v.lb for v in self.relaxation.vars]
         orig_ubs = [v.ub for v in self.relaxation.vars]
@@ -108,7 +120,9 @@ class DivingHeuristic(pybnb.Problem):
             if v.ub is None or (ub is not None and ub < v.ub):
                 v.setub(ub)
 
-        for r in iterators.relaxation_data_objects(self.relaxation, descend_into=True, active=True):
+        for r in iterators.relaxation_data_objects(
+            self.relaxation, descend_into=True, active=True
+        ):
             r.rebuild()
 
         for v, lb, ub in zip(self.relaxation.vars, orig_lbs, orig_ubs):
@@ -117,7 +131,12 @@ class DivingHeuristic(pybnb.Problem):
 
         opt = pe.SolverFactory('ipopt')
         try:
-            res = opt.solve(self.relaxation, skip_trivial_constraints=True, load_solutions=False, tee=False)
+            res = opt.solve(
+                self.relaxation,
+                skip_trivial_constraints=True,
+                load_solutions=False,
+                tee=False,
+            )
         except:
             return self.infeasible_objective()
         if not pe.check_optimal_termination(res):
@@ -129,7 +148,7 @@ class DivingHeuristic(pybnb.Problem):
         else:
             ret = min(self.current_node.bound, ret)
         return ret
-    
+
     def objective(self):
         unfixed_vars = [v for v in self.bin_and_int_vars if not v.is_fixed()]
         vals = [v.value for v in unfixed_vars]
@@ -148,7 +167,12 @@ class DivingHeuristic(pybnb.Problem):
             opt = pe.SolverFactory('ipopt')
             opt.options['max_iter'] = 300
             try:
-                res = opt.solve(self.m, skip_trivial_constraints=True, load_solutions=False, tee=False)
+                res = opt.solve(
+                    self.m,
+                    skip_trivial_constraints=True,
+                    load_solutions=False,
+                    tee=False,
+                )
             except:
                 success = False
 
@@ -167,7 +191,7 @@ class DivingHeuristic(pybnb.Problem):
             # we have to restore the values so that branch() works properly
             v.set_value(val, skip_validation=True)
         return ret
-    
+
     def get_state(self):
         xl = [math.ceil(v.lb) for v in self.bin_and_int_vars]
         xl = np.array(xl, dtype=int)
@@ -176,7 +200,7 @@ class DivingHeuristic(pybnb.Problem):
         xu = np.array(xu, dtype=int)
 
         return xl, xu, None
-    
+
     def save_state(self, node):
         node.state = self.get_state()
 
@@ -199,7 +223,10 @@ class DivingHeuristic(pybnb.Problem):
             return pybnb.Node()
 
         xl, xu, _ = self.get_state()
-        dist_list = [(abs(v.value - round(v.value)), ndx) for ndx, v in enumerate(self.bin_and_int_vars)]
+        dist_list = [
+            (abs(v.value - round(v.value)), ndx)
+            for ndx, v in enumerate(self.bin_and_int_vars)
+        ]
         dist_list.sort(key=lambda i: i[0], reverse=True)
         ndx = dist_list[0][1]
         branching_var = self.bin_and_int_vars[ndx]
@@ -220,32 +247,65 @@ class DivingHeuristic(pybnb.Problem):
         yield child2
 
 
-def assert_feasible(m: _BlockData, var_list: Sequence[_GeneralVarData], feasibility_tol: float, integer_tol: float):
-    for c in m.component_data_objects(pe.Constraint, active=True, descend_into=pe.Block):
+def assert_feasible(
+    m: _BlockData,
+    var_list: Sequence[_GeneralVarData],
+    feasibility_tol: float,
+    integer_tol: float,
+):
+    for c in m.component_data_objects(
+        pe.Constraint, active=True, descend_into=pe.Block
+    ):
         body_val = pe.value(c.body)
         if c.lb is not None:
-            assert c.lb - feasibility_tol <= body_val or abs(c.lb - body_val)/abs(c.lb) <= feasibility_tol
+            assert (
+                c.lb - feasibility_tol <= body_val
+                or abs(c.lb - body_val) / abs(c.lb) <= feasibility_tol
+            )
         if c.ub is not None:
-            assert body_val <= c.ub + feasibility_tol or abs(c.ub - body_val)/abs(c.ub) <= feasibility_tol
+            assert (
+                body_val <= c.ub + feasibility_tol
+                or abs(c.ub - body_val) / abs(c.ub) <= feasibility_tol
+            )
 
     for v in var_list:
         val = v.value
         lb, ub = v.bounds
         if lb is not None:
-            assert lb - feasibility_tol <= val or abs(lb - val)/abs(lb) <= feasibility_tol
+            assert (
+                lb - feasibility_tol <= val
+                or abs(lb - val) / abs(lb) <= feasibility_tol
+            )
         if ub is not None:
-            assert val <= ub + feasibility_tol or abs(ub - val)/abs(ub) <= feasibility_tol
+            assert (
+                val <= ub + feasibility_tol
+                or abs(ub - val) / abs(ub) <= feasibility_tol
+            )
         if v.is_integer():
             assert abs(val - round(val)) <= integer_tol
 
 
-def run_diving_heuristic(m: _BlockData, feasibility_tol: float = 1e-6, integer_tol: float = 1e-4, time_limit: float = 300, node_limit: int = 1000):
+def run_diving_heuristic(
+    m: _BlockData,
+    feasibility_tol: float = 1e-6,
+    integer_tol: float = 1e-4,
+    time_limit: float = 300,
+    node_limit: int = 1000,
+):
     prob = DivingHeuristic(m)
-    res: pybnb.SolverResults = pybnb.solve(prob, queue_strategy=pybnb.QueueStrategy.bound, objective_stop=prob.infeasible_objective(), node_limit=node_limit, time_limit=time_limit)
+    res: pybnb.SolverResults = pybnb.solve(
+        prob,
+        queue_strategy=pybnb.QueueStrategy.bound,
+        objective_stop=prob.infeasible_objective(),
+        node_limit=node_limit,
+        time_limit=time_limit,
+    )
     ss = pybnb.SolutionStatus
     if res.solution_status in {ss.feasible, ss.optimal}:
         best_obj = res.objective
-        best_sol: MutableMapping[_GeneralVarData, float] = ComponentMap(zip(prob.all_vars, res.best_node.state[2]))
+        best_sol: MutableMapping[_GeneralVarData, float] = ComponentMap(
+            zip(prob.all_vars, res.best_node.state[2])
+        )
     else:
         best_obj = None
         best_sol = None

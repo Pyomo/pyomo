@@ -14,10 +14,9 @@ class TestFilters(unittest.TestCase):
         r = coramin.relaxations.relax(m)
         opt = appsi.solvers.Highs()
         res = opt.solve(r)
-        (
-            vars_to_min,
-            vars_to_max,
-        ) = coramin.domain_reduction.filter_variables_from_solution([m.x])
+        (vars_to_min, vars_to_max) = (
+            coramin.domain_reduction.filter_variables_from_solution([m.x])
+        )
         self.assertIn(m.x, vars_to_max)
         self.assertNotIn(m.x, vars_to_min)
 

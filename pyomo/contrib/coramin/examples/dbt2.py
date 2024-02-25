@@ -5,6 +5,7 @@ this example, you have to download the problem file corresponding to
 the filename in the "read_osil" function bedlow. The file can be
 downloaded from minlplib.org. Suspect is also needed.
 """
+
 import pyomo.environ as pe
 from pyomo.contrib import coramin
 import itertools
@@ -31,11 +32,9 @@ relaxation = coramin.relaxations.relax(
 
 # perform decomposition
 print('Decomposing relaxation')
-(
-    relaxation,
-    component_map,
-    termination_reason,
-) = coramin.domain_reduction.decompose_model(relaxation, max_leaf_nnz=1000)
+(relaxation, component_map, termination_reason) = (
+    coramin.domain_reduction.decompose_model(relaxation, max_leaf_nnz=1000)
+)
 
 # rebuild the relaxations
 for b in coramin.relaxations.relaxation_data_objects(

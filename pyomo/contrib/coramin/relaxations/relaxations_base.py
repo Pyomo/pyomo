@@ -133,7 +133,11 @@ def _check_cut(
         cut.constant._value -= safety_tol
     else:
         cut.constant._value += safety_tol
-    if type(cut.constant.value) is complex or not math.isfinite(cut.constant.value) or abs(cut.constant.value) >= too_large:
+    if (
+        type(cut.constant.value) is complex
+        or not math.isfinite(cut.constant.value)
+        or abs(cut.constant.value) >= too_large
+    ):
         res = (False, None, cut.constant.value, None)
     return res
 
@@ -313,7 +317,9 @@ class BaseRelaxationData(_BlockData):
                         self._cuts = IndexedConstraint(pe.Any)
                     if self._oa_params is None:
                         del self._oa_params
-                        self._oa_params = IndexedParam(pe.Any, mutable=True, initialize=0, within=pe.Any)
+                        self._oa_params = IndexedParam(
+                            pe.Any, mutable=True, initialize=0, within=pe.Any
+                        )
                     self.clean_oa_points(ensure_oa_at_vertices=ensure_oa_at_vertices)
                     self._update_oa_cuts()
                 else:
@@ -573,7 +579,9 @@ class BaseRelaxationData(_BlockData):
         self._current_param_index = 0
         if self._oa_params is not None:
             del self._oa_params
-            self._oa_params = pe.Param(pe.Any, mutable=True, initialize=0, within=pe.Any)
+            self._oa_params = pe.Param(
+                pe.Any, mutable=True, initialize=0, within=pe.Any
+            )
         if self._cuts is not None:
             del self._cuts
             self._cuts = pe.Constraint(pe.Any)

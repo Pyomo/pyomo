@@ -1118,9 +1118,7 @@ class TestRelaxationBasics(unittest.TestCase):
         m = self.get_base_pyomo_model()
         m.rel = coramin.relaxations.MultivariateRelaxation()
         m.rel.build(
-            aux_var=m.z,
-            shape=coramin.FunctionShape.CONVEX,
-            f_x_expr=m.x**2 + m.y**2,
+            aux_var=m.z, shape=coramin.FunctionShape.CONVEX, f_x_expr=m.x**2 + m.y**2
         )
         e = m.x**2 + m.y**2
         self.options_switching_helper(m.rel)
@@ -1147,9 +1145,7 @@ class TestRelaxationBasics(unittest.TestCase):
         m = self.get_base_pyomo_model()
         m.rel = coramin.relaxations.MultivariateRelaxation()
         m.rel.build(
-            aux_var=m.z,
-            shape=coramin.FunctionShape.CONCAVE,
-            f_x_expr=-m.x**2 - m.y**2,
+            aux_var=m.z, shape=coramin.FunctionShape.CONCAVE, f_x_expr=-m.x**2 - m.y**2
         )
         e = -m.x**2 - m.y**2
         self.valid_relaxation_helper(m, m.rel, e, 10, False, True)
