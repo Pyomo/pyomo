@@ -2,14 +2,14 @@ import pyomo.environ as pe
 from pyomo.contrib import coramin
 from pyomo.contrib.coramin.algorithms.ecp_bounder import ECPBounder
 from pyomo.common import unittest
-import logging
 from pyomo.contrib import appsi
 
 
-logging.basicConfig(level=logging.INFO)
+gurobi_available = appsi.solvers.Gurobi().available()
 
 
 class TestECPBounder(unittest.TestCase):
+    @unittest.skipUnless(gurobi_available, 'gurobi is not available')
     def test_ecp_bounder(self):
         m = pe.ConcreteModel()
         m.x = pe.Var()

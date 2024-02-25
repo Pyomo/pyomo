@@ -14,6 +14,10 @@ import importlib
 import shutil
 
 
+ipopt_available = pe.SolverFactory('ipopt').available()
+gurobi_available = appsi.solvers.Gurobi().available()
+
+
 def _get_sol(pname):
     start_x1_set = {'batch0812', 'chem'}
     current_dir = os.getcwd()
@@ -59,6 +63,7 @@ class Helper(unittest.TestCase):
         )
 
 
+@unittest.skipUnless(ipopt_available and gurobi_available, 'need both ipopt and gurobi')
 class TestMultiTreeWithMINLPLib(Helper):
     @classmethod
     def setUpClass(self) -> None:

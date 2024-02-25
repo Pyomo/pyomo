@@ -1,9 +1,11 @@
 from pyomo.common import unittest
-import itertools
-import math
 import pyomo.environ as pe
 from pyomo.contrib import coramin
 from pyomo.contrib.coramin.relaxations.alphabb import AlphaBBRelaxation
+
+
+ipopt_available = pe.SolverFactory('ipopt').available()
+gurobi_available = pe.SolverFactory('appsi_gurobi').available()
 
 
 class TestAlphaBBRelaxation(unittest.TestCase):
@@ -26,6 +28,7 @@ class TestAlphaBBRelaxation(unittest.TestCase):
             eigenvalue_bounder=coramin.EigenValueBounder.GershgorinWithSimplification,
         )
 
+    @unittest.skipUnless(ipopt_available, 'ipopt is not available')
     def test_nonlinear(self):
         model = self.model.clone()
         model.abb.use_linear_relaxation = False
@@ -45,6 +48,7 @@ class TestAlphaBBRelaxation(unittest.TestCase):
         solver.solve(model)
         self.assertLessEqual(model.w.value, pe.value(model.f_x))
 
+    @unittest.skipUnless(gurobi_available, 'gurboi is not available')
     def test_linear(self):
         model = self.model.clone()
         model.abb.use_linear_relaxation = True

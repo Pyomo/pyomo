@@ -5,6 +5,9 @@ from pyomo.contrib import coramin
 from pyomo.core.base.var import SimpleVar
 
 
+gurobi_available = pe.SolverFactory('appsi_gurobi').available()
+
+
 """
 Things to test
 - relaxations are valid under all possible conditions
@@ -29,6 +32,7 @@ Things to test
 
 
 class TestBaseRelaxation(unittest.TestCase):
+    @unittest.skipUnless(gurobi_available, 'gurboi is not available')
     def test_push_and_pop_oa_points(self):
         m = pe.ConcreteModel()
         m.x = pe.Var(bounds=(-2, 1))

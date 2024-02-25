@@ -3,6 +3,10 @@ import pyomo.environ as pe
 from pyomo.contrib.coramin.heuristics.diving import run_diving_heuristic
 
 
+ipopt_available = pe.SolverFactory('ipopt').available()
+
+
+@unittest.skipUnless(ipopt_available, 'ipopt is not available')
 class TestDiving(unittest.TestCase):
     def test_diving_1(self):
         m = pe.ConcreteModel()
