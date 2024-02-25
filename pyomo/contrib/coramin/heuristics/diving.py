@@ -291,6 +291,7 @@ def run_diving_heuristic(
     integer_tol: float = 1e-4,
     time_limit: float = 300,
     node_limit: int = 1000,
+    comm=None,
 ):
     prob = DivingHeuristic(m)
     res: pybnb.SolverResults = pybnb.solve(
@@ -299,6 +300,7 @@ def run_diving_heuristic(
         objective_stop=prob.infeasible_objective(),
         node_limit=node_limit,
         time_limit=time_limit,
+        comm=comm,
     )
     ss = pybnb.SolutionStatus
     if res.solution_status in {ss.feasible, ss.optimal}:
