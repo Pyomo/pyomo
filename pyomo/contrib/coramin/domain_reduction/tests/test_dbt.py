@@ -26,8 +26,10 @@ from pyomo.contrib import appsi
 import pytest
 from pyomo.contrib.coramin.utils.compare_models import is_relaxation, is_equivalent
 from pyomo.contrib.coramin.utils.pyomo_utils import active_cons, active_vars
+
 try:
     import metis
+
     metis_available = True
 except ImportError:
     metis_available = False
