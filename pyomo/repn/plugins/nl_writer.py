@@ -1760,7 +1760,7 @@ class _NLWriter_impl(object):
                 id2_isdiscrete = var_map[id2].domain.isdiscrete()
                 if var_map[_id].domain.isdiscrete() ^ id2_isdiscrete:
                     # if only one variable is discrete, then we need to
-                    # substiitute out the other
+                    # substitute out the other
                     if id2_isdiscrete:
                         _id, id2 = id2, _id
                         coef, coef2 = coef2, coef
@@ -1820,10 +1820,15 @@ class _NLWriter_impl(object):
                 # appropriately (that expr_info is persisting in the
                 # eliminated_vars dict - and we will use that to
                 # update other linear expressions later.)
+                old_nnz = len(expr_info.linear)
                 c = expr_info.linear.pop(_id, 0)
+                nnz = old_nnz - 1
                 expr_info.const += c * b
                 if x in expr_info.linear:
                     expr_info.linear[x] += c * a
+                    if expr_info.linear[x] == 0:
+                        nnz -= 1
+                        coef = expr_info.linear.pop(x)
                 elif a:
                     expr_info.linear[x] = c * a
                     # replacing _id with x... NNZ is not changing,
@@ -1831,10 +1836,17 @@ class _NLWriter_impl(object):
                     # this constraint
                     comp_by_linear_var[x].append((con_id, expr_info))
                     continue
-                # NNZ has been reduced by 1
-                nnz = len(expr_info.linear)
-                _old = lcon_by_linear_nnz[nnz + 1]
+                _old = lcon_by_linear_nnz[old_nnz]
                 if con_id in _old:
+                    if not nnz:
+                        if abs(expr_info.const) > TOL:
+                            # constraint is trivially infeasible
+                            raise InfeasibleConstraintException(
+                                "model contains a trivially infeasible constraint "
+                                f"{expr_info.const} == {coef}*{var_map[x]}"
+                            )
+                        # constraint is trivially feasible
+                        eliminated_cons.add(con_id)
                     lcon_by_linear_nnz[nnz][con_id] = _old.pop(con_id)
             # If variables were replaced by the variable that
             # we are currently eliminating, then we need to update
