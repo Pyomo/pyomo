@@ -513,9 +513,9 @@ class DeferredImportCallbackFinder:
 
 _DeferredImportCallbackFinder = DeferredImportCallbackFinder()
 # Insert the DeferredImportCallbackFinder at the beginning of the
-# mata_path to that it is found before the standard finders (so that we
-# can correctly inject the resolution of the DeferredImportIndicators --
-# which triggers the needed callbacks)
+# sys.meta_path to that it is found before the standard finders (so that
+# we can correctly inject the resolution of the DeferredImportIndicators
+# -- which triggers the needed callbacks)
 sys.meta_path.insert(0, _DeferredImportCallbackFinder)
 
 
