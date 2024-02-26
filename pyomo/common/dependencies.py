@@ -490,6 +490,7 @@ class DeferredImportCallbackFinder:
     :py:class:`DeferredImportModule`.
 
     """
+
     _callbacks = {}
 
     def find_spec(self, fullname, path, target=None):
