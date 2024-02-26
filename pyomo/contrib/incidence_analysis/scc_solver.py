@@ -13,18 +13,27 @@ import logging
 
 from pyomo.core.base.constraint import Constraint
 from pyomo.util.calc_var_value import calculate_variable_from_constraint
-from pyomo.util.subsystems import TemporarySubsystemManager, generate_subsystem_blocks
+from pyomo.util.subsystems import (
+    TemporarySubsystemManager,
+    generate_subsystem_blocks,
+    create_subsystem_block,
+)
 from pyomo.contrib.incidence_analysis.interface import (
     IncidenceGraphInterface,
     _generate_variables_in_constraints,
 )
+from pyomo.contrib.incidence_analysis.config import IncidenceMethod
 
 
 _log = logging.getLogger(__name__)
 
 
+from pyomo.common.timing import HierarchicalTimer
 def generate_strongly_connected_components(
-    constraints, variables=None, include_fixed=False
+    constraints,
+    variables=None,
+    include_fixed=False,
+    timer=None,
 ):
     """Yield in order ``_BlockData`` that each contain the variables and
     constraints of a single diagonal block in a block lower triangularization
@@ -53,27 +62,52 @@ def generate_strongly_connected_components(
         "input variables" for that block.
 
     """
-    if variables is None:
-        variables = list(
-            _generate_variables_in_constraints(constraints, include_fixed=include_fixed)
-        )
+    if timer is None:
+        timer = HierarchicalTimer()
+
+    if isinstance(constraints, IncidenceGraphInterface):
+        igraph = constraints
+        variables = igraph.variables
+        constraints = igraph.constraints
+    else:
+        if variables is None:
+            timer.start("generate-variables")
+            variables = list(
+                _generate_variables_in_constraints(constraints, include_fixed=include_fixed)
+            )
+            timer.stop("generate-variables")
+        timer.start("igraph")
+        igraph = IncidenceGraphInterface()
+        timer.stop("igraph")
 
     assert len(variables) == len(constraints)
-    igraph = IncidenceGraphInterface()
+
+    timer.start("block-triang")
     var_blocks, con_blocks = igraph.block_triangularize(
         variables=variables, constraints=constraints
     )
+    timer.stop("block-triang")
     subsets = [(cblock, vblock) for vblock, cblock in zip(var_blocks, con_blocks)]
+    timer.start("generate-block")
     for block, inputs in generate_subsystem_blocks(
         subsets, include_fixed=include_fixed
     ):
+        timer.stop("generate-block")
         # TODO: How does len scale for reference-to-list?
         assert len(block.vars) == len(block.cons)
         yield (block, inputs)
+        # Note that this code, after the last yield, I believe is only called
+        # at time of GC.
+        timer.start("generate-block")
+    timer.stop("generate-block")
 
 
 def solve_strongly_connected_components(
-    block, solver=None, solve_kwds=None, calc_var_kwds=None
+    block,
+    solver=None,
+    solve_kwds=None,
+    calc_var_kwds=None,
+    timer=None,
 ):
     """Solve a square system of variables and equality constraints by
     solving strongly connected components individually.
@@ -110,24 +144,59 @@ def solve_strongly_connected_components(
         solve_kwds = {}
     if calc_var_kwds is None:
         calc_var_kwds = {}
+    if timer is None:
+        timer = HierarchicalTimer()
 
+    timer.start("igraph")
     igraph = IncidenceGraphInterface(
-        block, active=True, include_fixed=False, include_inequality=False
+        block,
+        active=True,
+        include_fixed=False,
+        include_inequality=False,
+        method=IncidenceMethod.ampl_repn,
     )
+    timer.stop("igraph")
+    # Use IncidenceGraphInterface to get the constraints and variables
     constraints = igraph.constraints
     variables = igraph.variables
 
+    timer.start("block-triang")
+    var_blocks, con_blocks = igraph.block_triangularize()
+    timer.stop("block-triang")
+    timer.start("subsystem-blocks")
+    subsystem_blocks = [
+        create_subsystem_block(conbl, varbl, timer=timer) if len(varbl) > 1 else None
+        for varbl, conbl in zip(var_blocks, con_blocks)
+    ]
+    timer.stop("subsystem-blocks")
+
     res_list = []
     log_blocks = _log.isEnabledFor(logging.DEBUG)
-    for scc, inputs in generate_strongly_connected_components(constraints, variables):
+
+    #timer.start("generate-scc")
+    #for scc, inputs in generate_strongly_connected_components(igraph, timer=timer):
+    #    timer.stop("generate-scc")
+    for i, scc in enumerate(subsystem_blocks):
+        if scc is None:
+            # Since a block is not necessary for 1x1 solve, we use the convention
+            # that None indicates a 1x1 SCC.
+            inputs = []
+            var = var_blocks[i][0]
+            con = con_blocks[i][0]
+        else:
+            inputs = list(scc.input_vars.values())
+
         with TemporarySubsystemManager(to_fix=inputs):
-            N = len(scc.vars)
+            N = len(var_blocks[i])
             if N == 1:
                 if log_blocks:
                     _log.debug(f"Solving 1x1 block: {scc.cons[0].name}.")
+                timer.start("calc-var")
                 results = calculate_variable_from_constraint(
-                    scc.vars[0], scc.cons[0], **calc_var_kwds
+                    #scc.vars[0], scc.cons[0], **calc_var_kwds
+                    var, con, **calc_var_kwds
                 )
+                timer.stop("calc-var")
                 res_list.append(results)
             else:
                 if solver is None:
@@ -141,6 +210,10 @@ def solve_strongly_connected_components(
                     )
                 if log_blocks:
                     _log.debug(f"Solving {N}x{N} block.")
+                timer.start("solve")
                 results = solver.solve(scc, **solve_kwds)
+                timer.stop("solve")
                 res_list.append(results)
+    #    timer.start("generate-scc")
+    #timer.stop("generate-scc")
     return res_list
