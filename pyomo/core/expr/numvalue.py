@@ -85,7 +85,7 @@ logger = logging.getLogger('pyomo.core')
 ##------------------------------------------------------------------------
 
 
-class NonNumericValue(object):
+class NonNumericValue(PyomoObject):
     """An object that contains a non-numeric value
 
     Constructor Arguments:
@@ -100,6 +100,8 @@ class NonNumericValue(object):
     def __str__(self):
         return str(self.value)
 
+    def __call__(self, exception=None):
+        return self.value
 
 nonpyomo_leaf_types.add(NonNumericValue)
 
