@@ -119,7 +119,6 @@ from pyomo.core.expr.numvalue import (
     value,
     native_types,
     native_numeric_types,
-    pyomo_constant_types,
 )
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr.visitor import ExpressionValueVisitor
@@ -902,7 +901,7 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
 
     def beforeChild(self, node, child, child_idx):
         ctype = child.__class__
-        if ctype in native_types or ctype in pyomo_constant_types:
+        if ctype in native_types:
             return False, self._pint_dimensionless
 
         if child.is_expression_type():
@@ -917,7 +916,7 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
             pint_unit = self._pyomo_units_container._get_pint_units(pyomo_unit)
             return False, pint_unit
 
-        return True, None
+        return False, self._pint_dimensionless
 
     def exitNode(self, node, data):
         """Visitor callback when moving up the expression tree.

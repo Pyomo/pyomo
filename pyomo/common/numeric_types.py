@@ -50,7 +50,6 @@ native_numeric_types = {int, float}
 native_integer_types = {int}
 native_logical_types = {bool}
 native_complex_types = {complex}
-pyomo_constant_types = set()  # includes NumericConstant
 
 _native_boolean_types = {int, bool, str, bytes}
 relocated_module_attribute(
@@ -61,6 +60,16 @@ relocated_module_attribute(
     "contains types that were convertible to bool, and not types that should "
     "be treated as if they were bool (as was the case for the other "
     "native_*_types sets).  Users likely should use native_logical_types.",
+)
+_pyomo_constant_types = set()  # includes NumericConstant, _PythonCallbackFunctionID
+relocated_module_attribute(
+    'pyomo_constant_types',
+    'pyomo.common.numeric_types._pyomo_constant_types',
+    version='6.7.2.dev0',
+    msg="The pyomo_constant_types set will be removed in the future: the set "
+    "contained only NumericConstant and _PythonCallbackFunctionID, and provided "
+    "no meaningful value to clients or walkers.  Users should likely handle "
+    "these types in the same manner as immutable Params.",
 )
 
 
@@ -338,16 +347,6 @@ def value(obj, exception=True):
     """
     if obj.__class__ in native_types:
         return obj
-    if obj.__class__ in pyomo_constant_types:
-        #
-        # I'm commenting this out for now, but I think we should never expect
-        # to see a numeric constant with value None.
-        #
-        # if exception and obj.value is None:
-        #    raise ValueError(
-        #        "No value for uninitialized NumericConstant object %s"
-        #        % (obj.name,))
-        return obj.value
     #
     # Test if we have a duck typed Pyomo expression
     #

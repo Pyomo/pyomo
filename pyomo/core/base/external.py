@@ -35,8 +35,8 @@ from pyomo.common.numeric_types import (
     check_if_native_type,
     native_types,
     native_numeric_types,
-    pyomo_constant_types,
     value,
+    _pyomo_constant_types,
 )
 from pyomo.core.expr.numvalue import (
     NonNumericValue,
@@ -495,7 +495,7 @@ class _PythonCallbackFunctionID(NumericConstant):
         return False
 
 
-pyomo_constant_types.add(_PythonCallbackFunctionID)
+_pyomo_constant_types.add(_PythonCallbackFunctionID)
 
 
 class PythonCallbackFunction(ExternalFunction):
