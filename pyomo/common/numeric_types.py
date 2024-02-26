@@ -350,9 +350,7 @@ def value(obj, exception=True):
     #
     # Test if we have a duck typed Pyomo expression
     #
-    try:
-        obj.is_numeric_type()
-    except AttributeError:
+    if not hasattr(obj, 'is_numeric_type'):
         #
         # TODO: Historically we checked for new *numeric* types and
         # raised exceptions for anything else.  That is inconsistent
@@ -367,7 +365,7 @@ def value(obj, exception=True):
                 return None
             raise TypeError(
                 "Cannot evaluate object with unknown type: %s" % obj.__class__.__name__
-            ) from None
+            )
     #
     # Evaluate the expression object
     #
