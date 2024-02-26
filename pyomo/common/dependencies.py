@@ -676,6 +676,15 @@ def attempt_import(
         assert defer_import is None
         defer_import = defer_check
 
+    # If the module has already been imported, there is no reason to
+    # further defer things: just import it.
+    if defer_import is None:
+        if name in sys.modules:
+            defer_import = False
+            deferred_submodules = None
+        else:
+            defer_import = True
+
     # If we are going to defer the check until later, return the
     # deferred import module object
     if defer_import:
