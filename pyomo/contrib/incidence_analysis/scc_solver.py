@@ -147,73 +147,106 @@ def solve_strongly_connected_components(
     if timer is None:
         timer = HierarchicalTimer()
 
-    timer.start("igraph")
-    igraph = IncidenceGraphInterface(
-        block,
-        active=True,
-        include_fixed=False,
-        include_inequality=False,
-        method=IncidenceMethod.ampl_repn,
-    )
-    timer.stop("igraph")
-    # Use IncidenceGraphInterface to get the constraints and variables
-    constraints = igraph.constraints
-    variables = igraph.variables
+    USE_IMPLICIT = True
+    if not USE_IMPLICIT:
+        timer.start("igraph")
+        igraph = IncidenceGraphInterface(
+            block,
+            active=True,
+            include_fixed=False,
+            include_inequality=False,
+            method=IncidenceMethod.ampl_repn,
+        )
+        timer.stop("igraph")
+        # Use IncidenceGraphInterface to get the constraints and variables
+        constraints = igraph.constraints
+        variables = igraph.variables
 
-    timer.start("block-triang")
-    var_blocks, con_blocks = igraph.block_triangularize()
-    timer.stop("block-triang")
-    timer.start("subsystem-blocks")
-    subsystem_blocks = [
-        create_subsystem_block(conbl, varbl, timer=timer) if len(varbl) > 1 else None
-        for varbl, conbl in zip(var_blocks, con_blocks)
-    ]
-    timer.stop("subsystem-blocks")
+        timer.start("block-triang")
+        var_blocks, con_blocks = igraph.block_triangularize()
+        timer.stop("block-triang")
+        timer.start("subsystem-blocks")
+        subsystem_blocks = [
+            create_subsystem_block(conbl, varbl, timer=timer) if len(varbl) > 1 else None
+            for varbl, conbl in zip(var_blocks, con_blocks)
+        ]
+        timer.stop("subsystem-blocks")
 
-    res_list = []
-    log_blocks = _log.isEnabledFor(logging.DEBUG)
+        res_list = []
+        log_blocks = _log.isEnabledFor(logging.DEBUG)
 
-    #timer.start("generate-scc")
-    #for scc, inputs in generate_strongly_connected_components(igraph, timer=timer):
-    #    timer.stop("generate-scc")
-    for i, scc in enumerate(subsystem_blocks):
-        if scc is None:
-            # Since a block is not necessary for 1x1 solve, we use the convention
-            # that None indicates a 1x1 SCC.
-            inputs = []
-            var = var_blocks[i][0]
-            con = con_blocks[i][0]
-        else:
-            inputs = list(scc.input_vars.values())
-
-        with TemporarySubsystemManager(to_fix=inputs):
-            N = len(var_blocks[i])
-            if N == 1:
-                if log_blocks:
-                    _log.debug(f"Solving 1x1 block: {scc.cons[0].name}.")
-                timer.start("calc-var")
-                results = calculate_variable_from_constraint(
-                    #scc.vars[0], scc.cons[0], **calc_var_kwds
-                    var, con, **calc_var_kwds
-                )
-                timer.stop("calc-var")
-                res_list.append(results)
+        #timer.start("generate-scc")
+        #for scc, inputs in generate_strongly_connected_components(igraph, timer=timer):
+        #    timer.stop("generate-scc")
+        for i, scc in enumerate(subsystem_blocks):
+            if scc is None:
+                # Since a block is not necessary for 1x1 solve, we use the convention
+                # that None indicates a 1x1 SCC.
+                inputs = []
+                var = var_blocks[i][0]
+                con = con_blocks[i][0]
             else:
-                if solver is None:
-                    var_names = [var.name for var in scc.vars.values()][:10]
-                    con_names = [con.name for con in scc.cons.values()][:10]
-                    raise RuntimeError(
-                        "An external solver is required if block has strongly\n"
-                        "connected components of size greater than one (is not"
-                        " a DAG).\nGot an SCC of size %sx%s including"
-                        " components:\n%s\n%s" % (N, N, var_names, con_names)
+                inputs = list(scc.input_vars.values())
+
+            with TemporarySubsystemManager(to_fix=inputs):
+                N = len(var_blocks[i])
+                if N == 1:
+                    if log_blocks:
+                        _log.debug(f"Solving 1x1 block: {scc.cons[0].name}.")
+                    timer.start("calc-var")
+                    results = calculate_variable_from_constraint(
+                        #scc.vars[0], scc.cons[0], **calc_var_kwds
+                        var, con, **calc_var_kwds
                     )
-                if log_blocks:
-                    _log.debug(f"Solving {N}x{N} block.")
-                timer.start("solve")
-                results = solver.solve(scc, **solve_kwds)
-                timer.stop("solve")
-                res_list.append(results)
-    #    timer.start("generate-scc")
-    #timer.stop("generate-scc")
-    return res_list
+                    timer.stop("calc-var")
+                    res_list.append(results)
+                else:
+                    if solver is None:
+                        var_names = [var.name for var in scc.vars.values()][:10]
+                        con_names = [con.name for con in scc.cons.values()][:10]
+                        raise RuntimeError(
+                            "An external solver is required if block has strongly\n"
+                            "connected components of size greater than one (is not"
+                            " a DAG).\nGot an SCC of size %sx%s including"
+                            " components:\n%s\n%s" % (N, N, var_names, con_names)
+                        )
+                    if log_blocks:
+                        _log.debug(f"Solving {N}x{N} block.")
+                    timer.start("solve")
+                    results = solver.solve(scc, **solve_kwds)
+                    timer.stop("solve")
+                    res_list.append(results)
+        #    timer.start("generate-scc")
+        #timer.stop("generate-scc")
+        return res_list
+    else:
+        from pyomo.contrib.pynumero.algorithms.solvers.implicit_functions import (
+            SccImplicitFunctionSolver,
+            ScipySolverWrapper,
+        )
+        timer.start("igraph")
+        igraph = IncidenceGraphInterface(
+            block,
+            active=True,
+            include_fixed=False,
+            include_inequality=False,
+            method=IncidenceMethod.ampl_repn,
+        )
+        timer.stop("igraph")
+        # Use IncidenceGraphInterface to get the constraints and variables
+        constraints = igraph.constraints
+        variables = igraph.variables
+
+        # Construct an implicit function solver with no parameters. (This is just
+        # a square system solver.)
+        scc_solver = SccImplicitFunctionSolver(
+            variables,
+            constraints,
+            [],
+            solver_class=ScipySolverWrapper,
+            timer=timer,
+            use_calc_var=False,
+        )
+        # set_parameters triggers the Newton solve.
+        scc_solver.set_parameters([])
+        scc_solver.update_pyomo_model()
