@@ -32,10 +32,8 @@ from pyomo.contrib.pynumero.algorithms.solvers.scipy_solvers import (
     NewtonNlpSolver,
     SecantNewtonNlpSolver,
 )
+from pyomo.contrib.incidence_analysis.config import IncidenceMethod
 from pyomo.contrib.incidence_analysis import IncidenceGraphInterface
-from pyomo.contrib.incidence_analysis.scc_solver import (
-    generate_strongly_connected_components,
-)
 
 
 class NlpSolverBase(object):
@@ -133,7 +131,7 @@ class PyomoImplicitFunctionBase(object):
 
     """
 
-    def __init__(self, variables, constraints, parameters):
+    def __init__(self, variables, constraints, parameters, timer=None):
         """
         Arguments
         ---------
@@ -145,11 +143,13 @@ class PyomoImplicitFunctionBase(object):
             Variables to be treated as inputs to the implicit function
 
         """
+        if timer is None:
+            timer = HierarchicalTimer()
         self._variables = variables
         self._constraints = constraints
         self._parameters = parameters
         self._block_variables = variables + parameters
-        self._block = create_subsystem_block(constraints, self._block_variables)
+        self._block = create_subsystem_block(constraints, self._block_variables, timer=timer)
 
     def get_variables(self):
         return self._variables
@@ -361,7 +361,9 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
         self._solver_options = solver_options
         self._calc_var_cutoff = 1 if use_calc_var else 0
         # NOTE: This super call is only necessary so the get_* methods work
-        super().__init__(variables, constraints, parameters)
+        timer.start("super.__init__")
+        super().__init__(variables, constraints, parameters, timer=timer)
+        timer.stop("super.__init__")
 
         subsystem_list = [
             # Switch order in list for compatibility with generate_subsystem_blocks
@@ -376,6 +378,7 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
         # an equality constraint.
         constants = []
         constant_set = ComponentSet()
+        timer.start("identify-vars")
         for con in constraints:
             for var in identify_variables(con.expr, include_fixed=False):
                 if var not in constant_set and var not in var_param_set:
@@ -383,6 +386,7 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
                     # a var nor param, treat it as a "constant"
                     constant_set.add(var)
                     constants.append(var)
+        timer.stop("identify-vars")
 
         with TemporarySubsystemManager(to_fix=constants):
             # Temporarily fix "constant" variables so (a) they don't show
@@ -390,6 +394,7 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
             # they don't appear as additional columns in the NLPs and
             # ProjectedNLPs.
 
+            timer.start("subsystem-blocks")
             self._subsystem_list = list(generate_subsystem_blocks(subsystem_list))
             # These are subsystems that need an external solver, rather than
             # calculate_variable_from_constraint. _calc_var_cutoff should be either
@@ -399,6 +404,7 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
                 for block, inputs in self._subsystem_list
                 if len(block.vars) > self._calc_var_cutoff
             ]
+            timer.stop("subsystem-blocks")
 
             # Need a dummy objective to create an NLP
             for block, inputs in self._solver_subsystem_list:
@@ -421,16 +427,20 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
 
         # "Output variable" names are required to construct ProjectedNLPs.
         # Ideally, we can eventually replace these with variable indices.
+        timer.start("names")
         self._solver_subsystem_var_names = [
             [var.name for var in block.vars.values()]
             for block, inputs in self._solver_subsystem_list
         ]
+        timer.stop("names")
+        timer.start("proj-ext-nlp")
         self._solver_proj_nlps = [
             nlp_proj.ProjectedExtendedNLP(nlp, names)
             for nlp, names in zip(
                 self._solver_subsystem_nlps, self._solver_subsystem_var_names
             )
         ]
+        timer.stop("proj-ext-nlp")
 
         # We will solve the ProjectedNLPs rather than the original NLPs
         self._timer.start("NlpSolver")
@@ -439,6 +449,7 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
             for nlp in self._solver_proj_nlps
         ]
         self._timer.stop("NlpSolver")
+        timer.start("input-indices")
         self._solver_subsystem_input_coords = [
             # Coordinates in the NLP, not ProjectedNLP
             nlp.get_primal_indices(inputs)
@@ -446,6 +457,7 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
                 self._solver_subsystem_nlps, self._solver_subsystem_list
             )
         ]
+        timer.stop("input-indices")
 
         self._n_variables = len(variables)
         self._n_constraints = len(constraints)
@@ -465,6 +477,7 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
         )
         # Cache the global array-coordinates of each subset of "input"
         # variables. These are used for updating before each solve.
+        timer.start("coord-maps")
         self._local_input_global_coords = [
             # If I do not fix "constants" above, I get errors here
             # that only show up in the CLC models.
@@ -481,6 +494,7 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
             )
             for (block, _) in self._solver_subsystem_list
         ]
+        timer.stop("coord-maps")
 
         self._timer.stop("__init__")
 
@@ -612,7 +626,7 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
 class SccImplicitFunctionSolver(DecomposedImplicitFunctionBase):
     def partition_system(self, variables, constraints):
         self._timer.start("partition")
-        igraph = IncidenceGraphInterface()
+        igraph = IncidenceGraphInterface(method=IncidenceMethod.ampl_repn)
         var_blocks, con_blocks = igraph.block_triangularize(variables, constraints)
         self._timer.stop("partition")
         return zip(var_blocks, con_blocks)
