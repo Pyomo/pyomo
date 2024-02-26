@@ -597,7 +597,7 @@ def attempt_import(
         module in the ``globals()`` namespaces.  For example, the alt_names
         for NumPy would be ``['np']``.  (deprecated in version 6.0)
 
-    callback: function, optional
+    callback: Callable[[ModuleType, bool], None], optional
         A function with the signature "``fcn(module, available)``" that
         will be called after the import is first attempted.
 
