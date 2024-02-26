@@ -38,10 +38,7 @@ from pyomo.common.numeric_types import (
     value,
     _pyomo_constant_types,
 )
-from pyomo.core.expr.numvalue import (
-    NonNumericValue,
-    NumericConstant,
-)
+from pyomo.core.expr.numvalue import NonNumericValue, NumericConstant
 import pyomo.core.expr as EXPR
 from pyomo.core.base.component import Component
 from pyomo.core.base.units_container import units

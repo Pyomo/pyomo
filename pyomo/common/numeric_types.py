@@ -236,13 +236,15 @@ def check_if_logical_type(obj):
             return obj_class in native_logical_types
 
     try:
-        if all((
-            obj_class(1) == obj_class(2),
-            obj_class(False) != obj_class(True),
-            obj_class(False) ^ obj_class(True) == obj_class(True),
-            obj_class(False) | obj_class(True) == obj_class(True),
-            obj_class(False) & obj_class(True) == obj_class(False),
-        )):
+        if all(
+            (
+                obj_class(1) == obj_class(2),
+                obj_class(False) != obj_class(True),
+                obj_class(False) ^ obj_class(True) == obj_class(True),
+                obj_class(False) | obj_class(True) == obj_class(True),
+                obj_class(False) & obj_class(True) == obj_class(False),
+            )
+        ):
             RegisterLogicalType(obj_class)
             return True
     except:
@@ -284,7 +286,7 @@ def check_if_numeric_type(obj):
     # Check if the numeric type behaves like a complex type
     #
     try:
-        if 1.41 < abs(obj_class(1j+1)) < 1.42:
+        if 1.41 < abs(obj_class(1j + 1)) < 1.42:
             RegisterComplexType(obj_class)
             return False
     except:

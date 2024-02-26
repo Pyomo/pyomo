@@ -103,6 +103,7 @@ class NonNumericValue(PyomoObject):
     def __call__(self, exception=None):
         return self.value
 
+
 nonpyomo_leaf_types.add(NonNumericValue)
 
 
