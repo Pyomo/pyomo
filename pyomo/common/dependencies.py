@@ -9,12 +9,15 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from collections.abc import Mapping
 import inspect
 import importlib
 import logging
 import sys
 import warnings
+
+from collections.abc import Mapping
+from types import ModuleType
+from typing import List
 
 from .deprecation import deprecated, deprecation_warning, in_testing_environment
 from .errors import DeferredImportError
@@ -312,6 +315,12 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
         self._module = None
         self._available = None
         self._deferred_submodules = deferred_submodules
+        # If this import has a callback, then record this deferred
+        # import so that any direct imports of this module also trigger
+        # the resolution of this DeferredImportIndicator (and the
+        # corresponding callback)
+        if callback is not None:
+            DeferredImportCallbackFinder._callbacks.setdefault(name, []).append(self)
 
     def __bool__(self):
         self.resolve()
@@ -431,6 +440,82 @@ def check_min_version(module, min_version):
 
 
 check_min_version._parser = None
+
+
+#
+# Note that we are duck-typing the Loader and MetaPathFinder base
+# classes from importlib.abc.  This avoids a (surprisingly costly)
+# import of importlib.abc
+#
+class DeferredImportCallbackLoader:
+    """Custom Loader to resolve registered :py:class:`DeferredImportIndicator` objects
+
+    This :py:class:`importlib.abc.Loader` loader wraps a regular loader
+    and automatically resolves the registered
+    :py:class:`DeferredImportIndicator` objects after the module is
+    loaded.
+
+    """
+
+    def __init__(self, loader, deferred_indicators: List[DeferredImportIndicator]):
+        self._loader = loader
+        self._deferred_indicators = deferred_indicators
+
+    def module_repr(self, module: ModuleType) -> str:
+        return self._loader.module_repr(module)
+
+    def create_module(self, spec) -> ModuleType:
+        return self._loader.create_module(spec)
+
+    def exec_module(self, module: ModuleType) -> None:
+        self._loader.exec_module(module)
+        # Now that the module has been loaded, trigger the resolution of
+        # the deferred indicators (and their associated callbacks)
+        for deferred in self._deferred_indicators:
+            deferred.resolve()
+
+    def load_module(self, fullname) -> ModuleType:
+        return self._loader.load_module(fullname)
+
+
+class DeferredImportCallbackFinder:
+    """Custom Finder that will wrap the normal loader to trigger callbacks
+
+    This :py:class:`importlib.abc.MetaPathFinder` finder will wrap the
+    normal loader returned by ``PathFinder`` with a loader that will
+    trigger custom callbacks after the module is loaded.  We use this to
+    trigger the post import callbacks registered through
+    :py:fcn:`attempt_import` even when a user imports the target library
+    directly (and not through attribute access on the
+    :py:class:`DeferredImportModule`.
+
+    """
+    _callbacks = {}
+
+    def find_spec(self, fullname, path, target=None):
+        if fullname not in self._callbacks:
+            return None
+
+        spec = importlib.machinery.PathFinder.find_spec(fullname, path, target)
+        if spec is None:
+            # Module not found.  Returning None will proceed to the next
+            # finder (which is likely to raise a ModuleNotFoundError)
+            return None
+        spec.loader = DeferredImportCallbackLoader(
+            spec.loader, self._callbacks[fullname]
+        )
+        return spec
+
+    def invalidate_caches(self):
+        pass
+
+
+_DeferredImportCallbackFinder = DeferredImportCallbackFinder()
+# Insert the DeferredImportCallbackFinder at the beginning of the
+# mata_path to that it is found before the standard finders (so that we
+# can correctly inject the resolution of the DeferredImportIndicators --
+# which triggers the needed callbacks)
+sys.meta_path.insert(0, _DeferredImportCallbackFinder)
 
 
 def attempt_import(
