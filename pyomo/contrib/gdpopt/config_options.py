@@ -554,3 +554,13 @@ def _add_ldsda_configs(CONFIG):
             TODO: Maybe we can find a better design for this.""",
         ),
     )
+    CONFIG.declare(
+        "disjunction_list",
+        ConfigValue(
+            default=None,
+            description="""
+            The list of disjunctions to be reformulated into external variables.
+            The disjunctions should be in the same order of provided starting point.
+            """,
+        ),
+    )

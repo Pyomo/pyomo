@@ -48,8 +48,6 @@ ExternalVarInfo = namedtuple(
     [
         'exactly_number',  # number of external variables for this type
         'Boolean_vars',  # list with names of the ordered Boolean variables to be reformulated
-        'Disjuncts',  # list of disjuncts that are associated with the external variables
-        'LogicExpression',  # Logic expression that defines the external variables
         'UB',  # upper bound on external variable
         'LB',  # lower bound on external variable
     ],
@@ -127,11 +125,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         self.working_model_util_block = self.working_model.component(util_block.name)
 
         add_disjunction_list(self.working_model_util_block)
-        # TODO: do we need to apply logical_to_disjunctive here?
-        # This is applied in LBB.
-        # root_node = TransformationFactory(
-        #     'contrib.logical_to_disjunctive'
-        # ).create_using(model)
+        TransformationFactory('core.logical_to_linear').apply_to(self.working_model)
         # Now that logical_to_disjunctive has been called.
         add_transformed_boolean_variable_list(self.working_model_util_block)
         self._get_external_information(self.working_model_util_block, config)
@@ -180,22 +174,23 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         self.fix_disjunctions_with_external_var(external_var_value)
         subproblem = self.working_model.clone()
         TransformationFactory('core.logical_to_linear').apply_to(subproblem)
-        TransformationFactory('gdp.bigm').apply_to(subproblem)
 
         try:
             with SuppressInfeasibleWarning():
-                # TODO: we can use fbbt or deactivate trivial constraints here.
-                # try:
-                #     fbbt(subproblem, integer_tol=config.integer_tolerance)
-                # except InfeasibleConstraintException:
-                #     # copy variable values, even if errored
-                #     copy_var_list_values(
-                #         from_list=subprob_utils.algebraic_variable_list,
-                #         to_list=model_utils.algebraic_variable_list,
-                #         config=config,
-                #         ignore_integrality=True,
-                #     )
-                #     return float('inf'), float('inf')
+                try:
+                    fbbt(subproblem, integer_tol=config.integer_tolerance)
+                    TransformationFactory('contrib.detect_fixed_vars').apply_to(
+                        subproblem
+                    )
+                    TransformationFactory('contrib.propagate_fixed_vars').apply_to(
+                        subproblem
+                    )
+                    TransformationFactory(
+                        'contrib.deactivate_trivial_constraints'
+                    ).apply_to(subproblem, tmp=False, ignore_infeasible=False)
+                    TransformationFactory('gdp.bigm').apply_to(subproblem)
+                except InfeasibleConstraintException:
+                    return False
                 minlp_args = dict(config.minlp_solver_args)
                 if config.time_limit is not None and config.minlp_solver == 'gams':
                     elapsed = get_main_elapsed_time(self.timing)
@@ -239,34 +234,53 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         # However, we cannot link the starting point and the logical constraint.
         # for c in util_block.logical_constraint_list:
         #     if isinstance(c.body, ExactlyExpression):
-        for constraint_name in config.logical_constraint_list:
-            # TODO: in the first version, we don't support more than one exactly constraint.
-            # TODO: if we use component instead of model.find_component, it will fail.
-            c = model.find_component(constraint_name)
-            exactly_number = c.body.args[0]
-            if exactly_number > 1:
-                raise ValueError("The function only works for exactly_number = 1")
-            sorted_boolean_var_list = sorted(c.body.args[1:], key=lambda x: x.index())
-            util_block.external_var_info_list.append(
-                ExternalVarInfo(
-                    exactly_number=1,
-                    Boolean_vars=sorted_boolean_var_list,
-                    Disjuncts=[
-                        boolean_var.get_associated_binary().parent_block()
-                        for boolean_var in sorted_boolean_var_list
-                    ],
-                    LogicExpression=c.body,
-                    UB=len(sorted_boolean_var_list),
-                    LB=1,
+        if config.logical_constraint_list is not None:
+            for constraint_name in config.logical_constraint_list:
+                # TODO: in the first version, we don't support more than one exactly constraint.
+                # TODO: if we use component instead of model.find_component, it will fail.
+                c = model.find_component(constraint_name)
+                exactly_number = c.body.args[0]
+                if exactly_number > 1:
+                    raise ValueError("The function only works for exactly_number = 1")
+                sorted_boolean_var_list = c.body.args[1:]
+                util_block.external_var_info_list.append(
+                    ExternalVarInfo(
+                        exactly_number=1,
+                        Boolean_vars=sorted_boolean_var_list,
+                        UB=len(sorted_boolean_var_list),
+                        LB=1,
+                    )
                 )
-            )
-            reformulation_summary.append(
-                [
-                    1,
-                    len(sorted_boolean_var_list),
-                    [boolean_var.name for boolean_var in sorted_boolean_var_list],
+                reformulation_summary.append(
+                    [
+                        1,
+                        len(sorted_boolean_var_list),
+                        [boolean_var.name for boolean_var in sorted_boolean_var_list],
+                    ]
+                )
+        if config.disjunction_list is not None:
+            for disjunction_name in config.disjunction_list:
+                # TODO: in the first version, we don't support more than one exactly constraint.
+                # TODO: if we use component instead of model.find_component, it will fail.
+                disjunction = model.find_component(disjunction_name)
+                sorted_boolean_var_list = [
+                    disjunct.indicator_var for disjunct in disjunction.disjuncts
                 ]
-            )
+                util_block.external_var_info_list.append(
+                    ExternalVarInfo(
+                        exactly_number=1,
+                        Boolean_vars=sorted_boolean_var_list,
+                        UB=len(sorted_boolean_var_list),
+                        LB=1,
+                    )
+                )
+                reformulation_summary.append(
+                    [
+                        1,
+                        len(sorted_boolean_var_list),
+                        [boolean_var.name for boolean_var in sorted_boolean_var_list],
+                    ]
+                )
         config.logger.info("Reformulation Summary:")
         config.logger.info(
             tabulate.tabulate(
@@ -280,6 +294,10 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
             external_var_info.exactly_number
             for external_var_info in util_block.external_var_info_list
         )
+        if self.number_of_external_variables != len(config.starting_point):
+            raise ValueError(
+                "The length of the provided starting point doesn't equal to the number of disjunctions."
+            )
 
     def fix_disjunctions_with_external_var(self, external_var_values_list):
         """Function that fixes the disjunctions in the working_model using the values of the external variables.
@@ -293,20 +311,15 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
             external_var_values_list,
             self.working_model_util_block.external_var_info_list,
         ):
-            for idx, (boolean_var, disjunct) in enumerate(
-                zip(external_var_info.Boolean_vars, external_var_info.Disjuncts)
-            ):
+            for idx, boolean_var in enumerate(external_var_info.Boolean_vars):
                 if idx == external_variable_value - 1:
-                    disjunct.activate()
                     boolean_var.fix(True)
-                    disjunct.indicator_var.fix(True)
-                    disjunct.binary_indicator_var.fix(1)
+                    if boolean_var.get_associated_binary() is not None:
+                        boolean_var.get_associated_binary().fix(1)
                 else:
-                    # TODO: maybe we can simplify this.
                     boolean_var.fix(False)
-                    disjunct.indicator_var.fix(False)
-                    disjunct.binary_indicator_var.fix(0)
-                    disjunct.deactivate()
+                    if boolean_var.get_associated_binary() is not None:
+                        boolean_var.get_associated_binary().fix(0)
         self.explored_point_set.add(tuple(external_var_values_list))
 
     def _get_directions(self, dimension, config):
