@@ -130,7 +130,7 @@ class DeferredImportModule(object):
 
     This object is returned by :py:func:`attempt_import()` in lieu of
     the module when :py:func:`attempt_import()` is called with
-    ``defer_check=True``.  Any attempts to access attributes on this
+    ``defer_import=True``.  Any attempts to access attributes on this
     object will trigger the actual module import and return either the
     appropriate module attribute or else if the module import fails,
     raise a :py:class:`.DeferredImportError` exception.
@@ -526,7 +526,8 @@ def attempt_import(
     alt_names=None,
     callback=None,
     importer=None,
-    defer_check=True,
+    defer_check=None,
+    defer_import=None,
     deferred_submodules=None,
     catch_exceptions=None,
 ):
@@ -607,10 +608,16 @@ def attempt_import(
         want to import/return the first one that is available.
 
     defer_check: bool, optional
-        If True (the default), then the attempted import is deferred
-        until the first use of either the module or the availability
-        flag.  The method will return instances of :py:class:`DeferredImportModule`
-        and :py:class:`DeferredImportIndicator`.
+        DEPRECATED: renamed to ``defer_import``
+
+    defer_import: bool, optional
+        If True, then the attempted import is deferred until the first
+        use of either the module or the availability flag.  The method
+        will return instances of :py:class:`DeferredImportModule` and
+        :py:class:`DeferredImportIndicator`.  If False, the import will
+        be attempted immediately.  If not set, then the import will be
+        deferred unless the ``name`` is already present in
+        ``sys.modules``.
 
     deferred_submodules: Iterable[str], optional
         If provided, an iterable of submodule names within this module
@@ -661,9 +668,17 @@ def attempt_import(
     if catch_exceptions is None:
         catch_exceptions = (ImportError,)
 
+    if defer_check is not None:
+        deprecation_warning(
+            'defer_check=%s is deprecated.  Please use defer_import' % (defer_check,),
+            version='6.7.2.dev0',
+        )
+        assert defer_import is None
+        defer_import = defer_check
+
     # If we are going to defer the check until later, return the
     # deferred import module object
-    if defer_check:
+    if defer_import:
         if deferred_submodules:
             if isinstance(deferred_submodules, Mapping):
                 deprecation_warning(
@@ -706,7 +721,7 @@ def attempt_import(
         return DeferredImportModule(indicator, deferred, None), indicator
 
     if deferred_submodules:
-        raise ValueError("deferred_submodules is only valid if defer_check==True")
+        raise ValueError("deferred_submodules is only valid if defer_import==True")
 
     return _perform_import(
         name=name,

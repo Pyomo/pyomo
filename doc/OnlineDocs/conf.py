@@ -271,7 +271,7 @@ from pyomo.common.dependencies import (
     yaml_available, networkx_available, matplotlib_available,
     pympler_available, dill_available,
 )
-pint_available = attempt_import('pint', defer_check=False)[1]
+pint_available = attempt_import('pint', defer_import=False)[1]
 from pyomo.contrib.parmest.parmest import parmest_available
 
 import pyomo.environ as _pe # (trigger all plugin registrations)
