@@ -485,7 +485,7 @@ class DeferredImportCallbackFinder:
     normal loader returned by ``PathFinder`` with a loader that will
     trigger custom callbacks after the module is loaded.  We use this to
     trigger the post import callbacks registered through
-    :py:fcn:`attempt_import` even when a user imports the target library
+    :py:func:`attempt_import` even when a user imports the target library
     directly (and not through attribute access on the
     :py:class:`DeferredImportModule`.
 
@@ -582,7 +582,8 @@ def attempt_import(
         The message for the exception raised by :py:class:`ModuleUnavailable`
 
     only_catch_importerror: bool, optional
-        DEPRECATED: use catch_exceptions instead or only_catch_importerror.
+        DEPRECATED: use ``catch_exceptions`` instead of ``only_catch_importerror``.
+
         If True (the default), exceptions other than ``ImportError`` raised
         during module import will be reraised.  If False, any exception
         will result in returning a :py:class:`ModuleUnavailable` object.
@@ -593,13 +594,14 @@ def attempt_import(
         ``module.__version__``)
 
     alt_names: list, optional
-        DEPRECATED: alt_names no longer needs to be specified and is ignored.
+        DEPRECATED: ``alt_names`` no longer needs to be specified and is ignored.
+
         A list of common alternate names by which to look for this
         module in the ``globals()`` namespaces.  For example, the alt_names
         for NumPy would be ``['np']``.  (deprecated in version 6.0)
 
     callback: Callable[[ModuleType, bool], None], optional
-        A function with the signature "``fcn(module, available)``" that
+        A function with the signature ``fcn(module, available)`` that
         will be called after the import is first attempted.
 
     importer: function, optional
@@ -609,7 +611,7 @@ def attempt_import(
         want to import/return the first one that is available.
 
     defer_check: bool, optional
-        DEPRECATED: renamed to ``defer_import``
+        DEPRECATED: renamed to ``defer_import`` (deprecated in version 6.7.2.dev0)
 
     defer_import: bool, optional
         If True, then the attempted import is deferred until the first
@@ -783,8 +785,8 @@ def _perform_import(
 
 
 @deprecated(
-    "declare_deferred_modules_as_importable() is dperecated.  "
-    "Use the declare_modules_as_importable() context manager.",
+    "``declare_deferred_modules_as_importable()`` is deprecated.  "
+    "Use the :py:class:`declare_modules_as_importable` context manager.",
     version='6.7.2.dev0',
 )
 def declare_deferred_modules_as_importable(globals_dict):
@@ -837,7 +839,7 @@ class declare_modules_as_importable(object):
 
     This context manager will detect all modules imported into the
     specified ``globals_dict`` environment (either directly or through
-    :py:fcn:`attempt_import`) and will make those modules importable
+    :py:func:`attempt_import`) and will make those modules importable
     from the specified ``globals_dict`` context.  It works by detecting
     changes in the specified ``globals_dict`` dictionary and adding any new
     modules or instances of :py:class:`DeferredImportModule` that it
