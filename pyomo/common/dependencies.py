@@ -829,25 +829,31 @@ class declare_modules_as_importable(object):
     def __init__(self, globals_dict):
         self.globals_dict = globals_dict
         self.init_dict = {}
+        self.init_modules = None
 
     def __enter__(self):
         self.init_dict.update(self.globals_dict)
+        self.init_modules = set(sys.modules)
 
     def __exit__(self, exc_type, exc_value, traceback):
         _global_name = self.globals_dict['__name__'] + '.'
-        deferred = [
-            (k, v)
+        deferred = {
+            k: v
             for k, v in self.globals_dict.items()
             if k not in self.init_dict
             and isinstance(v, (ModuleType, DeferredImportModule))
-        ]
+        }
+        if self.init_modules:
+            for name in set(sys.modules) - self.init_modules:
+                if '.' in name and name.split('.', 1)[0] in deferred:
+                    sys.modules[_global_name + name] = sys.modules[name]
         while deferred:
-            name, mod = deferred.pop(0)
+            name, mod = deferred.popitem()
             mod.__path__ = None
             mod.__spec__ = None
             sys.modules[_global_name + name] = mod
             if isinstance(mod, DeferredImportModule):
-                deferred.extend(
+                deferred.update(
                     (name + '.' + k, v)
                     for k, v in mod.__dict__.items()
                     if type(v) is DeferredImportModule
