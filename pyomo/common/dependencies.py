@@ -784,8 +784,8 @@ def _perform_import(
 
 @deprecated(
     "declare_deferred_modules_as_importable() is dperecated.  "
-    "Use the declare_modules_as_importable() context manager."
-    version='6.7.2.dev0'
+    "Use the declare_modules_as_importable() context manager.",
+    version='6.7.2.dev0',
 )
 def declare_deferred_modules_as_importable(globals_dict):
     """Make all :py:class:`DeferredImportModules` in ``globals_dict`` importable
@@ -875,6 +875,7 @@ class declare_modules_as_importable(object):
     :py:class:`ModuleUnavailable` instance.
 
     """
+
     def __init__(self, globals_dict):
         self.globals_dict = globals_dict
         self.init_dict = {}
