@@ -228,13 +228,6 @@ def check_if_logical_type(obj):
     if obj_class in native_types:
         return obj_class in native_logical_types
 
-    if 'numpy' in obj_class.__module__:
-        # trigger the resolution of numpy_available and check if this
-        # type was automatically registered
-        bool(numpy_available)
-        if obj_class in native_types:
-            return obj_class in native_logical_types
-
     try:
         if all(
             (
