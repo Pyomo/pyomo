@@ -782,6 +782,11 @@ def _perform_import(
     return module, False
 
 
+@deprecated(
+    "declare_deferred_modules_as_importable() is dperecated.  "
+    "Use the declare_modules_as_importable() context manager."
+    version='6.7.2.dev0'
+)
 def declare_deferred_modules_as_importable(globals_dict):
     """Make all :py:class:`DeferredImportModules` in ``globals_dict`` importable
 
@@ -826,6 +831,50 @@ def declare_deferred_modules_as_importable(globals_dict):
 
 
 class declare_modules_as_importable(object):
+    """Make all :py:class:`ModuleType` and :py:class:`DeferredImportModules`
+    importable through the ``globals_dict`` context.
+
+    This context manager will detect all modules imported into the
+    specified ``globals_dict`` environment (either directly or through
+    :py:fcn:`attempt_import`) and will make those modules importable
+    from the specified ``globals_dict`` context.  It works by detecting
+    changes in the specified ``globals_dict`` dictionary and adding any new
+    modules or instances of :py:class:`DeferredImportModule` that it
+    finds (and any of their deferred submodules) to ``sys.modules`` so
+    that the modules can be imported through the ``globals_dict``
+    namespace.
+
+    For example, ``pyomo/common/dependencies.py`` declares:
+
+    .. doctest::
+       :hide:
+
+       >>> from pyomo.common.dependencies import (
+       ...     attempt_import, _finalize_scipy, __dict__ as dep_globals,
+       ...     declare_deferred_modules_as_importable, )
+       >>> # Sphinx does not provide a proper globals()
+       >>> def globals(): return dep_globals
+
+    .. doctest::
+
+       >>> with declare_modules_as_importable(globals()):
+       ...     scipy, scipy_available = attempt_import(
+       ...        'scipy', callback=_finalize_scipy,
+       ...        deferred_submodules=['stats', 'sparse', 'spatial', 'integrate'])
+
+    Which enables users to use:
+
+    .. doctest::
+
+       >>> import pyomo.common.dependencies.scipy.sparse as spa
+
+    If the deferred import has not yet been triggered, then the
+    :py:class:`DeferredImportModule` is returned and named ``spa``.
+    However, if the import has already been triggered, then ``spa`` will
+    either be the ``scipy.sparse`` module, or a
+    :py:class:`ModuleUnavailable` instance.
+
+    """
     def __init__(self, globals_dict):
         self.globals_dict = globals_dict
         self.init_dict = {}
