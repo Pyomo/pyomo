@@ -963,6 +963,8 @@ def _finalize_matplotlib(module, available):
     if in_testing_environment():
         module.use('Agg')
     import matplotlib.pyplot
+    import matplotlib.pylab
+    import matplotlib.backends
 
 
 def _finalize_numpy(np, available):
@@ -1069,7 +1071,7 @@ with declare_modules_as_importable(globals()):
     matplotlib, matplotlib_available = attempt_import(
         'matplotlib',
         callback=_finalize_matplotlib,
-        deferred_submodules=['pyplot', 'pylab'],
+        deferred_submodules=['pyplot', 'pylab', 'backends'],
         catch_exceptions=(ImportError, RuntimeError),
     )
 
