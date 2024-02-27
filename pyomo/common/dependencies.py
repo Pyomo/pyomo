@@ -964,6 +964,11 @@ def _finalize_matplotlib(module, available):
 def _finalize_numpy(np, available):
     if not available:
         return
+    # scipy has a dependence on numpy.testing, and if we don't import it
+    # as part of resolving numpy, then certain deferred scipy imports
+    # fail when run under pytest.
+    import numpy.testing
+
     from . import numeric_types
 
     # Register ndarray as a native type to prevent 1-element ndarrays
