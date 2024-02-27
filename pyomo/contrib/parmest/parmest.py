@@ -226,12 +226,12 @@ def _experiment_instance_creation_callback(
         thetavals = outer_cb_data["ThetaVals"]
 
         # dlw august 2018: see mea code for more general theta
-        for vstr in thetavals:
-            theta_cuid = ComponentUID(vstr)
+        for name, val in thetavals.items():
+            theta_cuid = ComponentUID(name)
             theta_object = theta_cuid.find_component_on(instance)
-            if thetavals[vstr] is not None:
+            if val is not None:
                 # print("Fixing",vstr,"at",str(thetavals[vstr]))
-                theta_object.fix(thetavals[vstr])
+                theta_object.fix(val)
             else:
                 # print("Freeing",vstr)
                 theta_object.unfix()
@@ -399,6 +399,29 @@ class Estimator(object):
                 return (
                     self.estimator_theta_names
                 )  # default theta_names, created when Estimator object is created
+
+    def _expand_indexed_unknowns(self, model_temp):
+        """
+        Expand indexed variables to get full list of thetas
+        """
+        model_theta_list = [k.name for k, v in model_temp.unknown_parameters.items()]
+    
+        # check for indexed theta items
+        indexed_theta_list = []
+        for theta_i in model_theta_list:
+            var_cuid = ComponentUID(theta_i)
+            var_validate = var_cuid.find_component_on(model_temp)
+            for ind in var_validate.index_set():
+                if ind is not None:
+                    indexed_theta_list.append(theta_i + '[' + str(ind) + ']')
+                else:
+                    indexed_theta_list.append(theta_i)
+    
+        # if we found indexed thetas, use expanded list
+        if len(indexed_theta_list) > len(model_theta_list):
+            model_theta_list = indexed_theta_list
+    
+        return model_theta_list
 
     def _create_parmest_model(self, experiment_number):
         """
@@ -1155,28 +1178,6 @@ class Estimator(object):
 
         return results
 
-    # expand indexed variables to get full list of thetas
-    def _expand_indexed_unknowns(self, model_temp):
-
-        model_theta_list = [k.name for k, v in model_temp.unknown_parameters.items()]
-
-        # check for indexed theta items
-        indexed_theta_list = []
-        for theta_i in model_theta_list:
-            var_cuid = ComponentUID(theta_i)
-            var_validate = var_cuid.find_component_on(model_temp)
-            for ind in var_validate.index_set():
-                if ind is not None:
-                    indexed_theta_list.append(theta_i + '[' + str(ind) + ']')
-                else:
-                    indexed_theta_list.append(theta_i)
-
-        # if we found indexed thetas, use expanded list
-        if len(indexed_theta_list) > len(model_theta_list):
-            model_theta_list = indexed_theta_list
-
-        return model_theta_list
-
     def objective_at_theta(self, theta_values=None, initialize_parmest_model=False):
         """
         Objective value for each theta
@@ -1211,28 +1212,6 @@ class Estimator(object):
             # create a local instance of the pyomo model to access model variables and parameters
             model_temp = self._create_parmest_model(0)
             model_theta_list = self._expand_indexed_unknowns(model_temp)
-
-            # # iterate over original theta_names
-            # for theta_i in self.theta_names:
-            #     var_cuid = ComponentUID(theta_i)
-            #     var_validate = var_cuid.find_component_on(model_temp)
-            #     # check if theta in theta_names are indexed
-            #     try:
-            #         # get component UID of Set over which theta is defined
-            #         set_cuid = ComponentUID(var_validate.index_set())
-            #         # access and iterate over the Set to generate theta names as they appear
-            #         # in the pyomo model
-            #         set_validate = set_cuid.find_component_on(model_temp)
-            #         for s in set_validate:
-            #             self_theta_temp = repr(var_cuid) + "[" + repr(s) + "]"
-            #             # generate list of theta names
-            #             model_theta_list.append(self_theta_temp)
-            #     # if theta is not indexed, copy theta name to list as-is
-            #     except AttributeError:
-            #         self_theta_temp = repr(var_cuid)
-            #         model_theta_list.append(self_theta_temp)
-            #     except:
-            #         raise
 
             # if self.theta_names is not the same as temp model_theta_list,
             # create self.theta_names_updated
