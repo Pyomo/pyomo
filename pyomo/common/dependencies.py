@@ -813,6 +813,7 @@ def declare_deferred_modules_as_importable(globals_dict):
        ...     'scipy', callback=_finalize_scipy,
        ...     deferred_submodules=['stats', 'sparse', 'spatial', 'integrate'])
        >>> declare_deferred_modules_as_importable(globals())
+       WARNING: DEPRECATED: ...
 
     Which enables users to use:
 
@@ -851,7 +852,7 @@ class declare_modules_as_importable(object):
 
        >>> from pyomo.common.dependencies import (
        ...     attempt_import, _finalize_scipy, __dict__ as dep_globals,
-       ...     declare_deferred_modules_as_importable, )
+       ...     declare_modules_as_importable, )
        >>> # Sphinx does not provide a proper globals()
        >>> def globals(): return dep_globals
 
