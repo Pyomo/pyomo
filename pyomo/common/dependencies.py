@@ -822,20 +822,36 @@ def declare_deferred_modules_as_importable(globals_dict):
     :py:class:`ModuleUnavailable` instance.
 
     """
-    _global_name = globals_dict['__name__'] + '.'
-    deferred = list(
-        (k, v) for k, v in globals_dict.items() if type(v) is DeferredImportModule
-    )
-    while deferred:
-        name, mod = deferred.pop(0)
-        mod.__path__ = None
-        mod.__spec__ = None
-        sys.modules[_global_name + name] = mod
-        deferred.extend(
-            (name + '.' + k, v)
-            for k, v in mod.__dict__.items()
-            if type(v) is DeferredImportModule
-        )
+    return declare_modules_as_importable(globals_dict).__exit__(None, None, None)
+
+
+class declare_modules_as_importable(object):
+    def __init__(self, globals_dict):
+        self.globals_dict = globals_dict
+        self.init_dict = {}
+
+    def __enter__(self):
+        self.init_dict.update(self.globals_dict)
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        _global_name = self.globals_dict['__name__'] + '.'
+        deferred = [
+            (k, v)
+            for k, v in self.globals_dict.items()
+            if k not in self.init_dict
+            and isinstance(v, (ModuleType, DeferredImportModule))
+        ]
+        while deferred:
+            name, mod = deferred.pop(0)
+            mod.__path__ = None
+            mod.__spec__ = None
+            sys.modules[_global_name + name] = mod
+            if isinstance(mod, DeferredImportModule):
+                deferred.extend(
+                    (name + '.' + k, v)
+                    for k, v in mod.__dict__.items()
+                    if type(v) is DeferredImportModule
+                )
 
 
 #
@@ -952,41 +968,48 @@ def _pyutilib_importer():
     return importlib.import_module('pyutilib')
 
 
-# Standard libraries that are slower to import and not strictly required
-# on all platforms / situations.
-ctypes, _ = attempt_import(
-    'ctypes', deferred_submodules=['util'], callback=_finalize_ctypes
-)
-random, _ = attempt_import('random')
+#
+# Note: because we will be calling
+# declare_deferred_modules_as_importable, it is important that the
+# following declarations explicitly defer_import (even if the target
+# module has already been imported)
+#
+with declare_modules_as_importable(globals()):
+    # Standard libraries that are slower to import and not strictly required
+    # on all platforms / situations.
+    ctypes, _ = attempt_import(
+        'ctypes', deferred_submodules=['util'], callback=_finalize_ctypes
+    )
+    random, _ = attempt_import('random')
 
-# Commonly-used optional dependencies
-dill, dill_available = attempt_import('dill')
-mpi4py, mpi4py_available = attempt_import('mpi4py')
-networkx, networkx_available = attempt_import('networkx')
-numpy, numpy_available = attempt_import('numpy', callback=_finalize_numpy)
-pandas, pandas_available = attempt_import('pandas')
-plotly, plotly_available = attempt_import('plotly')
-pympler, pympler_available = attempt_import('pympler', callback=_finalize_pympler)
-pyutilib, pyutilib_available = attempt_import('pyutilib', importer=_pyutilib_importer)
-scipy, scipy_available = attempt_import(
-    'scipy',
-    callback=_finalize_scipy,
-    deferred_submodules=['stats', 'sparse', 'spatial', 'integrate'],
-)
-yaml, yaml_available = attempt_import('yaml', callback=_finalize_yaml)
+    # Commonly-used optional dependencies
+    dill, dill_available = attempt_import('dill')
+    mpi4py, mpi4py_available = attempt_import('mpi4py')
+    networkx, networkx_available = attempt_import('networkx')
+    numpy, numpy_available = attempt_import('numpy', callback=_finalize_numpy)
+    pandas, pandas_available = attempt_import('pandas')
+    plotly, plotly_available = attempt_import('plotly')
+    pympler, pympler_available = attempt_import('pympler', callback=_finalize_pympler)
+    pyutilib, pyutilib_available = attempt_import(
+        'pyutilib', importer=_pyutilib_importer
+    )
+    scipy, scipy_available = attempt_import(
+        'scipy',
+        callback=_finalize_scipy,
+        deferred_submodules=['stats', 'sparse', 'spatial', 'integrate'],
+    )
+    yaml, yaml_available = attempt_import('yaml', callback=_finalize_yaml)
 
-# Note that matplotlib.pyplot can generate a runtime error on OSX when
-# not installed as a Framework (as is the case in the CI systems)
-matplotlib, matplotlib_available = attempt_import(
-    'matplotlib',
-    callback=_finalize_matplotlib,
-    deferred_submodules=['pyplot', 'pylab'],
-    catch_exceptions=(ImportError, RuntimeError),
-)
+    # Note that matplotlib.pyplot can generate a runtime error on OSX when
+    # not installed as a Framework (as is the case in the CI systems)
+    matplotlib, matplotlib_available = attempt_import(
+        'matplotlib',
+        callback=_finalize_matplotlib,
+        deferred_submodules=['pyplot', 'pylab'],
+        catch_exceptions=(ImportError, RuntimeError),
+    )
 
 try:
     import cPickle as pickle
 except ImportError:
     import pickle
-
-declare_deferred_modules_as_importable(globals())
