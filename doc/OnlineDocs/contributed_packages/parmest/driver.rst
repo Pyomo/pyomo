@@ -106,7 +106,7 @@ A labeled Pyomo model ``m`` has the following additional suffixes (Pyomo `Suffix
 
 * ``m.experiment_outputs`` which defines experiment output (Pyomo `Param`, `Var`, or `Expression`)
   and their associated data values (float, int).
-* ``m.unknown_parameters`` which defines the mutable parameters or variables (Pyomo `Parm` or `Var`)
+* ``m.unknown_parameters`` which defines the mutable parameters or variables (Pyomo `Param` or `Var`)
   to estimate along with their component unique identifier (Pyomo `ComponentUID`). 
   Within parmest, any parameters that are to be estimated are converted to unfixed variables. 
   Variables that are to be estimated are also unfixed.
