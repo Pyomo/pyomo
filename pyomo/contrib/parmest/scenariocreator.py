@@ -137,7 +137,7 @@ class ScenarioCreator(object):
                 + "creator, please recreate object using experiment lists.",
                 version=DEPRECATION_VERSION,
             )
-            self.scen_deprecated = ScenarioCreatorDeprecated(
+            self.scen_deprecated = _ScenarioCreatorDeprecated(
                 pest.pest_deprecated, solvername
             )
         else:
@@ -201,7 +201,7 @@ class ScenarioCreator(object):
 ################################
 
 
-class ScenarioCreatorDeprecated(object):
+class _ScenarioCreatorDeprecated(object):
     """Create scenarios from parmest.
 
     Args:
