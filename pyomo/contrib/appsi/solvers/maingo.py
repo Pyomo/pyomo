@@ -146,7 +146,10 @@ class SolverModel(maingopy.MAiNGOmodel):
         ]
 
     def get_initial_point(self):
-        return [var.init if not var.init is None else (var.lb  + var.ub)/2.0 for var in self._var_list]
+        return [
+            var.init if not var.init is None else (var.lb + var.ub) / 2.0
+            for var in self._var_list
+        ]
 
     def evaluate(self, maingo_vars):
         visitor = ToMAiNGOVisitor(maingo_vars, self._idmap)
@@ -192,15 +195,15 @@ class ToMAiNGOVisitor(EXPR.ExpressionValueVisitor):
 
     @classmethod
     def maingo_asinh(cls, x):
-        return maingopy.log(x + maingopy.sqrt(maingopy.pow(x,2) + 1))
+        return maingopy.log(x + maingopy.sqrt(maingopy.pow(x, 2) + 1))
 
     @classmethod
     def maingo_acosh(cls, x):
-        return maingopy.log(x + maingopy.sqrt(maingopy.pow(x,2) - 1))
+        return maingopy.log(x + maingopy.sqrt(maingopy.pow(x, 2) - 1))
 
     @classmethod
     def maingo_atanh(cls, x):
-        return 0.5 * maingopy.log(x+1) - 0.5 * maingopy.log(1-x)
+        return 0.5 * maingopy.log(x + 1) - 0.5 * maingopy.log(1 - x)
 
     def visit(self, node, values):
         """Visit nodes that have been expanded"""
@@ -357,11 +360,13 @@ class MAiNGO(PersistentBase, PersistentSolver):
         # Check if Python >= 3.8
         if sys.version_info.major >= 3 and sys.version_info.minor >= 8:
             from importlib.metadata import version
+
             version = version('maingopy')
         else:
             import pkg_resources
+
             version = pkg_resources.get_distribution('maingopy').version
-            
+
         return tuple(int(k) for k in version.split('.'))
 
     @property
@@ -450,10 +455,18 @@ class MAiNGO(PersistentBase, PersistentSolver):
             ub = _value
         else:
             if lb is None and _lb is None:
-                logger.warning("No lower bound for variable " + var.getname() + " set. Using -1e10 instead. Please consider setting a valid lower bound.")
+                logger.warning(
+                    "No lower bound for variable "
+                    + var.getname()
+                    + " set. Using -1e10 instead. Please consider setting a valid lower bound."
+                )
             if ub is None and _ub is None:
-                logger.warning("No upper bound for variable " + var.getname() + " set. Using +1e10 instead. Please consider setting a valid upper bound.")
-                
+                logger.warning(
+                    "No upper bound for variable "
+                    + var.getname()
+                    + " set. Using +1e10 instead. Please consider setting a valid upper bound."
+                )
+
             if _lb is None:
                 _lb = -1e10
             if _ub is None:
@@ -477,7 +490,6 @@ class MAiNGO(PersistentBase, PersistentSolver):
             raise ValueError(
                 f"Unrecognized domain step: {step} (should be either 0 or 1)"
             )
-
 
         return lb, ub, vtype
 
@@ -534,7 +546,9 @@ class MAiNGO(PersistentBase, PersistentSolver):
 
     def _add_sos_constraints(self, cons: List[_SOSConstraintData]):
         if len(cons) >= 1:
-            raise NotImplementedError("MAiNGO does not currently support SOS constraints.")
+            raise NotImplementedError(
+                "MAiNGO does not currently support SOS constraints."
+            )
         pass
 
     def _remove_constraints(self, cons: List[_GeneralConstraintData]):
@@ -542,7 +556,9 @@ class MAiNGO(PersistentBase, PersistentSolver):
 
     def _remove_sos_constraints(self, cons: List[_SOSConstraintData]):
         if len(cons) >= 1:
-            raise NotImplementedError("MAiNGO does not currently support SOS constraints.")
+            raise NotImplementedError(
+                "MAiNGO does not currently support SOS constraints."
+            )
         pass
 
     def _remove_variables(self, variables: List[_GeneralVarData]):
@@ -581,7 +597,9 @@ class MAiNGO(PersistentBase, PersistentSolver):
         if status in {maingopy.GLOBALLY_OPTIMAL, maingopy.FEASIBLE_POINT}:
             results.termination_condition = TerminationCondition.optimal
             if status == maingopy.FEASIBLE_POINT:
-                logger.warning("MAiNGO did only find a feasible solution but did not prove its global optimality.")
+                logger.warning(
+                    "MAiNGO did only find a feasible solution but did not prove its global optimality."
+                )
         elif status == maingopy.INFEASIBLE:
             results.termination_condition = TerminationCondition.infeasible
         else:
