@@ -1096,7 +1096,6 @@ class Test_NLWriter(unittest.TestCase):
         m.c1 = Constraint([1, 2], rule=lambda m, i: sum(m.x.values()) == 1)
         m.c2 = Constraint(expr=m.p * m.x[1] ** 2 + m.x[2] ** 3 <= 100)
 
-        self.maxDiff = None
         OUT = io.StringIO()
         with capture_output() as LOG:
             with report_timing(level=logging.DEBUG):
