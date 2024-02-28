@@ -276,6 +276,9 @@ def _experiment_instance_creation_callback(
 
 
 def SSE(model):
+    """
+    Sum of squared error between `experiment_output` model and data values
+    """
     expr = sum((y - yhat) ** 2 for y, yhat in model.experiment_outputs.items())
     return expr
 
@@ -330,7 +333,7 @@ class Estimator(object):
                 + 'data, theta_names), please use experiment lists instead.',
                 version=DEPRECATION_VERSION,
             )
-            self.pest_deprecated = DeprecatedEstimator(*args, **kwargs)
+            self.pest_deprecated = _DeprecatedEstimator(*args, **kwargs)
             return
 
         # check that we have a (non-empty) list of experiments
@@ -1477,7 +1480,7 @@ class _DeprecatedSecondStageCostExpr(object):
         return self._ssc_function(model, self._data)
 
 
-class DeprecatedEstimator(object):
+class _DeprecatedEstimator(object):
     """
     Parameter estimation class
 
