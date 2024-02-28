@@ -354,7 +354,15 @@ class MAiNGO(PersistentBase, PersistentSolver):
         return self._available
 
     def version(self):
-        pass
+        # Check if Python >= 3.8
+        if sys.version_info.major >= 3 and sys.version_info.minor >= 8:
+            from importlib.metadata import version
+            version = version('maingopy')
+        else:
+            import pkg_resources
+            version = pkg_resources.get_distribution('maingopy').version
+            
+        return tuple(int(k) for k in version.split('.'))
 
     @property
     def config(self) -> MAiNGOConfig:
