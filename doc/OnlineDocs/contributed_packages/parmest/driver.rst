@@ -4,7 +4,7 @@ Parameter Estimation
 ==================================
 
 Parameter Estimation using parmest requires a Pyomo model, experimental
-data which defines multiple scenarios, and a list of parameter names
+data which defines multiple scenarios, and parameters
 (thetas) to estimate.  parmest uses Pyomo [PyomoBookII]_ and (optionally) 
 mpi-sppy [mpisppy]_ to solve a
 two-stage stochastic programming problem, where the experimental data is
@@ -36,8 +36,8 @@ which includes the following methods:
    ~pyomo.contrib.parmest.parmest.Estimator.likelihood_ratio_test
    ~pyomo.contrib.parmest.parmest.Estimator.leaveNout_bootstrap_test
 
-Additional functions are available in parmest to group data, plot
-results, and fit distributions to theta values.
+Additional functions are available in parmest to plot
+results and fit distributions to theta values.
 
 .. autosummary::
    :nosignatures:
@@ -92,65 +92,43 @@ Optionally, solver options can be supplied, e.g.,
 
     >>> solver_options = {"max_iter": 6000}
     >>> pest = parmest.Estimator(exp_list, obj_function=SSE, solver_options=solver_options)
-        
 
 
-Model function
---------------
+List of experiment objects
+--------------------------
 
-The first argument is a function which uses data for a single scenario
-to return a populated and initialized Pyomo model for that scenario.
+The first argument is a list of experiment objects which is used to
+create one labeled model for each expeirment. 
+The template :class:`~pyomo.contrib.parmest.experiment.Experiment` 
+can be used to generate a list of experiment objects.
 
-Parameters that the user would like to estimate can be defined as
-**mutable parameters (Pyomo `Param`) or variables (Pyomo `Var`)**.  
-Within parmest, any parameters that are to be estimated are converted to unfixed variables. 
-Variables that are to be estimated are also unfixed.
+A labeled Pyomo model ``m`` has the following additional suffixes (Pyomo `Suffix`):
 
-The model does not have to be specifically written as a 
-two-stage stochastic programming problem for parmest. 
-That is, parmest can modify the
-objective, see :ref:`ObjFunction` below.
+* ``m.experiment_outputs`` which defines experiment output (Pyomo `Param`, `Var`, or `Expression`)
+  and their associated data values (float, int).
+* ``m.unknown_parameters`` which defines the mutable parameters or variables (Pyomo `Parm` or `Var`)
+  to estimate along with their component unique identifier (Pyomo `ComponentUID`). 
+  Within parmest, any parameters that are to be estimated are converted to unfixed variables. 
+  Variables that are to be estimated are also unfixed.
 
-Data
-----
+The experiment class has one required method:
 
-The second argument is the data which will be used to populate the Pyomo
-model.  Supported data formats include:
-
-* **Pandas Dataframe** where each row is a separate scenario and column
-  names refer to observed quantities.  Pandas DataFrames are easily
-  stored and read in from csv, excel, or databases, or created directly
-  in Python.
-* **List of Pandas Dataframe** where each entry in the list is a separate scenario. 
-  Dataframes store observed quantities, referenced by index and column.
-* **List of dictionaries** where each entry in the list is a separate
-  scenario and the keys (or nested keys) refer to observed quantities.
-  Dictionaries are often preferred over DataFrames when using static and
-  time series data.  Dictionaries are easily stored and read in from
-  json or yaml files, or created directly in Python.
-* **List of json file names** where each entry in the list contains a
-  json file name for a separate scenario.  This format is recommended
-  when using large datasets in parallel computing.
-
-The data must be compatible with the model function that returns a
-populated and initialized Pyomo model for a single scenario.  Data can
-include multiple entries per variable (time series and/or duplicate
-sensors).  This information can be included in custom objective
-functions, see :ref:`ObjFunction` below.
-
-Theta names
------------
-
-The third argument is a list of parameters or variable names that the user wants to
-estimate.  The list contains strings with `Param` and/or `Var` names from the Pyomo
-model.
+* :class:`~pyomo.contrib.parmest.experiment.Experiment.get_labeled_model` which returns the labeled Pyomo model.
+  Note that the model does not have to be specifically written as a 
+  two-stage stochastic programming problem for parmest. 
+  That is, parmest can modify the
+  objective, see :ref:`ObjFunction` below.
+ 
+Parmest comes with several :ref:`examplesection` that illustrates how to set up the list of experiment objects.
+The examples commonly include additional :class:`~pyomo.contrib.parmest.experiment.Experiment` class methods to
+create the model, finalize the model, and label the model.  The user can customize methods to suit their needs.
 
 .. _ObjFunction:
 
 Objective function
 ------------------
 
-The fourth argument is an optional argument which defines the
+The second argument is an optional argument which defines the
 optimization objective function to use in parameter estimation.  
 
 If no objective function is specified, the Pyomo model is used "as is" and
@@ -161,11 +139,15 @@ stochastic programming problem.
 If the Pyomo model is not written as a two-stage stochastic programming problem in
 this format, and/or if the user wants to use an objective that is
 different than the original model, a custom objective function can be
-defined for parameter estimation.  The objective function arguments
-include `model` and `data` and the objective function returns a Pyomo
+defined for parameter estimation.  The objective function has a single argument, 
+which is the model from a single experiment.
+The objective function returns a Pyomo
 expression which is used to define "SecondStageCost".  The objective
 function can be used to customize data points and weights that are used
 in parameter estimation.
+
+Parmest includes one built in objective function to compute the sum of squared errors ("SSE") between the 
+``m.experiment_outputs`` model values and data values.
 
 Suggested initialization procedure for parameter estimation problems
 --------------------------------------------------------------------
@@ -173,8 +155,11 @@ Suggested initialization procedure for parameter estimation problems
 To check the quality of initial guess values provided for the fitted parameters, we suggest solving a 
 square instance of the problem prior to solving the parameter estimation problem using the following steps:
 
-1. Create :class:`~pyomo.contrib.parmest.parmest.Estimator` object. To initialize the parameter estimation solve from the square problem solution, set optional argument ``solver_options = {bound_push: 1e-8}``.
+1. Create :class:`~pyomo.contrib.parmest.parmest.Estimator` object. To initialize the parameter 
+estimation solve from the square problem solution, set optional argument ``solver_options = {bound_push: 1e-8}``.
 
-2. Call :class:`~pyomo.contrib.parmest.parmest.Estimator.objective_at_theta` with optional argument ``(initialize_parmest_model=True)``. Different initial guess values for the fitted parameters can be provided using optional argument `theta_values` (**Pandas Dataframe**)
+2. Call :class:`~pyomo.contrib.parmest.parmest.Estimator.objective_at_theta` with optional 
+argument ``(initialize_parmest_model=True)``. Different initial guess values for the fitted 
+parameters can be provided using optional argument `theta_values` (**Pandas Dataframe**)
 
 3. Solve parameter estimation problem by calling :class:`~pyomo.contrib.parmest.parmest.Estimator.theta_est`
