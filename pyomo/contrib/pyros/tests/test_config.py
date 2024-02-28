@@ -558,21 +558,28 @@ class TestPositiveIntOrMinusOne(unittest.TestCase):
         Test positive int or -1 validator works as expected.
         """
         standardizer_func = positive_int_or_minus_one
-        self.assertIs(
-            standardizer_func(1.0),
-            1,
-            msg=(
-                f"{positive_int_or_minus_one.__name__} "
-                "does not standardize as expected."
-            ),
-        )
+        ans = standardizer_func(1.0)
         self.assertEqual(
-            standardizer_func(-1.00),
+            ans,
+            1,
+            msg=f"{positive_int_or_minus_one.__name__} output value not as expected.",
+        )
+        self.assertIs(
+            type(ans),
+            int,
+            msg=f"{positive_int_or_minus_one.__name__} output type not as expected.",
+        )
+
+        ans = standardizer_func(-1.0)
+        self.assertEqual(
+            ans,
             -1,
-            msg=(
-                f"{positive_int_or_minus_one.__name__} "
-                "does not standardize as expected."
-            ),
+            msg=f"{positive_int_or_minus_one.__name__} output value not as expected.",
+        )
+        self.assertIs(
+            type(ans),
+            int,
+            msg=f"{positive_int_or_minus_one.__name__} output type not as expected.",
         )
 
         exc_str = r"Expected positive int or -1, but received value.*"
