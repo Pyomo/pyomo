@@ -643,7 +643,9 @@ True
         _tester('p = Param(mutable=True); p.construct(); p.value = ref')
         if pint_available:
             _tester('v = Var(units=units.m); v.construct(); v.value = ref')
-            _tester('p = Param(mutable=True, units=units.m); p.construct(); p.value = ref')
+            _tester(
+                'p = Param(mutable=True, units=units.m); p.construct(); p.value = ref'
+            )
 
 
 if __name__ == "__main__":
