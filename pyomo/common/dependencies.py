@@ -1034,12 +1034,6 @@ def _pyutilib_importer():
     return importlib.import_module('pyutilib')
 
 
-#
-# Note: because we will be calling
-# declare_deferred_modules_as_importable, it is important that the
-# following declarations explicitly defer_import (even if the target
-# module has already been imported)
-#
 with declare_modules_as_importable(globals()):
     # Standard libraries that are slower to import and not strictly required
     # on all platforms / situations.
