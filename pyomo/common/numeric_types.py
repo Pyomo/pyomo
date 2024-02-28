@@ -229,13 +229,32 @@ def check_if_logical_type(obj):
         return obj_class in native_logical_types
 
     try:
+        # It is not an error if you can't initialize the type from an
+        # int, but if you can, it should map !0 to True
+        if obj_class(1) != obj_class(2):
+            return False
+    except:
+        pass
+
+    try:
+        # Native logical types *must* be hashable
+        hash(obj)
+        # Native logical types must honor standard Boolean operators
         if all(
             (
-                obj_class(1) == obj_class(2),
                 obj_class(False) != obj_class(True),
+                obj_class(False) ^ obj_class(False) == obj_class(False),
                 obj_class(False) ^ obj_class(True) == obj_class(True),
+                obj_class(True) ^ obj_class(False) == obj_class(True),
+                obj_class(True) ^ obj_class(True) == obj_class(False),
+                obj_class(False) | obj_class(False) == obj_class(False),
                 obj_class(False) | obj_class(True) == obj_class(True),
+                obj_class(True) | obj_class(False) == obj_class(True),
+                obj_class(True) | obj_class(True) == obj_class(True),
+                obj_class(False) & obj_class(False) == obj_class(False),
                 obj_class(False) & obj_class(True) == obj_class(False),
+                obj_class(True) & obj_class(False) == obj_class(False),
+                obj_class(True) & obj_class(True) == obj_class(True),
             )
         ):
             RegisterLogicalType(obj_class)
