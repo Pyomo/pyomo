@@ -407,7 +407,7 @@ class MAiNGO(PersistentBase, PersistentSolver):
                 if config.time_limit is not None:
                     self._mymaingo.set_option("maxTime", config.time_limit)
                 if config.mip_gap is not None:
-                    self._mymaingo.set_option("epsilonA", config.mip_gap)
+                    self._mymaingo.set_option("epsilonR", config.mip_gap)
                 for key, option in options.items():
                     self._mymaingo.set_option(key, option)
 
