@@ -20,15 +20,6 @@ from pyomo.contrib.parmest.examples.reactor_design.reactor_design import (
 np.random.seed(1234)
 
 
-def reactor_design_model_for_datarec():
-
-    # Unfix inlet concentration for data rec
-    model = reactor_design_model()
-    model.caf.fixed = False
-
-    return model
-
-
 class ReactorDesignExperimentPreDataRec(ReactorDesignExperiment):
 
     def __init__(self, data, data_std, experiment_number):
@@ -37,7 +28,10 @@ class ReactorDesignExperimentPreDataRec(ReactorDesignExperiment):
         self.data_std = data_std
 
     def create_model(self):
-        self.model = m = reactor_design_model_for_datarec()
+
+        self.model = m = reactor_design_model()
+        m.caf.fixed = False
+
         return m
 
     def label_model(self):
@@ -124,20 +118,15 @@ def main():
         exp_list.append(ReactorDesignExperimentPreDataRec(data, data_std, i))
 
     # Define sum of squared error objective function for data rec
-    def SSE(model):
+    def SSE_with_std(model):
         expr = sum(
             ((y - yhat) / model.experiment_outputs_std[y]) ** 2
             for y, yhat in model.experiment_outputs.items()
         )
         return expr
 
-    # View one model & SSE
-    # exp0_model = exp_list[0].get_labeled_model()
-    # print(exp0_model.pprint())
-    # print(SSE(exp0_model))
-
     ### Data reconciliation
-    pest = parmest.Estimator(exp_list, obj_function=SSE)
+    pest = parmest.Estimator(exp_list, obj_function=SSE_with_std)
 
     obj, theta, data_rec = pest.theta_est(return_values=["ca", "cb", "cc", "cd", "caf"])
     print(obj)
@@ -157,7 +146,7 @@ def main():
     for i in range(data_rec.shape[0]):
         exp_list.append(ReactorDesignExperimentPostDataRec(data_rec, data_std, i))
 
-    pest = parmest.Estimator(exp_list, obj_function=SSE)
+    pest = parmest.Estimator(exp_list, obj_function=SSE_with_std)
     obj, theta = pest.theta_est()
     print(obj)
     print(theta)
