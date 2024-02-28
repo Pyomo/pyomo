@@ -436,10 +436,28 @@ class MAiNGO(PersistentBase, PersistentSolver):
     def _process_domain_and_bounds(self, var):
         _v, _lb, _ub, _fixed, _domain_interval, _value = self._vars[id(var)]
         lb, ub, step = _domain_interval
-        if lb is None:
-            lb = -1e10
-        if ub is None:
-            ub = 1e10
+
+        if _fixed:
+            lb = _value
+            ub = _value
+        else:
+            if lb is None and _lb is None:
+                logger.warning("No lower bound for variable " + var.getname() + " set. Using -1e10 instead. Please consider setting a valid lower bound.")
+            if ub is None and _ub is None:
+                logger.warning("No upper bound for variable " + var.getname() + " set. Using +1e10 instead. Please consider setting a valid upper bound.")
+                
+            if _lb is None:
+                _lb = -1e10
+            if _ub is None:
+                _ub = 1e10
+            if lb is None:
+                lb = -1e10
+            if ub is None:
+                ub = 1e10
+
+            lb = max(value(_lb), lb)
+            ub = min(value(_ub), ub)
+
         if step == 0:
             vtype = maingopy.VT_CONTINUOUS
         elif step == 1:
@@ -451,14 +469,7 @@ class MAiNGO(PersistentBase, PersistentSolver):
             raise ValueError(
                 f"Unrecognized domain step: {step} (should be either 0 or 1)"
             )
-        if _fixed:
-            lb = _value
-            ub = _value
-        else:
-            if _lb is not None:
-                lb = max(value(_lb), lb)
-            if _ub is not None:
-                ub = min(value(_ub), ub)
+
 
         return lb, ub, vtype
 
