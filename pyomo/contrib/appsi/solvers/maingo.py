@@ -146,7 +146,7 @@ class SolverModel(maingopy.MAiNGOmodel):
         ]
 
     def get_initial_point(self):
-        return [var.init if not var.init is None else var.lb for var in self._var_list]
+        return [var.init if not var.init is None else (var.lb  + var.ub)/2.0 for var in self._var_list]
 
     def evaluate(self, maingo_vars):
         visitor = ToMAiNGOVisitor(maingo_vars, self._idmap)
