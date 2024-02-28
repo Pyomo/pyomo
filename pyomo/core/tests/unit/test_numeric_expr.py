@@ -1424,7 +1424,6 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e1 = m.a * m.p
         e2 = m.b - m.c
         e = e2 - e1
-        self.maxDiff = None
         self.assertExpressionsEqual(
             e,
             LinearExpression(
