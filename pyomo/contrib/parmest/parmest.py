@@ -408,7 +408,7 @@ class Estimator(object):
         Expand indexed variables to get full list of thetas
         """
         model_theta_list = [k.name for k, v in model_temp.unknown_parameters.items()]
-    
+
         # check for indexed theta items
         indexed_theta_list = []
         for theta_i in model_theta_list:
@@ -419,11 +419,11 @@ class Estimator(object):
                     indexed_theta_list.append(theta_i + '[' + str(ind) + ']')
                 else:
                     indexed_theta_list.append(theta_i)
-    
+
         # if we found indexed thetas, use expanded list
         if len(indexed_theta_list) > len(model_theta_list):
             model_theta_list = indexed_theta_list
-    
+
         return model_theta_list
 
     def _create_parmest_model(self, experiment_number):

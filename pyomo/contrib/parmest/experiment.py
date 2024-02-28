@@ -13,16 +13,17 @@
 class Experiment:
     """
     The experiment class is a template for making experiment lists
-    to pass to parmest.  
-    
-    An experiment is a Pyomo model "m" which is labeled 
+    to pass to parmest.
+
+    An experiment is a Pyomo model "m" which is labeled
     with additional suffixes:
     * m.experiment_outputs which defines experiment outputs
     * m.unknown_parameters which defines parameters to estimate
-    
+
     The experiment class has one required method:
     * get_labeled_model() which returns the labeled Pyomo model
     """
+
     def __init__(self, model=None):
         self.model = model
 
