@@ -513,7 +513,7 @@ class DeferredImportCallbackFinder:
 
 _DeferredImportCallbackFinder = DeferredImportCallbackFinder()
 # Insert the DeferredImportCallbackFinder at the beginning of the
-# sys.meta_path to that it is found before the standard finders (so that
+# sys.meta_path so that it is found before the standard finders (so that
 # we can correctly inject the resolution of the DeferredImportIndicators
 # -- which triggers the needed callbacks)
 sys.meta_path.insert(0, _DeferredImportCallbackFinder)
