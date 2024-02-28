@@ -17,7 +17,11 @@ from typing import Mapping, Optional, Sequence
 
 from pyomo.common import Executable
 from pyomo.common.config import ConfigValue, document_kwargs_from_configdict, ConfigDict
-from pyomo.common.errors import PyomoException, DeveloperError
+from pyomo.common.errors import (
+    PyomoException,
+    DeveloperError,
+    InfeasibleConstraintException,
+)
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.base.var import _GeneralVarData
@@ -72,11 +76,7 @@ class IpoptConfig(SolverConfig):
             ),
         )
         self.writer_config: ConfigDict = self.declare(
-            'writer_config',
-            ConfigValue(
-                default=NLWriter.CONFIG(),
-                description="Configuration that controls options in the NL writer.",
-            ),
+            'writer_config', NLWriter.CONFIG()
         )
 
 
@@ -314,15 +314,19 @@ class Ipopt(SolverBase):
             ) as row_file, open(basename + '.col', 'w') as col_file:
                 timer.start('write_nl_file')
                 self._writer.config.set_value(config.writer_config)
-                nl_info = self._writer.write(
-                    model,
-                    nl_file,
-                    row_file,
-                    col_file,
-                    symbolic_solver_labels=config.symbolic_solver_labels,
-                )
+                try:
+                    nl_info = self._writer.write(
+                        model,
+                        nl_file,
+                        row_file,
+                        col_file,
+                        symbolic_solver_labels=config.symbolic_solver_labels,
+                    )
+                    proven_infeasible = False
+                except InfeasibleConstraintException:
+                    proven_infeasible = True
                 timer.stop('write_nl_file')
-            if len(nl_info.variables) > 0:
+            if not proven_infeasible and len(nl_info.variables) > 0:
                 # Get a copy of the environment to pass to the subprocess
                 env = os.environ.copy()
                 if nl_info.external_function_libraries:
@@ -361,11 +365,17 @@ class Ipopt(SolverBase):
                     timer.stop('subprocess')
                     # This is the stuff we need to parse to get the iterations
                     # and time
-                    iters, ipopt_time_nofunc, ipopt_time_func, ipopt_total_time = (
+                    (iters, ipopt_time_nofunc, ipopt_time_func, ipopt_total_time) = (
                         self._parse_ipopt_output(ostreams[0])
                     )
 
-            if len(nl_info.variables) == 0:
+            if proven_infeasible:
+                results = Results()
+                results.termination_condition = TerminationCondition.provenInfeasible
+                results.solution_loader = SolSolutionLoader(None, None)
+                results.iteration_count = 0
+                results.timing_info.total_seconds = 0
+            elif len(nl_info.variables) == 0:
                 if len(nl_info.eliminated_vars) == 0:
                     results = Results()
                     results.termination_condition = TerminationCondition.emptyModel
@@ -457,7 +467,7 @@ class Ipopt(SolverBase):
                 )
 
         results.solver_configuration = config
-        if len(nl_info.variables) > 0:
+        if not proven_infeasible and len(nl_info.variables) > 0:
             results.solver_log = ostreams[0].getvalue()
 
         # Capture/record end-time / wall-time
