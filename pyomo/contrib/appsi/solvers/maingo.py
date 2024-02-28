@@ -318,12 +318,14 @@ class ToMAiNGOVisitor(EXPR.ExpressionValueVisitor):
 
     def _linear_to_maingo(self, node):
         values = [
-            self._monomial_to_maingo(arg)
-            if (
-                arg.__class__ is EXPR.MonomialTermExpression
-                and not arg.arg(1).is_fixed()
+            (
+                self._monomial_to_maingo(arg)
+                if (
+                    arg.__class__ is EXPR.MonomialTermExpression
+                    and not arg.arg(1).is_fixed()
+                )
+                else value(arg)
             )
-            else value(arg)
             for arg in node.args
         ]
         return sum(values)
