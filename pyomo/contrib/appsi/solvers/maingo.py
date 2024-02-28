@@ -192,15 +192,15 @@ class ToMAiNGOVisitor(EXPR.ExpressionValueVisitor):
 
     @classmethod
     def maingo_asinh(cls, x):
-        return maingopy.inv(maingopy.sinh(x))
+        return maingopy.log(x + maingopy.sqrt(maingopy.pow(x,2) + 1))
 
     @classmethod
     def maingo_acosh(cls, x):
-        return maingopy.inv(maingopy.cosh(x))
+        return maingopy.log(x + maingopy.sqrt(maingopy.pow(x,2) - 1))
 
     @classmethod
     def maingo_atanh(cls, x):
-        return maingopy.inv(maingopy.tanh(x))
+        return 0.5 * maingopy.log(x+1) - 0.5 * maingopy.log(1-x)
 
     def visit(self, node, values):
         """Visit nodes that have been expanded"""
