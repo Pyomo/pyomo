@@ -347,7 +347,7 @@ class SeparationLoopResults:
     solver_call_results : ComponentMap
         Mapping from performance constraints to corresponding
         ``SeparationSolveCallResults`` objects.
-        worst_case_perf_con : None or Constraint
+    worst_case_perf_con : None or Constraint
         Performance constraint mapped to ``SeparationSolveCallResults``
         object in `self` corresponding to maximally violating
         separation problem solution.
