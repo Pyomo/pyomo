@@ -20,7 +20,7 @@ from pyomo.contrib.parmest.examples.reactor_design.reactor_design import (
 np.random.seed(1234)
 
 
-class ReactorDesignExperimentPreDataRec(ReactorDesignExperiment):
+class ReactorDesignExperimentDataRec(ReactorDesignExperiment):
 
     def __init__(self, data, data_std, experiment_number):
 
@@ -115,7 +115,7 @@ def main():
     # Create an experiment list
     exp_list = []
     for i in range(data.shape[0]):
-        exp_list.append(ReactorDesignExperimentPreDataRec(data, data_std, i))
+        exp_list.append(ReactorDesignExperimentDataRec(data, data_std, i))
 
     # Define sum of squared error objective function for data rec
     def SSE_with_std(model):
