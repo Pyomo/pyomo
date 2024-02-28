@@ -525,12 +525,16 @@ class MAiNGO(PersistentBase, PersistentSolver):
         self._cons = cons
 
     def _add_sos_constraints(self, cons: List[_SOSConstraintData]):
+        if len(cons) >= 1:
+            raise NotImplementedError("MAiNGO does not currently support SOS constraints.")
         pass
 
     def _remove_constraints(self, cons: List[_GeneralConstraintData]):
         pass
 
     def _remove_sos_constraints(self, cons: List[_SOSConstraintData]):
+        if len(cons) >= 1:
+            raise NotImplementedError("MAiNGO does not currently support SOS constraints.")
         pass
 
     def _remove_variables(self, variables: List[_GeneralVarData]):
