@@ -217,10 +217,10 @@ def check_if_native_type(obj):
 def check_if_logical_type(obj):
     """Test if the argument behaves like a logical type.
 
-    We check for "numeric types" by checking if we can add zero to it
-    without changing the object's type, and that the object compares to
-    0 in a meaningful way.  If that works, then we register the type in
-    :py:attr:`native_numeric_types`.
+    We check for "logical types" by checking if the type returns sane
+    results for Boolean operators (``^``, ``|``, ``&``) and if it maps
+    ``1`` and ``2`` both to the same equivalent instance.  If that
+    works, then we register the type in :py:attr:`native_logical_types`.
 
     """
     obj_class = obj.__class__
@@ -304,9 +304,8 @@ def check_if_numeric_type(obj):
     except:
         pass
     #
-    # ensure that the object is comparable to 0 in a meaningful way
-    # (among other things, this prevents numpy.ndarray objects from
-    # being added to native_numeric_types)
+    # Ensure that the object is comparable to 0 in a meaningful way
+    #
     try:
         if not ((obj < 0) ^ (obj >= 0)):
             return False
