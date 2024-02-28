@@ -11,7 +11,8 @@
 
 from functools import wraps
 
-from pyomo.common.collections import ComponentMap
+from pyomo.common.autoslots import AutoSlots
+from pyomo.common.collections import ComponentMap, DefaultComponentMap
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import unique_component_name
 
@@ -46,6 +47,17 @@ from pyomo.gdp.util import (
 from pyomo.network import Port
 
 from weakref import ref as weakref_ref
+
+
+class _GDPTransformationData(AutoSlots.Mixin):
+    __slots__ = ('src_constraint', 'transformed_constraints')
+
+    def __init__(self):
+        self.src_constraint = ComponentMap()
+        self.transformed_constraints = DefaultComponentMap(list)
+
+
+Block.register_private_data_initializer(_GDPTransformationData, scope='pyomo.gdp')
 
 
 class GDP_to_MIP_Transformation(Transformation):
@@ -243,14 +255,7 @@ class GDP_to_MIP_Transformation(Transformation):
         relaxationBlock = relaxedDisjuncts[len(relaxedDisjuncts)]
 
         relaxationBlock.transformedConstraints = Constraint(Any)
-
         relaxationBlock.localVarReferences = Block()
-        # add the map that will link back and forth between transformed
-        # constraints and their originals.
-        relaxationBlock._constraintMap = {
-            'srcConstraints': ComponentMap(),
-            'transformedConstraints': ComponentMap(),
-        }
 
         # add mappings to source disjunct (so we'll know we've relaxed)
         disjunct._transformation_block = weakref_ref(relaxationBlock)
