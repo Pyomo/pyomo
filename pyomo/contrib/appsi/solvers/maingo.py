@@ -570,8 +570,10 @@ class MAiNGO(PersistentBase, PersistentSolver):
         results.wallclock_time = mprob.get_wallclock_solution_time()
         results.cpu_time = mprob.get_cpu_solution_time()
 
-        if status == maingopy.GLOBALLY_OPTIMAL:
+        if status in {maingopy.GLOBALLY_OPTIMAL, maingopy.FEASIBLE_POINT}:
             results.termination_condition = TerminationCondition.optimal
+            if status == maingopy.FEASIBLE_POINT:
+                logger.warning("MAiNGO did only find a feasible solution but did not prove its global optimality.")
         elif status == maingopy.INFEASIBLE:
             results.termination_condition = TerminationCondition.infeasible
         else:
