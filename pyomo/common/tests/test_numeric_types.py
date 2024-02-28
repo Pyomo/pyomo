@@ -35,7 +35,7 @@ class TestNativeTypes(unittest.TestCase):
     def tearDown(self):
         for s in _type_sets:
             getattr(nt, s).clear()
-            getattr(nt, s).update(getattr(nt, s))
+            getattr(nt, s).update(getattr(self, s))
 
     def test_check_if_native_type(self):
         self.assertEqual(nt.native_types, set())
