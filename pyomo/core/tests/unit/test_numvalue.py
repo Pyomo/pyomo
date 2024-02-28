@@ -18,6 +18,7 @@ from math import nan, inf
 
 import pyomo.common.unittest as unittest
 from pyomo.common.dependencies import numpy, numpy_available
+from pyomo.core.base.units_container import pint_available
 
 from pyomo.environ import (
     value,
@@ -640,8 +641,9 @@ True
         _tester('Var() + ref')
         _tester('v = Var(); v.construct(); v.value = ref')
         _tester('p = Param(mutable=True); p.construct(); p.value = ref')
-        _tester('v = Var(units=units.m); v.construct(); v.value = ref')
-        _tester('p = Param(mutable=True, units=units.m); p.construct(); p.value = ref')
+        if pint_available:
+            _tester('v = Var(units=units.m); v.construct(); v.value = ref')
+            _tester('p = Param(mutable=True, units=units.m); p.construct(); p.value = ref')
 
 
 if __name__ == "__main__":
