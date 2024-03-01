@@ -9,18 +9,18 @@ to be used for analysis. It also computes a minimal intractable system
 as part of the watertap project and is governed by a license shown
 at the bottom of the ``mis.py``.
 
-The algortithms come from John Chinneck's slides, see: https://www.sce.carleton.ca/faculty/chinneck/docs/CPAIOR07InfeasibilityTutorial.pdf
+The algorithms come from John Chinneck's slides, see: https://www.sce.carleton.ca/faculty/chinneck/docs/CPAIOR07InfeasibilityTutorial.pdf
 
 Solver
 ------
 
-At the time of this writing, you need to use ipopt even for LPs.
+At the time of this writing, you need to use IPopt even for LPs.
 
 Quick Start
 -----------
 
 The file ``trivial_mis.py`` is a tiny example listed at the bottom of
-this help file, which references a pyomo model with the Python variable
+this help file, which references a Pyomo model with the Python variable
 `m` and has these lines:
 
 .. code-block:: python
@@ -33,7 +33,7 @@ this help file, which references a pyomo model with the Python variable
    This is done instead of solving the problem.
    
 .. Note::
-   If IDAES is installed, the `solver` keyward argument
+   If IDAES is installed, the `solver` keyword argument
    is not needed (the function will use IDAES to find
    a solver).
 
@@ -42,7 +42,7 @@ Interpreting the Output
 
 Assuming the dependencies are installed, file ``trivial_mis.py``
 (shown below) will
-produce a lot of warnings from ipopt and then meaninful output (using a logger).
+produce a lot of warnings from IPopt and then meaningful output (using a logger).
 
 Repair Options
 ^^^^^^^^^^^^^^
@@ -88,15 +88,14 @@ object back from the call to `solve`. In these cases we keep the constraint in t
 set of “guard” constraints – we can’t really be sure they’re a source of infeasibility or not, 
 just that “bad things” happen when they’re not included.
 
-Perhpas ideally we would put a constraint in the “guard” set if Ipopt failed to converge, and only put it in the 
-MIS if Ipopt converged to a point of local infeasibility. However, right now the code generally makes the 
-assumption that if Ipopt fails to converge the subproblem is infeasible, though obviously that is far from the truth. 
+Perhaps ideally we would put a constraint in the “guard” set if IPopt failed to converge, and only put it in the 
+MIS if IPopt converged to a point of local infeasibility. However, right now the code generally makes the 
+assumption that if IPopt fails to converge the subproblem is infeasible, though obviously that is far from the truth. 
 Hence for difficult NLPs even the “Phase 1” may “fail” – in that when finished the subproblem containing just the 
-constraints in the elastic filter may be feasible -- because Ipopt failed to converge and we assumed that meant the 
+constraints in the elastic filter may be feasible -- because IPopt failed to converge and we assumed that meant the 
 subproblem was not feasible.
 
-Dealing with NLPs is far from clean, but that doesn’t mean the tool can’t return useful results even when it’s 
-assumptions are not satisfied.
+Dealing with NLPs is far from clean, but that doesn’t mean the tool can’t return useful results even when it’s assumptions are not satisfied.
 
 trivial_mis.py
 --------------
