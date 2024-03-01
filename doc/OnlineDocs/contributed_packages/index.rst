@@ -30,6 +30,7 @@ Contributed packages distributed with Pyomo:
    pyros.rst
    sensitivity_toolbox.rst
    trustregion.rst
+   mis.rst
 
 Contributed Pyomo interfaces to other packages:
 
