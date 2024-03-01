@@ -42,7 +42,7 @@ Interpreting the Output
 
 Assuming the dependencies are installed, file ``trivial_mis.py``
 (shown below) will
-produce a lot of warnings from ipopt and then meaninful output in a log file.
+produce a lot of warnings from ipopt and then meaninful output (using a logger).
 
 Repair Options
 ^^^^^^^^^^^^^^
