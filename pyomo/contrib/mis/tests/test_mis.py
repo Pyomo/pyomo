@@ -12,6 +12,7 @@
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 import pyomo.contrib.mis as mis
+from pyomo.contrib.mis.mis import _get_constraint
 from pyomo.common.tempfiles import TempfileManager
 
 import logging
@@ -42,9 +43,8 @@ class TestMIS(unittest.TestCase):
 
     def test__get_constraint_errors(self):
         # A not-completely-cyincal way to get the coverage up.
-        m = _get_infeasible_model()  # not modified, but who cares?
-        fct = getattr(mis, "_get_constraint")
-        # fct = mis._get_constraint
+        m = _get_infeasible_model()  # not modified
+        fct = _get_constraint
 
         m.foo_slack_plus_ = pyo.Var()
         self.assertRaises(RuntimeError, fct, m, m.foo_slack_plus_)
