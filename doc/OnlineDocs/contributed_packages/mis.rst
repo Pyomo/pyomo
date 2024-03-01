@@ -40,7 +40,7 @@ this help file, which references a Pyomo model with the Python variable
 Interpreting the Output
 -----------------------
 
-Assuming the dependencies are installed, file ``trivial_mis.py``
+Assuming the dependencies are installed, running ``trivial_mis.py``
 (shown below) will
 produce a lot of warnings from IPopt and then meaningful output (using a logger).
 
@@ -50,7 +50,7 @@ Repair Options
 This output for the trivial example shows three independent ways that the model could be rendered feasible:
 
 
-.. raw::
+.. code-block:: text
    
    Model Trivial Quad may be infeasible. A feasible solution was found with only the following variable bounds relaxed:
 	ub of var x[1] by 4.464126126706818e-05
@@ -69,7 +69,7 @@ Minimal Intractable System (MIS)
 This output shows a minimal intractable system:
 
 
-.. raw::
+.. code-block:: text
 
    Computed Minimal Intractable System (MIS)!
    Constraints / bounds in MIS:
