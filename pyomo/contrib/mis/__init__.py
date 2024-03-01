@@ -9,4 +9,4 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.contrib.iis.iis import compute_infeasibility_explanation
+from pyomo.contrib.mis.mis import compute_infeasibility_explanation

@@ -25,7 +25,7 @@ this help file, which references a pyomo model with the Python variable
 
 .. code-block:: python
 
-   from mis import compute_infeasibility_explanation
+   from pyomo.contrib.mis import compute_infeasibility_explanation
    ipopt = pyo.SolverFactory("ipopt")
    compute_infeasibility_explanation(m, solver=ipopt)
 
@@ -40,13 +40,14 @@ this help file, which references a pyomo model with the Python variable
 Interpreting the Output
 -----------------------
 
-Assuming the dependencies are installed ``trivial_mis.py`` will
-produce a lot of warnings from ipopt and then meaninful output:
+Assuming the dependencies are installed, file ``trivial_mis.py``
+(shown below) will
+produce a lot of warnings from ipopt and then meaninful output in a log file.
 
 Repair Options
 ^^^^^^^^^^^^^^
 
-This output shows three independent ways that the model could be rendered feasible.
+This output for the trivial example shows three independent ways that the model could be rendered feasible:
 
 
 .. raw::
@@ -79,7 +80,7 @@ This output shows a minimal intractable system:
 Constraints / bounds in guards for stability
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This part of the report for nonlinear programs (NLPs).
+This part of the report is for nonlinear programs (NLPs).
 
 When we’re trying to reduce the constraint set, for an NLP there may be constraints that when missing cause the solver 
 to fail in some catastrophic fashion. In this implementation this is interpreted as failing to get a `results` 
@@ -109,6 +110,6 @@ trivial_mis.py
    m.c = pyo.Constraint(expr=m.x[1] * m.x[2] == -1)
    m.d = pyo.Constraint(expr=m.x[1] + m.y >= 1)
 
-   from mis import compute_infeasibility_explanation
+   from pyomo.contrib.mis import compute_infeasibility_explanation
    ipopt = pyo.SolverFactory("ipopt")
    compute_infeasibility_explanation(m, solver=ipopt)

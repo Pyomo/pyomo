@@ -8,6 +8,7 @@ copied by DLW 18Feb2024 and edited
 
 See: https://www.sce.carleton.ca/faculty/chinneck/docs/CPAIOR07InfeasibilityTutorial.pdf
 """
+import logging
 import pyomo.environ as pyo
 
 from pyomo.core.plugins.transform.add_slack_vars import AddSlackVariables
