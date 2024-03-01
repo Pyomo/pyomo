@@ -1,6 +1,6 @@
 """
 Minimal Intractable System (MIS) finder
-Originall written by Ben Knueven as part of the WaterTAP project:
+Originally written by Ben Knueven as part of the WaterTAP project:
    https://github.com/watertap-org/watertap
 That's why DLW put a huge license notice at the bottom of this file.
 
@@ -150,7 +150,7 @@ def compute_infeasibility_explanation(
 
     for v in slack_block.component_data_objects(pyo.Var):
         v.fix(0)
-    # start with variable bounds -- these are the easist to interpret
+    # start with variable bounds -- these are the easiest to interpret
     for c in modified_model._variable_bounds.component_data_objects(
         pyo.Constraint, descend_into=True
     ):
@@ -322,7 +322,7 @@ def _get_results_with_value(constr_value_generator, msg=None):
             elif "ub" in name:
                 msg += f"\tub of var {name[7:]} by {value}\n"
             else:
-                raise RuntimeError("unrecongized var name")
+                raise RuntimeError("unrecognized var name")
         else:
             msg += f"\tconstraint: {c_name} by {value}\n"
     return msg
@@ -340,7 +340,7 @@ def _get_results(constr_generator, msg=None):
             elif "ub" in name:
                 msg += f"\tub of var {name[7:]}\n"
             else:
-                raise RuntimeError("unrecongized var name")
+                raise RuntimeError("unrecognized var name")
         else:
             msg += f"\tconstraint: {c_name}\n"
     return msg
