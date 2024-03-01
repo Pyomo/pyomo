@@ -10,3 +10,5 @@
 #  ___________________________________________________________________________
 
 from pyomo.contrib.mis.mis import compute_infeasibility_explanation
+# so the tests can find it
+from pyomo.contrib.mis.mis import _get_constraint

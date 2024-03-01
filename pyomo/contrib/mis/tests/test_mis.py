@@ -11,7 +11,7 @@
 
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
-from pyomo.contrib.mis import compute_infeasibility_explanation
+import pyomo.contrib.mis as mis
 from pyomo.common.tempfiles import TempfileManager
 
 import logging
@@ -39,7 +39,20 @@ class TestMIS(unittest.TestCase):
     )
     def test_write_mis_ipopt(self):
         _test_mis("ipopt")
+    def test__get_constraint_errors(self):
+        # A not-completely-cyincal way to get the coverage up.
+        m = _get_infeasible_model()  # not modified, but who cares?
+        fct = getattr(mis, "_get_constraint")
+        #fct = mis._get_constraint
 
+        m.foo_slack_plus_ = pyo.Var()
+        self.assertRaises(RuntimeError, fct, m, m.foo_slack_plus_)
+        m.foo_slack_minus_ = pyo.Var()
+        self.assertRaises(RuntimeError, fct, m, m.foo_slack_minus_)
+        m.foo_bar = pyo.Var()
+        self.assertRaises(RuntimeError, fct, m, m.foo_bar)
+
+        
 def _check_output(file_name):
     # pretty simple check for now
     with open(file_name, "r+") as file1:
@@ -75,7 +88,7 @@ def _test_mis(solver_name):
     fh.setLevel(logging.DEBUG)
     logger.addHandler(fh)
     
-    compute_infeasibility_explanation(m, opt, logger=logger)
+    mis.compute_infeasibility_explanation(m, opt, logger=logger)
     _check_output(file_name)
 
     TempfileManager.pop()
