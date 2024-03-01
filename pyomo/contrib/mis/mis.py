@@ -8,6 +8,7 @@ copied by DLW 18Feb2024 and edited
 
 See: https://www.sce.carleton.ca/faculty/chinneck/docs/CPAIOR07InfeasibilityTutorial.pdf
 """
+
 import logging
 import pyomo.environ as pyo
 
@@ -22,12 +23,13 @@ from pyomo.opt import WriterFactory
 
 try:
     from idaes.core.solvers import get_solver
+
     have_idaes = True
 except:
     have_idaes = False
 
 logger = logging.getLogger("pyomo.contrib.iis")
-logger.setLevel(logging.INFO)    
+logger.setLevel(logging.INFO)
 
 _default_nl_writer = WriterFactory.get_class("nl")
 
@@ -66,7 +68,9 @@ class _VariableBoundsAsConstraints(IsomorphicTransformation):
             v.setub(None)
 
 
-def compute_infeasibility_explanation(model, solver=None, tee=False, tolerance=1e-8, logger=logger):
+def compute_infeasibility_explanation(
+    model, solver=None, tee=False, tolerance=1e-8, logger=logger
+):
     """
     This function attempts to determine why a given model is infeasible. It deploys
     two main algorithms:
@@ -359,6 +363,7 @@ def _get_constraint(modified_model, v):
         return constr
     else:
         raise RuntimeError("Bad var name {v.name}")
+
 
 """
 WaterTAP Copyright (c) 2020-2023, The Regents of the University of California, through Lawrence Berkeley National Laboratory, Oak Ridge National Laboratory, National Renewable Energy Laboratory, and National Energy Technology Laboratory (subject to receipt of any required approvals from the U.S. Dept. of Energy). All rights reserved.

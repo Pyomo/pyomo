@@ -39,11 +39,12 @@ class TestMIS(unittest.TestCase):
     )
     def test_write_mis_ipopt(self):
         _test_mis("ipopt")
+
     def test__get_constraint_errors(self):
         # A not-completely-cyincal way to get the coverage up.
         m = _get_infeasible_model()  # not modified, but who cares?
         fct = getattr(mis, "_get_constraint")
-        #fct = mis._get_constraint
+        # fct = mis._get_constraint
 
         m.foo_slack_plus_ = pyo.Var()
         self.assertRaises(RuntimeError, fct, m, m.foo_slack_plus_)
@@ -52,7 +53,7 @@ class TestMIS(unittest.TestCase):
         m.foo_bar = pyo.Var()
         self.assertRaises(RuntimeError, fct, m, m.foo_bar)
 
-        
+
 def _check_output(file_name):
     # pretty simple check for now
     with open(file_name, "r+") as file1:
@@ -71,7 +72,7 @@ def _check_output(file_name):
         raise RuntimeError(f"Did not find '{nugget}' after '{trigger}' in output")
     else:
         pass
-    
+
 
 def _test_mis(solver_name):
     m = _get_infeasible_model()
@@ -80,14 +81,14 @@ def _test_mis(solver_name):
     TempfileManager.push()
     tmp_path = TempfileManager.create_tempdir()
     file_name = os.path.join(tmp_path, f"{solver_name}_mis.log")
-    logger = logging.getLogger(f'test_mis_{solver_name}')
+    logger = logging.getLogger(f"test_mis_{solver_name}")
     logger.setLevel(logging.INFO)
     # create file handler which logs even debug messages
     print(f"{file_name =}")
     fh = logging.FileHandler(file_name)
     fh.setLevel(logging.DEBUG)
     logger.addHandler(fh)
-    
+
     mis.compute_infeasibility_explanation(m, opt, logger=logger)
     _check_output(file_name)
 
