@@ -2011,16 +2011,15 @@ class Block(ActiveIndexedComponent):
     _private_data_initializers = defaultdict(lambda: dict)
 
     @overload
-    def __new__(cls: Type[Block], *args, **kwds) -> Union[ScalarBlock, IndexedBlock]:
-        ...
+    def __new__(
+        cls: Type[Block], *args, **kwds
+    ) -> Union[ScalarBlock, IndexedBlock]: ...
 
     @overload
-    def __new__(cls: Type[ScalarBlock], *args, **kwds) -> ScalarBlock:
-        ...
+    def __new__(cls: Type[ScalarBlock], *args, **kwds) -> ScalarBlock: ...
 
     @overload
-    def __new__(cls: Type[IndexedBlock], *args, **kwds) -> IndexedBlock:
-        ...
+    def __new__(cls: Type[IndexedBlock], *args, **kwds) -> IndexedBlock: ...
 
     def __new__(cls, *args, **kwds):
         if cls != Block:

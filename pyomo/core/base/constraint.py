@@ -731,16 +731,15 @@ class Constraint(ActiveIndexedComponent):
     Satisfied = Feasible
 
     @overload
-    def __new__(cls: Type[Constraint], *args, **kwds) -> Union[ScalarConstraint, IndexedConstraint]:
-        ...
+    def __new__(
+        cls: Type[Constraint], *args, **kwds
+    ) -> Union[ScalarConstraint, IndexedConstraint]: ...
 
     @overload
-    def __new__(cls: Type[ScalarConstraint], *args, **kwds) -> ScalarConstraint:
-        ...
+    def __new__(cls: Type[ScalarConstraint], *args, **kwds) -> ScalarConstraint: ...
 
     @overload
-    def __new__(cls: Type[IndexedConstraint], *args, **kwds) -> IndexedConstraint:
-        ...
+    def __new__(cls: Type[IndexedConstraint], *args, **kwds) -> IndexedConstraint: ...
 
     def __new__(cls, *args, **kwds):
         if cls != Constraint:
@@ -1033,7 +1032,7 @@ class IndexedConstraint(Constraint):
     def add(self, index, expr):
         """Add a constraint with a given index."""
         return self.__setitem__(index, expr)
-    
+
     def __getitem__(self, index) -> _GeneralConstraintData:
         return super().__getitem__(index)
 

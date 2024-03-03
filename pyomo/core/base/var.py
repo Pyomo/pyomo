@@ -671,16 +671,13 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
     _ComponentDataClass = _GeneralVarData
 
     @overload
-    def __new__(cls: Type[Var], *args, **kwargs) -> Union[ScalarVar, IndexedVar]:
-        ...
+    def __new__(cls: Type[Var], *args, **kwargs) -> Union[ScalarVar, IndexedVar]: ...
 
     @overload
-    def __new__(cls: Type[ScalarVar], *args, **kwargs) -> ScalarVar:
-        ...
+    def __new__(cls: Type[ScalarVar], *args, **kwargs) -> ScalarVar: ...
 
     @overload
-    def __new__(cls: Type[IndexedVar], *args, **kwargs) -> IndexedVar:
-        ...
+    def __new__(cls: Type[IndexedVar], *args, **kwargs) -> IndexedVar: ...
 
     def __new__(cls, *args, **kwargs):
         if cls is not Var:
@@ -702,7 +699,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         dense=True,
         units=None,
         name=None,
-        doc=None
+        doc=None,
     ): ...
 
     def __init__(self, *args, **kwargs):

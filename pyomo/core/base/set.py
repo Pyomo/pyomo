@@ -1971,12 +1971,10 @@ class Set(IndexedComponent):
     _UnorderedInitializers = {set}
 
     @overload
-    def __new__(cls: Type[Set], *args, **kwds) -> Union[_SetData, IndexedSet]:
-        ...
+    def __new__(cls: Type[Set], *args, **kwds) -> Union[_SetData, IndexedSet]: ...
 
     @overload
-    def __new__(cls: Type[OrderedScalarSet], *args, **kwds) -> OrderedScalarSet:
-        ...
+    def __new__(cls: Type[OrderedScalarSet], *args, **kwds) -> OrderedScalarSet: ...
 
     def __new__(cls, *args, **kwds):
         if cls is not Set:
