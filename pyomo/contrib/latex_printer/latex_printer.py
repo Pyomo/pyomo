@@ -275,11 +275,11 @@ def handle_functionID_node(visitor, node, *args):
 
 
 def handle_indexTemplate_node(visitor, node, *args):
-    if node._set in ComponentSet(visitor.setMap.keys()):
+    if node._set in visitor.setMap:
         # already detected set, do nothing
         pass
     else:
-        visitor.setMap[node._set] = 'SET%d' % (len(visitor.setMap.keys()) + 1)
+        visitor.setMap[node._set] = 'SET%d' % (len(visitor.setMap) + 1)
 
     return '__I_PLACEHOLDER_8675309_GROUP_%s_%s__' % (
         node._group,
@@ -616,15 +616,15 @@ def latex_printer(
 
     # Cody's backdoor because he got outvoted
     if latex_component_map is not None:
-        if 'use_short_descriptors' in list(latex_component_map.keys()):
+        if 'use_short_descriptors' in latex_component_map:
             if latex_component_map['use_short_descriptors'] == False:
                 use_short_descriptors = False
 
     if latex_component_map is None:
         latex_component_map = ComponentMap()
-        existing_components = ComponentSet([])
+        existing_components = ComponentSet()
     else:
-        existing_components = ComponentSet(list(latex_component_map.keys()))
+        existing_components = ComponentSet(latex_component_map)
 
     isSingle = False
 
@@ -1225,14 +1225,14 @@ def latex_printer(
             )
 
     for ky, vl in new_variableMap.items():
-        if ky not in ComponentSet(latex_component_map.keys()):
+        if ky not in latex_component_map:
             latex_component_map[ky] = vl
     for ky, vl in new_parameterMap.items():
-        if ky not in ComponentSet(latex_component_map.keys()):
+        if ky not in latex_component_map:
             latex_component_map[ky] = vl
 
     rep_dict = {}
-    for ky in ComponentSet(list(reversed(list(latex_component_map.keys())))):
+    for ky in reversed(list(latex_component_map)):
         if isinstance(ky, (pyo.Var, _GeneralVarData)):
             overwrite_value = latex_component_map[ky]
             if ky not in existing_components:
