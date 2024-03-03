@@ -6267,7 +6267,6 @@ c : Size=3, Index=CHOICES, Active=True
 
     @unittest.skipIf(NamedTuple is None, "typing module not available")
     def test_issue_938(self):
-        self.maxDiff = None
         NodeKey = NamedTuple('NodeKey', [('id', int)])
         ArcKey = NamedTuple('ArcKey', [('node_from', NodeKey), ('node_to', NodeKey)])
 

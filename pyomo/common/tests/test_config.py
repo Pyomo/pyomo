@@ -2098,7 +2098,6 @@ endBlock{}
                 "generate_documentation is deprecated.",
                 LOG,
             )
-        self.maxDiff = None
         # print(test)
         self.assertEqual(test, reference)
 
@@ -2113,7 +2112,6 @@ endBlock{}
                 )
             )
         self.assertEqual(LOG.getvalue(), "")
-        self.maxDiff = None
         # print(test)
         self.assertEqual(test, reference)
 
@@ -2159,7 +2157,6 @@ endBlock{}
                 "generate_documentation is deprecated.",
                 LOG,
             )
-        self.maxDiff = None
         # print(test)
         self.assertEqual(test, reference)
 
@@ -2577,7 +2574,6 @@ Scenario definition:
         parser = argparse.ArgumentParser(prog='tester')
         self.config.initialize_argparse(parser)
         help = parser.format_help()
-        self.maxDiff = None
         self.assertIn(
             """
   -h, --help            show this help message and exit
@@ -3106,8 +3102,6 @@ c: 1.0
             cfg2.declare_from({})
 
     def test_docstring_decorator(self):
-        self.maxDiff = None
-
         @document_kwargs_from_configdict('CONFIG')
         class ExampleClass(object):
             CONFIG = ExampleConfig()

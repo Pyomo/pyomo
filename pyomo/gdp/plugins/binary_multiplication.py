@@ -121,7 +121,7 @@ class GDPBinaryMultiplicationTransformation(GDP_to_MIP_Transformation):
     def _transform_constraint(self, obj, disjunct):
         # add constraint to the transformation block, we'll transform it there.
         transBlock = disjunct._transformation_block()
-        constraintMap = transBlock._constraintMap
+        constraint_map = transBlock.private_data('pyomo.gdp')
 
         disjunctionRelaxationBlock = transBlock.parent_block()
 
@@ -137,14 +137,14 @@ class GDPBinaryMultiplicationTransformation(GDP_to_MIP_Transformation):
                 continue
 
             self._add_constraint_expressions(
-                c, i, disjunct.binary_indicator_var, newConstraint, constraintMap
+                c, i, disjunct.binary_indicator_var, newConstraint, constraint_map
             )
 
             # deactivate because we relaxed
             c.deactivate()
 
     def _add_constraint_expressions(
-        self, c, i, indicator_var, newConstraint, constraintMap
+        self, c, i, indicator_var, newConstraint, constraint_map
     ):
         # Since we are both combining components from multiple blocks and using
         # local names, we need to make sure that the first index for
@@ -156,21 +156,21 @@ class GDPBinaryMultiplicationTransformation(GDP_to_MIP_Transformation):
         # over the constraint indices, but I don't think it matters a lot.)
         unique = len(newConstraint)
         name = c.local_name + "_%s" % unique
-        transformed = constraintMap['transformedConstraints'][c] = []
+        transformed = constraint_map.transformed_constraints[c]
 
         lb, ub = c.lower, c.upper
         if (c.equality or lb is ub) and lb is not None:
             # equality
             newConstraint.add((name, i, 'eq'), (c.body - lb) * indicator_var == 0)
             transformed.append(newConstraint[name, i, 'eq'])
-            constraintMap['srcConstraints'][newConstraint[name, i, 'eq']] = c
+            constraint_map.src_constraint[newConstraint[name, i, 'eq']] = c
         else:
             # inequality
             if lb is not None:
                 newConstraint.add((name, i, 'lb'), 0 <= (c.body - lb) * indicator_var)
                 transformed.append(newConstraint[name, i, 'lb'])
-                constraintMap['srcConstraints'][newConstraint[name, i, 'lb']] = c
+                constraint_map.src_constraint[newConstraint[name, i, 'lb']] = c
             if ub is not None:
                 newConstraint.add((name, i, 'ub'), (c.body - ub) * indicator_var <= 0)
                 transformed.append(newConstraint[name, i, 'ub'])
-                constraintMap['srcConstraints'][newConstraint[name, i, 'ub']] = c
+                constraint_map.src_constraint[newConstraint[name, i, 'ub']] = c
