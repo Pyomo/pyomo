@@ -49,7 +49,7 @@ from pyomo.core.expr.template_expr import (
 )
 from pyomo.core.base.var import ScalarVar, _GeneralVarData, IndexedVar
 from pyomo.core.base.param import _ParamData, ScalarParam, IndexedParam
-from pyomo.core.base.set import _SetData
+from pyomo.core.base.set import _SetData, SetOperator
 from pyomo.core.base.constraint import ScalarConstraint, IndexedConstraint
 from pyomo.common.collections.component_map import ComponentMap
 from pyomo.common.collections.component_set import ComponentSet
@@ -78,6 +78,39 @@ from pyomo.common.errors import InfeasibleConstraintException
 
 from pyomo.common.dependencies import numpy as np, numpy_available
 
+
+set_operator_map = {
+    '|': r' \cup ',
+    '&': r' \cap ',
+    '*': r' \times ',
+    '-': r' \setminus ',
+    '^': r' \triangle ',
+}
+
+latex_reals = r'\mathds{R}'
+latex_integers = r'\mathds{Z}'
+
+domainMap = {
+    'Reals': latex_reals,
+    'PositiveReals': latex_reals + '_{> 0}',
+    'NonPositiveReals': latex_reals + '_{\\leq 0}',
+    'NegativeReals': latex_reals + '_{< 0}',
+    'NonNegativeReals': latex_reals + '_{\\geq 0}',
+    'Integers': latex_integers,
+    'PositiveIntegers': latex_integers + '_{> 0}',
+    'NonPositiveIntegers': latex_integers + '_{\\leq 0}',
+    'NegativeIntegers': latex_integers + '_{< 0}',
+    'NonNegativeIntegers': latex_integers + '_{\\geq 0}',
+    'Boolean': '\\left\\{ \\text{True} , \\text{False} \\right \\}',
+    'Binary': '\\left\\{ 0 , 1 \\right \\}',
+    # 'Any': None,
+    # 'AnyWithNone': None,
+    'EmptySet': '\\varnothing',
+    'UnitInterval': latex_reals,
+    'PercentFraction': latex_reals,
+    # 'RealInterval' :        None    ,
+    # 'IntegerInterval' :     None    ,
+}
 
 def decoder(num, base):
     if int(num) != abs(num):
@@ -406,32 +439,7 @@ class _LatexVisitor(StreamBasedExpressionVisitor):
             )
 
 
-mathbb = r'\mathbb'
-
-
 def analyze_variable(vr):
-    domainMap = {
-        'Reals': mathbb + '{R}',
-        'PositiveReals': mathbb + '{R}_{> 0}',
-        'NonPositiveReals': mathbb + '{R}_{\\leq 0}',
-        'NegativeReals': mathbb + '{R}_{< 0}',
-        'NonNegativeReals': mathbb + '{R}_{\\geq 0}',
-        'Integers': mathbb + '{Z}',
-        'PositiveIntegers': mathbb + '{Z}_{> 0}',
-        'NonPositiveIntegers': mathbb + '{Z}_{\\leq 0}',
-        'NegativeIntegers': mathbb + '{Z}_{< 0}',
-        'NonNegativeIntegers': mathbb + '{Z}_{\\geq 0}',
-        'Boolean': '\\left\\{ \\text{True} , \\text{False} \\right \\}',
-        'Binary': '\\left\\{ 0 , 1 \\right \\}',
-        # 'Any': None,
-        # 'AnyWithNone': None,
-        'EmptySet': '\\varnothing',
-        'UnitInterval': mathbb + '{R}',
-        'PercentFraction': mathbb + '{R}',
-        # 'RealInterval' :        None    ,
-        # 'IntegerInterval' :     None    ,
-    }
-
     domainName = vr.domain.name
     varBounds = vr.bounds
     lowerBoundValue = varBounds[0]
@@ -1062,15 +1070,22 @@ def latex_printer(
     setMap = visitor.setMap
     setMap_inverse = {vl: ky for ky, vl in setMap.items()}
 
+    def generate_set_name(st, lcm):
+        if st in lcm:
+            return lcm[st][0]
+        if st.parent_block().component(st.name) is st:
+            return st.name.replace('_', r'\_')
+        if isinstance(st, SetOperator):
+            return _set_op_map[st._operator.strip()].join(
+                generate_set_name(s, lcm) for s in st.subsets(False)
+            )
+        else:
+            return str(st).replace('_', r'\_').replace('{', '\{').replace('}', '\}')
+
     # Handling the iterator indices
     defaultSetLatexNames = ComponentMap()
-    for ky, vl in setMap.items():
-        st = ky
-        defaultSetLatexNames[st] = st.name.replace('_', '\\_')
-        if st in ComponentSet(latex_component_map.keys()):
-            defaultSetLatexNames[st] = latex_component_map[st][
-                0
-            ]  # .replace('_', '\\_')
+    for ky in setMap:
+        defaultSetLatexNames[ky] = generate_set_name(ky, latex_component_map)
 
     latexLines = pstr.split('\n')
     for jj in range(0, len(latexLines)):
