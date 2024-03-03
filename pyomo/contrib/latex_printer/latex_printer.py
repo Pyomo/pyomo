@@ -281,8 +281,9 @@ def handle_indexTemplate_node(visitor, node, *args):
     else:
         visitor.setMap[node._set] = 'SET%d' % (len(visitor.setMap) + 1)
 
-    return '__I_PLACEHOLDER_8675309_GROUP_%s_%s__' % (
+    return '__I_PLACEHOLDER_8675309_GROUP_%s_%s_%s__' % (
         node._group,
+        node._id,
         visitor.setMap[node._set],
     )
 
@@ -304,8 +305,9 @@ def handle_numericGetItemExpression_node(visitor, node, *args):
 def handle_templateSumExpression_node(visitor, node, *args):
     pstr = ''
     for i in range(0, len(node._iters)):
-        pstr += '\\sum_{__S_PLACEHOLDER_8675309_GROUP_%s_%s__} ' % (
+        pstr += '\\sum_{__S_PLACEHOLDER_8675309_GROUP_%s_%s_%s__} ' % (
             node._iters[i][0]._group,
+            ','.join(str(it._id) for it in node._iters[i]),
             visitor.setMap[node._iters[i][0]._set],
         )
 
@@ -904,24 +906,33 @@ def latex_printer(
                 # setMap = visitor.setMap
                 # Multiple constraints are generated using a set
                 if len(indices) > 0:
-                    if indices[0]._set in ComponentSet(visitor.setMap.keys()):
-                        # already detected set, do nothing
-                        pass
-                    else:
-                        visitor.setMap[indices[0]._set] = 'SET%d' % (
-                            len(visitor.setMap.keys()) + 1
+                    conLine += ' \\qquad \\forall'
+
+                    _bygroups = {}
+                    for idx in indices:
+                        _bygroups.setdefault(idx._group, []).append(idx)
+                    for _group, idxs in _bygroups.items():
+                        if idxs[0]._set in visitor.setMap:
+                            # already detected set, do nothing
+                            pass
+                        else:
+                            visitor.setMap[idxs[0]._set] = 'SET%d' % (
+                                len(visitor.setMap) + 1
+                            )
+
+                        idxTag = ','.join(
+                            '__I_PLACEHOLDER_8675309_GROUP_%s_%s_%s__'
+                            % (idx._group, idx._id, visitor.setMap[idx._set])
+                            for idx in idxs
                         )
 
-                    idxTag = '__I_PLACEHOLDER_8675309_GROUP_%s_%s__' % (
-                        indices[0]._group,
-                        visitor.setMap[indices[0]._set],
-                    )
-                    setTag = '__S_PLACEHOLDER_8675309_GROUP_%s_%s__' % (
-                        indices[0]._group,
-                        visitor.setMap[indices[0]._set],
-                    )
+                        setTag = '__S_PLACEHOLDER_8675309_GROUP_%s_%s_%s__' % (
+                            indices[0]._group,
+                            ','.join(str(it._id) for it in idxs),
+                            visitor.setMap[indices[0]._set],
+                        )
 
-                    conLine += ' \\qquad \\forall %s \\in %s ' % (idxTag, setTag)
+                        conLine += ' %s \\in %s ' % (idxTag, setTag)
                 pstr += conLine
 
                 # Add labels as needed
@@ -1070,8 +1081,8 @@ def latex_printer(
             for word in splitLatex:
                 if "PLACEHOLDER_8675309_GROUP_" in word:
                     ifo = word.split("PLACEHOLDER_8675309_GROUP_")[1]
-                    gpNum, stName = ifo.split('_')
-                    if gpNum not in groupMap.keys():
+                    gpNum, idNum, stName = ifo.split('_')
+                    if gpNum not in groupMap:
                         groupMap[gpNum] = [stName]
                     if stName not in ComponentSet(uniqueSets):
                         uniqueSets.append(stName)
@@ -1088,10 +1099,7 @@ def latex_printer(
                 ix = int(ky[3:]) - 1
                 setInfo[ky]['setObject'] = setMap_inverse[ky]  # setList[ix]
                 setInfo[ky]['setRegEx'] = (
-                    r'__S_PLACEHOLDER_8675309_GROUP_([0-9*])_%s__' % (ky)
-                )
-                setInfo[ky]['sumSetRegEx'] = (
-                    r'sum_{__S_PLACEHOLDER_8675309_GROUP_([0-9*])_%s__}' % (ky)
+                    r'__S_PLACEHOLDER_8675309_GROUP_([0-9]+)_([0-9,]+)_%s__' % (ky,)
                 )
                 # setInfo[ky]['idxRegEx'] = r'__I_PLACEHOLDER_8675309_GROUP_[0-9*]_%s__'%(ky)
 
@@ -1116,27 +1124,41 @@ def latex_printer(
                     ed = stData[-1]
 
                     replacement = (
-                        r'sum_{ __I_PLACEHOLDER_8675309_GROUP_\1_%s__ = %d }^{%d}'
+                        r'sum_{ __I_PLACEHOLDER_8675309_GROUP_\1_\2_%s__ = %d }^{%d}'
                         % (ky, bgn, ed)
                     )
-                    ln = re.sub(setInfo[ky]['sumSetRegEx'], replacement, ln)
+                    ln = re.sub(
+                        'sum_{' + setInfo[ky]['setRegEx'] + '}', replacement, ln
+                    )
                 else:
                     # if the set is not continuous or the flag has not been set
-                    replacement = (
-                        r'sum_{ __I_PLACEHOLDER_8675309_GROUP_\1_%s__ \\in __S_PLACEHOLDER_8675309_GROUP_\1_%s__  }'
-                        % (ky, ky)
-                    )
-                    ln = re.sub(setInfo[ky]['sumSetRegEx'], replacement, ln)
+                    for _grp, _id in re.findall(
+                        'sum_{' + setInfo[ky]['setRegEx'] + '}', ln
+                    ):
+                        set_placeholder = '__S_PLACEHOLDER_8675309_GROUP_%s_%s_%s__' % (
+                            _grp,
+                            _id,
+                            ky,
+                        )
+                        i_placeholder = ','.join(
+                            '__I_PLACEHOLDER_8675309_GROUP_%s_%s_%s__' % (_grp, _, ky)
+                            for _ in _id.split(',')
+                        )
+                        replacement = r'sum_{ %s \in %s  }' % (
+                            i_placeholder,
+                            set_placeholder,
+                        )
+                        ln = ln.replace('sum_{' + set_placeholder + '}', replacement)
 
                 replacement = repr(defaultSetLatexNames[setInfo[ky]['setObject']])[1:-1]
                 ln = re.sub(setInfo[ky]['setRegEx'], replacement, ln)
 
             # groupNumbers = re.findall(r'__I_PLACEHOLDER_8675309_GROUP_([0-9*])_SET[0-9]*__',ln)
             setNumbers = re.findall(
-                r'__I_PLACEHOLDER_8675309_GROUP_[0-9*]_SET([0-9]*)__', ln
+                r'__I_PLACEHOLDER_8675309_GROUP_[0-9]+_[0-9]+_SET([0-9]+)__', ln
             )
-            groupSetPairs = re.findall(
-                r'__I_PLACEHOLDER_8675309_GROUP_([0-9*])_SET([0-9]*)__', ln
+            groupIdSetTuples = re.findall(
+                r'__I_PLACEHOLDER_8675309_GROUP_([0-9]+)_([0-9]+)_SET([0-9]+)__', ln
             )
 
             groupInfo = {}
@@ -1146,43 +1168,44 @@ def latex_printer(
                     'indices': [],
                 }
 
-            for gp in groupSetPairs:
-                if gp[0] not in groupInfo['SET' + gp[1]]['indices']:
-                    groupInfo['SET' + gp[1]]['indices'].append(gp[0])
+            for _gp, _id, _set in groupIdSetTuples:
+                if (_gp, _id) not in groupInfo['SET' + _set]['indices']:
+                    groupInfo['SET' + _set]['indices'].append((_gp, _id))
+
+            def get_index_names(st, lcm):
+                if st in lcm:
+                    return lcm[st][1]
+                elif isinstance(st, SetOperator):
+                    return sum(
+                        (get_index_names(s, lcm) for s in st.subsets(False)), start=[]
+                    )
+                elif st.dimen is not None:
+                    return [None] * st.dimen
+                else:
+                    return [Ellipsis]
 
             indexCounter = 0
             for ky, vl in groupInfo.items():
-                if vl['setObject'] in ComponentSet(latex_component_map.keys()):
-                    indexNames = latex_component_map[vl['setObject']][1]
-                    if len(indexNames) != 0:
-                        if len(indexNames) < len(vl['indices']):
-                            raise ValueError(
-                                'Insufficient number of indices provided to the overwrite dictionary for set %s'
-                                % (vl['setObject'].name)
-                            )
-                        for i in range(0, len(vl['indices'])):
-                            ln = ln.replace(
-                                '__I_PLACEHOLDER_8675309_GROUP_%s_%s__'
-                                % (vl['indices'][i], ky),
-                                indexNames[i],
-                            )
-                    else:
-                        for i in range(0, len(vl['indices'])):
-                            ln = ln.replace(
-                                '__I_PLACEHOLDER_8675309_GROUP_%s_%s__'
-                                % (vl['indices'][i], ky),
-                                alphabetStringGenerator(indexCounter),
-                            )
-                            indexCounter += 1
-                else:
-                    for i in range(0, len(vl['indices'])):
-                        ln = ln.replace(
-                            '__I_PLACEHOLDER_8675309_GROUP_%s_%s__'
-                            % (vl['indices'][i], ky),
-                            alphabetStringGenerator(indexCounter),
+                indexNames = get_index_names(vl['setObject'], latex_component_map)
+                nonNone = list(filter(None, indexNames))
+                if nonNone:
+                    if len(nonNone) < len(vl['indices']):
+                        raise ValueError(
+                            'Insufficient number of indices provided to the '
+                            'overwrite dictionary for set %s (expected %s, but got %s)'
+                            % (vl['setObject'].name, len(vl['indices']), indexNames)
                         )
+                else:
+                    indexNames = []
+                    for i in vl['indices']:
+                        indexNames.append(alphabetStringGenerator(indexCounter))
                         indexCounter += 1
-
+                for i in range(0, len(vl['indices'])):
+                    ln = ln.replace(
+                        '__I_PLACEHOLDER_8675309_GROUP_%s_%s_%s__'
+                        % (*vl['indices'][i], ky),
+                        indexNames[i],
+                    )
         latexLines[jj] = ln
 
     pstr = '\n'.join(latexLines)
