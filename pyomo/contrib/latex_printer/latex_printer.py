@@ -112,6 +112,7 @@ domainMap = {
     # 'IntegerInterval' :     None    ,
 }
 
+
 def decoder(num, base):
     if int(num) != abs(num):
         # Requiring an integer is nice, but not strictly necessary;
