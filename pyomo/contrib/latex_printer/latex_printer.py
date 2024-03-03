@@ -406,25 +406,28 @@ class _LatexVisitor(StreamBasedExpressionVisitor):
             )
 
 
+mathbb = r'\mathbb'
+
+
 def analyze_variable(vr):
     domainMap = {
-        'Reals': '\\mathds{R}',
-        'PositiveReals': '\\mathds{R}_{> 0}',
-        'NonPositiveReals': '\\mathds{R}_{\\leq 0}',
-        'NegativeReals': '\\mathds{R}_{< 0}',
-        'NonNegativeReals': '\\mathds{R}_{\\geq 0}',
-        'Integers': '\\mathds{Z}',
-        'PositiveIntegers': '\\mathds{Z}_{> 0}',
-        'NonPositiveIntegers': '\\mathds{Z}_{\\leq 0}',
-        'NegativeIntegers': '\\mathds{Z}_{< 0}',
-        'NonNegativeIntegers': '\\mathds{Z}_{\\geq 0}',
+        'Reals': mathbb + '{R}',
+        'PositiveReals': mathbb + '{R}_{> 0}',
+        'NonPositiveReals': mathbb + '{R}_{\\leq 0}',
+        'NegativeReals': mathbb + '{R}_{< 0}',
+        'NonNegativeReals': mathbb + '{R}_{\\geq 0}',
+        'Integers': mathbb + '{Z}',
+        'PositiveIntegers': mathbb + '{Z}_{> 0}',
+        'NonPositiveIntegers': mathbb + '{Z}_{\\leq 0}',
+        'NegativeIntegers': mathbb + '{Z}_{< 0}',
+        'NonNegativeIntegers': mathbb + '{Z}_{\\geq 0}',
         'Boolean': '\\left\\{ \\text{True} , \\text{False} \\right \\}',
         'Binary': '\\left\\{ 0 , 1 \\right \\}',
         # 'Any': None,
         # 'AnyWithNone': None,
         'EmptySet': '\\varnothing',
-        'UnitInterval': '\\mathds{R}',
-        'PercentFraction': '\\mathds{R}',
+        'UnitInterval': mathbb + '{R}',
+        'PercentFraction': mathbb + '{R}',
         # 'RealInterval' :        None    ,
         # 'IntegerInterval' :     None    ,
     }
