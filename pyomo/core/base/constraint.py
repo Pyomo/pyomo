@@ -9,10 +9,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from __future__ import annotations
 import sys
 import logging
 from weakref import ref as weakref_ref
 from pyomo.common.pyomo_typing import overload
+from typing import Union, Type
 
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.errors import DeveloperError
@@ -728,6 +730,18 @@ class Constraint(ActiveIndexedComponent):
     Violated = Infeasible
     Satisfied = Feasible
 
+    @overload
+    def __new__(cls: Type[Constraint], *args, **kwds) -> Union[ScalarConstraint, IndexedConstraint]:
+        ...
+
+    @overload
+    def __new__(cls: Type[ScalarConstraint], *args, **kwds) -> ScalarConstraint:
+        ...
+
+    @overload
+    def __new__(cls: Type[IndexedConstraint], *args, **kwds) -> IndexedConstraint:
+        ...
+
     def __new__(cls, *args, **kwds):
         if cls != Constraint:
             return super(Constraint, cls).__new__(cls)
@@ -1019,6 +1033,9 @@ class IndexedConstraint(Constraint):
     def add(self, index, expr):
         """Add a constraint with a given index."""
         return self.__setitem__(index, expr)
+    
+    def __getitem__(self, index) -> _GeneralConstraintData:
+        return super().__getitem__(index)
 
 
 @ModelComponentFactory.register("A list of constraint expressions.")
