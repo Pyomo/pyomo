@@ -17,7 +17,7 @@ import math
 import sys
 import weakref
 from pyomo.common.pyomo_typing import overload
-from typing import Union, Type, Any
+from typing import Union, Type, Any as typingAny
 from collections.abc import Iterator
 
 from pyomo.common.collections import ComponentSet
@@ -572,7 +572,7 @@ class _SetData(_SetDataBase):
     def subsets(self, expand_all_set_operators=None):
         return iter((self,))
 
-    def __iter__(self) -> Iterator[Any]:
+    def __iter__(self) -> Iterator[typingAny]:
         """Iterate over the set members
 
         Raises AttributeError for non-finite sets.  This must be
