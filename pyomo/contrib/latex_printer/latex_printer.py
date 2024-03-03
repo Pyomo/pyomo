@@ -776,12 +776,12 @@ def latex_printer(
     for vr in variableList:
         vrIdx += 1
         if isinstance(vr, ScalarVar):
-            variableMap[vr] = 'x_' + str(vrIdx)
+            variableMap[vr] = 'x_' + str(vrIdx) + '_'
         elif isinstance(vr, IndexedVar):
-            variableMap[vr] = 'x_' + str(vrIdx)
+            variableMap[vr] = 'x_' + str(vrIdx) + '_'
             for sd in vr.index_set().data():
                 vrIdx += 1
-                variableMap[vr[sd]] = 'x_' + str(vrIdx)
+                variableMap[vr[sd]] = 'x_' + str(vrIdx) + '_'
         else:
             raise DeveloperError(
                 'Variable is not a variable.  Should not happen.  Contact developers'
@@ -793,12 +793,12 @@ def latex_printer(
     for vr in parameterList:
         pmIdx += 1
         if isinstance(vr, ScalarParam):
-            parameterMap[vr] = 'p_' + str(pmIdx)
+            parameterMap[vr] = 'p_' + str(pmIdx) + '_'
         elif isinstance(vr, IndexedParam):
-            parameterMap[vr] = 'p_' + str(pmIdx)
+            parameterMap[vr] = 'p_' + str(pmIdx) + '_'
             for sd in vr.index_set().data():
                 pmIdx += 1
-                parameterMap[vr[sd]] = 'p_' + str(pmIdx)
+                parameterMap[vr[sd]] = 'p_' + str(pmIdx) + '_'
         else:
             raise DeveloperError(
                 'Parameter is not a parameter.  Should not happen.  Contact developers'
