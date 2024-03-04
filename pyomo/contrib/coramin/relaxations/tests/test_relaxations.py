@@ -5,7 +5,7 @@ from pyomo.core.base.block import _BlockData
 from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.expr.numeric_expr import ExpressionBase
 from typing import Sequence, List, Tuple
-import numpy as np
+from pyomo.common.dependencies import numpy as np
 import itertools
 from pyomo.contrib import appsi
 from pyomo.core.expr.visitor import identify_variables

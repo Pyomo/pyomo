@@ -27,7 +27,7 @@ try:
     metis_available = True
 except ImportError:
     metis_available = False
-import numpy as np
+from pyomo.common.dependencies import numpy as np
 import math
 from pyomo.core.base.block import declare_custom_block, _BlockData
 from pyomo.contrib.coramin.utils.pyomo_utils import get_objective

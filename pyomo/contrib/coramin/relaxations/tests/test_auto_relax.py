@@ -5,7 +5,7 @@ from pyomo.core.expr.calculus.diff_with_pyomo import reverse_sd
 from pyomo.core.expr.visitor import identify_variables, identify_components
 import math
 from pyomo.common.collections import ComponentSet
-import numpy as np
+from pyomo.common.dependencies import numpy as np
 from pyomo.core.base.param import _ParamData, ScalarParam
 from pyomo.core.expr.sympy_tools import sympyify_expression
 from pyomo.contrib import appsi

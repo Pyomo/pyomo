@@ -1,5 +1,5 @@
 from mpi4py import MPI
-import numpy as np
+from pyomo.common.dependencies import numpy as np
 import sys
 import os
 

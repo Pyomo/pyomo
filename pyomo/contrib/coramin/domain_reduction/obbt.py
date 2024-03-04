@@ -7,7 +7,7 @@ from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.contrib import appsi
 import logging
 import traceback
-import numpy as np
+from pyomo.common.dependencies import numpy as np
 import math
 import time
 from typing import Union, Sequence, Optional, List

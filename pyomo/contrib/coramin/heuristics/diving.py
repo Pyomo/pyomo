@@ -5,7 +5,7 @@ from pyomo.core.base.var import _GeneralVarData
 from typing import Tuple, List, Sequence, Optional, MutableMapping
 from pyomo.contrib import appsi
 from pyomo.contrib.coramin.utils.pyomo_utils import get_objective
-import numpy as np
+from pyomo.common.dependencies import numpy as np
 import math
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.core.expr.visitor import identify_variables

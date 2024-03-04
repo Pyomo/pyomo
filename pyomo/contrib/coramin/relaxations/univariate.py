@@ -2,7 +2,7 @@ import pyomo.environ as pyo
 from pyomo.contrib.coramin.utils.coramin_enums import RelaxationSide, FunctionShape
 from .relaxations_base import BasePWRelaxationData, _check_cut
 from .custom_block import declare_custom_block
-import numpy as np
+from pyomo.common.dependencies import numpy as np
 import math
 import scipy.optimize
 from ._utils import check_var_pts, _get_bnds_list, _get_bnds_tuple

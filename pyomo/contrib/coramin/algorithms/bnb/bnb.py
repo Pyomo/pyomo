@@ -16,7 +16,7 @@ from pyomo.contrib.coramin.domain_reduction.obbt import perform_obbt
 from pyomo.contrib.coramin.cutting_planes.base import CutGenerator
 from typing import Tuple, List, Optional
 import math
-import numpy as np
+from pyomo.common.dependencies import numpy as np
 import logging
 from pyomo.contrib.appsi.base import (
     Solver,

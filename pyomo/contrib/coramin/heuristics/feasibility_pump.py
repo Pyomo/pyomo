@@ -10,7 +10,7 @@ import math
 import time
 from pyomo.common.modeling import unique_component_name
 import random
-import numpy as np
+from pyomo.common.dependencies import numpy as np
 
 
 def collect_integer_vars(

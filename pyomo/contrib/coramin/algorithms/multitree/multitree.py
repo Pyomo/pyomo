@@ -42,7 +42,7 @@ from pyomo.common.collections.component_set import ComponentSet
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import BoundsManager
-import numpy as np
+from pyomo.common.dependencies import numpy as np
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.contrib.coramin.clone import clone_shallow_active_flat, get_clone_and_var_map
 from pyomo.contrib.coramin.algorithms.cut_gen import AlphaBBConfig, find_cut_generators

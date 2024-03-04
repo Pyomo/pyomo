@@ -6,7 +6,7 @@ import pyomo.environ as pe
 from pyomo.core.expr.numvalue import is_fixed
 import math
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
-import numpy as np
+from pyomo.common.dependencies import numpy as np
 from pyomo.contrib.coramin.utils.coramin_enums import EigenValueBounder
 from pyomo.core.base.block import _BlockData
 from typing import Optional, MutableMapping
