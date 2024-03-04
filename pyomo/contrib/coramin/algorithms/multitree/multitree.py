@@ -909,7 +909,7 @@ class MultiTree(Solver):
 
         # prevent the model from being garbage collected;
         # otherwise the variables will become "unattached"
-        self.truely_original_model = model
+        self.truly_original_model = model
 
         self._original_model, self._relaxation = clone_shallow_active_flat(model, 2)
         model = self._original_model
