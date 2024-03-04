@@ -86,7 +86,7 @@ jobs:
           PACKAGES: pytest-qt
 
         - os: ubuntu-latest
-          python: '3.10'
+          python: 3.9
           other: /mpi
           mpi: 3
           skip_doctest: 1
