@@ -4,6 +4,10 @@ import pyomo.environ as pyo
 from pyomo.contrib import appsi
 
 
+ipopt_available = appsi.solvers.Ipopt().available()
+
+
+@unittest.skipUnless(ipopt_available, 'ipopt is not available')
 class TestBoundsTightener(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
