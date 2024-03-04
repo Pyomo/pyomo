@@ -86,7 +86,7 @@ jobs:
           PACKAGES: pytest-qt
 
         - os: ubuntu-latest
-          python: 3.9
+          python: '3.10'
           other: /mpi
           mpi: 3
           skip_doctest: 1
@@ -333,10 +333,11 @@ jobs:
                 CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES $PKG"
             fi
         done
+        echo ""
         echo "*** Install Pyomo dependencies ***"
         # Note: this will fail the build if any installation fails (or
         # possibly if it outputs messages to stderr)
-        conda install --update-deps -q -y $CONDA_DEPENDENCIES
+        conda install --update-deps -y $CONDA_DEPENDENCIES
         if test -z "${{matrix.slim}}"; then
             PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
             echo "Installing for $PYVER"
