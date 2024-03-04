@@ -276,6 +276,7 @@ setup_kwargs = dict(
             #'pathos',   # requested for #963, but PR currently closed
             'pint',  # units
             'plotly',  # incidence_analysis
+            'pybnb',  # coramin
             'python-louvain',  # community_detection
             'pyyaml',  # core
             # qtconsole also requires a supported Qt version (PyQt5 or PySide6).
