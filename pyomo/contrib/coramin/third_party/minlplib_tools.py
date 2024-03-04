@@ -1,12 +1,15 @@
 import os
-from zipfile import ZipFile
-from pyomo.common import fileutils
 from pyomo.common import download
-import enum
 import math
 import csv
 from collections.abc import Iterable
 import logging
+from xml.etree import ElementTree
+import pyomo.environ as pe
+from pyomo.core.base.block import ScalarBlock
+from pyomo.core.base.var import IndexedVar
+from pyomo.core.base.constraint import IndexedConstraint
+from pyomo.core.expr.numeric_expr import LinearExpression
 
 
 logger = logging.getLogger(__name__)
@@ -416,3 +419,306 @@ def get_minlplib(download_dir=None, format='osil', problem_name=None):
         downloader.get_binary_file(
             'http://www.minlplib.org/' + format + '/' + problem_name + '.' + format
         )
+
+
+def _handle_negate_osil(node, var_map):
+    assert len(node) == 1
+    return -_parse_nonlinear_expression_osil(node[0], var_map)
+
+
+def _handle_divide_osil(node, var_map):
+    assert len(node) == 2
+    arg1 = _parse_nonlinear_expression_osil(node[0], var_map)
+    arg2 = _parse_nonlinear_expression_osil(node[1], var_map)
+    return arg1 / arg2
+
+
+def _handle_sum_osil(node, var_map):
+    res = 0
+    for i in node:
+        arg = _parse_nonlinear_expression_osil(i, var_map)
+        res += arg
+    return res
+
+
+def _handle_product_osil(node, var_map):
+    res = 1
+    for i in node:
+        arg = _parse_nonlinear_expression_osil(i, var_map)
+        res *= arg
+    return res
+
+
+def _handle_variable_osil(node, var_map):
+    assert len(node) == 0
+    ndx = int(node.attrib['idx'])
+    v = var_map[ndx]
+    if 'coef' in node.attrib:
+        coef = float(node.attrib['coef'])
+    else:
+        coef = 1
+    return v * coef
+
+
+def _handle_log_osil(node, var_map):
+    assert len(node) == 1
+    return pe.log(_parse_nonlinear_expression_osil(node[0], var_map))
+
+
+def _handle_exp_osil(node, var_map):
+    assert len(node) == 1
+    return pe.exp(_parse_nonlinear_expression_osil(node[0], var_map))
+
+
+def _handle_number_osil(node, var_map):
+    assert len(node) == 0
+    return float(node.attrib['value'])
+
+
+def _handle_square_osil(node, var_map):
+    assert len(node) == 1
+    return _parse_nonlinear_expression_osil(node[0], var_map) ** 2
+
+
+def _handle_power_osil(node, var_map):
+    assert len(node) == 2
+    arg1 = _parse_nonlinear_expression_osil(node[0], var_map)
+    arg2 = _parse_nonlinear_expression_osil(node[1], var_map)
+    return arg1**arg2
+
+
+_osil_operator_map = dict()
+_osil_operator_map['{os.optimizationservices.org}negate'] = _handle_negate_osil
+_osil_operator_map['{os.optimizationservices.org}divide'] = _handle_divide_osil
+_osil_operator_map['{os.optimizationservices.org}sum'] = _handle_sum_osil
+_osil_operator_map['{os.optimizationservices.org}product'] = _handle_product_osil
+_osil_operator_map['{os.optimizationservices.org}variable'] = _handle_variable_osil
+_osil_operator_map['{os.optimizationservices.org}ln'] = _handle_log_osil
+_osil_operator_map['{os.optimizationservices.org}exp'] = _handle_exp_osil
+_osil_operator_map['{os.optimizationservices.org}number'] = _handle_number_osil
+_osil_operator_map['{os.optimizationservices.org}square'] = _handle_square_osil
+_osil_operator_map['{os.optimizationservices.org}power'] = _handle_power_osil
+
+
+def _parse_nonlinear_expression_osil(node, var_map):
+    return _osil_operator_map[node.tag](node, var_map)
+
+
+def parse_osil_file(fname) -> ScalarBlock:
+    tree = ElementTree.parse(fname)
+    ns = '{os.optimizationservices.org}'
+    root = tree.getroot()
+
+    instance_data = list(root.iter(ns + 'instanceData'))
+    assert len(instance_data) == 1
+    instance_data = instance_data[0]
+    acceptable_nodes = set(
+        ns + i
+        for i in [
+            'variables',
+            'objectives',
+            'constraints',
+            'linearConstraintCoefficients',
+            'quadraticCoefficients',
+            'nonlinearExpressions',
+        ]
+    )
+    for i in instance_data:
+        if i.tag not in acceptable_nodes:
+            raise ValueError(f'Unexpected xml node: {i.tag}')
+    instance_data_nodes = set(i.tag for i in instance_data)
+
+    m = ScalarBlock(concrete=True)
+
+    variables_node = list(instance_data.iter(ns + 'variables'))[0]
+    vnames = list()
+    for v in variables_node.iter(ns + 'var'):
+        vnames.append(v.attrib['name'])
+
+    m.var_names = pe.Set(initialize=vnames)
+    m.vars = IndexedVar(m.var_names)
+
+    type_map = {'B': pe.Binary}
+
+    for v in variables_node.iter(ns + 'var'):
+        vdata = v.attrib
+        vname = vdata.pop('name')
+        if 'lb' in vdata:
+            vlb = vdata.pop('lb')
+            if vlb == '-INF':
+                vlb = None
+            else:
+                vlb = float(vlb)
+        else:
+            vlb = 0
+        if 'ub' in vdata:
+            vub = float(vdata.pop('ub'))
+        else:
+            vub = None
+        if 'type' in vdata:
+            if vdata['type'] not in type_map:
+                raise ValueError(f"Unrecognized variable type: {vdata['type']}")
+            vtype = type_map[vdata.pop('type')]
+        else:
+            vtype = pe.Reals
+        m.vars[vname].setlb(vlb)
+        m.vars[vname].setub(vub)
+        m.vars[vname].domain = vtype
+        assert len(vdata) == 0
+
+    con_names = []
+    con_lbs = []
+    con_ubs = []
+    constraints_node = list(instance_data.iter(ns + 'constraints'))[0]
+    for c in constraints_node.iter(ns + 'con'):
+        cdata = c.attrib
+        cname = cdata.pop('name')
+        if 'lb' in cdata:
+            clb = float(cdata.pop('lb'))
+        else:
+            clb = None
+        if 'ub' in cdata:
+            cub = float(cdata.pop('ub'))
+        else:
+            cub = None
+        con_names.append(cname)
+        con_lbs.append(clb)
+        con_ubs.append(cub)
+
+    # osil format specifies the linear parts of the constraints in CSR format
+    if (ns + 'linearConstraintCoefficients') in instance_data_nodes:
+        linpart = list(instance_data.iter(ns + 'linearConstraintCoefficients'))
+        assert len(linpart) == 1
+        linpart = linpart[0]
+        rowstart = list(linpart.iter(ns + 'start'))[0]
+        colind = list(linpart.iter(ns + 'colIdx'))[0]
+        vals = list(linpart.iter(ns + 'value'))[0]
+
+        tmp = list()
+        for i in rowstart:
+            s = int(i.text)
+            n = int(i.attrib.pop('mult', 1)) - 1
+            step = int(i.attrib.pop('incr', 0))
+            tmp.append(s)
+            for _ in range(n):
+                s += step
+                tmp.append(s)
+        rowstart = tmp
+        assert len(rowstart) == len(con_names) + 1
+
+        tmp = list()
+        for i in colind:
+            s = int(i.text)
+            n = int(i.attrib.pop('mult', 1)) - 1
+            step = int(i.attrib.pop('incr', 0))
+            tmp.append(s)
+            for _ in range(n):
+                s += step
+                tmp.append(s)
+        colind = tmp
+
+        tmp = list()
+        for i in vals:
+            s = float(i.text)
+            n = int(i.attrib.pop('mult', 1))
+            for _ in range(n):
+                tmp.append(s)
+        vals = tmp
+
+        linear_parts = list()
+        for row in range(len(con_names)):
+            if rowstart[row] == rowstart[row + 1]:
+                linear_parts.append(0)
+            else:
+                coefs = vals[rowstart[row] : rowstart[row + 1]]
+                var_indices = colind[rowstart[row] : rowstart[row + 1]]
+                _vars = [m.vars[vnames[i]] for i in var_indices]
+                linear_parts.append(
+                    LinearExpression(constant=0, linear_coefs=coefs, linear_vars=_vars)
+                )
+    else:
+        linear_parts = [0] * len(con_names)
+
+    quad_exprs = [0] * len(con_names)
+    obj_expr = 0
+    if (ns + 'quadraticCoefficients') in instance_data_nodes:
+        quadpart = list(instance_data.iter(ns + 'quadraticCoefficients'))
+        assert len(quadpart) == 1
+        quadpart = quadpart[0]
+        for i in quadpart:
+            row_ndx = int(i.attrib['idx'])
+            col1 = int(i.attrib['idxOne'])
+            col2 = int(i.attrib['idxTwo'])
+            v1 = m.vars[vnames[col1]]
+            v2 = m.vars[vnames[col2]]
+            coef = float(i.attrib['coef'])
+            if row_ndx == -1:
+                obj_expr += coef * (v1 * v2)
+            else:
+                quad_exprs[row_ndx] += coef * (v1 * v2)
+
+    var_map = dict()
+    for var_ndx, var_name in enumerate(vnames):
+        var_map[var_ndx] = m.vars[var_name]
+    nl_exprs = [0] * len(con_names)
+    if (ns + 'nonlinearExpressions') in instance_data_nodes:
+        nlpart = list(instance_data.iter(ns + 'nonlinearExpressions'))
+        assert len(nlpart) == 1
+        nlpart = nlpart[0]
+        for i in nlpart:
+            row_ndx = int(i.attrib['idx'])
+            assert len(i) == 1
+            expr = _parse_nonlinear_expression_osil(i[0], var_map)
+            if row_ndx == -1:
+                obj_expr += expr
+            else:
+                nl_exprs[row_ndx] = expr
+
+    m.con_names = pe.Set(initialize=con_names)
+    m.cons = IndexedConstraint(m.con_names)
+    for ndx, cname in enumerate(con_names):
+        l = linear_parts[ndx]
+        q = quad_exprs[ndx]
+        n = nl_exprs[ndx]
+        lb = con_lbs[ndx]
+        ub = con_ubs[ndx]
+        if lb == ub and lb is not None:
+            m.cons[cname] = l + q + n == lb
+        else:
+            m.cons[cname] = (lb, l + q + n, ub)
+
+    if (ns + 'objectives') in instance_data_nodes:
+        obj_node = list(instance_data.iter(ns + 'objectives'))
+        assert len(obj_node) == 1
+        obj_node = obj_node[0]
+        # yes - this really does need repeated
+        assert len(obj_node) == 1
+        obj_node = obj_node[0]
+        sense_str = obj_node.attrib['maxOrMin']
+        if sense_str == 'min':
+            sense = pe.minimize
+        else:
+            assert sense_str == 'max'
+            sense = pe.maximize
+
+        lin_coefs = list()
+        lin_vars = list()
+        obj_const = float(obj_node.attrib.pop('constant', 0))
+        for node in obj_node:
+            var_ndx = int(node.attrib['idx'])
+            var_name = vnames[var_ndx]
+            coef = float(node.text)
+            lin_coefs.append(coef)
+            lin_vars.append(m.vars[var_name])
+        if len(lin_coefs) > 0:
+            obj_expr += LinearExpression(
+                constant=obj_const, linear_coefs=lin_coefs, linear_vars=lin_vars
+            )
+        else:
+            obj_expr += obj_const
+    else:
+        sense = pe.minimize
+
+    m.objective = pe.Objective(expr=obj_expr, sense=sense)
+
+    return m
