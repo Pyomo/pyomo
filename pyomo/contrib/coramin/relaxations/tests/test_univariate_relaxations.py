@@ -4,9 +4,10 @@ import pyomo.environ as pe
 from pyomo.contrib import coramin
 import numpy as np
 from pyomo.contrib.coramin.relaxations.segments import compute_k_segment_points
+from pyomo.contrib import appsi
 
 
-gurobi_available = pe.SolverFactory('gurobi_direct').available()
+gurobi_available = appsi.solvers.Gurobi().available()
 
 
 @unittest.skipUnless(gurobi_available, 'Gurobi is not available')

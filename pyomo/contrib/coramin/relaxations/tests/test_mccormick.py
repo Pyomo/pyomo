@@ -4,7 +4,7 @@ from pyomo.contrib import coramin
 from pyomo.contrib import appsi
 
 
-gurobi_available = pyo.SolverFactory('gurobi_direct').available()
+gurobi_available = appsi.solvers.Gurobi().available()
 
 
 @unittest.skipUnless(gurobi_available, 'Gurobi is not available')
