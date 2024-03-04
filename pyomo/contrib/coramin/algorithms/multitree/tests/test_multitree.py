@@ -33,16 +33,6 @@ def _get_sol(pname):
         if vname == 'objvar':
             continue
         assert vname.startswith('x') or vname.startswith('b')
-        if vname.startswith('x'):
-            ndx = int(vname.replace('x', '')) - 1
-            if pname in start_x1_set:
-                ndx += 1
-            vname = f'x{ndx}'
-        else:
-            ndx = int(vname.replace('b', '')) - 1
-            if pname in start_x1_set:
-                ndx += 1
-            vname = f'b{ndx}'
         res[vname] = vval
     f.close()
     return res
@@ -111,7 +101,7 @@ class TestMultiTreeWithMINLPLib(Helper):
         expected_by_str = self.primal_sol[pname]
         expected_by_var = pe.ComponentMap()
         for vname, vval in expected_by_str.items():
-            v = getattr(m, vname)
+            v = m.vars[vname]
             expected_by_var[v] = vval
         got = res.solution_loader.get_primals()
         for v, val in expected_by_var.items():

@@ -538,7 +538,7 @@ def parse_osil_file(fname) -> ScalarBlock:
     m.var_names = pe.Set(initialize=vnames)
     m.vars = IndexedVar(m.var_names)
 
-    type_map = {'B': pe.Binary}
+    type_map = {'B': pe.Binary, 'I': pe.Integers}
 
     for v in variables_node.iter(ns + 'var'):
         vdata = v.attrib

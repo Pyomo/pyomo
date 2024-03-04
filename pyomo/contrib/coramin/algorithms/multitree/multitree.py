@@ -907,6 +907,10 @@ class MultiTree(Solver):
 
         model, self._orig_var_map = get_clone_and_var_map(model)
 
+        # prevent the model from being garbage collected; 
+        # otherwise the variables will become "unattached"
+        self.truely_original_model = model
+
         self._original_model, self._relaxation = clone_shallow_active_flat(model, 2)
         model = self._original_model
 
