@@ -55,7 +55,11 @@ class Simplifier(object):
             return simplify_with_ginac(expr, self.gi)
         else:
             if not self.suppress_no_ginac_warnings:
-                msg = f"GiNaC does not seem to be available. Using SymPy. Note that the GiNac interface is significantly faster."
+                msg = (
+                    "GiNaC does not seem to be available. Using SymPy. "
+                    + "Note that the GiNac interface is significantly faster."
+                )
                 logger.warning(msg)
                 warnings.warn(msg)
+                self.suppress_no_ginac_warnings = True
             return simplify_with_sympy(expr)
