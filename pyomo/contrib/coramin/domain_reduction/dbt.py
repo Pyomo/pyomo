@@ -25,7 +25,7 @@ try:
     import metis
 
     metis_available = True
-except ImportError:
+except:
     metis_available = False
 from pyomo.common.dependencies import numpy as np
 import math
