@@ -12,6 +12,7 @@
 from pyomo.core.expr.sympy_tools import sympy2pyomo_expression, sympyify_expression
 from pyomo.core.expr.numeric_expr import NumericExpression
 from pyomo.core.expr.numvalue import is_fixed, value
+from pyomo.core.expr import native_numeric_types
 import logging
 import warnings
 
@@ -28,6 +29,8 @@ logger = logging.getLogger(__name__)
 
 
 def simplify_with_sympy(expr: NumericExpression):
+    if type(expr) in native_numeric_types:
+        return expr
     om, se = sympyify_expression(expr)
     se = se.simplify()
     new_expr = sympy2pyomo_expression(se, om)
