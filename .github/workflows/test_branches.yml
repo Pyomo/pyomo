@@ -88,7 +88,7 @@ jobs:
         - os: ubuntu-latest
           python: '3.10'
           other: /mpi
-          mpi: 3
+          mpi: 2
           skip_doctest: 1
           TARGET: linux
           PYENV: conda
