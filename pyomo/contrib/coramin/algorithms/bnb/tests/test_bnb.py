@@ -1,7 +1,7 @@
 import math
 
 from pyomo.contrib import coramin
-from pyomo.contrib.coramin.third_party.minlplib_tools import get_minlplib
+from pyomo.contrib.coramin.third_party.minlplib_tools import get_minlplib, parse_osil_file
 from pyomo.common import unittest
 from pyomo.contrib import appsi
 import os
@@ -10,7 +10,6 @@ import math
 from pyomo.common import download
 import pyomo.environ as pe
 from pyomo.core.base.block import _BlockData
-import importlib
 import shutil
 
 
@@ -88,17 +87,16 @@ class TestBnBWithMINLPLib(Helper):
     def tearDownClass(self) -> None:
         current_dir = os.getcwd()
         for pname in self.test_problems.keys():
-            os.remove(os.path.join(current_dir, 'minlplib', 'py', f'{pname}.py'))
-        shutil.rmtree(os.path.join(current_dir, 'minlplib', 'py'))
+            os.remove(os.path.join(current_dir, 'minlplib', 'osil', f'{pname}.osil'))
+        shutil.rmtree(os.path.join(current_dir, 'minlplib', 'osil'))
         os.rmdir(os.path.join(current_dir, 'minlplib'))
         for pname in self.primal_sol.keys():
             os.remove(os.path.join(current_dir, f'{pname}.sol'))
 
     def get_model(self, pname):
         current_dir = os.getcwd()
-        fname = os.path.join('minlplib', 'py', f'{pname}')
-        fname = fname.replace('/', '.')
-        m = importlib.import_module(fname).m
+        fname = os.path.join(current_dir, 'minlplib', 'osil', f'{pname}.osil')
+        m = parse_osil_file(fname)
         return m
 
     def _check_primal_sol(self, pname, m: _BlockData, res: appsi.base.Results):
