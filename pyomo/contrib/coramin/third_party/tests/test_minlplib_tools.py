@@ -27,7 +27,9 @@ class TestMINLPLibTools(unittest.TestCase):
         self.assertTrue(
             os.path.exists(os.path.join(current_dir, 'minlplib', 'instancedata.csv'))
         )
-        cases = coramin.third_party.filter_minlplib_instances(instancedata_filename=fname)
+        cases = coramin.third_party.filter_minlplib_instances(
+            instancedata_filename=fname
+        )
         self.assertEqual(len(cases), 1595 + 7)
         os.remove(os.path.join(current_dir, 'minlplib', 'instancedata.csv'))
         os.rmdir(os.path.join(current_dir, 'minlplib'))
@@ -281,7 +283,11 @@ class TestMINLPLibTools(unittest.TestCase):
 
     def test_get_minlplib_problem(self):
         current_dir = this_file_dir()
-        coramin.third_party.get_minlplib(download_dir=os.path.join(current_dir, 'minlplib', 'gms'), format='gms', problem_name='ex4_1_1')
+        coramin.third_party.get_minlplib(
+            download_dir=os.path.join(current_dir, 'minlplib', 'gms'),
+            format='gms',
+            problem_name='ex4_1_1',
+        )
         files = os.listdir(os.path.join(current_dir, 'minlplib', 'gms'))
         self.assertEqual(len(files), 1)
         self.assertEqual(files[0], 'ex4_1_1.gms')

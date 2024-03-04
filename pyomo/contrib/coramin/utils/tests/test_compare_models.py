@@ -62,7 +62,10 @@ class TestCompareModels(unittest.TestCase):
         self.assertFalse(m.c3.active)
         self.assertTrue(m.c4.active)
         self.assertTrue(
-            self._compare_expressions(m.c1.body, [m.x1 + m.x2 + 1, m.x2 + m.x1 + 1, 1 + m.x1 + m.x2, 1 + m.x2 + m.x1])
+            self._compare_expressions(
+                m.c1.body,
+                [m.x1 + m.x2 + 1, m.x2 + m.x1 + 1, 1 + m.x1 + m.x2, 1 + m.x2 + m.x1],
+            )
         )
         self.assertTrue(self._compare_expressions(m.c2.body, [m.x2 + 1, 1 + m.x2]))
         self.assertEqual(m.c1.lb, 1)
@@ -85,7 +88,10 @@ class TestCompareModels(unittest.TestCase):
         self.assertFalse(m.c3.active)
         self.assertFalse(m.c4.active)
         self.assertTrue(
-            self._compare_expressions(m.c1.body, [m.x1 + m.x2 + 1, m.x2 + m.x1 + 1, 1 + m.x1 + m.x2, 1 + m.x2 + m.x1])
+            self._compare_expressions(
+                m.c1.body,
+                [m.x1 + m.x2 + 1, m.x2 + m.x1 + 1, 1 + m.x1 + m.x2, 1 + m.x2 + m.x1],
+            )
         )
         self.assertTrue(self._compare_expressions(m.c2.body, [m.x2 + 1, 1 + m.x2]))
         self.assertEqual(m.c1.lb, 1)

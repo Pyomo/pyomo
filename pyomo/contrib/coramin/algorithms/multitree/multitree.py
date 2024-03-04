@@ -907,7 +907,7 @@ class MultiTree(Solver):
 
         model, self._orig_var_map = get_clone_and_var_map(model)
 
-        # prevent the model from being garbage collected; 
+        # prevent the model from being garbage collected;
         # otherwise the variables will become "unattached"
         self.truely_original_model = model
 

@@ -1,7 +1,10 @@
 import math
 
 from pyomo.contrib import coramin
-from pyomo.contrib.coramin.third_party.minlplib_tools import get_minlplib, parse_osil_file
+from pyomo.contrib.coramin.third_party.minlplib_tools import (
+    get_minlplib,
+    parse_osil_file,
+)
 from pyomo.common import unittest
 from pyomo.contrib import appsi
 import os
