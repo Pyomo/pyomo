@@ -4,7 +4,7 @@ import os
 from pyomo.common.fileutils import this_file_dir
 from urllib.request import urlopen
 from socket import timeout
-
+import shutil
 
 try:
     urlopen('http://www.minlplib.org', timeout=3)
@@ -13,14 +13,22 @@ except timeout:
 
 
 class TestMINLPLibTools(unittest.TestCase):
+    @classmethod
+    def tearDownClass(self) -> None:
+        current_dir = this_file_dir()
+        print(current_dir)
+        if os.path.exists(os.path.join(current_dir, 'minlplib')):
+            shutil.rmtree(os.path.join(current_dir, 'minlplib'))
+
     def test_get_minlplib_instancedata(self):
-        current_dir = os.getcwd()
-        coramin.third_party.get_minlplib_instancedata()
+        current_dir = this_file_dir()
+        fname = os.path.join(current_dir, 'minlplib', 'instancedata.csv')
+        coramin.third_party.get_minlplib_instancedata(target_filename=fname)
         self.assertTrue(
             os.path.exists(os.path.join(current_dir, 'minlplib', 'instancedata.csv'))
         )
-        cases = coramin.third_party.filter_minlplib_instances()
-        self.assertEqual(len(cases), 1595)
+        cases = coramin.third_party.filter_minlplib_instances(instancedata_filename=fname)
+        self.assertEqual(len(cases), 1595 + 7)
         os.remove(os.path.join(current_dir, 'minlplib', 'instancedata.csv'))
         os.rmdir(os.path.join(current_dir, 'minlplib'))
 
@@ -30,7 +38,7 @@ class TestMINLPLibTools(unittest.TestCase):
             target_filename=os.path.join(current_dir, 'minlplib', 'instancedata.csv')
         )
 
-        total_cases = 1595
+        total_cases = 1595 + 7
         cases = coramin.third_party.filter_minlplib_instances(
             instancedata_filename=os.path.join(
                 current_dir, 'minlplib', 'instancedata.csv'
@@ -63,7 +71,7 @@ class TestMINLPLibTools(unittest.TestCase):
             ),
             acceptable_probtype=['QCQP', 'MIQCQP', 'MBQCQP'],
         )
-        self.assertEqual(len(cases), 56)  # regression
+        self.assertEqual(len(cases), 56 + 2)  # regression
 
         cases = coramin.third_party.filter_minlplib_instances(
             instancedata_filename=os.path.join(
@@ -91,7 +99,7 @@ class TestMINLPLibTools(unittest.TestCase):
             min_nvars=2,
             max_nvars=200000,
         )
-        self.assertEqual(len(cases), total_cases - 16 - 1)  # unit
+        self.assertEqual(len(cases), total_cases - 16 - 1 - 2)  # unit
 
         cases = coramin.third_party.filter_minlplib_instances(
             instancedata_filename=os.path.join(
@@ -115,7 +123,7 @@ class TestMINLPLibTools(unittest.TestCase):
             ),
             max_ncons=164000,
         )
-        self.assertEqual(len(cases), total_cases - 1)  # unit
+        self.assertEqual(len(cases), total_cases - 4)  # unit
 
         cases = coramin.third_party.filter_minlplib_instances(
             instancedata_filename=os.path.join(
@@ -140,7 +148,7 @@ class TestMINLPLibTools(unittest.TestCase):
             ),
             max_nnlvars=199998,
         )
-        self.assertEqual(len(cases), total_cases - 1)  # unit
+        self.assertEqual(len(cases), total_cases - 2)  # unit
 
         cases = coramin.third_party.filter_minlplib_instances(
             instancedata_filename=os.path.join(
@@ -180,7 +188,7 @@ class TestMINLPLibTools(unittest.TestCase):
             ),
             max_nlincons=164319,
         )
-        self.assertEqual(len(cases), total_cases - 1)  # unit
+        self.assertEqual(len(cases), total_cases - 3)  # unit
 
         cases = coramin.third_party.filter_minlplib_instances(
             instancedata_filename=os.path.join(
@@ -188,7 +196,7 @@ class TestMINLPLibTools(unittest.TestCase):
             ),
             max_nquadcons=139999,
         )
-        self.assertEqual(len(cases), total_cases - 1)  # unit
+        self.assertEqual(len(cases), total_cases - 2)  # unit
 
         cases = coramin.third_party.filter_minlplib_instances(
             instancedata_filename=os.path.join(
@@ -236,7 +244,7 @@ class TestMINLPLibTools(unittest.TestCase):
             ),
             max_nlaghessiandiagnz=100000,
         )
-        self.assertEqual(len(cases), total_cases - 1)  # unit
+        self.assertEqual(len(cases), total_cases - 3)  # unit
 
         cases = coramin.third_party.filter_minlplib_instances(
             instancedata_filename=os.path.join(
@@ -252,7 +260,7 @@ class TestMINLPLibTools(unittest.TestCase):
             ),
             acceptable_objcurvature=['linear', 'convex'],
         )
-        self.assertEqual(len(cases), 1220)  # unit
+        self.assertEqual(len(cases), 1220 + 7)  # unit
 
         os.remove(os.path.join(current_dir, 'minlplib', 'instancedata.csv'))
         os.rmdir(os.path.join(current_dir, 'minlplib'))
@@ -263,7 +271,7 @@ class TestMINLPLibTools(unittest.TestCase):
             download_dir=os.path.join(current_dir, 'minlplib', 'osil')
         )
         files = os.listdir(os.path.join(current_dir, 'minlplib', 'osil'))
-        self.assertEqual(len(files), 1594)
+        self.assertEqual(len(files), 1594 + 7)
         for i in files:
             self.assertTrue(i.endswith('.osil'))
         for i in os.listdir(os.path.join(current_dir, 'minlplib', 'osil')):
@@ -272,8 +280,8 @@ class TestMINLPLibTools(unittest.TestCase):
         os.rmdir(os.path.join(current_dir, 'minlplib'))
 
     def test_get_minlplib_problem(self):
-        current_dir = os.getcwd()
-        coramin.third_party.get_minlplib(format='gms', problem_name='ex4_1_1')
+        current_dir = this_file_dir()
+        coramin.third_party.get_minlplib(download_dir=os.path.join(current_dir, 'minlplib', 'gms'), format='gms', problem_name='ex4_1_1')
         files = os.listdir(os.path.join(current_dir, 'minlplib', 'gms'))
         self.assertEqual(len(files), 1)
         self.assertEqual(files[0], 'ex4_1_1.gms')

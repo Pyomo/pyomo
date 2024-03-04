@@ -6,6 +6,10 @@ import numpy as np
 from pyomo.contrib.coramin.relaxations.segments import compute_k_segment_points
 
 
+gurobi_available = pe.SolverFactory('gurobi_direct').available()
+
+
+@unittest.skipUnless(gurobi_available, 'Gurobi is not available')
 class TestUnivariateExp(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -56,6 +60,7 @@ class TestUnivariateExp(unittest.TestCase):
         self.assertAlmostEqual(pe.value(model.y), math.exp(-1.5), 4)
 
 
+@unittest.skipUnless(gurobi_available, 'Gurobi is not available')
 class TestUnivariate(unittest.TestCase):
     def helper(
         self,
@@ -206,6 +211,7 @@ class TestUnivariate(unittest.TestCase):
         )
 
 
+@unittest.skipUnless(gurobi_available, 'Gurobi is not available')
 class TestFeasibility(unittest.TestCase):
     def test_univariate_exp(self):
         m = pe.ConcreteModel()

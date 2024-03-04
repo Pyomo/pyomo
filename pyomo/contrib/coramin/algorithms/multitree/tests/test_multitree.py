@@ -185,6 +185,7 @@ class TestMultiTreeWithMINLPLib(Helper):
         assert avail in appsi.base.Solver.Availability
 
 
+@unittest.skipUnless(ipopt_available and gurobi_available, 'need both ipopt and gurobi')
 class TestMultiTree(Helper):
     def test_convex_overestimator(self):
         m = pe.ConcreteModel()

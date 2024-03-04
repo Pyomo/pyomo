@@ -13,6 +13,10 @@ from pyomo.core.base.block import _BlockData
 import shutil
 
 
+highs_available = appsi.solvers.Highs().available()
+ipopt_available = pe.SolverFactory('ipopt').available()
+
+
 def _get_sol(pname):
     start_x1_set = {'batch0812', 'chem'}
     current_dir = os.getcwd()
@@ -48,6 +52,7 @@ class Helper(unittest.TestCase):
         )
 
 
+@unittest.skipUnless(ipopt_available and highs_available, 'need both ipopt and highs')
 class TestBnBWithMINLPLib(Helper):
     @classmethod
     def setUpClass(self) -> None:
@@ -174,7 +179,8 @@ class TestBnBWithMINLPLib(Helper):
         assert avail in appsi.base.Solver.Availability
 
 
-class TestMultiTree(Helper):
+@unittest.skipUnless(ipopt_available and highs_available, 'need both ipopt and highs')
+class TestBnB(Helper):
     def test_convex_overestimator(self):
         m = pe.ConcreteModel()
         m.x = pe.Var(bounds=(-2, 1))

@@ -1,8 +1,13 @@
 import pyomo.environ as pyo
 from pyomo.common import unittest
 from pyomo.contrib import coramin
+from pyomo.contrib import appsi
 
 
+gurobi_available = pyo.SolverFactory('gurobi_direct').available()
+
+
+@unittest.skipUnless(gurobi_available, 'Gurobi is not available')
 class TestMcCormick(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

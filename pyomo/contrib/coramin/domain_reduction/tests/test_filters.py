@@ -4,6 +4,10 @@ from pyomo.common import unittest
 from pyomo.contrib import appsi
 
 
+highs_available = appsi.solvers.Highs().available()
+
+
+@unittest.skipUnless(highs_available, 'HiGHS is not available')
 class TestFilters(unittest.TestCase):
     def test_basic_filter(self):
         m = pe.ConcreteModel()

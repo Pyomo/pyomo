@@ -13,6 +13,9 @@ from pyomo.contrib.coramin.utils import RelaxationSide, Effort, EigenValueBounde
 from pyomo.core.expr.compare import assertExpressionsEqual
 
 
+gurobi_available = appsi.solvers.Gurobi().available()
+
+
 class TestAutoRelax(unittest.TestCase):
     def test_product1(self):
         m = pe.ConcreteModel()
@@ -965,6 +968,7 @@ def _pow_neg_1point2(x):
     return x ** (-1.2)
 
 
+@unittest.skipUnless(gurobi_available, 'Gurobi is not available')
 class TestUnivariate(unittest.TestCase):
     def helper(self, func, bounds_list):
         for relaxation_side in [

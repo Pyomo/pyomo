@@ -19,6 +19,9 @@ from pyomo.core.expr import sympy_tools
 import io
 
 
+gurobi_available = appsi.solvers.Gurobi().available()
+
+
 def _grid_rhs_vars(
     v_list: Sequence[_GeneralVarData], num_points: int = 30
 ) -> List[Tuple[float, ...]]:
@@ -198,6 +201,7 @@ def _check_scaling(m: _BlockData, rel: coramin.relaxations.BaseRelaxationData) -
     return passed
 
 
+@unittest.skipUnless(gurobi_available, 'Gurobi is not available')
 class TestRelaxationBasics(unittest.TestCase):
     def valid_relaxation_helper(
         self,

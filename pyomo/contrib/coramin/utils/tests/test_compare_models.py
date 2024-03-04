@@ -9,7 +9,11 @@ from pyomo.contrib.coramin.utils.compare_models import (
 from pyomo.core.expr.compare import assertExpressionsEqual, compare_expressions
 
 
+highs_available = appsi.solvers.Highs().available()
+
+
 class TestCompareModels(unittest.TestCase):
+    @unittest.skipUnless(highs_available, 'HiGHS is not available')
     def test_compare_models_1(self):
         m1 = pe.ConcreteModel()
         m1.x = x = pe.Var(bounds=(-5, 4))
