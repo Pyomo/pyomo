@@ -13,7 +13,7 @@ import io
 from textwrap import dedent
 
 import pyomo.common.unittest as unittest
-import pyomo.core.tests.examples.pmedian_concrete as pmedian_concrete 
+import pyomo.core.tests.examples.pmedian_concrete as pmedian_concrete
 import pyomo.environ as pyo
 
 from pyomo.contrib.latex_printer import latex_printer
@@ -804,7 +804,7 @@ class TestLatexPrinter(unittest.TestCase):
     & & 0.0 \leq serve\_customer\_from\_location \leq 1.0 & \qquad \in \mathds{R} \label{con:M1_serve_customer_from_location_bound} \\ 
     &&& select\_location & \qquad \in \left\{ 0 , 1 \right \} \label{con:M1_select_location_bound} 
 \end{align}
-            """.strip()
+            """.strip(),
         )
 
     def test_latexPrinter_pmedian_concise(self):
@@ -829,7 +829,7 @@ class TestLatexPrinter(unittest.TestCase):
     & & 0.0 \leq x \leq 1.0 & \qquad \in \mathds{R} \label{con:M1_x_bound} \\ 
     &&& y & \qquad \in \left\{ 0 , 1 \right \} \label{con:M1_y_bound} 
 \end{align}
-            """.strip()
+            """.strip(),
         )
 
 
