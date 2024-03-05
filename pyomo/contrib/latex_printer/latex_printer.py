@@ -1077,7 +1077,7 @@ def latex_printer(
         if st.parent_block().component(st.name) is st:
             return st.name.replace('_', r'\_')
         if isinstance(st, SetOperator):
-            return _set_op_map[st._operator.strip()].join(
+            return set_operator_map[st._operator.strip()].join(
                 generate_set_name(s, lcm) for s in st.subsets(False)
             )
         else:
