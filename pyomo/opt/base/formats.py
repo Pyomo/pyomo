@@ -9,11 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-#
-# The formats that are supported by Pyomo
-#
-__all__ = ['ProblemFormat', 'ResultsFormat', 'guess_format']
-
 import enum
 
 

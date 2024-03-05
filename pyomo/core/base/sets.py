@@ -13,8 +13,6 @@
 # . rename 'filter' to something else
 # . confirm that filtering is efficient
 
-__all__ = ['Set', 'set_options', 'simple_set_rule', 'SetOf']
-
 from .set import (
     process_setarg,
     set_options,

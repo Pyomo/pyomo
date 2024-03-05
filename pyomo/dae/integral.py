@@ -21,8 +21,6 @@ from pyomo.core.base.expression import (
 from pyomo.dae.contset import ContinuousSet
 from pyomo.dae.diffvar import DAE_Error
 
-__all__ = ('Integral',)
-
 
 @ModelComponentFactory.register("Integral Expression in a DAE model.")
 class Integral(Expression):

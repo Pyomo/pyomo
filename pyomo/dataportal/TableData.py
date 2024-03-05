@@ -9,8 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['TableData']
-
 from pyomo.common.collections import Bunch
 from pyomo.dataportal.process_data import _process_data
 

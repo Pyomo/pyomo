@@ -9,8 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ('Suffix', 'active_export_suffix_generator', 'active_import_suffix_generator')
-
 import enum
 import logging
 
@@ -343,7 +341,7 @@ class Suffix(ComponentMap, ActiveComponent):
 
     @deprecated(
         'Suffix.set_datatype is replaced with the Suffix.datatype property',
-        version='6.7.1.dev0',
+        version='6.7.1',
     )
     def set_datatype(self, datatype):
         """
@@ -353,7 +351,7 @@ class Suffix(ComponentMap, ActiveComponent):
 
     @deprecated(
         'Suffix.get_datatype is replaced with the Suffix.datatype property',
-        version='6.7.1.dev0',
+        version='6.7.1',
     )
     def get_datatype(self):
         """
@@ -363,7 +361,7 @@ class Suffix(ComponentMap, ActiveComponent):
 
     @deprecated(
         'Suffix.set_direction is replaced with the Suffix.direction property',
-        version='6.7.1.dev0',
+        version='6.7.1',
     )
     def set_direction(self, direction):
         """
@@ -373,7 +371,7 @@ class Suffix(ComponentMap, ActiveComponent):
 
     @deprecated(
         'Suffix.get_direction is replaced with the Suffix.direction property',
-        version='6.7.1.dev0',
+        version='6.7.1',
     )
     def get_direction(self):
         """

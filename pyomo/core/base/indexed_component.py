@@ -9,15 +9,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['IndexedComponent', 'ActiveIndexedComponent']
-
-import enum
 import inspect
 import logging
 import sys
 import textwrap
-
-from copy import deepcopy
 
 import pyomo.core.expr as EXPR
 import pyomo.core.base as BASE
@@ -32,9 +27,8 @@ from pyomo.core.pyomoobject import PyomoObject
 from pyomo.common import DeveloperError
 from pyomo.common.autoslots import fast_deepcopy
 from pyomo.common.collections import ComponentSet
-from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.deprecation import deprecated, deprecation_warning
-from pyomo.common.errors import DeveloperError, TemplateExpressionError
+from pyomo.common.errors import TemplateExpressionError
 from pyomo.common.modeling import NOTSET
 from pyomo.common.numeric_types import native_types
 from pyomo.common.sorting import sorted_robust
@@ -166,9 +160,12 @@ include the "return" statement at the end of your rule.
 """
 
 
-def rule_result_substituter(result_map):
+def rule_result_substituter(result_map, map_types):
     _map = result_map
-    _map_types = set(type(key) for key in result_map)
+    if map_types is None:
+        _map_types = set(type(key) for key in result_map)
+    else:
+        _map_types = map_types
 
     def rule_result_substituter_impl(rule, *args, **kwargs):
         if rule.__class__ in _map_types:
@@ -209,7 +206,7 @@ _map_rule_funcdef = """def wrapper_function%s:
 """
 
 
-def rule_wrapper(rule, wrapping_fcn, positional_arg_map=None):
+def rule_wrapper(rule, wrapping_fcn, positional_arg_map=None, map_types=None):
     """Wrap a rule with another function
 
     This utility method provides a way to wrap a function (rule) with
@@ -236,7 +233,7 @@ def rule_wrapper(rule, wrapping_fcn, positional_arg_map=None):
 
     """
     if isinstance(wrapping_fcn, dict):
-        wrapping_fcn = rule_result_substituter(wrapping_fcn)
+        wrapping_fcn = rule_result_substituter(wrapping_fcn, map_types)
         if not inspect.isfunction(rule):
             return wrapping_fcn(rule)
     # Because some of our processing of initializer functions relies on

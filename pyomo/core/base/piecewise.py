@@ -32,9 +32,6 @@ Possible Extensions
 *) piecewise for functions of the form y = f(x1,x2,...)
 """
 
-
-__all__ = ['Piecewise']
-
 import logging
 import math
 import itertools

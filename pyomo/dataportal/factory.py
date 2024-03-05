@@ -9,8 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['DataManagerFactory', 'UnknownDataManager']
-
 import logging
 from pyomo.common import Factory
 from pyomo.common.plugin_base import PluginError

@@ -32,8 +32,6 @@ import numpy as np
 from scipy.sparse import coo_matrix
 import operator
 
-__all__ = ['MPIBlockMatrix']
-
 
 def assert_block_structure(mat: MPIBlockMatrix):
     if mat.has_undefined_row_sizes() or mat.has_undefined_col_sizes():

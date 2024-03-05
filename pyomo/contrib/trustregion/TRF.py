@@ -35,7 +35,7 @@ from pyomo.opt import SolverFactory
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
 
-__version__ = '0.2.0'
+__version__ = (0, 2, 0)
 
 
 def trust_region_method(model, decision_variables, ext_fcn_surrogate_map_rule, config):

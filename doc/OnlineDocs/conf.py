@@ -57,8 +57,8 @@ intersphinx_mapping = {
     'numpy': ('https://numpy.org/doc/stable/', None),
     'pandas': ('https://pandas.pydata.org/docs/', None),
     'scikit-learn': ('https://scikit-learn.org/stable/', None),
-    'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),
-    'Sphinx': ('https://www.sphinx-doc.org/en/stable/', None),
+    'scipy': ('https://docs.scipy.org/doc/scipy/', None),
+    'Sphinx': ('https://www.sphinx-doc.org/en/master/', None),
 }
 
 # -- General configuration ------------------------------------------------
@@ -83,6 +83,7 @@ extensions = [
     'sphinx.ext.doctest',
     'sphinx.ext.todo',
     'sphinx_copybutton',
+    'enum_tools.autoenum',
     #'sphinx.ext.githubpages',
 ]
 
@@ -270,7 +271,7 @@ from pyomo.common.dependencies import (
     yaml_available, networkx_available, matplotlib_available,
     pympler_available, dill_available,
 )
-pint_available = attempt_import('pint', defer_check=False)[1]
+pint_available = attempt_import('pint', defer_import=False)[1]
 from pyomo.contrib.parmest.parmest import parmest_available
 
 import pyomo.environ as _pe # (trigger all plugin registrations)

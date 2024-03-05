@@ -230,12 +230,12 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
                 no_feasible_soln = float('inf')
                 self.LB = (
                     node_data.obj_lb
-                    if solve_data.objective_sense == minimize
+                    if self.objective_sense == minimize
                     else -no_feasible_soln
                 )
                 self.UB = (
                     no_feasible_soln
-                    if solve_data.objective_sense == minimize
+                    if self.objective_sense == minimize
                     else -node_data.obj_lb
                 )
                 config.logger.info(

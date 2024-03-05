@@ -27,10 +27,8 @@ import numpy as np
 from pyomo.common.deprecation import deprecated
 from pyomo.contrib.pynumero.interfaces.nlp import ExtendedNLP
 
-__all__ = ['AslNLP', 'AmplNLP']
 
-
-# ToDo: need to add support for modifying bounds.
+# TODO: need to add support for modifying bounds.
 # support for changing variable bounds seems possible.
 # support for changing inequality bounds would require more work. (this is less frequent?)
 # TODO: check performance impacts of caching - memory and computational time.

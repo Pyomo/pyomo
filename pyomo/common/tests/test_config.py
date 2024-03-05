@@ -469,13 +469,18 @@ class TestConfigDomains(unittest.TestCase):
         c.val2 = testinst
         self.assertEqual(c.val2, testinst)
         exc_str = (
-            r"Expected an instance of '.*\.TestClass', "
+            r"Expected an instance of 'TestClass', "
             "but received value 2.4 of type 'float'"
         )
         with self.assertRaisesRegex(ValueError, exc_str):
             c.val2 = 2.4
 
-        c.declare("val3", ConfigValue(None, IsInstance(int, TestClass)))
+        c.declare(
+            "val3",
+            ConfigValue(
+                None, IsInstance(int, TestClass, document_full_base_names=True)
+            ),
+        )
         self.assertRegex(
             c.get("val3").domain_name(), r"IsInstance\(int, .*\.TestClass\)"
         )
@@ -487,6 +492,22 @@ class TestConfigDomains(unittest.TestCase):
         )
         with self.assertRaisesRegex(ValueError, exc_str):
             c.val3 = 2.4
+
+        c.declare(
+            "val4",
+            ConfigValue(
+                None, IsInstance(int, TestClass, document_full_base_names=False)
+            ),
+        )
+        self.assertEqual(c.get("val4").domain_name(), "IsInstance(int, TestClass)")
+        c.val4 = 2
+        self.assertEqual(c.val4, 2)
+        exc_str = (
+            r"Expected an instance of one of these types: 'int', 'TestClass'"
+            r", but received value 2.4 of type 'float'"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            c.val4 = 2.4
 
     def test_Path(self):
         def norm(x):
@@ -504,6 +525,8 @@ class TestConfigDomains(unittest.TestCase):
             def __str__(self):
                 path_str = str(self.path)
                 return f"{type(self).__name__}({path_str})"
+
+        self.assertEqual(Path().domain_name(), "Path")
 
         cwd = os.getcwd() + os.path.sep
         c = ConfigDict()
@@ -725,6 +748,8 @@ class TestConfigDomains(unittest.TestCase):
         cwd = os.getcwd() + os.path.sep
         c = ConfigDict()
 
+        self.assertEqual(PathList().domain_name(), "PathList")
+
         c.declare('a', ConfigValue(None, PathList()))
         self.assertEqual(c.a, None)
         c.a = "/a/b/c"
@@ -746,6 +771,13 @@ class TestConfigDomains(unittest.TestCase):
         c.a = ()
         self.assertEqual(len(c.a), 0)
         self.assertIs(type(c.a), list)
+
+        exc_str = r".*expected str, bytes or os.PathLike.*int"
+
+        with self.assertRaisesRegex(ValueError, exc_str):
+            c.a = 2
+        with self.assertRaisesRegex(ValueError, exc_str):
+            c.a = ["/a/b/c", 2]
 
     def test_ListOf(self):
         c = ConfigDict()
@@ -1638,7 +1670,7 @@ scenarios[1].detection""",
         self.config.add("bar", ConfigDict(implicit=True)).add("baz", ConfigDict())
         test = _display(self.config, 'userdata')
         sys.stdout.write(test)
-        self.assertEqual(yaml_load(test), {'bar': {'baz': None}, foo: 0})
+        self.assertEqual(yaml_load(test), {'bar': {'baz': None}, 'foo': 0})
 
     @unittest.skipIf(not yaml_available, "Test requires PyYAML")
     def test_parseDisplay_userdata_add_block(self):
@@ -2066,7 +2098,6 @@ endBlock{}
                 "generate_documentation is deprecated.",
                 LOG,
             )
-        self.maxDiff = None
         # print(test)
         self.assertEqual(test, reference)
 
@@ -2081,7 +2112,6 @@ endBlock{}
                 )
             )
         self.assertEqual(LOG.getvalue(), "")
-        self.maxDiff = None
         # print(test)
         self.assertEqual(test, reference)
 
@@ -2127,7 +2157,6 @@ endBlock{}
                 "generate_documentation is deprecated.",
                 LOG,
             )
-        self.maxDiff = None
         # print(test)
         self.assertEqual(test, reference)
 
@@ -2545,7 +2574,6 @@ Scenario definition:
         parser = argparse.ArgumentParser(prog='tester')
         self.config.initialize_argparse(parser)
         help = parser.format_help()
-        self.maxDiff = None
         self.assertIn(
             """
   -h, --help            show this help message and exit
@@ -3074,8 +3102,6 @@ c: 1.0
             cfg2.declare_from({})
 
     def test_docstring_decorator(self):
-        self.maxDiff = None
-
         @document_kwargs_from_configdict('CONFIG')
         class ExampleClass(object):
             CONFIG = ExampleConfig()
@@ -3232,6 +3258,41 @@ option_2: int, default=5
             "time_limit: 10.0\nstream_solver: false\n",
             OUT.getvalue().replace('null', 'None'),
         )
+
+    def test_domain_name(self):
+        cfg = ConfigDict()
+
+        cfg.declare('none', ConfigValue())
+        self.assertEqual(cfg.get('none').domain_name(), '')
+
+        def fcn(val):
+            return val
+
+        cfg.declare('fcn', ConfigValue(domain=fcn))
+        self.assertEqual(cfg.get('fcn').domain_name(), 'fcn')
+
+        fcn.domain_name = 'custom fcn'
+        self.assertEqual(cfg.get('fcn').domain_name(), 'custom fcn')
+
+        class functor:
+            def __call__(self, val):
+                return val
+
+        cfg.declare('functor', ConfigValue(domain=functor()))
+        self.assertEqual(cfg.get('functor').domain_name(), 'functor')
+
+        class cfunctor:
+            def __call__(self, val):
+                return val
+
+            def domain_name(self):
+                return 'custom functor'
+
+        cfg.declare('cfunctor', ConfigValue(domain=cfunctor()))
+        self.assertEqual(cfg.get('cfunctor').domain_name(), 'custom functor')
+
+        cfg.declare('type', ConfigValue(domain=int))
+        self.assertEqual(cfg.get('type').domain_name(), 'int')
 
 
 if __name__ == "__main__":

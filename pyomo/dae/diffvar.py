@@ -16,8 +16,6 @@ from pyomo.core.base.set import UnknownSetDimen
 from pyomo.core.base.var import Var
 from pyomo.dae.contset import ContinuousSet
 
-__all__ = ('DerivativeVar', 'DAE_Error')
-
 
 def create_access_function(var):
     """

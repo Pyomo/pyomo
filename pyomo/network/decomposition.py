@@ -9,8 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['SequentialDecomposition']
-
 from pyomo.network import Port, Arc
 from pyomo.network.foqus_graph import FOQUSGraph
 from pyomo.core import (
