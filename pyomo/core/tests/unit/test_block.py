@@ -2667,7 +2667,6 @@ class TestBlock(unittest.TestCase):
 
 5 Declarations: a1_IDX a3_IDX c a b
 """
-        self.maxDiff = None
         self.assertEqual(ref, buf.getvalue())
 
     @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")

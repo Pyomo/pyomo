@@ -1,10 +1,21 @@
 Future Solver Interface Changes
 ===============================
 
-Pyomo offers interfaces into multiple solvers, both commercial and open source.
-To support better capabilities for solver interfaces, the Pyomo team is actively
-redesigning the existing interfaces to make them more maintainable and intuitive
-for use. Redesigned interfaces can be found in ``pyomo.contrib.solver``.
+.. note::
+
+   The new solver interfaces are still under active development.  They
+   are included in the releases as development previews.  Please be
+   aware that APIs and functionality may change with no notice.
+
+   We welcome any feedback and ideas as we develop this capability.
+   Please post feedback on
+   `Issue 1030 <https://github.com/Pyomo/pyomo/issues/1030>`_.
+
+Pyomo offers interfaces into multiple solvers, both commercial and open
+source.  To support better capabilities for solver interfaces, the Pyomo
+team is actively redesigning the existing interfaces to make them more
+maintainable and intuitive for use. A preview of the redesigned
+interfaces can be found in ``pyomo.contrib.solver``.
 
 .. currentmodule:: pyomo.contrib.solver
 
@@ -12,27 +23,39 @@ for use. Redesigned interfaces can be found in ``pyomo.contrib.solver``.
 New Interface Usage
 -------------------
 
-The new interfaces have two modes: backwards compatible and future capability.
-The future capability mode can be accessed directly or by switching the default
-``SolverFactory`` version (see :doc:`future`). Currently, the new versions
-available are:
+The new interfaces are not completely backwards compatible with the
+existing Pyomo solver interfaces.  However, to aid in testing and
+evaluation, we are distributing versions of the new solver interfaces
+that are compatible with the existing ("legacy") solver interface.
+These "legacy" interfaces are registered with the current
+``SolverFactory`` using slightly different names (to avoid conflicts
+with existing interfaces).
 
-.. list-table:: Available Redesigned Solvers
-   :widths: 25 25 25
+.. |br| raw:: html
+
+   <br />
+
+.. list-table:: Available Redesigned Solvers and Names Registered
+                in the SolverFactories
    :header-rows: 1
 
    * - Solver
-     - ``SolverFactory`` (v1) Name
-     - ``SolverFactory`` (v3) Name
-   * - ipopt
-     - ``ipopt_v2``
+     - Name registered in the |br| ``pyomo.contrib.solver.factory.SolverFactory``
+     - Name registered in the |br| ``pyomo.opt.base.solvers.LegacySolverFactory``
+   * - Ipopt
      - ``ipopt``
+     - ``ipopt_v2``
    * - Gurobi
-     - ``gurobi_v2``
      - ``gurobi``
+     - ``gurobi_v2``
 
-Backwards Compatible Mode
-^^^^^^^^^^^^^^^^^^^^^^^^^
+Using the new interfaces through the legacy interface
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Here we use the new interface as exposed through the existing (legacy)
+solver factory and solver interface wrapper.  This provides an API that
+is compatible with the existing (legacy) Pyomo solver interface and can
+be used with other Pyomo tools / capabilities.
 
 .. testcode::
    :skipif: not ipopt_available
@@ -61,16 +84,15 @@ Backwards Compatible Mode
    ...
    3 Declarations: x y obj
 
-Future Capability Mode
-^^^^^^^^^^^^^^^^^^^^^^
+Using the new interfaces directly
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-There are multiple ways to utilize the future capability mode: direct import
-or changed ``SolverFactory`` version.
+Here we use the new interface by importing it directly:
 
 .. testcode::
    :skipif: not ipopt_available
 
-    # Direct import
+   # Direct import
    import pyomo.environ as pyo
    from pyomo.contrib.solver.util import assert_optimal_termination
    from pyomo.contrib.solver.ipopt import Ipopt
@@ -87,7 +109,7 @@ or changed ``SolverFactory`` version.
    opt = Ipopt()
    status = opt.solve(model)
    assert_optimal_termination(status)
-   # Displays important results information; only available in future capability mode
+   # Displays important results information; only available through the new interfaces
    status.display()
    model.pprint()
 
@@ -99,12 +121,54 @@ or changed ``SolverFactory`` version.
    ...
    3 Declarations: x y obj
 
-Changing the ``SolverFactory`` version:
+Using the new interfaces through the "new" SolverFactory
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Here we use the new interface by retrieving it from the new ``SolverFactory``:
 
 .. testcode::
    :skipif: not ipopt_available
 
-    # Change SolverFactory version
+   # Import through new SolverFactory
+   import pyomo.environ as pyo
+   from pyomo.contrib.solver.util import assert_optimal_termination
+   from pyomo.contrib.solver.factory import SolverFactory
+
+   model = pyo.ConcreteModel()
+   model.x = pyo.Var(initialize=1.5)
+   model.y = pyo.Var(initialize=1.5)
+
+   def rosenbrock(model):
+       return (1.0 - model.x) ** 2 + 100.0 * (model.y - model.x**2) ** 2
+
+   model.obj = pyo.Objective(rule=rosenbrock, sense=pyo.minimize)
+
+   opt = SolverFactory('ipopt')
+   status = opt.solve(model)
+   assert_optimal_termination(status)
+   # Displays important results information; only available through the new interfaces
+   status.display()
+   model.pprint()
+
+.. testoutput::
+   :skipif: not ipopt_available
+   :hide:
+
+   solution_loader: ...
+   ...
+   3 Declarations: x y obj
+
+Switching all of Pyomo to use the new interfaces
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+We also provide a mechanism to get a "preview" of the future where we
+replace the existing (legacy) SolverFactory and utilities with the new
+(development) version (see :doc:`future`):
+
+.. testcode::
+   :skipif: not ipopt_available
+
+   # Change default SolverFactory version
    import pyomo.environ as pyo
    from pyomo.contrib.solver.util import assert_optimal_termination
    from pyomo.__future__ import solver_factory_v3
@@ -120,7 +184,7 @@ Changing the ``SolverFactory`` version:
 
    status = pyo.SolverFactory('ipopt').solve(model)
    assert_optimal_termination(status)
-   # Displays important results information; only available in future capability mode
+   # Displays important results information; only available through the new interfaces
    status.display()
    model.pprint()
 
@@ -141,15 +205,14 @@ Changing the ``SolverFactory`` version:
 Linear Presolve and Scaling
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The new interface will allow for direct manipulation of linear presolve and scaling
-options for certain solvers. Currently, these options are only available for
-``ipopt``.
+The new interface allows access to new capabilities in the various
+problem writers, including the linear presolve and scaling options
+recently incorporated into the redesigned NL writer.  For example, you
+can control the NL writer in the new ``ipopt`` interface through the
+solver's ``writer_config`` configuration option:
 
 .. autoclass:: pyomo.contrib.solver.ipopt.Ipopt
    :members: solve
-
-The ``writer_config`` configuration option can be used to manipulate presolve
-and scaling options:
 
 .. testcode::
 
