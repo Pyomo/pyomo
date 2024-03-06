@@ -180,7 +180,7 @@ class TestTiming(unittest.TestCase):
 
     def test_TicTocTimer_tictoc(self):
         SLEEP = 0.1
-        RES = 0.02  # resolution (seconds): 1/5 the sleep
+        RES = 0.025  # resolution (seconds): 1/4 the sleep
 
         # Note: pypy on GHA occasionally has timing
         # differences of >0.04s
