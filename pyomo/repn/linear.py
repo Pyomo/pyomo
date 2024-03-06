@@ -218,20 +218,18 @@ _exit_node_handlers[NegationExpression] = {
 
 
 def _handle_product_constant_constant(visitor, node, arg1, arg2):
-    _, arg1 = arg1
-    _, arg2 = arg2
-    ans = arg1 * arg2
+    ans = arg1[1] * arg2[1]
     if ans != ans:
-        if not arg1 or not arg2:
+        if not arg1[1] or not arg2[1]:
             deprecation_warning(
-                f"Encountered {str(arg1)}*{str(arg2)} in expression tree.  "
+                f"Encountered {str(arg1[1])}*{str(arg2[1])} in expression tree.  "
                 "Mapping the NaN result to 0 for compatibility "
                 "with the lp_v1 writer.  In the future, this NaN "
                 "will be preserved/emitted to comply with IEEE-754.",
                 version='6.6.0',
             )
-            return _, 0
-    return _, arg1 * arg2
+            return _CONSTANT, 0
+    return _CONSTANT, ans
 
 
 def _handle_product_constant_ANY(visitor, node, arg1, arg2):
@@ -324,8 +322,7 @@ _exit_node_handlers[DivisionExpression] = {
 #
 
 
-def _handle_pow_constant_constant(visitor, node, *args):
-    arg1, arg2 = args
+def _handle_pow_constant_constant(visitor, node, arg1, arg2):
     ans = apply_node_operation(node, (arg1[1], arg2[1]))
     if ans.__class__ in native_complex_types:
         ans = complex_number_error(ans, visitor, node)
