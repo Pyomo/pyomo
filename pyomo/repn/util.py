@@ -439,12 +439,15 @@ class ExitNodeDispatcher(collections.defaultdict):
                         f"dispatcher for node '{node_class.__name__}' while walking "
                         "expression tree."
                     )
-            raise DeveloperError(
-                f"Unexpected expression node type '{node_class.__name__}' "
-                f"found while walking expression tree in {type(self).__name__}."
-            )
+            return self.unexpected_expression_type
         self[key] = fcn
         return fcn
+
+    def unexpected_expression_type(self, visitor, node, *args):
+        raise DeveloperError(
+            f"Unexpected expression node type '{type(node).__name__}' "
+            f"found while walking expression tree in {type(self).__name__}."
+        )
 
 
 def apply_node_operation(node, args):
