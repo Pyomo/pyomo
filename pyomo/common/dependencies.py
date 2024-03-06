@@ -902,10 +902,10 @@ class declare_modules_as_importable(object):
                     sys.modules[_global_name + name] = sys.modules[name]
         while deferred:
             name, mod = deferred.popitem()
-            mod.__path__ = None
-            mod.__spec__ = None
             sys.modules[_global_name + name] = mod
             if isinstance(mod, DeferredImportModule):
+                mod.__path__ = None
+                mod.__spec__ = None
                 deferred.update(
                     (name + '.' + k, v)
                     for k, v in mod.__dict__.items()
