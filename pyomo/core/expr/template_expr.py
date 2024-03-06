@@ -116,7 +116,7 @@ class GetItemExpression(ExpressionBase):
         return "%s[%s]" % (values[0], ','.join(values[1:]))
 
     def _resolve_template(self, args):
-        return args[0].__getitem__(tuple(args[1:]))
+        return args[0][*args[1:]]
 
     def _apply_operation(self, result):
         args = tuple(
@@ -127,7 +127,7 @@ class GetItemExpression(ExpressionBase):
             )
             for arg in result[1:]
         )
-        return result[0].__getitem__(tuple(result[1:]))
+        return result[0][*result[1:]]
 
 
 class Numeric_GetItemExpression(GetItemExpression, NumericExpression):
@@ -273,7 +273,7 @@ class GetAttrExpression(ExpressionBase):
         return "%s.%s" % (values[0], attr)
 
     def _resolve_template(self, args):
-        return getattr(*tuple(args))
+        return getattr(*args)
 
 
 class Numeric_GetAttrExpression(GetAttrExpression, NumericExpression):
