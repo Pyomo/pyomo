@@ -1081,7 +1081,7 @@ def latex_printer(
                 generate_set_name(s, lcm) for s in st.subsets(False)
             )
         else:
-            return str(st).replace('_', r'\_').replace('{', '\{').replace('}', '\}')
+            return str(st).replace('_', r'\_').replace('{', r'\{').replace('}', r'\}')
 
     # Handling the iterator indices
     defaultSetLatexNames = ComponentMap()
