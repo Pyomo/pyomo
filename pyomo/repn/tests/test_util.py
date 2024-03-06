@@ -718,16 +718,14 @@ class TestRepnUtils(unittest.TestCase):
             DeveloperError, r".*Unexpected expression node type 'UnknownExpression'"
         ):
             end[node.__class__](None, node, *node.args)
-        self.assertEqual(len(end), 9)
-        self.assertIn(UnknownExpression, end)
+        self.assertEqual(len(end), 8)
 
         node = UnknownExpression((6, 7))
         with self.assertRaisesRegex(
             DeveloperError, r".*Unexpected expression node type 'UnknownExpression'"
         ):
             end[node.__class__, 6, 7](None, node, *node.args)
-        self.assertEqual(len(end), 10)
-        self.assertIn((UnknownExpression, 6, 7), end)
+        self.assertEqual(len(end), 8)
 
     def test_BeforeChildDispatcher_registration(self):
         class BeforeChildDispatcherTester(BeforeChildDispatcher):
