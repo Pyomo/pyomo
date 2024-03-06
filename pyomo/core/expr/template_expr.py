@@ -19,11 +19,12 @@ from pyomo.common.errors import TemplateExpressionError
 from pyomo.core.expr.base import ExpressionBase, ExpressionArgs_Mixin, NPV_Mixin
 from pyomo.core.expr.logical_expr import BooleanExpression
 from pyomo.core.expr.numeric_expr import (
-    NumericExpression,
-    SumExpression,
-    Numeric_NPV_Mixin,
-    register_arg_type,
     ARG_TYPE,
+    NumericExpression,
+    Numeric_NPV_Mixin,
+    SumExpression,
+    mutable_expression,
+    register_arg_type,
     _balanced_parens,
 )
 from pyomo.core.expr.numvalue import (
@@ -521,7 +522,15 @@ class TemplateSumExpression(NumericExpression):
             return 'SUM(%s %s)' % (val, iterStr)
 
     def _resolve_template(self, args):
-        return SumExpression(args)
+        with mutable_expression() as e:
+            for arg in args:
+                e += arg
+        if e.nargs() > 1:
+            return e
+        elif not e.nargs():
+            return 0
+        else:
+            return e.arg(0)
 
 
 class IndexTemplate(NumericValue):
