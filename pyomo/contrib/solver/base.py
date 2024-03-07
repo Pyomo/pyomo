@@ -422,7 +422,7 @@ class LegacySolverWrapper:
         legacy_results.problem.number_of_constraints = model.nconstraints()
         legacy_results.problem.number_of_variables = model.nvariables()
         obj = get_objective(model)
-        if not obj:
+        if len(obj) == 0:
             legacy_results.problem.sense = ProblemSense.unknown
             legacy_results.problem.number_of_objectives = 0
         else:
