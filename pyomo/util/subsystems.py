@@ -17,6 +17,7 @@ from pyomo.common.modeling import unique_component_name
 
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.expression import Expression
+from pyomo.core.base.objective import Objective
 from pyomo.core.base.external import ExternalFunction
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
@@ -67,47 +68,37 @@ class _ExternalFunctionVisitor(StreamBasedExpressionVisitor):
         return child_result.is_expression_type(), None
 
 
-def identify_external_functions(
-    expr,
-    descend_into_named_expressions=True,
-    named_expressions=None,
-):
-    visitor = _ExternalFunctionVisitor(
-        descend_into_named_expressions=descend_into_named_expressions
-    )
-    efs = list(visitor.walk_expression(expr))
-    if not descend_into_named_expressions and named_expressions is not None:
-        named_expressions.extend(visitor.named_expressions)
-    return efs
-    #yield from _ExternalFunctionVisitor().walk_expression(expr)
+def identify_external_functions(expr):
+    # TODO: Potentially support descend_into_named_expressions argument here.
+    # This will likely require converting from a generator to a function.
+    yield from _ExternalFunctionVisitor().walk_expression(expr)
 
 
 def add_local_external_functions(block):
     ef_exprs = []
     named_expressions = []
-    for comp in block.component_data_objects((Constraint, Expression), active=True):
-        ef_exprs.extend(identify_external_functions(
-            comp.expr,
-            descend_into_named_expressions=False,
-            named_expressions=named_expressions,
-        ))
-    named_expr_set = ComponentSet(named_expressions)
+    visitor = _ExternalFunctionVisitor(descend_into_named_expressions=False)
+    for comp in block.component_data_objects(
+        (Constraint, Expression, Objective),
+        active=True,
+    ):
+        ef_exprs.extend(visitor.walk_expression(comp.expr))
+    named_expr_set = ComponentSet(visitor.named_expressions)
+    # List of unique named expressions
     named_expressions = list(named_expr_set)
     while named_expressions:
         expr = named_expressions.pop()
-        local_named_exprs = []
-        ef_exprs.extend(identify_external_functions(
-            expr,
-            descend_into_named_expressions=False,
-            named_expressions=local_named_exprs,
-        ))
+        # Clear named expression cache so we don't re-check named expressions
+        # we've seen before.
+        visitor.named_expressions.clear()
+        ef_exprs.extend(visitor.walk_expression(expr))
         # Only add to the stack named expressions that we have
         # not encountered yet.
-        for local_expr in local_named_exprs:
+        for local_expr in visitor.named_expressions:
             if local_expr not in named_expr_set:
                 named_expressions.append(local_expr)
                 named_expr_set.add(local_expr)
-        
+
     unique_functions = []
     fcn_set = set()
     for expr in ef_exprs:
@@ -184,7 +175,7 @@ def create_subsystem_block(
     return block
 
 
-def generate_subsystem_blocks(subsystems, include_fixed=False):
+def generate_subsystem_blocks(subsystems, include_fixed=False, timer=None):
     """Generates blocks that contain subsystems of variables and constraints.
 
     Arguments
@@ -203,8 +194,10 @@ def generate_subsystem_blocks(subsystems, include_fixed=False):
     not specified are contained in the input_vars component.
 
     """
+    if timer is None:
+        timer = HierarchicalTimer()
     for cons, vars in subsystems:
-        block = create_subsystem_block(cons, vars, include_fixed)
+        block = create_subsystem_block(cons, vars, include_fixed, timer=timer)
         yield block, list(block.input_vars.values())
 
 
