@@ -26,7 +26,11 @@ _log = logging.getLogger(__name__)
 
 
 def generate_strongly_connected_components(
-    constraints, variables=None, include_fixed=False
+    constraints,
+    variables=None,
+    include_fixed=False,
+    igraph=None,
+    timer=None,
 ):
     """Yield in order ``_BlockData`` that each contain the variables and
     constraints of a single diagonal block in a block lower triangularization
@@ -55,23 +59,38 @@ def generate_strongly_connected_components(
         "input variables" for that block.
 
     """
+    if timer is None:
+        timer = HierarchicalTimer()
     if variables is None:
+        timer.start("generate-vars")
         variables = list(
-            _generate_variables_in_constraints(constraints, include_fixed=include_fixed)
+            _generate_variables_in_constraints(
+                constraints,
+                include_fixed=include_fixed,
+                #method=IncidenceMethod.ampl_repn
+            )
         )
+        timer.stop("generate-vars")
 
     assert len(variables) == len(constraints)
-    igraph = IncidenceGraphInterface()
+    if igraph is None:
+        igraph = IncidenceGraphInterface()
+    timer.start("block-triang")
     var_blocks, con_blocks = igraph.block_triangularize(
         variables=variables, constraints=constraints
     )
+    timer.stop("block-triang")
     subsets = [(cblock, vblock) for vblock, cblock in zip(var_blocks, con_blocks)]
+    timer.start("subsystem-blocks")
     for block, inputs in generate_subsystem_blocks(
         subsets, include_fixed=include_fixed
     ):
+        timer.stop("subsystem-blocks")
         # TODO: How does len scale for reference-to-list?
         assert len(block.vars) == len(block.cons)
         yield (block, inputs)
+        timer.start("subsystem-blocks")
+    timer.stop("subsystem-blocks")
 
 
 def solve_strongly_connected_components(
@@ -139,7 +158,9 @@ def solve_strongly_connected_components(
     res_list = []
     log_blocks = _log.isEnabledFor(logging.DEBUG)
     timer.start("generate-scc")
-    for scc, inputs in generate_strongly_connected_components(constraints, variables):
+    for scc, inputs in generate_strongly_connected_components(
+        constraints, variables, timer=timer, igraph=igraph
+    ):
         timer.stop("generate-scc")
         with TemporarySubsystemManager(to_fix=inputs, remove_bounds_on_fix=True):
             N = len(scc.vars)
