@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -772,22 +772,22 @@ class PyomoDataPortal(unittest.TestCase):
         self.assertEqual(
             sorted(
                 md.values(),
-                key=lambda x: tuple(sorted(x) + [0])
-                if type(x) is list
-                else tuple(sorted(x.values()))
-                if not type(x) is int
-                else (x,),
+                key=lambda x: (
+                    tuple(sorted(x) + [0])
+                    if type(x) is list
+                    else tuple(sorted(x.values())) if not type(x) is int else (x,)
+                ),
             ),
             [-4, -3, -2, -1, [1, 3, 5], {1: 10, 3: 30, 5: 50}],
         )
         self.assertEqual(
             sorted(
                 md.values('ns1'),
-                key=lambda x: tuple(sorted(x) + [0])
-                if type(x) is list
-                else tuple(sorted(x.values()))
-                if not type(x) is int
-                else (x,),
+                key=lambda x: (
+                    tuple(sorted(x) + [0])
+                    if type(x) is list
+                    else tuple(sorted(x.values())) if not type(x) is int else (x,)
+                ),
             ),
             [1, [7, 9, 11], {7: 70, 9: 90, 11: 110}],
         )

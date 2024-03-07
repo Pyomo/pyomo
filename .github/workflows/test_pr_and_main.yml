@@ -38,7 +38,7 @@ jobs:
     - name: Checkout Pyomo source
       uses: actions/checkout@v4
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.10'
     - name: Black Formatting Check
@@ -59,7 +59,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-13, windows-latest]
         python: [ 3.8, 3.9, '3.10', '3.11', '3.12' ]
         other: [""]
         category: [""]
@@ -69,14 +69,14 @@ jobs:
           TARGET: linux
           PYENV: pip
 
-        - os: macos-latest
+        - os: macos-13
           TARGET: osx
           PYENV: pip
 
         - os: windows-latest
           TARGET: win
           PYENV: conda
-          PACKAGES: glpk
+          PACKAGES: glpk pytest-qt filelock
 
         - os: ubuntu-latest
           python: '3.11'
@@ -84,10 +84,10 @@ jobs:
           skip_doctest: 1
           TARGET: linux
           PYENV: conda
-          PACKAGES:
+          PACKAGES: pytest-qt
 
         - os: ubuntu-latest
-          python: 3.9
+          python: '3.10'
           other: /mpi
           mpi: 3
           skip_doctest: 1
@@ -164,7 +164,7 @@ jobs:
             | tr '\n' ' ' | sed 's/ \+/ /g' >> $GITHUB_ENV
 
     #- name: Pip package cache
-    #  uses: actions/cache@v3
+    #  uses: actions/cache@v4
     #  if: matrix.PYENV == 'pip'
     #  id: pip-cache
     #  with:
@@ -172,7 +172,7 @@ jobs:
     #    key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-${{matrix.python}}
 
     #- name: OS package cache
-    #  uses: actions/cache@v3
+    #  uses: actions/cache@v4
     #  if: matrix.TARGET != 'osx'
     #  id: os-cache
     #  with:
@@ -180,7 +180,7 @@ jobs:
     #    key: pkg-${{env.CACHE_VER}}.0-${{runner.os}}
 
     - name: TPL package download cache
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       if: ${{ ! matrix.slim }}
       id: download-cache
       with:
@@ -232,16 +232,25 @@ jobs:
 
     - name: Set up Python ${{ matrix.python }}
       if: matrix.PYENV == 'pip'
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python }}
 
     - name: Set up Miniconda Python ${{ matrix.python }}
       if: matrix.PYENV == 'conda'
-      uses: conda-incubator/setup-miniconda@v2
+      uses: conda-incubator/setup-miniconda@v3
       with:
         auto-update-conda: false
         python-version: ${{ matrix.python }}
+
+    # This is necessary for qt (UI) tests; the package utilized here does not
+    # have support for OSX.
+    - name: Set up UI testing infrastructure
+      if: ${{ matrix.TARGET != 'osx' }}
+      uses: pyvista/setup-headless-display-action@v2
+      with:
+        qt: true
+        pyvista: false
 
     # GitHub actions is very fragile when it comes to setting up various
     # Python interpreters, expecially the setup-miniconda interface.
@@ -339,7 +348,7 @@ jobs:
         fi
         # HACK: Remove problem packages on conda+Linux
         if test "${{matrix.TARGET}}" == linux; then
-            EXCLUDE="casadi numdifftools pint $EXCLUDE"
+            EXCLUDE="casadi numdifftools $EXCLUDE"
         fi
         EXCLUDE=`echo "$EXCLUDE" | xargs`
         if test -n "$EXCLUDE"; then
@@ -376,10 +385,11 @@ jobs:
                     | sed -r 's/\s+/ /g' | cut -d\  -f3) || echo ""
                 if test -n "$_BUILDS"; then
                     _ISPY=$(echo "$_BUILDS" | grep "^py") \
-                        || echo "No python build detected"
-                    _PYOK=$(echo "$_BUILDS" | grep "^$PYVER") \
-                        || echo "No python build matching $PYVER detected"
+                        || echo "INFO: No python build detected."
+                    _PYOK=$(echo "$_BUILDS" | grep -E "^($PYVER|pyh)") \
+                        || echo "INFO: No python build matching $PYVER detected."
                     if test -z "$_ISPY" -o -n "$_PYOK"; then
+                        echo ""
                         echo "... INSTALLING $PKG"
                         conda install -y "$PKG" || _BUILDS=""
                     fi
@@ -387,18 +397,6 @@ jobs:
                 if test -z "$_BUILDS"; then
                     echo "WARNING: $PKG is not available"
                 fi
-            done
-            # TODO: This is a hack to stop test_qt.py from running until we
-            # can better troubleshoot why it fails on GHA
-            for QTPACKAGE in qt pyqt; do
-                # Because conda is insane, removing packages can cause
-                # unrelated packages to be updated (breaking version
-                # specifications specified previously, e.g., in
-                # setup.py).  There doesn't appear to be a good
-                # workaround, so we will just force-remove (recognizing
-                # that it may break other conda cruft).
-                conda remove --force-remove $QTPACKAGE \
-                    || echo "$QTPACKAGE not in this environment"
             done
         fi
         # Re-try Pyomo (optional) dependencies with pip
@@ -622,8 +620,8 @@ jobs:
         echo "COVERAGE_PROCESS_START=$COVERAGE_RC" >> $GITHUB_ENV
         cp ${GITHUB_WORKSPACE}/.coveragerc ${COVERAGE_RC}
         echo "data_file=${COVERAGE_BASE}age" >> ${COVERAGE_RC}
-        SITE_PACKAGES=$($PYTHON_EXE -c "from distutils.sysconfig import \
-            get_python_lib; print(get_python_lib())")
+        SITE_PACKAGES=$($PYTHON_EXE -c \
+            "import sysconfig; print(sysconfig.get_path('purelib'))")
         echo "Python site-packages: $SITE_PACKAGES"
         echo 'import coverage; coverage.process_startup()' \
             > ${SITE_PACKAGES}/run_coverage_at_startup.pth
@@ -653,7 +651,7 @@ jobs:
         $PYTHON_EXE -m pytest -v \
             -W ignore::Warning ${{matrix.category}} \
             pyomo `pwd`/pyomo-model-libraries \
-            `pwd`/examples/pyomobook --junitxml="TEST-pyomo.xml"
+            `pwd`/examples `pwd`/doc --junitxml="TEST-pyomo.xml"
 
     - name: Run Pyomo MPI tests
       if: matrix.mpi != 0
@@ -663,7 +661,7 @@ jobs:
         $PYTHON_EXE -c "from pyomo.dataportal.parse_datacmds import \
             parse_data_commands; parse_data_commands(data='')"
         # Note: if we are testing with openmpi, add '--oversubscribe'
-        mpirun -np ${{matrix.mpi}} pytest -v \
+        mpirun -np ${{matrix.mpi}} -oversubscribe pytest -v \
             --junit-xml=TEST-pyomo-mpi.xml \
             -m "mpi" -W ignore::Warning \
             pyomo `pwd`/pyomo-model-libraries
@@ -680,7 +678,7 @@ jobs:
         coverage xml -i
 
     - name: Record build artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{github.job}}_${{env.GHA_JOBGROUP}}-${{env.GHA_JOBNAME}}
         path: |
@@ -701,7 +699,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Set up Python 3.8
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: 3.8
 
@@ -741,12 +739,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-13, windows-latest]
 
         include:
         - os: ubuntu-latest
           TARGET: linux
-        - os: macos-latest
+        - os: macos-13
           TARGET: osx
         - os: windows-latest
           TARGET: win
@@ -757,19 +755,19 @@ jobs:
       # We need the source for .codecov.yml and running "coverage xml"
 
     #- name: Pip package cache
-    #  uses: actions/cache@v3
+    #  uses: actions/cache@v4
     #  id: pip-cache
     #  with:
     #    path: cache/pip
     #    key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-3.8
 
     - name: Download build artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         path: artifacts
 
     - name: Set up Python 3.8
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: 3.8
 
@@ -864,7 +862,7 @@ jobs:
 
     - name: Upload codecov reports
       if: github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main'
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         files: coverage.xml
         token: ${{ secrets.PYOMO_CODECOV_TOKEN }}
@@ -876,7 +874,7 @@ jobs:
       if: |
         hashFiles('coverage-other.xml') != '' &&
         (github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main')
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         files: coverage-other.xml
         token: ${{ secrets.PYOMO_CODECOV_TOKEN }}

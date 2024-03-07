@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -15,7 +15,7 @@ import logging
 from pyomo.common.collections import Bunch
 from pyomo.opt import TerminationCondition
 from pyomo.solvers.tests.models.base import all_models
-from pyomo.solvers.tests.solvers import test_solver_cases
+from pyomo.solvers.tests.solvers import test_solver_cases as _test_solver_cases
 from pyomo.core.kernel.block import IBlock
 
 # For expected failures that appear in all known version
@@ -297,8 +297,8 @@ def generate_scenarios(arg=None):
         _model = all_models(model)
         if not arg is None and not arg(_model):
             continue
-        for solver, io in sorted(test_solver_cases()):
-            _solver_case = test_solver_cases(solver, io)
+        for solver, io in sorted(_test_solver_cases()):
+            _solver_case = _test_solver_cases(solver, io)
             _ver = _solver_case.version
 
             # Skip this test case if the solver doesn't support the

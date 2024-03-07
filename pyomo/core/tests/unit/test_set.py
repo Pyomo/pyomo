@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -112,17 +112,19 @@ from pyomo.environ import (
 
 class Test_SetInitializer(unittest.TestCase):
     def test_single_set(self):
+        tmp = Set()  # a placeholder to accumulate _anonymous_sets references
+
         a = SetInitializer(None)
         self.assertIs(type(a), SetInitializer)
         self.assertIsNone(a._set)
-        self.assertIs(a(None, None), Any)
+        self.assertIs(a(None, None, tmp), Any)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
 
         a = SetInitializer(Reals)
         self.assertIs(type(a), SetInitializer)
         self.assertIs(type(a._set), ConstantInitializer)
-        self.assertIs(a(None, None), Reals)
+        self.assertIs(a(None, None, tmp), Reals)
         self.assertIs(a._set.val, Reals)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
@@ -130,18 +132,20 @@ class Test_SetInitializer(unittest.TestCase):
         a = SetInitializer({1: Reals})
         self.assertIs(type(a), SetInitializer)
         self.assertIs(type(a._set), ItemInitializer)
-        self.assertIs(a(None, 1), Reals)
+        self.assertIs(a(None, 1, tmp), Reals)
         self.assertFalse(a.constant())
         self.assertFalse(a.verified)
 
     def test_intersect(self):
+        tmp = Set()  # a placeholder to accumulate _anonymous_sets references
+
         a = SetInitializer(None)
         a.intersect(SetInitializer(None))
         self.assertIs(type(a), SetInitializer)
         self.assertIsNone(a._set)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
-        self.assertIs(a(None, None), Any)
+        self.assertIs(a(None, None, tmp), Any)
 
         a = SetInitializer(None)
         a.intersect(SetInitializer(Reals))
@@ -150,7 +154,7 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertIs(a._set.val, Reals)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
-        self.assertIs(a(None, None), Reals)
+        self.assertIs(a(None, None, tmp), Reals)
 
         a = SetInitializer(None)
         a.intersect(BoundsInitializer(5, default_step=1))
@@ -158,7 +162,7 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertIs(type(a._set), BoundsInitializer)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
-        self.assertEqual(a(None, None), RangeSet(5))
+        self.assertEqual(a(None, None, tmp), RangeSet(5))
 
         a = SetInitializer(Reals)
         a.intersect(SetInitializer(None))
@@ -167,7 +171,7 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertIs(a._set.val, Reals)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
-        self.assertIs(a(None, None), Reals)
+        self.assertIs(a(None, None, tmp), Reals)
 
         a = SetInitializer(Reals)
         a.intersect(SetInitializer(Integers))
@@ -179,7 +183,7 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertIs(a._set._B.val, Integers)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
-        s = a(None, None)
+        s = a(None, None, tmp)
         self.assertIs(type(s), SetIntersection_InfiniteSet)
         self.assertIs(s._sets[0], Reals)
         self.assertIs(s._sets[1], Integers)
@@ -195,7 +199,7 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertIs(a._set._A._B.val, Integers)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
-        s = a(None, None)
+        s = a(None, None, tmp)
         self.assertIs(type(s), SetIntersection_OrderedSet)
         self.assertIs(type(s._sets[0]), SetIntersection_InfiniteSet)
         self.assertIsInstance(s._sets[1], RangeSet)
@@ -212,7 +216,7 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertIs(a._set._A._B.val, Integers)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
-        s = a(None, None)
+        s = a(None, None, tmp)
         self.assertIs(type(s), SetIntersection_InfiniteSet)
         p.construct()
         s.construct()
@@ -236,8 +240,8 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertFalse(a.constant())
         self.assertFalse(a.verified)
         with self.assertRaises(KeyError):
-            a(None, None)
-        s = a(None, 1)
+            a(None, None, tmp)
+        s = a(None, 1, tmp)
         self.assertIs(type(s), SetIntersection_InfiniteSet)
         p.construct()
         s.construct()
@@ -304,15 +308,17 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertEqual(s, RangeSet(0, 5))
 
     def test_setdefault(self):
+        tmp = Set()  # a placeholder to accumulate _anonymous_sets references
+
         a = SetInitializer(None)
-        self.assertIs(a(None, None), Any)
+        self.assertIs(a(None, None, tmp), Any)
         a.setdefault(Reals)
-        self.assertIs(a(None, None), Reals)
+        self.assertIs(a(None, None, tmp), Reals)
 
         a = SetInitializer(Integers)
-        self.assertIs(a(None, None), Integers)
+        self.assertIs(a(None, None, tmp), Integers)
         a.setdefault(Reals)
-        self.assertIs(a(None, None), Integers)
+        self.assertIs(a(None, None, tmp), Integers)
 
         a = BoundsInitializer(5, default_step=1)
         self.assertEqual(a(None, None), RangeSet(5))
@@ -321,9 +327,9 @@ class Test_SetInitializer(unittest.TestCase):
 
         a = SetInitializer(Reals)
         a.intersect(SetInitializer(Integers))
-        self.assertIs(type(a(None, None)), SetIntersection_InfiniteSet)
+        self.assertIs(type(a(None, None, tmp)), SetIntersection_InfiniteSet)
         a.setdefault(RangeSet(5))
-        self.assertIs(type(a(None, None)), SetIntersection_InfiniteSet)
+        self.assertIs(type(a(None, None, tmp)), SetIntersection_InfiniteSet)
 
     def test_indices(self):
         a = SetInitializer(None)
@@ -993,9 +999,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             i = SetOf([1, 2, 3])
-            self.assertEqual(output.getvalue(), "")
-            i.construct()
-            ref = 'Constructing SetOf, name=OrderedSetOf, from data=None\n'
+            ref = 'Constructing SetOf, name=[1, 2, 3], from data=None\n'
             self.assertEqual(output.getvalue(), ref)
             # Calling construct() twice bypasses construction the second
             # time around
@@ -1237,6 +1241,10 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         # Test types that cannot be case to set
         self.assertNotEqual(SetOf({3}), 3)
+
+        # Test floats
+        self.assertEqual(RangeSet(0.0, 2.0), RangeSet(0.0, 2.0))
+        self.assertEqual(RangeSet(0.0, 2.0), RangeSet(0, 2))
 
     def test_inequality(self):
         self.assertTrue(SetOf([1, 2, 3]) <= SetOf({1, 2, 3}))
@@ -1530,8 +1538,8 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertEqual(i[-1], 0)
         with self.assertRaisesRegex(
             IndexError,
-            "valid index values for Sets are "
-            r"\[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]",
+            "Accessing Pyomo Sets by position is 1-based: valid Set positional "
+            r"index values are \[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]",
         ):
             i[0]
         with self.assertRaisesRegex(IndexError, "OrderedSetOf index out of range"):
@@ -1589,8 +1597,8 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertEqual(i[-1], 0)
         with self.assertRaisesRegex(
             IndexError,
-            "valid index values for Sets are "
-            r"\[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]",
+            "Accessing Pyomo Sets by position is 1-based: valid Set positional "
+            r"index values are \[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]",
         ):
             i[0]
         with self.assertRaisesRegex(IndexError, "OrderedSetOf index out of range"):
@@ -1752,8 +1760,8 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
             self.assertEqual(r[i + 1], v)
         with self.assertRaisesRegex(
             IndexError,
-            "valid index values for Sets are "
-            r"\[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]",
+            "Accessing Pyomo Sets by position is 1-based: valid Set positional "
+            r"index values are \[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]",
         ):
             r[0]
         with self.assertRaisesRegex(
@@ -1769,8 +1777,8 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
             self.assertEqual(r[i + 1], v)
         with self.assertRaisesRegex(
             IndexError,
-            "valid index values for Sets are "
-            r"\[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]",
+            "Accessing Pyomo Sets by position is 1-based: valid Set positional "
+            r"index values are \[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]",
         ):
             r[0]
         with self.assertRaisesRegex(
@@ -1811,7 +1819,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 class Test_SetOperator(unittest.TestCase):
     def test_construct(self):
         p = Param(initialize=3)
-        a = RangeSet(p)
+        a = RangeSet(p, name='a')
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             i = a * a
@@ -1820,12 +1828,8 @@ class Test_SetOperator(unittest.TestCase):
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             i.construct()
             ref = (
-                'Constructing SetOperator, name=SetProduct_OrderedSet, '
-                'from data=None\n'
-                'Constructing RangeSet, name=FiniteScalarRangeSet, '
-                'from data=None\n'
-                'Constructing Set, name=SetProduct_OrderedSet, '
-                'from data=None\n'
+                'Constructing SetOperator, name=a*a, from data=None\n'
+                'Constructing RangeSet, name=a, from data=None\n'
             )
             self.assertEqual(output.getvalue(), ref)
             # Calling construct() twice bypasses construction the second
@@ -1937,8 +1941,8 @@ class TestSetUnion(unittest.TestCase):
         m.A.pprint(ostream=output)
         ref = """
 A : Size=1, Index=None, Ordered=True
-    Key  : Dimen : Domain        : Size : Members
-    None :     1 : I | A_index_0 :    4 : {1, 2, 3, 4}
+    Key  : Dimen : Domain     : Size : Members
+    None :     1 : I | {3, 4} :    4 : {1, 2, 3, 4}
 """.strip()
         self.assertEqual(output.getvalue().strip(), ref)
 
@@ -2213,8 +2217,8 @@ class TestSetIntersection(unittest.TestCase):
         m.A.pprint(ostream=output)
         ref = """
 A : Size=1, Index=None, Ordered=True
-    Key  : Dimen : Domain        : Size : Members
-    None :     1 : I & A_index_0 :    0 :      {}
+    Key  : Dimen : Domain     : Size : Members
+    None :     1 : I & {3, 4} :    0 :      {}
 """.strip()
         self.assertEqual(output.getvalue().strip(), ref)
 
@@ -2491,8 +2495,8 @@ class TestSetDifference(unittest.TestCase):
         m.A.pprint(ostream=output)
         ref = """
 A : Size=1, Index=None, Ordered=True
-    Key  : Dimen : Domain        : Size : Members
-    None :     1 : I - A_index_0 :    2 : {1, 2}
+    Key  : Dimen : Domain     : Size : Members
+    None :     1 : I - {3, 4} :    2 : {1, 2}
 """.strip()
         self.assertEqual(output.getvalue().strip(), ref)
 
@@ -2647,6 +2651,34 @@ A : Size=1, Index=None, Ordered=True
             list(RangeSet(ranges=[NR(0, 2, 0, (True, False))]).ranges()),
         )
 
+        x = RangeSet(0, 6, 0) - RangeSet(1, 5, 2)
+        self.assertIs(type(x), SetDifference_InfiniteSet)
+        self.assertFalse(x.isfinite())
+        self.assertFalse(x.isordered())
+
+        self.assertIn(0, x)
+        self.assertNotIn(1, x)
+        self.assertIn(2, x)
+        self.assertNotIn(3, x)
+        self.assertIn(4, x)
+        self.assertNotIn(5, x)
+        self.assertIn(6, x)
+        self.assertNotIn(7, x)
+
+        self.assertEqual(
+            list(x.ranges()),
+            list(
+                RangeSet(
+                    ranges=[
+                        NR(0, 1, 0, (True, False)),
+                        NR(1, 3, 0, (False, False)),
+                        NR(3, 5, 0, (False, False)),
+                        NR(5, 6, 0, (False, True)),
+                    ]
+                ).ranges()
+            ),
+        )
+
 
 class TestSetSymmetricDifference(unittest.TestCase):
     def test_pickle(self):
@@ -2692,8 +2724,8 @@ class TestSetSymmetricDifference(unittest.TestCase):
         m.A.pprint(ostream=output)
         ref = """
 A : Size=1, Index=None, Ordered=True
-    Key  : Dimen : Domain        : Size : Members
-    None :     1 : I ^ A_index_0 :    4 : {1, 2, 3, 4}
+    Key  : Dimen : Domain     : Size : Members
+    None :     1 : I ^ {3, 4} :    4 : {1, 2, 3, 4}
 """.strip()
         self.assertEqual(output.getvalue().strip(), ref)
 
@@ -2954,8 +2986,8 @@ class TestSetProduct(unittest.TestCase):
         m.A.pprint(ostream=output)
         ref = """
 A : Size=1, Index=None, Ordered=True
-    Key  : Dimen : Domain      : Size : Members
-    None :     2 : I*A_index_0 :    4 : {(1, 3), (1, 4), (2, 3), (2, 4)}
+    Key  : Dimen : Domain   : Size : Members
+    None :     2 : I*{3, 4} :    4 : {(1, 3), (1, 4), (2, 3), (2, 4)}
 """.strip()
         self.assertEqual(output.getvalue().strip(), ref)
 
@@ -3070,7 +3102,7 @@ J : Size=1, Index=None, Ordered=False
             x = I * J
 
             normalize_index.flatten = False
-            self.assertIs(x.dimen, None)
+            self.assertIs(x.dimen, 2)
             self.assertIn(((1, 2), 3), x)
             self.assertIn((1, (2, 3)), x)
             # if we are not flattening, then lookup must match the
@@ -3245,7 +3277,7 @@ J : Size=1, Index=None, Ordered=False
                 ((3, 4), (7, 8)),
             ]
             self.assertEqual(list(x), ref)
-            self.assertEqual(x.dimen, None)
+            self.assertEqual(x.dimen, 2)
         finally:
             SetModule.FLATTEN_CROSS_PRODUCT = origFlattenCross
 
@@ -3289,7 +3321,7 @@ J : Size=1, Index=None, Ordered=False
                 (1, (2, 3), 5),
             ]
             self.assertEqual(list(x), ref)
-            self.assertEqual(x.dimen, None)
+            self.assertEqual(x.dimen, 3)
         finally:
             SetModule.FLATTEN_CROSS_PRODUCT = origFlattenCross
 
@@ -3341,7 +3373,7 @@ J : Size=1, Index=None, Ordered=False
             self.assertEqual(list(x), ref)
             for i, v in enumerate(ref):
                 self.assertEqual(x[i + 1], v)
-            self.assertEqual(x.dimen, None)
+            self.assertEqual(x.dimen, 4)
         finally:
             SetModule.FLATTEN_CROSS_PRODUCT = origFlattenCross
 
@@ -4191,10 +4223,12 @@ class TestSet(unittest.TestCase):
         m.I = [1, 3, 2]
         self.assertEqual(m.I[2], 3)
         with self.assertRaisesRegex(
-            IndexError, "I indices must be integers, not float"
+            IndexError, "Set 'I' positional indices must be integers, not float"
         ):
             m.I[2.5]
-        with self.assertRaisesRegex(IndexError, "I indices must be integers, not str"):
+        with self.assertRaisesRegex(
+            IndexError, "Set 'I' positional indices must be integers, not str"
+        ):
             m.I['a']
 
     def test_add_filter_validate(self):
@@ -4376,17 +4410,17 @@ class TestSet(unittest.TestCase):
         self.assertEqual(list(m.I), [0, 2.0, 4])
         with self.assertRaisesRegex(
             ValueError,
-            'The value is not in the domain ' r'\(Integers & I_domain_index_0_index_1',
+            r'The value is not in the domain \(Integers & \[0:inf:2\]\) & \[0..9\]',
         ):
             m.I.add(1.5)
         with self.assertRaisesRegex(
             ValueError,
-            'The value is not in the domain ' r'\(Integers & I_domain_index_0_index_1',
+            r'The value is not in the domain \(Integers & \[0:inf:2\]\) & \[0..9\]',
         ):
             m.I.add(1)
         with self.assertRaisesRegex(
             ValueError,
-            'The value is not in the domain ' r'\(Integers & I_domain_index_0_index_1',
+            r'The value is not in the domain \(Integers & \[0:inf:2\]\) & \[0..9\]',
         ):
             m.I.add(10)
 
@@ -4424,8 +4458,8 @@ class TestSet(unittest.TestCase):
         Key  : Dimen : Domain : Size : Members
         None :     2 :    Any :    2 : {(3, 4), (1, 2)}
     M : Size=1, Index=None, Ordered=False
-        Key  : Dimen : Domain            : Size : Members
-        None :     1 : Reals - M_index_1 :  Inf : ([-inf..0) | (0..inf])
+        Key  : Dimen : Domain      : Size : Members
+        None :     1 : Reals - [0] :  Inf : ([-inf..0) | (0..inf])
     N : Size=1, Index=None, Ordered=False
         Key  : Dimen : Domain           : Size : Members
         None :     1 : Integers - Reals :  Inf :      []
@@ -4435,12 +4469,7 @@ class TestSet(unittest.TestCase):
         Key  : Finite : Members
         None :   True :   [1:3]
 
-1 SetOf Declarations
-    M_index_1 : Dimen=1, Size=1, Bounds=(0, 0)
-        Key  : Ordered : Members
-        None :    True :     [0]
-
-8 Declarations: I_index I J K L M_index_1 M N""".strip(),
+7 Declarations: I_index I J K L M N""".strip(),
         )
 
     def test_pickle(self):
@@ -4526,11 +4555,11 @@ class TestSet(unittest.TestCase):
         ref = """
 I : Size=0, Index=None, Ordered=Insertion
     Not constructed
-II : Size=0, Index=II_index, Ordered=Insertion
+II : Size=0, Index={1, 2, 3}, Ordered=Insertion
     Not constructed
 J : Size=0, Index=None, Ordered=Insertion
     Not constructed
-JJ : Size=0, Index=JJ_index, Ordered=Insertion
+JJ : Size=0, Index={1, 2, 3}, Ordered=Insertion
     Not constructed""".strip()
         self.assertEqual(output.getvalue().strip(), ref)
 
@@ -4797,7 +4826,7 @@ I : Size=1, Index=None, Ordered=Insertion
         output = StringIO()
         m.I.pprint(ostream=output)
         ref = """
-I : Size=2, Index=I_index, Ordered=Insertion
+I : Size=2, Index={1, 2, 3, 4, 5}, Ordered=Insertion
     Key : Dimen : Domain : Size : Members
       2 :     1 :    Any :    2 : {0, 1}
       4 :     1 :    Any :    4 : {0, 1, 2, 3}
@@ -5227,7 +5256,7 @@ I : Size=2, Index=I_index, Ordered=Insertion
             m.I = Set()
             self.assertIs(m.I._dimen, UnknownSetDimen)
             self.assertTrue(m.I.add((1, (2, 3))))
-            self.assertIs(m.I._dimen, None)
+            self.assertIs(m.I._dimen, 2)
             self.assertNotIn(((1, 2), 3), m.I)
             self.assertIn((1, (2, 3)), m.I)
             self.assertNotIn((1, 2, 3), m.I)
@@ -6238,7 +6267,6 @@ c : Size=3, Index=CHOICES, Active=True
 
     @unittest.skipIf(NamedTuple is None, "typing module not available")
     def test_issue_938(self):
-        self.maxDiff = None
         NodeKey = NamedTuple('NodeKey', [('id', int)])
         ArcKey = NamedTuple('ArcKey', [('node_from', NodeKey), ('node_to', NodeKey)])
 
@@ -6271,14 +6299,11 @@ c : Size=3, Index=CHOICES, Active=True
             output = StringIO()
             m.pprint(ostream=output)
             ref = """
-3 Set Declarations
+2 Set Declarations
     arc_keys : Set of arcs
         Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain          : Size : Members
-        None :     2 : arc_keys_domain :    2 : {(0, 0), (0, 1)}
-    arc_keys_domain : Size=1, Index=None, Ordered=True
         Key  : Dimen : Domain              : Size : Members
-        None :     2 : node_keys*node_keys :    4 : {(0, 0), (0, 1), (1, 0), (1, 1)}
+        None :     2 : node_keys*node_keys :    2 : {(0, 0), (0, 1)}
     node_keys : Set of nodes
         Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
@@ -6295,7 +6320,7 @@ c : Size=3, Index=CHOICES, Active=True
         Key  : Active : Sense    : Expression
         None :   True : minimize : arc_variables[0,0] + arc_variables[0,1]
 
-5 Declarations: node_keys arc_keys_domain arc_keys arc_variables obj
+4 Declarations: node_keys arc_keys arc_variables obj
 """.strip()
             self.assertEqual(output.getvalue().strip(), ref)
 
@@ -6304,18 +6329,15 @@ c : Size=3, Index=CHOICES, Active=True
             output = StringIO()
             m.pprint(ostream=output)
             ref = """
-3 Set Declarations
+2 Set Declarations
     arc_keys : Set of arcs
         Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain          : Size : Members
-        None :  None : arc_keys_domain :    2 : {ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=0)), ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=1))}
-    arc_keys_domain : Size=1, Index=None, Ordered=True
         Key  : Dimen : Domain              : Size : Members
-        None :  None : node_keys*node_keys :    4 : {(NodeKey(id=0), NodeKey(id=0)), (NodeKey(id=0), NodeKey(id=1)), (NodeKey(id=1), NodeKey(id=0)), (NodeKey(id=1), NodeKey(id=1))}
+        None :     2 : node_keys*node_keys :    2 : {ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=0)), ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=1))}
     node_keys : Set of nodes
         Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
-        None :  None :    Any :    2 : {NodeKey(id=0), NodeKey(id=1)}
+        None :     1 :    Any :    2 : {NodeKey(id=0), NodeKey(id=1)}
 
 1 Var Declarations
     arc_variables : Size=2, Index=arc_keys
@@ -6328,7 +6350,7 @@ c : Size=3, Index=CHOICES, Active=True
         Key  : Active : Sense    : Expression
         None :   True : minimize : arc_variables[ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=0))] + arc_variables[ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=1))]
 
-5 Declarations: node_keys arc_keys_domain arc_keys arc_variables obj
+4 Declarations: node_keys arc_keys arc_variables obj
 """.strip()
             self.assertEqual(output.getvalue().strip(), ref)
 

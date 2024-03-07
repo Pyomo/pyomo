@@ -38,7 +38,7 @@ if test -z "$WORKSPACE"; then
     export WORKSPACE=`pwd`
 fi
 if test -z "$TEST_SUITES"; then
-    export TEST_SUITES="${WORKSPACE}/pyomo/pyomo ${WORKSPACE}/pyomo-model-libraries ${WORKSPACE}/pyomo/examples/pyomobook"
+    export TEST_SUITES="${WORKSPACE}/pyomo/pyomo ${WORKSPACE}/pyomo-model-libraries ${WORKSPACE}/pyomo/examples ${WORKSPACE}/pyomo/doc"
 fi
 if test -z "$SLIM"; then
     export VENV_SYSTEM_PACKAGES='--system-site-packages'
@@ -77,7 +77,7 @@ if test -z "$MODE" -o "$MODE" == setup; then
     source python/bin/activate
     # Because modules set the PYTHONPATH, we need to make sure that the
     # virtualenv appears first
-    LOCAL_SITE_PACKAGES=`python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
+    LOCAL_SITE_PACKAGES=`python -c "import sysconfig; print(sysconfig.get_path('purelib'))"`
     export PYTHONPATH="$LOCAL_SITE_PACKAGES:$PYTHONPATH"
 
     # Set up Pyomo checkouts

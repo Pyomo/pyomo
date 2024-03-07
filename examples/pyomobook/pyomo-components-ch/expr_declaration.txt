@@ -18,28 +18,20 @@
         None : x + 2
 
 3 Declarations: x e1 e2
-2 Set Declarations
-    e_index : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :    3 : {1, 2, 3}
-    x_index : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :    3 : {1, 2, 3}
-
 1 Var Declarations
-    x : Size=3, Index=x_index
+    x : Size=3, Index={1, 2, 3}
         Key : Lower : Value : Upper : Fixed : Stale : Domain
           1 :  None :  None :  None : False :  True :  Reals
           2 :  None :  None :  None : False :  True :  Reals
           3 :  None :  None :  None : False :  True :  Reals
 
 1 Expression Declarations
-    e : Size=2, Index=e_index
+    e : Size=2, Index={1, 2, 3}
         Key : Expression
           2 :    x[2]**2
           3 :    x[3]**2
 
-4 Declarations: x_index x e_index e
+2 Declarations: x e
 1 Var Declarations
     x : Size=1, Index=None
         Key  : Lower : Value : Upper : Fixed : Stale : Domain

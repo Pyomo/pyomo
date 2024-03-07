@@ -142,6 +142,7 @@ PyROS Solver Interface
 
     Otherwise, the solution returned is certified to only be robust feasible.
 
+
 PyROS Uncertainty Sets
 -----------------------------
 Uncertainty sets are represented by subclasses of
@@ -518,7 +519,7 @@ correspond to first-stage degrees of freedom.
 
   >>> # === Designate which variables correspond to first-stage
   >>> #     and second-stage degrees of freedom ===
-  >>> first_stage_variables =[
+  >>> first_stage_variables = [
   ...     m.x1, m.x2, m.x3, m.x4, m.x5, m.x6,
   ...     m.x19, m.x20, m.x21, m.x22, m.x23, m.x24, m.x31,
   ... ]
@@ -539,7 +540,7 @@ correspond to first-stage degrees of freedom.
   ...     load_solution=False,
   ... )
   ==============================================================================
-  PyROS: The Pyomo Robust Optimization Solver.
+  PyROS: The Pyomo Robust Optimization Solver...
   ...
   ------------------------------------------------------------------------------
   Robust optimal solution identified.
@@ -657,6 +658,54 @@ For this example, we notice a ~25% decrease in the final objective
 value when switching from a static decision rule (no second-stage recourse)
 to an affine decision rule.
 
+
+Specifying Arguments Indirectly Through ``options``
+"""""""""""""""""""""""""""""""""""""""""""""""""""
+Like other Pyomo solver interface methods,
+:meth:`~pyomo.contrib.pyros.PyROS.solve`
+provides support for specifying options indirectly by passing
+a keyword argument ``options``, whose value must be a :class:`dict`
+mapping names of arguments to :meth:`~pyomo.contrib.pyros.PyROS.solve`
+to their desired values.
+For example, the ``solve()`` statement in the
+:ref:`two-stage problem snippet <example-two-stg>`
+could have been equivalently written as:
+
+.. doctest::
+  :skipif: not (baron.available() and baron.license_is_valid())
+
+  >>> results_2 = pyros_solver.solve(
+  ...     model=m,
+  ...     first_stage_variables=first_stage_variables,
+  ...     second_stage_variables=second_stage_variables,
+  ...     uncertain_params=uncertain_parameters,
+  ...     uncertainty_set=box_uncertainty_set,
+  ...     local_solver=local_solver,
+  ...     global_solver=global_solver,
+  ...     options={
+  ...         "objective_focus": pyros.ObjectiveType.worst_case,
+  ...         "solve_master_globally": True,
+  ...         "decision_rule_order": 1,
+  ...     },
+  ... )
+  ==============================================================================
+  PyROS: The Pyomo Robust Optimization Solver...
+  ...
+  ------------------------------------------------------------------------------
+  Robust optimal solution identified.
+  ------------------------------------------------------------------------------
+  ...
+  ------------------------------------------------------------------------------
+  All done. Exiting PyROS.
+  ==============================================================================
+
+In the event an argument is passed directly
+by position or keyword, *and* indirectly through ``options``,
+an appropriate warning is issued,
+and the value passed directly takes precedence over the value
+passed through ``options``.
+
+
 The Price of Robustness
 """"""""""""""""""""""""
 In conjunction with standard Python control flow tools,
@@ -723,11 +772,11 @@ For this example, we obtain the following price of robustness results:
     +==========================================+==============================+=============================+
     |   0.00                                   | 35,837,659.18                | 0.00 %                      |
     +------------------------------------------+------------------------------+-----------------------------+
-    |   0.10                                   | 36,135,191.59                | 0.82 %                      |
+    |   0.10                                   | 36,135,182.66                | 0.83 %                      |
     +------------------------------------------+------------------------------+-----------------------------+
-    |   0.20                                   | 36,437,979.81                | 1.64 %                      |
+    |   0.20                                   | 36,437,979.81                | 1.68 %                      |
     +------------------------------------------+------------------------------+-----------------------------+
-    |   0.30                                   | 43,478,190.92                | 17.57 %                     |
+    |   0.30                                   | 43,478,190.91                | 21.32 %                     |
     +------------------------------------------+------------------------------+-----------------------------+
     |   0.40                                   | ``robust_infeasible``        | :math:`\text{-----}`        |
     +------------------------------------------+------------------------------+-----------------------------+
@@ -854,10 +903,10 @@ Observe that the log contains the following information:
    :linenos:
 
    ==============================================================================
-   PyROS: The Pyomo Robust Optimization Solver, v1.2.8.
+   PyROS: The Pyomo Robust Optimization Solver, v1.2.9.
           Pyomo version: 6.7.0
           Commit hash: unknown
-          Invoked at UTC 2023-11-03T04:27:42.954101
+          Invoked at UTC 2023-12-16T00:00:00.000000
 
    Developed by: Natalie M. Isenberg (1), Jason A. F. Sherman (1),
                  John D. Siirola (2), Chrysanthos E. Gounaris (1)
@@ -914,14 +963,11 @@ Observe that the log contains the following information:
    ------------------------------------------------------------------------------
    Itn  Objective    1-Stg Shift  2-Stg Shift  #CViol  Max Viol     Wall Time (s)
    ------------------------------------------------------------------------------
-   0     3.5838e+07  -            -            5       1.8832e+04   1.555        
-   1     3.5838e+07  2.2045e-12   2.7854e-12   7       3.7766e+04   2.991        
-   2     3.6116e+07  1.2324e-01   3.9256e-01   8       1.3466e+06   4.881        
-   3     3.6285e+07  5.1968e-01   4.5604e-01   6       4.8734e+03   6.908        
-   4     3.6285e+07  2.6524e-13   1.3909e-13   1       3.5036e+01   9.176        
-   5     3.6285e+07  2.0167e-13   5.4357e-02   6       2.9103e+00   11.457       
-   6     3.6285e+07  2.2335e-12   1.2150e-01   5       4.1726e-01   13.868       
-   7     3.6285e+07  2.2340e-12   1.1422e-01   0       9.3279e-10g  20.917       
+   0     3.5838e+07  -            -            5       1.8832e+04   1.741        
+   1     3.5838e+07  3.5184e-15   3.9404e-15   10      4.2516e+06   3.766        
+   2     3.5993e+07  1.8105e-01   7.1406e-01   13      5.2004e+06   6.288
+   3     3.6285e+07  5.1968e-01   7.7753e-01   4       1.7892e+04   8.247
+   4     3.6285e+07  9.1166e-13   1.9702e-15   0       7.1157e-10g  11.456
    ------------------------------------------------------------------------------
    Robust optimal solution identified.
    ------------------------------------------------------------------------------
@@ -929,22 +975,22 @@ Observe that the log contains the following information:
 
    Identifier                ncalls   cumtime   percall      %
    -----------------------------------------------------------
-   main                           1    20.918    20.918  100.0
+   main                           1    11.457    11.457  100.0
         ------------------------------------------------------
-        dr_polishing              7     1.472     0.210    7.0
-        global_separation        47     1.239     0.026    5.9
-        local_separation        376     9.244     0.025   44.2
-        master                    8     5.259     0.657   25.1
-        master_feasibility        7     0.486     0.069    2.3
-        preprocessing             1     0.403     0.403    1.9
-        other                   n/a     2.815       n/a   13.5
+        dr_polishing              4     0.682     0.171    6.0
+        global_separation        47     1.109     0.024    9.7
+        local_separation        235     5.810     0.025   50.7
+        master                    5     1.353     0.271   11.8
+        master_feasibility        4     0.247     0.062    2.2
+        preprocessing             1     0.429     0.429    3.7
+        other                   n/a     1.828       n/a   16.0
         ======================================================
    ===========================================================
 
    ------------------------------------------------------------------------------
    Termination stats:
-    Iterations            : 8
-    Solve time (wall s)   : 20.918
+    Iterations            : 5
+    Solve time (wall s)   : 11.457
     Final objective value : 3.6285e+07
     Termination condition : pyrosTerminationCondition.robust_optimal
    ------------------------------------------------------------------------------

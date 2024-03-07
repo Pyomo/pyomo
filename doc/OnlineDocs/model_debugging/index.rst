@@ -7,4 +7,3 @@ Debugging Pyomo Models
    model_interrogation.rst
    FAQ.rst
    getting_help.rst
-   latex_printing.rst

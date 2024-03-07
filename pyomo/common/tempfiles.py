@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -22,18 +22,15 @@ import tempfile
 import logging
 import shutil
 import weakref
+
+from pyomo.common.dependencies import attempt_import, pyutilib_available
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.errors import TempfileContextError
 from pyomo.common.multithread import MultiThreadWrapperWithMain
 
-try:
-    from pyutilib.component.config.tempfiles import TempfileManager as pyutilib_mngr
-except ImportError:
-    pyutilib_mngr = None
-
 deletion_errors_are_fatal = True
-
 logger = logging.getLogger(__name__)
+pyutilib_tempfiles, _ = attempt_import('pyutilib.component.config.tempfiles')
 
 
 class TempfileManagerClass(object):
@@ -432,16 +429,17 @@ class TempfileContext:
             return self.manager().tempdir
         elif TempfileManager.main_thread.tempdir is not None:
             return TempfileManager.main_thread.tempdir
-        elif pyutilib_mngr is not None and pyutilib_mngr.tempdir is not None:
-            deprecation_warning(
-                "The use of the PyUtilib TempfileManager.tempdir "
-                "to specify the default location for Pyomo "
-                "temporary files has been deprecated.  "
-                "Please set TempfileManager.tempdir in "
-                "pyomo.common.tempfiles",
-                version='5.7.2',
-            )
-            return pyutilib_mngr.tempdir
+        elif pyutilib_available:
+            if pyutilib_tempfiles.TempfileManager.tempdir is not None:
+                deprecation_warning(
+                    "The use of the PyUtilib TempfileManager.tempdir "
+                    "to specify the default location for Pyomo "
+                    "temporary files has been deprecated.  "
+                    "Please set TempfileManager.tempdir in "
+                    "pyomo.common.tempfiles",
+                    version='5.7.2',
+                )
+                return pyutilib_tempfiles.TempfileManager.tempdir
         return None
 
     def _remove_filesystem_object(self, name):

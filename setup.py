@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -19,8 +19,10 @@ import sys
 from setuptools import setup, find_packages, Command
 
 try:
+    # This works beginning in setuptools 40.7.0 (27 Jan 2019)
     from setuptools import DistutilsOptionError
 except ImportError:
+    # Needed for setuptools prior to 40.7.0
     from distutils.errors import DistutilsOptionError
 
 
@@ -241,20 +243,19 @@ setup_kwargs = dict(
     python_requires='>=3.8',
     install_requires=['ply'],
     extras_require={
-        'tests': [
-            #'codecov', # useful for testing infrastructures, but not required
-            'coverage',
-            'pytest',
-            'pytest-parallel',
-            'parameterized',
-            'pybind11',
-        ],
+        # There are certain tests that also require pytest-qt, but because those
+        # tests are so environment/machine specific, we are leaving these out of
+        # the dependencies.
+        'tests': ['coverage', 'parameterized', 'pybind11', 'pytest', 'pytest-parallel'],
         'docs': [
             'Sphinx>4',
             'sphinx-copybutton',
             'sphinx_rtd_theme>0.5',
             'sphinxcontrib-jsmath',
             'sphinxcontrib-napoleon',
+            'sphinx-toolbox>=2.16.0',
+            'sphinx-jinja2-compat>=0.1.1',
+            'enum_tools',
             'numpy',  # Needed by autodoc for pynumero
             'scipy',  # Needed by autodoc for pynumero
         ],
@@ -266,7 +267,7 @@ setup_kwargs = dict(
             'matplotlib!=3.6.1',
             # network, incidence_analysis, community_detection
             # Note: networkx 3.2 is Python>-3.9, but there is a broken
-            # 3.2 package on conda-forgethat will get implicitly
+            # 3.2 package on conda-forge that will get implicitly
             # installed on python 3.8
             'networkx<3.2; python_version<"3.9"',
             'networkx; python_version>="3.9"',
@@ -277,6 +278,9 @@ setup_kwargs = dict(
             'plotly',  # incidence_analysis
             'python-louvain',  # community_detection
             'pyyaml',  # core
+            # qtconsole also requires a supported Qt version (PyQt5 or PySide6).
+            # Because those are environment specific, we have left that out here.
+            'qtconsole',  # contrib.viewer
             'scipy',
             'sympy',  # differentiation
             'xlrd',  # dataportals
@@ -289,9 +293,7 @@ setup_kwargs = dict(
             # The following optional dependencies are difficult to
             # install on PyPy (binary wheels are not available), so we
             # will only "require" them on other (CPython) platforms:
-            #
-            # DAE can use casadi
-            'casadi; implementation_name!="pypy"',
+            'casadi; implementation_name!="pypy"',  # dae
             'numdifftools; implementation_name!="pypy"',  # pynumero
             'pandas; implementation_name!="pypy"',
             'seaborn; implementation_name!="pypy"',  # parmest.graphics

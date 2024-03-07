@@ -1,6 +1,17 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
 #  Copyright (c) 2008-2023
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
@@ -1087,12 +1098,12 @@ def latex_printer(
             for ky, vl in setInfo.items():
                 ix = int(ky[3:]) - 1
                 setInfo[ky]['setObject'] = setMap_inverse[ky]  # setList[ix]
-                setInfo[ky][
-                    'setRegEx'
-                ] = r'__S_PLACEHOLDER_8675309_GROUP_([0-9*])_%s__' % (ky)
-                setInfo[ky][
-                    'sumSetRegEx'
-                ] = r'sum_{__S_PLACEHOLDER_8675309_GROUP_([0-9*])_%s__}' % (ky)
+                setInfo[ky]['setRegEx'] = (
+                    r'__S_PLACEHOLDER_8675309_GROUP_([0-9*])_%s__' % (ky)
+                )
+                setInfo[ky]['sumSetRegEx'] = (
+                    r'sum_{__S_PLACEHOLDER_8675309_GROUP_([0-9*])_%s__}' % (ky)
+                )
                 # setInfo[ky]['idxRegEx'] = r'__I_PLACEHOLDER_8675309_GROUP_[0-9*]_%s__'%(ky)
 
             if explicit_set_summation:

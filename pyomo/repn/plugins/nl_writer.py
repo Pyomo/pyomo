@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -26,7 +26,7 @@ from pyomo.common.config import (
     document_kwargs_from_configdict,
 )
 from pyomo.common.deprecation import deprecation_warning
-from pyomo.common.errors import DeveloperError, InfeasibleConstraintException
+from pyomo.common.errors import DeveloperError, InfeasibleConstraintException, MouseTrap
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.numeric_types import (
     native_complex_types,
@@ -214,7 +214,7 @@ class NLWriter(object):
     CONFIG.declare(
         'skip_trivial_constraints',
         ConfigValue(
-            default=False,
+            default=True,
             domain=bool,
             description='Skip writing constraints whose body is constant',
         ),
@@ -338,6 +338,9 @@ class NLWriter(object):
         config.scale_model = False
         config.linear_presolve = False
 
+        # just for backwards compatibility
+        config.skip_trivial_constraints = False
+
         if config.symbolic_solver_labels:
             _open = lambda fname: open(fname, 'w')
         else:
@@ -346,6 +349,18 @@ class NLWriter(object):
             row_fname
         ) as ROWFILE, _open(col_fname) as COLFILE:
             info = self.write(model, FILE, ROWFILE, COLFILE, config=config)
+        if not info.variables:
+            # This exception is included for compatibility with the
+            # original NL writer v1.
+            os.remove(filename)
+            if config.symbolic_solver_labels:
+                os.remove(row_fname)
+                os.remove(col_fname)
+            raise ValueError(
+                "No variables appear in the Pyomo model constraints or"
+                " objective. This is not supported by the NL file interface"
+            )
+
         # Historically, the NL writer communicated the external function
         # libraries back to the ASL interface through the PYOMO_AMPLFUNC
         # environment variable.
@@ -357,7 +372,9 @@ class NLWriter(object):
         return filename, symbol_map
 
     @document_kwargs_from_configdict(CONFIG)
-    def write(self, model, ostream, rowstream=None, colstream=None, **options):
+    def write(
+        self, model, ostream, rowstream=None, colstream=None, **options
+    ) -> NLWriterInfo:
         """Write a model in NL format.
 
         Returns
@@ -854,13 +871,6 @@ class _NLWriter_impl(object):
         con_vars = con_vars_linear | con_vars_nonlinear
         all_vars = con_vars | obj_vars
         n_vars = len(all_vars)
-        if n_vars < 1:
-            # TODO: Remove this.  This exception is included for
-            # compatibility with the original NL writer v1.
-            raise ValueError(
-                "No variables appear in the Pyomo model constraints or"
-                " objective. This is not supported by the NL file interface"
-            )
 
         continuous_vars = set()
         binary_vars = set()
@@ -1451,9 +1461,11 @@ class _NLWriter_impl(object):
         ostream.write(
             'r%s\n'
             % (
-                "\t#%d ranges (rhs's)" % len(constraints)
-                if symbolic_solver_labels
-                else '',
+                (
+                    "\t#%d ranges (rhs's)" % len(constraints)
+                    if symbolic_solver_labels
+                    else ''
+                ),
             )
         )
         ostream.write("\n".join(r_lines))
@@ -1466,9 +1478,11 @@ class _NLWriter_impl(object):
         ostream.write(
             'b%s\n'
             % (
-                "\t#%d bounds (on variables)" % len(variables)
-                if symbolic_solver_labels
-                else '',
+                (
+                    "\t#%d bounds (on variables)" % len(variables)
+                    if symbolic_solver_labels
+                    else ''
+                ),
             )
         )
         for var_idx, _id in enumerate(variables):
@@ -1492,9 +1506,11 @@ class _NLWriter_impl(object):
             'k%d%s\n'
             % (
                 len(variables) - 1,
-                "\t#intermediate Jacobian column lengths"
-                if symbolic_solver_labels
-                else '',
+                (
+                    "\t#intermediate Jacobian column lengths"
+                    if symbolic_solver_labels
+                    else ''
+                ),
             )
         )
         ktot = 0
@@ -1536,7 +1552,8 @@ class _NLWriter_impl(object):
 
         # Generate the return information
         eliminated_vars = [
-            (var_map[_id], expr_info) for _id, expr_info in eliminated_vars.items()
+            (var_map[_id], expr_info.to_expr(var_map))
+            for _id, expr_info in eliminated_vars.items()
         ]
         eliminated_vars.reverse()
         if scale_model:
@@ -1743,7 +1760,7 @@ class _NLWriter_impl(object):
                 id2_isdiscrete = var_map[id2].domain.isdiscrete()
                 if var_map[_id].domain.isdiscrete() ^ id2_isdiscrete:
                     # if only one variable is discrete, then we need to
-                    # substiitute out the other
+                    # substitute out the other
                     if id2_isdiscrete:
                         _id, id2 = id2, _id
                         coef, coef2 = coef2, coef
@@ -1803,10 +1820,15 @@ class _NLWriter_impl(object):
                 # appropriately (that expr_info is persisting in the
                 # eliminated_vars dict - and we will use that to
                 # update other linear expressions later.)
+                old_nnz = len(expr_info.linear)
                 c = expr_info.linear.pop(_id, 0)
+                nnz = old_nnz - 1
                 expr_info.const += c * b
                 if x in expr_info.linear:
                     expr_info.linear[x] += c * a
+                    if expr_info.linear[x] == 0:
+                        nnz -= 1
+                        coef = expr_info.linear.pop(x)
                 elif a:
                     expr_info.linear[x] = c * a
                     # replacing _id with x... NNZ is not changing,
@@ -1814,10 +1836,17 @@ class _NLWriter_impl(object):
                     # this constraint
                     comp_by_linear_var[x].append((con_id, expr_info))
                     continue
-                # NNZ has been reduced by 1
-                nnz = len(expr_info.linear)
-                _old = lcon_by_linear_nnz[nnz + 1]
+                _old = lcon_by_linear_nnz[old_nnz]
                 if con_id in _old:
+                    if not nnz:
+                        if abs(expr_info.const) > TOL:
+                            # constraint is trivially infeasible
+                            raise InfeasibleConstraintException(
+                                "model contains a trivially infeasible constraint "
+                                f"{expr_info.const} == {coef}*{var_map[x]}"
+                            )
+                        # constraint is trivially feasible
+                        eliminated_cons.add(con_id)
                     lcon_by_linear_nnz[nnz][con_id] = _old.pop(con_id)
             # If variables were replaced by the variable that
             # we are currently eliminating, then we need to update
@@ -2131,6 +2160,24 @@ class AMPLRepn(object):
                         self.nonlinear.append(other.nonlinear)
         elif _type is _CONSTANT:
             self.const += other[1]
+
+    def to_expr(self, var_map):
+        if self.nl is not None or self.nonlinear is not None:
+            # TODO: support converting general nonlinear expressiosn
+            # back to Pyomo expressions.  This will require an AMPL
+            # parser.
+            raise MouseTrap("Cannot convert nonlinear AMPLRepn to Pyomo Expression")
+        if self.linear:
+            # Explicitly generate the LinearExpression.  At time of
+            # writing, this is about 40% faster than standard operator
+            # overloading for O(1000) element sums
+            ans = LinearExpression(
+                [coef * var_map[vid] for vid, coef in self.linear.items()]
+            )
+            ans += self.const
+        else:
+            ans = self.const
+        return ans * self.mult
 
 
 def _create_strict_inequality_map(vars_):

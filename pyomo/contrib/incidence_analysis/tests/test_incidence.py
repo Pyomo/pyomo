@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -56,23 +56,114 @@ class _TestIncidence(object):
 
     def test_incidence_with_fixed_variable(self):
         m = pyo.ConcreteModel()
-        m.x = pyo.Var([1, 2, 3])
+        m.x = pyo.Var([1, 2, 3], initialize=1.0)
         expr = m.x[1] + m.x[1] * m.x[2] + m.x[1] * pyo.exp(m.x[3])
         m.x[2].fix()
         variables = self._get_incident_variables(expr)
         var_set = ComponentSet(variables)
         self.assertEqual(var_set, ComponentSet([m.x[1], m.x[3]]))
 
-    def test_incidence_with_mutable_parameter(self):
+    def test_incidence_with_named_expression(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
-        m.p = pyo.Param(mutable=True, initialize=None)
-        expr = m.x[1] + m.p * m.x[1] * m.x[2] + m.x[1] * pyo.exp(m.x[3])
+        m.subexpr = pyo.Expression(pyo.Integers)
+        m.subexpr[1] = m.x[1] * pyo.exp(m.x[3])
+        expr = m.x[1] + m.x[1] * m.x[2] + m.subexpr[1]
         variables = self._get_incident_variables(expr)
         self.assertEqual(ComponentSet(variables), ComponentSet(m.x[:]))
 
 
-class TestIncidenceStandardRepn(unittest.TestCase, _TestIncidence):
+class _TestIncidenceLinearOnly(object):
+    """Tests for methods that support linear_only"""
+
+    def _get_incident_variables(self, expr):
+        raise NotImplementedError(
+            "_TestIncidenceLinearOnly should not be used directly"
+        )
+
+    def test_linear_only(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3])
+
+        expr = 2 * m.x[1] + 4 * m.x[2] * m.x[1] - m.x[1] * pyo.exp(m.x[3])
+        variables = self._get_incident_variables(expr, linear_only=True)
+        self.assertEqual(len(variables), 0)
+
+        expr = 2 * m.x[1] + 2 * m.x[2] * m.x[3] + 3 * m.x[2]
+        variables = self._get_incident_variables(expr, linear_only=True)
+        self.assertEqual(ComponentSet(variables), ComponentSet([m.x[1]]))
+
+        m.x[3].fix(2.5)
+        expr = 2 * m.x[1] + 2 * m.x[2] * m.x[3] + 3 * m.x[2]
+        variables = self._get_incident_variables(expr, linear_only=True)
+        self.assertEqual(ComponentSet(variables), ComponentSet([m.x[1], m.x[2]]))
+
+
+class _TestIncidenceLinearCancellation(object):
+    """Tests for methods that perform linear cancellation"""
+
+    def _get_incident_variables(self, expr):
+        raise NotImplementedError(
+            "_TestIncidenceLinearCancellation should not be used directly"
+        )
+
+    def test_zero_coef(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3])
+
+        # generate_standard_repn filters subexpressions with zero coefficients
+        expr = 0 * m.x[1] + 0 * m.x[1] * m.x[2] + 0 * pyo.exp(m.x[3])
+        variables = self._get_incident_variables(expr)
+        self.assertEqual(len(variables), 0)
+
+    def test_variable_minus_itself(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3])
+        # standard repn will recognize the zero coefficient and filter x[1]
+        expr = m.x[1] + m.x[2] * m.x[3] - m.x[1]
+        variables = self._get_incident_variables(expr)
+        var_set = ComponentSet(variables)
+        self.assertEqual(var_set, ComponentSet([m.x[2], m.x[3]]))
+
+    def test_fixed_zero_linear_coefficient(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3])
+        m.p = pyo.Param([1, 2], mutable=True, initialize=1.0)
+        m.p[1].set_value(0)
+        expr = 2 * m.x[1] + m.p[1] * m.p[2] * m.x[2] + m.p[2] * m.x[3] ** 2
+        variables = self._get_incident_variables(expr)
+        self.assertEqual(ComponentSet(variables), ComponentSet([m.x[1], m.x[3]]))
+
+        m.x[3].fix(0.0)
+        expr = 2 * m.x[1] + 3 * m.x[3] * m.p[2] * m.x[2] + m.x[1] ** 2
+        variables = self._get_incident_variables(expr)
+        self.assertEqual(ComponentSet(variables), ComponentSet([m.x[1]]))
+
+        m.x[3].fix(1.0)
+        variables = self._get_incident_variables(expr)
+        self.assertEqual(ComponentSet(variables), ComponentSet([m.x[1], m.x[2]]))
+
+    # NOTE: This test assumes that all methods that support linear cancellation
+    # accept a linear_only argument. If this changes, this test will need to be
+    # moved.
+    def test_fixed_zero_coefficient_linear_only(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3])
+        expr = m.x[1] * m.x[2] + 2 * m.x[3]
+        m.x[2].fix(0)
+        variables = get_incident_variables(
+            expr, method=IncidenceMethod.standard_repn, linear_only=True
+        )
+        self.assertEqual(len(variables), 1)
+        self.assertIs(variables[0], m.x[3])
+
+
+class TestIncidenceStandardRepn(
+    unittest.TestCase,
+    _TestIncidence,
+    _TestIncidenceLinearOnly,
+    _TestIncidenceLinearCancellation,
+):
     def _get_incident_variables(self, expr, **kwds):
         method = IncidenceMethod.standard_repn
         return get_incident_variables(expr, method=method, **kwds)
@@ -95,70 +186,6 @@ class TestIncidenceStandardRepn(unittest.TestCase, _TestIncidence):
         self.assertEqual(len(repn.linear_vars), 1)
         self.assertIs(repn.linear_vars[0], m.x[2])
 
-    def test_zero_coef(self):
-        m = pyo.ConcreteModel()
-        m.x = pyo.Var([1, 2, 3])
-
-        # generate_standard_repn filters subexpressions with zero coefficients
-        expr = 0 * m.x[1] + 0 * m.x[1] * m.x[2] + 0 * pyo.exp(m.x[3])
-        variables = self._get_incident_variables(expr)
-        self.assertEqual(len(variables), 0)
-
-    def test_variable_minus_itself(self):
-        m = pyo.ConcreteModel()
-        m.x = pyo.Var([1, 2, 3])
-        # standard repn will recognize the zero coefficient and filter x[1]
-        expr = m.x[1] + m.x[2] * m.x[3] - m.x[1]
-        variables = self._get_incident_variables(expr)
-        var_set = ComponentSet(variables)
-        self.assertEqual(var_set, ComponentSet([m.x[2], m.x[3]]))
-
-    def test_linear_only(self):
-        m = pyo.ConcreteModel()
-        m.x = pyo.Var([1, 2, 3])
-
-        expr = 2 * m.x[1] + 4 * m.x[2] * m.x[1] - m.x[1] * pyo.exp(m.x[3])
-        variables = self._get_incident_variables(expr, linear_only=True)
-        self.assertEqual(len(variables), 0)
-
-        expr = 2 * m.x[1] + 2 * m.x[2] * m.x[3] + 3 * m.x[2]
-        variables = self._get_incident_variables(expr, linear_only=True)
-        self.assertEqual(ComponentSet(variables), ComponentSet([m.x[1]]))
-
-        m.x[3].fix(2.5)
-        expr = 2 * m.x[1] + 2 * m.x[2] * m.x[3] + 3 * m.x[2]
-        variables = self._get_incident_variables(expr, linear_only=True)
-        self.assertEqual(ComponentSet(variables), ComponentSet([m.x[1], m.x[2]]))
-
-    def test_fixed_zero_linear_coefficient(self):
-        m = pyo.ConcreteModel()
-        m.x = pyo.Var([1, 2, 3])
-        m.p = pyo.Param([1, 2], mutable=True, initialize=1.0)
-        m.p[1].set_value(0)
-        expr = 2 * m.x[1] + m.p[1] * m.p[2] * m.x[2] + m.p[2] * m.x[3] ** 2
-        variables = self._get_incident_variables(expr)
-        self.assertEqual(ComponentSet(variables), ComponentSet([m.x[1], m.x[3]]))
-
-        m.x[3].fix(0.0)
-        expr = 2 * m.x[1] + 3 * m.x[3] * m.p[2] * m.x[2] + m.x[1] ** 2
-        variables = self._get_incident_variables(expr)
-        self.assertEqual(ComponentSet(variables), ComponentSet([m.x[1]]))
-
-        m.x[3].fix(1.0)
-        variables = self._get_incident_variables(expr)
-        self.assertEqual(ComponentSet(variables), ComponentSet([m.x[1], m.x[2]]))
-
-    def test_fixed_zero_coefficient_linear_only(self):
-        m = pyo.ConcreteModel()
-        m.x = pyo.Var([1, 2, 3])
-        expr = m.x[1] * m.x[2] + 2 * m.x[3]
-        m.x[2].fix(0)
-        variables = get_incident_variables(
-            expr, method=IncidenceMethod.standard_repn, linear_only=True
-        )
-        self.assertEqual(len(variables), 1)
-        self.assertIs(variables[0], m.x[3])
-
     def test_fixed_none_linear_coefficient(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
@@ -167,6 +194,14 @@ class TestIncidenceStandardRepn(unittest.TestCase, _TestIncidence):
         expr = 2 * m.x[1] + 3 * m.x[3] * m.p[2] * m.x[2] + m.x[1] ** 2
         variables = self._get_incident_variables(expr)
         self.assertEqual(ComponentSet(variables), ComponentSet([m.x[1], m.x[2]]))
+
+    def test_incidence_with_mutable_parameter(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3])
+        m.p = pyo.Param(mutable=True, initialize=None)
+        expr = m.x[1] + m.p * m.x[1] * m.x[2] + m.x[1] * pyo.exp(m.x[3])
+        variables = self._get_incident_variables(expr)
+        self.assertEqual(ComponentSet(variables), ComponentSet(m.x[:]))
 
 
 class TestIncidenceIdentifyVariables(unittest.TestCase, _TestIncidence):
@@ -191,6 +226,36 @@ class TestIncidenceIdentifyVariables(unittest.TestCase, _TestIncidence):
         variables = self._get_incident_variables(expr)
         var_set = ComponentSet(variables)
         self.assertEqual(var_set, ComponentSet(m.x[:]))
+
+    def test_incidence_with_mutable_parameter(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3])
+        m.p = pyo.Param(mutable=True, initialize=None)
+        expr = m.x[1] + m.p * m.x[1] * m.x[2] + m.x[1] * pyo.exp(m.x[3])
+        variables = self._get_incident_variables(expr)
+        self.assertEqual(ComponentSet(variables), ComponentSet(m.x[:]))
+
+
+class TestIncidenceAmplRepn(
+    unittest.TestCase,
+    _TestIncidence,
+    _TestIncidenceLinearOnly,
+    _TestIncidenceLinearCancellation,
+):
+    def _get_incident_variables(self, expr, **kwds):
+        method = IncidenceMethod.ampl_repn
+        return get_incident_variables(expr, method=method, **kwds)
+
+
+class TestIncidenceStandardRepnComputeValues(
+    unittest.TestCase,
+    _TestIncidence,
+    _TestIncidenceLinearOnly,
+    _TestIncidenceLinearCancellation,
+):
+    def _get_incident_variables(self, expr, **kwds):
+        method = IncidenceMethod.standard_repn_compute_values
+        return get_incident_variables(expr, method=method, **kwds)
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@ LinearExpression
 ================
 
 Significant speed
-improvements can be obtained using the ``LinearExpression`` object
+improvements can sometimes be obtained using the ``LinearExpression`` object
 when there are long, dense, linear expressions. The arguments are
 
 :: 
@@ -11,7 +11,9 @@ when there are long, dense, linear expressions. The arguments are
 
 where the second and third arguments are lists that must be of the
 same length. Here is a simple example that illustrates the
-syntax. This example creates two constraints that are the same:
+syntax. This example creates two constraints that are the same; in this
+particular case the LinearExpression component would offer very little improvement
+because Pyomo would be able to detect that `campe2` is a linear expression:
 
 .. doctest::
 
@@ -38,5 +40,5 @@ syntax. This example creates two constraints that are the same:
 
 .. warning::
 
-   The lists that are passed to ``LinearModel`` are not copied, so caution must
+   The lists that are passed to ``LinearExpression`` are not copied, so caution must
    be exercised if they are modified after the component is constructed.

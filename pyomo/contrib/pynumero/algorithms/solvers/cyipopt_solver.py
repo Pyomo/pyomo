@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -24,6 +24,8 @@ import abc
 from pyomo.common.deprecation import relocated_module_attribute
 from pyomo.common.dependencies import attempt_import, numpy as np, numpy_available
 from pyomo.common.tee import redirect_fd, TeeStream
+from pyomo.common.modeling import unique_component_name
+from pyomo.core.base.objective import Objective
 
 # Because pynumero.interfaces requires numpy, we will leverage deferred
 # imports here so that the solver can be registered even when numpy is
@@ -332,11 +334,22 @@ class PyomoCyIpoptSolver(object):
         grey_box_blocks = list(
             model.component_data_objects(egb.ExternalGreyBoxBlock, active=True)
         )
-        if grey_box_blocks:
-            # nlp = pyomo_nlp.PyomoGreyBoxNLP(model)
-            nlp = pyomo_grey_box.PyomoNLPWithGreyBoxBlocks(model)
-        else:
-            nlp = pyomo_nlp.PyomoNLP(model)
+        # if there is no objective, add one temporarily so we can construct an NLP
+        objectives = list(model.component_data_objects(Objective, active=True))
+        if not objectives:
+            objname = unique_component_name(model, "_obj")
+            objective = model.add_component(objname, Objective(expr=0.0))
+        try:
+            if grey_box_blocks:
+                # nlp = pyomo_nlp.PyomoGreyBoxNLP(model)
+                nlp = pyomo_grey_box.PyomoNLPWithGreyBoxBlocks(model)
+            else:
+                nlp = pyomo_nlp.PyomoNLP(model)
+        finally:
+            # We only need the objective to construct the NLP, so we delete
+            # it from the model ASAP
+            if not objectives:
+                model.del_component(objective)
 
         problem = cyipopt_interface.CyIpoptNLP(
             nlp,

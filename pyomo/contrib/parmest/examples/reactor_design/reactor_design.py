@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -12,7 +12,7 @@
 Continuously stirred tank reactor model, based on
 pyomo/examples/doc/pyomobook/nonlinear-ch/react_design/ReactorDesign.py
 """
-import pandas as pd
+from pyomo.common.dependencies import pandas as pd
 from pyomo.environ import (
     ConcreteModel,
     Param,

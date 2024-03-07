@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -164,8 +164,8 @@ def get_indices_of_projection(index_set, *sets):
         info['set_except'] = [None]
         # index_getter returns an index corresponding to the values passed to
         # it, re-ordered according to order of indexing sets in component.
-        info['index_getter'] = (
-            lambda incomplete_index, *newvals: newvals[0]
+        info['index_getter'] = lambda incomplete_index, *newvals: (
+            newvals[0]
             if len(newvals) <= 1
             else tuple([newvals[location[i]] for i in location])
         )

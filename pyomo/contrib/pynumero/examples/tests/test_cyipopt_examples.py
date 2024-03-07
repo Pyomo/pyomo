@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -35,7 +35,7 @@ pandas, pandas_available = attempt_import(
     'One of the tests below requires a recent version of pandas for'
     ' comparing with a tolerance.',
     minimum_version='1.1.0',
-    defer_check=False,
+    defer_import=False,
 )
 
 from pyomo.contrib.pynumero.asl import AmplInterface

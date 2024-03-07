@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -405,7 +405,6 @@ class WalkerTests(unittest.TestCase):
         )
 
         del M.w
-        del M.w_index
         M.w = VarList()
         e = 2 * sum_product(M.z, M.x)
         walker = ReplacementWalkerTest1(M)

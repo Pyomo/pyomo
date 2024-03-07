@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -102,10 +102,12 @@ class ResidualDataModel(myqt.QAbstractTableModel):
         self._items.sort(
             key=lambda o: (
                 o is None,
-                get_residual(self.ui_data, o)
-                if get_residual(self.ui_data, o) is not None
-                and not isinstance(get_residual(self.ui_data, o), str)
-                else _inactive_to_back(o),
+                (
+                    get_residual(self.ui_data, o)
+                    if get_residual(self.ui_data, o) is not None
+                    and not isinstance(get_residual(self.ui_data, o), str)
+                    else _inactive_to_back(o)
+                ),
             ),
             reverse=True,
         )

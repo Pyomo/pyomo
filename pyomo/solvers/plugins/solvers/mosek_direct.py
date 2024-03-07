@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -305,10 +305,12 @@ class MOSEKDirect(DirectSolver):
             referenced_vars.update(q_vars)
             qsubi, qsubj = zip(
                 *[
-                    (i, j)
-                    if self._pyomo_var_to_solver_var_map[i]
-                    >= self._pyomo_var_to_solver_var_map[j]
-                    else (j, i)
+                    (
+                        (i, j)
+                        if self._pyomo_var_to_solver_var_map[i]
+                        >= self._pyomo_var_to_solver_var_map[j]
+                        else (j, i)
+                    )
                     for i, j in repn.quadratic_vars
                 ]
             )
@@ -465,15 +467,19 @@ class MOSEKDirect(DirectSolver):
             q_is, q_js, q_vals = zip(*qexp)
             l_ids, l_coefs, constants = zip(*arow)
             lbs = tuple(
-                -inf
-                if value(lq_all[i].lower) is None
-                else value(lq_all[i].lower) - constants[i]
+                (
+                    -inf
+                    if value(lq_all[i].lower) is None
+                    else value(lq_all[i].lower) - constants[i]
+                )
                 for i in range(num_lq)
             )
             ubs = tuple(
-                inf
-                if value(lq_all[i].upper) is None
-                else value(lq_all[i].upper) - constants[i]
+                (
+                    inf
+                    if value(lq_all[i].upper) is None
+                    else value(lq_all[i].upper) - constants[i]
+                )
                 for i in range(num_lq)
             )
             fxs = tuple(c.equality for c in lq_all)

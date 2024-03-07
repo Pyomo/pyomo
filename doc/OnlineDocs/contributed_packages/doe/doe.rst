@@ -266,7 +266,7 @@ It allows users to define any number of design decisions. Heatmaps can be drawn 
 The function ``run_grid_search`` enumerates over the design space, each MBDoE problem accomplished by ``compute_FIM`` method.
 Therefore, ``run_grid_search`` supports only two modes: ``sequential_finite`` and ``direct_kaug``.
 
-.. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_compute_FIM.py 
+.. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_grid_search.py 
     :language: python 
     :pyobject: main
 
@@ -284,7 +284,7 @@ Pyomo.DoE accomplishes gradient-based optimization with the ``stochastic_program
 
 This function solves twice: It solves the square version of the MBDoE problem first, and then unfixes the design variables as degree of freedoms and solves again. In this way the optimization problem can be well initialized.
 
-.. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_compute_FIM.py 
+.. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_optimize_doe.py 
     :language: python 
     :pyobject: main 
 

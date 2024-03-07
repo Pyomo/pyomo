@@ -1,9 +1,21 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 '''
 Utility functions for the PyROS solver
 '''
+
 import copy
 from enum import Enum, auto
-from pyomo.common.collections import ComponentSet
+from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.base import (
     Constraint,
@@ -17,11 +29,11 @@ from pyomo.core.base import (
     Block,
     Param,
 )
+from pyomo.core.util import prod
 from pyomo.core.base.var import IndexedVar
 from pyomo.core.base.set_types import Reals
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core.expr import value
-import pyomo.core.expr as EXPR
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.core.expr.visitor import (
@@ -39,7 +51,6 @@ import itertools as it
 import timeit
 from contextlib import contextmanager
 import logging
-from pprint import pprint
 import math
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.log import Preformatted
@@ -434,51 +445,6 @@ def setup_pyros_logger(name=DEFAULT_LOGGER_NAME):
     return logger
 
 
-def a_logger(str_or_logger):
-    """
-    Standardize a string or logger object to a logger object.
-
-    Parameters
-    ----------
-    str_or_logger : str or logging.Logger
-        String or logger object to normalize.
-
-    Returns
-    -------
-    logging.Logger
-        If `str_or_logger` is of type `logging.Logger`,then
-        `str_or_logger` is returned.
-        Otherwise, ``logging.getLogger(str_or_logger)``
-        is returned. In the event `str_or_logger` is
-        the name of the default PyROS logger, the logger level
-        is set to `logging.INFO`, and a `PreformattedLogger`
-        instance is returned in lieu of a standard `Logger`
-        instance.
-    """
-    if isinstance(str_or_logger, logging.Logger):
-        return logging.getLogger(str_or_logger.name)
-    else:
-        return logging.getLogger(str_or_logger)
-
-
-def ValidEnum(enum_class):
-    '''
-    Python 3 dependent format string
-    '''
-
-    def fcn(obj):
-        if obj not in enum_class:
-            raise ValueError(
-                "Expected an {0} object, "
-                "instead received {1}".format(
-                    enum_class.__name__, obj.__class__.__name__
-                )
-            )
-        return obj
-
-    return fcn
-
-
 class pyrosTerminationCondition(Enum):
     """Enumeration of all possible PyROS termination conditions."""
 
@@ -555,14 +521,6 @@ def recast_to_min_obj(model, obj):
         else:
             obj.expr = -obj.expr
         obj.sense = minimize
-
-
-def model_is_valid(model):
-    """
-    Assess whether model is valid on basis of the number of active
-    Objectives. A valid model must contain exactly one active Objective.
-    """
-    return len(list(model.component_data_objects(Objective, active=True))) == 1
 
 
 def turn_bounds_to_constraints(variable, model, config=None):
@@ -646,41 +604,6 @@ def get_time_from_solver(results):
             break
 
     return float("nan") if solve_time is None else solve_time
-
-
-def validate_uncertainty_set(config):
-    '''
-    Confirm expression output from uncertainty set function references all q in q.
-    Typecheck the uncertainty_set.q is Params referenced inside of m.
-    Give warning that the nominal point (default value in the model) is not in the specified uncertainty set.
-    :param config: solver config
-    '''
-    # === Check that q in UncertaintySet object constraint expression is referencing q in model.uncertain_params
-    uncertain_params = config.uncertain_params
-
-    # === Non-zero number of uncertain parameters
-    if len(uncertain_params) == 0:
-        raise AttributeError(
-            "Must provide uncertain params, uncertain_params list length is 0."
-        )
-    # === No duplicate parameters
-    if len(uncertain_params) != len(ComponentSet(uncertain_params)):
-        raise AttributeError("No duplicates allowed for uncertain param objects.")
-    # === Ensure nominal point is in the set
-    if not config.uncertainty_set.point_in_set(
-        point=config.nominal_uncertain_param_vals
-    ):
-        raise AttributeError(
-            "Nominal point for uncertain parameters must be in the uncertainty set."
-        )
-    # === Check set validity via boundedness and non-emptiness
-    if not config.uncertainty_set.is_valid(config=config):
-        raise AttributeError(
-            "Invalid uncertainty set detected. Check the uncertainty set object to "
-            "ensure non-emptiness and boundedness."
-        )
-
-    return
 
 
 def add_bounds_for_uncertain_parameters(model, config):
@@ -862,98 +785,345 @@ def replace_uncertain_bounds_with_constraints(model, uncertain_params):
             v.setlb(None)
 
 
-def validate_kwarg_inputs(model, config):
-    '''
-    Confirm kwarg inputs satisfy PyROS requirements.
-    :param model: the deterministic model
-    :param config: the config for this PyROS instance
-    :return:
-    '''
+def check_components_descended_from_model(model, components, components_name, config):
+    """
+    Check all members in a provided sequence of Pyomo component
+    objects are descended from a given ConcreteModel object.
 
-    # === Check if model is ConcreteModel object
+    Parameters
+    ----------
+    model : ConcreteModel
+        Model from which components should all be descended.
+    components : Iterable of Component
+        Components of interest.
+    components_name : str
+        Brief description or name for the sequence of components.
+        Used for constructing error messages.
+    config : ConfigDict
+        PyROS solver options.
+
+    Raises
+    ------
+    ValueError
+        If at least one entry of `components` is not descended
+        from `model`.
+    """
+    components_not_in_model = [comp for comp in components if comp.model() is not model]
+    if components_not_in_model:
+        comp_names_str = "\n ".join(
+            f"{comp.name!r}, from model with name {comp.model().name!r}"
+            for comp in components_not_in_model
+        )
+        config.progress_logger.error(
+            f"The following {components_name} "
+            "are not descended from the "
+            f"input deterministic model with name {model.name!r}:\n "
+            f"{comp_names_str}"
+        )
+        raise ValueError(
+            f"Found entries of {components_name} "
+            "not descended from input model. "
+            "Check logger output messages."
+        )
+
+
+def get_state_vars(blk, first_stage_variables, second_stage_variables):
+    """
+    Get state variables of a modeling block.
+
+    The state variables with respect to `blk` are the unfixed
+    `_VarData` objects participating in the active objective
+    or constraints descended from `blk` which are not
+    first-stage variables or second-stage variables.
+
+    Parameters
+    ----------
+    blk : ScalarBlock
+        Block of interest.
+    first_stage_variables : Iterable of VarData
+        First-stage variables.
+    second_stage_variables : Iterable of VarData
+        Second-stage variables.
+
+    Yields
+    ------
+    _VarData
+        State variable.
+    """
+    dof_var_set = ComponentSet(first_stage_variables) | ComponentSet(
+        second_stage_variables
+    )
+    for var in get_vars_from_component(blk, (Objective, Constraint)):
+        is_state_var = not var.fixed and var not in dof_var_set
+        if is_state_var:
+            yield var
+
+
+def check_variables_continuous(model, vars, config):
+    """
+    Check that all DOF and state variables of the model
+    are continuous.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        Input deterministic model.
+    config : ConfigDict
+        PyROS solver options.
+
+    Raises
+    ------
+    ValueError
+        If at least one variable is found to not be continuous.
+
+    Note
+    ----
+    A variable is considered continuous if the `is_continuous()`
+    method returns True.
+    """
+    non_continuous_vars = [var for var in vars if not var.is_continuous()]
+    if non_continuous_vars:
+        non_continuous_vars_str = "\n ".join(
+            f"{var.name!r}" for var in non_continuous_vars
+        )
+        config.progress_logger.error(
+            f"The following Vars of model with name {model.name!r} "
+            f"are non-continuous:\n {non_continuous_vars_str}\n"
+            "Ensure all model variables passed to PyROS solver are continuous."
+        )
+        raise ValueError(
+            f"Model with name {model.name!r} contains non-continuous Vars."
+        )
+
+
+def validate_model(model, config):
+    """
+    Validate deterministic model passed to PyROS solver.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        Deterministic model. Should have only one active Objective.
+    config : ConfigDict
+        PyROS solver options.
+
+    Returns
+    -------
+    ComponentSet
+        The variables participating in the active Objective
+        and Constraint expressions of `model`.
+
+    Raises
+    ------
+    TypeError
+        If model is not of type ConcreteModel.
+    ValueError
+        If model does not have exactly one active Objective
+        component.
+    """
+    # note: only support ConcreteModel. no support for Blocks
     if not isinstance(model, ConcreteModel):
-        raise ValueError("Model passed to PyROS solver must be a ConcreteModel object.")
+        raise TypeError(
+            f"Model should be of type {ConcreteModel.__name__}, "
+            f"but is of type {type(model).__name__}."
+        )
 
-    first_stage_variables = config.first_stage_variables
-    second_stage_variables = config.second_stage_variables
-    uncertain_params = config.uncertain_params
+    # active objectives check
+    active_objs_list = list(
+        model.component_data_objects(Objective, active=True, descend_into=True)
+    )
+    if len(active_objs_list) != 1:
+        raise ValueError(
+            "Expected model with exactly 1 active objective, but "
+            f"model provided has {len(active_objs_list)}."
+        )
 
+
+def validate_variable_partitioning(model, config):
+    """
+    Check that partitioning of the first-stage variables,
+    second-stage variables, and uncertain parameters
+    is valid.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        Input deterministic model.
+    config : ConfigDict
+        PyROS solver options.
+
+    Returns
+    -------
+    list of _VarData
+        State variables of the model.
+
+    Raises
+    ------
+    ValueError
+        If first-stage variables and second-stage variables
+        overlap, or there are no first-stage variables
+        and no second-stage variables.
+    """
+    # at least one DOF required
     if not config.first_stage_variables and not config.second_stage_variables:
-        # Must have non-zero DOF
         raise ValueError(
-            "first_stage_variables and "
-            "second_stage_variables cannot both be empty lists."
+            "Arguments `first_stage_variables` and "
+            "`second_stage_variables` are both empty lists."
         )
 
-    if ComponentSet(first_stage_variables) != ComponentSet(
-        config.first_stage_variables
-    ):
-        raise ValueError(
-            "All elements in first_stage_variables must be Var members of the model object."
-        )
-
-    if ComponentSet(second_stage_variables) != ComponentSet(
+    # ensure no overlap between DOF var sets
+    overlapping_vars = ComponentSet(config.first_stage_variables) & ComponentSet(
         config.second_stage_variables
-    ):
+    )
+    if overlapping_vars:
+        overlapping_var_list = "\n ".join(f"{var.name!r}" for var in overlapping_vars)
+        config.progress_logger.error(
+            "The following Vars were found in both `first_stage_variables`"
+            f"and `second_stage_variables`:\n {overlapping_var_list}"
+            "\nEnsure no Vars are included in both arguments."
+        )
         raise ValueError(
-            "All elements in second_stage_variables must be Var members of the model object."
+            "Arguments `first_stage_variables` and `second_stage_variables` "
+            "contain at least one common Var object."
         )
 
-    if any(
-        v in ComponentSet(second_stage_variables)
-        for v in ComponentSet(first_stage_variables)
-    ):
-        raise ValueError(
-            "No common elements allowed between first_stage_variables and second_stage_variables."
+    state_vars = list(
+        get_state_vars(
+            model,
+            first_stage_variables=config.first_stage_variables,
+            second_stage_variables=config.second_stage_variables,
+        )
+    )
+    var_type_list_map = {
+        "first-stage variables": config.first_stage_variables,
+        "second-stage variables": config.second_stage_variables,
+        "state variables": state_vars,
+    }
+    for desc, vars in var_type_list_map.items():
+        check_components_descended_from_model(
+            model=model, components=vars, components_name=desc, config=config
         )
 
-    if ComponentSet(uncertain_params) != ComponentSet(config.uncertain_params):
+    all_vars = config.first_stage_variables + config.second_stage_variables + state_vars
+    check_variables_continuous(model, all_vars, config)
+
+    return state_vars
+
+
+def validate_uncertainty_specification(model, config):
+    """
+    Validate specification of uncertain parameters and uncertainty
+    set.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        Input deterministic model.
+    config : ConfigDict
+        PyROS solver options.
+
+    Raises
+    ------
+    ValueError
+        If at least one of the following holds:
+
+        - dimension of uncertainty set does not equal number of
+          uncertain parameters
+        - uncertainty set `is_valid()` method does not return
+          true.
+        - nominal parameter realization is not in the uncertainty set.
+    """
+    check_components_descended_from_model(
+        model=model,
+        components=config.uncertain_params,
+        components_name="uncertain parameters",
+        config=config,
+    )
+
+    if len(config.uncertain_params) != config.uncertainty_set.dim:
         raise ValueError(
-            "uncertain_params must be mutable Param members of the model object."
+            "Length of argument `uncertain_params` does not match dimension "
+            "of argument `uncertainty_set` "
+            f"({len(config.uncertain_params)} != {config.uncertainty_set.dim})."
         )
 
-    if not config.uncertainty_set:
+    # validate uncertainty set
+    if not config.uncertainty_set.is_valid(config=config):
         raise ValueError(
-            "An UncertaintySet object must be provided to the PyROS solver."
+            f"Uncertainty set {config.uncertainty_set} is invalid, "
+            "as it is either empty or unbounded."
         )
 
-    non_mutable_params = []
-    for p in config.uncertain_params:
-        if not (
-            not p.is_constant() and p.is_fixed() and not p.is_potentially_variable()
-        ):
-            non_mutable_params.append(p)
-        if non_mutable_params:
-            raise ValueError(
-                "Param objects which are uncertain must have attribute mutable=True. "
-                "Offending Params: %s" % [p.name for p in non_mutable_params]
-            )
-
-    # === Solvers provided check
-    if not config.local_solver or not config.global_solver:
+    # fill-in nominal point as necessary, if not provided.
+    # otherwise, check length matches uncertainty dimension
+    if not config.nominal_uncertain_param_vals:
+        config.nominal_uncertain_param_vals = [
+            value(param, exception=True) for param in config.uncertain_params
+        ]
+    elif len(config.nominal_uncertain_param_vals) != len(config.uncertain_params):
         raise ValueError(
-            "User must designate both a local and global optimization solver via the local_solver"
-            " and global_solver options."
+            "Lengths of arguments `uncertain_params` and "
+            "`nominal_uncertain_param_vals` "
+            "do not match "
+            f"({len(config.uncertain_params)} != "
+            f"{len(config.nominal_uncertain_param_vals)})."
         )
 
+    # uncertainty set should contain nominal point
+    nominal_point_in_set = config.uncertainty_set.point_in_set(
+        point=config.nominal_uncertain_param_vals
+    )
+    if not nominal_point_in_set:
+        raise ValueError(
+            "Nominal uncertain parameter realization "
+            f"{config.nominal_uncertain_param_vals} "
+            "is not a point in the uncertainty set "
+            f"{config.uncertainty_set!r}."
+        )
+
+
+def validate_separation_problem_options(model, config):
+    """
+    Validate separation problem arguments to the PyROS solver.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        Input deterministic model.
+    config : ConfigDict
+        PyROS solver options.
+
+    Raises
+    ------
+    ValueError
+        If options `bypass_local_separation` and
+        `bypass_global_separation` are set to False.
+    """
     if config.bypass_local_separation and config.bypass_global_separation:
         raise ValueError(
-            "User cannot simultaneously enable options "
-            "'bypass_local_separation' and "
-            "'bypass_global_separation'."
+            "Arguments `bypass_local_separation` "
+            "and `bypass_global_separation` "
+            "cannot both be True."
         )
 
-    # === Degrees of freedom provided check
-    if len(config.first_stage_variables) + len(config.second_stage_variables) == 0:
-        raise ValueError(
-            "User must designate at least one first- and/or second-stage variable."
-        )
 
-    # === Uncertain params provided check
-    if len(config.uncertain_params) == 0:
-        raise ValueError("User must designate at least one uncertain parameter.")
+def validate_pyros_inputs(model, config):
+    """
+    Perform advanced validation of PyROS solver arguments.
 
-    return
+    Parameters
+    ----------
+    model : ConcreteModel
+        Input deterministic model.
+    config : ConfigDict
+        PyROS solver options.
+    """
+    validate_model(model, config)
+    state_vars = validate_variable_partitioning(model, config)
+    validate_uncertainty_specification(model, config)
+    validate_separation_problem_options(model, config)
+
+    return state_vars
 
 
 def substitute_ssv_in_dr_constraints(model, constraint):
@@ -1275,220 +1445,149 @@ def selective_clone(block, first_stage_vars):
 
 
 def add_decision_rule_variables(model_data, config):
-    '''
-    Function to add decision rule (DR) variables to the working model. DR variables become first-stage design
-    variables which do not get copied at each iteration. Currently support static_approx (no DR), affine DR,
-    and quadratic DR.
-    :param model_data: the data container for the working model
-    :param config: the config block
-    :return:
-    '''
+    """
+    Add variables for polynomial decision rules to the working
+    model.
+
+    Parameters
+    ----------
+    model_data : ROSolveResults
+        Model data.
+    config : config_dict
+        PyROS solver options.
+
+    Note
+    ----
+    Decision rule variables are considered first-stage decision
+    variables which do not get copied at each iteration.
+    PyROS currently supports static (zeroth order),
+    affine (first-order), and quadratic DR.
+    """
     second_stage_variables = model_data.working_model.util.second_stage_variables
     first_stage_variables = model_data.working_model.util.first_stage_variables
-    uncertain_params = model_data.working_model.util.uncertain_params
     decision_rule_vars = []
+
+    # since DR expression is a general polynomial in the uncertain
+    # parameters, the exact number of DR variables per second-stage
+    # variable depends on DR order and uncertainty set dimension
     degree = config.decision_rule_order
-    bounds = (None, None)
-    if degree == 0:
-        for i in range(len(second_stage_variables)):
-            model_data.working_model.add_component(
-                "decision_rule_var_" + str(i),
-                Var(
-                    initialize=value(second_stage_variables[i], exception=False),
-                    bounds=bounds,
-                    domain=Reals,
-                ),
-            )
-            first_stage_variables.extend(
-                getattr(
-                    model_data.working_model, "decision_rule_var_" + str(i)
-                ).values()
-            )
-            decision_rule_vars.append(
-                getattr(model_data.working_model, "decision_rule_var_" + str(i))
-            )
-    elif degree == 1:
-        for i in range(len(second_stage_variables)):
-            index_set = list(range(len(uncertain_params) + 1))
-            model_data.working_model.add_component(
-                "decision_rule_var_" + str(i),
-                Var(index_set, initialize=0, bounds=bounds, domain=Reals),
-            )
-            # === For affine drs, the [0]th constant term is initialized to the control variable values, all other terms are initialized to 0
-            getattr(model_data.working_model, "decision_rule_var_" + str(i))[
-                0
-            ].set_value(
-                value(second_stage_variables[i], exception=False), skip_validation=True
-            )
-            first_stage_variables.extend(
-                list(
-                    getattr(
-                        model_data.working_model, "decision_rule_var_" + str(i)
-                    ).values()
-                )
-            )
-            decision_rule_vars.append(
-                getattr(model_data.working_model, "decision_rule_var_" + str(i))
-            )
-    elif degree == 2 or degree == 3 or degree == 4:
-        for i in range(len(second_stage_variables)):
-            num_vars = int(sp.special.comb(N=len(uncertain_params) + degree, k=degree))
-            dict_init = {}
-            for r in range(num_vars):
-                if r == 0:
-                    dict_init.update(
-                        {r: value(second_stage_variables[i], exception=False)}
-                    )
-                else:
-                    dict_init.update({r: 0})
-            model_data.working_model.add_component(
-                "decision_rule_var_" + str(i),
-                Var(
-                    list(range(num_vars)),
-                    initialize=dict_init,
-                    bounds=bounds,
-                    domain=Reals,
-                ),
-            )
-            first_stage_variables.extend(
-                list(
-                    getattr(
-                        model_data.working_model, "decision_rule_var_" + str(i)
-                    ).values()
-                )
-            )
-            decision_rule_vars.append(
-                getattr(model_data.working_model, "decision_rule_var_" + str(i))
-            )
-    else:
-        raise ValueError(
-            "Decision rule order "
-            + str(config.decision_rule_order)
-            + " is not yet supported. PyROS supports polynomials of degree 0 (static approximation), 1, 2."
+    num_uncertain_params = len(model_data.working_model.util.uncertain_params)
+    num_dr_vars = sp.special.comb(
+        N=num_uncertain_params + degree, k=degree, exact=True, repetition=False
+    )
+
+    for idx, ss_var in enumerate(second_stage_variables):
+        # declare DR coefficients for current second-stage variable
+        indexed_dr_var = Var(
+            range(num_dr_vars), initialize=0, bounds=(None, None), domain=Reals
         )
+        model_data.working_model.add_component(
+            f"decision_rule_var_{idx}", indexed_dr_var
+        )
+
+        # index 0 entry of the IndexedVar is the static
+        # DR term. initialize to user-provided value of
+        # the corresponding second-stage variable.
+        # all other entries remain initialized to 0.
+        indexed_dr_var[0].set_value(value(ss_var, exception=False))
+
+        # update attributes
+        first_stage_variables.extend(indexed_dr_var.values())
+        decision_rule_vars.append(indexed_dr_var)
+
     model_data.working_model.util.decision_rule_vars = decision_rule_vars
 
 
-def partition_powers(n, v):
-    """Partition a total degree n across v variables
-
-    This is an implementation of the "stars and bars" algorithm from
-    combinatorial mathematics.
-
-    This partitions a "total integer degree" of n across v variables
-    such that each variable gets an integer degree >= 0.  You can think
-    of this as dividing a set of n+v things into v groupings, with the
-    power for each v_i being 1 less than the number of things in the
-    i'th group (because the v is part of the group).  It is therefore
-    sufficient to just get the v-1 starting points chosen from a list of
-    indices n+v long (the first starting point is fixed to be 0).
-
-    """
-    for starts in it.combinations(range(1, n + v), v - 1):
-        # add the initial starting point to the beginning and the total
-        # number of objects (degree counters and variables) to the end
-        # of the list.  The degree for each variable is 1 less than the
-        # difference of sequential starting points (to account for the
-        # variable itself)
-        starts = (0,) + starts + (n + v,)
-        yield [starts[i + 1] - starts[i] - 1 for i in range(v)]
-
-
-def sort_partitioned_powers(powers_list):
-    powers_list = sorted(powers_list, reverse=True)
-    powers_list = sorted(powers_list, key=lambda elem: max(elem))
-    return powers_list
-
-
 def add_decision_rule_constraints(model_data, config):
-    '''
-    Function to add the defining Constraint relationships for the decision rules to the working model.
-    :param model_data: model data container object
-    :param config: the config object
-    :return:
-    '''
+    """
+    Add decision rule equality constraints to the working model.
+
+    Parameters
+    ----------
+    model_data : ROSolveResults
+        Model data.
+    config : ConfigDict
+        PyROS solver options.
+    """
 
     second_stage_variables = model_data.working_model.util.second_stage_variables
     uncertain_params = model_data.working_model.util.uncertain_params
     decision_rule_eqns = []
+    decision_rule_vars_list = model_data.working_model.util.decision_rule_vars
     degree = config.decision_rule_order
-    if degree == 0:
-        for i in range(len(second_stage_variables)):
-            model_data.working_model.add_component(
-                "decision_rule_eqn_" + str(i),
-                Constraint(
-                    expr=getattr(
-                        model_data.working_model, "decision_rule_var_" + str(i)
-                    )
-                    == second_stage_variables[i]
-                ),
+
+    # keeping track of degree of monomial in which each
+    # DR coefficient participates will be useful for later
+    dr_var_to_exponent_map = ComponentMap()
+
+    # set up uncertain parameter combinations for
+    # construction of the monomials of the DR expressions
+    monomial_param_combos = []
+    for power in range(degree + 1):
+        power_combos = it.combinations_with_replacement(uncertain_params, power)
+        monomial_param_combos.extend(power_combos)
+
+    # now construct DR equations and declare them on the working model
+    second_stage_dr_var_zip = zip(second_stage_variables, decision_rule_vars_list)
+    for idx, (ss_var, indexed_dr_var) in enumerate(second_stage_dr_var_zip):
+        # for each DR equation, the number of coefficients should match
+        # the number of monomial terms exactly
+        if len(monomial_param_combos) != len(indexed_dr_var.index_set()):
+            raise ValueError(
+                f"Mismatch between number of DR coefficient variables "
+                f"and number of DR monomials for DR equation index {idx}, "
+                f"corresponding to second-stage variable {ss_var.name!r}. "
+                f"({len(indexed_dr_var.index_set())}!= {len(monomial_param_combos)})"
             )
-            decision_rule_eqns.append(
-                getattr(model_data.working_model, "decision_rule_eqn_" + str(i))
-            )
-    elif degree == 1:
-        for i in range(len(second_stage_variables)):
-            expr = 0
-            for j in range(
-                len(getattr(model_data.working_model, "decision_rule_var_" + str(i)))
-            ):
-                if j == 0:
-                    expr += getattr(
-                        model_data.working_model, "decision_rule_var_" + str(i)
-                    )[j]
-                else:
-                    expr += (
-                        getattr(
-                            model_data.working_model, "decision_rule_var_" + str(i)
-                        )[j]
-                        * uncertain_params[j - 1]
-                    )
-            model_data.working_model.add_component(
-                "decision_rule_eqn_" + str(i),
-                Constraint(expr=expr == second_stage_variables[i]),
-            )
-            decision_rule_eqns.append(
-                getattr(model_data.working_model, "decision_rule_eqn_" + str(i))
-            )
-    elif degree >= 2:
-        # Using bars and stars groupings of variable powers, construct x1^a * .... * xn^b terms for all c <= a+...+b = degree
-        all_powers = []
-        for n in range(1, degree + 1):
-            all_powers.append(
-                sort_partitioned_powers(
-                    list(partition_powers(n, len(uncertain_params)))
-                )
-            )
-        for i in range(len(second_stage_variables)):
-            Z = list(
-                z
-                for z in getattr(
-                    model_data.working_model, "decision_rule_var_" + str(i)
-                ).values()
-            )
-            e = Z.pop(0)
-            for degree_param_powers in all_powers:
-                for param_powers in degree_param_powers:
-                    product = 1
-                    for idx, power in enumerate(param_powers):
-                        if power == 0:
-                            pass
-                        else:
-                            product = product * uncertain_params[idx] ** power
-                    e += Z.pop(0) * product
-            model_data.working_model.add_component(
-                "decision_rule_eqn_" + str(i),
-                Constraint(expr=e == second_stage_variables[i]),
-            )
-            decision_rule_eqns.append(
-                getattr(model_data.working_model, "decision_rule_eqn_" + str(i))
-            )
-            if len(Z) != 0:
-                raise RuntimeError(
-                    "Construction of the decision rule functions did not work correctly! "
-                    "Did not use all coefficient terms."
-                )
+
+        # construct the DR polynomial
+        dr_expression = 0
+        for dr_var, param_combo in zip(indexed_dr_var.values(), monomial_param_combos):
+            dr_expression += dr_var * prod(param_combo)
+
+            # map decision rule var to degree (exponent) of the
+            # associated monomial with respect to the uncertain params
+            dr_var_to_exponent_map[dr_var] = len(param_combo)
+
+        # declare constraint on model
+        dr_eqn = Constraint(expr=dr_expression - ss_var == 0)
+        model_data.working_model.add_component(f"decision_rule_eqn_{idx}", dr_eqn)
+
+        # append to list of DR equality constraints
+        decision_rule_eqns.append(dr_eqn)
+
+    # finally, add attributes to util block
     model_data.working_model.util.decision_rule_eqns = decision_rule_eqns
+    model_data.working_model.util.dr_var_to_exponent_map = dr_var_to_exponent_map
+
+
+def enforce_dr_degree(blk, config, degree):
+    """
+    Make decision rule polynomials of a given degree
+    by fixing value of the appropriate subset of the decision
+    rule coefficients to 0.
+
+    Parameters
+    ----------
+    blk : ScalarBlock
+        Working model, or master problem block.
+    config : ConfigDict
+        PyROS solver options.
+    degree : int
+        Degree of the DR polynomials that is to be enforced.
+    """
+    second_stage_vars = blk.util.second_stage_variables
+    indexed_dr_vars = blk.util.decision_rule_vars
+    dr_var_to_exponent_map = blk.util.dr_var_to_exponent_map
+
+    for ss_var, indexed_dr_var in zip(second_stage_vars, indexed_dr_vars):
+        for dr_var in indexed_dr_var.values():
+            dr_var_degree = dr_var_to_exponent_map[dr_var]
+
+            if dr_var_degree > degree:
+                dr_var.fix(0)
+            else:
+                dr_var.unfix()
 
 
 def identify_objective_functions(model, objective):

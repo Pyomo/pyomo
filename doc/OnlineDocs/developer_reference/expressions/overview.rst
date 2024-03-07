@@ -50,13 +50,13 @@ are:
     example, the following two loops had dramatically different
     runtime:
 
-     .. literalinclude:: ../../tests/expr/overview_example1.spy
+     .. literalinclude:: ../../src/expr/overview_example1.spy
 
   * Coopr3 eliminates side effects by automatically cloning sub-expressions.
     Unfortunately, this can easily lead to unexpected cloning in models, which 
     can dramatically slow down Pyomo model generation.  For example:
      
-     .. literalinclude:: ../../tests/expr/overview_example2.spy
+     .. literalinclude:: ../../src/expr/overview_example2.spy
 
   * Coopr3 leverages recursion in many operations, including expression
     cloning.  Even simple non-linear expressions can result in deep
@@ -82,7 +82,7 @@ control for how expressions are managed in Python.  For example:
 
 * Python variables can point to the same expression tree
 
-    .. literalinclude:: ../../tests/expr/overview_tree1.spy
+    .. literalinclude:: ../../src/expr/overview_tree1.spy
 
   This is illustrated as follows:
 
@@ -102,7 +102,7 @@ control for how expressions are managed in Python.  For example:
 
 * A variable can point to a sub-tree that another variable points to
 
-    .. literalinclude:: ../../tests/expr/overview_tree2.spy
+    .. literalinclude:: ../../src/expr/overview_tree2.spy
 
   This is illustrated as follows:
 
@@ -124,7 +124,7 @@ control for how expressions are managed in Python.  For example:
 
 * Two expression trees can point to the same sub-tree
 
-    .. literalinclude:: ../../tests/expr/overview_tree3.spy
+    .. literalinclude:: ../../src/expr/overview_tree3.spy
 
   This is illustrated as follows:
 
@@ -169,7 +169,7 @@ between expressions, we do not consider those expressions entangled.
 Expression entanglement is problematic because shared expressions complicate
 the expected behavior when sub-expressions are changed.  Consider the following example:
 
-.. literalinclude:: ../../tests/expr/overview_tree4.spy
+.. literalinclude:: ../../src/expr/overview_tree4.spy
 
 What is the value of ``e`` after ``M.w`` is added to it?  What is the
 value of ``f``?  The answers to these questions are not immediately
@@ -244,7 +244,7 @@ There is one important exception to the entanglement property
 described above.  The ``Expression`` component is treated as a
 mutable expression when shared between expressions.  For example:
 
-.. literalinclude:: ../../tests/expr/overview_tree5.spy
+.. literalinclude:: ../../src/expr/overview_tree5.spy
 
 Here, the expression ``M.e`` is a so-called *named expression* that
 the user has declared.  Named expressions are explicitly intended

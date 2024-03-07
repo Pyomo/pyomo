@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -89,10 +89,9 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
         # constraints will be added by the transformation to a MIP, so these are
         # all we'll ever need.
         add_global_constraint_list(self.original_util_block)
-        (
-            discrete_problem_util_block,
-            subproblem_util_block,
-        ) = _get_discrete_problem_and_subproblem(self, config)
+        (discrete_problem_util_block, subproblem_util_block) = (
+            _get_discrete_problem_and_subproblem(self, config)
+        )
         discrete = discrete_problem_util_block.parent_block()
         subproblem = subproblem_util_block.parent_block()
         discrete_obj = next(

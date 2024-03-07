@@ -20,13 +20,13 @@ declaring a *singleton* (i.e. unindexed) variable named
 ``model.LumberJack`` that will take on real values between zero and 6
 and it initialized to be 1.5:
 
-.. literalinclude:: ../tests/scripting/spy4Variables_Declare_singleton_variable.spy
+.. literalinclude:: ../src/scripting/spy4Variables_Declare_singleton_variable.spy
    :language: python
 
 Instead of the ``initialize`` option, initialization is sometimes done
 with a Python assignment statement as in
 
-.. literalinclude:: ../tests/scripting/spy4Variables_Assign_value.spy
+.. literalinclude:: ../src/scripting/spy4Variables_Assign_value.spy
    :language: python
 
 For indexed variables, bounds and initial values are often specified by
@@ -36,7 +36,7 @@ followed by the indexes. This is illustrated in the following code
 snippet that makes use of Python dictionaries declared as lb and ub that
 are used by a function to provide bounds:
 
-.. literalinclude:: ../tests/scripting/spy4Variables_Declare_bounds.spy
+.. literalinclude:: ../src/scripting/spy4Variables_Declare_bounds.spy
    :language: python
 
 .. note::

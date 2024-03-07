@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -64,8 +64,8 @@ def _generate_configuration():
 
 
 def build_mcpp():
-    import distutils.core
-    from distutils.command.build_ext import build_ext
+    from setuptools import Distribution
+    from setuptools.command.build_ext import build_ext
 
     class _BuildWithoutPlatformInfo(build_ext, object):
         # Python3.x puts platform information into the generated SO file
@@ -87,7 +87,7 @@ def build_mcpp():
     print("\n**** Building MCPP library ****")
     package_config = _generate_configuration()
     package_config['cmdclass'] = {'build_ext': _BuildWithoutPlatformInfo}
-    dist = distutils.core.Distribution(package_config)
+    dist = Distribution(package_config)
     install_dir = os.path.join(envvar.PYOMO_CONFIG_DIR, 'lib')
     dist.get_command_obj('install_lib').install_dir = install_dir
     try:

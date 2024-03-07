@@ -1,7 +1,7 @@
 
 --- Solver Status: optimal ---
 Optimal Obj. Value = 2745.0
-y : Size=3, Index=y_index
+y : Size=3, Index={Harlingen, Memphis, Ashland}
     Key       : Lower : Value : Upper : Fixed : Stale : Domain
       Ashland :     0 :   1.0 :     1 : False : False : Binary
     Harlingen :     0 :   1.0 :     1 : False : False : Binary
@@ -9,7 +9,7 @@ y : Size=3, Index=y_index
 
 --- Solver Status: optimal ---
 Optimal Obj. Value = 3168.0
-y : Size=3, Index=y_index
+y : Size=3, Index={Harlingen, Memphis, Ashland}
     Key       : Lower : Value : Upper : Fixed : Stale : Domain
       Ashland :     0 :   1.0 :     1 : False : False : Binary
     Harlingen :     0 :   0.0 :     1 : False : False : Binary
@@ -17,7 +17,7 @@ y : Size=3, Index=y_index
 
 --- Solver Status: optimal ---
 Optimal Obj. Value = 3563.0
-y : Size=3, Index=y_index
+y : Size=3, Index={Harlingen, Memphis, Ashland}
     Key       : Lower : Value : Upper : Fixed : Stale : Domain
       Ashland :     0 :   0.0 :     1 : False : False : Binary
     Harlingen :     0 :   1.0 :     1 : False : False : Binary
@@ -25,7 +25,7 @@ y : Size=3, Index=y_index
 
 --- Solver Status: optimal ---
 Optimal Obj. Value = 3986.0
-y : Size=3, Index=y_index
+y : Size=3, Index={Harlingen, Memphis, Ashland}
     Key       : Lower : Value : Upper : Fixed : Stale : Domain
       Ashland :     0 :   0.0 :     1 : False : False : Binary
     Harlingen :     0 :   0.0 :     1 : False : False : Binary
@@ -33,7 +33,7 @@ y : Size=3, Index=y_index
 
 --- Solver Status: optimal ---
 Optimal Obj. Value = 4367.0
-y : Size=3, Index=y_index
+y : Size=3, Index={Harlingen, Memphis, Ashland}
     Key       : Lower : Value : Upper : Fixed : Stale : Domain
       Ashland :     0 :   1.0 :     1 : False : False : Binary
     Harlingen :     0 :   0.0 :     1 : False : False : Binary
@@ -41,7 +41,7 @@ y : Size=3, Index=y_index
 
 --- Solver Status: optimal ---
 Optimal Obj. Value = 5302.0
-y : Size=3, Index=y_index
+y : Size=3, Index={Harlingen, Memphis, Ashland}
     Key       : Lower : Value : Upper : Fixed : Stale : Domain
       Ashland :     0 :   0.0 :     1 : False : False : Binary
     Harlingen :     0 :   1.0 :     1 : False : False : Binary

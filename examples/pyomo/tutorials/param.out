@@ -1,22 +1,13 @@
-5 Set Declarations
+2 Set Declarations
     A : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    4 : {2, 4, 6, 8}
     B : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    3 : {1, 2, 3}
-    R_index : Size=1, Index=None, Ordered=True
-        Key  : Dimen : Domain : Size : Members
-        None :     2 :    A*B :   12 : {(2, 1), (2, 2), (2, 3), (4, 1), (4, 2), (4, 3), (6, 1), (6, 2), (6, 3), (8, 1), (8, 2), (8, 3)}
-    W_index : Size=1, Index=None, Ordered=True
-        Key  : Dimen : Domain : Size : Members
-        None :     2 :    A*B :   12 : {(2, 1), (2, 2), (2, 3), (4, 1), (4, 2), (4, 3), (6, 1), (6, 2), (6, 3), (8, 1), (8, 2), (8, 3)}
-    X_index : Size=1, Index=None, Ordered=True
-        Key  : Dimen : Domain : Size : Members
-        None :     2 :    A*B :   12 : {(2, 1), (2, 2), (2, 3), (4, 1), (4, 2), (4, 3), (6, 1), (6, 2), (6, 3), (8, 1), (8, 2), (8, 3)}
 
 9 Param Declarations
-    R : Size=12, Index=R_index, Domain=Any, Default=99.0, Mutable=False
+    R : Size=12, Index=A*B, Domain=Any, Default=99.0, Mutable=False
         Key    : Value
         (2, 1) :     1
         (2, 2) :     1
@@ -35,7 +26,7 @@
           1 :     1
           2 :     2
           3 :     9
-    W : Size=12, Index=W_index, Domain=Any, Default=None, Mutable=False
+    W : Size=12, Index=A*B, Domain=Any, Default=None, Mutable=False
         Key    : Value
         (2, 1) :     2
         (2, 2) :     4
@@ -49,7 +40,7 @@
         (8, 1) :     8
         (8, 2) :    16
         (8, 3) :    24
-    X : Size=12, Index=X_index, Domain=Any, Default=None, Mutable=False
+    X : Size=12, Index=A*B, Domain=Any, Default=None, Mutable=False
         Key    : Value
         (2, 1) :   1.3
         (2, 2) :   1.4
@@ -73,4 +64,4 @@
         Key  : Value
         None :   1.1
 
-14 Declarations: A B Z Y X_index X W_index W V U T S R_index R
+11 Declarations: A B Z Y X W V U T S R

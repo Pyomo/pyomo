@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -9,31 +9,18 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = [
-    'Block',
-    'TraversalStrategy',
-    'SortComponents',
-    'active_components',
-    'components',
-    'active_components_data',
-    'components_data',
-    'SimpleBlock',
-    'ScalarBlock',
-]
-
 import copy
-import enum
 import logging
 import sys
 import weakref
 import textwrap
-from contextlib import contextmanager
 
-from inspect import isclass
+from collections import defaultdict
+from contextlib import contextmanager
+from inspect import isclass, currentframe
+from io import StringIO
 from itertools import filterfalse, chain
 from operator import itemgetter, attrgetter
-from io import StringIO
-from pyomo.common.pyomo_typing import overload
 
 from pyomo.common.autoslots import AutoSlots
 from pyomo.common.collections import Mapping
@@ -41,7 +28,7 @@ from pyomo.common.deprecation import deprecated, deprecation_warning, RenamedCla
 from pyomo.common.formatting import StreamIndenter
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.log import is_debug_set
-from pyomo.common.sorting import sorted_robust
+from pyomo.common.pyomo_typing import overload
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.component import (
     Component,
@@ -51,7 +38,7 @@ from pyomo.core.base.component import (
 from pyomo.core.base.enums import SortComponents, TraversalStrategy
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.componentuid import ComponentUID
-from pyomo.core.base.set import Any, GlobalSetBase, _SetDataBase
+from pyomo.core.base.set import Any
 from pyomo.core.base.var import Var
 from pyomo.core.base.initializer import Initializer
 from pyomo.core.base.indexed_component import (
@@ -550,6 +537,7 @@ class _BlockData(ActiveComponentData):
         super(_BlockData, self).__setattr__('_ctypes', {})
         super(_BlockData, self).__setattr__('_decl', {})
         super(_BlockData, self).__setattr__('_decl_order', [])
+        self._private_data = None
 
     def __getattr__(self, val):
         if val in ModelComponentFactory:
@@ -846,47 +834,6 @@ class _BlockData(ActiveComponentData):
             ):
                 setattr(self, k, v)
 
-    def _add_implicit_sets(self, val):
-        """TODO: This method has known issues (see tickets) and needs to be
-        reviewed. [JDS 9/2014]"""
-
-        _component_sets = getattr(val, '_implicit_subsets', None)
-        #
-        # FIXME: The name attribute should begin with "_", and None
-        # should replace "_unknown_"
-        #
-        if _component_sets is not None:
-            for ctr, tset in enumerate(_component_sets):
-                if tset.parent_component().parent_block() is None and not isinstance(
-                    tset.parent_component(), GlobalSetBase
-                ):
-                    self.add_component("%s_index_%d" % (val.local_name, ctr), tset)
-        if (
-            getattr(val, '_index_set', None) is not None
-            and isinstance(val._index_set, _SetDataBase)
-            and val._index_set.parent_component().parent_block() is None
-            and not isinstance(val._index_set.parent_component(), GlobalSetBase)
-        ):
-            self.add_component(
-                "%s_index" % (val.local_name,), val._index_set.parent_component()
-            )
-        if (
-            getattr(val, 'initialize', None) is not None
-            and isinstance(val.initialize, _SetDataBase)
-            and val.initialize.parent_component().parent_block() is None
-            and not isinstance(val.initialize.parent_component(), GlobalSetBase)
-        ):
-            self.add_component(
-                "%s_index_init" % (val.local_name,), val.initialize.parent_component()
-            )
-        if (
-            getattr(val, 'domain', None) is not None
-            and isinstance(val.domain, _SetDataBase)
-            and val.domain.parent_block() is None
-            and not isinstance(val.domain, GlobalSetBase)
-        ):
-            self.add_component("%s_domain" % (val.local_name,), val.domain)
-
     def collect_ctypes(self, active=None, descend_into=True):
         """
         Count all component types stored on or under this
@@ -1066,16 +1013,11 @@ component, use the block del_component() and add_component() methods.
         val._parent = weakref.ref(self)
         val._name = name
         #
-        # We want to add the temporary / implicit sets first so that
-        # they get constructed before this component
+        # Update the context of any anonymous sets
         #
-        # FIXME: This is sloppy and wasteful (most components trigger
-        # this, even when there is no need for it).  We should
-        # reconsider the whole _implicit_subsets logic to defer this
-        # kind of thing to an "update_parent()" method on the
-        # components.
-        #
-        self._add_implicit_sets(val)
+        if getattr(val, '_anonymous_sets', None) is not None:
+            for _set in val._anonymous_sets:
+                _set._parent = val._parent
         #
         # Add the component to the underlying Component store
         #
@@ -1148,9 +1090,8 @@ Components must now specify their rules explicitly using 'rule=' keywords."""
         #   added to the class by Block.__init__()
         #
         if getattr(_component, '_constructed', False):
-            # NB: we don't have to construct the temporary / implicit
-            # sets here: if necessary, that happens when
-            # _add_implicit_sets() calls add_component().
+            # NB: we don't have to construct the anonymous sets here: if
+            # necessary, that happens in component.construct()
             if _BlockConstruction.data:
                 data = _BlockConstruction.data.get(id(self), None)
                 if data is not None:
@@ -1186,11 +1127,12 @@ Components must now specify their rules explicitly using 'rule=' keywords."""
             except:
                 err = sys.exc_info()[1]
                 logger.error(
-                    "Constructing component '%s' from data=%s failed:\n%s: %s",
+                    "Constructing component '%s' from data=%s failed:\n    %s: %s",
                     str(val.name),
                     str(data).strip(),
                     type(err).__name__,
                     err,
+                    extra={'cleandoc': False},
                 )
                 raise
             if generate_debug_messages:
@@ -1236,6 +1178,10 @@ Components must now specify their rules explicitly using 'rule=' keywords."""
 
         # Clear the _parent attribute
         obj._parent = None
+        # Update the context of any anonymous sets
+        if getattr(obj, '_anonymous_sets', None) is not None:
+            for _set in obj._anonymous_sets:
+                _set._parent = None
 
         # Now that this component is not in the _decl map, we can call
         # delattr as usual.
@@ -2027,6 +1973,23 @@ Components must now specify their rules explicitly using 'rule=' keywords."""
                 comp._create_objects_for_deepcopy(memo, component_list)
         return _ans
 
+    def private_data(self, scope=None):
+        mod = currentframe().f_back.f_globals['__name__']
+        if scope is None:
+            scope = mod
+        elif not mod.startswith(scope):
+            raise ValueError(
+                "All keys in the 'private_data' dictionary must "
+                "be substrings of the caller's module name. "
+                "Received '%s' when calling private_data on Block "
+                "'%s'." % (scope, self.name)
+            )
+        if self._private_data is None:
+            self._private_data = {}
+        if scope not in self._private_data:
+            self._private_data[scope] = Block._private_data_initializers[scope]()
+        return self._private_data[scope]
+
 
 @ModelComponentFactory.register(
     "A component that contains one or more model components."
@@ -2042,6 +2005,7 @@ class Block(ActiveIndexedComponent):
     """
 
     _ComponentDataClass = _BlockData
+    _private_data_initializers = defaultdict(lambda: dict)
 
     def __new__(cls, *args, **kwds):
         if cls != Block:
@@ -2055,8 +2019,7 @@ class Block(ActiveIndexedComponent):
     @overload
     def __init__(
         self, *indexes, rule=None, concrete=False, dense=True, name=None, doc=None
-    ):
-        ...
+    ): ...
 
     def __init__(self, *args, **kwargs):
         """Constructor"""
@@ -2138,6 +2101,11 @@ class Block(ActiveIndexedComponent):
         """
         Initialize the block
         """
+        if self._constructed:
+            return
+        self._constructed = True
+
+        timer = ConstructionTimer(self)
         if is_debug_set(logger):
             logger.debug(
                 "Constructing %s '%s', from data=%s",
@@ -2145,10 +2113,10 @@ class Block(ActiveIndexedComponent):
                 self.name,
                 str(data),
             )
-        if self._constructed:
-            return
-        timer = ConstructionTimer(self)
-        self._constructed = True
+
+        if self._anonymous_sets is not None:
+            for _set in self._anonymous_sets:
+                _set.construct()
 
         # Constructing blocks is tricky.  Scalar blocks are already
         # partially constructed (they have _data[None] == self) in order
@@ -2240,6 +2208,23 @@ class Block(ActiveIndexedComponent):
 
         for key in sorted(self):
             _BlockData.display(self[key], filename, ostream, prefix)
+
+    @staticmethod
+    def register_private_data_initializer(initializer, scope=None):
+        mod = currentframe().f_back.f_globals['__name__']
+        if scope is None:
+            scope = mod
+        elif not mod.startswith(scope):
+            raise ValueError(
+                "'private_data' scope must be substrings of the caller's module name. "
+                f"Received '{scope}' when calling register_private_data_initializer()."
+            )
+        if scope in Block._private_data_initializers:
+            raise RuntimeError(
+                "Duplicate initializer registration for 'private_data' dictionary "
+                f"(scope={scope})"
+            )
+        Block._private_data_initializers[scope] = initializer
 
 
 class ScalarBlock(_BlockData, Block):
