@@ -37,7 +37,6 @@ User's Guide
    blackboxobjectives.rst
    constraints.rst
    blackboxconstraints.rst
-   advancedruntimeconstraints.rst
    examples.rst
    additionaltips.rst
 

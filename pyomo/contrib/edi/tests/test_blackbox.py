@@ -436,9 +436,7 @@ class TestEDIBlackBox(unittest.TestCase):
                 self.post_init_setup(len(self.inputs))
 
             def BlackBox(self, *args, **kwargs):  # The actual function that does things
-                runCases, remainingKwargs = self.parseInputs(
-                    *args, **kwargs
-                )
+                runCases, remainingKwargs = self.parseInputs(*args, **kwargs)
 
                 x = self.sanitizeInputs(runCases[0]['x'])
                 x = np.array([pyo.value(xval) for xval in x], dtype=np.float64)
@@ -511,9 +509,7 @@ class TestEDIBlackBox(unittest.TestCase):
                 self.post_init_setup(len(self.inputs))
 
             def BlackBox(self, *args, **kwargs):  # The actual function that does things
-                runCases, remainingKwargs = self.parseInputs(
-                    *args, **kwargs
-                )
+                runCases, remainingKwargs = self.parseInputs(*args, **kwargs)
 
                 x = self.sanitizeInputs(runCases[0]['x'])
                 x = np.array([pyo.value(xval) for xval in x], dtype=np.float64)
@@ -582,9 +578,7 @@ class TestEDIBlackBox(unittest.TestCase):
                 self.post_init_setup(len(self.inputs))
 
             def BlackBox(self, *args, **kwargs):  # The actual function that does things
-                runCases, remainingKwargs = self.parseInputs(
-                    *args, **kwargs
-                )
+                runCases, remainingKwargs = self.parseInputs(*args, **kwargs)
 
                 x = pyo.value(self.sanitizeInputs(runCases[0]['x']))
 
@@ -646,9 +640,7 @@ class TestEDIBlackBox(unittest.TestCase):
                 self.post_init_setup(len(self.inputs))
 
             def BlackBox(self, *args, **kwargs):  # The actual function that does things
-                runCases, remainingKwargs = self.parseInputs(
-                    *args, **kwargs
-                )
+                runCases, remainingKwargs = self.parseInputs(*args, **kwargs)
 
                 x = self.sanitizeInputs(runCases[0]['x'])
                 x = np.array([pyo.value(xval) for xval in x], dtype=np.float64)
@@ -752,7 +744,7 @@ class TestEDIBlackBox(unittest.TestCase):
                 dydx = [dydx[i] * units.dimensionless for i in range(0, len(dydx))]
 
                 returnMode = 1
-                
+
                 if returnMode < 0:
                     returnMode = -1 * (returnMode + 1)
                     if returnMode == 0:
@@ -920,9 +912,7 @@ class TestEDIBlackBox(unittest.TestCase):
                 self.post_init_setup(len(self.inputs))
 
             def BlackBox(self, *args, **kwargs):  # The actual function that does things
-                runCases, remainingKwargs = self.parseInputs(
-                    *args, **kwargs
-                )
+                runCases, remainingKwargs = self.parseInputs(*args, **kwargs)
 
                 x = [rc['x'] for rc in runCases][0]
                 x = np.array([self.pyomo_value(xval) for xval in x], dtype=np.float64)

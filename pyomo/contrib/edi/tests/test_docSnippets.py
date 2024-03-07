@@ -187,31 +187,6 @@ class TestEDISnippets(unittest.TestCase):
         f.RuntimeConstraint(z, '==', [x, y], UnitCircle())
         # END: Formulation_Snippet_09
 
-        ### This will fail validatation, but should construct appropriately
-
-        # BEGIN: Formulation_Snippet_10
-        f.RuntimeConstraint(*(z, '==', [x, y], UnitCircle()))
-        # END: Formulation_Snippet_10
-
-        # BEGIN: Formulation_Snippet_11
-        f.RuntimeConstraint(*[z, '==', [x, y], UnitCircle()])
-        # END: Formulation_Snippet_11
-
-        # BEGIN: Formulation_Snippet_12
-        f.RuntimeConstraint(
-            **{
-                'outputs': z,
-                'operators': '==',
-                'inputs': [x, y],
-                'black_box': UnitCircle(),
-            }
-        )
-        # END: Formulation_Snippet_12
-
-        # BEGIN: Formulation_Snippet_13
-        f.RuntimeConstraint(*([z], ['=='], [x, y], UnitCircle()))
-        # END: Formulation_Snippet_13
-
     def test_edi_snippet_formuation_14(self):
         # BEGIN: Formulation_Snippet_14
         import pyomo.environ as pyo
@@ -872,6 +847,106 @@ class TestEDISnippets(unittest.TestCase):
         f.ConstraintList([(z, '==', [x, y], UnitCircle()), z <= 1 * units.m**2])
         # END: RuntimeConstraints_Snippet_10
 
+    def test_edi_snippet_runtimeconstraints_11(self):
+        # BEGIN: RuntimeConstraints_Snippet_11
+        import pyomo.environ as pyo
+        from pyomo.environ import units
+        from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel
+
+        f = Formulation()
+        x = f.Variable(name='x', guess=1.0, units='m', description='The x variable')
+        y = f.Variable(name='y', guess=1.0, units='m', description='The y variable')
+        z = f.Variable(name='z', guess=1.0, units='m^2', description='The z variable')
+
+        f.Objective(x + y)
+
+        class UnitCircle(BlackBoxFunctionModel):
+            def __init__(self):
+                super().__init__()
+                self.description = 'This model evaluates the function: z = x**2 + y**2'
+                self.inputs.append(name='x', units='ft', description='The x variable')
+                self.inputs.append(name='y', units='ft', description='The y variable')
+                self.outputs.append(
+                    name='z',
+                    units='ft**2',
+                    description='Resultant of the unit circle evaluation',
+                )
+                self.availableDerivative = 1
+                self.post_init_setup(len(self.inputs))
+
+            def BlackBox(self, x, y):  # The actual function that does things
+                x = pyo.value(units.convert(x, self.inputs['x'].units))
+                y = pyo.value(units.convert(y, self.inputs['y'].units))
+                z = x**2 + y**2
+                dzdx = 2 * x
+                dzdy = 2 * y
+                z = z * self.outputs['z'].units
+                dzdx = dzdx * self.outputs['z'].units / self.inputs['x'].units
+                dzdy = dzdy * self.outputs['z'].units / self.inputs['y'].units
+                return z, [dzdx, dzdy]  # return z, grad(z), hess(z)...
+
+        m = UnitCircle()
+        bb = m.BlackBox(0.5 * units.m, 0.5 * units.m)
+        bbs = m.BlackBox_Standardized(0.5 * units.m, 0.5 * units.m)
+        # END: RuntimeConstraints_Snippet_11
+
+    def test_edi_snippet_runtimeconstraints_12(self):
+        # BEGIN: RuntimeConstraints_Snippet_12
+        from collections import namedtuple
+        import pyomo.environ as pyo
+        from pyomo.environ import units
+        from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel
+
+        f = Formulation()
+        x = f.Variable(name='x', guess=1.0, units='m', description='The x variable')
+        y = f.Variable(name='y', guess=1.0, units='m', description='The y variable')
+        z = f.Variable(name='z', guess=1.0, units='m^2', description='The z variable')
+
+        f.Objective(x + y)
+
+        class UnitCircle(BlackBoxFunctionModel):
+            def __init__(self):
+                super().__init__()
+                self.description = 'This model evaluates the function: z = x**2 + y**2'
+                self.inputs.append(name='x', units='ft', description='The x variable')
+                self.inputs.append(name='y', units='ft', description='The y variable')
+                self.outputs.append(
+                    name='z',
+                    units='ft**2',
+                    description='Resultant of the unit circle evaluation',
+                )
+                self.availableDerivative = 1
+                self.post_init_setup(len(self.inputs))
+
+            def BlackBox(self, x, y):  # The actual function that does things
+                x = pyo.value(units.convert(x, self.inputs['x'].units))
+                y = pyo.value(units.convert(y, self.inputs['y'].units))
+                z = x**2 + y**2
+                dzdx = 2 * x
+                dzdy = 2 * y
+                z = z * self.outputs['z'].units
+                dzdx = dzdx * self.outputs['z'].units / self.inputs['x'].units
+                dzdy = dzdy * self.outputs['z'].units / self.inputs['y'].units
+                return z, [dzdx, dzdy]  # return z, grad(z), hess(z)...
+
+            def BlackBox_Standardized(self, x, y):  # The standardized function
+                res = self.BlackBox(x, y)
+
+                returnTuple = namedtuple('returnTuple', ['values', 'first', 'second'])
+                optTuple = namedtuple('optTuple', [o.name for o in self.outputs])
+                iptTuple = namedtuple('iptTuple', [i.name for i in self.inputs])
+
+                values = optTuple(res[0])
+                first = optTuple(iptTuple(res[1][0], res[1][1]))
+                second = None  # Second derivatives not currently supported
+
+                return returnTuple(values, first, second)
+
+        m = UnitCircle()
+        bb = m.BlackBox(0.5 * units.m, 0.5 * units.m)
+        bbs = m.BlackBox_Standardized(0.5 * units.m, 0.5 * units.m)
+        # END: RuntimeConstraints_Snippet_12
+
     def test_edi_snippet_advancedRTC_01(self):
         # BEGIN: AdvancedRTC_Snippet_01
         import numpy as np
@@ -915,7 +990,7 @@ class TestEDISnippets(unittest.TestCase):
                 dydx = [dydx[i] * units.dimensionless for i in range(0, len(dydx))]
 
                 returnMode = 1
-                
+
                 if returnMode < 0:
                     returnMode = -1 * (returnMode + 1)
                     if returnMode == 0:
@@ -945,6 +1020,7 @@ class TestEDISnippets(unittest.TestCase):
         # Additional options available with parseInputs
         bbo = s.BlackBox(*[0.5], **{'optn1': True, 'optn2': False})
         bbo = s.BlackBox(*[0.5, True], **{'optn': False})
+        bbo = s.BlackBox({'x': np.linspace(-2, 2, 11)})
         bbo = s.BlackBox({'x': [x for x in np.linspace(-2, 2, 11)]})
         bbo = s.BlackBox([{'x': x} for x in np.linspace(-2, 2, 11)])
         bbo = s.BlackBox([[x] for x in np.linspace(-2, 2, 11)])

@@ -15,6 +15,14 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+# # Register the pint quantity type to prevent warnings
+# from pyomo.common.numeric_types import RegisterNumericType
+# # try:
+# import pint
+# RegisterNumericType(pint.Quantity)
+# # except:
+# #     pass
+
 # Recommended just to build all of the appropriate things
 import pyomo.environ
 
@@ -24,7 +32,6 @@ try:
 except:
     pass
     # in this case, the dependencies are not installed, nothing will work
-
 
 # Import the black box modeling tools
 try:

@@ -147,33 +147,6 @@ The ``f.RuntimeConstraint()`` constructor takes in the following inputs:
     :param black_box: The object that stores the black-box function.   See the :doc:`black box constraint documentation <./blackboxconstraints>` for details on constructing this object
     :type black_box: pyomo.contrib.edi.BlackBoxFunctionModel
 
-
-The following are alternative construction methods that may be of use:
-
-.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
-    :language: python 
-    :dedent: 8
-    :start-after: # BEGIN: Formulation_Snippet_10
-    :end-before: # END: Formulation_Snippet_10
-
-.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
-    :language: python 
-    :dedent: 8
-    :start-after: # BEGIN: Formulation_Snippet_11
-    :end-before: # END: Formulation_Snippet_11
-
-.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
-    :language: python 
-    :dedent: 8
-    :start-after: # BEGIN: Formulation_Snippet_12
-    :end-before: # END: Formulation_Snippet_12
-
-.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
-    :language: python 
-    :dedent: 8
-    :start-after: # BEGIN: Formulation_Snippet_13
-    :end-before: # END: Formulation_Snippet_13
-
 However, more commonly we expect users to construct Runtime Constraints as a part of a ``f.ConstraintList()`` declaration.  Simply include a list, tuple, or dict as a part of the ConstraintList as follows:
 
 .. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
@@ -182,7 +155,7 @@ However, more commonly we expect users to construct Runtime Constraints as a par
     :start-after: # BEGIN: Formulation_Snippet_14
     :end-before: # END: Formulation_Snippet_14
 
-Any of the alternative declarations above are valid to pass into the ``f.ConstraintList()`` constructor, for example:
+The ``f.ConstraintList()`` constructor tests for types ``tuple``, ``list``, or ``dict``, and attempts to construct a ``RuntimeConstraint`` from this data.  Types of ``tuple`` and ``list`` should include 4 elements that are the ordered entries to the ``RuntimeConstraint`` constructor (ie, ``*args``), and type ``dict`` should have keyword arguments to the ``RuntimeConstraint`` constructor (ie, ``**kwrgs``).  Examples are as follows:
 
 .. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
     :language: python 

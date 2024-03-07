@@ -7,7 +7,7 @@ Overview
 
 While some constraints are explicitly known and can be written directly into the optimization problem, it is common (particularly in engineering design) for some relationships to be too complex to be directly coded as a constraint.  
 
-EDI refers to these types of constraints as ``RuntimeConstraints`` because they are not constructed until they are needed by the solver.  A particular subset of Runtime Constraints of interest are Black-Box constraints, that is, constraints which call to an external routine.  To the average pyomo and EDI user, ``RuntimeConstraints`` are for all intents and purposes Black-Box constraint, and the distinction is semantic.  
+EDI refers to these types of constraints as ``RuntimeConstraints`` because they are not constructed until they are needed by the solver.  A particular subset of Runtime Constraints of interest are Black-Box constraints, that is, constraints which call to an external routine.  To the average pyomo and EDI user, ``RuntimeConstraints`` are (for all intents and purposes) Black-Box constraints, and the distinction is semantic.  
 
 In other words, if you wish to code a black-box constraint using EDI, you will be using the Runtime Constraint constructor.
 
@@ -17,7 +17,7 @@ In this context, a *Black-Box* is defined as a routine that performs hidden comp
 Construction
 ------------
 
-Runtime constraints consist of two separate elements that need to be constructed.  
+Runtime constraints consist of two separate elements that need to be constructed: an ``__init__`` function and a ``BlackBox`` function.  Additionally, there are two pre-implemented functions that intermediate to advanced users will wish to interface with: ``BlackBox_Standardized`` and ``MultiCase``.
 
 
 Constructing a Black Box
@@ -75,7 +75,6 @@ Models with multiple inputs simply call the ``self.input.append()`` command mult
 
 Input names must be unique, and an error is raised if a repeated name is attempted to be set.  
 
-
 Next, outputs must be added to the model.  This is done identically to inputs, however the function is now ``self.outputs.append()``
 
 .. py:function:: self.outputs.append(name, units, description='', size=0)
@@ -113,9 +112,11 @@ Finally, the highest available derivative must be set.  For models being used in
 The BlackBox method
 *******************
 
-The ``BlackBox`` is extremely flexible, but here we present standard usage for a beginner user. Advanced users should also check the :doc:`advanced <./advancedruntimeconstraints>` documentation for more flexible ways of building black-box models
+The ``BlackBox`` is extremely flexible, but here we present standard usage for a typical user.
 
 The ``BlackBox`` method assumes to take in the inputs as arguments in the order defined during the ``__init__()`` method.  Note that the method assumes inputs **with units** and expects outputs **with units**.  In general, the units on inputs and outputs need not be in any specific system, but should be convertible (ex, meters and feet) to whatever has been specified as the input units when defining in the ``__init__()`` function.  
+
+The unit handling system in Pyomo can be rough at times, and so the BlackBox function is expected to return values that are ``pint.Quantity`` types.  These are obtained using the ``pyo.as_quantity()`` function.
 
 Since the units cannot be assumed on input, the first step in any black box is to convert to the model units:
 
@@ -134,11 +135,11 @@ And frequently, it is a good idea to cast these to a float value using ``pyomo.e
     :start-after: # BEGIN: RuntimeConstraints_Snippet_07
     :end-before: # END: RuntimeConstraints_Snippet_07
 
-The assumed units can now be added if desired, but this may cause a slowdown in performance.
+The assumed units can now be added if desired, but this may cause a slowdown in performance.  Typical usage is to strip units then append at the end, unless many unit systems are being used in the actual computations.
 
 Operations can now be performed to compute the output and derivatives as desired.
 
-When preparing the outputs, note that all outputs must have units:
+When preparing the outputs, note that all outputs must have units and be of type ``pint.Quantity``:
 
 .. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
     :language: python 
@@ -147,37 +148,147 @@ When preparing the outputs, note that all outputs must have units:
     :end-before: # END: RuntimeConstraints_Snippet_08
 
 
-The ``BlackBox`` method then outputs a tuple of length ``self.availableDerivative+1``.  Entry [0] is the values specified during the ``__init__()``, entry [1] is first derivative information, and similar for higher order if available.
+There are multiple options for packing the output.  In general, the ``BlackBox`` method should output in a way that is convenient for the modeler.  For simple black boxes, with less than 10 scalar inputs and scalar outputs, it is probably easiest to output as a tuple, as was done in the example here.  Consider as a second example a function of form ``[u,v,w]=f(x,y,z)``.  The simple packing would be:
+
+.. code-block:: python
+
+    return [u,v,w], [[du_dx, du_dy, du_dz], [dv_dx, dv_dy, dv_dz], [dw_dx, dw_dy, dw_dz]]
+
+If only one output, the following is also allowed:
+
+.. code-block:: python
+
+    return u, [du_dx, du_dy, du_dz]
+
+For more complex models, it is encouraged to switch to the ``NamedTuple`` output also used by the ``BlackBox_Standardized`` method:
+
+.. code-block:: python
+
+    returnTuple = namedtuple('returnTuple', ['values', 'first', 'second'])
+    optTuple    = namedtuple('optTuple', ['u','v','w'])
+    iptTuple    = namedtuple('iptTuple', ['x','y','z'])
+
+    values = optTuple(u,v,w)
+    first  = optTuple( iptTuple(du_dx, du_dy, du_dz),
+                       iptTuple(dv_dx, dv_dy, dv_dz), 
+                       iptTuple(dw_dx, dw_dy, dw_dz) )
+    second = None # Second derivatives not currently supported
+
+    return returnTuple(values,first,second)
+
+Dictionaries with the same keywords are also supported:
+
+.. code-block:: python
+
+    values = {'u':u , 'v':v , 'w':w}
+    first  = { 'u': {'x':du_dx ,'y':du_dy 'z':du_dz},
+               'v': {'x':dv_dx ,'y':dv_dy 'z':dv_dz}, 
+               'w': {'x':dw_dx ,'y':dw_dy 'z':dw_dz} }
+    second = None # Second derivatives not currently supported
+
+    return { 'values': values,
+             'first':  first,
+             'second': second }
+
+As are combinations of any of these options.
+
+In the event that the inputs and/or outputs are non-scalar, then outputs should be passed out as structures of their appropriate shape.  Derivatives are a little more complicated.  If the input **or** output is a scalar, then the derivative ``du_dx`` should have the shape of the non-scalar input/output.  However, if **both** are non-scalar, then the output should be a numpy array that takes in indices of the inputs as indices.  For example, an input (x) of dimension 2x2 and an output (u) of dimension 4x4x4, then the derivative information would be packed as:
+
+.. code-block:: python
+
+    du_dx[0,0,0,0,0] # derivative of u[0,0,0] with respect to x[0,0]
+    du_dx[0,0,1,0,0] # derivative of u[0,0,1] with respect to x[0,0]
+    du_dx[0,0,0,1,1] # derivative of u[0,0,0] with respect to x[1,1]
+
+Note that this may change in the future, as developers are unsatisfied with extensions of this method to second order and higher derivatives.
+
+The BlackBox_Standardized Method
+********************************
+The ``BlackBox`` method is designed to be highly flexible for use by practicing engineers.  However, integrating these black box analysis tools into optimization often requires a common, structured framework for the output.  The ``BlackBox_Standardized`` method provides this common interface.  
+
+The ``BlackBox_Standardized`` method will **always** provide an output that is a nested series of ``NamedTuples``:
+
+- [0]--'values'
+    - [0]--'name_of_first_output': First output of the black box
+    - [1]--'name_of_first_output': Second output of the black box
+    - ...
+    - [n]--'name_of_last_output': Last output of the black box
+- [1]--'first'
+    - [0]--'name_of_first_output'
+        - [0]--'name_of_first_input': Derivative of the first output of the black box wrt. the first input of the black box
+        - ...
+        - [n]--'name_of_last_input': Derivative of the first output of the black box wrt. the last input of the black box
+    - ...
+    - [n]--'name_of_last_output'
+        - [0]--'name_of_first_input': Derivative of the last output of the black box wrt. the first input of the black box
+        - ...
+        - [n]--'name_of_last_input': Derivative of the last output of the black box wrt. the last input of the black box
+- [2]--'second'
+    - At present, this will always be ``None``, though second order support is planned in future versions
+
+For example, for a black box function ``[u,v,w] = f(x,y,z)``, the ``BlackBox_Standardized`` method would look as follows:
+
+.. code-block:: python
+
+    opt = m.BlackBox_Standardized(x,y,z)
+    opt.values.u    # The output u
+    opt[0][2]       # The output w
+    opt.first.u.x   # The derivative du/dx
+    opt.first.w.y   # The derivative dw/dy 
+    opt[1][1][2]    # The derivative dv/dz
+    opt.second      # Will be None in the current version
+    opt[2]          # Will be None in the current version
+
+Note that while the current implementation does have a default ``BlackBox_Standardized`` method, this method is written for robustness and not performance.  For users who want maximum performance, we recommend writing your own ``BlackBox_Standardized`` method and overriding the base class.  Performance improvements will be most significant when a model has a large number of non-scalar inputs and/or outputs.
+
+Note also that the names in the named tuple are the names used in the black box model and **not** the names in the optimization problem.  These two namespaces are intentionally separated.  If you wish to use the namespace access, you must either get the names from ``[x.name for x in m.inputs]`` and ``[x.name for x in m.outputs]`` and use python's ``getattr`` function, or else have some other prior knowledge of the local black box namespace.
+
+Below is an example using the default ``BlackBox_Standardized`` method:
 
 .. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
     :language: python 
-    :dedent: 16
-    :start-after: # BEGIN: RuntimeConstraints_Snippet_09
-    :end-before: # END: RuntimeConstraints_Snippet_09
+    :dedent: 8
+    :start-after: # BEGIN: RuntimeConstraints_Snippet_11
+    :end-before: # END: RuntimeConstraints_Snippet_11
+
+And now if we wish to implement our own custom ``BlackBox_Standardized`` method:
+
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: RuntimeConstraints_Snippet_12
+    :end-before: # END: RuntimeConstraints_Snippet_12
+
+Note that if you are writing solvers for EDI, you should **exclusively** be calling the ``BlackBox_Standardized`` method, and never the basic ``BlackBox`` method, as this will ensure you are always working with a predictable data structure.
+
+As a modeler, you should **always** verify the output of ``BlackBox_Standardized`` as a final check in your effort to ensure it is packing the data as intended.  Please notify the developers of any issues.
+
+The MultiCase Method
+********************
+The ``MultiCase`` method provides a native capability to call the ``BlackBox`` method across multiple inputs simultaneously.  This function is **not** vectorized in the base class and is **not** optimized for performance.  If you wish to have a high performance vectorized function, you will need to implement your own method.
+
+The native ``MultiCase`` function can take in a variety of different input formats:
 
 
-The full unpacking is as follows:
-
-::
-
-    output[0] = <list_of_outputs>
-    output[0][<index_of_output>] = <output>
-
-    output[1] = <list_of_jacobians>
-    output[1][<index_of_output>][<index_of_input>] = <d(output_of_specified_index)/d(input_of_specified_index)>
 
 
-if there is one single scalar output, the unpacking may be simplified to the following (as shown in the above example)
-
-::
-
-    output[0] = <output>
-
-    output[1] = <list_of_jacobians>
-    output[1][<index_of_input>] = <d(output)/d(input_of_specified_index)>
 
 
-See the :doc:`advanced <./advancedruntimeconstraints>` documentation for cases where the inputs and outputs are not scalar.
+
+The output is a list of ``NamedTuple`` objects that are output from the ``BlackBox_Standardized`` method.
+
+Below is an example of overriding the default ``MultiCase`` method:
+
+
+
+
+
+
+
+
+
+
+
 
 
 Including a Black-Box in an EDI Formulation
@@ -275,7 +386,7 @@ Any of the alternative declarations above are valid to pass into the ``f.Constra
 Examples
 --------
 
-More examples are in the :doc:`advanced <./advancedruntimeconstraints>` documentation, and will be added over time.  Feel free to reach out to the developers if you have questions regarding model development.
+More examples will be added over time.  Feel free to reach out to the developers if you have questions regarding model development.
 
 A standard construction
 +++++++++++++++++++++++

@@ -21,7 +21,16 @@ from collections import namedtuple
 import pyomo
 import pyomo.environ as pyo
 from pyomo.environ import units as pyomo_units
+from pyomo.core.base.units_container import as_quantity
 from pyomo.common.dependencies import attempt_import
+
+# from pyomo.common.numeric_types import RegisterNumericType
+try:
+    import pint
+except:
+    raise ImportError(
+        "pyomo.contrib.edi requires pint to enable black box capability, fix with 'pip install pint' "
+    )
 
 
 egb, egb_available = attempt_import(
@@ -283,7 +292,7 @@ errorString = 'This function is calling to the base class and has not been defin
 
 
 def toList(itm, keylist):
-    if isinstance(itm, (namedtuple, tuple, list)):
+    if isinstance(itm, (tuple, list)):
         return list(itm)
     elif isinstance(itm, dict):
         retList = []
@@ -299,6 +308,7 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
     # ---------------------------------------------------------------------------------------------------------------------
     # ---------------------------------------------------------------------------------------------------------------------
     def __init__(self):
+        # pyomo.common.numeric_types.RegisterNumericType(pint.Quantity)
         super(BlackBoxFunctionModel, self).__init__()
 
         # List of the inputs and outputs
@@ -587,7 +597,9 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
             print(outputJacobian.dtype)
             # print(sps.coo_matrix(outputJacobian))
             # outputJacobian = np.zeros([3,1])
-            self._cache['pyomo_jacobian'] = sps.coo_matrix(outputJacobian, shape=outputJacobian.shape)
+            self._cache['pyomo_jacobian'] = sps.coo_matrix(
+                outputJacobian, shape=outputJacobian.shape
+            )
 
     # ---------------------------------------------------------------------------------------------------------------------
     # ---------------------------------------------------------------------------------------------------------------------
@@ -628,7 +640,7 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
         # Values
         # --------
         # values will always come back as an appropriate list
-        opt_values = toList(opt[0])
+        opt_values = toList(opt[0], [])
         for i in range(0, len(structuredOutput['values'])):
             if self.outputs[i].size == 0:
                 structuredOutput['values'][i] = 0.0 * self.outputs[i].units
@@ -640,7 +652,9 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
 
         for i, vl in enumerate(opt_values):
             if self.outputs[i].size == 0:
-                structuredOutput['values'][i] = opt_values[i].to(self.outputs[i].units)
+                structuredOutput['values'][i] = self.convert(
+                    opt_values[i], self.outputs[i].units
+                )
             else:
                 listOfIndices = list(
                     itertools.product(*[range(0, n) for n in self.outputs[i].size])
@@ -659,29 +673,34 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
         # should be [lst, lst, lst, lst...]
         if len(opt) > 1:
             opt_first = toList(opt[1], outputNames)
+            if len(self.outputs) == 1 and len(opt_first) == len(self.inputs):
+                opt_first = [opt_first]
+            for i, vl in enumerate(opt_first):
+                opt_first[i] = toList(vl, inputNames)
+
             for i in range(0, len(structuredOutput['first'])):
                 currentSize_output = toList(self.outputs[i].size, [])
                 for j in range(0, len(structuredOutput['first'][i])):
                     if self.outputs[i].size == 0 and self.inputs[j].size == 0:
-                        structuredOutput['values'][i][j] = (
+                        structuredOutput['first'][i][j] = (
                             0.0 * self.outputs[i].units / self.inputs[j].units
                         )
                     elif self.outputs[i].size == 0:
                         currentSize_input = toList(self.inputs[j].size, [])
-                        structuredOutput['values'][i][j] = (
+                        structuredOutput['first'][i][j] = (
                             np.zeros(currentSize_input)
                             * self.outputs[i].units
                             / self.inputs[j].units
                         )
                     elif self.inputs[j].size == 0:
-                        structuredOutput['values'][i][j] = (
+                        structuredOutput['first'][i][j] = (
                             np.zeros(currentSize_output)
                             * self.outputs[i].units
                             / self.inputs[j].units
                         )
                     else:
                         currentSize_input = toList(self.inputs[j].size, [])
-                        structuredOutput['values'][i][j] = (
+                        structuredOutput['first'][i][j] = (
                             np.zeros(currentSize_output + currentSize_input)
                             * self.outputs[i].units
                             / self.inputs[j].units
@@ -689,9 +708,16 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
 
             for i, vl in enumerate(opt_first):
                 for j, vlj in enumerate(opt_first[i]):
+                    # print(opt_first)
+                    # print(opt_first[i])
+                    # print(self.outputs)
+                    # print(self.inputs)
+                    # print(i)
+                    # print(j)
                     if self.outputs[i].size == 0 and self.inputs[j].size == 0:
-                        structuredOutput['first'][i][j] = opt_first[i][j].to(
-                            self.outputs[i].units / self.inputs[j].units
+                        structuredOutput['first'][i][j] = self.convert(
+                            opt_first[i][j],
+                            self.outputs[i].units / self.inputs[j].units,
                         )
                     elif self.outputs[i].size == 0:
                         listOfIndices = list(
@@ -750,19 +776,19 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
         # --------
         # Pack
         # --------
-        for i in range(0, len(structuredOutput['second'])):
-            for j in range(0, len(structuredOutput['second'][i])):
-                structuredOutput['second'][i][j] = iptTuple(
-                    *structuredOutput['second'][i][j]
-                )
+        # for i in range(0, len(structuredOutput['second'])):
+        #     for j in range(0, len(structuredOutput['second'][i])):
+        #         structuredOutput['second'][i][j] = iptTuple(
+        #             *structuredOutput['second'][i][j]
+        #         )
 
         for i in range(0, len(structuredOutput['first'])):
             structuredOutput['first'][i] = iptTuple(*structuredOutput['first'][i])
-            structuredOutput['second'][i] = iptTuple(*structuredOutput['second'][i])
+            # structuredOutput['second'][i] = iptTuple(*structuredOutput['second'][i])
 
         structuredOutput['values'] = optTuple(*structuredOutput['values'])
         structuredOutput['first'] = optTuple(*structuredOutput['first'])
-        structuredOutput['second'] = optTuple(*structuredOutput['second'])
+        # structuredOutput['second'] = optTuple(*structuredOutput['second'])
 
         return returnTuple(
             structuredOutput['values'],
@@ -794,6 +820,10 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
     # unit handling functions
 
     def convert(self, val, unts):
+        if isinstance(val, pint.Quantity):
+            val.to(pyomo_units._get_pint_units(unts))
+            return val
+
         try:
             val = val * pyomo_units.dimensionless
         except:
@@ -1015,12 +1045,10 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
                     if str(e) == 'Not enough inputs':
                         raise ValueError(e)
                     else:  # otherwise, proceed
-                        runCases,  extra_singleInput = self.parseInputs(
-                            args[0]
-                        )
+                        runCases, extra_singleInput = self.parseInputs(args[0])
                         remainingKwargs = copy.deepcopy(kwargs)
                         remainingKwargs['remainingArgs'] = args[len(inputNames) :]
-                        return runCases,  remainingKwargs
+                        return runCases, remainingKwargs
 
     # ---------------------------------------------------------------------------------------------------------------------
     # ---------------------------------------------------------------------------------------------------------------------
