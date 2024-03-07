@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -213,19 +213,19 @@ class MOSEKPersistent(PersistentSolver, MOSEKDirect):
                 var_ids.append(self._pyomo_var_to_solver_var_map[v])
             vtypes = tuple(map(self._mosek_vartype_from_var, solver_vars))
             lbs = tuple(
-                value(v)
-                if v.fixed
-                else -float('inf')
-                if value(v.lb) is None
-                else value(v.lb)
+                (
+                    value(v)
+                    if v.fixed
+                    else -float('inf') if value(v.lb) is None else value(v.lb)
+                )
                 for v in solver_vars
             )
             ubs = tuple(
-                value(v)
-                if v.fixed
-                else float('inf')
-                if value(v.ub) is None
-                else value(v.ub)
+                (
+                    value(v)
+                    if v.fixed
+                    else float('inf') if value(v.ub) is None else value(v.ub)
+                )
                 for v in solver_vars
             )
             fxs = tuple(v.is_fixed() for v in solver_vars)

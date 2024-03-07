@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -18,9 +18,18 @@ from pyomo.dataportal import TableData
 # )
 from pyomo.dataportal.factory import DataManagerFactory
 from pyomo.common.errors import ApplicationError
-from pyomo.common.dependencies import attempt_import
+from pyomo.common.dependencies import attempt_import, importlib, pyutilib
 
-spreadsheet, spreadsheet_available = attempt_import('pyutilib.excel.spreadsheet')
+
+def _spreadsheet_importer():
+    # verify pyutilib imported correctly the first time
+    pyutilib.component
+    return importlib.import_module('pyutilib.excel.spreadsheet')
+
+
+spreadsheet, spreadsheet_available = attempt_import(
+    'pyutilib.excel.spreadsheet', importer=_spreadsheet_importer
+)
 
 
 def _attempt_open_excel():

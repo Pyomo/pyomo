@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -21,7 +21,14 @@ from pyomo.contrib.cp.repn.docplex_writer import docplex_available, LogicalToDoC
 
 from pyomo.core.base.range import NumericRange
 from pyomo.core.expr.numeric_expr import MinExpression, MaxExpression
-from pyomo.core.expr.logical_expr import equivalent, exactly, atleast, atmost
+from pyomo.core.expr.logical_expr import (
+    equivalent,
+    exactly,
+    atleast,
+    atmost,
+    all_different,
+    count_if,
+)
 from pyomo.core.expr.relational_expr import NotEqualExpression
 
 from pyomo.environ import (
@@ -400,6 +407,38 @@ class TestCPExpressionWalker_LogicalExpressions(CommonTest):
         self.assertTrue(
             expr[1].equals(cp.less_or_equal(cp.count([a[i] == 4 for i in m.I], 1), 3))
         )
+
+    def test_all_diff_expression(self):
+        m = self.get_model()
+        m.a.domain = Integers
+        m.a.bounds = (11, 20)
+        m.c = LogicalConstraint(expr=all_different(m.a))
+
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.body, m.c, 0))
+
+        a = {}
+        for i in m.I:
+            self.assertIn(id(m.a[i]), visitor.var_map)
+            a[i] = visitor.var_map[id(m.a[i])]
+
+        self.assertTrue(expr[1].equals(cp.all_diff(a[i] for i in m.I)))
+
+    def test_count_if_expression(self):
+        m = self.get_model()
+        m.a.domain = Integers
+        m.a.bounds = (11, 20)
+        m.c = Constraint(expr=count_if(m.a[i] == i for i in m.I) == 5)
+
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.expr, m.c, 0))
+
+        a = {}
+        for i in m.I:
+            self.assertIn(id(m.a[i]), visitor.var_map)
+            a[i] = visitor.var_map[id(m.a[i])]
+
+        self.assertTrue(expr[1].equals(cp.count((a[i] == i for i in m.I), 1) == 5))
 
     def test_interval_var_is_present(self):
         m = self.get_model()

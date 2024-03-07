@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -179,13 +179,13 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
                     # TODO might be worthwhile to log number of nonlinear
                     # constraints in each disjunction for later branching
                     # purposes
-                    root_util_blk.disjunct_to_nonlinear_constraints[
-                        disjunct
-                    ] = nonlinear_constraints_in_disjunct
+                    root_util_blk.disjunct_to_nonlinear_constraints[disjunct] = (
+                        nonlinear_constraints_in_disjunct
+                    )
 
-            root_util_blk.disjunction_to_unfixed_disjuncts[
-                disjunction
-            ] = unfixed_disjuncts
+            root_util_blk.disjunction_to_unfixed_disjuncts[disjunction] = (
+                unfixed_disjuncts
+            )
             pass
 
         # Add the BigM suffix if it does not already exist. Used later during
@@ -230,12 +230,12 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
                 no_feasible_soln = float('inf')
                 self.LB = (
                     node_data.obj_lb
-                    if solve_data.objective_sense == minimize
+                    if self.objective_sense == minimize
                     else -no_feasible_soln
                 )
                 self.UB = (
                     no_feasible_soln
-                    if solve_data.objective_sense == minimize
+                    if self.objective_sense == minimize
                     else -node_data.obj_lb
                 )
                 config.logger.info(

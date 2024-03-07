@@ -1,15 +1,13 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-
-__all__ = ['convert_problem']
 
 import copy
 import os
@@ -55,7 +53,7 @@ def convert_problem(
         if os.sep in fname:  # pragma:nocover
             fname = tmp.split(os.sep)[-1]
         source_ptype = [guess_format(fname)]
-        if source_ptype is [None]:
+        if source_ptype == [None]:
             raise ConverterError("Unknown suffix type: " + tmp)
     else:
         source_ptype = args[0].valid_problem_types()

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -335,7 +335,6 @@ class BendersCutGeneratorData(_BlockData):
                     subproblem_solver.remove_constraint(c)
                 subproblem_solver.remove_constraint(subproblem.fix_eta)
             del subproblem.fix_complicating_vars
-            del subproblem.fix_complicating_vars_index
             del subproblem.fix_eta
 
         total_num_subproblems = self.global_num_subproblems()

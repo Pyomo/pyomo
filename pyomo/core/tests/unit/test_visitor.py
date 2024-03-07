@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -405,7 +405,6 @@ class WalkerTests(unittest.TestCase):
         )
 
         del M.w
-        del M.w_index
         M.w = VarList()
         e = 2 * sum_product(M.z, M.x)
         walker = ReplacementWalkerTest1(M)
@@ -1822,8 +1821,9 @@ class TestStreamBasedExpressionVisitor_Deep(unittest.TestCase):
             cases = []
         else:
             # 3 sufficed through Python 3.10, but appeared to need to be
-            # raised to 5 for recent 3.11 builds (3.11.2)
-            cases = [(0, ""), (5, warn_msg)]
+            # raised to 5 for Python 3.11 builds (3.11.2), and again to
+            # 10 for Python 3.12 builds (3.12.0)
+            cases = [(0, ""), (10, warn_msg)]
 
         head_room = sys.getrecursionlimit() - get_stack_depth()
         for n, msg in cases:

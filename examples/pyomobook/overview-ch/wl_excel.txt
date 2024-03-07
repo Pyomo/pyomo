@@ -1,4 +1,4 @@
-y : Size=3, Index=y_index
+y : Size=3, Index={Harlingen, Memphis, Ashland}
     Key       : Lower : Value : Upper : Fixed : Stale : Domain
       Ashland :     0 :   1.0 :     1 : False : False : Binary
     Harlingen :     0 :   1.0 :     1 : False : False : Binary

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -501,7 +501,7 @@ class Component(_ComponentBase):
         #
         self._ctype = kwds.pop('ctype', None)
         self.doc = kwds.pop('doc', None)
-        self._name = kwds.pop('name', str(type(self).__name__))
+        self._name = kwds.pop('name', None)
         if kwds:
             raise ValueError(
                 "Unexpected keyword options found while constructing '%s':\n\t%s"
@@ -625,6 +625,8 @@ class Component(_ComponentBase):
             Generate fully_qualified names relative to the specified block.
         """
         local_name = self._name
+        if local_name is None:
+            local_name = type(self).__name__
         if fully_qualified:
             pb = self.parent_block()
             if relative_to is None:
@@ -722,6 +724,27 @@ class Component(_ComponentBase):
                     return suffix_.get(self, default)
         else:
             return suffix_or_name.get(self, default)
+
+    def _pop_from_kwargs(self, name, kwargs, namelist, notset=None):
+        args = [
+            arg
+            for arg in (kwargs.pop(name, notset) for name in namelist)
+            if arg is not notset
+        ]
+        if len(args) == 1:
+            return args[0]
+        elif not args:
+            return notset
+        else:
+            argnames = "%s%s '%s='" % (
+                ', '.join("'%s='" % _ for _ in namelist[:-1]),
+                ',' if len(namelist) > 2 else '',
+                namelist[-1],
+            )
+            raise ValueError(
+                "Duplicate initialization: %s() only accepts one of %s"
+                % (name, argnames)
+            )
 
 
 class ActiveComponent(Component):

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -950,7 +950,14 @@ class TestExpressionDuplicateAPI(unittest.TestCase):
         f = e.create_node_with_local_data(e.args)
         self.assertIsNot(f, e)
         self.assertIs(type(f), type(e))
-        self.assertIs(f.args, e.args)
+        self.assertIsNot(f._args_, e._args_)
+        self.assertIsNot(f.args, e.args)
+
+        f = e.create_node_with_local_data(e._args_)
+        self.assertIsNot(f, e)
+        self.assertIs(type(f), type(e))
+        self.assertIs(f._args_, e._args_)
+        self.assertIsNot(f.args, e.args)
 
         f = e.create_node_with_local_data((m.x, 2, 3))
         self.assertIsNot(f, e)

@@ -1,9 +1,21 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 '''
 Utility functions for the PyROS solver
 '''
+
 import copy
 from enum import Enum, auto
-from pyomo.common.collections import ComponentSet
+from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.base import (
     Constraint,
@@ -17,11 +29,11 @@ from pyomo.core.base import (
     Block,
     Param,
 )
+from pyomo.core.util import prod
 from pyomo.core.base.var import IndexedVar
 from pyomo.core.base.set_types import Reals
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core.expr import value
-import pyomo.core.expr as EXPR
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.core.expr.visitor import (
@@ -39,8 +51,9 @@ import itertools as it
 import timeit
 from contextlib import contextmanager
 import logging
-from pprint import pprint
 import math
+from pyomo.common.timing import HierarchicalTimer
+from pyomo.common.log import Preformatted
 
 
 # Tolerances used in the code
@@ -50,6 +63,135 @@ COEFF_MATCH_REL_TOL = 1e-6
 COEFF_MATCH_ABS_TOL = 0
 ABS_CON_CHECK_FEAS_TOL = 1e-5
 TIC_TOC_SOLVE_TIME_ATTR = "pyros_tic_toc_time"
+DEFAULT_LOGGER_NAME = "pyomo.contrib.pyros"
+
+
+class TimingData:
+    """
+    PyROS solver timing data object.
+
+    Implemented as a wrapper around `common.timing.HierarchicalTimer`,
+    with added functionality for enforcing a standardized
+    hierarchy of identifiers.
+
+    Attributes
+    ----------
+    hierarchical_timer_full_ids : set of str
+        (Class attribute.) Valid identifiers for use with
+        the encapsulated hierarchical timer.
+    """
+
+    hierarchical_timer_full_ids = {
+        "main",
+        "main.preprocessing",
+        "main.master_feasibility",
+        "main.master",
+        "main.dr_polishing",
+        "main.local_separation",
+        "main.global_separation",
+    }
+
+    def __init__(self):
+        """Initialize self (see class docstring)."""
+        self._hierarchical_timer = HierarchicalTimer()
+
+    def __str__(self):
+        """
+        String representation of `self`. Currently
+        returns the string representation of `self.hierarchical_timer`.
+
+        Returns
+        -------
+        str
+            String representation.
+        """
+        return self._hierarchical_timer.__str__()
+
+    def _validate_full_identifier(self, full_identifier):
+        """
+        Validate identifier for hierarchical timer.
+
+        Parameters
+        ----------
+        full_identifier : str
+            Identifier to validate.
+
+        Raises
+        ------
+        ValueError
+            If identifier not in `TimingData.hierarchical_timer_full_ids`.
+        """
+        if full_identifier not in self.hierarchical_timer_full_ids:
+            raise ValueError(
+                "PyROS timing data object does not support timing ID: "
+                f"{full_identifier}."
+            )
+
+    def start_timer(self, full_identifier):
+        """
+        Start timer for `self.hierarchical_timer`.
+
+        Parameters
+        ----------
+        full_identifier : str
+            Full identifier for the timer to be started.
+            Must be an entry of
+            `TimingData.hierarchical_timer_full_ids`.
+        """
+        self._validate_full_identifier(full_identifier)
+        identifier = full_identifier.split(".")[-1]
+        return self._hierarchical_timer.start(identifier=identifier)
+
+    def stop_timer(self, full_identifier):
+        """
+        Stop timer for `self.hierarchical_timer`.
+
+        Parameters
+        ----------
+        full_identifier : str
+            Full identifier for the timer to be stopped.
+            Must be an entry of
+            `TimingData.hierarchical_timer_full_ids`.
+        """
+        self._validate_full_identifier(full_identifier)
+        identifier = full_identifier.split(".")[-1]
+        return self._hierarchical_timer.stop(identifier=identifier)
+
+    def get_total_time(self, full_identifier):
+        """
+        Get total time spent with identifier active.
+
+        Parameters
+        ----------
+        full_identifier : str
+            Full identifier for the timer of interest.
+
+        Returns
+        -------
+        float
+            Total time spent with identifier active.
+        """
+        return self._hierarchical_timer.get_total_time(identifier=full_identifier)
+
+    def get_main_elapsed_time(self):
+        """
+        Get total time elapsed for main timer of
+        the HierarchicalTimer contained in self.
+
+        Returns
+        -------
+        float
+            Total elapsed time.
+
+        Note
+        ----
+        This method is meant for use while the main timer is active.
+        Otherwise, use ``self.get_total_time("main")``.
+        """
+        # clean?
+        return self._hierarchical_timer.timers["main"].tic_toc.toc(
+            msg=None, delta=False
+        )
 
 
 '''Code borrowed from gdpopt: time_code, get_main_elapsed_time, a_logger.'''
@@ -57,31 +199,33 @@ TIC_TOC_SOLVE_TIME_ATTR = "pyros_tic_toc_time"
 
 @contextmanager
 def time_code(timing_data_obj, code_block_name, is_main_timer=False):
-    """Starts timer at entry, stores elapsed time at exit
+    """
+    Starts timer at entry, stores elapsed time at exit.
+
+    Parameters
+    ----------
+    timing_data_obj : TimingData
+        Timing data object.
+    code_block_name : str
+        Name of code block being timed.
 
     If `is_main_timer=True`, the start time is stored in the timing_data_obj,
     allowing calculation of total elapsed time 'on the fly' (e.g. to enforce
     a time limit) using `get_main_elapsed_time(timing_data_obj)`.
     """
+    # initialize tic toc timer
+    timing_data_obj.start_timer(code_block_name)
+
     start_time = timeit.default_timer()
     if is_main_timer:
         timing_data_obj.main_timer_start_time = start_time
     yield
-    elapsed_time = timeit.default_timer() - start_time
-    prev_time = timing_data_obj.get(code_block_name, 0)
-    timing_data_obj[code_block_name] = prev_time + elapsed_time
+    timing_data_obj.stop_timer(code_block_name)
 
 
 def get_main_elapsed_time(timing_data_obj):
     """Returns the time since entering the main `time_code` context"""
-    current_time = timeit.default_timer()
-    try:
-        return current_time - timing_data_obj.main_timer_start_time
-    except AttributeError as e:
-        if 'main_timer_start_time' in str(e):
-            raise AttributeError(
-                "You need to be in a 'time_code' context to use `get_main_elapsed_time()`."
-            )
+    return timing_data_obj.get_main_elapsed_time()
 
 
 def adjust_solver_time_settings(timing_data_obj, solver, config):
@@ -223,30 +367,82 @@ def revert_solver_max_time_adjustment(
                     del solver.options[options_key]
 
 
-def a_logger(str_or_logger):
-    """Returns a logger when passed either a logger name or logger object."""
-    if isinstance(str_or_logger, logging.Logger):
-        return str_or_logger
-    else:
-        return logging.getLogger(str_or_logger)
+class PreformattedLogger(logging.Logger):
+    """
+    A specialized logger object designed to cast log messages
+    to Pyomo `Preformatted` objects prior to logging the messages.
+    Useful for circumventing the formatters of the standard Pyomo
+    logger in the event an instance is a descendant of the Pyomo
+    logger.
+    """
+
+    def critical(self, msg, *args, **kwargs):
+        """
+        Preformat and log ``msg % args`` with severity
+        `logging.CRITICAL`.
+        """
+        return super(PreformattedLogger, self).critical(
+            Preformatted(msg % args if args else msg), **kwargs
+        )
+
+    def error(self, msg, *args, **kwargs):
+        """
+        Preformat and log ``msg % args`` with severity
+        `logging.ERROR`.
+        """
+        return super(PreformattedLogger, self).error(
+            Preformatted(msg % args if args else msg), **kwargs
+        )
+
+    def warning(self, msg, *args, **kwargs):
+        """
+        Preformat and log ``msg % args`` with severity
+        `logging.WARNING`.
+        """
+        return super(PreformattedLogger, self).warning(
+            Preformatted(msg % args if args else msg), **kwargs
+        )
+
+    def info(self, msg, *args, **kwargs):
+        """
+        Preformat and log ``msg % args`` with severity
+        `logging.INFO`.
+        """
+        return super(PreformattedLogger, self).info(
+            Preformatted(msg % args if args else msg), **kwargs
+        )
+
+    def debug(self, msg, *args, **kwargs):
+        """
+        Preformat and log ``msg % args`` with severity
+        `logging.DEBUG`.
+        """
+        return super(PreformattedLogger, self).debug(
+            Preformatted(msg % args if args else msg), **kwargs
+        )
+
+    def log(self, level, msg, *args, **kwargs):
+        """
+        Preformat and log ``msg % args`` with integer
+        severity `level`.
+        """
+        return super(PreformattedLogger, self).log(
+            level, Preformatted(msg % args if args else msg), **kwargs
+        )
 
 
-def ValidEnum(enum_class):
-    '''
-    Python 3 dependent format string
-    '''
+def setup_pyros_logger(name=DEFAULT_LOGGER_NAME):
+    """
+    Set up pyros logger.
+    """
+    # default logger: INFO level, with preformatted messages
+    current_logger_class = logging.getLoggerClass()
+    logging.setLoggerClass(PreformattedLogger)
+    logger = logging.getLogger(name=name)
+    logger.setLevel(logging.INFO)
+    logging.setLoggerClass(current_logger_class)
 
-    def fcn(obj):
-        if obj not in enum_class:
-            raise ValueError(
-                "Expected an {0} object, "
-                "instead received {1}".format(
-                    enum_class.__name__, obj.__class__.__name__
-                )
-            )
-        return obj
-
-    return fcn
+    return logger
 
 
 class pyrosTerminationCondition(Enum):
@@ -270,6 +466,25 @@ class pyrosTerminationCondition(Enum):
 
     time_out = 5
     """Maximum allowable time exceeded."""
+
+    @property
+    def message(self):
+        """
+        str : Message associated with a given PyROS
+        termination condition.
+        """
+        message_dict = {
+            self.robust_optimal: "Robust optimal solution identified.",
+            self.robust_feasible: "Robust feasible solution identified.",
+            self.robust_infeasible: "Problem is robust infeasible.",
+            self.time_out: "Maximum allowable time exceeded.",
+            self.max_iter: "Maximum number of iterations reached.",
+            self.subsolver_error: (
+                "Subordinate optimizer(s) could not solve a subproblem "
+                "to an acceptable status."
+            ),
+        }
+        return message_dict[self]
 
 
 class SeparationStrategy(Enum):
@@ -306,14 +521,6 @@ def recast_to_min_obj(model, obj):
         else:
             obj.expr = -obj.expr
         obj.sense = minimize
-
-
-def model_is_valid(model):
-    """
-    Assess whether model is valid on basis of the number of active
-    Objectives. A valid model must contain exactly one active Objective.
-    """
-    return len(list(model.component_data_objects(Objective, active=True))) == 1
 
 
 def turn_bounds_to_constraints(variable, model, config=None):
@@ -397,41 +604,6 @@ def get_time_from_solver(results):
             break
 
     return float("nan") if solve_time is None else solve_time
-
-
-def validate_uncertainty_set(config):
-    '''
-    Confirm expression output from uncertainty set function references all q in q.
-    Typecheck the uncertainty_set.q is Params referenced inside of m.
-    Give warning that the nominal point (default value in the model) is not in the specified uncertainty set.
-    :param config: solver config
-    '''
-    # === Check that q in UncertaintySet object constraint expression is referencing q in model.uncertain_params
-    uncertain_params = config.uncertain_params
-
-    # === Non-zero number of uncertain parameters
-    if len(uncertain_params) == 0:
-        raise AttributeError(
-            "Must provide uncertain params, uncertain_params list length is 0."
-        )
-    # === No duplicate parameters
-    if len(uncertain_params) != len(ComponentSet(uncertain_params)):
-        raise AttributeError("No duplicates allowed for uncertain param objects.")
-    # === Ensure nominal point is in the set
-    if not config.uncertainty_set.point_in_set(
-        point=config.nominal_uncertain_param_vals
-    ):
-        raise AttributeError(
-            "Nominal point for uncertain parameters must be in the uncertainty set."
-        )
-    # === Check set validity via boundedness and non-emptiness
-    if not config.uncertainty_set.is_valid(config=config):
-        raise AttributeError(
-            "Invalid uncertainty set detected. Check the uncertainty set object to "
-            "ensure non-emptiness and boundedness."
-        )
-
-    return
 
 
 def add_bounds_for_uncertain_parameters(model, config):
@@ -613,98 +785,345 @@ def replace_uncertain_bounds_with_constraints(model, uncertain_params):
             v.setlb(None)
 
 
-def validate_kwarg_inputs(model, config):
-    '''
-    Confirm kwarg inputs satisfy PyROS requirements.
-    :param model: the deterministic model
-    :param config: the config for this PyROS instance
-    :return:
-    '''
+def check_components_descended_from_model(model, components, components_name, config):
+    """
+    Check all members in a provided sequence of Pyomo component
+    objects are descended from a given ConcreteModel object.
 
-    # === Check if model is ConcreteModel object
+    Parameters
+    ----------
+    model : ConcreteModel
+        Model from which components should all be descended.
+    components : Iterable of Component
+        Components of interest.
+    components_name : str
+        Brief description or name for the sequence of components.
+        Used for constructing error messages.
+    config : ConfigDict
+        PyROS solver options.
+
+    Raises
+    ------
+    ValueError
+        If at least one entry of `components` is not descended
+        from `model`.
+    """
+    components_not_in_model = [comp for comp in components if comp.model() is not model]
+    if components_not_in_model:
+        comp_names_str = "\n ".join(
+            f"{comp.name!r}, from model with name {comp.model().name!r}"
+            for comp in components_not_in_model
+        )
+        config.progress_logger.error(
+            f"The following {components_name} "
+            "are not descended from the "
+            f"input deterministic model with name {model.name!r}:\n "
+            f"{comp_names_str}"
+        )
+        raise ValueError(
+            f"Found entries of {components_name} "
+            "not descended from input model. "
+            "Check logger output messages."
+        )
+
+
+def get_state_vars(blk, first_stage_variables, second_stage_variables):
+    """
+    Get state variables of a modeling block.
+
+    The state variables with respect to `blk` are the unfixed
+    `_VarData` objects participating in the active objective
+    or constraints descended from `blk` which are not
+    first-stage variables or second-stage variables.
+
+    Parameters
+    ----------
+    blk : ScalarBlock
+        Block of interest.
+    first_stage_variables : Iterable of VarData
+        First-stage variables.
+    second_stage_variables : Iterable of VarData
+        Second-stage variables.
+
+    Yields
+    ------
+    _VarData
+        State variable.
+    """
+    dof_var_set = ComponentSet(first_stage_variables) | ComponentSet(
+        second_stage_variables
+    )
+    for var in get_vars_from_component(blk, (Objective, Constraint)):
+        is_state_var = not var.fixed and var not in dof_var_set
+        if is_state_var:
+            yield var
+
+
+def check_variables_continuous(model, vars, config):
+    """
+    Check that all DOF and state variables of the model
+    are continuous.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        Input deterministic model.
+    config : ConfigDict
+        PyROS solver options.
+
+    Raises
+    ------
+    ValueError
+        If at least one variable is found to not be continuous.
+
+    Note
+    ----
+    A variable is considered continuous if the `is_continuous()`
+    method returns True.
+    """
+    non_continuous_vars = [var for var in vars if not var.is_continuous()]
+    if non_continuous_vars:
+        non_continuous_vars_str = "\n ".join(
+            f"{var.name!r}" for var in non_continuous_vars
+        )
+        config.progress_logger.error(
+            f"The following Vars of model with name {model.name!r} "
+            f"are non-continuous:\n {non_continuous_vars_str}\n"
+            "Ensure all model variables passed to PyROS solver are continuous."
+        )
+        raise ValueError(
+            f"Model with name {model.name!r} contains non-continuous Vars."
+        )
+
+
+def validate_model(model, config):
+    """
+    Validate deterministic model passed to PyROS solver.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        Deterministic model. Should have only one active Objective.
+    config : ConfigDict
+        PyROS solver options.
+
+    Returns
+    -------
+    ComponentSet
+        The variables participating in the active Objective
+        and Constraint expressions of `model`.
+
+    Raises
+    ------
+    TypeError
+        If model is not of type ConcreteModel.
+    ValueError
+        If model does not have exactly one active Objective
+        component.
+    """
+    # note: only support ConcreteModel. no support for Blocks
     if not isinstance(model, ConcreteModel):
-        raise ValueError("Model passed to PyROS solver must be a ConcreteModel object.")
+        raise TypeError(
+            f"Model should be of type {ConcreteModel.__name__}, "
+            f"but is of type {type(model).__name__}."
+        )
 
-    first_stage_variables = config.first_stage_variables
-    second_stage_variables = config.second_stage_variables
-    uncertain_params = config.uncertain_params
+    # active objectives check
+    active_objs_list = list(
+        model.component_data_objects(Objective, active=True, descend_into=True)
+    )
+    if len(active_objs_list) != 1:
+        raise ValueError(
+            "Expected model with exactly 1 active objective, but "
+            f"model provided has {len(active_objs_list)}."
+        )
 
+
+def validate_variable_partitioning(model, config):
+    """
+    Check that partitioning of the first-stage variables,
+    second-stage variables, and uncertain parameters
+    is valid.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        Input deterministic model.
+    config : ConfigDict
+        PyROS solver options.
+
+    Returns
+    -------
+    list of _VarData
+        State variables of the model.
+
+    Raises
+    ------
+    ValueError
+        If first-stage variables and second-stage variables
+        overlap, or there are no first-stage variables
+        and no second-stage variables.
+    """
+    # at least one DOF required
     if not config.first_stage_variables and not config.second_stage_variables:
-        # Must have non-zero DOF
         raise ValueError(
-            "first_stage_variables and "
-            "second_stage_variables cannot both be empty lists."
+            "Arguments `first_stage_variables` and "
+            "`second_stage_variables` are both empty lists."
         )
 
-    if ComponentSet(first_stage_variables) != ComponentSet(
-        config.first_stage_variables
-    ):
-        raise ValueError(
-            "All elements in first_stage_variables must be Var members of the model object."
-        )
-
-    if ComponentSet(second_stage_variables) != ComponentSet(
+    # ensure no overlap between DOF var sets
+    overlapping_vars = ComponentSet(config.first_stage_variables) & ComponentSet(
         config.second_stage_variables
-    ):
+    )
+    if overlapping_vars:
+        overlapping_var_list = "\n ".join(f"{var.name!r}" for var in overlapping_vars)
+        config.progress_logger.error(
+            "The following Vars were found in both `first_stage_variables`"
+            f"and `second_stage_variables`:\n {overlapping_var_list}"
+            "\nEnsure no Vars are included in both arguments."
+        )
         raise ValueError(
-            "All elements in second_stage_variables must be Var members of the model object."
+            "Arguments `first_stage_variables` and `second_stage_variables` "
+            "contain at least one common Var object."
         )
 
-    if any(
-        v in ComponentSet(second_stage_variables)
-        for v in ComponentSet(first_stage_variables)
-    ):
-        raise ValueError(
-            "No common elements allowed between first_stage_variables and second_stage_variables."
+    state_vars = list(
+        get_state_vars(
+            model,
+            first_stage_variables=config.first_stage_variables,
+            second_stage_variables=config.second_stage_variables,
+        )
+    )
+    var_type_list_map = {
+        "first-stage variables": config.first_stage_variables,
+        "second-stage variables": config.second_stage_variables,
+        "state variables": state_vars,
+    }
+    for desc, vars in var_type_list_map.items():
+        check_components_descended_from_model(
+            model=model, components=vars, components_name=desc, config=config
         )
 
-    if ComponentSet(uncertain_params) != ComponentSet(config.uncertain_params):
+    all_vars = config.first_stage_variables + config.second_stage_variables + state_vars
+    check_variables_continuous(model, all_vars, config)
+
+    return state_vars
+
+
+def validate_uncertainty_specification(model, config):
+    """
+    Validate specification of uncertain parameters and uncertainty
+    set.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        Input deterministic model.
+    config : ConfigDict
+        PyROS solver options.
+
+    Raises
+    ------
+    ValueError
+        If at least one of the following holds:
+
+        - dimension of uncertainty set does not equal number of
+          uncertain parameters
+        - uncertainty set `is_valid()` method does not return
+          true.
+        - nominal parameter realization is not in the uncertainty set.
+    """
+    check_components_descended_from_model(
+        model=model,
+        components=config.uncertain_params,
+        components_name="uncertain parameters",
+        config=config,
+    )
+
+    if len(config.uncertain_params) != config.uncertainty_set.dim:
         raise ValueError(
-            "uncertain_params must be mutable Param members of the model object."
+            "Length of argument `uncertain_params` does not match dimension "
+            "of argument `uncertainty_set` "
+            f"({len(config.uncertain_params)} != {config.uncertainty_set.dim})."
         )
 
-    if not config.uncertainty_set:
+    # validate uncertainty set
+    if not config.uncertainty_set.is_valid(config=config):
         raise ValueError(
-            "An UncertaintySet object must be provided to the PyROS solver."
+            f"Uncertainty set {config.uncertainty_set} is invalid, "
+            "as it is either empty or unbounded."
         )
 
-    non_mutable_params = []
-    for p in config.uncertain_params:
-        if not (
-            not p.is_constant() and p.is_fixed() and not p.is_potentially_variable()
-        ):
-            non_mutable_params.append(p)
-        if non_mutable_params:
-            raise ValueError(
-                "Param objects which are uncertain must have attribute mutable=True. "
-                "Offending Params: %s" % [p.name for p in non_mutable_params]
-            )
-
-    # === Solvers provided check
-    if not config.local_solver or not config.global_solver:
+    # fill-in nominal point as necessary, if not provided.
+    # otherwise, check length matches uncertainty dimension
+    if not config.nominal_uncertain_param_vals:
+        config.nominal_uncertain_param_vals = [
+            value(param, exception=True) for param in config.uncertain_params
+        ]
+    elif len(config.nominal_uncertain_param_vals) != len(config.uncertain_params):
         raise ValueError(
-            "User must designate both a local and global optimization solver via the local_solver"
-            " and global_solver options."
+            "Lengths of arguments `uncertain_params` and "
+            "`nominal_uncertain_param_vals` "
+            "do not match "
+            f"({len(config.uncertain_params)} != "
+            f"{len(config.nominal_uncertain_param_vals)})."
         )
 
+    # uncertainty set should contain nominal point
+    nominal_point_in_set = config.uncertainty_set.point_in_set(
+        point=config.nominal_uncertain_param_vals
+    )
+    if not nominal_point_in_set:
+        raise ValueError(
+            "Nominal uncertain parameter realization "
+            f"{config.nominal_uncertain_param_vals} "
+            "is not a point in the uncertainty set "
+            f"{config.uncertainty_set!r}."
+        )
+
+
+def validate_separation_problem_options(model, config):
+    """
+    Validate separation problem arguments to the PyROS solver.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        Input deterministic model.
+    config : ConfigDict
+        PyROS solver options.
+
+    Raises
+    ------
+    ValueError
+        If options `bypass_local_separation` and
+        `bypass_global_separation` are set to False.
+    """
     if config.bypass_local_separation and config.bypass_global_separation:
         raise ValueError(
-            "User cannot simultaneously enable options "
-            "'bypass_local_separation' and "
-            "'bypass_global_separation'."
+            "Arguments `bypass_local_separation` "
+            "and `bypass_global_separation` "
+            "cannot both be True."
         )
 
-    # === Degrees of freedom provided check
-    if len(config.first_stage_variables) + len(config.second_stage_variables) == 0:
-        raise ValueError(
-            "User must designate at least one first- and/or second-stage variable."
-        )
 
-    # === Uncertain params provided check
-    if len(config.uncertain_params) == 0:
-        raise ValueError("User must designate at least one uncertain parameter.")
+def validate_pyros_inputs(model, config):
+    """
+    Perform advanced validation of PyROS solver arguments.
 
-    return
+    Parameters
+    ----------
+    model : ConcreteModel
+        Input deterministic model.
+    config : ConfigDict
+        PyROS solver options.
+    """
+    validate_model(model, config)
+    state_vars = validate_variable_partitioning(model, config)
+    validate_uncertainty_specification(model, config)
+    validate_separation_problem_options(model, config)
+
+    return state_vars
 
 
 def substitute_ssv_in_dr_constraints(model, constraint):
@@ -1026,220 +1445,149 @@ def selective_clone(block, first_stage_vars):
 
 
 def add_decision_rule_variables(model_data, config):
-    '''
-    Function to add decision rule (DR) variables to the working model. DR variables become first-stage design
-    variables which do not get copied at each iteration. Currently support static_approx (no DR), affine DR,
-    and quadratic DR.
-    :param model_data: the data container for the working model
-    :param config: the config block
-    :return:
-    '''
+    """
+    Add variables for polynomial decision rules to the working
+    model.
+
+    Parameters
+    ----------
+    model_data : ROSolveResults
+        Model data.
+    config : config_dict
+        PyROS solver options.
+
+    Note
+    ----
+    Decision rule variables are considered first-stage decision
+    variables which do not get copied at each iteration.
+    PyROS currently supports static (zeroth order),
+    affine (first-order), and quadratic DR.
+    """
     second_stage_variables = model_data.working_model.util.second_stage_variables
     first_stage_variables = model_data.working_model.util.first_stage_variables
-    uncertain_params = model_data.working_model.util.uncertain_params
     decision_rule_vars = []
+
+    # since DR expression is a general polynomial in the uncertain
+    # parameters, the exact number of DR variables per second-stage
+    # variable depends on DR order and uncertainty set dimension
     degree = config.decision_rule_order
-    bounds = (None, None)
-    if degree == 0:
-        for i in range(len(second_stage_variables)):
-            model_data.working_model.add_component(
-                "decision_rule_var_" + str(i),
-                Var(
-                    initialize=value(second_stage_variables[i], exception=False),
-                    bounds=bounds,
-                    domain=Reals,
-                ),
-            )
-            first_stage_variables.extend(
-                getattr(
-                    model_data.working_model, "decision_rule_var_" + str(i)
-                ).values()
-            )
-            decision_rule_vars.append(
-                getattr(model_data.working_model, "decision_rule_var_" + str(i))
-            )
-    elif degree == 1:
-        for i in range(len(second_stage_variables)):
-            index_set = list(range(len(uncertain_params) + 1))
-            model_data.working_model.add_component(
-                "decision_rule_var_" + str(i),
-                Var(index_set, initialize=0, bounds=bounds, domain=Reals),
-            )
-            # === For affine drs, the [0]th constant term is initialized to the control variable values, all other terms are initialized to 0
-            getattr(model_data.working_model, "decision_rule_var_" + str(i))[
-                0
-            ].set_value(
-                value(second_stage_variables[i], exception=False), skip_validation=True
-            )
-            first_stage_variables.extend(
-                list(
-                    getattr(
-                        model_data.working_model, "decision_rule_var_" + str(i)
-                    ).values()
-                )
-            )
-            decision_rule_vars.append(
-                getattr(model_data.working_model, "decision_rule_var_" + str(i))
-            )
-    elif degree == 2 or degree == 3 or degree == 4:
-        for i in range(len(second_stage_variables)):
-            num_vars = int(sp.special.comb(N=len(uncertain_params) + degree, k=degree))
-            dict_init = {}
-            for r in range(num_vars):
-                if r == 0:
-                    dict_init.update(
-                        {r: value(second_stage_variables[i], exception=False)}
-                    )
-                else:
-                    dict_init.update({r: 0})
-            model_data.working_model.add_component(
-                "decision_rule_var_" + str(i),
-                Var(
-                    list(range(num_vars)),
-                    initialize=dict_init,
-                    bounds=bounds,
-                    domain=Reals,
-                ),
-            )
-            first_stage_variables.extend(
-                list(
-                    getattr(
-                        model_data.working_model, "decision_rule_var_" + str(i)
-                    ).values()
-                )
-            )
-            decision_rule_vars.append(
-                getattr(model_data.working_model, "decision_rule_var_" + str(i))
-            )
-    else:
-        raise ValueError(
-            "Decision rule order "
-            + str(config.decision_rule_order)
-            + " is not yet supported. PyROS supports polynomials of degree 0 (static approximation), 1, 2."
+    num_uncertain_params = len(model_data.working_model.util.uncertain_params)
+    num_dr_vars = sp.special.comb(
+        N=num_uncertain_params + degree, k=degree, exact=True, repetition=False
+    )
+
+    for idx, ss_var in enumerate(second_stage_variables):
+        # declare DR coefficients for current second-stage variable
+        indexed_dr_var = Var(
+            range(num_dr_vars), initialize=0, bounds=(None, None), domain=Reals
         )
+        model_data.working_model.add_component(
+            f"decision_rule_var_{idx}", indexed_dr_var
+        )
+
+        # index 0 entry of the IndexedVar is the static
+        # DR term. initialize to user-provided value of
+        # the corresponding second-stage variable.
+        # all other entries remain initialized to 0.
+        indexed_dr_var[0].set_value(value(ss_var, exception=False))
+
+        # update attributes
+        first_stage_variables.extend(indexed_dr_var.values())
+        decision_rule_vars.append(indexed_dr_var)
+
     model_data.working_model.util.decision_rule_vars = decision_rule_vars
 
 
-def partition_powers(n, v):
-    """Partition a total degree n across v variables
-
-    This is an implementation of the "stars and bars" algorithm from
-    combinatorial mathematics.
-
-    This partitions a "total integer degree" of n across v variables
-    such that each variable gets an integer degree >= 0.  You can think
-    of this as dividing a set of n+v things into v groupings, with the
-    power for each v_i being 1 less than the number of things in the
-    i'th group (because the v is part of the group).  It is therefore
-    sufficient to just get the v-1 starting points chosen from a list of
-    indices n+v long (the first starting point is fixed to be 0).
-
-    """
-    for starts in it.combinations(range(1, n + v), v - 1):
-        # add the initial starting point to the beginning and the total
-        # number of objects (degree counters and variables) to the end
-        # of the list.  The degree for each variable is 1 less than the
-        # difference of sequential starting points (to account for the
-        # variable itself)
-        starts = (0,) + starts + (n + v,)
-        yield [starts[i + 1] - starts[i] - 1 for i in range(v)]
-
-
-def sort_partitioned_powers(powers_list):
-    powers_list = sorted(powers_list, reverse=True)
-    powers_list = sorted(powers_list, key=lambda elem: max(elem))
-    return powers_list
-
-
 def add_decision_rule_constraints(model_data, config):
-    '''
-    Function to add the defining Constraint relationships for the decision rules to the working model.
-    :param model_data: model data container object
-    :param config: the config object
-    :return:
-    '''
+    """
+    Add decision rule equality constraints to the working model.
+
+    Parameters
+    ----------
+    model_data : ROSolveResults
+        Model data.
+    config : ConfigDict
+        PyROS solver options.
+    """
 
     second_stage_variables = model_data.working_model.util.second_stage_variables
     uncertain_params = model_data.working_model.util.uncertain_params
     decision_rule_eqns = []
+    decision_rule_vars_list = model_data.working_model.util.decision_rule_vars
     degree = config.decision_rule_order
-    if degree == 0:
-        for i in range(len(second_stage_variables)):
-            model_data.working_model.add_component(
-                "decision_rule_eqn_" + str(i),
-                Constraint(
-                    expr=getattr(
-                        model_data.working_model, "decision_rule_var_" + str(i)
-                    )
-                    == second_stage_variables[i]
-                ),
+
+    # keeping track of degree of monomial in which each
+    # DR coefficient participates will be useful for later
+    dr_var_to_exponent_map = ComponentMap()
+
+    # set up uncertain parameter combinations for
+    # construction of the monomials of the DR expressions
+    monomial_param_combos = []
+    for power in range(degree + 1):
+        power_combos = it.combinations_with_replacement(uncertain_params, power)
+        monomial_param_combos.extend(power_combos)
+
+    # now construct DR equations and declare them on the working model
+    second_stage_dr_var_zip = zip(second_stage_variables, decision_rule_vars_list)
+    for idx, (ss_var, indexed_dr_var) in enumerate(second_stage_dr_var_zip):
+        # for each DR equation, the number of coefficients should match
+        # the number of monomial terms exactly
+        if len(monomial_param_combos) != len(indexed_dr_var.index_set()):
+            raise ValueError(
+                f"Mismatch between number of DR coefficient variables "
+                f"and number of DR monomials for DR equation index {idx}, "
+                f"corresponding to second-stage variable {ss_var.name!r}. "
+                f"({len(indexed_dr_var.index_set())}!= {len(monomial_param_combos)})"
             )
-            decision_rule_eqns.append(
-                getattr(model_data.working_model, "decision_rule_eqn_" + str(i))
-            )
-    elif degree == 1:
-        for i in range(len(second_stage_variables)):
-            expr = 0
-            for j in range(
-                len(getattr(model_data.working_model, "decision_rule_var_" + str(i)))
-            ):
-                if j == 0:
-                    expr += getattr(
-                        model_data.working_model, "decision_rule_var_" + str(i)
-                    )[j]
-                else:
-                    expr += (
-                        getattr(
-                            model_data.working_model, "decision_rule_var_" + str(i)
-                        )[j]
-                        * uncertain_params[j - 1]
-                    )
-            model_data.working_model.add_component(
-                "decision_rule_eqn_" + str(i),
-                Constraint(expr=expr == second_stage_variables[i]),
-            )
-            decision_rule_eqns.append(
-                getattr(model_data.working_model, "decision_rule_eqn_" + str(i))
-            )
-    elif degree >= 2:
-        # Using bars and stars groupings of variable powers, construct x1^a * .... * xn^b terms for all c <= a+...+b = degree
-        all_powers = []
-        for n in range(1, degree + 1):
-            all_powers.append(
-                sort_partitioned_powers(
-                    list(partition_powers(n, len(uncertain_params)))
-                )
-            )
-        for i in range(len(second_stage_variables)):
-            Z = list(
-                z
-                for z in getattr(
-                    model_data.working_model, "decision_rule_var_" + str(i)
-                ).values()
-            )
-            e = Z.pop(0)
-            for degree_param_powers in all_powers:
-                for param_powers in degree_param_powers:
-                    product = 1
-                    for idx, power in enumerate(param_powers):
-                        if power == 0:
-                            pass
-                        else:
-                            product = product * uncertain_params[idx] ** power
-                    e += Z.pop(0) * product
-            model_data.working_model.add_component(
-                "decision_rule_eqn_" + str(i),
-                Constraint(expr=e == second_stage_variables[i]),
-            )
-            decision_rule_eqns.append(
-                getattr(model_data.working_model, "decision_rule_eqn_" + str(i))
-            )
-            if len(Z) != 0:
-                raise RuntimeError(
-                    "Construction of the decision rule functions did not work correctly! "
-                    "Did not use all coefficient terms."
-                )
+
+        # construct the DR polynomial
+        dr_expression = 0
+        for dr_var, param_combo in zip(indexed_dr_var.values(), monomial_param_combos):
+            dr_expression += dr_var * prod(param_combo)
+
+            # map decision rule var to degree (exponent) of the
+            # associated monomial with respect to the uncertain params
+            dr_var_to_exponent_map[dr_var] = len(param_combo)
+
+        # declare constraint on model
+        dr_eqn = Constraint(expr=dr_expression - ss_var == 0)
+        model_data.working_model.add_component(f"decision_rule_eqn_{idx}", dr_eqn)
+
+        # append to list of DR equality constraints
+        decision_rule_eqns.append(dr_eqn)
+
+    # finally, add attributes to util block
     model_data.working_model.util.decision_rule_eqns = decision_rule_eqns
+    model_data.working_model.util.dr_var_to_exponent_map = dr_var_to_exponent_map
+
+
+def enforce_dr_degree(blk, config, degree):
+    """
+    Make decision rule polynomials of a given degree
+    by fixing value of the appropriate subset of the decision
+    rule coefficients to 0.
+
+    Parameters
+    ----------
+    blk : ScalarBlock
+        Working model, or master problem block.
+    config : ConfigDict
+        PyROS solver options.
+    degree : int
+        Degree of the DR polynomials that is to be enforced.
+    """
+    second_stage_vars = blk.util.second_stage_variables
+    indexed_dr_vars = blk.util.decision_rule_vars
+    dr_var_to_exponent_map = blk.util.dr_var_to_exponent_map
+
+    for ss_var, indexed_dr_var in zip(second_stage_vars, indexed_dr_vars):
+        for dr_var in indexed_dr_var.values():
+            dr_var_degree = dr_var_to_exponent_map[dr_var]
+
+            if dr_var_degree > degree:
+                dr_var.fix(0)
+            else:
+                dr_var.unfix()
 
 
 def identify_objective_functions(model, objective):
@@ -1383,111 +1731,205 @@ def process_termination_condition_master_problem(config, results):
             )
 
 
-def output_logger(config, **kwargs):
-    '''
-    All user returned messages (termination conditions, runtime errors) are here
-    Includes when
-    "sub-solver %s returned status infeasible..."
-    :return:
-    '''
+class IterationLogRecord:
+    """
+    PyROS solver iteration log record.
 
-    # === PREAMBLE + LICENSING
-    # Version printing
-    if "preamble" in kwargs:
-        if kwargs["preamble"]:
-            version = str(kwargs["version"])
-            preamble = (
-                "===========================================================================================\n"
-                "PyROS: Pyomo Robust Optimization Solver v.%s \n"
-                "Developed by: Natalie M. Isenberg (1), Jason A. F. Sherman (1), \n"
-                "              John D. Siirola (2), Chrysanthos E. Gounaris (1) \n"
-                "(1) Carnegie Mellon University, Department of Chemical Engineering \n"
-                "(2) Sandia National Laboratories, Center for Computing Research\n\n"
-                "The developers gratefully acknowledge support from the U.S. Department of Energy's \n"
-                "Institute for the Design of Advanced Energy Systems (IDAES) \n"
-                "==========================================================================================="
-                % version
-            )
-            print(preamble)
-    # === DISCLAIMER
-    if "disclaimer" in kwargs:
-        if kwargs["disclaimer"]:
-            print(
-                "======================================== DISCLAIMER =======================================\n"
-                "PyROS is still under development. \n"
-                "Please provide feedback and/or report any issues by opening a Pyomo ticket.\n"
-                "===========================================================================================\n"
-            )
-    # === ALL LOGGER RETURN MESSAGES
-    if "bypass_global_separation" in kwargs:
-        if kwargs["bypass_global_separation"]:
-            config.progress_logger.info(
-                "NOTE: Option to bypass global separation was chosen. "
-                "Robust feasibility and optimality of the reported "
-                "solution are not guaranteed."
-            )
-    if "robust_optimal" in kwargs:
-        if kwargs["robust_optimal"]:
-            config.progress_logger.info(
-                'Robust optimal solution identified. Exiting PyROS.'
-            )
+    Parameters
+    ----------
+    iteration : int or None, optional
+        Iteration number.
+    objective : int or None, optional
+        Master problem objective value.
+        Note: if the sense of the original model is maximization,
+        then this is the negative of the objective value
+        of the original model.
+    first_stage_var_shift : float or None, optional
+        Infinity norm of the difference between first-stage
+        variable vectors for the current and previous iterations.
+    second_stage_var_shift : float or None, optional
+        Infinity norm of the difference between decision rule
+        variable vectors for the current and previous iterations.
+    dr_polishing_success : bool or None, optional
+        True if DR polishing solved successfully, False otherwise.
+    num_violated_cons : int or None, optional
+        Number of performance constraints found to be violated
+        during separation step.
+    all_sep_problems_solved : int or None, optional
+        True if all separation problems were solved successfully,
+        False otherwise (such as if there was a time out, subsolver
+        error, or only a subset of the problems were solved due to
+        custom constraint prioritization).
+    global_separation : bool, optional
+        True if separation problems were solved with the subordinate
+        global optimizer(s), False otherwise.
+    max_violation : int or None
+        Maximum scaled violation of any performance constraint
+        found during separation step.
+    elapsed_time : float, optional
+        Total time elapsed up to the current iteration, in seconds.
 
-    if "robust_feasible" in kwargs:
-        if kwargs["robust_feasible"]:
-            config.progress_logger.info(
-                'Robust feasible solution identified. Exiting PyROS.'
-            )
+    Attributes
+    ----------
+    iteration : int or None
+        Iteration number.
+    objective : int or None
+        Master problem objective value.
+        Note: if the sense of the original model is maximization,
+        then this is the negative of the objective value
+        of the original model.
+    first_stage_var_shift : float or None
+        Infinity norm of the relative difference between first-stage
+        variable vectors for the current and previous iterations.
+    second_stage_var_shift : float or None
+        Infinity norm of the relative difference between second-stage
+        variable vectors (evaluated subject to the nominal uncertain
+        parameter realization) for the current and previous iterations.
+    dr_var_shift : float or None
+        Infinity norm of the relative difference between decision rule
+        variable vectors for the current and previous iterations.
+        NOTE: This value is not reported in log messages.
+    dr_polishing_success : bool or None
+        True if DR polishing was solved successfully, False otherwise.
+    num_violated_cons : int or None
+        Number of performance constraints found to be violated
+        during separation step.
+    all_sep_problems_solved : int or None
+        True if all separation problems were solved successfully,
+        False otherwise (such as if there was a time out, subsolver
+        error, or only a subset of the problems were solved due to
+        custom constraint prioritization).
+    global_separation : bool
+        True if separation problems were solved with the subordinate
+        global optimizer(s), False otherwise.
+    max_violation : int or None
+        Maximum scaled violation of any performance constraint
+        found during separation step.
+    elapsed_time : float
+        Total time elapsed up to the current iteration, in seconds.
+    """
 
-    if "robust_infeasible" in kwargs:
-        if kwargs["robust_infeasible"]:
-            config.progress_logger.info('Robust infeasible problem. Exiting PyROS.')
+    _LINE_LENGTH = 78
+    _ATTR_FORMAT_LENGTHS = {
+        "iteration": 5,
+        "objective": 13,
+        "first_stage_var_shift": 13,
+        "second_stage_var_shift": 13,
+        "dr_var_shift": 13,
+        "num_violated_cons": 8,
+        "max_violation": 13,
+        "elapsed_time": 13,
+    }
+    _ATTR_HEADER_NAMES = {
+        "iteration": "Itn",
+        "objective": "Objective",
+        "first_stage_var_shift": "1-Stg Shift",
+        "second_stage_var_shift": "2-Stg Shift",
+        "dr_var_shift": "DR Shift",
+        "num_violated_cons": "#CViol",
+        "max_violation": "Max Viol",
+        "elapsed_time": "Wall Time (s)",
+    }
 
-    if "time_out" in kwargs:
-        if kwargs["time_out"]:
-            config.progress_logger.info(
-                'PyROS was unable to identify robust solution '
-                'before exceeding time limit of %s seconds. '
-                'Consider increasing the time limit via option time_limit.'
-                % config.time_limit
-            )
+    def __init__(
+        self,
+        iteration,
+        objective,
+        first_stage_var_shift,
+        second_stage_var_shift,
+        dr_var_shift,
+        dr_polishing_success,
+        num_violated_cons,
+        all_sep_problems_solved,
+        global_separation,
+        max_violation,
+        elapsed_time,
+    ):
+        """Initialize self (see class docstring)."""
+        self.iteration = iteration
+        self.objective = objective
+        self.first_stage_var_shift = first_stage_var_shift
+        self.second_stage_var_shift = second_stage_var_shift
+        self.dr_var_shift = dr_var_shift
+        self.dr_polishing_success = dr_polishing_success
+        self.num_violated_cons = num_violated_cons
+        self.all_sep_problems_solved = all_sep_problems_solved
+        self.global_separation = global_separation
+        self.max_violation = max_violation
+        self.elapsed_time = elapsed_time
 
-    if "max_iter" in kwargs:
-        if kwargs["max_iter"]:
-            config.progress_logger.info(
-                'PyROS was unable to identify robust solution '
-                'within %s iterations of the GRCS algorithm. '
-                'Consider increasing the iteration limit via option max_iter.'
-                % config.max_iter
-            )
+    def get_log_str(self):
+        """Get iteration log string."""
+        attrs = [
+            "iteration",
+            "objective",
+            "first_stage_var_shift",
+            "second_stage_var_shift",
+            # "dr_var_shift",
+            "num_violated_cons",
+            "max_violation",
+            "elapsed_time",
+        ]
+        return "".join(self._format_record_attr(attr) for attr in attrs)
 
-    if "master_error" in kwargs:
-        if kwargs["master_error"]:
-            status_dict = kwargs["status_dict"]
-            filename = kwargs["filename"]  # solver name to solver termination condition
-            if kwargs["iteration"] == 0:
-                raise AttributeError(
-                    "User-supplied solver(s) could not solve the deterministic model. "
-                    "Returned termination conditions were: %s"
-                    "Please ensure deterministic model is solvable by at least one of the supplied solvers. "
-                    "Exiting PyROS." % pprint(status_dict, width=1)
-                )
-            config.progress_logger.info(
-                "User-supplied solver(s) could not solve the master model at iteration %s.\n"
-                "Returned termination conditions were: %s\n"
-                "For debugging, this problem has been written to a GAMS file titled %s. Exiting PyROS."
-                % (kwargs["iteration"], pprint(status_dict), filename)
-            )
-    if "separation_error" in kwargs:
-        if kwargs["separation_error"]:
-            status_dict = kwargs["status_dict"]
-            filename = kwargs["filename"]
-            iteration = kwargs["iteration"]
-            obj = kwargs["objective"]
-            config.progress_logger.info(
-                "User-supplied solver(s) could not solve the separation problem at iteration %s under separation objective %s.\n"
-                "Returned termination conditions were: %s\n"
-                "For debugging, this problem has been written to a GAMS file titled %s. Exiting PyROS."
-                % (iteration, obj, pprint(status_dict, width=1), filename)
-            )
+    def _format_record_attr(self, attr_name):
+        """Format attribute record for logging."""
+        attr_val = getattr(self, attr_name)
+        if attr_val is None:
+            fmt_str = f"<{self._ATTR_FORMAT_LENGTHS[attr_name]}s"
+            return f"{'-':{fmt_str}}"
+        else:
+            attr_val_fstrs = {
+                "iteration": "f'{attr_val:d}'",
+                "objective": "f'{attr_val: .4e}'",
+                "first_stage_var_shift": "f'{attr_val:.4e}'",
+                "second_stage_var_shift": "f'{attr_val:.4e}'",
+                "dr_var_shift": "f'{attr_val:.4e}'",
+                "num_violated_cons": "f'{attr_val:d}'",
+                "max_violation": "f'{attr_val:.4e}'",
+                "elapsed_time": "f'{attr_val:.3f}'",
+            }
 
-    return
+            # qualifier for DR polishing and separation columns
+            if attr_name in ["second_stage_var_shift", "dr_var_shift"]:
+                qual = "*" if not self.dr_polishing_success else ""
+            elif attr_name == "num_violated_cons":
+                qual = "+" if not self.all_sep_problems_solved else ""
+            elif attr_name == "max_violation":
+                qual = "g" if self.global_separation else ""
+            else:
+                qual = ""
+
+            attr_val_str = f"{eval(attr_val_fstrs[attr_name])}{qual}"
+
+            return f"{attr_val_str:{f'<{self._ATTR_FORMAT_LENGTHS[attr_name]}'}}"
+
+    def log(self, log_func, **log_func_kwargs):
+        """Log self."""
+        log_str = self.get_log_str()
+        log_func(log_str, **log_func_kwargs)
+
+    @staticmethod
+    def get_log_header_str():
+        """Get string for iteration log header."""
+        fmt_lengths_dict = IterationLogRecord._ATTR_FORMAT_LENGTHS
+        header_names_dict = IterationLogRecord._ATTR_HEADER_NAMES
+        return "".join(
+            f"{header_names_dict[attr]:<{fmt_lengths_dict[attr]}s}"
+            for attr in fmt_lengths_dict
+            if attr != "dr_var_shift"
+        )
+
+    @staticmethod
+    def log_header(log_func, with_rules=True, **log_func_kwargs):
+        """Log header."""
+        if with_rules:
+            IterationLogRecord.log_header_rule(log_func, **log_func_kwargs)
+        log_func(IterationLogRecord.get_log_header_str(), **log_func_kwargs)
+        if with_rules:
+            IterationLogRecord.log_header_rule(log_func, **log_func_kwargs)
+
+    @staticmethod
+    def log_header_rule(log_func, fillchar="-", **log_func_kwargs):
+        """Log header rule."""
+        log_func(fillchar * IterationLogRecord._LINE_LENGTH, **log_func_kwargs)

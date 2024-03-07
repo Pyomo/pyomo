@@ -25,3 +25,6 @@ gurobi.log
 # Jupyterhub/Jupyterlab checkpoints
 .ipynb_checkpoints
 cplex.log
+
+# Mac tracking files
+*.DS_Store*

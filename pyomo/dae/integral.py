@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -20,8 +20,6 @@ from pyomo.core.base.expression import (
 )
 from pyomo.dae.contset import ContinuousSet
 from pyomo.dae.diffvar import DAE_Error
-
-__all__ = ('Integral',)
 
 
 @ModelComponentFactory.register("Integral Expression in a DAE model.")

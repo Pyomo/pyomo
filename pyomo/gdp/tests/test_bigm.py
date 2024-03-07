@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -33,6 +33,7 @@ from pyomo.core.expr.compare import (
     assertExpressionsStructurallyEqual,
 )
 from pyomo.repn import generate_standard_repn
+from pyomo.repn.linear import LinearRepnVisitor
 from pyomo.common.log import LoggingIntercept
 import logging
 
@@ -1315,18 +1316,10 @@ class ScalarDisjIndexedConstraints(unittest.TestCase, CommonTests):
         bigm.apply_to(m)
 
         # the real test: This wasn't transformed
-        log = StringIO()
-        with LoggingIntercept(log, 'pyomo.gdp', logging.ERROR):
-            self.assertRaisesRegex(
-                KeyError,
-                r".*b.simpledisj1.c\[1\]",
-                bigm.get_transformed_constraints,
-                m.b.simpledisj1.c[1],
-            )
-        self.assertRegex(
-            log.getvalue(),
-            r".*Constraint 'b.simpledisj1.c\[1\]' has not been transformed.",
-        )
+        with self.assertRaisesRegex(
+            GDP_Error, r"Constraint 'b.simpledisj1.c\[1\]' has not been transformed."
+        ):
+            bigm.get_transformed_constraints(m.b.simpledisj1.c[1])
 
         # and the rest of the container was transformed
         cons_list = bigm.get_transformed_constraints(m.b.simpledisj1.c[2])
@@ -1764,22 +1757,19 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         # we have the XOR constraints for both the outer and inner disjunctions
         self.assertIsInstance(transBlock.component("disjunction_xor"), Constraint)
 
-    def test_transformation_block_on_inner_disjunct_empty(self):
-        m = models.makeNestedDisjunctions()
-        TransformationFactory('gdp.bigm').apply_to(m)
-        self.assertIsNone(m.disjunct[1].component("_pyomo_gdp_bigm_reformulation"))
-
     def test_mappings_between_disjunctions_and_xors(self):
         m = models.makeNestedDisjunctions()
         transform = TransformationFactory('gdp.bigm')
         transform.apply_to(m)
 
         transBlock1 = m.component("_pyomo_gdp_bigm_reformulation")
+        transBlock2 = m.disjunct[1].component("_pyomo_gdp_bigm_reformulation")
+        transBlock3 = m.simpledisjunct.component("_pyomo_gdp_bigm_reformulation")
 
         disjunctionPairs = [
             (m.disjunction, transBlock1.disjunction_xor),
-            (m.disjunct[1].innerdisjunction[0], transBlock1.innerdisjunction_xor_4[0]),
-            (m.simpledisjunct.innerdisjunction, transBlock1.innerdisjunction_xor),
+            (m.disjunct[1].innerdisjunction[0], transBlock2.innerdisjunction_xor[0]),
+            (m.simpledisjunct.innerdisjunction, transBlock3.innerdisjunction_xor),
         ]
 
         # check disjunction mappings
@@ -1899,19 +1889,32 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         ct.check_linear_coef(self, repn, variable, 1)
         ct.check_linear_coef(self, repn, indicator_var, M)
 
-    def check_inner_xor_constraint(
-        self, inner_disjunction, outer_disjunct, inner_disjuncts
-    ):
-        self.assertIsNotNone(inner_disjunction.algebraic_constraint)
-        cons = inner_disjunction.algebraic_constraint
-        self.assertEqual(cons.lower, 0)
-        self.assertEqual(cons.upper, 0)
-        repn = generate_standard_repn(cons.body)
-        self.assertTrue(repn.is_linear())
-        self.assertEqual(repn.constant, 0)
-        for disj in inner_disjuncts:
-            ct.check_linear_coef(self, repn, disj.binary_indicator_var, 1)
-        ct.check_linear_coef(self, repn, outer_disjunct.binary_indicator_var, -1)
+    def check_inner_xor_constraint(self, inner_disjunction, outer_disjunct, bigm):
+        inner_xor = inner_disjunction.algebraic_constraint
+        sum_indicators = sum(
+            d.binary_indicator_var for d in inner_disjunction.disjuncts
+        )
+        assertExpressionsEqual(self, inner_xor.expr, sum_indicators == 1)
+        # this guy has been transformed
+        self.assertFalse(inner_xor.active)
+        cons = bigm.get_transformed_constraints(inner_xor)
+        self.assertEqual(len(cons), 2)
+        lb = cons[0]
+        ct.check_obj_in_active_tree(self, lb)
+        lb_expr = self.simplify_cons(lb, leq=False)
+        assertExpressionsEqual(
+            self,
+            lb_expr,
+            1.0 <= sum_indicators - outer_disjunct.binary_indicator_var + 1.0,
+        )
+        ub = cons[1]
+        ct.check_obj_in_active_tree(self, ub)
+        ub_expr = self.simplify_cons(ub, leq=True)
+        assertExpressionsEqual(
+            self,
+            ub_expr,
+            sum_indicators + outer_disjunct.binary_indicator_var - 1 <= 1.0,
+        )
 
     def test_transformed_constraints(self):
         # We'll check all the transformed constraints to make sure
@@ -1993,26 +1996,9 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
 
         # Here we check that the xor constraint from
         # simpledisjunct.innerdisjunction is transformed.
-        cons5 = m.simpledisjunct.innerdisjunction.algebraic_constraint
-        self.assertIsNotNone(cons5)
         self.check_inner_xor_constraint(
-            m.simpledisjunct.innerdisjunction,
-            m.simpledisjunct,
-            [m.simpledisjunct.innerdisjunct0, m.simpledisjunct.innerdisjunct1],
+            m.simpledisjunct.innerdisjunction, m.simpledisjunct, bigm
         )
-        self.assertIsInstance(cons5, Constraint)
-        self.assertEqual(cons5.lower, 0)
-        self.assertEqual(cons5.upper, 0)
-        repn = generate_standard_repn(cons5.body)
-        self.assertTrue(repn.is_linear())
-        self.assertEqual(repn.constant, 0)
-        ct.check_linear_coef(
-            self, repn, m.simpledisjunct.innerdisjunct0.binary_indicator_var, 1
-        )
-        ct.check_linear_coef(
-            self, repn, m.simpledisjunct.innerdisjunct1.binary_indicator_var, 1
-        )
-        ct.check_linear_coef(self, repn, m.simpledisjunct.binary_indicator_var, -1)
 
         cons6 = bigm.get_transformed_constraints(m.disjunct[0].c)
         self.assertEqual(len(cons6), 2)
@@ -2028,9 +2014,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         # now we check that the xor constraint from disjunct[1].innerdisjunction
         # is correct.
         self.check_inner_xor_constraint(
-            m.disjunct[1].innerdisjunction[0],
-            m.disjunct[1],
-            [m.disjunct[1].innerdisjunct[0], m.disjunct[1].innerdisjunct[1]],
+            m.disjunct[1].innerdisjunction[0], m.disjunct[1], bigm
         )
 
         cons8 = bigm.get_transformed_constraints(m.disjunct[1].c)
@@ -2136,33 +2120,27 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
             ct.check_squared_term_coef(self, repn, x[i], 1)
             ct.check_linear_coef(self, repn, x[i], -6)
 
+    def simplify_cons(self, cons, leq):
+        visitor = LinearRepnVisitor({}, {}, {}, None)
+        repn = visitor.walk_expression(cons.body)
+        self.assertIsNone(repn.nonlinear)
+        if leq:
+            self.assertIsNone(cons.lower)
+            ub = cons.upper
+            return ub >= repn.to_expression(visitor)
+        else:
+            self.assertIsNone(cons.upper)
+            lb = cons.lower
+            return lb <= repn.to_expression(visitor)
+
     def check_hierarchical_nested_model(self, m, bigm):
         outer_xor = m.disjunction_block.disjunction.algebraic_constraint
         ct.check_two_term_disjunction_xor(
             self, outer_xor, m.disj1, m.disjunct_block.disj2
         )
 
-        inner_xor = m.disjunct_block.disj2.disjunction.algebraic_constraint
-        self.assertEqual(inner_xor.lower, 0)
-        self.assertEqual(inner_xor.upper, 0)
-        repn = generate_standard_repn(inner_xor.body)
-        self.assertTrue(repn.is_linear())
-        self.assertEqual(len(repn.linear_vars), 3)
-        self.assertEqual(repn.constant, 0)
-        ct.check_linear_coef(
-            self,
-            repn,
-            m.disjunct_block.disj2.disjunction_disjuncts[0].binary_indicator_var,
-            1,
-        )
-        ct.check_linear_coef(
-            self,
-            repn,
-            m.disjunct_block.disj2.disjunction_disjuncts[1].binary_indicator_var,
-            1,
-        )
-        ct.check_linear_coef(
-            self, repn, m.disjunct_block.disj2.binary_indicator_var, -1
+        self.check_inner_xor_constraint(
+            m.disjunct_block.disj2.disjunction, m.disjunct_block.disj2, bigm
         )
 
         # outer disjunction constraints
@@ -2213,6 +2191,10 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         # Like above, the real test is that the above doesn't scream. We can use
         # the same check to make sure everything is transformed correctly.
         self.check_hierarchical_nested_model(m, bigm)
+
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    def test_do_not_assume_nested_indicators_local(self):
+        ct.check_do_not_assume_nested_indicators_local(self, 'gdp.bigm')
 
 
 class IndexedDisjunction(unittest.TestCase):
@@ -2282,18 +2264,12 @@ class BlocksOnDisjuncts(unittest.TestCase):
         self.assertEqual(len(evil1), 2)
         self.assertIs(evil1[0].parent_block(), disjBlock[1])
         self.assertIs(evil1[1].parent_block(), disjBlock[1])
-        out = StringIO()
-        with LoggingIntercept(out, 'pyomo.gdp', logging.ERROR):
-            self.assertRaisesRegex(
-                KeyError,
-                r".*.evil\[1\].b.anotherblock.c",
-                bigm.get_transformed_constraints,
-                m.evil[1].b.anotherblock.c,
-            )
-        self.assertRegex(
-            out.getvalue(),
-            r".*Constraint 'evil\[1\].b.anotherblock.c' has not been transformed.",
-        )
+        with self.assertRaisesRegex(
+            GDP_Error,
+            r"Constraint 'evil\[1\].b.anotherblock.c' has not been transformed.",
+        ):
+            bigm.get_transformed_constraints(m.evil[1].b.anotherblock.c)
+
         evil1 = bigm.get_transformed_constraints(m.evil[1].bb[1].c)
         self.assertEqual(len(evil1), 2)
         self.assertIs(evil1[0].parent_block(), disjBlock[1])

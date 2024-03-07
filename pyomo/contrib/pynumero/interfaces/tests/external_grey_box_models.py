@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 from pyomo.contrib.pynumero.dependencies import (
     numpy as np,
     numpy_available,
@@ -298,8 +309,7 @@ class PressureDropTwoEqualities(ExternalGreyBoxModel):
         P2 = self._input_values[3]
         Pout = self._input_values[4]
         return np.asarray(
-            [P2 - (Pin - 2 * c * F**2), Pout - (P2 - 2 * c * F**2)],
-            dtype=np.float64,
+            [P2 - (Pin - 2 * c * F**2), Pout - (P2 - 2 * c * F**2)], dtype=np.float64
         )
 
     def evaluate_jacobian_equality_constraints(self):

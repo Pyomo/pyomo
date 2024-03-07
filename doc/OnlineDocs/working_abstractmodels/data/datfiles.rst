@@ -104,7 +104,7 @@ A set may be empty, and it may contain any combination of numeric and
 non-numeric string values.  For example, the following are valid ``set``
 commands:
 
-.. literalinclude:: ../../tests/data/set1.dat
+.. literalinclude:: ../../src/data/set1.dat
     :language: python
 
 
@@ -115,19 +115,19 @@ The ``set`` data command can also specify tuple data with the standard
 notation for tuples.  For example, suppose that set ``A`` contains
 3-tuples:
 
-.. literalinclude:: ../../tests/data/set2_decl.spy
+.. literalinclude:: ../../src/data/set2_decl.spy
     :language: python
 
 The following ``set`` data command then specifies that ``A`` is the set
 containing the tuples ``(1,2,3)`` and ``(4,5,6)``:
 
-.. literalinclude:: ../../tests/data/set2a.dat
+.. literalinclude:: ../../src/data/set2a.dat
     :language: none
 
 Alternatively, set data can simply be listed in the order that the tuple
 is represented:
 
-.. literalinclude:: ../../tests/data/set2.dat
+.. literalinclude:: ../../src/data/set2.dat
     :language: none
 
 Obviously, the number of data elements specified using this syntax
@@ -138,7 +138,7 @@ membership.  For example, the following ``set`` data command declares
 2-tuples in ``A`` using plus (``+``) to denote valid tuples and minus
 (``-``) to denote invalid tuples:
 
-.. literalinclude:: ../../tests/data/set4.dat
+.. literalinclude:: ../../src/data/set4.dat
     :language: none
 
 This data command declares the following five 2-tuples: ``('A1',1)``,
@@ -148,13 +148,13 @@ Finally, a set of tuple data can be concisely represented with tuple
 *templates* that represent a *slice* of tuple data.  For example,
 suppose that the set ``A`` contains 4-tuples:
 
-.. literalinclude:: ../../tests/data/set5_decl.spy
+.. literalinclude:: ../../src/data/set5_decl.spy
     :language: python
 
 The following ``set`` data command declares groups of tuples that are
 defined by a template and data to complete this template:
 
-.. literalinclude:: ../../tests/data/set5.dat
+.. literalinclude:: ../../src/data/set5.dat
     :language: none
 
 A tuple template consists of a tuple that contains one or more asterisk
@@ -163,7 +163,7 @@ tuple value is replaced by the values from the list of values that
 follows the tuple template.  In this example, the following tuples are
 in set ``A``:
 
-.. literalinclude:: ../../tests/data/set5.txt
+.. literalinclude:: ../../src/data/set5.txt
     :language: none
 
 Set Arrays
@@ -183,12 +183,12 @@ list of string values.
 
 Suppose that a set ``A`` is used to index a set ``B`` as follows:
 
-.. literalinclude:: ../../tests/data/set3_decl.spy
+.. literalinclude:: ../../src/data/set3_decl.spy
     :language: python
 
 Then set ``B`` is indexed using the values declared for set ``A``:
 
-.. literalinclude:: ../../tests/data/set3.dat
+.. literalinclude:: ../../src/data/set3.dat
     :language: none
 
 The ``param`` Command
@@ -197,7 +197,7 @@ The ``param`` Command
 Simple or non-indexed parameters are declared in an obvious way, as
 shown by these examples:
 
-.. literalinclude:: ../../tests/data/param1.dat
+.. literalinclude:: ../../src/data/param1.dat
     :language: none
 
 Parameters can be defined with numeric data, simple strings and quoted
@@ -213,33 +213,33 @@ parameter data.  One-dimensional parameter data is indexed over a single
 set.  Suppose that the parameter ``B`` is a parameter indexed by the set
 ``A``:
 
-.. literalinclude:: ../../tests/data/param2_decl.spy
+.. literalinclude:: ../../src/data/param2_decl.spy
     :language: python
 
 A ``param`` data command can specify values for ``B`` with a list of
 index-value pairs:
 
-.. literalinclude:: ../../tests/data/param2.dat
+.. literalinclude:: ../../src/data/param2.dat
     :language: none
 
 Because whitespace is ignored, this example data command file can be
 reorganized to specify the same data in a tabular format:
 
-.. literalinclude:: ../../tests/data/param2a.dat
+.. literalinclude:: ../../src/data/param2a.dat
     :language: none
 
 Multiple parameters can be defined using a single ``param`` data
 command. For example, suppose that parameters ``B``, ``C``, and ``D``
 are one-dimensional parameters all indexed by the set ``A``:
 
-.. literalinclude:: ../../tests/data/param3_decl.spy
+.. literalinclude:: ../../src/data/param3_decl.spy
     :language: python
 
 Values for these parameters can be specified using a single ``param``
 data command that declares these parameter names followed by a list of
 index and parameter values:
 
-.. literalinclude:: ../../tests/data/param3.dat
+.. literalinclude:: ../../src/data/param3.dat
     :language: none
 
 The values in the ``param`` data command are interpreted as a list of
@@ -249,7 +249,7 @@ corresponding numeric value.
 Note that parameter values do not need to be defined for all indices.
 For example, the following data command file is valid:
 
-.. literalinclude:: ../../tests/data/param3a.dat
+.. literalinclude:: ../../src/data/param3a.dat
     :language: none
 
 The index ``g`` is omitted from the ``param`` command, and consequently
@@ -259,7 +259,7 @@ More complex patterns of missing data can be specified using the period
 specifying multiple parameters that do not necessarily have the same
 index values:
 
-.. literalinclude:: ../../tests/data/param3b.dat
+.. literalinclude:: ../../src/data/param3b.dat
     :language: none
 
 This example provides a concise representation of parameters that share
@@ -270,13 +270,13 @@ Note that this data file specifies the data for set ``A`` twice:
 defined.  An alternate syntax for ``param`` allows the user to concisely
 specify the definition of an index set along with associated parameters:
 
-.. literalinclude:: ../../tests/data/param3c.dat
+.. literalinclude:: ../../src/data/param3c.dat
     :language: none
 
 Finally, we note that default values for missing data can also be
 specified using the ``default`` keyword:
 
-.. literalinclude:: ../../tests/data/param4.dat
+.. literalinclude:: ../../src/data/param4.dat
     :language: none
 
 Note that default values can only be specified in ``param`` commands
@@ -290,58 +290,58 @@ Multi-dimensional parameter data is indexed over either multiple sets or
 a single multi-dimensional set.  Suppose that parameter ``B`` is a
 parameter indexed by set ``A`` that has dimension 2:
 
-.. literalinclude:: ../../tests/data/param5_decl.spy
+.. literalinclude:: ../../src/data/param5_decl.spy
     :language: python
 
 The syntax of the ``param`` data command remains essentially the same
 when specifying values for ``B`` with a list of index and parameter
 values:
 
-.. literalinclude:: ../../tests/data/param5.dat
+.. literalinclude:: ../../src/data/param5.dat
     :language: none
 
 Missing and default values are also handled in the same way with
 multi-dimensional index sets:
 
-.. literalinclude:: ../../tests/data/param5a.dat
+.. literalinclude:: ../../src/data/param5a.dat
     :language: none
 
 Similarly, multiple parameters can defined with a single ``param`` data
 command.  Suppose that parameters ``B``, ``C``, and ``D`` are parameters
 indexed over set ``A`` that has dimension 2:
 
-.. literalinclude:: ../../tests/data/param6_decl.spy
+.. literalinclude:: ../../src/data/param6_decl.spy
     :language: python
 
 These parameters can be defined with a single ``param`` command that
 declares the parameter names followed by a list of index and parameter
 values:
 
-.. literalinclude:: ../../tests/data/param6.dat
+.. literalinclude:: ../../src/data/param6.dat
     :language: none
 
 Similarly, the following ``param`` data command defines the index set
 along with the parameters:
 
-.. literalinclude:: ../../tests/data/param6a.dat
+.. literalinclude:: ../../src/data/param6a.dat
     :language: none
 
 The ``param`` command also supports a matrix syntax for specifying the
 values in a parameter that has a 2-dimensional index.  Suppose parameter
 ``B`` is indexed over set ``A`` that has dimension 2:
 
-.. literalinclude:: ../../tests/data/param7a_decl.spy
+.. literalinclude:: ../../src/data/param7a_decl.spy
     :language: python
 
 The following ``param`` command defines a matrix of parameter values:
 
-.. literalinclude:: ../../tests/data/param7a.dat
+.. literalinclude:: ../../src/data/param7a.dat
     :language: none
 
 Additionally, the following syntax can be used to specify a transposed
 matrix of parameter values:
 
-.. literalinclude:: ../../tests/data/param7b.dat
+.. literalinclude:: ../../src/data/param7b.dat
     :language: none
 
 This functionality facilitates the presentation of parameter data in a
@@ -355,13 +355,13 @@ be specified as a series of slices.  Each slice is defined by a template
 followed by a list of index and parameter values.  Suppose that
 parameter ``B`` is indexed over set ``A`` that has dimension 4:
 
-.. literalinclude:: ../../tests/data/param8a_decl.spy
+.. literalinclude:: ../../src/data/param8a_decl.spy
     :language: python
 
 The following ``param`` command defines a matrix of parameter values
 with multiple templates:
 
-.. literalinclude:: ../../tests/data/param8a.dat
+.. literalinclude:: ../../src/data/param8a.dat
     :language: none
 
 The ``B`` parameter consists of four values: ``B[a,1,a,1]=10``,
@@ -376,7 +376,7 @@ data declaration than is possible with a ``param`` declaration.  The
 following example illustrates a simple ``table`` command that declares
 data for a single parameter:
 
-.. literalinclude:: ../../tests/data/table0.dat
+.. literalinclude:: ../../src/data/table0.dat
     :language: none
 
 The parameter ``M`` is indexed by column ``A``, which must be
@@ -385,20 +385,20 @@ are provided after the colon and before the colon-equal (``:=``).
 Subsequently, the table data is provided.  The syntax is not sensitive
 to whitespace, so the following is an equivalent ``table`` command:
 
-.. literalinclude:: ../../tests/data/table1.dat
+.. literalinclude:: ../../src/data/table1.dat
     :language: none
 
 Multiple parameters can be declared by simply including additional
 parameter names.  For example:
 
-.. literalinclude:: ../../tests/data/table2.dat
+.. literalinclude:: ../../src/data/table2.dat
     :language: none
 
 This example declares data for the ``M`` and ``N`` parameters, which
 have different indexing columns.  The indexing columns represent set
 data, which is specified separately.  For example:
 
-.. literalinclude:: ../../tests/data/table3.dat
+.. literalinclude:: ../../src/data/table3.dat
     :language: none
 
 This example declares data for the ``M`` and ``N`` parameters, along
@@ -406,12 +406,12 @@ with the ``A`` and ``Z`` indexing sets.  The correspondence between the
 index set ``Z`` and the indices of parameter ``N`` can be made more
 explicit by indexing ``N`` by ``Z``:
 
-.. literalinclude:: ../../tests/data/table4.dat
+.. literalinclude:: ../../src/data/table4.dat
     :language: none
 
 Set data can also be specified independent of parameter data:
 
-.. literalinclude:: ../../tests/data/table5.dat
+.. literalinclude:: ../../src/data/table5.dat
     :language: none
 
 .. warning::
@@ -423,13 +423,13 @@ Set data can also be specified independent of parameter data:
     that is initialized.  For example, the ``table`` command initializes
     a set ``Z`` and a parameter ``M`` that are not related:
 
-    .. literalinclude:: ../../tests/data/table7.dat
+    .. literalinclude:: ../../src/data/table7.dat
         :language: none
 
 Finally, simple parameter values can also be specified with a ``table``
 command:
 
-.. literalinclude:: ../../tests/data/table6.dat
+.. literalinclude:: ../../src/data/table6.dat
     :language: none
 
 The previous examples considered examples of the ``table`` command where
@@ -437,7 +437,7 @@ column labels are provided.  The ``table`` command can also be used
 without column labels.  For example, the first example can be revised to
 omit column labels as follows:
 
-.. literalinclude:: ../../tests/data/table0.ul.dat
+.. literalinclude:: ../../src/data/table0.ul.dat
     :language: none
 
 The ``columns=4`` is a keyword-value pair that defines the number of
@@ -450,12 +450,12 @@ braces syntax declares the column where the ``M`` data is provided.
 Similarly, set data can be declared referencing the integer column
 labels:
 
-.. literalinclude:: ../../tests/data/table3.ul.dat
+.. literalinclude:: ../../src/data/table3.ul.dat
     :language: none
 
 Declared set names can also be used to index parameters:
 
-.. literalinclude:: ../../tests/data/table4.ul.dat
+.. literalinclude:: ../../src/data/table4.ul.dat
     :language: none
 
 Finally, we compare and contrast the ``table`` and ``param`` commands.
@@ -521,13 +521,13 @@ Simple Load Examples
 The simplest illustration of the ``load`` command is specifying data for
 an indexed parameter.  Consider the file ``Y.tab``:
 
-.. literalinclude:: ../../tests/data/Y.tab
+.. literalinclude:: ../../src/data/Y.tab
     :language: none
 
 This file specifies the values of parameter ``Y`` which is indexed by
 set ``A``.  The following ``load`` command loads the parameter data:
 
-.. literalinclude:: ../../tests/data/import1.tab.dat
+.. literalinclude:: ../../src/data/import1.tab.dat
     :language: none
 
 The first argument is the filename.  The options after the colon
@@ -538,7 +538,7 @@ indicates the parameter that is initialized.
 Similarly, the following load command loads both the parameter data as
 well as the index set ``A``:
 
-.. literalinclude:: ../../tests/data/import2.tab.dat
+.. literalinclude:: ../../src/data/import2.tab.dat
     :language: none
 
 The difference is the specification of the index set, ``A=[A]``, which
@@ -548,24 +548,24 @@ ASCII table file.
 Set data can also be loaded from a ASCII table file that contains a
 single column of data:
 
-.. literalinclude:: ../../tests/data/A.tab
+.. literalinclude:: ../../src/data/A.tab
     :language: none
 
 The ``format`` option must be specified to denote the fact that the
 relational data is being interpreted as a set:
 
-.. literalinclude:: ../../tests/data/import3.tab.dat
+.. literalinclude:: ../../src/data/import3.tab.dat
     :language: none
 
 Note that this allows for specifying set data that contains tuples.
 Consider file ``C.tab``:
 
-.. literalinclude:: ../../tests/data/C.tab
+.. literalinclude:: ../../src/data/C.tab
     :language: none
 
 A similar ``load`` syntax will load this data into set ``C``:
 
-.. literalinclude:: ../../tests/data/import4.tab.dat
+.. literalinclude:: ../../src/data/import4.tab.dat
     :language: none
 
 Note that this example requires that ``C`` be declared with dimension
@@ -609,7 +609,7 @@ describes different specifications and how they define how data is
 loaded into a model.  Suppose file ``ABCD.tab`` defines the following
 relational table:
 
-.. literalinclude:: ../../tests/data/ABCD.tab
+.. literalinclude:: ../../src/data/ABCD.tab
     :language: none
 
 There are many ways to interpret this relational table.  It could
@@ -621,7 +621,7 @@ for specifying how a table is interpreted.
 
 A simple specification is to interpret the relational table as a set:
 
-.. literalinclude:: ../../tests/data/ABCD1.dat
+.. literalinclude:: ../../src/data/ABCD1.dat
     :language: none
 
 Note that ``Z`` is a set in the model that the data is being loaded
@@ -631,7 +631,7 @@ data from this table.
 Another simple specification is to interpret the relational table as a
 parameter with indexed by 3-tuples:
 
-.. literalinclude:: ../../tests/data/ABCD2.dat
+.. literalinclude:: ../../src/data/ABCD2.dat
     :language: none
 
 Again, this requires that ``D`` be a parameter in the model that the
@@ -639,14 +639,14 @@ data is being loaded into.  Additionally, the index set for ``D`` must
 contain the indices that are specified in the table.  The ``load``
 command also allows for the specification of the index set:
 
-.. literalinclude:: ../../tests/data/ABCD3.dat
+.. literalinclude:: ../../src/data/ABCD3.dat
     :language: none
 
 This specifies that the index set is loaded into the ``Z`` set in the
 model.  Similarly, data can be loaded into another parameter than what
 is specified in the relational table:
 
-.. literalinclude:: ../../tests/data/ABCD4.dat
+.. literalinclude:: ../../src/data/ABCD4.dat
     :language: none
 
 This specifies that the index set is loaded into the ``Z`` set and that
@@ -658,13 +658,13 @@ specification of data mappings from columns in a relational table into
 index sets and parameters.  For example, suppose that a model is defined
 with set ``Z`` and parameters ``Y`` and ``W``:
 
-.. literalinclude:: ../../tests/data/ABCD5_decl.spy
+.. literalinclude:: ../../src/data/ABCD5_decl.spy
     :language: python
 
 Then the following command defines how these data items are loaded using
 columns ``B``, ``C`` and ``D``:
 
-.. literalinclude:: ../../tests/data/ABCD5.dat
+.. literalinclude:: ../../src/data/ABCD5.dat
     :language: none
 
 When the ``using`` option is omitted the data manager is inferred from
@@ -672,13 +672,13 @@ the filename suffix.  However, the filename suffix does not always
 reflect the format of the data it contains.  For example, consider the
 relational table in the file ``ABCD.txt``:
 
-.. literalinclude:: ../../tests/data/ABCD.txt
+.. literalinclude:: ../../src/data/ABCD.txt
     :language: none
 
 We can specify the ``using`` option to load from this file into
 parameter ``D`` and set ``Z``:
 
-.. literalinclude:: ../../tests/data/ABCD6.dat
+.. literalinclude:: ../../src/data/ABCD6.dat
     :language: none
 
 .. note::
@@ -692,7 +692,7 @@ parameter ``D`` and set ``Z``:
 
     The following data managers are supported in Pyomo 5.1:
     
-        .. literalinclude:: ../../tests/data/data_managers.txt
+        .. literalinclude:: ../../src/data/data_managers.txt
             :language: none
 
 Interpreting Tabular Data
@@ -725,12 +725,12 @@ A table with a single value can be interpreted as a simple parameter
 using the ``param`` format value.  Suppose that ``Z.tab`` contains the
 following table:
 
-.. literalinclude:: ../../tests/data/Z.tab
+.. literalinclude:: ../../src/data/Z.tab
     :language: none
 
 The following load command then loads this value into parameter ``p``:
 
-.. literalinclude:: ../../tests/data/import6.tab.dat
+.. literalinclude:: ../../src/data/import6.tab.dat
     :language: none
 
 Sets with 2-tuple data can be represented with a matrix format that
@@ -739,12 +739,12 @@ relational table as a matrix that defines a set of 2-tuples where ``+``
 denotes a valid tuple and ``-`` denotes an invalid tuple.  Suppose that
 ``D.tab`` contains the following relational table:
 
-.. literalinclude:: ../../tests/data/D.tab
+.. literalinclude:: ../../src/data/D.tab
     :language: none
 
 Then the following load command loads data into set ``B``:
 
-.. literalinclude:: ../../tests/data/import5.tab.dat
+.. literalinclude:: ../../src/data/import5.tab.dat
     :language: none
 
 This command declares the following 2-tuples: ``('A1',1)``,
@@ -754,19 +754,19 @@ Parameters with 2-tuple indices can be interpreted with a matrix format
 that where rows and columns are different indices.  Suppose that
 ``U.tab`` contains the following table:
 
-.. literalinclude:: ../../tests/data/U.tab
+.. literalinclude:: ../../src/data/U.tab
     :language: none
 
 Then the following load command loads this value into parameter ``U``
 with a 2-dimensional index using the ``array`` format value.:
 
-.. literalinclude:: ../../tests/data/import7.tab.dat
+.. literalinclude:: ../../src/data/import7.tab.dat
     :language: none
 
 The ``transpose_array`` format value also interprets the table as a
 matrix, but it loads the data in a transposed format:
 
-.. literalinclude:: ../../tests/data/import8.tab.dat
+.. literalinclude:: ../../src/data/import8.tab.dat
     :language: none
 
 Note that these format values do not support the initialization of the
@@ -789,7 +789,7 @@ in the following figure:
 The following command loads this data to initialize parameter ``D`` and
 index ``Z``:
 
-.. literalinclude:: ../../tests/data/ABCD7.dat
+.. literalinclude:: ../../src/data/ABCD7.dat
     :language: none
 
 Thus, the syntax for loading data from spreadsheets only differs from
@@ -809,7 +809,7 @@ command loads data from the Excel spreadsheet ``ABCD.xls`` using the
 ``pyodbc`` interface.  The command loads this data to initialize
 parameter ``D`` and index ``Z``:
 
-.. literalinclude:: ../../tests/data/ABCD8.dat
+.. literalinclude:: ../../src/data/ABCD8.dat
     :language: none
 
 The ``using`` option specifies that the ``pyodbc`` package will be
@@ -818,7 +818,7 @@ specifies that the table ``ABCD`` is loaded from this spreadsheet.
 Similarly, the following command specifies a data connection string
 to specify the ODBC driver explicitly:
 
-.. literalinclude:: ../../tests/data/ABCD9.dat
+.. literalinclude:: ../../src/data/ABCD9.dat
     :language: none
 
 ODBC drivers are generally tailored to the type of data source that
@@ -836,7 +836,7 @@ task of minimizing the cost for a meal at a fast food restaurant -- they
 must purchase a sandwich, side, and a drink for the lowest cost.  The
 following is a Pyomo model for this problem:
 
-.. literalinclude:: ../../tests/data/diet1.py
+.. literalinclude:: ../../src/data/diet1.py
     :language: python
 
 Suppose that the file ``diet1.sqlite`` be a SQLite database file that
@@ -884,7 +884,7 @@ We can solve the ``diet1`` model using the Python definition in
 ``diet.sqlite.dat`` specifies a ``load`` command that uses that
 ``sqlite3`` data manager and embeds a SQL query to retrieve the data:
 
-.. literalinclude:: ../../tests/data/diet.sqlite.dat
+.. literalinclude:: ../../src/data/diet.sqlite.dat
     :language: none
 
 The PyODBC driver module will pass the SQL query through an Access ODBC
@@ -904,7 +904,7 @@ The ``include`` command allows a data command file to execute data
 commands from another file.  For example, the following command file
 executes data commands from ``ex1.dat`` and then ``ex2.dat``:
 
-.. literalinclude:: ../../tests/data/ex.dat
+.. literalinclude:: ../../src/data/ex.dat
     :language: none
 
 Pyomo is sensitive to the order of execution of data commands, since
@@ -921,7 +921,7 @@ to structure the specification of Pyomo's data commands.  Specifically,
 a namespace declaration is used to group data commands and to provide a
 group label. Consider the following data command file:
 
-.. literalinclude:: ../../tests/data/namespace1.dat
+.. literalinclude:: ../../src/data/namespace1.dat
     :language: none
 
 This data file defines two namespaces: ``ns1`` and ``ns2`` that
