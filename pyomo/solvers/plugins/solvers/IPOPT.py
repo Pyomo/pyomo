@@ -16,7 +16,7 @@ from pyomo.common import Executable
 from pyomo.common.collections import Bunch
 from pyomo.common.tempfiles import TempfileManager
 
-from pyomo.opt.base import ProblemFormat, ResultsFormat
+from pyomo.opt.base import ProblemFormat, ResultsFormat, subprocess_timeout
 from pyomo.opt.base.solvers import _extract_version, SolverFactory
 from pyomo.opt.results import SolverStatus, SolverResults, TerminationCondition
 from pyomo.opt.solver import SystemCallSolver
@@ -79,7 +79,7 @@ class IPOPT(SystemCallSolver):
             return _extract_version('')
         results = subprocess.run(
             [solver_exec, "-v"],
-            timeout=1,
+            timeout=subprocess_timeout,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             universal_newlines=True,

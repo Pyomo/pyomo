@@ -22,3 +22,5 @@ from pyomo.opt.base.solvers import (
 from pyomo.opt.base.results import ReaderFactory, AbstractResultsReader
 from pyomo.opt.base.problem import AbstractProblemWriter, BranchDirection, WriterFactory
 from pyomo.opt.base.formats import ProblemFormat, ResultsFormat, guess_format
+
+subprocess_timeout = 2

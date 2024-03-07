@@ -42,6 +42,7 @@ from pyomo.common.errors import PyomoException
 import os
 from pyomo.contrib.appsi.cmodel import cmodel_available
 from pyomo.core.staleflag import StaleFlagManager
+from pyomo.opt.base import subprocess_timeout
 
 
 logger = logging.getLogger(__name__)
@@ -158,7 +159,7 @@ class Ipopt(PersistentSolver):
     def version(self):
         results = subprocess.run(
             [str(self.config.executable), '--version'],
-            timeout=1,
+            timeout=subprocess_timeout,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             universal_newlines=True,

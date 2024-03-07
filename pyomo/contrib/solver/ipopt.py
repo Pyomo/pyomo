@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import logging
 import os
 import subprocess
 import datetime
@@ -38,8 +39,7 @@ from pyomo.core.expr.visitor import replace_expressions
 from pyomo.core.expr.numvalue import value
 from pyomo.core.base.suffix import Suffix
 from pyomo.common.collections import ComponentMap
-
-import logging
+from pyomo.opt.base import subprocess_timeout
 
 logger = logging.getLogger(__name__)
 
@@ -229,7 +229,7 @@ class Ipopt(SolverBase):
             else:
                 results = subprocess.run(
                     [str(pth), '--version'],
-                    timeout=1,
+                    timeout=subprocess_timeout,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
                     universal_newlines=True,

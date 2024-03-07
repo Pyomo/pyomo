@@ -21,7 +21,13 @@ from pyomo.common.errors import ApplicationError
 from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.common.collections import ComponentMap, Bunch
-from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver, BranchDirection
+from pyomo.opt.base import (
+    ProblemFormat,
+    ResultsFormat,
+    OptSolver,
+    BranchDirection,
+    subprocess_timeout,
+)
 from pyomo.opt.base.solvers import _extract_version, SolverFactory
 from pyomo.opt.results import (
     SolverResults,
@@ -404,7 +410,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
             return _extract_version('')
         results = subprocess.run(
             [solver_exec, '-c', 'quit'],
-            timeout=1,
+            timeout=subprocess_timeout,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             universal_newlines=True,

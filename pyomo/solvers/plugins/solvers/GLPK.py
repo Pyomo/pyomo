@@ -29,6 +29,7 @@ from pyomo.opt import (
     SolutionStatus,
     ProblemSense,
 )
+from pyomo.opt.base import subprocess_timeout
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.solver import SystemCallSolver
 from pyomo.solvers.mockmip import MockMIP
@@ -137,7 +138,7 @@ class GLPKSHELL(SystemCallSolver):
             [executable, "--version"],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            timeout=1,
+            timeout=subprocess_timeout,
             universal_newlines=True,
         )
         return _extract_version(result.stdout)
