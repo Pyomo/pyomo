@@ -11,6 +11,7 @@
 
 import logging
 
+from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.base.constraint import Constraint
 from pyomo.util.calc_var_value import calculate_variable_from_constraint
 from pyomo.util.subsystems import TemporarySubsystemManager, generate_subsystem_blocks
@@ -18,6 +19,7 @@ from pyomo.contrib.incidence_analysis.interface import (
     IncidenceGraphInterface,
     _generate_variables_in_constraints,
 )
+from pyomo.contrib.incidence_analysis.config import IncidenceMethod
 
 
 _log = logging.getLogger(__name__)
@@ -73,7 +75,13 @@ def generate_strongly_connected_components(
 
 
 def solve_strongly_connected_components(
-    block, solver=None, solve_kwds=None, calc_var_kwds=None
+    block,
+    *,
+    solver=None,
+    solve_kwds=None,
+    use_calc_var=False,
+    calc_var_kwds=None,
+    timer=None,
 ):
     """Solve a square system of variables and equality constraints by
     solving strongly connected components individually.
@@ -98,6 +106,9 @@ def solve_strongly_connected_components(
         a solve method.
     solve_kwds: Dictionary
         Keyword arguments for the solver's solve method
+    use_calc_var: Bool
+        Whether to use ``calculate_variable_from_constraint`` for one-by-one
+        square system solves
     calc_var_kwds: Dictionary
         Keyword arguments for calculate_variable_from_constraint
 
@@ -110,25 +121,36 @@ def solve_strongly_connected_components(
         solve_kwds = {}
     if calc_var_kwds is None:
         calc_var_kwds = {}
+    if timer is None:
+        timer = HierarchicalTimer()
 
+    timer.start("igraph")
     igraph = IncidenceGraphInterface(
-        block, active=True, include_fixed=False, include_inequality=False
+        block,
+        active=True,
+        include_fixed=False,
+        include_inequality=False,
+        method=IncidenceMethod.ampl_repn,
     )
+    timer.stop("igraph")
     constraints = igraph.constraints
     variables = igraph.variables
 
     res_list = []
     log_blocks = _log.isEnabledFor(logging.DEBUG)
+    timer.start("generate-scc")
     for scc, inputs in generate_strongly_connected_components(constraints, variables):
-        with TemporarySubsystemManager(to_fix=inputs):
+        timer.stop("generate-scc")
+        with TemporarySubsystemManager(to_fix=inputs, remove_bounds_on_fix=True):
             N = len(scc.vars)
-            if N == 1:
+            if N == 1 and use_calc_var:
                 if log_blocks:
                     _log.debug(f"Solving 1x1 block: {scc.cons[0].name}.")
+                timer.start("calc-var-from-con")
                 results = calculate_variable_from_constraint(
                     scc.vars[0], scc.cons[0], **calc_var_kwds
                 )
-                res_list.append(results)
+                timer.stop("calc-var-from-con")
             else:
                 if solver is None:
                     var_names = [var.name for var in scc.vars.values()][:10]
@@ -141,6 +163,10 @@ def solve_strongly_connected_components(
                     )
                 if log_blocks:
                     _log.debug(f"Solving {N}x{N} block.")
+                timer.start("scc-subsolver")
                 results = solver.solve(scc, **solve_kwds)
-                res_list.append(results)
+                timer.stop("scc-subsolver")
+            res_list.append(results)
+        timer.start("generate-scc")
+    timer.stop("generate-scc")
     return res_list
