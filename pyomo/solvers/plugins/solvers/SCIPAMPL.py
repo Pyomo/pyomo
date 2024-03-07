@@ -18,7 +18,7 @@ from pyomo.common import Executable
 from pyomo.common.collections import Bunch
 from pyomo.common.tempfiles import TempfileManager
 
-from pyomo.opt.base import ProblemFormat, ResultsFormat, subprocess_timeout
+from pyomo.opt.base import ProblemFormat, ResultsFormat
 from pyomo.opt.base.solvers import _extract_version, SolverFactory
 from pyomo.opt.results import (
     SolverStatus,
@@ -103,7 +103,7 @@ class SCIPAMPL(SystemCallSolver):
                 return _extract_version('')
         results = subprocess.run(
             [solver_exec, "--version"],
-            timeout=subprocess_timeout,
+            timeout=self._version_timeout,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             universal_newlines=True,

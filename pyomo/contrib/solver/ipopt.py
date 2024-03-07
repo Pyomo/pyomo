@@ -39,7 +39,6 @@ from pyomo.core.expr.visitor import replace_expressions
 from pyomo.core.expr.numvalue import value
 from pyomo.core.base.suffix import Suffix
 from pyomo.common.collections import ComponentMap
-from pyomo.opt.base import subprocess_timeout
 
 logger = logging.getLogger(__name__)
 
@@ -207,6 +206,7 @@ class Ipopt(SolverBase):
         self._writer = NLWriter()
         self._available_cache = None
         self._version_cache = None
+        self._version_timeout = 2
 
     def available(self, config=None):
         if config is None:
@@ -229,7 +229,7 @@ class Ipopt(SolverBase):
             else:
                 results = subprocess.run(
                     [str(pth), '--version'],
-                    timeout=subprocess_timeout,
+                    timeout=self._version_timeout,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
                     universal_newlines=True,
