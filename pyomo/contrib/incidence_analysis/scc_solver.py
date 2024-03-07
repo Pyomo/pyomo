@@ -47,9 +47,12 @@ def generate_strongly_connected_components(
     variables: List of Pyomo variable data objects
         Variables that may participate in strongly connected components.
         If not provided, all variables in the constraints will be used.
-    include_fixed: Bool
+    include_fixed: Bool, optional
         Indicates whether fixed variables will be included when
         identifying variables in constraints.
+    igraph: IncidenceGraphInterface, optional
+        Incidence graph containing (at least) the provided constraints
+        and variables.
 
     Yields
     ------
@@ -67,7 +70,7 @@ def generate_strongly_connected_components(
             _generate_variables_in_constraints(
                 constraints,
                 include_fixed=include_fixed,
-                #method=IncidenceMethod.ampl_repn
+                method=IncidenceMethod.ampl_repn,
             )
         )
         timer.stop("generate-vars")
