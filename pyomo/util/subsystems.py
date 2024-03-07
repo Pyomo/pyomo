@@ -60,9 +60,6 @@ class _ExternalFunctionVisitor(StreamBasedExpressionVisitor):
         pass
 
     def acceptChildResult(self, node, data, child_result, child_idx):
-        pass
-
-    def acceptChildResult(self, node, data, child_result, child_idx):
         if child_result.__class__ in native_types:
             return False, None
         return child_result.is_expression_type(), None
