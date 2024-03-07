@@ -25,7 +25,6 @@ from pyomo.core.expr.numvalue import native_types, NumericValue
 
 
 class _ExternalFunctionVisitor(StreamBasedExpressionVisitor):
-
     def __init__(self, descend_into_named_expressions=True):
         super().__init__()
         self._descend_into_named_expressions = descend_into_named_expressions
@@ -56,10 +55,10 @@ class _ExternalFunctionVisitor(StreamBasedExpressionVisitor):
     def finalizeResult(self, result):
         return self._functions
 
-    #def enterNode(self, node):
+    # def enterNode(self, node):
     #    pass
 
-    #def acceptChildResult(self, node, data, child_result, child_idx):
+    # def acceptChildResult(self, node, data, child_result, child_idx):
     #    if child_result.__class__ in native_types:
     #        return False, None
     #    return child_result.is_expression_type(), None
@@ -114,6 +113,8 @@ def add_local_external_functions(block):
 
 
 from pyomo.common.timing import HierarchicalTimer
+
+
 def create_subsystem_block(
     constraints,
     variables=None,

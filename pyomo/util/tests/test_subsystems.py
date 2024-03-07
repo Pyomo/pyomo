@@ -304,11 +304,11 @@ class TestSubsystemBlock(unittest.TestCase):
             m.subexpr = pyo.Expression(pyo.PositiveIntegers)
             subexpr1 = m.subexpr[1] = 2 * m.fermi(m.v1)
             subexpr2 = m.subexpr[2] = m.bessel(m.v1) - m.bessel(m.v2)
-            subexpr3 = m.subexpr[3] = m.subexpr[2] + m.v3 ** 2
+            subexpr3 = m.subexpr[3] = m.subexpr[2] + m.v3**2
         else:
             subexpr1 = 2 * m.fermi(m.v1)
             subexpr2 = m.bessel(m.v1) - m.bessel(m.v2)
-            subexpr3 = m.subexpr[2] + m.v3 ** 2
+            subexpr3 = m.subexpr[2] + m.v3**2
         m.con1 = pyo.Constraint(expr=m.v1 == 0.5)
         m.con2 = pyo.Constraint(expr=subexpr1 + m.v2**2 - m.v3 == 1.0)
         m.con3 = pyo.Constraint(expr=subexpr3 == 2.0)
