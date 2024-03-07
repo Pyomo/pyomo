@@ -649,6 +649,7 @@ def perform_separation_loop(model_data, config, solve_globally):
                 solver_call_results=ComponentMap(),
                 solved_globally=solve_globally,
                 worst_case_perf_con=None,
+                all_discrete_scenarios_exhausted=True,
             )
 
         perf_con_to_maximize = sorted_priority_groups[
