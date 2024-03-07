@@ -148,7 +148,14 @@ class TemporarySubsystemManager(object):
 
     """
 
-    def __init__(self, to_fix=None, to_deactivate=None, to_reset=None, to_unfix=None):
+    def __init__(
+        self,
+        to_fix=None,
+        to_deactivate=None,
+        to_reset=None,
+        to_unfix=None,
+        remove_bounds_on_fix=False,
+    ):
         """
         Arguments
         ---------
@@ -168,6 +175,8 @@ class TemporarySubsystemManager(object):
             List of var data objects to be temporarily unfixed. These are
             restored to their original status on exit from this object's
             context manager.
+        remove_bounds_on_fix: Bool
+            Whether bounds should be removed temporarily for fixed variables
 
         """
         if to_fix is None:
@@ -194,6 +203,8 @@ class TemporarySubsystemManager(object):
         self._con_was_active = None
         self._comp_original_value = None
         self._var_was_unfixed = None
+        self._remove_bounds_on_fix = remove_bounds_on_fix
+        self._fixed_var_bounds = None
 
     def __enter__(self):
         to_fix = self._vars_to_fix
@@ -203,8 +214,13 @@ class TemporarySubsystemManager(object):
         self._var_was_fixed = [(var, var.fixed) for var in to_fix + to_unfix]
         self._con_was_active = [(con, con.active) for con in to_deactivate]
         self._comp_original_value = [(comp, comp.value) for comp in to_set]
+        self._fixed_var_bounds = [(var.lb, var.ub) for var in to_fix]
 
         for var in self._vars_to_fix:
+            if self._remove_bounds_on_fix:
+                # TODO: Potentially override var.domain as well?
+                var.setlb(None)
+                var.setub(None)
             var.fix()
 
         for con in self._cons_to_deactivate:
@@ -223,6 +239,11 @@ class TemporarySubsystemManager(object):
                 var.fix()
             else:
                 var.unfix()
+        if self._remove_bounds_on_fix:
+            for var, (lb, ub) in zip(self._vars_to_fix, self._fixed_var_bounds):
+                var.setlb(lb)
+                var.setub(ub)
+
         for con, was_active in self._con_was_active:
             if was_active:
                 con.activate()
