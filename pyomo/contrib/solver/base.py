@@ -22,6 +22,7 @@ from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.common.config import document_kwargs_from_configdict
 from pyomo.common.errors import ApplicationError
 from pyomo.common.deprecation import deprecation_warning
+from pyomo.opt import ProblemSense
 from pyomo.opt.results.results_ import SolverResults as LegacySolverResults
 from pyomo.opt.results.solution import Solution as LegacySolution
 from pyomo.core.kernel.objective import minimize
@@ -418,9 +419,15 @@ class LegacySolverWrapper:
         ]
         legacy_soln.status = legacy_solution_status_map[results.solution_status]
         legacy_results.solver.termination_message = str(results.termination_condition)
+        legacy_results.problem.number_of_constraints = model.nconstraints()
+        legacy_results.problem.number_of_variables = model.nvariables()
         obj = get_objective(model)
-        if len(list(obj)) > 0:
+        if not obj:
+            legacy_results.problem.sense = ProblemSense.unknown
+            legacy_results.problem.number_of_objectives = 0
+        else:
             legacy_results.problem.sense = obj.sense
+            legacy_results.problem.number_of_objectives = len(obj)
 
             if obj.sense == minimize:
                 legacy_results.problem.lower_bound = results.objective_bound
