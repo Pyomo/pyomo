@@ -14,7 +14,11 @@ import logging
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.base.constraint import Constraint
 from pyomo.util.calc_var_value import calculate_variable_from_constraint
-from pyomo.util.subsystems import TemporarySubsystemManager, generate_subsystem_blocks
+from pyomo.util.subsystems import (
+    TemporarySubsystemManager,
+    generate_subsystem_blocks,
+    create_subsystem_block,
+)
 from pyomo.contrib.incidence_analysis.interface import (
     IncidenceGraphInterface,
     _generate_variables_in_constraints,
@@ -25,6 +29,7 @@ from pyomo.contrib.incidence_analysis.config import IncidenceMethod
 _log = logging.getLogger(__name__)
 
 
+from pyomo.common.timing import HierarchicalTimer
 def generate_strongly_connected_components(
     constraints,
     variables=None,
@@ -75,22 +80,25 @@ def generate_strongly_connected_components(
     assert len(variables) == len(constraints)
     if igraph is None:
         igraph = IncidenceGraphInterface()
+
     timer.start("block-triang")
     var_blocks, con_blocks = igraph.block_triangularize(
         variables=variables, constraints=constraints
     )
     timer.stop("block-triang")
     subsets = [(cblock, vblock) for vblock, cblock in zip(var_blocks, con_blocks)]
-    timer.start("subsystem-blocks")
+    timer.start("generate-block")
     for block, inputs in generate_subsystem_blocks(
         subsets, include_fixed=include_fixed
     ):
-        timer.stop("subsystem-blocks")
+        timer.stop("generate-block")
         # TODO: How does len scale for reference-to-list?
         assert len(block.vars) == len(block.cons)
         yield (block, inputs)
-        timer.start("subsystem-blocks")
-    timer.stop("subsystem-blocks")
+        # Note that this code, after the last yield, I believe is only called
+        # at time of GC.
+        timer.start("generate-block")
+    timer.stop("generate-block")
 
 
 def solve_strongly_connected_components(
@@ -173,15 +181,7 @@ def solve_strongly_connected_components(
                 )
                 timer.stop("calc-var-from-con")
             else:
-                if solver is None:
-                    var_names = [var.name for var in scc.vars.values()][:10]
-                    con_names = [con.name for con in scc.cons.values()][:10]
-                    raise RuntimeError(
-                        "An external solver is required if block has strongly\n"
-                        "connected components of size greater than one (is not"
-                        " a DAG).\nGot an SCC of size %sx%s including"
-                        " components:\n%s\n%s" % (N, N, var_names, con_names)
-                    )
+                inputs = list(scc.input_vars.values())
                 if log_blocks:
                     _log.debug(f"Solving {N}x{N} block.")
                 timer.start("scc-subsolver")

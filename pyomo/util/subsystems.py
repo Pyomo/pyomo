@@ -20,14 +20,31 @@ from pyomo.core.base.expression import Expression
 from pyomo.core.base.external import ExternalFunction
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
-from pyomo.core.expr.numvalue import native_types
+from pyomo.core.expr.numvalue import native_types, NumericValue
 
 
 class _ExternalFunctionVisitor(StreamBasedExpressionVisitor):
+
+    def __init__(self, descend_into_named_expressions=True):
+        super().__init__()
+        self._descend_into_named_expressions = descend_into_named_expressions
+        self.named_expressions = []
+
     def initializeWalker(self, expr):
         self._functions = []
         self._seen = set()
         return True, None
+
+    def beforeChild(self, parent, child, index):
+        if (
+            not self._descend_into_named_expressions
+            and isinstance(child, NumericValue)
+            and child.is_named_expression_type()
+        ):
+            self.named_expressions.append(child)
+            return False, None
+        else:
+            return True, None
 
     def exitNode(self, node, data):
         if type(node) is ExternalFunctionExpression:
@@ -50,14 +67,47 @@ class _ExternalFunctionVisitor(StreamBasedExpressionVisitor):
         return child_result.is_expression_type(), None
 
 
-def identify_external_functions(expr):
-    yield from _ExternalFunctionVisitor().walk_expression(expr)
+def identify_external_functions(
+    expr,
+    descend_into_named_expressions=True,
+    named_expressions=None,
+):
+    visitor = _ExternalFunctionVisitor(
+        descend_into_named_expressions=descend_into_named_expressions
+    )
+    efs = list(visitor.walk_expression(expr))
+    if not descend_into_named_expressions and named_expressions is not None:
+        named_expressions.extend(visitor.named_expressions)
+    return efs
+    #yield from _ExternalFunctionVisitor().walk_expression(expr)
 
 
 def add_local_external_functions(block):
     ef_exprs = []
+    named_expressions = []
     for comp in block.component_data_objects((Constraint, Expression), active=True):
-        ef_exprs.extend(identify_external_functions(comp.expr))
+        ef_exprs.extend(identify_external_functions(
+            comp.expr,
+            descend_into_named_expressions=False,
+            named_expressions=named_expressions,
+        ))
+    named_expr_set = ComponentSet(named_expressions)
+    named_expressions = list(named_expr_set)
+    while named_expressions:
+        expr = named_expressions.pop()
+        local_named_exprs = []
+        ef_exprs.extend(identify_external_functions(
+            expr,
+            descend_into_named_expressions=False,
+            named_expressions=local_named_exprs,
+        ))
+        # Only add to the stack named expressions that we have
+        # not encountered yet.
+        for local_expr in local_named_exprs:
+            if local_expr not in named_expr_set:
+                named_expressions.append(local_expr)
+                named_expr_set.add(local_expr)
+        
     unique_functions = []
     fcn_set = set()
     for expr in ef_exprs:
@@ -75,7 +125,13 @@ def add_local_external_functions(block):
     return fcn_comp_map
 
 
-def create_subsystem_block(constraints, variables=None, include_fixed=False):
+from pyomo.common.timing import HierarchicalTimer
+def create_subsystem_block(
+    constraints,
+    variables=None,
+    include_fixed=False,
+    timer=None,
+):
     """This function creates a block to serve as a subsystem with the
     specified variables and constraints. To satisfy certain writers, other
     variables that appear in the constraints must be added to the block as
@@ -99,20 +155,32 @@ def create_subsystem_block(constraints, variables=None, include_fixed=False):
     as well as other variables present in the constraints
 
     """
+    if timer is None:
+        timer = HierarchicalTimer()
     if variables is None:
         variables = []
+    timer.start("block")
     block = Block(concrete=True)
+    timer.stop("block")
+    timer.start("reference")
     block.vars = Reference(variables)
     block.cons = Reference(constraints)
+    timer.stop("reference")
     var_set = ComponentSet(variables)
     input_vars = []
+    timer.start("identify-vars")
     for con in constraints:
         for var in identify_variables(con.expr, include_fixed=include_fixed):
             if var not in var_set:
                 input_vars.append(var)
                 var_set.add(var)
+    timer.stop("identify-vars")
+    timer.start("reference")
     block.input_vars = Reference(input_vars)
+    timer.stop("reference")
+    timer.start("external-fcns")
     add_local_external_functions(block)
+    timer.stop("external-fcns")
     return block
 
 
