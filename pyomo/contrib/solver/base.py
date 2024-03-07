@@ -22,7 +22,6 @@ from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.common.config import document_kwargs_from_configdict
 from pyomo.common.errors import ApplicationError
 from pyomo.common.deprecation import deprecation_warning
-from pyomo.opt import ProblemSense
 from pyomo.opt.results.results_ import SolverResults as LegacySolverResults
 from pyomo.opt.results.solution import Solution as LegacySolution
 from pyomo.core.kernel.objective import minimize
