@@ -2780,6 +2780,20 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
                     linear[_id] = arg1
             elif arg.__class__ in native_types:
                 const += arg
+            elif arg.is_variable_type():
+                _id = id(arg)
+                if _id not in var_map:
+                    if arg.fixed:
+                        if _id not in visitor.fixed_vars:
+                            visitor.cache_fixed_var(_id, arg)
+                        const += visitor.fixed_vars[_id]
+                        continue
+                    _before_child_handlers._record_var(visitor, arg)
+                    linear[_id] = 1
+                elif _id in linear:
+                    linear[_id] += 1
+                else:
+                    linear[_id] = 1
             else:
                 try:
                     const += visitor.check_constant(visitor.evaluate(arg), arg)
