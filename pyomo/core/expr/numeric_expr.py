@@ -1298,8 +1298,14 @@ class LinearExpression(SumExpression):
             if arg.__class__ is MonomialTermExpression:
                 coef.append(arg._args_[0])
                 var.append(arg._args_[1])
-            else:
+            elif arg.__class__ in native_numeric_types:
                 const += arg
+            elif not arg.is_potentially_variable():
+                const += arg
+            else:
+                assert arg.is_potentially_variable()
+                coef.append(1)
+                var.append(arg)
         LinearExpression._cache = (self, const, coef, var)
 
     @property
@@ -1325,7 +1331,7 @@ class LinearExpression(SumExpression):
             classtype = self.__class__
         if type(args) is not list:
             args = list(args)
-        for i, arg in enumerate(args):
+        for arg in args:
             if arg.__class__ in self._allowable_linear_expr_arg_types:
                 # 99% of the time, the arg type hasn't changed
                 continue
@@ -1336,8 +1342,7 @@ class LinearExpression(SumExpression):
                 # NPV expressions are OK
                 pass
             elif arg.is_variable_type():
-                # vars are OK, but need to be mapped to monomial terms
-                args[i] = MonomialTermExpression((1, arg))
+                # vars are OK
                 continue
             else:
                 # For anything else, convert this to a general sum
@@ -1820,7 +1825,7 @@ def _add_native_param(a, b):
 def _add_native_var(a, b):
     if not a:
         return b
-    return LinearExpression([a, MonomialTermExpression((1, b))])
+    return LinearExpression([a, b])
 
 
 def _add_native_monomial(a, b):
@@ -1871,7 +1876,7 @@ def _add_npv_param(a, b):
 
 
 def _add_npv_var(a, b):
-    return LinearExpression([a, MonomialTermExpression((1, b))])
+    return LinearExpression([a, b])
 
 
 def _add_npv_monomial(a, b):
@@ -1929,7 +1934,7 @@ def _add_param_var(a, b):
         a = a.value
         if not a:
             return b
-    return LinearExpression([a, MonomialTermExpression((1, b))])
+    return LinearExpression([a, b])
 
 
 def _add_param_monomial(a, b):
@@ -1972,11 +1977,11 @@ def _add_param_other(a, b):
 def _add_var_native(a, b):
     if not b:
         return a
-    return LinearExpression([MonomialTermExpression((1, a)), b])
+    return LinearExpression([a, b])
 
 
 def _add_var_npv(a, b):
-    return LinearExpression([MonomialTermExpression((1, a)), b])
+    return LinearExpression([a, b])
 
 
 def _add_var_param(a, b):
@@ -1984,21 +1989,19 @@ def _add_var_param(a, b):
         b = b.value
         if not b:
             return a
-    return LinearExpression([MonomialTermExpression((1, a)), b])
+    return LinearExpression([a, b])
 
 
 def _add_var_var(a, b):
-    return LinearExpression(
-        [MonomialTermExpression((1, a)), MonomialTermExpression((1, b))]
-    )
+    return LinearExpression([a, b])
 
 
 def _add_var_monomial(a, b):
-    return LinearExpression([MonomialTermExpression((1, a)), b])
+    return LinearExpression([a, b])
 
 
 def _add_var_linear(a, b):
-    return b._trunc_append(MonomialTermExpression((1, a)))
+    return b._trunc_append(a)
 
 
 def _add_var_sum(a, b):
@@ -2033,7 +2036,7 @@ def _add_monomial_param(a, b):
 
 
 def _add_monomial_var(a, b):
-    return LinearExpression([a, MonomialTermExpression((1, b))])
+    return LinearExpression([a, b])
 
 
 def _add_monomial_monomial(a, b):
@@ -2076,7 +2079,7 @@ def _add_linear_param(a, b):
 
 
 def _add_linear_var(a, b):
-    return a._trunc_append(MonomialTermExpression((1, b)))
+    return a._trunc_append(b)
 
 
 def _add_linear_monomial(a, b):
@@ -2403,7 +2406,7 @@ def _iadd_mutablelinear_param(a, b):
 
 
 def _iadd_mutablelinear_var(a, b):
-    a._args_.append(MonomialTermExpression((1, b)))
+    a._args_.append(b)
     a._nargs += 1
     return a
 
