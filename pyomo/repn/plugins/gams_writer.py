@@ -188,7 +188,8 @@ class ToGamsVisitor(_ToStringVisitor):
                     if arg.__class__ in native_numeric_types
                     else (
                         self.smap.getSymbol(arg)
-                        if arg.is_variable_type() and (not arg.fixed or self.output_fixed_variables)
+                        if arg.is_variable_type()
+                        and (not arg.fixed or self.output_fixed_variables)
                         else ftoa(value(arg), True)
                     )
                 )
