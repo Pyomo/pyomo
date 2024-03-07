@@ -84,7 +84,7 @@ def generate_strongly_connected_components(
     subsets = [(cblock, vblock) for vblock, cblock in zip(var_blocks, con_blocks)]
     timer.start("generate-block")
     for block, inputs in generate_subsystem_blocks(
-        subsets, include_fixed=include_fixed
+        subsets, include_fixed=include_fixed, timer=timer
     ):
         timer.stop("generate-block")
         # TODO: How does len scale for reference-to-list?
