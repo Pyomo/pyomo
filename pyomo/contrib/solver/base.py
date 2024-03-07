@@ -421,11 +421,11 @@ class LegacySolverWrapper:
         legacy_results.solver.termination_message = str(results.termination_condition)
         legacy_results.problem.number_of_constraints = model.nconstraints()
         legacy_results.problem.number_of_variables = model.nvariables()
-        obj = get_objective(model)
-        if len(obj) == 0:
+        if model.nobjectives() == 0:
             legacy_results.problem.sense = ProblemSense.unknown
             legacy_results.problem.number_of_objectives = 0
         else:
+            obj = get_objective(model)
             legacy_results.problem.sense = obj.sense
             legacy_results.problem.number_of_objectives = len(obj)
 
