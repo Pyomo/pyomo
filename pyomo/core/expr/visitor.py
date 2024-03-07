@@ -1388,6 +1388,85 @@ class _VariableVisitor(SimpleExpressionVisitor):
             return node
 
 
+class _StreamVariableVisitor(StreamBasedExpressionVisitor):
+    def __init__(
+        self,
+        include_fixed=False,
+        descend_into_named_expressions=True,
+    ):
+        self._include_fixed = include_fixed
+        self._descend_into_named_expressions = descend_into_named_expressions
+        self.named_expressions = []
+        # Should we allow re-use of this visitor for multiple expressions?
+
+    def initializeWalker(self, expr):
+        self._variables = []
+        self._seen = set()
+        return True, None
+
+    def beforeChild(self, parent, child, index):
+        if (
+            not self._descend_into_named_expressions
+            and isinstance(child, NumericValue)
+            and child.is_named_expression_type()
+        ):
+            self.named_expressions.append(child)
+            return False, None
+        else:
+            return True, None
+
+    def exitNode(self, node, data):
+        if node.is_variable_type() and (self._include_fixed or not node.fixed):
+            if id(node) not in self._seen:
+                self._seen.add(id(node))
+                self._variables.append(node)
+
+    def finalizeResult(self, result):
+        return self._variables
+
+    def enterNode(self, node):
+        pass
+
+    def acceptChildResult(self, node, data, child_result, child_idx):
+        if child_result.__class__ in native_types:
+            return False, None
+        return child_result.is_expression_type(), None
+
+
+def identify_variables_in_components(components, include_fixed=True):
+    visitor = _StreamVariableVisitor(
+        include_fixed=include_fixed, descend_into_named_expressions=False
+    )
+    all_variables = []
+    for comp in components:
+        all_variables.extend(visitor.walk_expressions(comp.expr))
+
+    named_expr_set = set()
+    unique_named_exprs = []
+    for expr in visitor.named_expressions:
+        if id(expr) in named_expr_set:
+            named_expr_set.add(id(expr))
+            unique_named_exprs.append(expr)
+
+    while unique_named_exprs:
+        expr = unique_named_exprs.pop()
+        visitor.named_expressions.clear()
+        all_variables.extend(visitor.walk_expression(expr.expr))
+
+        for new_expr in visitor.named_expressions:
+            if id(new_expr) not in named_expr_set:
+                named_expr_set.add(new_expr)
+                unique_named_exprs.append(new_expr)
+
+    unique_vars = []
+    var_set = set()
+    for var in all_variables:
+        if id(var) not in var_set:
+            var_set.add(id(var))
+            unique_vars.append(var)
+    return unique_vars
+
+
 def identify_variables(expr, include_fixed=True):
     """
     A generator that yields a sequence of variables
