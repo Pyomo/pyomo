@@ -29,7 +29,6 @@ from pyomo.contrib.incidence_analysis.config import IncidenceMethod
 _log = logging.getLogger(__name__)
 
 
-from pyomo.common.timing import HierarchicalTimer
 def generate_strongly_connected_components(
     constraints,
     variables=None,
