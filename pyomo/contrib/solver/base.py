@@ -41,7 +41,8 @@ from pyomo.contrib.solver.results import (
 class SolverBase(abc.ABC):
     """
     This base class defines the methods required for all solvers:
-        - available: Determines whether the solver is able to be run, combining both whether it can be found on the system and if the license is valid.
+        - available: Determines whether the solver is able to be run,
+                     combining both whether it can be found on the system and if the license is valid.
         - solve: The main method of every solver
         - version: The version of the solver
         - is_persistent: Set to false for all non-persistent solvers.
@@ -420,12 +421,11 @@ class LegacySolverWrapper:
         legacy_results.solver.termination_message = str(results.termination_condition)
         legacy_results.problem.number_of_constraints = model.nconstraints()
         legacy_results.problem.number_of_variables = model.nvariables()
-        if model.nobjectives() == 0:
-            legacy_results.problem.number_of_objectives = 0
-        else:
+        number_of_objectives = model.nobjectives()
+        legacy_results.problem.number_of_objectives = number_of_objectives
+        if number_of_objectives > 0:
             obj = get_objective(model)
             legacy_results.problem.sense = obj.sense
-            legacy_results.problem.number_of_objectives = len(obj)
 
             if obj.sense == minimize:
                 legacy_results.problem.lower_bound = results.objective_bound
