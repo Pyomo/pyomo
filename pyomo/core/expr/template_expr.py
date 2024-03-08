@@ -251,8 +251,8 @@ class GetAttrExpression(ExpressionBase):
         return 2
 
     def _apply_operation(self, result):
-        assert len(result) == 2
-        return getattr(result[0], result[1])
+        obj, attr = result
+        return getattr(obj, attr)
 
     def _to_string(self, values, verbose, smap):
         assert len(values) == 2
