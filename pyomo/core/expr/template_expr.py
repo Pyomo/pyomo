@@ -117,18 +117,10 @@ class GetItemExpression(ExpressionBase):
         return "%s[%s]" % (values[0], ','.join(values[1:]))
 
     def _resolve_template(self, args):
-        return args[0][*args[1:]]
+        return args[0].__getitem__(args[1:])
 
     def _apply_operation(self, result):
-        args = tuple(
-            (
-                arg
-                if arg.__class__ in native_types or not arg.is_numeric_type()
-                else value(arg)
-            )
-            for arg in result[1:]
-        )
-        return result[0][*result[1:]]
+        return result[0].__getitem__(result[1:])
 
 
 class Numeric_GetItemExpression(GetItemExpression, NumericExpression):
