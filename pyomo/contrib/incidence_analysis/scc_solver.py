@@ -175,7 +175,15 @@ def solve_strongly_connected_components(
                 )
                 timer.stop("calc-var-from-con")
             else:
-                inputs = list(scc.input_vars.values())
+                if solver is None:
+                    var_names = [var.name for var in scc.vars.values()][:10]
+                    con_names = [con.name for con in scc.cons.values()][:10]
+                    raise RuntimeError(
+                        "An external solver is required if block has strongly\n"
+                        "connected components of size greater than one (is not"
+                        " a DAG).\nGot an SCC of size %sx%s including"
+                        " components:\n%s\n%s" % (N, N, var_names, con_names)
+                    )
                 if log_blocks:
                     _log.debug(f"Solving {N}x{N} block.")
                 timer.start("scc-subsolver")
