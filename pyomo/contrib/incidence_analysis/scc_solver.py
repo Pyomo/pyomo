@@ -26,11 +26,7 @@ _log = logging.getLogger(__name__)
 
 
 def generate_strongly_connected_components(
-    constraints,
-    variables=None,
-    include_fixed=False,
-    igraph=None,
-    timer=None,
+    constraints, variables=None, include_fixed=False, igraph=None, timer=None
 ):
     """Yield in order ``_BlockData`` that each contain the variables and
     constraints of a single diagonal block in a block lower triangularization

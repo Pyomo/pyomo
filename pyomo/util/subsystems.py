@@ -75,8 +75,7 @@ def add_local_external_functions(block):
     named_expressions = []
     visitor = _ExternalFunctionVisitor(descend_into_named_expressions=False)
     for comp in block.component_data_objects(
-        (Constraint, Expression, Objective),
-        active=True,
+        (Constraint, Expression, Objective), active=True
     ):
         ef_exprs.extend(visitor.walk_expression(comp.expr))
     named_expr_set = ComponentSet(visitor.named_expressions)
@@ -116,10 +115,7 @@ from pyomo.common.timing import HierarchicalTimer
 
 
 def create_subsystem_block(
-    constraints,
-    variables=None,
-    include_fixed=False,
-    timer=None,
+    constraints, variables=None, include_fixed=False, timer=None
 ):
     """This function creates a block to serve as a subsystem with the
     specified variables and constraints. To satisfy certain writers, other
