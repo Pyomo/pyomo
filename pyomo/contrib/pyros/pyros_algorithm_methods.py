@@ -809,7 +809,7 @@ def ROSolver_iterative_solve(model_data, config):
             len(scaled_violations) == len(separation_model.util.performance_constraints)
             and not separation_results.subsolver_error
             and not separation_results.time_out
-        )
+        ) or separation_results.all_discrete_scenarios_exhausted
 
         iter_log_record = IterationLogRecord(
             iteration=k,
