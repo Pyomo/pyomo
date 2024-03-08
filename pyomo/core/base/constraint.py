@@ -44,6 +44,7 @@ from pyomo.core.base.indexed_component import (
     ActiveIndexedComponent,
     UnindexedComponent_set,
     rule_wrapper,
+    IndexedComponent,
 )
 from pyomo.core.base.set import Set
 from pyomo.core.base.disable_methods import disable_methods
