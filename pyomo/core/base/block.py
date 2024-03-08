@@ -2265,8 +2265,11 @@ class IndexedBlock(Block):
     def __init__(self, *args, **kwds):
         Block.__init__(self, *args, **kwds)
 
+    @overload
     def __getitem__(self, index) -> _BlockData:
-        return super().__getitem__(index)
+        ...
+
+    __getitem__ = IndexedComponent.__getitem__  # type: ignore
 
 
 #

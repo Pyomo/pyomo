@@ -1033,8 +1033,11 @@ class IndexedConstraint(Constraint):
         """Add a constraint with a given index."""
         return self.__setitem__(index, expr)
 
+    @overload
     def __getitem__(self, index) -> _GeneralConstraintData:
-        return super().__getitem__(index)
+        ...
+
+    __getitem__ = IndexedComponent.__getitem__  # type: ignore
 
 
 @ModelComponentFactory.register("A list of constraint expressions.")

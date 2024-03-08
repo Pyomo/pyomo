@@ -2382,8 +2382,11 @@ class IndexedSet(Set):
         "Return a dict containing the data() of each Set in this IndexedSet"
         return {k: v.data() for k, v in self.items()}
 
+    @overload
     def __getitem__(self, index) -> _SetData:
-        return super().__getitem__(index)
+        ...
+
+    __getitem__ = IndexedComponent.__getitem__  # type: ignore
 
 
 class FiniteScalarSet(_FiniteSetData, Set):
