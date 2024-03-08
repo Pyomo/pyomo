@@ -1548,7 +1548,10 @@ appsi_operator_from_pyomo_expr(py::handle expr, py::handle var_map,
     break;
   }
   case param: {
-    res = param_map[expr_types.id(expr)].cast<std::shared_ptr<Node>>();
+    if (expr.attr("parent_component")().attr("mutable").cast<bool>())
+        res = param_map[expr_types.id(expr)].cast<std::shared_ptr<Node>>();
+    else
+        res = std::make_shared<Constant>(expr.attr("value").cast<double>());
     break;
   }
   case product: {
