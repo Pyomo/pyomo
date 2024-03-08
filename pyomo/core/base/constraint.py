@@ -1034,8 +1034,7 @@ class IndexedConstraint(Constraint):
         return self.__setitem__(index, expr)
 
     @overload
-    def __getitem__(self, index) -> _GeneralConstraintData:
-        ...
+    def __getitem__(self, index) -> _GeneralConstraintData: ...
 
     __getitem__ = IndexedComponent.__getitem__  # type: ignore
 

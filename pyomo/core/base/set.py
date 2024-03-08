@@ -2383,8 +2383,7 @@ class IndexedSet(Set):
         return {k: v.data() for k, v in self.items()}
 
     @overload
-    def __getitem__(self, index) -> _SetData:
-        ...
+    def __getitem__(self, index) -> _SetData: ...
 
     __getitem__ = IndexedComponent.__getitem__  # type: ignore
 
