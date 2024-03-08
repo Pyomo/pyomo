@@ -1234,9 +1234,11 @@ class LinearExpression(SumExpression):
     """An expression object for linear polynomials.
 
     This is a derived :py:class`SumExpression` that guarantees all
-    arguments are either not potentially variable (e.g., native types,
-    Params, or NPV expressions) OR :py:class:`MonomialTermExpression`
-    objects.
+    arguments are one of the following types:
+
+      - not potentially variable (e.g., native types, Params, or NPV expressions)
+      - :py:class:`MonomialTermExpression`
+      - :py:class:`_VarData`
 
     Args:
         args (tuple): Children nodes
@@ -1253,7 +1255,7 @@ class LinearExpression(SumExpression):
 
         You can specify `args` OR (`constant`, `linear_coefs`, and
         `linear_vars`).  If `args` is provided, it should be a list that
-        contains only constants, NPV objects/expressions, or
+        contains only constants, NPV objects/expressions, variables, or
         :py:class:`MonomialTermExpression` objects.  Alternatively, you
         can specify the constant, the list of linear_coefs and the list
         of linear_vars separately.  Note that these lists are NOT
