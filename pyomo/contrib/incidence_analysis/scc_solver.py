@@ -100,7 +100,7 @@ def solve_strongly_connected_components(
     *,
     solver=None,
     solve_kwds=None,
-    use_calc_var=False,
+    use_calc_var=True,
     calc_var_kwds=None,
     timer=None,
 ):
