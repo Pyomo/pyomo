@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -328,7 +328,7 @@ def _diff_GeneralExpression(node, val_dict, der_dict):
     val_dict: ComponentMap
     der_dict: ComponentMap
     """
-    der_dict[node.expr] += der_dict[node]
+    der_dict[node.arg(0)] += der_dict[node]
 
 
 def _diff_ExternalFunctionExpression(node, val_dict, der_dict):

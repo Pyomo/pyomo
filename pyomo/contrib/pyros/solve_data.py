@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """
 Objects to contain all model data and solve results for the ROSolver
 """
@@ -5,17 +16,71 @@ Objects to contain all model data and solve results for the ROSolver
 
 class ROSolveResults(object):
     """
-    Container for solve-instance data returned to the user after solving with PyROS.
+    PyROS solver results object.
 
-    Attributes:
-        :pyros_termination_condition: termination condition of the PyROS algorithm
-        :config: the config block for this solve instance
-        :time: Total solver CPU time
-        :iterations: total iterations done by PyROS solver
-        :final_objective_value: objective function value at termination
+    Parameters
+    ----------
+    config : ConfigDict, optional
+        User-specified solver settings.
+    iterations : int, optional
+        Number of iterations required.
+    time : float, optional
+        Total elapsed time (or wall time), in seconds.
+    final_objective_value : float, optional
+        Final objective function value to report.
+    pyros_termination_condition : pyrosTerminationCondition, optional
+        PyROS-specific termination condition.
+
+    Attributes
+    ----------
+    config : ConfigDict, optional
+        User-specified solver settings.
+    iterations : int, optional
+        Number of iterations required by PyROS.
+    time : float, optional
+        Total elapsed time (or wall time), in seconds.
+    final_objective_value : float, optional
+        Final objective function value to report.
+    pyros_termination_condition : pyros.util.pyrosTerminationStatus
+        Indicator of the manner of termination.
     """
 
-    pass
+    def __init__(
+        self,
+        config=None,
+        iterations=None,
+        time=None,
+        final_objective_value=None,
+        pyros_termination_condition=None,
+    ):
+        """Initialize self (see class docstring)."""
+        self.config = config
+        self.iterations = iterations
+        self.time = time
+        self.final_objective_value = final_objective_value
+        self.pyros_termination_condition = pyros_termination_condition
+
+    def __str__(self):
+        """
+        Generate string representation of self.
+        Does not include any information about `self.config`.
+        """
+        lines = ["Termination stats:"]
+        attr_name_format_dict = {
+            "iterations": ("Iterations", "f'{val}'"),
+            "time": ("Solve time (wall s)", "f'{val:.3f}'"),
+            "final_objective_value": ("Final objective value", "f'{val:.4e}'"),
+            "pyros_termination_condition": ("Termination condition", "f'{val}'"),
+        }
+        attr_desc_pad_length = max(
+            len(desc) for desc, _ in attr_name_format_dict.values()
+        )
+        for attr_name, (attr_desc, fmt_str) in attr_name_format_dict.items():
+            val = getattr(self, attr_name)
+            val_str = eval(fmt_str) if val is not None else str(val)
+            lines.append(f" {attr_desc:<{attr_desc_pad_length}s} : {val_str}")
+
+        return "\n".join(lines)
 
 
 class MasterProblemData(object):
@@ -282,16 +347,23 @@ class SeparationLoopResults:
     solver_call_results : ComponentMap
         Mapping from performance constraints to corresponding
         ``SeparationSolveCallResults`` objects.
-    worst_case_perf_con : None or int, optional
+    worst_case_perf_con : None or Constraint
         Performance constraint mapped to ``SeparationSolveCallResults``
         object in `self` corresponding to maximally violating
         separation problem solution.
+    all_discrete_scenarios_exhausted : bool, optional
+        For problems with discrete uncertainty sets,
+        True if all scenarios were explicitly accounted for in master
+        (which occurs if there have been
+        as many PyROS iterations as there are scenarios in the set)
+        False otherwise.
 
     Attributes
     ----------
     solver_call_results
     solved_globally
     worst_case_perf_con
+    all_discrete_scenarios_exhausted
     found_violation
     violating_param_realization
     scaled_violations
@@ -300,11 +372,18 @@ class SeparationLoopResults:
     time_out
     """
 
-    def __init__(self, solved_globally, solver_call_results, worst_case_perf_con):
+    def __init__(
+        self,
+        solved_globally,
+        solver_call_results,
+        worst_case_perf_con,
+        all_discrete_scenarios_exhausted=False,
+    ):
         """Initialize self (see class docstring)."""
         self.solver_call_results = solver_call_results
         self.solved_globally = solved_globally
         self.worst_case_perf_con = worst_case_perf_con
+        self.all_discrete_scenarios_exhausted = all_discrete_scenarios_exhausted
 
     @property
     def found_violation(self):
@@ -443,6 +522,7 @@ class SeparationResults:
     ----------
     local_separation_loop_results
     global_separation_loop_results
+    main_loop_results
     subsolver_error
     time_out
     solved_locally
@@ -462,7 +542,7 @@ class SeparationResults:
     @property
     def time_out(self):
         """
-        Return True if time out found for local or global
+        bool : True if time out found for local or global
         separation loop, False otherwise.
         """
         local_time_out = (
@@ -476,7 +556,7 @@ class SeparationResults:
     @property
     def subsolver_error(self):
         """
-        Return True if subsolver error found for local or global
+        bool : True if subsolver error found for local or global
         separation loop, False otherwise.
         """
         local_subsolver_error = (
@@ -490,7 +570,7 @@ class SeparationResults:
     @property
     def solved_locally(self):
         """
-        Return true if local separation loop was invoked,
+        bool : true if local separation loop was invoked,
         False otherwise.
         """
         return self.local_separation_loop_results is not None
@@ -498,13 +578,18 @@ class SeparationResults:
     @property
     def solved_globally(self):
         """
-        Return True if global separation loop was invoked,
+        bool : True if global separation loop was invoked,
         False otherwise.
         """
         return self.global_separation_loop_results is not None
 
     def get_violating_attr(self, attr_name):
         """
+        If separation problems solved globally, returns
+        value of attribute of global separation loop results.
+
+        Otherwise, if separation problems solved locally,
+        returns value of attribute of local separation loop results.
         If local separation loop results specified, return
         value of attribute of local separation loop results.
 
@@ -526,27 +611,44 @@ class SeparationResults:
         object
             Attribute value.
         """
-        if self.solved_locally:
-            local_loop_val = getattr(self.local_separation_loop_results, attr_name)
-        else:
-            local_loop_val = None
+        return getattr(self.main_loop_results, attr_name, None)
 
-        if local_loop_val is not None:
-            attr_val = local_loop_val
-        else:
-            if self.solved_globally:
-                attr_val = getattr(self.global_separation_loop_results, attr_name)
-            else:
-                attr_val = None
+    @property
+    def all_discrete_scenarios_exhausted(self):
+        """
+        bool : For problems where the uncertainty set is of type
+        DiscreteScenarioSet,
+        True if last master problem solved explicitly
+        accounts for all scenarios in the uncertainty set,
+        False otherwise.
+        """
+        return self.get_violating_attr("all_discrete_scenarios_exhausted")
 
-        return attr_val
+    @property
+    def worst_case_perf_con(self):
+        """
+        ConstraintData : Performance constraint corresponding to the
+        separation solution chosen for the next master problem.
+        """
+        return self.get_violating_attr("worst_case_perf_con")
+
+    @property
+    def main_loop_results(self):
+        """
+        SeparationLoopResults : Main separation loop results.
+        In particular, this is considered to be the global
+        loop result if solved globally, and the local loop
+        results otherwise.
+        """
+        if self.solved_globally:
+            return self.global_separation_loop_results
+        return self.local_separation_loop_results
 
     @property
     def found_violation(self):
         """
-        bool: True if ``found_violation`` attribute for
-        local or global separation loop results found
-        to be True, False otherwise.
+        bool : True if ``found_violation`` attribute for
+        main separation loop results is True, False otherwise.
         """
         found_viol = self.get_violating_attr("found_violation")
         if found_viol is None:

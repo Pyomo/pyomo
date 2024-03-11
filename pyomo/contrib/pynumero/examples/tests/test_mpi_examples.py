@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import pyomo.common.unittest as unittest
 
 from pyomo.contrib.pynumero.dependencies import (
@@ -7,26 +18,28 @@ from pyomo.contrib.pynumero.dependencies import (
 )
 
 SKIPTESTS = []
-if numpy_available and scipy_available:
-    pass
-else:
-    SKIPTESTS.append("Pynumero needs scipy and numpy>=1.13.0 to run BlockMatrix tests")
+if not numpy_available:
+    SKIPTESTS.append("Pynumero needs numpy>=1.13.0 to run BlockMatrix tests")
+if not scipy_available:
+    SKIPTESTS.append("Pynumero needs scipy to run BlockMatrix tests")
 
 try:
     from mpi4py import MPI
 
     comm = MPI.COMM_WORLD
     if comm.Get_size() != 3:
-        SKIPTESTS.append("Pynumero MPI examples require exactly 3 processes")
+        SKIPTESTS.append(
+            f"Pynumero MPI examples require 3 MPI processes (got {comm.Get_size()})"
+        )
 except ImportError:
-    SKIPTESTS.append("Pynumero MPI examples require exactly 3 processes")
+    SKIPTESTS.append("Pynumero MPI examples require mpi4py")
 
 if not SKIPTESTS:
     from pyomo.contrib.pynumero.examples import parallel_vector_ops, parallel_matvec
 
 
 @unittest.pytest.mark.mpi
-@unittest.skipIf(SKIPTESTS, SKIPTESTS)
+@unittest.skipIf(SKIPTESTS, "\n".join(SKIPTESTS))
 class TestExamples(unittest.TestCase):
     def test_parallel_vector_ops(self):
         z1_local, z2, z3 = parallel_vector_ops.main()

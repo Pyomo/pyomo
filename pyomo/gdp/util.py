@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -169,7 +169,10 @@ class GDPTree:
         Arg:
             u : A node in the forest
         """
-        return self.parent(self.parent(u))
+        if u.ctype is Disjunct:
+            return self.parent(self.parent(u))
+        else:
+            return self.parent(u)
 
     def root_disjunct(self, u):
         """Returns the highest parent Disjunct in the hierarchy, or None if
@@ -183,7 +186,7 @@ class GDPTree:
         while True:
             if parent is None:
                 return rootmost_disjunct
-            if isinstance(parent, _DisjunctData) or parent.ctype is Disjunct:
+            if parent.ctype is Disjunct:
                 rootmost_disjunct = parent
             parent = self.parent(parent)
 
@@ -243,7 +246,7 @@ class GDPTree:
     @property
     def disjunct_nodes(self):
         for v in self._vertices:
-            if isinstance(v, _DisjunctData) or v.ctype is Disjunct:
+            if v.ctype is Disjunct:
                 yield v
 
 
@@ -474,16 +477,17 @@ def get_src_constraint(transformedConstraint):
     a transformation block
     """
     transBlock = transformedConstraint.parent_block()
+    src_constraints = transBlock.private_data('pyomo.gdp').src_constraint
     # This should be our block, so if it's not, the user messed up and gave
     # us the wrong thing. If they happen to also have a _constraintMap then
     # the world is really against us.
-    if not hasattr(transBlock, "_constraintMap"):
+    if transformedConstraint not in src_constraints:
         raise GDP_Error(
             "Constraint '%s' is not a transformed constraint"
             % transformedConstraint.name
         )
     # if something goes wrong here, it's a bug in the mappings.
-    return transBlock._constraintMap['srcConstraints'][transformedConstraint]
+    return src_constraints[transformedConstraint]
 
 
 def _find_parent_disjunct(constraint):
@@ -534,11 +538,15 @@ def get_transformed_constraints(srcConstraint):
             "from any of its _ComponentDatas.)"
         )
     transBlock = _get_constraint_transBlock(srcConstraint)
-    try:
-        return transBlock._constraintMap['transformedConstraints'][srcConstraint]
-    except:
-        logger.error("Constraint '%s' has not been transformed." % srcConstraint.name)
-        raise
+    transformed_constraints = transBlock.private_data(
+        'pyomo.gdp'
+    ).transformed_constraints
+    if srcConstraint in transformed_constraints:
+        return transformed_constraints[srcConstraint]
+    else:
+        raise GDP_Error(
+            "Constraint '%s' has not been transformed." % srcConstraint.name
+        )
 
 
 def _warn_for_active_disjunct(innerdisjunct, outerdisjunct):

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -301,7 +301,7 @@ class TestConnector(unittest.TestCase):
         m.component('c.expanded').pprint(ostream=os)
         self.assertEqual(
             os.getvalue(),
-            """c.expanded : Size=1, Index='c.expanded_index', Active=True
+            """c.expanded : Size=1, Index={1}, Active=True
     Key : Lower : Body : Upper : Active
       1 :   1.0 :    x :   1.0 :   True
 """,
@@ -336,7 +336,7 @@ class TestConnector(unittest.TestCase):
         m.component('c.expanded').pprint(ostream=os)
         self.assertEqual(
             os.getvalue(),
-            """c.expanded : Size=2, Index='c.expanded_index', Active=True
+            """c.expanded : Size=2, Index={1, 2}, Active=True
     Key : Lower : Body : Upper : Active
       1 :   1.0 :    x :   1.0 :   True
       2 :   1.0 :    y :   1.0 :   True
@@ -372,7 +372,7 @@ class TestConnector(unittest.TestCase):
         m.component('c.expanded').pprint(ostream=os)
         self.assertEqual(
             os.getvalue(),
-            """c.expanded : Size=2, Index='c.expanded_index', Active=True
+            """c.expanded : Size=2, Index={1, 2}, Active=True
     Key : Lower : Body  : Upper : Active
       1 :   1.0 :   - x :   1.0 :   True
       2 :   1.0 : 1 + y :   1.0 :   True
@@ -408,7 +408,7 @@ class TestConnector(unittest.TestCase):
         m.component('c.expanded').pprint(ostream=os)
         self.assertEqual(
             os.getvalue(),
-            """c.expanded : Size=3, Index='c.expanded_index', Active=True
+            """c.expanded : Size=3, Index={1, 2, 3}, Active=True
     Key : Lower : Body : Upper : Active
       1 :   1.0 : x[1] :   1.0 :   True
       2 :   1.0 : x[2] :   1.0 :   True
@@ -451,7 +451,7 @@ class TestConnector(unittest.TestCase):
         m.component('c.expanded').pprint(ostream=os)
         self.assertEqual(
             os.getvalue(),
-            """c.expanded : Size=2, Index='c.expanded_index', Active=True
+            """c.expanded : Size=2, Index={1, 2}, Active=True
     Key : Lower : Body              : Upper : Active
       1 :   0.0 : x - 'ECON.auto.x' :   0.0 :   True
       2 :   0.0 : y - 'ECON.auto.y' :   0.0 :   True
@@ -488,7 +488,7 @@ class TestConnector(unittest.TestCase):
         m.component('c.expanded').pprint(ostream=os)
         self.assertEqual(
             os.getvalue(),
-            """c.expanded : Size=2, Index='c.expanded_index', Active=True
+            """c.expanded : Size=2, Index={1, 2}, Active=True
     Key : Lower : Body                  : Upper : Active
       1 :   0.0 :   - x - 'ECON.auto.x' :   0.0 :   True
       2 :   0.0 : 1 + y - 'ECON.auto.y' :   0.0 :   True
@@ -533,7 +533,7 @@ class TestConnector(unittest.TestCase):
         m.component('c.expanded').pprint(ostream=os)
         self.assertEqual(
             os.getvalue(),
-            """c.expanded : Size=3, Index='c.expanded_index', Active=True
+            """c.expanded : Size=3, Index={1, 2, 3}, Active=True
     Key : Lower : Body                    : Upper : Active
       1 :   0.0 : x[1] - 'ECON.auto.x'[1] :   0.0 :   True
       2 :   0.0 : x[2] - 'ECON.auto.x'[2] :   0.0 :   True
@@ -590,7 +590,7 @@ class TestConnector(unittest.TestCase):
         m.component('c.expanded').pprint(ostream=os)
         self.assertEqual(
             os.getvalue(),
-            """c.expanded : Size=3, Index='c.expanded_index', Active=True
+            """c.expanded : Size=3, Index={1, 2, 3}, Active=True
     Key : Lower : Body                     : Upper : Active
       1 :   0.0 : x[1] - 'ECON1.auto.x'[1] :   0.0 :   True
       2 :   0.0 : x[2] - 'ECON1.auto.x'[2] :   0.0 :   True
@@ -602,7 +602,7 @@ class TestConnector(unittest.TestCase):
         m.component('d.expanded').pprint(ostream=os)
         self.assertEqual(
             os.getvalue(),
-            """d.expanded : Size=3, Index='d.expanded_index', Active=True
+            """d.expanded : Size=3, Index={1, 2, 3}, Active=True
     Key : Lower : Body                                  : Upper : Active
       1 :   0.0 : 'ECON2.auto.x'[1] - 'ECON1.auto.x'[1] :   0.0 :   True
       2 :   0.0 : 'ECON2.auto.x'[2] - 'ECON1.auto.x'[2] :   0.0 :   True
@@ -653,7 +653,7 @@ class TestConnector(unittest.TestCase):
         m.component('c.expanded').pprint(ostream=os)
         self.assertEqual(
             os.getvalue(),
-            """c.expanded : Size=3, Index='c.expanded_index', Active=True
+            """c.expanded : Size=3, Index={1, 2, 3}, Active=True
     Key : Lower : Body         : Upper : Active
       1 :   0.0 : x[1] - a2[1] :   0.0 :   True
       2 :   0.0 : x[2] - a2[2] :   0.0 :   True
@@ -665,7 +665,7 @@ class TestConnector(unittest.TestCase):
         m.component('d.expanded').pprint(ostream=os)
         self.assertEqual(
             os.getvalue(),
-            """d.expanded : Size=3, Index='d.expanded_index', Active=True
+            """d.expanded : Size=3, Index={1, 2, 3}, Active=True
     Key : Lower : Body          : Upper : Active
       1 :   0.0 : a1[1] - a2[1] :   0.0 :   True
       2 :   0.0 : a1[2] - a2[2] :   0.0 :   True
@@ -734,7 +734,7 @@ class TestConnector(unittest.TestCase):
         m.component('c.expanded').pprint(ostream=os)
         self.assertEqual(
             os.getvalue(),
-            """c.expanded : Size=3, Index='c.expanded_index', Active=True
+            """c.expanded : Size=3, Index={1, 2, 3}, Active=True
     Key : Lower : Body               : Upper : Active
       1 :   0.0 :       x[1] - a2[1] :   0.0 :   True
       2 :   0.0 :       x[2] - a2[2] :   0.0 :   True
@@ -746,7 +746,7 @@ class TestConnector(unittest.TestCase):
         m.component('d.expanded').pprint(ostream=os)
         self.assertEqual(
             os.getvalue(),
-            """d.expanded : Size=3, Index='d.expanded_index', Active=True
+            """d.expanded : Size=3, Index={1, 2, 3}, Active=True
     Key : Lower : Body                     : Upper : Active
       1 :   0.0 : 'ECON2.auto.x'[1] - x[1] :   0.0 :   True
       2 :   0.0 : 'ECON2.auto.x'[2] - x[2] :   0.0 :   True
@@ -789,7 +789,7 @@ class TestConnector(unittest.TestCase):
         m.component('c.expanded').pprint(ostream=os)
         self.assertEqual(
             os.getvalue(),
-            """c.expanded : Size=2, Index='c.expanded_index', Active=True
+            """c.expanded : Size=2, Index={1, 2}, Active=True
     Key : Lower : Body                        : Upper : Active
       1 :   0.0 : flow[1] - 'ECON1.auto.flow' :   0.0 :   True
       2 :   0.0 :  phase - 'ECON1.auto.phase' :   0.0 :   True
@@ -800,7 +800,7 @@ class TestConnector(unittest.TestCase):
         m.component('d.expanded').pprint(ostream=os)
         self.assertEqual(
             os.getvalue(),
-            """d.expanded : Size=2, Index='d.expanded_index', Active=True
+            """d.expanded : Size=2, Index={1, 2}, Active=True
     Key : Lower : Body                        : Upper : Active
       1 :   0.0 : 'ECON2.auto.flow' - flow[2] :   0.0 :   True
       2 :   0.0 :  'ECON2.auto.phase' - phase :   0.0 :   True
@@ -844,7 +844,7 @@ class TestConnector(unittest.TestCase):
         m.component('eq.expanded').pprint(ostream=os)
         self.assertEqual(
             os.getvalue(),
-            """eq.expanded : Size=1, Index='eq.expanded_index', Active=True
+            """eq.expanded : Size=1, Index={1}, Active=True
     Key : Lower : Body  : Upper : Active
       1 :   0.0 : x - y :   0.0 :   True
 """,

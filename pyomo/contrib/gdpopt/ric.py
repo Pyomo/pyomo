@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -62,10 +62,9 @@ class GDP_RIC_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
     def _solve_gdp(self, original_model, config):
         logger = config.logger
 
-        (
-            discrete_problem_util_block,
-            subproblem_util_block,
-        ) = _get_discrete_problem_and_subproblem(self, config)
+        (discrete_problem_util_block, subproblem_util_block) = (
+            _get_discrete_problem_and_subproblem(self, config)
+        )
         discrete_problem = discrete_problem_util_block.parent_block()
         subproblem = subproblem_util_block.parent_block()
         discrete_problem_obj = next(

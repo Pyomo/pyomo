@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 # -*- coding: utf-8 -*-
 """Tests for the MindtPy solver."""
 import pyomo.common.unittest as unittest
@@ -64,6 +75,22 @@ class TestMindtPy(unittest.TestCase):
                     mip_solver=required_solvers[1],
                     nlp_solver=required_solvers[0],
                     absolute_bound_tolerance=1e-5,
+                )
+                log_infeasible_constraints(model)
+                self.assertTrue(is_feasible(model, self.get_config(opt)))
+
+    def test_FP_L1_norm(self):
+        """Test the feasibility pump algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            for model in model_list:
+                model = model.clone()
+                results = opt.solve(
+                    model,
+                    strategy='FP',
+                    mip_solver=required_solvers[1],
+                    nlp_solver=required_solvers[0],
+                    absolute_bound_tolerance=1e-5,
+                    fp_main_norm='L1',
                 )
                 log_infeasible_constraints(model)
                 self.assertTrue(is_feasible(model, self.get_config(opt)))

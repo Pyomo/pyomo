@@ -30,8 +30,9 @@ The ``pyomo.dae.flatten`` module aims to address this use case by providing
 utilities to generate all components indexed, explicitly or implicitly, by
 user-provided sets.
 
-**When we say "flatten a model," we mean "generate all components in the model,
-preserving all user-specified indexing sets."**
+**When we say "flatten a model," we mean "recursively generate all components in
+the model," where a component can be indexed only by user-specified indexing
+sets (or is not indexed at all)**.
 
 Data structures
 ---------------
@@ -42,3 +43,23 @@ Slices are necessary as they can encode "implicit indexing" -- where a
 component is contained in an indexed block. It is natural to return references
 to these slices, so they may be accessed and manipulated like any other
 component.
+
+Citation
+--------
+If you use the ``pyomo.dae.flatten`` module in your research, we would appreciate
+you citing the following paper, which gives more detail about the motivation for
+and examples of using this functinoality.
+
+.. code-block:: bibtex
+
+    @article{parker2023mpc,
+    title = {Model predictive control simulations with block-hierarchical differential-algebraic process models},
+    journal = {Journal of Process Control},
+    volume = {132},
+    pages = {103113},
+    year = {2023},
+    issn = {0959-1524},
+    doi = {https://doi.org/10.1016/j.jprocont.2023.103113},
+    url = {https://www.sciencedirect.com/science/article/pii/S0959152423002007},
+    author = {Robert B. Parker and Bethany L. Nicholson and John D. Siirola and Lorenz T. Biegler},
+    }

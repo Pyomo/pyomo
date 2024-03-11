@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -44,10 +44,10 @@ testing_solvers['mosek_direct', 'python'] = False
 def setUpModule():
     global testing_solvers
     import pyomo.environ
-    from pyomo.solvers.tests.solvers import test_solver_cases
+    from pyomo.solvers.tests.solvers import test_solver_cases as _test_solver_cases
 
-    for _solver, _io in test_solver_cases():
-        if (_solver, _io) in testing_solvers and test_solver_cases(
+    for _solver, _io in _test_solver_cases():
+        if (_solver, _io) in testing_solvers and _test_solver_cases(
             _solver, _io
         ).available:
             testing_solvers[_solver, _io] = True

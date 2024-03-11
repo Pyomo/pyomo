@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.fileutils import Executable
 from pyomo.contrib.appsi.base import (
@@ -400,9 +411,11 @@ class Cbc(PersistentSolver):
         if cp.returncode != 0:
             if self.config.load_solution:
                 raise RuntimeError(
-                    'A feasible solution was not found, so no solution can be loaded.'
-                    'Please set opt.config.load_solution=False and check '
-                    'results.termination_condition and '
+                    'A feasible solution was not found, so no solution can be loaded. '
+                    'If using the appsi.solvers.Cbc interface, you can '
+                    'set opt.config.load_solution=False. If using the environ.SolverFactory '
+                    'interface, you can set opt.solve(model, load_solutions = False). '
+                    'Then you can check results.termination_condition and '
                     'results.best_feasible_objective before loading a solution.'
                 )
             results = Results()

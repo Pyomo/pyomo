@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -120,9 +120,11 @@ class GetItemExpression(ExpressionBase):
 
     def _apply_operation(self, result):
         args = tuple(
-            arg
-            if arg.__class__ in native_types or not arg.is_numeric_type()
-            else value(arg)
+            (
+                arg
+                if arg.__class__ in native_types or not arg.is_numeric_type()
+                else value(arg)
+            )
             for arg in result[1:]
         )
         return result[0].__getitem__(tuple(result[1:]))

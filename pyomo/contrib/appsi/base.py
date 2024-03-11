@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import abc
 import enum
 from typing import (
@@ -933,7 +944,7 @@ class PersistentBase(abc.ABC):
 
     def set_instance(self, model):
         saved_update_config = self.update_config
-        self.__init__()
+        self.__init__(only_child_vars=self._only_child_vars)
         self.update_config = saved_update_config
         self._model = model
         if self.use_extensions and cmodel_available:
@@ -1685,7 +1696,7 @@ class SolverFactoryClass(Factory):
             class LegacySolver(LegacySolverInterface, cls):
                 pass
 
-            LegacySolverFactory.register(name, doc)(LegacySolver)
+            LegacySolverFactory.register('appsi_' + name, doc)(LegacySolver)
 
             return cls
 

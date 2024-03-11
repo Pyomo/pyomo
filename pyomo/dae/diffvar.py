@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -15,8 +15,6 @@ from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.set import UnknownSetDimen
 from pyomo.core.base.var import Var
 from pyomo.dae.contset import ContinuousSet
-
-__all__ = ('DerivativeVar', 'DAE_Error')
 
 
 def create_access_function(var):

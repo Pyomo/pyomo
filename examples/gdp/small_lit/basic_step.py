@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """ Example from Section 3.2 in paper of Pseudo Basic Steps
 
 Ref:
@@ -9,6 +20,7 @@ Solution is 2.99 with (x1,x2) = (-0.1, 3.01)
 
 Pyomo model implementation by @RomeoV
 """
+
 from pyomo.environ import *
 from pyomo.gdp import *
 from pyomo.gdp.basic_step import apply_basic_step

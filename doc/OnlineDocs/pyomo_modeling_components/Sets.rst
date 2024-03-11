@@ -443,13 +443,13 @@ model is:
 
 for this model, a toy data file (in AMPL "``.dat``" format) would be:
 
-.. literalinclude:: ../tests/scripting/Isinglecomm.dat
+.. literalinclude:: ../src/scripting/Isinglecomm.dat
    :language: text
 
 .. doctest::
    :hide:
 
-   >>> inst = model.create_instance('tests/scripting/Isinglecomm.dat')
+   >>> inst = model.create_instance('src/scripting/Isinglecomm.dat')
 
 This can also be done somewhat more efficiently, and perhaps more clearly,
 using a :class:`BuildAction` (for more information, see :ref:`BuildAction`):

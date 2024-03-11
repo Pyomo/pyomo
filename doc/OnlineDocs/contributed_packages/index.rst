@@ -20,6 +20,7 @@ Contributed packages distributed with Pyomo:
    gdpopt.rst
    iis.rst
    incidence/index.rst
+   latex_printer.rst
    mindtpy.rst
    mpc/index.rst
    multistart.rst

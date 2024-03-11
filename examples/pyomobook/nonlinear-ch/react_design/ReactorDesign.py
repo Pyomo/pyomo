@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import pyomo.environ
 import pyomo.environ as pyo
 
@@ -33,9 +44,7 @@ def create_model(k1, k2, k3, caf):
 
     model.cc_bal = pyo.Constraint(expr=(0 == -model.sv * model.cc + k2 * model.cb))
 
-    model.cd_bal = pyo.Constraint(
-        expr=(0 == -model.sv * model.cd + k3 * model.ca**2.0)
-    )
+    model.cd_bal = pyo.Constraint(expr=(0 == -model.sv * model.cd + k3 * model.ca**2.0))
 
     return model
 

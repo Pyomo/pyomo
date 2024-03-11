@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -11,7 +11,8 @@
 
 from functools import wraps
 
-from pyomo.common.collections import ComponentMap
+from pyomo.common.autoslots import AutoSlots
+from pyomo.common.collections import ComponentMap, DefaultComponentMap
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import unique_component_name
 
@@ -46,6 +47,17 @@ from pyomo.gdp.util import (
 from pyomo.network import Port
 
 from weakref import ref as weakref_ref
+
+
+class _GDPTransformationData(AutoSlots.Mixin):
+    __slots__ = ('src_constraint', 'transformed_constraints')
+
+    def __init__(self):
+        self.src_constraint = ComponentMap()
+        self.transformed_constraints = DefaultComponentMap(list)
+
+
+Block.register_private_data_initializer(_GDPTransformationData, scope='pyomo.gdp')
 
 
 class GDP_to_MIP_Transformation(Transformation):
@@ -213,21 +225,26 @@ class GDP_to_MIP_Transformation(Transformation):
                 "likely indicative of a modeling error." % obj.name
             )
 
-        # Create or fetch the transformation block
+        # We always need to create or fetch a transformation block on the parent block.
+        trans_block, new_block = self._add_transformation_block(obj.parent_block())
+        # This is where we put exactly_one/or constraint
+        algebraic_constraint = self._add_xor_constraint(
+            obj.parent_component(), trans_block
+        )
+
+        # If requested, create or fetch the transformation block above the
+        # nested hierarchy
         if root_disjunct is not None:
-            # We want to put all the transformed things on the root
-            # Disjunct's parent's block so that they do not get
-            # re-transformed
-            transBlock, new_block = self._add_transformation_block(
+            # We want to put some transformed things on the root Disjunct's
+            # parent's block so that they do not get re-transformed. (Note this
+            # is never true for hull, but it calls this method with
+            # root_disjunct=None. BigM can't put the exactly-one constraint up
+            # here, but it can put everything else.)
+            trans_block, new_block = self._add_transformation_block(
                 root_disjunct.parent_block()
             )
-        else:
-            # This isn't nested--just put it on the parent block.
-            transBlock, new_block = self._add_transformation_block(obj.parent_block())
 
-        xorConstraint = self._add_xor_constraint(obj.parent_component(), transBlock)
-
-        return transBlock, xorConstraint
+        return trans_block, algebraic_constraint
 
     def _get_disjunct_transformation_block(self, disjunct, transBlock):
         if disjunct.transformation_block is not None:
@@ -238,14 +255,7 @@ class GDP_to_MIP_Transformation(Transformation):
         relaxationBlock = relaxedDisjuncts[len(relaxedDisjuncts)]
 
         relaxationBlock.transformedConstraints = Constraint(Any)
-
         relaxationBlock.localVarReferences = Block()
-        # add the map that will link back and forth between transformed
-        # constraints and their originals.
-        relaxationBlock._constraintMap = {
-            'srcConstraints': ComponentMap(),
-            'transformedConstraints': ComponentMap(),
-        }
 
         # add mappings to source disjunct (so we'll know we've relaxed)
         disjunct._transformation_block = weakref_ref(relaxationBlock)

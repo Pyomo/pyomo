@@ -1,3 +1,15 @@
+/**___________________________________________________________________________
+ *
+ * Pyomo: Python Optimization Modeling Objects
+ * Copyright (c) 2008-2024
+ * National Technology and Engineering Solutions of Sandia, LLC
+ * Under the terms of Contract DE-NA0003525 with National Technology and
+ * Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+ * rights in this software.
+ * This software is distributed under the 3-clause BSD License.
+ * ___________________________________________________________________________
+**/
+
 #include "expression.hpp"
 
 bool Leaf::is_leaf() { return true; }
@@ -1536,7 +1548,10 @@ appsi_operator_from_pyomo_expr(py::handle expr, py::handle var_map,
     break;
   }
   case param: {
-    res = param_map[expr_types.id(expr)].cast<std::shared_ptr<Node>>();
+    if (expr.attr("parent_component")().attr("mutable").cast<bool>())
+        res = param_map[expr_types.id(expr)].cast<std::shared_ptr<Node>>();
+    else
+        res = std::make_shared<Constant>(expr.attr("value").cast<double>());
     break;
   }
   case product: {
@@ -1777,7 +1792,8 @@ int build_expression_tree(py::handle pyomo_expr,
 
   if (expr_types.expr_type_map[py::type::of(pyomo_expr)].cast<ExprType>() ==
       named_expr)
-    pyomo_expr = pyomo_expr.attr("expr");
+    return build_expression_tree(pyomo_expr.attr("expr"), appsi_expr, var_map,
+                                 param_map, expr_types);
 
   if (appsi_expr->is_leaf()) {
     ;

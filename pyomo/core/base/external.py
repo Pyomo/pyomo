@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -31,19 +31,17 @@ from ctypes import (
 
 from pyomo.common.autoslots import AutoSlots
 from pyomo.common.fileutils import find_library
-from pyomo.core.expr.numvalue import (
+from pyomo.common.numeric_types import (
+    check_if_native_type,
     native_types,
     native_numeric_types,
-    pyomo_constant_types,
-    NonNumericValue,
-    NumericConstant,
     value,
+    _pyomo_constant_types,
 )
+from pyomo.core.expr.numvalue import NonNumericValue, NumericConstant
 import pyomo.core.expr as EXPR
 from pyomo.core.base.component import Component
 from pyomo.core.base.units_container import units
-
-__all__ = ('ExternalFunction',)
 
 logger = logging.getLogger('pyomo.core')
 nan = float('nan')
@@ -81,12 +79,10 @@ class ExternalFunction(Component):
             return super().__new__(AMPLExternalFunction)
 
     @overload
-    def __init__(self, function=None, gradient=None, hessian=None, *, fgh=None):
-        ...
+    def __init__(self, function=None, gradient=None, hessian=None, *, fgh=None): ...
 
     @overload
-    def __init__(self, *, library: str, function: str):
-        ...
+    def __init__(self, *, library: str, function: str): ...
 
     def __init__(self, *args, **kwargs):
         """Construct a reference to an external function.
@@ -201,14 +197,15 @@ class ExternalFunction(Component):
         pv = False
         for i, arg in enumerate(args_):
             try:
-                # Q: Is there a better way to test if a value is an object
-                #    not in native_types and not a standard expression type?
                 if arg.__class__ in native_types:
                     continue
                 if arg.is_potentially_variable():
                     pv = True
+                continue
             except AttributeError:
-                args_[i] = NonNumericValue(arg)
+                if check_if_native_type(arg):
+                    continue
+            args_[i] = NonNumericValue(arg)
         #
         if pv:
             return EXPR.ExternalFunctionExpression(args_, self)
@@ -457,9 +454,11 @@ class AMPLExternalFunction(ExternalFunction):
                 ('units', str(self._units)),
                 (
                     'arg_units',
-                    [str(u) for u in self._arg_units]
-                    if self._arg_units is not None
-                    else None,
+                    (
+                        [str(u) for u in self._arg_units]
+                        if self._arg_units is not None
+                        else None
+                    ),
                 ),
             ],
             (),
@@ -493,7 +492,7 @@ class _PythonCallbackFunctionID(NumericConstant):
         return False
 
 
-pyomo_constant_types.add(_PythonCallbackFunctionID)
+_pyomo_constant_types.add(_PythonCallbackFunctionID)
 
 
 class PythonCallbackFunction(ExternalFunction):
@@ -609,9 +608,11 @@ class PythonCallbackFunction(ExternalFunction):
                 ('units', str(self._units)),
                 (
                     'arg_units',
-                    [str(u) for u in self._arg_units[:-1]]
-                    if self._arg_units is not None
-                    else None,
+                    (
+                        [str(u) for u in self._arg_units[:-1]]
+                        if self._arg_units is not None
+                        else None
+                    ),
                 ),
             ],
             (),

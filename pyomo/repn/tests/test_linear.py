@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -40,9 +40,10 @@ class VisitorConfig(object):
         self.subexpr = {}
         self.var_map = {}
         self.var_order = {}
+        self.sorter = None
 
     def __iter__(self):
-        return iter((self.subexpr, self.var_map, self.var_order))
+        return iter((self.subexpr, self.var_map, self.var_order, self.sorter))
 
 
 def sum_sq(args, fixed, fgh):
@@ -576,8 +577,10 @@ class TestLinear(unittest.TestCase):
         cfg = VisitorConfig()
         repn = LinearRepnVisitor(*cfg).walk_expression(e)
         self.assertEqual(cfg.subexpr, {})
-        self.assertEqual(cfg.var_map, {id(m.x[0]): m.x[0]})
-        self.assertEqual(cfg.var_order, {id(m.x[0]): 0})
+        self.assertEqual(
+            cfg.var_map, {id(m.x[0]): m.x[0], id(m.x[1]): m.x[1], id(m.x[2]): m.x[2]}
+        )
+        self.assertEqual(cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1, id(m.x[2]): 2})
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 0)
         self.assertEqual(repn.linear, {id(m.x[0]): 1})
@@ -588,8 +591,10 @@ class TestLinear(unittest.TestCase):
         cfg = VisitorConfig()
         repn = LinearRepnVisitor(*cfg).walk_expression(e)
         self.assertEqual(cfg.subexpr, {})
-        self.assertEqual(cfg.var_map, {id(m.x[0]): m.x[0]})
-        self.assertEqual(cfg.var_order, {id(m.x[0]): 0})
+        self.assertEqual(
+            cfg.var_map, {id(m.x[0]): m.x[0], id(m.x[1]): m.x[1], id(m.x[2]): m.x[2]}
+        )
+        self.assertEqual(cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1, id(m.x[2]): 2})
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 0)
         self.assertEqual(repn.linear, {id(m.x[0]): 3})
@@ -600,8 +605,10 @@ class TestLinear(unittest.TestCase):
         cfg = VisitorConfig()
         repn = LinearRepnVisitor(*cfg).walk_expression(e)
         self.assertEqual(cfg.subexpr, {})
-        self.assertEqual(cfg.var_map, {id(m.x[0]): m.x[0], id(m.x[1]): m.x[1]})
-        self.assertEqual(cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1})
+        self.assertEqual(
+            cfg.var_map, {id(m.x[0]): m.x[0], id(m.x[1]): m.x[1], id(m.x[2]): m.x[2]}
+        )
+        self.assertEqual(cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1, id(m.x[2]): 2})
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 0)
         self.assertEqual(repn.linear, {id(m.x[0]): 3, id(m.x[1]): 4})
@@ -612,8 +619,10 @@ class TestLinear(unittest.TestCase):
         cfg = VisitorConfig()
         repn = LinearRepnVisitor(*cfg).walk_expression(e)
         self.assertEqual(cfg.subexpr, {})
-        self.assertEqual(cfg.var_map, {id(m.x[0]): m.x[0], id(m.x[1]): m.x[1]})
-        self.assertEqual(cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1})
+        self.assertEqual(
+            cfg.var_map, {id(m.x[0]): m.x[0], id(m.x[1]): m.x[1], id(m.x[2]): m.x[2]}
+        )
+        self.assertEqual(cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1, id(m.x[2]): 2})
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 0)
         self.assertEqual(repn.linear, {id(m.x[0]): 3, id(m.x[1]): 6})
@@ -624,8 +633,10 @@ class TestLinear(unittest.TestCase):
         cfg = VisitorConfig()
         repn = LinearRepnVisitor(*cfg).walk_expression(e)
         self.assertEqual(cfg.subexpr, {})
-        self.assertEqual(cfg.var_map, {id(m.x[0]): m.x[0], id(m.x[1]): m.x[1]})
-        self.assertEqual(cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1})
+        self.assertEqual(
+            cfg.var_map, {id(m.x[0]): m.x[0], id(m.x[1]): m.x[1], id(m.x[2]): m.x[2]}
+        )
+        self.assertEqual(cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1, id(m.x[2]): 2})
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 10)
         self.assertEqual(repn.linear, {id(m.x[0]): 3, id(m.x[1]): 6})
@@ -636,8 +647,10 @@ class TestLinear(unittest.TestCase):
         cfg = VisitorConfig()
         repn = LinearRepnVisitor(*cfg).walk_expression(e)
         self.assertEqual(cfg.subexpr, {})
-        self.assertEqual(cfg.var_map, {id(m.x[0]): m.x[0], id(m.x[1]): m.x[1]})
-        self.assertEqual(cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1})
+        self.assertEqual(
+            cfg.var_map, {id(m.x[0]): m.x[0], id(m.x[1]): m.x[1], id(m.x[2]): m.x[2]}
+        )
+        self.assertEqual(cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1, id(m.x[2]): 2})
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 50)
         self.assertEqual(repn.linear, {id(m.x[0]): 3, id(m.x[1]): 6})
@@ -648,8 +661,10 @@ class TestLinear(unittest.TestCase):
         cfg = VisitorConfig()
         repn = LinearRepnVisitor(*cfg).walk_expression(e)
         self.assertEqual(cfg.subexpr, {})
-        self.assertEqual(cfg.var_map, {id(m.x[0]): m.x[0], id(m.x[1]): m.x[1]})
-        self.assertEqual(cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1})
+        self.assertEqual(
+            cfg.var_map, {id(m.x[0]): m.x[0], id(m.x[1]): m.x[1], id(m.x[2]): m.x[2]}
+        )
+        self.assertEqual(cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1, id(m.x[2]): 2})
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 0)
         self.assertStructuredAlmostEqual(
@@ -663,8 +678,10 @@ class TestLinear(unittest.TestCase):
         cfg = VisitorConfig()
         repn = LinearRepnVisitor(*cfg).walk_expression(e)
         self.assertEqual(cfg.subexpr, {})
-        self.assertEqual(cfg.var_map, {id(m.x[0]): m.x[0], id(m.x[1]): m.x[1]})
-        self.assertEqual(cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1})
+        self.assertEqual(
+            cfg.var_map, {id(m.x[0]): m.x[0], id(m.x[1]): m.x[1], id(m.x[2]): m.x[2]}
+        )
+        self.assertEqual(cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1, id(m.x[2]): 2})
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 10)
         self.assertStructuredAlmostEqual(
@@ -677,8 +694,8 @@ class TestLinear(unittest.TestCase):
         cfg = VisitorConfig()
         repn = LinearRepnVisitor(*cfg).walk_expression(e)
         self.assertEqual(cfg.subexpr, {})
-        self.assertEqual(cfg.var_map, {id(m.x[1]): m.x[1]})
-        self.assertEqual(cfg.var_order, {id(m.x[1]): 0})
+        self.assertEqual(cfg.var_map, {id(m.x[1]): m.x[1], id(m.x[2]): m.x[2]})
+        self.assertEqual(cfg.var_order, {id(m.x[1]): 0, id(m.x[2]): 1})
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 40)
         self.assertStructuredAlmostEqual(repn.linear, {id(m.x[1]): InvalidNumber(nan)})
@@ -1492,53 +1509,48 @@ class TestLinear(unittest.TestCase):
         visitor = LinearRepnVisitor(*cfg)
 
         _orig_dispatcher = linear._before_child_dispatcher
-        linear._before_child_dispatcher = bcd = {}
+        linear._before_child_dispatcher = bcd = _orig_dispatcher.__class__()
+        bcd.clear()
         try:
             # native type
             self.assertEqual(
-                linear._register_new_before_child_dispatcher(visitor, 5),
-                (False, (linear._CONSTANT, 5)),
+                bcd.register_dispatcher(visitor, 5), (False, (linear._CONSTANT, 5))
             )
             self.assertEqual(len(bcd), 1)
-            self.assertIs(bcd[int], linear._before_native)
+            self.assertIs(bcd[int], bcd._before_native_numeric)
             # complex type
             self.assertEqual(
-                linear._register_new_before_child_dispatcher(visitor, 5j),
-                (False, (linear._CONSTANT, 5j)),
+                bcd.register_dispatcher(visitor, 5j), (False, (linear._CONSTANT, 5j))
             )
             self.assertEqual(len(bcd), 2)
-            self.assertIs(bcd[complex], linear._before_complex)
+            self.assertIs(bcd[complex], bcd._before_complex)
             # ScalarParam
             m.p = Param(initialize=5)
             self.assertEqual(
-                linear._register_new_before_child_dispatcher(visitor, m.p),
-                (False, (linear._CONSTANT, 5)),
+                bcd.register_dispatcher(visitor, m.p), (False, (linear._CONSTANT, 5))
             )
             self.assertEqual(len(bcd), 3)
-            self.assertIs(bcd[m.p.__class__], linear._before_param)
+            self.assertIs(bcd[m.p.__class__], bcd._before_param)
             # ParamData
             m.q = Param([0], initialize=6, mutable=True)
             self.assertEqual(
-                linear._register_new_before_child_dispatcher(visitor, m.q[0]),
-                (False, (linear._CONSTANT, 6)),
+                bcd.register_dispatcher(visitor, m.q[0]), (False, (linear._CONSTANT, 6))
             )
             self.assertEqual(len(bcd), 4)
-            self.assertIs(bcd[m.q[0].__class__], linear._before_param)
+            self.assertIs(bcd[m.q[0].__class__], bcd._before_param)
             # NPV_SumExpression
             self.assertEqual(
-                linear._register_new_before_child_dispatcher(visitor, m.p + m.q[0]),
+                bcd.register_dispatcher(visitor, m.p + m.q[0]),
                 (False, (linear._CONSTANT, 11)),
             )
             self.assertEqual(len(bcd), 6)
-            self.assertIs(bcd[NPV_SumExpression], linear._before_npv)
-            self.assertIs(bcd[LinearExpression], linear._before_general_expression)
+            self.assertIs(bcd[NPV_SumExpression], bcd._before_npv)
+            self.assertIs(bcd[LinearExpression], bcd._before_general_expression)
             # Named expression
             m.e = Expression(expr=m.p + m.q[0])
-            self.assertEqual(
-                linear._register_new_before_child_dispatcher(visitor, m.e), (True, None)
-            )
+            self.assertEqual(bcd.register_dispatcher(visitor, m.e), (True, None))
             self.assertEqual(len(bcd), 7)
-            self.assertIs(bcd[m.e.__class__], linear._before_named_expression)
+            self.assertIs(bcd[m.e.__class__], bcd._before_named_expression)
 
         finally:
             linear._before_child_dispatcher = _orig_dispatcher

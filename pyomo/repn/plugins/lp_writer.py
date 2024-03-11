@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -310,12 +310,13 @@ class _LPWriter_impl(object):
         _qp = self.config.allow_quadratic_objective
         _qc = self.config.allow_quadratic_constraint
         objective_visitor = (QuadraticRepnVisitor if _qp else LinearRepnVisitor)(
-            {}, var_map, self.var_order
+            {}, var_map, self.var_order, sorter
         )
         constraint_visitor = (QuadraticRepnVisitor if _qc else LinearRepnVisitor)(
             objective_visitor.subexpression_cache if _qp == _qc else {},
             var_map,
             self.var_order,
+            sorter,
         )
 
         timer.toc('Initialized column order', level=logging.DEBUG)
@@ -427,8 +428,6 @@ class _LPWriter_impl(object):
 
             # Pull out the constant: we will move it to the bounds
             offset = repn.constant
-            if offset.__class__ not in int_float:
-                offset = float(offset)
             repn.constant = 0
 
             if repn.linear or getattr(repn, 'quadratic', None):
@@ -584,8 +583,6 @@ class _LPWriter_impl(object):
             for vid, coef in sorted(
                 expr.linear.items(), key=lambda x: getVarOrder(x[0])
             ):
-                if coef.__class__ not in int_float:
-                    coef = float(coef)
                 if coef < 0:
                     ostream.write(f'{coef!r} {getSymbol(getVar(vid))}\n')
                 else:
@@ -607,8 +604,6 @@ class _LPWriter_impl(object):
                 else:
                     col = c1, c2
                     sym = f' {getSymbol(getVar(vid1))} * {getSymbol(getVar(vid2))}\n'
-                if coef.__class__ not in int_float:
-                    coef = float(coef)
                 if coef < 0:
                     return col, repr(coef) + sym
                 else:

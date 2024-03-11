@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -257,7 +257,8 @@ _bullet_re = re.compile(
     r'|(?:\[\s*[A-Za-z0-9\.]+\s*\] +)'  # [PASS]|[FAIL]|[ OK ]
 )
 _verbatim_line_start = re.compile(
-    r'(\| )' r'|(\+((-{3,})|(={3,}))\+)'  # line blocks  # grid table
+    r'(\| )'  # line blocks
+    r'|(\+((-{3,})|(={3,}))\+)'  # grid table
 )
 _verbatim_line = re.compile(
     r'(={3,}[ =]+)'  # simple tables, ======== sections

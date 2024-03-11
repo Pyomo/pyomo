@@ -1,13 +1,7 @@
-3 Set Declarations
+1 Set Declarations
     a : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    3 : {1, 2, 3}
-    cl_index : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :   10 : {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-    o3_index : Size=1, Index=None, Ordered=True
-        Key  : Dimen : Domain : Size : Members
-        None :     2 :    a*a :    9 : {(1, 1), (1, 2), (1, 3), (2, 1), (2, 2), (2, 3), (3, 1), (3, 2), (3, 3)}
 
 2 Param Declarations
     A : Size=1, Index=None, Domain=Any, Default=-1, Mutable=True
@@ -37,7 +31,7 @@
           1 :   True : minimize :       b[1]
           2 :   True : minimize :       b[2]
           3 :   True : minimize :       b[3]
-    o3 : Size=0, Index=o3_index, Active=True
+    o3 : Size=0, Index=a*a, Active=True
         Key : Active : Sense : Expression
 
 19 Constraint Declarations
@@ -97,7 +91,7 @@
     c9b : Size=1, Index=None, Active=True
         Key  : Lower : Body : Upper : Active
         None :  -Inf :    c : A + A :   True
-    cl : Size=10, Index=cl_index, Active=True
+    cl : Size=10, Index={1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, Active=True
         Key : Lower : Body     : Upper : Active
           1 :  -Inf :    d - c :   0.0 :   True
           2 :  -Inf :  d - 2*c :   0.0 :   True
@@ -110,4 +104,4 @@
           9 :  -Inf :  d - 9*c :   0.0 :   True
          10 :  -Inf : d - 10*c :   0.0 :   True
 
-30 Declarations: a b c d e A B o2 o3_index o3 c1 c2 c3 c4 c5 c6a c7a c7b c8 c9a c9b c10a c11 c15a c16a c12 c13a c14a cl_index cl
+28 Declarations: a b c d e A B o2 o3 c1 c2 c3 c4 c5 c6a c7a c7b c8 c9a c9b c10a c11 c15a c16a c12 c13a c14a cl

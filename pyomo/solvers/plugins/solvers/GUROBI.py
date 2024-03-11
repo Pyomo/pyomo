@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -480,9 +480,9 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
                         name = tokens[1]
                         if name != "c_e_ONE_VAR_CONSTANT":
                             if name.startswith('c_'):
-                                soln_constraints.setdefault(tokens[1], {})[
-                                    "Dual"
-                                ] = float(tokens[2])
+                                soln_constraints.setdefault(tokens[1], {})["Dual"] = (
+                                    float(tokens[2])
+                                )
                             elif name.startswith('r_l_'):
                                 range_duals.setdefault(name[4:], [0, 0])[0] = float(
                                     tokens[2]
@@ -495,9 +495,9 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
                         name = tokens[1]
                         if name != "c_e_ONE_VAR_CONSTANT":
                             if name.startswith('c_'):
-                                soln_constraints.setdefault(tokens[1], {})[
-                                    "Slack"
-                                ] = float(tokens[2])
+                                soln_constraints.setdefault(tokens[1], {})["Slack"] = (
+                                    float(tokens[2])
+                                )
                             elif name.startswith('r_l_'):
                                 range_slacks.setdefault(name[4:], [0, 0])[0] = float(
                                     tokens[2]
