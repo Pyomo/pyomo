@@ -36,15 +36,15 @@ class _ExternalFunctionVisitor(StreamBasedExpressionVisitor):
         return True, None
 
     def beforeChild(self, parent, child, index):
-        if (
+        if child.__class__ in native_types:
+            return False, None
+        elif (
             not self._descend_into_named_expressions
-            and isinstance(child, NumericValue)
             and child.is_named_expression_type()
         ):
             self.named_expressions.append(child)
             return False, None
-        else:
-            return True, None
+        return True, None
 
     def exitNode(self, node, data):
         if type(node) is ExternalFunctionExpression:
