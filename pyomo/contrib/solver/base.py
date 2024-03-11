@@ -423,7 +423,7 @@ class LegacySolverWrapper:
         legacy_results.problem.number_of_variables = model.nvariables()
         number_of_objectives = model.nobjectives()
         legacy_results.problem.number_of_objectives = number_of_objectives
-        if number_of_objectives > 0:
+        if number_of_objectives == 1:
             obj = get_objective(model)
             legacy_results.problem.sense = obj.sense
 
