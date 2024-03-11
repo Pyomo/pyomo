@@ -101,12 +101,7 @@ def add_local_external_functions(block):
     return fcn_comp_map
 
 
-from pyomo.common.timing import HierarchicalTimer
-
-
-def create_subsystem_block(
-    constraints, variables=None, include_fixed=False, timer=None
-):
+def create_subsystem_block(constraints, variables=None, include_fixed=False):
     """This function creates a block to serve as a subsystem with the
     specified variables and constraints. To satisfy certain writers, other
     variables that appear in the constraints must be added to the block as
@@ -130,36 +125,24 @@ def create_subsystem_block(
     as well as other variables present in the constraints
 
     """
-    if timer is None:
-        timer = HierarchicalTimer()
     if variables is None:
         variables = []
-    timer.start("block")
     block = Block(concrete=True)
-    timer.stop("block")
-    timer.start("reference")
     block.vars = Reference(variables)
     block.cons = Reference(constraints)
-    timer.stop("reference")
     var_set = ComponentSet(variables)
     input_vars = []
-    timer.start("identify-vars")
     for con in constraints:
         for var in identify_variables(con.expr, include_fixed=include_fixed):
             if var not in var_set:
                 input_vars.append(var)
                 var_set.add(var)
-    timer.stop("identify-vars")
-    timer.start("reference")
     block.input_vars = Reference(input_vars)
-    timer.stop("reference")
-    timer.start("external-fcns")
     add_local_external_functions(block)
-    timer.stop("external-fcns")
     return block
 
 
-def generate_subsystem_blocks(subsystems, include_fixed=False, timer=None):
+def generate_subsystem_blocks(subsystems, include_fixed=False):
     """Generates blocks that contain subsystems of variables and constraints.
 
     Arguments
@@ -178,10 +161,8 @@ def generate_subsystem_blocks(subsystems, include_fixed=False, timer=None):
     not specified are contained in the input_vars component.
 
     """
-    if timer is None:
-        timer = HierarchicalTimer()
     for cons, vars in subsystems:
-        block = create_subsystem_block(cons, vars, include_fixed, timer=timer)
+        block = create_subsystem_block(cons, vars, include_fixed)
         yield block, list(block.input_vars.values())
 
 
