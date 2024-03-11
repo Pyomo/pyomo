@@ -282,10 +282,21 @@ class BeforeChildDispatcher(collections.defaultdict):
             else:
                 self[child_type] = self._before_invalid
         elif not child.is_expression_type():
-            if child.is_potentially_variable():
-                self[child_type] = self._before_var
+            if child.is_indexed():
+                cdata = child._ComponentDataClass(child)
+                if cdata.is_expression_type():
+                    self[child_type] = self._before_indexed_expr
+                elif cdata.is_potentially_variable():
+                    self[child_type] = self._before_indexed_var
+                else:
+                    self[child_type] = self._before_indexed_param
             else:
-                self[child_type] = self._before_param
+                if child.is_potentially_variable():
+                    self[child_type] = self._before_var
+                elif isinstance(child, EXPR.IndexTemplate):
+                    self[child_type] = self._before_index_template
+                else:
+                    self[child_type] = self._before_param
         elif not child.is_potentially_variable():
             self[child_type] = self._before_npv
             pv_base_type = child.potentially_variable_base_class()
@@ -356,6 +367,34 @@ class BeforeChildDispatcher(collections.defaultdict):
     @staticmethod
     def _before_param(visitor, child):
         return False, (_CONSTANT, visitor.check_constant(child.value, child))
+
+    @staticmethod
+    def _before_index_template(visitor, child):
+        raise NotImplementedError(
+            f"{visitor.__class__.__name__} can not handle template expressions "
+            f"containing {child.__class__} nodes"
+        )
+
+    @staticmethod
+    def _before_indexed_expr(visitor, child):
+        raise NotImplementedError(
+            f"{visitor.__class__.__name__} can not handle template expressions "
+            f"containing {child.__class__} nodes"
+        )
+
+    @staticmethod
+    def _before_indexed_param(visitor, child):
+        raise NotImplementedError(
+            f"{visitor.__class__.__name__} can not handle template expressions "
+            f"containing {child.__class__} nodes"
+        )
+
+    @staticmethod
+    def _before_indexed_var(visitor, child):
+        raise NotImplementedError(
+            f"{visitor.__class__.__name__} can not handle template expressions "
+            f"containing {child.__class__} nodes"
+        )
 
     #
     # The following methods must be defined by derivative classes (along
