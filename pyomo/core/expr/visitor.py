@@ -1424,14 +1424,6 @@ class _StreamVariableVisitor(StreamBasedExpressionVisitor):
     def finalizeResult(self, result):
         return self._variables
 
-    def enterNode(self, node):
-        pass
-
-    def acceptChildResult(self, node, data, child_result, child_idx):
-        if child_result.__class__ in native_types:
-            return False, None
-        return child_result.is_expression_type(), None
-
 
 def identify_variables(expr, include_fixed=True):
     """
