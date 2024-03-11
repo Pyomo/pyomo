@@ -399,7 +399,7 @@ def construct_dr_polishing_problem(model_data, config):
 
         # get monomials; ensure second-stage variable term excluded
         #
-        # the dr_eq is a linear sum where teh first term is the
+        # the dr_eq is a linear sum where the first term is the
         # second-stage variable: the remainder of the terms will be
         # either MonomialTermExpressions or bare VarData
         dr_expr_terms = dr_eq.body.args[:-1]
