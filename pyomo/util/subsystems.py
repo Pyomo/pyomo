@@ -57,8 +57,6 @@ class _ExternalFunctionVisitor(StreamBasedExpressionVisitor):
 
 
 def identify_external_functions(expr):
-    # TODO: Potentially support descend_into_named_expressions argument here.
-    # This will likely require converting from a generator to a function.
     yield from _ExternalFunctionVisitor().walk_expression(expr)
 
 
