@@ -55,14 +55,6 @@ class _ExternalFunctionVisitor(StreamBasedExpressionVisitor):
     def finalizeResult(self, result):
         return self._functions
 
-    # def enterNode(self, node):
-    #    pass
-
-    # def acceptChildResult(self, node, data, child_result, child_idx):
-    #    if child_result.__class__ in native_types:
-    #        return False, None
-    #    return child_result.is_expression_type(), None
-
 
 def identify_external_functions(expr):
     # TODO: Potentially support descend_into_named_expressions argument here.
