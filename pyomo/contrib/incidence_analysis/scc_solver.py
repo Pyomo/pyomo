@@ -11,7 +11,6 @@
 
 import logging
 
-from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.base.constraint import Constraint
 from pyomo.util.calc_var_value import calculate_variable_from_constraint
 from pyomo.util.subsystems import TemporarySubsystemManager, generate_subsystem_blocks
@@ -26,7 +25,7 @@ _log = logging.getLogger(__name__)
 
 
 def generate_strongly_connected_components(
-    constraints, variables=None, include_fixed=False, igraph=None, timer=None
+    constraints, variables=None, include_fixed=False, igraph=None
 ):
     """Yield in order ``_BlockData`` that each contain the variables and
     constraints of a single diagonal block in a block lower triangularization
@@ -58,10 +57,7 @@ def generate_strongly_connected_components(
         "input variables" for that block.
 
     """
-    if timer is None:
-        timer = HierarchicalTimer()
     if variables is None:
-        timer.start("generate-vars")
         variables = list(
             _generate_variables_in_constraints(
                 constraints,
@@ -69,30 +65,23 @@ def generate_strongly_connected_components(
                 method=IncidenceMethod.ampl_repn,
             )
         )
-        timer.stop("generate-vars")
 
     assert len(variables) == len(constraints)
     if igraph is None:
         igraph = IncidenceGraphInterface()
 
-    timer.start("block-triang")
     var_blocks, con_blocks = igraph.block_triangularize(
         variables=variables, constraints=constraints
     )
-    timer.stop("block-triang")
     subsets = [(cblock, vblock) for vblock, cblock in zip(var_blocks, con_blocks)]
-    timer.start("generate-block")
     for block, inputs in generate_subsystem_blocks(
-        subsets, include_fixed=include_fixed, timer=timer
+        subsets, include_fixed=include_fixed
     ):
-        timer.stop("generate-block")
         # TODO: How does len scale for reference-to-list?
         assert len(block.vars) == len(block.cons)
         yield (block, inputs)
         # Note that this code, after the last yield, I believe is only called
         # at time of GC.
-        timer.start("generate-block")
-    timer.stop("generate-block")
 
 
 def solve_strongly_connected_components(
@@ -102,7 +91,6 @@ def solve_strongly_connected_components(
     solve_kwds=None,
     use_calc_var=True,
     calc_var_kwds=None,
-    timer=None,
 ):
     """Solve a square system of variables and equality constraints by
     solving strongly connected components individually.
@@ -142,10 +130,7 @@ def solve_strongly_connected_components(
         solve_kwds = {}
     if calc_var_kwds is None:
         calc_var_kwds = {}
-    if timer is None:
-        timer = HierarchicalTimer()
 
-    timer.start("igraph")
     igraph = IncidenceGraphInterface(
         block,
         active=True,
@@ -153,27 +138,22 @@ def solve_strongly_connected_components(
         include_inequality=False,
         method=IncidenceMethod.ampl_repn,
     )
-    timer.stop("igraph")
     constraints = igraph.constraints
     variables = igraph.variables
 
     res_list = []
     log_blocks = _log.isEnabledFor(logging.DEBUG)
-    timer.start("generate-scc")
     for scc, inputs in generate_strongly_connected_components(
-        constraints, variables, timer=timer, igraph=igraph
+        constraints, variables, igraph=igraph
     ):
-        timer.stop("generate-scc")
         with TemporarySubsystemManager(to_fix=inputs, remove_bounds_on_fix=True):
             N = len(scc.vars)
             if N == 1 and use_calc_var:
                 if log_blocks:
                     _log.debug(f"Solving 1x1 block: {scc.cons[0].name}.")
-                timer.start("calc-var-from-con")
                 results = calculate_variable_from_constraint(
                     scc.vars[0], scc.cons[0], **calc_var_kwds
                 )
-                timer.stop("calc-var-from-con")
             else:
                 if solver is None:
                     var_names = [var.name for var in scc.vars.values()][:10]
@@ -186,10 +166,6 @@ def solve_strongly_connected_components(
                     )
                 if log_blocks:
                     _log.debug(f"Solving {N}x{N} block.")
-                timer.start("scc-subsolver")
                 results = solver.solve(scc, **solve_kwds)
-                timer.stop("scc-subsolver")
             res_list.append(results)
-        timer.start("generate-scc")
-    timer.stop("generate-scc")
     return res_list
