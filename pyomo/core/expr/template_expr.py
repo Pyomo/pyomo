@@ -15,7 +15,9 @@ import sys
 import builtins
 from contextlib import nullcontext
 
+from pyomo.common.collections import MutableMapping
 from pyomo.common.errors import TemplateExpressionError
+from pyomo.common.gc_manager import PauseGC
 from pyomo.core.expr.base import ExpressionBase, ExpressionArgs_Mixin, NPV_Mixin
 from pyomo.core.expr.logical_expr import BooleanExpression
 from pyomo.core.expr.numeric_expr import (
@@ -1181,3 +1183,43 @@ def templatize_constraint(con):
     if expr.__class__ is tuple:
         expr = tuple_to_relational_expr(expr)
     return expr, indices
+
+
+class TemplatizedDataStore(MutableMapping):
+    def __init__(self, component, expr, indices):
+        self._component = component
+        self._expr = expr
+        self._indices = indices
+
+    def __getitem__(self, item):
+        if self._component._data is self:
+            self._replace_with_dict()
+        return self._component._data[item]
+
+    def __setitem__(self, item, value):
+        if self._component._data is self:
+            self._replace_with_dict()
+        self._component._data[item] = value
+
+    def __delitem__(self, index):
+        if self._component._data is self:
+            self._replace_with_dict()
+        del self._component._data[item]
+
+    def __iter__(self):
+        return iter(self._component.index_set())
+
+    def __len__(self):
+        return len(self._component.index_set())
+
+    def __bool__(self):
+        return bool(self._component.index_set())
+
+    def _replace_with_dict(self):
+        comp = self._component
+        comp._data = {}
+        rule = comp.rule
+        block = comp.parent_block()
+        with PauseGC():
+            for index in comp.index_set():
+                comp._setitem_when_not_present(index, rule(block, index))

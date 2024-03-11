@@ -15,7 +15,7 @@ from weakref import ref as weakref_ref
 from pyomo.common.pyomo_typing import overload
 
 from pyomo.common.deprecation import RenamedClass
-from pyomo.common.errors import DeveloperError
+from pyomo.common.errors import DeveloperError, TemplateExpressionError
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
@@ -36,6 +36,7 @@ from pyomo.core.expr import (
     InequalityExpression,
     RangedExpression,
 )
+from pyomo.core.expr.template_expr import TemplatizedDataStore, templatize_constraint
 from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import (
@@ -53,6 +54,8 @@ from pyomo.core.base.initializer import (
 
 
 logger = logging.getLogger('pyomo.core')
+
+TEMPLATIZE_CONSTRAINTS = False
 
 _inf = float('inf')
 _nonfinite_values = {_inf, -_inf}
@@ -795,6 +798,14 @@ class Constraint(ActiveIndexedComponent):
                 # indices to be created at a later time).
                 pass
             else:
+                if TEMPLATIZE_CONSTRAINTS:
+                    try:
+                        expr, indices = templatize_constraint(self)
+                        self._data = TemplatizedDataStore(self, expr, indices)
+                        return
+                    except TemplateExpressionError:
+                        pass
+
                 # Bypass the index validation and create the member directly
                 for index in self.index_set():
                     self._setitem_when_not_present(index, rule(block, index))
