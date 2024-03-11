@@ -398,10 +398,17 @@ def construct_dr_polishing_problem(model_data, config):
         all_ub_cons.append(polishing_absolute_value_ub_cons)
 
         # get monomials; ensure second-stage variable term excluded
+        #
+        # the dr_eq is a linear sum where the first term is the
+        # second-stage variable: the remainder of the terms will be
+        # either MonomialTermExpressions or bare VarData
         dr_expr_terms = dr_eq.body.args[:-1]
 
         for dr_eq_term in dr_expr_terms:
-            dr_var_in_term = dr_eq_term.args[-1]
+            if dr_eq_term.is_expression_type():
+                dr_var_in_term = dr_eq_term.args[-1]
+            else:
+                dr_var_in_term = dr_eq_term
             dr_var_in_term_idx = dr_var_in_term.index()
 
             # get corresponding polishing variable

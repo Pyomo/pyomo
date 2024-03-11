@@ -181,7 +181,7 @@ print(str(e))
 # x[0] + 5*x[1]
 print(str(ce))
 # x[0] + 5*x[1]
-print(e.arg(0) is not ce.arg(0))
+print(e.arg(0) is ce.arg(0))
 # True
 print(e.arg(1) is not ce.arg(1))
 # True

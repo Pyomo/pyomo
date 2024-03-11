@@ -19,6 +19,7 @@ from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.core.base.set_types import NonNegativeIntegers
+from pyomo.core.base.var import _VarData
 from pyomo.core.expr import (
     identify_variables,
     identify_mutable_parameters,
@@ -571,22 +572,30 @@ class testAddDecisionRuleConstraints(unittest.TestCase):
                 dr_polynomial_terms, indexed_dr_var.values(), dr_monomial_param_combos
             )
             for idx, (term, dr_var, param_combo) in enumerate(dr_polynomial_zip):
-                # term should be a monomial expression of form
-                # (uncertain parameter product) * (decision rule variable)
-                # so length of expression object should be 2
-                self.assertEqual(
-                    len(term.args),
-                    2,
-                    msg=(
-                        f"Length of `args` attribute of term {str(term)} "
-                        f"of DR equation {dr_eq.name!r} is not as expected. "
-                        f"Args: {term.args}"
-                    ),
-                )
+                # term should be either a monomial expression or scalar variable
+                if isinstance(term, MonomialTermExpression):
+                    # should be of form (uncertain parameter product) *
+                    # (decision rule variable) so length of expression
+                    # object should be 2
+                    self.assertEqual(
+                        len(term.args),
+                        2,
+                        msg=(
+                            f"Length of `args` attribute of term {str(term)} "
+                            f"of DR equation {dr_eq.name!r} is not as expected. "
+                            f"Args: {term.args}"
+                        ),
+                    )
 
-                # check that uncertain parameters participating in
-                # the monomial are as expected
-                param_product_multiplicand = term.args[0]
+                    # check that uncertain parameters participating in
+                    # the monomial are as expected
+                    param_product_multiplicand = term.args[0]
+                    dr_var_multiplicand = term.args[1]
+                else:
+                    self.assertIsInstance(term, _VarData)
+                    param_product_multiplicand = 1
+                    dr_var_multiplicand = term
+
                 if idx == 0:
                     # static DR term
                     param_combo_found_in_term = (param_product_multiplicand,)
@@ -612,7 +621,6 @@ class testAddDecisionRuleConstraints(unittest.TestCase):
 
                 # check that DR variable participating in the monomial
                 # is as expected
-                dr_var_multiplicand = term.args[1]
                 self.assertIs(
                     dr_var_multiplicand,
                     dr_var,
