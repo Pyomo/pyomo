@@ -85,12 +85,7 @@ def generate_strongly_connected_components(
 
 
 def solve_strongly_connected_components(
-    block,
-    *,
-    solver=None,
-    solve_kwds=None,
-    use_calc_var=True,
-    calc_var_kwds=None,
+    block, *, solver=None, solve_kwds=None, use_calc_var=True, calc_var_kwds=None
 ):
     """Solve a square system of variables and equality constraints by
     solving strongly connected components individually.
