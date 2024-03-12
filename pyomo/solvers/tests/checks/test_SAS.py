@@ -34,7 +34,9 @@ class SASTestAbc:
 
     @classmethod
     def setUpClass(cls):
-        cls.opt_sas = SolverFactory("sas", solver_io=cls.solver_io, **cls.session_options)
+        cls.opt_sas = SolverFactory(
+            "sas", solver_io=cls.solver_io, **cls.session_options
+        )
 
     @classmethod
     def tearDownClass(cls):

@@ -204,9 +204,9 @@ class SASAbc(ABC, OptSolver):
             results.solver.termination_condition = SOLSTATUS_TO_TERMINATIONCOND[
                 solution_status
             ]
-            results.solver.message = (
-                results.solver.termination_message
-            ) = SOLSTATUS_TO_MESSAGE[solution_status]
+            results.solver.message = results.solver.termination_message = (
+                SOLSTATUS_TO_MESSAGE[solution_status]
+            )
             results.solver.status = TerminationCondition.to_solver_status(
                 results.solver.termination_condition
             )
@@ -215,14 +215,14 @@ class SASAbc(ABC, OptSolver):
         elif results.solver.status == SolverStatus.aborted:
             results.solver.termination_condition = TerminationCondition.userInterrupt
             if solution_status != "ERROR":
-                results.solver.message = (
-                    results.solver.termination_message
-                ) = SOLSTATUS_TO_MESSAGE[solution_status]
+                results.solver.message = results.solver.termination_message = (
+                    SOLSTATUS_TO_MESSAGE[solution_status]
+                )
         else:
             results.solver.termination_condition = TerminationCondition.error
-            results.solver.message = (
-                results.solver.termination_message
-            ) = SOLSTATUS_TO_MESSAGE["FAILED"]
+            results.solver.message = results.solver.termination_message = (
+                SOLSTATUS_TO_MESSAGE["FAILED"]
+            )
         return results
 
     @abstractmethod
@@ -502,7 +502,9 @@ class SAS94(SASAbc):
 
             # Store status in solution
             sol.status = SolutionStatus.feasible
-            sol.termination_condition = SOLSTATUS_TO_TERMINATIONCOND[self._macro.get("SOLUTION_STATUS", "ERROR")]
+            sol.termination_condition = SOLSTATUS_TO_TERMINATIONCOND[
+                self._macro.get("SOLUTION_STATUS", "ERROR")
+            ]
 
             # Store objective value in solution
             sol.objective["__default_objective__"] = {"Value": self._macro["OBJECTIVE"]}
@@ -632,7 +634,7 @@ class SASCAS(SASAbc):
 
                 # Upload mps file to CAS, if the file is larger than 2 GB, we need to use convertMps instead of loadMps
                 # Note that technically it is 2 Gibibytes file size that trigger the issue, but 2 GB is the safer threshold
-                if stat(self._problem_files[0]).st_size > 2E9:
+                if stat(self._problem_files[0]).st_size > 2e9:
                     # For files larger than 2 GB (this is a limitation of the loadMps action used in the else part).
                     # Use convertMPS, first create file for upload.
                     mpsWithIdFileName = TempfileManager.create_tempfile(
@@ -723,7 +725,9 @@ class SASCAS(SASAbc):
 
                             # Store status in solution
                             sol.status = SolutionStatus.feasible
-                            sol.termination_condition = SOLSTATUS_TO_TERMINATIONCOND[r.get("solutionStatus", "ERROR")]
+                            sol.termination_condition = SOLSTATUS_TO_TERMINATIONCOND[
+                                r.get("solutionStatus", "ERROR")
+                            ]
 
                             # Store objective value in solution
                             sol.objective["__default_objective__"] = {
@@ -766,9 +770,7 @@ class SASCAS(SASAbc):
                                         "slack": row[3],
                                     }
                     else:
-                        raise ValueError(
-                            "The SAS solver returned an error status."
-                        )
+                        raise ValueError("The SAS solver returned an error status.")
                 else:
                     results = self.results = SolverResults()
                     results.solver.name = "SAS"
