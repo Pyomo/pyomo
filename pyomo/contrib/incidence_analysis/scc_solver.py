@@ -80,8 +80,6 @@ def generate_strongly_connected_components(
         # TODO: How does len scale for reference-to-list?
         assert len(block.vars) == len(block.cons)
         yield (block, inputs)
-        # Note that this code, after the last yield, I believe is only called
-        # at time of GC.
 
 
 def solve_strongly_connected_components(
