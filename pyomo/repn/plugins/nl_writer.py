@@ -1092,7 +1092,7 @@ class _NLWriter_impl(object):
                 # all the constraints from the subsystem.  Because the
                 # free variables in the subsystem are not referenced
                 # anywhere else in the model, they are not part of the
-                # `varaibles` list.  Implicitly "fix" it to an arbitrary
+                # `variables` list.  Implicitly "fix" it to an arbitrary
                 # valid value from the presolved domain (see #3192).
                 if _i not in _vmap:
                     lb, ub = var_bounds[_i]
