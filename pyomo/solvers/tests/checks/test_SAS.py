@@ -30,11 +30,11 @@ sas_available = check_available_solvers("sas")
 
 class SASTestAbc:
     solver_io = "_sas94"
-    base_options = {}
+    session_options = {}
 
     @classmethod
     def setUpClass(cls):
-        cls.opt_sas = SolverFactory("sas", solver_io=cls.solver_io)
+        cls.opt_sas = SolverFactory("sas", solver_io=cls.solver_io, **cls.session_options)
 
     @classmethod
     def tearDownClass(cls):
@@ -72,11 +72,6 @@ class SASTestAbc:
     def run_solver(self, **kwargs):
         opt_sas = self.opt_sas
         instance = self.instance
-
-        # Add base options for connection data etc.
-        options = kwargs.get("options", {})
-        if self.base_options:
-            kwargs["options"] = {**options, **self.base_options}
 
         # Call the solver
         self.results = opt_sas.solve(instance, **kwargs)
@@ -285,7 +280,7 @@ class SASTestLP(SASTestAbc):
 class SASTestLP94(SASTestLP, unittest.TestCase):
     @mock.patch(
         "pyomo.solvers.plugins.solvers.SAS.SAS94.sas_version",
-        return_value="2sd45s39M4234232",
+        return_value="9.sd45s39M4234232",
     )
     def test_solver_versionM4(self, sas):
         with self.assertRaises(NotImplementedError):
@@ -293,7 +288,7 @@ class SASTestLP94(SASTestLP, unittest.TestCase):
 
     @mock.patch(
         "pyomo.solvers.plugins.solvers.SAS.SAS94.sas_version",
-        return_value="234897293M5324u98",
+        return_value="9.34897293M5324u98",
     )
     def test_solver_versionM5(self, sas):
         self.run_solver()
@@ -317,7 +312,7 @@ class SASTestLP94(SASTestLP, unittest.TestCase):
 @unittest.skipIf(not sas_available, "The SAS solver is not available")
 class SASTestLPCAS(SASTestLP, unittest.TestCase):
     solver_io = "_sascas"
-    base_options = CAS_OPTIONS
+    session_options = CAS_OPTIONS
 
     @mock.patch("pyomo.solvers.plugins.solvers.SAS.stat")
     def test_solver_large_file(self, os_stat):
@@ -522,7 +517,7 @@ class SASTestMILP94(SASTestMILP, unittest.TestCase):
 @unittest.skipIf(not sas_available, "The SAS solver is not available")
 class SASTestMILPCAS(SASTestMILP, unittest.TestCase):
     solver_io = "_sascas"
-    base_options = CAS_OPTIONS
+    session_options = CAS_OPTIONS
 
 
 if __name__ == "__main__":

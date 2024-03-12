@@ -96,23 +96,6 @@ SOLSTATUS_TO_MESSAGE = {
 }
 
 
-CAS_OPTION_NAMES = [
-    "hostname",
-    "port",
-    "username",
-    "password",
-    "session",
-    "locale",
-    "name",
-    "nworkers",
-    "authinfo",
-    "protocol",
-    "path",
-    "ssl_ca_list",
-    "authcode",
-]
-
-
 @SolverFactory.register("sas", doc="The SAS LP/MIP solver")
 class SAS(OptSolver):
     """The SAS optimization solver"""
@@ -120,7 +103,7 @@ class SAS(OptSolver):
     def __new__(cls, *args, **kwds):
         mode = kwds.pop("solver_io", None)
         if mode != None:
-            return SolverFactory(mode)
+            return SolverFactory(mode, **kwds)
         else:
             # Choose solver factory automatically
             # based on what can be loaded.
@@ -216,6 +199,7 @@ class SASAbc(ABC, OptSolver):
         results = SolverResults()
         results.solver.name = "SAS"
         results.solver.status = STATUS_TO_SOLVERSTATUS[status]
+        results.solver.hasSolution = False
         if results.solver.status == SolverStatus.ok:
             results.solver.termination_condition = SOLSTATUS_TO_TERMINATIONCOND[
                 solution_status
@@ -226,11 +210,14 @@ class SASAbc(ABC, OptSolver):
             results.solver.status = TerminationCondition.to_solver_status(
                 results.solver.termination_condition
             )
+            if "OPTIMAL" in solution_status or "_SOL" in solution_status:
+                results.solver.hasSolution = True
         elif results.solver.status == SolverStatus.aborted:
             results.solver.termination_condition = TerminationCondition.userInterrupt
-            results.solver.message = (
-                results.solver.termination_message
-            ) = SOLSTATUS_TO_MESSAGE["ABORTED"]
+            if solution_status != "ERROR":
+                results.solver.message = (
+                    results.solver.termination_message
+                ) = SOLSTATUS_TO_MESSAGE[solution_status]
         else:
             results.solver.termination_condition = TerminationCondition.error
             results.solver.message = (
@@ -288,6 +275,9 @@ class SAS94(SASAbc):
         # Create the session only as its needed
         self._sas_session = None
 
+        # Store other options for the SAS session
+        self._session_options = kwds
+
     def __del__(self):
         # Close the session, if we created one
         if self._sas_session:
@@ -325,10 +315,6 @@ class SAS94(SASAbc):
         else:
             # Check if there are integer variables, this might be slow
             proc = "OPTMILP" if self._has_integer_variables() else "OPTLP"
-
-        # Remove CAS options in case they were specified
-        for opt in CAS_OPTION_NAMES:
-            self.options.pop(opt, None)
 
         # Get the rootnode options
         decomp_str = self._create_statement_str("decomp")
@@ -373,9 +359,7 @@ class SAS94(SASAbc):
         sas_options = "option notes nonumber nodate nosource pagesize=max;"
 
         # Get the current SAS session, submit the code and return the results
-        sas = self._sas_session
-        if sas == None:
-            sas = self._sas_session = self._sas.SASsession()
+        sas = self._sas_session = self._sas.SASsession(**self._session_options)
 
         # Find the version of 9.4 we are using
         self._sasver = sas.sasver
@@ -396,12 +380,13 @@ class SAS94(SASAbc):
             upload_pin = True
 
         # Using a function call to make it easier to moch the version check
-        version = self.sas_version().split("M", 1)[1][0]
-        if int(version) < 5:
+        major_version = self.sas_version()[0]
+        minor_version = self.sas_version().split("M", 1)[1][0]
+        if major_version == "9" and int(minor_version) < 5:
             raise NotImplementedError(
                 "Support for SAS 9.4 M4 and earlier is no implemented."
             )
-        elif int(version) == 5:
+        elif major_version == "9" and int(minor_version) == 5:
             # In 9.4M5 we have to create an MPS data set from an MPS file first
             # Earlier versions will not work because the MPS format in incompatible
             mps_dataset_name = "mps" + unique
@@ -436,7 +421,7 @@ class SAS94(SASAbc):
             )
             sas.sasdata(mps_dataset_name).delete(quiet=True)
         else:
-            # Since 9.4M6+ optlp/optmilp can read mps files directly
+            # Since 9.4M6+ optlp/optmilp can read mps files directly (this includes Viya-based local installs)
             res = sas.submit(
                 """
                             {sas_options}
@@ -512,12 +497,12 @@ class SAS94(SASAbc):
             results.problem.sense = ProblemSense.minimize
 
         # Prepare the solution information
-        if results.solver.termination_condition == TerminationCondition.optimal:
+        if results.solver.hasSolution:
             sol = results.solution.add()
 
             # Store status in solution
             sol.status = SolutionStatus.feasible
-            sol.termination_condition = TerminationCondition.optimal
+            sol.termination_condition = SOLSTATUS_TO_TERMINATIONCOND[self._macro.get("SOLUTION_STATUS", "ERROR")]
 
             # Store objective value in solution
             sol.objective["__default_objective__"] = {"Value": self._macro["OBJECTIVE"]}
@@ -606,6 +591,7 @@ class SASCAS(SASAbc):
 
         # Create the session only as its needed
         self._sas_session = None
+        self._session_options = kwds
 
     def __del__(self):
         # Close the session, if we created one
@@ -618,13 +604,6 @@ class SASCAS(SASAbc):
 
         # Set return code to issue an error if we get interrupted
         self._rc = -1
-
-        # Extract CAS connection options
-        cas_opts = {}
-        for opt in CAS_OPTION_NAMES:
-            val = self.options.pop(opt, None)
-            if val != None:
-                cas_opts[opt] = val
 
         # Figure out if the problem has integer variables
         with_opt = self.options.pop("with", None)
@@ -643,7 +622,7 @@ class SASCAS(SASAbc):
         with redirect_stdout(SASLogWriter(self._tee)) as self._log_writer:
             s = self._sas_session
             if s == None:
-                s = self._sas_session = self._sas.CAS(**cas_opts)
+                s = self._sas_session = self._sas.CAS(**self._session_options)
             try:
                 # Load the optimization action set
                 s.loadactionset("optimization")
@@ -651,8 +630,9 @@ class SASCAS(SASAbc):
                 # Declare a unique table name for the mps table
                 mpsdata_table_name = "mps" + unique
 
-                # Upload mps file to CAS
-                if stat(self._problem_files[0]).st_size >= 2 * 1024**3:
+                # Upload mps file to CAS, if the file is larger than 2 GB, we need to use convertMps instead of loadMps
+                # Note that technically it is 2 Gibibytes file size that trigger the issue, but 2 GB is the safer threshold
+                if stat(self._problem_files[0]).st_size > 2E9:
                     # For files larger than 2 GB (this is a limitation of the loadMps action used in the else part).
                     # Use convertMPS, first create file for upload.
                     mpsWithIdFileName = TempfileManager.create_tempfile(
@@ -731,62 +711,64 @@ class SASCAS(SASAbc):
                         r.get("status", "ERROR"), r.get("solutionStatus", "ERROR")
                     )
 
-                    if r.ProblemSummary["cValue1"][1] == "Maximization":
-                        results.problem.sense = ProblemSense.maximize
-                    else:
-                        results.problem.sense = ProblemSense.minimize
-
-                    # Prepare the solution information
-                    if (
-                        results.solver.termination_condition
-                        == TerminationCondition.optimal
-                    ):
-                        sol = results.solution.add()
-
-                        # Store status in solution
-                        sol.status = SolutionStatus.feasible
-                        sol.termination_condition = TerminationCondition.optimal
-
-                        # Store objective value in solution
-                        sol.objective["__default_objective__"] = {
-                            "Value": r["objective"]
-                        }
-
-                        if action == "solveMilp":
-                            primal_out = s.CASTable(name=primalout_table_name)
-                            # Use pandas functions for efficiency
-                            primal_out = primal_out[["_VAR_", "_VALUE_"]]
-                            sol.variable = {}
-                            for row in primal_out.itertuples(index=False):
-                                sol.variable[row[0]] = {"Value": row[1]}
+                    if results.solver.status != SolverStatus.error:
+                        if r.ProblemSummary["cValue1"][1] == "Maximization":
+                            results.problem.sense = ProblemSense.maximize
                         else:
-                            # Convert primal out data set to variable dictionary
-                            # Use panda functions for efficiency
-                            primal_out = s.CASTable(name=primalout_table_name)
-                            primal_out = primal_out[
-                                ["_VAR_", "_VALUE_", "_STATUS_", "_R_COST_"]
-                            ]
-                            sol.variable = {}
-                            for row in primal_out.itertuples(index=False):
-                                sol.variable[row[0]] = {
-                                    "Value": row[1],
-                                    "Status": row[2],
-                                    "rc": row[3],
-                                }
+                            results.problem.sense = ProblemSense.minimize
 
-                            # Convert dual out data set to constraint dictionary
-                            # Use pandas functions for efficiency
-                            dual_out = s.CASTable(name=dualout_table_name)
-                            dual_out = dual_out[
-                                ["_ROW_", "_VALUE_", "_STATUS_", "_ACTIVITY_"]
-                            ]
-                            sol.constraint = {}
-                            for row in dual_out.itertuples(index=False):
-                                sol.constraint[row[0]] = {
-                                    "dual": row[1],
-                                    "Status": row[2],
-                                    "slack": row[3],
-                                }
+                        # Prepare the solution information
+                        if results.solver.hasSolution:
+                            sol = results.solution.add()
+
+                            # Store status in solution
+                            sol.status = SolutionStatus.feasible
+                            sol.termination_condition = SOLSTATUS_TO_TERMINATIONCOND[r.get("solutionStatus", "ERROR")]
+
+                            # Store objective value in solution
+                            sol.objective["__default_objective__"] = {
+                                "Value": r["objective"]
+                            }
+
+                            if action == "solveMilp":
+                                primal_out = s.CASTable(name=primalout_table_name)
+                                # Use pandas functions for efficiency
+                                primal_out = primal_out[["_VAR_", "_VALUE_"]]
+                                sol.variable = {}
+                                for row in primal_out.itertuples(index=False):
+                                    sol.variable[row[0]] = {"Value": row[1]}
+                            else:
+                                # Convert primal out data set to variable dictionary
+                                # Use panda functions for efficiency
+                                primal_out = s.CASTable(name=primalout_table_name)
+                                primal_out = primal_out[
+                                    ["_VAR_", "_VALUE_", "_STATUS_", "_R_COST_"]
+                                ]
+                                sol.variable = {}
+                                for row in primal_out.itertuples(index=False):
+                                    sol.variable[row[0]] = {
+                                        "Value": row[1],
+                                        "Status": row[2],
+                                        "rc": row[3],
+                                    }
+
+                                # Convert dual out data set to constraint dictionary
+                                # Use pandas functions for efficiency
+                                dual_out = s.CASTable(name=dualout_table_name)
+                                dual_out = dual_out[
+                                    ["_ROW_", "_VALUE_", "_STATUS_", "_ACTIVITY_"]
+                                ]
+                                sol.constraint = {}
+                                for row in dual_out.itertuples(index=False):
+                                    sol.constraint[row[0]] = {
+                                        "dual": row[1],
+                                        "Status": row[2],
+                                        "slack": row[3],
+                                    }
+                    else:
+                        raise ValueError(
+                            "The SAS solver returned an error status."
+                        )
                 else:
                     results = self.results = SolverResults()
                     results.solver.name = "SAS"
