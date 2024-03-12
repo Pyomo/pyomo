@@ -341,11 +341,11 @@ class TestSubsystemBlock(unittest.TestCase):
     @unittest.skipUnless(find_GSL(), "Could not find the AMPL GSL library")
     def test_local_external_functions_with_named_expressions(self):
         m = self._make_model_with_external_functions(named_expressions=True)
-        variables = list(pyo.component_data_objects(pyo.Var))
-        constraints = list(pyo.component_data_objects(pyo.Constraint, active=True))
+        variables = list(m.component_data_objects(pyo.Var))
+        constraints = list(m.component_data_objects(pyo.Constraint, active=True))
         b = create_subsystem_block(constraints, variables)
-        self.assertTrue(isinstance(m._gsl_sf_bessel_J0, pyo.ExternalFunction))
-        self.assertTrue(isinstance(m._gsl_sf_fermi_dirac_m1, pyo.ExternalFunction))
+        self.assertTrue(isinstance(b._gsl_sf_bessel_J0, pyo.ExternalFunction))
+        self.assertTrue(isinstance(b._gsl_sf_fermi_dirac_m1, pyo.ExternalFunction))
 
     def _solve_ef_model_with_ipopt(self):
         m = self._make_model_with_external_functions()
