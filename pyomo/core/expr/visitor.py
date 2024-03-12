@@ -1390,6 +1390,7 @@ class _VariableVisitor(SimpleExpressionVisitor):
 
 class _StreamVariableVisitor(StreamBasedExpressionVisitor):
     def __init__(self, include_fixed=False, descend_into_named_expressions=True):
+        super().__init__()
         self._include_fixed = include_fixed
         self._descend_into_named_expressions = descend_into_named_expressions
         self.named_expressions = []
