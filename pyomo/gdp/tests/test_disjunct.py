@@ -632,19 +632,13 @@ class TestAutoVars(unittest.TestCase):
         out = StringIO()
         with LoggingIntercept(out):
             e = m.iv + 1
-        assertExpressionsEqual(
-            self, e, EXPR.LinearExpression([EXPR.MonomialTermExpression((1, m.biv)), 1])
-        )
+        assertExpressionsEqual(self, e, EXPR.LinearExpression([m.biv, 1]))
         self.assertIn(deprecation_msg, out.getvalue())
 
         out = StringIO()
         with LoggingIntercept(out):
             e = m.iv - 1
-        assertExpressionsEqual(
-            self,
-            e,
-            EXPR.LinearExpression([EXPR.MonomialTermExpression((1, m.biv)), -1]),
-        )
+        assertExpressionsEqual(self, e, EXPR.LinearExpression([m.biv, -1]))
         self.assertIn(deprecation_msg, out.getvalue())
 
         out = StringIO()
@@ -665,9 +659,7 @@ class TestAutoVars(unittest.TestCase):
         out = StringIO()
         with LoggingIntercept(out):
             e = 1 + m.iv
-        assertExpressionsEqual(
-            self, e, EXPR.LinearExpression([1, EXPR.MonomialTermExpression((1, m.biv))])
-        )
+        assertExpressionsEqual(self, e, EXPR.LinearExpression([1, m.biv]))
         self.assertIn(deprecation_msg, out.getvalue())
 
         out = StringIO()
@@ -699,20 +691,14 @@ class TestAutoVars(unittest.TestCase):
         with LoggingIntercept(out):
             a = m.iv
             a += 1
-        assertExpressionsEqual(
-            self, a, EXPR.LinearExpression([EXPR.MonomialTermExpression((1, m.biv)), 1])
-        )
+        assertExpressionsEqual(self, a, EXPR.LinearExpression([m.biv, 1]))
         self.assertIn(deprecation_msg, out.getvalue())
 
         out = StringIO()
         with LoggingIntercept(out):
             a = m.iv
             a -= 1
-        assertExpressionsEqual(
-            self,
-            a,
-            EXPR.LinearExpression([EXPR.MonomialTermExpression((1, m.biv)), -1]),
-        )
+        assertExpressionsEqual(self, a, EXPR.LinearExpression([m.biv, -1]))
         self.assertIn(deprecation_msg, out.getvalue())
 
         out = StringIO()
