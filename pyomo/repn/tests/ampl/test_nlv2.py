@@ -1812,6 +1812,78 @@ G0 1	#obj
             )
         )
 
+    def test_presolve_independent_subsystem(self):
+        # This is derived from the example in #3192
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.z = Var()
+        m.d = Constraint(expr=m.z == m.y)
+        m.c = Constraint(expr=m.y == m.x)
+        m.o = Objective(expr=0)
+
+        ref = """g3 1 1 0       #problem unknown
+ 0 0 1 0 0     #vars, constraints, objectives, ranges, eqns
+ 0 0 0 0 0 0   #nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0   #network constraints: nonlinear, linear
+ 0 0 0 #nonlinear vars in constraints, objectives, both
+ 0 0 0 1       #linear network variables; functions; arith, flags
+ 0 0 0 0 0     #discrete variables: binary, integer, nonlinear (b,c,o)
+ 0 0   #nonzeros in Jacobian, obj. gradient
+ 1 0   #max name lengths: constraints, variables
+ 0 0 0 0 0     #common exprs: b,c,o,c1,o1
+O0 0   #o
+n0
+x0     #initial guess
+r      #0 ranges (rhs's)
+b      #0 bounds (on variables)
+k-1    #intermediate Jacobian column lengths
+"""
+
+        OUT = io.StringIO()
+        with LoggingIntercept() as LOG:
+            nlinfo = nl_writer.NLWriter().write(
+                m, OUT, symbolic_solver_labels=True, linear_presolve=True
+            )
+        self.assertEqual(
+            LOG.getvalue(),
+            "presolve identified an underdetermined independent linear subsystem "
+            "that was removed from the model.  Setting 'z' == 0\n",
+        )
+
+        self.assertEqual(*nl_diff(ref, OUT.getvalue()))
+
+        m.x.lb = 5.0
+
+        OUT = io.StringIO()
+        with LoggingIntercept() as LOG:
+            nlinfo = nl_writer.NLWriter().write(
+                m, OUT, symbolic_solver_labels=True, linear_presolve=True
+            )
+        self.assertEqual(
+            LOG.getvalue(),
+            "presolve identified an underdetermined independent linear subsystem "
+            "that was removed from the model.  Setting 'z' == 5.0\n",
+        )
+
+        self.assertEqual(*nl_diff(ref, OUT.getvalue()))
+
+        m.x.lb = -5.0
+        m.z.ub = -2.0
+
+        OUT = io.StringIO()
+        with LoggingIntercept() as LOG:
+            nlinfo = nl_writer.NLWriter().write(
+                m, OUT, symbolic_solver_labels=True, linear_presolve=True
+            )
+        self.assertEqual(
+            LOG.getvalue(),
+            "presolve identified an underdetermined independent linear subsystem "
+            "that was removed from the model.  Setting 'z' == -2.0\n",
+        )
+
+        self.assertEqual(*nl_diff(ref, OUT.getvalue()))
+
     def test_scaling(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var(initialize=0)
