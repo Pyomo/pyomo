@@ -24,3 +24,4 @@ import pyomo.core.plugins.transform.discrete_vars
 import pyomo.core.plugins.transform.add_slack_vars
 import pyomo.core.plugins.transform.scaling
 import pyomo.core.plugins.transform.logical_to_linear
+import pyomo.core.plugins.transform.lp_dual
