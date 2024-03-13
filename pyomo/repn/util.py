@@ -400,14 +400,15 @@ class ExitNodeDispatcher(collections.defaultdict):
 
     def __missing__(self, key):
         if type(key) is tuple:
-            node_class = key[0]
-            node_args = key[1:]
             # Only lookup/cache argument-specific handlers for unary,
             # binary and ternary operators
-            if len(key) > 3:
-                key = node_class
-                if key in self:
-                    return self[key]
+            if len(key) <= 3:
+                node_class = key[0]
+                node_args = key[1:]
+            else:
+                node_class = key = key[0]
+                if node_class in self:
+                    return self[node_class]
         else:
             node_class = key
         bases = node_class.__mro__
@@ -446,7 +447,7 @@ class ExitNodeDispatcher(collections.defaultdict):
     def unexpected_expression_type(self, visitor, node, *args):
         raise DeveloperError(
             f"Unexpected expression node type '{type(node).__name__}' "
-            f"found while walking expression tree in {type(self).__name__}."
+            f"found while walking expression tree in {type(visitor).__name__}."
         )
 
 
