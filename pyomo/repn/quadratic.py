@@ -98,22 +98,15 @@ class QuadraticRepn(object):
                         e += coef * (var_map[x1] * var_map[x2])
             ans += e
         if self.linear:
-            if len(self.linear) == 1:
-                vid, coef = next(iter(self.linear.items()))
-                if coef == 1:
-                    ans += var_map[vid]
-                elif coef:
-                    ans += MonomialTermExpression((coef, var_map[vid]))
-                else:
-                    pass
-            else:
-                ans += LinearExpression(
-                    [
-                        MonomialTermExpression((coef, var_map[vid]))
-                        for vid, coef in self.linear.items()
-                        if coef
-                    ]
-                )
+            var_map = visitor.var_map
+            with mutable_expression() as e:
+                for vid, coef in self.linear.items():
+                    if coef:
+                        e += coef * var_map[vid]
+            if e.nargs() > 1:
+                ans += e
+            elif e.nargs() == 1:
+                ans += e.arg(0)
         if self.constant:
             ans += self.constant
         if self.multiplier != 1:

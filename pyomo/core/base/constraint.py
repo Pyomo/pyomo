@@ -9,10 +9,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from __future__ import annotations
 import sys
 import logging
 from weakref import ref as weakref_ref
 from pyomo.common.pyomo_typing import overload
+from typing import Union, Type
 
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.errors import DeveloperError
@@ -42,6 +44,7 @@ from pyomo.core.base.indexed_component import (
     ActiveIndexedComponent,
     UnindexedComponent_set,
     rule_wrapper,
+    IndexedComponent,
 )
 from pyomo.core.base.set import Set
 from pyomo.core.base.disable_methods import disable_methods
@@ -728,6 +731,17 @@ class Constraint(ActiveIndexedComponent):
     Violated = Infeasible
     Satisfied = Feasible
 
+    @overload
+    def __new__(
+        cls: Type[Constraint], *args, **kwds
+    ) -> Union[ScalarConstraint, IndexedConstraint]: ...
+
+    @overload
+    def __new__(cls: Type[ScalarConstraint], *args, **kwds) -> ScalarConstraint: ...
+
+    @overload
+    def __new__(cls: Type[IndexedConstraint], *args, **kwds) -> IndexedConstraint: ...
+
     def __new__(cls, *args, **kwds):
         if cls != Constraint:
             return super(Constraint, cls).__new__(cls)
@@ -1019,6 +1033,11 @@ class IndexedConstraint(Constraint):
     def add(self, index, expr):
         """Add a constraint with a given index."""
         return self.__setitem__(index, expr)
+
+    @overload
+    def __getitem__(self, index) -> _GeneralConstraintData: ...
+
+    __getitem__ = IndexedComponent.__getitem__  # type: ignore
 
 
 @ModelComponentFactory.register("A list of constraint expressions.")

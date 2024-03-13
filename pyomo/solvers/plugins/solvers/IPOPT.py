@@ -79,7 +79,7 @@ class IPOPT(SystemCallSolver):
             return _extract_version('')
         results = subprocess.run(
             [solver_exec, "-v"],
-            timeout=1,
+            timeout=self._version_timeout,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             universal_newlines=True,

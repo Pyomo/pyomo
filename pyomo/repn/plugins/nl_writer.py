@@ -1081,9 +1081,37 @@ class _NLWriter_impl(object):
 
         # Update any eliminated variables to point to the (potentially
         # scaled) substituted variables
-        for _id, expr_info in eliminated_vars.items():
+        for _id, expr_info in list(eliminated_vars.items()):
             nl, args, _ = expr_info.compile_repn(visitor)
-            _vmap[_id] = nl.rstrip() % tuple(_vmap[_id] for _id in args)
+            for _i in args:
+                # It is possible that the eliminated variable could
+                # reference another variable that is no longer part of
+                # the model and therefore does not have a _vmap entry.
+                # This can happen when there is an underdetermined
+                # independent linear subsystem and the presolve removed
+                # all the constraints from the subsystem.  Because the
+                # free variables in the subsystem are not referenced
+                # anywhere else in the model, they are not part of the
+                # `variables` list.  Implicitly "fix" it to an arbitrary
+                # valid value from the presolved domain (see #3192).
+                if _i not in _vmap:
+                    lb, ub = var_bounds[_i]
+                    if lb is None:
+                        lb = -inf
+                    if ub is None:
+                        ub = inf
+                    if lb <= 0 <= ub:
+                        val = 0
+                    else:
+                        val = lb if abs(lb) < abs(ub) else ub
+                    eliminated_vars[_i] = AMPLRepn(val, {}, None)
+                    _vmap[_i] = expr_info.compile_repn(visitor)[0]
+                    logger.warning(
+                        "presolve identified an underdetermined independent "
+                        "linear subsystem that was removed from the model.  "
+                        f"Setting '{var_map[_i]}' == {val}"
+                    )
+            _vmap[_id] = nl.rstrip() % tuple(_vmap[_i] for _i in args)
 
         r_lines = [None] * n_cons
         for idx, (con, expr_info, lb, ub) in enumerate(constraints):
@@ -2780,6 +2808,20 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
                     linear[_id] = arg1
             elif arg.__class__ in native_types:
                 const += arg
+            elif arg.is_variable_type():
+                _id = id(arg)
+                if _id not in var_map:
+                    if arg.fixed:
+                        if _id not in visitor.fixed_vars:
+                            visitor.cache_fixed_var(_id, arg)
+                        const += visitor.fixed_vars[_id]
+                        continue
+                    _before_child_handlers._record_var(visitor, arg)
+                    linear[_id] = 1
+                elif _id in linear:
+                    linear[_id] += 1
+                else:
+                    linear[_id] = 1
             else:
                 try:
                     const += visitor.check_constant(visitor.evaluate(arg), arg)
