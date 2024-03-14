@@ -87,7 +87,9 @@ class IncrementalInnerGDPTransformation(PiecewiseLinearToGDP):
         # is nonempty
         # TODO: One way to make this true will be to use the union_jack__triangulate.py 
         # script to generate the triangulation, but it is also possible for other 
-        # triangulations to be correct. This should be checkable using a MIP.
+        # triangulations to be correct. This should be checkable using a MIP. It
+        # is known that there is a correct ordering for any triangulation of a 
+        # domain homeomorphic to a disc in R^2 (Wilson 1998).
         self.simplex_ordering = {
             n: n for n in transBlock.simplex_indices
         }
