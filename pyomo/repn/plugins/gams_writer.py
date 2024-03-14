@@ -183,7 +183,16 @@ class ToGamsVisitor(_ToStringVisitor):
             (
                 self._monomial_to_string(arg)
                 if arg.__class__ is EXPR.MonomialTermExpression
-                else ftoa(arg, True)
+                else (
+                    ftoa(arg, True)
+                    if arg.__class__ in native_numeric_types
+                    else (
+                        self.smap.getSymbol(arg)
+                        if arg.is_variable_type()
+                        and (not arg.fixed or self.output_fixed_variables)
+                        else ftoa(value(arg), True)
+                    )
+                )
             )
             for arg in node.args
         ]

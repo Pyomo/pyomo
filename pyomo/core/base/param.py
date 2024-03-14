@@ -9,11 +9,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from __future__ import annotations
 import sys
 import types
 import logging
 from weakref import ref as weakref_ref
 from pyomo.common.pyomo_typing import overload
+from typing import Union, Type
 
 from pyomo.common.autoslots import AutoSlots
 from pyomo.common.deprecation import deprecation_warning, RenamedClass
@@ -290,6 +292,17 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         value for Params to indicate that no valid value is present."""
 
         pass
+
+    @overload
+    def __new__(
+        cls: Type[Param], *args, **kwds
+    ) -> Union[ScalarParam, IndexedParam]: ...
+
+    @overload
+    def __new__(cls: Type[ScalarParam], *args, **kwds) -> ScalarParam: ...
+
+    @overload
+    def __new__(cls: Type[IndexedParam], *args, **kwds) -> IndexedParam: ...
 
     def __new__(cls, *args, **kwds):
         if cls != Param:
@@ -983,7 +996,7 @@ class IndexedParam(Param):
     # between potentially variable GetItemExpression objects and
     # "constant" GetItemExpression objects.  That will need to wait for
     # the expression rework [JDS; Nov 22].
-    def __getitem__(self, args):
+    def __getitem__(self, args) -> _ParamData:
         try:
             return super().__getitem__(args)
         except:
