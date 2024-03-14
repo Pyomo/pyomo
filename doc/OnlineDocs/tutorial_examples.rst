@@ -9,7 +9,9 @@ Additional Pyomo tutorials and examples can be found at the following links:
 `Prof. Jeffrey Kantor's Pyomo Cookbook
 <https://jckantor.github.io/ND-Pyomo-Cookbook/>`_
 
-`Pyomo Gallery
-<https://github.com/Pyomo/PyomoGallery>`_
+The `companion notebooks <https://mobook.github.io/MO-book/intro.html>`_
+for *Hands-On Mathematical Optimization with Python*
+
+`Pyomo Gallery <https://github.com/Pyomo/PyomoGallery>`_
 
 
