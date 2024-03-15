@@ -1389,11 +1389,7 @@ class _VariableVisitor(SimpleExpressionVisitor):
 
 
 class _StreamVariableVisitor(StreamBasedExpressionVisitor):
-    def __init__(
-        self,
-        include_fixed=False,
-        named_expression_cache=None,
-    ):
+    def __init__(self, include_fixed=False, named_expression_cache=None):
         """Visitor that collects all unique variables participating in an
         expression
 
@@ -1520,8 +1516,7 @@ def identify_variables(expr, include_fixed=True, named_expression_cache=None):
     if named_expression_cache is None:
         named_expression_cache = {}
     visitor = _StreamVariableVisitor(
-        named_expression_cache=named_expression_cache,
-        include_fixed=include_fixed,
+        named_expression_cache=named_expression_cache, include_fixed=include_fixed
     )
     variables = visitor.walk_expression(expr)
     yield from variables
