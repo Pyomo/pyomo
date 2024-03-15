@@ -1416,6 +1416,8 @@ class _StreamVariableVisitor(StreamBasedExpressionVisitor):
                 self._named_expression_cache[eid] = [], set()
                 self._active_named_expressions.append(eid)
                 return True, expr
+        elif expr.is_variable_type():
+            return False, [expr]
         else:
             self._variables = []
             self._seen = set()
@@ -1466,18 +1468,7 @@ class _StreamVariableVisitor(StreamBasedExpressionVisitor):
             return True, None
 
     def exitNode(self, node, data):
-        if node.is_variable_type() and (self._include_fixed or not node.fixed):
-            if id(node) not in self._seen:
-                self._seen.add(id(node))
-                self._variables.append(node)
-            if self._active_named_expressions:
-                # If we are in a named expression, add new variables to the cache.
-                eid = self._active_named_expressions[-1]
-                local_vars, local_var_set = self._named_expression_cache[eid]
-                if id(node) not in local_var_set:
-                    local_var_set.add(id(node))
-                    local_vars.append(node)
-        elif node.is_named_expression_type():
+        if node.is_named_expression_type():
             # If we are returning from a named expression, we have at least one
             # active named expression. We must make sure that we properly
             # handle the variables for the named expression we just exited.
