@@ -1405,26 +1405,46 @@ class _StreamVariableVisitor(StreamBasedExpressionVisitor):
         self._active_named_expressions = []
 
     def initializeWalker(self, expr):
-        self._variables = []
-        self._seen = set()
-        return True, None
+        if expr.__class__ in native_types:
+            return False, []
+        elif expr.is_named_expression_type():
+            eid = id(expr)
+            if eid in self._named_expression_cache:
+                variables, var_set = self._named_expression_cache[eid]
+                return False, variables
+            else:
+                self._variables = []
+                self._seen = set()
+                self._named_expression_cache[eid] = [], set()
+                self._active_named_expressions.append(eid)
+                return True, expr
+        else:
+            self._variables = []
+            self._seen = set()
+            return True, expr
 
     def beforeChild(self, parent, child, index):
         if child.__class__ in native_types:
             return False, None
-        #elif (
-        #    not self._descend_into_named_expressions
-        #    and child.is_named_expression_type()
-        #):
-        #    self.named_expressions.append(child)
-        #    return False, None
         elif child.is_named_expression_type():
-            if id(child) in self._named_expression_cache:
+            eid = id(child)
+            if eid in self._named_expression_cache:
                 # We have already encountered this named expression. We just add
                 # the cached variables to our list and don't descend.
-                for var in self._named_expression_cache[id(child)][0]:
-                    if id(var) not in self._seen:
-                        self._variables.append(var)
+                if self._active_named_expressions:
+                    # If we are in another named expression, we update the
+                    # parent expression's cache
+                    parent_eid = self._active_named_expressions[-1]
+                    variables, var_set = self._named_expression_cache[parent_eid]
+                else:
+                    # If we are not in a named expression, we update the global
+                    # list
+                    variables = self._variables
+                    var_set = self._seen
+                for var in self._named_expression_cache[eid][0]:
+                    if id(var) not in var_set:
+                        var_set.add(id(var))
+                        variables.append(var)
                 return False, None
             else:
                 # If we are descending into a new named expression, initialize
@@ -1432,6 +1452,18 @@ class _StreamVariableVisitor(StreamBasedExpressionVisitor):
                 self._named_expression_cache[id(child)] = ([], set())
                 self._active_named_expressions.append(id(child))
                 return True, None
+        elif child.is_variable_type() and (self._include_fixed or not child.fixed):
+            if id(child) not in self._seen:
+                self._seen.add(id(child))
+                self._variables.append(child)
+            if self._active_named_expressions:
+                # If we are in a named expression, add new variables to the cache.
+                eid = self._active_named_expressions[-1]
+                local_vars, local_var_set = self._named_expression_cache[eid]
+                if id(child) not in local_var_set:
+                    local_var_set.add(id(child))
+                    local_vars.append(child)
+            return False, None
         else:
             return True, None
 
@@ -1449,19 +1481,29 @@ class _StreamVariableVisitor(StreamBasedExpressionVisitor):
                     local_vars.append(node)
         elif node.is_named_expression_type():
             # If we are returning from a named expression, we have at least one
-            # active named expression.
+            # active named expression. We must make sure that we properly
+            # handle the variables for the named expression we just exited.
             eid = self._active_named_expressions.pop()
             if self._active_named_expressions:
                 # If we still are in a named expression, we update that expression's
                 # cache with any new variables encountered.
-                new_eid = self._active_named_expressions[-1]
-                old_expr_vars, old_expr_var_set = self._named_expression_cache[eid]
-                new_expr_vars, new_expr_var_set = self._named_expression_cache[new_eid]
+                #new_eid = self._active_named_expressions[-1]
+                #old_expr_vars, old_expr_var_set = self._named_expression_cache[eid]
+                #new_expr_vars, new_expr_var_set = self._named_expression_cache[new_eid]
 
-                for var in old_expr_vars:
-                    if id(var) not in new_expr_var_set:
-                        new_expr_var_set.add(id(var))
-                        new_expr_vars.append(var)
+                #for var in old_expr_vars:
+                #    if id(var) not in new_expr_var_set:
+                #        new_expr_var_set.add(id(var))
+                #        new_expr_vars.append(var)
+                parent_eid = self._active_named_expressions[-1]
+                variables, var_set = self._named_expression_cache[parent_eid]
+            else:
+                variables = self._variables
+                var_set = self._seen
+            for var in self._named_expression_cache[eid][0]:
+                if id(var) not in var_set:
+                    var_set.add(id(var))
+                    variables.append(var)
 
     def finalizeResult(self, result):
         return self._variables
@@ -1489,7 +1531,7 @@ def identify_variables(expr, include_fixed=True, named_expression_cache=None):
     if NEW:
         visitor = _StreamVariableVisitor(
             named_expression_cache=named_expression_cache,
-            include_fixed=False,
+            include_fixed=include_fixed,
         )
         variables = visitor.walk_expression(expr)
         yield from variables
