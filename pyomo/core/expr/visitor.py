@@ -1392,12 +1392,10 @@ class _StreamVariableVisitor(StreamBasedExpressionVisitor):
     def __init__(
         self,
         include_fixed=False,
-        #descend_into_named_expressions=True,
         named_expression_cache=None,
     ):
         super().__init__()
         self._include_fixed = include_fixed
-        #self._descend_into_named_expressions = descend_into_named_expressions
         self.named_expressions = []
         if named_expression_cache is None:
             named_expression_cache = {}
@@ -1487,14 +1485,6 @@ class _StreamVariableVisitor(StreamBasedExpressionVisitor):
             if self._active_named_expressions:
                 # If we still are in a named expression, we update that expression's
                 # cache with any new variables encountered.
-                #new_eid = self._active_named_expressions[-1]
-                #old_expr_vars, old_expr_var_set = self._named_expression_cache[eid]
-                #new_expr_vars, new_expr_var_set = self._named_expression_cache[new_eid]
-
-                #for var in old_expr_vars:
-                #    if id(var) not in new_expr_var_set:
-                #        new_expr_var_set.add(id(var))
-                #        new_expr_vars.append(var)
                 parent_eid = self._active_named_expressions[-1]
                 variables, var_set = self._named_expression_cache[parent_eid]
             else:
@@ -1509,7 +1499,6 @@ class _StreamVariableVisitor(StreamBasedExpressionVisitor):
         return self._variables
 
 
-# TODO: descend_into_named_expressions option?
 def identify_variables(expr, include_fixed=True, named_expression_cache=None):
     """
     A generator that yields a sequence of variables
@@ -1526,32 +1515,12 @@ def identify_variables(expr, include_fixed=True, named_expression_cache=None):
     """
     if named_expression_cache is None:
         named_expression_cache = {}
-
-    NEW = True
-    if NEW:
-        visitor = _StreamVariableVisitor(
-            named_expression_cache=named_expression_cache,
-            include_fixed=include_fixed,
-        )
-        variables = visitor.walk_expression(expr)
-        yield from variables
-    else:
-        visitor = _VariableVisitor()
-        if include_fixed:
-            for v in visitor.xbfs_yield_leaves(expr):
-                if isinstance(v, tuple):
-                    yield from v
-                else:
-                    yield v
-        else:
-            for v in visitor.xbfs_yield_leaves(expr):
-                if isinstance(v, tuple):
-                    for v_i in v:
-                        if not v_i.is_fixed():
-                            yield v_i
-                else:
-                    if not v.is_fixed():
-                        yield v
+    visitor = _StreamVariableVisitor(
+        named_expression_cache=named_expression_cache,
+        include_fixed=include_fixed,
+    )
+    variables = visitor.walk_expression(expr)
+    yield from variables
 
 
 # =====================================================
