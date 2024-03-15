@@ -1394,12 +1394,25 @@ class _StreamVariableVisitor(StreamBasedExpressionVisitor):
         include_fixed=False,
         named_expression_cache=None,
     ):
+        """Visitor that collects all unique variables participating in an
+        expression
+
+        Args:
+            include_fixed (bool): Whether to include fixed variables
+            named_expression_cache (optional, dict): Dict mapping ids of named
+                expressions to a tuple of the list of all variables and the
+                set of all variable ids contained in the named expression.
+
+        """
         super().__init__()
         self._include_fixed = include_fixed
-        self.named_expressions = []
         if named_expression_cache is None:
+            # This cache will map named expression ids to the
+            # tuple: ([variables], {variable ids})
             named_expression_cache = {}
         self._named_expression_cache = named_expression_cache
+        # Stack of active named expressions. This holds the id of
+        # expressions we are currently in.
         self._active_named_expressions = []
 
     def initializeWalker(self, expr):
