@@ -1417,9 +1417,14 @@ class _StreamVariableVisitor(StreamBasedExpressionVisitor):
         elif expr.is_named_expression_type():
             eid = id(expr)
             if eid in self._named_expression_cache:
+                # If we were given a named expression that is already cached,
+                # just do nothing and return the expression's variables
                 variables, var_set = self._named_expression_cache[eid]
                 return False, variables
             else:
+                # We were given a named expression that is not cached.
+                # Initialize data structures and add this expression to the
+                # stack. This expression will get popped in exitNode.
                 self._variables = []
                 self._seen = set()
                 self._named_expression_cache[eid] = [], set()
@@ -1442,12 +1447,14 @@ class _StreamVariableVisitor(StreamBasedExpressionVisitor):
                 # the cached variables to our list and don't descend.
                 if self._active_named_expressions:
                     # If we are in another named expression, we update the
-                    # parent expression's cache
+                    # parent expression's cache. We don't need to update the
+                    # global list as we will do this when we exit the active
+                    # named expression.
                     parent_eid = self._active_named_expressions[-1]
                     variables, var_set = self._named_expression_cache[parent_eid]
                 else:
                     # If we are not in a named expression, we update the global
-                    # list
+                    # list.
                     variables = self._variables
                     var_set = self._seen
                 for var in self._named_expression_cache[eid][0]:
@@ -1462,16 +1469,16 @@ class _StreamVariableVisitor(StreamBasedExpressionVisitor):
                 self._active_named_expressions.append(id(child))
                 return True, None
         elif child.is_variable_type() and (self._include_fixed or not child.fixed):
-            if id(child) not in self._seen:
-                self._seen.add(id(child))
-                self._variables.append(child)
             if self._active_named_expressions:
                 # If we are in a named expression, add new variables to the cache.
                 eid = self._active_named_expressions[-1]
-                local_vars, local_var_set = self._named_expression_cache[eid]
-                if id(child) not in local_var_set:
-                    local_var_set.add(id(child))
-                    local_vars.append(child)
+                variables, var_set = self._named_expression_cache[eid]
+            else:
+                variables = self._variables
+                var_set = self._seen
+            if id(child) not in local_var_set:
+                var_set.add(id(child))
+                variables.append(child)
             return False, None
         else:
             return True, None
