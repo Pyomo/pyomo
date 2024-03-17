@@ -73,6 +73,8 @@ version, we will remove testing for that Python version.
 
 * [Pyomo Workshop Slides](https://github.com/Pyomo/pyomo-tutorials/blob/main/Pyomo-Workshop-December-2023.pdf)
 * [Prof. Jeffrey Kantor's Pyomo Cookbook](https://jckantor.github.io/ND-Pyomo-Cookbook/)
+* The [companion notebooks](https://mobook.github.io/MO-book/intro.html)
+  for *Hands-On Mathematical Optimization with Python*
 * [Pyomo Gallery](https://github.com/Pyomo/PyomoGallery)
 
 ### Getting Help
