@@ -312,6 +312,8 @@ def adjust_solver_time_settings(timing_data_obj, solver, config):
                     "max_wall_time" if solver.version() >= (3, 14, 0, 0)
                     else "max_cpu_time"
                 )
+            elif isinstance(solver, SolverFactory.get_class("scip")):
+                options_key = "limits/time"
             else:
                 options_key = None
 
@@ -379,6 +381,8 @@ def revert_solver_max_time_adjustment(
             options_key = "MaxTime"
         elif isinstance(solver, SolverFactory.get_class("ipopt")):
             options_key = "max_cpu_time"
+        elif isinstance(solver, SolverFactory.get_class("scip")):
+            options_key = "limits/time"
         else:
             options_key = None
 

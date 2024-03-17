@@ -4345,10 +4345,10 @@ class RegressionTest(unittest.TestCase):
         and SolverFactory('baron').license_is_valid(),
         "Global NLP solver is not available and licensed.",
     )
-    def test_gams_successful_time_limit(self):
+    def test_pyros_subsolver_time_limit_adjustment(self):
         """
-        Test PyROS time limit status returned in event
-        separation problem times out.
+        Check that PyROS does not ultimately alter state of
+        subordinate solver options due to time limit adjustments.
         """
         m = ConcreteModel()
         m.x1 = Var(initialize=0, bounds=(0, None))
@@ -4367,20 +4367,26 @@ class RegressionTest(unittest.TestCase):
         # Instantiate the PyROS solver
         pyros_solver = SolverFactory("pyros")
 
-        # Define subsolvers utilized in the algorithm
-        # two GAMS solvers, one of which has reslim set
-        # (overridden when invoked in PyROS)
+        # subordinate solvers to test.
+        # for testing, we pass each as the 'local' solver,
+        # and the BARON solver without custom options
+        # as the 'global' solver
+        baron_no_options = SolverFactory("baron")
         local_subsolvers = [
             SolverFactory("gams:conopt"),
             SolverFactory("gams:conopt"),
             SolverFactory("ipopt"),
+            SolverFactory("ipopt", options={"max_cpu_time": 300}),
+            SolverFactory("scip"),
+            SolverFactory("scip", options={"limits/time": 300}),
+            baron_no_options,
+            SolverFactory("baron", options={"MaxTime": 300}),
         ]
         local_subsolvers[0].options["add_options"] = ["option reslim=100;"]
-        global_subsolver = SolverFactory("baron")
-        global_subsolver.options["MaxTime"] = 300
 
         # Call the PyROS solver
         for idx, opt in enumerate(local_subsolvers):
+            original_solver_options = opt.options.copy()
             results = pyros_solver.solve(
                 model=m,
                 first_stage_variables=[m.x1, m.x2],
@@ -4388,12 +4394,11 @@ class RegressionTest(unittest.TestCase):
                 uncertain_params=[m.u],
                 uncertainty_set=interval,
                 local_solver=opt,
-                global_solver=global_subsolver,
+                global_solver=baron_no_options,
                 objective_focus=ObjectiveType.worst_case,
                 solve_master_globally=True,
                 time_limit=100,
             )
-
             self.assertEqual(
                 results.pyros_termination_condition,
                 pyrosTerminationCondition.robust_optimal,
@@ -4402,54 +4407,12 @@ class RegressionTest(unittest.TestCase):
                     f"subsolver {idx + 1} of 2 is not robust_optimal."
                 ),
             )
-
-        # check first local subsolver settings
-        # remain unchanged after PyROS exit
-        self.assertEqual(
-            len(list(local_subsolvers[0].options["add_options"])),
-            1,
-            msg=(
-                f"Local subsolver {local_subsolvers[0]} options 'add_options'"
-                "were changed by PyROS"
-            ),
-        )
-        self.assertEqual(
-            local_subsolvers[0].options["add_options"][0],
-            "option reslim=100;",
-            msg=(
-                f"Local subsolver {local_subsolvers[0]} setting "
-                "'add_options' was modified "
-                "by PyROS, but changes were not properly undone"
-            ),
-        )
-
-        # check global subsolver settings unchanged
-        self.assertEqual(
-            len(list(global_subsolver.options.keys())),
-            1,
-            msg=(f"Global subsolver {global_subsolver} options were changed by PyROS"),
-        )
-        self.assertEqual(
-            global_subsolver.options["MaxTime"],
-            300,
-            msg=(
-                f"Global subsolver {global_subsolver} setting "
-                "'MaxTime' was modified "
-                "by PyROS, but changes were not properly undone"
-            ),
-        )
-
-        # check other local subsolvers remain unchanged
-        for slvr, key in zip(local_subsolvers[1:], ["add_options", "max_cpu_time"]):
-            # no custom options were added to the `options`
-            # attribute of the optimizer, so any attribute
-            # of `options` should be `None`
-            self.assertIs(
-                getattr(slvr.options, key, None),
-                None,
+            self.assertEqual(
+                opt.options,
+                original_solver_options,
                 msg=(
-                    f"Local subsolver {slvr} setting '{key}' was added "
-                    "by PyROS, but not reverted"
+                    f"Options for subordinate solver {opt} were changed "
+                    "by PyROS, and the changes wee not properly reverted."
                 ),
             )
 
