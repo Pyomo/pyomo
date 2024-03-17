@@ -330,32 +330,24 @@ class PyROS(object):
             Summary of PyROS termination outcome.
 
         """
-        kwds.update(
-            dict(
-                first_stage_variables=first_stage_variables,
-                second_stage_variables=second_stage_variables,
-                uncertain_params=uncertain_params,
-                uncertainty_set=uncertainty_set,
-                local_solver=local_solver,
-                global_solver=global_solver,
-            )
-        )
-        config, state_vars = self._resolve_and_validate_pyros_args(model, **kwds)
-
-        # === Create data containers
         model_data = ROSolveResults()
-        model_data.timing = Bunch()
-
-        # === Start timer, run the algorithm
         model_data.timing = TimingData()
         with time_code(
             timing_data_obj=model_data.timing,
             code_block_name="main",
             is_main_timer=True,
         ):
-            # output intro and disclaimer
-            self._log_intro(logger=config.progress_logger, level=logging.INFO)
-            self._log_disclaimer(logger=config.progress_logger, level=logging.INFO)
+            kwds.update(
+                dict(
+                    first_stage_variables=first_stage_variables,
+                    second_stage_variables=second_stage_variables,
+                    uncertain_params=uncertain_params,
+                    uncertainty_set=uncertainty_set,
+                    local_solver=local_solver,
+                    global_solver=global_solver,
+                )
+            )
+            config, state_vars = self._resolve_and_validate_pyros_args(model, **kwds)
             self._log_config(
                 logger=config.progress_logger,
                 config=config,
