@@ -4341,9 +4341,11 @@ class RegressionTest(unittest.TestCase):
         )
 
     @unittest.skipUnless(
-        SolverFactory('gams').license_is_valid()
-        and SolverFactory('baron').license_is_valid(),
-        "Global NLP solver is not available and licensed.",
+        ipopt_available
+        and SolverFactory('gams').license_is_valid()
+        and SolverFactory('baron').license_is_valid()
+        and SolverFactory("scip").license_is_valid(),
+        "IPOPT not available or one of GAMS/BARON/SCIP not licensed",
     )
     def test_pyros_subsolver_time_limit_adjustment(self):
         """
