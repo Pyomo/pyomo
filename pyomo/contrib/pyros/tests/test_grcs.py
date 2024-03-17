@@ -4398,8 +4398,8 @@ class RegressionTest(unittest.TestCase):
                 results.pyros_termination_condition,
                 pyrosTerminationCondition.robust_optimal,
                 msg=(
-                    f"Returned termination condition with local "
-                    "subsolver {idx + 1} of 2 is not robust_optimal."
+                    "Returned termination condition with local "
+                    f"subsolver {idx + 1} of 2 is not robust_optimal."
                 ),
             )
 
