@@ -16,7 +16,9 @@ Utility functions for the PyROS solver
 import copy
 from enum import Enum, auto
 from pyomo.common.collections import ComponentSet, ComponentMap
+from pyomo.common.errors import ApplicationError
 from pyomo.common.modeling import unique_component_name
+from pyomo.common.timing import TicTocTimer
 from pyomo.core.base import (
     Constraint,
     Var,
@@ -1729,6 +1731,82 @@ def process_termination_condition_master_problem(config, results):
                 "This solver return termination condition (%s) "
                 "is currently not supported by PyROS." % termination_condition
             )
+
+
+def call_solver(model, solver, config, timing_obj, timer_name, err_msg):
+    """
+    Solve a model with a given optimizer, keeping track of
+    wall time requirements.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        Model of interest.
+    solver : Pyomo solver type
+        Subordinate optimizer.
+    config : ConfigDict
+        PyROS solver settings.
+    timing_obj : TimingData
+        PyROS solver timing data object.
+    timer_name : str
+        Name of sub timer under the hierarchical timer contained in
+        ``timing_obj`` to start/stop for keeping track of solve
+        time requirements.
+    err_msg : str
+        Message to log through ``config.progress_logger.exception()``
+        in event an ApplicationError is raised while attempting to
+        solve the model.
+
+    Returns
+    -------
+    SolverResults
+        Solve results. Note that ``results.solver`` contains
+        an additional attribute, named after
+        ``TIC_TOC_SOLVE_TIME_ATTR``, of which the value is set to the
+        recorded solver wall time.
+
+    Raises
+    ------
+    ApplicationError
+        If ApplicationError is raised by the solver.
+        In this case, `err_msg` is logged through
+        ``config.progress_logger.exception()`` before
+        the excception is raised.
+    """
+    tt_timer = TicTocTimer()
+
+    orig_setting, custom_setting_present = adjust_solver_time_settings(
+        timing_obj, solver, config
+    )
+    timing_obj.start_timer(timer_name)
+    tt_timer.tic(msg=None)
+
+    try:
+        results = solver.solve(
+            model,
+            tee=config.tee,
+            load_solutions=False,
+            symbolic_solver_labels=True,
+        )
+    except ApplicationError:
+        # account for possible external subsolver errors
+        # (such as segmentation faults, function evaluation
+        # errors, etc.)
+        config.progress_logger.error(err_msg)
+        raise
+    else:
+        setattr(
+            results.solver,
+            TIC_TOC_SOLVE_TIME_ATTR,
+            tt_timer.toc(msg=None, delta=True),
+        )
+    finally:
+        timing_obj.stop_timer(timer_name)
+        revert_solver_max_time_adjustment(
+            solver, orig_setting, custom_setting_present, config
+        )
+
+    return results
 
 
 class IterationLogRecord:
