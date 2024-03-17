@@ -1589,7 +1589,7 @@ class TestLinear(unittest.TestCase):
         expr.constant = 0
         expr.linear[id(m.x)] = 0
         expr.linear[id(m.y)] = 0
-        assertExpressionsEqual(self, expr.to_expression(visitor), LinearExpression())
+        assertExpressionsEqual(self, expr.to_expression(visitor), 0)
 
     @unittest.skipUnless(numpy_available, "Test requires numpy")
     def test_nonnumeric(self):

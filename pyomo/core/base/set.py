@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from __future__ import annotations
 import inspect
 import itertools
 import logging
@@ -16,6 +17,8 @@ import math
 import sys
 import weakref
 from pyomo.common.pyomo_typing import overload
+from typing import Union, Type, Any as typingAny
+from collections.abc import Iterator
 
 from pyomo.common.collections import ComponentSet
 from pyomo.common.deprecation import deprecated, deprecation_warning, RenamedClass
@@ -569,7 +572,7 @@ class _SetData(_SetDataBase):
     def subsets(self, expand_all_set_operators=None):
         return iter((self,))
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[typingAny]:
         """Iterate over the set members
 
         Raises AttributeError for non-finite sets.  This must be
@@ -1967,6 +1970,12 @@ class Set(IndexedComponent):
     _ValidOrderedAuguments = {True, False, InsertionOrder, SortedOrder}
     _UnorderedInitializers = {set}
 
+    @overload
+    def __new__(cls: Type[Set], *args, **kwds) -> Union[_SetData, IndexedSet]: ...
+
+    @overload
+    def __new__(cls: Type[OrderedScalarSet], *args, **kwds) -> OrderedScalarSet: ...
+
     def __new__(cls, *args, **kwds):
         if cls is not Set:
             return super(Set, cls).__new__(cls)
@@ -2372,6 +2381,11 @@ class IndexedSet(Set):
     def data(self):
         "Return a dict containing the data() of each Set in this IndexedSet"
         return {k: v.data() for k, v in self.items()}
+
+    @overload
+    def __getitem__(self, index) -> _SetData: ...
+
+    __getitem__ = IndexedComponent.__getitem__  # type: ignore
 
 
 class FiniteScalarSet(_FiniteSetData, Set):
