@@ -397,12 +397,7 @@ def revert_solver_max_time_adjustment(
                 if isinstance(solver, type(SolverFactory("gams", solver_io="shell"))):
                     solver.options[options_key].pop()
             else:
-                # remove the max time specification introduced.
-                # All lines are needed here to completely remove the option
-                # from access through getattr and dictionary reference.
                 delattr(solver.options, options_key)
-                if options_key in solver.options.keys():
-                    del solver.options[options_key]
 
 
 class PreformattedLogger(logging.Logger):
