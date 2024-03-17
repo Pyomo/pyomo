@@ -12,7 +12,7 @@
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 import pyomo.contrib.mis as mis
-from pyomo.contrib.mis.mis import _get_constraint
+from pyomo.contrib.iis.mis import _get_constraint
 from pyomo.common.tempfiles import TempfileManager
 
 import logging
