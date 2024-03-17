@@ -269,7 +269,7 @@ def adjust_solver_time_settings(timing_data_obj, solver, config):
         as there may be no means by which to specify the wall time
         limit explicitly.
     (3) For GAMS, we adjust the time limit through the GAMS Reslim
-        option. However, this may be overriden by any user
+        option. However, this may be overridden by any user
         specifications included in a GAMS optfile, which may be
         difficult to track down.
     (3) To ensure the time limit is specified to a strictly
@@ -287,15 +287,12 @@ def adjust_solver_time_settings(timing_data_obj, solver, config):
             original_max_time_setting = solver.options["add_options"]
             custom_setting_present = "add_options" in solver.options
 
-            # note: our time limit will be overriden by any
+            # note: our time limit will be overridden by any
             #       time limits specified by the user through a
             #       GAMS optfile, but tracking down the optfile
             #       and/or the GAMS subsolver specific option
             #       is more difficult
-            reslim_str = (
-                "option reslim="
-                f"{max(time_limit_buffer, time_remaining)};"
-            )
+            reslim_str = "option reslim=" f"{max(time_limit_buffer, time_remaining)};"
             if isinstance(solver.options["add_options"], list):
                 solver.options["add_options"].append(reslim_str)
             else:
@@ -309,7 +306,8 @@ def adjust_solver_time_settings(timing_data_obj, solver, config):
                     # IPOPT 3.14.0+ added support for specifying
                     # wall time limit explicitly; this is preferred
                     # over CPU time limit
-                    "max_wall_time" if solver.version() >= (3, 14, 0, 0)
+                    "max_wall_time"
+                    if solver.version() >= (3, 14, 0, 0)
                     else "max_cpu_time"
                 )
             elif isinstance(solver, SolverFactory.get_class("scip")):
@@ -332,8 +330,7 @@ def adjust_solver_time_settings(timing_data_obj, solver, config):
                     else original_max_time_setting
                 )
                 solver.options[options_key] = min(
-                    max(time_limit_buffer, time_remaining),
-                    orig_max_time,
+                    max(time_limit_buffer, time_remaining), orig_max_time
                 )
             else:
                 custom_setting_present = False
@@ -1814,10 +1811,7 @@ def call_solver(model, solver, config, timing_obj, timer_name, err_msg):
 
     try:
         results = solver.solve(
-            model,
-            tee=config.tee,
-            load_solutions=False,
-            symbolic_solver_labels=True,
+            model, tee=config.tee, load_solutions=False, symbolic_solver_labels=True
         )
     except ApplicationError:
         # account for possible external subsolver errors
@@ -1827,9 +1821,7 @@ def call_solver(model, solver, config, timing_obj, timer_name, err_msg):
         raise
     else:
         setattr(
-            results.solver,
-            TIC_TOC_SOLVE_TIME_ATTR,
-            tt_timer.toc(msg=None, delta=True),
+            results.solver, TIC_TOC_SOLVE_TIME_ATTR, tt_timer.toc(msg=None, delta=True)
         )
     finally:
         timing_obj.stop_timer(timer_name)
