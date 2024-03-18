@@ -401,11 +401,11 @@ class LegacySolverWrapper:
             self.config.raise_exception_on_nonoptimal_result = (
                 raise_exception_on_nonoptimal_result
             )
-        if solver_io is not NOTSET:
+        if solver_io is not NOTSET and solver_io is not None:
             raise NotImplementedError('Still working on this')
-        if suffixes is not NOTSET:
+        if suffixes is not NOTSET and suffixes is not None:
             raise NotImplementedError('Still working on this')
-        if logfile is not NOTSET:
+        if logfile is not NOTSET and logfile is not None:
             raise NotImplementedError('Still working on this')
         if keepfiles or 'keepfiles' in self.config:
             cwd = os.getcwd()
