@@ -91,7 +91,9 @@ def _test_mis(solver_name):
 
     mis.compute_infeasibility_explanation(m, opt, logger=logger)
     _check_output(file_name)
-
+    # logging.getLogger().removeHandler(logging.getLogger().handlers[0])
+    logger.removeHandler(logger.handlers[0])
+    
     TempfileManager.pop()
 
 
