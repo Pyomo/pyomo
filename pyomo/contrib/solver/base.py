@@ -379,6 +379,10 @@ class LegacySolverWrapper:
     ):
         """Map between legacy and new interface configuration options"""
         self.config = self.config()
+        if 'report_timing' not in self.config:
+            self.config.declare(
+                'report_timing', ConfigValue(domain=bool, default=False)
+            )
         if tee is not NOTSET:
             self.config.tee = tee
         if load_solutions is not NOTSET:
@@ -537,10 +541,12 @@ class LegacySolverWrapper:
 
         results: Results = super().solve(model)
         legacy_results, legacy_soln = self._map_results(model, results)
-
         legacy_results = self._solution_handler(
             load_solutions, model, results, legacy_results, legacy_soln
         )
+
+        if self.config.report_timing:
+            print(results.timing_info.timer)
 
         self.config = original_config
 
