@@ -12,6 +12,7 @@
 import datetime
 import io
 import math
+import os
 
 from pyomo.common.config import ConfigValue
 from pyomo.common.dependencies import attempt_import
