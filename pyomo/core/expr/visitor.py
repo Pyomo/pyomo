@@ -1476,7 +1476,7 @@ class _StreamVariableVisitor(StreamBasedExpressionVisitor):
             else:
                 variables = self._variables
                 var_set = self._seen
-            if id(child) not in local_var_set:
+            if id(child) not in var_set:
                 var_set.add(id(child))
                 variables.append(child)
             return False, None
