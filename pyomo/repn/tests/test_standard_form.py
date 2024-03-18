@@ -43,6 +43,19 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
         self.assertTrue(np.all(repn.A == np.array([[-1, -2, 0], [0, 1, 4]])))
         self.assertTrue(np.all(repn.rhs == np.array([-3, 5])))
 
+    def test_almost_dense_linear_model(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var([1, 2, 3])
+        m.c = pyo.Constraint(expr=m.x + 2 * m.y[1] + 4 * m.y[3] >= 10)
+        m.d = pyo.Constraint(expr=5 * m.x + 6 * m.y[1] + 8 * m.y[3] <= 20)
+
+        repn = LinearStandardFormCompiler().write(m)
+
+        self.assertTrue(np.all(repn.c == np.array([0, 0, 0])))
+        self.assertTrue(np.all(repn.A == np.array([[-1, -2, -4], [5, 6, 8]])))
+        self.assertTrue(np.all(repn.rhs == np.array([-10, 20])))
+
     def test_linear_model_row_col_order(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var()

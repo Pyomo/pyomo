@@ -472,24 +472,22 @@ class _LinearStandardFormCompiler_impl(object):
         # at the index pointer list (an O(num_var) operation).
         c_ip = c.indptr
         A_ip = A.indptr
-        active_var_idx = list(
-            filter(
-                lambda i: A_ip[i] != A_ip[i + 1] or c_ip[i] != c_ip[i + 1],
-                range(len(columns)),
-            )
-        )
-        nCol = len(active_var_idx)
+        active_var_mask = (A_ip[1:] > A_ip[:-1]) | (c_ip[1:] > c_ip[:-1])
+
+        # Masks on NumPy arrays are very fast.  Build the reduced A
+        # indptr and then check if we actually have to manipulate the
+        # columns
+        augmented_mask = np.concatenate((active_var_mask, [True]))
+        reduced_A_indptr = A.indptr[augmented_mask]
+        nCol = len(reduced_A_indptr) - 1
         if nCol != len(columns):
-            # Note that the indptr can't just use range() because a var
-            # may only appear in the objectives or the constraints.
-            columns = list(map(columns.__getitem__, active_var_idx))
-            active_var_idx.append(c.indptr[-1])
+            columns = [v for k, v in zip(active_var_mask, columns) if k]
             c = scipy.sparse.csc_array(
-                (c.data, c.indices, c.indptr.take(active_var_idx)), [c.shape[0], nCol]
+                (c.data, c.indices, c.indptr[augmented_mask]), [c.shape[0], nCol]
             )
-            active_var_idx[-1] = A.indptr[-1]
+            # active_var_idx[-1] = len(columns)
             A = scipy.sparse.csc_array(
-                (A.data, A.indices, A.indptr.take(active_var_idx)), [A.shape[0], nCol]
+                (A.data, A.indices, reduced_A_indptr), [A.shape[0], nCol]
             )
 
         if self.config.nonnegative_vars:
