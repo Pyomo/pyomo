@@ -1792,7 +1792,8 @@ int build_expression_tree(py::handle pyomo_expr,
 
   if (expr_types.expr_type_map[py::type::of(pyomo_expr)].cast<ExprType>() ==
       named_expr)
-    pyomo_expr = pyomo_expr.attr("expr");
+    return build_expression_tree(pyomo_expr.attr("expr"), appsi_expr, var_map,
+                                 param_map, expr_types);
 
   if (appsi_expr->is_leaf()) {
     ;

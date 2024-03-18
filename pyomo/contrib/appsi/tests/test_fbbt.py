@@ -151,3 +151,16 @@ class TestFBBTPersistent(unittest.TestCase):
         for x in m.x.values():
             self.assertAlmostEqual(x.lb, 0)
             self.assertAlmostEqual(x.ub, 0)
+
+    def test_named_exprs_nest(self):
+        # test for issue #3184
+        m = pe.ConcreteModel()
+        m.x = pe.Var()
+        m.e = pe.Expression(expr=m.x + 1)
+        m.f = pe.Expression(expr=m.e)
+        m.c = pe.Constraint(expr=(0, m.f, 0))
+        it = appsi.fbbt.IntervalTightener()
+        it.perform_fbbt(m)
+        for x in m.x.values():
+            self.assertAlmostEqual(x.lb, -1)
+            self.assertAlmostEqual(x.ub, -1)
