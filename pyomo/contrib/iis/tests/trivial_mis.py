@@ -6,7 +6,7 @@ m.y = pyo.Var(bounds=(0, 1))
 m.c = pyo.Constraint(expr=m.x[1] * m.x[2] == -1)
 m.d = pyo.Constraint(expr=m.x[1] + m.y >= 1)
 
-from pyomo.contrib.mis.mis import compute_infeasibility_explanation
+from pyomo.contrib.iis.mis import compute_infeasibility_explanation
 
 # if IDAES is installed, compute_infeasibility_explanation doesn't need to be passed a solver
 # Note: this particular little problem is quadratic
