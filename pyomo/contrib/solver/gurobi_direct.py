@@ -196,8 +196,8 @@ class GurobiDirect(SolverBase):
 
         try:
             orig_cwd = os.getcwd()
-            if self._config.working_directory:
-                os.chdir(self._config.working_directory)
+            if self._config.working_dir:
+                os.chdir(self._config.working_dir)
             with TeeStream(*ostreams) as t, capture_output(t.STDOUT, capture_fd=False):
                 gurobi_model = gurobipy.Model()
 
