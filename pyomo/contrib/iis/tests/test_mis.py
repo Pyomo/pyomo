@@ -93,7 +93,7 @@ def _test_mis(solver_name):
     _check_output(file_name)
     # logging.getLogger().removeHandler(logging.getLogger().handlers[0])
     logger.removeHandler(logger.handlers[0])
-    
+
     TempfileManager.pop()
 
 
