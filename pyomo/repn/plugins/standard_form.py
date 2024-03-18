@@ -140,6 +140,15 @@ class LinearStandardFormCompiler(object):
         ),
     )
     CONFIG.declare(
+        'mixed_form',
+        ConfigValue(
+            default=False,
+            domain=bool,
+            description='Return A in mixed form (the comparison operator is a '
+            'mix of <=, ==, and >=)',
+        ),
+    )
+    CONFIG.declare(
         'show_section_timing',
         ConfigValue(
             default=False,
@@ -332,6 +341,9 @@ class _LinearStandardFormCompiler_impl(object):
         # Tabulate constraints
         #
         slack_form = self.config.slack_form
+        mixed_form = self.config.mixed_form
+        if slack_form and mixed_form:
+            raise ValueError("cannot specify both slack_form and mixed_form")
         rows = []
         rhs = []
         con_data = []
@@ -372,7 +384,30 @@ class _LinearStandardFormCompiler_impl(object):
                     f"model contains a trivially infeasible constraint, '{con.name}'"
                 )
 
-            if slack_form:
+            if mixed_form:
+                N = len(repn.linear)
+                _data = np.fromiter(repn.linear.values(), float, N)
+                _index = np.fromiter(map(var_order.__getitem__, repn.linear), float, N)
+                if ub == lb:
+                    rows.append(RowEntry(con, 0))
+                    rhs.append(ub - offset)
+                    con_data.append(_data)
+                    con_index.append(_index)
+                    con_index_ptr.append(con_index_ptr[-1] + N)
+                else:
+                    if ub is not None:
+                        rows.append(RowEntry(con, 1))
+                        rhs.append(ub - offset)
+                        con_data.append(_data)
+                        con_index.append(_index)
+                        con_index_ptr.append(con_index_ptr[-1] + N)
+                    if lb is not None:
+                        rows.append(RowEntry(con, -1))
+                        rhs.append(lb - offset)
+                        con_data.append(_data)
+                        con_index.append(_index)
+                        con_index_ptr.append(con_index_ptr[-1] + N)
+            elif slack_form:
                 _data = list(repn.linear.values())
                 _index = list(map(var_order.__getitem__, repn.linear))
                 if lb == ub:  # TODO: add tolerance?
