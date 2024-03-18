@@ -19,6 +19,10 @@ from pyomo.common.dependencies.scipy import spatial
 from pyomo.contrib.piecewise.piecewise_linear_expression import (
     PiecewiseLinearExpression,
 )
+from pyomo.contrib.piecewise.triangulations import (
+    get_j1_triangulation,
+    Triangulation,
+)
 from pyomo.core import Any, NonNegativeIntegers, value, Var
 from pyomo.core.base.block import _BlockData, Block
 from pyomo.core.base.component import ModelComponentFactory
@@ -49,6 +53,11 @@ class PiecewiseLinearFunctionData(_BlockData):
             # These will always be tuples, even when we only have one dimension.
             self._points = []
             self._linear_functions = []
+            self._triangulation = None
+
+    @property
+    def triangulation(self):
+        return self._triangulation
 
     def __call__(self, *args):
         """
@@ -251,6 +260,7 @@ class PiecewiseLinearFunction(Block):
         _linear_functions = kwargs.pop('linear_functions', None)
         _tabular_data_arg = kwargs.pop('tabular_data', None)
         _tabular_data_rule_arg = kwargs.pop('tabular_data_rule', None)
+        _triangulation_rule_arg = kwargs.pop('triangulation', Triangulation.Delaunay)
 
         kwargs.setdefault('ctype', PiecewiseLinearFunction)
         Block.__init__(self, *args, **kwargs)
@@ -269,6 +279,8 @@ class PiecewiseLinearFunction(Block):
         self._tabular_data_rule = Initializer(
             _tabular_data_rule_arg, treat_sequences_as_mappings=False
         )
+        self._triangulation_rule = Initializer(_triangulation_rule_arg,
+                                               treat_sequences_as_mappings=False)
 
     def _get_dimension_from_points(self, points):
         if len(points) < 1:
@@ -284,12 +296,23 @@ class PiecewiseLinearFunction(Block):
 
         return dimension
 
-    def _construct_simplices_from_multivariate_points(self, obj, points, dimension):
-        try:
-            triangulation = spatial.Delaunay(points)
-        except (spatial.QhullError, ValueError) as error:
-            logger.error("Unable to triangulate the set of input points.")
-            raise
+    def _construct_simplices_from_multivariate_points(self, obj, parent, points,
+                                                      dimension):
+        tri = self._triangulation_rule(parent, obj._index)
+        if tri == Triangulation.Delaunay:
+            try:
+                triangulation = spatial.Delaunay(points)
+            except (spatial.QhullError, ValueError) as error:
+                logger.error("Unable to triangulate the set of input points.")
+                raise
+            obj._triangulation = tri
+        elif tri == Triangulation.J1:
+            triangulation = get_j1_triangulation(points, dimension)
+            obj._triangulation = tri
+        else:
+            raise ValueError(
+                "Unrecognized triangulation specified for '%s': %s"
+                % (obj, tri))
 
         # Get the points for the triangulation because they might not all be
         # there if any were coplanar.
@@ -350,7 +373,8 @@ class PiecewiseLinearFunction(Block):
                 obj, nonlinear_function
             )
 
-        self._construct_simplices_from_multivariate_points(obj, points, dimension)
+        self._construct_simplices_from_multivariate_points(obj, parent, points,
+                                                           dimension)
         return self._construct_from_function_and_simplices(
             obj, parent, nonlinear_function, simplices_are_user_defined=False
         )
@@ -460,7 +484,8 @@ class PiecewiseLinearFunction(Block):
                 obj, _tabular_data_functor(tabular_data, tupleize=True)
             )
 
-        self._construct_simplices_from_multivariate_points(obj, points, dimension)
+        self._construct_simplices_from_multivariate_points(obj, parent, points,
+                                                           dimension)
         return self._construct_from_function_and_simplices(
             obj, parent, _tabular_data_functor(tabular_data)
         )
