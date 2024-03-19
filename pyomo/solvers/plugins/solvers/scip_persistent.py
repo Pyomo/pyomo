@@ -84,9 +84,7 @@ class SCIPPersistent(PersistentSolver, SCIPDirect):
         #    return
         if var not in self._pyomo_var_to_solver_var_map:
             raise ValueError(
-                "The Var provided to compile_var needs to be added first: {0}".format(
-                    var
-                )
+                f"The Var provided to compile_var needs to be added first: {var}"
             )
         scip_var = self._pyomo_var_to_solver_var_map[var]
         vtype = self._scip_vtype_from_var(var)
@@ -182,9 +180,9 @@ class SCIPPersistent(PersistentSolver, SCIPDirect):
         self._solver_model.setObjective(obj_coef * scip_var, sense=sense, clear=False)
 
     def reset(self):
-        """ This function is necessary to call before making any changes to the
+        """This function is necessary to call before making any changes to the
         SCIP model after optimizing. It frees solution run specific information
         that is not automatically done when changes to an already solved model
         are made. Making changes to an already optimized model, e.g. adding additional
-        constraints will raise an error unless this function is called. """
+        constraints will raise an error unless this function is called."""
         self._solver_model.freeTransform()

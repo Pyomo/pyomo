@@ -74,7 +74,7 @@ class SCIPDirect(DirectSolver):
         except ImportError:
             self._python_api_exists = False
         except Exception as e:
-            print("Import of pyscipopt failed - SCIP message=" + str(e) + "\n")
+            print(f"Import of pyscipopt failed - SCIP message={str(e)}\n")
             self._python_api_exists = False
 
         # Note: Undefined capabilities default to None
@@ -104,7 +104,7 @@ class SCIPDirect(DirectSolver):
         if self._keepfiles:
             # Only save log file when the user wants to keep it.
             self._solver_model.setLogfile(self._log_file)
-            print("Solver log file: " + self._log_file)
+            print(f"Solver log file: {self._log_file}")
 
         # Set user specified parameters
         for key, option in self.options.items():
@@ -257,14 +257,14 @@ class SCIPDirect(DirectSolver):
 
     def _set_instance(self, model, kwds={}):
         DirectOrPersistentSolver._set_instance(self, model, kwds)
+        self.available()
         try:
             self._solver_model = self._scip.Model()
         except Exception:
             e = sys.exc_info()[1]
             msg = (
                 "Unable to create SCIP model. "
-                "Have you installed PySCIPOpt correctly?\n\n\t"
-                + "Error message: {0}".format(e)
+                f"Have you installed PySCIPOpt correctly?\n\n\t Error message: {e}"
             )
             raise Exception(msg)
 
@@ -275,14 +275,13 @@ class SCIPDirect(DirectSolver):
                 if var.fixed:
                     if not self._output_fixed_variable_bounds:
                         raise ValueError(
-                            "Encountered a fixed variable (%s) inside "
+                            f"Encountered a fixed variable {var.name} inside "
                             "an active objective or constraint "
-                            "expression on model %s, which is usually "
+                            f"expression on model {self._pyomo_model.name}, which is usually "
                             "indicative of a preprocessing error. Use "
                             "the IO-option 'output_fixed_variable_bounds=True' "
                             "to suppress this error and fix the variable "
                             "by overwriting its bounds in the SCIP instance."
-                            % (var.name, self._pyomo_model.name)
                         )
 
     def _add_block(self, block):
@@ -308,14 +307,10 @@ class SCIPDirect(DirectSolver):
 
         if con.has_lb():
             if not is_fixed(con.lower):
-                raise ValueError(
-                    "Lower bound of constraint {0} is not constant.".format(con)
-                )
+                raise ValueError(f"Lower bound of constraint {con} is not constant.")
         if con.has_ub():
             if not is_fixed(con.upper):
-                raise ValueError(
-                    "Upper bound of constraint {0} is not constant.".format(con)
-                )
+                raise ValueError(f"Upper bound of constraint {con} is not constant.")
 
         if con.equality:
             scip_cons = self._solver_model.addCons(
@@ -335,8 +330,7 @@ class SCIPDirect(DirectSolver):
             )
         else:
             raise ValueError(
-                "Constraint does not have a lower "
-                "or an upper bound: {0} \n".format(con)
+                f"Constraint does not have a lower or an upper bound: {con} \n"
             )
 
         for var in referenced_vars:
@@ -398,9 +392,7 @@ class SCIPDirect(DirectSolver):
         elif var.is_continuous():
             vtype = "C"
         else:
-            raise ValueError(
-                "Variable domain type is not recognized for {0}".format(var.domain)
-            )
+            raise ValueError(f"Variable domain type is not recognized for {var.domain}")
         return vtype
 
     def _set_objective(self, obj):
@@ -418,7 +410,7 @@ class SCIPDirect(DirectSolver):
         elif obj.sense == maximize:
             sense = "maximize"
         else:
-            raise ValueError("Objective sense is not recognized: {0}".format(obj.sense))
+            raise ValueError(f"Objective sense is not recognized: {obj.sense}")
 
         scip_expr, referenced_vars = self._get_expr_from_pyomo_expr(
             obj.expr, self._max_obj_degree
@@ -455,8 +447,7 @@ class SCIPDirect(DirectSolver):
                 flag = True
             if not flag:
                 raise RuntimeError(
-                    "***The scip_direct solver plugin cannot extract solution suffix="
-                    + suffix
+                    f"***The scip_direct solver plugin cannot extract solution suffix={suffix}"
                 )
 
         scip = self._solver_model
@@ -593,7 +584,7 @@ class SCIPDirect(DirectSolver):
         else:
             self.results.solver.status = SolverStatus.error
             self.results.solver.termination_message = (
-                "Unhandled SCIP status (" + str(status) + ")"
+                f"Unhandled SCIP status ({str(status)})"
             )
             self.results.solver.termination_condition = TerminationCondition.error
             soln.status = SolutionStatus.error
