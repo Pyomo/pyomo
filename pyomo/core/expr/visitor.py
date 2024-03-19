@@ -1373,22 +1373,7 @@ def identify_components(expr, component_types):
 # =====================================================
 
 
-class _VariableVisitor(SimpleExpressionVisitor):
-    def __init__(self):
-        self.seen = set()
-
-    def visit(self, node):
-        if node.__class__ in nonpyomo_leaf_types:
-            return
-
-        if node.is_variable_type():
-            if id(node) in self.seen:
-                return
-            self.seen.add(id(node))
-            return node
-
-
-class _StreamVariableVisitor(StreamBasedExpressionVisitor):
+class _VariableVisitor(StreamBasedExpressionVisitor):
     def __init__(self, include_fixed=False, named_expression_cache=None):
         """Visitor that collects all unique variables participating in an
         expression
@@ -1522,7 +1507,7 @@ def identify_variables(expr, include_fixed=True, named_expression_cache=None):
     """
     if named_expression_cache is None:
         named_expression_cache = {}
-    visitor = _StreamVariableVisitor(
+    visitor = _VariableVisitor(
         named_expression_cache=named_expression_cache, include_fixed=include_fixed
     )
     variables = visitor.walk_expression(expr)
