@@ -381,13 +381,7 @@ def test_solver_cases(*args):
         #
 
         _scip_persistent_capabilities = set(
-            [
-                "linear",
-                "integer",
-                "quadratic_constraint",
-                "sos1",
-                "sos2",
-            ]
+            ["linear", "integer", "quadratic_constraint", "sos1", "sos2"]
         )
 
         _test_solver_cases["scip_persistent", "python"] = initialize(
