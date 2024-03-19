@@ -17,8 +17,7 @@ not used in any expressions and it does not care if the Vars it finds are
 actually in the subtree or not.
 """
 from pyomo.core import Block
-from pyomo.core.expr.visitor import _StreamVariableVisitor
-from pyomo.core.expr import identify_variables
+import pyomo.core.expr as EXPR
 
 
 def get_vars_from_components(
@@ -52,7 +51,7 @@ def get_vars_from_components(
         descend_into=descend_into,
         descent_order=descent_order,
     ):
-        for var in identify_variables(
+        for var in EXPR.identify_variables(
             constraint.expr,
             include_fixed=include_fixed,
             named_expression_cache=named_expression_cache,
