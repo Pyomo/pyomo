@@ -94,7 +94,7 @@ class SCIPDirect(DirectSolver):
     def _apply_solver(self):
         StaleFlagManager.mark_all_as_stale()
 
-        # Supress solver output if requested
+        # Suppress solver output if requested
         if self._tee:
             self._solver_model.hideOutput(quiet=False)
         else:
@@ -179,7 +179,7 @@ class SCIPDirect(DirectSolver):
                 elif isinstance(pyomo_expr, DivisionExpression):
                     if len(scip_expr_list) != 2:
                         raise ValueError(
-                            f"DivisonExpression has {len(scip_expr_list)} many terms instead of two!"
+                            f"DivisionExpression has {len(scip_expr_list)} many terms instead of two!"
                         )
                     return scip_expr_list[0] / scip_expr_list[1]
                 elif isinstance(pyomo_expr, UnaryFunctionExpression):
