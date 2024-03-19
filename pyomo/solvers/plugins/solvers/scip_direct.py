@@ -591,15 +591,6 @@ class SCIPDirect(DirectSolver):
 
         self.results.problem.name = scip.getProbName()
 
-        if scip.getObjectiveSense() == "minimize":
-            self.results.problem.sense = minimize
-        elif scip.getObjectiveSense() == "maximize":
-            self.results.problem.sense = maximize
-        else:
-            raise RuntimeError(
-                f"Unrecognized SCIP objective sense: {scip.getObjectiveSense()}"
-            )
-
         self.results.problem.upper_bound = None
         self.results.problem.lower_bound = None
         if scip.getNSols() > 0:
