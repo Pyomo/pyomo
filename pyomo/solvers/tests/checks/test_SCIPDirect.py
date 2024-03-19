@@ -37,6 +37,7 @@ except ImportError:
     scip_available = False
 
 
+@unittest.skipIf(not scip_available, "The SCIP python bindings are not available")
 class SCIPDirectTests(unittest.TestCase):
     def setUp(self):
         self.stderr = sys.stderr
@@ -45,7 +46,6 @@ class SCIPDirectTests(unittest.TestCase):
     def tearDown(self):
         sys.stderr = self.stderr
 
-    @unittest.skipIf(not scip_available, "The SCIP python bindings are not available")
     def test_infeasible_lp(self):
         with SolverFactory("scip_direct", solver_io="python") as opt:
             model = ConcreteModel()
@@ -60,7 +60,6 @@ class SCIPDirectTests(unittest.TestCase):
                 results.solver.termination_condition, TerminationCondition.infeasible
             )
 
-    @unittest.skipIf(not scip_available, "The SCIP python bindings are not available")
     def test_unbounded_lp(self):
         with SolverFactory("scip_direct", solver_io="python") as opt:
             model = ConcreteModel()
@@ -77,7 +76,6 @@ class SCIPDirectTests(unittest.TestCase):
                 ),
             )
 
-    @unittest.skipIf(not scip_available, "The SCIP python bindings are not available")
     def test_optimal_lp(self):
         with SolverFactory("scip_direct", solver_io="python") as opt:
             model = ConcreteModel()
@@ -88,7 +86,6 @@ class SCIPDirectTests(unittest.TestCase):
 
             self.assertEqual(results.solution.status, SolutionStatus.optimal)
 
-    @unittest.skipIf(not scip_available, "The SCIP python bindings are not available")
     def test_get_duals_lp(self):
         with SolverFactory("scip_direct", solver_io="python") as opt:
             model = ConcreteModel()
@@ -108,7 +105,6 @@ class SCIPDirectTests(unittest.TestCase):
             self.assertAlmostEqual(model.dual[model.C1], 0.4)
             self.assertAlmostEqual(model.dual[model.C2], 0.2)
 
-    @unittest.skipIf(not scip_available, "The SCIP python bindings are not available")
     def test_infeasible_mip(self):
         with SolverFactory("scip_direct", solver_io="python") as opt:
             model = ConcreteModel()
@@ -123,7 +119,6 @@ class SCIPDirectTests(unittest.TestCase):
                 results.solver.termination_condition, TerminationCondition.infeasible
             )
 
-    @unittest.skipIf(not scip_available, "The SCIP python bindings are not available")
     def test_unbounded_mip(self):
         with SolverFactory("scip_direct", solver_io="python") as opt:
             model = AbstractModel()
@@ -141,7 +136,6 @@ class SCIPDirectTests(unittest.TestCase):
                 ),
             )
 
-    @unittest.skipIf(not scip_available, "The SCIP python bindings are not available")
     def test_optimal_mip(self):
         with SolverFactory("scip_direct", solver_io="python") as opt:
             model = ConcreteModel()
