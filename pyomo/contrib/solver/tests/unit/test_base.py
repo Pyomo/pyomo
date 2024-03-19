@@ -178,7 +178,13 @@ class TestPersistentSolverBase(unittest.TestCase):
 
 class TestLegacySolverWrapper(unittest.TestCase):
     def test_class_method_list(self):
-        expected_list = ['available', 'config_block', 'license_is_valid', 'set_options', 'solve']
+        expected_list = [
+            'available',
+            'config_block',
+            'license_is_valid',
+            'set_options',
+            'solve',
+        ]
         method_list = [
             method
             for method in dir(base.LegacySolverWrapper)
