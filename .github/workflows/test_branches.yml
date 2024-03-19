@@ -269,6 +269,12 @@ jobs:
             python -m pip install --cache-dir cache/pip xpress \
                 || echo "WARNING: Xpress Community Edition is not available"
             if [[ ${{matrix.python}} == pypy* ]]; then
+                echo "skipping SCIP for pypy"
+            else
+                python -m pip install --cache-dir cache/pip pyscipopt==5.0.0 \
+                    || echo "WARNING: SCIP is not available"
+            fi
+            if [[ ${{matrix.python}} == pypy* ]]; then
                 echo "skipping wntr for pypy"
             else
                 python -m pip install wntr \

@@ -182,4 +182,9 @@ class SCIPPersistent(PersistentSolver, SCIPDirect):
         self._solver_model.setObjective(obj_coef * scip_var, sense=sense, clear=False)
 
     def reset(self):
+        """ This function is necessary to call before making any changes to the
+        SCIP model after optimizing. It frees solution run specific information
+        that is not automatically done when changes to an already solved model
+        are made. Making changes to an already optimized model, e.g. adding additional
+        constraints will raise an error unless this function is called. """
         self._solver_model.freeTransform()
