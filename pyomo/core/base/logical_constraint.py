@@ -9,8 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['LogicalConstraint', '_LogicalConstraintData', 'LogicalConstraintList']
-
 import inspect
 import sys
 import logging
@@ -22,7 +20,6 @@ from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
 from pyomo.common.timing import ConstructionTimer
 
-from pyomo.core.base.constraint import Constraint
 from pyomo.core.expr.boolean_value import as_boolean, BooleanConstant
 from pyomo.core.expr.numvalue import native_types, native_logical_types
 from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory

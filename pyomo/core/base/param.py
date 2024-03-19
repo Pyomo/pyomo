@@ -9,13 +9,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['Param']
-
+from __future__ import annotations
 import sys
 import types
 import logging
 from weakref import ref as weakref_ref
 from pyomo.common.pyomo_typing import overload
+from typing import Union, Type
 
 from pyomo.common.autoslots import AutoSlots
 from pyomo.common.deprecation import deprecation_warning, RenamedClass
@@ -164,16 +164,31 @@ class _ParamData(ComponentData, NumericValue):
         # required to be mutable.
         #
         _comp = self.parent_component()
-        if type(value) in native_types:
+        if value.__class__ in native_types:
             # TODO: warn/error: check if this Param has units: assigning
             # a dimensionless value to a united param should be an error
             pass
         elif _comp._units is not None:
             _src_magnitude = expr_value(value)
-            _src_units = units.get_units(value)
-            value = units.convert_value(
-                num_value=_src_magnitude, from_units=_src_units, to_units=_comp._units
-            )
+            # Note: expr_value() could have just registered a new numeric type
+            if value.__class__ in native_types:
+                value = _src_magnitude
+            else:
+                _src_units = units.get_units(value)
+                value = units.convert_value(
+                    num_value=_src_magnitude,
+                    from_units=_src_units,
+                    to_units=_comp._units,
+                )
+        # FIXME: we should call value() here [to ensure types get
+        # registered], but doing so breaks non-numeric Params (which we
+        # allow).  The real fix will be to follow the precedent from
+        # GetItemExpression and have separate types based on which
+        # expression "system" the Param should participate in (numeric,
+        # logical, or structural).
+        #
+        # else:
+        #     value = expr_value(value)
 
         old_value, self._value = self._value, value
         try:
@@ -277,6 +292,17 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         value for Params to indicate that no valid value is present."""
 
         pass
+
+    @overload
+    def __new__(
+        cls: Type[Param], *args, **kwds
+    ) -> Union[ScalarParam, IndexedParam]: ...
+
+    @overload
+    def __new__(cls: Type[ScalarParam], *args, **kwds) -> ScalarParam: ...
+
+    @overload
+    def __new__(cls: Type[IndexedParam], *args, **kwds) -> IndexedParam: ...
 
     def __new__(cls, *args, **kwds):
         if cls != Param:
@@ -970,7 +996,7 @@ class IndexedParam(Param):
     # between potentially variable GetItemExpression objects and
     # "constant" GetItemExpression objects.  That will need to wait for
     # the expression rework [JDS; Nov 22].
-    def __getitem__(self, args):
+    def __getitem__(self, args) -> _ParamData:
         try:
             return super().__getitem__(args)
         except:

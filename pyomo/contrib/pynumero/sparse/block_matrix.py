@@ -31,8 +31,6 @@ import numpy as np
 import logging
 import warnings
 
-__all__ = ['BlockMatrix', 'NotFullyDefinedBlockMatrixError']
-
 
 logger = logging.getLogger(__name__)
 

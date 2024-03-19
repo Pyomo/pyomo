@@ -919,6 +919,27 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, 3)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
+    def test_bounds_with_immutable_params(
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
+    ):
+        # this test is for issue #2574
+        opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
+        if not opt.available():
+            raise unittest.SkipTest
+        m = pe.ConcreteModel()
+        m.p = pe.Param(mutable=False, initialize=1)
+        m.q = pe.Param([1, 2], mutable=False, initialize=10)
+        m.y = pe.Var()
+        m.y.setlb(m.p)
+        m.y.setub(m.q[1])
+        m.obj = pe.Objective(expr=m.y)
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.y.value, 1)
+        m.y.setlb(m.q[2])
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.y.value, 10)
+
+    @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_solution_loader(
         self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):

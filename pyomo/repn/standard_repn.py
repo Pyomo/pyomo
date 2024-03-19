@@ -10,9 +10,6 @@
 #  ___________________________________________________________________________
 
 
-__all__ = ['StandardRepn', 'generate_standard_repn']
-
-
 import sys
 import logging
 import itertools
@@ -324,6 +321,16 @@ def generate_standard_repn(
                             linear_vars[id_] = v
                     elif arg.__class__ in native_numeric_types:
                         C_ += arg
+                    elif arg.is_variable_type():
+                        if arg.fixed:
+                            C_ += arg.value
+                            continue
+                        id_ = id(arg)
+                        if id_ in linear_coefs:
+                            linear_coefs[id_] += 1
+                        else:
+                            linear_coefs[id_] = 1
+                            linear_vars[id_] = arg
                     else:
                         C_ += EXPR.evaluate_expression(arg)
             else:  # compute_values == False
@@ -339,6 +346,18 @@ def generate_standard_repn(
                         else:
                             linear_coefs[id_] = c
                             linear_vars[id_] = v
+                    elif arg.__class__ in native_numeric_types:
+                        C_ += arg
+                    elif arg.is_variable_type():
+                        if arg.fixed:
+                            C_ += arg
+                            continue
+                        id_ = id(arg)
+                        if id_ in linear_coefs:
+                            linear_coefs[id_] += 1
+                        else:
+                            linear_coefs[id_] = 1
+                            linear_vars[id_] = arg
                     else:
                         C_ += arg
 

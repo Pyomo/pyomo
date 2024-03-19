@@ -11,9 +11,7 @@
 
 from pyomo.common.dependencies import numpy as np, attempt_import
 
-block_vector = attempt_import(
-    'pyomo.contrib.pynumero.sparse.block_vector', defer_check=True
-)[0]
+block_vector = attempt_import('pyomo.contrib.pynumero.sparse.block_vector')[0]
 
 
 def norm(x, ord=None):

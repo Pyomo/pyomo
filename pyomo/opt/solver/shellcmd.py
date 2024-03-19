@@ -9,8 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['SystemCallSolver']
-
 import os
 import sys
 import time
@@ -62,6 +60,7 @@ class SystemCallSolver(OptSolver):
         # a solver plugin may not report execution time.
         self._last_solve_time = None
         self._define_signal_handlers = None
+        self._version_timeout = 2
 
         if executable is not None:
             self.set_executable(name=executable, validate=validate)

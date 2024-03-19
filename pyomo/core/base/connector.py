@@ -9,8 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['Connector']
-
 import logging
 import sys
 from weakref import ref as weakref_ref
@@ -26,7 +24,6 @@ from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.core.base.misc import apply_indexed_rule
-from pyomo.core.base.transformation import TransformationFactory
 
 logger = logging.getLogger('pyomo.core')
 

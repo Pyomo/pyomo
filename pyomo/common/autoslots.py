@@ -29,7 +29,7 @@ def _deepcopy_tuple(obj, memo, _id):
             unchanged = False
     if unchanged:
         # Python does not duplicate "unchanged" tuples (i.e. allows the
-        # original objecct to be returned from deepcopy()).  We will
+        # original object to be returned from deepcopy()).  We will
         # preserve that behavior here.
         #
         # It also appears to be faster *not* to cache the fact that this

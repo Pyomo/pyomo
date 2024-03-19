@@ -9,14 +9,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['display']
-
 import logging
 import sys
-import types
 
 from pyomo.common.deprecation import relocated_module_attribute
-from pyomo.core.expr import native_numeric_types
 
 logger = logging.getLogger('pyomo.core')
 

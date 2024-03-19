@@ -9,15 +9,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['Expression', '_ExpressionData']
-
 import sys
 import logging
 from weakref import ref as weakref_ref
 from pyomo.common.pyomo_typing import overload
 
 from pyomo.common.log import is_debug_set
-from pyomo.common.deprecation import deprecated, RenamedClass
+from pyomo.common.deprecation import RenamedClass
 from pyomo.common.modeling import NOTSET
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.timing import ConstructionTimer
@@ -32,7 +30,6 @@ import pyomo.core.expr.numeric_expr as numeric_expr
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
-from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.expr.numvalue import as_numeric
 from pyomo.core.base.initializer import Initializer
 

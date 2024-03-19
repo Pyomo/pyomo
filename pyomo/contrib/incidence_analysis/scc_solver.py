@@ -18,13 +18,14 @@ from pyomo.contrib.incidence_analysis.interface import (
     IncidenceGraphInterface,
     _generate_variables_in_constraints,
 )
+from pyomo.contrib.incidence_analysis.config import IncidenceMethod
 
 
 _log = logging.getLogger(__name__)
 
 
 def generate_strongly_connected_components(
-    constraints, variables=None, include_fixed=False
+    constraints, variables=None, include_fixed=False, igraph=None
 ):
     """Yield in order ``_BlockData`` that each contain the variables and
     constraints of a single diagonal block in a block lower triangularization
@@ -41,9 +42,12 @@ def generate_strongly_connected_components(
     variables: List of Pyomo variable data objects
         Variables that may participate in strongly connected components.
         If not provided, all variables in the constraints will be used.
-    include_fixed: Bool
+    include_fixed: Bool, optional
         Indicates whether fixed variables will be included when
         identifying variables in constraints.
+    igraph: IncidenceGraphInterface, optional
+        Incidence graph containing (at least) the provided constraints
+        and variables.
 
     Yields
     ------
@@ -55,11 +59,17 @@ def generate_strongly_connected_components(
     """
     if variables is None:
         variables = list(
-            _generate_variables_in_constraints(constraints, include_fixed=include_fixed)
+            _generate_variables_in_constraints(
+                constraints,
+                include_fixed=include_fixed,
+                method=IncidenceMethod.ampl_repn,
+            )
         )
 
     assert len(variables) == len(constraints)
-    igraph = IncidenceGraphInterface()
+    if igraph is None:
+        igraph = IncidenceGraphInterface()
+
     var_blocks, con_blocks = igraph.block_triangularize(
         variables=variables, constraints=constraints
     )
@@ -73,7 +83,7 @@ def generate_strongly_connected_components(
 
 
 def solve_strongly_connected_components(
-    block, solver=None, solve_kwds=None, calc_var_kwds=None
+    block, *, solver=None, solve_kwds=None, use_calc_var=True, calc_var_kwds=None
 ):
     """Solve a square system of variables and equality constraints by
     solving strongly connected components individually.
@@ -98,6 +108,9 @@ def solve_strongly_connected_components(
         a solve method.
     solve_kwds: Dictionary
         Keyword arguments for the solver's solve method
+    use_calc_var: Bool
+        Whether to use ``calculate_variable_from_constraint`` for one-by-one
+        square system solves
     calc_var_kwds: Dictionary
         Keyword arguments for calculate_variable_from_constraint
 
@@ -112,23 +125,28 @@ def solve_strongly_connected_components(
         calc_var_kwds = {}
 
     igraph = IncidenceGraphInterface(
-        block, active=True, include_fixed=False, include_inequality=False
+        block,
+        active=True,
+        include_fixed=False,
+        include_inequality=False,
+        method=IncidenceMethod.ampl_repn,
     )
     constraints = igraph.constraints
     variables = igraph.variables
 
     res_list = []
     log_blocks = _log.isEnabledFor(logging.DEBUG)
-    for scc, inputs in generate_strongly_connected_components(constraints, variables):
-        with TemporarySubsystemManager(to_fix=inputs):
+    for scc, inputs in generate_strongly_connected_components(
+        constraints, variables, igraph=igraph
+    ):
+        with TemporarySubsystemManager(to_fix=inputs, remove_bounds_on_fix=True):
             N = len(scc.vars)
-            if N == 1:
+            if N == 1 and use_calc_var:
                 if log_blocks:
                     _log.debug(f"Solving 1x1 block: {scc.cons[0].name}.")
                 results = calculate_variable_from_constraint(
                     scc.vars[0], scc.cons[0], **calc_var_kwds
                 )
-                res_list.append(results)
             else:
                 if solver is None:
                     var_names = [var.name for var in scc.vars.values()][:10]
@@ -142,5 +160,5 @@ def solve_strongly_connected_components(
                 if log_blocks:
                     _log.debug(f"Solving {N}x{N} block.")
                 results = solver.solve(scc, **solve_kwds)
-                res_list.append(results)
+            res_list.append(results)
     return res_list

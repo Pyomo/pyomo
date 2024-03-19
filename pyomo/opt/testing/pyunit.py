@@ -9,9 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-
-__all__ = ['TestCase']
-
 import sys
 import os
 import re

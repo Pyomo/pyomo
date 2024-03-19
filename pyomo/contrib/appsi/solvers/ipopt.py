@@ -147,6 +147,7 @@ class Ipopt(PersistentSolver):
         self._primal_sol = ComponentMap()
         self._reduced_costs = ComponentMap()
         self._last_results_object: Optional[Results] = None
+        self._version_timeout = 2
 
     def available(self):
         if self.config.executable.path() is None:
@@ -158,7 +159,7 @@ class Ipopt(PersistentSolver):
     def version(self):
         results = subprocess.run(
             [str(self.config.executable), '--version'],
-            timeout=1,
+            timeout=self._version_timeout,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             universal_newlines=True,
@@ -421,9 +422,11 @@ class Ipopt(PersistentSolver):
                 results.best_feasible_objective = value(obj_expr_evaluated)
         elif self.config.load_solution:
             raise RuntimeError(
-                'A feasible solution was not found, so no solution can be loaded.'
-                'Please set opt.config.load_solution=False and check '
-                'results.termination_condition and '
+                'A feasible solution was not found, so no solution can be loaded. '
+                'If using the appsi.solvers.Ipopt interface, you can '
+                'set opt.config.load_solution=False. If using the environ.SolverFactory '
+                'interface, you can set opt.solve(model, load_solutions = False). '
+                'Then you can check results.termination_condition and '
                 'results.best_feasible_objective before loading a solution.'
             )
 

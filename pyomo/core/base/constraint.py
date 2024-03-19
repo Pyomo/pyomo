@@ -9,20 +9,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = [
-    'Constraint',
-    '_ConstraintData',
-    'ConstraintList',
-    'simple_constraint_rule',
-    'simple_constraintlist_rule',
-]
-
-import io
+from __future__ import annotations
 import sys
 import logging
-import math
 from weakref import ref as weakref_ref
 from pyomo.common.pyomo_typing import overload
+from typing import Union, Type
 
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.errors import DeveloperError
@@ -37,6 +29,7 @@ from pyomo.core.expr.numvalue import (
     as_numeric,
     is_fixed,
     native_numeric_types,
+    native_logical_types,
     native_types,
 )
 from pyomo.core.expr import (
@@ -51,6 +44,7 @@ from pyomo.core.base.indexed_component import (
     ActiveIndexedComponent,
     UnindexedComponent_set,
     rule_wrapper,
+    IndexedComponent,
 )
 from pyomo.core.base.set import Set
 from pyomo.core.base.disable_methods import disable_methods
@@ -94,14 +88,15 @@ def simple_constraint_rule(rule):
 
     model.c = Constraint(rule=simple_constraint_rule(...))
     """
-    return rule_wrapper(
-        rule,
-        {
-            None: Constraint.Skip,
-            True: Constraint.Feasible,
-            False: Constraint.Infeasible,
-        },
-    )
+    map_types = set([type(None)]) | native_logical_types
+    result_map = {None: Constraint.Skip}
+    for l_type in native_logical_types:
+        result_map[l_type(True)] = Constraint.Feasible
+        result_map[l_type(False)] = Constraint.Infeasible
+    # Note: some logical types hash the same as bool (e.g., np.bool_), so
+    # we will pass the set of all logical types in addition to the
+    # result_map
+    return rule_wrapper(rule, result_map, map_types=map_types)
 
 
 def simple_constraintlist_rule(rule):
@@ -119,14 +114,15 @@ def simple_constraintlist_rule(rule):
 
     model.c = ConstraintList(expr=simple_constraintlist_rule(...))
     """
-    return rule_wrapper(
-        rule,
-        {
-            None: ConstraintList.End,
-            True: Constraint.Feasible,
-            False: Constraint.Infeasible,
-        },
-    )
+    map_types = set([type(None)]) | native_logical_types
+    result_map = {None: ConstraintList.End}
+    for l_type in native_logical_types:
+        result_map[l_type(True)] = Constraint.Feasible
+        result_map[l_type(False)] = Constraint.Infeasible
+    # Note: some logical types hash the same as bool (e.g., np.bool_), so
+    # we will pass the set of all logical types in addition to the
+    # result_map
+    return rule_wrapper(rule, result_map, map_types=map_types)
 
 
 #
@@ -735,6 +731,17 @@ class Constraint(ActiveIndexedComponent):
     Violated = Infeasible
     Satisfied = Feasible
 
+    @overload
+    def __new__(
+        cls: Type[Constraint], *args, **kwds
+    ) -> Union[ScalarConstraint, IndexedConstraint]: ...
+
+    @overload
+    def __new__(cls: Type[ScalarConstraint], *args, **kwds) -> ScalarConstraint: ...
+
+    @overload
+    def __new__(cls: Type[IndexedConstraint], *args, **kwds) -> IndexedConstraint: ...
+
     def __new__(cls, *args, **kwds):
         if cls != Constraint:
             return super(Constraint, cls).__new__(cls)
@@ -1026,6 +1033,11 @@ class IndexedConstraint(Constraint):
     def add(self, index, expr):
         """Add a constraint with a given index."""
         return self.__setitem__(index, expr)
+
+    @overload
+    def __getitem__(self, index) -> _GeneralConstraintData: ...
+
+    __getitem__ = IndexedComponent.__getitem__  # type: ignore
 
 
 @ModelComponentFactory.register("A list of constraint expressions.")

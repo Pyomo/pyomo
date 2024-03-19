@@ -28,9 +28,6 @@ from pyomo.contrib.pynumero.interfaces.nlp import NLP
 from .external_grey_box import ExternalGreyBoxBlock
 
 
-__all__ = ['PyomoNLP']
-
-
 # TODO: There are todos in the code below
 class PyomoNLP(AslNLP):
     def __init__(self, pyomo_model, nl_file_options=None):

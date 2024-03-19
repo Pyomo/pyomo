@@ -9,31 +9,20 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = [
-    'Block',
-    'TraversalStrategy',
-    'SortComponents',
-    'active_components',
-    'components',
-    'active_components_data',
-    'components_data',
-    'SimpleBlock',
-    'ScalarBlock',
-]
-
+from __future__ import annotations
 import copy
-import enum
 import logging
 import sys
 import weakref
 import textwrap
-from contextlib import contextmanager
 
+from collections import defaultdict
+from contextlib import contextmanager
 from inspect import isclass, currentframe
+from io import StringIO
 from itertools import filterfalse, chain
 from operator import itemgetter, attrgetter
-from io import StringIO
-from pyomo.common.pyomo_typing import overload
+from typing import Union, Any, Type
 
 from pyomo.common.autoslots import AutoSlots
 from pyomo.common.collections import Mapping
@@ -41,7 +30,7 @@ from pyomo.common.deprecation import deprecated, deprecation_warning, RenamedCla
 from pyomo.common.formatting import StreamIndenter
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.log import is_debug_set
-from pyomo.common.sorting import sorted_robust
+from pyomo.common.pyomo_typing import overload
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.component import (
     Component,
@@ -57,6 +46,7 @@ from pyomo.core.base.initializer import Initializer
 from pyomo.core.base.indexed_component import (
     ActiveIndexedComponent,
     UnindexedComponent_set,
+    IndexedComponent,
 )
 
 from pyomo.opt.base import ProblemFormat, guess_format
@@ -552,7 +542,7 @@ class _BlockData(ActiveComponentData):
         super(_BlockData, self).__setattr__('_decl_order', [])
         self._private_data = None
 
-    def __getattr__(self, val):
+    def __getattr__(self, val) -> Union[Component, IndexedComponent, Any]:
         if val in ModelComponentFactory:
             return _component_decorator(self, ModelComponentFactory.get_class(val))
         # Since the base classes don't support getattr, we can just
@@ -561,7 +551,7 @@ class _BlockData(ActiveComponentData):
             "'%s' object has no attribute '%s'" % (self.__class__.__name__, val)
         )
 
-    def __setattr__(self, name, val):
+    def __setattr__(self, name: str, val: Union[Component, IndexedComponent, Any]):
         """
         Set an attribute of a block data object.
         """
@@ -2000,7 +1990,7 @@ Components must now specify their rules explicitly using 'rule=' keywords."""
         if self._private_data is None:
             self._private_data = {}
         if scope not in self._private_data:
-            self._private_data[scope] = {}
+            self._private_data[scope] = Block._private_data_initializers[scope]()
         return self._private_data[scope]
 
 
@@ -2018,6 +2008,18 @@ class Block(ActiveIndexedComponent):
     """
 
     _ComponentDataClass = _BlockData
+    _private_data_initializers = defaultdict(lambda: dict)
+
+    @overload
+    def __new__(
+        cls: Type[Block], *args, **kwds
+    ) -> Union[ScalarBlock, IndexedBlock]: ...
+
+    @overload
+    def __new__(cls: Type[ScalarBlock], *args, **kwds) -> ScalarBlock: ...
+
+    @overload
+    def __new__(cls: Type[IndexedBlock], *args, **kwds) -> IndexedBlock: ...
 
     def __new__(cls, *args, **kwds):
         if cls != Block:
@@ -2221,6 +2223,23 @@ class Block(ActiveIndexedComponent):
         for key in sorted(self):
             _BlockData.display(self[key], filename, ostream, prefix)
 
+    @staticmethod
+    def register_private_data_initializer(initializer, scope=None):
+        mod = currentframe().f_back.f_globals['__name__']
+        if scope is None:
+            scope = mod
+        elif not mod.startswith(scope):
+            raise ValueError(
+                "'private_data' scope must be substrings of the caller's module name. "
+                f"Received '{scope}' when calling register_private_data_initializer()."
+            )
+        if scope in Block._private_data_initializers:
+            raise RuntimeError(
+                "Duplicate initializer registration for 'private_data' dictionary "
+                f"(scope={scope})"
+            )
+        Block._private_data_initializers[scope] = initializer
+
 
 class ScalarBlock(_BlockData, Block):
     def __init__(self, *args, **kwds):
@@ -2245,6 +2264,11 @@ class SimpleBlock(metaclass=RenamedClass):
 class IndexedBlock(Block):
     def __init__(self, *args, **kwds):
         Block.__init__(self, *args, **kwds)
+
+    @overload
+    def __getitem__(self, index) -> _BlockData: ...
+
+    __getitem__ = IndexedComponent.__getitem__  # type: ignore
 
 
 #

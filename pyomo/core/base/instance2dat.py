@@ -9,8 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['instance2dat']
-
 import types
 from pyomo.core.base import Set, Param, value
 

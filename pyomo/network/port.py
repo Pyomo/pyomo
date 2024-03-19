@@ -9,8 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['Port']
-
 import logging, sys
 from weakref import ref as weakref_ref
 
