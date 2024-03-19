@@ -116,6 +116,7 @@ class SCIPPersistent(PersistentSolver, SCIPDirect):
         param: str
             The SCIP parameter to set. Options include any SCIP parameter.
             Please see the SCIP documentation for options.
+            Link at: https://www.scipopt.org/doc/html/PARAMETERS.php
         val: any
             The value to set the parameter to. See SCIP documentation for possible values.
         """
@@ -129,6 +130,7 @@ class SCIPPersistent(PersistentSolver, SCIPDirect):
         ----------
         param: str or int or float
             The SCIP parameter to get the value of. See SCIP documentation for possible options.
+            Link at: https://www.scipopt.org/doc/html/PARAMETERS.php
         """
         return self._solver_model.getParam(param)
 
