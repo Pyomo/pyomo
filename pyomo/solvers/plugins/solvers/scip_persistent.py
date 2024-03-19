@@ -96,7 +96,7 @@ class SCIPPersistent(PersistentSolver, SCIPDirect):
 
     def write(self, filename, filetype=""):
         """
-        Write the model to a file (e.g., and lp file).
+        Write the model to a file (e.g., an lp file).
 
         Parameters
         ----------
