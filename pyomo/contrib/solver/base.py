@@ -19,9 +19,10 @@ from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.objective import _GeneralObjectiveData
-from pyomo.common.config import document_kwargs_from_configdict
+from pyomo.common.config import document_kwargs_from_configdict, ConfigValue
 from pyomo.common.errors import ApplicationError
 from pyomo.common.deprecation import deprecation_warning
+from pyomo.common.modeling import NOTSET
 from pyomo.opt.results.results_ import SolverResults as LegacySolverResults
 from pyomo.opt.results.solution import Solution as LegacySolution
 from pyomo.core.kernel.objective import minimize
@@ -347,6 +348,11 @@ class LegacySolverWrapper:
     interface. Necessary for backwards compatibility.
     """
 
+    def __init__(self, solver_io=None, **kwargs):
+        if solver_io is not None:
+            raise NotImplementedError('Still working on this')
+        super().__init__(**kwargs)
+
     #
     # Support "with" statements
     #
@@ -358,51 +364,61 @@ class LegacySolverWrapper:
 
     def _map_config(
         self,
-        tee,
-        load_solutions,
-        symbolic_solver_labels,
-        timelimit,
-        # Report timing is no longer a valid option. We now always return a
-        # timer object that can be inspected.
-        report_timing,
-        raise_exception_on_nonoptimal_result,
-        solver_io,
-        suffixes,
-        logfile,
-        keepfiles,
-        solnfile,
-        options,
+        tee=NOTSET,
+        load_solutions=NOTSET,
+        symbolic_solver_labels=NOTSET,
+        timelimit=NOTSET,
+        report_timing=NOTSET,
+        raise_exception_on_nonoptimal_result=NOTSET,
+        solver_io=NOTSET,
+        suffixes=NOTSET,
+        logfile=NOTSET,
+        keepfiles=NOTSET,
+        solnfile=NOTSET,
+        options=NOTSET,
     ):
         """Map between legacy and new interface configuration options"""
         self.config = self.config()
-        self.config.tee = tee
-        self.config.load_solutions = load_solutions
-        self.config.symbolic_solver_labels = symbolic_solver_labels
-        self.config.time_limit = timelimit
-        self.config.solver_options.set_value(options)
+        if 'report_timing' not in self.config:
+            self.config.declare(
+                'report_timing', ConfigValue(domain=bool, default=False)
+            )
+        if tee is not NOTSET:
+            self.config.tee = tee
+        if load_solutions is not NOTSET:
+            self.config.load_solutions = load_solutions
+        if symbolic_solver_labels is not NOTSET:
+            self.config.symbolic_solver_labels = symbolic_solver_labels
+        if timelimit is not NOTSET:
+            self.config.time_limit = timelimit
+        if report_timing is not NOTSET:
+            self.config.report_timing = report_timing
+        if options is not NOTSET:
+            self.config.solver_options.set_value(options)
         # This is a new flag in the interface. To preserve backwards compatibility,
         # its default is set to "False"
-        self.config.raise_exception_on_nonoptimal_result = (
-            raise_exception_on_nonoptimal_result
-        )
-        if solver_io is not None:
+        if raise_exception_on_nonoptimal_result is not NOTSET:
+            self.config.raise_exception_on_nonoptimal_result = (
+                raise_exception_on_nonoptimal_result
+            )
+        if solver_io is not NOTSET and solver_io is not None:
             raise NotImplementedError('Still working on this')
-        if suffixes is not None:
+        if suffixes is not NOTSET and suffixes is not None:
             raise NotImplementedError('Still working on this')
-        if logfile is not None:
+        if logfile is not NOTSET and logfile is not None:
             raise NotImplementedError('Still working on this')
         if keepfiles or 'keepfiles' in self.config:
             cwd = os.getcwd()
             deprecation_warning(
                 "`keepfiles` has been deprecated in the new solver interface. "
-                "Use `working_dir` instead to designate a directory in which "
-                f"files should be generated and saved. Setting `working_dir` to `{cwd}`.",
+                "Use `working_dir` instead to designate a directory in which files "
+                f"should be generated and saved. Setting `working_dir` to `{cwd}`.",
                 version='6.7.1',
             )
             self.config.working_dir = cwd
         # I believe this currently does nothing; however, it is unclear what
         # our desired behavior is for this.
-        if solnfile is not None:
+        if solnfile is not NOTSET:
             if 'filename' in self.config:
                 filename = os.path.splitext(solnfile)[0]
                 self.config.filename = filename
@@ -504,27 +520,33 @@ class LegacySolverWrapper:
 
         """
         original_config = self.config
-        self._map_config(
-            tee,
-            load_solutions,
-            symbolic_solver_labels,
-            timelimit,
-            report_timing,
-            raise_exception_on_nonoptimal_result,
-            solver_io,
-            suffixes,
-            logfile,
-            keepfiles,
-            solnfile,
-            options,
+
+        map_args = (
+            'tee',
+            'load_solutions',
+            'symbolic_solver_labels',
+            'timelimit',
+            'report_timing',
+            'raise_exception_on_nonoptimal_result',
+            'solver_io',
+            'suffixes',
+            'logfile',
+            'keepfiles',
+            'solnfile',
+            'options',
         )
+        loc = locals()
+        filtered_args = {k: loc[k] for k in map_args if loc.get(k, None) is not None}
+        self._map_config(**filtered_args)
 
         results: Results = super().solve(model)
         legacy_results, legacy_soln = self._map_results(model, results)
-
         legacy_results = self._solution_handler(
             load_solutions, model, results, legacy_results, legacy_soln
         )
+
+        if self.config.report_timing:
+            print(results.timing_info.timer)
 
         self.config = original_config
 
@@ -555,3 +577,13 @@ class LegacySolverWrapper:
 
         """
         return bool(self.available())
+
+    def config_block(self, init=False):
+        from pyomo.scripting.solve_config import default_config_block
+
+        return default_config_block(self, init)[0]
+
+    def set_options(self, options):
+        opts = {k: v for k, v in options.value().items() if v is not None}
+        if opts:
+            self._map_config(**opts)
