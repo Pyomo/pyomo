@@ -382,8 +382,16 @@ class SCIPDirect(DirectSolver):
     def _scip_vtype_from_var(self, var):
         """
         This function takes a pyomo variable and returns the appropriate SCIP variable type
-        :param var: pyomo.core.base.var.Var
-        :return: B, I, or C
+
+        Parameters
+        ----------
+        var: pyomo.core.base.var.Var
+            The pyomo variable that we want to retrieve the SCIP vtype of
+
+        Returns
+        -------
+        vtype: str
+            B for Binary, I for Integer, or C for Continuous
         """
         if var.is_binary():
             vtype = "B"
@@ -425,52 +433,12 @@ class SCIPDirect(DirectSolver):
 
         self._needs_updated = True
 
-    def _postsolve(self):
-        # the only suffixes that we extract from SCIP are
-        # constraint duals, constraint slacks, and variable
-        # reduced-costs. scan through the solver suffix list
-        # and throw an exception if the user has specified
-        # any others.
-        extract_duals = False
-        extract_slacks = False
-        extract_reduced_costs = False
-        for suffix in self._suffixes:
-            flag = False
-            if re.match(suffix, "dual"):
-                extract_duals = True
-                flag = True
-            if re.match(suffix, "slack"):
-                extract_slacks = True
-                flag = True
-            if re.match(suffix, "rc"):
-                extract_reduced_costs = True
-                flag = True
-            if not flag:
-                raise RuntimeError(
-                    f"***The scip_direct solver plugin cannot extract solution suffix={suffix}"
-                )
-
-        scip = self._solver_model
+    def _get_solver_solution_status(self, scip, soln):
+        """ """
+        # Get the status of the SCIP Model currently
         status = scip.getStatus()
-        scip_vars = scip.getVars()
-        n_bin_vars = sum([scip_var.vtype() == "BINARY" for scip_var in scip_vars])
-        n_int_vars = sum([scip_var.vtype() == "INTEGER" for scip_var in scip_vars])
-        n_con_vars = sum([scip_var.vtype() == "CONTINUOUS" for scip_var in scip_vars])
 
-        if n_bin_vars + n_int_vars > 0:
-            if extract_reduced_costs:
-                logger.warning("Cannot get reduced costs for MIP.")
-            if extract_duals:
-                logger.warning("Cannot get duals for MIP.")
-            extract_reduced_costs = False
-            extract_duals = False
-
-        self.results = SolverResults()
-        soln = Solution()
-
-        self.results.solver.name = f"SCIP{self._version}"
-        self.results.solver.wallclock_time = scip.getSolvingTime()
-
+        # Go through each potential case and update appropriately
         if scip.getStage() == 1:  # SCIP Model is created but not yet optimized
             self.results.solver.status = SolverStatus.aborted
             self.results.solver.termination_message = (
@@ -588,6 +556,55 @@ class SCIPDirect(DirectSolver):
             )
             self.results.solver.termination_condition = TerminationCondition.error
             soln.status = SolutionStatus.error
+        return soln
+
+    def _postsolve(self):
+        # the only suffixes that we extract from SCIP are
+        # constraint duals, constraint slacks, and variable
+        # reduced-costs. scan through the solver suffix list
+        # and throw an exception if the user has specified
+        # any others.
+        extract_duals = False
+        extract_slacks = False
+        extract_reduced_costs = False
+        for suffix in self._suffixes:
+            flag = False
+            if re.match(suffix, "dual"):
+                extract_duals = True
+                flag = True
+            if re.match(suffix, "slack"):
+                extract_slacks = True
+                flag = True
+            if re.match(suffix, "rc"):
+                extract_reduced_costs = True
+                flag = True
+            if not flag:
+                raise RuntimeError(
+                    f"***The scip_direct solver plugin cannot extract solution suffix={suffix}"
+                )
+
+        scip = self._solver_model
+        status = scip.getStatus()
+        scip_vars = scip.getVars()
+        n_bin_vars = sum([scip_var.vtype() == "BINARY" for scip_var in scip_vars])
+        n_int_vars = sum([scip_var.vtype() == "INTEGER" for scip_var in scip_vars])
+        n_con_vars = sum([scip_var.vtype() == "CONTINUOUS" for scip_var in scip_vars])
+
+        if n_bin_vars + n_int_vars > 0:
+            if extract_reduced_costs:
+                logger.warning("Cannot get reduced costs for MIP.")
+            if extract_duals:
+                logger.warning("Cannot get duals for MIP.")
+            extract_reduced_costs = False
+            extract_duals = False
+
+        self.results = SolverResults()
+        soln = Solution()
+
+        self.results.solver.name = f"SCIP{self._version}"
+        self.results.solver.wallclock_time = scip.getSolvingTime()
+
+        soln = self._get_solver_solution_status(scip, soln)
 
         self.results.problem.name = scip.getProbName()
 
