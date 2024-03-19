@@ -131,12 +131,10 @@ def create_subsystem_block(constraints, variables=None, include_fixed=False):
     block.vars = Reference(variables)
     block.cons = Reference(constraints)
     var_set = ComponentSet(variables)
-    input_vars = [
-        var for var in get_vars_from_components(
-            block, Constraint, include_fixed=include_fixed
-        )
-        if var not in var_set
-    ]
+    input_vars = []
+    for var in get_vars_from_components(block, Constraint, include_fixed=include_fixed):
+        if var not in var_set:
+            input_vars.append(var)
     block.input_vars = Reference(input_vars)
     add_local_external_functions(block)
     return block
