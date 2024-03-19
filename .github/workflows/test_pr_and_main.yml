@@ -301,7 +301,7 @@ jobs:
             if [[ ${{matrix.python}} == pypy* ]]; then
                 echo "skipping SCIP for pypy"
             else
-                python -m pip install --cache-dir cache/pip pyscipopt==5.0.0 \
+                python -m pip install --cache-dir cache/pip pyscipopt \
                     || echo "WARNING: SCIP is not available"
             fi
             if [[ ${{matrix.python}} == pypy* ]]; then
@@ -376,7 +376,7 @@ jobs:
         if test -z "${{matrix.slim}}"; then
             PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
             echo "Installing for $PYVER"
-            for PKG in 'cplex>=12.10' docplex 'gurobi=10.0.3' xpress cyipopt pymumps scip; do
+            for PKG in 'cplex>=12.10' docplex 'gurobi=10.0.3' xpress cyipopt pymumps scip pyscipopt; do
                 echo ""
                 echo "*** Install $PKG ***"
                 # conda can literally take an hour to determine that a
