@@ -60,7 +60,7 @@ from pyomo.core.base import (
 )
 from pyomo.core.base.boolean_var import (
     ScalarBooleanVar,
-    _GeneralBooleanVarData,
+    GeneralBooleanVarData,
     IndexedBooleanVar,
 )
 from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
@@ -964,7 +964,7 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         _GeneralVarData: _before_var,
         IndexedVar: _before_indexed_var,
         ScalarBooleanVar: _before_boolean_var,
-        _GeneralBooleanVarData: _before_boolean_var,
+        GeneralBooleanVarData: _before_boolean_var,
         IndexedBooleanVar: _before_indexed_boolean_var,
         _GeneralExpressionData: _before_named_expression,
         ScalarExpression: _before_named_expression,

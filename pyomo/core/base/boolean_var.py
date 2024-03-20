@@ -194,7 +194,7 @@ def _associated_binary_mapper(encode, val):
     return val
 
 
-class _GeneralBooleanVarData(BooleanVarData):
+class GeneralBooleanVarData(BooleanVarData):
     """
     This class defines the data for a single Boolean variable.
 
@@ -271,13 +271,13 @@ class _GeneralBooleanVarData(BooleanVarData):
 
     def get_associated_binary(self):
         """Get the binary _VarData associated with this
-        _GeneralBooleanVarData"""
+        GeneralBooleanVarData"""
         return (
             self._associated_binary() if self._associated_binary is not None else None
         )
 
     def associate_binary_var(self, binary_var):
-        """Associate a binary _VarData to this _GeneralBooleanVarData"""
+        """Associate a binary _VarData to this GeneralBooleanVarData"""
         if (
             self._associated_binary is not None
             and type(self._associated_binary)
@@ -300,6 +300,11 @@ class _GeneralBooleanVarData(BooleanVarData):
             self._associated_binary = weakref_ref(binary_var)
 
 
+class _GeneralBooleanVarData(metaclass=RenamedClass):
+    __renamed__new_class__ = GeneralBooleanVarData
+    __renamed__version__ = '6.7.2.dev0'
+
+
 @ModelComponentFactory.register("Logical decision variables.")
 class BooleanVar(IndexedComponent):
     """A logical variable, which may be defined over an index.
@@ -314,7 +319,7 @@ class BooleanVar(IndexedComponent):
             to True.
     """
 
-    _ComponentDataClass = _GeneralBooleanVarData
+    _ComponentDataClass = GeneralBooleanVarData
 
     def __new__(cls, *args, **kwds):
         if cls != BooleanVar:
@@ -506,11 +511,11 @@ class BooleanVar(IndexedComponent):
         )
 
 
-class ScalarBooleanVar(_GeneralBooleanVarData, BooleanVar):
+class ScalarBooleanVar(GeneralBooleanVarData, BooleanVar):
     """A single variable."""
 
     def __init__(self, *args, **kwd):
-        _GeneralBooleanVarData.__init__(self, component=self)
+        GeneralBooleanVarData.__init__(self, component=self)
         BooleanVar.__init__(self, *args, **kwd)
         self._index = UnindexedComponent_index
 
@@ -526,7 +531,7 @@ class ScalarBooleanVar(_GeneralBooleanVarData, BooleanVar):
     def value(self):
         """Return the value for this variable."""
         if self._constructed:
-            return _GeneralBooleanVarData.value.fget(self)
+            return GeneralBooleanVarData.value.fget(self)
         raise ValueError(
             "Accessing the value of variable '%s' "
             "before the Var has been constructed (there "
@@ -537,7 +542,7 @@ class ScalarBooleanVar(_GeneralBooleanVarData, BooleanVar):
     def value(self, val):
         """Set the value for this variable."""
         if self._constructed:
-            return _GeneralBooleanVarData.value.fset(self, val)
+            return GeneralBooleanVarData.value.fset(self, val)
         raise ValueError(
             "Setting the value of variable '%s' "
             "before the Var has been constructed (there "
@@ -546,7 +551,7 @@ class ScalarBooleanVar(_GeneralBooleanVarData, BooleanVar):
 
     @property
     def domain(self):
-        return _GeneralBooleanVarData.domain.fget(self)
+        return GeneralBooleanVarData.domain.fget(self)
 
     def fix(self, value=NOTSET, skip_validation=False):
         """
@@ -554,7 +559,7 @@ class ScalarBooleanVar(_GeneralBooleanVarData, BooleanVar):
         indicating the variable should be fixed at its current value.
         """
         if self._constructed:
-            return _GeneralBooleanVarData.fix(self, value, skip_validation)
+            return GeneralBooleanVarData.fix(self, value, skip_validation)
         raise ValueError(
             "Fixing variable '%s' "
             "before the Var has been constructed (there "
@@ -564,7 +569,7 @@ class ScalarBooleanVar(_GeneralBooleanVarData, BooleanVar):
     def unfix(self):
         """Sets the fixed indicator to False."""
         if self._constructed:
-            return _GeneralBooleanVarData.unfix(self)
+            return GeneralBooleanVarData.unfix(self)
         raise ValueError(
             "Freeing variable '%s' "
             "before the Var has been constructed (there "
