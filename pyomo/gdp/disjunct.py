@@ -412,7 +412,7 @@ class _Initializer(object):
             return (_Initializer.deferred_value, arg)
 
 
-class _DisjunctData(BlockData):
+class DisjunctData(BlockData):
     __autoslot_mappers__ = {'_transformation_block': AutoSlots.weakref_mapper}
 
     _Block_reserved_words = set()
@@ -434,23 +434,28 @@ class _DisjunctData(BlockData):
         self._transformation_block = None
 
     def activate(self):
-        super(_DisjunctData, self).activate()
+        super(DisjunctData, self).activate()
         self.indicator_var.unfix()
 
     def deactivate(self):
-        super(_DisjunctData, self).deactivate()
+        super(DisjunctData, self).deactivate()
         self.indicator_var.fix(False)
 
     def _deactivate_without_fixing_indicator(self):
-        super(_DisjunctData, self).deactivate()
+        super(DisjunctData, self).deactivate()
 
     def _activate_without_unfixing_indicator(self):
-        super(_DisjunctData, self).activate()
+        super(DisjunctData, self).activate()
+
+
+class _DisjunctData(metaclass=RenamedClass):
+    __renamed__new_class__ = DisjunctData
+    __renamed__version__ = '6.7.2.dev0'
 
 
 @ModelComponentFactory.register("Disjunctive blocks.")
 class Disjunct(Block):
-    _ComponentDataClass = _DisjunctData
+    _ComponentDataClass = DisjunctData
 
     def __new__(cls, *args, **kwds):
         if cls != Disjunct:
@@ -475,7 +480,7 @@ class Disjunct(Block):
     # def _deactivate_without_fixing_indicator(self):
     #    # Ideally, this would be a super call from this class.  However,
     #    # doing that would trigger a call to deactivate() on all the
-    #    # _DisjunctData objects (exactly what we want to avoid!)
+    #    # DisjunctData objects (exactly what we want to avoid!)
     #    #
     #    # For the time being, we will do something bad and directly call
     #    # the base class method from where we would otherwise want to
@@ -484,7 +489,7 @@ class Disjunct(Block):
     def _activate_without_unfixing_indicator(self):
         # Ideally, this would be a super call from this class.  However,
         # doing that would trigger a call to deactivate() on all the
-        # _DisjunctData objects (exactly what we want to avoid!)
+        # DisjunctData objects (exactly what we want to avoid!)
         #
         # For the time being, we will do something bad and directly call
         # the base class method from where we would otherwise want to
@@ -495,7 +500,7 @@ class Disjunct(Block):
                 component_data._activate_without_unfixing_indicator()
 
 
-class ScalarDisjunct(_DisjunctData, Disjunct):
+class ScalarDisjunct(DisjunctData, Disjunct):
     def __init__(self, *args, **kwds):
         ## FIXME: This is a HACK to get around a chicken-and-egg issue
         ## where BlockData creates the indicator_var *before*
@@ -503,7 +508,7 @@ class ScalarDisjunct(_DisjunctData, Disjunct):
         self._defer_construction = True
         self._suppress_ctypes = set()
 
-        _DisjunctData.__init__(self, self)
+        DisjunctData.__init__(self, self)
         Disjunct.__init__(self, *args, **kwds)
         self._data[None] = self
         self._index = UnindexedComponent_index
@@ -524,7 +529,7 @@ class IndexedDisjunct(Disjunct):
         return any(d.active for d in self._data.values())
 
 
-_DisjunctData._Block_reserved_words = set(dir(Disjunct()))
+DisjunctData._Block_reserved_words = set(dir(Disjunct()))
 
 
 class _DisjunctionData(ActiveComponentData):

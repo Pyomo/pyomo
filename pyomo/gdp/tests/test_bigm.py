@@ -2196,7 +2196,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
 
 class IndexedDisjunction(unittest.TestCase):
     # this tests that if the targets are a subset of the
-    # _DisjunctDatas in an IndexedDisjunction that the xor constraint
+    # DisjunctDatas in an IndexedDisjunction that the xor constraint
     # created on the parent block will still be indexed as expected.
     def test_xor_constraint(self):
         ct.check_indexed_xor_constraints_with_targets(self, 'bigm')

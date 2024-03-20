@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.gdp import GDP_Error, Disjunction
-from pyomo.gdp.disjunct import _DisjunctData, Disjunct
+from pyomo.gdp.disjunct import DisjunctData, Disjunct
 
 import pyomo.core.expr as EXPR
 from pyomo.core.base.component import _ComponentBase
@@ -493,7 +493,7 @@ def get_src_constraint(transformedConstraint):
 def _find_parent_disjunct(constraint):
     # traverse up until we find the disjunct this constraint lives on
     parent_disjunct = constraint.parent_block()
-    while not isinstance(parent_disjunct, _DisjunctData):
+    while not isinstance(parent_disjunct, DisjunctData):
         if parent_disjunct is None:
             raise GDP_Error(
                 "Constraint '%s' is not on a disjunct and so was not "

@@ -42,7 +42,7 @@ from pyomo.core import (
     Binary,
 )
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.disjunct import _DisjunctData
+from pyomo.gdp.disjunct import DisjunctData
 from pyomo.gdp.plugins.gdp_to_mip_transformation import GDP_to_MIP_Transformation
 from pyomo.gdp.transformed_disjunct import _TransformedDisjunct
 from pyomo.gdp.util import (
