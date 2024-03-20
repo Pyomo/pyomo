@@ -1642,9 +1642,9 @@ class _OrderedSetData(_OrderedSetMixin, FiniteSetData):
     In older Pyomo terms, this defines a "concrete" ordered set - that is,
     a set that "owns" the list of set members.  While this class actually
     implements a set ordered by insertion order, we make the "official"
-    _InsertionOrderSetData an empty derivative class, so that
+    InsertionOrderSetData an empty derivative class, so that
 
-         issubclass(_SortedSetData, _InsertionOrderSetData) == False
+         issubclass(_SortedSetData, InsertionOrderSetData) == False
 
     Constructor Arguments:
         component   The Set object that owns this data.
@@ -1735,7 +1735,7 @@ class _OrderedSetData(_OrderedSetMixin, FiniteSetData):
             raise ValueError("%s.ord(x): x not in %s" % (self.name, self.name))
 
 
-class _InsertionOrderSetData(_OrderedSetData):
+class InsertionOrderSetData(_OrderedSetData):
     """
     This class defines the data for a ordered set where the items are ordered
     in insertion order (similar to Python's OrderedSet.
@@ -1756,7 +1756,7 @@ class _InsertionOrderSetData(_OrderedSetData):
                 "This WILL potentially lead to nondeterministic behavior "
                 "in Pyomo" % (type(val).__name__,)
             )
-        super(_InsertionOrderSetData, self).set_value(val)
+        super(InsertionOrderSetData, self).set_value(val)
 
     def update(self, values):
         if type(values) in Set._UnorderedInitializers:
@@ -1766,7 +1766,12 @@ class _InsertionOrderSetData(_OrderedSetData):
                 "This WILL potentially lead to nondeterministic behavior "
                 "in Pyomo" % (type(values).__name__,)
             )
-        super(_InsertionOrderSetData, self).update(values)
+        super(InsertionOrderSetData, self).update(values)
+
+
+class _InsertionOrderSetData(metaclass=RenamedClass):
+    __renamed__new_class__ = InsertionOrderSetData
+    __renamed__version__ = '6.7.2.dev0'
 
 
 class _SortedSetMixin(object):
@@ -2035,7 +2040,7 @@ class Set(IndexedComponent):
         else:
             newObj = super(Set, cls).__new__(IndexedSet)
             if ordered is Set.InsertionOrder:
-                newObj._ComponentDataClass = _InsertionOrderSetData
+                newObj._ComponentDataClass = InsertionOrderSetData
             elif ordered is Set.SortedOrder:
                 newObj._ComponentDataClass = _SortedSetData
             else:
@@ -2363,7 +2368,7 @@ class Set(IndexedComponent):
                     _ordered = "Sorted"
                 else:
                     _ordered = "{user}"
-            elif issubclass(_refClass, _InsertionOrderSetData):
+            elif issubclass(_refClass, InsertionOrderSetData):
                 _ordered = "Insertion"
         return (
             [
@@ -2405,13 +2410,13 @@ class FiniteSimpleSet(metaclass=RenamedClass):
     __renamed__version__ = '6.0'
 
 
-class OrderedScalarSet(_ScalarOrderedSetMixin, _InsertionOrderSetData, Set):
+class OrderedScalarSet(_ScalarOrderedSetMixin, InsertionOrderSetData, Set):
     def __init__(self, **kwds):
         # In case someone inherits from us, we will provide a rational
         # default for the "ordered" flag
         kwds.setdefault('ordered', Set.InsertionOrder)
 
-        _InsertionOrderSetData.__init__(self, component=self)
+        InsertionOrderSetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
 
 

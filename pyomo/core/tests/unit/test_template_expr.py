@@ -127,7 +127,7 @@ class TestTemplateExpressions(unittest.TestCase):
         # Note that structural expressions do not implement polynomial_degree
         with self.assertRaisesRegex(
             AttributeError,
-            "'_InsertionOrderSetData' object has " "no attribute 'polynomial_degree'",
+            "'InsertionOrderSetData' object has " "no attribute 'polynomial_degree'",
         ):
             e.polynomial_degree()
         self.assertEqual(str(e), "s[{I}]")
