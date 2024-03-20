@@ -84,7 +84,7 @@ from pyomo.core.base.set import (
     SetData,
     FiniteSetData,
     InsertionOrderSetData,
-    _SortedSetData,
+    SortedSetData,
     _FiniteSetMixin,
     _OrderedSetMixin,
     SetInitializer,
@@ -4173,9 +4173,9 @@ class TestSet(unittest.TestCase):
         self.assertTrue(m.I[1].isordered())
         self.assertTrue(m.I[2].isordered())
         self.assertTrue(m.I[3].isordered())
-        self.assertIs(type(m.I[1]), _SortedSetData)
-        self.assertIs(type(m.I[2]), _SortedSetData)
-        self.assertIs(type(m.I[3]), _SortedSetData)
+        self.assertIs(type(m.I[1]), SortedSetData)
+        self.assertIs(type(m.I[2]), SortedSetData)
+        self.assertIs(type(m.I[3]), SortedSetData)
         self.assertEqual(m.I.data(), {1: (2, 4, 5), 2: (2, 4, 5), 3: (2, 4, 5)})
 
         # Explicit (procedural) construction

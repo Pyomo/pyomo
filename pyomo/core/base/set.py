@@ -1649,7 +1649,7 @@ class OrderedSetData(_OrderedSetMixin, FiniteSetData):
     implements a set ordered by insertion order, we make the "official"
     InsertionOrderSetData an empty derivative class, so that
 
-         issubclass(_SortedSetData, InsertionOrderSetData) == False
+         issubclass(SortedSetData, InsertionOrderSetData) == False
 
     Constructor Arguments:
         component   The Set object that owns this data.
@@ -1796,7 +1796,7 @@ class _SortedSetMixin(object):
         return iter(self)
 
 
-class _SortedSetData(_SortedSetMixin, OrderedSetData):
+class SortedSetData(_SortedSetMixin, OrderedSetData):
     """
     This class defines the data for a sorted set.
 
@@ -1819,12 +1819,12 @@ class _SortedSetData(_SortedSetMixin, OrderedSetData):
         """
         if not self._is_sorted:
             self._sort()
-        return super(_SortedSetData, self)._iter_impl()
+        return super(SortedSetData, self)._iter_impl()
 
     def __reversed__(self):
         if not self._is_sorted:
             self._sort()
-        return super(_SortedSetData, self).__reversed__()
+        return super(SortedSetData, self).__reversed__()
 
     def _add_impl(self, value):
         # Note that the sorted status has no bearing on insertion,
@@ -1838,7 +1838,7 @@ class _SortedSetData(_SortedSetMixin, OrderedSetData):
     # def discard(self, val):
 
     def clear(self):
-        super(_SortedSetData, self).clear()
+        super(SortedSetData, self).clear()
         self._is_sorted = True
 
     def at(self, index):
@@ -1850,7 +1850,7 @@ class _SortedSetData(_SortedSetMixin, OrderedSetData):
         """
         if not self._is_sorted:
             self._sort()
-        return super(_SortedSetData, self).at(index)
+        return super(SortedSetData, self).at(index)
 
     def ord(self, item):
         """
@@ -1862,7 +1862,7 @@ class _SortedSetData(_SortedSetMixin, OrderedSetData):
         """
         if not self._is_sorted:
             self._sort()
-        return super(_SortedSetData, self).ord(item)
+        return super(SortedSetData, self).ord(item)
 
     def sorted_data(self):
         return self.data()
@@ -1873,6 +1873,11 @@ class _SortedSetData(_SortedSetMixin, OrderedSetData):
         )
         self._values = {j: i for i, j in enumerate(self._ordered_values)}
         self._is_sorted = True
+
+
+class _SortedSetData(metaclass=RenamedClass):
+    __renamed__new_class__ = SortedSetData
+    __renamed__version__ = '6.7.2.dev0'
 
 
 ############################################################################
@@ -2005,7 +2010,7 @@ class Set(IndexedComponent):
         # Many things are easier by forcing it to be consistent across
         # the set (namely, the _ComponentDataClass is constant).
         # However, it is a bit off that 'ordered' it the only arg NOT
-        # processed by Initializer.  We can mock up a _SortedSetData
+        # processed by Initializer.  We can mock up a SortedSetData
         # sort function that preserves Insertion Order (lambda x: x), but
         # the unsorted is harder (it would effectively be insertion
         # order, but ordered() may not be deterministic based on how the
@@ -2052,7 +2057,7 @@ class Set(IndexedComponent):
             if ordered is Set.InsertionOrder:
                 newObj._ComponentDataClass = InsertionOrderSetData
             elif ordered is Set.SortedOrder:
-                newObj._ComponentDataClass = _SortedSetData
+                newObj._ComponentDataClass = SortedSetData
             else:
                 newObj._ComponentDataClass = FiniteSetData
             return newObj
@@ -2435,13 +2440,13 @@ class OrderedSimpleSet(metaclass=RenamedClass):
     __renamed__version__ = '6.0'
 
 
-class SortedScalarSet(_ScalarOrderedSetMixin, _SortedSetData, Set):
+class SortedScalarSet(_ScalarOrderedSetMixin, SortedSetData, Set):
     def __init__(self, **kwds):
         # In case someone inherits from us, we will provide a rational
         # default for the "ordered" flag
         kwds.setdefault('ordered', Set.SortedOrder)
 
-        _SortedSetData.__init__(self, component=self)
+        SortedSetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
         self._index = UnindexedComponent_index
 
