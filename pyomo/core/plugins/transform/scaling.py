@@ -16,7 +16,7 @@ from pyomo.core.base import (
     Constraint,
     Objective,
     ConstraintData,
-    _ObjectiveData,
+    ObjectiveData,
     Suffix,
     value,
 )
@@ -226,7 +226,7 @@ class ScaleModel(Transformation):
                     else:
                         c.set_value((lower, body, upper))
 
-                elif isinstance(c, _ObjectiveData):
+                elif isinstance(c, ObjectiveData):
                     c.expr = scaling_factor * replace_expressions(
                         expr=c.expr,
                         substitution_map=variable_substitution_dict,

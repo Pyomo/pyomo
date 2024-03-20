@@ -74,7 +74,7 @@ from pyomo.core.base.expression import ScalarExpression, GeneralExpressionData
 from pyomo.core.base.objective import (
     ScalarObjective,
     GeneralObjectiveData,
-    _ObjectiveData,
+    ObjectiveData,
 )
 from pyomo.core.base.suffix import SuffixFinder
 from pyomo.core.base.var import _VarData
@@ -139,7 +139,7 @@ class NLWriterInfo(object):
         The list of (active) Pyomo model constraints in the order written
         to the NL file
 
-    objectives: List[_ObjectiveData]
+    objectives: List[ObjectiveData]
 
         The list of (active) Pyomo model objectives in the order written
         to the NL file
@@ -466,7 +466,7 @@ class _SuffixData(object):
                     self.obj[obj_order[_id]] = val
                 elif _id == model_id:
                     self.prob[0] = val
-                elif isinstance(obj, (_VarData, ConstraintData, _ObjectiveData)):
+                elif isinstance(obj, (_VarData, ConstraintData, ObjectiveData)):
                     missing_component_data.add(obj)
                 elif isinstance(obj, (Var, Constraint, Objective)):
                     # Expand this indexed component to store the

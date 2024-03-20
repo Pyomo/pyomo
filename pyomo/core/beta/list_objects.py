@@ -16,7 +16,7 @@ from pyomo.common.log import is_debug_set
 from pyomo.core.base.set_types import Any
 from pyomo.core.base.var import IndexedVar, _VarData
 from pyomo.core.base.constraint import IndexedConstraint, ConstraintData
-from pyomo.core.base.objective import IndexedObjective, _ObjectiveData
+from pyomo.core.base.objective import IndexedObjective, ObjectiveData
 from pyomo.core.base.expression import IndexedExpression, ExpressionData
 
 from collections.abc import MutableSequence
@@ -250,7 +250,7 @@ class XObjectiveList(ComponentList, IndexedObjective):
         # Constructor for ComponentList needs to
         # go last in order to handle any initialization
         # iterable as an argument
-        ComponentList.__init__(self, _ObjectiveData, *args, **kwds)
+        ComponentList.__init__(self, ObjectiveData, *args, **kwds)
 
 
 class XExpressionList(ComponentList, IndexedExpression):

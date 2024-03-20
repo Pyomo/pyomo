@@ -82,7 +82,7 @@ from pyomo.core.base.objective import (
     simple_objectivelist_rule,
     Objective,
     ObjectiveList,
-    _ObjectiveData,
+    ObjectiveData,
 )
 from pyomo.core.base.connector import Connector
 from pyomo.core.base.sos import SOSConstraint

@@ -86,7 +86,7 @@ def simple_objectivelist_rule(rule):
 #
 
 
-class _ObjectiveData(ExpressionData):
+class ObjectiveData(ExpressionData):
     """
     This class defines the data for a single objective.
 
@@ -119,8 +119,13 @@ class _ObjectiveData(ExpressionData):
         raise NotImplementedError
 
 
+class _ObjectiveData(metaclass=RenamedClass):
+    __renamed__new_class__ = ObjectiveData
+    __renamed__version__ = '6.7.2.dev0'
+
+
 class GeneralObjectiveData(
-    GeneralExpressionDataImpl, _ObjectiveData, ActiveComponentData
+    GeneralExpressionDataImpl, ObjectiveData, ActiveComponentData
 ):
     """
     This class defines the data for a single objective.
@@ -479,7 +484,7 @@ class ScalarObjective(GeneralObjectiveData, Objective):
     # currently in place). So during initialization only, we will
     # treat them as "indexed" objects where things like
     # Objective.Skip are managed. But after that they will behave
-    # like _ObjectiveData objects where set_value does not handle
+    # like ObjectiveData objects where set_value does not handle
     # Objective.Skip but expects a valid expression or None
     #
 
