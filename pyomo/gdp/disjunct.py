@@ -532,7 +532,7 @@ class IndexedDisjunct(Disjunct):
 DisjunctData._Block_reserved_words = set(dir(Disjunct()))
 
 
-class _DisjunctionData(ActiveComponentData):
+class DisjunctionData(ActiveComponentData):
     __slots__ = ('disjuncts', 'xor', '_algebraic_constraint', '_transformation_map')
     __autoslot_mappers__ = {'_algebraic_constraint': AutoSlots.weakref_mapper}
     _NoArgument = (0,)
@@ -625,9 +625,14 @@ class _DisjunctionData(ActiveComponentData):
             self.disjuncts.append(disjunct)
 
 
+class _DisjunctionData(metaclass=RenamedClass):
+    __renamed__new_class__ = DisjunctionData
+    __renamed__version__ = '6.7.2.dev0'
+
+
 @ModelComponentFactory.register("Disjunction expressions.")
 class Disjunction(ActiveIndexedComponent):
-    _ComponentDataClass = _DisjunctionData
+    _ComponentDataClass = DisjunctionData
 
     def __new__(cls, *args, **kwds):
         if cls != Disjunction:
@@ -768,9 +773,9 @@ class Disjunction(ActiveIndexedComponent):
         )
 
 
-class ScalarDisjunction(_DisjunctionData, Disjunction):
+class ScalarDisjunction(DisjunctionData, Disjunction):
     def __init__(self, *args, **kwds):
-        _DisjunctionData.__init__(self, component=self)
+        DisjunctionData.__init__(self, component=self)
         Disjunction.__init__(self, *args, **kwds)
         self._index = UnindexedComponent_index
 
@@ -781,7 +786,7 @@ class ScalarDisjunction(_DisjunctionData, Disjunction):
     # currently in place). So during initialization only, we will
     # treat them as "indexed" objects where things like
     # Constraint.Skip are managed. But after that they will behave
-    # like _DisjunctionData objects where set_value does not handle
+    # like DisjunctionData objects where set_value does not handle
     # Disjunction.Skip but expects a valid expression or None.
     #
 
