@@ -13,7 +13,7 @@ import abc
 from typing import Sequence, Dict, Optional, Mapping, NoReturn
 
 from pyomo.core.base.constraint import GeneralConstraintData
-from pyomo.core.base.var import _GeneralVarData
+from pyomo.core.base.var import GeneralVarData
 from pyomo.core.expr import value
 from pyomo.common.collections import ComponentMap
 from pyomo.common.errors import DeveloperError
@@ -31,7 +31,7 @@ class SolutionLoaderBase(abc.ABC):
     """
 
     def load_vars(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
+        self, vars_to_load: Optional[Sequence[GeneralVarData]] = None
     ) -> NoReturn:
         """
         Load the solution of the primal variables into the value attribute of the variables.
@@ -49,8 +49,8 @@ class SolutionLoaderBase(abc.ABC):
 
     @abc.abstractmethod
     def get_primals(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
+        self, vars_to_load: Optional[Sequence[GeneralVarData]] = None
+    ) -> Mapping[GeneralVarData, float]:
         """
         Returns a ComponentMap mapping variable to var value.
 
@@ -86,8 +86,8 @@ class SolutionLoaderBase(abc.ABC):
         raise NotImplementedError(f'{type(self)} does not support the get_duals method')
 
     def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
+        self, vars_to_load: Optional[Sequence[GeneralVarData]] = None
+    ) -> Mapping[GeneralVarData, float]:
         """
         Returns a ComponentMap mapping variable to reduced cost.
 
@@ -127,8 +127,8 @@ class PersistentSolutionLoader(SolutionLoaderBase):
         return self._solver._get_duals(cons_to_load=cons_to_load)
 
     def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
+        self, vars_to_load: Optional[Sequence[GeneralVarData]] = None
+    ) -> Mapping[GeneralVarData, float]:
         self._assert_solution_still_valid()
         return self._solver._get_reduced_costs(vars_to_load=vars_to_load)
 
@@ -142,7 +142,7 @@ class SolSolutionLoader(SolutionLoaderBase):
         self._nl_info = nl_info
 
     def load_vars(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
+        self, vars_to_load: Optional[Sequence[GeneralVarData]] = None
     ) -> NoReturn:
         if self._nl_info is None:
             raise RuntimeError(
@@ -169,8 +169,8 @@ class SolSolutionLoader(SolutionLoaderBase):
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
     def get_primals(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
+        self, vars_to_load: Optional[Sequence[GeneralVarData]] = None
+    ) -> Mapping[GeneralVarData, float]:
         if self._nl_info is None:
             raise RuntimeError(
                 'Solution loader does not currently have a valid solution. Please '

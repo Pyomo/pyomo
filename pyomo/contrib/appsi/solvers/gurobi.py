@@ -23,7 +23,7 @@ from pyomo.common.shutdown import python_is_shutting_down
 from pyomo.common.config import ConfigValue, NonNegativeInt
 from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
-from pyomo.core.base.var import Var, _GeneralVarData
+from pyomo.core.base.var import Var, GeneralVarData
 from pyomo.core.base.constraint import GeneralConstraintData
 from pyomo.core.base.sos import _SOSConstraintData
 from pyomo.core.base.param import _ParamData
@@ -458,7 +458,7 @@ class Gurobi(PersistentBase, PersistentSolver):
 
         return lb, ub, vtype
 
-    def _add_variables(self, variables: List[_GeneralVarData]):
+    def _add_variables(self, variables: List[GeneralVarData]):
         var_names = list()
         vtypes = list()
         lbs = list()
@@ -759,7 +759,7 @@ class Gurobi(PersistentBase, PersistentSolver):
             del self._pyomo_sos_to_solver_sos_map[con]
         self._needs_updated = True
 
-    def _remove_variables(self, variables: List[_GeneralVarData]):
+    def _remove_variables(self, variables: List[GeneralVarData]):
         for var in variables:
             v_id = id(var)
             if var in self._vars_added_since_update:
@@ -774,7 +774,7 @@ class Gurobi(PersistentBase, PersistentSolver):
     def _remove_params(self, params: List[_ParamData]):
         pass
 
-    def _update_variables(self, variables: List[_GeneralVarData]):
+    def _update_variables(self, variables: List[GeneralVarData]):
         for var in variables:
             var_id = id(var)
             if var_id not in self._pyomo_var_to_solver_var_map:
@@ -1221,7 +1221,7 @@ class Gurobi(PersistentBase, PersistentSolver):
 
         Parameters
         ----------
-        var: pyomo.core.base.var._GeneralVarData
+        var: pyomo.core.base.var.GeneralVarData
             The pyomo var for which the corresponding gurobi var attribute
             should be modified.
         attr: str
@@ -1256,7 +1256,7 @@ class Gurobi(PersistentBase, PersistentSolver):
 
         Parameters
         ----------
-        var: pyomo.core.base.var._GeneralVarData
+        var: pyomo.core.base.var.GeneralVarData
             The pyomo var for which the corresponding gurobi var attribute
             should be retrieved.
         attr: str

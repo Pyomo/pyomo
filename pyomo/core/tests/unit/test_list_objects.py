@@ -17,7 +17,7 @@ from pyomo.core.beta.list_objects import (
     XObjectiveList,
     XExpressionList,
 )
-from pyomo.core.base.var import _GeneralVarData
+from pyomo.core.base.var import GeneralVarData
 from pyomo.core.base.constraint import GeneralConstraintData
 from pyomo.core.base.objective import GeneralObjectiveData
 from pyomo.core.base.expression import GeneralExpressionData
@@ -365,10 +365,10 @@ class _TestActiveComponentListBase(_TestComponentListBase):
 
 
 class TestVarList(_TestComponentListBase, unittest.TestCase):
-    # Note: the updated _GeneralVarData class only takes an optional
+    # Note: the updated GeneralVarData class only takes an optional
     # parent argument (you no longer pass the domain in)
     _ctype = XVarList
-    _cdatatype = lambda self, arg: _GeneralVarData()
+    _cdatatype = lambda self, arg: GeneralVarData()
 
     def setUp(self):
         _TestComponentListBase.setUp(self)

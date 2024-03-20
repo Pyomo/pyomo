@@ -11,7 +11,7 @@
 
 from typing import List
 from pyomo.core.base.param import _ParamData
-from pyomo.core.base.var import _GeneralVarData
+from pyomo.core.base.var import GeneralVarData
 from pyomo.core.base.constraint import GeneralConstraintData
 from pyomo.core.base.objective import GeneralObjectiveData
 from pyomo.core.base.sos import _SOSConstraintData
@@ -78,7 +78,7 @@ class NLWriter(PersistentBase):
             self.set_objective(None)
         self._set_pyomo_amplfunc_env()
 
-    def _add_variables(self, variables: List[_GeneralVarData]):
+    def _add_variables(self, variables: List[GeneralVarData]):
         if self.config.symbolic_solver_labels:
             set_name = True
             symbol_map = self._symbol_map
@@ -144,7 +144,7 @@ class NLWriter(PersistentBase):
         if len(cons) != 0:
             raise NotImplementedError('NL writer does not support SOS constraints')
 
-    def _remove_variables(self, variables: List[_GeneralVarData]):
+    def _remove_variables(self, variables: List[GeneralVarData]):
         if self.config.symbolic_solver_labels:
             for v in variables:
                 self._symbol_map.removeSymbol(v)
@@ -161,7 +161,7 @@ class NLWriter(PersistentBase):
         for p in params:
             del self._pyomo_param_to_solver_param_map[id(p)]
 
-    def _update_variables(self, variables: List[_GeneralVarData]):
+    def _update_variables(self, variables: List[GeneralVarData]):
         cmodel.process_pyomo_vars(
             self._expr_types,
             variables,

@@ -22,7 +22,7 @@ import logging
 import math
 from pyomo.common.collections import ComponentMap
 from typing import Optional, Sequence, NoReturn, List, Mapping, Dict
-from pyomo.core.base.var import _GeneralVarData
+from pyomo.core.base.var import GeneralVarData
 from pyomo.core.base.constraint import GeneralConstraintData
 from pyomo.core.base.block import BlockData
 from pyomo.core.base.param import _ParamData
@@ -179,7 +179,7 @@ class Cplex(PersistentSolver):
     def set_instance(self, model):
         self._writer.set_instance(model)
 
-    def add_variables(self, variables: List[_GeneralVarData]):
+    def add_variables(self, variables: List[GeneralVarData]):
         self._writer.add_variables(variables)
 
     def add_params(self, params: List[_ParamData]):
@@ -191,7 +191,7 @@ class Cplex(PersistentSolver):
     def add_block(self, block: BlockData):
         self._writer.add_block(block)
 
-    def remove_variables(self, variables: List[_GeneralVarData]):
+    def remove_variables(self, variables: List[GeneralVarData]):
         self._writer.remove_variables(variables)
 
     def remove_params(self, params: List[_ParamData]):
@@ -206,7 +206,7 @@ class Cplex(PersistentSolver):
     def set_objective(self, obj: GeneralObjectiveData):
         self._writer.set_objective(obj)
 
-    def update_variables(self, variables: List[_GeneralVarData]):
+    def update_variables(self, variables: List[GeneralVarData]):
         self._writer.update_variables(variables)
 
     def update_params(self):
@@ -362,8 +362,8 @@ class Cplex(PersistentSolver):
         return results
 
     def get_primals(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
+        self, vars_to_load: Optional[Sequence[GeneralVarData]] = None
+    ) -> Mapping[GeneralVarData, float]:
         if (
             self._cplex_model.solution.get_solution_type()
             == self._cplex_model.solution.type.none
@@ -440,8 +440,8 @@ class Cplex(PersistentSolver):
         return res
 
     def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
+        self, vars_to_load: Optional[Sequence[GeneralVarData]] = None
+    ) -> Mapping[GeneralVarData, float]:
         if (
             self._cplex_model.solution.get_solution_type()
             == self._cplex_model.solution.type.none

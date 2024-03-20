@@ -319,7 +319,7 @@ class _VarData(ComponentData, NumericValue):
         return self.unfix()
 
 
-class _GeneralVarData(_VarData):
+class GeneralVarData(_VarData):
     """This class defines the data for a single variable."""
 
     __slots__ = ('_value', '_lb', '_ub', '_domain', '_fixed', '_stale')
@@ -643,6 +643,11 @@ class _GeneralVarData(_VarData):
         return val
 
 
+class _GeneralVarData(metaclass=RenamedClass):
+    __renamed__new_class__ = GeneralVarData
+    __renamed__version__ = '6.7.2.dev0'
+
+
 @ModelComponentFactory.register("Decision variables.")
 class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
     """A numeric variable, which may be defined over an index.
@@ -668,7 +673,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         doc (str, optional): Text describing this component.
     """
 
-    _ComponentDataClass = _GeneralVarData
+    _ComponentDataClass = GeneralVarData
 
     @overload
     def __new__(cls: Type[Var], *args, **kwargs) -> Union[ScalarVar, IndexedVar]: ...
@@ -952,11 +957,11 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         )
 
 
-class ScalarVar(_GeneralVarData, Var):
+class ScalarVar(GeneralVarData, Var):
     """A single variable."""
 
     def __init__(self, *args, **kwd):
-        _GeneralVarData.__init__(self, component=self)
+        GeneralVarData.__init__(self, component=self)
         Var.__init__(self, *args, **kwd)
         self._index = UnindexedComponent_index
 
@@ -1057,7 +1062,7 @@ class IndexedVar(Var):
     # between potentially variable GetItemExpression objects and
     # "constant" GetItemExpression objects.  That will need to wait for
     # the expression rework [JDS; Nov 22].
-    def __getitem__(self, args) -> _GeneralVarData:
+    def __getitem__(self, args) -> GeneralVarData:
         try:
             return super().__getitem__(args)
         except RuntimeError:

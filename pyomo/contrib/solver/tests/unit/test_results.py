@@ -16,7 +16,7 @@ from typing import Sequence, Dict, Optional, Mapping, MutableMapping
 from pyomo.common import unittest
 from pyomo.common.config import ConfigDict
 from pyomo.core.base.constraint import GeneralConstraintData
-from pyomo.core.base.var import _GeneralVarData
+from pyomo.core.base.var import GeneralVarData
 from pyomo.common.collections import ComponentMap
 from pyomo.contrib.solver import results
 from pyomo.contrib.solver import solution
@@ -51,8 +51,8 @@ class SolutionLoaderExample(solution.SolutionLoaderBase):
         self._reduced_costs = reduced_costs
 
     def get_primals(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
+        self, vars_to_load: Optional[Sequence[GeneralVarData]] = None
+    ) -> Mapping[GeneralVarData, float]:
         if self._primals is None:
             raise RuntimeError(
                 'Solution loader does not currently have a valid solution. Please '
@@ -84,8 +84,8 @@ class SolutionLoaderExample(solution.SolutionLoaderBase):
         return duals
 
     def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
+        self, vars_to_load: Optional[Sequence[GeneralVarData]] = None
+    ) -> Mapping[GeneralVarData, float]:
         if self._reduced_costs is None:
             raise RuntimeError(
                 'Solution loader does not currently have valid reduced costs. Please '

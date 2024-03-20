@@ -40,7 +40,7 @@ from pyomo.common.collections import ComponentMap
 from pyomo.core.expr.numvalue import native_numeric_types
 from typing import Dict, Optional, List
 from pyomo.core.base.block import BlockData
-from pyomo.core.base.var import _GeneralVarData
+from pyomo.core.base.var import GeneralVarData
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.constraint import GeneralConstraintData
 from pyomo.common.timing import HierarchicalTimer
@@ -239,7 +239,7 @@ class Wntr(PersistentBase, PersistentSolver):
 
         self.add_block(model)
 
-    def _add_variables(self, variables: List[_GeneralVarData]):
+    def _add_variables(self, variables: List[GeneralVarData]):
         aml = wntr.sim.aml.aml
         for var in variables:
             varname = self._symbol_map.getSymbol(var, self._labeler)
@@ -302,7 +302,7 @@ class Wntr(PersistentBase, PersistentSolver):
             del self._pyomo_con_to_solver_con_map[con]
             self._needs_updated = True
 
-    def _remove_variables(self, variables: List[_GeneralVarData]):
+    def _remove_variables(self, variables: List[GeneralVarData]):
         for var in variables:
             v_id = id(var)
             solver_var = self._pyomo_var_to_solver_var_map[v_id]
@@ -322,7 +322,7 @@ class Wntr(PersistentBase, PersistentSolver):
             self._symbol_map.removeSymbol(p)
             del self._pyomo_param_to_solver_param_map[p_id]
 
-    def _update_variables(self, variables: List[_GeneralVarData]):
+    def _update_variables(self, variables: List[GeneralVarData]):
         aml = wntr.sim.aml.aml
         for var in variables:
             v_id = id(var)

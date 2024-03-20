@@ -14,7 +14,7 @@ from typing import List
 
 from pyomo.core.base.constraint import GeneralConstraintData, Constraint
 from pyomo.core.base.sos import _SOSConstraintData, SOSConstraint
-from pyomo.core.base.var import _GeneralVarData
+from pyomo.core.base.var import GeneralVarData
 from pyomo.core.base.param import _ParamData, Param
 from pyomo.core.base.objective import GeneralObjectiveData
 from pyomo.common.collections import ComponentMap
@@ -54,10 +54,10 @@ class PersistentSolverUtils(abc.ABC):
             self.set_objective(None)
 
     @abc.abstractmethod
-    def _add_variables(self, variables: List[_GeneralVarData]):
+    def _add_variables(self, variables: List[GeneralVarData]):
         pass
 
-    def add_variables(self, variables: List[_GeneralVarData]):
+    def add_variables(self, variables: List[GeneralVarData]):
         for v in variables:
             if id(v) in self._referenced_variables:
                 raise ValueError(
@@ -87,7 +87,7 @@ class PersistentSolverUtils(abc.ABC):
     def _add_constraints(self, cons: List[GeneralConstraintData]):
         pass
 
-    def _check_for_new_vars(self, variables: List[_GeneralVarData]):
+    def _check_for_new_vars(self, variables: List[GeneralVarData]):
         new_vars = {}
         for v in variables:
             v_id = id(v)
@@ -95,7 +95,7 @@ class PersistentSolverUtils(abc.ABC):
                 new_vars[v_id] = v
         self.add_variables(list(new_vars.values()))
 
-    def _check_to_remove_vars(self, variables: List[_GeneralVarData]):
+    def _check_to_remove_vars(self, variables: List[GeneralVarData]):
         vars_to_remove = {}
         for v in variables:
             v_id = id(v)
@@ -250,10 +250,10 @@ class PersistentSolverUtils(abc.ABC):
             del self._vars_referenced_by_con[con]
 
     @abc.abstractmethod
-    def _remove_variables(self, variables: List[_GeneralVarData]):
+    def _remove_variables(self, variables: List[GeneralVarData]):
         pass
 
-    def remove_variables(self, variables: List[_GeneralVarData]):
+    def remove_variables(self, variables: List[GeneralVarData]):
         self._remove_variables(variables)
         for v in variables:
             v_id = id(v)
@@ -309,10 +309,10 @@ class PersistentSolverUtils(abc.ABC):
         )
 
     @abc.abstractmethod
-    def _update_variables(self, variables: List[_GeneralVarData]):
+    def _update_variables(self, variables: List[GeneralVarData]):
         pass
 
-    def update_variables(self, variables: List[_GeneralVarData]):
+    def update_variables(self, variables: List[GeneralVarData]):
         for v in variables:
             self._vars[id(v)] = (
                 v,

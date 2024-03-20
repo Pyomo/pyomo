@@ -23,7 +23,7 @@ from typing import (
 )
 from pyomo.core.base.constraint import GeneralConstraintData, Constraint
 from pyomo.core.base.sos import _SOSConstraintData, SOSConstraint
-from pyomo.core.base.var import _GeneralVarData, Var
+from pyomo.core.base.var import GeneralVarData, Var
 from pyomo.core.base.param import _ParamData, Param
 from pyomo.core.base.block import BlockData, Block
 from pyomo.core.base.objective import GeneralObjectiveData
@@ -180,7 +180,7 @@ class MIPSolverConfig(SolverConfig):
 
 class SolutionLoaderBase(abc.ABC):
     def load_vars(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
+        self, vars_to_load: Optional[Sequence[GeneralVarData]] = None
     ) -> NoReturn:
         """
         Load the solution of the primal variables into the value attribute of the variables.
@@ -197,8 +197,8 @@ class SolutionLoaderBase(abc.ABC):
 
     @abc.abstractmethod
     def get_primals(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
+        self, vars_to_load: Optional[Sequence[GeneralVarData]] = None
+    ) -> Mapping[GeneralVarData, float]:
         """
         Returns a ComponentMap mapping variable to var value.
 
@@ -256,8 +256,8 @@ class SolutionLoaderBase(abc.ABC):
         )
 
     def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
+        self, vars_to_load: Optional[Sequence[GeneralVarData]] = None
+    ) -> Mapping[GeneralVarData, float]:
         """
         Returns a ComponentMap mapping variable to reduced cost.
 
@@ -303,8 +303,8 @@ class SolutionLoader(SolutionLoaderBase):
         self._reduced_costs = reduced_costs
 
     def get_primals(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
+        self, vars_to_load: Optional[Sequence[GeneralVarData]] = None
+    ) -> Mapping[GeneralVarData, float]:
         if self._primals is None:
             raise RuntimeError(
                 'Solution loader does not currently have a valid solution. Please '
@@ -353,8 +353,8 @@ class SolutionLoader(SolutionLoaderBase):
         return slacks
 
     def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
+        self, vars_to_load: Optional[Sequence[GeneralVarData]] = None
+    ) -> Mapping[GeneralVarData, float]:
         if self._reduced_costs is None:
             raise RuntimeError(
                 'Solution loader does not currently have valid reduced costs. Please '
@@ -709,7 +709,7 @@ class PersistentSolver(Solver):
         return True
 
     def load_vars(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
+        self, vars_to_load: Optional[Sequence[GeneralVarData]] = None
     ) -> NoReturn:
         """
         Load the solution of the primal variables into the value attribute of the variables.
@@ -726,8 +726,8 @@ class PersistentSolver(Solver):
 
     @abc.abstractmethod
     def get_primals(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
+        self, vars_to_load: Optional[Sequence[GeneralVarData]] = None
+    ) -> Mapping[GeneralVarData, float]:
         pass
 
     def get_duals(
@@ -771,8 +771,8 @@ class PersistentSolver(Solver):
         )
 
     def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
+        self, vars_to_load: Optional[Sequence[GeneralVarData]] = None
+    ) -> Mapping[GeneralVarData, float]:
         """
         Parameters
         ----------
@@ -799,7 +799,7 @@ class PersistentSolver(Solver):
         pass
 
     @abc.abstractmethod
-    def add_variables(self, variables: List[_GeneralVarData]):
+    def add_variables(self, variables: List[GeneralVarData]):
         pass
 
     @abc.abstractmethod
@@ -815,7 +815,7 @@ class PersistentSolver(Solver):
         pass
 
     @abc.abstractmethod
-    def remove_variables(self, variables: List[_GeneralVarData]):
+    def remove_variables(self, variables: List[GeneralVarData]):
         pass
 
     @abc.abstractmethod
@@ -835,7 +835,7 @@ class PersistentSolver(Solver):
         pass
 
     @abc.abstractmethod
-    def update_variables(self, variables: List[_GeneralVarData]):
+    def update_variables(self, variables: List[GeneralVarData]):
         pass
 
     @abc.abstractmethod
@@ -869,8 +869,8 @@ class PersistentSolutionLoader(SolutionLoaderBase):
         return self._solver.get_slacks(cons_to_load=cons_to_load)
 
     def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
+        self, vars_to_load: Optional[Sequence[GeneralVarData]] = None
+    ) -> Mapping[GeneralVarData, float]:
         self._assert_solution_still_valid()
         return self._solver.get_reduced_costs(vars_to_load=vars_to_load)
 
@@ -954,10 +954,10 @@ class PersistentBase(abc.ABC):
             self.set_objective(None)
 
     @abc.abstractmethod
-    def _add_variables(self, variables: List[_GeneralVarData]):
+    def _add_variables(self, variables: List[GeneralVarData]):
         pass
 
-    def add_variables(self, variables: List[_GeneralVarData]):
+    def add_variables(self, variables: List[GeneralVarData]):
         for v in variables:
             if id(v) in self._referenced_variables:
                 raise ValueError(
@@ -987,7 +987,7 @@ class PersistentBase(abc.ABC):
     def _add_constraints(self, cons: List[GeneralConstraintData]):
         pass
 
-    def _check_for_new_vars(self, variables: List[_GeneralVarData]):
+    def _check_for_new_vars(self, variables: List[GeneralVarData]):
         new_vars = dict()
         for v in variables:
             v_id = id(v)
@@ -995,7 +995,7 @@ class PersistentBase(abc.ABC):
                 new_vars[v_id] = v
         self.add_variables(list(new_vars.values()))
 
-    def _check_to_remove_vars(self, variables: List[_GeneralVarData]):
+    def _check_to_remove_vars(self, variables: List[GeneralVarData]):
         vars_to_remove = dict()
         for v in variables:
             v_id = id(v)
@@ -1174,10 +1174,10 @@ class PersistentBase(abc.ABC):
             del self._vars_referenced_by_con[con]
 
     @abc.abstractmethod
-    def _remove_variables(self, variables: List[_GeneralVarData]):
+    def _remove_variables(self, variables: List[GeneralVarData]):
         pass
 
-    def remove_variables(self, variables: List[_GeneralVarData]):
+    def remove_variables(self, variables: List[GeneralVarData]):
         self._remove_variables(variables)
         for v in variables:
             v_id = id(v)
@@ -1246,10 +1246,10 @@ class PersistentBase(abc.ABC):
         )
 
     @abc.abstractmethod
-    def _update_variables(self, variables: List[_GeneralVarData]):
+    def _update_variables(self, variables: List[GeneralVarData]):
         pass
 
-    def update_variables(self, variables: List[_GeneralVarData]):
+    def update_variables(self, variables: List[GeneralVarData]):
         for v in variables:
             self._vars[id(v)] = (
                 v,

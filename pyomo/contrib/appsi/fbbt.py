@@ -18,7 +18,7 @@ from pyomo.common.config import (
 )
 from .cmodel import cmodel, cmodel_available
 from typing import List, Optional
-from pyomo.core.base.var import _GeneralVarData
+from pyomo.core.base.var import GeneralVarData
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.constraint import GeneralConstraintData
 from pyomo.core.base.sos import _SOSConstraintData
@@ -121,7 +121,7 @@ class IntervalTightener(PersistentBase):
         if self._objective is None:
             self.set_objective(None)
 
-    def _add_variables(self, variables: List[_GeneralVarData]):
+    def _add_variables(self, variables: List[GeneralVarData]):
         if self._symbolic_solver_labels:
             set_name = True
             symbol_map = self._symbol_map
@@ -190,7 +190,7 @@ class IntervalTightener(PersistentBase):
                 'IntervalTightener does not support SOS constraints'
             )
 
-    def _remove_variables(self, variables: List[_GeneralVarData]):
+    def _remove_variables(self, variables: List[GeneralVarData]):
         if self._symbolic_solver_labels:
             for v in variables:
                 self._symbol_map.removeSymbol(v)
@@ -205,7 +205,7 @@ class IntervalTightener(PersistentBase):
         for p in params:
             del self._param_map[id(p)]
 
-    def _update_variables(self, variables: List[_GeneralVarData]):
+    def _update_variables(self, variables: List[GeneralVarData]):
         cmodel.process_pyomo_vars(
             self._pyomo_expr_types,
             variables,
@@ -304,7 +304,7 @@ class IntervalTightener(PersistentBase):
             self._deactivate_satisfied_cons()
         return n_iter
 
-    def perform_fbbt_with_seed(self, model: BlockData, seed_var: _GeneralVarData):
+    def perform_fbbt_with_seed(self, model: BlockData, seed_var: GeneralVarData):
         if model is not self._model:
             self.set_instance(model)
         else:
