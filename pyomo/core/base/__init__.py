@@ -36,7 +36,7 @@ from pyomo.core.expr.boolean_value import (
 from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.base.config import PyomoOptions
 
-from pyomo.core.base.expression import Expression, _ExpressionData
+from pyomo.core.base.expression import Expression, ExpressionData
 from pyomo.core.base.label import (
     CuidLabeler,
     CounterLabeler,

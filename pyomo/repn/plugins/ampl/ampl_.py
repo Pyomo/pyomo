@@ -33,7 +33,7 @@ from pyomo.core.expr.numvalue import (
 from pyomo.core.base import (
     SymbolMap,
     NameLabeler,
-    _ExpressionData,
+    ExpressionData,
     SortComponents,
     var,
     param,
@@ -724,7 +724,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 self._print_nonlinear_terms_NL(exp.arg(0))
                 self._print_nonlinear_terms_NL(exp.arg(1))
 
-            elif isinstance(exp, (_ExpressionData, IIdentityExpression)):
+            elif isinstance(exp, (ExpressionData, IIdentityExpression)):
                 self._print_nonlinear_terms_NL(exp.expr)
 
             else:

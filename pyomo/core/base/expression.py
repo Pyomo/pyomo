@@ -36,7 +36,7 @@ from pyomo.core.base.initializer import Initializer
 logger = logging.getLogger('pyomo.core')
 
 
-class _ExpressionData(numeric_expr.NumericValue):
+class ExpressionData(numeric_expr.NumericValue):
     """
     An object that defines a named expression.
 
@@ -137,13 +137,18 @@ class _ExpressionData(numeric_expr.NumericValue):
         """A boolean indicating whether this expression is fixed."""
         raise NotImplementedError
 
-    # _ExpressionData should never return False because
+    # ExpressionData should never return False because
     # they can store subexpressions that contain variables
     def is_potentially_variable(self):
         return True
 
 
-class _GeneralExpressionDataImpl(_ExpressionData):
+class _ExpressionData(metaclass=RenamedClass):
+    __renamed__new_class__ = ExpressionData
+    __renamed__version__ = '6.7.2.dev0'
+
+
+class _GeneralExpressionDataImpl(ExpressionData):
     """
     An object that defines an expression that is never cloned
 
