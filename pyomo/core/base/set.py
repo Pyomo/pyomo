@@ -894,7 +894,7 @@ class _SetData(_SetDataBase):
     @property
     @deprecated("The 'virtual' attribute is no longer supported", version='5.7')
     def virtual(self):
-        return isinstance(self, (_AnySet, SetOperator, _InfiniteRangeSetData))
+        return isinstance(self, (_AnySet, SetOperator, InfiniteRangeSetData))
 
     @virtual.setter
     def virtual(self, value):
@@ -2608,7 +2608,7 @@ class OrderedSetOf(_ScalarOrderedSetMixin, _OrderedSetMixin, FiniteSetOf):
 ############################################################################
 
 
-class _InfiniteRangeSetData(_SetData):
+class InfiniteRangeSetData(_SetData):
     """Data class for a infinite set.
 
     This Set implements an interface to an *infinite set* defined by one
@@ -2653,8 +2653,13 @@ class _InfiniteRangeSetData(_SetData):
         return iter(self._ranges)
 
 
+class _InfiniteRangeSetData(metaclass=RenamedClass):
+    __renamed__new_class__ = InfiniteRangeSetData
+    __renamed__version__ = '6.7.2.dev0'
+
+
 class FiniteRangeSetData(
-    _SortedSetMixin, _OrderedSetMixin, _FiniteSetMixin, _InfiniteRangeSetData
+    _SortedSetMixin, _OrderedSetMixin, _FiniteSetMixin, InfiniteRangeSetData
 ):
     __slots__ = ()
 
@@ -2754,11 +2759,11 @@ class FiniteRangeSetData(
         )
 
     # We must redefine ranges(), bounds(), and domain so that we get the
-    # _InfiniteRangeSetData version and not the one from
+    # InfiniteRangeSetData version and not the one from
     # _FiniteSetMixin.
-    bounds = _InfiniteRangeSetData.bounds
-    ranges = _InfiniteRangeSetData.ranges
-    domain = _InfiniteRangeSetData.domain
+    bounds = InfiniteRangeSetData.bounds
+    ranges = InfiniteRangeSetData.ranges
+    domain = InfiniteRangeSetData.domain
 
 
 class _FiniteRangeSetData(metaclass=RenamedClass):
@@ -3228,9 +3233,9 @@ class RangeSet(Component):
         )
 
 
-class InfiniteScalarRangeSet(_InfiniteRangeSetData, RangeSet):
+class InfiniteScalarRangeSet(InfiniteRangeSetData, RangeSet):
     def __init__(self, *args, **kwds):
-        _InfiniteRangeSetData.__init__(self, component=self)
+        InfiniteRangeSetData.__init__(self, component=self)
         RangeSet.__init__(self, *args, **kwds)
         self._index = UnindexedComponent_index
 

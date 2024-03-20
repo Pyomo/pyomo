@@ -61,7 +61,7 @@ from pyomo.core.base.set import (
     InfiniteSetOf,
     RangeSet,
     FiniteRangeSetData,
-    _InfiniteRangeSetData,
+    InfiniteRangeSetData,
     FiniteScalarRangeSet,
     InfiniteScalarRangeSet,
     AbstractFiniteScalarRangeSet,
@@ -1297,7 +1297,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertFalse(i.isdiscrete())
         self.assertFalse(i.isfinite())
         self.assertFalse(i.isordered())
-        self.assertIsInstance(i, _InfiniteRangeSetData)
+        self.assertIsInstance(i, InfiniteRangeSetData)
 
     def test_pprint(self):
         m = ConcreteModel()
