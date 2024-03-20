@@ -214,7 +214,7 @@ def _characterize_function(name, tol, f_rule, model, points, *index):
     return 0, values, False
 
 
-class _PiecewiseData(BlockData):
+class PiecewiseData(BlockData):
     """
     This class defines the base class for all linearization
     and piecewise constraint generators..
@@ -270,6 +270,11 @@ class _PiecewiseData(BlockData):
             "point range is [%s,%s]."
             % (x, self.name, min(self._domain_pts), max(self._domain_pts))
         )
+
+
+class _PiecewiseData(metaclass=RenamedClass):
+    __renamed__new_class__ = PiecewiseData
+    __renamed__version__ = '6.7.2.dev0'
 
 
 class _SimpleSinglePiecewise(object):
@@ -1125,7 +1130,7 @@ class Piecewise(Block):
                       not be modified.
     """
 
-    _ComponentDataClass = _PiecewiseData
+    _ComponentDataClass = PiecewiseData
 
     def __new__(cls, *args, **kwds):
         if cls != Piecewise:
@@ -1541,7 +1546,7 @@ class Piecewise(Block):
                     raise ValueError(msg % (self.name, index, self._pw_rep))
 
         if _is_indexed:
-            comp = _PiecewiseData(self)
+            comp = PiecewiseData(self)
         else:
             comp = self
         self._data[index] = comp
@@ -1551,9 +1556,9 @@ class Piecewise(Block):
         comp.build_constraints(func, _self_xvar, _self_yvar)
 
 
-class SimplePiecewise(_PiecewiseData, Piecewise):
+class SimplePiecewise(PiecewiseData, Piecewise):
     def __init__(self, *args, **kwds):
-        _PiecewiseData.__init__(self, self)
+        PiecewiseData.__init__(self, self)
         Piecewise.__init__(self, *args, **kwds)
 
 
