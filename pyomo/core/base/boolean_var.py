@@ -68,7 +68,7 @@ class _DeprecatedImplicitAssociatedBinaryVariable(object):
         self._boolvar = weakref_ref(state)
 
 
-class _BooleanVarData(ComponentData, BooleanValue):
+class BooleanVarData(ComponentData, BooleanValue):
     """
     This class defines the data for a single variable.
 
@@ -177,6 +177,11 @@ class _BooleanVarData(ComponentData, BooleanValue):
         return self.unfix()
 
 
+class _BooleanVarData(metaclass=RenamedClass):
+    __renamed__new_class__ = BooleanVarData
+    __renamed__version__ = '6.7.2.dev0'
+
+
 def _associated_binary_mapper(encode, val):
     if val is None:
         return None
@@ -189,7 +194,7 @@ def _associated_binary_mapper(encode, val):
     return val
 
 
-class _GeneralBooleanVarData(_BooleanVarData):
+class _GeneralBooleanVarData(BooleanVarData):
     """
     This class defines the data for a single Boolean variable.
 
@@ -222,7 +227,7 @@ class _GeneralBooleanVarData(_BooleanVarData):
         #
         # These lines represent in-lining of the
         # following constructors:
-        #   - _BooleanVarData
+        #   - BooleanVarData
         #   - ComponentData
         #   - BooleanValue
         self._component = weakref_ref(component) if (component is not None) else None
@@ -390,7 +395,7 @@ class BooleanVar(IndexedComponent):
                 _set.construct()
 
         #
-        # Construct _BooleanVarData objects for all index values
+        # Construct BooleanVarData objects for all index values
         #
         if not self.is_indexed():
             self._data[None] = self

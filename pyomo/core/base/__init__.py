@@ -60,7 +60,7 @@ from pyomo.core.base.param import Param
 from pyomo.core.base.var import Var, _VarData, _GeneralVarData, ScalarVar, VarList
 from pyomo.core.base.boolean_var import (
     BooleanVar,
-    _BooleanVarData,
+    BooleanVarData,
     _GeneralBooleanVarData,
     BooleanVarList,
     ScalarBooleanVar,

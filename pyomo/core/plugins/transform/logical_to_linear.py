@@ -285,7 +285,7 @@ class CnfToLinearVisitor(StreamBasedExpressionVisitor):
     """Convert CNF logical constraint to linear constraints.
 
     Expected expression node types: AndExpression, OrExpression, NotExpression,
-    AtLeastExpression, AtMostExpression, ExactlyExpression, _BooleanVarData
+    AtLeastExpression, AtMostExpression, ExactlyExpression, BooleanVarData
 
     """
 
@@ -372,7 +372,7 @@ class CnfToLinearVisitor(StreamBasedExpressionVisitor):
         if child.is_expression_type():
             return True, None
 
-        # Only thing left should be _BooleanVarData
+        # Only thing left should be BooleanVarData
         #
         # TODO: After the expr_multiple_dispatch is merged, this should
         # be switched to using as_numeric.
