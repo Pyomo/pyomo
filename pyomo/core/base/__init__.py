@@ -75,7 +75,7 @@ from pyomo.core.base.constraint import (
 from pyomo.core.base.logical_constraint import (
     LogicalConstraint,
     LogicalConstraintList,
-    _LogicalConstraintData,
+    LogicalConstraintData,
 )
 from pyomo.core.base.objective import (
     simple_objective_rule,

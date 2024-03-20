@@ -42,7 +42,7 @@ forgetting to include the "return" statement at the end of your rule.
 """
 
 
-class _LogicalConstraintData(ActiveComponentData):
+class LogicalConstraintData(ActiveComponentData):
     """
     This class defines the data for a single logical constraint.
 
@@ -99,7 +99,12 @@ class _LogicalConstraintData(ActiveComponentData):
         raise NotImplementedError
 
 
-class GeneralLogicalConstraintData(_LogicalConstraintData):
+class _LogicalConstraintData(metaclass=RenamedClass):
+    __renamed__new_class__ = LogicalConstraintData
+    __renamed__version__ = '6.7.2.dev0'
+
+
+class GeneralLogicalConstraintData(LogicalConstraintData):
     """
     This class defines the data for a single general logical constraint.
 
@@ -123,7 +128,7 @@ class GeneralLogicalConstraintData(_LogicalConstraintData):
         #
         # These lines represent in-lining of the
         # following constructors:
-        #   - _LogicalConstraintData,
+        #   - LogicalConstraintData,
         #   - ActiveComponentData
         #   - ComponentData
         self._component = weakref_ref(component) if (component is not None) else None
@@ -455,7 +460,7 @@ class ScalarLogicalConstraint(GeneralLogicalConstraintData, LogicalConstraint):
     # currently in place). So during initialization only, we will
     # treat them as "indexed" objects where things like
     # True are managed. But after that they will behave
-    # like _LogicalConstraintData objects where set_value expects
+    # like LogicalConstraintData objects where set_value expects
     # a valid expression or None.
     #
 

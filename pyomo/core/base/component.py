@@ -803,7 +803,7 @@ class ComponentData(_ComponentBase):
 
     # NOTE: This constructor is in-lined in the constructors for the following
     # classes: BooleanVarData, ConnectorData, ConstraintData,
-    # GeneralExpressionData, _LogicalConstraintData,
+    # GeneralExpressionData, LogicalConstraintData,
     # GeneralLogicalConstraintData, GeneralObjectiveData,
     # _ParamData,GeneralVarData, GeneralBooleanVarData, DisjunctionData,
     # ArcData, _PortData, _LinearConstraintData, and
