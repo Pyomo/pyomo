@@ -19,7 +19,7 @@ from pyomo.common.config import (
 from .cmodel import cmodel, cmodel_available
 from typing import List, Optional
 from pyomo.core.base.var import GeneralVarData
-from pyomo.core.base.param import _ParamData
+from pyomo.core.base.param import ParamData
 from pyomo.core.base.constraint import GeneralConstraintData
 from pyomo.core.base.sos import _SOSConstraintData
 from pyomo.core.base.objective import GeneralObjectiveData, minimize, maximize
@@ -143,7 +143,7 @@ class IntervalTightener(PersistentBase):
             False,
         )
 
-    def _add_params(self, params: List[_ParamData]):
+    def _add_params(self, params: List[ParamData]):
         cparams = cmodel.create_params(len(params))
         for ndx, p in enumerate(params):
             cp = cparams[ndx]
@@ -198,7 +198,7 @@ class IntervalTightener(PersistentBase):
             cvar = self._var_map.pop(id(v))
             del self._rvar_map[cvar]
 
-    def _remove_params(self, params: List[_ParamData]):
+    def _remove_params(self, params: List[ParamData]):
         if self._symbolic_solver_labels:
             for p in params:
                 self._symbol_map.removeSymbol(p)

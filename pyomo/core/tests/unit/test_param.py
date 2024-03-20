@@ -65,7 +65,7 @@ from pyomo.environ import (
 from pyomo.common.errors import PyomoException
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager
-from pyomo.core.base.param import _ParamData
+from pyomo.core.base.param import ParamData
 from pyomo.core.base.set import _SetData
 from pyomo.core.base.units_container import units, pint_available, UnitsError
 
@@ -181,7 +181,7 @@ class ParamTester(object):
         idx = sorted(keys)[0]
         self.assertEqual(value(self.instance.A[idx]), self.data[idx])
         if self.instance.A.mutable:
-            self.assertTrue(isinstance(self.instance.A[idx], _ParamData))
+            self.assertTrue(isinstance(self.instance.A[idx], ParamData))
         else:
             self.assertEqual(type(self.instance.A[idx]), float)
 
@@ -190,7 +190,7 @@ class ParamTester(object):
             if not self.instance.A.mutable:
                 self.fail("Expected setitem[%s] to fail for immutable Params" % (idx,))
             self.assertEqual(value(self.instance.A[idx]), 4.3)
-            self.assertTrue(isinstance(self.instance.A[idx], _ParamData))
+            self.assertTrue(isinstance(self.instance.A[idx], ParamData))
         except TypeError:
             # immutable Params should raise a TypeError exception
             if self.instance.A.mutable:
@@ -249,7 +249,7 @@ class ParamTester(object):
 
         self.assertEqual(value(self.instance.A[idx]), self.instance.A._default_val)
         if self.instance.A.mutable:
-            self.assertIsInstance(self.instance.A[idx], _ParamData)
+            self.assertIsInstance(self.instance.A[idx], ParamData)
         else:
             self.assertEqual(
                 type(self.instance.A[idx]), type(value(self.instance.A._default_val))
@@ -260,7 +260,7 @@ class ParamTester(object):
             if not self.instance.A.mutable:
                 self.fail("Expected setitem[%s] to fail for immutable Params" % (idx,))
             self.assertEqual(self.instance.A[idx].value, 4.3)
-            self.assertIsInstance(self.instance.A[idx], _ParamData)
+            self.assertIsInstance(self.instance.A[idx], ParamData)
         except TypeError:
             # immutable Params should raise a TypeError exception
             if self.instance.A.mutable:

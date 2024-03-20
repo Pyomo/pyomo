@@ -28,7 +28,7 @@ from pyomo.core.base import (
 )
 import pyomo.core.base.boolean_var as BV
 from pyomo.core.base.expression import ScalarExpression, GeneralExpressionData
-from pyomo.core.base.param import ScalarParam, _ParamData
+from pyomo.core.base.param import ScalarParam, ParamData
 from pyomo.core.base.var import ScalarVar, GeneralVarData
 from pyomo.gdp.disjunct import AutoLinkedBooleanVar, Disjunct, Disjunction
 
@@ -211,7 +211,7 @@ _before_child_dispatcher = {}
 _before_child_dispatcher[BV.ScalarBooleanVar] = _dispatch_boolean_var
 _before_child_dispatcher[BV.GeneralBooleanVarData] = _dispatch_boolean_var
 _before_child_dispatcher[AutoLinkedBooleanVar] = _dispatch_boolean_var
-_before_child_dispatcher[_ParamData] = _dispatch_param
+_before_child_dispatcher[ParamData] = _dispatch_param
 _before_child_dispatcher[ScalarParam] = _dispatch_param
 # for the moment, these are all just so we can get good error messages when we
 # don't handle them:

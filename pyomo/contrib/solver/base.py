@@ -16,7 +16,7 @@ import os
 
 from pyomo.core.base.constraint import GeneralConstraintData
 from pyomo.core.base.var import GeneralVarData
-from pyomo.core.base.param import _ParamData
+from pyomo.core.base.param import ParamData
 from pyomo.core.base.block import BlockData
 from pyomo.core.base.objective import GeneralObjectiveData
 from pyomo.common.config import document_kwargs_from_configdict, ConfigValue
@@ -288,7 +288,7 @@ class PersistentSolverBase(SolverBase):
         """
 
     @abc.abstractmethod
-    def add_parameters(self, params: List[_ParamData]):
+    def add_parameters(self, params: List[ParamData]):
         """
         Add parameters to the model
         """
@@ -312,7 +312,7 @@ class PersistentSolverBase(SolverBase):
         """
 
     @abc.abstractmethod
-    def remove_parameters(self, params: List[_ParamData]):
+    def remove_parameters(self, params: List[ParamData]):
         """
         Remove parameters from the model
         """

@@ -24,7 +24,7 @@ from typing import (
 from pyomo.core.base.constraint import GeneralConstraintData, Constraint
 from pyomo.core.base.sos import _SOSConstraintData, SOSConstraint
 from pyomo.core.base.var import GeneralVarData, Var
-from pyomo.core.base.param import _ParamData, Param
+from pyomo.core.base.param import ParamData, Param
 from pyomo.core.base.block import BlockData, Block
 from pyomo.core.base.objective import GeneralObjectiveData
 from pyomo.common.collections import ComponentMap
@@ -803,7 +803,7 @@ class PersistentSolver(Solver):
         pass
 
     @abc.abstractmethod
-    def add_params(self, params: List[_ParamData]):
+    def add_params(self, params: List[ParamData]):
         pass
 
     @abc.abstractmethod
@@ -819,7 +819,7 @@ class PersistentSolver(Solver):
         pass
 
     @abc.abstractmethod
-    def remove_params(self, params: List[_ParamData]):
+    def remove_params(self, params: List[ParamData]):
         pass
 
     @abc.abstractmethod
@@ -975,10 +975,10 @@ class PersistentBase(abc.ABC):
         self._add_variables(variables)
 
     @abc.abstractmethod
-    def _add_params(self, params: List[_ParamData]):
+    def _add_params(self, params: List[ParamData]):
         pass
 
-    def add_params(self, params: List[_ParamData]):
+    def add_params(self, params: List[ParamData]):
         for p in params:
             self._params[id(p)] = p
         self._add_params(params)
@@ -1198,10 +1198,10 @@ class PersistentBase(abc.ABC):
             del self._vars[v_id]
 
     @abc.abstractmethod
-    def _remove_params(self, params: List[_ParamData]):
+    def _remove_params(self, params: List[ParamData]):
         pass
 
-    def remove_params(self, params: List[_ParamData]):
+    def remove_params(self, params: List[ParamData]):
         self._remove_params(params)
         for p in params:
             del self._params[id(p)]

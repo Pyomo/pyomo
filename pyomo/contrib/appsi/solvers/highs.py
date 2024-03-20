@@ -23,7 +23,7 @@ from pyomo.core.base import SymbolMap
 from pyomo.core.base.var import GeneralVarData
 from pyomo.core.base.constraint import GeneralConstraintData
 from pyomo.core.base.sos import _SOSConstraintData
-from pyomo.core.base.param import _ParamData
+from pyomo.core.base.param import ParamData
 from pyomo.core.expr.numvalue import value, is_constant
 from pyomo.repn import generate_standard_repn
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
@@ -335,7 +335,7 @@ class Highs(PersistentBase, PersistentSolver):
             len(vtypes), np.array(indices), np.array(vtypes)
         )
 
-    def _add_params(self, params: List[_ParamData]):
+    def _add_params(self, params: List[ParamData]):
         pass
 
     def _reinit(self):
@@ -515,7 +515,7 @@ class Highs(PersistentBase, PersistentSolver):
         self._pyomo_var_to_solver_var_map.clear()
         self._pyomo_var_to_solver_var_map.update(new_var_map)
 
-    def _remove_params(self, params: List[_ParamData]):
+    def _remove_params(self, params: List[ParamData]):
         pass
 
     def _update_variables(self, variables: List[GeneralVarData]):

@@ -25,7 +25,7 @@ from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
 from pyomo.core.base.var import GeneralVarData
 from pyomo.core.base.constraint import GeneralConstraintData
 from pyomo.core.base.sos import _SOSConstraintData
-from pyomo.core.base.param import _ParamData
+from pyomo.core.base.param import ParamData
 from pyomo.core.expr.numvalue import value, is_constant, is_fixed, native_numeric_types
 from pyomo.repn import generate_standard_repn
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
@@ -469,7 +469,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         self._vars_added_since_update.update(variables)
         self._needs_updated = True
 
-    def _add_parameters(self, params: List[_ParamData]):
+    def _add_parameters(self, params: List[ParamData]):
         pass
 
     def _reinit(self):
@@ -747,7 +747,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
             self._mutable_bounds.pop(v_id, None)
         self._needs_updated = True
 
-    def _remove_parameters(self, params: List[_ParamData]):
+    def _remove_parameters(self, params: List[ParamData]):
         pass
 
     def _update_variables(self, variables: List[GeneralVarData]):

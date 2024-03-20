@@ -42,7 +42,7 @@ def differentiate(expr, wrt=None, wrt_list=None, mode=Modes.reverse_numeric):
     wrt: pyomo.core.base.var.GeneralVarData
         If specified, this function will return the derivative with
         respect to wrt. wrt is normally a GeneralVarData, but could
-        also be a _ParamData. wrt and wrt_list cannot both be specified.
+        also be a ParamData. wrt and wrt_list cannot both be specified.
     wrt_list: list of pyomo.core.base.var.GeneralVarData
         If specified, this function will return the derivative with
         respect to each element in wrt_list.  A list will be returned

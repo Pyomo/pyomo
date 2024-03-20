@@ -15,7 +15,7 @@ from typing import List
 from pyomo.core.base.constraint import GeneralConstraintData, Constraint
 from pyomo.core.base.sos import _SOSConstraintData, SOSConstraint
 from pyomo.core.base.var import GeneralVarData
-from pyomo.core.base.param import _ParamData, Param
+from pyomo.core.base.param import ParamData, Param
 from pyomo.core.base.objective import GeneralObjectiveData
 from pyomo.common.collections import ComponentMap
 from pyomo.common.timing import HierarchicalTimer
@@ -75,10 +75,10 @@ class PersistentSolverUtils(abc.ABC):
         self._add_variables(variables)
 
     @abc.abstractmethod
-    def _add_parameters(self, params: List[_ParamData]):
+    def _add_parameters(self, params: List[ParamData]):
         pass
 
-    def add_parameters(self, params: List[_ParamData]):
+    def add_parameters(self, params: List[ParamData]):
         for p in params:
             self._params[id(p)] = p
         self._add_parameters(params)
@@ -274,10 +274,10 @@ class PersistentSolverUtils(abc.ABC):
             del self._vars[v_id]
 
     @abc.abstractmethod
-    def _remove_parameters(self, params: List[_ParamData]):
+    def _remove_parameters(self, params: List[ParamData]):
         pass
 
-    def remove_parameters(self, params: List[_ParamData]):
+    def remove_parameters(self, params: List[ParamData]):
         self._remove_parameters(params)
         for p in params:
             del self._params[id(p)]

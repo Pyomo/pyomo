@@ -64,7 +64,7 @@ from pyomo.core.base.boolean_var import (
     IndexedBooleanVar,
 )
 from pyomo.core.base.expression import ScalarExpression, GeneralExpressionData
-from pyomo.core.base.param import IndexedParam, ScalarParam, _ParamData
+from pyomo.core.base.param import IndexedParam, ScalarParam, ParamData
 from pyomo.core.base.var import ScalarVar, GeneralVarData, IndexedVar
 import pyomo.core.expr as EXPR
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor, identify_variables
@@ -970,7 +970,7 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         ScalarExpression: _before_named_expression,
         IndexedParam: _before_indexed_param,  # Because of indirection
         ScalarParam: _before_param,
-        _ParamData: _before_param,
+        ParamData: _before_param,
     }
 
     def __init__(self, cpx_model, symbolic_solver_labels=False):

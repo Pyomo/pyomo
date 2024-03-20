@@ -41,7 +41,7 @@ from pyomo.core.expr.numvalue import native_numeric_types
 from typing import Dict, Optional, List
 from pyomo.core.base.block import BlockData
 from pyomo.core.base.var import GeneralVarData
-from pyomo.core.base.param import _ParamData
+from pyomo.core.base.param import ParamData
 from pyomo.core.base.constraint import GeneralConstraintData
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
@@ -270,7 +270,7 @@ class Wntr(PersistentBase, PersistentSolver):
                 )
             self._needs_updated = True
 
-    def _add_params(self, params: List[_ParamData]):
+    def _add_params(self, params: List[ParamData]):
         aml = wntr.sim.aml.aml
         for p in params:
             pname = self._symbol_map.getSymbol(p, self._labeler)
@@ -314,7 +314,7 @@ class Wntr(PersistentBase, PersistentSolver):
                 del self._solver_model._wntr_fixed_var_cons[v_id]
             self._needs_updated = True
 
-    def _remove_params(self, params: List[_ParamData]):
+    def _remove_params(self, params: List[ParamData]):
         for p in params:
             p_id = id(p)
             solver_param = self._pyomo_param_to_solver_param_map[p_id]

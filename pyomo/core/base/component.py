@@ -805,7 +805,7 @@ class ComponentData(_ComponentBase):
     # classes: BooleanVarData, ConnectorData, ConstraintData,
     # GeneralExpressionData, LogicalConstraintData,
     # GeneralLogicalConstraintData, GeneralObjectiveData,
-    # _ParamData,GeneralVarData, GeneralBooleanVarData, DisjunctionData,
+    # ParamData,GeneralVarData, GeneralBooleanVarData, DisjunctionData,
     # ArcData, _PortData, _LinearConstraintData, and
     # _LinearMatrixConstraintData. Changes made here need to be made in those
     # constructors as well!

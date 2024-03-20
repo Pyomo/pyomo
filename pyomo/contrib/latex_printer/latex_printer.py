@@ -48,7 +48,7 @@ from pyomo.core.expr.template_expr import (
     templatize_rule,
 )
 from pyomo.core.base.var import ScalarVar, GeneralVarData, IndexedVar
-from pyomo.core.base.param import _ParamData, ScalarParam, IndexedParam
+from pyomo.core.base.param import ParamData, ScalarParam, IndexedParam
 from pyomo.core.base.set import _SetData, SetOperator
 from pyomo.core.base.constraint import ScalarConstraint, IndexedConstraint
 from pyomo.common.collections.component_map import ComponentMap
@@ -417,7 +417,7 @@ class _LatexVisitor(StreamBasedExpressionVisitor):
             Numeric_GetItemExpression: handle_numericGetItemExpression_node,
             TemplateSumExpression: handle_templateSumExpression_node,
             ScalarParam: handle_param_node,
-            _ParamData: handle_param_node,
+            ParamData: handle_param_node,
             IndexedParam: handle_param_node,
             NPV_Numeric_GetItemExpression: handle_numericGetItemExpression_node,
             IndexedBlock: handle_indexedBlock_node,
@@ -717,10 +717,8 @@ def latex_printer(
                     variableList.append(v)
 
         parameterList = []
-        for p in identify_components(
-            temp_comp, [ScalarParam, _ParamData, IndexedParam]
-        ):
-            if isinstance(p, _ParamData):
+        for p in identify_components(temp_comp, [ScalarParam, ParamData, IndexedParam]):
+            if isinstance(p, ParamData):
                 p_write = p.parent_component()
                 if p_write not in ComponentSet(parameterList):
                     parameterList.append(p_write)
@@ -1280,7 +1278,7 @@ def latex_printer(
             if ky not in existing_components:
                 overwrite_value = overwrite_value.replace('_', '\\_')
             rep_dict[variableMap[ky]] = overwrite_value
-        elif isinstance(ky, (pyo.Param, _ParamData)):
+        elif isinstance(ky, (pyo.Param, ParamData)):
             overwrite_value = latex_component_map[ky]
             if ky not in existing_components:
                 overwrite_value = overwrite_value.replace('_', '\\_')

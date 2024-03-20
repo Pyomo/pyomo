@@ -8,7 +8,7 @@ import unittest
 from pyomo.core.base import ConcreteModel, Var, _VarData
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.errors import ApplicationError
-from pyomo.core.base.param import Param, _ParamData
+from pyomo.core.base.param import Param, ParamData
 from pyomo.contrib.pyros.config import (
     InputDataStandardizer,
     mutable_param_validator,
@@ -201,7 +201,7 @@ class TestInputDataStandardizer(unittest.TestCase):
         uninitialized entries passed.
         """
         standardizer_func = InputDataStandardizer(
-            ctype=Param, cdatatype=_ParamData, ctype_validator=mutable_param_validator
+            ctype=Param, cdatatype=ParamData, ctype_validator=mutable_param_validator
         )
 
         mdl = ConcreteModel()
@@ -217,7 +217,7 @@ class TestInputDataStandardizer(unittest.TestCase):
         Param object(s) passed.
         """
         standardizer_func = InputDataStandardizer(
-            ctype=Param, cdatatype=_ParamData, ctype_validator=mutable_param_validator
+            ctype=Param, cdatatype=ParamData, ctype_validator=mutable_param_validator
         )
 
         mdl = ConcreteModel()
@@ -237,7 +237,7 @@ class TestInputDataStandardizer(unittest.TestCase):
         mdl.p2 = Param(["a", "b"], initialize=1, mutable=True)
 
         standardizer_func = InputDataStandardizer(
-            ctype=Param, cdatatype=_ParamData, ctype_validator=mutable_param_validator
+            ctype=Param, cdatatype=ParamData, ctype_validator=mutable_param_validator
         )
 
         standardizer_input = [mdl.p1[0], mdl.p2]

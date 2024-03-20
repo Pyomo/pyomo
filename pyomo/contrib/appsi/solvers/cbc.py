@@ -29,7 +29,7 @@ from typing import Optional, Sequence, NoReturn, List, Mapping
 from pyomo.core.base.var import GeneralVarData
 from pyomo.core.base.constraint import GeneralConstraintData
 from pyomo.core.base.block import BlockData
-from pyomo.core.base.param import _ParamData
+from pyomo.core.base.param import ParamData
 from pyomo.core.base.objective import GeneralObjectiveData
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.tee import TeeStream
@@ -167,7 +167,7 @@ class Cbc(PersistentSolver):
     def add_variables(self, variables: List[GeneralVarData]):
         self._writer.add_variables(variables)
 
-    def add_params(self, params: List[_ParamData]):
+    def add_params(self, params: List[ParamData]):
         self._writer.add_params(params)
 
     def add_constraints(self, cons: List[GeneralConstraintData]):
@@ -179,7 +179,7 @@ class Cbc(PersistentSolver):
     def remove_variables(self, variables: List[GeneralVarData]):
         self._writer.remove_variables(variables)
 
-    def remove_params(self, params: List[_ParamData]):
+    def remove_params(self, params: List[ParamData]):
         self._writer.remove_params(params)
 
     def remove_constraints(self, cons: List[GeneralConstraintData]):

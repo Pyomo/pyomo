@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 from typing import List
-from pyomo.core.base.param import _ParamData
+from pyomo.core.base.param import ParamData
 from pyomo.core.base.var import GeneralVarData
 from pyomo.core.base.constraint import GeneralConstraintData
 from pyomo.core.base.objective import GeneralObjectiveData
@@ -100,7 +100,7 @@ class NLWriter(PersistentBase):
             False,
         )
 
-    def _add_params(self, params: List[_ParamData]):
+    def _add_params(self, params: List[ParamData]):
         cparams = cmodel.create_params(len(params))
         for ndx, p in enumerate(params):
             cp = cparams[ndx]
@@ -153,7 +153,7 @@ class NLWriter(PersistentBase):
             cvar = self._pyomo_var_to_solver_var_map.pop(id(v))
             del self._solver_var_to_pyomo_var_map[cvar]
 
-    def _remove_params(self, params: List[_ParamData]):
+    def _remove_params(self, params: List[ParamData]):
         if self.config.symbolic_solver_labels:
             for p in params:
                 self._symbol_map.removeSymbol(p)

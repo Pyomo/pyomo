@@ -23,7 +23,7 @@ from pyomo.core.base.objective import GeneralObjectiveData, ScalarObjective
 from pyomo.core.base import ExpressionData, Expression
 from pyomo.core.base.expression import ScalarExpression, GeneralExpressionData
 from pyomo.core.base.var import ScalarVar, Var, GeneralVarData, value
-from pyomo.core.base.param import ScalarParam, _ParamData
+from pyomo.core.base.param import ScalarParam, ParamData
 from pyomo.core.kernel.expression import expression, noclone
 from pyomo.core.kernel.variable import IVariable, variable
 from pyomo.core.kernel.objective import objective
@@ -1138,7 +1138,7 @@ _repn_collectors = {
     EXPR.ExternalFunctionExpression: _collect_external_fn,
     # ConnectorData          : _collect_linear_connector,
     # ScalarConnector         : _collect_linear_connector,
-    _ParamData: _collect_const,
+    ParamData: _collect_const,
     ScalarParam: _collect_const,
     # param.Param             : _collect_linear_const,
     # parameter               : _collect_linear_const,
@@ -1538,7 +1538,7 @@ _linear_repn_collectors = {
     ##EXPR.LinearSumExpression               : _collect_linear_sum,
     ##ConnectorData          : _collect_linear_connector,
     ##ScalarConnector         : _collect_linear_connector,
-    ##param._ParamData        : _collect_linear_const,
+    ##param.ParamData        : _collect_linear_const,
     ##param.ScalarParam       : _collect_linear_const,
     ##param.Param             : _collect_linear_const,
     ##parameter               : _collect_linear_const,

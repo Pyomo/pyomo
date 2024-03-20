@@ -171,8 +171,8 @@ def _build_op_template():
     _op_template[var._VarData] = "v%d{C}\n"
     _op_comment[var._VarData] = "\t#%s"
 
-    _op_template[param._ParamData] = "n%r{C}\n"
-    _op_comment[param._ParamData] = ""
+    _op_template[param.ParamData] = "n%r{C}\n"
+    _op_comment[param.ParamData] = ""
 
     _op_template[NumericConstant] = "n%r{C}\n"
     _op_comment[NumericConstant] = ""
@@ -749,8 +749,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     )
                 )
 
-        elif isinstance(exp, param._ParamData):
-            OUTPUT.write(self._op_string[param._ParamData] % (value(exp)))
+        elif isinstance(exp, param.ParamData):
+            OUTPUT.write(self._op_string[param.ParamData] % (value(exp)))
 
         elif isinstance(exp, NumericConstant) or exp.is_fixed():
             OUTPUT.write(self._op_string[NumericConstant] % (value(exp)))
