@@ -39,7 +39,7 @@ from pyomo.common.errors import PyomoException
 from pyomo.common.collections import ComponentMap
 from pyomo.core.expr.numvalue import native_numeric_types
 from typing import Dict, Optional, List
-from pyomo.core.base.block import _BlockData
+from pyomo.core.base.block import BlockData
 from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.constraint import _GeneralConstraintData
@@ -178,7 +178,7 @@ class Wntr(PersistentBase, PersistentSolver):
                 )
         return results
 
-    def solve(self, model: _BlockData, timer: HierarchicalTimer = None) -> Results:
+    def solve(self, model: BlockData, timer: HierarchicalTimer = None) -> Results:
         StaleFlagManager.mark_all_as_stale()
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()

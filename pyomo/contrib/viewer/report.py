@@ -149,7 +149,7 @@ def degrees_of_freedom(blk):
     Return the degrees of freedom.
 
     Args:
-        blk (Block or _BlockData): Block to count degrees of freedom in
+        blk (Block or BlockData): Block to count degrees of freedom in
     Returns:
         (int): Number of degrees of freedom
     """

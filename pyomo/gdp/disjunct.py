@@ -41,7 +41,7 @@ from pyomo.core.base.component import (
     ComponentData,
 )
 from pyomo.core.base.global_set import UnindexedComponent_index
-from pyomo.core.base.block import _BlockData
+from pyomo.core.base.block import BlockData
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.indexed_component import ActiveIndexedComponent
 from pyomo.core.expr.expr_common import ExpressionType
@@ -412,7 +412,7 @@ class _Initializer(object):
             return (_Initializer.deferred_value, arg)
 
 
-class _DisjunctData(_BlockData):
+class _DisjunctData(BlockData):
     __autoslot_mappers__ = {'_transformation_block': AutoSlots.weakref_mapper}
 
     _Block_reserved_words = set()
@@ -424,7 +424,7 @@ class _DisjunctData(_BlockData):
         )
 
     def __init__(self, component):
-        _BlockData.__init__(self, component)
+        BlockData.__init__(self, component)
         with self._declare_reserved_components():
             self.indicator_var = AutoLinkedBooleanVar()
             self.binary_indicator_var = AutoLinkedBinaryVar(self.indicator_var)
@@ -498,7 +498,7 @@ class Disjunct(Block):
 class ScalarDisjunct(_DisjunctData, Disjunct):
     def __init__(self, *args, **kwds):
         ## FIXME: This is a HACK to get around a chicken-and-egg issue
-        ## where _BlockData creates the indicator_var *before*
+        ## where BlockData creates the indicator_var *before*
         ## Block.__init__ declares the _defer_construction flag.
         self._defer_construction = True
         self._suppress_ctypes = set()

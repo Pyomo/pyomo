@@ -64,7 +64,7 @@ from pyomo.core.base.block import IndexedBlock
 from pyomo.core.base.external import _PythonCallbackFunctionID
 from pyomo.core.base.enums import SortComponents
 
-from pyomo.core.base.block import _BlockData
+from pyomo.core.base.block import BlockData
 
 from pyomo.repn.util import ExprType
 
@@ -587,7 +587,7 @@ def latex_printer(
 
     Parameters
     ----------
-    pyomo_component: _BlockData or Model or Objective or Constraint or Expression
+    pyomo_component: BlockData or Model or Objective or Constraint or Expression
         The Pyomo component to be printed
 
     latex_component_map: pyomo.common.collections.component_map.ComponentMap
@@ -674,7 +674,7 @@ def latex_printer(
         use_equation_environment = True
         isSingle = True
 
-    elif isinstance(pyomo_component, _BlockData):
+    elif isinstance(pyomo_component, BlockData):
         objectives = [
             obj
             for obj in pyomo_component.component_data_objects(

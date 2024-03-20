@@ -43,7 +43,7 @@ from pyomo.common.log import is_debug_set
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.numeric_types import value
 from pyomo.common.timing import ConstructionTimer
-from pyomo.core.base.block import Block, _BlockData
+from pyomo.core.base.block import Block, BlockData
 from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.constraint import Constraint, ConstraintList
 from pyomo.core.base.sos import SOSConstraint
@@ -214,14 +214,14 @@ def _characterize_function(name, tol, f_rule, model, points, *index):
     return 0, values, False
 
 
-class _PiecewiseData(_BlockData):
+class _PiecewiseData(BlockData):
     """
     This class defines the base class for all linearization
     and piecewise constraint generators..
     """
 
     def __init__(self, parent):
-        _BlockData.__init__(self, parent)
+        BlockData.__init__(self, parent)
         self._constructed = True
         self._bound_type = None
         self._domain_pts = None

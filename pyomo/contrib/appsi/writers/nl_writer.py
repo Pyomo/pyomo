@@ -15,7 +15,7 @@ from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.base.constraint import _GeneralConstraintData
 from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.core.base.sos import _SOSConstraintData
-from pyomo.core.base.block import _BlockData
+from pyomo.core.base.block import BlockData
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.core.expr.numvalue import value
 from pyomo.contrib.appsi.base import PersistentBase
@@ -232,7 +232,7 @@ class NLWriter(PersistentBase):
         cobj.sense = sense
         self._writer.objective = cobj
 
-    def write(self, model: _BlockData, filename: str, timer: HierarchicalTimer = None):
+    def write(self, model: BlockData, filename: str, timer: HierarchicalTimer = None):
         if timer is None:
             timer = HierarchicalTimer()
         if model is not self._model:

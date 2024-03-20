@@ -25,7 +25,7 @@ from pyomo.core.base.constraint import _GeneralConstraintData, Constraint
 from pyomo.core.base.sos import _SOSConstraintData, SOSConstraint
 from pyomo.core.base.var import _GeneralVarData, Var
 from pyomo.core.base.param import _ParamData, Param
-from pyomo.core.base.block import _BlockData, Block
+from pyomo.core.base.block import BlockData, Block
 from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.common.collections import ComponentMap
 from .utils.get_objective import get_objective
@@ -621,13 +621,13 @@ class Solver(abc.ABC):
             return self.name
 
     @abc.abstractmethod
-    def solve(self, model: _BlockData, timer: HierarchicalTimer = None) -> Results:
+    def solve(self, model: BlockData, timer: HierarchicalTimer = None) -> Results:
         """
         Solve a Pyomo model.
 
         Parameters
         ----------
-        model: _BlockData
+        model: BlockData
             The Pyomo model to be solved
         timer: HierarchicalTimer
             An option timer for reporting timing
@@ -811,7 +811,7 @@ class PersistentSolver(Solver):
         pass
 
     @abc.abstractmethod
-    def add_block(self, block: _BlockData):
+    def add_block(self, block: BlockData):
         pass
 
     @abc.abstractmethod
@@ -827,7 +827,7 @@ class PersistentSolver(Solver):
         pass
 
     @abc.abstractmethod
-    def remove_block(self, block: _BlockData):
+    def remove_block(self, block: BlockData):
         pass
 
     @abc.abstractmethod
@@ -1529,7 +1529,7 @@ legacy_solution_status_map = {
 class LegacySolverInterface(object):
     def solve(
         self,
-        model: _BlockData,
+        model: BlockData,
         tee: bool = False,
         load_solutions: bool = True,
         logfile: Optional[str] = None,

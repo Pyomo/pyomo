@@ -1603,7 +1603,7 @@ class TestSuffixCloneUsage(unittest.TestCase):
         self.assertEqual(inst.junk.get(model.b[1]), None)
         self.assertEqual(inst.junk.get(inst.b[1]), 1.0)
 
-    def test_clone_BlockData(self):
+    def test_cloneBlockData(self):
         model = ConcreteModel()
         model.b = Block([1, 2, 3])
         model.junk = Suffix()
@@ -1761,7 +1761,7 @@ class TestSuffixPickleUsage(unittest.TestCase):
         self.assertEqual(inst.junk.get(model.b[1]), None)
         self.assertEqual(inst.junk.get(inst.b[1]), 1.0)
 
-    def test_pickle_BlockData(self):
+    def test_pickleBlockData(self):
         model = ConcreteModel()
         model.b = Block([1, 2, 3])
         model.junk = Suffix()

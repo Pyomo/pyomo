@@ -486,7 +486,7 @@ def categorize_valid_components(
 
     Parameters
     ----------
-    model: _BlockData
+    model: BlockData
         The model tree to walk
 
     active: True or None
@@ -507,7 +507,7 @@ def categorize_valid_components(
 
     Returns
     -------
-    component_map: Dict[type, List[_BlockData]]
+    component_map: Dict[type, List[BlockData]]
         A dict mapping component type to a list of block data
         objects that contain declared component of that type.
 

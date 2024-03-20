@@ -17,7 +17,7 @@ import os
 from pyomo.core.base.constraint import _GeneralConstraintData
 from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.base.param import _ParamData
-from pyomo.core.base.block import _BlockData
+from pyomo.core.base.block import BlockData
 from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.common.config import document_kwargs_from_configdict, ConfigValue
 from pyomo.common.errors import ApplicationError
@@ -108,13 +108,13 @@ class SolverBase(abc.ABC):
 
     @document_kwargs_from_configdict(CONFIG)
     @abc.abstractmethod
-    def solve(self, model: _BlockData, **kwargs) -> Results:
+    def solve(self, model: BlockData, **kwargs) -> Results:
         """
         Solve a Pyomo model.
 
         Parameters
         ----------
-        model: _BlockData
+        model: BlockData
             The Pyomo model to be solved
         **kwargs
             Additional keyword arguments (including solver_options - passthrough
@@ -182,7 +182,7 @@ class PersistentSolverBase(SolverBase):
 
     @document_kwargs_from_configdict(PersistentSolverConfig())
     @abc.abstractmethod
-    def solve(self, model: _BlockData, **kwargs) -> Results:
+    def solve(self, model: BlockData, **kwargs) -> Results:
         super().solve(model, kwargs)
 
     def is_persistent(self):
@@ -300,7 +300,7 @@ class PersistentSolverBase(SolverBase):
         """
 
     @abc.abstractmethod
-    def add_block(self, block: _BlockData):
+    def add_block(self, block: BlockData):
         """
         Add a block to the model
         """
@@ -324,7 +324,7 @@ class PersistentSolverBase(SolverBase):
         """
 
     @abc.abstractmethod
-    def remove_block(self, block: _BlockData):
+    def remove_block(self, block: BlockData):
         """
         Remove a block from the model
         """
@@ -496,7 +496,7 @@ class LegacySolverWrapper:
 
     def solve(
         self,
-        model: _BlockData,
+        model: BlockData,
         tee: bool = False,
         load_solutions: bool = True,
         logfile: Optional[str] = None,

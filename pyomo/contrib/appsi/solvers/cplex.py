@@ -24,7 +24,7 @@ from pyomo.common.collections import ComponentMap
 from typing import Optional, Sequence, NoReturn, List, Mapping, Dict
 from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.base.constraint import _GeneralConstraintData
-from pyomo.core.base.block import _BlockData
+from pyomo.core.base.block import BlockData
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.common.timing import HierarchicalTimer
@@ -188,7 +188,7 @@ class Cplex(PersistentSolver):
     def add_constraints(self, cons: List[_GeneralConstraintData]):
         self._writer.add_constraints(cons)
 
-    def add_block(self, block: _BlockData):
+    def add_block(self, block: BlockData):
         self._writer.add_block(block)
 
     def remove_variables(self, variables: List[_GeneralVarData]):
@@ -200,7 +200,7 @@ class Cplex(PersistentSolver):
     def remove_constraints(self, cons: List[_GeneralConstraintData]):
         self._writer.remove_constraints(cons)
 
-    def remove_block(self, block: _BlockData):
+    def remove_block(self, block: BlockData):
         self._writer.remove_block(block)
 
     def set_objective(self, obj: _GeneralObjectiveData):

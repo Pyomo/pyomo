@@ -22,7 +22,7 @@ from pyomo.core import (
     LogicalConstraint,
     value,
 )
-from pyomo.core.base.block import _BlockData
+from pyomo.core.base.block import BlockData
 from pyomo.common.collections import ComponentMap, ComponentSet, OrderedSet
 from pyomo.opt import TerminationCondition, SolverStatus
 
@@ -330,7 +330,7 @@ def get_gdp_tree(targets, instance, knownBlocks=None):
                 "Target '%s' is not a component on instance "
                 "'%s'!" % (t.name, instance.name)
             )
-        if t.ctype is Block or isinstance(t, _BlockData):
+        if t.ctype is Block or isinstance(t, BlockData):
             _blocks = t.values() if t.is_indexed() else (t,)
             for block in _blocks:
                 if not block.active:
@@ -387,7 +387,7 @@ def is_child_of(parent, child, knownBlocks=None):
     if knownBlocks is None:
         knownBlocks = {}
     tmp = set()
-    node = child if isinstance(child, (Block, _BlockData)) else child.parent_block()
+    node = child if isinstance(child, (Block, BlockData)) else child.parent_block()
     while True:
         known = knownBlocks.get(node)
         if known:
@@ -452,7 +452,7 @@ def get_src_disjunct(transBlock):
 
     Parameters
     ----------
-    transBlock: _BlockData which is in the relaxedDisjuncts IndexedBlock
+    transBlock: BlockData which is in the relaxedDisjuncts IndexedBlock
                 on a transformation block.
     """
     if (

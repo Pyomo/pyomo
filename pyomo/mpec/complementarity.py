@@ -19,7 +19,7 @@ from pyomo.core.expr.numvalue import ZeroConstant, native_numeric_types, as_nume
 from pyomo.core import Constraint, Var, Block, Set
 from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
-from pyomo.core.base.block import _BlockData
+from pyomo.core.base.block import BlockData
 from pyomo.core.base.disable_methods import disable_methods
 from pyomo.core.base.initializer import (
     Initializer,
@@ -43,7 +43,7 @@ def complements(a, b):
     return ComplementarityTuple(a, b)
 
 
-class _ComplementarityData(_BlockData):
+class _ComplementarityData(BlockData):
     def _canonical_expression(self, e):
         # Note: as the complimentarity component maintains references to
         # the original expression (e), it is NOT safe or valid to bypass

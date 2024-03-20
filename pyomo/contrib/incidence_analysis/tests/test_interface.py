@@ -1888,7 +1888,7 @@ class TestIndexedBlock(unittest.TestCase):
         self.assertEqual(len(var_dmp.unmatched), 1)
         self.assertEqual(len(con_dmp.unmatched), 1)
 
-        msg = "Unsupported type.*_BlockData"
+        msg = "Unsupported type.*BlockData"
         with self.assertRaisesRegex(TypeError, msg):
             igraph = IncidenceGraphInterface(m.block)
 

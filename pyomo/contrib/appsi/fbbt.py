@@ -23,7 +23,7 @@ from pyomo.core.base.param import _ParamData
 from pyomo.core.base.constraint import _GeneralConstraintData
 from pyomo.core.base.sos import _SOSConstraintData
 from pyomo.core.base.objective import _GeneralObjectiveData, minimize, maximize
-from pyomo.core.base.block import _BlockData
+from pyomo.core.base.block import BlockData
 from pyomo.core.base import SymbolMap, TextLabeler
 from pyomo.common.errors import InfeasibleConstraintException
 
@@ -275,7 +275,7 @@ class IntervalTightener(PersistentBase):
             c.deactivate()
 
     def perform_fbbt(
-        self, model: _BlockData, symbolic_solver_labels: Optional[bool] = None
+        self, model: BlockData, symbolic_solver_labels: Optional[bool] = None
     ):
         if model is not self._model:
             self.set_instance(model, symbolic_solver_labels=symbolic_solver_labels)
@@ -304,7 +304,7 @@ class IntervalTightener(PersistentBase):
             self._deactivate_satisfied_cons()
         return n_iter
 
-    def perform_fbbt_with_seed(self, model: _BlockData, seed_var: _GeneralVarData):
+    def perform_fbbt_with_seed(self, model: BlockData, seed_var: _GeneralVarData):
         if model is not self._model:
             self.set_instance(model)
         else:

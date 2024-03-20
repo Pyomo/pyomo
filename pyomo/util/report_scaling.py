@@ -11,7 +11,7 @@
 
 import pyomo.environ as pyo
 import math
-from pyomo.core.base.block import _BlockData
+from pyomo.core.base.block import BlockData
 from pyomo.common.collections import ComponentSet
 from pyomo.core.base.var import _GeneralVarData
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
@@ -42,7 +42,7 @@ def _print_var_set(var_set):
     return s
 
 
-def _check_var_bounds(m: _BlockData, too_large: float):
+def _check_var_bounds(m: BlockData, too_large: float):
     vars_without_bounds = ComponentSet()
     vars_with_large_bounds = ComponentSet()
     for v in m.component_data_objects(pyo.Var, descend_into=True):
@@ -90,7 +90,7 @@ def _check_coefficients(
 
 
 def report_scaling(
-    m: _BlockData, too_large: float = 5e4, too_small: float = 1e-6
+    m: BlockData, too_large: float = 5e4, too_small: float = 1e-6
 ) -> bool:
     """
     This function logs potentially poorly scaled parts of the model.
@@ -107,7 +107,7 @@ def report_scaling(
 
     Parameters
     ----------
-    m: _BlockData
+    m: BlockData
         The pyomo model or block
     too_large: float
         Values above too_large will generate a log entry
