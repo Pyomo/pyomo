@@ -2648,7 +2648,7 @@ class _InfiniteRangeSetData(_SetData):
         return iter(self._ranges)
 
 
-class _FiniteRangeSetData(
+class FiniteRangeSetData(
     _SortedSetMixin, _OrderedSetMixin, _FiniteSetMixin, _InfiniteRangeSetData
 ):
     __slots__ = ()
@@ -2672,7 +2672,7 @@ class _FiniteRangeSetData(
         # iterate over it
         nIters = len(self._ranges) - 1
         if not nIters:
-            yield from _FiniteRangeSetData._range_gen(self._ranges[0])
+            yield from FiniteRangeSetData._range_gen(self._ranges[0])
             return
 
         # The trick here is that we need to remove any duplicates from
@@ -2683,7 +2683,7 @@ class _FiniteRangeSetData(
         for r in self._ranges:
             # Note: there should always be at least 1 member in each
             # NumericRange
-            i = _FiniteRangeSetData._range_gen(r)
+            i = FiniteRangeSetData._range_gen(r)
             iters.append([next(i), i])
 
         iters.sort(reverse=True, key=lambda x: x[0])
@@ -2754,6 +2754,11 @@ class _FiniteRangeSetData(
     bounds = _InfiniteRangeSetData.bounds
     ranges = _InfiniteRangeSetData.ranges
     domain = _InfiniteRangeSetData.domain
+
+
+class _FiniteRangeSetData(metaclass=RenamedClass):
+    __renamed__new_class__ = FiniteRangeSetData
+    __renamed__version__ = '6.7.2.dev0'
 
 
 @ModelComponentFactory.register(
@@ -3120,7 +3125,7 @@ class RangeSet(Component):
             old_ranges.reverse()
             while old_ranges:
                 r = old_ranges.pop()
-                for i, val in enumerate(_FiniteRangeSetData._range_gen(r)):
+                for i, val in enumerate(FiniteRangeSetData._range_gen(r)):
                     if not _filter(_block, val):
                         split_r = r.range_difference((NumericRange(val, val, 0),))
                         if len(split_r) == 2:
@@ -3233,9 +3238,9 @@ class InfiniteSimpleRangeSet(metaclass=RenamedClass):
     __renamed__version__ = '6.0'
 
 
-class FiniteScalarRangeSet(_ScalarOrderedSetMixin, _FiniteRangeSetData, RangeSet):
+class FiniteScalarRangeSet(_ScalarOrderedSetMixin, FiniteRangeSetData, RangeSet):
     def __init__(self, *args, **kwds):
-        _FiniteRangeSetData.__init__(self, component=self)
+        FiniteRangeSetData.__init__(self, component=self)
         RangeSet.__init__(self, *args, **kwds)
         self._index = UnindexedComponent_index
 

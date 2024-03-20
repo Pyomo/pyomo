@@ -60,7 +60,7 @@ from pyomo.core.base.set import (
     FiniteSetOf,
     InfiniteSetOf,
     RangeSet,
-    _FiniteRangeSetData,
+    FiniteRangeSetData,
     _InfiniteRangeSetData,
     FiniteScalarRangeSet,
     InfiniteScalarRangeSet,
@@ -1285,13 +1285,13 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertTrue(i.isdiscrete())
         self.assertTrue(i.isfinite())
         self.assertTrue(i.isordered())
-        self.assertIsInstance(i, _FiniteRangeSetData)
+        self.assertIsInstance(i, FiniteRangeSetData)
 
         i = RangeSet(1, 3)
         self.assertTrue(i.isdiscrete())
         self.assertTrue(i.isfinite())
         self.assertTrue(i.isordered())
-        self.assertIsInstance(i, _FiniteRangeSetData)
+        self.assertIsInstance(i, FiniteRangeSetData)
 
         i = RangeSet(1, 3, 0)
         self.assertFalse(i.isdiscrete())
