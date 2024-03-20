@@ -1294,7 +1294,7 @@ class _FiniteSetMixin(object):
                     yield NonNumericRange(i)
 
 
-class _FiniteSetData(_FiniteSetMixin, _SetData):
+class FiniteSetData(_FiniteSetMixin, _SetData):
     """A general unordered iterable Set"""
 
     __slots__ = ('_values', '_domain', '_validate', '_filter', '_dimen')
@@ -1470,6 +1470,11 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
         return self._values.pop()
 
 
+class _FiniteSetData(metaclass=RenamedClass):
+    __renamed__new_class__ = FiniteSetData
+    __renamed__version__ = '6.7.2.dev0'
+
+
 class _ScalarOrderedSetMixin(object):
     # This mixin is required because scalar ordered sets implement
     # __getitem__() as an alias of at()
@@ -1630,7 +1635,7 @@ class _OrderedSetMixin(object):
             )
 
 
-class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
+class _OrderedSetData(_OrderedSetMixin, FiniteSetData):
     """
     This class defines the base class for an ordered set of concrete data.
 
@@ -1652,7 +1657,7 @@ class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
     def __init__(self, component):
         self._values = {}
         self._ordered_values = []
-        _FiniteSetData.__init__(self, component=component)
+        FiniteSetData.__init__(self, component=component)
 
     def _iter_impl(self):
         """
@@ -2034,7 +2039,7 @@ class Set(IndexedComponent):
             elif ordered is Set.SortedOrder:
                 newObj._ComponentDataClass = _SortedSetData
             else:
-                newObj._ComponentDataClass = _FiniteSetData
+                newObj._ComponentDataClass = FiniteSetData
             return newObj
 
     @overload
@@ -2388,9 +2393,9 @@ class IndexedSet(Set):
     __getitem__ = IndexedComponent.__getitem__  # type: ignore
 
 
-class FiniteScalarSet(_FiniteSetData, Set):
+class FiniteScalarSet(FiniteSetData, Set):
     def __init__(self, **kwds):
-        _FiniteSetData.__init__(self, component=self)
+        FiniteSetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
         self._index = UnindexedComponent_index
 
