@@ -148,7 +148,7 @@ class _ExpressionData(metaclass=RenamedClass):
     __renamed__version__ = '6.7.2.dev0'
 
 
-class _GeneralExpressionDataImpl(ExpressionData):
+class GeneralExpressionDataImpl(ExpressionData):
     """
     An object that defines an expression that is never cloned
 
@@ -240,7 +240,7 @@ class _GeneralExpressionDataImpl(ExpressionData):
         return numeric_expr._pow_dispatcher[e.__class__, other.__class__](e, other)
 
 
-class _GeneralExpressionData(_GeneralExpressionDataImpl, ComponentData):
+class GeneralExpressionData(GeneralExpressionDataImpl, ComponentData):
     """
     An object that defines an expression that is never cloned
 
@@ -258,10 +258,15 @@ class _GeneralExpressionData(_GeneralExpressionDataImpl, ComponentData):
     __slots__ = ('_args_',)
 
     def __init__(self, expr=None, component=None):
-        _GeneralExpressionDataImpl.__init__(self, expr)
+        GeneralExpressionDataImpl.__init__(self, expr)
         # Inlining ComponentData.__init__
         self._component = weakref_ref(component) if (component is not None) else None
         self._index = NOTSET
+
+
+class _GeneralExpressionData(metaclass=RenamedClass):
+    __renamed__new_class__ = GeneralExpressionData
+    __renamed__version__ = '6.7.2.dev0'
 
 
 @ModelComponentFactory.register(
@@ -280,7 +285,7 @@ class Expression(IndexedComponent):
         doc         Text describing this component.
     """
 
-    _ComponentDataClass = _GeneralExpressionData
+    _ComponentDataClass = GeneralExpressionData
     # This seems like a copy-paste error, and should be renamed/removed
     NoConstraint = IndexedComponent.Skip
 
@@ -407,9 +412,9 @@ class Expression(IndexedComponent):
             timer.report()
 
 
-class ScalarExpression(_GeneralExpressionData, Expression):
+class ScalarExpression(GeneralExpressionData, Expression):
     def __init__(self, *args, **kwds):
-        _GeneralExpressionData.__init__(self, expr=None, component=self)
+        GeneralExpressionData.__init__(self, expr=None, component=self)
         Expression.__init__(self, *args, **kwds)
         self._index = UnindexedComponent_index
 
@@ -432,7 +437,7 @@ class ScalarExpression(_GeneralExpressionData, Expression):
     def expr(self):
         """Return expression on this expression."""
         if self._constructed:
-            return _GeneralExpressionData.expr.fget(self)
+            return GeneralExpressionData.expr.fget(self)
         raise ValueError(
             "Accessing the expression of Expression '%s' "
             "before the Expression has been constructed (there "
@@ -450,7 +455,7 @@ class ScalarExpression(_GeneralExpressionData, Expression):
     def set_value(self, expr):
         """Set the expression on this expression."""
         if self._constructed:
-            return _GeneralExpressionData.set_value(self, expr)
+            return GeneralExpressionData.set_value(self, expr)
         raise ValueError(
             "Setting the expression of Expression '%s' "
             "before the Expression has been constructed (there "
@@ -460,7 +465,7 @@ class ScalarExpression(_GeneralExpressionData, Expression):
     def is_constant(self):
         """A boolean indicating whether this expression is constant."""
         if self._constructed:
-            return _GeneralExpressionData.is_constant(self)
+            return GeneralExpressionData.is_constant(self)
         raise ValueError(
             "Accessing the is_constant flag of Expression '%s' "
             "before the Expression has been constructed (there "
@@ -470,7 +475,7 @@ class ScalarExpression(_GeneralExpressionData, Expression):
     def is_fixed(self):
         """A boolean indicating whether this expression is fixed."""
         if self._constructed:
-            return _GeneralExpressionData.is_fixed(self)
+            return GeneralExpressionData.is_fixed(self)
         raise ValueError(
             "Accessing the is_fixed flag of Expression '%s' "
             "before the Expression has been constructed (there "
@@ -514,6 +519,6 @@ class IndexedExpression(Expression):
         """Add an expression with a given index."""
         if (type(expr) is tuple) and (expr == Expression.Skip):
             return None
-        cdata = _GeneralExpressionData(expr, component=self)
+        cdata = GeneralExpressionData(expr, component=self)
         self._data[index] = cdata
         return cdata

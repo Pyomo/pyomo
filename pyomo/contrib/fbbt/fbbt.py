@@ -26,7 +26,7 @@ from pyomo.core.base.block import Block
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.var import Var
 from pyomo.gdp import Disjunct
-from pyomo.core.base.expression import _GeneralExpressionData, ScalarExpression
+from pyomo.core.base.expression import GeneralExpressionData, ScalarExpression
 import logging
 from pyomo.common.errors import InfeasibleConstraintException, PyomoException
 from pyomo.common.config import (
@@ -340,7 +340,7 @@ def _prop_bnds_leaf_to_root_GeneralExpression(visitor, node, expr):
     Parameters
     ----------
     visitor: _FBBTVisitorLeafToRoot
-    node: pyomo.core.base.expression._GeneralExpressionData
+    node: pyomo.core.base.expression.GeneralExpressionData
     expr: GeneralExpression arg
     """
     bnds_dict = visitor.bnds_dict
@@ -366,7 +366,7 @@ _prop_bnds_leaf_to_root_map = defaultdict(
         numeric_expr.UnaryFunctionExpression: _prop_bnds_leaf_to_root_UnaryFunctionExpression,
         numeric_expr.LinearExpression: _prop_bnds_leaf_to_root_SumExpression,
         numeric_expr.AbsExpression: _prop_bnds_leaf_to_root_abs,
-        _GeneralExpressionData: _prop_bnds_leaf_to_root_GeneralExpression,
+        GeneralExpressionData: _prop_bnds_leaf_to_root_GeneralExpression,
         ScalarExpression: _prop_bnds_leaf_to_root_GeneralExpression,
     },
 )
@@ -904,7 +904,7 @@ def _prop_bnds_root_to_leaf_GeneralExpression(node, bnds_dict, feasibility_tol):
 
     Parameters
     ----------
-    node: pyomo.core.base.expression._GeneralExpressionData
+    node: pyomo.core.base.expression.GeneralExpressionData
     bnds_dict: ComponentMap
     feasibility_tol: float
         If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
@@ -945,7 +945,7 @@ _prop_bnds_root_to_leaf_map[numeric_expr.LinearExpression] = (
 )
 _prop_bnds_root_to_leaf_map[numeric_expr.AbsExpression] = _prop_bnds_root_to_leaf_abs
 
-_prop_bnds_root_to_leaf_map[_GeneralExpressionData] = (
+_prop_bnds_root_to_leaf_map[GeneralExpressionData] = (
     _prop_bnds_root_to_leaf_GeneralExpression
 )
 _prop_bnds_root_to_leaf_map[ScalarExpression] = (

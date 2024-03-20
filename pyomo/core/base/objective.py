@@ -28,7 +28,7 @@ from pyomo.core.base.indexed_component import (
     UnindexedComponent_set,
     rule_wrapper,
 )
-from pyomo.core.base.expression import ExpressionData, _GeneralExpressionDataImpl
+from pyomo.core.base.expression import ExpressionData, GeneralExpressionDataImpl
 from pyomo.core.base.set import Set
 from pyomo.core.base.initializer import (
     Initializer,
@@ -120,7 +120,7 @@ class _ObjectiveData(ExpressionData):
 
 
 class _GeneralObjectiveData(
-    _GeneralExpressionDataImpl, _ObjectiveData, ActiveComponentData
+    GeneralExpressionDataImpl, _ObjectiveData, ActiveComponentData
 ):
     """
     This class defines the data for a single objective.
@@ -147,7 +147,7 @@ class _GeneralObjectiveData(
     __slots__ = ("_sense", "_args_")
 
     def __init__(self, expr=None, sense=minimize, component=None):
-        _GeneralExpressionDataImpl.__init__(self, expr)
+        GeneralExpressionDataImpl.__init__(self, expr)
         # Inlining ActiveComponentData.__init__
         self._component = weakref_ref(component) if (component is not None) else None
         self._index = NOTSET
