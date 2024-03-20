@@ -43,7 +43,7 @@ def complements(a, b):
     return ComplementarityTuple(a, b)
 
 
-class _ComplementarityData(BlockData):
+class ComplementarityData(BlockData):
     def _canonical_expression(self, e):
         # Note: as the complimentarity component maintains references to
         # the original expression (e), it is NOT safe or valid to bypass
@@ -179,9 +179,14 @@ class _ComplementarityData(BlockData):
             )
 
 
+class _ComplementarityData(metaclass=RenamedClass):
+    __renamed__new_class__ = ComplementarityData
+    __renamed__version__ = '6.7.2.dev0'
+
+
 @ModelComponentFactory.register("Complementarity conditions.")
 class Complementarity(Block):
-    _ComponentDataClass = _ComplementarityData
+    _ComponentDataClass = ComplementarityData
 
     def __new__(cls, *args, **kwds):
         if cls != Complementarity:
@@ -298,9 +303,9 @@ Error thrown for Complementarity "%s"."""
         )
 
 
-class ScalarComplementarity(_ComplementarityData, Complementarity):
+class ScalarComplementarity(ComplementarityData, Complementarity):
     def __init__(self, *args, **kwds):
-        _ComplementarityData.__init__(self, self)
+        ComplementarityData.__init__(self, self)
         Complementarity.__init__(self, *args, **kwds)
         self._data[None] = self
         self._index = UnindexedComponent_index
