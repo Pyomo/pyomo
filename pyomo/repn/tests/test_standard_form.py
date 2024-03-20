@@ -42,6 +42,8 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
         self.assertTrue(np.all(repn.c == np.array([0, 0, 0])))
         self.assertTrue(np.all(repn.A == np.array([[-1, -2, 0], [0, 1, 4]])))
         self.assertTrue(np.all(repn.rhs == np.array([-3, 5])))
+        self.assertEqual(repn.rows, [(m.c, -1), (m.d, 1)])
+        self.assertEqual(repn.columns, [m.x, m.y[1], m.y[3]])
 
     def test_almost_dense_linear_model(self):
         m = pyo.ConcreteModel()
@@ -55,6 +57,8 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
         self.assertTrue(np.all(repn.c == np.array([0, 0, 0])))
         self.assertTrue(np.all(repn.A == np.array([[-1, -2, -4], [5, 6, 8]])))
         self.assertTrue(np.all(repn.rhs == np.array([-10, 20])))
+        self.assertEqual(repn.rows, [(m.c, -1), (m.d, 1)])
+        self.assertEqual(repn.columns, [m.x, m.y[1], m.y[3]])
 
     def test_linear_model_row_col_order(self):
         m = pyo.ConcreteModel()
@@ -70,6 +74,8 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
         self.assertTrue(np.all(repn.c == np.array([0, 0, 0])))
         self.assertTrue(np.all(repn.A == np.array([[4, 0, 1], [0, -1, -2]])))
         self.assertTrue(np.all(repn.rhs == np.array([5, -3])))
+        self.assertEqual(repn.rows, [(m.d, 1), (m.c, -1)])
+        self.assertEqual(repn.columns, [m.y[3], m.x, m.y[1]])
 
     def test_suffix_warning(self):
         m = pyo.ConcreteModel()
@@ -234,6 +240,40 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
             )
         )
         self._verify_solution(soln, repn, True)
+
+        repn = LinearStandardFormCompiler().write(
+            m, mixed_form=True, column_order=col_order
+        )
+
+        self.assertEqual(repn.rows, [(m.c, -1), (m.d, 1), (m.e, 1), (m.e, -1), (m.f, 0)])
+        self.assertEqual(
+            list(map(str, repn.x)),
+            ['x', 'y[0]', 'y[1]', 'y[3]'],
+        )
+        self.assertEqual(
+            list(v.bounds for v in repn.x),
+            [(None, None), (0, 10), (-5, 10), (-5, -2)],
+        )
+        ref = np.array(
+            [
+                [1, 0, 2, 0],
+                [0, 0, 1, 4],
+                [0, 1, 6, 0],
+                [0, 1, 6, 0],
+                [1, 1, 0, 0],
+            ]
+        )
+        self.assertTrue(np.all(repn.A == ref))
+        print(repn)
+        print(repn.b)
+        self.assertTrue(np.all(repn.b == np.array([3, 5, 6, -3, 8])))
+        self.assertTrue(
+            np.all(
+                repn.c == np.array([[-1, 0, -5, 0], [1, 0, 0, 15]])
+            )
+        )
+        # Note that the solution is a mix of inequality and equality constraints
+        # self._verify_solution(soln, repn, False)
 
         repn = LinearStandardFormCompiler().write(
             m, slack_form=True, nonnegative_vars=True, column_order=col_order
