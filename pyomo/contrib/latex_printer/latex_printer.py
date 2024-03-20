@@ -35,7 +35,7 @@ from pyomo.core.expr import (
 from pyomo.core.expr.visitor import identify_components
 from pyomo.core.expr.base import ExpressionBase
 from pyomo.core.base.expression import ScalarExpression, GeneralExpressionData
-from pyomo.core.base.objective import ScalarObjective, _GeneralObjectiveData
+from pyomo.core.base.objective import ScalarObjective, GeneralObjectiveData
 import pyomo.core.kernel as kernel
 from pyomo.core.expr.template_expr import (
     GetItemExpression,
@@ -403,7 +403,7 @@ class _LatexVisitor(StreamBasedExpressionVisitor):
             ScalarExpression: handle_named_expression_node,
             kernel.expression.expression: handle_named_expression_node,
             kernel.expression.noclone: handle_named_expression_node,
-            _GeneralObjectiveData: handle_named_expression_node,
+            GeneralObjectiveData: handle_named_expression_node,
             _GeneralVarData: handle_var_node,
             ScalarObjective: handle_named_expression_node,
             kernel.objective.objective: handle_named_expression_node,

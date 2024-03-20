@@ -32,7 +32,7 @@ from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.base.constraint import GeneralConstraintData
 from pyomo.core.base.block import BlockData
 from pyomo.core.base.param import _ParamData
-from pyomo.core.base.objective import _GeneralObjectiveData
+from pyomo.core.base.objective import GeneralObjectiveData
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.tee import TeeStream
 import sys
@@ -252,7 +252,7 @@ class Ipopt(PersistentSolver):
     def remove_block(self, block: BlockData):
         self._writer.remove_block(block)
 
-    def set_objective(self, obj: _GeneralObjectiveData):
+    def set_objective(self, obj: GeneralObjectiveData):
         self._writer.set_objective(obj)
 
     def update_variables(self, variables: List[_GeneralVarData]):

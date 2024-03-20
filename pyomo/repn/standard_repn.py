@@ -19,7 +19,7 @@ from pyomo.core.base import Constraint, Objective, ComponentMap
 
 import pyomo.core.expr as EXPR
 from pyomo.core.expr.numvalue import NumericConstant
-from pyomo.core.base.objective import _GeneralObjectiveData, ScalarObjective
+from pyomo.core.base.objective import GeneralObjectiveData, ScalarObjective
 from pyomo.core.base import ExpressionData, Expression
 from pyomo.core.base.expression import ScalarExpression, GeneralExpressionData
 from pyomo.core.base.var import ScalarVar, Var, _GeneralVarData, value
@@ -1154,7 +1154,7 @@ _repn_collectors = {
     noclone: _collect_identity,
     ExpressionData: _collect_identity,
     Expression: _collect_identity,
-    _GeneralObjectiveData: _collect_identity,
+    GeneralObjectiveData: _collect_identity,
     ScalarObjective: _collect_identity,
     objective: _collect_identity,
 }
@@ -1553,7 +1553,7 @@ _linear_repn_collectors = {
     noclone                                     : _linear_collect_identity,
     ExpressionData                             : _linear_collect_identity,
     Expression                                  : _linear_collect_identity,
-    _GeneralObjectiveData                       : _linear_collect_identity,
+    GeneralObjectiveData                       : _linear_collect_identity,
     ScalarObjective                             : _linear_collect_identity,
     objective                                   : _linear_collect_identity,
     }

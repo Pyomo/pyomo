@@ -16,7 +16,7 @@ from pyomo.core.base.constraint import GeneralConstraintData, Constraint
 from pyomo.core.base.sos import _SOSConstraintData, SOSConstraint
 from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.base.param import _ParamData, Param
-from pyomo.core.base.objective import _GeneralObjectiveData
+from pyomo.core.base.objective import GeneralObjectiveData
 from pyomo.common.collections import ComponentMap
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.expr.numvalue import NumericConstant
@@ -149,10 +149,10 @@ class PersistentSolverUtils(abc.ABC):
         self._add_sos_constraints(cons)
 
     @abc.abstractmethod
-    def _set_objective(self, obj: _GeneralObjectiveData):
+    def _set_objective(self, obj: GeneralObjectiveData):
         pass
 
-    def set_objective(self, obj: _GeneralObjectiveData):
+    def set_objective(self, obj: GeneralObjectiveData):
         if self._objective is not None:
             for v in self._vars_referenced_by_obj:
                 self._referenced_variables[id(v)][2] = None

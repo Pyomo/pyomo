@@ -19,7 +19,7 @@ from pyomo.core.beta.list_objects import (
 )
 from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.base.constraint import GeneralConstraintData
-from pyomo.core.base.objective import _GeneralObjectiveData
+from pyomo.core.base.objective import GeneralObjectiveData
 from pyomo.core.base.expression import GeneralExpressionData
 
 
@@ -401,7 +401,7 @@ class TestConstraintList(_TestActiveComponentListBase, unittest.TestCase):
 
 class TestObjectiveList(_TestActiveComponentListBase, unittest.TestCase):
     _ctype = XObjectiveList
-    _cdatatype = _GeneralObjectiveData
+    _cdatatype = GeneralObjectiveData
 
     def setUp(self):
         _TestComponentListBase.setUp(self)
