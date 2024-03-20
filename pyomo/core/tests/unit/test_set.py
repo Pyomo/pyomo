@@ -81,7 +81,7 @@ from pyomo.core.base.set import (
     SetProduct_InfiniteSet,
     SetProduct_FiniteSet,
     SetProduct_OrderedSet,
-    _SetData,
+    SetData,
     FiniteSetData,
     InsertionOrderSetData,
     _SortedSetData,
@@ -4300,7 +4300,7 @@ class TestSet(unittest.TestCase):
         # This tests a filter that matches the dimentionality of the
         # component.  construct() needs to recognize that the filter is
         # returning a constant in construct() and re-assign it to be the
-        # _filter for each _SetData
+        # _filter for each SetData
         def _lt_3(model, i):
             self.assertIs(model, m)
             return i < 3
@@ -5297,15 +5297,15 @@ I : Size=2, Index={1, 2, 3, 4, 5}, Ordered=Insertion
 
 
 class TestAbstractSetAPI(unittest.TestCase):
-    def test_SetData(self):
+    def testSetData(self):
         # This tests an anstract non-finite set API
 
         m = ConcreteModel()
         m.I = Set(initialize=[1])
-        s = _SetData(m.I)
+        s = SetData(m.I)
 
         #
-        # _SetData API
+        # SetData API
         #
 
         with self.assertRaises(DeveloperError):
@@ -5395,7 +5395,7 @@ class TestAbstractSetAPI(unittest.TestCase):
 
     def test_FiniteMixin(self):
         # This tests an anstract finite set API
-        class FiniteMixin(_FiniteSetMixin, _SetData):
+        class FiniteMixin(_FiniteSetMixin, SetData):
             pass
 
         m = ConcreteModel()
@@ -5403,7 +5403,7 @@ class TestAbstractSetAPI(unittest.TestCase):
         s = FiniteMixin(m.I)
 
         #
-        # _SetData API
+        # SetData API
         #
 
         with self.assertRaises(DeveloperError):
@@ -5520,7 +5520,7 @@ class TestAbstractSetAPI(unittest.TestCase):
 
     def test_OrderedMixin(self):
         # This tests an anstract ordered set API
-        class OrderedMixin(_OrderedSetMixin, _FiniteSetMixin, _SetData):
+        class OrderedMixin(_OrderedSetMixin, _FiniteSetMixin, SetData):
             pass
 
         m = ConcreteModel()
@@ -5528,7 +5528,7 @@ class TestAbstractSetAPI(unittest.TestCase):
         s = OrderedMixin(m.I)
 
         #
-        # _SetData API
+        # SetData API
         #
 
         with self.assertRaises(DeveloperError):

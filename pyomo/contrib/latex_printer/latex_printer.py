@@ -49,7 +49,7 @@ from pyomo.core.expr.template_expr import (
 )
 from pyomo.core.base.var import ScalarVar, GeneralVarData, IndexedVar
 from pyomo.core.base.param import ParamData, ScalarParam, IndexedParam
-from pyomo.core.base.set import _SetData, SetOperator
+from pyomo.core.base.set import SetData, SetOperator
 from pyomo.core.base.constraint import ScalarConstraint, IndexedConstraint
 from pyomo.common.collections.component_map import ComponentMap
 from pyomo.common.collections.component_set import ComponentSet
@@ -1283,7 +1283,7 @@ def latex_printer(
             if ky not in existing_components:
                 overwrite_value = overwrite_value.replace('_', '\\_')
             rep_dict[parameterMap[ky]] = overwrite_value
-        elif isinstance(ky, _SetData):
+        elif isinstance(ky, SetData):
             # already handled
             pass
         elif isinstance(ky, (float, int)):

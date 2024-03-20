@@ -87,7 +87,7 @@ All Sets implement one of the following APIs:
 0. `class _SetDataBase(ComponentData)`
    *(pure virtual interface)*
 
-1. `class _SetData(_SetDataBase)`
+1. `class SetData(_SetDataBase)`
    *(base class for all AML Sets)*
 
 2. `class _FiniteSetMixin(object)`
@@ -102,7 +102,7 @@ sets that contain an infinite number of values (this includes both
 bounded continuous ranges as well as unbounded discrete ranges).  As
 there are an infinite number of values, iteration is *not*
 supported. The base class also implements all Python set operations.
-Note that `_SetData` does *not* implement `len()`, as Python requires
+Note that `SetData` does *not* implement `len()`, as Python requires
 `len()` to return a positive integer.
 
 Finite sets add iteration and support for `len()`.  In addition, they
@@ -520,7 +520,7 @@ class _SetDataBase(ComponentData):
     __slots__ = ()
 
 
-class _SetData(_SetDataBase):
+class SetData(_SetDataBase):
     """The base for all Pyomo AML objects that can be used as a component
     indexing set.
 
@@ -534,13 +534,13 @@ class _SetData(_SetDataBase):
             ans = self.get(value, _NotFound)
         except TypeError:
             # In Python 3.x, Sets are unhashable
-            if isinstance(value, _SetData):
+            if isinstance(value, SetData):
                 ans = _NotFound
             else:
                 raise
 
         if ans is _NotFound:
-            if isinstance(value, _SetData):
+            if isinstance(value, SetData):
                 deprecation_warning(
                     "Testing for set subsets with 'a in b' is deprecated.  "
                     "Use 'a.issubset(b)'.",
@@ -1188,6 +1188,11 @@ class _SetData(_SetDataBase):
         return self >= other and not self == other
 
 
+class _SetData(metaclass=RenamedClass):
+    __renamed__new_class__ = SetData
+    __renamed__version__ = '6.7.2.dev0'
+
+
 class _FiniteSetMixin(object):
     __slots__ = ()
 
@@ -1294,13 +1299,13 @@ class _FiniteSetMixin(object):
                     yield NonNumericRange(i)
 
 
-class FiniteSetData(_FiniteSetMixin, _SetData):
+class FiniteSetData(_FiniteSetMixin, SetData):
     """A general unordered iterable Set"""
 
     __slots__ = ('_values', '_domain', '_validate', '_filter', '_dimen')
 
     def __init__(self, component):
-        _SetData.__init__(self, component=component)
+        SetData.__init__(self, component=component)
         # Derived classes (like OrderedSetData) may want to change the
         # storage
         if not hasattr(self, '_values'):
@@ -1986,7 +1991,7 @@ class Set(IndexedComponent):
     _UnorderedInitializers = {set}
 
     @overload
-    def __new__(cls: Type[Set], *args, **kwds) -> Union[_SetData, IndexedSet]: ...
+    def __new__(cls: Type[Set], *args, **kwds) -> Union[SetData, IndexedSet]: ...
 
     @overload
     def __new__(cls: Type[OrderedScalarSet], *args, **kwds) -> OrderedScalarSet: ...
@@ -2193,7 +2198,7 @@ class Set(IndexedComponent):
         """Returns the default component data value."""
         # Because we allow sets within an IndexedSet to have different
         # dimen, we have moved the tuplization logic from PyomoModel
-        # into Set (because we cannot know the dimen of a _SetData until
+        # into Set (because we cannot know the dimen of a SetData until
         # we are actually constructing that index).  This also means
         # that we need to potentially communicate the dimen to the
         # (wrapped) value initializer.  So, we will get the dimen first,
@@ -2353,7 +2358,7 @@ class Set(IndexedComponent):
         #         else:
         #             return '{' + str(ans)[1:-1] + "}"
 
-        # TBD: In the current design, we force all _SetData within an
+        # TBD: In the current design, we force all SetData within an
         # indexed Set to have the same isordered value, so we will only
         # print it once in the header.  Is this a good design?
         try:
@@ -2398,7 +2403,7 @@ class IndexedSet(Set):
         return {k: v.data() for k, v in self.items()}
 
     @overload
-    def __getitem__(self, index) -> _SetData: ...
+    def __getitem__(self, index) -> SetData: ...
 
     __getitem__ = IndexedComponent.__getitem__  # type: ignore
 
@@ -2479,14 +2484,14 @@ class AbstractSortedSimpleSet(metaclass=RenamedClass):
 ############################################################################
 
 
-class SetOf(_SetData, Component):
+class SetOf(SetData, Component):
     """"""
 
     def __new__(cls, *args, **kwds):
         if cls is not SetOf:
             return super(SetOf, cls).__new__(cls)
         (reference,) = args
-        if isinstance(reference, (_SetData, GlobalSetBase)):
+        if isinstance(reference, (SetData, GlobalSetBase)):
             if reference.isfinite():
                 if reference.isordered():
                     return super(SetOf, cls).__new__(OrderedSetOf)
@@ -2500,7 +2505,7 @@ class SetOf(_SetData, Component):
             return super(SetOf, cls).__new__(FiniteSetOf)
 
     def __init__(self, reference, **kwds):
-        _SetData.__init__(self, component=self)
+        SetData.__init__(self, component=self)
         kwds.setdefault('ctype', SetOf)
         Component.__init__(self, **kwds)
         self._ref = reference
@@ -2523,7 +2528,7 @@ class SetOf(_SetData, Component):
 
     @property
     def dimen(self):
-        if isinstance(self._ref, _SetData):
+        if isinstance(self._ref, SetData):
             return self._ref.dimen
         _iter = iter(self)
         try:
@@ -2618,7 +2623,7 @@ class OrderedSetOf(_ScalarOrderedSetMixin, _OrderedSetMixin, FiniteSetOf):
 ############################################################################
 
 
-class InfiniteRangeSetData(_SetData):
+class InfiniteRangeSetData(SetData):
     """Data class for a infinite set.
 
     This Set implements an interface to an *infinite set* defined by one
@@ -2630,7 +2635,7 @@ class InfiniteRangeSetData(_SetData):
     __slots__ = ('_ranges',)
 
     def __init__(self, component):
-        _SetData.__init__(self, component=component)
+        SetData.__init__(self, component=component)
         self._ranges = None
 
     def get(self, value, default=None):
@@ -3298,11 +3303,11 @@ class AbstractFiniteSimpleRangeSet(metaclass=RenamedClass):
 ############################################################################
 
 
-class SetOperator(_SetData, Set):
+class SetOperator(SetData, Set):
     __slots__ = ('_sets',)
 
     def __init__(self, *args, **kwds):
-        _SetData.__init__(self, component=self)
+        SetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
         self._sets, _anonymous = zip(*(process_setarg(_set) for _set in args))
         _anonymous = tuple(filter(None, _anonymous))
@@ -4242,9 +4247,9 @@ class SetProduct_OrderedSet(
 ############################################################################
 
 
-class _AnySet(_SetData, Set):
+class _AnySet(SetData, Set):
     def __init__(self, **kwds):
-        _SetData.__init__(self, component=self)
+        SetData.__init__(self, component=self)
         # There is a chicken-and-egg game here: the SetInitializer uses
         # Any as part of the processing of the domain/within/bounds
         # domain restrictions.  However, Any has not been declared when
@@ -4298,9 +4303,9 @@ class _AnyWithNoneSet(_AnySet):
         return super(_AnyWithNoneSet, self).get(val, default)
 
 
-class _EmptySet(_FiniteSetMixin, _SetData, Set):
+class _EmptySet(_FiniteSetMixin, SetData, Set):
     def __init__(self, **kwds):
-        _SetData.__init__(self, component=self)
+        SetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
         self.construct()
 
