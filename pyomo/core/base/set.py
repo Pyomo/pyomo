@@ -1301,7 +1301,7 @@ class FiniteSetData(_FiniteSetMixin, _SetData):
 
     def __init__(self, component):
         _SetData.__init__(self, component=component)
-        # Derived classes (like _OrderedSetData) may want to change the
+        # Derived classes (like OrderedSetData) may want to change the
         # storage
         if not hasattr(self, '_values'):
             self._values = set()
@@ -1635,7 +1635,7 @@ class _OrderedSetMixin(object):
             )
 
 
-class _OrderedSetData(_OrderedSetMixin, FiniteSetData):
+class OrderedSetData(_OrderedSetMixin, FiniteSetData):
     """
     This class defines the base class for an ordered set of concrete data.
 
@@ -1735,7 +1735,12 @@ class _OrderedSetData(_OrderedSetMixin, FiniteSetData):
             raise ValueError("%s.ord(x): x not in %s" % (self.name, self.name))
 
 
-class InsertionOrderSetData(_OrderedSetData):
+class _OrderedSetData(metaclass=RenamedClass):
+    __renamed__new_class__ = OrderedSetData
+    __renamed__version__ = '6.7.2.dev0'
+
+
+class InsertionOrderSetData(OrderedSetData):
     """
     This class defines the data for a ordered set where the items are ordered
     in insertion order (similar to Python's OrderedSet.
@@ -1786,7 +1791,7 @@ class _SortedSetMixin(object):
         return iter(self)
 
 
-class _SortedSetData(_SortedSetMixin, _OrderedSetData):
+class _SortedSetData(_SortedSetMixin, OrderedSetData):
     """
     This class defines the data for a sorted set.
 
@@ -1801,7 +1806,7 @@ class _SortedSetData(_SortedSetMixin, _OrderedSetData):
     def __init__(self, component):
         # An empty set is sorted...
         self._is_sorted = True
-        _OrderedSetData.__init__(self, component=component)
+        OrderedSetData.__init__(self, component=component)
 
     def _iter_impl(self):
         """
