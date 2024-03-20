@@ -802,7 +802,7 @@ class ComponentData(_ComponentBase):
     __autoslot_mappers__ = {'_component': AutoSlots.weakref_mapper}
 
     # NOTE: This constructor is in-lined in the constructors for the following
-    # classes: BooleanVarData, ConnectorData, _ConstraintData,
+    # classes: BooleanVarData, ConnectorData, ConstraintData,
     # _GeneralExpressionData, _LogicalConstraintData,
     # _GeneralLogicalConstraintData, _GeneralObjectiveData,
     # _ParamData,_GeneralVarData, _GeneralBooleanVarData, _DisjunctionData,

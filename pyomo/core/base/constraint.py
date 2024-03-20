@@ -130,7 +130,7 @@ def simple_constraintlist_rule(rule):
 #
 
 
-class _ConstraintData(ActiveComponentData):
+class ConstraintData(ActiveComponentData):
     """
     This class defines the data for a single constraint.
 
@@ -165,7 +165,7 @@ class _ConstraintData(ActiveComponentData):
         #
         # These lines represent in-lining of the
         # following constructors:
-        #   - _ConstraintData,
+        #   - ConstraintData,
         #   - ActiveComponentData
         #   - ComponentData
         self._component = weakref_ref(component) if (component is not None) else None
@@ -280,7 +280,12 @@ class _ConstraintData(ActiveComponentData):
         raise NotImplementedError
 
 
-class _GeneralConstraintData(_ConstraintData):
+class _ConstraintData(metaclass=RenamedClass):
+    __renamed__new_class__ = ConstraintData
+    __renamed__version__ = '6.7.2.dev0'
+
+
+class _GeneralConstraintData(ConstraintData):
     """
     This class defines the data for a single general constraint.
 
@@ -312,7 +317,7 @@ class _GeneralConstraintData(_ConstraintData):
         #
         # These lines represent in-lining of the
         # following constructors:
-        #   - _ConstraintData,
+        #   - ConstraintData,
         #   - ActiveComponentData
         #   - ComponentData
         self._component = weakref_ref(component) if (component is not None) else None
@@ -897,7 +902,7 @@ class ScalarConstraint(_GeneralConstraintData, Constraint):
     # currently in place). So during initialization only, we will
     # treat them as "indexed" objects where things like
     # Constraint.Skip are managed. But after that they will behave
-    # like _ConstraintData objects where set_value does not handle
+    # like ConstraintData objects where set_value does not handle
     # Constraint.Skip but expects a valid expression or None.
     #
     @property

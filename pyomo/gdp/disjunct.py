@@ -542,7 +542,7 @@ class _DisjunctionData(ActiveComponentData):
         #
         # These lines represent in-lining of the
         # following constructors:
-        #   - _ConstraintData,
+        #   - ConstraintData,
         #   - ActiveComponentData
         #   - ComponentData
         self._component = weakref_ref(component) if (component is not None) else None

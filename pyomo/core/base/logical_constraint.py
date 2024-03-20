@@ -373,7 +373,7 @@ class LogicalConstraint(ActiveIndexedComponent):
 
     #
     # Checks flags like Constraint.Skip, etc. before actually creating a
-    # constraint object. Returns the _ConstraintData object when it should be
+    # constraint object. Returns the ConstraintData object when it should be
     #  added to the _data dict; otherwise, None is returned or an exception
     # is raised.
     #

@@ -750,20 +750,20 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
                 if obj.is_indexed():
                     newConstraint.add((name, i, 'eq'), newConsExpr)
-                    # map the _ConstraintDatas (we mapped the container above)
+                    # map the ConstraintDatas (we mapped the container above)
                     constraint_map.transformed_constraints[c].append(
                         newConstraint[name, i, 'eq']
                     )
                     constraint_map.src_constraint[newConstraint[name, i, 'eq']] = c
                 else:
                     newConstraint.add((name, 'eq'), newConsExpr)
-                    # map to the _ConstraintData (And yes, for
+                    # map to the ConstraintData (And yes, for
                     # ScalarConstraints, this is overwriting the map to the
                     # container we made above, and that is what I want to
                     # happen. ScalarConstraints will map to lists. For
                     # IndexedConstraints, we can map the container to the
                     # container, but more importantly, we are mapping the
-                    # _ConstraintDatas to each other above)
+                    # ConstraintDatas to each other above)
                     constraint_map.transformed_constraints[c].append(
                         newConstraint[name, 'eq']
                     )

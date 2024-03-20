@@ -50,7 +50,7 @@ def get_residual(ui_data, c):
             values of the constraint body. This function uses the cached values
             and will not trigger recalculation. If variable values have changed,
             this may not yield accurate results.
-        c(_ConstraintData): a constraint or constraint data
+        c(ConstraintData): a constraint or constraint data
     Returns:
         (float) residual
     """

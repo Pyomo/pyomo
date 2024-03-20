@@ -27,7 +27,7 @@ from pyomo.environ import (
     value,
 )
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.core.base import constraint, _ConstraintData
+from pyomo.core.base import constraint, ConstraintData
 from pyomo.core.expr.compare import (
     assertExpressionsEqual,
     assertExpressionsStructurallyEqual,
@@ -653,14 +653,14 @@ class TwoTermIndexedDisj(unittest.TestCase, CommonTests):
             if src[0]:
                 # equality
                 self.assertEqual(len(transformed), 2)
-                self.assertIsInstance(transformed[0], _ConstraintData)
-                self.assertIsInstance(transformed[1], _ConstraintData)
+                self.assertIsInstance(transformed[0], ConstraintData)
+                self.assertIsInstance(transformed[1], ConstraintData)
                 self.assertIs(bigm.get_src_constraint(transformed[0]), srcDisjunct.c)
                 self.assertIs(bigm.get_src_constraint(transformed[1]), srcDisjunct.c)
             else:
                 # >=
                 self.assertEqual(len(transformed), 1)
-                self.assertIsInstance(transformed[0], _ConstraintData)
+                self.assertIsInstance(transformed[0], ConstraintData)
                 # check reverse map from the container
                 self.assertIs(bigm.get_src_constraint(transformed[0]), srcDisjunct.c)
 

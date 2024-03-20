@@ -12,7 +12,7 @@
 from pyomo.common.errors import IterationLimitError
 from pyomo.common.numeric_types import native_numeric_types, native_complex_types, value
 from pyomo.core.expr.calculus.derivatives import differentiate
-from pyomo.core.base.constraint import Constraint, _ConstraintData
+from pyomo.core.base.constraint import Constraint, ConstraintData
 
 import logging
 
@@ -55,7 +55,7 @@ def calculate_variable_from_constraint(
     -----------
     variable: :py:class:`_VarData`
         The variable to solve for
-    constraint: :py:class:`_ConstraintData` or relational expression or `tuple`
+    constraint: :py:class:`ConstraintData` or relational expression or `tuple`
         The equality constraint to use to solve for the variable value.
         May be a `ConstraintData` object or any valid argument for
         ``Constraint(expr=<>)`` (i.e., a relational expression or 2- or
@@ -81,7 +81,7 @@ def calculate_variable_from_constraint(
 
     """
     # Leverage all the Constraint logic to process the incoming tuple/expression
-    if not isinstance(constraint, _ConstraintData):
+    if not isinstance(constraint, ConstraintData):
         constraint = Constraint(expr=constraint, name=type(constraint).__name__)
         constraint.construct()
 

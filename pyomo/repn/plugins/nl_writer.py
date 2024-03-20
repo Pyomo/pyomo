@@ -69,7 +69,7 @@ from pyomo.core.base import (
     minimize,
 )
 from pyomo.core.base.component import ActiveComponent
-from pyomo.core.base.constraint import _ConstraintData
+from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
 from pyomo.core.base.objective import (
     ScalarObjective,
@@ -134,7 +134,7 @@ class NLWriterInfo(object):
         The list of (unfixed) Pyomo model variables in the order written
         to the NL file
 
-    constraints: List[_ConstraintData]
+    constraints: List[ConstraintData]
 
         The list of (active) Pyomo model constraints in the order written
         to the NL file
@@ -466,7 +466,7 @@ class _SuffixData(object):
                     self.obj[obj_order[_id]] = val
                 elif _id == model_id:
                     self.prob[0] = val
-                elif isinstance(obj, (_VarData, _ConstraintData, _ObjectiveData)):
+                elif isinstance(obj, (_VarData, ConstraintData, _ObjectiveData)):
                     missing_component_data.add(obj)
                 elif isinstance(obj, (Var, Constraint, Objective)):
                     # Expand this indexed component to store the

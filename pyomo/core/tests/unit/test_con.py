@@ -1388,7 +1388,7 @@ class MiscConTests(unittest.TestCase):
         # Even though we construct a ScalarConstraint,
         # if it is not initialized that means it is "empty"
         # and we should encounter errors when trying to access the
-        # _ConstraintData interface methods until we assign
+        # ConstraintData interface methods until we assign
         # something to the constraint.
         #
         self.assertEqual(a._constructed, True)

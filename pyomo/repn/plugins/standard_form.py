@@ -76,11 +76,11 @@ class LinearStandardFormInfo(object):
 
         The constraint right-hand sides.
 
-    rows : List[Tuple[_ConstraintData, int]]
+    rows : List[Tuple[ConstraintData, int]]
 
         The list of Pyomo constraint objects corresponding to the rows
         in `A`.  Each element in the list is a 2-tuple of
-        (_ConstraintData, row_multiplier).  The `row_multiplier` will be
+        (ConstraintData, row_multiplier).  The `row_multiplier` will be
         +/- 1 indicating if the row was multiplied by -1 (corresponding
         to a constraint lower bound) or +1 (upper bound).
 

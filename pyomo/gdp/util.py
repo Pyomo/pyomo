@@ -525,13 +525,13 @@ def get_transformed_constraints(srcConstraint):
 
     Parameters
     ----------
-    srcConstraint: ScalarConstraint or _ConstraintData, which must be in
+    srcConstraint: ScalarConstraint or ConstraintData, which must be in
     the subtree of a transformed Disjunct
     """
     if srcConstraint.is_indexed():
         raise GDP_Error(
             "Argument to get_transformed_constraint should be "
-            "a ScalarConstraint or _ConstraintData. (If you "
+            "a ScalarConstraint or ConstraintData. (If you "
             "want the container for all transformed constraints "
             "from an IndexedDisjunction, this is the parent "
             "component of a transformed constraint originating "
