@@ -725,18 +725,30 @@ class SCIPDirect(DirectSolver):
         return True
 
     def _warm_start(self):
-        scip_sol = self._solver_model.createSol()
+        partial_sol = False
+        for pyomo_var in self._pyomo_var_to_solver_var_expr_map:
+            if pyomo_var.value is None:
+                partial_sol = True
+                break
+        if partial_sol:
+            scip_sol = self._solver_model.createPartialSol()
+        else:
+            scip_sol = self._solver_model.createSol()
         for pyomo_var, scip_var in self._pyomo_var_to_solver_var_expr_map.items():
             if pyomo_var.value is not None:
                 scip_sol[scip_var] = value(pyomo_var)
-        feasible = self._solver_model.checkSol(scip_sol)
-        if feasible:
+        if partial_sol:
             self._solver_model.addSol(scip_sol)
             del scip_sol
         else:
-            logger.warning("Warm start solution was not accepted by SCIP")
-            self._solver_model.freeSol(scip_sol)
-            del scip_sol
+            feasible = self._solver_model.checkSol(scip_sol)
+            if feasible:
+                self._solver_model.addSol(scip_sol)
+                del scip_sol
+            else:
+                logger.warning("Warm start solution was not accepted by SCIP")
+                self._solver_model.freeSol(scip_sol)
+                del scip_sol
 
     def _load_vars(self, vars_to_load=None):
         var_map = self._pyomo_var_to_solver_var_expr_map
