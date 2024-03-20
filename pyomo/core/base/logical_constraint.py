@@ -99,7 +99,7 @@ class _LogicalConstraintData(ActiveComponentData):
         raise NotImplementedError
 
 
-class _GeneralLogicalConstraintData(_LogicalConstraintData):
+class GeneralLogicalConstraintData(_LogicalConstraintData):
     """
     This class defines the data for a single general logical constraint.
 
@@ -173,6 +173,11 @@ class _GeneralLogicalConstraintData(_LogicalConstraintData):
         return self._expr
 
 
+class _GeneralLogicalConstraintData(metaclass=RenamedClass):
+    __renamed__new_class__ = GeneralLogicalConstraintData
+    __renamed__version__ = '6.7.2.dev0'
+
+
 @ModelComponentFactory.register("General logical constraints.")
 class LogicalConstraint(ActiveIndexedComponent):
     """
@@ -215,7 +220,7 @@ class LogicalConstraint(ActiveIndexedComponent):
             The class type for the derived subclass
     """
 
-    _ComponentDataClass = _GeneralLogicalConstraintData
+    _ComponentDataClass = GeneralLogicalConstraintData
 
     class Infeasible(object):
         pass
@@ -409,14 +414,14 @@ class LogicalConstraint(ActiveIndexedComponent):
         return expr
 
 
-class ScalarLogicalConstraint(_GeneralLogicalConstraintData, LogicalConstraint):
+class ScalarLogicalConstraint(GeneralLogicalConstraintData, LogicalConstraint):
     """
     ScalarLogicalConstraint is the implementation representing a single,
     non-indexed logical constraint.
     """
 
     def __init__(self, *args, **kwds):
-        _GeneralLogicalConstraintData.__init__(self, component=self, expr=None)
+        GeneralLogicalConstraintData.__init__(self, component=self, expr=None)
         LogicalConstraint.__init__(self, *args, **kwds)
         self._index = UnindexedComponent_index
 
@@ -436,7 +441,7 @@ class ScalarLogicalConstraint(_GeneralLogicalConstraintData, LogicalConstraint):
                     "an expression. There is currently "
                     "nothing to access." % self.name
                 )
-            return _GeneralLogicalConstraintData.body.fget(self)
+            return GeneralLogicalConstraintData.body.fget(self)
         raise ValueError(
             "Accessing the body of logical constraint '%s' "
             "before the LogicalConstraint has been constructed (there "
