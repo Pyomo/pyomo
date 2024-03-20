@@ -423,7 +423,7 @@ class NLWriter(object):
         return symbol_map
 
 
-class _SuffixData(object):
+class SuffixData(object):
     def __init__(self, name):
         self.name = name
         self.obj = {}
@@ -503,6 +503,11 @@ class _SuffixData(object):
                     "Skipped component keys:\n\t"
                     + "\n\t".join(sorted(map(str, unknown_data)))
                 )
+
+
+class _SuffixData(metaclass=RenamedClass):
+    __renamed__new_class__ = SuffixData
+    __renamed__version__ = '6.7.2.dev0'
 
 
 class CachingNumericSuffixFinder(SuffixFinder):
@@ -637,7 +642,7 @@ class _NLWriter_impl(object):
                         continue
                     name = suffix.local_name
                     if name not in suffix_data:
-                        suffix_data[name] = _SuffixData(name)
+                        suffix_data[name] = SuffixData(name)
                     suffix_data[name].update(suffix)
         #
         # Data structures to support variable/constraint scaling
@@ -994,7 +999,7 @@ class _NLWriter_impl(object):
                         "model. To avoid this error please use only one of "
                         "these methods to define special ordered sets."
                     )
-                suffix_data[name] = _SuffixData(name)
+                suffix_data[name] = SuffixData(name)
                 suffix_data[name].datatype.add(Suffix.INT)
             sos_id = 0
             sosno = suffix_data['sosno']
@@ -1344,7 +1349,7 @@ class _NLWriter_impl(object):
                 if not _vals:
                     continue
                 ostream.write(f"S{_field|_float} {len(_vals)} {name}\n")
-                # Note: _SuffixData.compile() guarantees the value is int/float
+                # Note: SuffixData.compile() guarantees the value is int/float
                 ostream.write(
                     ''.join(f"{_id} {_vals[_id]!r}\n" for _id in sorted(_vals))
                 )
@@ -1454,7 +1459,7 @@ class _NLWriter_impl(object):
                 logger.warning("ignoring 'dual' suffix for Model")
             if data.con:
                 ostream.write(f"d{len(data.con)}\n")
-                # Note: _SuffixData.compile() guarantees the value is int/float
+                # Note: SuffixData.compile() guarantees the value is int/float
                 ostream.write(
                     ''.join(f"{_id} {data.con[_id]!r}\n" for _id in sorted(data.con))
                 )
