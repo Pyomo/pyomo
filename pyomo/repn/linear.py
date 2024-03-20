@@ -31,8 +31,8 @@ from pyomo.core.expr.numeric_expr import (
     MonomialTermExpression,
     LinearExpression,
     SumExpression,
-    NPV_SumExpression,
     ExternalFunctionExpression,
+    mutable_expression,
 )
 from pyomo.core.expr.relational_expr import (
     EqualityExpression,
@@ -120,22 +120,14 @@ class LinearRepn(object):
             ans = 0
         if self.linear:
             var_map = visitor.var_map
-            if len(self.linear) == 1:
-                vid, coef = next(iter(self.linear.items()))
-                if coef == 1:
-                    ans += var_map[vid]
-                elif coef:
-                    ans += MonomialTermExpression((coef, var_map[vid]))
-                else:
-                    pass
-            else:
-                ans += LinearExpression(
-                    [
-                        MonomialTermExpression((coef, var_map[vid]))
-                        for vid, coef in self.linear.items()
-                        if coef
-                    ]
-                )
+            with mutable_expression() as e:
+                for vid, coef in self.linear.items():
+                    if coef:
+                        e += coef * var_map[vid]
+            if e.nargs() > 1:
+                ans += e
+            elif e.nargs() == 1:
+                ans += e.arg(0)
         if self.constant:
             ans += self.constant
         if self.multiplier != 1:
@@ -704,6 +696,18 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                     linear[_id] = arg1
             elif arg.__class__ in native_numeric_types:
                 const += arg
+            elif arg.is_variable_type():
+                _id = id(arg)
+                if _id not in var_map:
+                    if arg.fixed:
+                        const += visitor.check_constant(arg.value, arg)
+                        continue
+                    LinearBeforeChildDispatcher._record_var(visitor, arg)
+                    linear[_id] = 1
+                elif _id in linear:
+                    linear[_id] += 1
+                else:
+                    linear[_id] = 1
             else:
                 try:
                     const += visitor.check_constant(visitor.evaluate(arg), arg)

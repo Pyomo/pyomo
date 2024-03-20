@@ -9,10 +9,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from __future__ import annotations
 import logging
 import sys
 from pyomo.common.pyomo_typing import overload
 from weakref import ref as weakref_ref
+from typing import Union, Type
 
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
@@ -668,6 +670,15 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
 
     _ComponentDataClass = _GeneralVarData
 
+    @overload
+    def __new__(cls: Type[Var], *args, **kwargs) -> Union[ScalarVar, IndexedVar]: ...
+
+    @overload
+    def __new__(cls: Type[ScalarVar], *args, **kwargs) -> ScalarVar: ...
+
+    @overload
+    def __new__(cls: Type[IndexedVar], *args, **kwargs) -> IndexedVar: ...
+
     def __new__(cls, *args, **kwargs):
         if cls is not Var:
             return super(Var, cls).__new__(cls)
@@ -688,7 +699,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         dense=True,
         units=None,
         name=None,
-        doc=None
+        doc=None,
     ): ...
 
     def __init__(self, *args, **kwargs):
@@ -1046,7 +1057,7 @@ class IndexedVar(Var):
     # between potentially variable GetItemExpression objects and
     # "constant" GetItemExpression objects.  That will need to wait for
     # the expression rework [JDS; Nov 22].
-    def __getitem__(self, args):
+    def __getitem__(self, args) -> _GeneralVarData:
         try:
             return super().__getitem__(args)
         except RuntimeError:

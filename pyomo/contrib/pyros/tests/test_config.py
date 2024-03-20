@@ -12,9 +12,9 @@ from pyomo.core.base.param import Param, _ParamData
 from pyomo.contrib.pyros.config import (
     InputDataStandardizer,
     mutable_param_validator,
-    LoggerType,
+    logger_domain,
     SolverNotResolvable,
-    PositiveIntOrMinusOne,
+    positive_int_or_minus_one,
     pyros_config,
     SolverIterable,
     SolverResolvable,
@@ -557,16 +557,29 @@ class TestPositiveIntOrMinusOne(unittest.TestCase):
         """
         Test positive int or -1 validator works as expected.
         """
-        standardizer_func = PositiveIntOrMinusOne()
-        self.assertIs(
-            standardizer_func(1.0),
-            1,
-            msg=(f"{PositiveIntOrMinusOne.__name__} does not standardize as expected."),
-        )
+        standardizer_func = positive_int_or_minus_one
+        ans = standardizer_func(1.0)
         self.assertEqual(
-            standardizer_func(-1.00),
+            ans,
+            1,
+            msg=f"{positive_int_or_minus_one.__name__} output value not as expected.",
+        )
+        self.assertIs(
+            type(ans),
+            int,
+            msg=f"{positive_int_or_minus_one.__name__} output type not as expected.",
+        )
+
+        ans = standardizer_func(-1.0)
+        self.assertEqual(
+            ans,
             -1,
-            msg=(f"{PositiveIntOrMinusOne.__name__} does not standardize as expected."),
+            msg=f"{positive_int_or_minus_one.__name__} output value not as expected.",
+        )
+        self.assertIs(
+            type(ans),
+            int,
+            msg=f"{positive_int_or_minus_one.__name__} output type not as expected.",
         )
 
         exc_str = r"Expected positive int or -1, but received value.*"
@@ -576,26 +589,26 @@ class TestPositiveIntOrMinusOne(unittest.TestCase):
             standardizer_func(0)
 
 
-class TestLoggerType(unittest.TestCase):
+class TestLoggerDomain(unittest.TestCase):
     """
-    Test logger type validator.
+    Test logger type domain validator.
     """
 
     def test_logger_type(self):
         """
         Test logger type validator.
         """
-        standardizer_func = LoggerType()
+        standardizer_func = logger_domain
         mylogger = logging.getLogger("example")
         self.assertIs(
             standardizer_func(mylogger),
             mylogger,
-            msg=f"{LoggerType.__name__} output not as expected",
+            msg=f"{standardizer_func.__name__} output not as expected",
         )
         self.assertIs(
             standardizer_func(mylogger.name),
             mylogger,
-            msg=f"{LoggerType.__name__} output not as expected",
+            msg=f"{standardizer_func.__name__} output not as expected",
         )
 
         exc_str = r"A logger name must be a string"

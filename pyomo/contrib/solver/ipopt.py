@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import logging
 import os
 import subprocess
 import datetime
@@ -29,7 +30,6 @@ from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn.plugins.nl_writer import NLWriter, NLWriterInfo
 from pyomo.contrib.solver.base import SolverBase
 from pyomo.contrib.solver.config import SolverConfig
-from pyomo.contrib.solver.factory import SolverFactory
 from pyomo.contrib.solver.results import Results, TerminationCondition, SolutionStatus
 from pyomo.contrib.solver.sol_reader import parse_sol_file
 from pyomo.contrib.solver.solution import SolSolutionLoader
@@ -38,8 +38,6 @@ from pyomo.core.expr.visitor import replace_expressions
 from pyomo.core.expr.numvalue import value
 from pyomo.core.base.suffix import Suffix
 from pyomo.common.collections import ComponentMap
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -198,7 +196,6 @@ ipopt_command_line_options = {
 }
 
 
-@SolverFactory.register('ipopt_v2', doc='The ipopt NLP solver (new interface)')
 class Ipopt(SolverBase):
     CONFIG = IpoptConfig()
 
@@ -207,6 +204,7 @@ class Ipopt(SolverBase):
         self._writer = NLWriter()
         self._available_cache = None
         self._version_cache = None
+        self._version_timeout = 2
 
     def available(self, config=None):
         if config is None:
@@ -229,7 +227,7 @@ class Ipopt(SolverBase):
             else:
                 results = subprocess.run(
                     [str(pth), '--version'],
-                    timeout=1,
+                    timeout=self._version_timeout,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
                     universal_newlines=True,

@@ -41,7 +41,7 @@ from pyomo.opt.results import (
 
 from pyomo.common.dependencies import attempt_import
 
-gdxcc, gdxcc_available = attempt_import('gdxcc', defer_check=True)
+gdxcc, gdxcc_available = attempt_import('gdxcc')
 
 logger = logging.getLogger('pyomo.solvers')
 

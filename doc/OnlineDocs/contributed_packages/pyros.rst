@@ -689,7 +689,7 @@ could have been equivalently written as:
   ...     },
   ... )
   ==============================================================================
-  PyROS: The Pyomo Robust Optimization Solver.
+  PyROS: The Pyomo Robust Optimization Solver...
   ...
   ------------------------------------------------------------------------------
   Robust optimal solution identified.
