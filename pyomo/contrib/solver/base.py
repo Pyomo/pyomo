@@ -14,7 +14,7 @@ import enum
 from typing import Sequence, Dict, Optional, Mapping, NoReturn, List, Tuple
 import os
 
-from pyomo.core.base.constraint import _GeneralConstraintData
+from pyomo.core.base.constraint import GeneralConstraintData
 from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.block import BlockData
@@ -232,8 +232,8 @@ class PersistentSolverBase(SolverBase):
         )
 
     def _get_duals(
-        self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None
-    ) -> Dict[_GeneralConstraintData, float]:
+        self, cons_to_load: Optional[Sequence[GeneralConstraintData]] = None
+    ) -> Dict[GeneralConstraintData, float]:
         """
         Declare sign convention in docstring here.
 
@@ -294,7 +294,7 @@ class PersistentSolverBase(SolverBase):
         """
 
     @abc.abstractmethod
-    def add_constraints(self, cons: List[_GeneralConstraintData]):
+    def add_constraints(self, cons: List[GeneralConstraintData]):
         """
         Add constraints to the model
         """
@@ -318,7 +318,7 @@ class PersistentSolverBase(SolverBase):
         """
 
     @abc.abstractmethod
-    def remove_constraints(self, cons: List[_GeneralConstraintData]):
+    def remove_constraints(self, cons: List[GeneralConstraintData]):
         """
         Remove constraints from the model
         """

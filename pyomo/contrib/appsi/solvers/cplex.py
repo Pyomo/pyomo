@@ -23,7 +23,7 @@ import math
 from pyomo.common.collections import ComponentMap
 from typing import Optional, Sequence, NoReturn, List, Mapping, Dict
 from pyomo.core.base.var import _GeneralVarData
-from pyomo.core.base.constraint import _GeneralConstraintData
+from pyomo.core.base.constraint import GeneralConstraintData
 from pyomo.core.base.block import BlockData
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.objective import _GeneralObjectiveData
@@ -185,7 +185,7 @@ class Cplex(PersistentSolver):
     def add_params(self, params: List[_ParamData]):
         self._writer.add_params(params)
 
-    def add_constraints(self, cons: List[_GeneralConstraintData]):
+    def add_constraints(self, cons: List[GeneralConstraintData]):
         self._writer.add_constraints(cons)
 
     def add_block(self, block: BlockData):
@@ -197,7 +197,7 @@ class Cplex(PersistentSolver):
     def remove_params(self, params: List[_ParamData]):
         self._writer.remove_params(params)
 
-    def remove_constraints(self, cons: List[_GeneralConstraintData]):
+    def remove_constraints(self, cons: List[GeneralConstraintData]):
         self._writer.remove_constraints(cons)
 
     def remove_block(self, block: BlockData):
@@ -389,8 +389,8 @@ class Cplex(PersistentSolver):
         return res
 
     def get_duals(
-        self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None
-    ) -> Dict[_GeneralConstraintData, float]:
+        self, cons_to_load: Optional[Sequence[GeneralConstraintData]] = None
+    ) -> Dict[GeneralConstraintData, float]:
         if (
             self._cplex_model.solution.get_solution_type()
             == self._cplex_model.solution.type.none

@@ -27,7 +27,7 @@ import math
 from pyomo.common.collections import ComponentMap
 from typing import Optional, Sequence, NoReturn, List, Mapping
 from pyomo.core.base.var import _GeneralVarData
-from pyomo.core.base.constraint import _GeneralConstraintData
+from pyomo.core.base.constraint import GeneralConstraintData
 from pyomo.core.base.block import BlockData
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.objective import _GeneralObjectiveData
@@ -170,7 +170,7 @@ class Cbc(PersistentSolver):
     def add_params(self, params: List[_ParamData]):
         self._writer.add_params(params)
 
-    def add_constraints(self, cons: List[_GeneralConstraintData]):
+    def add_constraints(self, cons: List[GeneralConstraintData]):
         self._writer.add_constraints(cons)
 
     def add_block(self, block: BlockData):
@@ -182,7 +182,7 @@ class Cbc(PersistentSolver):
     def remove_params(self, params: List[_ParamData]):
         self._writer.remove_params(params)
 
-    def remove_constraints(self, cons: List[_GeneralConstraintData]):
+    def remove_constraints(self, cons: List[GeneralConstraintData]):
         self._writer.remove_constraints(cons)
 
     def remove_block(self, block: BlockData):

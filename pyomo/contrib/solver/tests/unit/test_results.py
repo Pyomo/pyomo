@@ -15,7 +15,7 @@ from typing import Sequence, Dict, Optional, Mapping, MutableMapping
 
 from pyomo.common import unittest
 from pyomo.common.config import ConfigDict
-from pyomo.core.base.constraint import _GeneralConstraintData
+from pyomo.core.base.constraint import GeneralConstraintData
 from pyomo.core.base.var import _GeneralVarData
 from pyomo.common.collections import ComponentMap
 from pyomo.contrib.solver import results
@@ -67,8 +67,8 @@ class SolutionLoaderExample(solution.SolutionLoaderBase):
             return primals
 
     def get_duals(
-        self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None
-    ) -> Dict[_GeneralConstraintData, float]:
+        self, cons_to_load: Optional[Sequence[GeneralConstraintData]] = None
+    ) -> Dict[GeneralConstraintData, float]:
         if self._duals is None:
             raise RuntimeError(
                 'Solution loader does not currently have valid duals. Please '

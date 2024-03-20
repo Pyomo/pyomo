@@ -1253,11 +1253,11 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
         orig = model.component("_pyomo_gdp_hull_reformulation")
         self.assertIsInstance(
             model.disjunctionList[1].algebraic_constraint,
-            constraint._GeneralConstraintData,
+            constraint.GeneralConstraintData,
         )
         self.assertIsInstance(
             model.disjunctionList[0].algebraic_constraint,
-            constraint._GeneralConstraintData,
+            constraint.GeneralConstraintData,
         )
         self.assertFalse(model.disjunctionList[1].active)
         self.assertFalse(model.disjunctionList[0].active)

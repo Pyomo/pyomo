@@ -1323,8 +1323,8 @@ class ScalarDisjIndexedConstraints(unittest.TestCase, CommonTests):
         self.assertEqual(len(cons_list), 2)
         lb = cons_list[0]
         ub = cons_list[1]
-        self.assertIsInstance(lb, constraint._GeneralConstraintData)
-        self.assertIsInstance(ub, constraint._GeneralConstraintData)
+        self.assertIsInstance(lb, constraint.GeneralConstraintData)
+        self.assertIsInstance(ub, constraint.GeneralConstraintData)
 
     def checkMs(
         self, m, disj1c1lb, disj1c1ub, disj1c2lb, disj1c2ub, disj2c1ub, disj2c2ub

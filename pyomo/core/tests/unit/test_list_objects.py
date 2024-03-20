@@ -18,7 +18,7 @@ from pyomo.core.beta.list_objects import (
     XExpressionList,
 )
 from pyomo.core.base.var import _GeneralVarData
-from pyomo.core.base.constraint import _GeneralConstraintData
+from pyomo.core.base.constraint import GeneralConstraintData
 from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.core.base.expression import _GeneralExpressionData
 
@@ -392,7 +392,7 @@ class TestExpressionList(_TestComponentListBase, unittest.TestCase):
 
 class TestConstraintList(_TestActiveComponentListBase, unittest.TestCase):
     _ctype = XConstraintList
-    _cdatatype = _GeneralConstraintData
+    _cdatatype = GeneralConstraintData
 
     def setUp(self):
         _TestComponentListBase.setUp(self)

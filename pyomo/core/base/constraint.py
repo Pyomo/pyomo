@@ -285,7 +285,7 @@ class _ConstraintData(metaclass=RenamedClass):
     __renamed__version__ = '6.7.2.dev0'
 
 
-class _GeneralConstraintData(ConstraintData):
+class GeneralConstraintData(ConstraintData):
     """
     This class defines the data for a single general constraint.
 
@@ -684,6 +684,11 @@ class _GeneralConstraintData(ConstraintData):
                     )
 
 
+class _GeneralConstraintData(metaclass=RenamedClass):
+    __renamed__new_class__ = GeneralConstraintData
+    __renamed__version__ = '6.7.2.dev0'
+
+
 @ModelComponentFactory.register("General constraint expressions.")
 class Constraint(ActiveIndexedComponent):
     """
@@ -726,7 +731,7 @@ class Constraint(ActiveIndexedComponent):
             The class type for the derived subclass
     """
 
-    _ComponentDataClass = _GeneralConstraintData
+    _ComponentDataClass = GeneralConstraintData
 
     class Infeasible(object):
         pass
@@ -884,14 +889,14 @@ class Constraint(ActiveIndexedComponent):
         )
 
 
-class ScalarConstraint(_GeneralConstraintData, Constraint):
+class ScalarConstraint(GeneralConstraintData, Constraint):
     """
     ScalarConstraint is the implementation representing a single,
     non-indexed constraint.
     """
 
     def __init__(self, *args, **kwds):
-        _GeneralConstraintData.__init__(self, component=self, expr=None)
+        GeneralConstraintData.__init__(self, component=self, expr=None)
         Constraint.__init__(self, *args, **kwds)
         self._index = UnindexedComponent_index
 
@@ -915,7 +920,7 @@ class ScalarConstraint(_GeneralConstraintData, Constraint):
                 "an expression. There is currently "
                 "nothing to access." % (self.name)
             )
-        return _GeneralConstraintData.body.fget(self)
+        return GeneralConstraintData.body.fget(self)
 
     @property
     def lower(self):
@@ -927,7 +932,7 @@ class ScalarConstraint(_GeneralConstraintData, Constraint):
                 "an expression. There is currently "
                 "nothing to access." % (self.name)
             )
-        return _GeneralConstraintData.lower.fget(self)
+        return GeneralConstraintData.lower.fget(self)
 
     @property
     def upper(self):
@@ -939,7 +944,7 @@ class ScalarConstraint(_GeneralConstraintData, Constraint):
                 "an expression. There is currently "
                 "nothing to access." % (self.name)
             )
-        return _GeneralConstraintData.upper.fget(self)
+        return GeneralConstraintData.upper.fget(self)
 
     @property
     def equality(self):
@@ -951,7 +956,7 @@ class ScalarConstraint(_GeneralConstraintData, Constraint):
                 "an expression. There is currently "
                 "nothing to access." % (self.name)
             )
-        return _GeneralConstraintData.equality.fget(self)
+        return GeneralConstraintData.equality.fget(self)
 
     @property
     def strict_lower(self):
@@ -963,7 +968,7 @@ class ScalarConstraint(_GeneralConstraintData, Constraint):
                 "an expression. There is currently "
                 "nothing to access." % (self.name)
             )
-        return _GeneralConstraintData.strict_lower.fget(self)
+        return GeneralConstraintData.strict_lower.fget(self)
 
     @property
     def strict_upper(self):
@@ -975,7 +980,7 @@ class ScalarConstraint(_GeneralConstraintData, Constraint):
                 "an expression. There is currently "
                 "nothing to access." % (self.name)
             )
-        return _GeneralConstraintData.strict_upper.fget(self)
+        return GeneralConstraintData.strict_upper.fget(self)
 
     def clear(self):
         self._data = {}
@@ -1040,7 +1045,7 @@ class IndexedConstraint(Constraint):
         return self.__setitem__(index, expr)
 
     @overload
-    def __getitem__(self, index) -> _GeneralConstraintData: ...
+    def __getitem__(self, index) -> GeneralConstraintData: ...
 
     __getitem__ = IndexedComponent.__getitem__  # type: ignore
 
