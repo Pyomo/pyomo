@@ -806,7 +806,7 @@ class ComponentData(_ComponentBase):
     # _GeneralExpressionData, _LogicalConstraintData,
     # _GeneralLogicalConstraintData, _GeneralObjectiveData,
     # _ParamData,_GeneralVarData, _GeneralBooleanVarData, _DisjunctionData,
-    # _ArcData, _PortData, _LinearConstraintData, and
+    # ArcData, _PortData, _LinearConstraintData, and
     # _LinearMatrixConstraintData. Changes made here need to be made in those
     # constructors as well!
     def __init__(self, component):
