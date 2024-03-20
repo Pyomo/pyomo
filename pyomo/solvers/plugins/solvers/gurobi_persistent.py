@@ -413,7 +413,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
         Parameters
         ----------
-        con: pyomo.core.base.sos._SOSConstraintData
+        con: pyomo.core.base.sos.SOSConstraintData
             The pyomo SOS constraint for which the corresponding gurobi SOS constraint attribute
             should be retrieved.
         attr: str

@@ -22,7 +22,7 @@ from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.base import SymbolMap
 from pyomo.core.base.var import GeneralVarData
 from pyomo.core.base.constraint import GeneralConstraintData
-from pyomo.core.base.sos import _SOSConstraintData
+from pyomo.core.base.sos import SOSConstraintData
 from pyomo.core.base.param import ParamData
 from pyomo.core.expr.numvalue import value, is_constant
 from pyomo.repn import generate_standard_repn
@@ -456,7 +456,7 @@ class Highs(PersistentBase, PersistentSolver):
             np.array(coef_values, dtype=np.double),
         )
 
-    def _add_sos_constraints(self, cons: List[_SOSConstraintData]):
+    def _add_sos_constraints(self, cons: List[SOSConstraintData]):
         if cons:
             raise NotImplementedError(
                 'Highs interface does not support SOS constraints'
@@ -487,7 +487,7 @@ class Highs(PersistentBase, PersistentSolver):
             {v: k for k, v in self._pyomo_con_to_solver_con_map.items()}
         )
 
-    def _remove_sos_constraints(self, cons: List[_SOSConstraintData]):
+    def _remove_sos_constraints(self, cons: List[SOSConstraintData]):
         if cons:
             raise NotImplementedError(
                 'Highs interface does not support SOS constraints'

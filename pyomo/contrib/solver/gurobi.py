@@ -24,7 +24,7 @@ from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
 from pyomo.core.base.var import GeneralVarData
 from pyomo.core.base.constraint import GeneralConstraintData
-from pyomo.core.base.sos import _SOSConstraintData
+from pyomo.core.base.sos import SOSConstraintData
 from pyomo.core.base.param import ParamData
 from pyomo.core.expr.numvalue import value, is_constant, is_fixed, native_numeric_types
 from pyomo.repn import generate_standard_repn
@@ -685,7 +685,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         self._constraints_added_since_update.update(cons)
         self._needs_updated = True
 
-    def _add_sos_constraints(self, cons: List[_SOSConstraintData]):
+    def _add_sos_constraints(self, cons: List[SOSConstraintData]):
         for con in cons:
             conname = self._symbol_map.getSymbol(con, self._labeler)
             level = con.level
@@ -725,7 +725,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
             self._mutable_quadratic_helpers.pop(con, None)
         self._needs_updated = True
 
-    def _remove_sos_constraints(self, cons: List[_SOSConstraintData]):
+    def _remove_sos_constraints(self, cons: List[SOSConstraintData]):
         for con in cons:
             if con in self._constraints_added_since_update:
                 self._update_gurobi_model()
@@ -1218,7 +1218,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
 
         Parameters
         ----------
-        con: pyomo.core.base.sos._SOSConstraintData
+        con: pyomo.core.base.sos.SOSConstraintData
             The pyomo SOS constraint for which the corresponding gurobi SOS constraint attribute
             should be retrieved.
         attr: str

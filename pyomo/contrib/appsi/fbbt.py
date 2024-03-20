@@ -21,7 +21,7 @@ from typing import List, Optional
 from pyomo.core.base.var import GeneralVarData
 from pyomo.core.base.param import ParamData
 from pyomo.core.base.constraint import GeneralConstraintData
-from pyomo.core.base.sos import _SOSConstraintData
+from pyomo.core.base.sos import SOSConstraintData
 from pyomo.core.base.objective import GeneralObjectiveData, minimize, maximize
 from pyomo.core.base.block import BlockData
 from pyomo.core.base import SymbolMap, TextLabeler
@@ -169,7 +169,7 @@ class IntervalTightener(PersistentBase):
             for c, cc in self._con_map.items():
                 cc.name = self._symbol_map.getSymbol(c, self._con_labeler)
 
-    def _add_sos_constraints(self, cons: List[_SOSConstraintData]):
+    def _add_sos_constraints(self, cons: List[SOSConstraintData]):
         if len(cons) != 0:
             raise NotImplementedError(
                 'IntervalTightener does not support SOS constraints'
@@ -184,7 +184,7 @@ class IntervalTightener(PersistentBase):
             self._cmodel.remove_constraint(cc)
             del self._rcon_map[cc]
 
-    def _remove_sos_constraints(self, cons: List[_SOSConstraintData]):
+    def _remove_sos_constraints(self, cons: List[SOSConstraintData]):
         if len(cons) != 0:
             raise NotImplementedError(
                 'IntervalTightener does not support SOS constraints'

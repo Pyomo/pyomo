@@ -14,7 +14,7 @@ from pyomo.core.base.param import ParamData
 from pyomo.core.base.var import GeneralVarData
 from pyomo.core.base.constraint import GeneralConstraintData
 from pyomo.core.base.objective import GeneralObjectiveData
-from pyomo.core.base.sos import _SOSConstraintData
+from pyomo.core.base.sos import SOSConstraintData
 from pyomo.core.base.block import BlockData
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.core.expr.numvalue import value
@@ -126,7 +126,7 @@ class NLWriter(PersistentBase):
             for c, cc in self._pyomo_con_to_solver_con_map.items():
                 cc.name = self._symbol_map.getSymbol(c, self._con_labeler)
 
-    def _add_sos_constraints(self, cons: List[_SOSConstraintData]):
+    def _add_sos_constraints(self, cons: List[SOSConstraintData]):
         if len(cons) != 0:
             raise NotImplementedError('NL writer does not support SOS constraints')
 
@@ -140,7 +140,7 @@ class NLWriter(PersistentBase):
             self._writer.remove_constraint(cc)
             del self._solver_con_to_pyomo_con_map[cc]
 
-    def _remove_sos_constraints(self, cons: List[_SOSConstraintData]):
+    def _remove_sos_constraints(self, cons: List[SOSConstraintData]):
         if len(cons) != 0:
             raise NotImplementedError('NL writer does not support SOS constraints')
 

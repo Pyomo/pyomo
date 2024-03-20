@@ -22,7 +22,7 @@ from typing import (
     MutableMapping,
 )
 from pyomo.core.base.constraint import GeneralConstraintData, Constraint
-from pyomo.core.base.sos import _SOSConstraintData, SOSConstraint
+from pyomo.core.base.sos import SOSConstraintData, SOSConstraint
 from pyomo.core.base.var import GeneralVarData, Var
 from pyomo.core.base.param import ParamData, Param
 from pyomo.core.base.block import BlockData, Block
@@ -1034,10 +1034,10 @@ class PersistentBase(abc.ABC):
             v.fix()
 
     @abc.abstractmethod
-    def _add_sos_constraints(self, cons: List[_SOSConstraintData]):
+    def _add_sos_constraints(self, cons: List[SOSConstraintData]):
         pass
 
-    def add_sos_constraints(self, cons: List[_SOSConstraintData]):
+    def add_sos_constraints(self, cons: List[SOSConstraintData]):
         for con in cons:
             if con in self._vars_referenced_by_con:
                 raise ValueError(
@@ -1154,10 +1154,10 @@ class PersistentBase(abc.ABC):
             del self._vars_referenced_by_con[con]
 
     @abc.abstractmethod
-    def _remove_sos_constraints(self, cons: List[_SOSConstraintData]):
+    def _remove_sos_constraints(self, cons: List[SOSConstraintData]):
         pass
 
-    def remove_sos_constraints(self, cons: List[_SOSConstraintData]):
+    def remove_sos_constraints(self, cons: List[SOSConstraintData]):
         self._remove_sos_constraints(cons)
         for con in cons:
             if con not in self._vars_referenced_by_con:
@@ -1339,7 +1339,7 @@ class PersistentBase(abc.ABC):
                         old_cons.append(c)
                     else:
                         assert (c.ctype is SOSConstraint) or (
-                            c.ctype is None and isinstance(c, _SOSConstraintData)
+                            c.ctype is None and isinstance(c, SOSConstraintData)
                         )
                         old_sos.append(c)
         self.remove_constraints(old_cons)

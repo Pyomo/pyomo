@@ -14,7 +14,7 @@ from pyomo.core.base.param import ParamData
 from pyomo.core.base.var import GeneralVarData
 from pyomo.core.base.constraint import GeneralConstraintData
 from pyomo.core.base.objective import GeneralObjectiveData
-from pyomo.core.base.sos import _SOSConstraintData
+from pyomo.core.base.sos import SOSConstraintData
 from pyomo.core.base.block import BlockData
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.core.expr.numvalue import value
@@ -102,7 +102,7 @@ class LPWriter(PersistentBase):
     def _add_constraints(self, cons: List[GeneralConstraintData]):
         cmodel.process_lp_constraints(cons, self)
 
-    def _add_sos_constraints(self, cons: List[_SOSConstraintData]):
+    def _add_sos_constraints(self, cons: List[SOSConstraintData]):
         if len(cons) != 0:
             raise NotImplementedError('LP writer does not yet support SOS constraints')
 
@@ -113,7 +113,7 @@ class LPWriter(PersistentBase):
             self._symbol_map.removeSymbol(c)
             del self._solver_con_to_pyomo_con_map[cc]
 
-    def _remove_sos_constraints(self, cons: List[_SOSConstraintData]):
+    def _remove_sos_constraints(self, cons: List[SOSConstraintData]):
         if len(cons) != 0:
             raise NotImplementedError('LP writer does not yet support SOS constraints')
 

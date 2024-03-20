@@ -374,7 +374,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
     def printSOS(self, symbol_map, labeler, variable_symbol_map, soscondata, output):
         """
-        Prints the SOS constraint associated with the _SOSConstraintData object
+        Prints the SOS constraint associated with the SOSConstraintData object
         """
         sos_template_string = self.sos_template_string
 
