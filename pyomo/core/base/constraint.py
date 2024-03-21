@@ -125,7 +125,7 @@ def simple_constraintlist_rule(rule):
     return rule_wrapper(rule, result_map, map_types=map_types)
 
 
-class ConstraintData(ConstraintData):
+class ConstraintData(ActiveComponentData):
     """
     This class defines the data for a single general constraint.
 
