@@ -44,7 +44,7 @@ class NamedExpressionData(numeric_expr.NumericValue):
         expr       The expression owned by this data.
     """
 
-    # Note: derived classes are expected to declare teh _args_ slot
+    # Note: derived classes are expected to declare the _args_ slot
     __slots__ = ()
 
     EXPRESSION_SYSTEM = EXPR.ExpressionType.NUMERIC
