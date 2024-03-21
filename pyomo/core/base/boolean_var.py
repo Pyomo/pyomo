@@ -68,27 +68,61 @@ class _DeprecatedImplicitAssociatedBinaryVariable(object):
         self._boolvar = weakref_ref(state)
 
 
+def _associated_binary_mapper(encode, val):
+    if val is None:
+        return None
+    if encode:
+        if val.__class__ is not _DeprecatedImplicitAssociatedBinaryVariable:
+            return val()
+    else:
+        if val.__class__ is not _DeprecatedImplicitAssociatedBinaryVariable:
+            return weakref_ref(val)
+    return val
+
+
 class BooleanVarData(ComponentData, BooleanValue):
     """
-    This class defines the data for a single variable.
+    This class defines the data for a single Boolean variable.
 
     Constructor Arguments:
         component   The BooleanVar object that owns this data.
+
     Public Class Attributes:
+        domain      The domain of this variable.
         fixed       If True, then this variable is treated as a
                         fixed constant in the model.
         stale       A Boolean indicating whether the value of this variable is
-                        legitimate.  This value is true if the value should
+                        legitimiate.  This value is true if the value should
                         be considered legitimate for purposes of reporting or
                         other interrogation.
         value       The numeric value of this variable.
+
+    The domain attribute is a property because it is
+    too widely accessed directly to enforce explicit getter/setter
+    methods and we need to deter directly modifying or accessing
+    these attributes in certain cases.
     """
 
-    __slots__ = ()
+    __slots__ = ('_value', 'fixed', '_stale', '_associated_binary')
+    __autoslot_mappers__ = {
+        '_associated_binary': _associated_binary_mapper,
+        '_stale': StaleFlagManager.stale_mapper,
+    }
 
     def __init__(self, component=None):
+        #
+        # These lines represent in-lining of the
+        # following constructors:
+        #   - BooleanVarData
+        #   - ComponentData
+        #   - BooleanValue
         self._component = weakref_ref(component) if (component is not None) else None
         self._index = NOTSET
+        self._value = None
+        self.fixed = False
+        self._stale = 0  # True
+
+        self._associated_binary = None
 
     def is_fixed(self):
         """Returns True if this variable is fixed, otherwise returns False."""
@@ -134,23 +168,58 @@ class BooleanVarData(ComponentData, BooleanValue):
 
     @property
     def value(self):
-        """Return the value for this variable."""
-        raise NotImplementedError
+        """Return (or set) the value for this variable."""
+        return self._value
+
+    @value.setter
+    def value(self, val):
+        self.set_value(val)
 
     @property
     def domain(self):
         """Return the domain for this variable."""
-        raise NotImplementedError
-
-    @property
-    def fixed(self):
-        """Return the fixed indicator for this variable."""
-        raise NotImplementedError
+        return BooleanSet
 
     @property
     def stale(self):
-        """Return the stale indicator for this variable."""
-        raise NotImplementedError
+        return StaleFlagManager.is_stale(self._stale)
+
+    @stale.setter
+    def stale(self, val):
+        if val:
+            self._stale = 0
+        else:
+            self._stale = StaleFlagManager.get_flag(0)
+
+    def get_associated_binary(self):
+        """Get the binary VarData associated with this
+        BooleanVarData"""
+        return (
+            self._associated_binary() if self._associated_binary is not None else None
+        )
+
+    def associate_binary_var(self, binary_var):
+        """Associate a binary VarData to this BooleanVarData"""
+        if (
+            self._associated_binary is not None
+            and type(self._associated_binary)
+            is not _DeprecatedImplicitAssociatedBinaryVariable
+        ):
+            raise RuntimeError(
+                "Reassociating BooleanVar '%s' (currently associated "
+                "with '%s') with '%s' is not allowed"
+                % (
+                    self.name,
+                    (
+                        self._associated_binary().name
+                        if self._associated_binary is not None
+                        else None
+                    ),
+                    binary_var.name if binary_var is not None else None,
+                )
+            )
+        if binary_var is not None:
+            self._associated_binary = weakref_ref(binary_var)
 
     def fix(self, value=NOTSET, skip_validation=False):
         """Fix the value of this variable (treat as nonvariable)
@@ -182,126 +251,8 @@ class _BooleanVarData(metaclass=RenamedClass):
     __renamed__version__ = '6.7.2.dev0'
 
 
-def _associated_binary_mapper(encode, val):
-    if val is None:
-        return None
-    if encode:
-        if val.__class__ is not _DeprecatedImplicitAssociatedBinaryVariable:
-            return val()
-    else:
-        if val.__class__ is not _DeprecatedImplicitAssociatedBinaryVariable:
-            return weakref_ref(val)
-    return val
-
-
-class GeneralBooleanVarData(BooleanVarData):
-    """
-    This class defines the data for a single Boolean variable.
-
-    Constructor Arguments:
-        component   The BooleanVar object that owns this data.
-
-    Public Class Attributes:
-        domain      The domain of this variable.
-        fixed       If True, then this variable is treated as a
-                        fixed constant in the model.
-        stale       A Boolean indicating whether the value of this variable is
-                        legitimiate.  This value is true if the value should
-                        be considered legitimate for purposes of reporting or
-                        other interrogation.
-        value       The numeric value of this variable.
-
-    The domain attribute is a property because it is
-    too widely accessed directly to enforce explicit getter/setter
-    methods and we need to deter directly modifying or accessing
-    these attributes in certain cases.
-    """
-
-    __slots__ = ('_value', 'fixed', '_stale', '_associated_binary')
-    __autoslot_mappers__ = {
-        '_associated_binary': _associated_binary_mapper,
-        '_stale': StaleFlagManager.stale_mapper,
-    }
-
-    def __init__(self, component=None):
-        #
-        # These lines represent in-lining of the
-        # following constructors:
-        #   - BooleanVarData
-        #   - ComponentData
-        #   - BooleanValue
-        self._component = weakref_ref(component) if (component is not None) else None
-        self._index = NOTSET
-        self._value = None
-        self.fixed = False
-        self._stale = 0  # True
-
-        self._associated_binary = None
-
-    #
-    # Abstract Interface
-    #
-
-    # value is an attribute
-
-    @property
-    def value(self):
-        """Return (or set) the value for this variable."""
-        return self._value
-
-    @value.setter
-    def value(self, val):
-        self.set_value(val)
-
-    @property
-    def domain(self):
-        """Return the domain for this variable."""
-        return BooleanSet
-
-    @property
-    def stale(self):
-        return StaleFlagManager.is_stale(self._stale)
-
-    @stale.setter
-    def stale(self, val):
-        if val:
-            self._stale = 0
-        else:
-            self._stale = StaleFlagManager.get_flag(0)
-
-    def get_associated_binary(self):
-        """Get the binary VarData associated with this
-        GeneralBooleanVarData"""
-        return (
-            self._associated_binary() if self._associated_binary is not None else None
-        )
-
-    def associate_binary_var(self, binary_var):
-        """Associate a binary VarData to this GeneralBooleanVarData"""
-        if (
-            self._associated_binary is not None
-            and type(self._associated_binary)
-            is not _DeprecatedImplicitAssociatedBinaryVariable
-        ):
-            raise RuntimeError(
-                "Reassociating BooleanVar '%s' (currently associated "
-                "with '%s') with '%s' is not allowed"
-                % (
-                    self.name,
-                    (
-                        self._associated_binary().name
-                        if self._associated_binary is not None
-                        else None
-                    ),
-                    binary_var.name if binary_var is not None else None,
-                )
-            )
-        if binary_var is not None:
-            self._associated_binary = weakref_ref(binary_var)
-
-
-class _GeneralBooleanVarData(metaclass=RenamedClass):
-    __renamed__new_class__ = GeneralBooleanVarData
+class _BooleanVarData(metaclass=RenamedClass):
+    __renamed__new_class__ = BooleanVarData
     __renamed__version__ = '6.7.2.dev0'
 
 
@@ -319,7 +270,7 @@ class BooleanVar(IndexedComponent):
             to True.
     """
 
-    _ComponentDataClass = GeneralBooleanVarData
+    _ComponentDataClass = BooleanVarData
 
     def __new__(cls, *args, **kwds):
         if cls != BooleanVar:
@@ -511,11 +462,11 @@ class BooleanVar(IndexedComponent):
         )
 
 
-class ScalarBooleanVar(GeneralBooleanVarData, BooleanVar):
+class ScalarBooleanVar(BooleanVarData, BooleanVar):
     """A single variable."""
 
     def __init__(self, *args, **kwd):
-        GeneralBooleanVarData.__init__(self, component=self)
+        BooleanVarData.__init__(self, component=self)
         BooleanVar.__init__(self, *args, **kwd)
         self._index = UnindexedComponent_index
 
@@ -531,7 +482,7 @@ class ScalarBooleanVar(GeneralBooleanVarData, BooleanVar):
     def value(self):
         """Return the value for this variable."""
         if self._constructed:
-            return GeneralBooleanVarData.value.fget(self)
+            return BooleanVarData.value.fget(self)
         raise ValueError(
             "Accessing the value of variable '%s' "
             "before the Var has been constructed (there "
@@ -542,7 +493,7 @@ class ScalarBooleanVar(GeneralBooleanVarData, BooleanVar):
     def value(self, val):
         """Set the value for this variable."""
         if self._constructed:
-            return GeneralBooleanVarData.value.fset(self, val)
+            return BooleanVarData.value.fset(self, val)
         raise ValueError(
             "Setting the value of variable '%s' "
             "before the Var has been constructed (there "
@@ -551,7 +502,7 @@ class ScalarBooleanVar(GeneralBooleanVarData, BooleanVar):
 
     @property
     def domain(self):
-        return GeneralBooleanVarData.domain.fget(self)
+        return BooleanVarData.domain.fget(self)
 
     def fix(self, value=NOTSET, skip_validation=False):
         """
@@ -559,7 +510,7 @@ class ScalarBooleanVar(GeneralBooleanVarData, BooleanVar):
         indicating the variable should be fixed at its current value.
         """
         if self._constructed:
-            return GeneralBooleanVarData.fix(self, value, skip_validation)
+            return BooleanVarData.fix(self, value, skip_validation)
         raise ValueError(
             "Fixing variable '%s' "
             "before the Var has been constructed (there "
@@ -569,7 +520,7 @@ class ScalarBooleanVar(GeneralBooleanVarData, BooleanVar):
     def unfix(self):
         """Sets the fixed indicator to False."""
         if self._constructed:
-            return GeneralBooleanVarData.unfix(self)
+            return BooleanVarData.unfix(self)
         raise ValueError(
             "Freeing variable '%s' "
             "before the Var has been constructed (there "
