@@ -13,7 +13,7 @@ from typing import List
 from pyomo.core.base.param import ParamData
 from pyomo.core.base.var import VarData
 from pyomo.core.base.constraint import GeneralConstraintData
-from pyomo.core.base.objective import GeneralObjectiveData
+from pyomo.core.base.objective import ObjectiveData
 from pyomo.core.base.sos import SOSConstraintData
 from pyomo.core.base.block import BlockData
 from pyomo.repn.standard_repn import generate_standard_repn
@@ -147,7 +147,7 @@ class LPWriter(PersistentBase):
             cp = self._pyomo_param_to_solver_param_map[p_id]
             cp.value = p.value
 
-    def _set_objective(self, obj: GeneralObjectiveData):
+    def _set_objective(self, obj: ObjectiveData):
         cobj = cmodel.process_lp_objective(
             self._expr_types,
             obj,

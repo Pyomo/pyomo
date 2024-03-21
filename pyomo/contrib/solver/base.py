@@ -18,7 +18,7 @@ from pyomo.core.base.constraint import GeneralConstraintData
 from pyomo.core.base.var import VarData
 from pyomo.core.base.param import ParamData
 from pyomo.core.base.block import BlockData
-from pyomo.core.base.objective import GeneralObjectiveData
+from pyomo.core.base.objective import ObjectiveData
 from pyomo.common.config import document_kwargs_from_configdict, ConfigValue
 from pyomo.common.errors import ApplicationError
 from pyomo.common.deprecation import deprecation_warning
@@ -274,7 +274,7 @@ class PersistentSolverBase(SolverBase):
         """
 
     @abc.abstractmethod
-    def set_objective(self, obj: GeneralObjectiveData):
+    def set_objective(self, obj: ObjectiveData):
         """
         Set current objective for the model
         """

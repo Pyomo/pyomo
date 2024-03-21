@@ -22,7 +22,7 @@ from pyomo.core.base.var import VarData
 from pyomo.core.base.param import ParamData
 from pyomo.core.base.constraint import GeneralConstraintData
 from pyomo.core.base.sos import SOSConstraintData
-from pyomo.core.base.objective import GeneralObjectiveData, minimize, maximize
+from pyomo.core.base.objective import ObjectiveData, minimize, maximize
 from pyomo.core.base.block import BlockData
 from pyomo.core.base import SymbolMap, TextLabeler
 from pyomo.common.errors import InfeasibleConstraintException
@@ -224,13 +224,13 @@ class IntervalTightener(PersistentBase):
             cp = self._param_map[p_id]
             cp.value = p.value
 
-    def set_objective(self, obj: GeneralObjectiveData):
+    def set_objective(self, obj: ObjectiveData):
         if self._symbolic_solver_labels:
             if self._objective is not None:
                 self._symbol_map.removeSymbol(self._objective)
         super().set_objective(obj)
 
-    def _set_objective(self, obj: GeneralObjectiveData):
+    def _set_objective(self, obj: ObjectiveData):
         if obj is None:
             ce = cmodel.Constant(0)
             sense = 0

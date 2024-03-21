@@ -26,7 +26,7 @@ from pyomo.core.base.sos import SOSConstraintData, SOSConstraint
 from pyomo.core.base.var import VarData, Var
 from pyomo.core.base.param import ParamData, Param
 from pyomo.core.base.block import BlockData, Block
-from pyomo.core.base.objective import GeneralObjectiveData
+from pyomo.core.base.objective import ObjectiveData
 from pyomo.common.collections import ComponentMap
 from .utils.get_objective import get_objective
 from .utils.collect_vars_and_named_exprs import collect_vars_and_named_exprs
@@ -827,7 +827,7 @@ class PersistentSolver(Solver):
         pass
 
     @abc.abstractmethod
-    def set_objective(self, obj: GeneralObjectiveData):
+    def set_objective(self, obj: ObjectiveData):
         pass
 
     @abc.abstractmethod
@@ -1050,10 +1050,10 @@ class PersistentBase(abc.ABC):
         self._add_sos_constraints(cons)
 
     @abc.abstractmethod
-    def _set_objective(self, obj: GeneralObjectiveData):
+    def _set_objective(self, obj: ObjectiveData):
         pass
 
-    def set_objective(self, obj: GeneralObjectiveData):
+    def set_objective(self, obj: ObjectiveData):
         if self._objective is not None:
             for v in self._vars_referenced_by_obj:
                 self._referenced_variables[id(v)][2] = None

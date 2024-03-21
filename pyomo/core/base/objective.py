@@ -81,9 +81,7 @@ def simple_objectivelist_rule(rule):
     return rule_wrapper(rule, {None: ObjectiveList.End})
 
 
-class ObjectiveData(
-    GeneralExpressionDataImpl, ActiveComponentData
-):
+class ObjectiveData(GeneralExpressionDataImpl, ActiveComponentData):
     """
     This class defines the data for a single objective.
 
@@ -216,7 +214,7 @@ class Objective(ActiveIndexedComponent):
             The class type for the derived subclass
     """
 
-    _ComponentDataClass = GeneralObjectiveData
+    _ComponentDataClass = ObjectiveData
     NoObjective = ActiveIndexedComponent.Skip
 
     def __new__(cls, *args, **kwds):
@@ -365,14 +363,14 @@ class Objective(ActiveIndexedComponent):
         )
 
 
-class ScalarObjective(GeneralObjectiveData, Objective):
+class ScalarObjective(ObjectiveData, Objective):
     """
     ScalarObjective is the implementation representing a single,
     non-indexed objective.
     """
 
     def __init__(self, *args, **kwd):
-        GeneralObjectiveData.__init__(self, expr=None, component=self)
+        ObjectiveData.__init__(self, expr=None, component=self)
         Objective.__init__(self, *args, **kwd)
         self._index = UnindexedComponent_index
 
@@ -408,7 +406,7 @@ class ScalarObjective(GeneralObjectiveData, Objective):
                     "a sense or expression (there is currently "
                     "no value to return)." % (self.name)
                 )
-            return GeneralObjectiveData.expr.fget(self)
+            return ObjectiveData.expr.fget(self)
         raise ValueError(
             "Accessing the expression of objective '%s' "
             "before the Objective has been constructed (there "
@@ -431,7 +429,7 @@ class ScalarObjective(GeneralObjectiveData, Objective):
                     "a sense or expression (there is currently "
                     "no value to return)." % (self.name)
                 )
-            return GeneralObjectiveData.sense.fget(self)
+            return ObjectiveData.sense.fget(self)
         raise ValueError(
             "Accessing the sense of objective '%s' "
             "before the Objective has been constructed (there "
@@ -474,7 +472,7 @@ class ScalarObjective(GeneralObjectiveData, Objective):
         if self._constructed:
             if len(self._data) == 0:
                 self._data[None] = self
-            return GeneralObjectiveData.set_sense(self, sense)
+            return ObjectiveData.set_sense(self, sense)
         raise ValueError(
             "Setting the sense of objective '%s' "
             "before the Objective has been constructed (there "
