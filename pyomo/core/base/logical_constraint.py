@@ -44,68 +44,6 @@ forgetting to include the "return" statement at the end of your rule.
 
 class LogicalConstraintData(ActiveComponentData):
     """
-    This class defines the data for a single logical constraint.
-
-    It functions as a pure interface.
-
-    Constructor arguments:
-        component       The LogicalConstraint object that owns this data.
-
-    Public class attributes:
-        active          A boolean that is true if this statement is
-                            active in the model.
-        body            The Pyomo logical expression for this statement
-
-    Private class attributes:
-        _component      The statement component.
-        _active         A boolean that indicates whether this data is active
-    """
-
-    __slots__ = ()
-
-    def __init__(self, component=None):
-        #
-        # These lines represent in-lining of the
-        # following constructors:
-        #   - ActiveComponentData
-        #   - ComponentData
-        self._component = weakref_ref(component) if (component is not None) else None
-        self._index = NOTSET
-        self._active = True
-
-    #
-    # Interface
-    #
-    def __call__(self, exception=True):
-        """Compute the value of the body of this logical constraint."""
-        if self.body is None:
-            return None
-        return self.body(exception=exception)
-
-    #
-    # Abstract Interface
-    #
-    @property
-    def expr(self):
-        """Get the expression on this logical constraint."""
-        raise NotImplementedError
-
-    def set_value(self, expr):
-        """Set the expression on this logical constraint."""
-        raise NotImplementedError
-
-    def get_value(self):
-        """Get the expression on this logical constraint."""
-        raise NotImplementedError
-
-
-class _LogicalConstraintData(metaclass=RenamedClass):
-    __renamed__new_class__ = LogicalConstraintData
-    __renamed__version__ = '6.7.2.dev0'
-
-
-class GeneralLogicalConstraintData(LogicalConstraintData):
-    """
     This class defines the data for a single general logical constraint.
 
     Constructor arguments:
@@ -178,8 +116,13 @@ class GeneralLogicalConstraintData(LogicalConstraintData):
         return self._expr
 
 
+class _LogicalConstraintData(metaclass=RenamedClass):
+    __renamed__new_class__ = LogicalConstraintData
+    __renamed__version__ = '6.7.2.dev0'
+
+
 class _GeneralLogicalConstraintData(metaclass=RenamedClass):
-    __renamed__new_class__ = GeneralLogicalConstraintData
+    __renamed__new_class__ = LogicalConstraintData
     __renamed__version__ = '6.7.2.dev0'
 
 
@@ -225,7 +168,7 @@ class LogicalConstraint(ActiveIndexedComponent):
             The class type for the derived subclass
     """
 
-    _ComponentDataClass = GeneralLogicalConstraintData
+    _ComponentDataClass = LogicalConstraintData
 
     class Infeasible(object):
         pass
@@ -419,14 +362,14 @@ class LogicalConstraint(ActiveIndexedComponent):
         return expr
 
 
-class ScalarLogicalConstraint(GeneralLogicalConstraintData, LogicalConstraint):
+class ScalarLogicalConstraint(LogicalConstraintData, LogicalConstraint):
     """
     ScalarLogicalConstraint is the implementation representing a single,
     non-indexed logical constraint.
     """
 
     def __init__(self, *args, **kwds):
-        GeneralLogicalConstraintData.__init__(self, component=self, expr=None)
+        LogicalConstraintData.__init__(self, component=self, expr=None)
         LogicalConstraint.__init__(self, *args, **kwds)
         self._index = UnindexedComponent_index
 
@@ -446,7 +389,7 @@ class ScalarLogicalConstraint(GeneralLogicalConstraintData, LogicalConstraint):
                     "an expression. There is currently "
                     "nothing to access." % self.name
                 )
-            return GeneralLogicalConstraintData.body.fget(self)
+            return LogicalConstraintData.body.fget(self)
         raise ValueError(
             "Accessing the body of logical constraint '%s' "
             "before the LogicalConstraint has been constructed (there "
