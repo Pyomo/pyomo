@@ -81,51 +81,8 @@ def simple_objectivelist_rule(rule):
     return rule_wrapper(rule, {None: ObjectiveList.End})
 
 
-#
-# This class is a pure interface
-#
-
-
-class ObjectiveData(ExpressionData):
-    """
-    This class defines the data for a single objective.
-
-    Public class attributes:
-        expr            The Pyomo expression for this objective
-        sense           The direction for this objective.
-    """
-
-    __slots__ = ()
-
-    #
-    # Interface
-    #
-
-    def is_minimizing(self):
-        """Return True if this is a minimization objective."""
-        return self.sense == minimize
-
-    #
-    # Abstract Interface
-    #
-
-    @property
-    def sense(self):
-        """Access sense (direction) of this objective."""
-        raise NotImplementedError
-
-    def set_sense(self, sense):
-        """Set the sense (direction) of this objective."""
-        raise NotImplementedError
-
-
-class _ObjectiveData(metaclass=RenamedClass):
-    __renamed__new_class__ = ObjectiveData
-    __renamed__version__ = '6.7.2.dev0'
-
-
-class GeneralObjectiveData(
-    GeneralExpressionDataImpl, ObjectiveData, ActiveComponentData
+class ObjectiveData(
+    GeneralExpressionDataImpl, ActiveComponentData
 ):
     """
     This class defines the data for a single objective.
@@ -166,6 +123,10 @@ class GeneralObjectiveData(
                 "value: %s'" % (minimize, maximize, sense)
             )
 
+    def is_minimizing(self):
+        """Return True if this is a minimization objective."""
+        return self.sense == minimize
+
     def set_value(self, expr):
         if expr is None:
             raise ValueError(_rule_returned_none_error % (self.name,))
@@ -197,8 +158,13 @@ class GeneralObjectiveData(
             )
 
 
+class _ObjectiveData(metaclass=RenamedClass):
+    __renamed__new_class__ = ObjectiveData
+    __renamed__version__ = '6.7.2.dev0'
+
+
 class _GeneralObjectiveData(metaclass=RenamedClass):
-    __renamed__new_class__ = GeneralObjectiveData
+    __renamed__new_class__ = ObjectiveData
     __renamed__version__ = '6.7.2.dev0'
 
 
