@@ -70,7 +70,7 @@ from pyomo.core.base import (
 )
 from pyomo.core.base.component import ActiveComponent
 from pyomo.core.base.constraint import ConstraintData
-from pyomo.core.base.expression import ScalarExpression, GeneralExpressionData
+from pyomo.core.base.expression import ScalarExpression, ExpressionData
 from pyomo.core.base.objective import ScalarObjective, ObjectiveData
 from pyomo.core.base.suffix import SuffixFinder
 from pyomo.core.base.var import VarData

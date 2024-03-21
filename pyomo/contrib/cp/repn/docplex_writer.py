@@ -63,7 +63,7 @@ from pyomo.core.base.boolean_var import (
     BooleanVarData,
     IndexedBooleanVar,
 )
-from pyomo.core.base.expression import ScalarExpression, GeneralExpressionData
+from pyomo.core.base.expression import ScalarExpression, ExpressionData
 from pyomo.core.base.param import IndexedParam, ScalarParam, ParamData
 from pyomo.core.base.var import ScalarVar, VarData, IndexedVar
 import pyomo.core.expr as EXPR
@@ -949,7 +949,7 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         BeforeExpression: _handle_before_expression_node,
         AtExpression: _handle_at_expression_node,
         AlwaysIn: _handle_always_in_node,
-        GeneralExpressionData: _handle_named_expression_node,
+        ExpressionData: _handle_named_expression_node,
         ScalarExpression: _handle_named_expression_node,
     }
     _var_handles = {
@@ -966,7 +966,7 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         ScalarBooleanVar: _before_boolean_var,
         BooleanVarData: _before_boolean_var,
         IndexedBooleanVar: _before_indexed_boolean_var,
-        GeneralExpressionData: _before_named_expression,
+        ExpressionData: _before_named_expression,
         ScalarExpression: _before_named_expression,
         IndexedParam: _before_indexed_param,  # Because of indirection
         ScalarParam: _before_param,

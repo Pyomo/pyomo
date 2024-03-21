@@ -97,7 +97,7 @@ from pyomo.core.base.constraint import (
     Constraint,
     ConstraintData,
 )
-from pyomo.core.base.expression import Expression, ExpressionData
+from pyomo.core.base.expression import Expression, NamedExpressionData, ExpressionData
 from pyomo.core.base.external import ExternalFunction
 from pyomo.core.base.logical_constraint import (
     LogicalConstraint,
@@ -170,10 +170,12 @@ relocated_module_attribute(
 relocated_module_attribute(
     f'_GeneralBooleanVarData', f'pyomo.core.base.BooleanVarData', version='6.7.2.dev0'
 )
+relocated_module_attribute(
+    f'_ExpressionData', f'pyomo.core.base.NamedExpressionData', version='6.7.2.dev0'
+)
 for _cdata in (
     'ConstraintData',
     'LogicalConstraintData',
-    'ExpressionData',
     'VarData',
     'BooleanVarData',
     'ObjectiveData',

@@ -700,7 +700,7 @@ public:
     expr_type_map[UnaryFunctionExpression] = unary_func;
     expr_type_map[NPV_UnaryFunctionExpression] = unary_func;
     expr_type_map[LinearExpression] = linear;
-    expr_type_map[_GeneralExpressionData] = named_expr;
+    expr_type_map[_ExpressionData] = named_expr;
     expr_type_map[ScalarExpression] = named_expr;
     expr_type_map[Integral] = named_expr;
     expr_type_map[ScalarIntegral] = named_expr;
@@ -765,8 +765,8 @@ public:
   py::object NumericConstant =
       py::module_::import("pyomo.core.expr.numvalue").attr("NumericConstant");
   py::object expr_module = py::module_::import("pyomo.core.base.expression");
-  py::object _GeneralExpressionData =
-      expr_module.attr("_GeneralExpressionData");
+  py::object _ExpressionData =
+      expr_module.attr("_ExpressionData");
   py::object ScalarExpression = expr_module.attr("ScalarExpression");
   py::object ScalarIntegral =
       py::module_::import("pyomo.dae.integral").attr("ScalarIntegral");

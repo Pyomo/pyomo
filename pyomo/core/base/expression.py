@@ -44,14 +44,12 @@ class NamedExpressionData(numeric_expr.NumericValue):
         expr       The expression owned by this data.
     """
 
-    __slots__ = ('_args_',)
+    # Note: derived classes are expected to declare teh _args_ slot
+    __slots__ = ()
 
     EXPRESSION_SYSTEM = EXPR.ExpressionType.NUMERIC
     PRECEDENCE = 0
     ASSOCIATIVITY = EXPR.OperatorAssociativity.NON_ASSOCIATIVE
-
-    def __init__(self, expr=None):
-        self._args_ = (expr,)
 
     def __call__(self, exception=True):
         """Compute the value of this expression."""
@@ -199,6 +197,7 @@ class _ExpressionData(metaclass=RenamedClass):
     __renamed__new_class__ = NamedExpressionData
     __renamed__version__ = '6.7.2.dev0'
 
+
 class _GeneralExpressionDataImpl(metaclass=RenamedClass):
     __renamed__new_class__ = NamedExpressionData
     __renamed__version__ = '6.7.2.dev0'
@@ -219,7 +218,7 @@ class ExpressionData(NamedExpressionData, ComponentData):
         _component  The expression component.
     """
 
-    __slots__ = ()
+    __slots__ = ('_args_',)
 
     def __init__(self, expr=None, component=None):
         self._args_ = (expr,)

@@ -34,7 +34,7 @@ from pyomo.core.expr import (
 
 from pyomo.core.expr.visitor import identify_components
 from pyomo.core.expr.base import ExpressionBase
-from pyomo.core.base.expression import ScalarExpression, GeneralExpressionData
+from pyomo.core.base.expression import ScalarExpression, ExpressionData
 from pyomo.core.base.objective import ScalarObjective, ObjectiveData
 import pyomo.core.kernel as kernel
 from pyomo.core.expr.template_expr import (
@@ -399,7 +399,7 @@ class _LatexVisitor(StreamBasedExpressionVisitor):
             EqualityExpression: handle_equality_node,
             InequalityExpression: handle_inequality_node,
             RangedExpression: handle_ranged_inequality_node,
-            GeneralExpressionData: handle_named_expression_node,
+            ExpressionData: handle_named_expression_node,
             ScalarExpression: handle_named_expression_node,
             kernel.expression.expression: handle_named_expression_node,
             kernel.expression.noclone: handle_named_expression_node,
