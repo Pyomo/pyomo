@@ -20,7 +20,7 @@ from pyomo.common.tee import TeeStream, capture_output
 from pyomo.common.log import LogStream
 from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.base import SymbolMap
-from pyomo.core.base.var import GeneralVarData
+from pyomo.core.base.var import VarData
 from pyomo.core.base.constraint import GeneralConstraintData
 from pyomo.core.base.sos import SOSConstraintData
 from pyomo.core.base.param import ParamData
@@ -308,7 +308,7 @@ class Highs(PersistentBase, PersistentSolver):
 
         return lb, ub, vtype
 
-    def _add_variables(self, variables: List[GeneralVarData]):
+    def _add_variables(self, variables: List[VarData]):
         self._sol = None
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()
@@ -493,7 +493,7 @@ class Highs(PersistentBase, PersistentSolver):
                 'Highs interface does not support SOS constraints'
             )
 
-    def _remove_variables(self, variables: List[GeneralVarData]):
+    def _remove_variables(self, variables: List[VarData]):
         self._sol = None
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()
@@ -518,7 +518,7 @@ class Highs(PersistentBase, PersistentSolver):
     def _remove_params(self, params: List[ParamData]):
         pass
 
-    def _update_variables(self, variables: List[GeneralVarData]):
+    def _update_variables(self, variables: List[VarData]):
         self._sol = None
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()

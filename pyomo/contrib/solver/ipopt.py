@@ -25,7 +25,7 @@ from pyomo.common.errors import (
 )
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.timing import HierarchicalTimer
-from pyomo.core.base.var import GeneralVarData
+from pyomo.core.base.var import VarData
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn.plugins.nl_writer import NLWriter, NLWriterInfo
 from pyomo.contrib.solver.base import SolverBase
@@ -80,8 +80,8 @@ class IpoptConfig(SolverConfig):
 
 class IpoptSolutionLoader(SolSolutionLoader):
     def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[GeneralVarData]] = None
-    ) -> Mapping[GeneralVarData, float]:
+        self, vars_to_load: Optional[Sequence[VarData]] = None
+    ) -> Mapping[VarData, float]:
         if self._nl_info is None:
             raise RuntimeError(
                 'Solution loader does not currently have a valid solution. Please '

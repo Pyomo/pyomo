@@ -15,7 +15,7 @@ from typing import Sequence, Dict, Optional, Mapping, NoReturn, List, Tuple
 import os
 
 from pyomo.core.base.constraint import GeneralConstraintData
-from pyomo.core.base.var import GeneralVarData
+from pyomo.core.base.var import VarData
 from pyomo.core.base.param import ParamData
 from pyomo.core.base.block import BlockData
 from pyomo.core.base.objective import GeneralObjectiveData
@@ -194,9 +194,7 @@ class PersistentSolverBase(SolverBase):
         """
         return True
 
-    def _load_vars(
-        self, vars_to_load: Optional[Sequence[GeneralVarData]] = None
-    ) -> NoReturn:
+    def _load_vars(self, vars_to_load: Optional[Sequence[VarData]] = None) -> NoReturn:
         """
         Load the solution of the primal variables into the value attribute of the variables.
 
@@ -212,19 +210,19 @@ class PersistentSolverBase(SolverBase):
 
     @abc.abstractmethod
     def _get_primals(
-        self, vars_to_load: Optional[Sequence[GeneralVarData]] = None
-    ) -> Mapping[GeneralVarData, float]:
+        self, vars_to_load: Optional[Sequence[VarData]] = None
+    ) -> Mapping[VarData, float]:
         """
         Get mapping of variables to primals.
 
         Parameters
         ----------
-        vars_to_load : Optional[Sequence[GeneralVarData]], optional
+        vars_to_load : Optional[Sequence[VarData]], optional
             Which vars to be populated into the map. The default is None.
 
         Returns
         -------
-        Mapping[GeneralVarData, float]
+        Mapping[VarData, float]
             A map of variables to primals.
         """
         raise NotImplementedError(
@@ -251,8 +249,8 @@ class PersistentSolverBase(SolverBase):
         raise NotImplementedError(f'{type(self)} does not support the get_duals method')
 
     def _get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[GeneralVarData]] = None
-    ) -> Mapping[GeneralVarData, float]:
+        self, vars_to_load: Optional[Sequence[VarData]] = None
+    ) -> Mapping[VarData, float]:
         """
         Parameters
         ----------
@@ -282,7 +280,7 @@ class PersistentSolverBase(SolverBase):
         """
 
     @abc.abstractmethod
-    def add_variables(self, variables: List[GeneralVarData]):
+    def add_variables(self, variables: List[VarData]):
         """
         Add variables to the model
         """
@@ -306,7 +304,7 @@ class PersistentSolverBase(SolverBase):
         """
 
     @abc.abstractmethod
-    def remove_variables(self, variables: List[GeneralVarData]):
+    def remove_variables(self, variables: List[VarData]):
         """
         Remove variables from the model
         """
@@ -330,7 +328,7 @@ class PersistentSolverBase(SolverBase):
         """
 
     @abc.abstractmethod
-    def update_variables(self, variables: List[GeneralVarData]):
+    def update_variables(self, variables: List[VarData]):
         """
         Update variables on the model
         """

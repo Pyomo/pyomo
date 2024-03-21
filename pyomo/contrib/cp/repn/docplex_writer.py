@@ -65,7 +65,7 @@ from pyomo.core.base.boolean_var import (
 )
 from pyomo.core.base.expression import ScalarExpression, GeneralExpressionData
 from pyomo.core.base.param import IndexedParam, ScalarParam, ParamData
-from pyomo.core.base.var import ScalarVar, GeneralVarData, IndexedVar
+from pyomo.core.base.var import ScalarVar, VarData, IndexedVar
 import pyomo.core.expr as EXPR
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor, identify_variables
 from pyomo.core.base import Set, RangeSet
@@ -961,7 +961,7 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         IntervalVarData: _before_interval_var,
         IndexedIntervalVar: _before_indexed_interval_var,
         ScalarVar: _before_var,
-        GeneralVarData: _before_var,
+        VarData: _before_var,
         IndexedVar: _before_indexed_var,
         ScalarBooleanVar: _before_boolean_var,
         GeneralBooleanVarData: _before_boolean_var,

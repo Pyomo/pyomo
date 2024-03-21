@@ -680,7 +680,7 @@ public:
     expr_type_map[np_float32] = py_float;
     expr_type_map[np_float64] = py_float;
     expr_type_map[ScalarVar] = var;
-    expr_type_map[_GeneralVarData] = var;
+    expr_type_map[_VarData] = var;
     expr_type_map[AutoLinkedBinaryVar] = var;
     expr_type_map[ScalarParam] = param;
     expr_type_map[_ParamData] = param;
@@ -732,8 +732,8 @@ public:
       py::module_::import("pyomo.core.base.param").attr("_ParamData");
   py::object ScalarVar =
       py::module_::import("pyomo.core.base.var").attr("ScalarVar");
-  py::object _GeneralVarData =
-      py::module_::import("pyomo.core.base.var").attr("_GeneralVarData");
+  py::object _VarData =
+      py::module_::import("pyomo.core.base.var").attr("_VarData");
   py::object AutoLinkedBinaryVar =
       py::module_::import("pyomo.gdp.disjunct").attr("AutoLinkedBinaryVar");
   py::object numeric_expr = py::module_::import("pyomo.core.expr.numeric_expr");

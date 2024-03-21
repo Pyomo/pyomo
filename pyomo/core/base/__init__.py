@@ -40,7 +40,6 @@ from pyomo.core.base.component import name, Component, ModelComponentFactory
 from pyomo.core.base.componentuid import ComponentUID
 from pyomo.core.base.config import PyomoOptions
 from pyomo.core.base.enums import SortComponents, TraversalStrategy
-from pyomo.core.base.instance2dat import instance2dat
 from pyomo.core.base.label import (
     CuidLabeler,
     CounterLabeler,
@@ -146,7 +145,9 @@ from pyomo.core.base.suffix import (
     active_import_suffix_generator,
     Suffix,
 )
-from pyomo.core.base.var import Var, VarData, GeneralVarData, ScalarVar, VarList
+from pyomo.core.base.var import Var, VarData, VarData, ScalarVar, VarList
+
+from pyomo.core.base.instance2dat import instance2dat
 
 #
 # These APIs are deprecated and should be removed in the near future
@@ -163,12 +164,14 @@ relocated_module_attribute(
     'SimpleBooleanVar', 'pyomo.core.base.boolean_var.SimpleBooleanVar', version='6.0'
 )
 # Historically, only a subset of "private" component data classes were imported here
+relocated_module_attribute(
+    f'_GeneralVarData', f'pyomo.core.base.VarData', version='6.7.2.dev0'
+)
 for _cdata in (
     'ConstraintData',
     'LogicalConstraintData',
     'ExpressionData',
     'VarData',
-    'GeneralVarData',
     'GeneralBooleanVarData',
     'BooleanVarData',
     'ObjectiveData',

@@ -11,7 +11,7 @@
 
 from typing import List
 from pyomo.core.base.param import ParamData
-from pyomo.core.base.var import GeneralVarData
+from pyomo.core.base.var import VarData
 from pyomo.core.base.constraint import GeneralConstraintData
 from pyomo.core.base.objective import GeneralObjectiveData
 from pyomo.core.base.sos import SOSConstraintData
@@ -77,7 +77,7 @@ class LPWriter(PersistentBase):
         if self._objective is None:
             self.set_objective(None)
 
-    def _add_variables(self, variables: List[GeneralVarData]):
+    def _add_variables(self, variables: List[VarData]):
         cmodel.process_pyomo_vars(
             self._expr_types,
             variables,
@@ -117,7 +117,7 @@ class LPWriter(PersistentBase):
         if len(cons) != 0:
             raise NotImplementedError('LP writer does not yet support SOS constraints')
 
-    def _remove_variables(self, variables: List[GeneralVarData]):
+    def _remove_variables(self, variables: List[VarData]):
         for v in variables:
             cvar = self._pyomo_var_to_solver_var_map.pop(id(v))
             del self._solver_var_to_pyomo_var_map[cvar]
@@ -128,7 +128,7 @@ class LPWriter(PersistentBase):
             del self._pyomo_param_to_solver_param_map[id(p)]
             self._symbol_map.removeSymbol(p)
 
-    def _update_variables(self, variables: List[GeneralVarData]):
+    def _update_variables(self, variables: List[VarData]):
         cmodel.process_pyomo_vars(
             self._expr_types,
             variables,

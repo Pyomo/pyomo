@@ -13,7 +13,7 @@ import pyomo.environ as pyo
 import math
 from pyomo.core.base.block import BlockData
 from pyomo.common.collections import ComponentSet
-from pyomo.core.base.var import GeneralVarData
+from pyomo.core.base.var import VarData
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.core.expr.calculus.diff_with_pyomo import reverse_sd
 import logging
@@ -73,7 +73,7 @@ def _check_coefficients(
 ):
     ders = reverse_sd(expr)
     for _v, _der in ders.items():
-        if isinstance(_v, GeneralVarData):
+        if isinstance(_v, VarData):
             if _v.is_fixed():
                 continue
             der_lb, der_ub = compute_bounds_on_expr(_der)

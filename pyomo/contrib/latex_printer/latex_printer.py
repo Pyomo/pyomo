@@ -47,7 +47,7 @@ from pyomo.core.expr.template_expr import (
     resolve_template,
     templatize_rule,
 )
-from pyomo.core.base.var import ScalarVar, GeneralVarData, IndexedVar
+from pyomo.core.base.var import ScalarVar, VarData, IndexedVar
 from pyomo.core.base.param import ParamData, ScalarParam, IndexedParam
 from pyomo.core.base.set import SetData, SetOperator
 from pyomo.core.base.constraint import ScalarConstraint, IndexedConstraint
@@ -404,7 +404,7 @@ class _LatexVisitor(StreamBasedExpressionVisitor):
             kernel.expression.expression: handle_named_expression_node,
             kernel.expression.noclone: handle_named_expression_node,
             GeneralObjectiveData: handle_named_expression_node,
-            GeneralVarData: handle_var_node,
+            VarData: handle_var_node,
             ScalarObjective: handle_named_expression_node,
             kernel.objective.objective: handle_named_expression_node,
             ExternalFunctionExpression: handle_external_function_node,
@@ -705,10 +705,8 @@ def latex_printer(
     if isSingle:
         temp_comp, temp_indexes = templatize_fcn(pyomo_component)
         variableList = []
-        for v in identify_components(
-            temp_comp, [ScalarVar, GeneralVarData, IndexedVar]
-        ):
-            if isinstance(v, GeneralVarData):
+        for v in identify_components(temp_comp, [ScalarVar, VarData, IndexedVar]):
+            if isinstance(v, VarData):
                 v_write = v.parent_component()
                 if v_write not in ComponentSet(variableList):
                     variableList.append(v_write)
@@ -1273,7 +1271,7 @@ def latex_printer(
 
     rep_dict = {}
     for ky in reversed(list(latex_component_map)):
-        if isinstance(ky, (pyo.Var, GeneralVarData)):
+        if isinstance(ky, (pyo.Var, VarData)):
             overwrite_value = latex_component_map[ky]
             if ky not in existing_components:
                 overwrite_value = overwrite_value.replace('_', '\\_')

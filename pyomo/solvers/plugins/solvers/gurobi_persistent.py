@@ -192,7 +192,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
         Parameters
         ----------
-        con: pyomo.core.base.var.GeneralVarData
+        con: pyomo.core.base.var.VarData
             The pyomo var for which the corresponding gurobi var attribute
             should be modified.
         attr: str
@@ -342,7 +342,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
         Parameters
         ----------
-        var: pyomo.core.base.var.GeneralVarData
+        var: pyomo.core.base.var.VarData
             The pyomo var for which the corresponding gurobi var attribute
             should be retrieved.
         attr: str
