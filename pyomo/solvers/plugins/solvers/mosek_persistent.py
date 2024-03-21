@@ -95,7 +95,7 @@ class MOSEKPersistent(PersistentSolver, MOSEKDirect):
         This will keep any other model components intact.
         Parameters
         ----------
-        solver_var: Var (scalar Var or single _VarData)
+        solver_var: Var (scalar Var or single VarData)
         """
         self.remove_vars(solver_var)
 
@@ -106,7 +106,7 @@ class MOSEKPersistent(PersistentSolver, MOSEKDirect):
         This will keep any other model components intact.
         Parameters
         ----------
-        *solver_var: Var (scalar Var or single _VarData)
+        *solver_var: Var (scalar Var or single VarData)
         """
         try:
             var_ids = []

@@ -88,7 +88,7 @@ _VARDATA_API = (
 )
 
 
-class _VarData(ComponentData, NumericValue):
+class VarData(ComponentData, NumericValue):
     """This class defines the abstract interface for a single variable.
 
     Note that this "abstract" class is not intended to be directly
@@ -319,7 +319,12 @@ class _VarData(ComponentData, NumericValue):
         return self.unfix()
 
 
-class GeneralVarData(_VarData):
+class _VarData(metaclass=RenamedClass):
+    __renamed__new_class__ = VarData
+    __renamed__version__ = '6.7.2.dev0'
+
+
+class GeneralVarData(VarData):
     """This class defines the data for a single variable."""
 
     __slots__ = ('_value', '_lb', '_ub', '_domain', '_fixed', '_stale')
@@ -329,7 +334,7 @@ class GeneralVarData(_VarData):
         #
         # These lines represent in-lining of the
         # following constructors:
-        #   - _VarData
+        #   - VarData
         #   - ComponentData
         #   - NumericValue
         self._component = weakref_ref(component) if (component is not None) else None
@@ -448,9 +453,9 @@ class GeneralVarData(_VarData):
             )
             raise
 
-    @_VarData.bounds.getter
+    @VarData.bounds.getter
     def bounds(self):
-        # Custom implementation of _VarData.bounds to avoid unnecessary
+        # Custom implementation of VarData.bounds to avoid unnecessary
         # expression generation and duplicate calls to domain.bounds()
         domain_lb, domain_ub = self.domain.bounds()
         # lb is the tighter of the domain and bounds
@@ -491,9 +496,9 @@ class GeneralVarData(_VarData):
                 ub = min(ub, domain_ub)
         return lb, ub
 
-    @_VarData.lb.getter
+    @VarData.lb.getter
     def lb(self):
-        # Custom implementation of _VarData.lb to avoid unnecessary
+        # Custom implementation of VarData.lb to avoid unnecessary
         # expression generation
         domain_lb, domain_ub = self.domain.bounds()
         # lb is the tighter of the domain and bounds
@@ -516,9 +521,9 @@ class GeneralVarData(_VarData):
                 lb = max(lb, domain_lb)
         return lb
 
-    @_VarData.ub.getter
+    @VarData.ub.getter
     def ub(self):
-        # Custom implementation of _VarData.ub to avoid unnecessary
+        # Custom implementation of VarData.ub to avoid unnecessary
         # expression generation
         domain_lb, domain_ub = self.domain.bounds()
         # ub is the tighter of the domain and bounds
@@ -780,7 +785,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
 
     def construct(self, data=None):
         """
-        Construct the _VarData objects for this variable
+        Construct the VarData objects for this variable
         """
         if self._constructed:
             return
@@ -839,7 +844,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
                 # initializers that are constant, we can avoid
                 # re-calling (and re-validating) the inputs in certain
                 # cases.  To support this, we will create the first
-                # _VarData and then use it as a template to initialize
+                # VarData and then use it as a template to initialize
                 # (constant portions of) every VarData so as to not
                 # repeat all the domain/bounds validation.
                 try:
@@ -1008,7 +1013,7 @@ class IndexedVar(Var):
     def unfix(self):
         """Unfix all variables in this :class:`IndexedVar` (treat as variable)
 
-        This sets the :attr:`_VarData.fixed` indicator to False for
+        This sets the :attr:`VarData.fixed` indicator to False for
         every variable in this :class:`IndexedVar`.
 
         """

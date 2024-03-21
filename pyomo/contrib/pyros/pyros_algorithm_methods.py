@@ -28,7 +28,7 @@ from pyomo.contrib.pyros.util import get_main_elapsed_time, coefficient_matching
 from pyomo.core.base import value
 from pyomo.core.expr import MonomialTermExpression
 from pyomo.common.collections import ComponentSet, ComponentMap
-from pyomo.core.base.var import _VarData as VarData
+from pyomo.core.base.var import VarData as VarData
 from itertools import chain
 from pyomo.common.dependencies import numpy as np
 

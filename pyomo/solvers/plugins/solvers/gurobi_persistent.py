@@ -111,7 +111,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
         Parameters
         ----------
-        var: Var (scalar Var or single _VarData)
+        var: Var (scalar Var or single VarData)
 
         """
         # see PR #366 for discussion about handling indexed
@@ -710,7 +710,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
         Parameters
         ----------
-        var: Var (scalar Var or single _VarData)
+        var: Var (scalar Var or single VarData)
         obj_coef: float
         constraints: list of solver constraints
         coefficients: list of coefficients to put on var in the associated constraint

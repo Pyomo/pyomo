@@ -60,7 +60,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         # The LP writer tracks which variables are
         # referenced in constraints, so that a user does not end up with a
         # zillion "unreferenced variables" warning messages.
-        # This dictionary maps id(_VarData) -> _VarData.
+        # This dictionary maps id(VarData) -> VarData.
         self._referenced_variable_ids = {}
 
         # Per ticket #4319, we are using %.17g, which mocks the

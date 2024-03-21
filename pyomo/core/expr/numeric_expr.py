@@ -1238,7 +1238,7 @@ class LinearExpression(SumExpression):
 
       - not potentially variable (e.g., native types, Params, or NPV expressions)
       - :py:class:`MonomialTermExpression`
-      - :py:class:`_VarData`
+      - :py:class:`VarData`
 
     Args:
         args (tuple): Children nodes

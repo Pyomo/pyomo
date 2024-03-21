@@ -16,7 +16,7 @@ from pyomo.common.config import (
     Path,
 )
 from pyomo.common.errors import ApplicationError, PyomoException
-from pyomo.core.base import Var, _VarData
+from pyomo.core.base import Var, VarData
 from pyomo.core.base.param import Param, ParamData
 from pyomo.opt import SolverFactory
 from pyomo.contrib.pyros.util import ObjectiveType, setup_pyros_logger
@@ -98,7 +98,7 @@ class InputDataStandardizer(object):
         Pyomo component type, such as Component, Var or Param.
     cdatatype : type
         Corresponding Pyomo component data type, such as
-        _ComponentData, _VarData, or ParamData.
+        _ComponentData, VarData, or ParamData.
     ctype_validator : callable, optional
         Validator function for objects of type `ctype`.
     cdatatype_validator : callable, optional
@@ -511,7 +511,7 @@ def pyros_config():
         "first_stage_variables",
         ConfigValue(
             default=[],
-            domain=InputDataStandardizer(Var, _VarData, allow_repeats=False),
+            domain=InputDataStandardizer(Var, VarData, allow_repeats=False),
             description="First-stage (or design) variables.",
             visibility=1,
         ),
@@ -520,7 +520,7 @@ def pyros_config():
         "second_stage_variables",
         ConfigValue(
             default=[],
-            domain=InputDataStandardizer(Var, _VarData, allow_repeats=False),
+            domain=InputDataStandardizer(Var, VarData, allow_repeats=False),
             description="Second-stage (or control) variables.",
             visibility=1,
         ),

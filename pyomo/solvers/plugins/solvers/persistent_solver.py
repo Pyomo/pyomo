@@ -206,7 +206,7 @@ class PersistentSolver(DirectOrPersistentSolver):
         Parameters
         ----------
         model: pyomo ConcreteModel to which the column will be added
-        var: Var (scalar Var or single _VarData)
+        var: Var (scalar Var or single VarData)
         obj_coef: float, pyo.Param
         constraints: list of scalar Constraints of single ConstraintDatas
         coefficients: list of the coefficient to put on var in the associated constraint
@@ -380,7 +380,7 @@ class PersistentSolver(DirectOrPersistentSolver):
 
         Parameters
         ----------
-        var: Var (scalar Var or single _VarData)
+        var: Var (scalar Var or single VarData)
 
         """
         # see PR #366 for discussion about handling indexed

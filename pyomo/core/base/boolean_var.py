@@ -270,14 +270,14 @@ class GeneralBooleanVarData(BooleanVarData):
             self._stale = StaleFlagManager.get_flag(0)
 
     def get_associated_binary(self):
-        """Get the binary _VarData associated with this
+        """Get the binary VarData associated with this
         GeneralBooleanVarData"""
         return (
             self._associated_binary() if self._associated_binary is not None else None
         )
 
     def associate_binary_var(self, binary_var):
-        """Associate a binary _VarData to this GeneralBooleanVarData"""
+        """Associate a binary VarData to this GeneralBooleanVarData"""
         if (
             self._associated_binary is not None
             and type(self._associated_binary)

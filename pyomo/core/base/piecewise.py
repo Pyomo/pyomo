@@ -47,7 +47,7 @@ from pyomo.core.base.block import Block, BlockData
 from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.constraint import Constraint, ConstraintList
 from pyomo.core.base.sos import SOSConstraint
-from pyomo.core.base.var import Var, _VarData, IndexedVar
+from pyomo.core.base.var import Var, VarData, IndexedVar
 from pyomo.core.base.set_types import PositiveReals, NonNegativeReals, Binary
 from pyomo.core.base.util import flatten_tuple
 
@@ -1240,7 +1240,7 @@ class Piecewise(Block):
 
         # Check that the variables args are actually Pyomo Vars
         if not (
-            isinstance(self._domain_var, _VarData)
+            isinstance(self._domain_var, VarData)
             or isinstance(self._domain_var, IndexedVar)
         ):
             msg = (
@@ -1249,7 +1249,7 @@ class Piecewise(Block):
             )
             raise TypeError(msg % (repr(self._domain_var),))
         if not (
-            isinstance(self._range_var, _VarData)
+            isinstance(self._range_var, VarData)
             or isinstance(self._range_var, IndexedVar)
         ):
             msg = (
@@ -1359,22 +1359,22 @@ class Piecewise(Block):
         _self_yvar = None
         _self_domain_pts_index = None
         if not _is_indexed:
-            # allows one to mix Var and _VarData as input to
+            # allows one to mix Var and VarData as input to
             # non-indexed Piecewise, index would be None in this case
-            # so for Var elements Var[None] is Var, but _VarData[None] would fail
+            # so for Var elements Var[None] is Var, but VarData[None] would fail
             _self_xvar = self._domain_var
             _self_yvar = self._range_var
             _self_domain_pts_index = self._domain_points[index]
         else:
-            # The following allows one to specify a Var or _VarData
+            # The following allows one to specify a Var or VarData
             # object even with an indexed Piecewise component.
             # The most common situation will most likely be a VarArray,
             # so we try this first.
-            if not isinstance(self._domain_var, _VarData):
+            if not isinstance(self._domain_var, VarData):
                 _self_xvar = self._domain_var[index]
             else:
                 _self_xvar = self._domain_var
-            if not isinstance(self._range_var, _VarData):
+            if not isinstance(self._range_var, VarData):
                 _self_yvar = self._range_var[index]
             else:
                 _self_yvar = self._range_var

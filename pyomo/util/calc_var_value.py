@@ -53,7 +53,7 @@ def calculate_variable_from_constraint(
 
     Parameters:
     -----------
-    variable: :py:class:`_VarData`
+    variable: :py:class:`VarData`
         The variable to solve for
     constraint: :py:class:`ConstraintData` or relational expression or `tuple`
         The equality constraint to use to solve for the variable value.

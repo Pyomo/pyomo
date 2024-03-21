@@ -77,7 +77,7 @@ from pyomo.core.base.objective import (
     ObjectiveData,
 )
 from pyomo.core.base.suffix import SuffixFinder
-from pyomo.core.base.var import _VarData
+from pyomo.core.base.var import VarData
 import pyomo.core.kernel as kernel
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.opt import WriterFactory
@@ -129,7 +129,7 @@ class NLWriterInfo(object):
 
     Attributes
     ----------
-    variables: List[_VarData]
+    variables: List[VarData]
 
         The list of (unfixed) Pyomo model variables in the order written
         to the NL file
@@ -162,10 +162,10 @@ class NLWriterInfo(object):
         file in the same order as the :py:attr:`variables` and generated
         .col file.
 
-    eliminated_vars: List[Tuple[_VarData, NumericExpression]]
+    eliminated_vars: List[Tuple[VarData, NumericExpression]]
 
         The list of variables in the model that were eliminated by the
-        presolve.  Each entry is a 2-tuple of (:py:class:`_VarData`,
+        presolve.  Each entry is a 2-tuple of (:py:class:`VarData`,
         :py:class`NumericExpression`|`float`).  The list is in the
         necessary order for correct evaluation (i.e., all variables
         appearing in the expression must either have been sent to the
@@ -466,7 +466,7 @@ class SuffixData(object):
                     self.obj[obj_order[_id]] = val
                 elif _id == model_id:
                     self.prob[0] = val
-                elif isinstance(obj, (_VarData, ConstraintData, ObjectiveData)):
+                elif isinstance(obj, (VarData, ConstraintData, ObjectiveData)):
                     missing_component_data.add(obj)
                 elif isinstance(obj, (Var, Constraint, Objective)):
                     # Expand this indexed component to store the

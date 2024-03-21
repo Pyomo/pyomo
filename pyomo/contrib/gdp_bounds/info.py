@@ -35,7 +35,7 @@ def disjunctive_bound(var, scope):
     """Compute the disjunctive bounds for a variable in a given scope.
 
     Args:
-        var (_VarData): Variable for which to compute bound
+        var (VarData): Variable for which to compute bound
         scope (Component): The scope in which to compute the bound. If not a
             DisjunctData, it will walk up the tree and use the scope of the
             most immediate enclosing DisjunctData.

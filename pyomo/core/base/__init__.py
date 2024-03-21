@@ -57,7 +57,7 @@ from pyomo.core.base.action import BuildAction
 from pyomo.core.base.check import BuildCheck
 from pyomo.core.base.set import Set, SetOf, simple_set_rule, RangeSet
 from pyomo.core.base.param import Param
-from pyomo.core.base.var import Var, _VarData, GeneralVarData, ScalarVar, VarList
+from pyomo.core.base.var import Var, VarData, GeneralVarData, ScalarVar, VarList
 from pyomo.core.base.boolean_var import (
     BooleanVar,
     BooleanVarData,

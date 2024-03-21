@@ -19,7 +19,7 @@ from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.core.base.set_types import NonNegativeIntegers
-from pyomo.core.base.var import _VarData
+from pyomo.core.base.var import VarData
 from pyomo.core.expr import (
     identify_variables,
     identify_mutable_parameters,
@@ -592,7 +592,7 @@ class testAddDecisionRuleConstraints(unittest.TestCase):
                     param_product_multiplicand = term.args[0]
                     dr_var_multiplicand = term.args[1]
                 else:
-                    self.assertIsInstance(term, _VarData)
+                    self.assertIsInstance(term, VarData)
                     param_product_multiplicand = 1
                     dr_var_multiplicand = term
 

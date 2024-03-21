@@ -168,8 +168,8 @@ def _build_op_template():
     _op_template[EXPR.EqualityExpression] = "o24{C}\n"
     _op_comment[EXPR.EqualityExpression] = "\t#eq"
 
-    _op_template[var._VarData] = "v%d{C}\n"
-    _op_comment[var._VarData] = "\t#%s"
+    _op_template[var.VarData] = "v%d{C}\n"
+    _op_comment[var.VarData] = "\t#%s"
 
     _op_template[param.ParamData] = "n%r{C}\n"
     _op_comment[param.ParamData] = ""
@@ -733,16 +733,16 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     % (exp_type)
                 )
 
-        elif isinstance(exp, (var._VarData, IVariable)) and (not exp.is_fixed()):
+        elif isinstance(exp, (var.VarData, IVariable)) and (not exp.is_fixed()):
             # (self._output_fixed_variable_bounds or
             if not self._symbolic_solver_labels:
                 OUTPUT.write(
-                    self._op_string[var._VarData]
+                    self._op_string[var.VarData]
                     % (self.ampl_var_id[self._varID_map[id(exp)]])
                 )
             else:
                 OUTPUT.write(
-                    self._op_string[var._VarData]
+                    self._op_string[var.VarData]
                     % (
                         self.ampl_var_id[self._varID_map[id(exp)]],
                         self._name_labeler(exp),

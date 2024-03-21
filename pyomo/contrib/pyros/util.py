@@ -832,7 +832,7 @@ def get_state_vars(blk, first_stage_variables, second_stage_variables):
     Get state variables of a modeling block.
 
     The state variables with respect to `blk` are the unfixed
-    `_VarData` objects participating in the active objective
+    `VarData` objects participating in the active objective
     or constraints descended from `blk` which are not
     first-stage variables or second-stage variables.
 
@@ -847,7 +847,7 @@ def get_state_vars(blk, first_stage_variables, second_stage_variables):
 
     Yields
     ------
-    _VarData
+    VarData
         State variable.
     """
     dof_var_set = ComponentSet(first_stage_variables) | ComponentSet(
@@ -954,7 +954,7 @@ def validate_variable_partitioning(model, config):
 
     Returns
     -------
-    list of _VarData
+    list of VarData
         State variables of the model.
 
     Raises
