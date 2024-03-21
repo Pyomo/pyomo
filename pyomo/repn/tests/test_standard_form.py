@@ -245,33 +245,21 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
             m, mixed_form=True, column_order=col_order
         )
 
-        self.assertEqual(repn.rows, [(m.c, -1), (m.d, 1), (m.e, 1), (m.e, -1), (m.f, 0)])
         self.assertEqual(
-            list(map(str, repn.x)),
-            ['x', 'y[0]', 'y[1]', 'y[3]'],
+            repn.rows, [(m.c, -1), (m.d, 1), (m.e, 1), (m.e, -1), (m.f, 0)]
         )
+        self.assertEqual(list(map(str, repn.x)), ['x', 'y[0]', 'y[1]', 'y[3]'])
         self.assertEqual(
-            list(v.bounds for v in repn.x),
-            [(None, None), (0, 10), (-5, 10), (-5, -2)],
+            list(v.bounds for v in repn.x), [(None, None), (0, 10), (-5, 10), (-5, -2)]
         )
         ref = np.array(
-            [
-                [1, 0, 2, 0],
-                [0, 0, 1, 4],
-                [0, 1, 6, 0],
-                [0, 1, 6, 0],
-                [1, 1, 0, 0],
-            ]
+            [[1, 0, 2, 0], [0, 0, 1, 4], [0, 1, 6, 0], [0, 1, 6, 0], [1, 1, 0, 0]]
         )
         self.assertTrue(np.all(repn.A == ref))
         print(repn)
         print(repn.b)
         self.assertTrue(np.all(repn.b == np.array([3, 5, 6, -3, 8])))
-        self.assertTrue(
-            np.all(
-                repn.c == np.array([[-1, 0, -5, 0], [1, 0, 0, 15]])
-            )
-        )
+        self.assertTrue(np.all(repn.c == np.array([[-1, 0, -5, 0], [1, 0, 0, 15]])))
         # Note that the solution is a mix of inequality and equality constraints
         # self._verify_solution(soln, repn, False)
 
