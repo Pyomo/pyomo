@@ -134,6 +134,15 @@ class SCIPDirect(DirectSolver):
     def _get_expr_from_pyomo_repn(self, repn, max_degree=None):
         referenced_vars = ComponentSet()
 
+        degree = repn.polynomial_degree()
+        if (max_degree is not None) and (degree > max_degree):
+            raise DegreeError(
+                "While SCIP supports general non-linear constraints, the objective must be linear. "
+                "Please reformulate the objective by introducing a new variable. "
+                "For min problems: min z s.t z >= f(x). For max problems: max z s.t z <= f(x). "
+                "f(x) is the original non-linear objective."
+            )
+
         new_expr = repn.constant
 
         if len(repn.linear_vars) > 0:
