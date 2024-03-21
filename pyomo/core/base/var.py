@@ -575,7 +575,7 @@ class _VarData(metaclass=RenamedClass):
     __renamed__version__ = '6.7.2.dev0'
 
 
-class _VarData(metaclass=RenamedClass):
+class _GeneralVarData(metaclass=RenamedClass):
     __renamed__new_class__ = VarData
     __renamed__version__ = '6.7.2.dev0'
 
