@@ -17,7 +17,7 @@ from .set import (
     process_setarg,
     set_options,
     simple_set_rule,
-    SetDataBase,
+    _SetDataBase,
     SetData,
     Set,
     SetOf,

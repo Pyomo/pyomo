@@ -33,10 +33,14 @@ from pyomo.core.expr.boolean_value import (
     BooleanValue,
     native_logical_values,
 )
-from pyomo.core.kernel.objective import minimize, maximize
-from pyomo.core.base.config import PyomoOptions
 
-from pyomo.core.base.expression import Expression, ExpressionData
+from pyomo.core.kernel.objective import minimize, maximize
+
+from pyomo.core.base.component import name, Component, ModelComponentFactory
+from pyomo.core.base.componentuid import ComponentUID
+from pyomo.core.base.config import PyomoOptions
+from pyomo.core.base.enums import SortComponents, TraversalStrategy
+from pyomo.core.base.instance2dat import instance2dat
 from pyomo.core.base.label import (
     CuidLabeler,
     CounterLabeler,
@@ -47,17 +51,37 @@ from pyomo.core.base.label import (
     NameLabeler,
     ShortNameLabeler,
 )
+from pyomo.core.base.misc import display
+from pyomo.core.base.reference import Reference
+from pyomo.core.base.symbol_map import symbol_map_from_instance
+from pyomo.core.base.transformation import (
+    Transformation,
+    TransformationFactory,
+    ReverseTransformationToken,
+)
+
+from pyomo.core.base.PyomoModel import (
+    global_option,
+    ModelSolution,
+    ModelSolutions,
+    Model,
+    ConcreteModel,
+    AbstractModel,
+)
 
 #
 # Components
 #
-from pyomo.core.base.component import name, Component, ModelComponentFactory
-from pyomo.core.base.componentuid import ComponentUID
 from pyomo.core.base.action import BuildAction
-from pyomo.core.base.check import BuildCheck
-from pyomo.core.base.set import Set, SetOf, simple_set_rule, RangeSet
-from pyomo.core.base.param import Param
-from pyomo.core.base.var import Var, VarData, GeneralVarData, ScalarVar, VarList
+from pyomo.core.base.block import (
+    Block,
+    BlockData,
+    ScalarBlock,
+    active_components,
+    components,
+    active_components_data,
+    components_data,
+)
 from pyomo.core.base.boolean_var import (
     BooleanVar,
     BooleanVarData,
@@ -65,6 +89,8 @@ from pyomo.core.base.boolean_var import (
     BooleanVarList,
     ScalarBooleanVar,
 )
+from pyomo.core.base.check import BuildCheck
+from pyomo.core.base.connector import Connector, ConnectorData
 from pyomo.core.base.constraint import (
     simple_constraint_rule,
     simple_constraintlist_rule,
@@ -72,6 +98,8 @@ from pyomo.core.base.constraint import (
     Constraint,
     ConstraintData,
 )
+from pyomo.core.base.expression import Expression, ExpressionData
+from pyomo.core.base.external import ExternalFunction
 from pyomo.core.base.logical_constraint import (
     LogicalConstraint,
     LogicalConstraintList,
@@ -84,19 +112,13 @@ from pyomo.core.base.objective import (
     ObjectiveList,
     ObjectiveData,
 )
-from pyomo.core.base.connector import Connector
-from pyomo.core.base.sos import SOSConstraint
-from pyomo.core.base.piecewise import Piecewise
-from pyomo.core.base.suffix import (
-    active_export_suffix_generator,
-    active_import_suffix_generator,
-    Suffix,
-)
-from pyomo.core.base.external import ExternalFunction
-from pyomo.core.base.symbol_map import symbol_map_from_instance
-from pyomo.core.base.reference import Reference
-
+from pyomo.core.base.param import Param, ParamData
+from pyomo.core.base.piecewise import Piecewise, PiecewiseData
 from pyomo.core.base.set import (
+    Set,
+    SetData,
+    SetOf,
+    RangeSet,
     Reals,
     PositiveReals,
     NonPositiveReals,
@@ -116,34 +138,19 @@ from pyomo.core.base.set import (
     PercentFraction,
     RealInterval,
     IntegerInterval,
+    simple_set_rule,
 )
-from pyomo.core.base.misc import display
-from pyomo.core.base.block import (
-    Block,
-    ScalarBlock,
-    active_components,
-    components,
-    active_components_data,
-    components_data,
+from pyomo.core.base.sos import SOSConstraint, SOSConstraintData
+from pyomo.core.base.suffix import (
+    active_export_suffix_generator,
+    active_import_suffix_generator,
+    Suffix,
 )
-from pyomo.core.base.enums import SortComponents, TraversalStrategy
-from pyomo.core.base.PyomoModel import (
-    global_option,
-    ModelSolution,
-    ModelSolutions,
-    Model,
-    ConcreteModel,
-    AbstractModel,
-)
-from pyomo.core.base.transformation import (
-    Transformation,
-    TransformationFactory,
-    ReverseTransformationToken,
-)
+from pyomo.core.base.var import Var, VarData, GeneralVarData, ScalarVar, VarList
 
-from pyomo.core.base.instance2dat import instance2dat
-
+#
 # These APIs are deprecated and should be removed in the near future
+#
 from pyomo.core.base.set import set_options, RealSet, IntegerSet, BooleanSet
 
 from pyomo.common.deprecation import relocated_module_attribute
@@ -155,4 +162,19 @@ relocated_module_attribute('SimpleVar', 'pyomo.core.base.var.SimpleVar', version
 relocated_module_attribute(
     'SimpleBooleanVar', 'pyomo.core.base.boolean_var.SimpleBooleanVar', version='6.0'
 )
+# Historically, only a subset of "private" component data classes were imported here
+for _cdata in (
+    'ConstraintData',
+    'LogicalConstraintData',
+    'ExpressionData',
+    'VarData',
+    'GeneralVarData',
+    'GeneralBooleanVarData',
+    'BooleanVarData',
+    'ObjectiveData',
+):
+    relocated_module_attribute(
+        f'_{_cdata}', f'pyomo.core.base.{_cdata}', version='6.7.2.dev0'
+    )
+del _cdata
 del relocated_module_attribute

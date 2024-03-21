@@ -40,7 +40,7 @@ import types
 import enum
 
 from pyomo.common.log import is_debug_set
-from pyomo.common.deprecation import deprecation_warning
+from pyomo.common.deprecation import RenamedClass, deprecation_warning
 from pyomo.common.numeric_types import value
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.block import Block, BlockData
