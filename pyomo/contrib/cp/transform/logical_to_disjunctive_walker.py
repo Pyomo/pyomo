@@ -209,7 +209,7 @@ _operator_dispatcher[EXPR.AtMostExpression] = _dispatch_atmost
 
 _before_child_dispatcher = {}
 _before_child_dispatcher[BV.ScalarBooleanVar] = _dispatch_boolean_var
-_before_child_dispatcher[BV.GeneralBooleanVarData] = _dispatch_boolean_var
+_before_child_dispatcher[BV.BooleanVarData] = _dispatch_boolean_var
 _before_child_dispatcher[AutoLinkedBooleanVar] = _dispatch_boolean_var
 _before_child_dispatcher[ParamData] = _dispatch_param
 _before_child_dispatcher[ScalarParam] = _dispatch_param

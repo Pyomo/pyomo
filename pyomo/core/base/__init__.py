@@ -84,7 +84,7 @@ from pyomo.core.base.block import (
 from pyomo.core.base.boolean_var import (
     BooleanVar,
     BooleanVarData,
-    GeneralBooleanVarData,
+    BooleanVarData,
     BooleanVarList,
     ScalarBooleanVar,
 )
@@ -167,12 +167,14 @@ relocated_module_attribute(
 relocated_module_attribute(
     f'_GeneralVarData', f'pyomo.core.base.VarData', version='6.7.2.dev0'
 )
+relocated_module_attribute(
+    f'_GeneralBooleanVarData', f'pyomo.core.base.BooleanVarData', version='6.7.2.dev0'
+)
 for _cdata in (
     'ConstraintData',
     'LogicalConstraintData',
     'ExpressionData',
     'VarData',
-    'GeneralBooleanVarData',
     'BooleanVarData',
     'ObjectiveData',
 ):
