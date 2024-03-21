@@ -129,7 +129,7 @@ class SuffixDirection(enum.IntEnum):
     IMPORT_EXPORT = 3
 
 
-SuffixDataTypeDomain = In(SuffixDataType)
+_SuffixDataTypeDomain = In(SuffixDataType)
 _SuffixDirectionDomain = In(SuffixDirection)
 
 
@@ -253,7 +253,7 @@ class Suffix(ComponentMap, ActiveComponent):
     def datatype(self, datatype):
         """Set the suffix datatype."""
         if datatype is not None:
-            datatype = SuffixDataTypeDomain(datatype)
+            datatype = _SuffixDataTypeDomain(datatype)
         self._datatype = datatype
 
     @property
