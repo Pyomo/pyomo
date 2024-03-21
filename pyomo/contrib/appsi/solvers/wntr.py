@@ -42,7 +42,7 @@ from typing import Dict, Optional, List
 from pyomo.core.base.block import BlockData
 from pyomo.core.base.var import VarData
 from pyomo.core.base.param import ParamData
-from pyomo.core.base.constraint import GeneralConstraintData
+from pyomo.core.base.constraint import ConstraintData
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
 from pyomo.common.dependencies import attempt_import
@@ -278,7 +278,7 @@ class Wntr(PersistentBase, PersistentSolver):
             setattr(self._solver_model, pname, wntr_p)
             self._pyomo_param_to_solver_param_map[id(p)] = wntr_p
 
-    def _add_constraints(self, cons: List[GeneralConstraintData]):
+    def _add_constraints(self, cons: List[ConstraintData]):
         aml = wntr.sim.aml.aml
         for con in cons:
             if not con.equality:
@@ -294,7 +294,7 @@ class Wntr(PersistentBase, PersistentSolver):
             self._pyomo_con_to_solver_con_map[con] = wntr_con
             self._needs_updated = True
 
-    def _remove_constraints(self, cons: List[GeneralConstraintData]):
+    def _remove_constraints(self, cons: List[ConstraintData]):
         for con in cons:
             solver_con = self._pyomo_con_to_solver_con_map[con]
             delattr(self._solver_model, solver_con.name)

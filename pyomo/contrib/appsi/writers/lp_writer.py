@@ -12,7 +12,7 @@
 from typing import List
 from pyomo.core.base.param import ParamData
 from pyomo.core.base.var import VarData
-from pyomo.core.base.constraint import GeneralConstraintData
+from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.objective import ObjectiveData
 from pyomo.core.base.sos import SOSConstraintData
 from pyomo.core.base.block import BlockData
@@ -99,14 +99,14 @@ class LPWriter(PersistentBase):
             cp.value = p.value
             self._pyomo_param_to_solver_param_map[id(p)] = cp
 
-    def _add_constraints(self, cons: List[GeneralConstraintData]):
+    def _add_constraints(self, cons: List[ConstraintData]):
         cmodel.process_lp_constraints(cons, self)
 
     def _add_sos_constraints(self, cons: List[SOSConstraintData]):
         if len(cons) != 0:
             raise NotImplementedError('LP writer does not yet support SOS constraints')
 
-    def _remove_constraints(self, cons: List[GeneralConstraintData]):
+    def _remove_constraints(self, cons: List[ConstraintData]):
         for c in cons:
             cc = self._pyomo_con_to_solver_con_map.pop(c)
             self._writer.remove_constraint(cc)

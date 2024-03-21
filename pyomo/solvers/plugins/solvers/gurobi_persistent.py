@@ -157,7 +157,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
         Parameters
         ----------
-        con: pyomo.core.base.constraint.GeneralConstraintData
+        con: pyomo.core.base.constraint.ConstraintData
             The pyomo constraint for which the corresponding gurobi constraint attribute
             should be modified.
         attr: str
@@ -384,7 +384,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
         Parameters
         ----------
-        con: pyomo.core.base.constraint.GeneralConstraintData
+        con: pyomo.core.base.constraint.ConstraintData
             The pyomo constraint for which the corresponding gurobi constraint attribute
             should be retrieved.
         attr: str
@@ -431,7 +431,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
         Parameters
         ----------
-        con: pyomo.core.base.constraint.GeneralConstraintData
+        con: pyomo.core.base.constraint.ConstraintData
             The pyomo constraint for which the corresponding gurobi constraint attribute
             should be retrieved.
         attr: str
@@ -569,7 +569,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
         Parameters
         ----------
-        con: pyomo.core.base.constraint.GeneralConstraintData
+        con: pyomo.core.base.constraint.ConstraintData
             The cut to add
         """
         if not con.active:
@@ -647,7 +647,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         """
         Parameters
         ----------
-        con: pyomo.core.base.constraint.GeneralConstraintData
+        con: pyomo.core.base.constraint.ConstraintData
             The lazy constraint to add
         """
         if not con.active:

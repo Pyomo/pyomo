@@ -12,7 +12,7 @@
 import abc
 from typing import List
 
-from pyomo.core.base.constraint import GeneralConstraintData, Constraint
+from pyomo.core.base.constraint import ConstraintData, Constraint
 from pyomo.core.base.sos import SOSConstraintData, SOSConstraint
 from pyomo.core.base.var import VarData
 from pyomo.core.base.param import ParamData, Param
@@ -84,7 +84,7 @@ class PersistentSolverUtils(abc.ABC):
         self._add_parameters(params)
 
     @abc.abstractmethod
-    def _add_constraints(self, cons: List[GeneralConstraintData]):
+    def _add_constraints(self, cons: List[ConstraintData]):
         pass
 
     def _check_for_new_vars(self, variables: List[VarData]):
@@ -104,7 +104,7 @@ class PersistentSolverUtils(abc.ABC):
                 vars_to_remove[v_id] = v
         self.remove_variables(list(vars_to_remove.values()))
 
-    def add_constraints(self, cons: List[GeneralConstraintData]):
+    def add_constraints(self, cons: List[ConstraintData]):
         all_fixed_vars = {}
         for con in cons:
             if con in self._named_expressions:
@@ -209,10 +209,10 @@ class PersistentSolverUtils(abc.ABC):
             self.set_objective(obj)
 
     @abc.abstractmethod
-    def _remove_constraints(self, cons: List[GeneralConstraintData]):
+    def _remove_constraints(self, cons: List[ConstraintData]):
         pass
 
-    def remove_constraints(self, cons: List[GeneralConstraintData]):
+    def remove_constraints(self, cons: List[ConstraintData]):
         self._remove_constraints(cons)
         for con in cons:
             if con not in self._named_expressions:
@@ -384,7 +384,7 @@ class PersistentSolverUtils(abc.ABC):
             for c in self._vars_referenced_by_con.keys():
                 if c not in current_cons_dict and c not in current_sos_dict:
                     if (c.ctype is Constraint) or (
-                        c.ctype is None and isinstance(c, GeneralConstraintData)
+                        c.ctype is None and isinstance(c, ConstraintData)
                     ):
                         old_cons.append(c)
                     else:

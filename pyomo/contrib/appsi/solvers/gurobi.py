@@ -24,7 +24,7 @@ from pyomo.common.config import ConfigValue, NonNegativeInt
 from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
 from pyomo.core.base.var import Var, VarData
-from pyomo.core.base.constraint import GeneralConstraintData
+from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.sos import SOSConstraintData
 from pyomo.core.base.param import ParamData
 from pyomo.core.expr.numvalue import value, is_constant, is_fixed, native_numeric_types
@@ -579,7 +579,7 @@ class Gurobi(PersistentBase, PersistentSolver):
             mutable_quadratic_coefficients,
         )
 
-    def _add_constraints(self, cons: List[GeneralConstraintData]):
+    def _add_constraints(self, cons: List[ConstraintData]):
         for con in cons:
             conname = self._symbol_map.getSymbol(con, self._labeler)
             (
@@ -735,7 +735,7 @@ class Gurobi(PersistentBase, PersistentSolver):
         self._constraints_added_since_update.update(cons)
         self._needs_updated = True
 
-    def _remove_constraints(self, cons: List[GeneralConstraintData]):
+    def _remove_constraints(self, cons: List[ConstraintData]):
         for con in cons:
             if con in self._constraints_added_since_update:
                 self._update_gurobi_model()
@@ -1195,7 +1195,7 @@ class Gurobi(PersistentBase, PersistentSolver):
 
         Parameters
         ----------
-        con: pyomo.core.base.constraint.GeneralConstraintData
+        con: pyomo.core.base.constraint.ConstraintData
             The pyomo constraint for which the corresponding gurobi constraint attribute
             should be modified.
         attr: str
@@ -1272,7 +1272,7 @@ class Gurobi(PersistentBase, PersistentSolver):
 
         Parameters
         ----------
-        con: pyomo.core.base.constraint.GeneralConstraintData
+        con: pyomo.core.base.constraint.ConstraintData
             The pyomo constraint for which the corresponding gurobi constraint attribute
             should be retrieved.
         attr: str
@@ -1304,7 +1304,7 @@ class Gurobi(PersistentBase, PersistentSolver):
 
         Parameters
         ----------
-        con: pyomo.core.base.constraint.GeneralConstraintData
+        con: pyomo.core.base.constraint.ConstraintData
             The pyomo constraint for which the corresponding gurobi constraint attribute
             should be retrieved.
         attr: str
@@ -1425,7 +1425,7 @@ class Gurobi(PersistentBase, PersistentSolver):
 
         Parameters
         ----------
-        con: pyomo.core.base.constraint.GeneralConstraintData
+        con: pyomo.core.base.constraint.ConstraintData
             The cut to add
         """
         if not con.active:
@@ -1510,7 +1510,7 @@ class Gurobi(PersistentBase, PersistentSolver):
         """
         Parameters
         ----------
-        con: pyomo.core.base.constraint.GeneralConstraintData
+        con: pyomo.core.base.constraint.ConstraintData
             The lazy constraint to add
         """
         if not con.active:

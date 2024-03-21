@@ -12,7 +12,7 @@
 import abc
 from typing import Sequence, Dict, Optional, Mapping, NoReturn
 
-from pyomo.core.base.constraint import GeneralConstraintData
+from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.var import VarData
 from pyomo.core.expr import value
 from pyomo.common.collections import ComponentMap
@@ -65,8 +65,8 @@ class SolutionLoaderBase(abc.ABC):
         """
 
     def get_duals(
-        self, cons_to_load: Optional[Sequence[GeneralConstraintData]] = None
-    ) -> Dict[GeneralConstraintData, float]:
+        self, cons_to_load: Optional[Sequence[ConstraintData]] = None
+    ) -> Dict[ConstraintData, float]:
         """
         Returns a dictionary mapping constraint to dual value.
 
@@ -119,8 +119,8 @@ class PersistentSolutionLoader(SolutionLoaderBase):
         return self._solver._get_primals(vars_to_load=vars_to_load)
 
     def get_duals(
-        self, cons_to_load: Optional[Sequence[GeneralConstraintData]] = None
-    ) -> Dict[GeneralConstraintData, float]:
+        self, cons_to_load: Optional[Sequence[ConstraintData]] = None
+    ) -> Dict[ConstraintData, float]:
         self._assert_solution_still_valid()
         return self._solver._get_duals(cons_to_load=cons_to_load)
 
@@ -201,8 +201,8 @@ class SolSolutionLoader(SolutionLoaderBase):
         return res
 
     def get_duals(
-        self, cons_to_load: Optional[Sequence[GeneralConstraintData]] = None
-    ) -> Dict[GeneralConstraintData, float]:
+        self, cons_to_load: Optional[Sequence[ConstraintData]] = None
+    ) -> Dict[ConstraintData, float]:
         if self._nl_info is None:
             raise RuntimeError(
                 'Solution loader does not currently have a valid solution. Please '

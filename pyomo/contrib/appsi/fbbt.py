@@ -20,7 +20,7 @@ from .cmodel import cmodel, cmodel_available
 from typing import List, Optional
 from pyomo.core.base.var import VarData
 from pyomo.core.base.param import ParamData
-from pyomo.core.base.constraint import GeneralConstraintData
+from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.sos import SOSConstraintData
 from pyomo.core.base.objective import ObjectiveData, minimize, maximize
 from pyomo.core.base.block import BlockData
@@ -154,7 +154,7 @@ class IntervalTightener(PersistentBase):
                 cp = cparams[ndx]
                 cp.name = self._symbol_map.getSymbol(p, self._param_labeler)
 
-    def _add_constraints(self, cons: List[GeneralConstraintData]):
+    def _add_constraints(self, cons: List[ConstraintData]):
         cmodel.process_fbbt_constraints(
             self._cmodel,
             self._pyomo_expr_types,
@@ -175,7 +175,7 @@ class IntervalTightener(PersistentBase):
                 'IntervalTightener does not support SOS constraints'
             )
 
-    def _remove_constraints(self, cons: List[GeneralConstraintData]):
+    def _remove_constraints(self, cons: List[ConstraintData]):
         if self._symbolic_solver_labels:
             for c in cons:
                 self._symbol_map.removeSymbol(c)

@@ -952,9 +952,7 @@ def check_disjunction_data_target(self, transformation):
     transBlock = m.component("_pyomo_gdp_%s_reformulation" % transformation)
     self.assertIsInstance(transBlock, Block)
     self.assertIsInstance(transBlock.component("disjunction_xor"), Constraint)
-    self.assertIsInstance(
-        transBlock.disjunction_xor[2], constraint.GeneralConstraintData
-    )
+    self.assertIsInstance(transBlock.disjunction_xor[2], constraint.ConstraintData)
     self.assertIsInstance(transBlock.component("relaxedDisjuncts"), Block)
     self.assertEqual(len(transBlock.relaxedDisjuncts), 3)
 
@@ -963,7 +961,7 @@ def check_disjunction_data_target(self, transformation):
         m, targets=[m.disjunction[1]]
     )
     self.assertIsInstance(
-        m.disjunction[1].algebraic_constraint, constraint.GeneralConstraintData
+        m.disjunction[1].algebraic_constraint, constraint.ConstraintData
     )
     transBlock = m.component("_pyomo_gdp_%s_reformulation_4" % transformation)
     self.assertIsInstance(transBlock, Block)

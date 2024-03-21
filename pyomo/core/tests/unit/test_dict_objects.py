@@ -18,7 +18,7 @@ from pyomo.core.beta.dict_objects import (
     ExpressionDict,
 )
 from pyomo.core.base.var import VarData
-from pyomo.core.base.constraint import GeneralConstraintData
+from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.objective import ObjectiveData
 from pyomo.core.base.expression import ExpressionData
 
@@ -375,7 +375,7 @@ class TestExpressionDict(_TestComponentDictBase, unittest.TestCase):
 
 class TestConstraintDict(_TestActiveComponentDictBase, unittest.TestCase):
     _ctype = ConstraintDict
-    _cdatatype = GeneralConstraintData
+    _cdatatype = ConstraintData
 
     def setUp(self):
         _TestComponentDictBase.setUp(self)

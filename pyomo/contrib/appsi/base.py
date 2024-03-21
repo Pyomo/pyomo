@@ -21,7 +21,7 @@ from typing import (
     Tuple,
     MutableMapping,
 )
-from pyomo.core.base.constraint import GeneralConstraintData, Constraint
+from pyomo.core.base.constraint import ConstraintData, Constraint
 from pyomo.core.base.sos import SOSConstraintData, SOSConstraint
 from pyomo.core.base.var import VarData, Var
 from pyomo.core.base.param import ParamData, Param
@@ -214,8 +214,8 @@ class SolutionLoaderBase(abc.ABC):
         pass
 
     def get_duals(
-        self, cons_to_load: Optional[Sequence[GeneralConstraintData]] = None
-    ) -> Dict[GeneralConstraintData, float]:
+        self, cons_to_load: Optional[Sequence[ConstraintData]] = None
+    ) -> Dict[ConstraintData, float]:
         """
         Returns a dictionary mapping constraint to dual value.
 
@@ -233,8 +233,8 @@ class SolutionLoaderBase(abc.ABC):
         raise NotImplementedError(f'{type(self)} does not support the get_duals method')
 
     def get_slacks(
-        self, cons_to_load: Optional[Sequence[GeneralConstraintData]] = None
-    ) -> Dict[GeneralConstraintData, float]:
+        self, cons_to_load: Optional[Sequence[ConstraintData]] = None
+    ) -> Dict[ConstraintData, float]:
         """
         Returns a dictionary mapping constraint to slack.
 
@@ -317,8 +317,8 @@ class SolutionLoader(SolutionLoaderBase):
             return primals
 
     def get_duals(
-        self, cons_to_load: Optional[Sequence[GeneralConstraintData]] = None
-    ) -> Dict[GeneralConstraintData, float]:
+        self, cons_to_load: Optional[Sequence[ConstraintData]] = None
+    ) -> Dict[ConstraintData, float]:
         if self._duals is None:
             raise RuntimeError(
                 'Solution loader does not currently have valid duals. Please '
@@ -334,8 +334,8 @@ class SolutionLoader(SolutionLoaderBase):
         return duals
 
     def get_slacks(
-        self, cons_to_load: Optional[Sequence[GeneralConstraintData]] = None
-    ) -> Dict[GeneralConstraintData, float]:
+        self, cons_to_load: Optional[Sequence[ConstraintData]] = None
+    ) -> Dict[ConstraintData, float]:
         if self._slacks is None:
             raise RuntimeError(
                 'Solution loader does not currently have valid slacks. Please '
@@ -727,8 +727,8 @@ class PersistentSolver(Solver):
         pass
 
     def get_duals(
-        self, cons_to_load: Optional[Sequence[GeneralConstraintData]] = None
-    ) -> Dict[GeneralConstraintData, float]:
+        self, cons_to_load: Optional[Sequence[ConstraintData]] = None
+    ) -> Dict[ConstraintData, float]:
         """
         Declare sign convention in docstring here.
 
@@ -748,8 +748,8 @@ class PersistentSolver(Solver):
         )
 
     def get_slacks(
-        self, cons_to_load: Optional[Sequence[GeneralConstraintData]] = None
-    ) -> Dict[GeneralConstraintData, float]:
+        self, cons_to_load: Optional[Sequence[ConstraintData]] = None
+    ) -> Dict[ConstraintData, float]:
         """
         Parameters
         ----------
@@ -803,7 +803,7 @@ class PersistentSolver(Solver):
         pass
 
     @abc.abstractmethod
-    def add_constraints(self, cons: List[GeneralConstraintData]):
+    def add_constraints(self, cons: List[ConstraintData]):
         pass
 
     @abc.abstractmethod
@@ -819,7 +819,7 @@ class PersistentSolver(Solver):
         pass
 
     @abc.abstractmethod
-    def remove_constraints(self, cons: List[GeneralConstraintData]):
+    def remove_constraints(self, cons: List[ConstraintData]):
         pass
 
     @abc.abstractmethod
@@ -853,14 +853,14 @@ class PersistentSolutionLoader(SolutionLoaderBase):
         return self._solver.get_primals(vars_to_load=vars_to_load)
 
     def get_duals(
-        self, cons_to_load: Optional[Sequence[GeneralConstraintData]] = None
-    ) -> Dict[GeneralConstraintData, float]:
+        self, cons_to_load: Optional[Sequence[ConstraintData]] = None
+    ) -> Dict[ConstraintData, float]:
         self._assert_solution_still_valid()
         return self._solver.get_duals(cons_to_load=cons_to_load)
 
     def get_slacks(
-        self, cons_to_load: Optional[Sequence[GeneralConstraintData]] = None
-    ) -> Dict[GeneralConstraintData, float]:
+        self, cons_to_load: Optional[Sequence[ConstraintData]] = None
+    ) -> Dict[ConstraintData, float]:
         self._assert_solution_still_valid()
         return self._solver.get_slacks(cons_to_load=cons_to_load)
 
@@ -980,7 +980,7 @@ class PersistentBase(abc.ABC):
         self._add_params(params)
 
     @abc.abstractmethod
-    def _add_constraints(self, cons: List[GeneralConstraintData]):
+    def _add_constraints(self, cons: List[ConstraintData]):
         pass
 
     def _check_for_new_vars(self, variables: List[VarData]):
@@ -1000,7 +1000,7 @@ class PersistentBase(abc.ABC):
                 vars_to_remove[v_id] = v
         self.remove_variables(list(vars_to_remove.values()))
 
-    def add_constraints(self, cons: List[GeneralConstraintData]):
+    def add_constraints(self, cons: List[ConstraintData]):
         all_fixed_vars = dict()
         for con in cons:
             if con in self._named_expressions:
@@ -1128,10 +1128,10 @@ class PersistentBase(abc.ABC):
             self.set_objective(obj)
 
     @abc.abstractmethod
-    def _remove_constraints(self, cons: List[GeneralConstraintData]):
+    def _remove_constraints(self, cons: List[ConstraintData]):
         pass
 
-    def remove_constraints(self, cons: List[GeneralConstraintData]):
+    def remove_constraints(self, cons: List[ConstraintData]):
         self._remove_constraints(cons)
         for con in cons:
             if con not in self._named_expressions:
@@ -1330,7 +1330,7 @@ class PersistentBase(abc.ABC):
             for c in self._vars_referenced_by_con.keys():
                 if c not in current_cons_dict and c not in current_sos_dict:
                     if (c.ctype is Constraint) or (
-                        c.ctype is None and isinstance(c, GeneralConstraintData)
+                        c.ctype is None and isinstance(c, ConstraintData)
                     ):
                         old_cons.append(c)
                     else:

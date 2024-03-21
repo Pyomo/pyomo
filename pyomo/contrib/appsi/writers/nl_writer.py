@@ -12,7 +12,7 @@
 from typing import List
 from pyomo.core.base.param import ParamData
 from pyomo.core.base.var import VarData
-from pyomo.core.base.constraint import GeneralConstraintData
+from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.objective import ObjectiveData
 from pyomo.core.base.sos import SOSConstraintData
 from pyomo.core.base.block import BlockData
@@ -111,7 +111,7 @@ class NLWriter(PersistentBase):
                 cp = cparams[ndx]
                 cp.name = self._symbol_map.getSymbol(p, self._param_labeler)
 
-    def _add_constraints(self, cons: List[GeneralConstraintData]):
+    def _add_constraints(self, cons: List[ConstraintData]):
         cmodel.process_nl_constraints(
             self._writer,
             self._expr_types,
@@ -130,7 +130,7 @@ class NLWriter(PersistentBase):
         if len(cons) != 0:
             raise NotImplementedError('NL writer does not support SOS constraints')
 
-    def _remove_constraints(self, cons: List[GeneralConstraintData]):
+    def _remove_constraints(self, cons: List[ConstraintData]):
         if self.config.symbolic_solver_labels:
             for c in cons:
                 self._symbol_map.removeSymbol(c)
