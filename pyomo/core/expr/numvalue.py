@@ -28,7 +28,7 @@ from pyomo.common.numeric_types import (
     native_numeric_types,
     native_integer_types,
     native_logical_types,
-    pyomo_constant_types,
+    _pyomo_constant_types,
     check_if_numeric_type,
     value,
 )
@@ -85,7 +85,7 @@ logger = logging.getLogger('pyomo.core')
 ##------------------------------------------------------------------------
 
 
-class NonNumericValue(object):
+class NonNumericValue(PyomoObject):
     """An object that contains a non-numeric value
 
     Constructor Arguments:
@@ -99,6 +99,9 @@ class NonNumericValue(object):
 
     def __str__(self):
         return str(self.value)
+
+    def __call__(self, exception=None):
+        return self.value
 
 
 nonpyomo_leaf_types.add(NonNumericValue)
@@ -410,7 +413,7 @@ class NumericConstant(NumericValue):
         ostream.write(str(self))
 
 
-pyomo_constant_types.add(NumericConstant)
+_pyomo_constant_types.add(NumericConstant)
 
 # We use as_numeric() so that the constant is also in the cache
 ZeroConstant = as_numeric(0)

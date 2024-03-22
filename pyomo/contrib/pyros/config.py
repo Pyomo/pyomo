@@ -26,71 +26,34 @@ from pyomo.contrib.pyros.uncertainty_sets import UncertaintySet
 default_pyros_solver_logger = setup_pyros_logger()
 
 
-class LoggerType:
+def logger_domain(obj):
     """
-    Domain validator for objects castable to logging.Logger.
+    Domain validator for logger-type arguments.
+
+    This admits any object of type ``logging.Logger``,
+    or which can be cast to ``logging.Logger``.
     """
-
-    def __call__(self, obj):
-        """
-        Cast object to logger.
-
-        Parameters
-        ----------
-        obj : object
-            Object to be cast.
-
-        Returns
-        -------
-        logging.Logger
-            If `str_or_logger` is of type `logging.Logger`,then
-            `str_or_logger` is returned.
-            Otherwise, ``logging.getLogger(str_or_logger)``
-            is returned.
-        """
-        if isinstance(obj, logging.Logger):
-            return obj
-        else:
-            return logging.getLogger(obj)
-
-    def domain_name(self):
-        """Return str briefly describing domain encompassed by self."""
-        return "None, str or logging.Logger"
+    if isinstance(obj, logging.Logger):
+        return obj
+    else:
+        return logging.getLogger(obj)
 
 
-class PositiveIntOrMinusOne:
+logger_domain.domain_name = "None, str or logging.Logger"
+
+
+def positive_int_or_minus_one(obj):
     """
-    Domain validator for objects castable to a
-    strictly positive int or -1.
+    Domain validator for objects castable to a strictly
+    positive int or -1.
     """
+    ans = int(obj)
+    if ans != float(obj) or (ans <= 0 and ans != -1):
+        raise ValueError(f"Expected positive int or -1, but received value {obj!r}")
+    return ans
 
-    def __call__(self, obj):
-        """
-        Cast object to positive int or -1.
 
-        Parameters
-        ----------
-        obj : object
-            Object of interest.
-
-        Returns
-        -------
-        int
-            Positive int, or -1.
-
-        Raises
-        ------
-        ValueError
-            If object not castable to positive int, or -1.
-        """
-        ans = int(obj)
-        if ans != float(obj) or (ans <= 0 and ans != -1):
-            raise ValueError(f"Expected positive int or -1, but received value {obj!r}")
-        return ans
-
-    def domain_name(self):
-        """Return str briefly describing domain encompassed by self."""
-        return "positive int or -1"
+positive_int_or_minus_one.domain_name = "positive int or -1"
 
 
 def mutable_param_validator(param_obj):
@@ -721,7 +684,7 @@ def pyros_config():
         "max_iter",
         ConfigValue(
             default=-1,
-            domain=PositiveIntOrMinusOne(),
+            domain=positive_int_or_minus_one,
             description=(
                 """
                 Iteration limit. If -1 is provided, then no iteration
@@ -766,7 +729,7 @@ def pyros_config():
         "progress_logger",
         ConfigValue(
             default=default_pyros_solver_logger,
-            domain=LoggerType(),
+            domain=logger_domain,
             doc=(
                 """
                 Logger (or name thereof) used for reporting PyROS solver

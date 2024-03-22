@@ -1280,7 +1280,6 @@ class TestReference(unittest.TestCase):
             normalize_index.flatten = _old_flatten
 
     def test_pprint_nonfinite_sets(self):
-        self.maxDiff = None
         m = ConcreteModel()
         m.v = Var(NonNegativeIntegers, dense=False)
         m.ref = Reference(m.v)
@@ -1322,7 +1321,6 @@ class TestReference(unittest.TestCase):
 
     def test_pprint_nonfinite_sets_ctypeNone(self):
         # test issue #2039
-        self.maxDiff = None
         m = ConcreteModel()
         m.v = Var(NonNegativeIntegers, dense=False)
         m.ref = Reference(m.v, ctype=None)
