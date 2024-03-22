@@ -191,9 +191,8 @@ class DisaggregatedLogarithmicMIPTransformation(PiecewiseLinearTransformationBas
 
     # Not a Gray code, just a regular binary representation
     # TODO test the Gray codes too
+    # note: Must have num != 0 and ceil(log2(num)) > length to be valid
     def _get_binary_vector(self, num, length):
-        if num != 0 and ceil(log2(num)) > length:
-            raise DeveloperError("Invalid input in _get_binary_vector")
         # Use python's string formatting instead of bothering with modular
         # arithmetic. Hopefully not slow.
         return tuple(int(x) for x in format(num, f"0{length}b"))
