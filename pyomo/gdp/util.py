@@ -13,7 +13,6 @@ from pyomo.gdp import GDP_Error, Disjunction
 from pyomo.gdp.disjunct import DisjunctData, Disjunct
 
 import pyomo.core.expr as EXPR
-from pyomo.core.base.component import _ComponentBase
 from pyomo.core import (
     Block,
     Suffix,

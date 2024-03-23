@@ -50,7 +50,7 @@ from pyomo.core.base.range import (
     RangeDifferenceError,
 )
 from pyomo.core.base.component import (
-    _ComponentBase,
+    ComponentBase,
     Component,
     ComponentData,
     ModelComponentFactory,
@@ -140,7 +140,7 @@ def process_setarg(arg):
             _anonymous.update(arg._anonymous_sets)
         return arg, _anonymous
 
-    elif isinstance(arg, _ComponentBase):
+    elif isinstance(arg, ComponentBase):
         if isinstance(arg, IndexedComponent) and arg.is_indexed():
             raise TypeError(
                 "Cannot apply a Set operator to an "
