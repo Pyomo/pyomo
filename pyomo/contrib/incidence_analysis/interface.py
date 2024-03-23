@@ -1040,3 +1040,84 @@ class IncidenceGraphInterface(object):
                 cb.reverse()
 
         return vpartition, cpartition
+
+
+import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
+
+def _get_rectangle_around_coords(
+    ij1,
+    ij2,
+    linewidth=2,
+):
+    i1, j1 = ij1
+    i2, j2 = ij2
+    buffer = 0.5
+    ll_corner = (min(i1, i2)-buffer, min(j1, j2)-buffer)
+    width = abs(i1 - i2) + 2*buffer
+    height = abs(j1 - j2) + 2*buffer
+    rect = Rectangle(
+        ll_corner,
+        width,
+        height,
+        clip_on=False,
+        fill=False,
+        edgecolor="orange",
+        linewidth=linewidth,
+    )
+    return rect
+
+
+def spy_dulmage_mendelsohn(
+    model,
+    order=IncidenceOrder.dulmage_mendelsohn_upper,
+    highlight_coarse=True,
+    highlight_fine=True,
+    ax=None,
+):
+    igraph = IncidenceGraphInterface(model)
+    vpart, cpart = igraph.partition_variables_and_constraints(order=order)
+    vpart_fine = sum(vpart, [])
+    cpart_fine = sum(cpart, [])
+    vorder = sum(vpart_fine, [])
+    corder = sum(cpart_fine, [])
+
+    imat = get_structural_incidence_matrix(vorder, corder)
+
+    if ax is None:
+        fig, ax = plt.subplots()
+    else:
+        fig = None
+
+    # TODO: Options to configure:
+    # - tick direction/presence
+    # - rectangle linewidth/linestyle
+    # - spy markersize
+    # markersize and linewidth should probably be set automatically
+    # based on size of problem
+
+    ax.spy(
+        imat,
+        # TODO: pass keyword args
+        markersize=0.2,
+    )
+    ax.tick_params(length=0)
+    if highlight_coarse:
+        start = (0, 0)
+        for vblocks, cblocks in zip(vpart, cpart):
+            # Get the total number of variables/constraints in this part
+            # of the coarse partition
+            nv = sum(len(vb) for vb in vblocks)
+            nc = sum(len(cb) for cb in cblocks)
+            stop = (start[0] + nv - 1, start[1] + nc - 1)
+            ax.add_patch(_get_rectangle_around_coords(start, stop))
+            start = (stop[0] + 1, stop[1] + 1)
+
+    if highlight_fine:
+        start = (0, 0)
+        for vb, cb in zip(vpart_fine, cpart_fine):
+            stop = (start[0] + len(vb) - 1, start[1] + len(cb) - 1)
+            ax.add_patch(_get_rectangle_around_coords(start, stop))
+            start = (stop[0] + 1, stop[1] + 1)
+
+    return fig, ax
