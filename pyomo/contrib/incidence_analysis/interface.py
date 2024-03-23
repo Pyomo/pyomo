@@ -29,7 +29,7 @@ from pyomo.common.dependencies import (
     plotly,
 )
 from pyomo.common.deprecation import deprecated
-from pyomo.contrib.incidence_analysis.config import get_config_from_kwds
+from pyomo.contrib.incidence_analysis.config import get_config_from_kwds, IncidenceOrder
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
 from pyomo.contrib.incidence_analysis.connected import get_independent_submatrices
 from pyomo.contrib.incidence_analysis.triangularize import (
@@ -995,3 +995,48 @@ class IncidenceGraphInterface(object):
         con_id = self._con_index_map[constraint]
 
         self._incidence_graph.add_edge(var_id, con_id)
+
+    def partition_variables_and_constraints(
+        self,
+        variables=None,
+        constraints=None,
+        order=IncidenceOrder.dulmage_mendelsohn_upper,
+    ):
+        """Partition variables and constraints in an incidence graph
+        """
+        variables, constraints = self._validate_input(variables, constraints)
+        vdmp, cdmp = self.dulmage_mendelsohn(variables=variables, constraints=constraints)
+        
+        ucv = vdmp.unmatched + vdmp.underconstrained
+        ucc = cdmp.underconstrained
+
+        ocv = vdmp.overconstrained
+        occ = cdmp.overconstrained + cdmp.unmatched
+
+        ucvblocks, uccblocks = self.get_connected_components(
+            variables=ucv, constraints=ucc
+        )
+        ocvblocks, occblocks = self.get_connected_components(
+            variables=ocv, constraints=occ
+        )
+        wcvblocks, wccblocks = self.block_triangularize(
+            variables=vdmp.square, constraints=cdmp.square
+        )
+        # By default, we block-*lower* triangularize. By default, however, we want
+        # the Dulmage-Mendelsohn decomposition to be block-*upper* triangular.
+        wcvblocks.reverse()
+        wccblocks.reverse()
+        vpartition = [ucvblocks, wcvblocks, ocvblocks]
+        cpartition = [uccblocks, wccblocks, occblocks]
+
+        if order == IncidenceOrder.dulmage_mendelsohn_lower:
+            # If a block-lower triangular matrix was requested, we need to reverse
+            # both the inner and outer partitions
+            vpartition.reverse()
+            cpartition.reverse()
+            for vb in vpartition:
+                vb.reverse()
+            for cb in cpartition:
+                cb.reverse()
+
+        return vpartition, cpartition
