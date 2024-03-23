@@ -21,7 +21,6 @@ from pyomo.contrib.incidence_analysis.tests.models_for_testing import (
 
 @unittest.skipUnless(matplotlib_available, "Matplotlib is not available")
 class TestSpy(unittest.TestCase):
-
     def test_spy_dulmage_mendelsohn(self):
         models = [
             make_gas_expansion_model(),

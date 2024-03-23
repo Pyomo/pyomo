@@ -22,8 +22,7 @@ from pyomo.common.dependencies import matplotlib
 def _partition_variables_and_constraints(
     model, order=IncidenceOrder.dulmage_mendelsohn_upper, **kwds
 ):
-    """Partition variables and constraints in an incidence graph
-    """
+    """Partition variables and constraints in an incidence graph"""
     igraph = IncidenceGraphInterface(model, **kwds)
     vdmp, cdmp = igraph.dulmage_mendelsohn()
 
@@ -62,18 +61,13 @@ def _partition_variables_and_constraints(
     return vpartition, cpartition
 
 
-def _get_rectangle_around_coords(
-    ij1,
-    ij2,
-    linewidth=2,
-    linestyle="-",
-):
+def _get_rectangle_around_coords(ij1, ij2, linewidth=2, linestyle="-"):
     i1, j1 = ij1
     i2, j2 = ij2
     buffer = 0.5
-    ll_corner = (min(i1, i2)-buffer, min(j1, j2)-buffer)
-    width = abs(i1 - i2) + 2*buffer
-    height = abs(j1 - j2) + 2*buffer
+    ll_corner = (min(i1, i2) - buffer, min(j1, j2) - buffer)
+    width = abs(i1 - i2) + 2 * buffer
+    height = abs(j1 - j2) + 2 * buffer
     rect = matplotlib.patches.Rectangle(
         ll_corner,
         width,
@@ -136,7 +130,7 @@ def spy_dulmage_mendelsohn(
 
     linewidth: int, optional
         Line width of for rectangle used to highlight. Default 2
-    
+
     spy_kwds: dict, optional
         Keyword arguments for ``Axes.spy``
 
@@ -178,10 +172,9 @@ def spy_dulmage_mendelsohn(
         # At 20 vars/cons, we want markersize=10
         # We assume we want a linear relationship between 1/nvar
         # and the markersize.
-        markersize = (
-            (10.0 - 0.2) / (1/20 - 1/10000) * (1/max(nvar, ncon) - 1/10000)
-            + 0.2
-        )
+        markersize = (10.0 - 0.2) / (1 / 20 - 1 / 10000) * (
+            1 / max(nvar, ncon) - 1 / 10000
+        ) + 0.2
 
     ax.spy(imat, markersize=markersize, **spy_kwds)
     ax.tick_params(length=0)
@@ -211,10 +204,7 @@ def spy_dulmage_mendelsohn(
             stop = (start[0] + len(vb) - 1, start[1] + len(cb) - 1)
             ax.add_patch(
                 _get_rectangle_around_coords(
-                    start,
-                    stop,
-                    linestyle=linestyle,
-                    linewidth=linewidth,
+                    start, stop, linestyle=linestyle, linewidth=linewidth
                 )
             )
             start = (stop[0] + 1, stop[1] + 1)
