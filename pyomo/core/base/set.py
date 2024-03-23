@@ -84,10 +84,7 @@ API (e.g., only finite discrete Sets support `add()`).
 
 All Sets implement one of the following APIs:
 
-0. `class _SetDataBase(ComponentData)`
-   *(pure virtual interface)*
-
-1. `class SetData(_SetDataBase)`
+1. `class SetData(ComponentData)`
    *(base class for all AML Sets)*
 
 2. `class _FiniteSetMixin(object)`
@@ -128,7 +125,7 @@ implemented) through Mixin classes.
 
 
 def process_setarg(arg):
-    if isinstance(arg, _SetDataBase):
+    if isinstance(arg, SetData):
         if (
             getattr(arg, '_parent', None) is not None
             or getattr(arg, '_anonymous_sets', None) is GlobalSetBase
@@ -512,16 +509,8 @@ class _NotFound(object):
     pass
 
 
-# A trivial class that we can use to test if an object is a "legitimate"
-# set (either ScalarSet, or a member of an IndexedSet)
-class _SetDataBase(ComponentData):
-    """The base for all objects that can be used as a component indexing set."""
-
-    __slots__ = ()
-
-
-class SetData(_SetDataBase):
-    """The base for all Pyomo AML objects that can be used as a component
+class SetData(ComponentData):
+    """The base for all Pyomo objects that can be used as a component
     indexing set.
 
     Derived versions of this class can be used as the Index for any
@@ -1189,6 +1178,11 @@ class SetData(_SetDataBase):
 
 
 class _SetData(metaclass=RenamedClass):
+    __renamed__new_class__ = SetData
+    __renamed__version__ = '6.7.2.dev0'
+
+
+class _SetDataBase(metaclass=RenamedClass):
     __renamed__new_class__ = SetData
     __renamed__version__ = '6.7.2.dev0'
 
@@ -3496,7 +3490,7 @@ class SetOperator(SetData, Set):
     def _checkArgs(*sets):
         ans = []
         for s in sets:
-            if isinstance(s, _SetDataBase):
+            if isinstance(s, SetData):
                 ans.append((s.isordered(), s.isfinite()))
             elif type(s) in {tuple, list}:
                 ans.append((True, True))
