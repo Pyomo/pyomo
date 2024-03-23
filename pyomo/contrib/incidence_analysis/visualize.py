@@ -115,7 +115,7 @@ def spy_dulmage_mendelsohn(
         Order in which to plot sparsity structure
 
     highlight_coarse: bool, optional
-        Whether to draw a rectange around the coarse partition
+        Whether to draw a rectangle around the coarse partition
 
     highlight_fine: bool, optional
         Whether to draw a rectangle around the fine partition

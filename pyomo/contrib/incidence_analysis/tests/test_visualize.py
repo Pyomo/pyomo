@@ -31,7 +31,7 @@ class TestSpy(unittest.TestCase):
             fig, ax = spy_dulmage_mendelsohn(m)
             # Note that this is a weak test. We just test that we can call the
             # plot method, it doesn't raise an error, and gives us back the
-            # types we expect. We don't attemt to validate the resulting plot.
+            # types we expect. We don't attempt to validate the resulting plot.
             self.assertTrue(isinstance(fig, matplotlib.pyplot.Figure))
             self.assertTrue(isinstance(ax, matplotlib.pyplot.Axes))
 
