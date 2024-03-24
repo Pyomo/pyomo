@@ -10,7 +10,12 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
-from pyomo.common.dependencies import matplotlib, matplotlib_available
+from pyomo.common.dependencies import (
+    matplotlib,
+    matplotlib_available,
+    scipy_available,
+    networkx_available,
+)
 from pyomo.contrib.incidence_analysis.visualize import spy_dulmage_mendelsohn
 from pyomo.contrib.incidence_analysis.tests.models_for_testing import (
     make_gas_expansion_model,
@@ -20,6 +25,8 @@ from pyomo.contrib.incidence_analysis.tests.models_for_testing import (
 
 
 @unittest.skipUnless(matplotlib_available, "Matplotlib is not available")
+@unittest.skipUnless(scipy_available, "SciPy is not available")
+@unittest.skipUnless(networkx_available, "NetworkX is not available")
 class TestSpy(unittest.TestCase):
     def test_spy_dulmage_mendelsohn(self):
         models = [
