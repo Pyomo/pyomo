@@ -90,7 +90,7 @@ Via ``pip``:
 
    pip install pyomo --global-option="--with-cython"
 
-From source:
+From source (recommended for advanced users only):
 
 ::
 
