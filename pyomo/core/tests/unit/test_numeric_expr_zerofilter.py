@@ -6020,11 +6020,11 @@ class TestExpressionGeneration_ZeroFilter(Base, unittest.TestCase):
             (mutable_npv, self.invalid, NotImplemented),
             (mutable_npv, self.asbinary, _MutableLinearExpression([10, self.bin])),
             (mutable_npv, self.zero, _MutableNPVSumExpression([10])),
-            (mutable_npv, self.one, _MutableNPVSumExpression([10, 1])),
+            (mutable_npv, self.one, _MutableNPVSumExpression([11])),
             # 4:
-            (mutable_npv, self.native, _MutableNPVSumExpression([10, 5])),
+            (mutable_npv, self.native, _MutableNPVSumExpression([15])),
             (mutable_npv, self.npv, _MutableNPVSumExpression([10, self.npv])),
-            (mutable_npv, self.param, _MutableNPVSumExpression([10, 6])),
+            (mutable_npv, self.param, _MutableNPVSumExpression([16])),
             (
                 mutable_npv,
                 self.param_mut,
@@ -6064,7 +6064,7 @@ class TestExpressionGeneration_ZeroFilter(Base, unittest.TestCase):
                 _MutableSumExpression([10] + self.mutable_l2.args),
             ),
             (mutable_npv, self.param0, _MutableNPVSumExpression([10])),
-            (mutable_npv, self.param1, _MutableNPVSumExpression([10, 1])),
+            (mutable_npv, self.param1, _MutableNPVSumExpression([11])),
             # 20:
             (mutable_npv, self.mutable_l3, _MutableNPVSumExpression([10, self.npv])),
         ]
