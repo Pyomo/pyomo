@@ -71,6 +71,7 @@ version, we will remove testing for that Python version.
 
 ### Tutorials and Examples
 
+* [Pyomo — Optimization Modeling in Python](https://link.springer.com/book/10.1007/978-3-030-68928-5)
 * [Pyomo Workshop Slides](https://github.com/Pyomo/pyomo-tutorials/blob/main/Pyomo-Workshop-December-2023.pdf)
 * [Prof. Jeffrey Kantor's Pyomo Cookbook](https://jckantor.github.io/ND-Pyomo-Cookbook/)
 * The [companion notebooks](https://mobook.github.io/MO-book/intro.html)

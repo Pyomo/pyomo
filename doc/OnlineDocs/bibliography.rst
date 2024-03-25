@@ -39,6 +39,8 @@ Bibliography
                   John D. Siirola, Jean-Paul Watson, and David L. Woodruff.
                   Pyomo - Optimization Modeling in Python, 3rd Edition.
                   Vol. 67. Springer, 2021.
+                  doi: `10.1007/978-3-030-68928-5
+                  <https://doi.org/10.1007/978-3-030-68928-5>`_
 
 .. [PyomoJournal] William E. Hart, Jean-Paul Watson, David L. Woodruff.
                   "Pyomo: modeling and solving mathematical programs in
