@@ -14,11 +14,11 @@ import enum
 from typing import Sequence, Dict, Optional, Mapping, NoReturn, List, Tuple
 import os
 
-from pyomo.core.base.constraint import _GeneralConstraintData
-from pyomo.core.base.var import _GeneralVarData
+from pyomo.core.base.constraint import Constraint, _GeneralConstraintData
+from pyomo.core.base.var import Var, _GeneralVarData
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.block import _BlockData
-from pyomo.core.base.objective import _GeneralObjectiveData
+from pyomo.core.base.objective import Objective, _GeneralObjectiveData
 from pyomo.common.config import document_kwargs_from_configdict, ConfigValue
 from pyomo.common.errors import ApplicationError
 from pyomo.common.deprecation import deprecation_warning
@@ -435,9 +435,9 @@ class LegacySolverWrapper:
         ]
         legacy_soln.status = legacy_solution_status_map[results.solution_status]
         legacy_results.solver.termination_message = str(results.termination_condition)
-        legacy_results.problem.number_of_constraints = model.nconstraints()
-        legacy_results.problem.number_of_variables = model.nvariables()
-        number_of_objectives = model.nobjectives()
+        legacy_results.problem.number_of_constraints = len(list(model.component_map(ctype=Constraint)))
+        legacy_results.problem.number_of_variables = len(list(model.component_map(ctype=Var)))
+        number_of_objectives = len(list(model.component_map(ctype=Objective)))
         legacy_results.problem.number_of_objectives = number_of_objectives
         if number_of_objectives == 1:
             obj = get_objective(model)
