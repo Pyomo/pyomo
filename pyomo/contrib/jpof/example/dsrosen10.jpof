@@ -1,0 +1,106 @@
+{
+  "__metadata__": {
+    "version": 20210301,
+    "format": "JSON Parameterized Optimization Format (JPOF)"
+  },
+  "model": {
+    "config": {
+      "symbolic_solver_labels": 1,
+      "skip_trivial_constraints": 0,
+      "file_determinism": 3,
+      "include_all_variable_bounds": 0
+    },
+    "obj": [
+      {
+        "expr": "sum,18,*,N,100,pow,sum,3,V,1,neg,pow,V,0,N,2,P,0,N,2,pow,+,*,N,-1,V,0,N,1,N,2,*,N,100,pow,sum,3,V,2,neg,pow,V,1,N,2,P,0,N,2,pow,+,*,N,-1,V,1,N,1,N,2,*,N,100,pow,sum,3,V,3,neg,pow,V,2,N,2,P,0,N,2,pow,+,*,N,-1,V,2,N,1,N,2,*,N,100,pow,sum,3,V,4,neg,pow,V,3,N,2,P,0,N,2,pow,+,*,N,-1,V,3,N,1,N,2,*,N,100,pow,sum,3,V,5,neg,pow,V,4,N,2,P,0,N,2,pow,+,*,N,-1,V,4,N,1,N,2,*,N,100,pow,sum,3,V,6,neg,pow,V,5,N,2,P,0,N,2,pow,+,*,N,-1,V,5,N,1,N,2,*,N,100,pow,sum,3,V,7,neg,pow,V,6,N,2,P,0,N,2,pow,+,*,N,-1,V,6,N,1,N,2,*,N,100,pow,sum,3,V,8,neg,pow,V,7,N,2,P,0,N,2,pow,+,*,N,-1,V,7,N,1,N,2,*,N,100,pow,sum,3,V,9,neg,pow,V,8,N,2,P,0,N,2,pow,+,*,N,-1,V,8,N,1,N,2",
+        "sense": "min",
+        "label": "f"
+      }
+    ],
+    "con": [],
+    "var": [
+      {
+        "label": "x[1]",
+        "id": 0,
+        "value": -1.2,
+        "type": "R",
+        "fixed": 0
+      },
+      {
+        "label": "x[2]",
+        "id": 1,
+        "value": 1.2,
+        "type": "R",
+        "fixed": 0
+      },
+      {
+        "label": "x[3]",
+        "id": 2,
+        "value": -1.2,
+        "type": "R",
+        "fixed": 0
+      },
+      {
+        "label": "x[4]",
+        "id": 3,
+        "value": 1.2,
+        "type": "R",
+        "fixed": 0
+      },
+      {
+        "label": "x[5]",
+        "id": 4,
+        "value": -1.2,
+        "type": "R",
+        "fixed": 0
+      },
+      {
+        "label": "x[6]",
+        "id": 5,
+        "value": 1.2,
+        "type": "R",
+        "fixed": 0
+      },
+      {
+        "label": "x[7]",
+        "id": 6,
+        "value": -1.2,
+        "type": "R",
+        "fixed": 0
+      },
+      {
+        "label": "x[8]",
+        "id": 7,
+        "value": 1.2,
+        "type": "R",
+        "fixed": 0
+      },
+      {
+        "label": "x[9]",
+        "id": 8,
+        "value": -1.2,
+        "type": "R",
+        "fixed": 0
+      },
+      {
+        "label": "x[10]",
+        "id": 9,
+        "value": 1.2,
+        "type": "R",
+        "fixed": 0
+      }
+    ],
+    "param": [
+      {
+        "label": "p",
+        "id": 0,
+        "value": 0
+      }
+    ],
+    "set": {},
+    "indexed_vars": [
+      "x"
+    ],
+    "indexed_params": []
+  }
+}
