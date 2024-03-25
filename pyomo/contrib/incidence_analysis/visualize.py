@@ -186,10 +186,7 @@ def spy_dulmage_mendelsohn(
             nv = sum(len(vb) for vb in vblocks)
             nc = sum(len(cb) for cb in cblocks)
             stop = (start[0] + nv - 1, start[1] + nc - 1)
-            if (
-                not (i == 1 and skip_wellconstrained)
-                and nv > 0 and nc > 0
-            ):
+            if not (i == 1 and skip_wellconstrained) and nv > 0 and nc > 0:
                 # Regardless of whether we are plotting in upper or lower
                 # triangular order, the well-constrained subsystem is at
                 # position 1
