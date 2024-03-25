@@ -475,7 +475,7 @@ class LegacySolverWrapper:
             # instead of PyomoModel. This is an attempt to fix that.
             from pyomo.core.base.PyomoModel import ModelSolutions
 
-            setattr(model, 'solutions', ModelSolutions())
+            setattr(model, 'solutions', ModelSolutions(model))
             model.solutions.add_symbol_map(symbol_map)
         legacy_results._smap_id = id(symbol_map)
         delete_legacy_soln = True
