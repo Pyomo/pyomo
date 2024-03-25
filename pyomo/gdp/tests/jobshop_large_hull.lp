@@ -66,15 +66,15 @@ c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(3)_:
 = 0
 
 c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(4)_:
-+1 t(A)
--1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(4)_disaggregatedVars__t(A)_
--1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(5)_disaggregatedVars__t(A)_
-= 0
-
-c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(5)_:
 +1 t(C)
 -1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(4)_disaggregatedVars__t(C)_
 -1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(5)_disaggregatedVars__t(C)_
+= 0
+
+c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(5)_:
++1 t(A)
+-1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(4)_disaggregatedVars__t(A)_
+-1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(5)_disaggregatedVars__t(A)_
 = 0
 
 c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(6)_:
@@ -114,15 +114,15 @@ c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(11)_:
 = 0
 
 c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(12)_:
-+1 t(A)
--1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(12)_disaggregatedVars__t(A)_
--1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(13)_disaggregatedVars__t(A)_
-= 0
-
-c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(13)_:
 +1 t(F)
 -1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(12)_disaggregatedVars__t(F)_
 -1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(13)_disaggregatedVars__t(F)_
+= 0
+
+c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(13)_:
++1 t(A)
+-1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(12)_disaggregatedVars__t(A)_
+-1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(13)_disaggregatedVars__t(A)_
 = 0
 
 c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(14)_:
@@ -150,27 +150,27 @@ c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(17)_:
 = 0
 
 c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(18)_:
-+1 t(B)
--1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(18)_disaggregatedVars__t(B)_
--1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(19)_disaggregatedVars__t(B)_
-= 0
-
-c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(19)_:
 +1 t(C)
 -1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(18)_disaggregatedVars__t(C)_
 -1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(19)_disaggregatedVars__t(C)_
 = 0
 
-c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(20)_:
+c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(19)_:
 +1 t(B)
--1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(20)_disaggregatedVars__t(B)_
--1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(21)_disaggregatedVars__t(B)_
+-1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(18)_disaggregatedVars__t(B)_
+-1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(19)_disaggregatedVars__t(B)_
 = 0
 
-c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(21)_:
+c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(20)_:
 +1 t(D)
 -1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(20)_disaggregatedVars__t(D)_
 -1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(21)_disaggregatedVars__t(D)_
+= 0
+
+c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(21)_:
++1 t(B)
+-1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(20)_disaggregatedVars__t(B)_
+-1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(21)_disaggregatedVars__t(B)_
 = 0
 
 c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(22)_:
@@ -186,15 +186,15 @@ c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(23)_:
 = 0
 
 c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(24)_:
-+1 t(B)
--1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(24)_disaggregatedVars__t(B)_
--1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(25)_disaggregatedVars__t(B)_
-= 0
-
-c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(25)_:
 +1 t(E)
 -1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(24)_disaggregatedVars__t(E)_
 -1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(25)_disaggregatedVars__t(E)_
+= 0
+
+c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(25)_:
++1 t(B)
+-1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(24)_disaggregatedVars__t(B)_
+-1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(25)_disaggregatedVars__t(B)_
 = 0
 
 c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(26)_:
@@ -234,15 +234,15 @@ c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(31)_:
 = 0
 
 c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(32)_:
-+1 t(B)
--1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(32)_disaggregatedVars__t(B)_
--1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(33)_disaggregatedVars__t(B)_
-= 0
-
-c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(33)_:
 +1 t(G)
 -1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(32)_disaggregatedVars__t(G)_
 -1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(33)_disaggregatedVars__t(G)_
+= 0
+
+c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(33)_:
++1 t(B)
+-1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(32)_disaggregatedVars__t(B)_
+-1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(33)_disaggregatedVars__t(B)_
 = 0
 
 c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(34)_:
@@ -294,15 +294,15 @@ c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(41)_:
 = 0
 
 c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(42)_:
-+1 t(C)
--1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(42)_disaggregatedVars__t(C)_
--1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(43)_disaggregatedVars__t(C)_
-= 0
-
-c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(43)_:
 +1 t(F)
 -1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(42)_disaggregatedVars__t(F)_
 -1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(43)_disaggregatedVars__t(F)_
+= 0
+
+c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(43)_:
++1 t(C)
+-1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(42)_disaggregatedVars__t(C)_
+-1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(43)_disaggregatedVars__t(C)_
 = 0
 
 c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(44)_:
@@ -342,15 +342,15 @@ c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(49)_:
 = 0
 
 c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(50)_:
-+1 t(D)
--1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(50)_disaggregatedVars__t(D)_
--1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(51)_disaggregatedVars__t(D)_
-= 0
-
-c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(51)_:
 +1 t(E)
 -1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(50)_disaggregatedVars__t(E)_
 -1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(51)_disaggregatedVars__t(E)_
+= 0
+
+c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(51)_:
++1 t(D)
+-1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(50)_disaggregatedVars__t(D)_
+-1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(51)_disaggregatedVars__t(D)_
 = 0
 
 c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(52)_:
@@ -390,15 +390,15 @@ c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(57)_:
 = 0
 
 c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(58)_:
-+1 t(D)
--1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(58)_disaggregatedVars__t(D)_
--1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(59)_disaggregatedVars__t(D)_
-= 0
-
-c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(59)_:
 +1 t(G)
 -1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(58)_disaggregatedVars__t(G)_
 -1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(59)_disaggregatedVars__t(G)_
+= 0
+
+c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(59)_:
++1 t(D)
+-1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(58)_disaggregatedVars__t(D)_
+-1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(59)_disaggregatedVars__t(D)_
 = 0
 
 c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(60)_:
@@ -426,15 +426,15 @@ c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(63)_:
 = 0
 
 c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(64)_:
-+1 t(E)
--1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(64)_disaggregatedVars__t(E)_
--1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(65)_disaggregatedVars__t(E)_
-= 0
-
-c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(65)_:
 +1 t(G)
 -1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(64)_disaggregatedVars__t(G)_
 -1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(65)_disaggregatedVars__t(G)_
+= 0
+
+c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(65)_:
++1 t(E)
+-1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(64)_disaggregatedVars__t(E)_
+-1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(65)_disaggregatedVars__t(E)_
 = 0
 
 c_e__pyomo_gdp_hull_reformulation_disaggregationConstraints(66)_:
@@ -701,34 +701,34 @@ c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(3)__t(A)_bounds_(ub)_:
 <= 0
 
 c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(4)_transformedConstraints(c_0_ub)_:
--1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(4)_disaggregatedVars__t(A)_
 +1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(4)_disaggregatedVars__t(C)_
+-1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(4)_disaggregatedVars__t(A)_
 +6.0 NoClash(A_C_1_0)_binary_indicator_var
 <= 0.0
-
-c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(4)__t(A)_bounds_(ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(4)_disaggregatedVars__t(A)_
--92 NoClash(A_C_1_0)_binary_indicator_var
-<= 0
 
 c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(4)__t(C)_bounds_(ub)_:
 +1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(4)_disaggregatedVars__t(C)_
 -92 NoClash(A_C_1_0)_binary_indicator_var
 <= 0
 
+c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(4)__t(A)_bounds_(ub)_:
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(4)_disaggregatedVars__t(A)_
+-92 NoClash(A_C_1_0)_binary_indicator_var
+<= 0
+
 c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(5)_transformedConstraints(c_0_ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(5)_disaggregatedVars__t(A)_
 -1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(5)_disaggregatedVars__t(C)_
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(5)_disaggregatedVars__t(A)_
 +3.0 NoClash(A_C_1_1)_binary_indicator_var
 <= 0.0
 
-c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(5)__t(A)_bounds_(ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(5)_disaggregatedVars__t(A)_
+c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(5)__t(C)_bounds_(ub)_:
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(5)_disaggregatedVars__t(C)_
 -92 NoClash(A_C_1_1)_binary_indicator_var
 <= 0
 
-c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(5)__t(C)_bounds_(ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(5)_disaggregatedVars__t(C)_
+c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(5)__t(A)_bounds_(ub)_:
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(5)_disaggregatedVars__t(A)_
 -92 NoClash(A_C_1_1)_binary_indicator_var
 <= 0
 
@@ -827,34 +827,34 @@ c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(11)__t(A)_bounds_(ub)_:
 <= 0
 
 c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(12)_transformedConstraints(c_0_ub)_:
--1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(12)_disaggregatedVars__t(A)_
 +1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(12)_disaggregatedVars__t(F)_
+-1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(12)_disaggregatedVars__t(A)_
 +2.0 NoClash(A_F_1_0)_binary_indicator_var
 <= 0.0
-
-c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(12)__t(A)_bounds_(ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(12)_disaggregatedVars__t(A)_
--92 NoClash(A_F_1_0)_binary_indicator_var
-<= 0
 
 c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(12)__t(F)_bounds_(ub)_:
 +1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(12)_disaggregatedVars__t(F)_
 -92 NoClash(A_F_1_0)_binary_indicator_var
 <= 0
 
+c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(12)__t(A)_bounds_(ub)_:
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(12)_disaggregatedVars__t(A)_
+-92 NoClash(A_F_1_0)_binary_indicator_var
+<= 0
+
 c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(13)_transformedConstraints(c_0_ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(13)_disaggregatedVars__t(A)_
 -1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(13)_disaggregatedVars__t(F)_
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(13)_disaggregatedVars__t(A)_
 +3.0 NoClash(A_F_1_1)_binary_indicator_var
 <= 0.0
 
-c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(13)__t(A)_bounds_(ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(13)_disaggregatedVars__t(A)_
+c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(13)__t(F)_bounds_(ub)_:
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(13)_disaggregatedVars__t(F)_
 -92 NoClash(A_F_1_1)_binary_indicator_var
 <= 0
 
-c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(13)__t(F)_bounds_(ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(13)_disaggregatedVars__t(F)_
+c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(13)__t(A)_bounds_(ub)_:
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(13)_disaggregatedVars__t(A)_
 -92 NoClash(A_F_1_1)_binary_indicator_var
 <= 0
 
@@ -923,66 +923,66 @@ c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(17)__t(A)_bounds_(ub)_:
 <= 0
 
 c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(18)_transformedConstraints(c_0_ub)_:
--1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(18)_disaggregatedVars__t(B)_
 +1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(18)_disaggregatedVars__t(C)_
+-1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(18)_disaggregatedVars__t(B)_
 +9.0 NoClash(B_C_2_0)_binary_indicator_var
 <= 0.0
-
-c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(18)__t(B)_bounds_(ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(18)_disaggregatedVars__t(B)_
--92 NoClash(B_C_2_0)_binary_indicator_var
-<= 0
 
 c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(18)__t(C)_bounds_(ub)_:
 +1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(18)_disaggregatedVars__t(C)_
 -92 NoClash(B_C_2_0)_binary_indicator_var
 <= 0
 
+c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(18)__t(B)_bounds_(ub)_:
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(18)_disaggregatedVars__t(B)_
+-92 NoClash(B_C_2_0)_binary_indicator_var
+<= 0
+
 c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(19)_transformedConstraints(c_0_ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(19)_disaggregatedVars__t(B)_
 -1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(19)_disaggregatedVars__t(C)_
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(19)_disaggregatedVars__t(B)_
 -3.0 NoClash(B_C_2_1)_binary_indicator_var
 <= 0.0
-
-c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(19)__t(B)_bounds_(ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(19)_disaggregatedVars__t(B)_
--92 NoClash(B_C_2_1)_binary_indicator_var
-<= 0
 
 c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(19)__t(C)_bounds_(ub)_:
 +1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(19)_disaggregatedVars__t(C)_
 -92 NoClash(B_C_2_1)_binary_indicator_var
 <= 0
 
+c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(19)__t(B)_bounds_(ub)_:
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(19)_disaggregatedVars__t(B)_
+-92 NoClash(B_C_2_1)_binary_indicator_var
+<= 0
+
 c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(20)_transformedConstraints(c_0_ub)_:
--1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(20)_disaggregatedVars__t(B)_
 +1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(20)_disaggregatedVars__t(D)_
+-1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(20)_disaggregatedVars__t(B)_
 +8.0 NoClash(B_D_2_0)_binary_indicator_var
 <= 0.0
-
-c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(20)__t(B)_bounds_(ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(20)_disaggregatedVars__t(B)_
--92 NoClash(B_D_2_0)_binary_indicator_var
-<= 0
 
 c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(20)__t(D)_bounds_(ub)_:
 +1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(20)_disaggregatedVars__t(D)_
 -92 NoClash(B_D_2_0)_binary_indicator_var
 <= 0
 
+c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(20)__t(B)_bounds_(ub)_:
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(20)_disaggregatedVars__t(B)_
+-92 NoClash(B_D_2_0)_binary_indicator_var
+<= 0
+
 c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(21)_transformedConstraints(c_0_ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(21)_disaggregatedVars__t(B)_
 -1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(21)_disaggregatedVars__t(D)_
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(21)_disaggregatedVars__t(B)_
 +3.0 NoClash(B_D_2_1)_binary_indicator_var
 <= 0.0
 
-c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(21)__t(B)_bounds_(ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(21)_disaggregatedVars__t(B)_
+c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(21)__t(D)_bounds_(ub)_:
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(21)_disaggregatedVars__t(D)_
 -92 NoClash(B_D_2_1)_binary_indicator_var
 <= 0
 
-c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(21)__t(D)_bounds_(ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(21)_disaggregatedVars__t(D)_
+c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(21)__t(B)_bounds_(ub)_:
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(21)_disaggregatedVars__t(B)_
 -92 NoClash(B_D_2_1)_binary_indicator_var
 <= 0
 
@@ -1019,34 +1019,34 @@ c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(23)__t(B)_bounds_(ub)_:
 <= 0
 
 c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(24)_transformedConstraints(c_0_ub)_:
--1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(24)_disaggregatedVars__t(B)_
 +1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(24)_disaggregatedVars__t(E)_
+-1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(24)_disaggregatedVars__t(B)_
 +4.0 NoClash(B_E_2_0)_binary_indicator_var
 <= 0.0
-
-c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(24)__t(B)_bounds_(ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(24)_disaggregatedVars__t(B)_
--92 NoClash(B_E_2_0)_binary_indicator_var
-<= 0
 
 c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(24)__t(E)_bounds_(ub)_:
 +1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(24)_disaggregatedVars__t(E)_
 -92 NoClash(B_E_2_0)_binary_indicator_var
 <= 0
 
+c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(24)__t(B)_bounds_(ub)_:
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(24)_disaggregatedVars__t(B)_
+-92 NoClash(B_E_2_0)_binary_indicator_var
+<= 0
+
 c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(25)_transformedConstraints(c_0_ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(25)_disaggregatedVars__t(B)_
 -1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(25)_disaggregatedVars__t(E)_
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(25)_disaggregatedVars__t(B)_
 +3.0 NoClash(B_E_2_1)_binary_indicator_var
 <= 0.0
 
-c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(25)__t(B)_bounds_(ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(25)_disaggregatedVars__t(B)_
+c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(25)__t(E)_bounds_(ub)_:
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(25)_disaggregatedVars__t(E)_
 -92 NoClash(B_E_2_1)_binary_indicator_var
 <= 0
 
-c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(25)__t(E)_bounds_(ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(25)_disaggregatedVars__t(E)_
+c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(25)__t(B)_bounds_(ub)_:
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(25)_disaggregatedVars__t(B)_
 -92 NoClash(B_E_2_1)_binary_indicator_var
 <= 0
 
@@ -1146,34 +1146,34 @@ c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(31)__t(B)_bounds_(ub)_:
 <= 0
 
 c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(32)_transformedConstraints(c_0_ub)_:
--1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(32)_disaggregatedVars__t(B)_
 +1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(32)_disaggregatedVars__t(G)_
+-1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(32)_disaggregatedVars__t(B)_
 +8.0 NoClash(B_G_2_0)_binary_indicator_var
 <= 0.0
-
-c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(32)__t(B)_bounds_(ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(32)_disaggregatedVars__t(B)_
--92 NoClash(B_G_2_0)_binary_indicator_var
-<= 0
 
 c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(32)__t(G)_bounds_(ub)_:
 +1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(32)_disaggregatedVars__t(G)_
 -92 NoClash(B_G_2_0)_binary_indicator_var
 <= 0
 
+c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(32)__t(B)_bounds_(ub)_:
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(32)_disaggregatedVars__t(B)_
+-92 NoClash(B_G_2_0)_binary_indicator_var
+<= 0
+
 c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(33)_transformedConstraints(c_0_ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(33)_disaggregatedVars__t(B)_
 -1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(33)_disaggregatedVars__t(G)_
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(33)_disaggregatedVars__t(B)_
 +3.0 NoClash(B_G_2_1)_binary_indicator_var
 <= 0.0
 
-c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(33)__t(B)_bounds_(ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(33)_disaggregatedVars__t(B)_
+c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(33)__t(G)_bounds_(ub)_:
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(33)_disaggregatedVars__t(G)_
 -92 NoClash(B_G_2_1)_binary_indicator_var
 <= 0
 
-c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(33)__t(G)_bounds_(ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(33)_disaggregatedVars__t(G)_
+c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(33)__t(B)_bounds_(ub)_:
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(33)_disaggregatedVars__t(B)_
 -92 NoClash(B_G_2_1)_binary_indicator_var
 <= 0
 
@@ -1306,34 +1306,34 @@ c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(41)__t(C)_bounds_(ub)_:
 <= 0
 
 c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(42)_transformedConstraints(c_0_ub)_:
--1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(42)_disaggregatedVars__t(C)_
 +1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(42)_disaggregatedVars__t(F)_
+-1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(42)_disaggregatedVars__t(C)_
 +2.0 NoClash(C_F_1_0)_binary_indicator_var
 <= 0.0
-
-c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(42)__t(C)_bounds_(ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(42)_disaggregatedVars__t(C)_
--92 NoClash(C_F_1_0)_binary_indicator_var
-<= 0
 
 c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(42)__t(F)_bounds_(ub)_:
 +1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(42)_disaggregatedVars__t(F)_
 -92 NoClash(C_F_1_0)_binary_indicator_var
 <= 0
 
+c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(42)__t(C)_bounds_(ub)_:
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(42)_disaggregatedVars__t(C)_
+-92 NoClash(C_F_1_0)_binary_indicator_var
+<= 0
+
 c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(43)_transformedConstraints(c_0_ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(43)_disaggregatedVars__t(C)_
 -1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(43)_disaggregatedVars__t(F)_
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(43)_disaggregatedVars__t(C)_
 +6.0 NoClash(C_F_1_1)_binary_indicator_var
 <= 0.0
 
-c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(43)__t(C)_bounds_(ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(43)_disaggregatedVars__t(C)_
+c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(43)__t(F)_bounds_(ub)_:
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(43)_disaggregatedVars__t(F)_
 -92 NoClash(C_F_1_1)_binary_indicator_var
 <= 0
 
-c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(43)__t(F)_bounds_(ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(43)_disaggregatedVars__t(F)_
+c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(43)__t(C)_bounds_(ub)_:
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(43)_disaggregatedVars__t(C)_
 -92 NoClash(C_F_1_1)_binary_indicator_var
 <= 0
 
@@ -1434,34 +1434,34 @@ c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(49)__t(C)_bounds_(ub)_:
 <= 0
 
 c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(50)_transformedConstraints(c_0_ub)_:
--1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(50)_disaggregatedVars__t(D)_
 +1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(50)_disaggregatedVars__t(E)_
+-1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(50)_disaggregatedVars__t(D)_
 +4.0 NoClash(D_E_2_0)_binary_indicator_var
 <= 0.0
-
-c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(50)__t(D)_bounds_(ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(50)_disaggregatedVars__t(D)_
--92 NoClash(D_E_2_0)_binary_indicator_var
-<= 0
 
 c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(50)__t(E)_bounds_(ub)_:
 +1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(50)_disaggregatedVars__t(E)_
 -92 NoClash(D_E_2_0)_binary_indicator_var
 <= 0
 
+c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(50)__t(D)_bounds_(ub)_:
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(50)_disaggregatedVars__t(D)_
+-92 NoClash(D_E_2_0)_binary_indicator_var
+<= 0
+
 c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(51)_transformedConstraints(c_0_ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(51)_disaggregatedVars__t(D)_
 -1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(51)_disaggregatedVars__t(E)_
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(51)_disaggregatedVars__t(D)_
 +8.0 NoClash(D_E_2_1)_binary_indicator_var
 <= 0.0
 
-c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(51)__t(D)_bounds_(ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(51)_disaggregatedVars__t(D)_
+c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(51)__t(E)_bounds_(ub)_:
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(51)_disaggregatedVars__t(E)_
 -92 NoClash(D_E_2_1)_binary_indicator_var
 <= 0
 
-c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(51)__t(E)_bounds_(ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(51)_disaggregatedVars__t(E)_
+c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(51)__t(D)_bounds_(ub)_:
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(51)_disaggregatedVars__t(D)_
 -92 NoClash(D_E_2_1)_binary_indicator_var
 <= 0
 
@@ -1562,34 +1562,34 @@ c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(57)__t(D)_bounds_(ub)_:
 <= 0
 
 c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(58)_transformedConstraints(c_0_ub)_:
--1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(58)_disaggregatedVars__t(D)_
 +1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(58)_disaggregatedVars__t(G)_
+-1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(58)_disaggregatedVars__t(D)_
 +8.0 NoClash(D_G_2_0)_binary_indicator_var
 <= 0.0
-
-c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(58)__t(D)_bounds_(ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(58)_disaggregatedVars__t(D)_
--92 NoClash(D_G_2_0)_binary_indicator_var
-<= 0
 
 c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(58)__t(G)_bounds_(ub)_:
 +1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(58)_disaggregatedVars__t(G)_
 -92 NoClash(D_G_2_0)_binary_indicator_var
 <= 0
 
+c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(58)__t(D)_bounds_(ub)_:
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(58)_disaggregatedVars__t(D)_
+-92 NoClash(D_G_2_0)_binary_indicator_var
+<= 0
+
 c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(59)_transformedConstraints(c_0_ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(59)_disaggregatedVars__t(D)_
 -1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(59)_disaggregatedVars__t(G)_
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(59)_disaggregatedVars__t(D)_
 +8.0 NoClash(D_G_2_1)_binary_indicator_var
 <= 0.0
 
-c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(59)__t(D)_bounds_(ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(59)_disaggregatedVars__t(D)_
+c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(59)__t(G)_bounds_(ub)_:
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(59)_disaggregatedVars__t(G)_
 -92 NoClash(D_G_2_1)_binary_indicator_var
 <= 0
 
-c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(59)__t(G)_bounds_(ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(59)_disaggregatedVars__t(G)_
+c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(59)__t(D)_bounds_(ub)_:
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(59)_disaggregatedVars__t(D)_
 -92 NoClash(D_G_2_1)_binary_indicator_var
 <= 0
 
@@ -1657,34 +1657,34 @@ c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(63)__t(E)_bounds_(ub)_:
 <= 0
 
 c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(64)_transformedConstraints(c_0_ub)_:
--1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(64)_disaggregatedVars__t(E)_
 +1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(64)_disaggregatedVars__t(G)_
+-1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(64)_disaggregatedVars__t(E)_
 +8.0 NoClash(E_G_2_0)_binary_indicator_var
 <= 0.0
-
-c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(64)__t(E)_bounds_(ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(64)_disaggregatedVars__t(E)_
--92 NoClash(E_G_2_0)_binary_indicator_var
-<= 0
 
 c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(64)__t(G)_bounds_(ub)_:
 +1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(64)_disaggregatedVars__t(G)_
 -92 NoClash(E_G_2_0)_binary_indicator_var
 <= 0
 
+c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(64)__t(E)_bounds_(ub)_:
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(64)_disaggregatedVars__t(E)_
+-92 NoClash(E_G_2_0)_binary_indicator_var
+<= 0
+
 c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(65)_transformedConstraints(c_0_ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(65)_disaggregatedVars__t(E)_
 -1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(65)_disaggregatedVars__t(G)_
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(65)_disaggregatedVars__t(E)_
 +4.0 NoClash(E_G_2_1)_binary_indicator_var
 <= 0.0
 
-c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(65)__t(E)_bounds_(ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(65)_disaggregatedVars__t(E)_
+c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(65)__t(G)_bounds_(ub)_:
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(65)_disaggregatedVars__t(G)_
 -92 NoClash(E_G_2_1)_binary_indicator_var
 <= 0
 
-c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(65)__t(G)_bounds_(ub)_:
-+1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(65)_disaggregatedVars__t(G)_
+c_u__pyomo_gdp_hull_reformulation_relaxedDisjuncts(65)__t(E)_bounds_(ub)_:
++1 _pyomo_gdp_hull_reformulation_relaxedDisjuncts(65)_disaggregatedVars__t(E)_
 -92 NoClash(E_G_2_1)_binary_indicator_var
 <= 0
 
@@ -1769,10 +1769,10 @@ bounds
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(3)_disaggregatedVars__t(B)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(2)_disaggregatedVars__t(A)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(3)_disaggregatedVars__t(A)_ <= 92
-   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(4)_disaggregatedVars__t(A)_ <= 92
-   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(5)_disaggregatedVars__t(A)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(4)_disaggregatedVars__t(C)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(5)_disaggregatedVars__t(C)_ <= 92
+   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(4)_disaggregatedVars__t(A)_ <= 92
+   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(5)_disaggregatedVars__t(A)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(6)_disaggregatedVars__t(D)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(7)_disaggregatedVars__t(D)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(6)_disaggregatedVars__t(A)_ <= 92
@@ -1785,10 +1785,10 @@ bounds
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(11)_disaggregatedVars__t(E)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(10)_disaggregatedVars__t(A)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(11)_disaggregatedVars__t(A)_ <= 92
-   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(12)_disaggregatedVars__t(A)_ <= 92
-   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(13)_disaggregatedVars__t(A)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(12)_disaggregatedVars__t(F)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(13)_disaggregatedVars__t(F)_ <= 92
+   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(12)_disaggregatedVars__t(A)_ <= 92
+   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(13)_disaggregatedVars__t(A)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(14)_disaggregatedVars__t(F)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(15)_disaggregatedVars__t(F)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(14)_disaggregatedVars__t(A)_ <= 92
@@ -1797,22 +1797,22 @@ bounds
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(17)_disaggregatedVars__t(G)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(16)_disaggregatedVars__t(A)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(17)_disaggregatedVars__t(A)_ <= 92
-   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(18)_disaggregatedVars__t(B)_ <= 92
-   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(19)_disaggregatedVars__t(B)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(18)_disaggregatedVars__t(C)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(19)_disaggregatedVars__t(C)_ <= 92
-   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(20)_disaggregatedVars__t(B)_ <= 92
-   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(21)_disaggregatedVars__t(B)_ <= 92
+   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(18)_disaggregatedVars__t(B)_ <= 92
+   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(19)_disaggregatedVars__t(B)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(20)_disaggregatedVars__t(D)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(21)_disaggregatedVars__t(D)_ <= 92
+   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(20)_disaggregatedVars__t(B)_ <= 92
+   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(21)_disaggregatedVars__t(B)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(22)_disaggregatedVars__t(D)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(23)_disaggregatedVars__t(D)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(22)_disaggregatedVars__t(B)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(23)_disaggregatedVars__t(B)_ <= 92
-   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(24)_disaggregatedVars__t(B)_ <= 92
-   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(25)_disaggregatedVars__t(B)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(24)_disaggregatedVars__t(E)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(25)_disaggregatedVars__t(E)_ <= 92
+   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(24)_disaggregatedVars__t(B)_ <= 92
+   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(25)_disaggregatedVars__t(B)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(26)_disaggregatedVars__t(E)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(27)_disaggregatedVars__t(E)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(26)_disaggregatedVars__t(B)_ <= 92
@@ -1825,10 +1825,10 @@ bounds
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(31)_disaggregatedVars__t(F)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(30)_disaggregatedVars__t(B)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(31)_disaggregatedVars__t(B)_ <= 92
-   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(32)_disaggregatedVars__t(B)_ <= 92
-   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(33)_disaggregatedVars__t(B)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(32)_disaggregatedVars__t(G)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(33)_disaggregatedVars__t(G)_ <= 92
+   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(32)_disaggregatedVars__t(B)_ <= 92
+   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(33)_disaggregatedVars__t(B)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(34)_disaggregatedVars__t(G)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(35)_disaggregatedVars__t(G)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(34)_disaggregatedVars__t(B)_ <= 92
@@ -1845,10 +1845,10 @@ bounds
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(41)_disaggregatedVars__t(E)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(40)_disaggregatedVars__t(C)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(41)_disaggregatedVars__t(C)_ <= 92
-   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(42)_disaggregatedVars__t(C)_ <= 92
-   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(43)_disaggregatedVars__t(C)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(42)_disaggregatedVars__t(F)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(43)_disaggregatedVars__t(F)_ <= 92
+   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(42)_disaggregatedVars__t(C)_ <= 92
+   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(43)_disaggregatedVars__t(C)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(44)_disaggregatedVars__t(F)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(45)_disaggregatedVars__t(F)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(44)_disaggregatedVars__t(C)_ <= 92
@@ -1861,10 +1861,10 @@ bounds
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(49)_disaggregatedVars__t(G)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(48)_disaggregatedVars__t(C)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(49)_disaggregatedVars__t(C)_ <= 92
-   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(50)_disaggregatedVars__t(D)_ <= 92
-   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(51)_disaggregatedVars__t(D)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(50)_disaggregatedVars__t(E)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(51)_disaggregatedVars__t(E)_ <= 92
+   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(50)_disaggregatedVars__t(D)_ <= 92
+   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(51)_disaggregatedVars__t(D)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(52)_disaggregatedVars__t(E)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(53)_disaggregatedVars__t(E)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(52)_disaggregatedVars__t(D)_ <= 92
@@ -1877,10 +1877,10 @@ bounds
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(57)_disaggregatedVars__t(F)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(56)_disaggregatedVars__t(D)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(57)_disaggregatedVars__t(D)_ <= 92
-   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(58)_disaggregatedVars__t(D)_ <= 92
-   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(59)_disaggregatedVars__t(D)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(58)_disaggregatedVars__t(G)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(59)_disaggregatedVars__t(G)_ <= 92
+   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(58)_disaggregatedVars__t(D)_ <= 92
+   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(59)_disaggregatedVars__t(D)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(60)_disaggregatedVars__t(G)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(61)_disaggregatedVars__t(G)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(60)_disaggregatedVars__t(D)_ <= 92
@@ -1889,10 +1889,10 @@ bounds
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(63)_disaggregatedVars__t(F)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(62)_disaggregatedVars__t(E)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(63)_disaggregatedVars__t(E)_ <= 92
-   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(64)_disaggregatedVars__t(E)_ <= 92
-   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(65)_disaggregatedVars__t(E)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(64)_disaggregatedVars__t(G)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(65)_disaggregatedVars__t(G)_ <= 92
+   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(64)_disaggregatedVars__t(E)_ <= 92
+   0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(65)_disaggregatedVars__t(E)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(66)_disaggregatedVars__t(G)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(67)_disaggregatedVars__t(G)_ <= 92
    0 <= _pyomo_gdp_hull_reformulation_relaxedDisjuncts(66)_disaggregatedVars__t(E)_ <= 92
