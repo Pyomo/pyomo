@@ -200,7 +200,8 @@ def inv(xl, xu, feasibility_tol):
 
 
 def div(xl, xu, yl, yu, feasibility_tol):
-    return mul(xl, xu, *inv(yl, yu, feasibility_tol))
+    lb, ub = mul(xl, xu, *inv(yl, yu, feasibility_tol))
+    return lb, ub
 
 
 def power(xl, xu, yl, yu, feasibility_tol):

@@ -472,6 +472,7 @@ class Highs(PersistentBase, PersistentSolver):
             del self._solver_con_to_pyomo_con_map[con_ndx]
             indices_to_remove.append(con_ndx)
             self._mutable_helpers.pop(con, None)
+        indices_to_remove.sort()
         self._solver_model.deleteRows(
             len(indices_to_remove), np.array(indices_to_remove)
         )

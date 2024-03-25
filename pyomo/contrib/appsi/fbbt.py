@@ -147,7 +147,8 @@ class IntervalTightener(PersistentBase):
         cparams = cmodel.create_params(len(params))
         for ndx, p in enumerate(params):
             cp = cparams[ndx]
-            cp.value = p.value
+            if p.value is not None:
+                cp.value = p.value
             self._param_map[id(p)] = cp
         if self._symbolic_solver_labels:
             for ndx, p in enumerate(params):
@@ -222,7 +223,8 @@ class IntervalTightener(PersistentBase):
     def update_params(self):
         for p_id, p in self._params.items():
             cp = self._param_map[p_id]
-            cp.value = p.value
+            if p.value is not None:
+                cp.value = p.value
 
     def set_objective(self, obj: _GeneralObjectiveData):
         if self._symbolic_solver_labels:
