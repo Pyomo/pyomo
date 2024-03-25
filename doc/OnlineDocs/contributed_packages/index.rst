@@ -17,6 +17,7 @@ Contributed packages distributed with Pyomo:
    
    community.rst
    doe/doe.rst
+   edi/index.rst
    gdpopt.rst
    iis.rst
    incidence/index.rst
