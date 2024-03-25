@@ -40,4 +40,7 @@ WRONLY = "WRONLY"
 Hax = "Hax"
 # Big Sur
 Sur = "Sur"
+# contrib package named mis and the acronym whence the name comes
+mis = "mis"
+MIS = "MIS"
 # AS NEEDED: Add More Words Below
