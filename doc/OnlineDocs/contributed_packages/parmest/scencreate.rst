@@ -18,5 +18,5 @@ scenarios to the screen, accessing them via the ``ScensItator`` a ``print``
    :language: python
 
 .. note::
-   This example may produce an error message your version of Ipopt is not based
+   This example may produce an error message if your version of Ipopt is not based
    on a good linear solver.

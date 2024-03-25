@@ -14,6 +14,15 @@
 
 import pyomo.environ as pyo
 
+from pyomo.common.deprecation import deprecated
+from pyomo.common.deprecation import deprecation_warning
+
+DEPRECATION_VERSION = '6.7.0'
+
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class ScenarioSet(object):
     """
@@ -119,6 +128,89 @@ class ScenarioCreator(object):
     """
 
     def __init__(self, pest, solvername):
+
+        # is this a deprecated pest object?
+        self.scen_deprecated = None
+        if pest.pest_deprecated is not None:
+            deprecation_warning(
+                "Using a deprecated parmest object for scenario "
+                + "creator, please recreate object using experiment lists.",
+                version=DEPRECATION_VERSION,
+            )
+            self.scen_deprecated = _ScenarioCreatorDeprecated(
+                pest.pest_deprecated, solvername
+            )
+        else:
+            self.pest = pest
+            self.solvername = solvername
+
+    def ScenariosFromExperiments(self, addtoSet):
+        """Creates new self.Scenarios list using the experiments only.
+
+        Args:
+            addtoSet (ScenarioSet): the scenarios will be added to this set
+        Returns:
+            a ScenarioSet
+        """
+
+        # check if using deprecated pest object
+        if self.scen_deprecated is not None:
+            self.scen_deprecated.ScenariosFromExperiments(addtoSet)
+            return
+
+        assert isinstance(addtoSet, ScenarioSet)
+
+        scenario_numbers = list(range(len(self.pest.exp_list)))
+
+        prob = 1.0 / len(scenario_numbers)
+        for exp_num in scenario_numbers:
+            ##print("Experiment number=", exp_num)
+            model = self.pest._instance_creation_callback(exp_num)
+            opt = pyo.SolverFactory(self.solvername)
+            results = opt.solve(model)  # solves and updates model
+            ## pyo.check_termination_optimal(results)
+            ThetaVals = dict()
+            for theta in self.pest.theta_names:
+                tvar = eval('model.' + theta)
+                tval = pyo.value(tvar)
+                ##print("    theta, tval=", tvar, tval)
+                ThetaVals[theta] = tval
+            addtoSet.addone(ParmestScen("ExpScen" + str(exp_num), ThetaVals, prob))
+
+    def ScenariosFromBootstrap(self, addtoSet, numtomake, seed=None):
+        """Creates new self.Scenarios list using the experiments only.
+
+        Args:
+            addtoSet (ScenarioSet): the scenarios will be added to this set
+            numtomake (int) : number of scenarios to create
+        """
+
+        # check if using deprecated pest object
+        if self.scen_deprecated is not None:
+            self.scen_deprecated.ScenariosFromBootstrap(addtoSet, numtomake, seed=seed)
+            return
+
+        assert isinstance(addtoSet, ScenarioSet)
+
+        bootstrap_thetas = self.pest.theta_est_bootstrap(numtomake, seed=seed)
+        addtoSet.append_bootstrap(bootstrap_thetas)
+
+
+################################
+# deprecated functions/classes #
+################################
+
+
+class _ScenarioCreatorDeprecated(object):
+    """Create scenarios from parmest.
+
+    Args:
+        pest (Estimator): the parmest object
+        solvername (str): name of the solver (e.g. "ipopt")
+
+    """
+
+    def __init__(self, pest, solvername):
         self.pest = pest
         self.solvername = solvername
 
@@ -131,7 +223,7 @@ class ScenarioCreator(object):
             a ScenarioSet
         """
 
-        assert isinstance(addtoSet, ScenarioSet)
+        # assert isinstance(addtoSet, ScenarioSet)
 
         scenario_numbers = list(range(len(self.pest.callback_data)))
 
@@ -160,7 +252,7 @@ class ScenarioCreator(object):
             numtomake (int) : number of scenarios to create
         """
 
-        assert isinstance(addtoSet, ScenarioSet)
+        # assert isinstance(addtoSet, ScenarioSet)
 
         bootstrap_thetas = self.pest.theta_est_bootstrap(numtomake, seed=seed)
         addtoSet.append_bootstrap(bootstrap_thetas)

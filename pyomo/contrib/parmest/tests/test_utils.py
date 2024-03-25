@@ -48,12 +48,17 @@ class TestUtils(unittest.TestCase):
             columns=["sv", "caf", "ca", "cb", "cc", "cd"],
         )
 
-        theta_names = ["k1", "k2", "k3"]
+        # make model
+        instance = reactor_design_model()
 
-        instance = reactor_design_model(data.loc[0])
+        # add caf, sv
+        instance.caf = data.iloc[0]['caf']
+        instance.sv = data.iloc[0]['sv']
+
         solver = pyo.SolverFactory("ipopt")
         solver.solve(instance)
 
+        theta_names = ['k1', 'k2', 'k3']
         instance_vars = parmest.utils.convert_params_to_vars(
             instance, theta_names, fix_vars=True
         )
