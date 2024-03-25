@@ -186,10 +186,16 @@ def spy_dulmage_mendelsohn(
             nv = sum(len(vb) for vb in vblocks)
             nc = sum(len(cb) for cb in cblocks)
             stop = (start[0] + nv - 1, start[1] + nc - 1)
-            if not (i == 1 and skip_wellconstrained):
+            if (
+                not (i == 1 and skip_wellconstrained)
+                and nv > 0 and nc > 0
+            ):
                 # Regardless of whether we are plotting in upper or lower
                 # triangular order, the well-constrained subsystem is at
                 # position 1
+                #
+                # The get-rectangle function doesn't look good if we give it
+                # an "empty region" to box.
                 ax.add_patch(
                     _get_rectangle_around_coords(start, stop, linewidth=linewidth)
                 )
@@ -202,6 +208,7 @@ def spy_dulmage_mendelsohn(
         start = (0, 0)
         for vb, cb in zip(vpart_fine, cpart_fine):
             stop = (start[0] + len(vb) - 1, start[1] + len(cb) - 1)
+            # Note that the subset's we're boxing here can't be empty.
             ax.add_patch(
                 _get_rectangle_around_coords(
                     start, stop, linestyle=linestyle, linewidth=linewidth
