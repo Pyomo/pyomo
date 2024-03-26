@@ -1,13 +1,20 @@
-__all__ = ["SAS"]
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 import logging
 import sys
 from os import stat
 import uuid
-
-from io import StringIO
 from abc import ABC, abstractmethod
-from contextlib import redirect_stdout
+from io import StringIO
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver
 from pyomo.opt.base.solvers import SolverFactory
@@ -23,6 +30,8 @@ from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.base import Var
 from pyomo.core.base.block import _BlockData
 from pyomo.core.kernel.block import IBlock
+from pyomo.common.log import LogStream
+from pyomo.common.tee import capture_output, TeeStream
 
 
 logger = logging.getLogger("pyomo.solvers")
@@ -252,6 +261,7 @@ class SAS94(SASAbc):
     """
     Solver interface for SAS 9.4 using saspy. See the saspy documentation about
     how to create a connection.
+    The swat connection options can be specified on the SolverFactory call.
     """
 
     def __init__(self, **kwds):
@@ -541,37 +551,12 @@ class SAS94(SASAbc):
         return Bunch(rc=self._rc, log=self._log)
 
 
-class SASLogWriter:
-    """Helper class to take the log from stdout and put it also in a StringIO."""
-
-    def __init__(self, tee):
-        """Set up the two outputs."""
-        self.tee = tee
-        self._log = StringIO()
-        self.stdout = sys.stdout
-
-    def write(self, message):
-        """If the tee options is specified, write to both outputs."""
-        if self.tee:
-            self.stdout.write(message)
-        self._log.write(message)
-
-    def flush(self):
-        """Nothing to do, just here for compatibility reasons."""
-        # Do nothing since we flush right away
-        pass
-
-    def log(self):
-        """ "Get the log as a string."""
-        return self._log.getvalue()
-
-
 @SolverFactory.register("_sascas", doc="SAS Viya CAS Server interface")
 class SASCAS(SASAbc):
     """
     Solver interface connection to a SAS Viya CAS server using swat.
     See the documentation for the swat package about how to create a connection.
-    The swat connection options can be passed as options to the solve function.
+    The swat connection options can be specified on the SolverFactory call.
     """
 
     def __init__(self, **kwds):
@@ -600,6 +585,106 @@ class SASCAS(SASAbc):
         if self._sas_session:
             self._sas_session.close()
 
+    def _uploadMpsFile(self, s, unique):
+        # Declare a unique table name for the mps table
+        mpsdata_table_name = "mps" + unique
+
+        # Upload mps file to CAS, if the file is larger than 2 GB, we need to use convertMps instead of loadMps
+        # Note that technically it is 2 Gibibytes file size that trigger the issue, but 2 GB is the safer threshold
+        if stat(self._problem_files[0]).st_size > 2e9:
+            # For files larger than 2 GB (this is a limitation of the loadMps action used in the else part).
+            # Use convertMPS, first create file for upload.
+            mpsWithIdFileName = TempfileManager.create_tempfile(".mps.csv", text=True)
+            with open(mpsWithIdFileName, "w") as mpsWithId:
+                mpsWithId.write("_ID_\tText\n")
+                with open(self._problem_files[0], "r") as f:
+                    id = 0
+                    for line in f:
+                        id += 1
+                        mpsWithId.write(str(id) + "\t" + line.rstrip() + "\n")
+
+            # Upload .mps.csv file
+            mpscsv_table_name = "csv" + unique
+            s.upload_file(
+                mpsWithIdFileName,
+                casout={"name": mpscsv_table_name, "replace": True},
+                importoptions={"filetype": "CSV", "delimiter": "\t"},
+            )
+
+            # Convert .mps.csv file to .mps
+            s.optimization.convertMps(
+                data=mpscsv_table_name,
+                casOut={"name": mpsdata_table_name, "replace": True},
+                format="FREE",
+            )
+
+            # Delete the table we don't need anymore
+            if mpscsv_table_name:
+                s.dropTable(name=mpscsv_table_name, quiet=True)
+        else:
+            # For small files (less than 2 GB), use loadMps
+            with open(self._problem_files[0], "r") as mps_file:
+                s.optimization.loadMps(
+                    mpsFileString=mps_file.read(),
+                    casout={"name": mpsdata_table_name, "replace": True},
+                    format="FREE",
+                )
+        return mpsdata_table_name
+
+    def _uploadPrimalin(self, s, unique):
+        # Upload warmstart file to CAS with a unique name
+        primalin_table_name = "pin" + unique
+        s.upload_file(
+            self._warm_start_file_name,
+            casout={"name": primalin_table_name, "replace": True},
+            importoptions={"filetype": "CSV"},
+        )
+        self.options["primalin"] = primalin_table_name
+        return primalin_table_name
+
+    def _retrieveSolution(
+        self, s, r, results, action, primalout_table_name, dualout_table_name
+    ):
+        # Create solution
+        sol = results.solution.add()
+
+        # Store status in solution
+        sol.status = SolutionStatus.feasible
+        sol.termination_condition = SOLSTATUS_TO_TERMINATIONCOND[
+            r.get("solutionStatus", "ERROR")
+        ]
+
+        # Store objective value in solution
+        sol.objective["__default_objective__"] = {"Value": r["objective"]}
+
+        if action == "solveMilp":
+            primal_out = s.CASTable(name=primalout_table_name)
+            # Use pandas functions for efficiency
+            primal_out = primal_out[["_VAR_", "_VALUE_"]]
+            sol.variable = {}
+            for row in primal_out.itertuples(index=False):
+                sol.variable[row[0]] = {"Value": row[1]}
+        else:
+            # Convert primal out data set to variable dictionary
+            # Use panda functions for efficiency
+            primal_out = s.CASTable(name=primalout_table_name)
+            primal_out = primal_out[["_VAR_", "_VALUE_", "_STATUS_", "_R_COST_"]]
+            sol.variable = {}
+            for row in primal_out.itertuples(index=False):
+                sol.variable[row[0]] = {"Value": row[1], "Status": row[2], "rc": row[3]}
+
+            # Convert dual out data set to constraint dictionary
+            # Use pandas functions for efficiency
+            dual_out = s.CASTable(name=dualout_table_name)
+            dual_out = dual_out[["_ROW_", "_VALUE_", "_STATUS_", "_ACTIVITY_"]]
+            sol.constraint = {}
+            for row in dual_out.itertuples(index=False):
+                sol.constraint[row[0]] = {
+                    "dual": row[1],
+                    "Status": row[2],
+                    "slack": row[3],
+                }
+
     def _apply_solver(self):
         """ "Prepare the options and run the solver. Then store the data to be returned."""
         logger.debug("Running SAS Viya")
@@ -620,175 +705,92 @@ class SASCAS(SASAbc):
         # Get a unique identifier, always use the same with different prefixes
         unique = uuid.uuid4().hex[:16]
 
+        # Creat the output stream, we want to print to a log string as well as to the console
+        self._log = StringIO()
+        ostreams = [LogStream(level=logging.INFO, logger=logger)]
+        ostreams.append(self._log)
+        if self._tee:
+            ostreams.append(sys.stdout)
+
         # Connect to CAS server
-        with redirect_stdout(SASLogWriter(self._tee)) as self._log_writer:
-            s = self._sas_session
-            if s == None:
-                s = self._sas_session = self._sas.CAS(**self._session_options)
-            try:
-                # Load the optimization action set
-                s.loadactionset("optimization")
+        with TeeStream(*ostreams) as t:
+            with capture_output(output=t.STDOUT, capture_fd=False):
+                s = self._sas_session
+                if s == None:
+                    s = self._sas_session = self._sas.CAS(**self._session_options)
+                try:
+                    # Load the optimization action set
+                    s.loadactionset("optimization")
 
-                # Declare a unique table name for the mps table
-                mpsdata_table_name = "mps" + unique
+                    mpsdata_table_name = self._uploadMpsFile(s, unique)
 
-                # Upload mps file to CAS, if the file is larger than 2 GB, we need to use convertMps instead of loadMps
-                # Note that technically it is 2 Gibibytes file size that trigger the issue, but 2 GB is the safer threshold
-                if stat(self._problem_files[0]).st_size > 2e9:
-                    # For files larger than 2 GB (this is a limitation of the loadMps action used in the else part).
-                    # Use convertMPS, first create file for upload.
-                    mpsWithIdFileName = TempfileManager.create_tempfile(
-                        ".mps.csv", text=True
-                    )
-                    with open(mpsWithIdFileName, "w") as mpsWithId:
-                        mpsWithId.write("_ID_\tText\n")
-                        with open(self._problem_files[0], "r") as f:
-                            id = 0
-                            for line in f:
-                                id += 1
-                                mpsWithId.write(str(id) + "\t" + line.rstrip() + "\n")
+                    primalin_table_name = None
+                    if self.warmstart_flag:
+                        primalin_table_name = self._uploadPrimalin(s, unique)
 
-                    # Upload .mps.csv file
-                    mpscsv_table_name = "csv" + unique
-                    s.upload_file(
-                        mpsWithIdFileName,
-                        casout={"name": mpscsv_table_name, "replace": True},
-                        importoptions={"filetype": "CSV", "delimiter": "\t"},
-                    )
+                    # Define output table names
+                    primalout_table_name = "pout" + unique
+                    dualout_table_name = None
 
-                    # Convert .mps.csv file to .mps
-                    s.optimization.convertMps(
-                        data=mpscsv_table_name,
-                        casOut={"name": mpsdata_table_name, "replace": True},
-                        format="FREE",
-                    )
-
-                    # Delete the table we don't need anymore
-                    if mpscsv_table_name:
-                        s.dropTable(name=mpscsv_table_name, quiet=True)
-                else:
-                    # For small files (less than 2 GB), use loadMps
-                    with open(self._problem_files[0], "r") as mps_file:
-                        s.optimization.loadMps(
-                            mpsFileString=mps_file.read(),
-                            casout={"name": mpsdata_table_name, "replace": True},
-                            format="FREE",
+                    # Solve the problem in CAS
+                    if action == "solveMilp":
+                        r = s.optimization.solveMilp(
+                            data={"name": mpsdata_table_name},
+                            primalOut={"name": primalout_table_name, "replace": True},
+                            **self.options
+                        )
+                    else:
+                        dualout_table_name = "dout" + unique
+                        r = s.optimization.solveLp(
+                            data={"name": mpsdata_table_name},
+                            primalOut={"name": primalout_table_name, "replace": True},
+                            dualOut={"name": dualout_table_name, "replace": True},
+                            **self.options
                         )
 
-                primalin_table_name = None
-                if self.warmstart_flag:
-                    primalin_table_name = "pin" + unique
-                    # Upload warmstart file to CAS
-                    s.upload_file(
-                        self._warm_start_file_name,
-                        casout={"name": primalin_table_name, "replace": True},
-                        importoptions={"filetype": "CSV"},
-                    )
-                    self.options["primalin"] = primalin_table_name
+                    # Prepare the solver results
+                    if r:
+                        # Get back the primal and dual solution data sets
+                        results = self.results = self._create_results_from_status(
+                            r.get("status", "ERROR"), r.get("solutionStatus", "ERROR")
+                        )
 
-                # Define output table names
-                primalout_table_name = "pout" + unique
-                dualout_table_name = None
-
-                # Solve the problem in CAS
-                if action == "solveMilp":
-                    r = s.optimization.solveMilp(
-                        data={"name": mpsdata_table_name},
-                        primalOut={"name": primalout_table_name, "replace": True},
-                        **self.options
-                    )
-                else:
-                    dualout_table_name = "dout" + unique
-                    r = s.optimization.solveLp(
-                        data={"name": mpsdata_table_name},
-                        primalOut={"name": primalout_table_name, "replace": True},
-                        dualOut={"name": dualout_table_name, "replace": True},
-                        **self.options
-                    )
-
-                # Prepare the solver results
-                if r:
-                    # Get back the primal and dual solution data sets
-                    results = self.results = self._create_results_from_status(
-                        r.get("status", "ERROR"), r.get("solutionStatus", "ERROR")
-                    )
-
-                    if results.solver.status != SolverStatus.error:
-                        if r.ProblemSummary["cValue1"][1] == "Maximization":
-                            results.problem.sense = ProblemSense.maximize
-                        else:
-                            results.problem.sense = ProblemSense.minimize
-
-                        # Prepare the solution information
-                        if results.solver.hasSolution:
-                            sol = results.solution.add()
-
-                            # Store status in solution
-                            sol.status = SolutionStatus.feasible
-                            sol.termination_condition = SOLSTATUS_TO_TERMINATIONCOND[
-                                r.get("solutionStatus", "ERROR")
-                            ]
-
-                            # Store objective value in solution
-                            sol.objective["__default_objective__"] = {
-                                "Value": r["objective"]
-                            }
-
-                            if action == "solveMilp":
-                                primal_out = s.CASTable(name=primalout_table_name)
-                                # Use pandas functions for efficiency
-                                primal_out = primal_out[["_VAR_", "_VALUE_"]]
-                                sol.variable = {}
-                                for row in primal_out.itertuples(index=False):
-                                    sol.variable[row[0]] = {"Value": row[1]}
+                        if results.solver.status != SolverStatus.error:
+                            if r.ProblemSummary["cValue1"][1] == "Maximization":
+                                results.problem.sense = ProblemSense.maximize
                             else:
-                                # Convert primal out data set to variable dictionary
-                                # Use panda functions for efficiency
-                                primal_out = s.CASTable(name=primalout_table_name)
-                                primal_out = primal_out[
-                                    ["_VAR_", "_VALUE_", "_STATUS_", "_R_COST_"]
-                                ]
-                                sol.variable = {}
-                                for row in primal_out.itertuples(index=False):
-                                    sol.variable[row[0]] = {
-                                        "Value": row[1],
-                                        "Status": row[2],
-                                        "rc": row[3],
-                                    }
+                                results.problem.sense = ProblemSense.minimize
 
-                                # Convert dual out data set to constraint dictionary
-                                # Use pandas functions for efficiency
-                                dual_out = s.CASTable(name=dualout_table_name)
-                                dual_out = dual_out[
-                                    ["_ROW_", "_VALUE_", "_STATUS_", "_ACTIVITY_"]
-                                ]
-                                sol.constraint = {}
-                                for row in dual_out.itertuples(index=False):
-                                    sol.constraint[row[0]] = {
-                                        "dual": row[1],
-                                        "Status": row[2],
-                                        "slack": row[3],
-                                    }
+                            # Prepare the solution information
+                            if results.solver.hasSolution:
+                                self._retrieveSolution(
+                                    s,
+                                    r,
+                                    results,
+                                    action,
+                                    primalout_table_name,
+                                    dualout_table_name,
+                                )
+                        else:
+                            raise ValueError("The SAS solver returned an error status.")
                     else:
-                        raise ValueError("The SAS solver returned an error status.")
-                else:
-                    results = self.results = SolverResults()
-                    results.solver.name = "SAS"
-                    results.solver.status = SolverStatus.error
-                    raise ValueError(
-                        "An option passed to the SAS solver caused a syntax error."
-                    )
+                        results = self.results = SolverResults()
+                        results.solver.name = "SAS"
+                        results.solver.status = SolverStatus.error
+                        raise ValueError(
+                            "An option passed to the SAS solver caused a syntax error."
+                        )
 
-            finally:
-                if mpsdata_table_name:
-                    s.dropTable(name=mpsdata_table_name, quiet=True)
-                if primalin_table_name:
-                    s.dropTable(name=primalin_table_name, quiet=True)
-                if primalout_table_name:
-                    s.dropTable(name=primalout_table_name, quiet=True)
-                if dualout_table_name:
-                    s.dropTable(name=dualout_table_name, quiet=True)
+                finally:
+                    if mpsdata_table_name:
+                        s.dropTable(name=mpsdata_table_name, quiet=True)
+                    if primalin_table_name:
+                        s.dropTable(name=primalin_table_name, quiet=True)
+                    if primalout_table_name:
+                        s.dropTable(name=primalout_table_name, quiet=True)
+                    if dualout_table_name:
+                        s.dropTable(name=dualout_table_name, quiet=True)
 
-        self._log = self._log_writer.log()
+        self._log = self._log.getvalue()
         self._rc = 0
         return Bunch(rc=self._rc, log=self._log)
