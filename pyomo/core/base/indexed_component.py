@@ -18,7 +18,7 @@ import pyomo.core.expr as EXPR
 import pyomo.core.base as BASE
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 from pyomo.core.base.initializer import Initializer
-from pyomo.core.base.component import Component, ActiveComponent
+from pyomo.core.base.component import Component, ActiveComponent, ComponentData
 from pyomo.core.base.config import PyomoOptions
 from pyomo.core.base.enums import SortComponents
 from pyomo.core.base.global_set import UnindexedComponent_set
@@ -606,7 +606,7 @@ You can silence this warning by one of three ways:
         """Return a list (index,data) tuples from the dictionary"""
         return self.items()
 
-    def __getitem__(self, index):
+    def __getitem__(self, index) -> ComponentData:
         """
         This method returns the data corresponding to the given index.
         """

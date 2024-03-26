@@ -146,10 +146,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             self,
             orcons.body,
             EXPR.LinearExpression(
-                [
-                    EXPR.MonomialTermExpression((1, m.d[0].binary_indicator_var)),
-                    EXPR.MonomialTermExpression((1, m.d[1].binary_indicator_var)),
-                ]
+                [m.d[0].binary_indicator_var, m.d[1].binary_indicator_var]
             ),
         )
         self.assertEqual(orcons.lower, 1)
