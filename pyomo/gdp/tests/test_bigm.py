@@ -2091,35 +2091,6 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
                 m._pyomo_gdp_bigm_reformulation.relaxedDisjuncts,
             )
 
-    def check_first_disjunct_constraint(self, disj1c, x, ind_var):
-        self.assertEqual(len(disj1c), 1)
-        cons = disj1c[0]
-        self.assertIsNone(cons.lower)
-        self.assertEqual(cons.upper, 1)
-        repn = generate_standard_repn(cons.body)
-        self.assertTrue(repn.is_quadratic())
-        self.assertEqual(len(repn.linear_vars), 1)
-        self.assertEqual(len(repn.quadratic_vars), 4)
-        ct.check_linear_coef(self, repn, ind_var, 143)
-        self.assertEqual(repn.constant, -143)
-        for i in range(1, 5):
-            ct.check_squared_term_coef(self, repn, x[i], 1)
-
-    def check_second_disjunct_constraint(self, disj2c, x, ind_var):
-        self.assertEqual(len(disj2c), 1)
-        cons = disj2c[0]
-        self.assertIsNone(cons.lower)
-        self.assertEqual(cons.upper, 1)
-        repn = generate_standard_repn(cons.body)
-        self.assertTrue(repn.is_quadratic())
-        self.assertEqual(len(repn.linear_vars), 5)
-        self.assertEqual(len(repn.quadratic_vars), 4)
-        self.assertEqual(repn.constant, -63)  # M = 99, so this is 36 - 99
-        ct.check_linear_coef(self, repn, ind_var, 99)
-        for i in range(1, 5):
-            ct.check_squared_term_coef(self, repn, x[i], 1)
-            ct.check_linear_coef(self, repn, x[i], -6)
-
     def simplify_cons(self, cons, leq):
         visitor = LinearRepnVisitor({}, {}, {}, None)
         repn = visitor.walk_expression(cons.body)
@@ -2145,30 +2116,45 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
 
         # outer disjunction constraints
         disj1c = bigm.get_transformed_constraints(m.disj1.c)
-        self.check_first_disjunct_constraint(disj1c, m.x, m.disj1.binary_indicator_var)
+        self.assertEqual(len(disj1c), 1)
+        cons = disj1c[0]
+        assertExpressionsEqual(
+            self,
+            cons.expr,
+            m.x[1]**2 + m.x[2]**2 + m.x[3]**2 + m.x[4]**2 - 143.0*(1 - m.disj1.binary_indicator_var) <= 1.0
+        )
 
         disj2c = bigm.get_transformed_constraints(m.disjunct_block.disj2.c)
-        self.check_second_disjunct_constraint(
-            disj2c, m.x, m.disjunct_block.disj2.binary_indicator_var
+        self.assertEqual(len(disj2c), 1)
+        cons = disj2c[0]
+        cons.pprint()
+        assertExpressionsEqual(
+            self,
+            cons.expr,
+            (3 - m.x[1])**2 + (3 - m.x[2])**2 + (3 - m.x[3])**2 + (3 - m.x[4])**2 - 99.0*(1 - m.disjunct_block.disj2.binary_indicator_var) <= 1.0
         )
 
         # inner disjunction constraints
         innerd1c = bigm.get_transformed_constraints(
             m.disjunct_block.disj2.disjunction_disjuncts[0].constraint[1]
         )
-        self.check_first_disjunct_constraint(
-            innerd1c,
-            m.x,
-            m.disjunct_block.disj2.disjunction_disjuncts[0].binary_indicator_var,
+        self.assertEqual(len(innerd1c), 1)
+        cons = innerd1c[0]
+        assertExpressionsEqual(
+            self,
+            cons.expr,
+            m.x[1]**2 + m.x[2]**2 + m.x[3]**2 + m.x[4]**2 - 143.0*(1 - m.disjunct_block.disj2.disjunction_disjuncts[0].binary_indicator_var + 1 - m.disjunct_block.disj2.binary_indicator_var) <= 1.0
         )
 
         innerd2c = bigm.get_transformed_constraints(
             m.disjunct_block.disj2.disjunction_disjuncts[1].constraint[1]
         )
-        self.check_second_disjunct_constraint(
-            innerd2c,
-            m.x,
-            m.disjunct_block.disj2.disjunction_disjuncts[1].binary_indicator_var,
+        self.assertEqual(len(innerd2c), 1)
+        cons = innerd2c[0]
+        assertExpressionsEqual(
+            self,
+            cons.expr,
+            (3 - m.x[1])**2 + (3 - m.x[2])**2 + (3 - m.x[3])**2 + (3 - m.x[4])**2 - 99.0*(1 - m.disjunct_block.disj2.disjunction_disjuncts[1].binary_indicator_var + 1 - m.disjunct_block.disj2.binary_indicator_var) <= 1.0
         )
 
     def test_hierarchical_badly_ordered_targets(self):
