@@ -19,8 +19,11 @@ from pyomo.environ import (
     Set,
     Constraint,
     ComponentMap,
+    LogicalConstraint,
+    Objective,
     SolverFactory,
     Suffix,
+    TerminationCondition,
     ConcreteModel,
     Var,
     Any,
@@ -2192,6 +2195,43 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
     @unittest.skipUnless(gurobi_available, "Gurobi is not available")
     def test_do_not_assume_nested_indicators_local(self):
         ct.check_do_not_assume_nested_indicators_local(self, 'gdp.bigm')
+
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    def test_constraints_not_enforced_when_an_ancestor_indicator_is_False(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 30))
+
+        m.left = Disjunct()
+        m.left.left = Disjunct()
+        m.left.left.c = Constraint(expr=m.x >= 10)
+        m.left.right = Disjunct()
+        m.left.right.c = Constraint(expr=m.x >= 9)
+        m.left.disjunction = Disjunction(expr=[m.left.left, m.left.right])
+        m.right = Disjunct()
+        m.right.left = Disjunct()
+        m.right.left.c = Constraint(expr=m.x >= 11)
+        m.right.right = Disjunct()
+        m.right.right.c = Constraint(expr=m.x >= 8)
+        m.right.disjunction = Disjunction(expr=[m.right.left, m.right.right])
+        m.disjunction = Disjunction(expr=[m.left, m.right])
+
+        m.equiv_left = LogicalConstraint(expr=m.left.left.indicator_var.equivalent_to(
+            m.right.left.indicator_var))
+        m.equiv_right = LogicalConstraint(expr=m.left.right.indicator_var.equivalent_to(
+            m.right.right.indicator_var))
+
+        m.obj = Objective(expr=m.x)
+
+        TransformationFactory('gdp.bigm').apply_to(m)
+        results = SolverFactory('gurobi').solve(m)
+        self.assertEqual(results.solver.termination_condition,
+                         TerminationCondition.optimal)
+        self.assertTrue(value(m.right.indicator_var))
+        self.assertFalse(value(m.left.indicator_var))
+        self.assertTrue(value(m.right.right.indicator_var))
+        self.assertFalse(value(m.right.left.indicator_var))
+        self.assertTrue(value(m.left.right.indicator_var))
+        self.assertAlmostEqual(value(m.x), 8)
 
 
 class IndexedDisjunction(unittest.TestCase):
