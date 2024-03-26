@@ -453,11 +453,29 @@ class IncidenceGraphInterface(object):
                 raise ValueError("Neither variables nor a model have been provided.")
             else:
                 variables = self.variables
+        elif self._incidence_graph is not None:
+            # If variables were provided and an incidence graph is cached,
+            # make sure the provided variables exist in the graph.
+            for var in variables:
+                if var not in self._var_index_map:
+                    raise KeyError(
+                        f"Variable {var} does not exist in the cached"
+                        " incidence graph."
+                    )
         if constraints is None:
             if self._incidence_graph is None:
                 raise ValueError("Neither constraints nor a model have been provided.")
             else:
                 constraints = self.constraints
+        elif self._incidence_graph is not None:
+            # If constraints were provided and an incidence graph is cached,
+            # make sure the provided constraints exist in the graph.
+            for con in constraints:
+                if con not in self._con_index_map:
+                    raise KeyError(
+                        f"Constraint {con} does not exist in the cached"
+                        " incidence graph."
+                    )
 
         _check_unindexed(variables + constraints)
         return variables, constraints
@@ -854,7 +872,7 @@ class IncidenceGraphInterface(object):
         # Hopefully this does not get too confusing...
         return var_partition, con_partition
 
-    def remove_nodes(self, nodes, constraints=None):
+    def remove_nodes(self, variables=None, constraints=None):
         """Removes the specified variables and constraints (columns and
         rows) from the cached incidence matrix.
 
@@ -866,35 +884,48 @@ class IncidenceGraphInterface(object):
 
         Parameters
         ----------
-        nodes: list
-            VarData or ConData objects whose columns or rows will be
-            removed from the incidence matrix.
+        variables: list
+            VarData objects whose nodes will be removed from the incidence graph
         constraints: list
-            VarData or ConData objects whose columns or rows will be
-            removed from the incidence matrix.
+            ConData objects whose nodes will be removed from the incidence graph
+
+        .. note::
+
+           **Breaking change in Pyomo vTBD**
+
+           The pre-TBD implementation of ``remove_nodes`` allowed variables and
+           constraints to remove to be specified in a single list. This made
+           error checking difficult, and indeed, if invalid components were
+           provided, we carried on silently instead of throwing an error or
+           warning. As part of a fix to raise an error if an invalid component
+           (one that is not part of the incidence graph) is provided, we now require
+           variables and constraints to be specified separately.
 
         """
         if constraints is None:
             constraints = []
+        if variables is None:
+            variables = []
         if self._incidence_graph is None:
             raise RuntimeError(
                 "Attempting to remove variables and constraints from cached "
                 "incidence matrix,\nbut no incidence matrix has been cached."
             )
-        to_exclude = ComponentSet(nodes)
-        to_exclude.update(constraints)
-        vars_to_include = [v for v in self.variables if v not in to_exclude]
-        cons_to_include = [c for c in self.constraints if c not in to_exclude]
+        variables, constraints = self._validate_input(variables, constraints)
+        v_exclude = ComponentSet(variables)
+        c_exclude = ComponentSet(constraints)
+        vars_to_include = [v for v in self.variables if v not in v_exclude]
+        cons_to_include = [c for c in self.constraints if c not in c_exclude]
         incidence_graph = self._extract_subgraph(vars_to_include, cons_to_include)
         # update attributes
         self._variables = vars_to_include
         self._constraints = cons_to_include
         self._incidence_graph = incidence_graph
         self._var_index_map = ComponentMap(
-            (var, i) for i, var in enumerate(self.variables)
+            (var, i) for i, var in enumerate(vars_to_include)
         )
         self._con_index_map = ComponentMap(
-            (con, i) for i, con in enumerate(self._constraints)
+            (con, i) for i, con in enumerate(cons_to_include)
         )
 
     def plot(self, variables=None, constraints=None, title=None, show=True):
