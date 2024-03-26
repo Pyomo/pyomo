@@ -121,8 +121,9 @@ class IPOPT(SystemCallSolver):
         #
         if 'PYOMO_AMPLFUNC' in env:
             if 'AMPLFUNC' in env:
+                existing = set(env['AMPLFUNC'].split("\n"))
                 for line in env['PYOMO_AMPLFUNC'].split('\n'):
-                    if line not in env['AMPLFUNC']:
+                    if line not in existing:
                         env['AMPLFUNC'] += "\n" + line
             else:
                 env['AMPLFUNC'] = env['PYOMO_AMPLFUNC']
