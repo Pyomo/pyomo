@@ -1050,7 +1050,8 @@ class TestGDPopt(unittest.TestCase):
 
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1e-2)
 
-    @unittest.skipUnless(Gurobi().available(), "APPSI Gurobi solver is not available")
+    @unittest.skipUnless(Gurobi().available() and Gurobi().license_is_valid(),
+                         "APPSI Gurobi solver is not available")
     def test_auto_persistent_solver(self):
         exfile = import_file(join(exdir, 'eight_process', 'eight_proc_model.py'))
         m = exfile.build_eight_process_flowsheet()
