@@ -92,15 +92,13 @@ class PyomoNLP(AslNLP):
             # The NL writer advertises the external function libraries
             # through the PYOMO_AMPLFUNC environment variable; merge it
             # with any preexisting AMPLFUNC definitions
-            amplfunc = "\n".join(
-                filter(
-                    None,
-                    (
-                        os.environ.get('AMPLFUNC', None),
-                        os.environ.get('PYOMO_AMPLFUNC', None),
-                    ),
-                )
-            )
+            amplfunc_lines = os.environ.get("AMPLFUNC", "").split("\n")
+            existing = set(amplfunc_lines)
+            for line in os.environ.get("PYOMO_AMPLFUNC", "").split("\n"):
+                # Skip (a) empty lines and (b) lines we already have
+                if line != "" and line not in existing:
+                    amplfunc_lines.append(line)
+            amplfunc = "\n".join(amplfunc_lines)
             with CtypesEnviron(AMPLFUNC=amplfunc):
                 super(PyomoNLP, self).__init__(nl_file)
 
