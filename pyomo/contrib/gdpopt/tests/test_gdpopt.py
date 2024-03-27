@@ -22,6 +22,7 @@ from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import Bunch
 from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.common.fileutils import import_file, PYOMO_ROOT_DIR
+from pyomo.contrib.appsi.base import Solver
 from pyomo.contrib.appsi.solvers.gurobi import Gurobi
 from pyomo.contrib.gdpopt.create_oa_subproblems import (
     add_util_block,
@@ -767,6 +768,9 @@ class TestGDPopt(unittest.TestCase):
             results.solver.termination_condition, TerminationCondition.maxTimeLimit
         )
 
+    @unittest.skipUnless(
+        license_available, "No BARON license--8PP logical problem exceeds demo size"
+    )
     def test_LOA_8PP_logical_default_init(self):
         """Test logic-based outer approximation with 8PP."""
         exfile = import_file(join(exdir, 'eight_process', 'eight_proc_logical.py'))
@@ -870,6 +874,9 @@ class TestGDPopt(unittest.TestCase):
         )
         ct.check_8PP_solution(self, eight_process, results)
 
+    @unittest.skipUnless(
+        license_available, "No BARON license--8PP logical problem exceeds demo size"
+    )
     def test_LOA_8PP_logical_maxBinary(self):
         """Test logic-based OA with max_binary initialization."""
         exfile = import_file(join(exdir, 'eight_process', 'eight_proc_logical.py'))
@@ -1050,7 +1057,11 @@ class TestGDPopt(unittest.TestCase):
 
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1e-2)
 
-    @unittest.skipUnless(Gurobi().available(), "APPSI Gurobi solver is not available")
+    @unittest.skipUnless(
+        SolverFactory('appsi_gurobi').available(exception_flag=False)
+        and SolverFactory('appsi_gurobi').license_is_valid(),
+        "Legacy APPSI Gurobi solver is not available",
+    )
     def test_auto_persistent_solver(self):
         exfile = import_file(join(exdir, 'eight_process', 'eight_proc_model.py'))
         m = exfile.build_eight_process_flowsheet()
@@ -1126,6 +1137,9 @@ class TestGDPoptRIC(unittest.TestCase):
         )
         ct.check_8PP_solution(self, eight_process, results)
 
+    @unittest.skipUnless(
+        license_available, "No BARON license--8PP logical problem exceeds demo size"
+    )
     def test_RIC_8PP_logical_default_init(self):
         """Test logic-based outer approximation with 8PP."""
         exfile = import_file(join(exdir, 'eight_process', 'eight_proc_logical.py'))

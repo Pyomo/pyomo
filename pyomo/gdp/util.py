@@ -144,13 +144,13 @@ class GDPTree:
         Arg:
             u : A node in the tree
         """
+        if u in self._parent:
+            return self._parent[u]
         if u not in self._vertices:
             raise ValueError(
                 "'%s' is not a vertex in the GDP tree. Cannot "
                 "retrieve its parent." % u
             )
-        if u in self._parent:
-            return self._parent[u]
         else:
             return None
 

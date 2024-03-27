@@ -213,21 +213,15 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         bigM = self._config.bigM
         for t in preprocessed_targets:
             if t.ctype is Disjunction:
-                self._transform_disjunctionData(
-                    t,
-                    t.index(),
-                    bigM,
-                    parent_disjunct=gdp_tree.parent(t),
-                    root_disjunct=gdp_tree.root_disjunct(t),
-                )
+                self._transform_disjunctionData(t, t.index(), bigM, gdp_tree)
 
         # issue warnings about anything that was in the bigM args dict that we
         # didn't use
         _warn_for_unused_bigM_args(bigM, self.used_args, logger)
 
-    def _transform_disjunctionData(
-        self, obj, index, bigM, parent_disjunct=None, root_disjunct=None
-    ):
+    def _transform_disjunctionData(self, obj, index, bigM, gdp_tree):
+        parent_disjunct = gdp_tree.parent(obj)
+        root_disjunct = gdp_tree.root_disjunct(obj)
         (transBlock, xorConstraint) = self._setup_transform_disjunctionData(
             obj, root_disjunct
         )
@@ -236,7 +230,7 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         or_expr = 0
         for disjunct in obj.disjuncts:
             or_expr += disjunct.binary_indicator_var
-            self._transform_disjunct(disjunct, bigM, transBlock)
+            self._transform_disjunct(disjunct, bigM, transBlock, gdp_tree)
 
         if obj.xor:
             xorConstraint[index] = or_expr == 1
@@ -249,7 +243,7 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         # and deactivate for the writers
         obj.deactivate()
 
-    def _transform_disjunct(self, obj, bigM, transBlock):
+    def _transform_disjunct(self, obj, bigM, transBlock, gdp_tree):
         # We're not using the preprocessed list here, so this could be
         # inactive. We've already done the error checking in preprocessing, so
         # we just skip it here.
@@ -261,6 +255,12 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
 
         relaxationBlock = self._get_disjunct_transformation_block(obj, transBlock)
 
+        indicator_expression = 0
+        node = obj
+        while node is not None:
+            indicator_expression += 1 - node.binary_indicator_var
+            node = gdp_tree.parent_disjunct(node)
+
         # This is crazy, but if the disjunction has been previously
         # relaxed, the disjunct *could* be deactivated.  This is a big
         # deal for Hull, as it uses the component_objects /
@@ -270,13 +270,21 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         # comparing the two relaxations.
         #
         # Transform each component within this disjunct
-        self._transform_block_components(obj, obj, bigM, arg_list, suffix_list)
+        self._transform_block_components(
+            obj, obj, bigM, arg_list, suffix_list, indicator_expression
+        )
 
         # deactivate disjunct to keep the writers happy
         obj._deactivate_without_fixing_indicator()
 
     def _transform_constraint(
-        self, obj, disjunct, bigMargs, arg_list, disjunct_suffix_list
+        self,
+        obj,
+        disjunct,
+        bigMargs,
+        arg_list,
+        disjunct_suffix_list,
+        indicator_expression,
     ):
         # add constraint to the transformation block, we'll transform it there.
         transBlock = disjunct._transformation_block()
@@ -348,7 +356,13 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             bigm_src[c] = (lower, upper)
 
             self._add_constraint_expressions(
-                c, i, M, disjunct.binary_indicator_var, newConstraint, constraint_map
+                c,
+                i,
+                M,
+                disjunct.binary_indicator_var,
+                newConstraint,
+                constraint_map,
+                indicator_expression=indicator_expression,
             )
 
             # deactivate because we relaxed
