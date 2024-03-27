@@ -36,6 +36,13 @@ class IncidenceMethod(enum.Enum):
     """Use ``pyomo.repn.plugins.nl_writer.AMPLRepnVisitor``"""
 
 
+class IncidenceOrder(enum.Enum):
+
+    dulmage_mendelsohn_upper = 0
+
+    dulmage_mendelsohn_lower = 1
+
+
 _include_fixed = ConfigValue(
     default=False,
     domain=bool,
