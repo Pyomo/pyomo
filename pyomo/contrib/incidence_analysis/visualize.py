@@ -112,13 +112,16 @@ def spy_dulmage_mendelsohn(
         Config options for ``IncidenceGraphInterface``
 
     order: ``IncidenceOrder``, optional
-        Order in which to plot sparsity structure
+        Order in which to plot sparsity structure. Default is
+        ``IncidenceOrder.dulmage_mendelsohn_upper`` for a block-upper triangular
+        matrix. Set to ``IncidenceOrder.dulmage_mendelsohn_lower`` for a
+        block-lower triangular matrix.
 
     highlight_coarse: bool, optional
-        Whether to draw a rectangle around the coarse partition
+        Whether to draw a rectangle around the coarse partition. Default True
 
     highlight_fine: bool, optional
-        Whether to draw a rectangle around the fine partition
+        Whether to draw a rectangle around the fine partition. Default True
 
     skip_wellconstrained: bool, optional
         Whether to skip highlighting the well-constrained subsystem of the
