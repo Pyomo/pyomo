@@ -46,6 +46,8 @@ def configure_and_call_solver(model, solver, args, problem_type, timing, time_li
                     solver_args.get('time_limit', float('inf')), remaining
                 )
         try:
+            ## DEBUG
+            solver_args['tee'] = True
             results = opt.solve(model, **solver_args)
         except ValueError as err:
             if 'Cannot load a SolverResults object with bad status: error' in str(err):
