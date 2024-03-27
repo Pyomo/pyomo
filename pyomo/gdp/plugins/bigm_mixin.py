@@ -232,8 +232,14 @@ class _BigM_MixIn(object):
         return tuple(M)
 
     def _add_constraint_expressions(
-        self, c, i, M, indicator_var, newConstraint, constraint_map,
-        indicator_expression=None
+        self,
+        c,
+        i,
+        M,
+        indicator_var,
+        newConstraint,
+        constraint_map,
+        indicator_expression=None,
     ):
         # Since we are both combining components from multiple blocks and using
         # local names, we need to make sure that the first index for

@@ -213,12 +213,7 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         bigM = self._config.bigM
         for t in preprocessed_targets:
             if t.ctype is Disjunction:
-                self._transform_disjunctionData(
-                    t,
-                    t.index(),
-                    bigM,
-                    gdp_tree,
-                )
+                self._transform_disjunctionData(t, t.index(), bigM, gdp_tree)
 
         # issue warnings about anything that was in the bigM args dict that we
         # didn't use
@@ -275,15 +270,21 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         # comparing the two relaxations.
         #
         # Transform each component within this disjunct
-        self._transform_block_components(obj, obj, bigM, arg_list, suffix_list,
-                                         indicator_expression)
+        self._transform_block_components(
+            obj, obj, bigM, arg_list, suffix_list, indicator_expression
+        )
 
         # deactivate disjunct to keep the writers happy
         obj._deactivate_without_fixing_indicator()
 
     def _transform_constraint(
-        self, obj, disjunct, bigMargs, arg_list, disjunct_suffix_list,
-            indicator_expression
+        self,
+        obj,
+        disjunct,
+        bigMargs,
+        arg_list,
+        disjunct_suffix_list,
+        indicator_expression,
     ):
         # add constraint to the transformation block, we'll transform it there.
         transBlock = disjunct._transformation_block()
@@ -355,8 +356,13 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             bigm_src[c] = (lower, upper)
 
             self._add_constraint_expressions(
-                c, i, M, disjunct.binary_indicator_var, newConstraint, constraint_map,
-                indicator_expression=indicator_expression
+                c,
+                i,
+                M,
+                disjunct.binary_indicator_var,
+                newConstraint,
+                constraint_map,
+                indicator_expression=indicator_expression,
             )
 
             # deactivate because we relaxed

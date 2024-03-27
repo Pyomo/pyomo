@@ -1885,7 +1885,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         assertExpressionsEqual(
             self,
             cons.body,
-            variable - float(M) * (1 - indicator_var.get_associated_binary())
+            variable - float(M) * (1 - indicator_var.get_associated_binary()),
         )
 
     def check_inner_xor_constraint(self, inner_disjunction, outer_disjunct, bigm):
@@ -1953,11 +1953,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
                                             ),
                                             1,
                                             EXPR.MonomialTermExpression(
-                                                (
-                                                    -1,
-                                                    m.disjunct[1]
-                                                    .binary_indicator_var,
-                                                )
+                                                (-1, m.disjunct[1].binary_indicator_var)
                                             ),
                                         ]
                                     ),
@@ -1971,8 +1967,15 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         assertExpressionsEqual(
             self,
             cons1ub.expr,
-            m.z - 10.0*(1 - m.disjunct[1].innerdisjunct[0].binary_indicator_var +
-                        1 - m.disjunct[1].binary_indicator_var) <= 0.0
+            m.z
+            - 10.0
+            * (
+                1
+                - m.disjunct[1].innerdisjunct[0].binary_indicator_var
+                + 1
+                - m.disjunct[1].binary_indicator_var
+            )
+            <= 0.0,
         )
 
         cons2 = bigm.get_transformed_constraints(m.disjunct[1].innerdisjunct[1].c)
@@ -1981,8 +1984,15 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         assertExpressionsEqual(
             self,
             cons2lb.expr,
-            5.0 <= m.z - (-5.0)*(1 - m.disjunct[1].innerdisjunct[1].binary_indicator_var
-                              + 1 - m.disjunct[1].binary_indicator_var)
+            5.0
+            <= m.z
+            - (-5.0)
+            * (
+                1
+                - m.disjunct[1].innerdisjunct[1].binary_indicator_var
+                + 1
+                - m.disjunct[1].binary_indicator_var
+            ),
         )
 
         cons3 = bigm.get_transformed_constraints(m.simpledisjunct.innerdisjunct0.c)
@@ -1991,8 +2001,15 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         assertExpressionsEqual(
             self,
             cons3ub.expr,
-            m.x - 7.0*(1 - m.simpledisjunct.innerdisjunct0.binary_indicator_var + 1 -
-                       m.simpledisjunct.binary_indicator_var) <= 2.0
+            m.x
+            - 7.0
+            * (
+                1
+                - m.simpledisjunct.innerdisjunct0.binary_indicator_var
+                + 1
+                - m.simpledisjunct.binary_indicator_var
+            )
+            <= 2.0,
         )
 
         cons4 = bigm.get_transformed_constraints(m.simpledisjunct.innerdisjunct1.c)
@@ -2001,8 +2018,15 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         assertExpressionsEqual(
             self,
             cons4lb.expr,
-            m.x - (-13.0)*(1 - m.simpledisjunct.innerdisjunct1.binary_indicator_var
-                           + 1 - m.simpledisjunct.binary_indicator_var) >= 4.0
+            m.x
+            - (-13.0)
+            * (
+                1
+                - m.simpledisjunct.innerdisjunct1.binary_indicator_var
+                + 1
+                - m.simpledisjunct.binary_indicator_var
+            )
+            >= 4.0,
         )
 
         # Here we check that the xor constraint from
@@ -2132,7 +2156,12 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         assertExpressionsEqual(
             self,
             cons.expr,
-            m.x[1]**2 + m.x[2]**2 + m.x[3]**2 + m.x[4]**2 - 143.0*(1 - m.disj1.binary_indicator_var) <= 1.0
+            m.x[1] ** 2
+            + m.x[2] ** 2
+            + m.x[3] ** 2
+            + m.x[4] ** 2
+            - 143.0 * (1 - m.disj1.binary_indicator_var)
+            <= 1.0,
         )
 
         disj2c = bigm.get_transformed_constraints(m.disjunct_block.disj2.c)
@@ -2141,7 +2170,12 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         assertExpressionsEqual(
             self,
             cons.expr,
-            (3 - m.x[1])**2 + (3 - m.x[2])**2 + (3 - m.x[3])**2 + (3 - m.x[4])**2 - 99.0*(1 - m.disjunct_block.disj2.binary_indicator_var) <= 1.0
+            (3 - m.x[1]) ** 2
+            + (3 - m.x[2]) ** 2
+            + (3 - m.x[3]) ** 2
+            + (3 - m.x[4]) ** 2
+            - 99.0 * (1 - m.disjunct_block.disj2.binary_indicator_var)
+            <= 1.0,
         )
 
         # inner disjunction constraints
@@ -2153,7 +2187,18 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         assertExpressionsEqual(
             self,
             cons.expr,
-            m.x[1]**2 + m.x[2]**2 + m.x[3]**2 + m.x[4]**2 - 143.0*(1 - m.disjunct_block.disj2.disjunction_disjuncts[0].binary_indicator_var + 1 - m.disjunct_block.disj2.binary_indicator_var) <= 1.0
+            m.x[1] ** 2
+            + m.x[2] ** 2
+            + m.x[3] ** 2
+            + m.x[4] ** 2
+            - 143.0
+            * (
+                1
+                - m.disjunct_block.disj2.disjunction_disjuncts[0].binary_indicator_var
+                + 1
+                - m.disjunct_block.disj2.binary_indicator_var
+            )
+            <= 1.0,
         )
 
         innerd2c = bigm.get_transformed_constraints(
@@ -2164,7 +2209,18 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         assertExpressionsEqual(
             self,
             cons.expr,
-            (3 - m.x[1])**2 + (3 - m.x[2])**2 + (3 - m.x[3])**2 + (3 - m.x[4])**2 - 99.0*(1 - m.disjunct_block.disj2.disjunction_disjuncts[1].binary_indicator_var + 1 - m.disjunct_block.disj2.binary_indicator_var) <= 1.0
+            (3 - m.x[1]) ** 2
+            + (3 - m.x[2]) ** 2
+            + (3 - m.x[3]) ** 2
+            + (3 - m.x[4]) ** 2
+            - 99.0
+            * (
+                1
+                - m.disjunct_block.disj2.disjunction_disjuncts[1].binary_indicator_var
+                + 1
+                - m.disjunct_block.disj2.binary_indicator_var
+            )
+            <= 1.0,
         )
 
     def test_hierarchical_badly_ordered_targets(self):
@@ -2211,17 +2267,20 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         m.right.disjunction = Disjunction(expr=[m.right.left, m.right.right])
         m.disjunction = Disjunction(expr=[m.left, m.right])
 
-        m.equiv_left = LogicalConstraint(expr=m.left.left.indicator_var.equivalent_to(
-            m.right.left.indicator_var))
-        m.equiv_right = LogicalConstraint(expr=m.left.right.indicator_var.equivalent_to(
-            m.right.right.indicator_var))
+        m.equiv_left = LogicalConstraint(
+            expr=m.left.left.indicator_var.equivalent_to(m.right.left.indicator_var)
+        )
+        m.equiv_right = LogicalConstraint(
+            expr=m.left.right.indicator_var.equivalent_to(m.right.right.indicator_var)
+        )
 
         m.obj = Objective(expr=m.x)
 
         TransformationFactory('gdp.bigm').apply_to(m)
         results = SolverFactory('gurobi').solve(m)
-        self.assertEqual(results.solver.termination_condition,
-                         TerminationCondition.optimal)
+        self.assertEqual(
+            results.solver.termination_condition, TerminationCondition.optimal
+        )
         self.assertTrue(value(m.right.indicator_var))
         self.assertFalse(value(m.left.indicator_var))
         self.assertTrue(value(m.right.right.indicator_var))
