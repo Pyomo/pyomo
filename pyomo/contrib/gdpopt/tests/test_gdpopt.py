@@ -768,6 +768,9 @@ class TestGDPopt(unittest.TestCase):
             results.solver.termination_condition, TerminationCondition.maxTimeLimit
         )
 
+    @unittest.skipUnless(
+        license_is_valid, "No BARON license--8PP logical problem exceeds demo size"
+    )
     def test_LOA_8PP_logical_default_init(self):
         """Test logic-based outer approximation with 8PP."""
         exfile = import_file(join(exdir, 'eight_process', 'eight_proc_logical.py'))
@@ -871,6 +874,9 @@ class TestGDPopt(unittest.TestCase):
         )
         ct.check_8PP_solution(self, eight_process, results)
 
+    @unittest.skipUnless(
+        license_is_valid, "No BARON license--8PP logical problem exceeds demo size"
+    )
     def test_LOA_8PP_logical_maxBinary(self):
         """Test logic-based OA with max_binary initialization."""
         exfile = import_file(join(exdir, 'eight_process', 'eight_proc_logical.py'))
@@ -1131,6 +1137,9 @@ class TestGDPoptRIC(unittest.TestCase):
         )
         ct.check_8PP_solution(self, eight_process, results)
 
+    @unittest.skipUnless(
+        license_is_valid, "No BARON license--8PP logical problem exceeds demo size"
+    )
     def test_RIC_8PP_logical_default_init(self):
         """Test logic-based outer approximation with 8PP."""
         exfile = import_file(join(exdir, 'eight_process', 'eight_proc_logical.py'))
