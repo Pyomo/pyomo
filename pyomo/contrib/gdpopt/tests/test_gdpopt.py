@@ -22,6 +22,7 @@ from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import Bunch
 from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.common.fileutils import import_file, PYOMO_ROOT_DIR
+from pyomo.contrib.appsi.base import Solver
 from pyomo.contrib.appsi.solvers.gurobi import Gurobi
 from pyomo.contrib.gdpopt.create_oa_subproblems import (
     add_util_block,
@@ -1050,8 +1051,9 @@ class TestGDPopt(unittest.TestCase):
 
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1e-2)
 
-    @unittest.skipUnless(Gurobi().available() and Gurobi().license_is_valid(),
-                         "APPSI Gurobi solver is not available")
+    @unittest.skipUnless(SolverFactory('appsi_gurobi').available(
+        exception_flag=False) and SolverFactory('appsi_gurobi').license_is_valid(),
+                         "Legacy APPSI Gurobi solver is not available")
     def test_auto_persistent_solver(self):
         exfile = import_file(join(exdir, 'eight_process', 'eight_proc_model.py'))
         m = exfile.build_eight_process_flowsheet()
