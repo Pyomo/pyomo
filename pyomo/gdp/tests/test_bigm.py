@@ -1882,12 +1882,11 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
     # many of the transformed constraints look like this, so can call this
     # function to test them.
     def check_bigM_constraint(self, cons, variable, M, indicator_var):
-        repn = generate_standard_repn(cons.body)
-        self.assertTrue(repn.is_linear())
-        self.assertEqual(repn.constant, -M)
-        self.assertEqual(len(repn.linear_vars), 2)
-        ct.check_linear_coef(self, repn, variable, 1)
-        ct.check_linear_coef(self, repn, indicator_var, M)
+        assertExpressionsEqual(
+            self,
+            cons.body,
+            variable - float(M) * (1 - indicator_var.get_associated_binary())
+        )
 
     def check_inner_xor_constraint(self, inner_disjunction, outer_disjunct, bigm):
         inner_xor = inner_disjunction.algebraic_constraint
@@ -1952,6 +1951,14 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
                                                     .binary_indicator_var,
                                                 )
                                             ),
+                                            1,
+                                            EXPR.MonomialTermExpression(
+                                                (
+                                                    -1,
+                                                    m.disjunct[1]
+                                                    .binary_indicator_var,
+                                                )
+                                            ),
                                         ]
                                     ),
                                 )
@@ -1961,37 +1968,41 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
                 ]
             ),
         )
-        self.assertIsNone(cons1ub.lower)
-        self.assertEqual(cons1ub.upper, 0)
-        self.check_bigM_constraint(
-            cons1ub, m.z, 10, m.disjunct[1].innerdisjunct[0].indicator_var
+        assertExpressionsEqual(
+            self,
+            cons1ub.expr,
+            m.z - 10.0*(1 - m.disjunct[1].innerdisjunct[0].binary_indicator_var +
+                        1 - m.disjunct[1].binary_indicator_var) <= 0.0
         )
 
         cons2 = bigm.get_transformed_constraints(m.disjunct[1].innerdisjunct[1].c)
         self.assertEqual(len(cons2), 1)
         cons2lb = cons2[0]
-        self.assertEqual(cons2lb.lower, 5)
-        self.assertIsNone(cons2lb.upper)
-        self.check_bigM_constraint(
-            cons2lb, m.z, -5, m.disjunct[1].innerdisjunct[1].indicator_var
+        assertExpressionsEqual(
+            self,
+            cons2lb.expr,
+            5.0 <= m.z - (-5.0)*(1 - m.disjunct[1].innerdisjunct[1].binary_indicator_var
+                              + 1 - m.disjunct[1].binary_indicator_var)
         )
 
         cons3 = bigm.get_transformed_constraints(m.simpledisjunct.innerdisjunct0.c)
         self.assertEqual(len(cons3), 1)
         cons3ub = cons3[0]
-        self.assertEqual(cons3ub.upper, 2)
-        self.assertIsNone(cons3ub.lower)
-        self.check_bigM_constraint(
-            cons3ub, m.x, 7, m.simpledisjunct.innerdisjunct0.indicator_var
+        assertExpressionsEqual(
+            self,
+            cons3ub.expr,
+            m.x - 7.0*(1 - m.simpledisjunct.innerdisjunct0.binary_indicator_var + 1 -
+                       m.simpledisjunct.binary_indicator_var) <= 2.0
         )
 
         cons4 = bigm.get_transformed_constraints(m.simpledisjunct.innerdisjunct1.c)
         self.assertEqual(len(cons4), 1)
         cons4lb = cons4[0]
-        self.assertEqual(cons4lb.lower, 4)
-        self.assertIsNone(cons4lb.upper)
-        self.check_bigM_constraint(
-            cons4lb, m.x, -13, m.simpledisjunct.innerdisjunct1.indicator_var
+        assertExpressionsEqual(
+            self,
+            cons4lb.expr,
+            m.x - (-13.0)*(1 - m.simpledisjunct.innerdisjunct1.binary_indicator_var
+                           + 1 - m.simpledisjunct.binary_indicator_var) >= 4.0
         )
 
         # Here we check that the xor constraint from
@@ -2127,7 +2138,6 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         disj2c = bigm.get_transformed_constraints(m.disjunct_block.disj2.c)
         self.assertEqual(len(disj2c), 1)
         cons = disj2c[0]
-        cons.pprint()
         assertExpressionsEqual(
             self,
             cons.expr,
