@@ -577,7 +577,10 @@ class LegacySolverWrapper:
         """
         ans = super().available()
         if exception_flag and not ans:
-            raise ApplicationError(f'Solver {self.__class__} is not available ({ans}).')
+            raise ApplicationError(
+                f'Solver "{self.name}" is not available. '
+                f'The returned status is: {ans}.'
+            )
         return bool(ans)
 
     def license_is_valid(self) -> bool:
