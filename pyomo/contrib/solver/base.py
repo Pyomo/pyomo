@@ -349,6 +349,8 @@ class LegacySolverWrapper:
     """
 
     def __init__(self, **kwargs):
+        # There is no reason for a user to be trying to mix both old
+        # and new options. That is silly. So we will yell at them.
         if 'options' in kwargs and 'solver_options' in kwargs:
             raise ApplicationError(
                 "Both 'options' and 'solver_options' were requested. "
