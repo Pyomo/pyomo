@@ -348,9 +348,9 @@ class LegacySolverWrapper:
     interface. Necessary for backwards compatibility.
     """
 
-    def __init__(self, solver_io=None, **kwargs):
-        if solver_io is not None:
-            raise NotImplementedError('Still working on this')
+    def __init__(self, **kwargs):
+        if 'options' in kwargs:
+            self.options = kwargs.pop('options')
         super().__init__(**kwargs)
 
     #
@@ -393,8 +393,14 @@ class LegacySolverWrapper:
             self.config.time_limit = timelimit
         if report_timing is not NOTSET:
             self.config.report_timing = report_timing
+        if hasattr(self, 'options'):
+            self.config.solver_options.set_value(self.options)
         if options is not NOTSET:
+            # This block is trying to mimic the existing logic in the legacy
+            # interface that allows users to pass initialized options to
+            # the solver object and override them in the solve call.
             self.config.solver_options.set_value(options)
+
         # This is a new flag in the interface. To preserve backwards compatibility,
         # its default is set to "False"
         if raise_exception_on_nonoptimal_result is not NOTSET:
