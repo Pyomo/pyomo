@@ -14,6 +14,7 @@ import os
 from pyomo.common import unittest
 from pyomo.common.config import ConfigDict
 from pyomo.contrib.solver import base
+from pyomo.common.errors import ApplicationError
 
 
 class TestSolverBase(unittest.TestCase):
@@ -306,6 +307,69 @@ class TestLegacySolverWrapper(unittest.TestCase):
         solver._map_config(options={'max_iter': 4})
         self.assertEqual(solver.config.solver_options, {'max_iter': 4})
         self.assertEqual(solver.options, {'max_iter': 6})
+
+        # solver_options are also supported
+        # Test case 1: set at instantiation
+        solver = base.LegacySolverWrapper(solver_options={'max_iter': 6})
+        self.assertEqual(solver.solver_options, {'max_iter': 6})
+
+        # Test case 2: Set later
+        solver = base.LegacySolverWrapper()
+        solver.solver_options = {'max_iter': 4, 'foo': 'bar'}
+        self.assertEqual(solver.solver_options, {'max_iter': 4, 'foo': 'bar'})
+
+        # Test case 3: pass some solver_options to the mapping (aka, 'solve' command)
+        solver = base.LegacySolverWrapper()
+        config = ConfigDict(implicit=True)
+        config.declare(
+            'solver_options',
+            ConfigDict(implicit=True, description="Options to pass to the solver."),
+        )
+        solver.config = config
+        solver._map_config(solver_options={'max_iter': 4})
+        self.assertEqual(solver.config.solver_options, {'max_iter': 4})
+
+        # Test case 4: Set at instantiation and override during 'solve' call
+        solver = base.LegacySolverWrapper(solver_options={'max_iter': 6})
+        config = ConfigDict(implicit=True)
+        config.declare(
+            'solver_options',
+            ConfigDict(implicit=True, description="Options to pass to the solver."),
+        )
+        solver.config = config
+        solver._map_config(solver_options={'max_iter': 4})
+        self.assertEqual(solver.config.solver_options, {'max_iter': 4})
+        self.assertEqual(solver.solver_options, {'max_iter': 6})
+
+        # users can mix... sort of
+        # Test case 1: Initialize with options, solve with solver_options
+        solver = base.LegacySolverWrapper(options={'max_iter': 6})
+        config = ConfigDict(implicit=True)
+        config.declare(
+            'solver_options',
+            ConfigDict(implicit=True, description="Options to pass to the solver."),
+        )
+        solver.config = config
+        solver._map_config(solver_options={'max_iter': 4})
+        self.assertEqual(solver.config.solver_options, {'max_iter': 4})
+
+        # users CANNOT initialize both values at the same time, because how
+        # do we know what to do with it then?
+        # Test case 1: Class instance
+        with self.assertRaises(ApplicationError):
+            solver = base.LegacySolverWrapper(
+                options={'max_iter': 6}, solver_options={'max_iter': 4}
+            )
+        # Test case 2: Passing to `solve`
+        solver = base.LegacySolverWrapper()
+        config = ConfigDict(implicit=True)
+        config.declare(
+            'solver_options',
+            ConfigDict(implicit=True, description="Options to pass to the solver."),
+        )
+        solver.config = config
+        with self.assertRaises(ApplicationError):
+            solver._map_config(solver_options={'max_iter': 4}, options={'max_iter': 6})
 
     def test_map_results(self):
         # Unclear how to test this

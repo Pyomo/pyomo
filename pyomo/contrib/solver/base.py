@@ -349,8 +349,15 @@ class LegacySolverWrapper:
     """
 
     def __init__(self, **kwargs):
-        if 'options' in kwargs:
+        if 'options' in kwargs and 'solver_options' in kwargs:
+            raise ApplicationError(
+                "Both 'options' and 'solver_options' were requested. "
+                "Please use one or the other, not both."
+            )
+        elif 'options' in kwargs:
             self.options = kwargs.pop('options')
+        elif 'solver_options' in kwargs:
+            self.solver_options = kwargs.pop('solver_options')
         super().__init__(**kwargs)
 
     #
@@ -376,6 +383,8 @@ class LegacySolverWrapper:
         keepfiles=NOTSET,
         solnfile=NOTSET,
         options=NOTSET,
+        solver_options=NOTSET,
+        writer_config=NOTSET,
     ):
         """Map between legacy and new interface configuration options"""
         self.config = self.config()
@@ -395,12 +404,27 @@ class LegacySolverWrapper:
             self.config.report_timing = report_timing
         if hasattr(self, 'options'):
             self.config.solver_options.set_value(self.options)
-        if options is not NOTSET:
+        if hasattr(self, 'solver_options'):
+            self.config.solver_options.set_value(self.solver_options)
+        if (options is not NOTSET) and (solver_options is not NOTSET):
+            # There is no reason for a user to be trying to mix both old
+            # and new options. That is silly. So we will yell at them.
+            # Example that would raise an error:
+            # solver.solve(model, options={'foo' : 'bar'}, solver_options={'foo' : 'not_bar'})
+            raise ApplicationError(
+                "Both 'options' and 'solver_options' were declared "
+                "in the 'solve' call. Please use one or the other, "
+                "not both."
+            )
+        elif options is not NOTSET:
             # This block is trying to mimic the existing logic in the legacy
             # interface that allows users to pass initialized options to
             # the solver object and override them in the solve call.
             self.config.solver_options.set_value(options)
-
+        elif solver_options is not NOTSET:
+            self.config.solver_options.set_value(solver_options)
+        if writer_config is not NOTSET:
+            self.config.writer_config.set_value(writer_config)
         # This is a new flag in the interface. To preserve backwards compatibility,
         # its default is set to "False"
         if raise_exception_on_nonoptimal_result is not NOTSET:
@@ -526,7 +550,10 @@ class LegacySolverWrapper:
         options: Optional[Dict] = None,
         keepfiles: bool = False,
         symbolic_solver_labels: bool = False,
+        # These are for forward-compatibility
         raise_exception_on_nonoptimal_result: bool = False,
+        solver_options: Optional[Dict] = None,
+        writer_config: Optional[Dict] = None,
     ):
         """
         Solve method: maps new solve method style to backwards compatible version.
@@ -552,6 +579,8 @@ class LegacySolverWrapper:
             'keepfiles',
             'solnfile',
             'options',
+            'solver_options',
+            'writer_config',
         )
         loc = locals()
         filtered_args = {k: loc[k] for k in map_args if loc.get(k, None) is not None}
