@@ -84,6 +84,37 @@ be used with other Pyomo tools / capabilities.
    ...
    3 Declarations: x y obj
 
+In keeping with our commitment to backwards compatibility, both the legacy and
+future methods of specifying solver options are supported:
+
+.. testcode::
+   :skipif: not ipopt_available
+
+   import pyomo.environ as pyo
+
+   model = pyo.ConcreteModel()
+   model.x = pyo.Var(initialize=1.5)
+   model.y = pyo.Var(initialize=1.5)
+
+   def rosenbrock(model):
+       return (1.0 - model.x) ** 2 + 100.0 * (model.y - model.x**2) ** 2
+
+   model.obj = pyo.Objective(rule=rosenbrock, sense=pyo.minimize)
+
+   # Backwards compatible
+   status = pyo.SolverFactory('ipopt_v2').solve(model, options={'max_iter' : 6})
+   # Forwards compatible
+   status = pyo.SolverFactory('ipopt_v2').solve(model, solver_options={'max_iter' : 6})
+   model.pprint()
+
+.. testoutput::
+   :skipif: not ipopt_available
+   :hide:
+
+   2 Var Declarations
+   ...
+   3 Declarations: x y obj
+
 Using the new interfaces directly
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
