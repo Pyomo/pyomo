@@ -48,7 +48,7 @@ class TestIpopt(unittest.TestCase):
         self.assertIsInstance(config.executable, ExecutableData)
 
         # Test custom initialization
-        solver = SolverFactory('ipopt_v2', executable='/path/to/exe')
+        solver = SolverFactory('ipopt', executable='/path/to/exe')
         self.assertFalse(solver.config.tee)
         self.assertTrue(solver.config.executable.startswith('/path'))
 
