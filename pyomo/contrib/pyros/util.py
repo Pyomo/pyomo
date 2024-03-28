@@ -272,7 +272,7 @@ def adjust_solver_time_settings(timing_data_obj, solver, config):
         option. However, this may be overridden by any user
         specifications included in a GAMS optfile, which may be
         difficult to track down.
-    (3) To ensure the time limit is specified to a strictly
+    (4) To ensure the time limit is specified to a strictly
         positive value, the time limit is adjusted to a value of
         at least 1 second.
     """
