@@ -12,7 +12,6 @@
 # pyros.py: Generalized Robust Cutting-Set Algorithm for Pyomo
 import logging
 from pyomo.common.config import document_kwargs_from_configdict
-from pyomo.common.collections import Bunch
 from pyomo.core.base.block import Block
 from pyomo.core.expr import value
 from pyomo.core.base.var import Var
@@ -20,7 +19,7 @@ from pyomo.core.base.objective import Objective
 from pyomo.contrib.pyros.util import time_code
 from pyomo.common.modeling import unique_component_name
 from pyomo.opt import SolverFactory
-from pyomo.contrib.pyros.config import pyros_config
+from pyomo.contrib.pyros.config import pyros_config, logger_domain
 from pyomo.contrib.pyros.util import (
     recast_to_min_obj,
     add_decision_rule_constraints,
@@ -347,6 +346,23 @@ class PyROS(object):
                     global_solver=global_solver,
                 )
             )
+
+            # we want to log the intro and disclaimer in
+            # advance of assembling the config.
+            # this helps clarify to the user that any
+            # messages logged during assembly of the config
+            # were, in fact, logged after PyROS was initiated
+            progress_logger = logger_domain(
+                kwds.get(
+                    "progress_logger",
+                    kwds.get("options", dict()).get(
+                        "progress_logger", default_pyros_solver_logger
+                    ),
+                )
+            )
+            self._log_intro(logger=progress_logger, level=logging.INFO)
+            self._log_disclaimer(logger=progress_logger, level=logging.INFO)
+
             config, state_vars = self._resolve_and_validate_pyros_args(model, **kwds)
             self._log_config(
                 logger=config.progress_logger,
