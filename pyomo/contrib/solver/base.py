@@ -361,7 +361,7 @@ class LegacySolverWrapper:
         elif 'options' in kwargs:
             self.options = kwargs.pop('options')
         elif 'solver_options' in kwargs:
-            self.solver_options = kwargs.pop('solver_options')
+            self.options = kwargs.pop('solver_options')
         super().__init__(**kwargs)
 
     #
@@ -408,17 +408,14 @@ class LegacySolverWrapper:
             self.config.report_timing = report_timing
         if hasattr(self, 'options'):
             self.config.solver_options.set_value(self.options)
-        if hasattr(self, 'solver_options'):
-            self.config.solver_options.set_value(self.solver_options)
         if (options is not NOTSET) and (solver_options is not NOTSET):
             # There is no reason for a user to be trying to mix both old
             # and new options. That is silly. So we will yell at them.
             # Example that would raise an error:
             # solver.solve(model, options={'foo' : 'bar'}, solver_options={'foo' : 'not_bar'})
             raise ApplicationError(
-                "Both 'options' and 'solver_options' were declared "
-                "in the 'solve' call. Please use one or the other, "
-                "not both."
+                "Both 'options' and 'solver_options' were requested. "
+                "Please use one or the other, not both."
             )
         elif options is not NOTSET:
             # This block is trying to mimic the existing logic in the legacy
