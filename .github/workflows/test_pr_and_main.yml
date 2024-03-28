@@ -605,7 +605,8 @@ jobs:
       if: ${{ ! matrix.slim }}
       shell: bash
       run: |
-        $PYTHON_EXE -m pip install --cache-dir cache/pip highspy \
+        echo "NOTE: temporarily pinning to highspy pre-release for testing"
+        $PYTHON_EXE -m pip install --cache-dir cache/pip highspy==1.7.1.dev1 \
             || echo "WARNING: highspy is not available"
 
     - name: Set up coverage tracking

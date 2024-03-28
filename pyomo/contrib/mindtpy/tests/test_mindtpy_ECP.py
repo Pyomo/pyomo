@@ -23,7 +23,13 @@ from pyomo.contrib.mindtpy.tests.constraint_qualification_example import (
 from pyomo.environ import SolverFactory, value
 from pyomo.opt import TerminationCondition
 
-required_solvers = ('ipopt', 'glpk')
+if SolverFactory('appsi_highs').available(exception_flag=False) and SolverFactory(
+    'appsi_highs'
+).version() >= (1, 7, 0):
+    required_solvers = ('ipopt', 'appsi_highs')
+else:
+    required_solvers = ('ipopt', 'glpk')
+
 if all(SolverFactory(s).available(exception_flag=False) for s in required_solvers):
     subsolvers_available = True
 else:
