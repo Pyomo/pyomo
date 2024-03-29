@@ -78,23 +78,25 @@ def _test_mis(solver_name):
     m = _get_infeasible_model()
     opt = pyo.SolverFactory(solver_name)
 
-    TempfileManager.push()
-    tmp_path = TempfileManager.create_tempdir()
-    file_name = os.path.join(tmp_path, f"{solver_name}_mis.log")
-    logger = logging.getLogger(f"test_mis_{solver_name}")
-    logger.setLevel(logging.INFO)
-    # create file handler which logs even debug messages
-    print(f"{file_name =}")
-    fh = logging.FileHandler(file_name)
-    fh.setLevel(logging.DEBUG)
-    logger.addHandler(fh)
+    ####TempfileManager.push()
+    ####tmp_path = TempfileManager.create_tempdir()
+    with TempfileManager.new_context() as tmpmgr:
+        tmp_path = tmpmgr.mkdtemp()
+        file_name = os.path.join(tmp_path, f"{solver_name}_mis.log")
+        logger = logging.getLogger(f"test_mis_{solver_name}")
+        logger.setLevel(logging.INFO)
+        # create file handler which logs even debug messages
+        print(f"{file_name =}")
+        fh = logging.FileHandler(file_name)
+        fh.setLevel(logging.DEBUG)
+        logger.addHandler(fh)
 
-    mis.compute_infeasibility_explanation(m, opt, logger=logger)
-    _check_output(file_name)
-    # logging.getLogger().removeHandler(logging.getLogger().handlers[0])
-    logger.removeHandler(logger.handlers[0])
+        mis.compute_infeasibility_explanation(m, opt, logger=logger)
+        _check_output(file_name)
+        # logging.getLogger().removeHandler(logging.getLogger().handlers[0])
+        logger.removeHandler(logger.handlers[0])
 
-    TempfileManager.pop()
+    ####TempfileManager.pop()
 
 
 if __name__ == "__main__":
