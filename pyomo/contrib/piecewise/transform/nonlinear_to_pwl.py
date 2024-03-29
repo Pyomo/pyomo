@@ -9,11 +9,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import enum
 import itertools
 
 from lineartree import LinearTreeRegressor
 import lineartree
-
+import logging
 import numpy as np
 
 from pyomo.environ import (
@@ -24,72 +25,54 @@ from pyomo.environ import (
     Objective,
     Any,
     value,
+    BooleanVar,
+    Connector,
+    Expression,
+    Suffix,
+    Param,
+    Set,
+    SetOf,
+    RangeSet,
+    Block,
+    ExternalFunction,
+    SortComponents,
+    LogicalConstraint
 )
+from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.common.config import ConfigDict, ConfigValue, PositiveInt, InEnum
+from pyomo.common.modeling import unique_component_name
 from pyomo.core.expr.numeric_expr import SumExpression
 from pyomo.core.expr import identify_variables
-from pyomo.repn.quadratic import QuadraticRepnVisitor
 from pyomo.core.expr import SumExpression
+from pyomo.core.util import target_list
 from pyomo.contrib.piecewise import (
     PiecewiseLinearExpression,
     PiecewiseLinearFunction
 )
+from pyomo.gdp import Disjunct, Disjunction
+from pyomo.network import Port
+from pyomo.repn.quadratic import QuadraticRepnVisitor
 
 from sklearn.linear_model import LinearRegression
 import random
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import train_test_split
 
+logger = logging.getLogger(__name__)
 
-# TODO remove
-MAX_DIM = 5
+class DomainPartitioningMethod(enum.IntEnum):
+    RANDOM_GRID = 1
+    UNIFORM_GRID = 2
+    LINEAR_MODEL_TREE_UNIFORM = 3
+    LINEAR_MODEL_TREE_RANDOM = 4
 
 # This should be safe to use many times; declare it globally
 _quadratic_repn_visitor = QuadraticRepnVisitor(
     subexpression_cache={}, var_map={}, var_order={}, sorter=None
 )
 
-def get_pwl_function_approximation(func, method, n, bounds, **kwargs):
-    """
-    Get a piecewise-linear approximation to a function, given:
 
-    func: function to approximate
-    method: method to use for the approximation, current options are:
-        - 'simple_random_point_grid'
-        - 'simple_uniform_point_grid'
-        - 'naive_lmt'
-    n: parameter controlling fineness of the approximation based on the specified method
-    bounds: list of tuples giving upper and lower bounds for each of func's arguments
-    kwargs: additional arguments to be specified to the method used
-    """
-
-    points = None
-    match (method):
-        case 'simple_random_point_grid':
-            points = get_simple_random_point_grid(bounds, n)
-        case 'simple_uniform_point_grid':
-            points = get_simple_uniform_point_grid(bounds, n)
-        case 'naive_lmt':
-            points = get_points_naive_lmt(bounds, n, func, randomize=True)
-        case 'naive_lmt_uniform':
-            points = get_points_naive_lmt(bounds, n, func, randomize=False)
-        case _:
-            raise NotImplementedError(f"Invalid method: {method}")
-
-    # Default path: after getting the points, construct PWLF using the
-    # function-and-list-of-points constructor
-
-    # DUCT TAPE WARNING: work around deficiency in PiecewiseLinearFunction constructor. TODO
-    dim = len(points[0])
-    if dim == 1:
-        points = [pt[0] for pt in points]
-
-    print(
-        f"    Constructing PWLF with {len(points)} points, each of which are {dim}-dimensional"
-    )
-    return PiecewiseLinearFunction(points=points, function=func)
-
-
-def get_simple_random_point_grid(bounds, n, seed=42):
+def get_random_point_grid(bounds, n, func, seed=42):
     # Generate randomized grid of points
     linspaces = []
     for (lb, ub) in bounds:
@@ -98,7 +81,7 @@ def get_simple_random_point_grid(bounds, n, seed=42):
     return list(itertools.product(*linspaces))
 
 
-def get_simple_uniform_point_grid(bounds, n):
+def get_uniform_point_grid(bounds, n, func):
     # Generate non-randomized grid of points
     linspaces = []
     for (lb, ub) in bounds:
@@ -111,15 +94,17 @@ def get_simple_uniform_point_grid(bounds, n):
     return list(itertools.product(*linspaces))
 
 
-# TODO this was copypasted from shumeng; make it better
-def get_points_naive_lmt(bounds, n, func, seed=42, randomize=True):
-    
-    points = None
-    if randomize:
-        points = get_simple_random_point_grid(bounds, n, seed=seed)
-    else:
-        points = get_simple_uniform_point_grid(bounds, n)
-        # perturb(points, 0.01)
+def get_points_lmt_random_sample(bounds, n, func, seed=42):
+    points = get_random_point_grid(bounds, n, func, seed=seed)
+    return get_points_lmt(points, bounds, func, seed)
+
+
+def get_points_lmt_uniform_sample(bounds, n, func, seed=42):
+    points = get_uniform_point_grid(bounds, n, func)
+    return get_points_lmt(points, bounds, func, seed)
+
+
+def get_points_lmt(points, bounds, func, seed):
     x_list = np.array(points)
     y_list = []
     for point in points:
@@ -152,6 +137,36 @@ def get_points_naive_lmt(bounds, n, func, seed=42, randomize=True):
     # duct tape to fix possible issues from unknown bugs. TODO should this go
     # here?
     return bound_point_list
+
+_partition_method_dispatcher = {
+    DomainPartitioningMethod.RANDOM_GRID: get_random_point_grid,
+    DomainPartitioningMethod.UNIFORM_GRID: get_uniform_point_grid,
+    DomainPartitioningMethod.LINEAR_MODEL_TREE_UNIFORM: get_points_lmt_uniform_sample,
+    DomainPartitioningMethod.LINEAR_MODEL_TREE_RANDOM: get_points_lmt_random_sample,
+}
+
+def get_pwl_function_approximation(func, method, n, bounds):
+    """
+    Get a piecewise-linear approximation of a function, given:
+
+    func: function to approximate
+    method: method to use for the approximation, member of DomainPartitioningMethod
+    n: parameter controlling fineness of the approximation based on the specified method
+    bounds: list of tuples giving upper and lower bounds for each of func's arguments
+    """
+    points = _partition_method_dispatcher[method](bounds, n, func)
+
+    # DUCT TAPE WARNING: work around deficiency in PiecewiseLinearFunction
+    # constructor. TODO
+    dim = len(points[0])
+    if dim == 1:
+        points = [pt[0] for pt in points]
+
+    # After getting the points, construct PWLF using the
+    # function-and-list-of-points constructor
+    logger.debug(f"Constructing PWLF with {len(points)} points, each of which "
+                 f"are {dim}-dimensional")
+    return PiecewiseLinearFunction(points=points, function=func)
 
 
 # TODO: this is still horrible. Maybe I should put these back together into
@@ -213,11 +228,13 @@ def parse_linear_tree_regressor(linear_tree_regressor, bounds):
         node['left_leaves'], node['right_leaves'] = [], []
         if left_child_node in leaves:  # if left child is a leaf node
             node['left_leaves'].append(left_child_node)
-        else:  # traverse its left node by calling function to find all the leaves from its left node
+        else:  # traverse its left node by calling function to find all the
+               # leaves from its left node
             node['left_leaves'] = find_leaves(splits, leaves, splits[left_child_node])
         if right_child_node in leaves:  # if right child is a leaf node
             node['right_leaves'].append(right_child_node)
-        else:  # traverse its right node by calling function to find all the leaves from its right node
+        else:  # traverse its right node by calling function to find all the
+               # leaves from its right node
             node['right_leaves'] = find_leaves(splits, leaves, splits[right_child_node])
 
     # For each feature in each leaf, initialize lower and upper bounds to None
@@ -248,6 +265,16 @@ def parse_linear_tree_regressor(linear_tree_regressor, bounds):
         )
 
     return leaves_new, splits, splitting_thresholds
+
+
+# This doesn't catch all additively separable expressions--we really need a
+# walker (as does gdp.partition_disjuncts)
+def _additively_decompose_expr(input_expr):
+    if input_expr.__class__ is not SumExpression:
+        # This isn't separable, so we just have the one expression
+        return [input_expr]
+    # else, it was a SumExpression, and we will break it into the summands
+    return list(input_expr.args)
 
 
 # Populate the "None" bounds with the bounding box bounds for a leaves-dict-tree
@@ -286,227 +313,311 @@ def find_leaves(splits, leaves, input_node):
 
 @TransformationFactory.register(
     'contrib.piecewise.nonlinear_to_pwl',
-    doc="Convert nonlinear constraints and objectives to piecewise-linear approximations.",
+    doc="Convert nonlinear constraints and objectives to piecewise-linear "
+    "approximations.",
 )
 class NonlinearToPWL(Transformation):
     """
     Convert nonlinear constraints and objectives to piecewise-linear approximations.
     """
+    CONFIG = ConfigDict('contrib.piecewise.nonlinear_to_pwl')
+    CONFIG.declare(
+        'targets',
+        ConfigValue(
+            default=None,
+            domain=target_list,
+            description="target or list of targets that will be approximated",
+            doc="""
+            This specifies the list of components to approximate. If None (default),
+            the entire model is transformed. Note that if the transformation is
+            done out of place, the list of targets should be attached to the model
+            before it is cloned, and the list will specify the targets on the cloned
+            instance.""",
+        ),
+    )
+    CONFIG.declare(
+        'num_points',
+        ConfigValue(
+            default=3,
+            domain=PositiveInt,
+            description="Number of breakpoints for each piecewise-linear approximation",
+            doc="""
+            Specifies the number of points in each function domain to triangulate in 
+            order to construct the piecewise-linear approximation. Must be an integer
+            greater than 1.""",
+        ),
+    )
+    CONFIG.declare(
+        'domain_partitioning_method',
+        ConfigValue(
+            default=DomainPartitioningMethod.UNIFORM_GRID,
+            domain=InEnum(DomainPartitioningMethod),
+            description="Method for sampling points that will partition function "
+            "domains.",
+            doc="""
+            The method by which the points used to partition each function domain
+            are selected. By default, the range of each variable is partitioned
+            uniformly, however it is possible to sample randomly or to use the
+            partitions from training a linear model tree based on either uniform
+            or random samples of the ranges.""",
+        ),
+    )
+    CONFIG.declare(
+        'approximate_quadratic_constraints',
+        ConfigValue(
+            default=True,
+            domain=bool,
+            description="Whether or not to approximate quadratic constraints.",
+            doc="""
+            Whether or not to calculate piecewise-linear approximations for
+            quadratic constraints. If True, the resulting approximation will be
+            a mixed-integer linear program. If False, the resulting approximation
+            will be a mixed-integer quadratic program.""",
+        ),
+    )
+    CONFIG.declare(
+        'approximate_quadratic_objectives',
+        ConfigValue(
+            default=True,
+            domain=bool,
+            description="Whether or not to approximate quadratic objectives.",
+            doc="""
+            Whether or not to calculate piecewise-linear approximations for
+            quadratic objectives. If True, the resulting approximation will be
+            a mixed-integer linear program. If False, the resulting approximation
+            will be a mixed-integer quadratic program.""",
+        ),
+    )
+    CONFIG.declare(
+        'additively_decompose',
+        ConfigValue(
+            default=False,
+            domain=bool,
+            description="Whether or not to additively decompose constraints and "
+            "approximate the summands separately.",
+            doc="""
+            If False, each nonlinear constraint expression will be approximated by
+            exactly one piecewise-linear function. If True, constraints will be 
+            additively decomposed, and each of the resulting summands will be
+            approximated by a separate piecewise-linear function.
 
+            It is recommended to leave this False as long as no nonlinear constraint 
+            involves more than about 5-6 variables. For constraints with higher-
+            dimmensional nonlinear functions, additive decomposition will improve
+            the scalability of the approximation (since paritioning the domain is
+            subject to the curse of dimensionality).""",
+        ),
+    )
+    CONFIG.declare(
+        'max_dimension',
+        ConfigValue(
+            default=5,
+            domain=PositiveInt,
+            description="The maximum dimension of functions that will be approximated.",
+            doc="""
+            Specifies the maximum dimension function the transformation should
+            attempt to approximate. If a nonlinear function dimension exceeds
+            'max_dimension' the transformation will log a warning and leave the
+            expression as-is. For functions with dimension significantly the default
+            (5), it is likely that this transformation will stall triangulating the 
+            points in order to partition the function domain.""",
+        ),
+    )
     def __init__(self):
         super(Transformation).__init__()
-    # TODO: ConfigDict
-    def _apply_to(
-        self,
-        model,
-        n=3,
-        method='simple_uniform_point_grid',
-        allow_quadratic_cons=True,
-        allow_quadratic_objs=True,
-        additively_decompose=True,
-    ):
-        """TODO: docstring"""
+        self._handlers = {
+            Constraint: self._transform_constraint,
+            Objective: self._transform_objective,
+            Var: False,
+            BooleanVar: False,
+            Connector: False,
+            Expression: False,
+            Suffix: False,
+            Param: False,
+            Set: False,
+            SetOf: False,
+            RangeSet: False,
+            Disjunction: False,
+            Disjunct: self._transform_block_components,
+            Block: self._transform_block_components,
+            ExternalFunction: False,
+            Port: False,
+            PiecewiseLinearFunction: False,
+            LogicalConstraint: False,
+        }
+        self._transformation_blocks = {}
+        self._transformation_block_set = ComponentSet()
 
-        # Upcoming steps will trash the values of the vars, since I don't know
-        # a better way. But what if the user set them with initialize= ? We'd
-        # better restore them after we're done.
-        orig_var_map = {id(var): var.value for var in model.component_data_objects(Var)}
+    def _apply_to(self, instance, **kwds):
+        try:
+            self._apply_to_impl(instance, **kwds)
+        finally:
+            self._transformation_blocks.clear()
+            self._transformation_block_set.clear()
 
-        # Now we are ready to start
-        original_cons = list(model.component_data_objects(Constraint))
-        original_objs = list(model.component_data_objects(Objective))
+    def _apply_to_impl( self, model, **kwds):
+        config = self.CONFIG(kwds.pop('options', {}))
+        config.set_value(kwds)
 
-        model._pwl_quadratic_count = 0
-        model._pwl_nonlinear_count = 0
+        targets = config.targets
+        if targets is None:
+            targets = (model,)
 
-        # Let's put all our new constraints in one big index
-        model._pwl_cons = Constraint(Any)
-
-        for con in original_cons:
-            repn = _quadratic_repn_visitor.walk_expression(con.body)
-            if repn.nonlinear is None:
-                if repn.quadratic is None:
-                    # Linear constraint. Always skip.
-                    continue
-                else:
-                    model._pwl_quadratic_count += 1
-                    if allow_quadratic_cons:
-                        continue
+        for target in targets:
+            if target.ctype is Block or target.ctype is Disjunct:
+                self._transform_block_components(target, config)
+            elif target.ctype is Constraint:
+                self._transform_constraint(target, config)
+            elif target.ctype is Objective:
+                self._transform_objective(target, config)
             else:
-                model._pwl_nonlinear_count += 1
-            _replace_con(
-                model, con, method, n, allow_quadratic_cons, additively_decompose
-            )
+                raise ValueError(
+                    "Target '%s' is not a Block, Constraint, or Objective. It "
+                    "is of type '%s' and cannot be transformed."
+                    % (target.name, type(t))
+                )
 
-        # And do the same for objectives
-        for obj in original_objs:
-            repn = _quadratic_repn_visitor.walk_expression(obj)
-            if repn.nonlinear is None:
-                if repn.quadratic is None:
-                    # Linear objective. Skip.
-                    continue
-                else:
-                    model._pwl_quadratic_count += 1
-                    if allow_quadratic_objs:
-                        continue
-            else:
-                model._pwl_nonlinear_count += 1
-            _replace_obj(
-                model, obj, method, n, allow_quadratic_objs, additively_decompose
-            )
+    def _get_transformation_block(self, parent):
+        if parent in self._transformation_blocks:
+            return self._transformation_blocks[parent]
 
-        # Before we're done, replace the old variable values
-        for var in model.component_data_objects(Var):
-            var.value = orig_var_map[id(var)]
-
-
-# Check whether a term should be skipped for approximation. Do not touch
-# model's quadratic or nonlinear counts; those are only for top-level
-# expressions which were already checked
-def _check_skip_approx(expr, allow_quadratic, model):
-    repn = _quadratic_repn_visitor.walk_expression(expr)
-    if repn.nonlinear is None:
-        if repn.quadratic is None:
-            # Linear expression. Skip.
-            return True
-        else:
-            # model._pwl_quadratic_count += 1
-            if allow_quadratic:
-                return True
-    else:
-        pass
-        # model._pwl_nonlinear_count += 1
-    dim = len(list(identify_variables(expr)))
-    if dim > MAX_DIM:
-        print(f"Refusing to approximate function with {dim}-dimensional component.")
-        raise RuntimeError(
-            f"Refusing to approximate function with {dim}-dimensional component."
+        nm = unique_component_name(
+            parent, '_pyomo_contrib_nonlinear_to_pwl'
         )
-    return False
+        self._transformation_blocks[parent] = transBlock = Block()
+        parent.add_component(nm, transBlock)
+        self._transformation_block_set.add(transBlock)
 
+        transBlock._pwl_cons = Constraint(Any)
+        return transBlock
+    
+    def _transform_block_components(self, block, config):
+        blocks = block.values() if block.is_indexed() else (block,)
+        for b in blocks:
+            for obj in b.component_objects(
+                active=True,
+                descend_into=False,
+                sort=SortComponents.deterministic
+            ):
+                if obj in self._transformation_block_set:
+                    # This is a Block we created--we know we don't need to look
+                    # on it.
+                    continue
+                handler = self._handlers.get(obj.ctype, None)
+                if not handler:
+                    if handler is None:
+                        raise RuntimeError(
+                            "No transformation handler registered for modeling "
+                            "components of type '%s'." % obj.ctype
+                        )
+                    continue
+                handler(obj, config)
 
-def _generate_bounds_list(vars_inner, con):
-    bounds = []
-    for v in vars_inner:
-        if v.fixed:
-            bounds.append((value(v), value(v)))
-        elif None in v.bounds:
-            raise ValueError(
-                "Cannot automatically approximate constraints with unbounded "
-                "variables. Var '%s' appearining in component '%s' is missing "
-                "at least one bound" % (con.name, v.name))
-        else:
-            bounds.append(v.bounds)
-    return bounds
+    def _transform_constraint(self, cons, config):
+        trans_block = self._get_transformation_block(cons.parent_block())
+        constraints = cons.values() if cons.is_indexed() else (cons,)
+        for c in constraints:
+            pw_approx = self._approximate_expression(
+                c.body, c, trans_block, config,
+                config.approximate_quadratic_constraints)
 
+            if pw_approx is None:
+                # Didn't need approximated, nothing to do
+                continue
 
-def _replace_con(model, con, method, n, allow_quadratic_cons, additively_decompose):
-    # Additively decompose con.body and work on the pieces
-    func_pieces = []
-    for k, expr in enumerate(
-        _additively_decompose_expr(con.body) if additively_decompose else [con.body]
-    ):
-        # First, check if we actually need to do anything
-        if _check_skip_approx(expr, allow_quadratic_cons, model):
-            # We're skipping this term. Just add expr directly to the pieces
-            func_pieces.append(expr)
-            continue
+            trans_block._pwl_cons[c.name, len(trans_block._pwl_cons)] = (c.lower,
+                                                                         pw_approx,
+                                                                         c.upper)
+            # deactivate original
+            c.deactivate()
 
-        vars_inner = list(identify_variables(expr))
-        bounds = _generate_bounds_list(vars_inner, con)
+    def _transform_objective(self, objective, config):
+        trans_block = self._get_transformation_block(objective.parent_block())
+        objectives = objective.values() if objective.is_indexed() else (objective,)
+        for obj in objectives:
+            pw_approx = self._approximate_expression(
+                obj.expr, obj, trans_block, config,
+                config.approximate_quadratic_objectives)
 
-        def eval_con_func(*args):
-            # sanity check
-            assert len(args) == len(
-                vars_inner
-            ), f"eval_con_func was called with {len(args)} arguments, but expected {len(vars_inner)}"
-            for i, v in enumerate(vars_inner):
-                v.value = args[i]
-            return value(con.body)
+            if pw_approx is None:
+                # Didn't need approximated, nothing to do
+                continue
 
-        pwlf = get_pwl_function_approximation(eval_con_func, method, n, bounds)
+            trans_block.add_component(
+                unique_component_name(trans_block, obj.name),
+                Objective(expr=pw_approx, sense=obj.sense)
+            )
+            obj.deactivate()
 
-        con_name = con.getname(fully_qualified=False)
-        model.add_component(f"_pwle_{con_name}_{k}", pwlf)
-        # func_pieces.append(pwlf(*vars_inner).expr)
-        func_pieces.append(pwlf(*vars_inner))
+    def _get_bounds_list(self, var_list, parent_component):
+        bounds = []
+        for v in var_list:
+            if None in v.bounds:
+                raise ValueError(
+                    "Cannot automatically approximate constraints with unbounded "
+                    "variables. Var '%s' appearining in component '%s' is missing "
+                    "at least one bound" % (con.name, v.name))
+            else:
+                bounds.append(v.bounds)
+        return bounds
 
-    pwl_func = sum(func_pieces)
+    def _needs_approximating(self, expr, approximate_quadratic):
+        repn = _quadratic_repn_visitor.walk_expression(expr)
+        if repn.nonlinear is None:
+            if repn.quadratic is None:
+                # Linear constraint. Always skip.
+                return False
+            else:
+                if not approximate_quadratic:
+                    # Didn't need approximated, nothing to do
+                    return False
+        return True
 
-    # Change the constraint. This is hard to do in-place, so I'll
-    # remake it and deactivate the old one as was done originally.
+    def _approximate_expression(self, obj, parent_component, trans_block,
+                                config, approximate_quadratic):
+        if not self._needs_approximating(obj, approximate_quadratic):
+            return
+        
+        # Additively decompose obj and work on the pieces
+        pwl_func = 0
+        for k, expr in enumerate(_additively_decompose_expr(obj) if
+                                 config.additively_decompose else (obj,)):
+            # First check is this is a good idea
+            expr_vars = list(identify_variables(expr, include_fixed=False))
+            orig_values = ComponentMap((v, v.value) for v in expr_vars)
 
-    # Now we need a ton of if statements to properly set up the constraint
-    if con.equality:
-        model._pwl_cons[str(con)] = pwl_func == con.ub
-    elif con.strict_lower:
-        model._pwl_cons[str(con)] = pwl_func > con.lb
-    elif con.strict_upper:
-        model._pwl_cons[str(con)] = pwl_func < con.ub
-    elif con.has_lb():
-        if con.has_ub():  # constraint is of the form lb <= expr <= ub
-            model._pwl_cons[str(con)] = (con.lb, pwl_func, con.ub)
-        else:
-            model._pwl_cons[str(con)] = pwl_func >= con.lb
-    elif con.has_ub():
-        model._pwl_cons[str(con)] = pwl_func <= con.ub
-    else:
-        assert (
-            False
-        ), f"unreachable: original Constraint '{con_name}' did not have any upper or lower bound"
-    con.deactivate()
+            dim = len(expr_vars)
+            if dim > config.max_dimension:
+                logger.warning(
+                    "Not approximating expression for component '%s' as "
+                    "it exceeds the maximum dimension of %s. Try increasing "
+                    "'max_dimension' or additively separating the expression."
+                    % (parent_component.name, config.max_dimension))
+                pwl_func += expr
+                continue
+            elif not self._needs_approximating(expr, approximate_quadratic):
+                pwl_func += expr
+                continue
 
+            def eval_expr(*args):
+                for i, v in enumerate(expr_vars):
+                    v.value = args[i]
+                return value(expr)
 
-def _replace_obj(model, obj, method, n, allow_quadratic_obj, additively_decompose):
-    func_pieces = []
-    for k, expr in enumerate(
-        _additively_decompose_expr(obj.expr) if additively_decompose else [obj.expr]
-    ):
-        # First, check if we actually need to do anything
-        if _check_skip_approx(expr, allow_quadratic_obj, model):
-            # We're skipping this term. Just add expr directly to the pieces
-            func_pieces.append(expr)
-            continue
+            pwlf = get_pwl_function_approximation(
+                eval_expr, config.domain_partitioning_method,
+                config.num_points,
+                self._get_bounds_list(expr_vars, parent_component)
+            )
+            name = unique_component_name(
+                trans_block,
+                parent_component.getname(fully_qualified=False)
+            )
+            trans_block.add_component(f"_pwle_{name}_{k}", pwlf)
+            pwl_func += pwlf(*expr_vars)
 
-        vars_inner = list(identify_variables(expr))
-        bounds = _generate_bounds_list(vars_inner, obj)
+            # restore var values
+            for v, val in orig_values.items():
+                v.value = val
 
-        def eval_obj_func(*args):
-            # sanity check
-            assert len(args) == len(
-                vars_inner
-            ), f"eval_obj_func was called with {len(args)} arguments, but expected {len(vars_inner)}"
-            for i, v in enumerate(vars_inner):
-                v.value = args[i]
-            return value(obj)
-
-        pwlf = get_pwl_function_approximation(eval_obj_func, method, n, bounds)
-
-        obj_name = obj.getname(fully_qualified=False)
-        model.add_component(f"_pwle_{obj_name}_{k}", pwlf)
-        func_pieces.append(pwlf(*vars_inner))
-
-    pwl_func = sum(func_pieces[1:], func_pieces[0])
-
-    # Add the new objective
-    obj_name = obj.getname(fully_qualified=False)
-    # model.add_component(f"_pwle_{obj_name}", pwl_func)
-    model.add_component(
-        f"_pwl_obj_{obj_name}", Objective(expr=pwl_func, sense=obj.sense)
-    )
-    obj.deactivate()
-
-
-# Copypasted from gdp/plugins/partition_disjuncts.py for now. This is the
-# stupid approach that will not properly catch all additive separability; to do
-# it better we need a walker.
-def _additively_decompose_expr(input_expr):
-    if input_expr.__class__ is not SumExpression:
-        # print(f"couldn't decompose: input_expr.__class__ was {input_expr.__class__}, not SumExpression")
-        # This isn't separable, so we just have the one expression
-        return [input_expr]
-    # else, it was a SumExpression, and we will break it into the summands
-    summands = list(input_expr.args)
-    # print(f"len(summands) is {len(summands)}")
-    # print(f"summands is {summands}")
-    return summands
+        return pwl_func
