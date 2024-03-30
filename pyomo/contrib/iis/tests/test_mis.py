@@ -90,7 +90,7 @@ def _test_mis(solver_name):
 
         mis.compute_infeasibility_explanation(m, opt, logger=logger)
         _check_output(file_name)
-    
+
     else:  # not windows
         with TempfileManager.new_context() as tmpmgr:
             tmp_path = tmpmgr.mkdtemp()
