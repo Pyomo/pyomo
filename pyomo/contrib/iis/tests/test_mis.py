@@ -82,21 +82,23 @@ def _test_mis(solver_name):
     #    On a Windows machine, we will not use a temp dir and just try to delete the log file
     if os.name == "nt":
         print("we have nt")
-        file_name = f"{solver_name}_mis.log"
+        file_name = f"_test_mis_{solver_name}.log"
         logger = logging.getLogger(f"test_mis_{solver_name}")
+        logger.setLevel(logging.INFO)
         fh = logging.FileHandler(file_name)
         fh.setLevel(logging.DEBUG)
         logger.addHandler(fh)
 
         mis.compute_infeasibility_explanation(m, opt, logger=logger)
         _check_output(file_name)
+        # os.remove(file_name) cannot remove it on Windows. Still in use.
 
     else:  # not windows
         with TempfileManager.new_context() as tmpmgr:
             tmp_path = tmpmgr.mkdtemp()
-            file_name = os.path.join(tmp_path, f"{solver_name}_mis.log")
+            file_name = os.path.join(tmp_path, f"_test_mis_{solver_name}.log")
             logger = logging.getLogger(f"test_mis_{solver_name}")
-            logger.setlevel(logging.INFO)
+            logger.setLevel(logging.INFO)
             fh = logging.FileHandler(file_name)
             fh.setLevel(logging.DEBUG)
             logger.addHandler(fh)
