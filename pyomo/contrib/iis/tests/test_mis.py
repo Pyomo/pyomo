@@ -98,6 +98,5 @@ def _test_mis(solver_name):
         print("PerimssionError allowed for log file during test (Windows)")
 
 
-
 if __name__ == "__main__":
     unittest.main()
