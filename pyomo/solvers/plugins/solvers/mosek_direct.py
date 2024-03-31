@@ -492,13 +492,10 @@ class MOSEKDirect(DirectSolver):
             ptrb = (0,) + ptre[:-1]
             asubs = tuple(itertools.chain.from_iterable(l_ids))
             avals = tuple(itertools.chain.from_iterable(l_coefs))
-            qcsubi = tuple(itertools.chain.from_iterable(q_is))
-            qcsubj = tuple(itertools.chain.from_iterable(q_js))
-            qcval = tuple(itertools.chain.from_iterable(q_vals))
-            qcsubk = tuple(i for i in sub for j in range(len(q_is[i - con_num])))
             self._solver_model.appendcons(num_lq)
             self._solver_model.putarowlist(sub, ptrb, ptre, asubs, avals)
-            self._solver_model.putqcon(qcsubk, qcsubi, qcsubj, qcval)
+            for k, i, j, v in zip(sub, q_is, q_js, q_vals):
+                self._solver_model.putqconk(k, i, j, v)
             self._solver_model.putconboundlist(sub, bound_types, lbs, ubs)
             for i, s_n in enumerate(sub_names):
                 self._solver_model.putconname(sub[i], s_n)
