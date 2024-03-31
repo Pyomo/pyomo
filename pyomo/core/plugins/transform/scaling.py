@@ -15,8 +15,6 @@ from pyomo.core.base import (
     Var,
     Constraint,
     Objective,
-    ConstraintData,
-    ObjectiveData,
     Suffix,
     value,
 )
@@ -197,7 +195,7 @@ class ScaleModel(Transformation):
                 already_scaled.add(id(c))
                 # perform the constraint/objective scaling and variable sub
                 scaling_factor = component_scaling_factor_map[c]
-                if isinstance(c, ConstraintData):
+                if c.ctype is Constraint:
                     body = scaling_factor * replace_expressions(
                         expr=c.body,
                         substitution_map=variable_substitution_dict,
@@ -226,7 +224,7 @@ class ScaleModel(Transformation):
                     else:
                         c.set_value((lower, body, upper))
 
-                elif isinstance(c, ObjectiveData):
+                elif c.ctype is Objective:
                     c.expr = scaling_factor * replace_expressions(
                         expr=c.expr,
                         substitution_map=variable_substitution_dict,

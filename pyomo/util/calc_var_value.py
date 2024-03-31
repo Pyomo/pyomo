@@ -12,7 +12,7 @@
 from pyomo.common.errors import IterationLimitError
 from pyomo.common.numeric_types import native_numeric_types, native_complex_types, value
 from pyomo.core.expr.calculus.derivatives import differentiate
-from pyomo.core.base.constraint import Constraint, ConstraintData
+from pyomo.core.base.constraint import Constraint
 
 import logging
 
@@ -81,7 +81,7 @@ def calculate_variable_from_constraint(
 
     """
     # Leverage all the Constraint logic to process the incoming tuple/expression
-    if not isinstance(constraint, ConstraintData):
+    if not getattr(constraint, 'ctype', None) is Constraint:
         constraint = Constraint(expr=constraint, name=type(constraint).__name__)
         constraint.construct()
 

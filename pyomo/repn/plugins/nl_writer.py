@@ -437,6 +437,7 @@ class _SuffixData(object):
         self.values[obj] = val
 
     def compile(self, column_order, row_order, obj_order, model_id):
+        var_con_obj = {Var, Constraint, Objective}
         missing_component_data = ComponentSet()
         unknown_data = ComponentSet()
         queue = [self.values.items()]
@@ -462,18 +463,20 @@ class _SuffixData(object):
                     self.obj[obj_order[_id]] = val
                 elif _id == model_id:
                     self.prob[0] = val
-                elif isinstance(obj, (VarData, ConstraintData, ObjectiveData)):
-                    missing_component_data.add(obj)
-                elif isinstance(obj, (Var, Constraint, Objective)):
-                    # Expand this indexed component to store the
-                    # individual ComponentDatas, but ONLY if the
-                    # component data is not in the original dictionary
-                    # of values that we extracted from the Suffixes
-                    queue.append(
-                        product(
-                            filterfalse(self.values.__contains__, obj.values()), (val,)
+                elif getattr(obj, 'ctype', None) in var_con_obj:
+                    if obj.is_indexed():
+                        # Expand this indexed component to store the
+                        # individual ComponentDatas, but ONLY if the
+                        # component data is not in the original dictionary
+                        # of values that we extracted from the Suffixes
+                        queue.append(
+                            product(
+                                filterfalse(self.values.__contains__, obj.values()),
+                                (val,),
+                            )
                         )
-                    )
+                    else:
+                        missing_component_data.add(obj)
                 else:
                     unknown_data.add(obj)
         if missing_component_data:
