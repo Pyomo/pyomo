@@ -40,7 +40,7 @@ WRONLY = "WRONLY"
 Hax = "Hax"
 # Big Sur
 Sur = "Sur"
-# Ignore the shorthand ans for and
+# Ignore the shorthand ans for answer
 ans = "ans"
 # Ignore the keyword arange
 arange = "arange"
