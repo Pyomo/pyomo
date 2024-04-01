@@ -88,6 +88,7 @@ class GurobiDirect(SolverBase):
 
     _available = None
     _num_instances = 0
+    _tc_map = None
 
     def __init__(self, **kwds):
         super().__init__(**kwds)
@@ -256,7 +257,6 @@ class GurobiDirect(SolverBase):
         config = self._config
 
         gprob = loader._grb_model
-        grb = gurobipy.GRB
         status = gprob.Status
 
         results = Results()
@@ -264,45 +264,16 @@ class GurobiDirect(SolverBase):
         results.timing_info.gurobi_time = gprob.Runtime
 
         if gprob.SolCount > 0:
-            if status == grb.OPTIMAL:
+            if status == gurobipy.GRB.OPTIMAL:
                 results.solution_status = SolutionStatus.optimal
             else:
                 results.solution_status = SolutionStatus.feasible
         else:
             results.solution_status = SolutionStatus.noSolution
 
-        if status == grb.LOADED:  # problem is loaded, but no solution
-            results.termination_condition = TerminationCondition.unknown
-        elif status == grb.OPTIMAL:  # optimal
-            results.termination_condition = (
-                TerminationCondition.convergenceCriteriaSatisfied
-            )
-        elif status == grb.INFEASIBLE:
-            results.termination_condition = TerminationCondition.provenInfeasible
-        elif status == grb.INF_OR_UNBD:
-            results.termination_condition = TerminationCondition.infeasibleOrUnbounded
-        elif status == grb.UNBOUNDED:
-            results.termination_condition = TerminationCondition.unbounded
-        elif status == grb.CUTOFF:
-            results.termination_condition = TerminationCondition.objectiveLimit
-        elif status == grb.ITERATION_LIMIT:
-            results.termination_condition = TerminationCondition.iterationLimit
-        elif status == grb.NODE_LIMIT:
-            results.termination_condition = TerminationCondition.iterationLimit
-        elif status == grb.TIME_LIMIT:
-            results.termination_condition = TerminationCondition.maxTimeLimit
-        elif status == grb.SOLUTION_LIMIT:
-            results.termination_condition = TerminationCondition.unknown
-        elif status == grb.INTERRUPTED:
-            results.termination_condition = TerminationCondition.interrupted
-        elif status == grb.NUMERIC:
-            results.termination_condition = TerminationCondition.unknown
-        elif status == grb.SUBOPTIMAL:
-            results.termination_condition = TerminationCondition.unknown
-        elif status == grb.USER_OBJ_LIMIT:
-            results.termination_condition = TerminationCondition.objectiveLimit
-        else:
-            results.termination_condition = TerminationCondition.unknown
+        results.termination_condition = self._get_tc_map().get(
+            status, TerminationCondition.unknown
+        )
 
         if (
             results.termination_condition
@@ -310,7 +281,9 @@ class GurobiDirect(SolverBase):
             and config.raise_exception_on_nonoptimal_result
         ):
             raise RuntimeError(
-                'Solver did not find the optimal solution. Set opt.config.raise_exception_on_nonoptimal_result = False to bypass this error.'
+                'Solver did not find the optimal solution. Set '
+                'opt.config.raise_exception_on_nonoptimal_result=False '
+                'to bypass this error.'
             )
 
         results.incumbent_objective = None
@@ -348,3 +321,25 @@ class GurobiDirect(SolverBase):
         timer.stop('load solution')
 
         return results
+
+    def _get_tc_map(self):
+        if GurobiDirect._tc_map is None:
+            grb = gurobipy.GRB
+            tc = TerminationCondition
+            GurobiDirect._tc_map = {
+                grb.LOADED: tc.unknown,  # problem is loaded, but no solution
+                grb.OPTIMAL:  tc.convergenceCriteriaSatisfied,
+                grb.INFEASIBLE: tc.provenInfeasible,
+                grb.INF_OR_UNBD: tc.infeasibleOrUnbounded,
+                grb.UNBOUNDED: tc.unbounded,
+                grb.CUTOFF: tc.objectiveLimit,
+                grb.ITERATION_LIMIT: tc.iterationLimit,
+                grb.NODE_LIMIT: tc.iterationLimit,
+                grb.TIME_LIMIT: tc.maxTimeLimit,
+                grb.SOLUTION_LIMIT: tc.unknown,
+                grb.INTERRUPTED: tc.interrupted,
+                grb.NUMERIC: tc.unknown,
+                grb.SUBOPTIMAL: tc.unknown,
+                grb.USER_OBJ_LIMIT: tc.objectiveLimit,
+            }
+        return GurobiDirect._tc_map
