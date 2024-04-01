@@ -328,7 +328,7 @@ class GurobiDirect(SolverBase):
             tc = TerminationCondition
             GurobiDirect._tc_map = {
                 grb.LOADED: tc.unknown,  # problem is loaded, but no solution
-                grb.OPTIMAL:  tc.convergenceCriteriaSatisfied,
+                grb.OPTIMAL: tc.convergenceCriteriaSatisfied,
                 grb.INFEASIBLE: tc.provenInfeasible,
                 grb.INF_OR_UNBD: tc.infeasibleOrUnbounded,
                 grb.UNBOUNDED: tc.unbounded,
