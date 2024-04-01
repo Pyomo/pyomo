@@ -10,14 +10,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.collections import ComponentMap
-from pyomo.core.base import (
-    Block,
-    Var,
-    Constraint,
-    Objective,
-    Suffix,
-    value,
-)
+from pyomo.core.base import Block, Var, Constraint, Objective, Suffix, value
 from pyomo.core.plugins.transform.hierarchy import Transformation
 from pyomo.core.base import TransformationFactory
 from pyomo.core.base.suffix import SuffixFinder
