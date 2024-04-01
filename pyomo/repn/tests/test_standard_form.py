@@ -256,11 +256,11 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
             [[1, 0, 2, 0], [0, 0, 1, 4], [0, 1, 6, 0], [0, 1, 6, 0], [1, 1, 0, 0]]
         )
         self.assertTrue(np.all(repn.A == ref))
-        print(repn)
-        print(repn.b)
         self.assertTrue(np.all(repn.b == np.array([3, 5, 6, -3, 8])))
         self.assertTrue(np.all(repn.c == np.array([[-1, 0, -5, 0], [1, 0, 0, 15]])))
-        # Note that the solution is a mix of inequality and equality constraints
+        # Note that the mixed_form solution is a mix of inequality and
+        # equality constraints, so we cannot (easily) reuse the
+        # _verify_solutions helper (as in the above cases):
         # self._verify_solution(soln, repn, False)
 
         repn = LinearStandardFormCompiler().write(
