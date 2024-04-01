@@ -358,9 +358,9 @@ class FOQUSGraph(object):
         done = False
         for i in range(len(sccNodes)):
             for j in range(len(sccNodes)):
-                for ine in ie[i]:
+                for in_e in ie[i]:
                     for oute in oe[j]:
-                        if ine == oute:
+                        if in_e == oute:
                             adj[j].append(i)
                             adjR[i].append(j)
                             done = True
