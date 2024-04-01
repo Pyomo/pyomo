@@ -353,14 +353,13 @@ class LegacySolverWrapper:
             raise NotImplementedError('Still working on this')
         # There is no reason for a user to be trying to mix both old
         # and new options. That is silly. So we will yell at them.
-        if 'options' in kwargs and 'solver_options' in kwargs:
-            raise ApplicationError(
-                "Both 'options' and 'solver_options' were requested. "
-                "Please use one or the other, not both."
-            )
-        elif 'options' in kwargs:
-            self.options = kwargs.pop('options')
-        elif 'solver_options' in kwargs:
+        self.options = kwargs.pop('options', None)
+        if 'solver_options' in kwargs:
+            if self.options is not None:
+                raise ValueError(
+                    "Both 'options' and 'solver_options' were requested. "
+                    "Please use one or the other, not both."
+                )
             self.options = kwargs.pop('solver_options')
         super().__init__(**kwargs)
 
@@ -406,14 +405,14 @@ class LegacySolverWrapper:
             self.config.time_limit = timelimit
         if report_timing is not NOTSET:
             self.config.report_timing = report_timing
-        if hasattr(self, 'options'):
+        if self.options is not None:
             self.config.solver_options.set_value(self.options)
         if (options is not NOTSET) and (solver_options is not NOTSET):
             # There is no reason for a user to be trying to mix both old
             # and new options. That is silly. So we will yell at them.
             # Example that would raise an error:
             # solver.solve(model, options={'foo' : 'bar'}, solver_options={'foo' : 'not_bar'})
-            raise ApplicationError(
+            raise ValueError(
                 "Both 'options' and 'solver_options' were requested. "
                 "Please use one or the other, not both."
             )

@@ -14,7 +14,6 @@ import os
 from pyomo.common import unittest
 from pyomo.common.config import ConfigDict
 from pyomo.contrib.solver import base
-from pyomo.common.errors import ApplicationError
 
 
 class TestSolverBase(unittest.TestCase):
@@ -351,7 +350,7 @@ class TestLegacySolverWrapper(unittest.TestCase):
         # users CANNOT initialize both values at the same time, because how
         # do we know what to do with it then?
         # Test case 1: Class instance
-        with self.assertRaises(ApplicationError):
+        with self.assertRaises(ValueError):
             solver = base.LegacySolverWrapper(
                 options={'max_iter': 6}, solver_options={'max_iter': 4}
             )
@@ -363,7 +362,7 @@ class TestLegacySolverWrapper(unittest.TestCase):
             ConfigDict(implicit=True, description="Options to pass to the solver."),
         )
         solver.config = config
-        with self.assertRaises(ApplicationError):
+        with self.assertRaises(ValueError):
             solver._map_config(solver_options={'max_iter': 4}, options={'max_iter': 6})
 
     def test_map_results(self):
