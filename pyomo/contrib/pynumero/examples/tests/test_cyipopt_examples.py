@@ -266,6 +266,11 @@ class TestExamples(unittest.TestCase):
         s = df['ca_bal']
         self.assertAlmostEqual(s.iloc[6], 0, places=3)
 
+    @unittest.skipIf(
+        cyipopt_core.__version__ == "1.4.0",
+        "Terminating Ipopt through a user callback is broken in CyIpopt 1.4.0 "
+        "(see mechmotum/cyipopt#249",
+    )
     def test_cyipopt_callback_halt(self):
         ex = import_file(
             os.path.join(example_dir, 'callback', 'cyipopt_callback_halt.py')
