@@ -140,6 +140,15 @@ class LinearStandardFormCompiler(object):
         ),
     )
     CONFIG.declare(
+        'mixed_form',
+        ConfigValue(
+            default=False,
+            domain=bool,
+            description='Return A in mixed form (the comparison operator is a '
+            'mix of <=, ==, and >=)',
+        ),
+    )
+    CONFIG.declare(
         'show_section_timing',
         ConfigValue(
             default=False,
@@ -332,6 +341,9 @@ class _LinearStandardFormCompiler_impl(object):
         # Tabulate constraints
         #
         slack_form = self.config.slack_form
+        mixed_form = self.config.mixed_form
+        if slack_form and mixed_form:
+            raise ValueError("cannot specify both slack_form and mixed_form")
         rows = []
         rhs = []
         con_data = []
@@ -372,7 +384,30 @@ class _LinearStandardFormCompiler_impl(object):
                     f"model contains a trivially infeasible constraint, '{con.name}'"
                 )
 
-            if slack_form:
+            if mixed_form:
+                N = len(repn.linear)
+                _data = np.fromiter(repn.linear.values(), float, N)
+                _index = np.fromiter(map(var_order.__getitem__, repn.linear), float, N)
+                if ub == lb:
+                    rows.append(RowEntry(con, 0))
+                    rhs.append(ub - offset)
+                    con_data.append(_data)
+                    con_index.append(_index)
+                    con_index_ptr.append(con_index_ptr[-1] + N)
+                else:
+                    if ub is not None:
+                        rows.append(RowEntry(con, 1))
+                        rhs.append(ub - offset)
+                        con_data.append(_data)
+                        con_index.append(_index)
+                        con_index_ptr.append(con_index_ptr[-1] + N)
+                    if lb is not None:
+                        rows.append(RowEntry(con, -1))
+                        rhs.append(lb - offset)
+                        con_data.append(_data)
+                        con_index.append(_index)
+                        con_index_ptr.append(con_index_ptr[-1] + N)
+            elif slack_form:
                 _data = list(repn.linear.values())
                 _index = list(map(var_order.__getitem__, repn.linear))
                 if lb == ub:  # TODO: add tolerance?
@@ -437,24 +472,22 @@ class _LinearStandardFormCompiler_impl(object):
         # at the index pointer list (an O(num_var) operation).
         c_ip = c.indptr
         A_ip = A.indptr
-        active_var_idx = list(
-            filter(
-                lambda i: A_ip[i] != A_ip[i + 1] or c_ip[i] != c_ip[i + 1],
-                range(len(columns)),
-            )
-        )
-        nCol = len(active_var_idx)
+        active_var_mask = (A_ip[1:] > A_ip[:-1]) | (c_ip[1:] > c_ip[:-1])
+
+        # Masks on NumPy arrays are very fast.  Build the reduced A
+        # indptr and then check if we actually have to manipulate the
+        # columns
+        augmented_mask = np.concatenate((active_var_mask, [True]))
+        reduced_A_indptr = A.indptr[augmented_mask]
+        nCol = len(reduced_A_indptr) - 1
         if nCol != len(columns):
-            # Note that the indptr can't just use range() because a var
-            # may only appear in the objectives or the constraints.
-            columns = list(map(columns.__getitem__, active_var_idx))
-            active_var_idx.append(c.indptr[-1])
+            columns = [v for k, v in zip(active_var_mask, columns) if k]
             c = scipy.sparse.csc_array(
-                (c.data, c.indices, c.indptr.take(active_var_idx)), [c.shape[0], nCol]
+                (c.data, c.indices, c.indptr[augmented_mask]), [c.shape[0], nCol]
             )
-            active_var_idx[-1] = A.indptr[-1]
+            # active_var_idx[-1] = len(columns)
             A = scipy.sparse.csc_array(
-                (A.data, A.indices, A.indptr.take(active_var_idx)), [A.shape[0], nCol]
+                (A.data, A.indices, reduced_A_indptr), [A.shape[0], nCol]
             )
 
         if self.config.nonnegative_vars:

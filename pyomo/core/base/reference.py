@@ -579,7 +579,7 @@ def Reference(reference, ctype=NOTSET):
     :py:class:`IndexedComponent`.
 
     If the indices associated with wildcards in the component slice all
-    refer to the same :py:class:`Set` objects for all data identifed by
+    refer to the same :py:class:`Set` objects for all data identified by
     the slice, then the resulting indexed component will be indexed by
     the product of those sets.  However, if all data do not share common
     set objects, or only a subset of indices in a multidimentional set

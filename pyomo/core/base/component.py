@@ -369,7 +369,7 @@ class ComponentBase(PyomoObject):
 
     @property
     def name(self):
-        """Get the fully qualifed component name."""
+        """Get the fully qualified component name."""
         return self.getname(fully_qualified=True)
 
     # Adding a setter here to help users adapt to the new
@@ -670,7 +670,7 @@ class Component(ComponentBase):
 
     @property
     def name(self):
-        """Get the fully qualifed component name."""
+        """Get the fully qualified component name."""
         return self.getname(fully_qualified=True)
 
     # Allow setting a component's name if it is not owned by a parent
