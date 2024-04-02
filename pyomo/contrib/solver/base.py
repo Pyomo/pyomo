@@ -465,13 +465,14 @@ class LegacySolverWrapper:
         ]
         legacy_soln.status = legacy_solution_status_map[results.solution_status]
         legacy_results.solver.termination_message = str(results.termination_condition)
-        legacy_results.problem.number_of_constraints = len(
-            list(model.component_map(ctype=Constraint))
+        legacy_results.problem.number_of_constraints = float('nan')
+        legacy_results.problem.number_of_variables = float('nan')
+        number_of_objectives = sum(
+            1
+            for _ in model.component_data_objects(
+                Objective, active=True, descend_into=True
+            )
         )
-        legacy_results.problem.number_of_variables = len(
-            list(model.component_map(ctype=Var))
-        )
-        number_of_objectives = len(list(model.component_map(ctype=Objective)))
         legacy_results.problem.number_of_objectives = number_of_objectives
         if number_of_objectives == 1:
             obj = get_objective(model)
