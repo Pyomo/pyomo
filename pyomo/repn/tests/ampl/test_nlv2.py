@@ -1096,7 +1096,6 @@ class Test_NLWriter(unittest.TestCase):
         m.c1 = Constraint([1, 2], rule=lambda m, i: sum(m.x.values()) == 1)
         m.c2 = Constraint(expr=m.p * m.x[1] ** 2 + m.x[2] ** 3 <= 100)
 
-        self.maxDiff = None
         OUT = io.StringIO()
         with capture_output() as LOG:
             with report_timing(level=logging.DEBUG):
@@ -1687,6 +1686,203 @@ G0 2	#obj
                 OUT.getvalue(),
             )
         )
+
+    def test_presolve_zero_coef(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.z = Var()
+        m.obj = Objective(expr=m.x**2 + m.y**2 + m.z**2)
+        m.c1 = Constraint(expr=m.x == m.y + m.z + 1.5)
+        m.c2 = Constraint(expr=m.z == -m.y)
+
+        OUT = io.StringIO()
+        with LoggingIntercept() as LOG:
+            nlinfo = nl_writer.NLWriter().write(
+                m, OUT, symbolic_solver_labels=True, linear_presolve=True
+            )
+        self.assertEqual(LOG.getvalue(), "")
+
+        self.assertEqual(nlinfo.eliminated_vars[0], (m.x, 1.5))
+        self.assertIs(nlinfo.eliminated_vars[1][0], m.y)
+        self.assertExpressionsEqual(
+            nlinfo.eliminated_vars[1][1], LinearExpression([-1.0 * m.z])
+        )
+
+        self.assertEqual(
+            *nl_diff(
+                """g3 1 1 0	# problem unknown
+ 1 0 1 0 0	#vars, constraints, objectives, ranges, eqns
+ 0 1 0 0 0 0	#nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0	#network constraints: nonlinear, linear
+ 0 1 0	#nonlinear vars in constraints, objectives, both
+ 0 0 0 1	#linear network variables; functions; arith, flags
+ 0 0 0 0 0	#discrete variables: binary, integer, nonlinear (b,c,o)
+ 0 1	#nonzeros in Jacobian, obj. gradient
+ 3 1	#max name lengths: constraints, variables
+ 0 0 0 0 0	#common exprs: b,c,o,c1,o1
+O0 0	#obj
+o54	#sumlist
+3	#(n)
+o5	#^
+n1.5
+n2
+o5	#^
+o16	#-
+v0	#z
+n2
+o5	#^
+v0	#z
+n2
+x0	#initial guess
+r	#0 ranges (rhs's)
+b	#1 bounds (on variables)
+3	#z
+k0	#intermediate Jacobian column lengths
+G0 1	#obj
+0 0
+""",
+                OUT.getvalue(),
+            )
+        )
+
+        m.c3 = Constraint(expr=m.x == 2)
+        OUT = io.StringIO()
+        with LoggingIntercept() as LOG:
+            with self.assertRaisesRegex(
+                nl_writer.InfeasibleConstraintException,
+                r"model contains a trivially infeasible constraint 0.5 == 0.0\*y",
+            ):
+                nlinfo = nl_writer.NLWriter().write(
+                    m, OUT, symbolic_solver_labels=True, linear_presolve=True
+                )
+        self.assertEqual(LOG.getvalue(), "")
+
+        m.c1.set_value(m.x >= m.y + m.z + 1.5)
+        OUT = io.StringIO()
+        with LoggingIntercept() as LOG:
+            nlinfo = nl_writer.NLWriter().write(
+                m, OUT, symbolic_solver_labels=True, linear_presolve=True
+            )
+        self.assertEqual(LOG.getvalue(), "")
+
+        self.assertIs(nlinfo.eliminated_vars[0][0], m.y)
+        self.assertExpressionsEqual(
+            nlinfo.eliminated_vars[0][1], LinearExpression([-1.0 * m.z])
+        )
+        self.assertEqual(nlinfo.eliminated_vars[1], (m.x, 2))
+
+        self.assertEqual(
+            *nl_diff(
+                """g3 1 1 0	# problem unknown
+ 1 1 1 0 0	#vars, constraints, objectives, ranges, eqns
+ 0 1 0 0 0 0	#nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0	#network constraints: nonlinear, linear
+ 0 1 0	#nonlinear vars in constraints, objectives, both
+ 0 0 0 1	#linear network variables; functions; arith, flags
+ 0 0 0 0 0	#discrete variables: binary, integer, nonlinear (b,c,o)
+ 0 1	#nonzeros in Jacobian, obj. gradient
+ 3 1	#max name lengths: constraints, variables
+ 0 0 0 0 0	#common exprs: b,c,o,c1,o1
+C0	#c1
+n0
+O0 0	#obj
+o54	#sumlist
+3	#(n)
+o5	#^
+n2
+n2
+o5	#^
+o16	#-
+v0	#z
+n2
+o5	#^
+v0	#z
+n2
+x0	#initial guess
+r	#1 ranges (rhs's)
+1 0.5	#c1
+b	#1 bounds (on variables)
+3	#z
+k0	#intermediate Jacobian column lengths
+G0 1	#obj
+0 0
+""",
+                OUT.getvalue(),
+            )
+        )
+
+    def test_presolve_independent_subsystem(self):
+        # This is derived from the example in #3192
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.z = Var()
+        m.d = Constraint(expr=m.z == m.y)
+        m.c = Constraint(expr=m.y == m.x)
+        m.o = Objective(expr=0)
+
+        ref = """g3 1 1 0       #problem unknown
+ 0 0 1 0 0     #vars, constraints, objectives, ranges, eqns
+ 0 0 0 0 0 0   #nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0   #network constraints: nonlinear, linear
+ 0 0 0 #nonlinear vars in constraints, objectives, both
+ 0 0 0 1       #linear network variables; functions; arith, flags
+ 0 0 0 0 0     #discrete variables: binary, integer, nonlinear (b,c,o)
+ 0 0   #nonzeros in Jacobian, obj. gradient
+ 1 0   #max name lengths: constraints, variables
+ 0 0 0 0 0     #common exprs: b,c,o,c1,o1
+O0 0   #o
+n0
+x0     #initial guess
+r      #0 ranges (rhs's)
+b      #0 bounds (on variables)
+k-1    #intermediate Jacobian column lengths
+"""
+
+        OUT = io.StringIO()
+        with LoggingIntercept() as LOG:
+            nlinfo = nl_writer.NLWriter().write(
+                m, OUT, symbolic_solver_labels=True, linear_presolve=True
+            )
+        self.assertEqual(
+            LOG.getvalue(),
+            "presolve identified an underdetermined independent linear subsystem "
+            "that was removed from the model.  Setting 'z' == 0\n",
+        )
+
+        self.assertEqual(*nl_diff(ref, OUT.getvalue()))
+
+        m.x.lb = 5.0
+
+        OUT = io.StringIO()
+        with LoggingIntercept() as LOG:
+            nlinfo = nl_writer.NLWriter().write(
+                m, OUT, symbolic_solver_labels=True, linear_presolve=True
+            )
+        self.assertEqual(
+            LOG.getvalue(),
+            "presolve identified an underdetermined independent linear subsystem "
+            "that was removed from the model.  Setting 'z' == 5.0\n",
+        )
+
+        self.assertEqual(*nl_diff(ref, OUT.getvalue()))
+
+        m.x.lb = -5.0
+        m.z.ub = -2.0
+
+        OUT = io.StringIO()
+        with LoggingIntercept() as LOG:
+            nlinfo = nl_writer.NLWriter().write(
+                m, OUT, symbolic_solver_labels=True, linear_presolve=True
+            )
+        self.assertEqual(
+            LOG.getvalue(),
+            "presolve identified an underdetermined independent linear subsystem "
+            "that was removed from the model.  Setting 'z' == -2.0\n",
+        )
+
+        self.assertEqual(*nl_diff(ref, OUT.getvalue()))
 
     def test_scaling(self):
         m = pyo.ConcreteModel()

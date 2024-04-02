@@ -178,7 +178,13 @@ class TestPersistentSolverBase(unittest.TestCase):
 
 class TestLegacySolverWrapper(unittest.TestCase):
     def test_class_method_list(self):
-        expected_list = ['available', 'license_is_valid', 'solve']
+        expected_list = [
+            'available',
+            'config_block',
+            'license_is_valid',
+            'set_options',
+            'solve',
+        ]
         method_list = [
             method
             for method in dir(base.LegacySolverWrapper)
@@ -207,9 +213,7 @@ class TestLegacySolverWrapper(unittest.TestCase):
         self.assertTrue(instance.config.tee)
         self.assertFalse(instance.config.load_solutions)
         self.assertEqual(instance.config.time_limit, 20)
-        # Report timing shouldn't be created because it no longer exists
-        with self.assertRaises(AttributeError):
-            print(instance.config.report_timing)
+        self.assertEqual(instance.config.report_timing, True)
         # Keepfiles should not be created because we did not declare keepfiles on
         # the original config
         with self.assertRaises(AttributeError):

@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from __future__ import annotations
 import copy
 import logging
 import sys
@@ -21,6 +22,7 @@ from inspect import isclass, currentframe
 from io import StringIO
 from itertools import filterfalse, chain
 from operator import itemgetter, attrgetter
+from typing import Union, Any, Type
 
 from pyomo.common.autoslots import AutoSlots
 from pyomo.common.collections import Mapping
@@ -44,6 +46,7 @@ from pyomo.core.base.initializer import Initializer
 from pyomo.core.base.indexed_component import (
     ActiveIndexedComponent,
     UnindexedComponent_set,
+    IndexedComponent,
 )
 
 from pyomo.opt.base import ProblemFormat, guess_format
@@ -539,7 +542,7 @@ class _BlockData(ActiveComponentData):
         super(_BlockData, self).__setattr__('_decl_order', [])
         self._private_data = None
 
-    def __getattr__(self, val):
+    def __getattr__(self, val) -> Union[Component, IndexedComponent, Any]:
         if val in ModelComponentFactory:
             return _component_decorator(self, ModelComponentFactory.get_class(val))
         # Since the base classes don't support getattr, we can just
@@ -548,7 +551,7 @@ class _BlockData(ActiveComponentData):
             "'%s' object has no attribute '%s'" % (self.__class__.__name__, val)
         )
 
-    def __setattr__(self, name, val):
+    def __setattr__(self, name: str, val: Union[Component, IndexedComponent, Any]):
         """
         Set an attribute of a block data object.
         """
@@ -2007,6 +2010,17 @@ class Block(ActiveIndexedComponent):
     _ComponentDataClass = _BlockData
     _private_data_initializers = defaultdict(lambda: dict)
 
+    @overload
+    def __new__(
+        cls: Type[Block], *args, **kwds
+    ) -> Union[ScalarBlock, IndexedBlock]: ...
+
+    @overload
+    def __new__(cls: Type[ScalarBlock], *args, **kwds) -> ScalarBlock: ...
+
+    @overload
+    def __new__(cls: Type[IndexedBlock], *args, **kwds) -> IndexedBlock: ...
+
     def __new__(cls, *args, **kwds):
         if cls != Block:
             return super(Block, cls).__new__(cls)
@@ -2250,6 +2264,11 @@ class SimpleBlock(metaclass=RenamedClass):
 class IndexedBlock(Block):
     def __init__(self, *args, **kwds):
         Block.__init__(self, *args, **kwds)
+
+    @overload
+    def __getitem__(self, index) -> _BlockData: ...
+
+    __getitem__ = IndexedComponent.__getitem__  # type: ignore
 
 
 #
