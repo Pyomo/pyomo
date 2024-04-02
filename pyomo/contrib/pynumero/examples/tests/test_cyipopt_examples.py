@@ -44,10 +44,12 @@ if not AmplInterface.available():
     raise unittest.SkipTest("Pynumero needs the ASL extension to run CyIpopt tests")
 
 import pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver as cyipopt_solver
+from pyomo.contrib.pynumero.interfaces.cyipopt_interface import cyipopt_available
 
-if not cyipopt_solver.cyipopt_available:
+if not cyipopt_available:
     raise unittest.SkipTest("PyNumero needs CyIpopt installed to run CyIpopt tests")
 import cyipopt as cyipopt_core
+
 
 example_dir = os.path.join(this_file_dir(), '..')
 
