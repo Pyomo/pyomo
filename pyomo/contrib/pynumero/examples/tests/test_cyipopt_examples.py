@@ -269,7 +269,7 @@ class TestExamples(unittest.TestCase):
         self.assertAlmostEqual(s.iloc[6], 0, places=3)
 
     @unittest.skipIf(
-        cyipopt_core.__version__ == "1.4.0",
+        cyipopt_solver.PyomoCyIpoptSolver().version() == (1, 4, 0),
         "Terminating Ipopt through a user callback is broken in CyIpopt 1.4.0 "
         "(see mechmotum/cyipopt#249)",
     )
