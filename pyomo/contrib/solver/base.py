@@ -499,15 +499,7 @@ class LegacySolverWrapper:
         """Method to handle the preferred action for the solution"""
         symbol_map = SymbolMap()
         symbol_map.default_labeler = NumericLabeler('x')
-        try:
-            model.solutions.add_symbol_map(symbol_map)
-        except AttributeError:
-            # Something wacky happens in IDAES due to the usage of ScalarBlock
-            # instead of PyomoModel. This is an attempt to fix that.
-            from pyomo.core.base.PyomoModel import ModelSolutions
-
-            setattr(model, 'solutions', ModelSolutions(model))
-            model.solutions.add_symbol_map(symbol_map)
+        model.solutions.add_symbol_map(symbol_map)
         legacy_results._smap_id = id(symbol_map)
         delete_legacy_soln = True
         if load_solutions:
