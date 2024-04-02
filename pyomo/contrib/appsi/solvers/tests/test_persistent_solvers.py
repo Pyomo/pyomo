@@ -17,7 +17,7 @@ parameterized, param_available = attempt_import('parameterized')
 parameterized = parameterized.parameterized
 from pyomo.contrib.appsi.base import TerminationCondition, Results, PersistentSolver
 from pyomo.contrib.appsi.cmodel import cmodel_available
-from pyomo.contrib.appsi.solvers import Gurobi, Ipopt, Cplex, Cbc, Highs
+from pyomo.contrib.appsi.solvers import Gurobi, Ipopt, Cplex, Cbc, Highs, MAiNGO
 from typing import Type
 from pyomo.core.expr.numeric_expr import LinearExpression
 import os
@@ -36,11 +36,23 @@ all_solvers = [
     ('cplex', Cplex),
     ('cbc', Cbc),
     ('highs', Highs),
+    ('maingo', MAiNGO),
 ]
-mip_solvers = [('gurobi', Gurobi), ('cplex', Cplex), ('cbc', Cbc), ('highs', Highs)]
-nlp_solvers = [('ipopt', Ipopt)]
-qcp_solvers = [('gurobi', Gurobi), ('ipopt', Ipopt), ('cplex', Cplex)]
-miqcqp_solvers = [('gurobi', Gurobi), ('cplex', Cplex)]
+mip_solvers = [
+    ('gurobi', Gurobi),
+    ('cplex', Cplex),
+    ('cbc', Cbc),
+    ('highs', Highs),
+    ('maingo', MAiNGO),
+]
+nlp_solvers = [('ipopt', Ipopt), ('maingo', MAiNGO)]
+qcp_solvers = [
+    ('gurobi', Gurobi),
+    ('ipopt', Ipopt),
+    ('cplex', Cplex),
+    ('maingo', MAiNGO),
+]
+miqcqp_solvers = [('gurobi', Gurobi), ('cplex', Cplex), ('maingo', MAiNGO)]
 only_child_vars_options = [True, False]
 
 
