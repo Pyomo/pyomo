@@ -271,7 +271,7 @@ class TestExamples(unittest.TestCase):
     @unittest.skipIf(
         cyipopt_core.__version__ == "1.4.0",
         "Terminating Ipopt through a user callback is broken in CyIpopt 1.4.0 "
-        "(see mechmotum/cyipopt#249",
+        "(see mechmotum/cyipopt#249)",
     )
     def test_cyipopt_callback_halt(self):
         ex = import_file(
