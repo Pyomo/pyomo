@@ -12,19 +12,33 @@
 import enum
 from pyomo.opt.results.container import MapContainer
 
+from pyomo.common.deprecation import deprecated, deprecation_warning
+from pyomo.common.enums import ObjectiveSense
 
-class ProblemSense(str, enum.Enum):
-    unknown = 'unknown'
-    minimize = 'minimize'
-    maximize = 'maximize'
 
-    # Overloading __str__ is needed to match the behavior of the old
-    # pyutilib.enum class (removed June 2020). There are spots in the
-    # code base that expect the string representation for items in the
-    # enum to not include the class name. New uses of enum shouldn't
-    # need to do this.
-    def __str__(self):
-        return self.value
+class ProblemSenseType(type):
+    @deprecated(
+        "pyomo.opt.results.problem.ProblemSense has been replaced by "
+        "pyomo.common.enums.ObjectiveSense",
+        version="6.7.2.dev0",
+    )
+    def __getattr__(cls, attr):
+        if attr == 'minimize':
+            return ObjectiveSense.minimize
+        if attr == 'maximize':
+            return ObjectiveSense.maximize
+        if attr == 'unknown':
+            deprecation_warning(
+                "ProblemSense.unknown is no longer an allowable option.  "
+                "Mapping 'unknown' to 'minimize'",
+                version="6.7.2.dev0",
+            )
+            return ObjectiveSense.minimize
+        raise AttributeError(attr)
+
+
+class ProblemSense(metaclass=ProblemSenseType):
+    pass
 
 
 class ProblemInformation(MapContainer):
@@ -40,4 +54,4 @@ class ProblemInformation(MapContainer):
         self.declare('number_of_integer_variables')
         self.declare('number_of_continuous_variables')
         self.declare('number_of_nonzeros')
-        self.declare('sense', value=ProblemSense.unknown, required=True)
+        self.declare('sense', value=ProblemSense.minimize, required=True)
