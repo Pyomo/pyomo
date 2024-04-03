@@ -891,7 +891,7 @@ class IncidenceGraphInterface(object):
 
         .. note::
 
-           **Breaking change in Pyomo vTBD**
+           **Deprecation in Pyomo vTBD**
 
            The pre-TBD implementation of ``remove_nodes`` allowed variables and
            constraints to remove to be specified in a single list. This made
