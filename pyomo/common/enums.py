@@ -10,8 +10,97 @@
 #  ___________________________________________________________________________
 
 import enum
+import itertools
 
-from pyomo.common.deprecation import RenamedClass
+
+class ExtendedEnumType(enum.EnumType):
+    """Metaclass for creating an :py:class:`Enum` that extends another Enum
+
+    In general, :py:class:`Enum` classes are not extensible: that is,
+    they are frozen when defined and cannot be the base class of another
+    Enum.  This Metaclass provides a workaround for creating a new Enum
+    that extends an existing enum.  Members in the base Enum are all
+    present as members on the extended enum.
+
+    Example
+    -------
+
+    .. testcode::
+       :hide:
+
+       import enum
+       from pyomo.common.enums import ExtendedEnumType
+
+    .. testcode::
+
+       class ObjectiveSense(enum.IntEnum):
+           minimize = 1
+           maximize = -1
+
+       class ProblemSense(enum.IntEnum, metaclass=ExtendedEnumType):
+           __base_enum__ = ObjectiveSense
+
+           unknown = 0
+
+    .. doctest::
+
+       >>> list(ProblemSense)
+       [<ProblemSense.unknown: 0>, <ObjectiveSense.minimize: 1>, <ObjectiveSense.maximize: -1>]
+       >>> ProblemSense.unknown
+       <ProblemSense.unknown: 0>
+       >>> ProblemSense.maximize
+       <ObjectiveSense.maximize: -1>
+       >>> ProblemSense(0)
+       <ProblemSense.unknown: 0>
+       >>> ProblemSense(1)
+       <ObjectiveSense.minimize: 1>
+       >>> ProblemSense('unknown')
+       <ProblemSense.unknown: 0>
+       >>> ProblemSense('maximize')
+       <ObjectiveSense.maximize: -1>
+       >>> hasattr(ProblemSense, 'minimize')
+       True
+       >>> hasattr(ProblemSense, 'unknown')
+       True
+       >>> ProblemSense.minimize is ObjectiveSense.minimize
+       True
+
+    """
+
+    def __getattr__(cls, attr):
+        try:
+            return getattr(cls.__base_enum__, attr)
+        except:
+            return super().__getattr__(attr)
+
+    def __iter__(cls):
+        # The members of this Enum are the base enum members joined with
+        # the local members
+        return itertools.chain(super().__iter__(), cls.__base_enum__.__iter__())
+
+    def __instancecheck__(cls, instance):
+        if cls.__subclasscheck__(type(instance)):
+            return True
+        # Also pretend that members of the extended enum are subclasses
+        # of the __base_enum__.  This is needed to circumvent error
+        # checking in enum.__new__ (e.g., for `ProblemSense('minimize')`)
+        return cls.__base_enum__.__subclasscheck__(type(instance))
+
+    def _missing_(cls, value):
+        # Support attribute lookup by value or name
+        for attr in ('value', 'name'):
+            for member in cls:
+                if getattr(member, attr) == value:
+                    return member
+        return None
+
+    def __new__(metacls, cls, bases, classdict, **kwds):
+        # Support lookup by name - but only if the new Enum doesn't
+        # specify it's own implementation of _missing_
+        if '_missing_' not in classdict:
+            classdict['_missing_'] = classmethod(ExtendedEnumType._missing_)
+        return super().__new__(metacls, cls, bases, classdict, **kwds)
+
 
 class ObjectiveSense(enum.IntEnum):
     """Flag indicating if an objective is minimizing (1) or maximizing (-1).
@@ -21,6 +110,7 @@ class ObjectiveSense(enum.IntEnum):
     consistent with some solvers (notably Gurobi).
 
     """
+
     minimize = 1
     maximize = -1
 
@@ -32,7 +122,13 @@ class ObjectiveSense(enum.IntEnum):
     def __str__(self):
         return self.name
 
+    @classmethod
+    def _missing_(cls, value):
+        for member in cls:
+            if member.name == value:
+                return member
+        return None
+
+
 minimize = ObjectiveSense.minimize
 maximize = ObjectiveSense.maximize
-
-

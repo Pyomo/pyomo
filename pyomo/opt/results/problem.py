@@ -13,32 +13,16 @@ import enum
 from pyomo.opt.results.container import MapContainer
 
 from pyomo.common.deprecation import deprecated, deprecation_warning
-from pyomo.common.enums import ObjectiveSense
+from pyomo.common.enums import ExtendedEnumType, ObjectiveSense
 
 
-class ProblemSenseType(type):
-    @deprecated(
-        "pyomo.opt.results.problem.ProblemSense has been replaced by "
-        "pyomo.common.enums.ObjectiveSense",
-        version="6.7.2.dev0",
-    )
-    def __getattr__(cls, attr):
-        if attr == 'minimize':
-            return ObjectiveSense.minimize
-        if attr == 'maximize':
-            return ObjectiveSense.maximize
-        if attr == 'unknown':
-            deprecation_warning(
-                "ProblemSense.unknown is no longer an allowable option.  "
-                "Mapping 'unknown' to 'minimize'",
-                version="6.7.2.dev0",
-            )
-            return ObjectiveSense.minimize
-        raise AttributeError(attr)
+class ProblemSense(enum.IntEnum, metaclass=ExtendedEnumType):
+    __base_enum__ = ObjectiveSense
 
+    unknown = 0
 
-class ProblemSense(metaclass=ProblemSenseType):
-    pass
+    def __str__(self):
+        return self.name
 
 
 class ProblemInformation(MapContainer):
@@ -54,4 +38,4 @@ class ProblemInformation(MapContainer):
         self.declare('number_of_integer_variables')
         self.declare('number_of_continuous_variables')
         self.declare('number_of_nonzeros')
-        self.declare('sense', value=ProblemSense.minimize, required=True)
+        self.declare('sense', value=ProblemSense.unknown, required=True)
