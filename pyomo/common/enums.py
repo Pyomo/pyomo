@@ -11,9 +11,14 @@
 
 import enum
 import itertools
+import sys
 
+if sys.version_info[:2] < (3, 11):
+    _EnumType = enum.EnumMeta
+else:
+    _EnumType = enum.EnumType
 
-class ExtendedEnumType(enum.EnumType):
+class ExtendedEnumType(_EnumType):
     """Metaclass for creating an :py:class:`Enum` that extends another Enum
 
     In general, :py:class:`Enum` classes are not extensible: that is,
