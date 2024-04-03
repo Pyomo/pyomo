@@ -237,6 +237,35 @@ class TestCPExpressionWalker_AlgebraicExpressions(CommonTest):
 
         self.assertTrue(expr[1].equals(4 * x))
 
+    def test_monomial_expressions(self):
+        m = ConcreteModel()
+        m.x = Var(domain=Integers, bounds=(1, 4))
+        m.p = Param(initialize=4, mutable=True)
+
+        visitor = self.get_visitor()
+
+        const_expr = 3 * m.x
+        nested_expr = (1 / m.p) * m.x
+        pow_expr = (m.p ** (0.5)) * m.x
+        
+        e = m.x * 4
+        expr = visitor.walk_expression((e, e, 0))
+        self.assertIn(id(m.x), visitor.var_map)
+        x = visitor.var_map[id(m.x)]
+        self.assertTrue(expr[1].equals(4 * x))
+
+        e = 1.0 * m.x
+        expr = visitor.walk_expression((e, e, 0))
+        self.assertTrue(expr[1].equals(x))
+
+        e = (1 / m.p) * m.x
+        expr = visitor.walk_expression((e, e, 0))
+        self.assertTrue(expr[1].equals(0.25 * x))
+
+        e = (m.p ** (0.5)) * m.x
+        expr = visitor.walk_expression((e, e, 0))
+        self.assertTrue(expr[1].equals(2 * x))
+
 
 @unittest.skipIf(not docplex_available, "docplex is not available")
 class TestCPExpressionWalker_LogicalExpressions(CommonTest):
