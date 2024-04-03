@@ -13,8 +13,8 @@ from pyomo.common.dependencies import attempt_import
 
 __version__ = '1.5'
 
-numpy, numpy_available = attempt_import('numpy', defer_check=True)
+numpy, numpy_available = attempt_import('numpy', defer_import=True)
 
 bogus_nonexisting_module, bogus_nonexisting_module_available = attempt_import(
-    'bogus_nonexisting_module', alt_names=['bogus_nem'], defer_check=True
+    'bogus_nonexisting_module', alt_names=['bogus_nem'], defer_import=True
 )

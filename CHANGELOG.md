@@ -3,6 +3,82 @@ Pyomo CHANGELOG
 
 
 -------------------------------------------------------------------------------
+Pyomo 6.7.1   (21 Feb 2024)
+-------------------------------------------------------------------------------
+
+- General
+  - Add support for tuples in `ComponentMap`; add `DefaultComponentMap` (#3150)
+  - Update `Path`, `PathList`, and `IsInstance` Domain Validators (#3144)
+  - Remove usage of `__all__` (#3142)
+  - Extend Path and Type Checking Validators of `common.config` (#3140)
+  - Update Copyright Statements (#3139)
+  - Update `ExitNodeDispatcher` to better support extensibility (#3125)
+  - Create contributors data gathering script (#3117)
+  - Prevent duplicate entries in ConfigDict declaration order (#3116)
+  - Remove unnecessary `__future__` imports (#3109)
+  - Import pandas through pyomo.common.dependencies (#3102)
+  - Update links to workshop slides (#3079)
+  - Remove incorrect use of identity (is) comparisons (#3061)
+- Core
+  - Add `Block.register_private_data_initializer()` (#3153)
+  - Generalize the simple_constraint_rule decorator (#3152)
+  - Fix edge case assigning new numeric types to Var/Param with units (#3151)
+  - Add private_data to `_BlockData` (#3138)
+  - IndexComponent create implicit sets as "anonymous" sets (#3075)
+  - Add `all_different` and `count_if` to the logical expression system (#3058)
+  - Fix RangeSet.__len__ when defined by floats (#3119)
+  - Overhaul the `Suffix` component (#3072)
+  - Enforce expression immutability in `expr.args` (#3099)
+  - Improve NumPy registration when assigning numpy to Param (#3093)
+  - Track changes in PyPy behavior introduced in 7.3.14 (#3087)
+  - Remove automatic numpy import (#3077)
+  - Fix `range_difference` for Sets with nonzero anchor points (#3063)
+  - Clarify errors raised by accessing Sets by positional index (#3062)
+- Documentation
+  - Update intersphinx links, remove docs for nonfunctional code (#3155)
+  - Update MPC documentation and citation (#3148)
+  - Fix an error in the documentation for LinearExpression (#3090)
+  - Fix Pyomo.DoE documentation (#3070)
+  - Fix latex_printer documentation (#3066)
+- Solver Interfaces
+  - Preview release of new solver interfaces as pyomo.contrib.solver
+    (#3137, #3156)
+  - Make error msg more explicit wrt different interfaces (#3141)
+  - NLv2: only raise exception for empty models in the legacy API (#3135)
+  - Add `to_expr()` to AMPLRepn, fix NLWriterInfo return type (#3095)
+- Testing
+  - Update Release Wheel Builder Action (#3149)
+  - Actions Version Update: Address node.js deprecations (#3118)
+  - New Black Major Release (24.1.0) (#3108)
+  - Use scip for PyROS tests (#3104)
+  - Add missing solver dependency flags for OnlineDocs tests (#3094)
+  - Re-enable `contrib.viewer.tests.test_qt.py` (#3085)
+  - Add automated testing of OnlineDocs examples (#3080)
+  - Silence deprecation warnings emitted by Pyomo tests (#3076)
+  - Fix Python 3.12 tests (manage `pyutilib`, `distutils` dependencies) (#3065)
+- DAE
+  - Replace deprecated `numpy.math` alias with standard `math` module (#3074)
+- GDP
+  - Handle nested GDPs correctly in all the transformations (#3145)
+  - Fix bugs in nested models in gdp.hull transformation (#3143)
+  - Various bug fixes in gdp.mbigm transformation (#3073)
+  - Add GDP => MINLP Transformation (#3082)
+- Contributed Packages
+  - GDPopt: Fix lbb solve_data bug (#3133)
+  - GDPopt: Adding missing import for gdpopt.enumerate (#3105)
+  - FBBT: Extend `fbbt.ExpressionBoundsVisitor` to handle relational
+    expressions and Expr_if (#3129)
+  - incidence_analysis: Method to add an edge in IncidenceGraphInterface (#3120)
+  - incidence_analysis: Add subgraph method to IncidencegraphInterface (#3122)
+  - incidence_analysis: Add `ampl_repn` option (#3069)
+  - incidence_analysis: Update documentation (#3067)
+  - interior_point: Resolve test failure due to Mumps update (#3114)
+  - MindtPy: Various bug fixes (#3034)
+  - PyROS: Update Solver Argument Resolution and Validation Routines (#3126)
+  - PyROS: Update Subproblem Initialization Routines (#3071)
+  - PyROS: Fix DR polishing under nominal objective focus (#3060)
+
+-------------------------------------------------------------------------------
 Pyomo 6.7.0   (29 Nov 2023)
 -------------------------------------------------------------------------------
 
