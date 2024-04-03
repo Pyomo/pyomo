@@ -1466,7 +1466,10 @@ class TestExceptions(unittest.TestCase):
         with self.assertRaisesRegex(KeyError, "does not exist"):
             # Suppose we think something like this should work. We should get
             # an error, and not silently do nothing.
-            igraph.remove_nodes([m.x], [m.eq])
+            igraph.remove_nodes([m.x], [m.eq[1]])
+
+        with self.assertRaisesRegex(KeyError, "does not exist"):
+            igraph.remove_nodes(None, [m.eq])
 
         with self.assertRaisesRegex(KeyError, "does not exist"):
             igraph.remove_nodes([[m.x[1], m.x[2]], [m.eq[1]]])
