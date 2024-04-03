@@ -83,9 +83,9 @@ class ExtendedEnumType(_EnumType):
        <ObjectiveSense.maximize: -1>
        >>> hasattr(ProblemSense, 'minimize')
        True
-       >>> hasattr(ProblemSense, 'unknown')
-       True
        >>> ProblemSense.minimize is ObjectiveSense.minimize
+       True
+       >>> ProblemSense.minimize in ProblemSense
        True
 
     """
