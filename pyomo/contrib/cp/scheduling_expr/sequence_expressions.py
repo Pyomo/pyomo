@@ -11,15 +11,8 @@
 
 from pyomo.core.expr.logical_expr import BooleanExpression
 
-# ESJ TODO: The naming in this file needs more thought, and it appears I do not
-# need the base class.
 
-
-class SequenceVarExpression(BooleanExpression):
-    pass
-
-
-class NoOverlapExpression(SequenceVarExpression):
+class NoOverlapExpression(BooleanExpression):
     """
     Expression representing that none of the IntervalVars in a SequenceVar overlap
     (if they are scheduled)
@@ -35,7 +28,7 @@ class NoOverlapExpression(SequenceVarExpression):
         return "no_overlap(%s)" % values[0]
 
 
-class FirstInSequenceExpression(SequenceVarExpression):
+class FirstInSequenceExpression(BooleanExpression):
     """
     Expression representing that the specified IntervalVar is the first in the
     sequence specified by SequenceVar (if it is scheduled)
@@ -52,7 +45,7 @@ class FirstInSequenceExpression(SequenceVarExpression):
         return "first_in(%s, %s)" % (values[0], values[1])
 
 
-class LastInSequenceExpression(SequenceVarExpression):
+class LastInSequenceExpression(BooleanExpression):
     """
     Expression representing that the specified IntervalVar is the last in the
     sequence specified by SequenceVar (if it is scheduled)
@@ -69,7 +62,7 @@ class LastInSequenceExpression(SequenceVarExpression):
         return "last_in(%s, %s)" % (values[0], values[1])
 
 
-class BeforeInSequenceExpression(SequenceVarExpression):
+class BeforeInSequenceExpression(BooleanExpression):
     """
     Expression representing that one IntervalVar occurs before another in the
     sequence specified by the given SequenceVar (if both are scheduled)
@@ -86,7 +79,7 @@ class BeforeInSequenceExpression(SequenceVarExpression):
         return "before_in(%s, %s, %s)" % (values[0], values[1], values[2])
 
 
-class PredecessorToExpression(SequenceVarExpression):
+class PredecessorToExpression(BooleanExpression):
     """
     Expression representing that one IntervalVar is a direct predecessor to another
     in the sequence specified by the given SequenceVar (if both are scheduled)
