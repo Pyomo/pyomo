@@ -1471,6 +1471,24 @@ class TestExceptions(unittest.TestCase):
         with self.assertRaisesRegex(KeyError, "does not exist"):
             igraph.remove_nodes([[m.x[1], m.x[2]], [m.eq[1]]])
 
+    def test_remove_varcon_samelist_deprecated(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3])
+        m.eq = pyo.Constraint(pyo.PositiveIntegers)
+        m.eq[1] = m.x[1] * m.x[2] == m.x[3]
+        m.eq[2] = m.x[1] + 2 * m.x[2] == 3 * m.x[3]
+
+        igraph = IncidenceGraphInterface(m)
+        # This raises a deprecation warning. When the deprecated functionality
+        # is removed, this will fail, and this test should be updated accordingly.
+        igraph.remove_nodes([m.eq[1], m.x[1]])
+        self.assertEqual(len(igraph.variables), 2)
+        self.assertEqual(len(igraph.constraints), 1)
+
+        igraph.remove_nodes([], [m.eq[2], m.x[2]])
+        self.assertEqual(len(igraph.variables), 1)
+        self.assertEqual(len(igraph.constraints), 0)
+
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")

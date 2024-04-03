@@ -28,7 +28,7 @@ from pyomo.common.dependencies import (
     scipy as sp,
     plotly,
 )
-from pyomo.common.deprecation import deprecated
+from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.contrib.incidence_analysis.config import get_config_from_kwds
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
 from pyomo.contrib.incidence_analysis.connected import get_independent_submatrices
@@ -911,7 +911,31 @@ class IncidenceGraphInterface(object):
                 "Attempting to remove variables and constraints from cached "
                 "incidence matrix,\nbut no incidence matrix has been cached."
             )
-        variables, constraints = self._validate_input(variables, constraints)
+
+        vars_to_validate = []
+        cons_to_validate = []
+        depr_msg = (
+            "In IncidenceGraphInterface.remove_nodes, passing variables and"
+            " constraints in the same list is deprecated. Please separate your"
+            " variables and constraints and pass them in the order variables,"
+            " constraints."
+        )
+        for var in variables:
+            if var in self._con_index_map:
+                deprecation_warning(depr_msg, version="TBD")
+                cons_to_validate.append(var)
+            else:
+                vars_to_validate.append(var)
+        for con in constraints:
+            if con in self._var_index_map:
+                deprecation_warning(depr_msg, version="TBD")
+                vars_to_validate.append(con)
+            else:
+                cons_to_validate.append(con)
+
+        variables, constraints = self._validate_input(
+            vars_to_validate, cons_to_validate
+        )
         v_exclude = ComponentSet(variables)
         c_exclude = ComponentSet(constraints)
         vars_to_include = [v for v in self.variables if v not in v_exclude]
