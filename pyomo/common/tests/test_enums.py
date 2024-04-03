@@ -57,9 +57,7 @@ class TestExtendedEnumType(unittest.TestCase):
         self.assertIs(ProblemSense('minimize'), ObjectiveSense.minimize)
         self.assertIs(ProblemSense('maximize'), ObjectiveSense.maximize)
 
-        with self.assertRaisesRegex(
-                ValueError, "'foo' is not a valid ProblemSense"
-        ):
+        with self.assertRaisesRegex(ValueError, "'foo' is not a valid ProblemSense"):
             ProblemSense('foo')
 
     def test_contains(self):
@@ -71,11 +69,11 @@ class TestExtendedEnumType(unittest.TestCase):
         self.assertIn(ProblemSense.minimize, ObjectiveSense)
         self.assertIn(ProblemSense.maximize, ObjectiveSense)
 
+
 class TestObjectiveSense(unittest.TestCase):
     def test_members(self):
         self.assertEqual(
-            list(ObjectiveSense),
-            [ObjectiveSense.minimize, ObjectiveSense.maximize],
+            list(ObjectiveSense), [ObjectiveSense.minimize, ObjectiveSense.maximize]
         )
 
     def test_hasattr(self):
@@ -89,9 +87,7 @@ class TestObjectiveSense(unittest.TestCase):
         self.assertIs(ObjectiveSense('minimize'), ObjectiveSense.minimize)
         self.assertIs(ObjectiveSense('maximize'), ObjectiveSense.maximize)
 
-        with self.assertRaisesRegex(
-                ValueError, "'foo' is not a valid ObjectiveSense"
-        ):
+        with self.assertRaisesRegex(ValueError, "'foo' is not a valid ObjectiveSense"):
             ObjectiveSense('foo')
 
     def test_str(self):
