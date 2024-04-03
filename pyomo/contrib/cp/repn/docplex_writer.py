@@ -551,18 +551,6 @@ def _before_sequence_var(visitor, child):
     return False, (_GENERAL, visitor.var_map[_id])
 
 
-def _before_indexed_sequence_var(visitor, child):
-    # ESJ TODO: I'm not sure we can encounter an indexed sequence var in an
-    # expression right now?
-    cpx_vars = {}
-    for i, v in child.items():
-        cpx_sequence_var = _get_docplex_sequence_var(visitor, v)
-        visitor.var_map[id(v)] = cpx_sequence_var
-        visitor.pyomo_to_docplex[v] = cpx_sequence_var
-        cpx_vars[i] = cpx_sequence_var
-    return False, (_GENERAL, cpx_vars)
-
-
 def _before_interval_var(visitor, child):
     _id = id(child)
     if _id not in visitor.var_map:
@@ -1063,7 +1051,6 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         IndexedIntervalVar: _before_indexed_interval_var,
         ScalarSequenceVar: _before_sequence_var,
         _SequenceVarData: _before_sequence_var,
-        IndexedSequenceVar: _before_indexed_sequence_var,
         ScalarVar: _before_var,
         _GeneralVarData: _before_var,
         IndexedVar: _before_indexed_var,
