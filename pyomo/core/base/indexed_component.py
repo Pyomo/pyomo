@@ -731,7 +731,7 @@ You can silence this warning by one of three ways:
 
         # this supports "del m.x[:,1]" through a simple recursive call
         if index.__class__ is IndexedComponent_slice:
-            # Assert that this slice ws just generated
+            # Assert that this slice was just generated
             assert len(index._call_stack) == 1
             # Make a copy of the slicer items *before* we start
             # iterating over it (since we will be removing items!).
