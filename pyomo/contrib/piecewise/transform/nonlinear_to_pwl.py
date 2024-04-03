@@ -38,6 +38,7 @@ from pyomo.environ import (
     SortComponents,
     LogicalConstraint
 )
+from pyomo.common.autoslots import AutoSlots
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.config import ConfigDict, ConfigValue, PositiveInt, InEnum
 from pyomo.common.modeling import unique_component_name
@@ -71,6 +72,13 @@ _quadratic_repn_visitor = QuadraticRepnVisitor(
     subexpression_cache={}, var_map={}, var_order={}, sorter=None
 )
 
+class _NonlinearToPWLTransformationData(AutoSlots.Mixin):
+    __slots__ = ('transformed_component', 'src_component')
+
+    def __init__(self):
+        self.transformed_component = ComponentMap()
+        self.src_component = ComponentMap()
+Block.register_private_data_initializer(_NonlinearToPWLTransformationData)
 
 def get_random_point_grid(bounds, n, func, seed=42):
     # Generate randomized grid of points
@@ -515,6 +523,8 @@ class NonlinearToPWL(Transformation):
 
     def _transform_constraint(self, cons, config):
         trans_block = self._get_transformation_block(cons.parent_block())
+        trans_data_dict = trans_block.private_data()
+        src_data_dict = cons.parent_block().private_data()
         constraints = cons.values() if cons.is_indexed() else (cons,)
         for c in constraints:
             pw_approx = self._approximate_expression(
@@ -525,15 +535,20 @@ class NonlinearToPWL(Transformation):
                 # Didn't need approximated, nothing to do
                 continue
 
-            trans_block._pwl_cons[c.name, len(trans_block._pwl_cons)] = (c.lower,
-                                                                         pw_approx,
-                                                                         c.upper)
+            idx = len(trans_block._pwl_cons)
+            trans_block._pwl_cons[c.name, idx] = (c.lower, pw_approx, c.upper)
+            new_cons = trans_block._pwl_cons[c.name, idx]
+            trans_data_dict.src_component[new_cons] = c
+            src_data_dict.transformed_component[c] = new_cons
+            
             # deactivate original
             c.deactivate()
 
     def _transform_objective(self, objective, config):
         trans_block = self._get_transformation_block(objective.parent_block())
+        trans_data_dict = trans_block.private_data()
         objectives = objective.values() if objective.is_indexed() else (objective,)
+        src_data_dict = objective.parent_block().private_data()
         for obj in objectives:
             pw_approx = self._approximate_expression(
                 obj.expr, obj, trans_block, config,
@@ -543,10 +558,14 @@ class NonlinearToPWL(Transformation):
                 # Didn't need approximated, nothing to do
                 continue
 
+            new_obj = Objective(expr=pw_approx, sense=obj.sense)
             trans_block.add_component(
                 unique_component_name(trans_block, obj.name),
-                Objective(expr=pw_approx, sense=obj.sense)
+                new_obj
             )
+            trans_data_dict.src_component[new_obj] = obj
+            src_data_dict.transformed_component[obj] = new_obj
+            
             obj.deactivate()
 
     def _get_bounds_list(self, var_list, parent_component):
@@ -621,3 +640,21 @@ class NonlinearToPWL(Transformation):
                 v.value = val
 
         return pwl_func
+
+    def get_src_component(self, cons):
+        data = cons.parent_block().private_data().src_component
+        if cons in data:
+            return data[cons]
+        else:
+            raise ValueError(
+                "It does not appear that '%s' is a transformed Constraint "
+                "created by the 'nonlinear_to_pwl' transformation." % cons.name)
+
+    def get_transformed_component(self, cons):
+        data = cons.parent_block().private_data().transformed_component
+        if cons in data:
+            return data[cons]
+        else:
+            raise ValueError(
+                "It does not appear that '%s' is a Constraint that was "
+                "transformed by the 'nonlinear_to_pwl' transformation." % cons.name)

@@ -36,6 +36,10 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
         m.cons = Constraint(expr=log(m.x) >= 0.35)
 
         return m
+
+    def check_pw_linear_log_x(self, m, points):
+        x1 = points[0][0]
+        x2 = points
         
     def test_log_constraint_uniform_grid(self):
         m = self.make_model()
@@ -86,3 +90,29 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
         self.assertIsNone(new_cons.ub)
         self.assertEqual(new_cons.lb, 0.35)
         self.assertIs(n_to_pwl.get_src_component(new_cons), m.cons)
+
+    def test_log_constraint_random_grid(self):
+        m = self.make_model()
+        
+        n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
+        # [ESJ 3/30/24]: The seed is actually set in the function for getting
+        # the points right now, so this will be deterministic.
+        n_to_pwl.apply_to(
+            m,
+            num_points=3,
+            domain_partitioning_method=DomainPartitioningMethod.RANDOM_GRID,
+        )
+
+        # cons is transformed
+        self.assertFalse(m.cons.active)
+
+        pwlf = list(m.component_data_objects(PiecewiseLinearFunction,
+                                             descend_into=True))
+        self.assertEqual(len(pwlf), 1)
+        pwlf = pwlf[0]
+        
+        set_trace()
+        points = [(4.370861069626263,), (7.587945476302646,), (9.556428757689245,)]
+        self.assertEqual(pwlf._simplices, [(0, 1), (1, 2)])
+        self.assertEqual(pwlf._points, points)
+        self.assertEqual(len(pwlf._linear_functions), 2)
