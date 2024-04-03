@@ -18,6 +18,7 @@ if sys.version_info[:2] < (3, 11):
 else:
     _EnumType = enum.EnumType
 
+
 class ExtendedEnumType(_EnumType):
     """Metaclass for creating an :py:class:`Enum` that extends another Enum
 
