@@ -9,6 +9,23 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+"""This module provides standard :py:class:`enum.Enum` definitions used in
+Pyomo, along with additional utilities for working with custom Enums
+
+Utilities:
+
+.. autosummary::
+
+   ExtendedEnumType
+
+Standard Enums:
+
+.. autosummary::
+
+   ObjectiveSense
+
+"""
+
 import enum
 import itertools
 import sys
@@ -20,9 +37,9 @@ else:
 
 
 class ExtendedEnumType(_EnumType):
-    """Metaclass for creating an :py:class:`Enum` that extends another Enum
+    """Metaclass for creating an :py:class:`enum.Enum` that extends another Enum
 
-    In general, :py:class:`Enum` classes are not extensible: that is,
+    In general, :py:class:`enum.Enum` classes are not extensible: that is,
     they are frozen when defined and cannot be the base class of another
     Enum.  This Metaclass provides a workaround for creating a new Enum
     that extends an existing enum.  Members in the base Enum are all
@@ -83,6 +100,11 @@ class ExtendedEnumType(_EnumType):
         # The members of this Enum are the base enum members joined with
         # the local members
         return itertools.chain(super().__iter__(), cls.__base_enum__.__iter__())
+
+    def __contains__(cls, member):
+        # This enum "containts" both it's local members and the members
+        # in the __base_enum__ (necessary for good auto-enum[sphinx] docs)
+        return super().__contains__(member) or member in cls.__base_enum__
 
     def __instancecheck__(cls, instance):
         if cls.__subclasscheck__(type(instance)):
