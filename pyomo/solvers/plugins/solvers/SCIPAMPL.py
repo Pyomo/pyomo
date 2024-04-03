@@ -371,7 +371,9 @@ class SCIPAMPL(SystemCallSolver):
             try:
                 if results.solver.primal_bound < results.solver.dual_bound:
                     results.problem.lower_bound = results.solver.primal_bound
+                    results.problem.upper_bound = results.solver.dual_bound
                 else:
+                    results.problem.lower_bound = results.solver.dual_bound
                     results.problem.upper_bound = results.solver.primal_bound
             except AttributeError:
                 """
