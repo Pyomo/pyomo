@@ -102,8 +102,8 @@ class ExtendedEnumType(_EnumType):
         return itertools.chain(super().__iter__(), cls.__base_enum__.__iter__())
 
     def __contains__(cls, member):
-        # This enum "containts" both it's local members and the members
-        # in the __base_enum__ (necessary for good auto-enum[sphinx] docs)
+        # This enum "contains" both its local members and the members in
+        # the __base_enum__ (necessary for good auto-enum[sphinx] docs)
         return super().__contains__(member) or member in cls.__base_enum__
 
     def __instancecheck__(cls, instance):
@@ -124,7 +124,7 @@ class ExtendedEnumType(_EnumType):
 
     def __new__(metacls, cls, bases, classdict, **kwds):
         # Support lookup by name - but only if the new Enum doesn't
-        # specify it's own implementation of _missing_
+        # specify its own implementation of _missing_
         if '_missing_' not in classdict:
             classdict['_missing_'] = classmethod(ExtendedEnumType._missing_)
         return super().__new__(metacls, cls, bases, classdict, **kwds)
