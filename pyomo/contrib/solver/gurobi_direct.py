@@ -237,20 +237,19 @@ class GurobiDirect(SolverBase):
                 _u = inf
             lb.append(_l)
             ub.append(_u)
+        CON = gurobipy.GRB.CONTINUOUS
+        BIN = gurobipy.GRB.BINARY
+        INT = gurobipy.GRB.INTEGER
         vtype = [
             (
-                gurobipy.GRB.CONTINUOUS
+                CON
                 if v.is_continuous()
-                else (
-                    gurobipy.GRB.BINARY
-                    if v.is_binary()
-                    else gurobipy.GRB.INTEGER if v.is_integer() else '?'
-                )
+                else (BIN if v.is_binary() else INT if v.is_integer() else '?')
             )
             for v in repn.columns
         ]
-        sense_type = '>=<'
-        sense = [sense_type[r[1] + 1] for r in repn.rows]
+        sense_type = '=<>'  # Note: ordering matches 0, 1, -1
+        sense = [sense_type[r[1]] for r in repn.rows]
         timer.stop('prepare_matrices')
 
         ostreams = [io.StringIO()] + config.tee
