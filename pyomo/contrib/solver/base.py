@@ -18,7 +18,7 @@ from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.var import VarData
 from pyomo.core.base.param import ParamData
 from pyomo.core.base.block import BlockData
-from pyomo.core.base.objective import ObjectiveData
+from pyomo.core.base.objective import Objective, ObjectiveData
 from pyomo.common.config import document_kwargs_from_configdict, ConfigValue
 from pyomo.common.errors import ApplicationError
 from pyomo.common.deprecation import deprecation_warning
@@ -346,9 +346,19 @@ class LegacySolverWrapper:
     interface. Necessary for backwards compatibility.
     """
 
-    def __init__(self, solver_io=None, **kwargs):
-        if solver_io is not None:
+    def __init__(self, **kwargs):
+        if 'solver_io' in kwargs:
             raise NotImplementedError('Still working on this')
+        # There is no reason for a user to be trying to mix both old
+        # and new options. That is silly. So we will yell at them.
+        self.options = kwargs.pop('options', None)
+        if 'solver_options' in kwargs:
+            if self.options is not None:
+                raise ValueError(
+                    "Both 'options' and 'solver_options' were requested. "
+                    "Please use one or the other, not both."
+                )
+            self.options = kwargs.pop('solver_options')
         super().__init__(**kwargs)
 
     #
@@ -374,6 +384,8 @@ class LegacySolverWrapper:
         keepfiles=NOTSET,
         solnfile=NOTSET,
         options=NOTSET,
+        solver_options=NOTSET,
+        writer_config=NOTSET,
     ):
         """Map between legacy and new interface configuration options"""
         self.config = self.config()
@@ -391,8 +403,26 @@ class LegacySolverWrapper:
             self.config.time_limit = timelimit
         if report_timing is not NOTSET:
             self.config.report_timing = report_timing
-        if options is not NOTSET:
+        if self.options is not None:
+            self.config.solver_options.set_value(self.options)
+        if (options is not NOTSET) and (solver_options is not NOTSET):
+            # There is no reason for a user to be trying to mix both old
+            # and new options. That is silly. So we will yell at them.
+            # Example that would raise an error:
+            # solver.solve(model, options={'foo' : 'bar'}, solver_options={'foo' : 'not_bar'})
+            raise ValueError(
+                "Both 'options' and 'solver_options' were requested. "
+                "Please use one or the other, not both."
+            )
+        elif options is not NOTSET:
+            # This block is trying to mimic the existing logic in the legacy
+            # interface that allows users to pass initialized options to
+            # the solver object and override them in the solve call.
             self.config.solver_options.set_value(options)
+        elif solver_options is not NOTSET:
+            self.config.solver_options.set_value(solver_options)
+        if writer_config is not NOTSET:
+            self.config.writer_config.set_value(writer_config)
         # This is a new flag in the interface. To preserve backwards compatibility,
         # its default is set to "False"
         if raise_exception_on_nonoptimal_result is not NOTSET:
@@ -433,9 +463,14 @@ class LegacySolverWrapper:
         ]
         legacy_soln.status = legacy_solution_status_map[results.solution_status]
         legacy_results.solver.termination_message = str(results.termination_condition)
-        legacy_results.problem.number_of_constraints = model.nconstraints()
-        legacy_results.problem.number_of_variables = model.nvariables()
-        number_of_objectives = model.nobjectives()
+        legacy_results.problem.number_of_constraints = float('nan')
+        legacy_results.problem.number_of_variables = float('nan')
+        number_of_objectives = sum(
+            1
+            for _ in model.component_data_objects(
+                Objective, active=True, descend_into=True
+            )
+        )
         legacy_results.problem.number_of_objectives = number_of_objectives
         if number_of_objectives == 1:
             obj = get_objective(model)
@@ -506,7 +541,10 @@ class LegacySolverWrapper:
         options: Optional[Dict] = None,
         keepfiles: bool = False,
         symbolic_solver_labels: bool = False,
+        # These are for forward-compatibility
         raise_exception_on_nonoptimal_result: bool = False,
+        solver_options: Optional[Dict] = None,
+        writer_config: Optional[Dict] = None,
     ):
         """
         Solve method: maps new solve method style to backwards compatible version.
@@ -532,6 +570,8 @@ class LegacySolverWrapper:
             'keepfiles',
             'solnfile',
             'options',
+            'solver_options',
+            'writer_config',
         )
         loc = locals()
         filtered_args = {k: loc[k] for k in map_args if loc.get(k, None) is not None}
@@ -557,7 +597,10 @@ class LegacySolverWrapper:
         """
         ans = super().available()
         if exception_flag and not ans:
-            raise ApplicationError(f'Solver {self.__class__} is not available ({ans}).')
+            raise ApplicationError(
+                f'Solver "{self.name}" is not available. '
+                f'The returned status is: {ans}.'
+            )
         return bool(ans)
 
     def license_is_valid(self) -> bool:
