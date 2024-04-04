@@ -26,6 +26,7 @@ def amplfunc_string_merge(amplfunc, pyomo_amplfunc):
     amplfunc_lines = [s for s in amplfunc_lines if s != ""]
     return "\n".join(amplfunc_lines)
 
+
 def amplfunc_merge(env):
     """Merge AMPLFUNC and PYOMO_AMPLFuNC in an environment var dict"""
     return amplfunc_string_merge(env.get("AMPLFUNC", ""), env.get("PYOMO_AMPLFUNC", ""))

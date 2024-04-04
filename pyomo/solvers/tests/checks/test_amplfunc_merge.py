@@ -92,6 +92,7 @@ class TestAMPLFUNCStringMerge(unittest.TestCase):
         self.assertEqual(sm_list[0], "my/place/l1.so")
         self.assertEqual(sm_list[1], "another/place/l1.so")
 
+
 class TestAMPLFUNCMerge(unittest.TestCase):
     def test_merge_no_dup(self):
         env = {
@@ -172,4 +173,3 @@ class TestAMPLFUNCMerge(unittest.TestCase):
         sm_list = sm.split("\n")
         self.assertEqual(len(sm_list), 1)
         self.assertEqual(sm_list[0], "")
-
