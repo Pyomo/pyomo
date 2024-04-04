@@ -248,7 +248,7 @@ class TestCPExpressionWalker_AlgebraicExpressions(CommonTest):
         const_expr = 3 * m.x
         nested_expr = (1 / m.p) * m.x
         pow_expr = (m.p ** (0.5)) * m.x
-        
+
         e = m.x * 4
         expr = visitor.walk_expression((e, e, 0))
         self.assertIn(id(m.x), visitor.var_map)
@@ -1574,7 +1574,7 @@ class TestCPExpressionWalker_HierarchicalScheduling(CommonTest):
 
         self.assertTrue(
             expr[1].equals(cp.synchronize(whole_enchilada, [iv[i] for i in [1, 2, 3]]))
-        )        
+        )
 
 
 @unittest.skipIf(not docplex_available, "docplex is not available")

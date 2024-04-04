@@ -37,9 +37,7 @@ class AlternativeExpression(NaryBooleanExpression):
 
 
 class SynchronizeExpression(NaryBooleanExpression):
-    """
-
-    """
+    """ """
 
     def _to_string(self, values, verbose, smap):
         return "synchronize(%s, [%s])" % (values[0], ", ".join(values[1:]))

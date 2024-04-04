@@ -11,11 +11,8 @@
 
 import pyomo.common.unittest as unittest
 
-from pyomo.environ import (
-    ConcreteModel,
-    Constraint,
-    Var,
-)
+from pyomo.environ import ConcreteModel, Constraint, Var
+
 
 class TestCPDebugging(unittest.TestCase):
     def test_debug_infeasibility(self):
