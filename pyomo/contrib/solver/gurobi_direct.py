@@ -15,6 +15,7 @@ import math
 import os
 
 from pyomo.common.config import ConfigValue
+from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.shutdown import python_is_shutting_down
 from pyomo.common.tee import capture_output, TeeStream
@@ -59,10 +60,13 @@ class GurobiConfig(BranchAndBoundConfig):
 
 
 class GurobiDirectSolutionLoader(SolutionLoaderBase):
-    def __init__(self, grb_model, grb_vars, pyo_vars):
+    def __init__(self, grb_model, grb_cons, grb_vars, pyo_cons, pyo_vars, pyo_obj):
         self._grb_model = grb_model
+        self._grb_cons = grb_cons
         self._grb_vars = grb_vars
+        self._pyo_cons = pyo_cons
         self._pyo_vars = pyo_vars
+        self._pyo_obj = pyo_obj
         GurobiDirect._num_instances += 1
 
     def __del__(self):
@@ -72,15 +76,70 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
                 GurobiDirect.release_license()
 
     def load_vars(self, vars_to_load=None, solution_number=0):
-        assert vars_to_load is None
         assert solution_number == 0
-        for p_var, g_var in zip(self._pyo_vars, self._grb_vars.x.tolist()):
-            p_var.set_value(g_var, skip_validation=True)
+        if self._grb_model.SolCount == 0:
+            raise RuntimeError(
+                'Solver does not currently have a valid solution. Please '
+                'check the termination condition.'
+            )
 
-    def get_primals(self, vars_to_load=None):
-        assert vars_to_load is None
+        iterator = zip(self._pyo_vars, self._grb_vars.x.tolist())
+        if vars_to_load:
+            vars_to_load = ComponentSet(vars_to_load)
+            iterator = filter(lambda var_val: var_val[0] in vars_to_load, iterator)
+        for p_var, g_var in iterator:
+            p_var.set_value(g_var, skip_validation=True)
+        StaleFlagManager.mark_all_as_stale(delayed=True)
+
+    def get_primals(self, vars_to_load=None, solution_number=0):
         assert solution_number == 0
-        return ComponentMap(zip(self._pyo_vars, self._grb_vars.x.tolist()))
+        if self._grb_model.SolCount == 0:
+            raise RuntimeError(
+                'Solver does not currently have a valid solution. Please '
+                'check the termination condition.'
+            )
+
+        iterator = zip(self._pyo_vars, self._grb_vars.x.tolist())
+        if vars_to_load:
+            vars_to_load = ComponentSet(vars_to_load)
+            iterator = filter(lambda var_val: var_val[0] in vars_to_load, iterator)
+        return ComponentMap(iterator)
+
+    def get_duals(self, cons_to_load=None):
+        if self._grb_model.Status != gurobipy.GRB.OPTIMAL:
+            raise RuntimeError(
+                'Solver does not currently have valid duals. Please '
+                'check the termination condition.'
+            )
+
+        def dedup(_iter):
+            last = None
+            for con_info_dual in _iter:
+                if not con_info_dual[1] and con_info_dual[0][0] is last:
+                    continue
+                last = con_info_dual[0][0]
+                yield con_info_dual
+
+        iterator = dedup(zip(self._pyo_cons, self._grb_cons.getAttr('Pi').tolist()))
+        if cons_to_load:
+            cons_to_load = set(cons_to_load)
+            iterator = filter(
+                lambda con_info_dual: con_info_dual[0][0] in cons_to_load, iterator
+            )
+        return {con_info[0]: dual for con_info, dual in iterator}
+
+    def get_reduced_costs(self, vars_to_load=None):
+        if self._grb_model.Status != gurobipy.GRB.OPTIMAL:
+            raise RuntimeError(
+                'Solver does not currently have valid reduced costs. Please '
+                'check the termination condition.'
+            )
+
+        iterator = zip(self._pyo_vars, self._grb_vars.getAttr('Rc').tolist())
+        if vars_to_load:
+            vars_to_load = ComponentSet(vars_to_load)
+            iterator = filter(lambda var_rc: var_rc[0] in vars_to_load, iterator)
+        return ComponentMap(iterator)
 
 
 class GurobiDirect(SolverBase):
@@ -240,7 +299,11 @@ class GurobiDirect(SolverBase):
             os.chdir(orig_cwd)
 
         res = self._postsolve(
-            timer, GurobiDirectSolutionLoader(gurobi_model, x, repn.columns)
+            timer,
+            config,
+            GurobiDirectSolutionLoader(
+                gurobi_model, A, x, repn.rows, repn.columns, repn.objectives
+            ),
         )
         res.solver_configuration = config
         res.solver_name = 'Gurobi'
