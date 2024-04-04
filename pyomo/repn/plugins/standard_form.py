@@ -61,11 +61,15 @@ class LinearStandardFormInfo(object):
 
     Attributes
     ----------
-    c : scipy.sparse.csr_array
+    c : scipy.sparse.csc_array
 
         The objective coefficients.  Note that this is a sparse array
         and may contain multiple rows (for multiobjective problems).  The
         objectives may be calculated by "c @ x"
+
+    c_offset : numpy.ndarray
+
+        The list of objective constant offsets
 
     A : scipy.sparse.csc_array
 
@@ -89,6 +93,10 @@ class LinearStandardFormInfo(object):
         The list of Pyomo variable objects corresponding to columns in
         the `A` and `c` matrices.
 
+    objectives : List[_ObjectiveData]
+
+        The list of Pyomo objective objects correcponding to the active objectives
+
     eliminated_vars: List[Tuple[_VarData, NumericExpression]]
 
         The list of variables from the original model that do not appear
@@ -101,12 +109,14 @@ class LinearStandardFormInfo(object):
 
     """
 
-    def __init__(self, c, A, rhs, rows, columns, eliminated_vars):
+    def __init__(self, c, c_offset, A, rhs, rows, columns, objectives, eliminated_vars):
         self.c = c
+        self.c_offset = c_offset
         self.A = A
         self.rhs = rhs
         self.rows = rows
         self.columns = columns
+        self.objectives = objectives
         self.eliminated_vars = eliminated_vars
 
     @property
@@ -305,21 +315,18 @@ class _LinearStandardFormCompiler_impl(object):
         #
         # Process objective
         #
-        if not component_map[Objective]:
-            objectives = [Objective(expr=1)]
-            objectives[0].construct()
-        else:
-            objectives = []
-            for blk in component_map[Objective]:
-                objectives.extend(
-                    blk.component_data_objects(
-                        Objective, active=True, descend_into=False, sort=sorter
-                    )
+        objectives = []
+        for blk in component_map[Objective]:
+            objectives.extend(
+                blk.component_data_objects(
+                    Objective, active=True, descend_into=False, sort=sorter
                 )
+            )
+        obj_offset = []
         obj_data = []
         obj_index = []
         obj_index_ptr = [0]
-        for i, obj in enumerate(objectives):
+        for obj in objectives:
             repn = visitor.walk_expression(obj.expr)
             if repn.nonlinear is not None:
                 raise ValueError(
@@ -328,8 +335,10 @@ class _LinearStandardFormCompiler_impl(object):
                 )
             N = len(repn.linear)
             obj_data.append(np.fromiter(repn.linear.values(), float, N))
+            obj_offset.append(repn.constant)
             if obj.sense == maximize:
                 obj_data[-1] *= -1
+                obj_offset[-1] *= -1
             obj_index.append(
                 np.fromiter(map(var_order.__getitem__, repn.linear), float, N)
             )
@@ -495,7 +504,9 @@ class _LinearStandardFormCompiler_impl(object):
         else:
             eliminated_vars = []
 
-        info = LinearStandardFormInfo(c, A, rhs, rows, columns, eliminated_vars)
+        info = LinearStandardFormInfo(
+            c, np.array(obj_offset), A, rhs, rows, columns, objectives, eliminated_vars
+        )
         timer.toc("Generated linear standard form representation", delta=False)
         return info
 
