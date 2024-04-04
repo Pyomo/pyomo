@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 
-def amplfunc_merge(amplfunc, pyomo_amplfunc):
+def amplfunc_string_merge(amplfunc, pyomo_amplfunc):
     """Merge two AMPLFUNC variable strings eliminating duplicate lines"""
     # Assume that the strings amplfunc and pyomo_amplfunc don't contain duplicates
     # Assume that the path separator is correct for the OS so we don't need to
@@ -25,3 +25,7 @@ def amplfunc_merge(amplfunc, pyomo_amplfunc):
     # empty or there are two new lines in a row for whatever reason.
     amplfunc_lines = [s for s in amplfunc_lines if s != ""]
     return "\n".join(amplfunc_lines)
+
+def amplfunc_merge(env):
+    """Merge AMPLFUNC and PYOMO_AMPLFuNC in an environment var dict"""
+    return amplfunc_string_merge(env.get("AMPLFUNC", ""), env.get("PYOMO_AMPLFUNC", ""))

@@ -121,11 +121,9 @@ class IPOPT(SystemCallSolver):
         # Pyomo/Pyomo) with any user-specified external function
         # libraries
         #
-        if 'PYOMO_AMPLFUNC' in env:
-            if 'AMPLFUNC' in env:
-                env['AMPLFUNC'] = amplfunc_merge(env['AMPLFUNC'], env['PYOMO_AMPLFUNC'])
-            else:
-                env['AMPLFUNC'] = env['PYOMO_AMPLFUNC']
+        amplfunc = amplfunc_merge(env)
+        if amplfunc:
+            env['AMPLFUNC'] = amplfunc
 
         cmd = [executable, problem_files[0], '-AMPL']
         if self._timer:

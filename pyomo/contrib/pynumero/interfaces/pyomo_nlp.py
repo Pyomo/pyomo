@@ -93,13 +93,7 @@ class PyomoNLP(AslNLP):
             # The NL writer advertises the external function libraries
             # through the PYOMO_AMPLFUNC environment variable; merge it
             # with any preexisting AMPLFUNC definitions
-            if 'PYOMO_AMPLFUNC' in os.environ:
-                if 'AMPLFUNC' in os.environ:
-                    amplfunc = amplfunc_merge(
-                        os.environ['AMPLFUNC'], os.environ['PYOMO_AMPLFUNC']
-                    )
-                else:
-                    amplfunc = os.environ['PYOMO_AMPLFUNC']
+            amplfunc = amplfunc_merge(os.environ)
 
             with CtypesEnviron(AMPLFUNC=amplfunc):
                 super(PyomoNLP, self).__init__(nl_file)
