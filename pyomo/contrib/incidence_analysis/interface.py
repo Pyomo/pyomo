@@ -920,15 +920,20 @@ class IncidenceGraphInterface(object):
             " variables and constraints and pass them in the order variables,"
             " constraints."
         )
+        if (
+            any(var in self._con_index_map for var in variables)
+            or any(con in self._var_index_map for con in constraints)
+        ):
+            deprecation_warning(depr_msg, version="6.7.2.dev0")
+        # If we received variables/constraints in the same list, sort them.
+        # Any unrecognized objects will be caught by _validate_input.
         for var in variables:
             if var in self._con_index_map:
-                deprecation_warning(depr_msg, version="TBD")
                 cons_to_validate.append(var)
             else:
                 vars_to_validate.append(var)
         for con in constraints:
             if con in self._var_index_map:
-                deprecation_warning(depr_msg, version="TBD")
                 vars_to_validate.append(con)
             else:
                 cons_to_validate.append(con)
