@@ -920,9 +920,8 @@ class IncidenceGraphInterface(object):
             " variables and constraints and pass them in the order variables,"
             " constraints."
         )
-        if (
-            any(var in self._con_index_map for var in variables)
-            or any(con in self._var_index_map for con in constraints)
+        if any(var in self._con_index_map for var in variables) or any(
+            con in self._var_index_map for con in constraints
         ):
             deprecation_warning(depr_msg, version="6.7.2.dev0")
         # If we received variables/constraints in the same list, sort them.
