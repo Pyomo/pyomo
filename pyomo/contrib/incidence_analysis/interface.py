@@ -891,9 +891,9 @@ class IncidenceGraphInterface(object):
 
         .. note::
 
-           **Deprecation in Pyomo vTBD**
+           **Deprecation in Pyomo v6.7.2.dev0**
 
-           The pre-TBD implementation of ``remove_nodes`` allowed variables and
+           The pre-6.7.2.dev0 implementation of ``remove_nodes`` allowed variables and
            constraints to remove to be specified in a single list. This made
            error checking difficult, and indeed, if invalid components were
            provided, we carried on silently instead of throwing an error or
