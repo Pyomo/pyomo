@@ -29,15 +29,26 @@ class SpanExpression(NaryBooleanExpression):
 
 class AlternativeExpression(NaryBooleanExpression):
     """
-    TODO/
+    Expression over IntervalVars representing that if the first arg is present,
+    then exactly one of the following args must be present. The first arg is
+    absent if and only if all the others are absent.
     """
+
+    # [ESJ 4/4/24]: docplex takes an optional 'cardinality' argument with this
+    # too--it generalized to "exactly n" of the intervals have to exist,
+    # basically. It would be nice to include this eventually, but this is
+    # probably fine for now.
 
     def _to_string(self, values, verbose, smap):
         return "alternative(%s, [%s])" % (values[0], ", ".join(values[1:]))
 
 
 class SynchronizeExpression(NaryBooleanExpression):
-    """ """
+    """
+    Expression over IntervalVars synchronizing the first argument with all of the
+    following arguments. That is, if the first argument is present, the remaining
+    arguments start and end at the same time as it.
+    """
 
     def _to_string(self, values, verbose, smap):
         return "synchronize(%s, [%s])" % (values[0], ", ".join(values[1:]))
