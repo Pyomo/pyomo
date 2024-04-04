@@ -232,7 +232,14 @@ class _BigM_MixIn(object):
         return tuple(M)
 
     def _add_constraint_expressions(
-        self, c, i, M, indicator_var, newConstraint, constraint_map
+        self,
+        c,
+        i,
+        M,
+        indicator_var,
+        newConstraint,
+        constraint_map,
+        indicator_expression=None,
     ):
         # Since we are both combining components from multiple blocks and using
         # local names, we need to make sure that the first index for
@@ -244,6 +251,8 @@ class _BigM_MixIn(object):
         # over the constraint indices, but I don't think it matters a lot.)
         unique = len(newConstraint)
         name = c.local_name + "_%s" % unique
+        if indicator_expression is None:
+            indicator_expression = 1 - indicator_var
 
         if c.lower is not None:
             if M[0] is None:
@@ -251,7 +260,7 @@ class _BigM_MixIn(object):
                     "Cannot relax disjunctive constraint '%s' "
                     "because M is not defined." % name
                 )
-            M_expr = M[0] * (1 - indicator_var)
+            M_expr = M[0] * indicator_expression
             newConstraint.add((name, i, 'lb'), c.lower <= c.body - M_expr)
             constraint_map.transformed_constraints[c].append(
                 newConstraint[name, i, 'lb']
@@ -263,7 +272,7 @@ class _BigM_MixIn(object):
                     "Cannot relax disjunctive constraint '%s' "
                     "because M is not defined." % name
                 )
-            M_expr = M[1] * (1 - indicator_var)
+            M_expr = M[1] * indicator_expression
             newConstraint.add((name, i, 'ub'), c.body - M_expr <= c.upper)
             constraint_map.transformed_constraints[c].append(
                 newConstraint[name, i, 'ub']
