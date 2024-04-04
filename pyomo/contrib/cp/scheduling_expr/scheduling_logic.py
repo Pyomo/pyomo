@@ -36,6 +36,15 @@ class AlternativeExpression(NaryBooleanExpression):
         return "alternative(%s, [%s])" % (values[0], ", ".join(values[1:]))
 
 
+class SynchronizeExpression(NaryBooleanExpression):
+    """
+
+    """
+
+    def _to_string(self, values, verbose, smap):
+        return "synchronize(%s, [%s])" % (values[0], ", ".join(values[1:]))
+
+
 def spans(*args):
     """Creates a new SpanExpression"""
 
@@ -46,3 +55,9 @@ def alternative(*args):
     """Creates a new AlternativeExpression"""
 
     return AlternativeExpression(list(_flattened(args)))
+
+
+def synchronize(*args):
+    """Creates a new SynchronizeExpression"""
+
+    return SynchronizeExpression(list(_flattened(args)))

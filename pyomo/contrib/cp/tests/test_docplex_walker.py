@@ -20,6 +20,7 @@ from pyomo.contrib.cp import (
     before_in_sequence,
     predecessor_to,
     alternative,
+    synchronize,
 )
 from pyomo.contrib.cp.scheduling_expr.step_function_expressions import (
     AlwaysIn,
@@ -1554,6 +1555,26 @@ class TestCPExpressionWalker_HierarchicalScheduling(CommonTest):
         self.assertTrue(
             expr[1].equals(cp.alternative(whole_enchilada, [iv[i] for i in [1, 2, 3]]))
         )
+
+    def test_synchronize(self):
+        m = self.get_model()
+        e = synchronize(m.whole_enchilada, [m.iv[i] for i in [1, 2, 3]])
+
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((e, e, 0))
+
+        self.assertIn(id(m.whole_enchilada), visitor.var_map)
+        whole_enchilada = visitor.var_map[id(m.whole_enchilada)]
+        self.assertIs(visitor.pyomo_to_docplex[m.whole_enchilada], whole_enchilada)
+
+        iv = {}
+        for i in [1, 2, 3]:
+            self.assertIn(id(m.iv[i]), visitor.var_map)
+            iv[i] = visitor.var_map[id(m.iv[i])]
+
+        self.assertTrue(
+            expr[1].equals(cp.synchronize(whole_enchilada, [iv[i] for i in [1, 2, 3]]))
+        )        
 
 
 @unittest.skipIf(not docplex_available, "docplex is not available")

@@ -15,8 +15,10 @@ from pyomo.contrib.cp.interval_var import IntervalVar
 from pyomo.contrib.cp.scheduling_expr.scheduling_logic import (
     AlternativeExpression,
     SpanExpression,
+    SynchronizeExpression,
     alternative,
     spans,
+    synchronize,
 )
 from pyomo.contrib.cp.scheduling_expr.sequence_expressions import (
     NoOverlapExpression,
@@ -159,3 +161,16 @@ class TestHierarchicalSchedulingExpressions(unittest.TestCase):
             self.assertIs(e.args[i], m.iv[i])
 
         self.assertEqual(str(e), "alternative(whole_enchilada, [iv[1], iv[2], iv[3]])")
+
+    def test_synchronize(self):
+        m = self.make_model()
+        e = synchronize(m.whole_enchilada, [m.iv[i] for i in [1, 2, 3]])
+
+        self.assertIsInstance(e, SynchronizeExpression)
+        self.assertEqual(e.nargs(), 4)
+        self.assertEqual(len(e.args), 4)
+        self.assertIs(e.args[0], m.whole_enchilada)
+        for i in [1, 2, 3]:
+            self.assertIs(e.args[i], m.iv[i])
+
+        self.assertEqual(str(e), "synchronize(whole_enchilada, [iv[1], iv[2], iv[3]])")

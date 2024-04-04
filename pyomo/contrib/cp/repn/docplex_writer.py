@@ -39,6 +39,7 @@ from pyomo.contrib.cp.sequence_var import (
 from pyomo.contrib.cp.scheduling_expr.scheduling_logic import (
     AlternativeExpression,
     SpanExpression,
+    SynchronizeExpression,
 )
 from pyomo.contrib.cp.scheduling_expr.precedence_expressions import (
     BeforeExpression,
@@ -992,6 +993,10 @@ def _handle_alternative_expression_node(visitor, node, *args):
     return _GENERAL, cp.alternative(args[0][1], [arg[1] for arg in args[1:]])
 
 
+def _handle_synchronize_expression_node(visitor, node, *args):
+    return _GENERAL, cp.synchronize(args[0][1], [arg[1] for arg in args[1:]])
+
+
 class LogicalToDoCplex(StreamBasedExpressionVisitor):
     _operator_handles = {
         EXPR.GetItemExpression: _handle_getitem,
@@ -1040,6 +1045,7 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         PredecessorToExpression: _handle_predecessor_to_expression_node,
         SpanExpression: _handle_span_expression_node,
         AlternativeExpression: _handle_alternative_expression_node,
+        SynchronizeExpression: _handle_synchronize_expression_node,
     }
     _var_handles = {
         IntervalVarStartTime: _before_interval_var_start_time,
