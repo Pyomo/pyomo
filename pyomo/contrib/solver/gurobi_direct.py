@@ -213,11 +213,12 @@ class GurobiDirect(SolverBase):
 
     def solve(self, model, **kwds) -> Results:
         start_timestamp = datetime.datetime.now(datetime.timezone.utc)
-        self._config = config = self.config(value=kwds, preserve_implicit=True)
-        StaleFlagManager.mark_all_as_stale()
+        config = self.config(value=kwds, preserve_implicit=True)
         if config.timer is None:
             config.timer = HierarchicalTimer()
         timer = config.timer
+
+        StaleFlagManager.mark_all_as_stale()
 
         timer.start('compile_model')
         repn = LinearStandardFormCompiler().write(model, mixed_form=True)
@@ -256,8 +257,8 @@ class GurobiDirect(SolverBase):
 
         try:
             orig_cwd = os.getcwd()
-            if self._config.working_dir:
-                os.chdir(self._config.working_dir)
+            if config.working_dir:
+                os.chdir(config.working_dir)
             with TeeStream(*ostreams) as t, capture_output(t.STDOUT, capture_fd=False):
                 gurobi_model = gurobipy.Model()
 
@@ -316,17 +317,15 @@ class GurobiDirect(SolverBase):
         res.timing_info.timer = timer
         return res
 
-    def _postsolve(self, timer: HierarchicalTimer, loader):
-        config = self._config
-
-        gprob = loader._grb_model
-        status = gprob.Status
+    def _postsolve(self, timer: HierarchicalTimer, config, loader):
+        grb_model = loader._grb_model
+        status = grb_model.Status
 
         results = Results()
         results.solution_loader = loader
-        results.timing_info.gurobi_time = gprob.Runtime
+        results.timing_info.gurobi_time = grb_model.Runtime
 
-        if gprob.SolCount > 0:
+        if grb_model.SolCount > 0:
             if status == gurobipy.GRB.OPTIMAL:
                 results.solution_status = SolutionStatus.optimal
             else:
@@ -349,30 +348,31 @@ class GurobiDirect(SolverBase):
                 'to bypass this error.'
             )
 
-        results.incumbent_objective = None
-        results.objective_bound = None
         try:
-            results.incumbent_objective = gprob.ObjVal
+            if math.isfinite(grb_model.ObjVal):
+                results.incumbent_objective = grb_model.ObjVal
+            else:
+                results.incumbent_objective = None
         except (gurobipy.GurobiError, AttributeError):
             results.incumbent_objective = None
         try:
-            results.objective_bound = gprob.ObjBound
+            results.objective_bound = grb_model.ObjBound
         except (gurobipy.GurobiError, AttributeError):
-            if self._objective.sense == minimize:
+            if grb_model.ModelSense == OptimizationSense.minimize:
                 results.objective_bound = -math.inf
             else:
                 results.objective_bound = math.inf
-
         if results.incumbent_objective is not None and not math.isfinite(
             results.incumbent_objective
         ):
             results.incumbent_objective = None
+            results.objective_bound = None
 
-        results.iteration_count = gprob.getAttr('IterCount')
+        results.iteration_count = grb_model.getAttr('IterCount')
 
         timer.start('load solution')
         if config.load_solutions:
-            if gprob.SolCount > 0:
+            if grb_model.SolCount > 0:
                 results.solution_loader.load_vars()
             else:
                 raise RuntimeError(
