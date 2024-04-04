@@ -96,7 +96,7 @@ class LinearStandardFormInfo(object):
 
     objectives : List[_ObjectiveData]
 
-        The list of Pyomo objective objects correcponding to the active objectives
+        The list of Pyomo objective objects corresponding to the active objectives
 
     eliminated_vars: List[Tuple[_VarData, NumericExpression]]
 
