@@ -20,7 +20,7 @@ from pyomo.common.config import (
     document_kwargs_from_configdict,
 )
 from pyomo.common.dependencies import scipy, numpy as np
-from pyomo.common.enums import OptimizationSense
+from pyomo.common.enums import ObjectiveSense
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.timing import TicTocTimer
 
@@ -162,8 +162,8 @@ class LinearStandardFormCompiler(object):
     CONFIG.declare(
         'set_sense',
         ConfigValue(
-            default=OptimizationSense.minimize,
-            domain=InEnum(OptimizationSense),
+            default=ObjectiveSense.minimize,
+            domain=InEnum(ObjectiveSense),
             description='If not None, map all objectives to the specified sense.',
         ),
     )

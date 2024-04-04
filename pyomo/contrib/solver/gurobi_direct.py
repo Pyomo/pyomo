@@ -17,7 +17,7 @@ import os
 from pyomo.common.config import ConfigValue
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.dependencies import attempt_import
-from pyomo.common.enums import OptimizationSense
+from pyomo.common.enums import ObjectiveSense
 from pyomo.common.shutdown import python_is_shutting_down
 from pyomo.common.tee import capture_output, TeeStream
 from pyomo.common.timing import HierarchicalTimer
@@ -371,7 +371,7 @@ class GurobiDirect(SolverBase):
             try:
                 results.objective_bound = grb_model.ObjBound
             except (gurobipy.GurobiError, AttributeError):
-                if grb_model.ModelSense == OptimizationSense.minimize:
+                if grb_model.ModelSense == ObjectiveSense.minimize:
                     results.objective_bound = -math.inf
                 else:
                     results.objective_bound = math.inf
