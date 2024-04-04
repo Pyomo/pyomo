@@ -16,6 +16,7 @@ from pyomo.common.pyomo_typing import overload
 
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.errors import TemplateExpressionError
+from pyomo.common.enums import ObjectiveSense, minimize, maximize
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
 from pyomo.common.formatting import tabular_writer
@@ -37,7 +38,6 @@ from pyomo.core.base.initializer import (
     IndexedCallInitializer,
     CountedCallInitializer,
 )
-from pyomo.core.base import minimize, maximize
 
 logger = logging.getLogger('pyomo.core')
 
@@ -156,14 +156,7 @@ class _GeneralObjectiveData(
         self._component = weakref_ref(component) if (component is not None) else None
         self._index = NOTSET
         self._active = True
-        self._sense = sense
-
-        if (self._sense != minimize) and (self._sense != maximize):
-            raise ValueError(
-                "Objective sense must be set to one of "
-                "'minimize' (%s) or 'maximize' (%s). Invalid "
-                "value: %s'" % (minimize, maximize, sense)
-            )
+        self._sense = ObjectiveSense(sense)
 
     def set_value(self, expr):
         if expr is None:
@@ -186,14 +179,7 @@ class _GeneralObjectiveData(
 
     def set_sense(self, sense):
         """Set the sense (direction) of this objective."""
-        if sense in {minimize, maximize}:
-            self._sense = sense
-        else:
-            raise ValueError(
-                "Objective sense must be set to one of "
-                "'minimize' (%s) or 'maximize' (%s). Invalid "
-                "value: %s'" % (minimize, maximize, sense)
-            )
+        self._sense = ObjectiveSense(sense)
 
 
 @ModelComponentFactory.register("Expressions that are minimized or maximized.")
@@ -365,11 +351,7 @@ class Objective(ActiveIndexedComponent):
             ],
             self._data.items(),
             ("Active", "Sense", "Expression"),
-            lambda k, v: [
-                v.active,
-                ("minimize" if (v.sense == minimize) else "maximize"),
-                v.expr,
-            ],
+            lambda k, v: [v.active, v.sense, v.expr],
         )
 
     def display(self, prefix="", ostream=None):
