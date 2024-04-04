@@ -225,6 +225,12 @@ class GurobiDirect(SolverBase):
         repn = LinearStandardFormCompiler().write(model, mixed_form=True)
         timer.stop('compile_model')
 
+        if len(repn.objectives) > 1:
+            raise ValueError(
+                f"The {self.__class__.__name__} solver only supports models "
+                f"with zero or one objectives (received {len(repn.objectives)})."
+            )
+
         timer.start('prepare_matrices')
         inf = float('inf')
         ninf = -inf
