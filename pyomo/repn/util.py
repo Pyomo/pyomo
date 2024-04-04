@@ -400,7 +400,15 @@ class ExitNodeDispatcher(collections.defaultdict):
 
     def __missing__(self, key):
         if type(key) is tuple:
-            node_class = key[0]
+            # Only lookup/cache argument-specific handlers for unary,
+            # binary and ternary operators
+            if len(key) <= 3:
+                node_class = key[0]
+                node_args = key[1:]
+            else:
+                node_class = key = key[0]
+                if node_class in self:
+                    return self[node_class]
         else:
             node_class = key
         bases = node_class.__mro__
@@ -412,30 +420,31 @@ class ExitNodeDispatcher(collections.defaultdict):
             bases = [Expression]
         fcn = None
         for base_type in bases:
-            if isinstance(key, tuple):
-                base_key = (base_type,) + key[1:]
-                # Only cache handlers for unary, binary and ternary operators
-                cache = len(key) <= 4
-            else:
-                base_key = base_type
-                cache = True
-            if base_key in self:
-                fcn = self[base_key]
-            elif base_type in self:
+            if key is not node_class:
+                if (base_type,) + node_args in self:
+                    fcn = self[(base_type,) + node_args]
+                    break
+            if base_type in self:
                 fcn = self[base_type]
-            elif any((k[0] if type(k) is tuple else k) is base_type for k in self):
-                raise DeveloperError(
-                    f"Base expression key '{base_key}' not found when inserting "
-                    f"dispatcher for node '{node_class.__name__}' while walking "
-                    "expression tree."
-                )
+                break
         if fcn is None:
-            fcn = self.unexpected_expression_type
-        if cache:
-            self[key] = fcn
+            partial_matches = set(
+                k[0] for k in self if type(k) is tuple and issubclass(node_class, k[0])
+            )
+            for base_type in node_class.__mro__:
+                if node_class is not key:
+                    key = (base_type,) + node_args
+                if base_type in partial_matches:
+                    raise DeveloperError(
+                        f"Base expression key '{key}' not found when inserting "
+                        f"dispatcher for node '{node_class.__name__}' while walking "
+                        "expression tree."
+                    )
+            return self.unexpected_expression_type
+        self[key] = fcn
         return fcn
 
-    def unexpected_expression_type(self, visitor, node, *arg):
+    def unexpected_expression_type(self, visitor, node, *args):
         raise DeveloperError(
             f"Unexpected expression node type '{type(node).__name__}' "
             f"found while walking expression tree in {type(visitor).__name__}."
