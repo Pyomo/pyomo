@@ -465,13 +465,17 @@ class _LinearStandardFormCompiler_impl(object):
         # Get the variable list
         columns = list(var_map.values())
         # Convert the compiled data to scipy sparse matrices
+        if obj_data:
+            obj_data = np.concatenate(obj_data)
+            obj_index = np.concatenate(obj_index)
         c = scipy.sparse.csr_array(
-            (np.concatenate(obj_data), np.concatenate(obj_index), obj_index_ptr),
-            [len(obj_index_ptr) - 1, len(columns)],
+            (obj_data, obj_index, obj_index_ptr), [len(obj_index_ptr) - 1, len(columns)]
         ).tocsc()
+        if rows:
+            con_data = np.concatenate(con_data)
+            con_index = np.concatenate(con_index)
         A = scipy.sparse.csr_array(
-            (np.concatenate(con_data), np.concatenate(con_index), con_index_ptr),
-            [len(rows), len(columns)],
+            (con_data, con_index, con_index_ptr), [len(rows), len(columns)]
         ).tocsc()
 
         # Some variables in the var_map may not actually appear in the
