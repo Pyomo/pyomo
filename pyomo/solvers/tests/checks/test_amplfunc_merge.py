@@ -107,30 +107,21 @@ class TestAMPLFUNCMerge(unittest.TestCase):
         self.assertEqual(sm_list[2], "my/place/l2.so")
 
     def test_merge_empty1(self):
-        env = {
-            "AMPLFUNC": "",
-            "PYOMO_AMPLFUNC": "my/place/l2.so",
-        }
+        env = {"AMPLFUNC": "", "PYOMO_AMPLFUNC": "my/place/l2.so"}
         sm = amplfunc_merge(env)
         sm_list = sm.split("\n")
         self.assertEqual(len(sm_list), 1)
         self.assertEqual(sm_list[0], "my/place/l2.so")
 
     def test_merge_empty2(self):
-        env = {
-            "AMPLFUNC": "my/place/l2.so",
-            "PYOMO_AMPLFUNC": "",
-        }
+        env = {"AMPLFUNC": "my/place/l2.so", "PYOMO_AMPLFUNC": ""}
         sm = amplfunc_merge(env)
         sm_list = sm.split("\n")
         self.assertEqual(len(sm_list), 1)
         self.assertEqual(sm_list[0], "my/place/l2.so")
 
     def test_merge_empty_both(self):
-        env = {
-            "AMPLFUNC": "",
-            "PYOMO_AMPLFUNC": "",
-        }
+        env = {"AMPLFUNC": "", "PYOMO_AMPLFUNC": ""}
         sm = amplfunc_merge(env)
         sm_list = sm.split("\n")
         self.assertEqual(len(sm_list), 1)
@@ -148,9 +139,7 @@ class TestAMPLFUNCMerge(unittest.TestCase):
         self.assertEqual(sm_list[1], "another/place/l1.so")
 
     def test_merge_no_pyomo(self):
-        env = {
-            "AMPLFUNC": "my/place/l1.so\nanother/place/l1.so",
-        }
+        env = {"AMPLFUNC": "my/place/l1.so\nanother/place/l1.so"}
         sm = amplfunc_merge(env)
         sm_list = sm.split("\n")
         self.assertEqual(len(sm_list), 2)
@@ -158,9 +147,7 @@ class TestAMPLFUNCMerge(unittest.TestCase):
         self.assertEqual(sm_list[1], "another/place/l1.so")
 
     def test_merge_no_user(self):
-        env = {
-            "PYOMO_AMPLFUNC": "my/place/l1.so\nanother/place/l1.so",
-        }
+        env = {"PYOMO_AMPLFUNC": "my/place/l1.so\nanother/place/l1.so"}
         sm = amplfunc_merge(env)
         sm_list = sm.split("\n")
         self.assertEqual(len(sm_list), 2)
