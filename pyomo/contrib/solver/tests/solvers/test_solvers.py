@@ -21,6 +21,7 @@ from pyomo.contrib.solver.results import TerminationCondition, SolutionStatus, R
 from pyomo.contrib.solver.base import SolverBase
 from pyomo.contrib.solver.ipopt import Ipopt
 from pyomo.contrib.solver.gurobi import Gurobi
+from pyomo.contrib.solver.gurobi_direct import GurobiDirect
 from pyomo.core.expr.numeric_expr import LinearExpression
 
 
@@ -32,8 +33,8 @@ parameterized = parameterized.parameterized
 if not param_available:
     raise unittest.SkipTest('Parameterized is not available.')
 
-all_solvers = [('gurobi', Gurobi), ('ipopt', Ipopt)]
-mip_solvers = [('gurobi', Gurobi)]
+all_solvers = [('gurobi', Gurobi), ('gurobi_direct', GurobiDirect), ('ipopt', Ipopt)]
+mip_solvers = [('gurobi', Gurobi), ('gurobi_direct', GurobiDirect)]
 nlp_solvers = [('ipopt', Ipopt)]
 qcp_solvers = [('gurobi', Gurobi), ('ipopt', Ipopt)]
 miqcqp_solvers = [('gurobi', Gurobi)]
