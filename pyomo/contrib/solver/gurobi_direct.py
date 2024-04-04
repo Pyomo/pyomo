@@ -54,7 +54,8 @@ class GurobiConfig(BranchAndBoundConfig):
             ConfigValue(
                 default=False,
                 domain=bool,
-                description="If True, the values of the integer variables will be passed to Gurobi.",
+                description="If True, the current values of the integer variables "
+                "will be passed to Gurobi.",
             ),
         )
 
