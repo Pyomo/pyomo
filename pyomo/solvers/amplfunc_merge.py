@@ -28,5 +28,5 @@ def amplfunc_string_merge(amplfunc, pyomo_amplfunc):
 
 
 def amplfunc_merge(env):
-    """Merge AMPLFUNC and PYOMO_AMPLFuNC in an environment var dict"""
+    """Merge AMPLFUNC and PYOMO_AMPLFUNC in an environment var dict"""
     return amplfunc_string_merge(env.get("AMPLFUNC", ""), env.get("PYOMO_AMPLFUNC", ""))
