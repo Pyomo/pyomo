@@ -266,10 +266,13 @@ class GurobiDirect(SolverBase):
                     len(repn.columns),
                     lb=lb,
                     ub=ub,
-                    obj=repn.c.todense()[0],
+                    obj=repn.c.todense()[0] if repn.c.shape[0] else 0,
                     vtype=vtype,
                 )
                 A = gurobi_model.addMConstr(repn.A, x, sense, repn.rhs)
+                if repn.c.shape[0]:
+                    gurobi_model.setAttr('ObjCon', repn.c_offset[0])
+                    gurobi_model.setAttr('ModelSense', int(repn.objectives[0].sense))
                 # gurobi_model.update()
                 timer.stop('transfer_model')
 
@@ -347,23 +350,22 @@ class GurobiDirect(SolverBase):
                 'to bypass this error.'
             )
 
-        try:
-            if math.isfinite(grb_model.ObjVal):
-                results.incumbent_objective = grb_model.ObjVal
-            else:
+        if loader._pyo_obj:
+            try:
+                if math.isfinite(grb_model.ObjVal):
+                    results.incumbent_objective = grb_model.ObjVal
+                else:
+                    results.incumbent_objective = None
+            except (gurobipy.GurobiError, AttributeError):
                 results.incumbent_objective = None
-        except (gurobipy.GurobiError, AttributeError):
-            results.incumbent_objective = None
-        try:
-            results.objective_bound = grb_model.ObjBound
-        except (gurobipy.GurobiError, AttributeError):
-            if grb_model.ModelSense == OptimizationSense.minimize:
-                results.objective_bound = -math.inf
-            else:
-                results.objective_bound = math.inf
-        if results.incumbent_objective is not None and not math.isfinite(
-            results.incumbent_objective
-        ):
+            try:
+                results.objective_bound = grb_model.ObjBound
+            except (gurobipy.GurobiError, AttributeError):
+                if grb_model.ModelSense == OptimizationSense.minimize:
+                    results.objective_bound = -math.inf
+                else:
+                    results.objective_bound = math.inf
+        else:
             results.incumbent_objective = None
             results.objective_bound = None
 
