@@ -17,6 +17,7 @@ import os
 from pyomo.common.config import ConfigValue
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.dependencies import attempt_import
+from pyomo.common.enums import OptimizationSense
 from pyomo.common.shutdown import python_is_shutting_down
 from pyomo.common.tee import capture_output, TeeStream
 from pyomo.common.timing import HierarchicalTimer
@@ -222,7 +223,9 @@ class GurobiDirect(SolverBase):
         StaleFlagManager.mark_all_as_stale()
 
         timer.start('compile_model')
-        repn = LinearStandardFormCompiler().write(model, mixed_form=True)
+        repn = LinearStandardFormCompiler().write(
+            model, mixed_form=True, set_sense=None
+        )
         timer.stop('compile_model')
 
         if len(repn.objectives) > 1:

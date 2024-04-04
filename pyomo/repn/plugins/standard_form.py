@@ -20,6 +20,7 @@ from pyomo.common.config import (
     document_kwargs_from_configdict,
 )
 from pyomo.common.dependencies import scipy, numpy as np
+from pyomo.common.enums import OptimizationSense
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.timing import TicTocTimer
 
@@ -156,6 +157,14 @@ class LinearStandardFormCompiler(object):
             domain=bool,
             description='Return A in mixed form (the comparison operator is a '
             'mix of <=, ==, and >=)',
+        ),
+    )
+    CONFIG.declare(
+        'set_sense',
+        ConfigValue(
+            default=OptimizationSense.minimize,
+            domain=InEnum(OptimizationSense),
+            description='If not None, map all objectives to the specified sense.',
         ),
     )
     CONFIG.declare(
@@ -315,6 +324,7 @@ class _LinearStandardFormCompiler_impl(object):
         #
         # Process objective
         #
+        set_sense = self.config.set_sense
         objectives = []
         for blk in component_map[Objective]:
             objectives.extend(
@@ -336,7 +346,7 @@ class _LinearStandardFormCompiler_impl(object):
             N = len(repn.linear)
             obj_data.append(np.fromiter(repn.linear.values(), float, N))
             obj_offset.append(repn.constant)
-            if obj.sense == maximize:
+            if set_sense is not None and set_sense != obj.sense:
                 obj_data[-1] *= -1
                 obj_offset[-1] *= -1
             obj_index.append(
