@@ -44,10 +44,12 @@ if not AmplInterface.available():
     raise unittest.SkipTest("Pynumero needs the ASL extension to run CyIpopt tests")
 
 import pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver as cyipopt_solver
+from pyomo.contrib.pynumero.interfaces.cyipopt_interface import cyipopt_available
 
-if not cyipopt_solver.cyipopt_available:
+if not cyipopt_available:
     raise unittest.SkipTest("PyNumero needs CyIpopt installed to run CyIpopt tests")
 import cyipopt as cyipopt_core
+
 
 example_dir = os.path.join(this_file_dir(), '..')
 
@@ -266,6 +268,11 @@ class TestExamples(unittest.TestCase):
         s = df['ca_bal']
         self.assertAlmostEqual(s.iloc[6], 0, places=3)
 
+    @unittest.skipIf(
+        cyipopt_solver.PyomoCyIpoptSolver().version() == (1, 4, 0),
+        "Terminating Ipopt through a user callback is broken in CyIpopt 1.4.0 "
+        "(see mechmotum/cyipopt#249)",
+    )
     def test_cyipopt_callback_halt(self):
         ex = import_file(
             os.path.join(example_dir, 'callback', 'cyipopt_callback_halt.py')
