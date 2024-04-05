@@ -1002,13 +1002,7 @@ def _handle_synchronize_expression_node(visitor, node, *args):
 
 _operator_handles = {
         EXPR.GetItemExpression: _handle_getitem,
-        EXPR.Structural_GetItemExpression: _handle_getitem,
-        EXPR.Numeric_GetItemExpression: _handle_getitem,
-        EXPR.Boolean_GetItemExpression: _handle_getitem,
         EXPR.GetAttrExpression: _handle_getattr,
-        EXPR.Structural_GetAttrExpression: _handle_getattr,
-        EXPR.Numeric_GetAttrExpression: _handle_getattr,
-        EXPR.Boolean_GetAttrExpression: _handle_getattr,
         EXPR.CallExpression: _handle_call,
         EXPR.NegationExpression: _handle_negation_node,
         EXPR.ProductExpression: _handle_product_node,
@@ -1017,7 +1011,6 @@ _operator_handles = {
         EXPR.AbsExpression: _handle_abs_node,
         EXPR.MonomialTermExpression: _handle_monomial_expr,
         EXPR.SumExpression: _handle_sum_node,
-        EXPR.LinearExpression: _handle_sum_node,
         EXPR.MinExpression: _handle_min_node,
         EXPR.MaxExpression: _handle_max_node,
         EXPR.NotExpression: _handle_not_node,
