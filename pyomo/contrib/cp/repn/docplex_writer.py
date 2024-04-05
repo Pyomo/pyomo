@@ -33,7 +33,6 @@ from pyomo.contrib.cp.interval_var import (
 from pyomo.contrib.cp.sequence_var import (
     SequenceVar,
     ScalarSequenceVar,
-    IndexedSequenceVar,
     _SequenceVarData,
 )
 from pyomo.contrib.cp.scheduling_expr.scheduling_logic import (
@@ -81,7 +80,7 @@ from pyomo.core.base.boolean_var import (
     _GeneralBooleanVarData,
     IndexedBooleanVar,
 )
-from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
+from pyomo.core.base.expression import _GeneralExpressionData, ScalarExpression
 from pyomo.core.base.param import IndexedParam, ScalarParam, _ParamData
 from pyomo.core.base.var import ScalarVar, _GeneralVarData, IndexedVar
 import pyomo.core.expr as EXPR

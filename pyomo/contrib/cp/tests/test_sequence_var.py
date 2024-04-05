@@ -13,7 +13,7 @@ from io import StringIO
 import pyomo.common.unittest as unittest
 from pyomo.contrib.cp.interval_var import IntervalVar
 from pyomo.contrib.cp.sequence_var import SequenceVar, IndexedSequenceVar
-from pyomo.environ import ConcreteModel, Integers, Set, value, Var
+from pyomo.environ import ConcreteModel, Set
 
 
 class TestScalarSequenceVar(unittest.TestCase):

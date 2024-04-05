@@ -9,7 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from io import StringIO
 import pyomo.common.unittest as unittest
 from pyomo.contrib.cp.interval_var import IntervalVar
 from pyomo.contrib.cp.scheduling_expr.scheduling_logic import (
@@ -32,8 +31,8 @@ from pyomo.contrib.cp.scheduling_expr.sequence_expressions import (
     first_in_sequence,
     last_in_sequence,
 )
-from pyomo.contrib.cp.sequence_var import SequenceVar, IndexedSequenceVar
-from pyomo.environ import ConcreteModel, Integers, LogicalConstraint, Set, value, Var
+from pyomo.contrib.cp.sequence_var import SequenceVar
+from pyomo.environ import ConcreteModel, LogicalConstraint, Set
 
 
 class TestSequenceVarExpressions(unittest.TestCase):

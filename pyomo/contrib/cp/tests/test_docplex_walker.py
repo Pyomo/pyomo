@@ -17,13 +17,10 @@ from pyomo.contrib.cp import (
     no_overlap,
     first_in_sequence,
     last_in_sequence,
-    before_in_sequence,
-    predecessor_to,
     alternative,
     synchronize,
 )
 from pyomo.contrib.cp.scheduling_expr.step_function_expressions import (
-    AlwaysIn,
     Step,
     Pulse,
 )
@@ -56,8 +53,6 @@ from pyomo.environ import (
     Integers,
     inequality,
     Expression,
-    Reals,
-    Set,
     Param,
 )
 
