@@ -1799,7 +1799,7 @@ def call_solver(model, solver, config, timing_obj, timer_name, err_msg):
         If ApplicationError is raised by the solver.
         In this case, `err_msg` is logged through
         ``config.progress_logger.exception()`` before
-        the excception is raised.
+        the exception is raised.
     """
     tt_timer = TicTocTimer()
 
@@ -1811,7 +1811,10 @@ def call_solver(model, solver, config, timing_obj, timer_name, err_msg):
 
     try:
         results = solver.solve(
-            model, tee=config.tee, load_solutions=False, symbolic_solver_labels=True
+            model,
+            tee=config.tee,
+            load_solutions=False,
+            symbolic_solver_labels=config.symbolic_solver_labels,
         )
     except ApplicationError:
         # account for possible external subsolver errors

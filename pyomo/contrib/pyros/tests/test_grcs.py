@@ -3795,6 +3795,7 @@ class testSolveMaster(unittest.TestCase):
         config.declare(
             "progress_logger", ConfigValue(default=logging.getLogger(__name__))
         )
+        config.declare("symbolic_solver_labels", ConfigValue(default=False))
 
         with time_code(master_data.timing, "main", is_main_timer=True):
             master_soln = solve_master(master_data, config)
@@ -6171,6 +6172,7 @@ class TestPyROSSolverLogIntros(unittest.TestCase):
             " keepfiles=False\n"
             " tee=False\n"
             " load_solution=True\n"
+            " symbolic_solver_labels=False\n"
             " objective_focus=<ObjectiveType.nominal: 2>\n"
             " nominal_uncertain_param_vals=[0.5]\n"
             " decision_rule_order=0\n"
