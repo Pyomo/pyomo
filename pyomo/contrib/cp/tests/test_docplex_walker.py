@@ -20,10 +20,7 @@ from pyomo.contrib.cp import (
     alternative,
     synchronize,
 )
-from pyomo.contrib.cp.scheduling_expr.step_function_expressions import (
-    Step,
-    Pulse,
-)
+from pyomo.contrib.cp.scheduling_expr.step_function_expressions import Step, Pulse
 from pyomo.contrib.cp.repn.docplex_writer import docplex_available, LogicalToDoCplex
 
 from pyomo.core.base.range import NumericRange
