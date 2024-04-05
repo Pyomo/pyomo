@@ -707,8 +707,6 @@ def _get_bool_valued_expr(arg):
 def _handle_monomial_expr(visitor, node, arg1, arg2):
     # Monomial terms show up a lot.  This handles some common
     # simplifications (necessary in part for the unit tests)
-    print(arg1)
-    print(arg2)
     if arg2[1].__class__ in EXPR.native_types:
         return _GENERAL, arg1[1] * arg2[1]
     elif arg1[1].__class__ in EXPR.native_types and arg1[1] == 1:
