@@ -261,11 +261,11 @@ class TestCPExpressionWalker_AlgebraicExpressions(CommonTest):
 
         e = (1 / m.p) * m.x
         expr = visitor.walk_expression((e, e, 0))
-        self.assertTrue(expr[1].equals(0.25 * x))
+        self.assertTrue(expr[1].equals(cp.float_div(1, 4) * x))
 
         e = (m.p ** (0.5)) * m.x
         expr = visitor.walk_expression((e, e, 0))
-        self.assertTrue(expr[1].equals(2 * x))
+        self.assertTrue(expr[1].equals(cp.power(4, 0.5) * x))
 
 
 @unittest.skipIf(not docplex_available, "docplex is not available")

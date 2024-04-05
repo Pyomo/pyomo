@@ -88,6 +88,7 @@ import pyomo.core.expr as EXPR
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor, identify_variables
 from pyomo.core.base import Set, RangeSet
 from pyomo.core.base.set import SetProduct
+from pyomo.repn.util import ExitNodeDispatcher
 from pyomo.opt import WriterFactory, SolverFactory, TerminationCondition, SolverResults
 
 ### FIXME: Remove the following as soon as non-active components no
@@ -707,9 +708,11 @@ def _get_bool_valued_expr(arg):
 def _handle_monomial_expr(visitor, node, arg1, arg2):
     # Monomial terms show up a lot.  This handles some common
     # simplifications (necessary in part for the unit tests)
+    print(arg1)
+    print(arg2)
     if arg2[1].__class__ in EXPR.native_types:
         return _GENERAL, arg1[1] * arg2[1]
-    elif arg1[1] == 1:
+    elif arg1[1].__class__ in EXPR.native_types and arg1[1] == 1:
         return arg2
     return (_GENERAL, cp.times(_get_int_valued_expr(arg1), _get_int_valued_expr(arg2)))
 
@@ -997,8 +1000,7 @@ def _handle_synchronize_expression_node(visitor, node, *args):
     return _GENERAL, cp.synchronize(args[0][1], [arg[1] for arg in args[1:]])
 
 
-class LogicalToDoCplex(StreamBasedExpressionVisitor):
-    _operator_handles = {
+_operator_handles = {
         EXPR.GetItemExpression: _handle_getitem,
         EXPR.Structural_GetItemExpression: _handle_getitem,
         EXPR.Numeric_GetItemExpression: _handle_getitem,
@@ -1047,6 +1049,14 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         AlternativeExpression: _handle_alternative_expression_node,
         SynchronizeExpression: _handle_synchronize_expression_node,
     }
+
+
+class LogicalToDoCplex(StreamBasedExpressionVisitor):
+    exit_node_dispatcher = ExitNodeDispatcher(
+        _operator_handles
+    )
+    # NOTE: Because of indirection, we can encounter indexed Params and Vars in
+    # expressions
     _var_handles = {
         IntervalVarStartTime: _before_interval_var_start_time,
         IntervalVarEndTime: _before_interval_var_end_time,
@@ -1065,7 +1075,7 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         IndexedBooleanVar: _before_indexed_boolean_var,
         _GeneralExpressionData: _before_named_expression,
         ScalarExpression: _before_named_expression,
-        IndexedParam: _before_indexed_param,  # Because of indirection
+        IndexedParam: _before_indexed_param,
         ScalarParam: _before_param,
         _ParamData: _before_param,
     }
@@ -1101,7 +1111,7 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         return True, None
 
     def exitNode(self, node, data):
-        return self._operator_handles[node.__class__](self, node, *data)
+        return self.exit_node_dispatcher[node.__class__](self, node, *data)
 
     finalizeResult = None
 
