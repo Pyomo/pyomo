@@ -926,6 +926,7 @@ Observe that the log contains the following information:
     keepfiles=False
     tee=False
     load_solution=True
+    symbolic_solver_labels=False
     objective_focus=<ObjectiveType.worst_case: 1>
     nominal_uncertain_param_vals=[0.13248000000000001, 4.97, 4.97, 1800]
     decision_rule_order=1
