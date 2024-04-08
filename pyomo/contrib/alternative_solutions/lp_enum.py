@@ -10,14 +10,24 @@
 #  ___________________________________________________________________________
 
 import pyomo.environ as pe
-from pyomo.contrib.alternative_solutions import aos_utils, shifted_lp, \
-    solution, solnpool
-    
-def enumerate_linear_solutions_soln_pool(model, num_solutions=10, 
-                                         variables='all', rel_opt_gap=None, 
-                                         abs_opt_gap=None,
-                                         solver_options={}, tee=False):
-    '''
+from pyomo.contrib.alternative_solutions import (
+    aos_utils,
+    shifted_lp,
+    solution,
+    solnpool,
+)
+
+
+def enumerate_linear_solutions_soln_pool(
+    model,
+    num_solutions=10,
+    variables="all",
+    rel_opt_gap=None,
+    abs_opt_gap=None,
+    solver_options={},
+    tee=False,
+):
+    """
     Finds alternative optimal solutions a (mixed-integer) linear program using
     Gurobi's solution pool feature.
 
@@ -28,59 +38,62 @@ def enumerate_linear_solutions_soln_pool(model, num_solutions=10,
         num_solutions : int
             The maximum number of solutions to generate.
         variables: 'all' or a collection of Pyomo _GeneralVarData variables
-            The variables for which bounds will be generated. 'all' indicates 
+            The variables for which bounds will be generated. 'all' indicates
             that all variables will be included. Alternatively, a collection of
             _GenereralVarData variables can be provided.
         rel_opt_gap : float or None
-            The relative optimality gap for the original objective for which 
-            variable bounds will be found. None indicates that a relative gap 
+            The relative optimality gap for the original objective for which
+            variable bounds will be found. None indicates that a relative gap
             constraint will not be added to the model.
         abs_opt_gap : float or None
-            The absolute optimality gap for the original objective for which 
-            variable bounds will be found. None indicates that an absolute gap 
+            The absolute optimality gap for the original objective for which
+            variable bounds will be found. None indicates that an absolute gap
             constraint will not be added to the model.
         solver_options : dict
             Solver option-value pairs to be passed to the solver.
         tee : boolean
             Boolean indicating that the solver output should be displayed.
-            
+
         Returns
         -------
         solutions
             A list of Solution objects.
             [Solution]
-    '''
-    opt = pe.SolverFactory('gurobi')
-    print('STARTING LP ENUMERATION ANALYSIS USING GUROBI SOLUTION POOL')
-    
+    """
+    opt = pe.SolverFactory("gurobi")
+    print("STARTING LP ENUMERATION ANALYSIS USING GUROBI SOLUTION POOL")
+
     # For now keeping things simple
     # TODO: Relax this
-    assert variables == 'all'
+    assert variables == "all"
 
-    opt = pe.SolverFactory('gurobi')
+    opt = pe.SolverFactory("gurobi")
     for parameter, value in solver_options.items():
         opt.options[parameter] = value
-        
-    print('Peforming initial solve of model.')
+
+    print("Peforming initial solve of model.")
     results = opt.solve(model, tee=tee)
     status = results.solver.status
     condition = results.solver.termination_condition
     if condition != pe.TerminationCondition.optimal:
-        raise Exception(('Model could not be solve. LP enumeration analysis '
-                         'cannot be applied, SolverStatus = {}, '
-                         'TerminationCondition = {}').format(status.value, 
-                                                             condition.value))
-    
-    orig_objective = aos_utils._get_active_objective(model)
+        raise Exception(
+            (
+                "Model could not be solve. LP enumeration analysis "
+                "cannot be applied, SolverStatus = {}, "
+                "TerminationCondition = {}"
+            ).format(status.value, condition.value)
+        )
+
+    orig_objective = aos_utils.get_active_objective(model)
     orig_objective_value = pe.value(orig_objective)
-    print('Found optimal solution, value = {}.'.format(orig_objective_value))
-    
-    aos_block = aos_utils._add_aos_block(model, name='_lp_enum')
-    print('Added block {} to the model.'.format(aos_block))
-    aos_utils._add_objective_constraint(aos_block, orig_objective, 
-                                        orig_objective_value, rel_opt_gap, 
-                                        abs_opt_gap)   
-    
+    print("Found optimal solution, value = {}.".format(orig_objective_value))
+
+    aos_block = aos_utils._add_aos_block(model, name="_lp_enum")
+    print("Added block {} to the model.".format(aos_block))
+    aos_utils._add_objective_constraint(
+        aos_block, orig_objective, orig_objective_value, rel_opt_gap, abs_opt_gap
+    )
+
     cannonical_block = shifted_lp.get_shifted_linear_model(model)
     cb = cannonical_block
 
@@ -88,22 +101,31 @@ def enumerate_linear_solutions_soln_pool(model, num_solutions=10,
     cb.basic_lower = pe.Var(cb.var_lower_index, domain=pe.Binary)
     cb.basic_upper = pe.Var(cb.var_upper_index, domain=pe.Binary)
     cb.basic_slack = pe.Var(cb.slack_index, domain=pe.Binary)
-  
+
     # w upper bounds constraints
     def bound_lower_rule(m, var_index):
-        return m.var_lower[var_index] <= m.var_lower[var_index].ub \
-            * m.basic_lower[var_index]
-    cb.bound_lower = pe.Constraint(cb.var_lower_index,rule=bound_lower_rule)
-    
+        return (
+            m.var_lower[var_index]
+            <= m.var_lower[var_index].ub * m.basic_lower[var_index]
+        )
+
+    cb.bound_lower = pe.Constraint(cb.var_lower_index, rule=bound_lower_rule)
+
     def bound_upper_rule(m, var_index):
-        return m.var_upper[var_index] <= m.var_upper[var_index].ub \
-            * m.basic_upper[var_index]
-    cb.bound_upper = pe.Constraint(cb.var_upper_index,rule=bound_upper_rule)
-    
+        return (
+            m.var_upper[var_index]
+            <= m.var_upper[var_index].ub * m.basic_upper[var_index]
+        )
+
+    cb.bound_upper = pe.Constraint(cb.var_upper_index, rule=bound_upper_rule)
+
     def bound_slack_rule(m, var_index):
-        return m.slack_vars[var_index] <= m.slack_vars[var_index].ub \
-            * m.basic_slack[var_index]
-    cb.bound_slack = pe.Constraint(cb.slack_index,rule=bound_slack_rule)   
+        return (
+            m.slack_vars[var_index]
+            <= m.slack_vars[var_index].ub * m.basic_slack[var_index]
+        )
+
+    cb.bound_slack = pe.Constraint(cb.slack_index, rule=bound_slack_rule)
     cb.pprint()
     results = solnpool.gurobi_generate_solutions(cb, num_solutions)
 
@@ -114,7 +136,7 @@ def enumerate_linear_solutions_soln_pool(model, num_solutions=10,
     #     if condition == pe.TerminationCondition.optimal:
     #         for var, index in cb.var_map.items():
     #             var.set_value(var.lb + cb.var_lower[index].value)
-    #         sol = solution.Solution(model, all_variables, 
+    #         sol = solution.Solution(model, all_variables,
     #                                  objective=orig_objective)
     #         solutions.append(sol)
     #         orig_objective_value = sol.objective[1]
@@ -127,19 +149,19 @@ def enumerate_linear_solutions_soln_pool(model, num_solutions=10,
     #             cb.del_component('link_in_out')
 
     #         if hasattr(cb, 'basic_last_lower'):
-    #             cb.del_component('basic_last_lower')       
+    #             cb.del_component('basic_last_lower')
     #         if hasattr(cb, 'basic_last_upper'):
     #             cb.del_component('basic_last_upper')
     #         if hasattr(cb, 'basic_last_slack'):
     #             cb.del_component('basic_last_slack')
-                
+
     #         cb.link_in_out = pe.Constraint(pe.Any)
     #         cb.basic_last_lower = pe.Var(pe.Any, domain=pe.Binary, dense=False)
     #         cb.basic_last_upper = pe.Var(pe.Any, domain=pe.Binary, dense=False)
     #         cb.basic_last_slack = pe.Var(pe.Any, domain=pe.Binary, dense=False)
-    #         basic_last_list = [cb.basic_last_lower, cb.basic_last_upper, 
+    #         basic_last_list = [cb.basic_last_lower, cb.basic_last_upper,
     #                            cb.basic_last_slack]
-            
+
     #         num_non_zero = 0
     #         force_out_expr = -1
     #         non_zero_basic_expr = 1
@@ -159,14 +181,22 @@ def enumerate_linear_solutions_soln_pool(model, num_solutions=10,
 
     # aos_block.deactivate()
     # print('COMPLETED LP ENUMERATION ANALYSIS')
-    
+
     # return solutions
 
-def enumerate_linear_solutions(model, num_solutions=10, variables='all', 
-                               rel_opt_gap=None, abs_opt_gap=None,
-                               search_mode='optimal', solver='gurobi', 
-                               solver_options={}, tee=False):
-    '''
+
+def enumerate_linear_solutions(
+    model,
+    num_solutions=10,
+    variables="all",
+    rel_opt_gap=None,
+    abs_opt_gap=None,
+    search_mode="optimal",
+    solver="gurobi",
+    solver_options={},
+    tee=False,
+):
+    """
     Finds alternative optimal solutions a (mixed-integer) linear program.
 
         Parameters
@@ -176,22 +206,22 @@ def enumerate_linear_solutions(model, num_solutions=10, variables='all',
         num_solutions : int
             The maximum number of solutions to generate.
         variables: 'all' or a collection of Pyomo _GeneralVarData variables
-            The variables for which bounds will be generated. 'all' indicates 
+            The variables for which bounds will be generated. 'all' indicates
             that all variables will be included. Alternatively, a collection of
             _GenereralVarData variables can be provided.
         rel_opt_gap : float or None
-            The relative optimality gap for the original objective for which 
-            variable bounds will be found. None indicates that a relative gap 
+            The relative optimality gap for the original objective for which
+            variable bounds will be found. None indicates that a relative gap
             constraint will not be added to the model.
         abs_opt_gap : float or None
-            The absolute optimality gap for the original objective for which 
-            variable bounds will be found. None indicates that an absolute gap 
+            The absolute optimality gap for the original objective for which
+            variable bounds will be found. None indicates that an absolute gap
             constraint will not be added to the model.
         search_mode : 'optimal', 'random', or 'norm'
             Indicates the mode that is used to generate alternative solutions.
             The optimal mode finds the next best solution. The random mode
             finds an alternative solution in the direction of a random ray. The
-            norm mode iteratively finds solution that maximize the L2 distance 
+            norm mode iteratively finds solution that maximize the L2 distance
             from previously discovered solutions.
         solver : string
             The solver to be used.
@@ -199,26 +229,29 @@ def enumerate_linear_solutions(model, num_solutions=10, variables='all',
             Solver option-value pairs to be passed to the solver.
         tee : boolean
             Boolean indicating that the solver output should be displayed.
-            
+
         Returns
         -------
         solutions
             A list of Solution objects.
             [Solution]
-    '''
+    """
     # TODO: Set this intelligently
     zero_threshold = 1e-5
-    print('STARTING LP ENUMERATION ANALYSIS')
-    
+    print("STARTING LP ENUMERATION ANALYSIS")
+
     # For now keeping things simple
     # TODO: See if this can be relaxed
-    assert variables == 'all'
-    
-    assert search_mode in ['optimal', 'random', 'norm'], \
-        'search mode must be "optimal", "random", or "norm".'
-        
-    if variables == 'all':
-        all_variables = aos_utils.get_model_variables(model, 'all')
+    assert variables == "all"
+
+    assert search_mode in [
+        "optimal",
+        "random",
+        "norm",
+    ], 'search mode must be "optimal", "random", or "norm".'
+
+    if variables == "all":
+        all_variables = aos_utils.get_model_variables(model, "all")
     # else:
     #     binary_variables = ComponentSet()
     #     non_binary_variables = []
@@ -231,20 +264,20 @@ def enumerate_linear_solutions(model, num_solutions=10, variables='all',
     #         print(('Warning: The following non-binary variables were included'
     #                'in the variable list and will be ignored:'))
     #         print(", ".join(non_binary_variables))
-    # all_variables = aos_utils.get_model_variables(model, 'all', 
+    # all_variables = aos_utils.get_model_variables(model, 'all',
     #                                               include_fixed=True)
-    
+
     # TODO: Relax this if possible
     for var in all_variables:
-        assert var.is_continuous(), 'Model must be an LP'
+        assert var.is_continuous(), "Model must be an LP"
 
     opt = pe.SolverFactory(solver)
     for parameter, value in solver_options.items():
         opt.options[parameter] = value
-        
+
     use_appsi = False
     # TODO Check all this once implemented
-    if 'appsi' in solver:
+    if "appsi" in solver:
         use_appsi = True
         opt.update_config.check_for_new_or_removed_constraints = True
         opt.update_config.update_constraints = False
@@ -254,40 +287,43 @@ def enumerate_linear_solutions(model, num_solutions=10, variables='all',
         opt.update_config.update_params = False
         opt.update_config.update_named_expressions = False
         opt.update_config.treat_fixed_vars_as_params = False
-        
-        if search_mode == 'norm':
+
+        if search_mode == "norm":
             opt.update_config.check_for_new_objective = True
             opt.update_config.update_objective = True
-        elif search_mode == 'random':
+        elif search_mode == "random":
             opt.update_config.check_for_new_objective = True
-            opt.update_config.update_objective = False   
+            opt.update_config.update_objective = False
         else:
             opt.update_config.check_for_new_objective = False
             opt.update_config.update_objective = False
-        
-    print('Peforming initial solve of model.')
+
+    print("Peforming initial solve of model.")
     results = opt.solve(model, tee=tee)
     status = results.solver.status
     condition = results.solver.termination_condition
     if condition != pe.TerminationCondition.optimal:
-        raise Exception(('Model could not be solved. LP enumeration analysis '
-                         'cannot be applied, SolverStatus = {}, '
-                         'TerminationCondition = {}').format(status.value, 
-                                                             condition.value))
-    
-    orig_objective = aos_utils._get_active_objective(model)
+        raise Exception(
+            (
+                "Model could not be solved. LP enumeration analysis "
+                "cannot be applied, SolverStatus = {}, "
+                "TerminationCondition = {}"
+            ).format(status.value, condition.value)
+        )
+
+    orig_objective = aos_utils.get_active_objective(model)
     orig_objective_value = pe.value(orig_objective)
-    print('Found optimal solution, value = {}.'.format(orig_objective_value))
-    
-    aos_block = aos_utils._add_aos_block(model, name='_lp_enum')
-    print('Added block {} to the model.'.format(aos_block))
-    aos_utils._add_objective_constraint(aos_block, orig_objective, 
-                                        orig_objective_value, rel_opt_gap, 
-                                        abs_opt_gap)   
-    
+    print("Found optimal solution, value = {}.".format(orig_objective_value))
+
+    aos_block = aos_utils._add_aos_block(model, name="_lp_enum")
+    print("Added block {} to the model.".format(aos_block))
+    aos_utils._add_objective_constraint(
+        aos_block, orig_objective, orig_objective_value, rel_opt_gap, abs_opt_gap
+    )
+
     canon_block = shifted_lp.get_shifted_linear_model(model)
     cb = canon_block
-        
+
     # Set K
     cb.iteration = pe.Set(pe.PositiveIntegers)
 
@@ -295,55 +331,59 @@ def enumerate_linear_solutions(model, num_solutions=10, variables='all',
     cb.basic_lower = pe.Var(pe.Any, domain=pe.Binary, dense=False)
     cb.basic_upper = pe.Var(pe.Any, domain=pe.Binary, dense=False)
     cb.basic_slack = pe.Var(pe.Any, domain=pe.Binary, dense=False)
-  
+
     # w upper bounds constraints
     cb.bound_lower = pe.Constraint(pe.Any)
     cb.bound_upper = pe.Constraint(pe.Any)
     cb.bound_slack = pe.Constraint(pe.Any)
-    
+
     # non-zero basic variable no-good cut set
     cb.cut_set = pe.Constraint(pe.PositiveIntegers)
-    
-    variable_groups = [(cb.var_lower, cb.basic_lower, cb.bound_lower),
-                       (cb.var_upper, cb.basic_upper, cb.bound_upper),
-                       (cb.slack_vars, cb.basic_slack, cb.bound_slack)]
+
+    variable_groups = [
+        (cb.var_lower, cb.basic_lower, cb.bound_lower),
+        (cb.var_upper, cb.basic_upper, cb.bound_upper),
+        (cb.slack_vars, cb.basic_slack, cb.bound_slack),
+    ]
 
     solution_number = 1
-    solutions = []    
+    solutions = []
     while solution_number <= num_solutions:
-        print('Solving Iteration {}: '.format(solution_number), end='')
+        print("Solving Iteration {}: ".format(solution_number), end="")
         results = opt.solve(cb, tee=tee)
         status = results.solver.status
         condition = results.solver.termination_condition
         if condition == pe.TerminationCondition.optimal:
             for var, index in cb.var_map.items():
                 var.set_value(var.lb + cb.var_lower[index].value)
-            sol = solution.Solution(model, all_variables, 
-                                     objective=orig_objective)
+            sol = solution.Solution(model, all_variables, objective=orig_objective)
             solutions.append(sol)
             orig_objective_value = sol.objective[1]
-            print('Solved, objective = {}'.format(orig_objective_value))
+            print("Solved, objective = {}".format(orig_objective_value))
             for var, index in cb.var_map.items():
-                print('{} = {}'.format(var.name, var.lb + cb.var_lower[index].value))
-            if hasattr(cb, 'force_out'):
-                cb.del_component('force_out')
-            if hasattr(cb, 'link_in_out'):
-                cb.del_component('link_in_out')
+                print("{} = {}".format(var.name, var.lb + cb.var_lower[index].value))
+            if hasattr(cb, "force_out"):
+                cb.del_component("force_out")
+            if hasattr(cb, "link_in_out"):
+                cb.del_component("link_in_out")
 
-            if hasattr(cb, 'basic_last_lower'):
-                cb.del_component('basic_last_lower')       
-            if hasattr(cb, 'basic_last_upper'):
-                cb.del_component('basic_last_upper')
-            if hasattr(cb, 'basic_last_slack'):
-                cb.del_component('basic_last_slack')
-                
+            if hasattr(cb, "basic_last_lower"):
+                cb.del_component("basic_last_lower")
+            if hasattr(cb, "basic_last_upper"):
+                cb.del_component("basic_last_upper")
+            if hasattr(cb, "basic_last_slack"):
+                cb.del_component("basic_last_slack")
+
             cb.link_in_out = pe.Constraint(pe.Any)
             cb.basic_last_lower = pe.Var(pe.Any, domain=pe.Binary, dense=False)
             cb.basic_last_upper = pe.Var(pe.Any, domain=pe.Binary, dense=False)
             cb.basic_last_slack = pe.Var(pe.Any, domain=pe.Binary, dense=False)
-            basic_last_list = [cb.basic_last_lower, cb.basic_last_upper, 
-                               cb.basic_last_slack]
-            
+            basic_last_list = [
+                cb.basic_last_lower,
+                cb.basic_last_upper,
+                cb.basic_last_slack,
+            ]
+
             num_non_zero = 0
             force_out_expr = -1
             non_zero_basic_expr = 1
@@ -354,27 +394,34 @@ def enumerate_linear_solutions(model, num_solutions=10, variables='all',
                         num_non_zero += 1
                         if var not in binary_var:
                             binary_var[var]
-                            constraint[var] = continuous_var[var] <= \
-                                continuous_var[var].ub * binary_var[var]
+                            constraint[var] = (
+                                continuous_var[var]
+                                <= continuous_var[var].ub * binary_var[var]
+                            )
                         non_zero_basic_expr += binary_var[var]
                         basic_var = basic_last_list[idx][var]
                         force_out_expr += basic_var
                         cb.link_in_out[var] = basic_var + binary_var[var] <= 1
             cb.force_out = pe.Constraint(expr=force_out_expr >= 0)
             cb.cut_set[solution_number] = non_zero_basic_expr <= num_non_zero
-            
+
             solution_number += 1
-        elif (condition == pe.TerminationCondition.infeasibleOrUnbounded or 
-              condition == pe.TerminationCondition.infeasible):
+        elif (
+            condition == pe.TerminationCondition.infeasibleOrUnbounded
+            or condition == pe.TerminationCondition.infeasible
+        ):
             print("Infeasible, all alternative solutions have been found.")
             break
         else:
-            print(("Unexpected solver condition. Stopping LP enumeration. "
-                   "SolverStatus = {}, TerminationCondition = {}").format(
-                       status.value, condition.value))
+            print(
+                (
+                    "Unexpected solver condition. Stopping LP enumeration. "
+                    "SolverStatus = {}, TerminationCondition = {}"
+                ).format(status.value, condition.value)
+            )
             break
 
     aos_block.deactivate()
-    print('COMPLETED LP ENUMERATION ANALYSIS')
-    
+    print("COMPLETED LP ENUMERATION ANALYSIS")
+
     return solutions

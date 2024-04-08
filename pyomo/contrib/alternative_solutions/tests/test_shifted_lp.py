@@ -20,31 +20,33 @@ import pdb
 #  ___________________________________________________________________________
 
 
-mip_solver = 'gurobi_appsi'
-#mip_solver = 'gurobi'
+mip_solver = "gurobi_appsi"
+# mip_solver = 'gurobi'
+
 
 class TestShiftedIP(unittest.TestCase):
-        
+
     def test_mip_abs_objective(self):
-        '''COMMENT'''
+        """COMMENT"""
         m = tc.get_indexed_pentagonal_pyramid_mip()
         m.x.domain = pe.Reals
-        opt = pe.SolverFactory('gurobi')
-        old_results = opt.solve(m, tee = True)
+        opt = pe.SolverFactory("gurobi")
+        old_results = opt.solve(m, tee=True)
         old_obj = pe.value(m.o)
         new_model = shifted_lp.get_shifted_linear_model(m)
-        new_results = opt.solve(new_model, tee = True)
+        new_results = opt.solve(new_model, tee=True)
         new_obj = pe.value(new_model.objective)
         self.assertAlmostEqual(old_obj, new_obj)
-        
+
     def test_polyhedron(self):
         m = tc.get_3d_polyhedron_problem()
-        opt = pe.SolverFactory('gurobi')
-        old_results = opt.solve(m, tee = True)
+        opt = pe.SolverFactory("gurobi")
+        old_results = opt.solve(m, tee=True)
         old_obj = pe.value(m.o)
         new_model = shifted_lp.get_shifted_linear_model(m)
-        new_results = opt.solve(new_model, tee = True)
+        new_results = opt.solve(new_model, tee=True)
         new_obj = pe.value(new_model.objective)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

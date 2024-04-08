@@ -20,29 +20,27 @@ import pyomo.contrib.alternative_solutions.tests.test_cases as tc
 from collections import Counter
 import pdb
 
-mip_solver = 'gurobi'
 
+
+@unittest.pytest.mark.solver("gurobi")
 class TestSolnPoolUnit(unittest.TestCase):
-    #TODO: Add test cases.
-    '''
-    Cases to cover: 
-        MIP feasability, 
-        MILP feasability, 
-        LP feasability (for an LP just one solution should be returned since gurobi cant enumerate over continuous vars)
-        For a MIP or MILP we should check that num solutions, rel_opt_gap and abs_opt_gap work
+    """
+    Cases to cover:
+        
+        LP feasability (for an LP just one solution should be returned since gurobi cannot enumerate over continuous vars)
+
         Pass at least one solver option to make sure that work, e.g. time limit
-        
-        I have the triagnle problem which should be easy to test with, there is 
-        also the knapsack problem. For the LP case we can use the 2d diamond problem
-        I don't really have MILP case worked out though, so we may need to create one.
-        
-        We probably also need a utility to check that a two sets of solutions are the same.
+
+        We need a utility to check that a two sets of solutions are the same.
         Maybe this should be an AOS utility since it may be a thing we will want to do often.
-    '''
+    """
 
     def test_ip_feasibility(self):
-        '''Check that the correct number of alternate solutions are found for
-        each objective value in an ip with known solutions'''
+        """
+        Enumerate all solutions for an ip: triangle_ip.
+
+        Check that the correct number of alternate solutions are found.
+        """
         m = tc.get_triangle_ip()
         results = sp.gurobi_generate_solutions(m, 100)
         objectives = [round(result.objective[1], 2) for result in results]
@@ -50,32 +48,70 @@ class TestSolnPoolUnit(unittest.TestCase):
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
         assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
 
+    def test_ip_num_solutions(self):
+        """
+        Enumerate 8 solutions for an ip: triangle_ip.
+
+        Check that the correct number of alternate solutions are found.
+        """
+        m = tc.get_triangle_ip()
+        results = sp.gurobi_generate_solutions(m, 8)
+        for r in results:
+            print(r)
+        assert len(results) == 8
+        objectives = [round(result.objective[1], 2) for result in results]
+        actual_solns_by_obj = [6, 2]
+        unique_solns_by_obj = [val for val in Counter(objectives).values()]
+        assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
+
     def test_mip_feasibility(self):
-        '''
-        Check that the correct number of alternate solutions are found for
-        each objective value in a mip with known solutions'''
+        """
+        Enumerate all solutions for a mip: indexed_pentagonal_pyramid_mip.
+
+        Check that the correct number of alternate solutions are found.
+        """
         m = tc.get_indexed_pentagonal_pyramid_mip()
-        results = sp.gurobi_generate_solutions(m, 100, tee = True)
+        results = sp.gurobi_generate_solutions(m, 100)
         objectives = [round(result.objective[1], 2) for result in results]
         actual_solns_by_obj = m.num_ranked_solns
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
         assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
 
     def test_mip_rel_feasibility(self):
-        '''
-        Check that relative mip gap constraints are added and the correct
-        number of alternative solutions are found'''
+        """
+        Enumerate solutions for a mip: indexed_pentagonal_pyramid_mip.
+
+        Check that only solutions within a relative tolerance of 0.2 are
+        found.
+        """
         m = tc.get_pentagonal_pyramid_mip()
-        results = sp.gurobi_generate_solutions(m, 100, rel_opt_gap=.2)
+        results = sp.gurobi_generate_solutions(m, 100, rel_opt_gap=0.2)
+        objectives = [round(result.objective[1], 2) for result in results]
+        actual_solns_by_obj = m.num_ranked_solns[0:2]
+        unique_solns_by_obj = [val for val in Counter(objectives).values()]
+        assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
+
+    def test_mip_rel_feasibility_options(self):
+        """
+        Enumerate solutions for a mip: indexed_pentagonal_pyramid_mip.
+
+        Check that only solutions within a relative tolerance of 0.2 are
+        found.
+        """
+        m = tc.get_pentagonal_pyramid_mip()
+        results = sp.gurobi_generate_solutions(m, 100, solver_options={"PoolGap":0.2})
         objectives = [round(result.objective[1], 2) for result in results]
         actual_solns_by_obj = m.num_ranked_solns[0:2]
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
         assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
 
     def test_mip_abs_feasibility(self):
-        '''
-        Check that absolute mip gap constraints are added and the correct
-        number of alternative solutions are found'''
+        """
+        Enumerate solutions for a mip: indexed_pentagonal_pyramid_mip.
+
+        Check that only solutions within an absolute tolerance of 1.99 are
+        found.
+        """
         m = tc.get_pentagonal_pyramid_mip()
         results = sp.gurobi_generate_solutions(m, 100, abs_opt_gap=1.99)
         objectives = [round(result.objective[1], 2) for result in results]
@@ -83,5 +119,20 @@ class TestSolnPoolUnit(unittest.TestCase):
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
         assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
 
-if __name__ == '__main__':
+    def test_mip_no_time(self):
+        """
+        Enumerate solutions for a mip: indexed_pentagonal_pyramid_mip.
+
+        Check that no solutions are returned with a timelimit of 0.
+        """
+        m = tc.get_pentagonal_pyramid_mip()
+        results = sp.gurobi_generate_solutions(m, 100, solver_options={"TimeLimit":0.0})
+        assert len(results) == 0
+        #objectives = [round(result.objective[1], 2) for result in results]
+        #actual_solns_by_obj = m.num_ranked_solns[0:2]
+        #unique_solns_by_obj = [val for val in Counter(objectives).values()]
+        #assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
+
+
+if __name__ == "__main__":
     unittest.main()
