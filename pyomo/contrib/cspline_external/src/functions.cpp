@@ -18,7 +18,7 @@
 
 unsigned int n_cspline_1d = 0;
 std::unordered_map<std::string, unsigned int> idx_cspline_1d;
-std::vector< std::vector<double> > joints_cspline_1d;
+std::vector< std::vector<double> > knots_cspline_1d;
 std::vector< std::vector<double> > a1_cspline_1d;
 std::vector< std::vector<double> > a2_cspline_1d;
 std::vector< std::vector<double> > a3_cspline_1d;
@@ -52,21 +52,21 @@ int read_parameters_cspline_1d(std::string file_path) {
    n_seg_cspline_1d.resize(n_cspline_1d);
    n_seg_cspline_1d[idx] = n;
 
-   joints_cspline_1d.resize(n_cspline_1d);
+   knots_cspline_1d.resize(n_cspline_1d);
    a1_cspline_1d.resize(n_cspline_1d);
    a2_cspline_1d.resize(n_cspline_1d);
    a3_cspline_1d.resize(n_cspline_1d);
    a4_cspline_1d.resize(n_cspline_1d);
 
-   joints_cspline_1d[idx].resize(n + 1);
+   knots_cspline_1d[idx].resize(n + 1);
    a1_cspline_1d[idx].resize(n);
    a2_cspline_1d[idx].resize(n);
    a3_cspline_1d[idx].resize(n);
    a4_cspline_1d[idx].resize(n);
 
-   // get the joints
+   // get the knots
    for(i=0; i < n + 1; ++i){
-      param_file >> joints_cspline_1d[idx][i];
+      param_file >> knots_cspline_1d[idx][i];
    }
 
    // get the a1 params
@@ -101,8 +101,8 @@ extern real cspline_1d(arglist *al) {
    real a1, a2, a3, a4;
 
    //find segment index
-   auto lit = std::lower_bound(joints_cspline_1d[idx].begin(), joints_cspline_1d[idx].end(), x);
-   seg = lit - joints_cspline_1d[idx].begin();
+   auto lit = std::lower_bound(knots_cspline_1d[idx].begin(), knots_cspline_1d[idx].end(), x);
+   seg = lit - knots_cspline_1d[idx].begin();
    if(seg > 0) --seg;
    if(seg >= n_seg_cspline_1d[idx]) seg = n_seg_cspline_1d[idx] - 1;
 

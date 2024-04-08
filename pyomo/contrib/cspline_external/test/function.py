@@ -2,7 +2,7 @@ import pyomo.environ as pyo
 from pyomo.common.fileutils import find_library
 
 if __name__ == "__main__":
-    lib = find_library("cspline_1d_external")
+    lib = find_library("cspline_external")
     params = "t1_params.txt"
 
     m = pyo.ConcreteModel()

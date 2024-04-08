@@ -79,7 +79,7 @@ def fxx(x, alpha, s=None):
 def cubic_parameters_model(
     x_data,
     y_data,
-    x_joints=None,
+    x_knots=None,
     end_point_constraint=True,
     objective_form=False,
     name="cubic spline parameters model",
@@ -94,7 +94,7 @@ def cubic_parameters_model(
     Args:
         x_data: list of x data
         y_data: list of y data
-        x_joints: optional list of joints
+        x_knots: optional list of knots
         end_point_constraint: if true add constraint that second derivative = 0 at 
             endpoints
         objective_form: if true write a least squares objective rather than constraints
@@ -107,23 +107,23 @@ def cubic_parameters_model(
     """
     n_data = len(x_data)
     assert n_data == len(y_data)
-    if x_joints is None:
-        n_joints = n_data
+    if x_knots is None:
+        n_knots = n_data
         n_seg = n_data - 1
-        x_joints = x_data
+        x_knots = x_data
     else:
-        n_joints = len(x_joints)
-        n_seg = n_joints - 1
+        n_knots = len(x_knots)
+        n_seg = n_knots - 1
 
     m = pyo.ConcreteModel(name=name)
-    # Sets of indexes for joints, segments, and data
-    m.jnt_idx = pyo.RangeSet(n_joints)
-    m.seg_idx = pyo.RangeSet(n_joints - 1)
+    # Sets of indexes for knots, segments, and data
+    m.jnt_idx = pyo.RangeSet(n_knots)
+    m.seg_idx = pyo.RangeSet(n_knots - 1)
     m.dat_idx = pyo.RangeSet(n_data)
 
     m.x_data = pyo.Param(m.dat_idx, initialize={i + 1: x for i, x in enumerate(x_data)})
     m.y_data = pyo.Param(m.dat_idx, initialize={i + 1: x for i, x in enumerate(y_data)})
-    m.x = pyo.Var(m.jnt_idx, initialize={i + 1: x for i, x in enumerate(x_joints)})
+    m.x = pyo.Var(m.jnt_idx, initialize={i + 1: x for i, x in enumerate(x_knots)})
     m.x.fix()
     m.alpha = pyo.Var(m.seg_idx, {1, 2, 3, 4}, initialize=1)
 
@@ -152,8 +152,8 @@ def cubic_parameters_model(
 
     # Identify segments used to predict y_data at each x_data.  We use search in
     # instead of a dict lookup, since we don't want to require the data to be at
-    # the joints, even though that is almost always the case.
-    idx = np.searchsorted(x_joints, x_data)
+    # the knots, even though that is almost always the case.
+    idx = np.searchsorted(x_knots, x_data)
 
     if end_point_constraint:
         add_endpoint_second_derivative_constraints(m)
@@ -194,7 +194,7 @@ def add_endpoint_second_derivative_constraints(m):
 
 def get_parameters(m, file_name=None):
 
-    joints = [pyo.value(x) for x in m.x.values()]
+    knots = [pyo.value(x) for x in m.x.values()]
     a1 = [None] * len(m.seg_idx)
     a2 = [None] * len(m.seg_idx)
     a3 = [None] * len(m.seg_idx)
@@ -208,11 +208,11 @@ def get_parameters(m, file_name=None):
     if file_name is not None:
         with open(file_name, "w") as fptr:
             fptr.write(f"{len(a1)}\n")
-            for l in [joints, a1, a2, a3, a4]:
+            for l in [knots, a1, a2, a3, a4]:
                 for x in l:
                     fptr.write(f"{x}\n")
 
-    return joints, a1, a2, a3, a4
+    return knots, a1, a2, a3, a4
 
 def _extract_params(m):
     """Extract alpha as a plain dict of floats to play nice with vectorized functions"""
@@ -300,7 +300,7 @@ def plot_fxx(m, file_name=None, **kwargs):
 
 if __name__ == "__main__":
 
-    x_joints = [
+    x_knots = [
         # -2,
         # -1,
         1,
@@ -328,7 +328,7 @@ if __name__ == "__main__":
         1,
     ]
 
-    m = cubic_parameters_model(x_data, y_data, x_joints)
+    m = cubic_parameters_model(x_data, y_data, x_knots)
 
     """
     m.alpha[1, 1].fix(0)
