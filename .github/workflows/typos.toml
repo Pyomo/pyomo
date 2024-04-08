@@ -40,4 +40,28 @@ WRONLY = "WRONLY"
 Hax = "Hax"
 # Big Sur
 Sur = "Sur"
+# Ignore the shorthand ans for answer
+ans = "ans"
+# Ignore the keyword arange
+arange = "arange"
+# Ignore IIS
+IIS = "IIS"
+iis = "iis"
+# Ignore PN
+PN = "PN"
+# Ignore hd
+hd = "hd"
+# Ignore opf
+opf = "opf"
+# Ignore FRE
+FRE = "FRE"
+# Ignore MCH
+MCH = "MCH"
+# Ignore RO
+ro = "ro"
+RO = "RO"
+# Ignore EOF - end of file
+EOF = "EOF"
+# Ignore lst as shorthand for list
+lst = "lst"
 # AS NEEDED: Add More Words Below
