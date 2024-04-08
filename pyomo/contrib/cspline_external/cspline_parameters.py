@@ -123,7 +123,8 @@ def cubic_parameters_model(
 
     m.x_data = pyo.Param(m.dat_idx, initialize={i + 1: x for i, x in enumerate(x_data)})
     m.y_data = pyo.Param(m.dat_idx, initialize={i + 1: x for i, x in enumerate(y_data)})
-    m.x = pyo.Param(m.jnt_idx, initialize={i + 1: x for i, x in enumerate(x_joints)})
+    m.x = pyo.Var(m.jnt_idx, initialize={i + 1: x for i, x in enumerate(x_joints)})
+    m.x.fix()
     m.alpha = pyo.Var(m.seg_idx, {1, 2, 3, 4}, initialize=1)
 
     # f_s(x) = f_s+1(x)
@@ -239,7 +240,7 @@ def plot_f(m, file_name=None, **kwargs):
     plt.close()
     alpha = _extract_params(m)
     for s in m.seg_idx:
-        xvec = np.linspace(m.x[s], m.x[s + 1], 20)
+        xvec = np.linspace(pyo.value(m.x[s]), pyo.value(m.x[s + 1]), 20)
         plt.plot(xvec, f(xvec, alpha[s]))
     plt.title("f(x)")
     x = []
@@ -267,7 +268,7 @@ def plot_fx(m, file_name=None, **kwargs):
     plt.close()
     alpha = _extract_params(m)
     for s in m.seg_idx:
-        xvec = np.linspace(m.x[s], m.x[s + 1], 20)
+        xvec = np.linspace(pyo.value(m.x[s]), pyo.value(m.x[s + 1]), 20)
         plt.plot(xvec, fx(xvec, alpha[s]))
     plt.title("f'(x)")
     if file_name is not None:
@@ -290,7 +291,7 @@ def plot_fxx(m, file_name=None, **kwargs):
     plt.close()
     alpha = _extract_params(m)
     for s in m.seg_idx:
-        xvec = np.linspace(m.x[s], m.x[s + 1], 20)
+        xvec = np.linspace(pyo.value(m.x[s]), pyo.value(m.x[s + 1]), 20)
         plt.plot(xvec, fxx(xvec, alpha[s]))
     if file_name is not None:
         plt.savefig(file_name, **kwargs)
