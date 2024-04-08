@@ -14,14 +14,15 @@ import enum
 from typing import Sequence, Dict, Optional, Mapping, NoReturn, List, Tuple
 import os
 
-from pyomo.core.base.constraint import _GeneralConstraintData
-from pyomo.core.base.var import _GeneralVarData
+from pyomo.core.base.constraint import Constraint, _GeneralConstraintData
+from pyomo.core.base.var import Var, _GeneralVarData
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.block import _BlockData
-from pyomo.core.base.objective import _GeneralObjectiveData
-from pyomo.common.config import document_kwargs_from_configdict
+from pyomo.core.base.objective import Objective, _GeneralObjectiveData
+from pyomo.common.config import document_kwargs_from_configdict, ConfigValue
 from pyomo.common.errors import ApplicationError
 from pyomo.common.deprecation import deprecation_warning
+from pyomo.common.modeling import NOTSET
 from pyomo.opt.results.results_ import SolverResults as LegacySolverResults
 from pyomo.opt.results.solution import Solution as LegacySolution
 from pyomo.core.kernel.objective import minimize
@@ -41,7 +42,8 @@ from pyomo.contrib.solver.results import (
 class SolverBase(abc.ABC):
     """
     This base class defines the methods required for all solvers:
-        - available: Determines whether the solver is able to be run, combining both whether it can be found on the system and if the license is valid.
+        - available: Determines whether the solver is able to be run,
+                     combining both whether it can be found on the system and if the license is valid.
         - solve: The main method of every solver
         - version: The version of the solver
         - is_persistent: Set to false for all non-persistent solvers.
@@ -346,6 +348,21 @@ class LegacySolverWrapper:
     interface. Necessary for backwards compatibility.
     """
 
+    def __init__(self, **kwargs):
+        if 'solver_io' in kwargs:
+            raise NotImplementedError('Still working on this')
+        # There is no reason for a user to be trying to mix both old
+        # and new options. That is silly. So we will yell at them.
+        self.options = kwargs.pop('options', None)
+        if 'solver_options' in kwargs:
+            if self.options is not None:
+                raise ValueError(
+                    "Both 'options' and 'solver_options' were requested. "
+                    "Please use one or the other, not both."
+                )
+            self.options = kwargs.pop('solver_options')
+        super().__init__(**kwargs)
+
     #
     # Support "with" statements
     #
@@ -357,51 +374,81 @@ class LegacySolverWrapper:
 
     def _map_config(
         self,
-        tee,
-        load_solutions,
-        symbolic_solver_labels,
-        timelimit,
-        # Report timing is no longer a valid option. We now always return a
-        # timer object that can be inspected.
-        report_timing,
-        raise_exception_on_nonoptimal_result,
-        solver_io,
-        suffixes,
-        logfile,
-        keepfiles,
-        solnfile,
-        options,
+        tee=NOTSET,
+        load_solutions=NOTSET,
+        symbolic_solver_labels=NOTSET,
+        timelimit=NOTSET,
+        report_timing=NOTSET,
+        raise_exception_on_nonoptimal_result=NOTSET,
+        solver_io=NOTSET,
+        suffixes=NOTSET,
+        logfile=NOTSET,
+        keepfiles=NOTSET,
+        solnfile=NOTSET,
+        options=NOTSET,
+        solver_options=NOTSET,
+        writer_config=NOTSET,
     ):
         """Map between legacy and new interface configuration options"""
         self.config = self.config()
-        self.config.tee = tee
-        self.config.load_solutions = load_solutions
-        self.config.symbolic_solver_labels = symbolic_solver_labels
-        self.config.time_limit = timelimit
-        self.config.solver_options.set_value(options)
+        if 'report_timing' not in self.config:
+            self.config.declare(
+                'report_timing', ConfigValue(domain=bool, default=False)
+            )
+        if tee is not NOTSET:
+            self.config.tee = tee
+        if load_solutions is not NOTSET:
+            self.config.load_solutions = load_solutions
+        if symbolic_solver_labels is not NOTSET:
+            self.config.symbolic_solver_labels = symbolic_solver_labels
+        if timelimit is not NOTSET:
+            self.config.time_limit = timelimit
+        if report_timing is not NOTSET:
+            self.config.report_timing = report_timing
+        if self.options is not None:
+            self.config.solver_options.set_value(self.options)
+        if (options is not NOTSET) and (solver_options is not NOTSET):
+            # There is no reason for a user to be trying to mix both old
+            # and new options. That is silly. So we will yell at them.
+            # Example that would raise an error:
+            # solver.solve(model, options={'foo' : 'bar'}, solver_options={'foo' : 'not_bar'})
+            raise ValueError(
+                "Both 'options' and 'solver_options' were requested. "
+                "Please use one or the other, not both."
+            )
+        elif options is not NOTSET:
+            # This block is trying to mimic the existing logic in the legacy
+            # interface that allows users to pass initialized options to
+            # the solver object and override them in the solve call.
+            self.config.solver_options.set_value(options)
+        elif solver_options is not NOTSET:
+            self.config.solver_options.set_value(solver_options)
+        if writer_config is not NOTSET:
+            self.config.writer_config.set_value(writer_config)
         # This is a new flag in the interface. To preserve backwards compatibility,
         # its default is set to "False"
-        self.config.raise_exception_on_nonoptimal_result = (
-            raise_exception_on_nonoptimal_result
-        )
-        if solver_io is not None:
+        if raise_exception_on_nonoptimal_result is not NOTSET:
+            self.config.raise_exception_on_nonoptimal_result = (
+                raise_exception_on_nonoptimal_result
+            )
+        if solver_io is not NOTSET and solver_io is not None:
             raise NotImplementedError('Still working on this')
-        if suffixes is not None:
+        if suffixes is not NOTSET and suffixes is not None:
             raise NotImplementedError('Still working on this')
-        if logfile is not None:
+        if logfile is not NOTSET and logfile is not None:
             raise NotImplementedError('Still working on this')
         if keepfiles or 'keepfiles' in self.config:
             cwd = os.getcwd()
             deprecation_warning(
                 "`keepfiles` has been deprecated in the new solver interface. "
-                "Use `working_dir` instead to designate a directory in which "
-                f"files should be generated and saved. Setting `working_dir` to `{cwd}`.",
+                "Use `working_dir` instead to designate a directory in which files "
+                f"should be generated and saved. Setting `working_dir` to `{cwd}`.",
                 version='6.7.1',
             )
             self.config.working_dir = cwd
         # I believe this currently does nothing; however, it is unclear what
         # our desired behavior is for this.
-        if solnfile is not None:
+        if solnfile is not NOTSET:
             if 'filename' in self.config:
                 filename = os.path.splitext(solnfile)[0]
                 self.config.filename = filename
@@ -418,8 +465,17 @@ class LegacySolverWrapper:
         ]
         legacy_soln.status = legacy_solution_status_map[results.solution_status]
         legacy_results.solver.termination_message = str(results.termination_condition)
-        obj = get_objective(model)
-        if len(list(obj)) > 0:
+        legacy_results.problem.number_of_constraints = float('nan')
+        legacy_results.problem.number_of_variables = float('nan')
+        number_of_objectives = sum(
+            1
+            for _ in model.component_data_objects(
+                Objective, active=True, descend_into=True
+            )
+        )
+        legacy_results.problem.number_of_objectives = number_of_objectives
+        if number_of_objectives == 1:
+            obj = get_objective(model)
             legacy_results.problem.sense = obj.sense
 
             if obj.sense == minimize:
@@ -487,7 +543,10 @@ class LegacySolverWrapper:
         options: Optional[Dict] = None,
         keepfiles: bool = False,
         symbolic_solver_labels: bool = False,
+        # These are for forward-compatibility
         raise_exception_on_nonoptimal_result: bool = False,
+        solver_options: Optional[Dict] = None,
+        writer_config: Optional[Dict] = None,
     ):
         """
         Solve method: maps new solve method style to backwards compatible version.
@@ -499,27 +558,35 @@ class LegacySolverWrapper:
 
         """
         original_config = self.config
-        self._map_config(
-            tee,
-            load_solutions,
-            symbolic_solver_labels,
-            timelimit,
-            report_timing,
-            raise_exception_on_nonoptimal_result,
-            solver_io,
-            suffixes,
-            logfile,
-            keepfiles,
-            solnfile,
-            options,
+
+        map_args = (
+            'tee',
+            'load_solutions',
+            'symbolic_solver_labels',
+            'timelimit',
+            'report_timing',
+            'raise_exception_on_nonoptimal_result',
+            'solver_io',
+            'suffixes',
+            'logfile',
+            'keepfiles',
+            'solnfile',
+            'options',
+            'solver_options',
+            'writer_config',
         )
+        loc = locals()
+        filtered_args = {k: loc[k] for k in map_args if loc.get(k, None) is not None}
+        self._map_config(**filtered_args)
 
         results: Results = super().solve(model)
         legacy_results, legacy_soln = self._map_results(model, results)
-
         legacy_results = self._solution_handler(
             load_solutions, model, results, legacy_results, legacy_soln
         )
+
+        if self.config.report_timing:
+            print(results.timing_info.timer)
 
         self.config = original_config
 
@@ -532,7 +599,10 @@ class LegacySolverWrapper:
         """
         ans = super().available()
         if exception_flag and not ans:
-            raise ApplicationError(f'Solver {self.__class__} is not available ({ans}).')
+            raise ApplicationError(
+                f'Solver "{self.name}" is not available. '
+                f'The returned status is: {ans}.'
+            )
         return bool(ans)
 
     def license_is_valid(self) -> bool:
@@ -550,3 +620,13 @@ class LegacySolverWrapper:
 
         """
         return bool(self.available())
+
+    def config_block(self, init=False):
+        from pyomo.scripting.solve_config import default_config_block
+
+        return default_config_block(self, init)[0]
+
+    def set_options(self, options):
+        opts = {k: v for k, v in options.value().items() if v is not None}
+        if opts:
+            self._map_config(**opts)

@@ -147,6 +147,7 @@ class Ipopt(PersistentSolver):
         self._primal_sol = ComponentMap()
         self._reduced_costs = ComponentMap()
         self._last_results_object: Optional[Results] = None
+        self._version_timeout = 2
 
     def available(self):
         if self.config.executable.path() is None:
@@ -158,7 +159,7 @@ class Ipopt(PersistentSolver):
     def version(self):
         results = subprocess.run(
             [str(self.config.executable), '--version'],
-            timeout=1,
+            timeout=self._version_timeout,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             universal_newlines=True,
