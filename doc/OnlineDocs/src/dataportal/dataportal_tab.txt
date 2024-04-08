@@ -85,19 +85,16 @@
          A3 :   4.5
 
 2 Declarations: A w
-3 Set Declarations
+2 Set Declarations
     A : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    3 : {'A1', 'A2', 'A3'}
     I : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    4 : {'I1', 'I2', 'I3', 'I4'}
-    u_index : Size=1, Index=None, Ordered=True
-        Key  : Dimen : Domain : Size : Members
-        None :     2 :    I*A :   12 : {('I1', 'A1'), ('I1', 'A2'), ('I1', 'A3'), ('I2', 'A1'), ('I2', 'A2'), ('I2', 'A3'), ('I3', 'A1'), ('I3', 'A2'), ('I3', 'A3'), ('I4', 'A1'), ('I4', 'A2'), ('I4', 'A3')}
 
 1 Param Declarations
-    u : Size=12, Index=u_index, Domain=Any, Default=None, Mutable=False
+    u : Size=12, Index=I*A, Domain=Any, Default=None, Mutable=False
         Key          : Value
         ('I1', 'A1') :   1.3
         ('I1', 'A2') :   2.3
@@ -112,20 +109,17 @@
         ('I4', 'A2') :   2.6
         ('I4', 'A3') :   3.6
 
-4 Declarations: A I u_index u
-3 Set Declarations
+3 Declarations: A I u
+2 Set Declarations
     A : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    3 : {'A1', 'A2', 'A3'}
     I : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    4 : {'I1', 'I2', 'I3', 'I4'}
-    t_index : Size=1, Index=None, Ordered=True
-        Key  : Dimen : Domain : Size : Members
-        None :     2 :    A*I :   12 : {('A1', 'I1'), ('A1', 'I2'), ('A1', 'I3'), ('A1', 'I4'), ('A2', 'I1'), ('A2', 'I2'), ('A2', 'I3'), ('A2', 'I4'), ('A3', 'I1'), ('A3', 'I2'), ('A3', 'I3'), ('A3', 'I4')}
 
 1 Param Declarations
-    t : Size=12, Index=t_index, Domain=Any, Default=None, Mutable=False
+    t : Size=12, Index=A*I, Domain=Any, Default=None, Mutable=False
         Key          : Value
         ('A1', 'I1') :   1.3
         ('A1', 'I2') :   1.4
@@ -140,7 +134,7 @@
         ('A3', 'I3') :   3.5
         ('A3', 'I4') :   3.6
 
-4 Declarations: A I t_index t
+3 Declarations: A I t
 1 Set Declarations
     A : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
@@ -185,13 +179,9 @@
         None :     1 :    Any :    3 : {'A1', 'A2', 'A3'}
 
 1 Declarations: A
-1 Set Declarations
-    y_index : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :    3 : {'A1', 'A2', 'A3'}
 
 2 Param Declarations
-    y : Size=3, Index=y_index, Domain=Any, Default=None, Mutable=False
+    y : Size=3, Index={A1, A2, A3}, Domain=Any, Default=None, Mutable=False
         Key : Value
          A1 :   3.3
          A2 :   3.4
@@ -200,7 +190,7 @@
         Key  : Value
         None :   1.1
 
-3 Declarations: z y_index y
+2 Declarations: z y
 ['A1', 'A2', 'A3']
 1.1
 A1 3.3

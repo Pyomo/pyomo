@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -1517,7 +1517,7 @@ class TestLinear(unittest.TestCase):
                 bcd.register_dispatcher(visitor, 5), (False, (linear._CONSTANT, 5))
             )
             self.assertEqual(len(bcd), 1)
-            self.assertIs(bcd[int], bcd._before_native)
+            self.assertIs(bcd[int], bcd._before_native_numeric)
             # complex type
             self.assertEqual(
                 bcd.register_dispatcher(visitor, 5j), (False, (linear._CONSTANT, 5j))
@@ -1589,7 +1589,7 @@ class TestLinear(unittest.TestCase):
         expr.constant = 0
         expr.linear[id(m.x)] = 0
         expr.linear[id(m.y)] = 0
-        assertExpressionsEqual(self, expr.to_expression(visitor), LinearExpression())
+        assertExpressionsEqual(self, expr.to_expression(visitor), 0)
 
     @unittest.skipUnless(numpy_available, "Test requires numpy")
     def test_nonnumeric(self):

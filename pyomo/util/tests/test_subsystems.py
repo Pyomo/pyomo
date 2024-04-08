@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -292,7 +292,7 @@ class TestSubsystemBlock(unittest.TestCase):
         self.assertFalse(m.v3.fixed)
         self.assertTrue(m.v4.fixed)
 
-    def _make_model_with_external_functions(self):
+    def _make_model_with_external_functions(self, named_expressions=False):
         m = pyo.ConcreteModel()
         gsl = find_GSL()
         m.bessel = pyo.ExternalFunction(library=gsl, function="gsl_sf_bessel_J0")
@@ -300,9 +300,21 @@ class TestSubsystemBlock(unittest.TestCase):
         m.v1 = pyo.Var(initialize=1.0)
         m.v2 = pyo.Var(initialize=2.0)
         m.v3 = pyo.Var(initialize=3.0)
+        if named_expressions:
+            m.subexpr = pyo.Expression(pyo.PositiveIntegers)
+            m.subexpr[1] = 2 * m.fermi(m.v1)
+            m.subexpr[2] = m.bessel(m.v1) - m.bessel(m.v2)
+            m.subexpr[3] = m.subexpr[2] + m.v3**2
+            subexpr1 = m.subexpr[1]
+            subexpr2 = m.subexpr[2]
+            subexpr3 = m.subexpr[3]
+        else:
+            subexpr1 = 2 * m.fermi(m.v1)
+            subexpr2 = m.bessel(m.v1) - m.bessel(m.v2)
+            subexpr3 = subexpr2 + m.v3**2
         m.con1 = pyo.Constraint(expr=m.v1 == 0.5)
-        m.con2 = pyo.Constraint(expr=2 * m.fermi(m.v1) + m.v2**2 - m.v3 == 1.0)
-        m.con3 = pyo.Constraint(expr=m.bessel(m.v1) - m.bessel(m.v2) + m.v3**2 == 2.0)
+        m.con2 = pyo.Constraint(expr=subexpr1 + m.v2**2 - m.v3 == 1.0)
+        m.con3 = pyo.Constraint(expr=subexpr3 == 2.0)
         return m
 
     @unittest.skipUnless(find_GSL(), "Could not find the AMPL GSL library")
@@ -329,6 +341,15 @@ class TestSubsystemBlock(unittest.TestCase):
         pred_fcn_data = {(gsl, "gsl_sf_bessel_J0"), (gsl, "gsl_sf_fermi_dirac_m1")}
         self.assertEqual(fcn_data, pred_fcn_data)
 
+    @unittest.skipUnless(find_GSL(), "Could not find the AMPL GSL library")
+    def test_local_external_functions_with_named_expressions(self):
+        m = self._make_model_with_external_functions(named_expressions=True)
+        variables = list(m.component_data_objects(pyo.Var))
+        constraints = list(m.component_data_objects(pyo.Constraint, active=True))
+        b = create_subsystem_block(constraints, variables)
+        self.assertTrue(isinstance(b._gsl_sf_bessel_J0, pyo.ExternalFunction))
+        self.assertTrue(isinstance(b._gsl_sf_fermi_dirac_m1, pyo.ExternalFunction))
+
     def _solve_ef_model_with_ipopt(self):
         m = self._make_model_with_external_functions()
         ipopt = pyo.SolverFactory("ipopt")
@@ -341,6 +362,33 @@ class TestSubsystemBlock(unittest.TestCase):
     )
     def test_with_external_function(self):
         m = self._make_model_with_external_functions()
+        subsystem = ([m.con2, m.con3], [m.v2, m.v3])
+
+        m.v1.set_value(0.5)
+        block = create_subsystem_block(*subsystem)
+        ipopt = pyo.SolverFactory("ipopt")
+        with TemporarySubsystemManager(to_fix=list(block.input_vars.values())):
+            ipopt.solve(block)
+
+        # Correct values obtained by solving with Ipopt directly
+        # in another script.
+        self.assertEqual(m.v1.value, 0.5)
+        self.assertFalse(m.v1.fixed)
+        self.assertAlmostEqual(m.v2.value, 1.04816, delta=1e-5)
+        self.assertAlmostEqual(m.v3.value, 1.34356, delta=1e-5)
+
+        # Result obtained by solving the full system
+        m_full = self._solve_ef_model_with_ipopt()
+        self.assertAlmostEqual(m.v1.value, m_full.v1.value)
+        self.assertAlmostEqual(m.v2.value, m_full.v2.value)
+        self.assertAlmostEqual(m.v3.value, m_full.v3.value)
+
+    @unittest.skipUnless(find_GSL(), "Could not find the AMPL GSL library")
+    @unittest.skipUnless(
+        pyo.SolverFactory("ipopt").available(), "ipopt is not available"
+    )
+    def test_with_external_function_in_named_expression(self):
+        m = self._make_model_with_external_functions(named_expressions=True)
         subsystem = ([m.con2, m.con3], [m.v2, m.v3])
 
         m.v1.set_value(0.5)

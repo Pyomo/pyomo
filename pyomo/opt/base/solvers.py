@@ -1,15 +1,13 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-
-__all__ = ('OptSolver', 'SolverFactory', 'UnknownSolver', 'check_available_solvers')
 
 import re
 import sys
@@ -18,12 +16,11 @@ import logging
 import shlex
 
 from pyomo.common import Factory
-from pyomo.common.config import ConfigDict
 from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import Bunch
 
 from pyomo.opt.base.convert import convert_problem
-from pyomo.opt.base.formats import ResultsFormat, ProblemFormat
+from pyomo.opt.base.formats import ResultsFormat
 import pyomo.opt.base.results
 
 logger = logging.getLogger('pyomo.opt')
@@ -181,7 +178,11 @@ class SolverFactoryClass(Factory):
         return opt
 
 
+LegacySolverFactory = SolverFactoryClass('solver type')
+
 SolverFactory = SolverFactoryClass('solver type')
+SolverFactory._cls = LegacySolverFactory._cls
+SolverFactory._doc = LegacySolverFactory._doc
 
 
 #

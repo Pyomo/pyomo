@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -232,7 +232,14 @@ class _BigM_MixIn(object):
         return tuple(M)
 
     def _add_constraint_expressions(
-        self, c, i, M, indicator_var, newConstraint, constraintMap
+        self,
+        c,
+        i,
+        M,
+        indicator_var,
+        newConstraint,
+        constraint_map,
+        indicator_expression=None,
     ):
         # Since we are both combining components from multiple blocks and using
         # local names, we need to make sure that the first index for
@@ -244,6 +251,8 @@ class _BigM_MixIn(object):
         # over the constraint indices, but I don't think it matters a lot.)
         unique = len(newConstraint)
         name = c.local_name + "_%s" % unique
+        if indicator_expression is None:
+            indicator_expression = 1 - indicator_var
 
         if c.lower is not None:
             if M[0] is None:
@@ -251,25 +260,21 @@ class _BigM_MixIn(object):
                     "Cannot relax disjunctive constraint '%s' "
                     "because M is not defined." % name
                 )
-            M_expr = M[0] * (1 - indicator_var)
+            M_expr = M[0] * indicator_expression
             newConstraint.add((name, i, 'lb'), c.lower <= c.body - M_expr)
-            constraintMap['transformedConstraints'][c] = [newConstraint[name, i, 'lb']]
-            constraintMap['srcConstraints'][newConstraint[name, i, 'lb']] = c
+            constraint_map.transformed_constraints[c].append(
+                newConstraint[name, i, 'lb']
+            )
+            constraint_map.src_constraint[newConstraint[name, i, 'lb']] = c
         if c.upper is not None:
             if M[1] is None:
                 raise GDP_Error(
                     "Cannot relax disjunctive constraint '%s' "
                     "because M is not defined." % name
                 )
-            M_expr = M[1] * (1 - indicator_var)
+            M_expr = M[1] * indicator_expression
             newConstraint.add((name, i, 'ub'), c.body - M_expr <= c.upper)
-            transformed = constraintMap['transformedConstraints'].get(c)
-            if transformed is not None:
-                constraintMap['transformedConstraints'][c].append(
-                    newConstraint[name, i, 'ub']
-                )
-            else:
-                constraintMap['transformedConstraints'][c] = [
-                    newConstraint[name, i, 'ub']
-                ]
-            constraintMap['srcConstraints'][newConstraint[name, i, 'ub']] = c
+            constraint_map.transformed_constraints[c].append(
+                newConstraint[name, i, 'ub']
+            )
+            constraint_map.src_constraint[newConstraint[name, i, 'ub']] = c

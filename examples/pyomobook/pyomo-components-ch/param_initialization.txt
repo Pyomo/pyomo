@@ -1,27 +1,15 @@
-6 Set Declarations
+2 Set Declarations
     A : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    3 : {1, 2, 3}
     B : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    3 : {1, 2, 3}
-    T_index : Size=1, Index=None, Ordered=True
-        Key  : Dimen : Domain : Size : Members
-        None :     2 :    A*B :    9 : {(1, 1), (1, 2), (1, 3), (2, 1), (2, 2), (2, 3), (3, 1), (3, 2), (3, 3)}
-    U_index : Size=1, Index=None, Ordered=True
-        Key  : Dimen : Domain : Size : Members
-        None :     2 :    A*A :    9 : {(1, 1), (1, 2), (1, 3), (2, 1), (2, 2), (2, 3), (3, 1), (3, 2), (3, 3)}
-    XX_index : Size=1, Index=None, Ordered=True
-        Key  : Dimen : Domain : Size : Members
-        None :     2 :    A*A :    9 : {(1, 1), (1, 2), (1, 3), (2, 1), (2, 2), (2, 3), (3, 1), (3, 2), (3, 3)}
-    X_index : Size=1, Index=None, Ordered=True
-        Key  : Dimen : Domain : Size : Members
-        None :     2 :    A*A :    9 : {(1, 1), (1, 2), (1, 3), (2, 1), (2, 2), (2, 3), (3, 1), (3, 2), (3, 3)}
 
 5 Param Declarations
-    T : Size=0, Index=T_index, Domain=Any, Default=None, Mutable=False
+    T : Size=0, Index=A*B, Domain=Any, Default=None, Mutable=False
         Key : Value
-    U : Size=9, Index=U_index, Domain=Any, Default=0, Mutable=False
+    U : Size=9, Index=A*A, Domain=Any, Default=0, Mutable=False
         Key    : Value
         (1, 1) :    10
         (2, 2) :    20
@@ -30,7 +18,7 @@
         Key : Value
           1 :    10
           3 :    30
-    X : Size=9, Index=X_index, Domain=Any, Default=None, Mutable=False
+    X : Size=9, Index=A*A, Domain=Any, Default=None, Mutable=False
         Key    : Value
         (1, 1) :     1
         (1, 2) :     2
@@ -41,7 +29,7 @@
         (3, 1) :     3
         (3, 2) :     6
         (3, 3) :     9
-    XX : Size=9, Index=XX_index, Domain=Any, Default=None, Mutable=False
+    XX : Size=9, Index=A*A, Domain=Any, Default=None, Mutable=False
         Key    : Value
         (1, 1) :     1
         (1, 2) :     2
@@ -53,7 +41,7 @@
         (3, 2) :     8
         (3, 3) :    14
 
-11 Declarations: A X_index X XX_index XX B W U_index U T_index T
+7 Declarations: A X XX B W U T
 2
 3
 False

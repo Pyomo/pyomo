@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -405,7 +405,6 @@ class WalkerTests(unittest.TestCase):
         )
 
         del M.w
-        del M.w_index
         M.w = VarList()
         e = 2 * sum_product(M.z, M.x)
         walker = ReplacementWalkerTest1(M)
@@ -438,9 +437,7 @@ class WalkerTests(unittest.TestCase):
         sub_map = dict()
         sub_map[id(m.x)] = 5
         e2 = replace_expressions(e, sub_map)
-        assertExpressionsEqual(
-            self, e2, LinearExpression([10, MonomialTermExpression((1, m.y))])
-        )
+        assertExpressionsEqual(self, e2, LinearExpression([10, m.y]))
 
         e = LinearExpression(linear_coefs=[2, 3], linear_vars=[m.x, m.y])
         sub_map = dict()
@@ -887,20 +884,7 @@ class WalkerTests_ReplaceInternal(unittest.TestCase):
         assertExpressionsEqual(
             self,
             SumExpression(
-                [
-                    LinearExpression(
-                        [
-                            MonomialTermExpression((1, m.y[1])),
-                            MonomialTermExpression((1, m.y[2])),
-                        ]
-                    ),
-                    LinearExpression(
-                        [
-                            MonomialTermExpression((1, m.y[2])),
-                            MonomialTermExpression((1, m.y[3])),
-                        ]
-                    ),
-                ]
+                [LinearExpression([m.y[1], m.y[2]]), LinearExpression([m.y[2], m.y[3]])]
             )
             == 0,
             f,
@@ -931,9 +915,7 @@ class TestReplacementWithNPV(unittest.TestCase):
         e3 = replace_expressions(e1, {id(m.p1): m.x})
 
         assertExpressionsEqual(self, e2, m.p2 + 2)
-        assertExpressionsEqual(
-            self, e3, LinearExpression([MonomialTermExpression((1, m.x)), 2])
-        )
+        assertExpressionsEqual(self, e3, LinearExpression([m.x, 2]))
 
     def test_npv_negation(self):
         m = ConcreteModel()

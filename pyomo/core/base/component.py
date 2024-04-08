@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -368,7 +368,7 @@ class _ComponentBase(PyomoObject):
 
     @property
     def name(self):
-        """Get the fully qualifed component name."""
+        """Get the fully qualified component name."""
         return self.getname(fully_qualified=True)
 
     # Adding a setter here to help users adapt to the new
@@ -501,7 +501,7 @@ class Component(_ComponentBase):
         #
         self._ctype = kwds.pop('ctype', None)
         self.doc = kwds.pop('doc', None)
-        self._name = kwds.pop('name', str(type(self).__name__))
+        self._name = kwds.pop('name', None)
         if kwds:
             raise ValueError(
                 "Unexpected keyword options found while constructing '%s':\n\t%s"
@@ -625,6 +625,8 @@ class Component(_ComponentBase):
             Generate fully_qualified names relative to the specified block.
         """
         local_name = self._name
+        if local_name is None:
+            local_name = type(self).__name__
         if fully_qualified:
             pb = self.parent_block()
             if relative_to is None:
@@ -662,7 +664,7 @@ class Component(_ComponentBase):
 
     @property
     def name(self):
-        """Get the fully qualifed component name."""
+        """Get the fully qualified component name."""
         return self.getname(fully_qualified=True)
 
     # Allow setting a component's name if it is not owned by a parent

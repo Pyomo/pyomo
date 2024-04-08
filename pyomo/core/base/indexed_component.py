@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -9,21 +9,16 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['IndexedComponent', 'ActiveIndexedComponent']
-
-import enum
 import inspect
 import logging
 import sys
 import textwrap
 
-from copy import deepcopy
-
 import pyomo.core.expr as EXPR
 import pyomo.core.base as BASE
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 from pyomo.core.base.initializer import Initializer
-from pyomo.core.base.component import Component, ActiveComponent
+from pyomo.core.base.component import Component, ActiveComponent, ComponentData
 from pyomo.core.base.config import PyomoOptions
 from pyomo.core.base.enums import SortComponents
 from pyomo.core.base.global_set import UnindexedComponent_set
@@ -31,9 +26,9 @@ from pyomo.core.expr.numeric_expr import _ndarray
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.common import DeveloperError
 from pyomo.common.autoslots import fast_deepcopy
-from pyomo.common.dependencies import numpy as np, numpy_available
+from pyomo.common.collections import ComponentSet
 from pyomo.common.deprecation import deprecated, deprecation_warning
-from pyomo.common.errors import DeveloperError, TemplateExpressionError
+from pyomo.common.errors import TemplateExpressionError
 from pyomo.common.modeling import NOTSET
 from pyomo.common.numeric_types import native_types
 from pyomo.common.sorting import sorted_robust
@@ -165,9 +160,12 @@ include the "return" statement at the end of your rule.
 """
 
 
-def rule_result_substituter(result_map):
+def rule_result_substituter(result_map, map_types):
     _map = result_map
-    _map_types = set(type(key) for key in result_map)
+    if map_types is None:
+        _map_types = set(type(key) for key in result_map)
+    else:
+        _map_types = map_types
 
     def rule_result_substituter_impl(rule, *args, **kwargs):
         if rule.__class__ in _map_types:
@@ -208,7 +206,7 @@ _map_rule_funcdef = """def wrapper_function%s:
 """
 
 
-def rule_wrapper(rule, wrapping_fcn, positional_arg_map=None):
+def rule_wrapper(rule, wrapping_fcn, positional_arg_map=None, map_types=None):
     """Wrap a rule with another function
 
     This utility method provides a way to wrap a function (rule) with
@@ -235,7 +233,7 @@ def rule_wrapper(rule, wrapping_fcn, positional_arg_map=None):
 
     """
     if isinstance(wrapping_fcn, dict):
-        wrapping_fcn = rule_result_substituter(wrapping_fcn)
+        wrapping_fcn = rule_result_substituter(wrapping_fcn, map_types)
         if not inspect.isfunction(rule):
             return wrapping_fcn(rule)
     # Because some of our processing of initializer functions relies on
@@ -255,8 +253,7 @@ def rule_wrapper(rule, wrapping_fcn, positional_arg_map=None):
 
 
 class IndexedComponent(Component):
-    """
-    This is the base class for all indexed modeling components.
+    """This is the base class for all indexed modeling components.
     This class stores a dictionary, self._data, that maps indices
     to component data objects.  The object self._index_set defines valid
     keys for this dictionary, and the dictionary keys may be a
@@ -278,11 +275,16 @@ class IndexedComponent(Component):
         doc         A text string describing this component
 
     Private class attributes:
-        _data               A dictionary from the index set to
-                                component data objects
-        _index_set              The set of valid indices
-        _implicit_subsets   A temporary data element that stores
-                                sets that are transferred to the model
+
+        _data:  A dictionary from the index set to component data objects
+
+        _index_set:  The set of valid indices
+
+        _anonymous_sets: A ComponentSet of "anonymous" sets used by this
+            component.  Anonymous sets are Set / SetOperator / RangeSet
+            that compose attributes like _index_set, but are not
+            themselves explicitly assigned (and named) on any Block
+
     """
 
     class Skip(object):
@@ -304,37 +306,33 @@ class IndexedComponent(Component):
         #
         self._data = {}
         #
-        if len(args) == 0 or (len(args) == 1 and args[0] is UnindexedComponent_set):
+        if len(args) == 0 or (args[0] is UnindexedComponent_set and len(args) == 1):
             #
             # If no indexing sets are provided, generate a dummy index
             #
-            self._implicit_subsets = None
             self._index_set = UnindexedComponent_set
+            self._anonymous_sets = None
         elif len(args) == 1:
             #
             # If a single indexing set is provided, just process it.
             #
-            self._implicit_subsets = None
-            self._index_set = BASE.set.process_setarg(args[0])
+            self._index_set, self._anonymous_sets = BASE.set.process_setarg(args[0])
         else:
             #
             # If multiple indexing sets are provided, process them all,
-            # and store the cross-product of these sets.  The individual
-            # sets need to stored in the Pyomo model, so the
-            # _implicit_subsets class data is used for this temporary
-            # storage.
+            # and store the cross-product of these sets.
             #
-            # Example:  Pyomo allows things like
-            # "Param([1,2,3], range(100), initialize=0)".  This
-            # needs to create *3* sets: two SetOf components and then
-            # the SetProduct.  That means that the component needs to
-            # hold on to the implicit SetOf objects until the component
-            # is assigned to a model (where the implicit subsets can be
-            # "transferred" to the model).
+            # Example: Pyomo allows things like "Param([1,2,3],
+            # range(100), initialize=0)".  This needs to create *3*
+            # sets: two SetOf components and then the SetProduct.  As
+            # the user declined to name any of these sets, we will not
+            # make up names and instead store them on the model as
+            # "anonymous components"
             #
-            tmp = [BASE.set.process_setarg(x) for x in args]
-            self._implicit_subsets = tmp
-            self._index_set = tmp[0].cross(*tmp[1:])
+            self._index_set = BASE.set.SetProduct(*args)
+            self._anonymous_sets = ComponentSet((self._index_set,))
+            if self._index_set._anonymous_sets is not None:
+                self._anonymous_sets.update(self._index_set._anonymous_sets)
 
     def _create_objects_for_deepcopy(self, memo, component_list):
         _new = self.__class__.__new__(self.__class__)
@@ -608,7 +606,7 @@ You can silence this warning by one of three ways:
         """Return a list (index,data) tuples from the dictionary"""
         return self.items()
 
-    def __getitem__(self, index):
+    def __getitem__(self, index) -> ComponentData:
         """
         This method returns the data corresponding to the given index.
         """
@@ -733,7 +731,7 @@ You can silence this warning by one of three ways:
 
         # this supports "del m.x[:,1]" through a simple recursive call
         if index.__class__ is IndexedComponent_slice:
-            # Assert that this slice ws just generated
+            # Assert that this slice was just generated
             assert len(index._call_stack) == 1
             # Make a copy of the slicer items *before* we start
             # iterating over it (since we will be removing items!).
@@ -983,11 +981,13 @@ value() function."""
                 slice_dim -= 1
             if normalize_index.flatten:
                 set_dim = self.dim()
-            elif self._implicit_subsets is None:
+            elif not self.is_indexed():
                 # Scalar component.
                 set_dim = 0
             else:
-                set_dim = len(self._implicit_subsets)
+                set_dim = self.index_set().dimen
+                if set_dim is None:
+                    set_dim = 1
 
             structurally_valid = False
             if slice_dim == set_dim or set_dim is None:

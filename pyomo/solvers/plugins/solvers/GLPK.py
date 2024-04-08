@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -19,6 +19,7 @@ from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.common import Executable
 from pyomo.common.collections import Bunch
+from pyomo.common.errors import ApplicationError
 from pyomo.opt import (
     SolverFactory,
     OptSolver,
@@ -137,7 +138,7 @@ class GLPKSHELL(SystemCallSolver):
             [executable, "--version"],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            timeout=1,
+            timeout=self._version_timeout,
             universal_newlines=True,
         )
         return _extract_version(result.stdout)

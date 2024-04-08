@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """
 Functions for the construction and solving of the GRCS separation problem via ROsolver
 """
@@ -638,6 +649,7 @@ def perform_separation_loop(model_data, config, solve_globally):
                 solver_call_results=ComponentMap(),
                 solved_globally=solve_globally,
                 worst_case_perf_con=None,
+                all_discrete_scenarios_exhausted=True,
             )
 
         perf_con_to_maximize = sorted_priority_groups[

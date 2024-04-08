@@ -71,8 +71,11 @@ version, we will remove testing for that Python version.
 
 ### Tutorials and Examples
 
+* [Pyomo — Optimization Modeling in Python](https://link.springer.com/book/10.1007/978-3-030-68928-5)
 * [Pyomo Workshop Slides](https://github.com/Pyomo/pyomo-tutorials/blob/main/Pyomo-Workshop-December-2023.pdf)
 * [Prof. Jeffrey Kantor's Pyomo Cookbook](https://jckantor.github.io/ND-Pyomo-Cookbook/)
+* The [companion notebooks](https://mobook.github.io/MO-book/intro.html)
+  for *Hands-On Mathematical Optimization with Python*
 * [Pyomo Gallery](https://github.com/Pyomo/PyomoGallery)
 
 ### Getting Help
@@ -83,7 +86,7 @@ To get help from the Pyomo community ask a question on one of the following:
 
 ### Developers
 
-Pyomo development moved to this repository in June, 2016 from
+Pyomo development moved to this repository in June 2016 from
 Sandia National Laboratories. Developer discussions are hosted by
 [Google Groups](https://groups.google.com/forum/#!forum/pyomo-developers).
 

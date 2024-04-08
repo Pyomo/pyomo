@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -253,6 +253,9 @@ setup_kwargs = dict(
             'sphinx_rtd_theme>0.5',
             'sphinxcontrib-jsmath',
             'sphinxcontrib-napoleon',
+            'sphinx-toolbox>=2.16.0',
+            'sphinx-jinja2-compat>=0.1.1',
+            'enum_tools',
             'numpy',  # Needed by autodoc for pynumero
             'scipy',  # Needed by autodoc for pynumero
         ],

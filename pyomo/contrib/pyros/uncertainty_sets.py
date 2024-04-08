@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """
 Abstract and pre-defined classes for representing uncertainty sets (or
 uncertain parameter spaces) of two-stage nonlinear robust optimization
@@ -270,14 +281,6 @@ def validate_array(
             valid_type_desc=valid_type_desc,
             is_entry_of_arg=True,
         )
-
-
-def uncertainty_sets(obj):
-    if not isinstance(obj, UncertaintySet):
-        raise ValueError(
-            "Expected an UncertaintySet object, instead received %s" % (obj,)
-        )
-    return obj
 
 
 def column(matrix, i):

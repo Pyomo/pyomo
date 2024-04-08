@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -601,31 +601,26 @@ class TestComponentUID(unittest.TestCase):
             ComponentUID.generate_cuid_string_map(model, repr_version=1),
             ComponentUID.generate_cuid_string_map(model),
         )
-        self.assertEqual(len(cuids[0]), 29)
-        self.assertEqual(len(cuids[1]), 29)
+        self.assertEqual(len(cuids[0]), 24)
+        self.assertEqual(len(cuids[1]), 24)
         for obj in [
             model,
             model.x,
             model.y,
-            model.y_index,
             model.y[1],
             model.y[2],
             model.V,
-            model.V_index,
             model.V['a', 'b'],
             model.V[1, '2'],
             model.V[3, 4],
             model.b,
             model.b.z,
-            model.b.z_index,
             model.b.z[1],
             model.b.z['2'],
             getattr(model.b, '.H'),
-            getattr(model.b, '.H_index'),
             getattr(model.b, '.H')['a'],
             getattr(model.b, '.H')[2],
             model.B,
-            model.B_index,
             model.B['a'],
             getattr(model.B['a'], '.k'),
             model.B[2],
@@ -642,23 +637,20 @@ class TestComponentUID(unittest.TestCase):
             ),
             ComponentUID.generate_cuid_string_map(model, descend_into=False),
         )
-        self.assertEqual(len(cuids[0]), 18)
-        self.assertEqual(len(cuids[1]), 18)
+        self.assertEqual(len(cuids[0]), 15)
+        self.assertEqual(len(cuids[1]), 15)
         for obj in [
             model,
             model.x,
             model.y,
-            model.y_index,
             model.y[1],
             model.y[2],
             model.V,
-            model.V_index,
             model.V['a', 'b'],
             model.V[1, '2'],
             model.V[3, 4],
             model.b,
             model.B,
-            model.B_index,
             model.B['a'],
             model.B[2],
             model.component('c tuple')[(1,)],

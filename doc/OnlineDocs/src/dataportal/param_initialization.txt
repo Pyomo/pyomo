@@ -1,24 +1,16 @@
-2 Set Declarations
-    b_index : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :    3 : {1, 2, 3}
-    c_index : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :    3 : {1, 2, 3}
-
 3 Param Declarations
     a : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
         Key  : Value
         None :   1.1
-    b : Size=3, Index=b_index, Domain=Any, Default=None, Mutable=False
+    b : Size=3, Index={1, 2, 3}, Domain=Any, Default=None, Mutable=False
         Key : Value
           1 :     1
           2 :     2
           3 :     3
-    c : Size=3, Index=c_index, Domain=Any, Default=None, Mutable=False
+    c : Size=3, Index={1, 2, 3}, Domain=Any, Default=None, Mutable=False
         Key : Value
           1 :     1
           2 :     2
           3 :     3
 
-5 Declarations: a b_index b c_index c
+3 Declarations: a b c

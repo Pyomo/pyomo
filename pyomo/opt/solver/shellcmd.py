@@ -1,15 +1,13 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-
-__all__ = ['SystemCallSolver']
 
 import os
 import sys
@@ -62,6 +60,7 @@ class SystemCallSolver(OptSolver):
         # a solver plugin may not report execution time.
         self._last_solve_time = None
         self._define_signal_handlers = None
+        self._version_timeout = 2
 
         if executable is not None:
             self.set_executable(name=executable, validate=validate)
