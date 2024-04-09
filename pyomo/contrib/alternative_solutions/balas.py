@@ -1,21 +1,12 @@
-#  ___________________________________________________________________________
-#
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
-
 import pyomo.environ as pe
 from pyomo.common.collections import ComponentSet
-from pyomo.contrib.alternative_solutions import aos_utils, solution
+from pyomo.contrib.alternative_solutions import Solution
+import pyomo.contrib.alternative_solutions.aos_utils as aos_utils
 
 
 def enumerate_binary_solutions(
     model,
+    *,
     num_solutions=10,
     variables="all",
     rel_opt_gap=None,
@@ -24,6 +15,8 @@ def enumerate_binary_solutions(
     solver="gurobi",
     solver_options={},
     tee=False,
+    quiet=True,
+    seed=None,
 ):
     """
     Finds alternative optimal solutions for a binary problem using no-good
@@ -59,6 +52,10 @@ def enumerate_binary_solutions(
             Solver option-value pairs to be passed to the solver.
         tee : boolean
             Boolean indicating that the solver output should be displayed.
+        quiet : boolean
+            Boolean indicating whether to suppress all output.
+        seed : int
+            Optional integer seed for the numpy random number generator
 
         Returns
         -------
@@ -66,14 +63,17 @@ def enumerate_binary_solutions(
             A list of Solution objects.
             [Solution]
     """
-
-    print("STARTING NO-GOOD CUT ANALYSIS")
+    if not quiet:   #pragma: no cover
+        print("STARTING NO-GOOD CUT ANALYSIS")
 
     assert search_mode in [
         "optimal",
         "random",
         "hamming",
     ], 'search mode must be "optimal", "random", or "hamming".'
+
+    if seed is not None:
+        aos_utils._set_numpy_rng(seed)
 
     if variables == "all":
         binary_variables = aos_utils.get_model_variables(
@@ -84,25 +84,31 @@ def enumerate_binary_solutions(
         non_binary_variables = []
         for var in variables:
             if var.is_binary():
-                binary_variables.append(var)
+                binary_variables.add(var)
             else:
                 non_binary_variables.append(var.name)
         if len(non_binary_variables) > 0:
-            print(
-                (
-                    "Warning: The following non-binary variables were included"
-                    "in the variable list and will be ignored:"
+            if not quiet:
+                print(
+                    (
+                        "Warning: The following non-binary variables were included"
+                        "in the variable list and will be ignored:"
+                    )
                 )
-            )
-            print(", ".join(non_binary_variables))
-    all_variables = aos_utils.get_model_variables(model, "all", include_fixed=True)
+                print(", ".join(non_binary_variables))
 
+    all_variables = aos_utils.get_model_variables(model, "all", include_fixed=True)
     orig_objective = aos_utils.get_active_objective(model)
 
+    #
+    # Setup solver
+    #
     opt = pe.SolverFactory(solver)
     for parameter, value in solver_options.items():
         opt.options[parameter] = value
-
+    #
+    # Appsi-specific configurations
+    #
     use_appsi = False
     if "appsi" in solver:
         use_appsi = True
@@ -125,11 +131,15 @@ def enumerate_binary_solutions(
             opt.update_config.check_for_new_objective = False
             opt.update_config.update_objective = False
 
-    print("Peforming initial solve of model.")
-    results = opt.solve(model, tee=tee)
+    #
+    # Initial solve of the model
+    #
+    if not quiet:   #pragma: no cover
+        print("Peforming initial solve of model.")
+    results = opt.solve(model, tee=tee, load_solutions=False)
     status = results.solver.status
     condition = results.solver.termination_condition
-    if condition != pe.TerminationCondition.optimal:
+    if not pe.check_optimal_termination(results):
         raise Exception(
             (
                 "No-good cut analysis cannot be applied, "
@@ -138,12 +148,20 @@ def enumerate_binary_solutions(
             ).format(status.value, condition.value)
         )
 
+    model.solutions.load_from(results)
     orig_objective_value = pe.value(orig_objective)
-    print("Found optimal solution, value = {}.".format(orig_objective_value))
-    solutions = [solution.Solution(model, all_variables)]
+    if not quiet:   #pragma: no cover
+        print("Found optimal solution, value = {}.".format(orig_objective_value))
+    solutions = [Solution(model, all_variables, objective=orig_objective)]
+    #
+    # Return just this solution if there are no binary variables
+    #
+    if len(binary_variables) == 0:
+        return solutions
 
     aos_block = aos_utils._add_aos_block(model, name="_balas")
-    print("Added block {} to the model.".format(aos_block))
+    if not quiet:   #pragma: no cover
+        print("Added block {} to the model.".format(aos_block))
     aos_block.no_good_cuts = pe.ConstraintList()
     aos_utils._add_objective_constraint(
         aos_block, orig_objective, orig_objective_value, rel_opt_gap, abs_opt_gap
@@ -172,7 +190,7 @@ def enumerate_binary_solutions(
             else:
                 aos_block.hamming_objective = pe.Objective(expr=expr, sense=pe.maximize)
 
-        if search_mode == "random":
+        elif search_mode == "random":
             if hasattr(aos_block, "random_objective"):
                 aos_block.del_component("random_objective")
             vector = aos_utils._get_random_direction(len(binary_variables))
@@ -183,35 +201,42 @@ def enumerate_binary_solutions(
                 idx += 1
             aos_block.random_objective = pe.Objective(expr=expr, sense=pe.maximize)
 
-        results = opt.solve(model, tee=tee)
+        results = opt.solve(model, tee=tee, load_solutions=False)
         status = results.solver.status
         condition = results.solver.termination_condition
-        if condition == pe.TerminationCondition.optimal:
-            orig_obj_val = pe.value(orig_objective)
-            print("Iteration {}: objective = {}".format(solution_number, orig_obj_val))
-            solutions.append(solution.Solution(model, all_variables))
+        if pe.check_optimal_termination(results):
+            model.solutions.load_from(results)
+            orig_obj_value = pe.value(orig_objective)
+            orig_obj_value = pe.value(orig_objective)
+            if not quiet:   #pragma: no cover
+                print("Iteration {}: objective = {}".format(solution_number, orig_obj_value))
+            solutions.append(Solution(model, all_variables, objective=orig_objective))
             solution_number += 1
         elif (
             condition == pe.TerminationCondition.infeasibleOrUnbounded
             or condition == pe.TerminationCondition.infeasible
         ):
-            print(
-                "Iteration {}: Infeasible, no additional binary solutions.".format(
-                    solution_number
+            if not quiet:   #pragma: no cover
+                print(
+                    "Iteration {}: Infeasible, no additional binary solutions.".format(
+                        solution_number
+                    )
                 )
-            )
             break
-        else:
-            print(
-                (
-                    "Iteration {}: Unexpected condition, SolverStatus = {}, "
-                    "TerminationCondition = {}"
-                ).format(solution_number, status.value, condition.value)
-            )
+        else:               #pragma: no cover
+            if not quiet:
+                print(
+                    (
+                        "Iteration {}: Unexpected condition, SolverStatus = {}, "
+                        "TerminationCondition = {}"
+                    ).format(solution_number, status.value, condition.value)
+                )
             break
 
     aos_block.deactivate()
     orig_objective.activate()
-    print("COMPLETED NO-GOOD CUT ANALYSIS")
+
+    if not quiet:   #pragma: no cover
+        print("COMPLETED NO-GOOD CUT ANALYSIS")
 
     return solutions
