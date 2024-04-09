@@ -18,6 +18,7 @@ mip_solver = "gurobi"
 
 
 class TestSolutionUnit(unittest.TestCase):
+
     def get_model(self):
         """
         Simple model with all variable types and fixed variables to test the
@@ -51,10 +52,35 @@ class TestSolutionUnit(unittest.TestCase):
         all_vars = au.get_model_variables(model, include_fixed=True)
 
         solution = sol.Solution(model, all_vars, include_fixed=False)
-        solution.pprint()
+        sol_str = """{
+    "fixed_variables": [
+        "f"
+    ],
+    "objective": "obj",
+    "objective_value": 6.5,
+    "solution": {
+        "x": 1.5,
+        "y": 1,
+        "z": 3
+    }
+}"""
+        assert str(solution) == sol_str
 
         solution = sol.Solution(model, all_vars)
-        solution.pprint(round_discrete=True)
+        sol_str = """{
+    "fixed_variables": [
+        "f"
+    ],
+    "objective": "obj",
+    "objective_value": 6.5,
+    "solution": {
+        "f": 1,
+        "x": 1.5,
+        "y": 1,
+        "z": 3
+    }
+}"""
+        assert solution.to_string(round_discrete=True) == sol_str
 
         sol_val = solution.get_variable_name_values(
             include_fixed=True, round_discrete=True
