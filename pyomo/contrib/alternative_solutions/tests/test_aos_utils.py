@@ -18,6 +18,7 @@ import pyomo.contrib.alternative_solutions.aos_utils as au
 
 
 class TestAOSUtilsUnit(unittest.TestCase):
+
     def get_multiple_objective_model(self):
         """Create a simple model with three objectives."""
         m = pe.ConcreteModel()
@@ -257,7 +258,7 @@ class TestAOSUtilsUnit(unittest.TestCase):
         )
         self.assertEqual(var, specific_vars)
 
-    def test_get_block_vars(self):
+    def test_get_block_vars1(self):
         """
         Check that all variables from block are gathered (without
         descending into subblocks).
@@ -268,6 +269,17 @@ class TestAOSUtilsUnit(unittest.TestCase):
         specific_vars = ComponentSet(
             [m.b1.y, m.b2.sb2.z_l[0], m.b2.sb2.z_l[1], m.b2.sb2.z_l[2]]
         )
+        self.assertEqual(var, specific_vars)
+
+    def test_get_block_vars2(self):
+        """
+        Check that all variables from block are gathered (without
+        descending into subblocks).
+        """
+        m = self.get_var_model()
+        components = [m.b1]
+        var = au.get_model_variables(m, components=components)
+        specific_vars = ComponentSet([m.b1.y, m.b1.sb1.y_l[0]])
         self.assertEqual(var, specific_vars)
 
     def test_get_constraint_vars(self):
