@@ -9,7 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from numpy.random import normal
+import numpy.random
+#from numpy.random import normal
 from numpy.linalg import norm
 
 import pyomo.environ as pe
@@ -100,17 +101,23 @@ def _add_objective_constraint(
     return objective_constraints
 
 
+rng = numpy.random.default_rng(9283749387)
+
+def _set_numpy_rng(seed):
+    global rng
+    rng = numpy.random.default_rng(seed)
+
 def _get_random_direction(num_dimensions):
     """
     Get a unit vector of dimension num_dimensions by sampling from and
     normalizing a standard multivariate Gaussian distribution.
     """
-
+    global rng
     iterations = 1000
     min_norm = 1e-4
     idx = 0
     while idx < iterations:
-        samples = normal(size=num_dimensions)
+        samples = rng.normal(size=num_dimensions)
         samples_norm = norm(samples)
         if samples_norm > min_norm:
             return samples / samples_norm
