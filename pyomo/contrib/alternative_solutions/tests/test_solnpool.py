@@ -83,7 +83,9 @@ class TestSolnPoolUnit(unittest.TestCase):
         found.
         """
         m = tc.get_pentagonal_pyramid_mip()
-        results = gurobi_generate_solutions(m, num_solutions=100, solver_options={"PoolGap": 0.2})
+        results = gurobi_generate_solutions(
+            m, num_solutions=100, solver_options={"PoolGap": 0.2}
+        )
         objectives = [round(result.objective[1], 2) for result in results]
         actual_solns_by_obj = m.num_ranked_solns[0:2]
         unique_solns_by_obj = [val for val in Counter(objectives).values()]

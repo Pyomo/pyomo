@@ -229,7 +229,9 @@ def get_implied_bound_ip():
     return m
 
 
-def get_aos_test_knapsack(var_max, weights, values, capacity=None, capacity_fraction=1.0):
+def get_aos_test_knapsack(
+    var_max, weights, values, capacity=None, capacity_fraction=1.0
+):
     """
     Creates a knapsack problem, given arrays of weights and values, and
     returns all feasible solutions. The capacity represents the percent of the
@@ -266,8 +268,8 @@ def get_aos_test_knapsack(var_max, weights, values, capacity=None, capacity_frac
         if np.dot(sol, weights) <= capacity:
             feasible_sols.append((sol, np.dot(sol, values)))
     feasible_sols = sorted(feasible_sols, key=lambda sol: sol[1], reverse=True)
-    m.ranked_solution_values = list(sorted([v for x,v in feasible_sols], reverse=True))
-    m.num_ranked_solns = list(Counter([v for x,v in feasible_sols]).values())
+    m.ranked_solution_values = list(sorted([v for x, v in feasible_sols], reverse=True))
+    m.num_ranked_solns = list(Counter([v for x, v in feasible_sols]).values())
     return m
 
 

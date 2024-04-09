@@ -63,7 +63,7 @@ def enumerate_binary_solutions(
             A list of Solution objects.
             [Solution]
     """
-    if not quiet:   #pragma: no cover
+    if not quiet:  # pragma: no cover
         print("STARTING NO-GOOD CUT ANALYSIS")
 
     assert search_mode in [
@@ -134,7 +134,7 @@ def enumerate_binary_solutions(
     #
     # Initial solve of the model
     #
-    if not quiet:   #pragma: no cover
+    if not quiet:  # pragma: no cover
         print("Peforming initial solve of model.")
     results = opt.solve(model, tee=tee, load_solutions=False)
     status = results.solver.status
@@ -150,7 +150,7 @@ def enumerate_binary_solutions(
 
     model.solutions.load_from(results)
     orig_objective_value = pe.value(orig_objective)
-    if not quiet:   #pragma: no cover
+    if not quiet:  # pragma: no cover
         print("Found optimal solution, value = {}.".format(orig_objective_value))
     solutions = [Solution(model, all_variables, objective=orig_objective)]
     #
@@ -160,7 +160,7 @@ def enumerate_binary_solutions(
         return solutions
 
     aos_block = aos_utils._add_aos_block(model, name="_balas")
-    if not quiet:   #pragma: no cover
+    if not quiet:  # pragma: no cover
         print("Added block {} to the model.".format(aos_block))
     aos_block.no_good_cuts = pe.ConstraintList()
     aos_utils._add_objective_constraint(
@@ -208,22 +208,26 @@ def enumerate_binary_solutions(
             model.solutions.load_from(results)
             orig_obj_value = pe.value(orig_objective)
             orig_obj_value = pe.value(orig_objective)
-            if not quiet:   #pragma: no cover
-                print("Iteration {}: objective = {}".format(solution_number, orig_obj_value))
+            if not quiet:  # pragma: no cover
+                print(
+                    "Iteration {}: objective = {}".format(
+                        solution_number, orig_obj_value
+                    )
+                )
             solutions.append(Solution(model, all_variables, objective=orig_objective))
             solution_number += 1
         elif (
             condition == pe.TerminationCondition.infeasibleOrUnbounded
             or condition == pe.TerminationCondition.infeasible
         ):
-            if not quiet:   #pragma: no cover
+            if not quiet:  # pragma: no cover
                 print(
                     "Iteration {}: Infeasible, no additional binary solutions.".format(
                         solution_number
                     )
                 )
             break
-        else:               #pragma: no cover
+        else:  # pragma: no cover
             if not quiet:
                 print(
                     (
@@ -236,7 +240,7 @@ def enumerate_binary_solutions(
     aos_block.deactivate()
     orig_objective.activate()
 
-    if not quiet:   #pragma: no cover
+    if not quiet:  # pragma: no cover
         print("COMPLETED NO-GOOD CUT ANALYSIS")
 
     return solutions

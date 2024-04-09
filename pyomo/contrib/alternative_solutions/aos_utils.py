@@ -10,7 +10,8 @@
 #  ___________________________________________________________________________
 
 import numpy.random
-#from numpy.random import normal
+
+# from numpy.random import normal
 from numpy.linalg import norm
 
 import pyomo.environ as pe
@@ -103,9 +104,11 @@ def _add_objective_constraint(
 
 rng = numpy.random.default_rng(9283749387)
 
+
 def _set_numpy_rng(seed):
     global rng
     rng = numpy.random.default_rng(seed)
+
 
 def _get_random_direction(num_dimensions):
     """
