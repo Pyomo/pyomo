@@ -6,10 +6,6 @@ import pyomo.contrib.alternative_solutions.tests.test_cases as tc
 from pyomo.contrib.alternative_solutions import shifted_lp
 
 
-mip_solver = "gurobi_appsi"
-# mip_solver = 'gurobi'
-
-
 class TestShiftedIP(unittest.TestCase):
 
     def test_mip_abs_objective(self):

@@ -1,14 +1,3 @@
-#  ___________________________________________________________________________
-#
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
-
 from numpy.testing import assert_array_almost_equal
 
 import pyomo.environ as pe
@@ -16,7 +5,6 @@ import pyomo.common.unittest as unittest
 
 from pyomo.contrib.alternative_solutions.obbt import obbt_analysis
 import pyomo.contrib.alternative_solutions.tests.test_cases as tc
-import pdb
 
 mip_solver = "gurobi_appsi"
 # mip_solver = 'gurobi'

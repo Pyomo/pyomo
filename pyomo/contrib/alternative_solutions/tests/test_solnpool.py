@@ -1,24 +1,11 @@
-#  ___________________________________________________________________________
-#
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
-
-import unittest
 from numpy.testing import assert_array_almost_equal
+from collections import Counter
 
 import pyomo.environ as pe
 import pyomo.common.unittest as unittest
 
-import pyomo.contrib.alternative_solutions.solnpool as sp
+from pyomo.contrib.alternative_solutions import gurobi_generate_solutions
 import pyomo.contrib.alternative_solutions.tests.test_cases as tc
-from collections import Counter
-import pdb
 
 
 @unittest.pytest.mark.solver("gurobi")
@@ -41,7 +28,7 @@ class TestSolnPoolUnit(unittest.TestCase):
         Check that the correct number of alternate solutions are found.
         """
         m = tc.get_triangle_ip()
-        results = sp.gurobi_generate_solutions(m, 100)
+        results = gurobi_generate_solutions(m, num_solutions=100)
         objectives = [round(result.objective[1], 2) for result in results]
         actual_solns_by_obj = m.num_ranked_solns
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
@@ -54,7 +41,7 @@ class TestSolnPoolUnit(unittest.TestCase):
         Check that the correct number of alternate solutions are found.
         """
         m = tc.get_triangle_ip()
-        results = sp.gurobi_generate_solutions(m, 8)
+        results = gurobi_generate_solutions(m, num_solutions=8)
         assert len(results) == 8
         objectives = [round(result.objective[1], 2) for result in results]
         actual_solns_by_obj = [6, 2]
@@ -68,7 +55,7 @@ class TestSolnPoolUnit(unittest.TestCase):
         Check that the correct number of alternate solutions are found.
         """
         m = tc.get_indexed_pentagonal_pyramid_mip()
-        results = sp.gurobi_generate_solutions(m, 100)
+        results = gurobi_generate_solutions(m, num_solutions=100)
         objectives = [round(result.objective[1], 2) for result in results]
         actual_solns_by_obj = m.num_ranked_solns
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
@@ -82,7 +69,7 @@ class TestSolnPoolUnit(unittest.TestCase):
         found.
         """
         m = tc.get_pentagonal_pyramid_mip()
-        results = sp.gurobi_generate_solutions(m, 100, rel_opt_gap=0.2)
+        results = gurobi_generate_solutions(m, num_solutions=100, rel_opt_gap=0.2)
         objectives = [round(result.objective[1], 2) for result in results]
         actual_solns_by_obj = m.num_ranked_solns[0:2]
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
@@ -96,7 +83,7 @@ class TestSolnPoolUnit(unittest.TestCase):
         found.
         """
         m = tc.get_pentagonal_pyramid_mip()
-        results = sp.gurobi_generate_solutions(m, 100, solver_options={"PoolGap": 0.2})
+        results = gurobi_generate_solutions(m, num_solutions=100, solver_options={"PoolGap": 0.2})
         objectives = [round(result.objective[1], 2) for result in results]
         actual_solns_by_obj = m.num_ranked_solns[0:2]
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
@@ -110,7 +97,7 @@ class TestSolnPoolUnit(unittest.TestCase):
         found.
         """
         m = tc.get_pentagonal_pyramid_mip()
-        results = sp.gurobi_generate_solutions(m, 100, abs_opt_gap=1.99)
+        results = gurobi_generate_solutions(m, num_solutions=100, abs_opt_gap=1.99)
         objectives = [round(result.objective[1], 2) for result in results]
         actual_solns_by_obj = m.num_ranked_solns[0:3]
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
@@ -124,8 +111,8 @@ class TestSolnPoolUnit(unittest.TestCase):
         """
         m = tc.get_pentagonal_pyramid_mip()
         # Use quiet=False to test error message
-        results = sp.gurobi_generate_solutions(
-            m, 100, solver_options={"TimeLimit": 0.0}, quiet=False
+        results = gurobi_generate_solutions(
+            m, num_solutions=100, solver_options={"TimeLimit": 0.0}, quiet=False
         )
         assert len(results) == 0
 

@@ -1,18 +1,8 @@
-#  ___________________________________________________________________________
-#
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
-
 from itertools import product
 from math import ceil, floor
 from collections import Counter
 import numpy as np
+
 import pyomo.environ as pe
 
 """
@@ -239,12 +229,12 @@ def get_implied_bound_ip():
     return m
 
 
-def get_aos_test_knapsack(var_max, weights, values, capacity_fraction):
+def get_aos_test_knapsack(var_max, weights, values, capacity=None, capacity_fraction=1.0):
     """
     Creates a knapsack problem, given arrays of weights and values, and
     returns all feasible solutions. The capacity represents the percent of the
     total max weight that can be selected (sum weights * var_max). The var_max
-    parameter sets the upper bound on all variables, teh max number of times
+    parameter sets the upper bound on all variables, the max number of times
     they can be selected.
     """
     assert len(weights) == len(values), "weights and values must be the same length."
@@ -253,7 +243,8 @@ def get_aos_test_knapsack(var_max, weights, values, capacity_fraction):
     ), "capacity_fraction must be between 0 and 1."
 
     num_vars = len(weights)
-    capacity = sum(weights) * var_max * capacity_fraction
+    if capacity is None:
+        capacity = sum(weights) * var_max * capacity_fraction
 
     m = pe.ConcreteModel()
     m.i = pe.RangeSet(0, num_vars - 1)
@@ -275,6 +266,8 @@ def get_aos_test_knapsack(var_max, weights, values, capacity_fraction):
         if np.dot(sol, weights) <= capacity:
             feasible_sols.append((sol, np.dot(sol, values)))
     feasible_sols = sorted(feasible_sols, key=lambda sol: sol[1], reverse=True)
+    m.ranked_solution_values = list(sorted([v for x,v in feasible_sols], reverse=True))
+    m.num_ranked_solns = list(Counter([v for x,v in feasible_sols]).values())
     return m
 
 

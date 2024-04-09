@@ -1,18 +1,7 @@
-#  ___________________________________________________________________________
-#
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
-
 import pyomo.environ as pe
 import pyomo.common.unittest as unittest
 import pyomo.contrib.alternative_solutions.aos_utils as au
-import pyomo.contrib.alternative_solutions.solution as sol
+from pyomo.contrib.alternative_solutions import Solution
 
 mip_solver = "gurobi"
 
@@ -51,7 +40,7 @@ class TestSolutionUnit(unittest.TestCase):
         opt.solve(model)
         all_vars = au.get_model_variables(model, include_fixed=True)
 
-        solution = sol.Solution(model, all_vars, include_fixed=False)
+        solution = Solution(model, all_vars, include_fixed=False)
         sol_str = """{
     "fixed_variables": [
         "f"
@@ -66,7 +55,7 @@ class TestSolutionUnit(unittest.TestCase):
 }"""
         assert str(solution) == sol_str
 
-        solution = sol.Solution(model, all_vars)
+        solution = Solution(model, all_vars)
         sol_str = """{
     "fixed_variables": [
         "f"
