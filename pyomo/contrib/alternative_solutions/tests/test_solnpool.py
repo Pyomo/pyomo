@@ -21,12 +21,11 @@ from collections import Counter
 import pdb
 
 
-
 @unittest.pytest.mark.solver("gurobi")
 class TestSolnPoolUnit(unittest.TestCase):
     """
     Cases to cover:
-        
+
         LP feasability (for an LP just one solution should be returned since gurobi cannot enumerate over continuous vars)
 
         Pass at least one solver option to make sure that work, e.g. time limit
@@ -97,7 +96,7 @@ class TestSolnPoolUnit(unittest.TestCase):
         found.
         """
         m = tc.get_pentagonal_pyramid_mip()
-        results = sp.gurobi_generate_solutions(m, 100, solver_options={"PoolGap":0.2})
+        results = sp.gurobi_generate_solutions(m, 100, solver_options={"PoolGap": 0.2})
         objectives = [round(result.objective[1], 2) for result in results]
         actual_solns_by_obj = m.num_ranked_solns[0:2]
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
@@ -125,7 +124,9 @@ class TestSolnPoolUnit(unittest.TestCase):
         """
         m = tc.get_pentagonal_pyramid_mip()
         # Use quiet=False to test error message
-        results = sp.gurobi_generate_solutions(m, 100, solver_options={"TimeLimit":0.0}, quiet=False)
+        results = sp.gurobi_generate_solutions(
+            m, 100, solver_options={"TimeLimit": 0.0}, quiet=False
+        )
         assert len(results) == 0
 
 

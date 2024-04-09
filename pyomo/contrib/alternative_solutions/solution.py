@@ -81,10 +81,18 @@ class Solution:
             rounded_discrete : boolean
                 If True, then round discrete variable values before printing.
         """
-        print(self.to_string(round_discrete=round_discrete, sort_keys=sort_keys, indent=indent))    #pragma: no cover
+        print(
+            self.to_string(
+                round_discrete=round_discrete, sort_keys=sort_keys, indent=indent
+            )
+        )  # pragma: no cover
 
     def to_string(self, round_discrete=True, sort_keys=True, indent=4):
-        return json.dumps(self.to_dict(round_discrete=round_discrete), sort_keys=sort_keys, indent=indent)
+        return json.dumps(
+            self.to_dict(round_discrete=round_discrete),
+            sort_keys=sort_keys,
+            indent=indent,
+        )
 
     def to_dict(self, round_discrete=True):
         ans = {}
@@ -139,4 +147,3 @@ class Solution:
         Returns a rounded value unless the variable is discrete or rounded_discrete is False.
         """
         return value if not round_discrete or variable.is_continuous() else round(value)
-

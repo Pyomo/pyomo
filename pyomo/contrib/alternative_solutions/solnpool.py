@@ -61,7 +61,7 @@ def gurobi_generate_solutions(
     # Setup gurobi
     #
     opt = appsi.solvers.Gurobi()
-    if not opt.available():     #pragma: no cover
+    if not opt.available():  # pragma: no cover
         return []
 
     opt.config.stream_solver = tee
@@ -82,10 +82,9 @@ def gurobi_generate_solutions(
     if not (condition == appsi.base.TerminationCondition.optimal):
         if not quiet:
             print(
-                (
-                    "Model cannot be solved, "
-                    "TerminationCondition = {}"
-                ).format(condition.value)
+                ("Model cannot be solved, " "TerminationCondition = {}").format(
+                    condition.value
+                )
             )
         return []
     #
