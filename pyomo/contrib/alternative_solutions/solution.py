@@ -72,6 +72,15 @@ class Solution:
             objective = aos_utils.get_active_objective(model)
         self.objective = (objective, pe.value(objective))
 
+    @property
+    def objective_value(self):
+        """
+        Returns
+        -------
+            The value of the objective.
+        """
+        return self.objective[1]
+
     def pprint(self, round_discrete=True, sort_keys=True, indent=4):
         """
         Print the solution variables and objective values.

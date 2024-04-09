@@ -9,15 +9,16 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import gurobipy
 import pyomo.environ as pe
 from pyomo.contrib import appsi
-from pyomo.contrib.alternative_solutions import aos_utils, solution
-import gurobipy
-import pdb
+import pyomo.contrib.alternative_solutions.aos_utils as aos_utils
+from pyomo.contrib.alternative_solutions import Solution
 
 
 def gurobi_generate_solutions(
     model,
+    *,
     num_solutions=10,
     rel_opt_gap=None,
     abs_opt_gap=None,
@@ -102,6 +103,6 @@ def gurobi_generate_solutions(
         # Pull the solution from the model into a Solution object,
         # and append to our list of solutions
         #
-        solutions.append(solution.Solution(model, variables))
+        solutions.append(Solution(model, variables))
 
     return solutions
