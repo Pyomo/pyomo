@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.collections import ComponentSet
+from pyomo.common.numeric_types import native_numeric_types
 from pyomo.core import Var
 from pyomo.core.expr.logical_expr import _flattened
 from pyomo.core.expr.numeric_expr import (
@@ -66,6 +67,7 @@ class MultiLevelLinearBeforeChildDispatcher(LinearBeforeChildDispatcher):
 _before_child_dispatcher = MultiLevelLinearBeforeChildDispatcher()
 
 
+# LinearSubsystemRepnVisitor
 class MultilevelLinearRepnVisitor(LinearRepnVisitor):
     def __init__(self, subexpression_cache, var_map, var_order, sorter, wrt):
         super().__init__(subexpression_cache, var_map, var_order, sorter)
@@ -75,3 +77,15 @@ class MultilevelLinearRepnVisitor(LinearRepnVisitor):
         print("before child %s" % child)
         print(child.__class__)
         return _before_child_dispatcher[child.__class__](self, child)
+
+    def finalizeResult(self, result):
+        ans = result[1]
+        if ans.__class__ is self.Result:
+            mult = ans.multiplier
+            if not mult.__class__ in native_numeric_types:
+                # mult is an expression--we should push it back into the other terms
+                self._factor_multiplier_into_linear_terms(ans, mult)
+                return ans
+
+        # In all other cases, the base class implementation is correct
+        return super().finalizeResult(result)

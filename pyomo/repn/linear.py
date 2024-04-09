@@ -803,6 +803,22 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
             self, node, *data
         )
 
+    def _factor_multiplier_into_linear_terms(self, ans, mult):
+        linear = ans.linear
+        zeros = []
+        for vid, coef in linear.items():
+            if coef:
+                linear[vid] = coef * mult
+            else:
+                zeros.append(vid)
+        for vid in zeros:
+            del linear[vid]
+        if ans.nonlinear is not None:
+            ans.nonlinear *= mult
+        if ans.constant:
+            ans.constant *= mult
+        ans.multiplier = 1
+
     def finalizeResult(self, result):
         ans = result[1]
         if ans.__class__ is self.Result:
@@ -831,20 +847,7 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
             else:
                 # mult not in {0, 1}: factor it into the constant,
                 # linear coefficients, and nonlinear term
-                linear = ans.linear
-                zeros = []
-                for vid, coef in linear.items():
-                    if coef:
-                        linear[vid] = coef * mult
-                    else:
-                        zeros.append(vid)
-                for vid in zeros:
-                    del linear[vid]
-                if ans.nonlinear is not None:
-                    ans.nonlinear *= mult
-                if ans.constant:
-                    ans.constant *= mult
-                ans.multiplier = 1
+                self._factor_mult_into_linear_terms(ans, mult)
             return ans
         ans = self.Result()
         assert result[0] is _CONSTANT

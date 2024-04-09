@@ -27,7 +27,6 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
         m = self.make_model()
         e = m.x + m.y
         cfg = VisitorConfig()
-        print("constructing")
         visitor = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x])
 
         repn = visitor.walk_expression(e)
@@ -37,4 +36,19 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
         self.assertIn(id(m.x), repn.linear)
         self.assertEqual(repn.linear[id(m.x)], 1)
         self.assertIs(repn.constant, m.y)
+        self.assertEqual(repn.multiplier, 1)
+
+    def test_bilinear_term(self):
+        m = self.make_model()
+        e = m.x * m.y
+        cfg = VisitorConfig()
+        visitor = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x])
+
+        repn = visitor.walk_expression(e)
+
+        self.assertIsNone(repn.nonlinear)
+        self.assertEqual(len(repn.linear), 1)
+        self.assertIn(id(m.x), repn.linear)
+        self.assertIs(repn.linear[id(m.x)], m.y)
+        self.assertEqual(repn.constant, 0)
         self.assertEqual(repn.multiplier, 1)
