@@ -14,8 +14,8 @@ import enum
 from typing import Sequence, Dict, Optional, Mapping, NoReturn, List, Tuple
 import os
 
-from pyomo.core.base.constraint import Constraint, _GeneralConstraintData
-from pyomo.core.base.var import Var, _GeneralVarData
+from pyomo.core.base.constraint import _GeneralConstraintData
+from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.objective import Objective, _GeneralObjectiveData
@@ -62,6 +62,8 @@ class SolverBase(abc.ABC):
         # if they really desire. Otherwise it defaults to the class name (all lowercase)
         if "name" in kwds:
             self.name = kwds.pop('name')
+        elif not hasattr(self, 'name'):
+            self.name = type(self).__name__.lower()
         self.config = self.CONFIG(value=kwds)
 
     #
