@@ -23,7 +23,7 @@ def gurobi_generate_solutions(
     abs_opt_gap=None,
     solver_options={},
     tee=False,
-    quiet=False,
+    quiet=True,
 ):
     """
     Finds alternative optimal solutions for discrete variables using Gurobi's
@@ -61,10 +61,11 @@ def gurobi_generate_solutions(
     # Setup gurobi
     #
     opt = appsi.solvers.Gurobi()
-    if not opt.available():
+    if not opt.available():     #pragma: no cover
         return []
 
     opt.config.stream_solver = tee
+    opt.config.load_solution = False
     opt.gurobi_options["PoolSolutions"] = num_solutions
     opt.gurobi_options["PoolSearchMode"] = 2
     if rel_opt_gap is not None:
@@ -82,17 +83,15 @@ def gurobi_generate_solutions(
         if not quiet:
             print(
                 (
-                    "Model cannot be solved, SolverStatus = {}, "
+                    "Model cannot be solved, "
                     "TerminationCondition = {}"
-                ).format(status.value, condition.value)
+                ).format(condition.value)
             )
         return []
     #
     # Collect solutions
     #
     solution_count = opt.get_model_attr("SolCount")
-    if not quiet:
-        print("{} solutions found.".format(solution_count))
     variables = aos_utils.get_model_variables(model, "all", include_fixed=True)
     solutions = []
     for i in range(solution_count):

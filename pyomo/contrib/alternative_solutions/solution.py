@@ -81,7 +81,7 @@ class Solution:
             rounded_discrete : boolean
                 If True, then round discrete variable values before printing.
         """
-        print(self.to_string(round_discrete=round_discrete, sort_keys=sort_keys, indent=indent))
+        print(self.to_string(round_discrete=round_discrete, sort_keys=sort_keys, indent=indent))    #pragma: no cover
 
     def to_string(self, round_discrete=True, sort_keys=True, indent=4):
         return json.dumps(self.to_dict(round_discrete=round_discrete), sort_keys=sort_keys, indent=indent)

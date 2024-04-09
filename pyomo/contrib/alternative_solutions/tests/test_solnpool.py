@@ -56,8 +56,6 @@ class TestSolnPoolUnit(unittest.TestCase):
         """
         m = tc.get_triangle_ip()
         results = sp.gurobi_generate_solutions(m, 8)
-        for r in results:
-            print(r)
         assert len(results) == 8
         objectives = [round(result.objective[1], 2) for result in results]
         actual_solns_by_obj = [6, 2]
@@ -126,12 +124,9 @@ class TestSolnPoolUnit(unittest.TestCase):
         Check that no solutions are returned with a timelimit of 0.
         """
         m = tc.get_pentagonal_pyramid_mip()
-        results = sp.gurobi_generate_solutions(m, 100, solver_options={"TimeLimit":0.0})
+        # Use quiet=False to test error message
+        results = sp.gurobi_generate_solutions(m, 100, solver_options={"TimeLimit":0.0}, quiet=False)
         assert len(results) == 0
-        #objectives = [round(result.objective[1], 2) for result in results]
-        #actual_solns_by_obj = m.num_ranked_solns[0:2]
-        #unique_solns_by_obj = [val for val in Counter(objectives).values()]
-        #assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
 
 
 if __name__ == "__main__":

@@ -40,7 +40,7 @@ def get_shifted_linear_model(model, block=None):
     """
     Converts an (MI)LP with bounded (discrete and) continuous variables
     (l <= x <= u) into a standard form where where all continuous variables
-    are non-negative reals and all contraints are equalities. For a pure LP of
+    are non-negative reals and all constraints are equalities. For a pure LP of
     the form,
 
     min/max cx
