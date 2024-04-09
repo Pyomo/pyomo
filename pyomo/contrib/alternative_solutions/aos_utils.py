@@ -114,8 +114,8 @@ def _get_random_direction(num_dimensions):
         samples_norm = norm(samples)
         if samples_norm > min_norm:
             return samples / samples_norm
-        idx += 1
-    raise Exception(
+        idx += 1                                # pragma: no cover
+    raise Exception(                            # pragma: no cover
         (
             "Generated {} sequential Gaussian draws with a norm of "
             "less than {}.".format(iterations, min_norm)
@@ -152,6 +152,7 @@ def get_model_variables(
     include_binary=True,
     include_integer=True,
     include_fixed=False,
+    quiet=True,
 ):
     """
     Gathers and returns all variables or a subset of variables from a Pyomo
@@ -262,9 +263,10 @@ def get_model_variables(
                     include_integer,
                     include_fixed,
                 )
-            else:
-                print(
-                    ("No variables added for unrecognized component {}.").format(comp)
-                )
+            else:                               #pragma: no cover
+                if not quiet:
+                    print(
+                        ("No variables added for unrecognized component {}.").format(comp)
+                    )
 
     return variable_set
