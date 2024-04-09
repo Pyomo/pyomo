@@ -17,6 +17,7 @@ import pdb
 
 def obbt_analysis(
     model,
+    *,
     variables="all",
     rel_opt_gap=None,
     abs_opt_gap=None,
@@ -25,6 +26,7 @@ def obbt_analysis(
     solver="gurobi",
     solver_options={},
     tee=False,
+    quiet=True,
 ):
     """
     Calculates the bounds on each variable by solving a series of min and max
@@ -61,6 +63,8 @@ def obbt_analysis(
             Solver option-value pairs to be passed to the solver.
         tee : boolean
             Boolean indicating that the solver output should be displayed.
+        quiet : boolean
+            Boolean indicating whether to suppress all output.
 
         Returns
         -------
@@ -70,7 +74,8 @@ def obbt_analysis(
             the solver encountered an issue.
     """
 
-    print("STARTING OBBT ANALYSIS")
+    if not quiet:       #pragma: no cover
+        print("STARTING OBBT ANALYSIS")
     if variables == "all" or warmstart:
         all_variables = aos_utils.get_model_variables(model, "all", include_fixed=False)
         variable_list = all_variables
@@ -80,7 +85,8 @@ def obbt_analysis(
             solutions[var] = []
 
     num_vars = len(variable_list)
-    print("Analyzing {} variables ({} total solves).".format(num_vars, 2 * num_vars))
+    if not quiet:       #pragma: no cover
+        print("Analyzing {} variables ({} total solves).".format(num_vars, 2 * num_vars))
     orig_objective = aos_utils.get_active_objective(model)
 
     use_appsi = False
@@ -89,6 +95,7 @@ def obbt_analysis(
         for parameter, value in solver_options.items():
             opt.gurobi_options[parameter] = var_value
         opt.config.stream_solver = tee
+        opt.config.load_solution = False
         results = opt.solve(model)
         condition = results.termination_condition
         optimal_tc = appsi.base.TerminationCondition.optimal
@@ -99,12 +106,19 @@ def obbt_analysis(
         opt = pe.SolverFactory(solver)
         for parameter, value in solver_options.items():
             opt.options[parameter] = value
-        results = opt.solve(model, warmstart=warmstart, tee=tee)
+        try:
+            results = opt.solve(model, warmstart=warmstart, tee=tee, load_solutions=False)
+        except:
+            # Assume that we failed b.c. of warm starts
+            results = None
+        if results is None:
+            results = opt.solve(model, tee=tee, load_solutions=False)
         condition = results.solver.termination_condition
         optimal_tc = pe.TerminationCondition.optimal
         infeas_or_unbdd_tc = pe.TerminationCondition.infeasibleOrUnbounded
         unbdd_tc = pe.TerminationCondition.unbounded
-    print("Peforming initial solve of model.")
+    if not quiet:       #pragma: no cover
+        print("Peforming initial solve of model.")
 
     if condition != optimal_tc:
         raise Exception(
@@ -112,12 +126,18 @@ def obbt_analysis(
                 condition.value
             )
         )
+    if use_appsi:
+        results.solution_loader.load_vars(solution_number=0)
+    else:
+        model.solutions.load_from(results)
     if warmstart:
         _add_solution(solutions)
     orig_objective_value = pe.value(orig_objective)
-    print("Found optimal solution, value = {}.".format(orig_objective_value))
+    if not quiet:       #pragma: no cover
+        print("Found optimal solution, value = {}.".format(orig_objective_value))
     aos_block = aos_utils._add_aos_block(model, name="_obbt")
-    print("Added block {} to the model.".format(aos_block))
+    if not quiet:       #pragma: no cover
+        print("Added block {} to the model.".format(aos_block))
     obj_constraints = aos_utils._add_objective_constraint(
         aos_block, orig_objective, orig_objective_value, rel_opt_gap, abs_opt_gap
     )
@@ -171,13 +191,19 @@ def obbt_analysis(
                     pass
             else:
                 try:
-                    results = opt.solve(model, warmstart=warmstart, tee=tee)
-                    condition = results.solver.termination_condition
+                    results = opt.solve(model, warmstart=warmstart, tee=tee, load_solutions=False)
                 except:
-                    pass
+                    results = None
+                if results is None:
+                    results = opt.solve(model, tee=tee, load_solutions=False)
+                condition = results.solver.termination_condition
             new_constraint = False
 
             if condition == optimal_tc:
+                if use_appsi:
+                    results.solution_loader.load_vars(solution_number=0)
+                else:
+                    model.solutions.load_from(results)
                 if warmstart:
                     _add_solution(solutions)
                 obj_val = pe.value(var)
@@ -203,7 +229,7 @@ def obbt_analysis(
                     variable_bounds[var][idx] = float("-inf")
                 else:
                     variable_bounds[var][idx] = float("inf")
-            else:
+            else:       #pragma: no cover
                 print(
                     (
                         "Unexpected condition for the variable {} {} problem."
@@ -212,11 +238,12 @@ def obbt_analysis(
                 )
 
             var_value = variable_bounds[var][idx]
-            print(
-                "Iteration {}/{}: {}_{} = {}".format(
-                    iteration, total_iterations, var.name, bound_dir, var_value
+            if not quiet:       #pragma: no cover
+                print(
+                    "Iteration {}/{}: {}_{} = {}".format(
+                     iteration, total_iterations, var.name, bound_dir, var_value
+                    )
                 )
-            )
 
             if idx == 1:
                 variable_bounds[var] = tuple(variable_bounds[var])
@@ -226,7 +253,8 @@ def obbt_analysis(
     aos_block.deactivate()
     orig_objective.activate()
 
-    print("COMPLETED OBBT ANALYSIS")
+    if not quiet:       #pragma: no cover
+        print("COMPLETED OBBT ANALYSIS")
 
     return variable_bounds
 

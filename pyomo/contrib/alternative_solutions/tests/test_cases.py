@@ -21,7 +21,9 @@ def _is_satified(constraint, feasability_tol=1e-6):
 
 
 def get_2d_diamond_problem(discrete_x=False, discrete_y=False):
-    """Simple 2d problem where the feasible is diamond-shaped."""
+    """
+    Simple 2d problem where the feasible is diamond-shaped.
+    """
     m = pe.ConcreteModel()
     m.x = pe.Var(within=pe.Integers if discrete_x else pe.Reals)
     m.y = pe.Var(within=pe.Integers if discrete_y else pe.Reals)
