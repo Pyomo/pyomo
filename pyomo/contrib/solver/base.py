@@ -59,7 +59,10 @@ class SolverBase(abc.ABC):
 
     def __init__(self, **kwds) -> None:
         # We allow the user and/or developer to name the solver something else,
-        # if they really desire. Otherwise it defaults to the class name (all lowercase)
+        # if they really desire.
+        # Otherwise it defaults to the name defined when the solver was registered
+        # in the SolverFactory or the class name (all lowercase), whichever is
+        # applicable
         if "name" in kwds:
             self.name = kwds.pop('name')
         elif not hasattr(self, 'name'):
