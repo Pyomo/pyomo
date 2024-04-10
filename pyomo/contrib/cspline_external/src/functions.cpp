@@ -16,48 +16,61 @@
 
 #include "funcadd.h"
 
+// Don't want to have the overhead of reading parameter files
+// each time, so keep params as long as library remains loaded
+
+// Number of loaded curves
 unsigned int n_cspline_1d = 0;
+
+// Parameter file path to unsigned in index map
 std::unordered_map<std::string, unsigned int> idx_cspline_1d;
+
+// Knots for each curve
 std::vector< std::vector<double> > knots_cspline_1d;
+
+// Cubic segment parameters for each curve
 std::vector< std::vector<double> > a1_cspline_1d;
 std::vector< std::vector<double> > a2_cspline_1d;
 std::vector< std::vector<double> > a3_cspline_1d;
 std::vector< std::vector<double> > a4_cspline_1d;
+
+// Number of segments in each curve
 std::vector< unsigned int > n_seg_cspline_1d;
 
+// The data file format is a text file with one parameter per line
+//   Line 1: Number of parameters
+//   nsegs + 1 lines for knots
+//   nsegs lines for a1
+//   nsegs lines for a2
+//   nsegs lines for a3
+//   nsegs lines for a4 
 
-int read_parameters_cspline_1d(std::string file_path) {
-   // Read data table
-   try{
-      // Parameters have been calculated already 
+// Function to read parameter file if not read and store params
+static int read_parameters_cspline_1d(std::string file_path) {
+   try{ //if read already return curve index and done.
       return idx_cspline_1d.at(file_path);
    }
-   catch(std::out_of_range const&){
-      // Parameters haven't been read yet, so do that.
-   }
-   unsigned int i, idx;
-   unsigned int n; // number of segments
+   catch(std::out_of_range const&){} // Not read so read it.
+   unsigned int i, idx, n; //loop counter, curve index, and number of segs
    std::ifstream param_file; // parameter input file
 
-   // Set index for cspline param file
+   // Set index for cspline param file and increment curve count
    idx_cspline_1d[file_path] = n_cspline_1d;
    idx = n_cspline_1d;
    ++n_cspline_1d;
 
-   // open the parameter file
+   // open the parameter file for input
    param_file.open(file_path);
 
-   // get the number of segments
+   // get the number of segments and size to vectors
    param_file >> n;
    n_seg_cspline_1d.resize(n_cspline_1d);
    n_seg_cspline_1d[idx] = n;
-
    knots_cspline_1d.resize(n_cspline_1d);
    a1_cspline_1d.resize(n_cspline_1d);
    a2_cspline_1d.resize(n_cspline_1d);
    a3_cspline_1d.resize(n_cspline_1d);
    a4_cspline_1d.resize(n_cspline_1d);
-
    knots_cspline_1d[idx].resize(n + 1);
    a1_cspline_1d[idx].resize(n);
    a2_cspline_1d[idx].resize(n);
@@ -90,22 +103,36 @@ int read_parameters_cspline_1d(std::string file_path) {
    }
 
    param_file.close();
+
+   // Returns curve index
    return idx;
 }
 
+// Calculate the cspline 1D function value and derivatives
 extern real cspline_1d(arglist *al) {
+   // Get the data file path argument
    const char* data_file = al->sa[-(al->at[1]+1)];
+   // Get the function input
    real x = al->ra[al->at[0]];
+   // Get parameters, read file if needed
    unsigned int idx = read_parameters_cspline_1d(data_file);
-   size_t seg;
-   real a1, a2, a3, a4;
+   size_t seg; // segment index
+   real a1, a2, a3, a4; // segment parameters
 
    //find segment index
    auto lit = std::lower_bound(knots_cspline_1d[idx].begin(), knots_cspline_1d[idx].end(), x);
    seg = lit - knots_cspline_1d[idx].begin();
+
+   // If off the curve on the low side use first seg (0) otherwise
+   // subtract 1 to go from knot index to segment index (i.e. seg is
+   // initially how many knots are below, so 0 is less than first knot,
+   // 1 is above first knot..., so > 0 we need to decrement to get the 
+   // segment index)
    if(seg > 0) --seg;
+   // In off the curve on the high side, use last segment
    if(seg >= n_seg_cspline_1d[idx]) seg = n_seg_cspline_1d[idx] - 1;
 
+   // Get the parameters for the correct segment 
    a1 = a1_cspline_1d[idx][seg];
    a2 = a2_cspline_1d[idx][seg];
    a3 = a3_cspline_1d[idx][seg];

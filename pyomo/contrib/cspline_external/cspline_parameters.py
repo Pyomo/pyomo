@@ -117,14 +117,13 @@ def cubic_parameters_model(
 
     m = pyo.ConcreteModel(name=name)
     # Sets of indexes for knots, segments, and data
-    m.jnt_idx = pyo.RangeSet(n_knots)
+    m.knt_idx = pyo.RangeSet(n_knots)
     m.seg_idx = pyo.RangeSet(n_knots - 1)
     m.dat_idx = pyo.RangeSet(n_data)
 
     m.x_data = pyo.Param(m.dat_idx, initialize={i + 1: x for i, x in enumerate(x_data)})
     m.y_data = pyo.Param(m.dat_idx, initialize={i + 1: x for i, x in enumerate(y_data)})
-    m.x = pyo.Var(m.jnt_idx, initialize={i + 1: x for i, x in enumerate(x_knots)})
-    m.x.fix()
+    m.x = pyo.Param(m.knt_idx, initialize={i + 1: x for i, x in enumerate(x_knots)})
     m.alpha = pyo.Var(m.seg_idx, {1, 2, 3, 4}, initialize=1)
 
     # f_s(x) = f_s+1(x)
@@ -186,7 +185,7 @@ def add_endpoint_second_derivative_constraints(m):
     @m.Constraint([m.seg_idx.first(), m.seg_idx.last()])
     def yxx_endpoint_eqn(blk, s):
         if s == m.seg_idx.last():
-            j = m.jnt_idx.last()
+            j = m.knt_idx.last()
         else:
             j = s
         return fxx(m.x[j], m.alpha, s) == 0
@@ -301,15 +300,15 @@ def plot_fxx(m, file_name=None, **kwargs):
 if __name__ == "__main__":
 
     x_knots = [
-        # -2,
-        # -1,
+        0,
         1,
         2,
+        2.5,
         3,
+        3.5,
         4,
         5,
-        # 7,
-        # 8,
+        6,
     ]
 
     x_data = [
@@ -328,35 +327,27 @@ if __name__ == "__main__":
         1,
     ]
 
-    m = cubic_parameters_model(x_data, y_data, x_knots)
+    m = cubic_parameters_model(
+        x_data, 
+        y_data, 
+        x_knots,    
+        end_point_constraint=False,
+        objective_form=True,
+    )
 
-    """
-    m.alpha[1, 1].fix(0)
-    m.alpha[1, 2].fix(0)
+    #m.alpha[1, 1].fix(0)
+    m.alpha[1, 2].fix(0.5)
     m.alpha[1, 3].fix(0)
     m.alpha[1, 4].fix(0)
 
-    m.alpha[8, 1].fix(0)
-    m.alpha[8, 2].fix(0)
+    #m.alpha[8, 1].fix(0)
+    m.alpha[8, 2].fix(-0.5)
     m.alpha[8, 3].fix(0)
     m.alpha[8, 4].fix(0)
 
 
-    @m.Constraint(m.jnt_idx)
-    def c1(blk, j):
-        if j > m.seg_idx.last():
-            s = j - 1
-        else:
-            s = j
-        if s >= m.jnt_idx.last() - 2:
-            return pyo.Constraint.Skip
-        elif s <= 3:
-            return pyo.Constraint.Skip
-        return fxx(m.x[j], m.alpha, s) <= 0
-    """
-
-
-    solver_obj = pyo.SolverFactory("clp")
+    #solver_obj = pyo.SolverFactory("clp")
+    solver_obj = pyo.SolverFactory("ipopt")
     solver_obj.solve(m, tee=True)
 
     get_parameters(m, "test.txt")

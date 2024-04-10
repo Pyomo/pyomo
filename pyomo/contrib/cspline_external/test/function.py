@@ -3,12 +3,12 @@ from pyomo.common.fileutils import find_library
 
 if __name__ == "__main__":
     lib = find_library("cspline_external")
-    params = "t1_params.txt"
+    params = "t2_params.txt"
 
     m = pyo.ConcreteModel()
     m.f = pyo.ExternalFunction(library=lib, function="cspline_1d")
 
-    m.x = pyo.Var(initialize=2)  # , bounds=(0.9, 5.1))
+    m.x = pyo.Var(initialize=2, bounds=(0.5, 5.5))
     m.y = pyo.Var()
 
     m.c1 = pyo.Constraint(expr=m.y == m.f(m.x, params))
