@@ -85,6 +85,13 @@ def calculate_variable_from_constraint(
         constraint = Constraint(expr=constraint, name=type(constraint).__name__)
         constraint.construct()
 
+    if constraint.is_indexed():
+        raise ValueError(
+            'calculate_variable_from_constraint(): constraint must be a '
+            'scalar constraint or a single ConstraintData.  Received '
+            f'{constraint.__class__.__name__} ("{constraint.name}")'
+        )
+
     body = constraint.body
     lower = constraint.lb
     upper = constraint.ub
