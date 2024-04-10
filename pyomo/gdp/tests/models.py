@@ -840,7 +840,7 @@ def makeAnyIndexedDisjunctionOfDisjunctDatas():
     build from DisjunctDatas. Identical mathematically to
     makeDisjunctionOfDisjunctDatas.
 
-    Used to test that the right things happen for a case where soemone
+    Used to test that the right things happen for a case where someone
     implements an algorithm which iteratively generates disjuncts and
     retransforms"""
     m = ConcreteModel()
