@@ -98,7 +98,7 @@ class InputDataStandardizer(object):
         Pyomo component type, such as Component, Var or Param.
     cdatatype : type
         Corresponding Pyomo component data type, such as
-        _ComponentData, VarData, or ParamData.
+        ComponentData, VarData, or ParamData.
     ctype_validator : callable, optional
         Validator function for objects of type `ctype`.
     cdatatype_validator : callable, optional

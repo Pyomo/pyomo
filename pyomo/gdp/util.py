@@ -534,7 +534,7 @@ def get_transformed_constraints(srcConstraint):
             "want the container for all transformed constraints "
             "from an IndexedDisjunction, this is the parent "
             "component of a transformed constraint originating "
-            "from any of its _ComponentDatas.)"
+            "from any of its ComponentDatas.)"
         )
     transBlock = _get_constraint_transBlock(srcConstraint)
     transformed_constraints = transBlock.private_data(
