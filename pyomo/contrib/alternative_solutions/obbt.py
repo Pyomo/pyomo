@@ -70,15 +70,20 @@ def obbt_analysis(
         -------
         variable_ranges
             A Pyomo ComponentMap containing the bounds for each variable.
-            {variable: (lower_bound, upper_bound)}. A None value indicates
+            {variable: (lower_bound, upper_bound)}. An exception is raised when 
             the solver encountered an issue.
     """
 
     if not quiet:       #pragma: no cover
         print("STARTING OBBT ANALYSIS")
-    if variables == "all" or warmstart:
+
+    if warmstart:
+        assert variables == "all", "Cannot restrict variable list when warmstart is specified"
+    if variables == "all":
         all_variables = aos_utils.get_model_variables(model, "all", include_fixed=False)
         variable_list = all_variables
+    else:
+        variable_list = list(variables)
     if warmstart:
         solutions = pe.ComponentMap()
         for var in all_variables:
@@ -93,7 +98,7 @@ def obbt_analysis(
     if "appsi" in solver:
         opt = appsi.solvers.Gurobi()
         for parameter, value in solver_options.items():
-            opt.gurobi_options[parameter] = var_value
+            opt.gurobi_options[parameter] = value
         opt.config.stream_solver = tee
         opt.config.load_solution = False
         results = opt.solve(model)
@@ -121,7 +126,7 @@ def obbt_analysis(
         print("Peforming initial solve of model.")
 
     if condition != optimal_tc:
-        raise Exception(
+        raise RuntimeError(
             ("OBBT cannot be applied, " "TerminationCondition = {}").format(
                 condition.value
             )
@@ -184,11 +189,8 @@ def obbt_analysis(
                 opt.update_config.check_for_new_or_removed_constraints = new_constraint
             if use_appsi:
                 opt.config.stream_solver = tee
-                try:
-                    results = opt.solve(model)
-                    condition = results.termination_condition
-                except:
-                    pass
+                results = opt.solve(model)
+                condition = results.termination_condition
             else:
                 try:
                     results = opt.solve(model, warmstart=warmstart, tee=tee, load_solutions=False)

@@ -220,13 +220,14 @@ def get_implied_bound_ip():
 
     m.c1 = pe.Constraint(expr=m.x + m.y == 3)
     m.c2 = pe.Constraint(expr=m.x + m.y + m.z <= 5)
+    m.c3 = pe.Constraint(expr=m.x + m.y + m.z >= 4)
 
     m.extreme_points = {(4, 2)}
 
     m.var_bounds = pe.ComponentMap()
     m.var_bounds[m.x] = (0, 3)
     m.var_bounds[m.y] = (0, 3)
-    m.var_bounds[m.z] = (0, 2)
+    m.var_bounds[m.z] = (1, 2)
 
     return m
 

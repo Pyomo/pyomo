@@ -11,29 +11,25 @@ import pyomo.contrib.alternative_solutions.tests.test_cases as tc
 solvers = list(pyomo.opt.check_available_solvers("glpk", "gurobi", "appsi_gurobi"))
 pytestmark = pytest.mark.parametrize("mip_solver", solvers)
 
+timelimit={"gurobi":"TimeLimit", "appsi_gurobi":"TimeLimit", "glpk":"tmlim"}
 
 @unittest.pytest.mark.default
 class TestOBBTUnit:
 
-    # TODO: Add more test cases
-    """
-    So far I have added test cases for the feasibility problems, we should test cases
-    where we put objective constraints in as well based on the absolute and relative difference.
+    def test_obbt_error1(self, mip_solver):
+        m = tc.get_2d_diamond_problem()
+        with pytest.raises(AssertionError):
+            obbt_analysis(m, variables=[m.x], solver=mip_solver)
 
-    Add a case where bounds are only found for a subset of variables.
-
-    Try cases where refine_discrete_bounds is set to true to ensure that new constraints are
-    added to refine the bounds. I created the problem get_implied_bound_ip to facilitate this
-
-    Check to see that warm starting works for a MIP and MILP case
-
-    We should also check that warmstarting and refining bounds works for gurobi and appsi_gurobi
-
-    We should pass at least one solver_options to ensure this work (e.g. time limit)
-
-    I only looked at linear cases here, so you think others are worth testing, some simple non-linear (convex) cases?
-
-    """
+    def test_obbt_some_vars(self, mip_solver):
+        """
+        Check that the correct bounds are found for a continuous problem.
+        """
+        m = tc.get_2d_diamond_problem()
+        results = obbt_analysis(m, variables=[m.x], warmstart=False, solver=mip_solver)
+        assert len(results) == 1
+        for var, bounds in results.items():
+            assert_array_almost_equal(bounds, m.continuous_bounds[var])
 
     def test_obbt_continuous(self, mip_solver):
         """
@@ -55,7 +51,8 @@ class TestOBBTUnit:
 
     def test_mip_abs_objective(self, mip_solver):
         """
-        Check that absolute mip gap constraints are added"""
+        Check that absolute mip gap constraints are added
+        """
         m = tc.get_pentagonal_pyramid_mip()
         results = obbt_analysis(m, abs_opt_gap=1.99)
         assert m._obbt.optimality_tol_abs.lb == pytest.approx(3.01)
@@ -113,6 +110,15 @@ class TestOBBTUnit:
         assert results.keys() == m.var_bounds.keys()
         for var, bounds in results.items():
             assert_array_almost_equal(bounds, m.var_bounds[var])
+
+    def test_no_time(self, mip_solver):
+        """
+        Check that the correct bounds are found for a discrete problem where
+        more restrictive bounds are implied by the constraints.
+        """
+        m = tc.get_implied_bound_ip()
+        with pytest.raises(RuntimeError):
+            obbt_analysis(m, solver=mip_solver, solver_options={timelimit[mip_solver]: 0})
 
     def test_bound_refinement(self, mip_solver):
         """
