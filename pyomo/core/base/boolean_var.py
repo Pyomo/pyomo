@@ -81,26 +81,30 @@ def _associated_binary_mapper(encode, val):
 
 
 class BooleanVarData(ComponentData, BooleanValue):
-    """
-    This class defines the data for a single Boolean variable.
+    """This class defines the data for a single Boolean variable.
 
-    Constructor Arguments:
-        component   The BooleanVar object that owns this data.
+    Parameters
+    ----------
+    component: Component
+        The BooleanVar object that owns this data.
 
-    Public Class Attributes:
-        domain      The domain of this variable.
-        fixed       If True, then this variable is treated as a
-                        fixed constant in the model.
-        stale       A Boolean indicating whether the value of this variable is
-                        legitimiate.  This value is true if the value should
-                        be considered legitimate for purposes of reporting or
-                        other interrogation.
-        value       The numeric value of this variable.
+    Attributes
+    ----------
+    domain: SetData
+        The domain of this variable.
 
-    The domain attribute is a property because it is
-    too widely accessed directly to enforce explicit getter/setter
-    methods and we need to deter directly modifying or accessing
-    these attributes in certain cases.
+    fixed: bool
+        If True, then this variable is treated as a fixed constant in
+        the model.
+
+    stale: bool
+        A Boolean indicating whether the value of this variable is
+        Consistent with the most recent solve.  `True` indicates that
+        this variable's value was set prior to the most recent solve and
+        was not updated by the results returned by the solve.
+
+    value: bool
+        The value of this variable.
     """
 
     __slots__ = ('_value', 'fixed', '_stale', '_associated_binary')
