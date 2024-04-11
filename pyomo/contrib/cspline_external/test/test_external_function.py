@@ -1,12 +1,23 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import pyomo.environ as pyo
 from pyomo.common.fileutils import find_library
 
 if __name__ == "__main__":
     lib = find_library("cspline_external")
-    params = "t2_params.txt"
+    params = "t1_params.txt"
 
     m = pyo.ConcreteModel()
-    m.f = pyo.ExternalFunction(library=lib, function="cspline_1d")
+    m.f = pyo.ExternalFunction(library=lib, function="cspline")
 
     m.x = pyo.Var(initialize=2, bounds=(0.5, 5.5))
     m.y = pyo.Var()

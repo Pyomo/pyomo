@@ -1,10 +1,19 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 from pyomo.common.dependencies import attempt_import
 import pyomo.environ as pyo
 
 np, numpy_available = attempt_import("numpy")
 plt, plt_available = attempt_import("matplotlib.pyplot")
-
-import idaes
 
 
 def f(x, alpha, s=None):
@@ -86,21 +95,21 @@ def cubic_parameters_model(
 ):
     """Create a Pyomo model to calculate parameters for a cubic spline.  By default
     this creates a square linear model, but optionally it can leave off the endpoint
-    second derivative constraints and add an objective function for fitting data 
-    instead.  The purpose of alternative objective form is to allow the spline to 
-    be constrained in other way and/or extend the spline for a particular 
-    extrapolation behavior.
+    second derivative constraints and add an objective function for fitting data
+    instead.  The purpose of alternative least squares form is to allow the spline to
+    be constrained in other that don't require a perfect data match.  The knots don't
+    need to be the same as the x data to allow, for example, additional segments for
+    extrapolation.
 
     Args:
         x_data: list of x data
         y_data: list of y data
         x_knots: optional list of knots
-        end_point_constraint: if true add constraint that second derivative = 0 at 
+        end_point_constraint: if true add constraint that second derivative = 0 at
             endpoints
         objective_form: if true write a least squares objective rather than constraints
             to match data
         name: optional model name
-
 
     Returns:
         Poymo ConcreteModel
@@ -147,8 +156,6 @@ def cubic_parameters_model(
             return pyo.Constraint.Skip
         return fxx(m.x[s + 1], m.alpha, s) == fxx(m.x[s + 1], m.alpha, s + 1)
 
-    # Objective function
-
     # Identify segments used to predict y_data at each x_data.  We use search in
     # instead of a dict lookup, since we don't want to require the data to be at
     # the knots, even though that is almost always the case.
@@ -192,7 +199,9 @@ def add_endpoint_second_derivative_constraints(m):
 
 
 def get_parameters(m, file_name=None):
-
+    """Once the model has been solved, this function can be used to extract
+    the cubic spline parameters.
+    """
     knots = [pyo.value(x) for x in m.x.values()]
     a1 = [None] * len(m.seg_idx)
     a2 = [None] * len(m.seg_idx)
@@ -213,6 +222,7 @@ def get_parameters(m, file_name=None):
 
     return knots, a1, a2, a3, a4
 
+
 def _extract_params(m):
     """Extract alpha as a plain dict of floats to play nice with vectorized functions"""
     alpha = {}
@@ -224,9 +234,10 @@ def _extract_params(m):
         alpha[s][4] = pyo.value(m.alpha[s, 4])
     return alpha
 
+
 def plot_f(m, file_name=None, **kwargs):
     """Plot the cspline function.
-    
+
     Args:
         m: Pyomo model with data and parameters
         file_name: optional file to save plot to
@@ -252,9 +263,10 @@ def plot_f(m, file_name=None, **kwargs):
         plt.savefig(file_name, **kwargs)
     return plt
 
+
 def plot_fx(m, file_name=None, **kwargs):
     """Plot the cspline derivative function.
-    
+
     Args:
         m: Pyomo model with data and parameters
         file_name: optional file to save plot to
@@ -277,7 +289,7 @@ def plot_fx(m, file_name=None, **kwargs):
 
 def plot_fxx(m, file_name=None, **kwargs):
     """Plot the cspline second derivative function.
-    
+
     Args:
         m: Pyomo model with data and parameters
         file_name: optional file to save plot to
@@ -295,64 +307,3 @@ def plot_fxx(m, file_name=None, **kwargs):
     if file_name is not None:
         plt.savefig(file_name, **kwargs)
     return plt
-
-
-if __name__ == "__main__":
-
-    x_knots = [
-        0,
-        1,
-        2,
-        2.5,
-        3,
-        3.5,
-        4,
-        5,
-        6,
-    ]
-
-    x_data = [
-        1,
-        2,
-        3,
-        4,
-        5,
-    ]
-
-    y_data = [
-        2,
-        3,
-        5,
-        2,
-        1,
-    ]
-
-    m = cubic_parameters_model(
-        x_data, 
-        y_data, 
-        x_knots,    
-        end_point_constraint=False,
-        objective_form=True,
-    )
-
-    #m.alpha[1, 1].fix(0)
-    m.alpha[1, 2].fix(0.5)
-    m.alpha[1, 3].fix(0)
-    m.alpha[1, 4].fix(0)
-
-    #m.alpha[8, 1].fix(0)
-    m.alpha[8, 2].fix(-0.5)
-    m.alpha[8, 3].fix(0)
-    m.alpha[8, 4].fix(0)
-
-
-    #solver_obj = pyo.SolverFactory("clp")
-    solver_obj = pyo.SolverFactory("ipopt")
-    solver_obj.solve(m, tee=True)
-
-    get_parameters(m, "test.txt")
-
-    p = plot_f(m, file_name="f_plot.pdf")
-    p = plot_fx(m, file_name="fx_plot.pdf")
-    p = plot_fxx(m, file_name="fxx_plot.pdf")
-
