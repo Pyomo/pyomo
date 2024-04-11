@@ -49,8 +49,6 @@ from pyomo.opt import WriterFactory
 logger = logging.getLogger("pyomo.contrib.iis")
 logger.setLevel(logging.INFO)
 
-_default_nl_writer = WriterFactory.get_class("nl")
-
 
 class _VariableBoundsAsConstraints(IsomorphicTransformation):
     """Replace all variables bounds and domain information with constraints.
@@ -87,7 +85,7 @@ class _VariableBoundsAsConstraints(IsomorphicTransformation):
 
 
 def compute_infeasibility_explanation(
-    model, solver=None, tee=False, tolerance=1e-8, logger=logger
+    model, solver, tee=False, tolerance=1e-8, logger=logger
 ):
     """
     This function attempts to determine why a given model is infeasible. It deploys
@@ -105,7 +103,7 @@ def compute_infeasibility_explanation(
     Args
     ----
         model: A pyomo block
-        solver (optional): A pyomo solver, a string, or None
+        solver: A pyomo solver object or a string for SolverFactory
         tee (optional):  Display intermediate solves conducted (False)
         tolerance (optional): The feasibility tolerance to use when declaring a
             constraint feasible (1e-08)
@@ -267,10 +265,6 @@ def compute_infeasibility_explanation(
             )
 
     # Phase 2 -- deletion filter
-    # TODO: the model created here seems to mess with the nl_v2
-    #       writer sometimes. So we temporarily switch to nl_v1 writer.
-    WriterFactory.register("nl")(WriterFactory.get_class("nl_v1"))
-
     # remove slacks by fixing them to 0
     for v in slack_block.component_data_objects(pyo.Var):
         v.fix(0)
@@ -318,8 +312,6 @@ def compute_infeasibility_explanation(
         msg = _get_results(deletion_filter, msg)
         msg += "Constraints / bounds in guards for stability:"
         msg = _get_results(guards, msg)
-
-    WriterFactory.register("nl")(_default_nl_writer)
 
     logger.info(msg)
 
