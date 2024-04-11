@@ -18,27 +18,12 @@ import pyomo.environ as pyo
 
 if __name__ == "__main__":
 
-    x_data = [
-        1,
-        2,
-        3,
-        4,
-        5,
-    ]
+    x_data = [1, 2, 3, 4, 5]
 
-    y_data = [
-        2,
-        3,
-        5,
-        2,
-        1,
-    ]
+    y_data = [2, 3, 5, 2, 1]
 
     m = cubic_parameters_model(
-        x_data,
-        y_data,
-        end_point_constraint=True,
-        objective_form=False,
+        x_data, y_data, end_point_constraint=True, objective_form=False
     )
 
     # REMOVE, temporary just to set solver path
