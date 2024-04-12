@@ -1,18 +1,7 @@
-#  ___________________________________________________________________________
-#
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
-
 import pyomo.environ as pe
 from pyomo.contrib.alternative_solutions import aos_utils
+from pyomo.contrib.alternative_solutions import Solution
 from pyomo.contrib import appsi
-import pdb
 
 
 def obbt_analysis(
@@ -70,17 +59,98 @@ def obbt_analysis(
         -------
         variable_ranges
             A Pyomo ComponentMap containing the bounds for each variable.
-            {variable: (lower_bound, upper_bound)}. An exception is raised when 
+            {variable: (lower_bound, upper_bound)}. An exception is raised when
             the solver encountered an issue.
+        solutions
+            [Solution]
+    """
+    bounds, solns = obbt_analysis_bounds_and_solutions(
+        model,
+        variables=variables,
+        rel_opt_gap=rel_opt_gap,
+        abs_opt_gap=abs_opt_gap,
+        refine_discrete_bounds=refine_discrete_bounds,
+        warmstart=warmstart,
+        solver=solver,
+        solver_options=solver_options,
+        tee=tee,
+        quiet=quiet,
+    )
+    return bounds
+
+
+def obbt_analysis_bounds_and_solutions(
+    model,
+    *,
+    variables="all",
+    rel_opt_gap=None,
+    abs_opt_gap=None,
+    refine_discrete_bounds=False,
+    warmstart=True,
+    solver="gurobi",
+    solver_options={},
+    tee=False,
+    quiet=True,
+):
+    """
+    Calculates the bounds on each variable by solving a series of min and max
+    optimization problems where each variable is used as the objective function
+    This can be applied to any class of problem supported by the selected
+    solver.
+
+        Parameters
+        ----------
+        model : ConcreteModel
+            A concrete Pyomo model.
+        variables: 'all' or a collection of Pyomo _GeneralVarData variables
+            The variables for which bounds will be generated. 'all' indicates
+            that all variables will be included. Alternatively, a collection of
+            _GenereralVarData variables can be provided.
+        rel_opt_gap : float or None
+            The relative optimality gap for the original objective for which
+            variable bounds will be found. None indicates that a relative gap
+            constraint will not be added to the model.
+        abs_opt_gap : float or None
+            The absolute optimality gap for the original objective for which
+            variable bounds will be found. None indicates that an absolute gap
+            constraint will not be added to the model.
+        refine_discrete_bounds : boolean
+            Boolean indicating that new constraints should be added to the
+            model at each iteration to tighten the bounds for discrete
+            variables.
+        warmstart : boolean
+            Boolean indicating that the solver should be warmstarted from the
+            best previously discovered solution.
+        solver : string
+            The solver to be used.
+        solver_options : dict
+            Solver option-value pairs to be passed to the solver.
+        tee : boolean
+            Boolean indicating that the solver output should be displayed.
+        quiet : boolean
+            Boolean indicating whether to suppress all output.
+
+        Returns
+        -------
+        variable_ranges
+            A Pyomo ComponentMap containing the bounds for each variable.
+            {variable: (lower_bound, upper_bound)}. An exception is raised when
+            the solver encountered an issue.
+        solutions
+            [Solution]
     """
 
-    if not quiet:       #pragma: no cover
+    # TODO - parallelization
+
+    if not quiet:  # pragma: no cover
         print("STARTING OBBT ANALYSIS")
 
     if warmstart:
-        assert variables == "all", "Cannot restrict variable list when warmstart is specified"
+        assert (
+            variables == "all"
+        ), "Cannot restrict variable list when warmstart is specified"
+    all_variables = aos_utils.get_model_variables(model, "all", include_fixed=False)
     if variables == "all":
-        all_variables = aos_utils.get_model_variables(model, "all", include_fixed=False)
         variable_list = all_variables
     else:
         variable_list = list(variables)
@@ -90,8 +160,10 @@ def obbt_analysis(
             solutions[var] = []
 
     num_vars = len(variable_list)
-    if not quiet:       #pragma: no cover
-        print("Analyzing {} variables ({} total solves).".format(num_vars, 2 * num_vars))
+    if not quiet:  # pragma: no cover
+        print(
+            "Analyzing {} variables ({} total solves).".format(num_vars, 2 * num_vars)
+        )
     orig_objective = aos_utils.get_active_objective(model)
 
     use_appsi = False
@@ -112,7 +184,9 @@ def obbt_analysis(
         for parameter, value in solver_options.items():
             opt.options[parameter] = value
         try:
-            results = opt.solve(model, warmstart=warmstart, tee=tee, load_solutions=False)
+            results = opt.solve(
+                model, warmstart=warmstart, tee=tee, load_solutions=False
+            )
         except:
             # Assume that we failed b.c. of warm starts
             results = None
@@ -122,7 +196,7 @@ def obbt_analysis(
         optimal_tc = pe.TerminationCondition.optimal
         infeas_or_unbdd_tc = pe.TerminationCondition.infeasibleOrUnbounded
         unbdd_tc = pe.TerminationCondition.unbounded
-    if not quiet:       #pragma: no cover
+    if not quiet:  # pragma: no cover
         print("Peforming initial solve of model.")
 
     if condition != optimal_tc:
@@ -138,10 +212,10 @@ def obbt_analysis(
     if warmstart:
         _add_solution(solutions)
     orig_objective_value = pe.value(orig_objective)
-    if not quiet:       #pragma: no cover
+    if not quiet:  # pragma: no cover
         print("Found optimal solution, value = {}.".format(orig_objective_value))
     aos_block = aos_utils._add_aos_block(model, name="_obbt")
-    if not quiet:       #pragma: no cover
+    if not quiet:  # pragma: no cover
         print("Added block {} to the model.".format(aos_block))
     obj_constraints = aos_utils._add_objective_constraint(
         aos_block, orig_objective, orig_objective_value, rel_opt_gap, abs_opt_gap
@@ -164,6 +238,7 @@ def obbt_analysis(
         opt.update_config.treat_fixed_vars_as_params = False
 
     variable_bounds = pe.ComponentMap()
+    solns = [Solution(model, all_variables, objective=orig_objective)]
 
     senses = [(pe.minimize, "LB"), (pe.maximize, "UB")]
 
@@ -193,7 +268,9 @@ def obbt_analysis(
                 condition = results.termination_condition
             else:
                 try:
-                    results = opt.solve(model, warmstart=warmstart, tee=tee, load_solutions=False)
+                    results = opt.solve(
+                        model, warmstart=warmstart, tee=tee, load_solutions=False
+                    )
                 except:
                     results = None
                 if results is None:
@@ -206,6 +283,8 @@ def obbt_analysis(
                     results.solution_loader.load_vars(solution_number=0)
                 else:
                     model.solutions.load_from(results)
+                solns.append(Solution(model, all_variables, objective=orig_objective))
+
                 if warmstart:
                     _add_solution(solutions)
                 obj_val = pe.value(var)
@@ -231,7 +310,7 @@ def obbt_analysis(
                     variable_bounds[var][idx] = float("-inf")
                 else:
                     variable_bounds[var][idx] = float("inf")
-            else:       #pragma: no cover
+            else:  # pragma: no cover
                 print(
                     (
                         "Unexpected condition for the variable {} {} problem."
@@ -240,10 +319,10 @@ def obbt_analysis(
                 )
 
             var_value = variable_bounds[var][idx]
-            if not quiet:       #pragma: no cover
+            if not quiet:  # pragma: no cover
                 print(
                     "Iteration {}/{}: {}_{} = {}".format(
-                     iteration, total_iterations, var.name, bound_dir, var_value
+                        iteration, total_iterations, var.name, bound_dir, var_value
                     )
                 )
 
@@ -252,13 +331,14 @@ def obbt_analysis(
 
             iteration += 1
 
+    # TODO - Remove this block
     aos_block.deactivate()
     orig_objective.activate()
 
-    if not quiet:       #pragma: no cover
+    if not quiet:  # pragma: no cover
         print("COMPLETED OBBT ANALYSIS")
 
-    return variable_bounds
+    return variable_bounds, solns
 
 
 def _add_solution(solutions):

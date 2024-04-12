@@ -1,0 +1,73 @@
+import pytest
+
+import pyomo.environ as pe
+import pyomo.common.unittest as unittest
+import pyomo.opt
+
+import pyomo.contrib.alternative_solutions.tests.test_cases as tc
+from pyomo.contrib.alternative_solutions import lp_enum
+
+#
+# Find available solvers. Just use GLPK if it's available.
+#
+solvers = list(pyomo.opt.check_available_solvers("glpk", "gurobi", "appsi_gurobi"))
+pytestmark = pytest.mark.parametrize("mip_solver", solvers)
+
+timelimit = {"gurobi": "TimeLimit", "appsi_gurobi": "TimeLimit", "glpk": "tmlim"}
+
+
+@unittest.pytest.mark.default
+class TestLPEnum:
+
+    def test_no_time(self, mip_solver):
+        """
+        Check that the correct bounds are found for a discrete problem where
+        more restrictive bounds are implied by the constraints.
+        """
+        m = tc.get_3d_polyhedron_problem()
+        with pytest.raises(Exception):
+            lp_enum.enumerate_linear_solutions(
+                m, solver=mip_solver, solver_options={timelimit[mip_solver]: 0}
+            )
+
+    def test_3d_polyhedron(self, mip_solver):
+        m = tc.get_3d_polyhedron_problem()
+        m.o.deactivate()
+        m.obj = pe.Objective(expr=m.x[0] + m.x[1] + m.x[2])
+
+        sols = lp_enum.enumerate_linear_solutions(m, solver=mip_solver)
+        assert len(sols) == 2
+        for s in sols:
+            assert s.objective_value == pytest.approx(4)
+
+    def test_3d_polyhedron(self, mip_solver):
+        m = tc.get_3d_polyhedron_problem()
+        m.o.deactivate()
+        m.obj = pe.Objective(expr=m.x[0] + 2 * m.x[1] + 3 * m.x[2])
+
+        sols = lp_enum.enumerate_linear_solutions(m, solver=mip_solver)
+        assert len(sols) == 2
+        for s in sols:
+            assert s.objective_value == pytest.approx(
+                9
+            ) or s.objective_value == pytest.approx(10)
+
+    def test_2d_diamond_problem(self, mip_solver):
+        m = tc.get_2d_diamond_problem()
+        sols = lp_enum.enumerate_linear_solutions(m, solver=mip_solver, num_solutions=2)
+        assert len(sols) == 2
+        for s in sols:
+            print(s)
+        assert sols[0].objective_value == pytest.approx(6.789473684210527)
+        assert sols[1].objective_value == pytest.approx(3.6923076923076916)
+
+    def test_pentagonal_pyramid(self, mip_solver):
+        n = tc.get_pentagonal_pyramid_mip()
+        n.o.sense = pe.minimize
+        n.x.domain = pe.Reals
+        n.y.domain = pe.Reals
+
+        sols = lp_enum.enumerate_linear_solutions(n, solver=mip_solver)
+        for s in sols:
+            print(s)
+        assert len(sols) == 6

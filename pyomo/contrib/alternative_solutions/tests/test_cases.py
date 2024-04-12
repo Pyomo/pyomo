@@ -25,8 +25,8 @@ def get_2d_diamond_problem(discrete_x=False, discrete_y=False):
     Simple 2d problem where the feasible is diamond-shaped.
     """
     m = pe.ConcreteModel()
-    m.x = pe.Var(within=pe.Integers if discrete_x else pe.Reals)
-    m.y = pe.Var(within=pe.Integers if discrete_y else pe.Reals)
+    m.x = pe.Var(within=pe.Integers if discrete_x else pe.Reals, bounds=(-10, 10))
+    m.y = pe.Var(within=pe.Integers if discrete_y else pe.Reals, bounds=(-10, 10))
 
     m.o = pe.Objective(expr=m.x + m.y, sense=pe.maximize)
 
@@ -221,8 +221,6 @@ def get_implied_bound_ip():
     m.c1 = pe.Constraint(expr=m.x + m.y == 3)
     m.c2 = pe.Constraint(expr=m.x + m.y + m.z <= 5)
     m.c3 = pe.Constraint(expr=m.x + m.y + m.z >= 4)
-
-    m.extreme_points = {(4, 2)}
 
     m.var_bounds = pe.ComponentMap()
     m.var_bounds[m.x] = (0, 3)

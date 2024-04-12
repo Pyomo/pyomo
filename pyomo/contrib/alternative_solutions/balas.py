@@ -85,10 +85,10 @@ def enumerate_binary_solutions(
         for var in variables:
             if var.is_binary():
                 binary_variables.add(var)
-            else:
+            else:  # pragma: no cover
                 non_binary_variables.append(var.name)
         if len(non_binary_variables) > 0:
-            if not quiet:
+            if not quiet:  # pragma: no cover
                 print(
                     (
                         "Warning: The following non-binary variables were included"
