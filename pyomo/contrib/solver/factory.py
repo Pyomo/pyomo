@@ -27,8 +27,12 @@ class SolverFactoryClass(Factory):
             class LegacySolver(LegacySolverWrapper, cls):
                 pass
 
-            LegacySolverFactory.register(legacy_name, doc)(LegacySolver)
+            LegacySolverFactory.register(legacy_name, doc + " (new interface)")(
+                LegacySolver
+            )
 
+            # Preserve the preferred name, as registered in the Factory
+            cls.name = name
             return cls
 
         return decorator

@@ -21,6 +21,8 @@ from pyomo.opt.base.solvers import _extract_version, SolverFactory
 from pyomo.opt.results import SolverStatus, SolverResults, TerminationCondition
 from pyomo.opt.solver import SystemCallSolver
 
+from pyomo.solvers.amplfunc_merge import amplfunc_merge
+
 import logging
 
 logger = logging.getLogger('pyomo.solvers')
@@ -119,11 +121,9 @@ class IPOPT(SystemCallSolver):
         # Pyomo/Pyomo) with any user-specified external function
         # libraries
         #
-        if 'PYOMO_AMPLFUNC' in env:
-            if 'AMPLFUNC' in env:
-                env['AMPLFUNC'] += "\n" + env['PYOMO_AMPLFUNC']
-            else:
-                env['AMPLFUNC'] = env['PYOMO_AMPLFUNC']
+        amplfunc = amplfunc_merge(env)
+        if amplfunc:
+            env['AMPLFUNC'] = amplfunc
 
         cmd = [executable, problem_files[0], '-AMPL']
         if self._timer:
