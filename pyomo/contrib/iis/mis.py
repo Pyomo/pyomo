@@ -165,7 +165,7 @@ def compute_infeasibility_explanation(
     # TODO: Elasticizing too much at once seems to cause Ipopt trouble.
     #       After an initial sweep, we should just fix one elastic variable
     #       and put everything else on a stack of "constraints to elasticize".
-    #       We elastisize one constraint at a time and fix one constraint at a time.
+    #       We elasticize one constraint at a time and fix one constraint at a time.
     #       After fixing an elastic variable, we elasticize a single constraint it
     #       appears in and put the remaining constraints on the stack. If the resulting problem
     #       is feasible, we keep going "down the tree". If the resulting problem is
