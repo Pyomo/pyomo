@@ -185,14 +185,16 @@ class TestSolvers(unittest.TestCase):
         res = opt.solve(m)
         self.assertEqual(res.termination_condition, TerminationCondition.optimal)
         self.assertAlmostEqual(m.x.value, -1)
-        duals = opt.get_duals()
-        self.assertAlmostEqual(duals[m.c], 1)
+        if not opt_class is MAiNGO:
+            duals = opt.get_duals()
+            self.assertAlmostEqual(duals[m.c], 1)
         m.obj.sense = pe.maximize
         res = opt.solve(m)
         self.assertEqual(res.termination_condition, TerminationCondition.optimal)
         self.assertAlmostEqual(m.x.value, 1)
-        duals = opt.get_duals()
-        self.assertAlmostEqual(duals[m.c], 1)
+        if not opt_class is MAiNGO:
+            duals = opt.get_duals()
+            self.assertAlmostEqual(duals[m.c], 1)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_reduced_costs(
@@ -209,9 +211,10 @@ class TestSolvers(unittest.TestCase):
         self.assertEqual(res.termination_condition, TerminationCondition.optimal)
         self.assertAlmostEqual(m.x.value, -1)
         self.assertAlmostEqual(m.y.value, -2)
-        rc = opt.get_reduced_costs()
-        self.assertAlmostEqual(rc[m.x], 3)
-        self.assertAlmostEqual(rc[m.y], 4)
+        if not opt_class is MAiNGO:
+            rc = opt.get_reduced_costs()
+            self.assertAlmostEqual(rc[m.x], 3)
+            self.assertAlmostEqual(rc[m.y], 4)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_reduced_costs2(
@@ -226,14 +229,16 @@ class TestSolvers(unittest.TestCase):
         res = opt.solve(m)
         self.assertEqual(res.termination_condition, TerminationCondition.optimal)
         self.assertAlmostEqual(m.x.value, -1)
-        rc = opt.get_reduced_costs()
-        self.assertAlmostEqual(rc[m.x], 1)
+        if not opt_class is MAiNGO:
+            rc = opt.get_reduced_costs()
+            self.assertAlmostEqual(rc[m.x], 1)
         m.obj.sense = pe.maximize
         res = opt.solve(m)
         self.assertEqual(res.termination_condition, TerminationCondition.optimal)
         self.assertAlmostEqual(m.x.value, 1)
-        rc = opt.get_reduced_costs()
-        self.assertAlmostEqual(rc[m.x], 1)
+        if not opt_class is MAiNGO:
+            rc = opt.get_reduced_costs()
+            self.assertAlmostEqual(rc[m.x], 1)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_param_changes(
@@ -265,9 +270,10 @@ class TestSolvers(unittest.TestCase):
             self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
             self.assertAlmostEqual(res.best_feasible_objective, m.y.value)
             self.assertTrue(res.best_objective_bound <= m.y.value)
-            duals = opt.get_duals()
-            self.assertAlmostEqual(duals[m.c1], (1 + a1 / (a2 - a1)))
-            self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
+            if not opt_class is MAiNGO:
+                duals = opt.get_duals()
+                self.assertAlmostEqual(duals[m.c1], (1 + a1 / (a2 - a1)))
+                self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_immutable_param(
@@ -303,9 +309,10 @@ class TestSolvers(unittest.TestCase):
             self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
             self.assertAlmostEqual(res.best_feasible_objective, m.y.value)
             self.assertTrue(res.best_objective_bound <= m.y.value)
-            duals = opt.get_duals()
-            self.assertAlmostEqual(duals[m.c1], (1 + a1 / (a2 - a1)))
-            self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
+            if not opt_class is MAiNGO:
+                duals = opt.get_duals()
+                self.assertAlmostEqual(duals[m.c1], (1 + a1 / (a2 - a1)))
+                self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_equality(
@@ -337,9 +344,10 @@ class TestSolvers(unittest.TestCase):
             self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
             self.assertAlmostEqual(res.best_feasible_objective, m.y.value)
             self.assertTrue(res.best_objective_bound <= m.y.value)
-            duals = opt.get_duals()
-            self.assertAlmostEqual(duals[m.c1], (1 + a1 / (a2 - a1)))
-            self.assertAlmostEqual(duals[m.c2], -a1 / (a2 - a1))
+            if not opt_class is MAiNGO:
+                duals = opt.get_duals()
+                self.assertAlmostEqual(duals[m.c1], (1 + a1 / (a2 - a1)))
+                self.assertAlmostEqual(duals[m.c2], -a1 / (a2 - a1))
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_linear_expression(
@@ -407,9 +415,10 @@ class TestSolvers(unittest.TestCase):
             self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
             self.assertEqual(res.best_feasible_objective, None)
             self.assertEqual(res.best_objective_bound, None)
-            duals = opt.get_duals()
-            self.assertAlmostEqual(duals[m.c1], 0)
-            self.assertAlmostEqual(duals[m.c2], 0)
+            if not opt_class is MAiNGO:
+                duals = opt.get_duals()
+                self.assertAlmostEqual(duals[m.c1], 0)
+                self.assertAlmostEqual(duals[m.c2], 0)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_add_remove_cons(
@@ -436,9 +445,10 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
         self.assertAlmostEqual(res.best_feasible_objective, m.y.value)
         self.assertTrue(res.best_objective_bound <= m.y.value)
-        duals = opt.get_duals()
-        self.assertAlmostEqual(duals[m.c1], -(1 + a1 / (a2 - a1)))
-        self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
+        if not opt_class is MAiNGO:
+            duals = opt.get_duals()
+            self.assertAlmostEqual(duals[m.c1], -(1 + a1 / (a2 - a1)))
+            self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
 
         m.c3 = pe.Constraint(expr=m.y >= a3 * m.x + b3)
         res = opt.solve(m)
@@ -447,10 +457,11 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, a1 * (b3 - b1) / (a1 - a3) + b1)
         self.assertAlmostEqual(res.best_feasible_objective, m.y.value)
         self.assertTrue(res.best_objective_bound <= m.y.value)
-        duals = opt.get_duals()
-        self.assertAlmostEqual(duals[m.c1], -(1 + a1 / (a3 - a1)))
-        self.assertAlmostEqual(duals[m.c2], 0)
-        self.assertAlmostEqual(duals[m.c3], a1 / (a3 - a1))
+        if not opt_class is MAiNGO:
+            duals = opt.get_duals()
+            self.assertAlmostEqual(duals[m.c1], -(1 + a1 / (a3 - a1)))
+            self.assertAlmostEqual(duals[m.c2], 0)
+            self.assertAlmostEqual(duals[m.c3], a1 / (a3 - a1))
 
         del m.c3
         res = opt.solve(m)
@@ -459,9 +470,10 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
         self.assertAlmostEqual(res.best_feasible_objective, m.y.value)
         self.assertTrue(res.best_objective_bound <= m.y.value)
-        duals = opt.get_duals()
-        self.assertAlmostEqual(duals[m.c1], -(1 + a1 / (a2 - a1)))
-        self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
+        if not opt_class is MAiNGO:
+            duals = opt.get_duals()
+            self.assertAlmostEqual(duals[m.c1], -(1 + a1 / (a2 - a1)))
+            self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_results_infeasible(
@@ -500,14 +512,15 @@ class TestSolvers(unittest.TestCase):
             RuntimeError, '.*does not currently have a valid solution.*'
         ):
             res.solution_loader.load_vars()
-        with self.assertRaisesRegex(
-            RuntimeError, '.*does not currently have valid duals.*'
-        ):
-            res.solution_loader.get_duals()
-        with self.assertRaisesRegex(
-            RuntimeError, '.*does not currently have valid reduced costs.*'
-        ):
-            res.solution_loader.get_reduced_costs()
+        if not opt_class is MAiNGO:
+            with self.assertRaisesRegex(
+                RuntimeError, '.*does not currently have valid duals.*'
+            ):
+                res.solution_loader.get_duals()
+            with self.assertRaisesRegex(
+                RuntimeError, '.*does not currently have valid reduced costs.*'
+            ):
+                res.solution_loader.get_reduced_costs()
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_duals(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
@@ -524,13 +537,14 @@ class TestSolvers(unittest.TestCase):
         res = opt.solve(m)
         self.assertAlmostEqual(m.x.value, 1)
         self.assertAlmostEqual(m.y.value, 1)
-        duals = opt.get_duals()
-        self.assertAlmostEqual(duals[m.c1], 0.5)
-        self.assertAlmostEqual(duals[m.c2], 0.5)
+        if not opt_class is MAiNGO:
+            duals = opt.get_duals()
+            self.assertAlmostEqual(duals[m.c1], 0.5)
+            self.assertAlmostEqual(duals[m.c2], 0.5)
 
-        duals = opt.get_duals(cons_to_load=[m.c1])
-        self.assertAlmostEqual(duals[m.c1], 0.5)
-        self.assertNotIn(m.c2, duals)
+            duals = opt.get_duals(cons_to_load=[m.c1])
+            self.assertAlmostEqual(duals[m.c1], 0.5)
+            self.assertNotIn(m.c2, duals)
 
     @parameterized.expand(input=_load_tests(qcp_solvers, only_child_vars_options))
     def test_mutable_quadratic_coefficient(
@@ -778,17 +792,19 @@ class TestSolvers(unittest.TestCase):
                 self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1, 6)
                 self.assertAlmostEqual(res.best_feasible_objective, m.y.value, 6)
                 self.assertTrue(res.best_objective_bound <= m.y.value + 1e-12)
-                duals = opt.get_duals()
-                self.assertAlmostEqual(duals[m.con1], (1 + a1 / (a2 - a1)), 6)
-                self.assertAlmostEqual(duals[m.con2], -a1 / (a2 - a1), 6)
+                if not opt_class is MAiNGO:
+                    duals = opt.get_duals()
+                    self.assertAlmostEqual(duals[m.con1], (1 + a1 / (a2 - a1)), 6)
+                    self.assertAlmostEqual(duals[m.con2], -a1 / (a2 - a1), 6)
             else:
                 self.assertAlmostEqual(m.x.value, (c2 - c1) / (a1 - a2), 6)
                 self.assertAlmostEqual(m.y.value, a1 * (c2 - c1) / (a1 - a2) + c1, 6)
                 self.assertAlmostEqual(res.best_feasible_objective, m.y.value, 6)
                 self.assertTrue(res.best_objective_bound >= m.y.value - 1e-12)
-                duals = opt.get_duals()
-                self.assertAlmostEqual(duals[m.con1], (1 + a1 / (a2 - a1)), 6)
-                self.assertAlmostEqual(duals[m.con2], -a1 / (a2 - a1), 6)
+                if not opt_class is MAiNGO:
+                    duals = opt.get_duals()
+                    self.assertAlmostEqual(duals[m.con1], (1 + a1 / (a2 - a1)), 6)
+                    self.assertAlmostEqual(duals[m.con2], -a1 / (a2 - a1), 6)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_add_and_remove_vars(
@@ -986,24 +1002,25 @@ class TestSolvers(unittest.TestCase):
         self.assertNotIn(m.x, primals)
         self.assertIn(m.y, primals)
         self.assertAlmostEqual(primals[m.y], 1)
-        reduced_costs = res.solution_loader.get_reduced_costs()
-        self.assertIn(m.x, reduced_costs)
-        self.assertIn(m.y, reduced_costs)
-        self.assertAlmostEqual(reduced_costs[m.x], 1)
-        self.assertAlmostEqual(reduced_costs[m.y], 0)
-        reduced_costs = res.solution_loader.get_reduced_costs([m.y])
-        self.assertNotIn(m.x, reduced_costs)
-        self.assertIn(m.y, reduced_costs)
-        self.assertAlmostEqual(reduced_costs[m.y], 0)
-        duals = res.solution_loader.get_duals()
-        self.assertIn(m.c1, duals)
-        self.assertIn(m.c2, duals)
-        self.assertAlmostEqual(duals[m.c1], 1)
-        self.assertAlmostEqual(duals[m.c2], 0)
-        duals = res.solution_loader.get_duals([m.c1])
-        self.assertNotIn(m.c2, duals)
-        self.assertIn(m.c1, duals)
-        self.assertAlmostEqual(duals[m.c1], 1)
+        if not opt_class is MAiNGO:
+            reduced_costs = res.solution_loader.get_reduced_costs()
+            self.assertIn(m.x, reduced_costs)
+            self.assertIn(m.y, reduced_costs)
+            self.assertAlmostEqual(reduced_costs[m.x], 1)
+            self.assertAlmostEqual(reduced_costs[m.y], 0)
+            reduced_costs = res.solution_loader.get_reduced_costs([m.y])
+            self.assertNotIn(m.x, reduced_costs)
+            self.assertIn(m.y, reduced_costs)
+            self.assertAlmostEqual(reduced_costs[m.y], 0)
+            duals = res.solution_loader.get_duals()
+            self.assertIn(m.c1, duals)
+            self.assertIn(m.c2, duals)
+            self.assertAlmostEqual(duals[m.c1], 1)
+            self.assertAlmostEqual(duals[m.c2], 0)
+            duals = res.solution_loader.get_duals([m.c1])
+            self.assertNotIn(m.c2, duals)
+            self.assertIn(m.c1, duals)
+            self.assertAlmostEqual(duals[m.c1], 1)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_time_limit(
@@ -1373,7 +1390,8 @@ class TestLegacySolverInterface(unittest.TestCase):
         m.obj = pe.Objective(expr=m.y)
         m.c1 = pe.Constraint(expr=(0, m.y - m.a1 * m.x - m.b1, None))
         m.c2 = pe.Constraint(expr=(None, -m.y + m.a2 * m.x + m.b2, 0))
-        m.dual = pe.Suffix(direction=pe.Suffix.IMPORT)
+        if not opt_class is MAiNGO:
+            m.dual = pe.Suffix(direction=pe.Suffix.IMPORT)
 
         params_to_test = [(1, -1, 2, 1), (1, -2, 2, 1), (1, -1, 3, 1)]
         for a1, a2, b1, b2 in params_to_test:
@@ -1385,8 +1403,9 @@ class TestLegacySolverInterface(unittest.TestCase):
             pe.assert_optimal_termination(res)
             self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
             self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
-            self.assertAlmostEqual(m.dual[m.c1], (1 + a1 / (a2 - a1)))
-            self.assertAlmostEqual(m.dual[m.c2], a1 / (a2 - a1))
+            if not opt_class is MAiNGO:
+                self.assertAlmostEqual(m.dual[m.c1], (1 + a1 / (a2 - a1)))
+                self.assertAlmostEqual(m.dual[m.c2], a1 / (a2 - a1))
 
     @parameterized.expand(input=all_solvers)
     def test_load_solutions(self, name: str, opt_class: Type[PersistentSolver]):
@@ -1397,11 +1416,14 @@ class TestLegacySolverInterface(unittest.TestCase):
         m.x = pe.Var()
         m.obj = pe.Objective(expr=m.x)
         m.c = pe.Constraint(expr=(-1, m.x, 1))
-        m.dual = pe.Suffix(direction=pe.Suffix.IMPORT)
+        if not opt_class is MAiNGO:
+            m.dual = pe.Suffix(direction=pe.Suffix.IMPORT)
         res = opt.solve(m, load_solutions=False)
         pe.assert_optimal_termination(res)
         self.assertIsNone(m.x.value)
-        self.assertNotIn(m.c, m.dual)
+        if not opt_class is MAiNGO:
+            self.assertNotIn(m.c, m.dual)
         m.solutions.load_from(res)
         self.assertAlmostEqual(m.x.value, -1)
-        self.assertAlmostEqual(m.dual[m.c], 1)
+        if not opt_class is MAiNGO:
+            self.assertAlmostEqual(m.dual[m.c], 1)
