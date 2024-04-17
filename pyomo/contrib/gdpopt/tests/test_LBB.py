@@ -59,6 +59,7 @@ class TestGDPopt_LBB(unittest.TestCase):
         self.assertIsNone(m.d.disjuncts[0].indicator_var.value)
         self.assertIsNone(m.d.disjuncts[1].indicator_var.value)
 
+    @unittest.skipUnless(z3_available, "Z3 SAT solver is not available")
     def test_infeasible_GDP_check_sat(self):
         """Test for infeasible GDP with check_sat option True."""
         m = ConcreteModel()

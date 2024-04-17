@@ -420,7 +420,7 @@ class MAiNGO(PersistentBase, PersistentSolver):
             if status == maingopy.FEASIBLE_POINT:
                 results.globally_optimal = False
                 logger.warning(
-                    "MAiNGO did only find a feasible solution but did not prove its global optimality."
+                    "MAiNGO found a feasible solution but did not prove its global optimality."
                 )
         elif status == maingopy.INFEASIBLE:
             results.termination_condition = TerminationCondition.infeasible
