@@ -2193,8 +2193,15 @@ G1 3	#o2
         m.x1 = Var(within=Binary)
         m.x2 = Var(within=Integers, bounds=(0, 1))
         m.x3 = Var(within=Integers, bounds=(0, None))
-        m.const = Constraint(expr=((0.7 - (m.c1*m.t1 + m.c2*m.t2)) <= (m.p1*m.t1 + m.p2*m.t2 + m.p1*m.t4 + m.t6*m.t5)))
-        m.OBJ = Objective(expr=(m.p1*m.t1 + m.p2*m.t2 + m.p2*m.t3 + m.x1 + m.x2 + m.x3))
+        m.const = Constraint(
+            expr=(
+                (0.7 - (m.c1 * m.t1 + m.c2 * m.t2))
+                <= (m.p1 * m.t1 + m.p2 * m.t2 + m.p1 * m.t4 + m.t6 * m.t5)
+            )
+        )
+        m.OBJ = Objective(
+            expr=(m.p1 * m.t1 + m.p2 * m.t2 + m.p2 * m.t3 + m.x1 + m.x2 + m.x3)
+        )
 
         OUT = io.StringIO()
         nl_writer.NLWriter().write(m, OUT, symbolic_solver_labels=True)
