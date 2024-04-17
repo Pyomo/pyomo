@@ -98,13 +98,11 @@ class MAiNGOConfig(MIPSolverConfig):
             visibility=visibility,
         )
 
-        self.declare("logfile", ConfigValue(domain=str))
-        self.declare("solver_output_logger", ConfigValue())
-        self.declare("log_level", ConfigValue(domain=NonNegativeInt))
-
-        self.logfile = ""
-        self.solver_output_logger = logger
-        self.log_level = logging.INFO
+        self.declare("logfile", ConfigValue(domain=str, default=""))
+        self.declare("solver_output_logger", ConfigValue(default=logger))
+        self.declare(
+            "log_level", ConfigValue(domain=NonNegativeInt, default=logging.INFO)
+        )
 
 
 class MAiNGOSolutionLoader(PersistentSolutionLoader):
