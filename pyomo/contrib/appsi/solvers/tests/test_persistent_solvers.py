@@ -688,7 +688,7 @@ class TestSolvers(unittest.TestCase):
             raise unittest.SkipTest
         m = pe.ConcreteModel()
         m.x = pe.Var()
-        m.y = pe.Var()
+        m.y = pe.Var(bounds=(1e-6, None))
         m.obj = pe.Objective(expr=m.x**2 + m.y**2)
         m.c1 = pe.Constraint(expr=m.x == 2 / m.y)
         m.y.fix(1)
