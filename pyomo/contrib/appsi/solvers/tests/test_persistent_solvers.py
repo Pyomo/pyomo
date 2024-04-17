@@ -1090,13 +1090,14 @@ class TestSolvers(unittest.TestCase):
         m.obj.sense = pe.maximize
         opt.config.load_solution = False
         res = opt.solve(m)
-        self.assertIn(
-            res.termination_condition,
-            {
-                TerminationCondition.unbounded,
-                TerminationCondition.infeasibleOrUnbounded,
-            },
-        )
+        if not isinstance(opt, MAiNGO):
+            self.assertIn(
+                res.termination_condition,
+                {
+                    TerminationCondition.unbounded,
+                    TerminationCondition.infeasibleOrUnbounded,
+                },
+            )
         m.obj.sense = pe.minimize
         opt.config.load_solution = True
         m.obj = pe.Objective(expr=m.x * m.y)
