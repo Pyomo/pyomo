@@ -319,7 +319,13 @@ class PyomoCyIpoptSolver(object):
         return True
 
     def version(self):
-        return tuple(int(_) for _ in cyipopt.__version__.split("."))
+        def _int(x):
+            try:
+                return int(x)
+            except:
+                return x
+
+        return tuple(_int(_) for _ in cyipopt_interface.cyipopt.__version__.split("."))
 
     def solve(self, model, **kwds):
         config = self.config(kwds, preserve_implicit=True)
