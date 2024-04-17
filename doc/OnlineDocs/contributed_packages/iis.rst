@@ -28,7 +28,7 @@ solver uses, so users may want to post-process output if it is going
 to be used for analysis. It also computes a minimal intractable system
 (which is not guaranteed to be unique).  It was written by Ben Knueven
 as part of the watertap project and is governed by a license shown
-at the bottom of the ``mis.py``.
+at the top of ``mis.py``.
 
 The algorithms come from John Chinneck's slides, see: https://www.sce.carleton.ca/faculty/chinneck/docs/CPAIOR07InfeasibilityTutorial.pdf
 
@@ -54,9 +54,8 @@ this help file, which references a Pyomo model with the Python variable
    This is done instead of solving the problem.
    
 .. Note::
-   If IDAES is installed, the `solver` keyword argument
-   is not needed (the function will use IDAES to find
-   a solver).
+   IDAES users can pass ``get_solver()`` imported from ``ideas.core.solvers``
+   as the solver.
 
 Interpreting the Output
 -----------------------
