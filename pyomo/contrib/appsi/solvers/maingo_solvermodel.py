@@ -13,6 +13,7 @@ import math
 
 from pyomo.common.dependencies import attempt_import
 from pyomo.core.base.var import ScalarVar
+from pyomo.core.base.expression import ScalarExpression
 import pyomo.core.expr.expr_common as common
 import pyomo.core.expr as EXPR
 from pyomo.core.expr.numvalue import (
@@ -178,19 +179,14 @@ class ToMAiNGOVisitor(EXPR.ExpressionValueVisitor):
             return True, maingo_var
 
     def _monomial_to_maingo(self, node):
-        if node.__class__ is ScalarVar:
-            var = node
-            const = 1
-        else:
-            const, var = node.args
-        maingo_var_id = self.idmap[id(var)]
-        maingo_var = self.variables[maingo_var_id]
+        const, var = node.args
         if const.__class__ not in native_types:
             const = value(const)
         if var.is_fixed():
             return const * var.value
         if not const:
             return 0
+        maingo_var = self._var_to_maingo(var)
         if const in _plusMinusOne:
             if const < 0:
                 return -maingo_var
@@ -198,12 +194,25 @@ class ToMAiNGOVisitor(EXPR.ExpressionValueVisitor):
                 return maingo_var
         return const * maingo_var
 
+    def _var_to_maingo(self, var):
+        maingo_var_id = self.idmap[id(var)]
+        maingo_var = self.variables[maingo_var_id]
+        return maingo_var
+
     def _linear_to_maingo(self, node):
         values = [
             (
                 self._monomial_to_maingo(arg)
-                if (arg.__class__ in {EXPR.MonomialTermExpression, ScalarVar})
-                else (value(arg))
+                if (arg.__class__ is EXPR.MonomialTermExpression)
+                else (
+                    value(arg)
+                    if arg.__class__ in native_numeric_types
+                    else (
+                        self._var_to_maingo(arg)
+                        if arg.is_variable_type()
+                        else value(arg)
+                    )
+                )
             )
             for arg in node.args
         ]
@@ -211,17 +220,25 @@ class ToMAiNGOVisitor(EXPR.ExpressionValueVisitor):
 
 
 class SolverModel(maingopy.MAiNGOmodel):
-    def __init__(self, var_list, objective, con_list, idmap):
+    def __init__(self, var_list, objective, con_list, idmap, logger):
         maingopy.MAiNGOmodel.__init__(self)
         self._var_list = var_list
         self._con_list = con_list
         self._objective = objective
         self._idmap = idmap
+        self._logger = logger
+        self._no_objective = False
+
+        if self._objective is None:
+            self._logger.warning("No objective given, setting a dummy objective of 1.")
+            self._no_objective = True
 
     def build_maingo_objective(self, obj, visitor):
+        if self._no_objective:
+            return visitor.variables[-1]
         maingo_obj = visitor.dfs_postorder_stack(obj.expr)
         if obj.sense == maximize:
-            maingo_obj *= -1
+            return -1 * maingo_obj
         return maingo_obj
 
     def build_maingo_constraints(self, cons, visitor):
@@ -235,7 +252,7 @@ class SolverModel(maingopy.MAiNGOmodel):
                 ineqs += [visitor.dfs_postorder_stack(con.lower - con.body)]
             elif con.has_ub():
                 ineqs += [visitor.dfs_postorder_stack(con.body - con.upper)]
-            elif con.has_ub():
+            elif con.has_lb():
                 ineqs += [visitor.dfs_postorder_stack(con.lower - con.body)]
             else:
                 raise ValueError(
@@ -245,18 +262,24 @@ class SolverModel(maingopy.MAiNGOmodel):
         return eqs, ineqs
 
     def get_variables(self):
-        return [
+        vars = [
             maingopy.OptimizationVariable(
                 maingopy.Bounds(var.lb, var.ub), var.type, var.name
             )
             for var in self._var_list
         ]
+        if self._no_objective:
+            vars += [maingopy.OptimizationVariable(maingopy.Bounds(1, 1), "dummy_obj")]
+        return vars
 
     def get_initial_point(self):
-        return [
+        initial = [
             var.init if not var.init is None else (var.lb + var.ub) / 2.0
             for var in self._var_list
         ]
+        if self._no_objective:
+            initial += [1]
+        return initial
 
     def evaluate(self, maingo_vars):
         visitor = ToMAiNGOVisitor(maingo_vars, self._idmap)

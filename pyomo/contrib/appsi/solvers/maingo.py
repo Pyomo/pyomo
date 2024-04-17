@@ -120,6 +120,7 @@ class MAiNGOResults(Results):
         super(MAiNGOResults, self).__init__()
         self.wallclock_time = None
         self.cpu_time = None
+        self.globally_optimal = None
         self.solution_loader = MAiNGOSolutionLoader(solver=solver)
 
 
@@ -228,9 +229,14 @@ class MAiNGO(PersistentBase, PersistentSolver):
             self._last_results_object.solution_loader.invalidate()
         if timer is None:
             timer = HierarchicalTimer()
-        timer.start("set_instance")
-        self.set_instance(model)
-        timer.stop("set_instance")
+        if model is not self._model:
+            timer.start("set_instance")
+            self.set_instance(model)
+            timer.stop("set_instance")
+        else:
+            timer.start("Update")
+            self.update(timer=timer)
+            timer.stop("Update")
         res = self._solve(timer)
         self._last_results_object = res
         if self.config.report_timing:
@@ -285,7 +291,7 @@ class MAiNGO(PersistentBase, PersistentSolver):
         return lb, ub, vtype
 
     def _add_variables(self, variables: List[_GeneralVarData]):
-        for ndx, var in enumerate(variables):
+        for var in variables:
             varname = self._symbol_map.getSymbol(var, self._labeler)
             lb, ub, vtype = self._process_domain_and_bounds(var)
             self._maingo_vars.append(
@@ -331,10 +337,11 @@ class MAiNGO(PersistentBase, PersistentSolver):
             con_list=self._cons,
             objective=self._objective,
             idmap=self._pyomo_var_to_solver_var_id_map,
+            logger=logger,
         )
 
     def _add_constraints(self, cons: List[_GeneralConstraintData]):
-        self._cons = cons
+        self._cons += cons
 
     def _add_sos_constraints(self, cons: List[_SOSConstraintData]):
         if len(cons) >= 1:
@@ -344,7 +351,8 @@ class MAiNGO(PersistentBase, PersistentSolver):
         pass
 
     def _remove_constraints(self, cons: List[_GeneralConstraintData]):
-        pass
+        for con in cons:
+            self._cons.remove(con)
 
     def _remove_sos_constraints(self, cons: List[_SOSConstraintData]):
         if len(cons) >= 1:
@@ -354,28 +362,48 @@ class MAiNGO(PersistentBase, PersistentSolver):
         pass
 
     def _remove_variables(self, variables: List[_GeneralVarData]):
-        pass
+        removed_maingo_vars = []
+        for var in variables:
+            varname = self._symbol_map.getSymbol(var, self._labeler)
+            del self._maingo_vars[self._pyomo_var_to_solver_var_id_map[id(var)]]
+            removed_maingo_vars += [self._pyomo_var_to_solver_var_id_map[id(var)]]
+            del self._pyomo_var_to_solver_var_id_map[id(var)]
+
+        for pyomo_var, maingo_var_id in self._pyomo_var_to_solver_var_id_map.items():
+            # How many variables before current var where removed?
+            num_removed = 0
+            for removed_var in removed_maingo_vars:
+                if removed_var <= maingo_var_id:
+                    num_removed += 1
+            self._pyomo_var_to_solver_var_id_map[pyomo_var] = (
+                maingo_var_id - num_removed
+            )
 
     def _remove_params(self, params: List[_ParamData]):
         pass
 
     def _update_variables(self, variables: List[_GeneralVarData]):
-        pass
+        for var in variables:
+            if id(var) not in self._pyomo_var_to_solver_var_id_map:
+                raise ValueError(
+                    'The Var provided to update_var needs to be added first: {0}'.format(
+                        var
+                    )
+                )
+            lb, ub, vtype = self._process_domain_and_bounds(var)
+            self._maingo_vars[self._pyomo_var_to_solver_var_id_map[id(var)]] = (
+                MaingoVar(name=var.name, type=vtype, lb=lb, ub=ub, init=var.value)
+            )
 
     def update_params(self):
-        pass
+        vars = [var[0] for var in self._vars.values()]
+        self._update_variables(vars)
 
     def _set_objective(self, obj):
-        if obj is None:
-            raise NotImplementedError(
-                "MAiNGO needs a objective. Please set a dummy objective."
-            )
-        else:
-            if not obj.sense in {minimize, maximize}:
-                raise ValueError(
-                    "Objective sense is not recognized: {0}".format(obj.sense)
-                )
-            self._objective = obj
+
+        if not obj.sense in {minimize, maximize}:
+            raise ValueError("Objective sense is not recognized: {0}".format(obj.sense))
+        self._objective = obj
 
     def _postsolve(self, timer: HierarchicalTimer):
         config = self.config
@@ -388,7 +416,9 @@ class MAiNGO(PersistentBase, PersistentSolver):
 
         if status in {maingopy.GLOBALLY_OPTIMAL, maingopy.FEASIBLE_POINT}:
             results.termination_condition = TerminationCondition.optimal
+            results.globally_optimal = True
             if status == maingopy.FEASIBLE_POINT:
+                results.globally_optimal = False
                 logger.warning(
                     "MAiNGO did only find a feasible solution but did not prove its global optimality."
                 )
@@ -425,8 +455,8 @@ class MAiNGO(PersistentBase, PersistentSolver):
 
         timer.start("load solution")
         if config.load_solution:
-            if not results.best_feasible_objective is None:
-                if results.termination_condition != TerminationCondition.optimal:
+            if results.termination_condition is TerminationCondition.optimal:
+                if not results.globally_optimal:
                     logger.warning(
                         "Loading a feasible but suboptimal solution. "
                         "Please set load_solution=False and check "
@@ -487,6 +517,15 @@ class MAiNGO(PersistentBase, PersistentSolver):
     def get_duals(self, cons_to_load=None):
         raise ValueError("MAiNGO does not support returning Duals")
 
+    def update(self, timer: HierarchicalTimer = None):
+        super(MAiNGO, self).update(timer=timer)
+        self._solver_model = maingo_solvermodel.SolverModel(
+            var_list=self._maingo_vars,
+            con_list=self._cons,
+            objective=self._objective,
+            idmap=self._pyomo_var_to_solver_var_id_map,
+            logger=logger,
+        )
 
     def _set_maingo_options(self):
         pass
