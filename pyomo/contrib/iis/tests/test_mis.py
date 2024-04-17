@@ -32,6 +32,7 @@ def _get_infeasible_model():
 
     return m
 
+
 def _get_feasible_model():
     m = pyo.ConcreteModel("Trivial Feasible Quad")
     m.x = pyo.Var([1, 2], bounds=(0, 1))
@@ -65,9 +66,8 @@ class TestMIS(unittest.TestCase):
     def test_feasible_model(self):
         m = _get_feasible_model()
         opt = pyo.SolverFactory("ipopt")
-        self.assertRaises(Exception,
-                          mis.compute_infeasibility_explanation, m, opt)
-        
+        self.assertRaises(Exception, mis.compute_infeasibility_explanation, m, opt)
+
 
 def _check_output(file_name):
     # pretty simple check for now
