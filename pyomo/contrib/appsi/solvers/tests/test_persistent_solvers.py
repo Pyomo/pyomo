@@ -858,7 +858,7 @@ class TestSolvers(unittest.TestCase):
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
-        m.x = pe.Var(initialize=1)
+        m.x = pe.Var(initialize=1, bounds=(1e-6, None))
         m.y = pe.Var()
         m.obj = pe.Objective(expr=m.x**2 + m.y**2)
         m.c1 = pe.Constraint(expr=m.y <= pe.log(m.x))
