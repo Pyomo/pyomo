@@ -17,7 +17,8 @@ parameterized, param_available = attempt_import('parameterized')
 parameterized = parameterized.parameterized
 from pyomo.contrib.appsi.base import TerminationCondition, Results, PersistentSolver
 from pyomo.contrib.appsi.cmodel import cmodel_available
-from pyomo.contrib.appsi.solvers import Gurobi, Ipopt, Cplex, Cbc, Highs, MAiNGO
+from pyomo.contrib.appsi.solvers import Gurobi, Ipopt, Cplex, Cbc, Highs
+from pyomo.contrib.appsi.solvers import MAiNGOTest as MAiNGO
 from typing import Type
 from pyomo.core.expr.numeric_expr import LinearExpression
 import os

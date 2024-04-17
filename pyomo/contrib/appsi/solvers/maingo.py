@@ -201,6 +201,9 @@ class MAiNGO(PersistentBase, PersistentSolver):
 
                 self._mymaingo.set_option("loggingDestination", 2)
                 self._mymaingo.set_log_file_name(config.logfile)
+                self._mymaingo.set_option("epsilonA", 1e-4)
+                self._mymaingo.set_option("epsilonR", 1e-4)
+                self._set_maingo_options()
 
                 if config.time_limit is not None:
                     self._mymaingo.set_option("maxTime", config.time_limit)
@@ -480,3 +483,16 @@ class MAiNGO(PersistentBase, PersistentSolver):
 
     def get_duals(self, cons_to_load=None):
         raise ValueError("MAiNGO does not support returning Duals")
+
+
+    def _set_maingo_options(self):
+        pass
+
+
+# Solver class with tighter tolerances for testing
+class MAiNGOTest(MAiNGO):
+    def _set_maingo_options(self):
+        self._mymaingo.set_option("epsilonA", 1e-8)
+        self._mymaingo.set_option("epsilonR", 1e-8)
+        self._mymaingo.set_option("deltaIneq", 1e-9)
+        self._mymaingo.set_option("deltaEq", 1e-9)
