@@ -1277,8 +1277,8 @@ class _NLWriter_impl(object):
                 len(linear_binary_vars),
                 len(linear_integer_vars),
                 len(both_vars_nonlinear.intersection(discrete_vars)),
-                len(con_vars_nonlinear.intersection(discrete_vars)),
-                len(obj_vars_nonlinear.intersection(discrete_vars)),
+                len(con_only_nonlinear_vars.intersection(discrete_vars)),
+                len(obj_only_nonlinear_vars.intersection(discrete_vars)),
             )
         )
         #
