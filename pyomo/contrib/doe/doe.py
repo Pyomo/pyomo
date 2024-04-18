@@ -38,6 +38,7 @@ from pyomo.common.timing import TicTocTimer
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 from pyomo.contrib.doe.scenario import ScenarioGenerator, FiniteDifferenceStep
 from pyomo.contrib.doe.result import FisherResults, GridSearchResult
+import pyomo.core.base as pcb
 
 
 class CalculationMode(Enum):
@@ -485,8 +486,11 @@ class DesignOfExperiments:
         for par in self.param.keys():
             cuid = pyo.ComponentUID(par)
             var = cuid.find_component_on(mod)
-            var.setlb(self.param[par])
-            var.setub(self.param[par])
+
+            # only set up bounds if they are variables
+            if isinstance(var, (pcb.var.Var, pcb.var.IndexedVar, pcb.var.ScalarVar, pcb.var.SimpleVar)):
+                var.setlb(self.param[par])
+                var.setub(self.param[par])
 
         # generate parameter name list and value dictionary with index
         var_name = list(self.param.keys())
@@ -598,7 +602,17 @@ class DesignOfExperiments:
             for par in self.param:
                 cuid = pyo.ComponentUID(par)
                 var = cuid.find_component_on(b)
-                var.fix(self.scenario_data.scenario[s][par])
+
+                # if it is a variable, fix it to a new value
+                if isinstance(var, (pcb.var.Var, pcb.var.IndexedVar, pcb.var.ScalarVar, pcb.var.SimpleVar)):
+                    var.fix(self.scenario_data.scenario[s][par])
+                # if it is a param, give it a new value
+                elif isinstance(var, (pcb.param.ScalrParam, pcb.param.IndexedParam, pcb.param.Param)):
+                    # check if param is mutable
+                    if var.mutable:
+                        var = self.scenario_data.scenario[s][par]
+                    else:
+                        raise TypeError("If defined as a Param, parameters should be mutable by mutable=True")
 
         mod.block = pyo.Block(mod.scenario, rule=block_build)
 
