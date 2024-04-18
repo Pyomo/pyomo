@@ -113,7 +113,7 @@ logger = logging.getLogger(__name__)
 TOL = 1e-8
 inf = float('inf')
 minus_inf = -inf
-allowable_binary_var_bounds = {(0,0), (0,1), (1,1)}
+allowable_binary_var_bounds = {(0, 0), (0, 1), (1, 1)}
 
 _CONSTANT = ExprType.CONSTANT
 _MONOMIAL = ExprType.MONOMIAL
