@@ -25,7 +25,12 @@ from pyomo.contrib.appsi.base import (
 )
 from pyomo.contrib.appsi.cmodel import cmodel, cmodel_available
 from pyomo.common.collections import ComponentMap
-from pyomo.common.config import ConfigValue, NonNegativeInt
+from pyomo.common.config import (
+    ConfigValue,
+    ConfigDict,
+    NonNegativeInt,
+    NonNegativeFloat,
+)
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import PyomoException
 from pyomo.common.log import LogStream
@@ -97,7 +102,41 @@ class MAiNGOConfig(MIPSolverConfig):
             implicit_domain=implicit_domain,
             visibility=visibility,
         )
+        self.tolerances: ConfigDict = self.declare(
+            'tolerances', ConfigDict(implicit=True)
+        )
 
+        self.tolerances.epsilonA: Optional[float] = self.tolerances.declare(
+            'epsilonA',
+            ConfigValue(
+                domain=NonNegativeFloat,
+                default=1e-4,
+                description="Absolute optimality tolerance",
+            ),
+        )
+        self.tolerances.epsilonR: Optional[float] = self.tolerances.declare(
+            'epsilonR',
+            ConfigValue(
+                domain=NonNegativeFloat,
+                default=1e-4,
+                description="Relative optimality tolerance",
+            ),
+        )
+        self.tolerances.deltaEq: Optional[float] = self.tolerances.declare(
+            'deltaEq',
+            ConfigValue(
+                domain=NonNegativeFloat, default=1e-6, description="Equality tolerance"
+            ),
+        )
+
+        self.tolerances.deltaIneq: Optional[float] = self.tolerances.declare(
+            'deltaIneq',
+            ConfigValue(
+                domain=NonNegativeFloat,
+                default=1e-6,
+                description="Inequality tolerance",
+            ),
+        )
         self.declare("logfile", ConfigValue(domain=str, default=""))
         self.declare("solver_output_logger", ConfigValue(default=logger))
         self.declare(
@@ -205,9 +244,10 @@ class MAiNGO(PersistentBase, PersistentSolver):
 
                 self._mymaingo.set_option("loggingDestination", 2)
                 self._mymaingo.set_log_file_name(config.logfile)
-                self._mymaingo.set_option("epsilonA", 1e-4)
-                self._mymaingo.set_option("epsilonR", 1e-4)
-                self._set_maingo_options()
+                self._mymaingo.set_option("epsilonA", config.tolerances.epsilonA)
+                self._mymaingo.set_option("epsilonR", config.tolerances.epsilonR)
+                self._mymaingo.set_option("deltaEq", config.tolerances.deltaEq)
+                self._mymaingo.set_option("deltaIneq", config.tolerances.deltaIneq)
 
                 if config.time_limit is not None:
                     self._mymaingo.set_option("maxTime", config.time_limit)
@@ -526,15 +566,3 @@ class MAiNGO(PersistentBase, PersistentSolver):
             idmap=self._pyomo_var_to_solver_var_id_map,
             logger=logger,
         )
-
-    def _set_maingo_options(self):
-        pass
-
-
-# Solver class with tighter tolerances for testing
-class MAiNGOTest(MAiNGO):
-    def _set_maingo_options(self):
-        self._mymaingo.set_option("epsilonA", 1e-8)
-        self._mymaingo.set_option("epsilonR", 1e-8)
-        self._mymaingo.set_option("deltaIneq", 1e-9)
-        self._mymaingo.set_option("deltaEq", 1e-9)

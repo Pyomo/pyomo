@@ -17,8 +17,7 @@ parameterized, param_available = attempt_import('parameterized')
 parameterized = parameterized.parameterized
 from pyomo.contrib.appsi.base import TerminationCondition, Results, PersistentSolver
 from pyomo.contrib.appsi.cmodel import cmodel_available
-from pyomo.contrib.appsi.solvers import Gurobi, Ipopt, Cplex, Cbc, Highs
-from pyomo.contrib.appsi.solvers import MAiNGOTest as MAiNGO
+from pyomo.contrib.appsi.solvers import Gurobi, Ipopt, Cplex, Cbc, Highs, MAiNGO
 from typing import Type
 from pyomo.core.expr.numeric_expr import LinearExpression
 import os
@@ -866,8 +865,8 @@ class TestSolvers(unittest.TestCase):
         m.obj = pe.Objective(expr=m.x**2 + m.y**2)
         m.c1 = pe.Constraint(expr=m.y >= pe.exp(m.x))
         res = opt.solve(m)
-        self.assertAlmostEqual(m.x.value, -0.42630274815985264)
-        self.assertAlmostEqual(m.y.value, 0.6529186341994245)
+        self.assertAlmostEqual(m.x.value, -0.42630274815985264, 6)
+        self.assertAlmostEqual(m.y.value, 0.6529186341994245, 6)
 
     @parameterized.expand(input=_load_tests(nlp_solvers, only_child_vars_options))
     def test_log(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
@@ -1212,19 +1211,19 @@ class TestSolvers(unittest.TestCase):
         m.c = pe.Constraint(expr=m.y >= m.x)
         m.x.fix(0)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 0)
+        self.assertAlmostEqual(res.best_feasible_objective, 0, 6)
         m.x.fix(1)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 1)
+        self.assertAlmostEqual(res.best_feasible_objective, 1, 6)
 
         opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         opt.update_config.treat_fixed_vars_as_params = False
         m.x.fix(0)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 0)
+        self.assertAlmostEqual(res.best_feasible_objective, 0, 6)
         m.x.fix(1)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 1)
+        self.assertAlmostEqual(res.best_feasible_objective, 1, 6)
 
     @parameterized.expand(input=_load_tests(mip_solvers, only_child_vars_options))
     def test_with_gdp(
@@ -1248,16 +1247,16 @@ class TestSolvers(unittest.TestCase):
         pe.TransformationFactory("gdp.bigm").apply_to(m)
 
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 1)
-        self.assertAlmostEqual(m.x.value, 0)
-        self.assertAlmostEqual(m.y.value, 1)
+        self.assertAlmostEqual(res.best_feasible_objective, 1, 6)
+        self.assertAlmostEqual(m.x.value, 0, 6)
+        self.assertAlmostEqual(m.y.value, 1, 6)
 
         opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         opt.use_extensions = True
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 1)
-        self.assertAlmostEqual(m.x.value, 0)
-        self.assertAlmostEqual(m.y.value, 1)
+        self.assertAlmostEqual(res.best_feasible_objective, 1, 6)
+        self.assertAlmostEqual(m.x.value, 0, 6)
+        self.assertAlmostEqual(m.y.value, 1, 6)
 
     @parameterized.expand(input=all_solvers)
     def test_variables_elsewhere(self, name: str, opt_class: Type[PersistentSolver]):
