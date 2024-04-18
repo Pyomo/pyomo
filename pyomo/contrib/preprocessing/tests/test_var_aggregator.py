@@ -219,7 +219,7 @@ class TestVarAggregate(unittest.TestCase):
         m.x = Var(domain=Binary)
         m.y = Var(domain=Binary)
         m.c = Constraint(expr=m.x == m.y)
-        m.o = Objective(expr=0.5*m.x + m.y, sense=maximize)
+        m.o = Objective(expr=0.5 * m.x + m.y, sense=maximize)
         TransformationFactory('contrib.aggregate_vars').apply_to(m)
         var_to_z = m._var_aggregator_info.var_to_z
         z = var_to_z[m.x]
@@ -227,18 +227,14 @@ class TestVarAggregate(unittest.TestCase):
         self.assertEqual(z.domain, Binary)
         self.assertEqual(z.lb, 0)
         self.assertEqual(z.ub, 1)
-        assertExpressionsEqual(
-            self,
-            m.o.expr,
-            0.5 * z + z
-        )
+        assertExpressionsEqual(self, m.o.expr, 0.5 * z + z)
 
     def test_equality_different_domains(self):
         m = ConcreteModel()
         m.x = Var(domain=Reals, bounds=(1, 2))
         m.y = Var(domain=Binary)
         m.c = Constraint(expr=m.x == m.y)
-        m.o = Objective(expr=0.5*m.x + m.y, sense=maximize)
+        m.o = Objective(expr=0.5 * m.x + m.y, sense=maximize)
         TransformationFactory('contrib.aggregate_vars').apply_to(m)
         var_to_z = m._var_aggregator_info.var_to_z
         z = var_to_z[m.x]
@@ -246,11 +242,8 @@ class TestVarAggregate(unittest.TestCase):
         self.assertEqual(z.lb, 1)
         self.assertEqual(z.ub, 1)
         self.assertEqual(z.domain, Binary)
-        assertExpressionsEqual(
-            self,
-            m.o.expr,
-            0.5 * z + z
-        )
+        assertExpressionsEqual(self, m.o.expr, 0.5 * z + z)
+
 
 if __name__ == '__main__':
     unittest.main()

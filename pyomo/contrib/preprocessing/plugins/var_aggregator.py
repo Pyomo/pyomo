@@ -13,8 +13,14 @@
 
 
 from pyomo.common.collections import ComponentMap, ComponentSet
-from pyomo.core.base import (Block, Constraint, VarList, Objective, Reals,
-                             TransformationFactory)
+from pyomo.core.base import (
+    Block,
+    Constraint,
+    VarList,
+    Objective,
+    Reals,
+    TransformationFactory,
+)
 from pyomo.core.expr import ExpressionReplacementVisitor
 from pyomo.core.expr.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
