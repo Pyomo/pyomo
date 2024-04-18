@@ -1567,7 +1567,7 @@ class TestSuffixCloneUsage(unittest.TestCase):
         self.assertEqual(inst.junk.get(model.obj[1]), None)
         self.assertEqual(inst.junk.get(inst.obj[1]), 1.0)
 
-    def test_cloneObjectiveData(self):
+    def test_clone_ObjectiveData(self):
         model = ConcreteModel()
         model.x = Var([1, 2, 3], dense=True)
         model.obj = Objective([1, 2, 3], rule=lambda model, i: model.x[i])
@@ -1603,7 +1603,7 @@ class TestSuffixCloneUsage(unittest.TestCase):
         self.assertEqual(inst.junk.get(model.b[1]), None)
         self.assertEqual(inst.junk.get(inst.b[1]), 1.0)
 
-    def test_cloneBlockData(self):
+    def test_clone_BlockData(self):
         model = ConcreteModel()
         model.b = Block([1, 2, 3])
         model.junk = Suffix()
@@ -1725,7 +1725,7 @@ class TestSuffixPickleUsage(unittest.TestCase):
         self.assertEqual(inst.junk.get(model.obj[1]), None)
         self.assertEqual(inst.junk.get(inst.obj[1]), 1.0)
 
-    def test_pickleObjectiveData(self):
+    def test_pickle_ObjectiveData(self):
         model = ConcreteModel()
         model.x = Var([1, 2, 3], dense=True)
         model.obj = Objective([1, 2, 3], rule=simple_obj_rule)
@@ -1761,7 +1761,7 @@ class TestSuffixPickleUsage(unittest.TestCase):
         self.assertEqual(inst.junk.get(model.b[1]), None)
         self.assertEqual(inst.junk.get(inst.b[1]), 1.0)
 
-    def test_pickleBlockData(self):
+    def test_pickle_BlockData(self):
         model = ConcreteModel()
         model.b = Block([1, 2, 3])
         model.junk = Suffix()
