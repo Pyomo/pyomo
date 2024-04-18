@@ -84,7 +84,6 @@ from pyomo.core.base.block import (
 from pyomo.core.base.boolean_var import (
     BooleanVar,
     BooleanVarData,
-    BooleanVarData,
     BooleanVarList,
     ScalarBooleanVar,
 )
@@ -145,7 +144,7 @@ from pyomo.core.base.suffix import (
     active_import_suffix_generator,
     Suffix,
 )
-from pyomo.core.base.var import Var, VarData, VarData, ScalarVar, VarList
+from pyomo.core.base.var import Var, VarData, ScalarVar, VarList
 
 from pyomo.core.base.instance2dat import instance2dat
 
