@@ -43,7 +43,7 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
     def test_walk_triple_sum(self):
         m = self.make_model()
         m.z = Var()
-        e = m.x + m.z*m.y + m.z
+        e = m.x + m.z * m.y + m.z
 
         cfg = VisitorConfig()
         visitor = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x, m.y])
@@ -150,5 +150,6 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
         self.assertEqual(len(repn.linear), 0)
         self.assertEqual(repn.multiplier, 1)
         assertExpressionsEqual(self, repn.nonlinear, log(m.x) * (m.y * (m.y + 2)) / m.x)
-        assertExpressionsEqual(self, repn.to_expression(visitor),
-                               log(m.x) * (m.y * (m.y + 2)) / m.x)
+        assertExpressionsEqual(
+            self, repn.to_expression(visitor), log(m.x) * (m.y * (m.y + 2)) / m.x
+        )
