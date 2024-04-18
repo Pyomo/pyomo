@@ -122,7 +122,7 @@ class LinearRepn(object):
             var_map = visitor.var_map
             with mutable_expression() as e:
                 for vid, coef in self.linear.items():
-                    if coef:
+                    if coef.__class__ not in native_numeric_types or coef:
                         e += coef * var_map[vid]
             if e.nargs() > 1:
                 ans += e
