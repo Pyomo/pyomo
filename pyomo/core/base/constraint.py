@@ -127,7 +127,7 @@ def simple_constraintlist_rule(rule):
 
 class ConstraintData(ActiveComponentData):
     """
-    This class defines the data for a single general constraint.
+    This class defines the data for a single algebraic constraint.
 
     Constructor arguments:
         component       The Constraint object that owns this data.
