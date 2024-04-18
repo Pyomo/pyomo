@@ -113,7 +113,7 @@ logger = logging.getLogger(__name__)
 TOL = 1e-8
 inf = float('inf')
 minus_inf = -inf
-zero_one = {0, 1}
+allowable_binary_var_bounds = {(0,0), (0,1), (1,1)}
 
 _CONSTANT = ExprType.CONSTANT
 _MONOMIAL = ExprType.MONOMIAL
@@ -883,10 +883,9 @@ class _NLWriter_impl(object):
             elif v.is_binary():
                 binary_vars.add(_id)
             elif v.is_integer():
-                bnd = var_bounds[_id]
                 # Note: integer variables whose bounds are in {0, 1}
                 # should be classified as binary
-                if bnd[1] in zero_one and bnd[0] in zero_one:
+                if var_bounds[_id] in allowable_binary_var_bounds:
                     binary_vars.add(_id)
                 else:
                     integer_vars.add(_id)
