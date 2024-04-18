@@ -92,7 +92,7 @@ jobs:
           skip_doctest: 1
           TARGET: linux
           PYENV: conda
-          PACKAGES: mpich mpi4py
+          PACKAGES: openmpi mpi4py
 
         - os: ubuntu-latest
           python: '3.10'
