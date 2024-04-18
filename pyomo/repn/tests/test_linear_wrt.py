@@ -38,6 +38,27 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.linear[id(m.x)], 1)
         self.assertIs(repn.constant, m.y)
         self.assertEqual(repn.multiplier, 1)
+        assertExpressionsEqual(self, repn.to_expression(visitor), m.x + m.y)
+
+    def test_walk_triple_sum(self):
+        m = self.make_model()
+        m.z = Var()
+        e = m.x + m.z*m.y + m.z
+
+        cfg = VisitorConfig()
+        visitor = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x, m.y])
+
+        repn = visitor.walk_expression(e)
+
+        self.assertIsNone(repn.nonlinear)
+        self.assertEqual(len(repn.linear), 2)
+        self.assertIn(id(m.x), repn.linear)
+        self.assertIn(id(m.y), repn.linear)
+        self.assertEqual(repn.linear[id(m.x)], 1)
+        self.assertIs(repn.linear[id(m.y)], m.z)
+        self.assertIs(repn.constant, m.z)
+        self.assertEqual(repn.multiplier, 1)
+        assertExpressionsEqual(self, repn.to_expression(visitor), m.x + m.z * m.y + m.z)
 
     def test_bilinear_term(self):
         m = self.make_model()
@@ -53,6 +74,7 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
         self.assertIs(repn.linear[id(m.x)], m.y)
         self.assertEqual(repn.constant, 0)
         self.assertEqual(repn.multiplier, 1)
+        assertExpressionsEqual(self, repn.to_expression(visitor), m.y * m.x)
 
     def test_distributed_bilinear_term(self):
         m = self.make_model()
@@ -68,6 +90,7 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
         self.assertIs(repn.linear[id(m.x)], m.y)
         assertExpressionsEqual(self, repn.constant, m.y * 7)
         self.assertEqual(repn.multiplier, 1)
+        assertExpressionsEqual(self, repn.to_expression(visitor), m.y * m.x + m.y * 7)
 
     def test_monomial(self):
         m = self.make_model()
@@ -83,6 +106,7 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.linear[id(m.y)], 45)
         self.assertEqual(repn.constant, 0)
         self.assertEqual(repn.multiplier, 1)
+        assertExpressionsEqual(self, repn.to_expression(visitor), 45 * m.y)
 
     def test_constant(self):
         m = self.make_model()
@@ -96,6 +120,7 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
         self.assertEqual(len(repn.linear), 0)
         assertExpressionsEqual(self, repn.constant, 45 * m.y)
         self.assertEqual(repn.multiplier, 1)
+        assertExpressionsEqual(self, repn.to_expression(visitor), 45 * m.y)
 
     def test_fixed_var(self):
         m = self.make_model()
@@ -111,6 +136,7 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
         self.assertEqual(len(repn.linear), 0)
         assertExpressionsEqual(self, repn.constant, (m.y**2) * 1806)
         self.assertEqual(repn.multiplier, 1)
+        assertExpressionsEqual(self, repn.to_expression(visitor), (m.y**2) * 1806)
 
     def test_nonlinear(self):
         m = self.make_model()
@@ -123,5 +149,6 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
 
         self.assertEqual(len(repn.linear), 0)
         self.assertEqual(repn.multiplier, 1)
-        print(repn.nonlinear)
         assertExpressionsEqual(self, repn.nonlinear, log(m.x) * (m.y * (m.y + 2)) / m.x)
+        assertExpressionsEqual(self, repn.to_expression(visitor),
+                               log(m.x) * (m.y * (m.y + 2)) / m.x)
