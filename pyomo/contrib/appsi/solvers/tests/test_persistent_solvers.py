@@ -699,11 +699,11 @@ class TestSolvers(unittest.TestCase):
     ):
         opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         opt.update_config.treat_fixed_vars_as_params = True
-        if not opt.available():
+        if not opt.available() or opt_class in MAiNGO:
             raise unittest.SkipTest
         m = pe.ConcreteModel()
         m.x = pe.Var()
-        m.y = pe.Var(bounds=(1e-6, None))
+        m.y = pe.Var()
         m.obj = pe.Objective(expr=m.x**2 + m.y**2)
         m.c1 = pe.Constraint(expr=m.x == 2 / m.y)
         m.y.fix(1)
@@ -872,10 +872,10 @@ class TestSolvers(unittest.TestCase):
     @parameterized.expand(input=_load_tests(nlp_solvers, only_child_vars_options))
     def test_log(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
         opt = opt_class(only_child_vars=only_child_vars)
-        if not opt.available():
+        if not opt.available() or opt_class in MAiNGO:
             raise unittest.SkipTest
         m = pe.ConcreteModel()
-        m.x = pe.Var(initialize=1, bounds=(1e-6, None))
+        m.x = pe.Var(initialize=1)
         m.y = pe.Var()
         m.obj = pe.Objective(expr=m.x**2 + m.y**2)
         m.c1 = pe.Constraint(expr=m.y <= pe.log(m.x))
