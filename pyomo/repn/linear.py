@@ -62,7 +62,12 @@ _GENERAL = ExprType.GENERAL
 
 
 def _merge_dict(dest_dict, mult, src_dict):
-    if mult == 1:
+    try:
+        _mult = mult != 1
+    except:
+        _mult = True
+
+    if not _mult:
         for vid, coef in src_dict.items():
             if vid in dest_dict:
                 dest_dict[vid] += coef
