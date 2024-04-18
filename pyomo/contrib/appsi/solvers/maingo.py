@@ -369,8 +369,8 @@ class MAiNGO(PersistentBase, PersistentSolver):
             removed_maingo_vars += [self._pyomo_var_to_solver_var_id_map[id(var)]]
             del self._pyomo_var_to_solver_var_id_map[id(var)]
 
+        # Update _pyomo_var_to_solver_var_id_map to account for removed variables
         for pyomo_var, maingo_var_id in self._pyomo_var_to_solver_var_id_map.items():
-            # How many variables before current var where removed?
             num_removed = 0
             for removed_var in removed_maingo_vars:
                 if removed_var <= maingo_var_id:
