@@ -130,8 +130,10 @@ class LinearRepn(object):
                 ans += e.arg(0)
         if self.constant.__class__ not in native_numeric_types or self.constant:
             ans += self.constant
-        if (self.multiplier.__class__ not in native_numeric_types or
-            self.multiplier != 1):
+        if (
+            self.multiplier.__class__ not in native_numeric_types
+            or self.multiplier != 1
+        ):
             ans *= self.multiplier
         return ans
 

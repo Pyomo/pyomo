@@ -66,11 +66,7 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
         self.assertEqual(len(repn.linear), 1)
         self.assertIn(id(m.x), repn.linear)
         self.assertIs(repn.linear[id(m.x)], m.y)
-        assertExpressionsEqual(
-            self,
-            repn.constant,
-            m.y * 7
-        )
+        assertExpressionsEqual(self, repn.constant, m.y * 7)
         self.assertEqual(repn.multiplier, 1)
 
     def test_monomial(self):
@@ -95,20 +91,16 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
         visitor = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x])
 
         repn = visitor.walk_expression(e)
-        
+
         self.assertIsNone(repn.nonlinear)
         self.assertEqual(len(repn.linear), 0)
-        assertExpressionsEqual(
-            self,
-            repn.constant,
-            45 * m.y
-        )
+        assertExpressionsEqual(self, repn.constant, 45 * m.y)
         self.assertEqual(repn.multiplier, 1)
 
     def test_fixed_var(self):
         m = self.make_model()
         m.x.fix(42)
-        e = (m.y ** 2) * (m.x + m.x ** 2)
+        e = (m.y**2) * (m.x + m.x**2)
 
         cfg = VisitorConfig()
         visitor = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x])
@@ -117,17 +109,13 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
 
         self.assertIsNone(repn.nonlinear)
         self.assertEqual(len(repn.linear), 0)
-        assertExpressionsEqual(
-            self,
-            repn.constant,
-            (m.y ** 2) * 1806
-        )
+        assertExpressionsEqual(self, repn.constant, (m.y**2) * 1806)
         self.assertEqual(repn.multiplier, 1)
 
     def test_nonlinear(self):
         m = self.make_model()
         e = (m.y * log(m.x)) * (m.y + 2) / m.x
-        
+
         cfg = VisitorConfig()
         visitor = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x])
 
@@ -136,8 +124,4 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
         self.assertEqual(len(repn.linear), 0)
         self.assertEqual(repn.multiplier, 1)
         print(repn.nonlinear)
-        assertExpressionsEqual(
-            self,
-            repn.nonlinear,
-            log(m.x) * (m.y *(m.y + 2))/m.x
-        )
+        assertExpressionsEqual(self, repn.nonlinear, log(m.x) * (m.y * (m.y + 2)) / m.x)
