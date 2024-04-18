@@ -84,6 +84,33 @@ class MultilevelLinearRepnVisitor(LinearRepnVisitor):
                 # mult is an expression--we should push it back into the other terms
                 self._factor_multiplier_into_linear_terms(ans, mult)
                 return ans
+            if mult == 1:
+                for vid, coef in ans.linear.items():
+                    if coef.__class__ in native_numeric_types and not coef:
+                        del ans.linear[vid]
+            elif not mult:
+                # the mulltiplier has cleared out the entire expression.
+                # Warn if this is suppressing a NaN (unusual, and
+                # non-standard, but we will wait to remove this behavior
+                # for the time being)
+                if ans.constant != ans.constant or any(
+                    c != c for c in ans.linear.values()
+                ):
+                    deprecation_warning(
+                        f"Encountered {str(mult)}*nan in expression tree.  "
+                        "Mapping the NaN result to 0 for compatibility "
+                        "with the lp_v1 writer.  In the future, this NaN "
+                        "will be preserved/emitted to comply with IEEE-754.",
+                        version='6.6.0',
+                    )
+                return self.Result()
+            else:
+                # mult not in {0, 1}: factor it into the constant,
+                # linear coefficients, and nonlinear term
+                self._factor_multiplier_into_linear_terms(ans, mult)
+            return ans
 
-        # In all other cases, the base class implementation is correct
-        return super().finalizeResult(result)
+        ans = self.Result()
+        assert result[0] is ExprType.CONSTANT
+        ans.constant = result[1]
+        return ans
