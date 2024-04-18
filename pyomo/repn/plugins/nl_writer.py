@@ -11,6 +11,8 @@
 
 import ctypes
 import logging
+import math
+import operator
 import os
 from collections import deque, defaultdict, namedtuple
 from contextlib import nullcontext
@@ -1835,7 +1837,7 @@ class _NLWriter_impl(object):
                     fixed_vars.append(x)
                 eliminated_cons.add(con_id)
             else:
-                return eliminated_cons, eliminated_vars
+                break
             for con_id, expr_info in comp_by_linear_var[_id]:
                 # Note that if we were aggregating (i.e., _id was
                 # from two_var), then one of these info's will be
@@ -1887,6 +1889,32 @@ class _NLWriter_impl(object):
                     expr_info.linear[x] += c * a
                 elif a:
                     expr_info.linear[x] = c * a
+
+        # Note: the ASL will (silently) produce incorrect answers if the
+        # nonlinear portion of a defined variable is a constant
+        # expression.  This may now be the case if all the variables in
+        # the original nonlinear expression have been fixed.
+        for expr, info, _ in self.subexpression_cache.values():
+            if not info.nonlinear:
+                continue
+            print(info.nonlinear)
+            nl, args = info.nonlinear
+            if not args or any(vid not in eliminated_vars for vid in args):
+                continue
+            # Ideally, we would just evaluate the named expression.
+            # However, there might be a linear portion of the named
+            # expression that still has free variables, and there is no
+            # guarantee that the user actually initialized the
+            # variables.  So, we will fall back on parsing the (now
+            # constant) nonlinear fragment and evaluating it.
+            if info.linear is None:
+                info.linear = {}
+            info.nonlinear = None
+            info.const += _evaluate_constant_nl(
+                nl % tuple(template.const % eliminated_vars[i].const for i in args)
+            )
+
+        return eliminated_cons, eliminated_vars
 
     def _record_named_expression_usage(self, named_exprs, src, comp_type):
         self.used_named_expressions.update(named_exprs)
@@ -2263,6 +2291,40 @@ class text_nl_debug_template(object):
     _create_strict_inequality_map(vars())
 
 
+nl_operators = {
+    0: (2, operator.add),
+    2: (2, operator.mul),
+    3: (2, operator.truediv),
+    5: (2, operator.pow),
+    15: (1, operator.abs),
+    16: (1, operator.neg),
+    54: (None, lambda *x: sum(x)),
+    35: (3, lambda a, b, c: b if a else c),
+    21: (2, operator.and_),
+    22: (2, operator.lt),
+    23: (2, operator.le),
+    24: (2, operator.eq),
+    43: (2, math.log),
+    42: (2, math.log10),
+    41: (2, math.sin),
+    46: (2, math.cos),
+    38: (2, math.tan),
+    40: (2, math.sinh),
+    45: (2, math.cosh),
+    37: (2, math.tanh),
+    51: (2, math.asin),
+    53: (2, math.acos),
+    49: (2, math.atan),
+    44: (2, math.exp),
+    39: (2, math.sqrt),
+    50: (2, math.asinh),
+    52: (2, math.acosh),
+    47: (2, math.atanh),
+    14: (2, math.ceil),
+    13: (2, math.floor),
+}
+
+
 def _strip_template_comments(vars_, base_):
     vars_['unary'] = {k: v[: v.find('\t#')] + '\n' for k, v in base_.unary.items()}
     for k, v in base_.__dict__.items():
@@ -2515,6 +2577,15 @@ def handle_named_expression_node(visitor, node, arg1):
         expression_source,
     )
 
+    # As we will eventually need the compiled form of any nonlinear
+    # expression, we will go ahead and compile it here.  We do not
+    # do the same for the linear component as we will only need the
+    # linear component compiled to a dict if we are emitting the
+    # original (linear + nonlinear) V line (which will not happen if
+    # the V line is part of a larger linear operator).
+    if repn.nonlinear.__class__ is list:
+        repn.compile_nonlinear_fragment(visitor)
+
     if not visitor.use_named_exprs:
         return _GENERAL, repn.duplicate()
 
@@ -2527,15 +2598,6 @@ def handle_named_expression_node(visitor, node, arg1):
     repn.nl = (visitor.template.var, (_id,))
 
     if repn.nonlinear:
-        # As we will eventually need the compiled form of any nonlinear
-        # expression, we will go ahead and compile it here.  We do not
-        # do the same for the linear component as we will only need the
-        # linear component compiled to a dict if we are emitting the
-        # original (linear + nonlinear) V line (which will not happen if
-        # the V line is part of a larger linear operator).
-        if repn.nonlinear.__class__ is list:
-            repn.compile_nonlinear_fragment(visitor)
-
         if repn.linear:
             # If this expression has both linear and nonlinear
             # components, we will follow the ASL convention and break
@@ -3016,3 +3078,46 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         #
         self.active_expression_source = None
         return ans
+
+
+def _evaluate_constant_nl(nl):
+    expr = nl.splitlines()
+    stack = []
+    while expr:
+        line = expr.pop()
+        tokens = line.split()
+        # remove tokens after the first comment
+        for i, t in enumerate(tokens):
+            if t.startswith('#'):
+                tokens = tokens[:i]
+                break
+        if len(tokens) != 1:
+            # skip blank lines
+            if not tokens:
+                continue
+            raise DeveloperError(
+                f"Unsupported line format _evaluate_nl() (we expect each line "
+                f"to contain a single token): '{line}'"
+            )
+        term = tokens[0]
+        # the "command" can be determined by the first character on the line
+        cmd = term[0]
+        # Note that we will unpack the line into the expected number of
+        # explicit arguments as a form of error checking
+        if cmd == 'n':
+            stack.append(float(term[1:]))
+        elif cmd == 'o':
+            # operator
+            nargs, fcn = nl_operators[int(term[1:])]
+            if nargs is None:
+                nargs = int(stack.pop())
+            stack.append(fcn(*(stack.pop() for i in range(nargs))))
+        elif cmd in '1234567890':
+            # this is either a single int (e.g., the nargs in a nary
+            # sum) or a string argument.  Preserve it as-is until later
+            # when we know which we are expecting.
+            stack.append(term)
+        else:
+            raise DeveloperError(f"Unsupported NL operator in _evaluate_nl(): '{line}'")
+    assert len(stack) == 1
+    return stack[0]
