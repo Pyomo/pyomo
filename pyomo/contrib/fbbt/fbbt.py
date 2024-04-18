@@ -24,9 +24,10 @@ import pyomo.contrib.fbbt.interval as interval
 import math
 from pyomo.core.base.block import Block
 from pyomo.core.base.constraint import Constraint
+from pyomo.core.base.expression import ExpressionData, ScalarExpression
+from pyomo.core.base.objective import ObjectiveData, ScalarObjective
 from pyomo.core.base.var import Var
 from pyomo.gdp import Disjunct
-from pyomo.core.base.expression import ExpressionData, ScalarExpression
 import logging
 from pyomo.common.errors import InfeasibleConstraintException, PyomoException
 from pyomo.common.config import (
@@ -340,7 +341,7 @@ def _prop_bnds_leaf_to_root_NamedExpression(visitor, node, expr):
     Parameters
     ----------
     visitor: _FBBTVisitorLeafToRoot
-    node: pyomo.core.base.expression.ExpressionData
+    node: pyomo.core.base.expression.NamedExpressionData
     expr: NamedExpressionData arg
     """
     bnds_dict = visitor.bnds_dict
@@ -368,6 +369,8 @@ _prop_bnds_leaf_to_root_map = defaultdict(
         numeric_expr.AbsExpression: _prop_bnds_leaf_to_root_abs,
         ExpressionData: _prop_bnds_leaf_to_root_NamedExpression,
         ScalarExpression: _prop_bnds_leaf_to_root_NamedExpression,
+        ObjectiveData: _prop_bnds_leaf_to_root_NamedExpression,
+        ScalarObjective: _prop_bnds_leaf_to_root_NamedExpression,
     },
 )
 
@@ -904,7 +907,7 @@ def _prop_bnds_root_to_leaf_NamedExpression(node, bnds_dict, feasibility_tol):
 
     Parameters
     ----------
-    node: pyomo.core.base.expression.ExpressionData
+    node: pyomo.core.base.expression.NamedExpressionData
     bnds_dict: ComponentMap
     feasibility_tol: float
         If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
@@ -947,6 +950,8 @@ _prop_bnds_root_to_leaf_map[numeric_expr.AbsExpression] = _prop_bnds_root_to_lea
 
 _prop_bnds_root_to_leaf_map[ExpressionData] = _prop_bnds_root_to_leaf_NamedExpression
 _prop_bnds_root_to_leaf_map[ScalarExpression] = _prop_bnds_root_to_leaf_NamedExpression
+_prop_bnds_root_to_leaf_map[ObjectiveData] = _prop_bnds_root_to_leaf_NamedExpression
+_prop_bnds_root_to_leaf_map[ScalarObjective] = _prop_bnds_root_to_leaf_NamedExpression
 
 
 def _check_and_reset_bounds(var, lb, ub):
