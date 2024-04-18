@@ -128,9 +128,10 @@ class LinearRepn(object):
                 ans += e
             elif e.nargs() == 1:
                 ans += e.arg(0)
-        if self.constant:
+        if self.constant.__class__ not in native_numeric_types or self.constant:
             ans += self.constant
-        if self.multiplier != 1:
+        if (self.multiplier.__class__ not in native_numeric_types or
+            self.multiplier != 1):
             ans *= self.multiplier
         return ans
 
@@ -147,33 +148,49 @@ class LinearRepn(object):
         callback).
 
         """
-        # Note that self.multiplier will always be 1 (we only call append()
-        # within a sum, so there is no opportunity for self.multiplier to
-        # change). Omitting the assertion for efficiency.
-        # assert self.multiplier == 1
         _type, other = other
         if _type is _CONSTANT:
             self.constant += other
             return
 
         mult = other.multiplier
-        if not mult:
-            # 0 * other, so there is nothing to add/change about
-            # self.  We can just exit now.
-            return
-        if other.constant:
-            self.constant += mult * other.constant
-        if other.linear:
-            _merge_dict(self.linear, mult, other.linear)
-        if other.nonlinear is not None:
-            if mult != 1:
+        try:
+            _mult = bool(mult)
+            if not _mult:
+                return
+            if mult == 1:
+                _mult = False
+        except:
+            _mult = True
+
+        const = other.constant
+        try:
+            _const = bool(const)
+        except:
+            _const = True
+
+        if _mult:
+            if _const:
+                self.constant += mult * const
+            if other.linear:
+                _merge_dict(self.linear, mult, other.linear)
+            if other.nonlinear is not None:
                 nl = mult * other.nonlinear
-            else:
+                if self.nonlinear is None:
+                    self.nonlinear = nl
+                else:
+                    self.nonlinear += nl
+        else:
+            if _const:
+                self.constant += const
+            if other.linear:
+                _merge_dict(self.linear, 1, other.linear)
+            if other.nonlinear is not None:
                 nl = other.nonlinear
-            if self.nonlinear is None:
-                self.nonlinear = nl
-            else:
-                self.nonlinear += nl
+                if self.nonlinear is None:
+                    self.nonlinear = nl
+                else:
+                    self.nonlinear += nl
 
 
 def to_expression(visitor, arg):
@@ -847,7 +864,7 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
             else:
                 # mult not in {0, 1}: factor it into the constant,
                 # linear coefficients, and nonlinear term
-                self._factor_mult_into_linear_terms(ans, mult)
+                self._factor_multiplier_into_linear_terms(ans, mult)
             return ans
         ans = self.Result()
         assert result[0] is _CONSTANT

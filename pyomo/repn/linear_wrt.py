@@ -74,15 +74,13 @@ class MultilevelLinearRepnVisitor(LinearRepnVisitor):
         self.wrt = ComponentSet(_flattened(wrt))
 
     def beforeChild(self, node, child, child_idx):
-        print("before child %s" % child)
-        print(child.__class__)
         return _before_child_dispatcher[child.__class__](self, child)
 
     def finalizeResult(self, result):
         ans = result[1]
         if ans.__class__ is self.Result:
             mult = ans.multiplier
-            if not mult.__class__ in native_numeric_types:
+            if mult.__class__ not in native_numeric_types:
                 # mult is an expression--we should push it back into the other terms
                 self._factor_multiplier_into_linear_terms(ans, mult)
                 return ans
