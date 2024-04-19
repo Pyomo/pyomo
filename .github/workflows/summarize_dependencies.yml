@@ -1,0 +1,589 @@
+name: Nightly Dependencies Summary
+
+on:
+  push:
+    branches-ignore:
+      - main
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      git-ref:
+        description: Git Hash (Optional)
+        required: false
+
+defaults:
+  run:
+    shell: bash -l {0}
+
+env:
+  PYTHONWARNINGS: ignore::UserWarning
+  PYTHON_CORE_PKGS: wheel
+  PYPI_ONLY: z3-solver
+  PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels
+  CACHE_VER: v221013.1
+  NEOS_EMAIL: tests@pyomo.org
+  SRC_REF: ${{ github.head_ref || github.ref }}
+
+jobs:
+  build:
+    name: ${{ matrix.TARGET }}/${{ matrix.python }}${{ matrix.other }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python: ['3.12']
+        other: [""]
+        category: [""]
+
+        include:
+        - os: ubuntu-latest
+          python: '3.12'
+          TARGET: linux
+          PYENV: pip
+
+        - os: macos-13
+          python: '3.10'
+          TARGET: osx
+          PYENV: pip
+
+        - os: windows-latest
+          python: 3.9
+          TARGET: win
+          PYENV: conda
+          PACKAGES: glpk pytest-qt filelock
+
+        - os: ubuntu-latest
+          python: '3.11'
+          other: /conda
+          skip_doctest: 1
+          TARGET: linux
+          PYENV: conda
+          PACKAGES: pytest-qt
+
+        - os: ubuntu-latest
+          python: '3.10'
+          other: /mpi
+          mpi: 3
+          skip_doctest: 1
+          TARGET: linux
+          PYENV: conda
+          PACKAGES: openmpi mpi4py
+
+        - os: ubuntu-latest
+          python: '3.10'
+          other: /cython
+          setup_options: --with-cython
+          skip_doctest: 1
+          TARGET: linux
+          PYENV: pip
+          PACKAGES: cython
+
+        - os: windows-latest
+          python: 3.8
+          other: /pip
+          skip_doctest: 1
+          TARGET: win
+          PYENV: pip
+
+    steps:
+    - name: Checkout Pyomo source
+      uses: actions/checkout@v4
+
+    - name: Configure job parameters
+      run: |
+        JOB="${{matrix.TARGET}}/${{matrix.python}}${{matrix.other}}"
+        echo "TIMESTAMP=$(date +%F)" >> $GITHUB_ENV
+        echo "GHA_JOBNAME=$JOB" | sed 's|/|_|g' >> $GITHUB_ENV
+        if test -z "${{matrix.other}}"; then
+            echo "GHA_JOBGROUP=${{matrix.TARGET}}" >> $GITHUB_ENV
+        else
+            echo "GHA_JOBGROUP=other" >> $GITHUB_ENV
+        fi
+        # Note: pandas 1.0.3 causes gams 29.1.0 import to fail in python 3.8
+        EXTRAS=tests
+        if test -z "${{matrix.slim}}"; then
+            EXTRAS="$EXTRAS,docs,optional"
+        fi
+        echo "EXTRAS=$EXTRAS" >> $GITHUB_ENV
+        PYTHON_PACKAGES="${{matrix.PACKAGES}}"
+        echo "PYTHON_PACKAGES=$PYTHON_PACKAGES" \
+            | tr '\n' ' ' | sed 's/ \+/ /g' >> $GITHUB_ENV
+
+    #- name: Pip package cache
+    #  uses: actions/cache@v4
+    #  if: matrix.PYENV == 'pip'
+    #  id: pip-cache
+    #  with:
+    #    path: cache/pip
+    #    key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-${{matrix.python}}
+
+    #- name: OS package cache
+    #  uses: actions/cache@v4
+    #  if: matrix.TARGET != 'osx'
+    #  id: os-cache
+    #  with:
+    #    path: cache/os
+    #    key: pkg-${{env.CACHE_VER}}.0-${{runner.os}}
+
+    - name: TPL package download cache
+      uses: actions/cache@v4
+      if: ${{ ! matrix.slim }}
+      id: download-cache
+      with:
+        path: cache/download
+        key: download-${{env.CACHE_VER}}.0-${{runner.os}}
+
+    - name: Configure curl
+      run: |
+        CURLRC="$(cat <<EOF
+           retry = 0
+           max-time = 30
+        EOF
+        )"
+        echo "$CURLRC" > ${GITHUB_WORKSPACE}/.curlrc
+        echo "$CURLRC" > ${GITHUB_WORKSPACE}/_curlrc
+        echo "CURL_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+
+    - name: Update OSX
+      if: matrix.TARGET == 'osx'
+      run: |
+        mkdir -p ${GITHUB_WORKSPACE}/cache/os
+        export HOMEBREW_CACHE=${GITHUB_WORKSPACE}/cache/os
+        # Be cautious running brew update: it can break
+        #    setup-python on OSX
+        # brew update
+        #
+        # Notes:
+        #  - install glpk
+        #  - pyodbc needs: gcc pkg-config unixodbc freetds
+        for pkg in bash pkg-config unixodbc freetds glpk; do
+            brew list $pkg || brew install $pkg
+        done
+
+    - name: Update Linux
+      if: matrix.TARGET == 'linux'
+      run: |
+        mkdir -p ${GITHUB_WORKSPACE}/cache/os
+        # Notes:
+        #  - install glpk
+        #  - ipopt needs: libopenblas-dev gfortran liblapack-dev
+        sudo apt-get -o Dir::Cache=${GITHUB_WORKSPACE}/cache/os \
+            install libopenblas-dev gfortran liblapack-dev glpk-utils
+        sudo chmod -R 777 ${GITHUB_WORKSPACE}/cache/os
+
+    - name: Update Windows
+      if: matrix.TARGET == 'win'
+      run: |
+        echo "SETUPTOOLS_USE_DISTUTILS=local" >> $GITHUB_ENV
+
+    - name: Set up Python ${{ matrix.python }}
+      if: matrix.PYENV == 'pip'
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python }}
+
+    - name: Set up Miniconda Python ${{ matrix.python }}
+      if: matrix.PYENV == 'conda'
+      uses: conda-incubator/setup-miniconda@v3
+      with:
+        auto-update-conda: false
+        python-version: ${{ matrix.python }}
+
+    # This is necessary for qt (UI) tests; the package utilized here does not
+    # have support for OSX.
+    - name: Set up UI testing infrastructure
+      if: ${{ matrix.TARGET != 'osx' }}
+      uses: pyvista/setup-headless-display-action@v2
+      with:
+        qt: true
+        pyvista: false
+
+    - name: Install Python Packages (pip)
+      if: matrix.PYENV == 'pip'
+      shell: bash # DO NOT REMOVE: see note above
+      run: |
+        python -c 'import sys;print(sys.executable)'
+        python -m pip install --cache-dir cache/pip --upgrade pip
+        python -m pip install --cache-dir cache/pip setuptools
+        PYOMO_DEPENDENCIES=`python setup.py dependencies \
+            --extras "$EXTRAS" | tail -1`
+        PACKAGES="${PYTHON_CORE_PKGS} ${PYTHON_PACKAGES} ${PYOMO_DEPENDENCIES} "
+        if [[ ${{matrix.python}} == pypy* ]]; then
+            EXCLUDE="$PYPY_EXCLUDE $EXCLUDE"
+        fi
+        EXCLUDE=`echo "$EXCLUDE" | xargs`
+        if test -n "$EXCLUDE"; then
+            for WORD in $EXCLUDE; do
+                PACKAGES=${PACKAGES//$WORD / }
+            done
+        fi
+        python -m pip install --cache-dir cache/pip ${PACKAGES}
+        python -m pip install --cache-dir cache/pip pymysql || \
+            python -m pip install --cache-dir cache/pip pymysql
+        if test -z "${{matrix.slim}}"; then
+            python -m pip install --cache-dir cache/pip cplex docplex \
+                || echo "WARNING: CPLEX Community Edition is not available"
+            python -m pip install --cache-dir cache/pip \
+                -i https://pypi.gurobi.com gurobipy==10.0.3 \
+                || echo "WARNING: Gurobi is not available"
+            python -m pip install --cache-dir cache/pip xpress \
+                || echo "WARNING: Xpress Community Edition is not available"
+            if [[ ${{matrix.python}} == pypy* ]]; then
+                echo "skipping wntr for pypy"
+            else
+                python -m pip install wntr \
+                    || echo "WARNING: WNTR is not available"
+            fi
+        fi
+        python -c 'import sys; print("PYTHON_EXE=%s" \
+            % (sys.executable,))' >> $GITHUB_ENV
+        echo ""
+        echo "Final pip environment:"
+        python -m pip list | sed 's/^/    /'
+
+    - name: Install Python packages (conda)
+      if: matrix.PYENV == 'conda'
+      run: |
+        # Set up environment
+        conda config --set always_yes yes
+        conda config --set auto_update_conda false
+        conda config --remove channels defaults
+        conda config --append channels nodefaults
+        conda config --append channels conda-forge
+        # Try to install mamba
+        conda install --update-deps -q -y -n base conda-libmamba-solver \
+            || MAMBA_FAILED=1
+        if test -z "$MAMBA_FAILED"; then
+            echo "*** Activating the mamba environment solver ***"
+            conda config --set solver libmamba
+        fi
+        # Add the rest of the channels
+        conda config --append channels gurobi
+        conda config --append channels ibmdecisionoptimization
+        conda config --append channels fico-xpress
+        # Print environment info
+        echo "*** CONDA environment: ***"
+        conda info
+        conda config --show-sources
+        conda config --show channels
+        conda list --show-channel-urls
+        which python
+        python --version
+        # Note: some pypi packages are not available through conda
+        PYOMO_DEPENDENCIES=`python setup.py dependencies \
+            --extras "$EXTRAS" | tail -1`
+        PACKAGES="${PYTHON_CORE_PKGS} ${PYTHON_PACKAGES} ${PYOMO_DEPENDENCIES} "
+        if [[ ${{matrix.python}} == pypy* ]]; then
+            EXCLUDE="$PYPY_EXCLUDE $EXCLUDE"
+        fi
+        # HACK: Remove problem packages on conda+Linux
+        if test "${{matrix.TARGET}}" == linux; then
+            EXCLUDE="casadi numdifftools $EXCLUDE"
+        fi
+        EXCLUDE=`echo "$EXCLUDE" | xargs`
+        if test -n "$EXCLUDE"; then
+            for WORD in $EXCLUDE; do
+                PACKAGES=${PACKAGES//$WORD / }
+            done
+        fi
+        for PKG in $PACKAGES; do
+            if [[ " $PYPI_ONLY " == *" $PKG "* ]]; then
+                PYPI_DEPENDENCIES="$PYPI_DEPENDENCIES $PKG"
+            else
+                CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES $PKG"
+            fi
+        done
+        echo ""
+        echo "*** Install Pyomo dependencies ***"
+        # Note: this will fail the build if any installation fails (or
+        # possibly if it outputs messages to stderr)
+        conda install --update-deps -y $CONDA_DEPENDENCIES
+        if test -z "${{matrix.slim}}"; then
+            PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
+            echo "Installing for $PYVER"
+            for PKG in 'cplex>=12.10' docplex 'gurobi=10.0.3' xpress cyipopt pymumps scip; do
+                echo ""
+                echo "*** Install $PKG ***"
+                # conda can literally take an hour to determine that a
+                # package is not available.  Perform a quick search to see
+                # if the package is available for this interpreter before
+                # attempting an install.
+                # NOTE: conda search will attempt approximate matches.
+                _PKGLIST=$(conda search -f "$PKG") || echo "Package $PKG not found"
+                echo "$_PKGLIST"
+                _BASE=$(echo "$PKG" | sed 's/[=<>].*//')
+                _BUILDS=$(echo "$_PKGLIST" | grep "^$_BASE " \
+                    | sed -r 's/\s+/ /g' | cut -d\  -f3) || echo ""
+                if test -n "$_BUILDS"; then
+                    _ISPY=$(echo "$_BUILDS" | grep "^py") \
+                        || echo "INFO: No python build detected."
+                    _PYOK=$(echo "$_BUILDS" | grep -E "^($PYVER|pyh)") \
+                        || echo "INFO: No python build matching $PYVER detected."
+                    if test -z "$_ISPY" -o -n "$_PYOK"; then
+                        echo ""
+                        echo "... INSTALLING $PKG"
+                        conda install -y "$PKG" || _BUILDS=""
+                    fi
+                fi
+                if test -z "$_BUILDS"; then
+                    echo "WARNING: $PKG is not available"
+                fi
+            done
+        fi
+        # Re-try Pyomo (optional) dependencies with pip
+        if test -n "$PYPI_DEPENDENCIES"; then
+            python -m pip install --cache-dir cache/pip $PYPI_DEPENDENCIES
+        fi
+        # remember this python interpreter
+        python -c 'import sys; print("PYTHON_EXE=%s" \
+            % (sys.executable,))' >> $GITHUB_ENV
+        #
+        # conda activate puts itself first in the PATH, which overrides
+        # any paths we add through GITHUB_PATH.  We will update .profile
+        # to move the local runner paths back to the front (before conda).
+        for profile in $HOME/.profile $HOME/.bash_profile; do
+            if test ! -e $profile; then
+                continue
+            fi
+            echo '' >> $profile
+            echo 'export PATH=`echo "$PATH" \
+                | tr ":" "\\n" | grep runner | tr "\n" ":"`:`echo "$PATH" \
+                | tr ":" "\\n" | grep -v runner | tr "\n" ":"`' >> $profile
+        done
+        echo ""
+        echo "Final conda environment:"
+        conda list | sed 's/^/    /'
+
+    - name: Setup TPL package directories
+      run: |
+        TPL_DIR="${GITHUB_WORKSPACE}/cache/tpl"
+        mkdir -p "$TPL_DIR"
+        DOWNLOAD_DIR="${GITHUB_WORKSPACE}/cache/download"
+        mkdir -p "$DOWNLOAD_DIR"
+        echo "TPL_DIR=$TPL_DIR" >> $GITHUB_ENV
+        echo "DOWNLOAD_DIR=$DOWNLOAD_DIR" >> $GITHUB_ENV
+
+    - name: Install Ipopt
+      if: ${{ ! matrix.slim }}
+      run: |
+        IPOPT_DIR=$TPL_DIR/ipopt
+        echo "$IPOPT_DIR" >> $GITHUB_PATH
+        echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$IPOPT_DIR" >> $GITHUB_ENV
+        mkdir -p $IPOPT_DIR
+        IPOPT_TAR=${DOWNLOAD_DIR}/ipopt.tar.gz
+        if test ! -e $IPOPT_TAR; then
+            echo "...downloading Ipopt"
+            if test "${{matrix.TARGET}}" == osx; then
+                echo "IDAES Ipopt not available on OSX"
+                exit 0
+            fi
+            URL=https://github.com/IDAES/idaes-ext
+            RELEASE=$(curl --max-time 150 --retry 8 \
+                -L -s -H 'Accept: application/json' ${URL}/releases/latest)
+            VER=$(echo $RELEASE | sed -e 's/.*"tag_name":"\([^"]*\)".*/\1/')
+            URL=${URL}/releases/download/$VER
+            if test "${{matrix.TARGET}}" == linux; then
+                curl --max-time 150 --retry 8 \
+                    -L $URL/idaes-solvers-ubuntu2004-x86_64.tar.gz \
+                    > $IPOPT_TAR
+            else
+                curl --max-time 150 --retry 8 \
+                    -L $URL/idaes-solvers-windows-x86_64.tar.gz \
+                    $URL/idaes-lib-windows-x86_64.tar.gz > $IPOPT_TAR
+            fi
+        fi
+        cd $IPOPT_DIR
+        tar -xzi < $IPOPT_TAR
+        echo ""
+        echo "$IPOPT_DIR"
+        ls -l $IPOPT_DIR
+
+    - name: Install GAMS
+      if: ${{ ! matrix.slim }}
+      # We install using Powershell because the GAMS installer hangs
+      # when launched from bash on Windows
+      shell: pwsh
+      run: |
+        $GAMS_DIR = "${env:TPL_DIR}/gams"
+        echo "$GAMS_DIR" | `
+            Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        echo "LD_LIBRARY_PATH=${env:LD_LIBRARY_PATH}:$GAMS_DIR" `
+            Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        echo "DYLD_LIBRARY_PATH=${env:DYLD_LIBRARY_PATH}:$GAMS_DIR" `
+            Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        $INSTALLER = "${env:DOWNLOAD_DIR}/gams_install.exe"
+        # We are pinning to 29.1.0 because a license is required for
+        # versions after this in order to run in demo mode.
+        $URL = "https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0"
+        if ( "${{matrix.TARGET}}" -eq "win" ) {
+            $URL = "$URL/windows/windows_x64_64.exe"
+        } elseif ( "${{matrix.TARGET}}" -eq "osx" ) {
+            $URL = "$URL/macosx/osx_x64_64_sfx.exe"
+        } else {
+            $URL = "$URL/linux/linux_x64_64_sfx.exe"
+        }
+        if (-not (Test-Path "$INSTALLER" -PathType Leaf)) {
+            echo "...downloading GAMS"
+            Invoke-WebRequest -Uri "$URL" -OutFile "$INSTALLER" `
+                -RetryIntervalSec 30 -MaximumRetryCount 8 -TimeoutSec 150
+        }
+        echo "...installing GAMS"
+        if ( "${{matrix.TARGET}}" -eq "win" ) {
+            Start-Process -FilePath "$INSTALLER" -ArgumentList `
+                "/SP- /NORESTART /VERYSILENT /DIR=$GAMS_DIR /NOICONS" `
+                -Wait
+        } else {
+            chmod 777 $INSTALLER
+            Start-Process -FilePath "$INSTALLER" -ArgumentList `
+                "-q -d $GAMS_DIR" -Wait
+            mv $GAMS_DIR/*/* $GAMS_DIR/.
+        }
+        echo ""
+        echo "$GAMS_DIR"
+        ls -l $GAMS_DIR
+
+    - name: Install GAMS Python bindings
+      if: ${{ ! matrix.slim }}
+      run: |
+        GAMS_DIR="${env:TPL_DIR}/gams"
+        py_ver=$($PYTHON_EXE -c 'import sys;v="_%s%s" % sys.version_info[:2] \
+            ;print(v if v != "_27" else "")')
+        if test -e $GAMS_DIR/apifiles/Python/api$py_ver; then
+            echo "Installing GAMS Python bindings"
+            pushd $GAMS_DIR/apifiles/Python/api$py_ver
+            $PYTHON_EXE setup.py install
+            popd
+        fi
+
+    - name: Install BARON
+      if: ${{ ! matrix.slim }}
+      shell: pwsh
+      run: |
+        $BARON_DIR = "${env:TPL_DIR}/baron"
+        echo "$BARON_DIR" | `
+            Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        $URL = "https://www.minlp.com/downloads/xecs/baron/current/"
+        if ( "${{matrix.TARGET}}" -eq "win" ) {
+            $INSTALLER = "${env:DOWNLOAD_DIR}/baron_install.exe"
+            $URL += "baron-win64.exe"
+        } elseif ( "${{matrix.TARGET}}" -eq "osx" ) {
+            $INSTALLER = "${env:DOWNLOAD_DIR}/baron_install.zip"
+            $URL += "baron-osx64.zip"
+        } else {
+            $INSTALLER = "${env:DOWNLOAD_DIR}/baron_install.zip"
+            $URL += "baron-lin64.zip"
+        }
+        if (-not (Test-Path "$INSTALLER" -PathType Leaf)) {
+            echo "...downloading BARON ($URL)"
+            Invoke-WebRequest -Uri "$URL" -OutFile "$INSTALLER" `
+                -RetryIntervalSec 30 -MaximumRetryCount 8 -TimeoutSec 150
+        }
+        echo "...installing BARON"
+        if ( "${{matrix.TARGET}}" -eq "win" ) {
+            Start-Process -FilePath "$INSTALLER" -ArgumentList `
+                "/SP- /NORESTART /VERYSILENT /DIR=$BARON_DIR /NOICONS" `
+                -Wait
+        } else {
+            unzip -q $INSTALLER
+            mv baron-* $BARON_DIR
+        }
+        echo ""
+        echo "$BARON_DIR"
+        ls -l $BARON_DIR
+
+    - name: Install GJH_ASL_JSON
+      if: ${{ ! matrix.slim && matrix.TARGET != 'win' }}
+      run: |
+        GJH_DIR="$TPL_DIR/gjh"
+        echo "${GJH_DIR}" >> $GITHUB_PATH
+        INSTALL_DIR="${DOWNLOAD_DIR}/gjh"
+        if test ! -e "$INSTALL_DIR/bin"; then
+            mkdir -p "$INSTALL_DIR"
+            INSTALLER="$INSTALL_DIR/gjh_asl_json.zip"
+            URL="https://codeload.github.com/ghackebeil/gjh_asl_json/zip/master"
+            curl --max-time 150 --retry 8 -L $URL > $INSTALLER
+            cd $INSTALL_DIR
+            unzip -q $INSTALLER
+            cd gjh_asl_json-master/Thirdparty
+            ./get.ASL
+            cd ..
+            make
+            mv bin "$INSTALL_DIR/bin"
+        fi
+        cp -rp "$INSTALL_DIR/bin" "$GJH_DIR"
+        echo ""
+        echo "$GJH_DIR"
+        ls -l $GJH_DIR
+
+    - name: Install Pyomo
+      run: |
+        echo ""
+        echo "Clone Pyomo-model-libraries..."
+        URL=https://github.com/Pyomo/pyomo-model-libraries.git
+        git clone -b ${SRC_REF##*/} $URL || git clone -b main $URL
+        echo ""
+        echo "Install Pyomo..."
+        echo ""
+        $PYTHON_EXE setup.py develop ${{matrix.setup_options}}
+        echo ""
+        echo "Set custom PYOMO_CONFIG_DIR"
+        echo ""
+        echo "PYOMO_CONFIG_DIR=${GITHUB_WORKSPACE}/config" >> $GITHUB_ENV
+
+    # this has to be done after Pyomo is installed because highspy 
+    # depends on pyomo's find_library function
+    - name: Install HiGHS
+      if: ${{ ! matrix.slim }}
+      shell: bash
+      run: |
+        $PYTHON_EXE -m pip install --cache-dir cache/pip highspy \
+            || echo "WARNING: highspy is not available"
+
+    - name: Download and install extensions
+      if: ${{ ! matrix.slim }}
+      run: |
+        echo ""
+        echo "Pyomo download-extensions"
+        echo ""
+        pyomo download-extensions || exit 1
+        echo ""
+        echo "Pyomo build-extensions"
+        echo ""
+        pyomo build-extensions --parallel 2
+
+    - name: Report current job environment
+      run: |
+        echo "# Environment and Dependency Summary for $TIMESTAMP" >> $GITHUB_STEP_SUMMARY
+        echo "--------------------------------------------------" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Current Environment" >> $GITHUB_STEP_SUMMARY
+        echo "--------------------------------------------------" >> $GITHUB_STEP_SUMMARY
+        env >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Packages installed via pip" >> $GITHUB_STEP_SUMMARY
+        echo "--------------------------------------------------" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        pip list >> $GITHUB_STEP_SUMMARY
+        if "${{ matrix.PYENV }}" == 'conda'; then
+            echo "## Packages installed via conda" >> $GITHUB_STEP_SUMMARY
+            echo "--------------------------------------------------" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            conda list >> $GITHUB_STEP_SUMMARY
+        fi
+        echo "## Pyomo Help Information" >> $GITHUB_STEP_SUMMARY
+        echo "--------------------------------------------------" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        pyomo help --solvers >> $GITHUB_STEP_SUMMARY
+        pyomo help --transformations >> $GITHUB_STEP_SUMMARY
+        pyomo help --writers >> $GITHUB_STEP_SUMMARY
+        echo $GITHUB_STEP_SUMMARY >> archive.txt
+
+    - name: Record archive artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{env.TIMESTAMP}}-${{env.GHA_JOBNAME}}
+        path: |
+          archive.txt
