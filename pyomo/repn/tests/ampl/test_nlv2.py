@@ -2435,8 +2435,8 @@ J0 1	#c1
 V3 0 1	#nl(e)
 o54	#sumlist
 3	#(n)
- o2	#*
- v0	#y
+o2	#*
+v0	#y
 v2	#z
 o5	#^
 v0	#y
