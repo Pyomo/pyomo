@@ -3102,8 +3102,8 @@ def _evaluate_constant_nl(nl):
             if not tokens:
                 continue
             raise DeveloperError(
-                f"Unsupported line format _evaluate_nl() (we expect each line "
-                f"to contain a single token): '{line}'"
+                f"Unsupported line format _evaluate_constant_nl() "
+                f"(we expect each line to contain a single token): '{line}'"
             )
         term = tokens[0]
         # the "command" can be determined by the first character on the line
@@ -3111,6 +3111,7 @@ def _evaluate_constant_nl(nl):
         # Note that we will unpack the line into the expected number of
         # explicit arguments as a form of error checking
         if cmd == 'n':
+            # numeric constant
             stack.append(float(term[1:]))
         elif cmd == 'o':
             # operator
@@ -3124,6 +3125,8 @@ def _evaluate_constant_nl(nl):
             # when we know which we are expecting.
             stack.append(term)
         else:
-            raise DeveloperError(f"Unsupported NL operator in _evaluate_nl(): '{line}'")
+            raise DeveloperError(
+                f"Unsupported NL operator in _evaluate_constant_nl(): '{line}'"
+            )
     assert len(stack) == 1
     return stack[0]
