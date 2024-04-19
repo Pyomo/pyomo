@@ -831,15 +831,15 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
         linear = ans.linear
         zeros = []
         for vid, coef in linear.items():
-            if coef:
-                linear[vid] = coef * mult
+            if coef.__class__ not in native_numeric_types or coef:
+                linear[vid] = mult * coef
             else:
                 zeros.append(vid)
         for vid in zeros:
             del linear[vid]
         if ans.nonlinear is not None:
             ans.nonlinear *= mult
-        if ans.constant:
+        if ans.constant.__class__ not in native_numeric_types or ans.constant:
             ans.constant *= mult
         ans.multiplier = 1
 

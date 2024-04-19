@@ -46,7 +46,6 @@ class MultiLevelLinearBeforeChildDispatcher(LinearBeforeChildDispatcher):
     def _before_var(visitor, child):
         if child in visitor.wrt:
             # This is a normal situation
-            print("NORMAL: %s" % child)
             _id = id(child)
             if _id not in visitor.var_map:
                 if child.fixed:
@@ -59,7 +58,6 @@ class MultiLevelLinearBeforeChildDispatcher(LinearBeforeChildDispatcher):
             ans.linear[_id] = 1
             return False, (ExprType.LINEAR, ans)
         else:
-            print("DATA: %s" % child)
             # We aren't treating this Var as a Var for the purposes of this walker
             return False, (ExprType.CONSTANT, child)
 
@@ -85,14 +83,17 @@ class MultilevelLinearRepnVisitor(LinearRepnVisitor):
                 self._factor_multiplier_into_linear_terms(ans, mult)
                 return ans
             if mult == 1:
-                for vid, coef in ans.linear.items():
-                    if coef.__class__ in native_numeric_types and not coef:
-                        del ans.linear[vid]
+                zeros = [(vid, coef) for vid, coef in ans.linear.items() if
+                         coef.__class__ in native_numeric_types and not coef]
+                for vid, coef in zeros:
+                    del ans.linear[vid]
             elif not mult:
                 # the mulltiplier has cleared out the entire expression.
                 # Warn if this is suppressing a NaN (unusual, and
                 # non-standard, but we will wait to remove this behavior
                 # for the time being)
+                # ESJ TODO: This won't work either actually...
+                # I'm not sure how to do it.
                 if ans.constant != ans.constant or any(
                     c != c for c in ans.linear.values()
                 ):
