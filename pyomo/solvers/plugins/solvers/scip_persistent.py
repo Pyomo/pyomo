@@ -8,7 +8,6 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-
 from pyomo.solvers.plugins.solvers.scip_direct import SCIPDirect
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.opt.base import SolverFactory
@@ -50,16 +49,34 @@ class SCIPPersistent(PersistentSolver, SCIPDirect):
         con = self._solver_con_to_pyomo_con_map[solver_conname]
         scip_con = self._pyomo_con_to_solver_con_expr_map[con]
         self._solver_model.delCons(scip_con)
+        for var in self._vars_reference_by_con[con]:
+            self._references_vars[var] -= 1
+        del self._vars_reference_by_con[con]
+        del self._pyomo_con_to_solver_con_map[con]
+        del self._pyomo_con_to_solver_con_expr_map[con]
+        del self._pyomo_con_to_solver_expr_map[con]
+        del self._solver_con_to_pyomo_con_map[solver_conname]
 
+        
     def _remove_sos_constraint(self, solver_sos_conname):
         con = self._solver_con_to_pyomo_con_map[solver_sos_conname]
         scip_con = self._pyomo_con_to_solver_con_expr_map[con]
         self._solver_model.delCons(scip_con)
+        for var in self._vars_reference_by_con[con]:
+            self._references_vars[var] -= 1
+        del self._vars_reference_by_con[con]
+        del self._pyomo_con_to_solver_con_map[con]
+        del self._pyomo_con_to_solver_con_expr_map[con]
+        del self._solver_con_to_pyomo_con_map[solver_conname]
 
     def _remove_var(self, solver_varname):
         var = self._solver_var_to_pyomo_var_map[solver_varname]
         scip_var = self._pyomo_var_to_solver_var_expr_map[var]
         self._solver_model.delVar(scip_var)
+        del self._pyomo_var_to_solver_var_expr_map[var]
+        del self._pyomo_var_to_solver_var_map[var]
+        del self._solver_var_to_pyomo_var_map[scip_var.name]
+        del self._referenced_variables[var]
 
     def _warm_start(self):
         SCIPDirect._warm_start(self)
