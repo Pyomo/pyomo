@@ -332,9 +332,10 @@ class SCIPDirect(DirectSolver):
             scip_cons = self._solver_model.addCons(
                 value(con.lower) <= scip_expr, name=conname
             )
-            self._solver_model.chgRhs(
-                scip_cons, value(con.upper) - value(con.body.constant)
-            )
+            rhs = value(con.upper)
+            if hasattr(con.body, "constant"):
+                rhs -= value(con.body.constant)
+            self._solver_model.chgRhs(scip_cons, rhs)
         elif con.has_lb():
             scip_cons = self._solver_model.addCons(
                 value(con.lower) <= scip_expr, name=conname
