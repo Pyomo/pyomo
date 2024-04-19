@@ -115,6 +115,7 @@ logger = logging.getLogger(__name__)
 TOL = 1e-8
 inf = float('inf')
 minus_inf = -inf
+allowable_binary_var_bounds = {(0, 0), (0, 1), (1, 1)}
 
 _CONSTANT = ExprType.CONSTANT
 _MONOMIAL = ExprType.MONOMIAL
@@ -884,7 +885,12 @@ class _NLWriter_impl(object):
             elif v.is_binary():
                 binary_vars.add(_id)
             elif v.is_integer():
-                integer_vars.add(_id)
+                # Note: integer variables whose bounds are in {0, 1}
+                # should be classified as binary
+                if var_bounds[_id] in allowable_binary_var_bounds:
+                    binary_vars.add(_id)
+                else:
+                    integer_vars.add(_id)
             else:
                 raise ValueError(
                     f"Variable '{v.name}' has a domain that is not Real, "
@@ -1279,8 +1285,8 @@ class _NLWriter_impl(object):
                 len(linear_binary_vars),
                 len(linear_integer_vars),
                 len(both_vars_nonlinear.intersection(discrete_vars)),
-                len(con_vars_nonlinear.intersection(discrete_vars)),
-                len(obj_vars_nonlinear.intersection(discrete_vars)),
+                len(con_only_nonlinear_vars.intersection(discrete_vars)),
+                len(obj_only_nonlinear_vars.intersection(discrete_vars)),
             )
         )
         #
