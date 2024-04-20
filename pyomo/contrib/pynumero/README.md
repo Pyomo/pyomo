@@ -71,3 +71,34 @@ Prerequisites
    - cmake
    - a C/C++ compiler
    - MA57 library or COIN-HSL Full
+
+Code organization
+=================
+
+PyNumero was initially designed around three core components: linear solver
+interfaces, an interface for function and derivative callbacks, and block
+vector and matrix classes. Since then, it has incorporated additional
+functionality in an ad-hoc manner. The following is a rough overview of
+PyNumero, by directory:
+
+`linalg`
+--------
+
+Python interfaces to linear solvers. This is core functionality.
+
+`interfaces`
+------------
+
+- Classes that define and implement an API for function and derivative callbacks
+required by nonlinear optimization solvers, e.g. `nlp.py` and `pyomo_nlp.py`
+- Various wrappers around these NLP classes to support "hybrid" implementations,
+e.g. `PyomoNLPWithGreyBoxBlocks`
+- The `ExternalGreyBoxBlock` Pyomo modeling component and
+`ExternalGreyBoxModel` API
+- The `ExternalPyomoModel` implementation of `ExternalGreyBoxModel`, which allows
+definition of an external grey box via an implicit function
+- The `CyIpoptNLP` class, which wraps an object implementing the NLP API in
+the interface required by CyIpopt
+
+`src`
+-----
