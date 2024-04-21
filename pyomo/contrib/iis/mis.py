@@ -58,9 +58,9 @@ class _VariableBoundsAsConstraints(IsomorphicTransformation):
 
     def _apply_to(self, instance, **kwds):
 
-        boundconstrblockname = unique_component_name(instance, "_variable_bounds")
-        instance.add_component(boundconstrblockname, pyo.Block())
-        boundconstrblock = instance.component(boundconstrblockname)
+        bound_constr_block_name = unique_component_name(instance, "_variable_bounds")
+        instance.add_component(bound_constr_block_name, pyo.Block())
+        bound_constr_block = instance.component(bound_constr_block_name)
 
         for v in instance.component_data_objects(pyo.Var, descend_into=True):
             if v.fixed:
@@ -72,11 +72,11 @@ class _VariableBoundsAsConstraints(IsomorphicTransformation):
             if lb is not None:
                 con_name = "lb_for_" + var_name
                 con = pyo.Constraint(expr=(lb, v, None))
-                boundconstrblock.add_component(con_name, con)
+                bound_constr_block.add_component(con_name, con)
             if ub is not None:
                 con_name = "ub_for_" + var_name
                 con = pyo.Constraint(expr=(None, v, ub))
-                boundconstrblock.add_component(con_name, con)
+                bound_constr_block.add_component(con_name, con)
 
             # now we deactivate the variable bounds / domain
             v.domain = pyo.Reals
@@ -317,6 +317,7 @@ def compute_infeasibility_explanation(
 
 
 def _get_results_with_value(constr_value_generator, msg=None):
+    # note that "lb_for_" and "ub_for_" are 7 characters long
     if msg is None:
         msg = ""
     for c, value in constr_value_generator:
@@ -335,6 +336,7 @@ def _get_results_with_value(constr_value_generator, msg=None):
 
 
 def _get_results(constr_generator, msg=None):
+    # note that "lb_for_" and "ub_for_" are 7 characters long
     if msg is None:
         msg = ""
     for c in constr_generator:

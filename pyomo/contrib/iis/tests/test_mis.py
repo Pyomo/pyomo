@@ -52,7 +52,7 @@ class TestMIS(unittest.TestCase):
         _test_mis("ipopt")
 
     def test__get_constraint_errors(self):
-        # A not-completely-cyincal way to get the coverage up.
+        # A not-completely-cynical way to get the coverage up.
         m = _get_infeasible_model()  # not modified
         fct = _get_constraint
 
@@ -76,14 +76,14 @@ def _check_output(file_name):
     trigger = "Constraints / bounds in MIS:"
     nugget = "lb of var y"
     live = False  # (long i)
-    wewin = False
+    found_nugget = False
     for line in lines:
         if trigger in line:
             live = True
         if live:
             if nugget in line:
-                wewin = True
-    if not wewin:
+                found_nugget = True
+    if not found_nugget:
         raise RuntimeError(f"Did not find '{nugget}' after '{trigger}' in output")
     else:
         pass
@@ -96,7 +96,6 @@ def _test_mis(solver_name):
     # This test seems to fail on Windows as it unlinks the tempfile, so live with it
     #    On a Windows machine, we will not use a temp dir and just try to delete the log file
     if os.name == "nt":
-        print("we have nt")
         file_name = f"_test_mis_{solver_name}.log"
         logger = logging.getLogger(f"test_mis_{solver_name}")
         logger.setLevel(logging.INFO)

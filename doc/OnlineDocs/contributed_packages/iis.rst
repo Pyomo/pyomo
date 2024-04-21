@@ -27,7 +27,8 @@ would result in feasibility.  The zero-tolerance is whatever the
 solver uses, so users may want to post-process output if it is going
 to be used for analysis. It also computes a minimal intractable system
 (which is not guaranteed to be unique).  It was written by Ben Knueven
-as part of the watertap project and is governed by a license shown
+as part of the watertap project (https://github.com/watertap-org/watertap)
+and is therefore governed by a license shown
 at the top of ``mis.py``.
 
 The algorithms come from John Chinneck's slides, see: https://www.sce.carleton.ca/faculty/chinneck/docs/CPAIOR07InfeasibilityTutorial.pdf
@@ -115,7 +116,7 @@ Hence for difficult NLPs even the “Phase 1” may “fail” – in that when 
 constraints in the elastic filter may be feasible -- because IPopt failed to converge and we assumed that meant the 
 subproblem was not feasible.
 
-Dealing with NLPs is far from clean, but that doesn’t mean the tool can’t return useful results even when it’s assumptions are not satisfied.
+Dealing with NLPs is far from clean, but that doesn’t mean the tool can’t return useful results even when its assumptions are not satisfied.
 
 trivial_mis.py
 --------------
