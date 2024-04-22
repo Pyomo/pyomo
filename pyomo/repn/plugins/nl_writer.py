@@ -1903,7 +1903,6 @@ class _NLWriter_impl(object):
         for expr, info, _ in self.subexpression_cache.values():
             if not info.nonlinear:
                 continue
-            print(info.nonlinear)
             nl, args = info.nonlinear
             if not args or any(vid not in eliminated_vars for vid in args):
                 continue
