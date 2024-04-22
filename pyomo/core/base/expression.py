@@ -37,11 +37,14 @@ logger = logging.getLogger('pyomo.core')
 
 
 class NamedExpressionData(numeric_expr.NumericValue):
-    """
-    An object that defines a named expression.
+    """An object that defines a generic "named expression".
+
+    This is the base class for both :py:class:`ExpressionData` and
+    :py:class:`ObjectiveData`.
 
     Public Class Attributes
         expr       The expression owned by this data.
+
     """
 
     # Note: derived classes are expected to declare the _args_ slot
