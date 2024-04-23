@@ -103,7 +103,7 @@ class SCIPAMPL(SystemCallSolver):
                 return _extract_version('')
         results = subprocess.run(
             [solver_exec, "--version"],
-            timeout=1,
+            timeout=self._version_timeout,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             universal_newlines=True,
@@ -455,7 +455,7 @@ class SCIPAMPL(SystemCallSolver):
         solver_status = scip_lines[0][colon_position + 2 : scip_lines[0].index('\n')]
 
         solving_time = float(
-            scip_lines[1][colon_position + 2 : scip_lines[1].index('\n')]
+            scip_lines[1][colon_position + 2 : scip_lines[1].index('\n')].split(' ')[0]
         )
 
         try:

@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import logging
 import os
 import subprocess
 import datetime
@@ -17,7 +18,11 @@ from typing import Mapping, Optional, Sequence
 
 from pyomo.common import Executable
 from pyomo.common.config import ConfigValue, document_kwargs_from_configdict, ConfigDict
-from pyomo.common.errors import PyomoException, DeveloperError
+from pyomo.common.errors import (
+    PyomoException,
+    DeveloperError,
+    InfeasibleConstraintException,
+)
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.base.var import _GeneralVarData
@@ -25,7 +30,6 @@ from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn.plugins.nl_writer import NLWriter, NLWriterInfo
 from pyomo.contrib.solver.base import SolverBase
 from pyomo.contrib.solver.config import SolverConfig
-from pyomo.contrib.solver.factory import SolverFactory
 from pyomo.contrib.solver.results import Results, TerminationCondition, SolutionStatus
 from pyomo.contrib.solver.sol_reader import parse_sol_file
 from pyomo.contrib.solver.solution import SolSolutionLoader
@@ -34,8 +38,6 @@ from pyomo.core.expr.visitor import replace_expressions
 from pyomo.core.expr.numvalue import value
 from pyomo.core.base.suffix import Suffix
 from pyomo.common.collections import ComponentMap
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -72,11 +74,7 @@ class IpoptConfig(SolverConfig):
             ),
         )
         self.writer_config: ConfigDict = self.declare(
-            'writer_config',
-            ConfigValue(
-                default=NLWriter.CONFIG(),
-                description="Configuration that controls options in the NL writer.",
-            ),
+            'writer_config', NLWriter.CONFIG()
         )
 
 
@@ -198,7 +196,6 @@ ipopt_command_line_options = {
 }
 
 
-@SolverFactory.register('ipopt_v2', doc='The ipopt NLP solver (new interface)')
 class Ipopt(SolverBase):
     CONFIG = IpoptConfig()
 
@@ -207,6 +204,7 @@ class Ipopt(SolverBase):
         self._writer = NLWriter()
         self._available_cache = None
         self._version_cache = None
+        self._version_timeout = 2
 
     def available(self, config=None):
         if config is None:
@@ -229,7 +227,7 @@ class Ipopt(SolverBase):
             else:
                 results = subprocess.run(
                     [str(pth), '--version'],
-                    timeout=1,
+                    timeout=self._version_timeout,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
                     universal_newlines=True,
@@ -309,20 +307,29 @@ class Ipopt(SolverBase):
                 raise RuntimeError(
                     f"NL file with the same name {basename + '.nl'} already exists!"
                 )
-            with open(basename + '.nl', 'w') as nl_file, open(
+            # Note: the ASL has an issue where string constants written
+            # to the NL file (e.g. arguments in external functions) MUST
+            # be terminated with '\n' regardless of platform.  We will
+            # disable universal newlines in the NL file to prevent
+            # Python from mapping those '\n' to '\r\n' on Windows.
+            with open(basename + '.nl', 'w', newline='\n') as nl_file, open(
                 basename + '.row', 'w'
             ) as row_file, open(basename + '.col', 'w') as col_file:
                 timer.start('write_nl_file')
                 self._writer.config.set_value(config.writer_config)
-                nl_info = self._writer.write(
-                    model,
-                    nl_file,
-                    row_file,
-                    col_file,
-                    symbolic_solver_labels=config.symbolic_solver_labels,
-                )
+                try:
+                    nl_info = self._writer.write(
+                        model,
+                        nl_file,
+                        row_file,
+                        col_file,
+                        symbolic_solver_labels=config.symbolic_solver_labels,
+                    )
+                    proven_infeasible = False
+                except InfeasibleConstraintException:
+                    proven_infeasible = True
                 timer.stop('write_nl_file')
-            if len(nl_info.variables) > 0:
+            if not proven_infeasible and len(nl_info.variables) > 0:
                 # Get a copy of the environment to pass to the subprocess
                 env = os.environ.copy()
                 if nl_info.external_function_libraries:
@@ -361,11 +368,17 @@ class Ipopt(SolverBase):
                     timer.stop('subprocess')
                     # This is the stuff we need to parse to get the iterations
                     # and time
-                    iters, ipopt_time_nofunc, ipopt_time_func, ipopt_total_time = (
+                    (iters, ipopt_time_nofunc, ipopt_time_func, ipopt_total_time) = (
                         self._parse_ipopt_output(ostreams[0])
                     )
 
-            if len(nl_info.variables) == 0:
+            if proven_infeasible:
+                results = Results()
+                results.termination_condition = TerminationCondition.provenInfeasible
+                results.solution_loader = SolSolutionLoader(None, None)
+                results.iteration_count = 0
+                results.timing_info.total_seconds = 0
+            elif len(nl_info.variables) == 0:
                 if len(nl_info.eliminated_vars) == 0:
                     results = Results()
                     results.termination_condition = TerminationCondition.emptyModel
@@ -457,7 +470,7 @@ class Ipopt(SolverBase):
                 )
 
         results.solver_configuration = config
-        if len(nl_info.variables) > 0:
+        if not proven_infeasible and len(nl_info.variables) > 0:
             results.solver_log = ostreams[0].getvalue()
 
         # Capture/record end-time / wall-time

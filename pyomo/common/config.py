@@ -1134,7 +1134,11 @@ def _domain_name(domain):
     if domain is None:
         return ""
     elif hasattr(domain, 'domain_name'):
-        return domain.domain_name()
+        dn = domain.domain_name
+        if hasattr(dn, '__call__'):
+            return dn()
+        else:
+            return dn
     elif domain.__class__ is type:
         return domain.__name__
     elif inspect.isfunction(domain):

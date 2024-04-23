@@ -164,10 +164,12 @@ class Results(ConfigDict):
     iteration_count: int
         The total number of iterations.
     timing_info: ConfigDict
-        A ConfigDict containing two pieces of information:
-            start_timestamp: UTC timestamp of when run was initiated
-            wall_time: elapsed wall clock time for entire process
-            timer: a HierarchicalTimer object containing timing data about the solve
+        A ConfigDict containing three pieces of information:
+            - ``start_timestamp``: UTC timestamp of when run was initiated
+            - ``wall_time``: elapsed wall clock time for entire process
+            - ``timer``: a HierarchicalTimer object containing timing data about the solve
+
+        Specific solvers may add other relevant timing information, as appropriate.
     extra_info: ConfigDict
         A ConfigDict to store extra information such as solver messages.
     solver_configuration: ConfigDict

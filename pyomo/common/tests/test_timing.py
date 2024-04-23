@@ -107,7 +107,6 @@ class TestTiming(unittest.TestCase):
                 m.y = Var(Any, dense=False)
                 xfrm.apply_to(m)
             result = out.getvalue().strip()
-            self.maxDiff = None
             for l, r in zip(result.splitlines(), ref.splitlines()):
                 self.assertRegex(str(l.strip()), str(r.strip()))
         finally:
@@ -122,7 +121,6 @@ class TestTiming(unittest.TestCase):
             m.y = Var(Any, dense=False)
             xfrm.apply_to(m)
             result = os.getvalue().strip()
-            self.maxDiff = None
             for l, r in zip(result.splitlines(), ref.splitlines()):
                 self.assertRegex(str(l.strip()), str(r.strip()))
         finally:
@@ -135,7 +133,6 @@ class TestTiming(unittest.TestCase):
             m.y = Var(Any, dense=False)
             xfrm.apply_to(m)
             result = os.getvalue().strip()
-            self.maxDiff = None
             for l, r in zip(result.splitlines(), ref.splitlines()):
                 self.assertRegex(str(l.strip()), str(r.strip()))
             self.assertEqual(buf.getvalue().strip(), "")
@@ -172,7 +169,6 @@ class TestTiming(unittest.TestCase):
                     xfrm.apply_to(m)
                 self.assertEqual(OUT.getvalue(), "")
                 result = OS.getvalue().strip()
-                self.maxDiff = None
                 for l, r in zip_longest(result.splitlines(), ref.splitlines()):
                     self.assertRegex(str(l.strip()), str(r.strip()))
             # Active reporting is False: the previous log should not have changed
