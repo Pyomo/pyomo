@@ -309,7 +309,7 @@ class BaseRelaxationData(_BlockData):
                 self._original_constraint = pe.Constraint(
                     expr=self.get_aux_var() <= self.get_rhs_expr()
                 )
-        else:
+        elif not build_nonlinear_constraint:
             if self._has_a_convex_side():
                 if self.use_linear_relaxation:
                     if self._cuts is None:
