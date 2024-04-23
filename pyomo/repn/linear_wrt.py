@@ -9,6 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import copy
+
 from pyomo.common.collections import ComponentSet
 from pyomo.common.numeric_types import native_numeric_types
 from pyomo.core import Var
@@ -16,10 +18,122 @@ from pyomo.core.expr.logical_expr import _flattened
 from pyomo.core.expr.numeric_expr import (
     LinearExpression,
     MonomialTermExpression,
+    mutable_expression,
+    ProductExpression,
     SumExpression,
 )
-from pyomo.repn.linear import LinearBeforeChildDispatcher, LinearRepnVisitor
+from pyomo.repn.linear import (
+    ExitNodeDispatcher,
+    _initialize_exit_node_dispatcher,
+    LinearBeforeChildDispatcher,
+    LinearRepn,
+    LinearRepnVisitor,
+)
 from pyomo.repn.util import ExprType
+from . import linear
+
+_CONSTANT = ExprType.CONSTANT
+
+
+def _merge_dict(dest_dict, mult, src_dict):
+    if mult.__class__ not in native_numeric_types or mult != 1:
+        for vid, coef in src_dict.items():
+            if vid in dest_dict:
+                dest_dict[vid] += mult * coef
+            else:
+                dest_dict[vid] = mult * coef
+    else:
+        for vid, coef in src_dict.items():
+            if vid in dest_dict:
+                dest_dict[vid] += coef
+            else:
+                dest_dict[vid] = coef
+
+
+class LinearSubsystemRepn(LinearRepn):
+    def to_expression(self, visitor):
+        if self.nonlinear is not None:
+            # We want to start with the nonlinear term (and use
+            # assignment) in case the term is a non-numeric node (like a
+            # relational expression)
+            ans = self.nonlinear
+        else:
+            ans = 0
+        if self.linear:
+            var_map = visitor.var_map
+            with mutable_expression() as e:
+                for vid, coef in self.linear.items():
+                    if coef.__class__ not in native_numeric_types or coef:
+                        e += coef * var_map[vid]
+            if e.nargs() > 1:
+                ans += e
+            elif e.nargs() == 1:
+                ans += e.arg(0)
+        if self.constant.__class__ not in native_numeric_types or self.constant:
+            ans += self.constant
+        if (
+            self.multiplier.__class__ not in native_numeric_types
+            or self.multiplier != 1
+        ):
+            ans *= self.multiplier
+        return ans
+
+    def append(self, other):
+        """Append a child result from acceptChildResult
+
+        Notes
+        -----
+        This method assumes that the operator was "+". It is implemented
+        so that we can directly use a LinearRepn() as a `data` object in
+        the expression walker (thereby allowing us to use the default
+        implementation of acceptChildResult [which calls
+        `data.append()`] and avoid the function call for a custom
+        callback).
+
+        """
+        _type, other = other
+        if _type is _CONSTANT:
+            self.constant += other
+            return
+
+        mult = other.multiplier
+        try:
+            _mult = bool(mult)
+            if not _mult:
+                return
+            if mult == 1:
+                _mult = False
+        except:
+            _mult = True
+
+        const = other.constant
+        try:
+            _const = bool(const)
+        except:
+            _const = True
+
+        if _mult:
+            if _const:
+                self.constant += mult * const
+            if other.linear:
+                _merge_dict(self.linear, mult, other.linear)
+            if other.nonlinear is not None:
+                nl = mult * other.nonlinear
+                if self.nonlinear is None:
+                    self.nonlinear = nl
+                else:
+                    self.nonlinear += nl
+        else:
+            if _const:
+                self.constant += const
+            if other.linear:
+                _merge_dict(self.linear, 1, other.linear)
+            if other.nonlinear is not None:
+                nl = other.nonlinear
+                if self.nonlinear is None:
+                    self.nonlinear = nl
+                else:
+                    self.nonlinear += nl
 
 
 class MultiLevelLinearBeforeChildDispatcher(LinearBeforeChildDispatcher):
@@ -50,7 +164,7 @@ class MultiLevelLinearBeforeChildDispatcher(LinearBeforeChildDispatcher):
             if _id not in visitor.var_map:
                 if child.fixed:
                     return False, (
-                        ExprType.CONSTANT,
+                        _CONSTANT,
                         visitor.check_constant(child.value, child),
                     )
                 MultiLevelLinearBeforeChildDispatcher._record_var(visitor, child)
@@ -59,20 +173,54 @@ class MultiLevelLinearBeforeChildDispatcher(LinearBeforeChildDispatcher):
             return False, (ExprType.LINEAR, ans)
         else:
             # We aren't treating this Var as a Var for the purposes of this walker
-            return False, (ExprType.CONSTANT, child)
+            return False, (_CONSTANT, child)
 
 
 _before_child_dispatcher = MultiLevelLinearBeforeChildDispatcher()
+_exit_node_handlers = copy.deepcopy(linear._exit_node_handlers)
 
+
+def _handle_product_constant_constant(visitor, node, arg1, arg2):
+    # ESJ: Can I do this? Just let the potential nans go through?
+    return _CONSTANT, arg1[1] * arg2[1]
+
+_exit_node_handlers[ProductExpression].update(
+    {
+        (_CONSTANT, _CONSTANT): _handle_product_constant_constant,
+    }
+)
+    
 
 # LinearSubsystemRepnVisitor
 class MultilevelLinearRepnVisitor(LinearRepnVisitor):
+    Result = LinearSubsystemRepn
+    exit_node_handlers = _exit_node_handlers
+    exit_node_dispatcher = ExitNodeDispatcher(
+        _initialize_exit_node_dispatcher(_exit_node_handlers)
+    )
+
     def __init__(self, subexpression_cache, var_map, var_order, sorter, wrt):
         super().__init__(subexpression_cache, var_map, var_order, sorter)
         self.wrt = ComponentSet(_flattened(wrt))
 
     def beforeChild(self, node, child, child_idx):
         return _before_child_dispatcher[child.__class__](self, child)
+
+    def _factor_multiplier_into_linear_terms(self, ans, mult):
+        linear = ans.linear
+        zeros = []
+        for vid, coef in linear.items():
+            if coef.__class__ not in native_numeric_types or coef:
+                linear[vid] = mult * coef
+            else:
+                zeros.append(vid)
+        for vid in zeros:
+            del linear[vid]
+        if ans.nonlinear is not None:
+            ans.nonlinear *= mult
+        if ans.constant.__class__ not in native_numeric_types or ans.constant:
+            ans.constant *= mult
+        ans.multiplier = 1
 
     def finalizeResult(self, result):
         ans = result[1]
@@ -112,6 +260,6 @@ class MultilevelLinearRepnVisitor(LinearRepnVisitor):
             return ans
 
         ans = self.Result()
-        assert result[0] is ExprType.CONSTANT
+        assert result[0] is _CONSTANT
         ans.constant = result[1]
         return ans
