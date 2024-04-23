@@ -62,12 +62,7 @@ _GENERAL = ExprType.GENERAL
 
 
 def _merge_dict(dest_dict, mult, src_dict):
-    try:
-        _mult = mult != 1
-    except:
-        _mult = True
-
-    if not _mult:
+    if mult == 1:
         for vid, coef in src_dict.items():
             if vid in dest_dict:
                 dest_dict[vid] += coef
@@ -127,18 +122,15 @@ class LinearRepn(object):
             var_map = visitor.var_map
             with mutable_expression() as e:
                 for vid, coef in self.linear.items():
-                    if coef.__class__ not in native_numeric_types or coef:
+                    if coef:
                         e += coef * var_map[vid]
             if e.nargs() > 1:
                 ans += e
             elif e.nargs() == 1:
                 ans += e.arg(0)
-        if self.constant.__class__ not in native_numeric_types or self.constant:
+        if self.constant:
             ans += self.constant
-        if (
-            self.multiplier.__class__ not in native_numeric_types
-            or self.multiplier != 1
-        ):
+        if self.multiplier != 1:
             ans *= self.multiplier
         return ans
 
@@ -155,49 +147,33 @@ class LinearRepn(object):
         callback).
 
         """
+        # Note that self.multiplier will always be 1 (we only call append()
+        # within a sum, so there is no opportunity for self.multiplier to
+        # change). Omitting the assertion for efficiency.
+        # assert self.multiplier == 1
         _type, other = other
         if _type is _CONSTANT:
             self.constant += other
             return
 
         mult = other.multiplier
-        try:
-            _mult = bool(mult)
-            if not _mult:
-                return
-            if mult == 1:
-                _mult = False
-        except:
-            _mult = True
-
-        const = other.constant
-        try:
-            _const = bool(const)
-        except:
-            _const = True
-
-        if _mult:
-            if _const:
-                self.constant += mult * const
-            if other.linear:
-                _merge_dict(self.linear, mult, other.linear)
-            if other.nonlinear is not None:
+        if not mult:
+            # 0 * other, so there is nothing to add/change about
+            # self.  We can just exit now.
+            return
+        if other.constant:
+            self.constant += mult * other.constant
+        if other.linear:
+            _merge_dict(self.linear, mult, other.linear)
+        if other.nonlinear is not None:
+            if mult != 1:
                 nl = mult * other.nonlinear
-                if self.nonlinear is None:
-                    self.nonlinear = nl
-                else:
-                    self.nonlinear += nl
-        else:
-            if _const:
-                self.constant += const
-            if other.linear:
-                _merge_dict(self.linear, 1, other.linear)
-            if other.nonlinear is not None:
+            else:
                 nl = other.nonlinear
-                if self.nonlinear is None:
-                    self.nonlinear = nl
-                else:
-                    self.nonlinear += nl
+            if self.nonlinear is None:
+                self.nonlinear = nl
+            else:
+                self.nonlinear += nl
 
 
 def to_expression(visitor, arg):
@@ -827,22 +803,6 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
             self, node, *data
         )
 
-    def _factor_multiplier_into_linear_terms(self, ans, mult):
-        linear = ans.linear
-        zeros = []
-        for vid, coef in linear.items():
-            if coef.__class__ not in native_numeric_types or coef:
-                linear[vid] = mult * coef
-            else:
-                zeros.append(vid)
-        for vid in zeros:
-            del linear[vid]
-        if ans.nonlinear is not None:
-            ans.nonlinear *= mult
-        if ans.constant.__class__ not in native_numeric_types or ans.constant:
-            ans.constant *= mult
-        ans.multiplier = 1
-
     def finalizeResult(self, result):
         ans = result[1]
         if ans.__class__ is self.Result:
@@ -871,7 +831,20 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
             else:
                 # mult not in {0, 1}: factor it into the constant,
                 # linear coefficients, and nonlinear term
-                self._factor_multiplier_into_linear_terms(ans, mult)
+                linear = ans.linear
+                zeros = []
+                for vid, coef in linear.items():
+                    if coef:
+                        linear[vid] = coef * mult
+                    else:
+                        zeros.append(vid)
+                for vid in zeros:
+                    del linear[vid]
+                if ans.nonlinear is not None:
+                    ans.nonlinear *= mult
+                if ans.constant:
+                    ans.constant *= mult
+                ans.multiplier = 1
             return ans
         ans = self.Result()
         assert result[0] is _CONSTANT
