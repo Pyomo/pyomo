@@ -101,6 +101,8 @@ class DesignOfExperiments:
         """
 
         # parameters
+        if type(param_init) != dict:
+            raise ValueError("param_init should be a dictionary.")
         self.param = param_init
         # design variable name
         self.design_name = design_vars.variable_names
