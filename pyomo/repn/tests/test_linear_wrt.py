@@ -241,15 +241,15 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
             repn = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x]).walk_expression(expr)
         self.assertEqual(
             LOG.getvalue(),
-            "Exception encountered evaluating expression 'div(3, 0)'\n"
+            "Exception encountered evaluating expression 'div(3*z, 0)'\n"
             "\tmessage: division by zero\n"
-            "\texpression: 3/p\n",
+            "\texpression: 3*z*x/p\n",
         )
         self.assertEqual(repn.multiplier, 1)
         assertExpressionsEqual(
             self,
             repn.constant,
-            1 + m.z
+            m.y + m.z
         )
         self.assertEqual(len(repn.linear), 1)
         self.assertEqual(str(repn.linear[id(m.x)]), 'InvalidNumber(nan)')
