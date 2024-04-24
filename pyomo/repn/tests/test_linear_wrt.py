@@ -15,6 +15,7 @@ from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.environ import Any, Binary, ConcreteModel, log, Param, Var
 from pyomo.repn.linear_wrt import MultilevelLinearRepnVisitor
 from pyomo.repn.tests.test_linear import VisitorConfig
+from pyomo.repn.util import InvalidNumber
 
 
 class TestMultilevelLinearRepnVisitor(unittest.TestCase):
@@ -227,6 +228,34 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
         )
         assertExpressionsEqual(self, repn.nonlinear, (m.z**2 + 3 * m.w * m.y**3) * 5)
 
+    def test_ANY_over_constant_division(self):
+        m = ConcreteModel()
+        m.p = Param(mutable=True, initialize=2, domain=Any)
+        m.x = Var()
+        m.y = Var()
+        m.z = Var()
+        # We aren't treating this as a Var, so we don't really care that it's fixed.
+        m.y.fix(1)
+
+        expr = m.y + m.x + m.z + ((3 * m.z * m.x) / m.p) / m.y
+        cfg = VisitorConfig()
+        repn = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x]).walk_expression(expr)
+
+        self.assertEqual(repn.multiplier, 1)
+        assertExpressionsEqual(
+            self,
+            repn.constant,
+            m.y + m.z
+        )
+        self.assertEqual(len(repn.linear), 1)
+        print(repn.linear[id(m.x)])
+        assertExpressionsEqual(
+            self,
+            repn.linear[id(m.x)],
+            1 + 1.5 * m.z / m.y
+        )
+        self.assertEqual(repn.nonlinear, None)
+
     def test_errors_propogate_nan(self):
         m = ConcreteModel()
         m.p = Param(mutable=True, initialize=0, domain=Any)
@@ -252,13 +281,23 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
             m.y + m.z
         )
         self.assertEqual(len(repn.linear), 1)
-        self.assertEqual(str(repn.linear[id(m.x)]), 'InvalidNumber(nan)')
+        self.assertIsInstance(repn.linear[id(m.x)], InvalidNumber)
+        assertExpressionsEqual(
+            self,
+            repn.linear[id(m.x)].value,
+            1 + float('nan')/m.y
+        )
         self.assertEqual(repn.nonlinear, None)
 
         m.y.fix(None)
         expr = m.z * log(m.y) + 3
         repn = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x]).walk_expression(expr)
         self.assertEqual(repn.multiplier, 1)
-        self.assertEqual(str(repn.constant), 'InvalidNumber(nan)')
+        self.assertIsInstance(repn.constant, InvalidNumber)
+        assertExpressionsEqual(
+            self,
+            repn.constant.value,
+            float('nan')*m.z + 3
+        )
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
