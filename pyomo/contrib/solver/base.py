@@ -14,8 +14,8 @@ import enum
 from typing import Sequence, Dict, Optional, Mapping, NoReturn, List, Tuple
 import os
 
-from pyomo.core.base.constraint import Constraint, _GeneralConstraintData
-from pyomo.core.base.var import Var, _GeneralVarData
+from pyomo.core.base.constraint import _GeneralConstraintData
+from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.objective import Objective, _GeneralObjectiveData
@@ -59,11 +59,13 @@ class SolverBase(abc.ABC):
 
     def __init__(self, **kwds) -> None:
         # We allow the user and/or developer to name the solver something else,
-        # if they really desire. Otherwise it defaults to the class name (all lowercase)
+        # if they really desire.
+        # Otherwise it defaults to the name defined when the solver was registered
+        # in the SolverFactory or the class name (all lowercase), whichever is
+        # applicable
         if "name" in kwds:
-            self.name = kwds["name"]
-            kwds.pop('name')
-        else:
+            self.name = kwds.pop('name')
+        elif not hasattr(self, 'name'):
             self.name = type(self).__name__.lower()
         self.config = self.CONFIG(value=kwds)
 
@@ -499,6 +501,12 @@ class LegacySolverWrapper:
         """Method to handle the preferred action for the solution"""
         symbol_map = SymbolMap()
         symbol_map.default_labeler = NumericLabeler('x')
+        if not hasattr(model, 'solutions'):
+            # This logic gets around Issue #2130 in which
+            # solutions is not an attribute on Blocks
+            from pyomo.core.base.PyomoModel import ModelSolutions
+
+            setattr(model, 'solutions', ModelSolutions(model))
         model.solutions.add_symbol_map(symbol_map)
         legacy_results._smap_id = id(symbol_map)
         delete_legacy_soln = True

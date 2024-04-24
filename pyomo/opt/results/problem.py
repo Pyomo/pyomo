@@ -12,7 +12,6 @@
 import enum
 from pyomo.opt.results.container import MapContainer
 
-from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.enums import ExtendedEnumType, ObjectiveSense
 
 
