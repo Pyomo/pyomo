@@ -93,17 +93,17 @@ class VariablesWithIndices:
             upper_bounds,
         )
 
-        if values:
+        if values is not None:
             # this dictionary keys are special set, values are its value
             self.variable_names_value.update(zip(added_names, values))
 
         # if a scalar (int or float) is given, set it as the lower bound for all variables
-        if lower_bounds:
+        if lower_bounds is not None:
             if type(lower_bounds) in [int, float]:
                 lower_bounds = [lower_bounds] * len(added_names)
             self.lower_bounds.update(zip(added_names, lower_bounds))
 
-        if upper_bounds:
+        if upper_bounds is not None:
             if type(upper_bounds) in [int, float]:
                 upper_bounds = [upper_bounds] * len(added_names)
             self.upper_bounds.update(zip(added_names, upper_bounds))
@@ -177,20 +177,20 @@ class VariablesWithIndices:
             raise ValueError("time index cannot be found in indices.")
 
         # if given a list, check if bounds have the same length with flattened variable
-        if values and len(values) != len_indices:
+        if values is not None and len(values) != len_indices:
             raise ValueError("Values is of different length with indices.")
 
         if (
-            lower_bounds
-            and type(lower_bounds) == list
-            and len(lower_bounds) != len_indices
+            lower_bounds is not None # ensure not None
+            and type(lower_bounds) == list # ensure list
+            and len(lower_bounds) != len_indices # ensure same length
         ):
             raise ValueError("Lowerbounds is of different length with indices.")
 
         if (
-            upper_bounds
-            and type(upper_bounds) == list
-            and len(upper_bounds) != len_indices
+            upper_bounds is not None # ensure None
+            and type(upper_bounds) == list # ensure list
+            and len(upper_bounds) != len_indices # ensure same length
         ):
             raise ValueError("Upperbounds is of different length with indices.")
 
