@@ -93,7 +93,7 @@ active development may be marked 'stale' and closed.
 
 .. note::
    Draft and WIP Pull Requests will **NOT** trigger tests. This is an effort to
-   keep our backlog as available as possible. Please make use of the provided
+   reduce our CI backlog. Please make use of the provided
    branch test suite for evaluating / testing draft functionality.
 
 Python Version Support
