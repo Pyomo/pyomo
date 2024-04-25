@@ -55,8 +55,8 @@ def to_standard_form(self):
     # N.B. Structure hierarchy:
     #
     # active_components: {class: {attr_name: object}}
-    # object -> Constraint: ._data: {ndx: _ConstraintData}
-    # _ConstraintData: .lower, .body, .upper
+    # object -> Constraint: ._data: {ndx: ConstraintData}
+    # ConstraintData: .lower, .body, .upper
     #
     # So, altogether, we access a lower bound via
     #

@@ -78,7 +78,7 @@ class TestScalarObj(unittest.TestCase):
         # Even though we construct a ScalarObjective,
         # if it is not initialized that means it is "empty"
         # and we should encounter errors when trying to access the
-        # _ObjectiveData interface methods until we assign
+        # ObjectiveData interface methods until we assign
         # something to the objective.
         #
         self.assertEqual(a._constructed, True)

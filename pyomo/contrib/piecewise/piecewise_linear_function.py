@@ -20,7 +20,7 @@ from pyomo.contrib.piecewise.piecewise_linear_expression import (
     PiecewiseLinearExpression,
 )
 from pyomo.core import Any, NonNegativeIntegers, value, Var
-from pyomo.core.base.block import _BlockData, Block
+from pyomo.core.base.block import BlockData, Block
 from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.expression import Expression
 from pyomo.core.base.global_set import UnindexedComponent_index
@@ -36,11 +36,11 @@ ZERO_TOLERANCE = 1e-8
 logger = logging.getLogger(__name__)
 
 
-class PiecewiseLinearFunctionData(_BlockData):
+class PiecewiseLinearFunctionData(BlockData):
     _Block_reserved_words = Any
 
     def __init__(self, component=None):
-        _BlockData.__init__(self, component)
+        BlockData.__init__(self, component)
 
         with self._declare_reserved_components():
             self._expressions = Expression(NonNegativeIntegers)
