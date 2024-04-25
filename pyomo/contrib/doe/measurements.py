@@ -26,6 +26,7 @@
 #  ___________________________________________________________________________
 
 import itertools
+import collections
 
 
 class VariablesWithIndices:
@@ -171,7 +172,7 @@ class VariablesWithIndices:
         """
         Check if the measurement information provided are valid to use.
         """
-        assert type(var_name) is str, "var_name should be a string."
+        assert isinstance(var_name, str), "var_name should be a string."
 
         if time_index_position not in indices:
             raise ValueError("time index cannot be found in indices.")
@@ -182,14 +183,14 @@ class VariablesWithIndices:
 
         if (
             lower_bounds is not None # ensure not None
-            and type(lower_bounds) == list # ensure list
+            and isinstance(lower_bounds, collections.Sequence) # ensure list-like
             and len(lower_bounds) != len_indices # ensure same length
         ):
             raise ValueError("Lowerbounds is of different length with indices.")
 
         if (
             upper_bounds is not None # ensure None
-            and type(upper_bounds) == list # ensure list
+            and isinstance(upper_bounds, collections.Sequence) # ensure list-like
             and len(upper_bounds) != len_indices # ensure same length
         ):
             raise ValueError("Upperbounds is of different length with indices.")

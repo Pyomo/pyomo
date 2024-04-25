@@ -38,7 +38,7 @@ from pyomo.common.timing import TicTocTimer
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 from pyomo.contrib.doe.scenario import ScenarioGenerator, FiniteDifferenceStep
 from pyomo.contrib.doe.result import FisherResults, GridSearchResult
-
+import collections
 
 class CalculationMode(Enum):
     sequential_finite = "sequential_finite"
@@ -101,7 +101,7 @@ class DesignOfExperiments:
         """
 
         # parameters
-        if type(param_init) != dict:
+        if not isinstance(param_init, collections.Mapping):
             raise ValueError("param_init should be a dictionary.")
         self.param = param_init
         # design variable name
@@ -777,7 +777,7 @@ class DesignOfExperiments:
             # update the controlled value of certain time points for certain design variables
             for i, names in enumerate(design_dimension_names):
                 # if the element is a list, all design variables in this list share the same values
-                if type(names) is list or type(names) is tuple:
+                if isinstance(names, collections.Sequence):
                     for n in names:
                         design_iter[n] = list(design_set_iter)[i]
                 else:
