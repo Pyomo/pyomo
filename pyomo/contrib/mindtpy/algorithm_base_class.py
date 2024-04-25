@@ -27,13 +27,7 @@ from pyomo.contrib.mindtpy.cut_generation import add_no_good_cuts
 from operator import itemgetter
 from pyomo.common.errors import DeveloperError
 from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
-from pyomo.opt import (
-    SolverFactory,
-    SolverResults,
-    ProblemSense,
-    SolutionStatus,
-    SolverStatus,
-)
+from pyomo.opt import SolverFactory, SolverResults, SolutionStatus, SolverStatus
 from pyomo.core import (
     minimize,
     maximize,
@@ -633,9 +627,7 @@ class _MindtPyAlgorithm(object):
             raise ValueError('Model has multiple active objectives.')
         else:
             main_obj = active_objectives[0]
-        self.results.problem.sense = (
-            ProblemSense.minimize if main_obj.sense == 1 else ProblemSense.maximize
-        )
+        self.results.problem.sense = main_obj.sense
         self.objective_sense = main_obj.sense
 
         # Move the objective to the constraints if it is nonlinear or move_objective is True.

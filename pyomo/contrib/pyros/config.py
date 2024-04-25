@@ -503,6 +503,21 @@ def pyros_config():
             ),
         ),
     )
+    CONFIG.declare(
+        'symbolic_solver_labels',
+        ConfigValue(
+            default=False,
+            domain=bool,
+            description=(
+                """
+                True to ensure the component names given to the
+                subordinate solvers for every subproblem reflect
+                the names of the corresponding Pyomo modeling components,
+                False otherwise.
+                """
+            ),
+        ),
+    )
 
     # ================================================
     # === Required User Inputs
