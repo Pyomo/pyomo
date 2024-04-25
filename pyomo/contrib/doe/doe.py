@@ -240,12 +240,12 @@ class DesignOfExperiments:
         if self.optimize:
             analysis_optimize = self._optimize_stochastic_program(m)
             dT = sp_timer.toc(msg=None)
-            self.logger.info("elapsed time: %0.1f" % dT)
+            self.logger.info("elapsed time: %0.1f seconds" % dT)
             return analysis_square, analysis_optimize
 
         else:
             dT = sp_timer.toc(msg=None)
-            self.logger.info("elapsed time: %0.1f" % dT)
+            self.logger.info("elapsed time: %0.1f seconds" % dT)
             return analysis_square
 
     def _compute_stochastic_program(self, m, optimize_option):
@@ -389,7 +389,7 @@ class DesignOfExperiments:
             FIM_analysis = self._direct_kaug()
 
         dT = square_timer.toc(msg=None)
-        self.logger.info("elapsed time: %0.1f" % dT)
+        self.logger.info("elapsed time: %0.1f seconds" % dT)
 
         return FIM_analysis
 
