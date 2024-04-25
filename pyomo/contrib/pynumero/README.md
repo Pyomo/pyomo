@@ -133,6 +133,8 @@ be considered experimental.
 Interfaces to Python solvers using the NLP API defined in `interfaces`.
 Only the solvers accessible through `SolverFactory`, e.g. `PyomoCyIpoptSolver`
 and `PyomoFsolveSolver`, should be considered core functionality.
+The supported way to access these solvers is via `SolverFactory`. *The locations
+of the underlying solver objects are subject to change without warning.*
 
 `examples`
 ----------
