@@ -12,6 +12,7 @@
 # TODO: this import is for historical backwards compatibility and should
 # probably be removed
 from pyomo.common.collections import ComponentMap
+from pyomo.common.enums import minimize, maximize
 
 from pyomo.core.expr.symbol_map import SymbolMap
 from pyomo.core.expr.numvalue import (
@@ -33,7 +34,6 @@ from pyomo.core.expr.boolean_value import (
     BooleanValue,
     native_logical_values,
 )
-from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.base.config import PyomoOptions
 
 from pyomo.core.base.expression import Expression, _ExpressionData
