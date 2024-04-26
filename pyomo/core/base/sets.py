@@ -18,7 +18,7 @@ from .set import (
     set_options,
     simple_set_rule,
     _SetDataBase,
-    _SetData,
+    SetData,
     Set,
     SetOf,
     IndexedSet,

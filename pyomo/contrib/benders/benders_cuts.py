@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.base.block import _BlockData, declare_custom_block
+from pyomo.core.base.block import BlockData, declare_custom_block
 import pyomo.environ as pyo
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.core.expr.visitor import identify_variables
@@ -166,13 +166,13 @@ def _setup_subproblem(b, root_vars, relax_subproblem_cons):
 
 
 @declare_custom_block(name='BendersCutGenerator')
-class BendersCutGeneratorData(_BlockData):
+class BendersCutGeneratorData(BlockData):
     def __init__(self, component):
         if not mpi4py_available:
             raise ImportError('BendersCutGenerator requires mpi4py.')
         if not numpy_available:
             raise ImportError('BendersCutGenerator requires numpy.')
-        _BlockData.__init__(self, component)
+        BlockData.__init__(self, component)
 
         self.num_subproblems_by_rank = 0  # np.zeros(self.comm.Get_size())
         self.subproblems = list()

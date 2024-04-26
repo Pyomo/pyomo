@@ -115,7 +115,7 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
                 disjunct_component, Block
             )
             # HACK: activate the block, but do not activate the
-            # _BlockData objects
+            # BlockData objects
             super(ActiveIndexedComponent, disjunct_component).activate()
 
             # Deactivate all constraints.  Note that we only need to

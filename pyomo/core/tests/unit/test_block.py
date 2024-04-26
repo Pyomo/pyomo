@@ -54,7 +54,7 @@ from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.base.block import (
     ScalarBlock,
     SubclassOf,
-    _BlockData,
+    BlockData,
     declare_custom_block,
 )
 import pyomo.core.expr as EXPR
@@ -851,7 +851,7 @@ class TestBlock(unittest.TestCase):
             _Block_reserved_words = None
 
         DerivedBlock._Block_reserved_words = (
-            set(['a', 'b', 'c']) | _BlockData._Block_reserved_words
+            set(['a', 'b', 'c']) | BlockData._Block_reserved_words
         )
 
         m = ConcreteModel()
@@ -965,7 +965,7 @@ class TestBlock(unittest.TestCase):
         b.c.d.e = Block()
         with self.assertRaisesRegex(
             ValueError,
-            r'_BlockData.transfer_attributes_from\(\): '
+            r'BlockData.transfer_attributes_from\(\): '
             r'Cannot set a sub-block \(c.d.e\) to a parent block \(c\):',
         ):
             b.c.d.e.transfer_attributes_from(b.c)
@@ -974,7 +974,7 @@ class TestBlock(unittest.TestCase):
         b = Block(concrete=True)
         with self.assertRaisesRegex(
             ValueError,
-            r'_BlockData.transfer_attributes_from\(\): expected a Block '
+            r'BlockData.transfer_attributes_from\(\): expected a Block '
             'or dict; received str',
         ):
             b.transfer_attributes_from('foo')
@@ -2977,7 +2977,7 @@ class TestBlock(unittest.TestCase):
 
     def test_override_pprint(self):
         @declare_custom_block('TempBlock')
-        class TempBlockData(_BlockData):
+        class TempBlockData(BlockData):
             def pprint(self, ostream=None, verbose=False, prefix=""):
                 ostream.write('Testing pprint of a custom block.')
 
@@ -3052,9 +3052,9 @@ class TestBlock(unittest.TestCase):
         class ConcreteBlock(Block):
             pass
 
-        class ScalarConcreteBlock(_BlockData, ConcreteBlock):
+        class ScalarConcreteBlock(BlockData, ConcreteBlock):
             def __init__(self, *args, **kwds):
-                _BlockData.__init__(self, component=self)
+                BlockData.__init__(self, component=self)
                 ConcreteBlock.__init__(self, *args, **kwds)
 
         _buf = []

@@ -10,10 +10,9 @@
 #  ___________________________________________________________________________
 
 from pyomo.gdp import GDP_Error, Disjunction
-from pyomo.gdp.disjunct import _DisjunctData, Disjunct
+from pyomo.gdp.disjunct import DisjunctData, Disjunct
 
 import pyomo.core.expr as EXPR
-from pyomo.core.base.component import _ComponentBase
 from pyomo.core import (
     Block,
     Suffix,
@@ -22,7 +21,7 @@ from pyomo.core import (
     LogicalConstraint,
     value,
 )
-from pyomo.core.base.block import _BlockData
+from pyomo.core.base.block import BlockData
 from pyomo.common.collections import ComponentMap, ComponentSet, OrderedSet
 from pyomo.opt import TerminationCondition, SolverStatus
 
@@ -330,7 +329,7 @@ def get_gdp_tree(targets, instance, knownBlocks=None):
                 "Target '%s' is not a component on instance "
                 "'%s'!" % (t.name, instance.name)
             )
-        if t.ctype is Block or isinstance(t, _BlockData):
+        if t.ctype is Block or isinstance(t, BlockData):
             _blocks = t.values() if t.is_indexed() else (t,)
             for block in _blocks:
                 if not block.active:
@@ -387,7 +386,7 @@ def is_child_of(parent, child, knownBlocks=None):
     if knownBlocks is None:
         knownBlocks = {}
     tmp = set()
-    node = child if isinstance(child, (Block, _BlockData)) else child.parent_block()
+    node = child if isinstance(child, (Block, BlockData)) else child.parent_block()
     while True:
         known = knownBlocks.get(node)
         if known:
@@ -452,7 +451,7 @@ def get_src_disjunct(transBlock):
 
     Parameters
     ----------
-    transBlock: _BlockData which is in the relaxedDisjuncts IndexedBlock
+    transBlock: BlockData which is in the relaxedDisjuncts IndexedBlock
                 on a transformation block.
     """
     if (
@@ -493,7 +492,7 @@ def get_src_constraint(transformedConstraint):
 def _find_parent_disjunct(constraint):
     # traverse up until we find the disjunct this constraint lives on
     parent_disjunct = constraint.parent_block()
-    while not isinstance(parent_disjunct, _DisjunctData):
+    while not isinstance(parent_disjunct, DisjunctData):
         if parent_disjunct is None:
             raise GDP_Error(
                 "Constraint '%s' is not on a disjunct and so was not "
@@ -525,17 +524,17 @@ def get_transformed_constraints(srcConstraint):
 
     Parameters
     ----------
-    srcConstraint: ScalarConstraint or _ConstraintData, which must be in
+    srcConstraint: ScalarConstraint or ConstraintData, which must be in
     the subtree of a transformed Disjunct
     """
     if srcConstraint.is_indexed():
         raise GDP_Error(
             "Argument to get_transformed_constraint should be "
-            "a ScalarConstraint or _ConstraintData. (If you "
+            "a ScalarConstraint or ConstraintData. (If you "
             "want the container for all transformed constraints "
             "from an IndexedDisjunction, this is the parent "
             "component of a transformed constraint originating "
-            "from any of its _ComponentDatas.)"
+            "from any of its ComponentDatas.)"
         )
     transBlock = _get_constraint_transBlock(srcConstraint)
     transformed_constraints = transBlock.private_data(
