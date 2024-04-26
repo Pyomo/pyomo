@@ -38,7 +38,9 @@ from pyomo.common.timing import TicTocTimer
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 from pyomo.contrib.doe.scenario import ScenarioGenerator, FiniteDifferenceStep
 from pyomo.contrib.doe.result import FisherResults, GridSearchResult
-import collections
+import collections.abc
+
+import inspect
 
 class CalculationMode(Enum):
     sequential_finite = "sequential_finite"
@@ -101,7 +103,7 @@ class DesignOfExperiments:
         """
 
         # parameters
-        if not isinstance(param_init, collections.Mapping):
+        if not isinstance(param_init, collections.abc.Mapping):
             raise ValueError("param_init should be a dictionary.")
         self.param = param_init
         # design variable name
@@ -238,6 +240,10 @@ class DesignOfExperiments:
         m, analysis_square = self._compute_stochastic_program(m, optimize_opt)
 
         if self.optimize:
+            # set max_iter to 0 to debug the initialization
+            # self.solver.options["max_iter"] = 0
+            # self.solver.options["bound_push"] = 1e-10
+            
             analysis_optimize = self._optimize_stochastic_program(m)
             dT = sp_timer.toc(msg=None)
             self.logger.info("elapsed time: %0.1f seconds" % dT)
@@ -588,13 +594,34 @@ class DesignOfExperiments:
 
         # Set for block/scenarios
         mod.scenario = pyo.Set(initialize=self.scenario_data.scenario_indices)
+        
+        # Determine if create_model takes theta as an optional input
+        # print(inspect.getfullargspec(self.create_model))
+        pass_theta_to_initialize= ('theta' in inspect.getfullargspec(self.create_model).args)
+        #print("pass_theta_to_initialize =", pass_theta_to_initialize)
 
         # Allow user to self-define complex design variables
         self.create_model(mod=mod, model_option=ModelOptionLib.stage1)
 
+        # Fix parameter values in the copy of the stage1 model (if they exist)
+        for par in self.param:
+            cuid = pyo.ComponentUID(par)
+            var = cuid.find_component_on(mod)
+            if var is not None:
+                # Fix the parameter value
+                # Otherwise, the parameter does not exist on the stage 1 model
+                var.fix(self.param[par])
+
         def block_build(b, s):
             # create block scenarios
-            self.create_model(mod=b, model_option=ModelOptionLib.stage2)
+            # idea: check if create_model takes theta as an optional input, if so, pass parameter values to create_model
+
+            if pass_theta_to_initialize:
+                theta_initialize = self.scenario_data.scenario[s]
+                #print("Initializing with theta=", theta_initialize)
+                self.create_model(mod=b, model_option=ModelOptionLib.stage2, theta=theta_initialize)
+            else:
+                self.create_model(mod=b, model_option=ModelOptionLib.stage2)
 
             # fix parameter values to perturbed values
             for par in self.param:
@@ -605,7 +632,7 @@ class DesignOfExperiments:
         mod.block = pyo.Block(mod.scenario, rule=block_build)
 
         # discretize the model
-        if self.discretize_model:
+        if self.discretize_model is not None:
             mod = self.discretize_model(mod)
 
         # force design variables in blocks to be equal to global design values
@@ -777,7 +804,7 @@ class DesignOfExperiments:
             # update the controlled value of certain time points for certain design variables
             for i, names in enumerate(design_dimension_names):
                 # if the element is a list, all design variables in this list share the same values
-                if isinstance(names, collections.Sequence):
+                if isinstance(names, collections.abc.Sequence):
                     for n in names:
                         design_iter[n] = list(design_set_iter)[i]
                 else:
@@ -881,20 +908,39 @@ class DesignOfExperiments:
             else:
                 return 0
 
+        if self.jac_initial is not None:
+            dict_jac_initialize = {}
+            for i, bu in enumerate(model.regression_parameters):
+                for j, un in enumerate(model.measured_variables):
+                    if isinstance(self.jac_initial, dict):
+                        # Jacobian is a dictionary of arrays or lists where the key is the regression parameter name
+                        dict_jac_initialize[(bu, un)] = self.jac_initial[bu][j]
+                    elif isinstance(self.jac_initial, np.ndarray):
+                        # Jacobian is a numpy array, rows are regression parameters, columns are measured variables
+                        dict_jac_initialize[(bu, un)] = self.jac_initial[i][j]
+
+        def initialize_jac(m, i, j):
+            if self.jac_initial is not None:
+                return dict_jac_initialize[(i, j)]
+            else:
+                return 0.1
+
         model.sensitivity_jacobian = pyo.Var(
-            model.regression_parameters, model.measured_variables, initialize=0.1
+            model.regression_parameters, model.measured_variables, initialize=initialize_jac
         )
 
-        if self.fim_initial:
+        if self.fim_initial is not None:
             dict_fim_initialize = {}
             for i, bu in enumerate(model.regression_parameters):
                 for j, un in enumerate(model.regression_parameters):
                     dict_fim_initialize[(bu, un)] = self.fim_initial[i][j]
+            
+            #print(dict_fim_initialize)
 
         def initialize_fim(m, j, d):
             return dict_fim_initialize[(j, d)]
 
-        if self.fim_initial:
+        if self.fim_initial is not None:
             model.fim = pyo.Var(
                 model.regression_parameters,
                 model.regression_parameters,
@@ -1013,6 +1059,32 @@ class DesignOfExperiments:
         return model
 
     def _add_objective(self, m):
+
+        ### Initialize the Cholesky decomposition matrix
+        if self.Cholesky_option:
+
+            # Assemble the FIM matrix
+            fim = np.zeros((len(self.param), len(self.param)))
+            for i, bu in enumerate(m.regression_parameters):
+                for j, un in enumerate(m.regression_parameters):
+                    fim[i][j] = m.fim[bu, un].value
+
+            # Calculate the eigenvalues of the FIM matrix
+            eig = np.linalg.eigvals(fim)
+
+            # If the smallest eigenvalue is (pratcially) negative, add a diagonal matrix to make it positive definite
+            small_number = 1E-10
+            if min(eig) < small_number:
+                fim = fim + np.eye(len(self.param)) * (small_number - min(eig))
+
+            # Compute the Cholesky decomposition of the FIM matrix
+            L = np.linalg.cholesky(fim)
+
+        # Initialize the Cholesky matrix
+        for i, c in enumerate(m.regression_parameters):
+            for j, d in enumerate(m.regression_parameters):
+                m.L_ele[c, d].value = L[i, j]
+
         def cholesky_imp(m, c, d):
             """
             Calculate Cholesky L matrix using algebraic constraints
@@ -1103,14 +1175,20 @@ class DesignOfExperiments:
         m: model
         """
         for name in self.design_name:
+            # Loop over design variables
+            # Get Pyomo variable object
             cuid = pyo.ComponentUID(name)
             var = cuid.find_component_on(m)
             if fix_opt:
+                # If fix_opt is True, fix the design variable
                 var.fix(design_val[name])
             else:
+                # Otherwise check optimize_option
                 if optimize_option is None:
+                    # If optimize_option is None, unfix all design variables
                     var.unfix()
                 else:
+                    # Otherwise, unfix only the design variables listed in optimize_option with value True
                     if optimize_option[name]:
                         var.unfix()
         return m
@@ -1126,7 +1204,7 @@ class DesignOfExperiments:
     def _solve_doe(self, m, fix=False, opt_option=None):
         """Solve DOE model.
         If it's a square problem, fix design variable and solve.
-        Else, fix design variable and solve square problem firstly, then unfix them and solve the optimization problem
+        Else, fix design variable and solve square problem first, then unfix them and solve the optimization problem
 
         Parameters
         ----------
@@ -1140,14 +1218,30 @@ class DesignOfExperiments:
         -------
         solver_results: solver results
         """
-        ### Solve square problem
+        # if fix = False, solve the optimization problem
+        # if fix = True, solve the square problem
+
+        # either fix or unfix the design variables
         mod = self._fix_design(
             m, self.design_values, fix_opt=fix, optimize_option=opt_option
         )
 
+        '''
+        # This is for initialization diagnostics
+        # Remove before merging the PR
+        if not fix:
+            # halt at initial point
+            self.solver.options['max_iter'] = 0
+            self.solver.options['bound_push'] = 1E-10
+        else:
+            # resort to defaults
+            self.solver.options['max_iter'] = 3000
+            self.solver.options['bound_push'] = 0.01
+        '''
+
         # if user gives solver, use this solver. if not, use default IPOPT solver
         solver_result = self.solver.solve(mod, tee=self.tee_opt)
-
+            
         return solver_result
 
     def _sgn(self, p):

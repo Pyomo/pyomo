@@ -26,7 +26,7 @@
 #  ___________________________________________________________________________
 
 import itertools
-import collections
+import collections.abc
 
 
 class VariablesWithIndices:
@@ -183,14 +183,14 @@ class VariablesWithIndices:
 
         if (
             lower_bounds is not None # ensure not None
-            and isinstance(lower_bounds, collections.Sequence) # ensure list-like
+            and isinstance(lower_bounds, collections.abc.Sequence) # ensure list-like
             and len(lower_bounds) != len_indices # ensure same length
         ):
             raise ValueError("Lowerbounds is of different length with indices.")
 
         if (
             upper_bounds is not None # ensure None
-            and isinstance(upper_bounds, collections.Sequence) # ensure list-like
+            and isinstance(upper_bounds, collections.abc.Sequence) # ensure list-like
             and len(upper_bounds) != len_indices # ensure same length
         ):
             raise ValueError("Upperbounds is of different length with indices.")
