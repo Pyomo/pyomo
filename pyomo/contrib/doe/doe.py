@@ -488,7 +488,10 @@ class DesignOfExperiments:
             var = cuid.find_component_on(mod)
 
             # only set up bounds if they are variables
-            if isinstance(var, (pcb.var.Var, pcb.var.IndexedVar, pcb.var.ScalarVar, pcb.var.SimpleVar)):
+            if isinstance(
+                var,
+                (pcb.var.Var, pcb.var.IndexedVar, pcb.var.ScalarVar, pcb.var.SimpleVar),
+            ):
                 var.setlb(self.param[par])
                 var.setub(self.param[par])
 
@@ -604,15 +607,27 @@ class DesignOfExperiments:
                 var = cuid.find_component_on(b)
 
                 # if it is a variable, fix it to a new value
-                if isinstance(var, (pcb.var.Var, pcb.var.IndexedVar, pcb.var.ScalarVar, pcb.var.SimpleVar)):
+                if isinstance(
+                    var,
+                    (
+                        pcb.var.Var,
+                        pcb.var.IndexedVar,
+                        pcb.var.ScalarVar,
+                        pcb.var.SimpleVar,
+                    ),
+                ):
                     var.fix(self.scenario_data.scenario[s][par])
                 # if it is a param, give it a new value
-                elif isinstance(var, (pcb.param.ScalrParam, pcb.param.IndexedParam, pcb.param.Param)):
+                elif isinstance(
+                    var, (pcb.param.ScalrParam, pcb.param.IndexedParam, pcb.param.Param)
+                ):
                     # check if param is mutable
                     if var.mutable:
                         var = self.scenario_data.scenario[s][par]
                     else:
-                        raise TypeError("If defined as a Param, parameters should be mutable by mutable=True")
+                        raise TypeError(
+                            "If defined as a Param, parameters should be mutable by mutable=True"
+                        )
 
         mod.block = pyo.Block(mod.scenario, rule=block_build)
 
