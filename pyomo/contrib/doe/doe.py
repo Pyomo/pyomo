@@ -913,6 +913,9 @@ class DesignOfExperiments:
             else:
                 return 0
 
+        ### Initialize the Jacobian if provided by the user
+        
+        # If the user provides an initial Jacobian, convert it to a dictionary
         if self.jac_initial is not None:
             dict_jac_initialize = {}
             for i, bu in enumerate(model.regression_parameters):
@@ -924,9 +927,12 @@ class DesignOfExperiments:
                         # Jacobian is a numpy array, rows are regression parameters, columns are measured variables
                         dict_jac_initialize[(bu, un)] = self.jac_initial[i][j]
 
+        # Initialize the Jacobian matrix
         def initialize_jac(m, i, j):
+            # If provided by the user, use the values now stored in the dictionary
             if self.jac_initial is not None:
                 return dict_jac_initialize[(i, j)]
+            # Otherwise initialize to 0.1 (which is an arbitrary non-zero value)
             else:
                 return 0.1
 
