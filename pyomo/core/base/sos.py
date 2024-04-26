@@ -28,7 +28,7 @@ from pyomo.core.base.set_types import PositiveIntegers
 logger = logging.getLogger('pyomo.core')
 
 
-class _SOSConstraintData(ActiveComponentData):
+class SOSConstraintData(ActiveComponentData):
     """
     This class defines the data for a single special ordered set.
 
@@ -99,6 +99,11 @@ class _SOSConstraintData(ActiveComponentData):
                     "Cannot set negative weight %f for variable %s" % (w, v.name)
                 )
             self._weights.append(w)
+
+
+class _SOSConstraintData(metaclass=RenamedClass):
+    __renamed__new_class__ = SOSConstraintData
+    __renamed__version__ = '6.7.2.dev0'
 
 
 @ModelComponentFactory.register("SOS constraint expressions.")
@@ -512,10 +517,10 @@ class SOSConstraint(ActiveIndexedComponent):
         Add a component data for the specified index.
         """
         if index is None:
-            # because ScalarSOSConstraint already makes an _SOSConstraintData instance
+            # because ScalarSOSConstraint already makes an SOSConstraintData instance
             soscondata = self
         else:
-            soscondata = _SOSConstraintData(self)
+            soscondata = SOSConstraintData(self)
         self._data[index] = soscondata
         soscondata._index = index
 
@@ -549,9 +554,9 @@ class SOSConstraint(ActiveIndexedComponent):
                 ostream.write("\t\t" + str(weight) + ' : ' + var.name + '\n')
 
 
-class ScalarSOSConstraint(SOSConstraint, _SOSConstraintData):
+class ScalarSOSConstraint(SOSConstraint, SOSConstraintData):
     def __init__(self, *args, **kwd):
-        _SOSConstraintData.__init__(self, self)
+        SOSConstraintData.__init__(self, self)
         SOSConstraint.__init__(self, *args, **kwd)
         self._index = UnindexedComponent_index
 

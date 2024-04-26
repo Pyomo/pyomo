@@ -18,7 +18,7 @@ from pyomo.common.collections import (
     Sequence,
 )
 from pyomo.common.modeling import NOTSET
-from pyomo.core.base.set import DeclareGlobalSet, Set, SetOf, OrderedSetOf, _SetDataBase
+from pyomo.core.base.set import DeclareGlobalSet, Set, SetOf, OrderedSetOf, SetData
 from pyomo.core.base.component import Component, ComponentData
 from pyomo.core.base.global_set import UnindexedComponent_set
 from pyomo.core.base.enums import SortComponents
@@ -774,10 +774,10 @@ def Reference(reference, ctype=NOTSET):
             # is that within the subsets list, and set is a wildcard set.
             index = wildcards[0][1]
             # index is the first wildcard set.
-            if not isinstance(index, _SetDataBase):
+            if not isinstance(index, SetData):
                 index = SetOf(index)
             for lvl, idx in wildcards[1:]:
-                if not isinstance(idx, _SetDataBase):
+                if not isinstance(idx, SetData):
                     idx = SetOf(idx)
                 index = index * idx
             # index is now either a single Set, or a SetProduct of the
