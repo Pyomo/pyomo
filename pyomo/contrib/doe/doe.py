@@ -914,7 +914,7 @@ class DesignOfExperiments:
                 return 0
 
         ### Initialize the Jacobian if provided by the user
-        
+
         # If the user provides an initial Jacobian, convert it to a dictionary
         if self.jac_initial is not None:
             dict_jac_initialize = {}
