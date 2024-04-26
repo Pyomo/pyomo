@@ -42,6 +42,7 @@ import collections.abc
 
 import inspect
 
+
 class CalculationMode(Enum):
     sequential_finite = "sequential_finite"
     direct_kaug = "direct_kaug"
@@ -228,7 +229,7 @@ class DesignOfExperiments:
 
         # calculate how much the FIM element is scaled by a constant number
         # FIM = Jacobian.T@Jacobian, the FIM is scaled by squared value the Jacobian is scaled
-        self.fim_scale_constant_value = self.scale_constant_value**2
+        self.fim_scale_constant_value = self.scale_constant_value ** 2
 
         # Start timer
         sp_timer = TicTocTimer()
@@ -241,7 +242,7 @@ class DesignOfExperiments:
         m, analysis_square = self._compute_stochastic_program(m, optimize_opt)
 
         if self.optimize:
-            # If set to optimize, solve the optimization problem (with degrees of freedom)            
+            # If set to optimize, solve the optimization problem (with degrees of freedom)
             analysis_optimize = self._optimize_stochastic_program(m)
             dT = sp_timer.toc(msg=None)
             self.logger.info("elapsed time: %0.1f seconds" % dT)
@@ -382,7 +383,7 @@ class DesignOfExperiments:
 
         # calculate how much the FIM element is scaled by a constant number
         # As FIM~Jacobian.T@Jacobian, FIM is scaled twice the number the Q is scaled
-        self.fim_scale_constant_value = self.scale_constant_value**2
+        self.fim_scale_constant_value = self.scale_constant_value ** 2
 
         square_timer = TicTocTimer()
         square_timer.tic(msg=None)
@@ -594,9 +595,11 @@ class DesignOfExperiments:
 
         # Set for block/scenarios
         mod.scenario = pyo.Set(initialize=self.scenario_data.scenario_indices)
-        
+
         # Determine if create_model takes theta as an optional input
-        pass_theta_to_initialize= ('theta' in inspect.getfullargspec(self.create_model).args)
+        pass_theta_to_initialize = (
+            'theta' in inspect.getfullargspec(self.create_model).args
+        )
 
         # Allow user to self-define complex design variables
         self.create_model(mod=mod, model_option=ModelOptionLib.stage1)
@@ -618,7 +621,9 @@ class DesignOfExperiments:
                 # Grab the values of theta for this scenario/block
                 theta_initialize = self.scenario_data.scenario[s]
                 # Add model on block with theta values
-                self.create_model(mod=b, model_option=ModelOptionLib.stage2, theta=theta_initialize)
+                self.create_model(
+                    mod=b, model_option=ModelOptionLib.stage2, theta=theta_initialize
+                )
             else:
                 # Otherwise add model on block without theta values
                 self.create_model(mod=b, model_option=ModelOptionLib.stage2)
@@ -773,7 +778,7 @@ class DesignOfExperiments:
         self.store_optimality_as_csv = store_optimality_as_csv
 
         # calculate how much the FIM element is scaled
-        self.fim_scale_constant_value = scale_constant_value**2
+        self.fim_scale_constant_value = scale_constant_value ** 2
 
         # to store all FIM results
         result_combine = {}
@@ -926,7 +931,9 @@ class DesignOfExperiments:
                 return 0.1
 
         model.sensitivity_jacobian = pyo.Var(
-            model.regression_parameters, model.measured_variables, initialize=initialize_jac
+            model.regression_parameters,
+            model.measured_variables,
+            initialize=initialize_jac,
         )
 
         if self.fim_initial is not None:
@@ -1071,7 +1078,7 @@ class DesignOfExperiments:
             eig = np.linalg.eigvals(fim)
 
             # If the smallest eigenvalue is (pratcially) negative, add a diagonal matrix to make it positive definite
-            small_number = 1E-10
+            small_number = 1e-10
             if min(eig) < small_number:
                 fim = fim + np.eye(len(self.param)) * (small_number - min(eig))
 
@@ -1226,7 +1233,7 @@ class DesignOfExperiments:
 
         # if user gives solver, use this solver. if not, use default IPOPT solver
         solver_result = self.solver.solve(mod, tee=self.tee_opt)
-            
+
         return solver_result
 
     def _sgn(self, p):

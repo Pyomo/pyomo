@@ -29,6 +29,7 @@ import itertools
 import collections.abc
 from pyomo.common.numeric_types import native_numeric_types
 
+
 class VariablesWithIndices:
     def __init__(self):
         """This class provides utility methods for DesignVariables and MeasurementVariables to create
@@ -182,16 +183,16 @@ class VariablesWithIndices:
             raise ValueError("Values is of different length with indices.")
 
         if (
-            lower_bounds is not None # ensure not None
-            and isinstance(lower_bounds, collections.abc.Sequence) # ensure list-like
-            and len(lower_bounds) != len_indices # ensure same length
+            lower_bounds is not None  # ensure not None
+            and isinstance(lower_bounds, collections.abc.Sequence)  # ensure list-like
+            and len(lower_bounds) != len_indices  # ensure same length
         ):
             raise ValueError("Lowerbounds is of different length with indices.")
 
         if (
-            upper_bounds is not None # ensure None
-            and isinstance(upper_bounds, collections.abc.Sequence) # ensure list-like
-            and len(upper_bounds) != len_indices # ensure same length
+            upper_bounds is not None  # ensure None
+            and isinstance(upper_bounds, collections.abc.Sequence)  # ensure list-like
+            and len(upper_bounds) != len_indices  # ensure same length
         ):
             raise ValueError("Upperbounds is of different length with indices.")
 

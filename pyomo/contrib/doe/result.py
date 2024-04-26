@@ -81,7 +81,7 @@ class FisherResults:
         self.prior_FIM = prior_FIM
         self.store_FIM = store_FIM
         self.scale_constant_value = scale_constant_value
-        self.fim_scale_constant_value = scale_constant_value**2
+        self.fim_scale_constant_value = scale_constant_value ** 2
         self.max_condition_number = max_condition_number
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(level=logging.WARN)
