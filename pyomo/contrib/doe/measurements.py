@@ -27,7 +27,7 @@
 
 import itertools
 import collections.abc
-
+from pyomo.common.numeric_types import native_numeric_types
 
 class VariablesWithIndices:
     def __init__(self):
@@ -100,12 +100,12 @@ class VariablesWithIndices:
 
         # if a scalar (int or float) is given, set it as the lower bound for all variables
         if lower_bounds is not None:
-            if type(lower_bounds) in [int, float]:
+            if type(lower_bounds) in native_numeric_types:
                 lower_bounds = [lower_bounds] * len(added_names)
             self.lower_bounds.update(zip(added_names, lower_bounds))
 
         if upper_bounds is not None:
-            if type(upper_bounds) in [int, float]:
+            if type(upper_bounds) in native_numeric_types:
                 upper_bounds = [upper_bounds] * len(added_names)
             self.upper_bounds.update(zip(added_names, upper_bounds))
 

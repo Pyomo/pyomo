@@ -230,6 +230,7 @@ class DesignOfExperiments:
         # FIM = Jacobian.T@Jacobian, the FIM is scaled by squared value the Jacobian is scaled
         self.fim_scale_constant_value = self.scale_constant_value**2
 
+        # Start timer
         sp_timer = TicTocTimer()
         sp_timer.tic(msg=None)
 
@@ -240,18 +241,17 @@ class DesignOfExperiments:
         m, analysis_square = self._compute_stochastic_program(m, optimize_opt)
 
         if self.optimize:
-            # set max_iter to 0 to debug the initialization
-            # self.solver.options["max_iter"] = 0
-            # self.solver.options["bound_push"] = 1e-10
-            
+            # If set to optimize, solve the optimization problem (with degrees of freedom)            
             analysis_optimize = self._optimize_stochastic_program(m)
             dT = sp_timer.toc(msg=None)
             self.logger.info("elapsed time: %0.1f seconds" % dT)
+            # Return both square problem and optimization problem results
             return analysis_square, analysis_optimize
 
         else:
             dT = sp_timer.toc(msg=None)
             self.logger.info("elapsed time: %0.1f seconds" % dT)
+            # Return only square problem results
             return analysis_square
 
     def _compute_stochastic_program(self, m, optimize_option):
@@ -596,9 +596,7 @@ class DesignOfExperiments:
         mod.scenario = pyo.Set(initialize=self.scenario_data.scenario_indices)
         
         # Determine if create_model takes theta as an optional input
-        # print(inspect.getfullargspec(self.create_model))
         pass_theta_to_initialize= ('theta' in inspect.getfullargspec(self.create_model).args)
-        #print("pass_theta_to_initialize =", pass_theta_to_initialize)
 
         # Allow user to self-define complex design variables
         self.create_model(mod=mod, model_option=ModelOptionLib.stage1)
@@ -617,10 +615,12 @@ class DesignOfExperiments:
             # idea: check if create_model takes theta as an optional input, if so, pass parameter values to create_model
 
             if pass_theta_to_initialize:
+                # Grab the values of theta for this scenario/block
                 theta_initialize = self.scenario_data.scenario[s]
-                #print("Initializing with theta=", theta_initialize)
+                # Add model on block with theta values
                 self.create_model(mod=b, model_option=ModelOptionLib.stage2, theta=theta_initialize)
             else:
+                # Otherwise add model on block without theta values
                 self.create_model(mod=b, model_option=ModelOptionLib.stage2)
 
             # fix parameter values to perturbed values
@@ -934,8 +934,6 @@ class DesignOfExperiments:
             for i, bu in enumerate(model.regression_parameters):
                 for j, un in enumerate(model.regression_parameters):
                     dict_fim_initialize[(bu, un)] = self.fim_initial[i][j]
-            
-            #print(dict_fim_initialize)
 
         def initialize_fim(m, j, d):
             return dict_fim_initialize[(j, d)]
@@ -1225,19 +1223,6 @@ class DesignOfExperiments:
         mod = self._fix_design(
             m, self.design_values, fix_opt=fix, optimize_option=opt_option
         )
-
-        '''
-        # This is for initialization diagnostics
-        # Remove before merging the PR
-        if not fix:
-            # halt at initial point
-            self.solver.options['max_iter'] = 0
-            self.solver.options['bound_push'] = 1E-10
-        else:
-            # resort to defaults
-            self.solver.options['max_iter'] = 3000
-            self.solver.options['bound_push'] = 0.01
-        '''
 
         # if user gives solver, use this solver. if not, use default IPOPT solver
         solver_result = self.solver.solve(mod, tee=self.tee_opt)
