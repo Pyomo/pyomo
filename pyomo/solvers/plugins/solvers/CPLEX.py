@@ -17,6 +17,7 @@ import logging
 import subprocess
 
 from pyomo.common import Executable
+from pyomo.common.enums import maximize, minimize
 from pyomo.common.errors import ApplicationError
 from pyomo.common.tempfiles import TempfileManager
 
@@ -28,7 +29,6 @@ from pyomo.opt.results import (
     SolverStatus,
     TerminationCondition,
     SolutionStatus,
-    ProblemSense,
     Solution,
 )
 from pyomo.opt.solver import ILMLicensedSystemCallSolver
@@ -547,9 +547,9 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 ):  # CPLEX 11.2 and subsequent has two Nonzeros sections.
                     results.problem.number_of_nonzeros = int(tokens[2])
             elif len(tokens) >= 5 and tokens[4] == "MINIMIZE":
-                results.problem.sense = ProblemSense.minimize
+                results.problem.sense = minimize
             elif len(tokens) >= 5 and tokens[4] == "MAXIMIZE":
-                results.problem.sense = ProblemSense.maximize
+                results.problem.sense = maximize
             elif (
                 len(tokens) >= 4
                 and tokens[0] == "Solution"
@@ -859,9 +859,9 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                     else:
                         sense = tokens[0].lower()
                         if sense in ['max', 'maximize']:
-                            results.problem.sense = ProblemSense.maximize
+                            results.problem.sense = maximize
                         if sense in ['min', 'minimize']:
-                            results.problem.sense = ProblemSense.minimize
+                            results.problem.sense = minimize
                     break
                 tINPUT.close()
 
@@ -952,7 +952,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 )
                 if primal_feasible == 1:
                     soln.status = SolutionStatus.feasible
-                    if results.problem.sense == ProblemSense.minimize:
+                    if results.problem.sense == minimize:
                         results.problem.upper_bound = soln.objective[
                             '__default_objective__'
                         ]['Value']
@@ -964,7 +964,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                     soln.status = SolutionStatus.infeasible
 
         if self._best_bound is not None:
-            if results.problem.sense == ProblemSense.minimize:
+            if results.problem.sense == minimize:
                 results.problem.lower_bound = self._best_bound
             else:
                 results.problem.upper_bound = self._best_bound
