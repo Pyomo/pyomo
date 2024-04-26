@@ -12,7 +12,7 @@
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import (
     DirectOrPersistentSolver,
 )
-from pyomo.core.base.block import _BlockData
+from pyomo.core.base.block import BlockData
 from pyomo.core.kernel.block import IBlock
 from pyomo.core.base.suffix import active_import_suffix_generator
 from pyomo.core.kernel.suffix import import_suffix_generator
@@ -96,7 +96,7 @@ class PersistentSolver(DirectOrPersistentSolver):
 
         Parameters
         ----------
-        block: Block (scalar Block or single _BlockData)
+        block: Block (scalar Block or single BlockData)
 
         """
         if self._pyomo_model is None:
@@ -132,7 +132,7 @@ class PersistentSolver(DirectOrPersistentSolver):
 
         Parameters
         ----------
-        con: Constraint (scalar Constraint or single _ConstraintData)
+        con: Constraint (scalar Constraint or single ConstraintData)
 
         """
         if self._pyomo_model is None:
@@ -206,9 +206,9 @@ class PersistentSolver(DirectOrPersistentSolver):
         Parameters
         ----------
         model: pyomo ConcreteModel to which the column will be added
-        var: Var (scalar Var or single _VarData)
+        var: Var (scalar Var or single VarData)
         obj_coef: float, pyo.Param
-        constraints: list of scalar Constraints of single _ConstraintDatas
+        constraints: list of scalar Constraints of single ConstraintDatas
         coefficients: list of the coefficient to put on var in the associated constraint
 
         """
@@ -295,7 +295,7 @@ class PersistentSolver(DirectOrPersistentSolver):
 
         Parameters
         ----------
-        block: Block (scalar Block or a single _BlockData)
+        block: Block (scalar Block or a single BlockData)
 
         """
         # see PR #366 for discussion about handling indexed
@@ -328,7 +328,7 @@ class PersistentSolver(DirectOrPersistentSolver):
 
         Parameters
         ----------
-        con: Constraint (scalar Constraint or single _ConstraintData)
+        con: Constraint (scalar Constraint or single ConstraintData)
 
         """
         # see PR #366 for discussion about handling indexed
@@ -380,7 +380,7 @@ class PersistentSolver(DirectOrPersistentSolver):
 
         Parameters
         ----------
-        var: Var (scalar Var or single _VarData)
+        var: Var (scalar Var or single VarData)
 
         """
         # see PR #366 for discussion about handling indexed
@@ -455,7 +455,7 @@ class PersistentSolver(DirectOrPersistentSolver):
         self.available(exception_flag=True)
 
         # Collect suffix names to try and import from solution.
-        if isinstance(self._pyomo_model, _BlockData):
+        if isinstance(self._pyomo_model, BlockData):
             model_suffixes = list(
                 name
                 for (name, comp) in active_import_suffix_generator(self._pyomo_model)

@@ -76,25 +76,25 @@ class LinearStandardFormInfo(object):
 
         The constraint right-hand sides.
 
-    rows : List[Tuple[_ConstraintData, int]]
+    rows : List[Tuple[ConstraintData, int]]
 
         The list of Pyomo constraint objects corresponding to the rows
         in `A`.  Each element in the list is a 2-tuple of
-        (_ConstraintData, row_multiplier).  The `row_multiplier` will be
+        (ConstraintData, row_multiplier).  The `row_multiplier` will be
         +/- 1 indicating if the row was multiplied by -1 (corresponding
         to a constraint lower bound) or +1 (upper bound).
 
-    columns : List[_VarData]
+    columns : List[VarData]
 
         The list of Pyomo variable objects corresponding to columns in
         the `A` and `c` matrices.
 
-    eliminated_vars: List[Tuple[_VarData, NumericExpression]]
+    eliminated_vars: List[Tuple[VarData, NumericExpression]]
 
         The list of variables from the original model that do not appear
         in the standard form (usually because they were replaced by
         nonnegative variables).  Each entry is a 2-tuple of
-        (:py:class:`_VarData`, :py:class`NumericExpression`|`float`).
+        (:py:class:`VarData`, :py:class`NumericExpression`|`float`).
         The list is in the necessary order for correct evaluation (i.e.,
         all variables appearing in the expression must either have
         appeared in the standard form, or appear *earlier* in this list.

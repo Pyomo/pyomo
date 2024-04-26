@@ -30,7 +30,7 @@ from pyomo.environ import (
     value,
 )
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.core.base import constraint, _ConstraintData
+from pyomo.core.base import constraint, ConstraintData
 from pyomo.core.expr.compare import (
     assertExpressionsEqual,
     assertExpressionsStructurallyEqual,
@@ -656,14 +656,14 @@ class TwoTermIndexedDisj(unittest.TestCase, CommonTests):
             if src[0]:
                 # equality
                 self.assertEqual(len(transformed), 2)
-                self.assertIsInstance(transformed[0], _ConstraintData)
-                self.assertIsInstance(transformed[1], _ConstraintData)
+                self.assertIsInstance(transformed[0], ConstraintData)
+                self.assertIsInstance(transformed[1], ConstraintData)
                 self.assertIs(bigm.get_src_constraint(transformed[0]), srcDisjunct.c)
                 self.assertIs(bigm.get_src_constraint(transformed[1]), srcDisjunct.c)
             else:
                 # >=
                 self.assertEqual(len(transformed), 1)
-                self.assertIsInstance(transformed[0], _ConstraintData)
+                self.assertIsInstance(transformed[0], ConstraintData)
                 # check reverse map from the container
                 self.assertIs(bigm.get_src_constraint(transformed[0]), srcDisjunct.c)
 
@@ -1326,8 +1326,8 @@ class ScalarDisjIndexedConstraints(unittest.TestCase, CommonTests):
         self.assertEqual(len(cons_list), 2)
         lb = cons_list[0]
         ub = cons_list[1]
-        self.assertIsInstance(lb, constraint._GeneralConstraintData)
-        self.assertIsInstance(ub, constraint._GeneralConstraintData)
+        self.assertIsInstance(lb, constraint.ConstraintData)
+        self.assertIsInstance(ub, constraint.ConstraintData)
 
     def checkMs(
         self, m, disj1c1lb, disj1c1ub, disj1c2lb, disj1c2ub, disj2c1ub, disj2c2ub
@@ -2291,7 +2291,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
 
 class IndexedDisjunction(unittest.TestCase):
     # this tests that if the targets are a subset of the
-    # _DisjunctDatas in an IndexedDisjunction that the xor constraint
+    # DisjunctDatas in an IndexedDisjunction that the xor constraint
     # created on the parent block will still be indexed as expected.
     def test_xor_constraint(self):
         ct.check_indexed_xor_constraints_with_targets(self, 'bigm')
