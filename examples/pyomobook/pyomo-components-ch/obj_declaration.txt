@@ -55,7 +55,7 @@ Model unknown
     None
 value
 x[Q] + 2*x[R]
-1
+minimize
 6.5
 Model unknown
 

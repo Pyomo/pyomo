@@ -7,6 +7,11 @@ on:
   pull_request:
     branches:
       - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
   workflow_dispatch:
     inputs:
       git-ref:
@@ -34,6 +39,8 @@ jobs:
   lint:
     name: lint/style-and-typos
     runs-on: ubuntu-latest
+    if: |
+      contains(github.event.pull_request.title, '[WIP]') != true && !github.event.pull_request.draft
     steps:
     - name: Checkout Pyomo source
       uses: actions/checkout@v4
@@ -43,7 +50,8 @@ jobs:
         python-version: '3.10'
     - name: Black Formatting Check
       run: |
-        pip install black
+        # Note v24.4.1 fails due to a bug in the parser
+        pip install 'black!=24.4.1'
         black . -S -C --check --diff --exclude examples/pyomobook/python-ch/BadIndent.py
     - name: Spell Check
       uses: crate-ci/typos@master
@@ -93,7 +101,7 @@ jobs:
           skip_doctest: 1
           TARGET: linux
           PYENV: conda
-          PACKAGES: mpi4py
+          PACKAGES: openmpi mpi4py
 
         - os: ubuntu-latest
           python: '3.11'
@@ -733,7 +741,7 @@ jobs:
   cover:
     name: process-coverage-${{ matrix.TARGET }}
     needs: build
-    if: always() # run even if a build job fails
+    if: success() || failure() # run even if a build job fails, but not if cancelled
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     strategy:

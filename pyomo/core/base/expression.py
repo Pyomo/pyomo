@@ -36,23 +36,23 @@ from pyomo.core.base.initializer import Initializer
 logger = logging.getLogger('pyomo.core')
 
 
-class _ExpressionData(numeric_expr.NumericValue):
-    """
-    An object that defines a named expression.
+class NamedExpressionData(numeric_expr.NumericValue):
+    """An object that defines a generic "named expression".
+
+    This is the base class for both :py:class:`ExpressionData` and
+    :py:class:`ObjectiveData`.
 
     Public Class Attributes
         expr       The expression owned by this data.
+
     """
 
+    # Note: derived classes are expected to declare the _args_ slot
     __slots__ = ()
 
     EXPRESSION_SYSTEM = EXPR.ExpressionType.NUMERIC
     PRECEDENCE = 0
     ASSOCIATIVITY = EXPR.OperatorAssociativity.NON_ASSOCIATIVE
-
-    #
-    # Interface
-    #
 
     def __call__(self, exception=True):
         """Compute the value of this expression."""
@@ -61,6 +61,18 @@ class _ExpressionData(numeric_expr.NumericValue):
             # Note: native_types includes NoneType
             return arg
         return arg(exception=exception)
+
+    def create_node_with_local_data(self, values):
+        """
+        Construct a simple expression after constructing the
+        contained expression.
+
+        This class provides a consistent interface for constructing a
+        node, which is used in tree visitor scripts.
+        """
+        obj = self.__class__()
+        obj._args_ = values
+        return obj
 
     def is_named_expression_type(self):
         """A boolean indicating whether this in a named expression."""
@@ -110,9 +122,10 @@ class _ExpressionData(numeric_expr.NumericValue):
     def _is_fixed(self, values):
         return values[0]
 
-    #
-    # Abstract Interface
-    #
+    # NamedExpressionData should never return False because
+    # they can store subexpressions that contain variables
+    def is_potentially_variable(self):
+        return True
 
     @property
     def expr(self):
@@ -124,58 +137,6 @@ class _ExpressionData(numeric_expr.NumericValue):
     @expr.setter
     def expr(self, value):
         self.set_value(value)
-
-    def set_value(self, expr):
-        """Set the expression on this expression."""
-        raise NotImplementedError
-
-    def is_constant(self):
-        """A boolean indicating whether this expression is constant."""
-        raise NotImplementedError
-
-    def is_fixed(self):
-        """A boolean indicating whether this expression is fixed."""
-        raise NotImplementedError
-
-    # _ExpressionData should never return False because
-    # they can store subexpressions that contain variables
-    def is_potentially_variable(self):
-        return True
-
-
-class _GeneralExpressionDataImpl(_ExpressionData):
-    """
-    An object that defines an expression that is never cloned
-
-    Constructor Arguments
-        expr        The Pyomo expression stored in this expression.
-        component   The Expression object that owns this data.
-
-    Public Class Attributes
-        expr       The expression owned by this data.
-    """
-
-    __slots__ = ()
-
-    def __init__(self, expr=None):
-        self._args_ = (expr,)
-
-    def create_node_with_local_data(self, values):
-        """
-        Construct a simple expression after constructing the
-        contained expression.
-
-        This class provides a consistent interface for constructing a
-        node, which is used in tree visitor scripts.
-        """
-        obj = ScalarExpression()
-        obj.construct()
-        obj._args_ = values
-        return obj
-
-    #
-    # Abstract Interface
-    #
 
     def set_value(self, expr):
         """Set the expression on this expression."""
@@ -235,7 +196,17 @@ class _GeneralExpressionDataImpl(_ExpressionData):
         return numeric_expr._pow_dispatcher[e.__class__, other.__class__](e, other)
 
 
-class _GeneralExpressionData(_GeneralExpressionDataImpl, ComponentData):
+class _ExpressionData(metaclass=RenamedClass):
+    __renamed__new_class__ = NamedExpressionData
+    __renamed__version__ = '6.7.2.dev0'
+
+
+class _GeneralExpressionDataImpl(metaclass=RenamedClass):
+    __renamed__new_class__ = NamedExpressionData
+    __renamed__version__ = '6.7.2.dev0'
+
+
+class ExpressionData(NamedExpressionData, ComponentData):
     """
     An object that defines an expression that is never cloned
 
@@ -253,10 +224,14 @@ class _GeneralExpressionData(_GeneralExpressionDataImpl, ComponentData):
     __slots__ = ('_args_',)
 
     def __init__(self, expr=None, component=None):
-        _GeneralExpressionDataImpl.__init__(self, expr)
-        # Inlining ComponentData.__init__
+        self._args_ = (expr,)
         self._component = weakref_ref(component) if (component is not None) else None
         self._index = NOTSET
+
+
+class _GeneralExpressionData(metaclass=RenamedClass):
+    __renamed__new_class__ = ExpressionData
+    __renamed__version__ = '6.7.2.dev0'
 
 
 @ModelComponentFactory.register(
@@ -275,7 +250,7 @@ class Expression(IndexedComponent):
         doc         Text describing this component.
     """
 
-    _ComponentDataClass = _GeneralExpressionData
+    _ComponentDataClass = ExpressionData
     # This seems like a copy-paste error, and should be renamed/removed
     NoConstraint = IndexedComponent.Skip
 
@@ -402,9 +377,9 @@ class Expression(IndexedComponent):
             timer.report()
 
 
-class ScalarExpression(_GeneralExpressionData, Expression):
+class ScalarExpression(ExpressionData, Expression):
     def __init__(self, *args, **kwds):
-        _GeneralExpressionData.__init__(self, expr=None, component=self)
+        ExpressionData.__init__(self, expr=None, component=self)
         Expression.__init__(self, *args, **kwds)
         self._index = UnindexedComponent_index
 
@@ -427,7 +402,7 @@ class ScalarExpression(_GeneralExpressionData, Expression):
     def expr(self):
         """Return expression on this expression."""
         if self._constructed:
-            return _GeneralExpressionData.expr.fget(self)
+            return ExpressionData.expr.fget(self)
         raise ValueError(
             "Accessing the expression of Expression '%s' "
             "before the Expression has been constructed (there "
@@ -445,7 +420,7 @@ class ScalarExpression(_GeneralExpressionData, Expression):
     def set_value(self, expr):
         """Set the expression on this expression."""
         if self._constructed:
-            return _GeneralExpressionData.set_value(self, expr)
+            return ExpressionData.set_value(self, expr)
         raise ValueError(
             "Setting the expression of Expression '%s' "
             "before the Expression has been constructed (there "
@@ -455,7 +430,7 @@ class ScalarExpression(_GeneralExpressionData, Expression):
     def is_constant(self):
         """A boolean indicating whether this expression is constant."""
         if self._constructed:
-            return _GeneralExpressionData.is_constant(self)
+            return ExpressionData.is_constant(self)
         raise ValueError(
             "Accessing the is_constant flag of Expression '%s' "
             "before the Expression has been constructed (there "
@@ -465,7 +440,7 @@ class ScalarExpression(_GeneralExpressionData, Expression):
     def is_fixed(self):
         """A boolean indicating whether this expression is fixed."""
         if self._constructed:
-            return _GeneralExpressionData.is_fixed(self)
+            return ExpressionData.is_fixed(self)
         raise ValueError(
             "Accessing the is_fixed flag of Expression '%s' "
             "before the Expression has been constructed (there "
@@ -509,6 +484,6 @@ class IndexedExpression(Expression):
         """Add an expression with a given index."""
         if (type(expr) is tuple) and (expr == Expression.Skip):
             return None
-        cdata = _GeneralExpressionData(expr, component=self)
+        cdata = ExpressionData(expr, component=self)
         self._data[index] = cdata
         return cdata

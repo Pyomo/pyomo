@@ -101,6 +101,15 @@ class Test_calc_var(unittest.TestCase):
         ):
             calculate_variable_from_constraint(m.x, m.lt)
 
+        m.indexed = Constraint([1, 2], rule=lambda m, i: m.x <= i)
+        with self.assertRaisesRegex(
+            ValueError,
+            r"calculate_variable_from_constraint\(\): constraint must be a scalar "
+            r"constraint or a single ConstraintData.  Received IndexedConstraint "
+            r'\("indexed"\)',
+        ):
+            calculate_variable_from_constraint(m.x, m.indexed)
+
     def test_linear(self):
         m = ConcreteModel()
         m.x = Var()

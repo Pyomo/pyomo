@@ -42,7 +42,7 @@ from pyomo.core import (
     Binary,
 )
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.disjunct import _DisjunctData
+from pyomo.gdp.disjunct import DisjunctData
 from pyomo.gdp.plugins.gdp_to_mip_transformation import GDP_to_MIP_Transformation
 from pyomo.gdp.transformed_disjunct import _TransformedDisjunct
 from pyomo.gdp.util import (
@@ -750,20 +750,20 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
                 if obj.is_indexed():
                     newConstraint.add((name, i, 'eq'), newConsExpr)
-                    # map the _ConstraintDatas (we mapped the container above)
+                    # map the ConstraintDatas (we mapped the container above)
                     constraint_map.transformed_constraints[c].append(
                         newConstraint[name, i, 'eq']
                     )
                     constraint_map.src_constraint[newConstraint[name, i, 'eq']] = c
                 else:
                     newConstraint.add((name, 'eq'), newConsExpr)
-                    # map to the _ConstraintData (And yes, for
+                    # map to the ConstraintData (And yes, for
                     # ScalarConstraints, this is overwriting the map to the
                     # container we made above, and that is what I want to
                     # happen. ScalarConstraints will map to lists. For
                     # IndexedConstraints, we can map the container to the
                     # container, but more importantly, we are mapping the
-                    # _ConstraintDatas to each other above)
+                    # ConstraintDatas to each other above)
                     constraint_map.transformed_constraints[c].append(
                         newConstraint[name, 'eq']
                     )
