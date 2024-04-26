@@ -20,6 +20,7 @@ from pyomo.common import DeveloperError
 from pyomo.common.autoslots import AutoSlots, fast_deepcopy
 from pyomo.common.collections import OrderedDict
 from pyomo.common.deprecation import (
+    RenamedClass,
     deprecated,
     deprecation_warning,
     relocated_module_attribute,
@@ -79,7 +80,7 @@ class CloneError(pyomo.common.errors.PyomoException):
     pass
 
 
-class _ComponentBase(PyomoObject):
+class ComponentBase(PyomoObject):
     """A base class for Component and ComponentData
 
     This class defines some fundamental methods and properties that are
@@ -474,7 +475,12 @@ class _ComponentBase(PyomoObject):
             ostream.write(_data)
 
 
-class Component(_ComponentBase):
+class _ComponentBase(metaclass=RenamedClass):
+    __renamed__new_class__ = ComponentBase
+    __renamed__version__ = '6.7.2.dev0'
+
+
+class Component(ComponentBase):
     """
     This is the base class for all Pyomo modeling components.
 
@@ -779,7 +785,7 @@ class ActiveComponent(Component):
         self._active = False
 
 
-class ComponentData(_ComponentBase):
+class ComponentData(ComponentBase):
     """
     This is the base class for the component data used
     in Pyomo modeling components.  Subclasses of ComponentData are
@@ -802,11 +808,11 @@ class ComponentData(_ComponentBase):
     __autoslot_mappers__ = {'_component': AutoSlots.weakref_mapper}
 
     # NOTE: This constructor is in-lined in the constructors for the following
-    # classes: _BooleanVarData, _ConnectorData, _ConstraintData,
-    # _GeneralExpressionData, _LogicalConstraintData,
-    # _GeneralLogicalConstraintData, _GeneralObjectiveData,
-    # _ParamData,_GeneralVarData, _GeneralBooleanVarData, _DisjunctionData,
-    # _ArcData, _PortData, _LinearConstraintData, and
+    # classes: BooleanVarData, ConnectorData, ConstraintData,
+    # ExpressionData, LogicalConstraintData,
+    # LogicalConstraintData, ObjectiveData,
+    # ParamData,VarData, BooleanVarData, DisjunctionData,
+    # ArcData, PortData, _LinearConstraintData, and
     # _LinearMatrixConstraintData. Changes made here need to be made in those
     # constructors as well!
     def __init__(self, component):

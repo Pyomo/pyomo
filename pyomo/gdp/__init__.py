@@ -9,7 +9,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.gdp.disjunct import GDP_Error, Disjunct, Disjunction
+from pyomo.gdp.disjunct import (
+    GDP_Error,
+    Disjunct,
+    DisjunctData,
+    Disjunction,
+    DisjunctionData,
+)
 
 # Do not import these files: importing them registers the transformation
 # plugins with the pyomo script so that they get automatically invoked.

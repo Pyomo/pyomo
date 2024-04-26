@@ -7,6 +7,11 @@ on:
   pull_request:
     branches:
       - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
   workflow_dispatch:
     inputs:
       git-ref:
@@ -34,6 +39,8 @@ jobs:
   lint:
     name: lint/style-and-typos
     runs-on: ubuntu-latest
+    if: |
+      contains(github.event.pull_request.title, '[WIP]') != true && !github.event.pull_request.draft
     steps:
     - name: Checkout Pyomo source
       uses: actions/checkout@v4
@@ -734,7 +741,7 @@ jobs:
   cover:
     name: process-coverage-${{ matrix.TARGET }}
     needs: build
-    if: always() # run even if a build job fails
+    if: success() || failure() # run even if a build job fails, but not if cancelled
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     strategy:
