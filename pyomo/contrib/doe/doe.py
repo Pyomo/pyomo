@@ -229,7 +229,7 @@ class DesignOfExperiments:
 
         # calculate how much the FIM element is scaled by a constant number
         # FIM = Jacobian.T@Jacobian, the FIM is scaled by squared value the Jacobian is scaled
-        self.fim_scale_constant_value = self.scale_constant_value ** 2
+        self.fim_scale_constant_value = self.scale_constant_value**2
 
         # Start timer
         sp_timer = TicTocTimer()
@@ -383,7 +383,7 @@ class DesignOfExperiments:
 
         # calculate how much the FIM element is scaled by a constant number
         # As FIM~Jacobian.T@Jacobian, FIM is scaled twice the number the Q is scaled
-        self.fim_scale_constant_value = self.scale_constant_value ** 2
+        self.fim_scale_constant_value = self.scale_constant_value**2
 
         square_timer = TicTocTimer()
         square_timer.tic(msg=None)
@@ -778,7 +778,7 @@ class DesignOfExperiments:
         self.store_optimality_as_csv = store_optimality_as_csv
 
         # calculate how much the FIM element is scaled
-        self.fim_scale_constant_value = scale_constant_value ** 2
+        self.fim_scale_constant_value = scale_constant_value**2
 
         # to store all FIM results
         result_combine = {}
