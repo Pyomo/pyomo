@@ -1,25 +1,5 @@
-6 Set Declarations
-    demand_index : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :    4 : {1, 2, 3, 4}
-    warehouse_active_index : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :   12 : {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
-    x_index : Size=1, Index=None, Ordered=True
-        Key  : Dimen : Domain              : Size : Members
-        None :     2 : x_index_0*x_index_1 :   12 : {('Harlingen', 'NYC'), ('Harlingen', 'LA'), ('Harlingen', 'Chicago'), ('Harlingen', 'Houston'), ('Memphis', 'NYC'), ('Memphis', 'LA'), ('Memphis', 'Chicago'), ('Memphis', 'Houston'), ('Ashland', 'NYC'), ('Ashland', 'LA'), ('Ashland', 'Chicago'), ('Ashland', 'Houston')}
-    x_index_0 : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :    3 : {'Harlingen', 'Memphis', 'Ashland'}
-    x_index_1 : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :    4 : {'NYC', 'LA', 'Chicago', 'Houston'}
-    y_index : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :    3 : {'Harlingen', 'Memphis', 'Ashland'}
-
 2 Var Declarations
-    x : Size=12, Index=x_index
+    x : Size=12, Index={Harlingen, Memphis, Ashland}*{NYC, LA, Chicago, Houston}
         Key                      : Lower : Value : Upper : Fixed : Stale : Domain
           ('Ashland', 'Chicago') :     0 :  None :     1 : False :  True :  Reals
           ('Ashland', 'Houston') :     0 :  None :     1 : False :  True :  Reals
@@ -33,7 +13,7 @@
           ('Memphis', 'Houston') :     0 :  None :     1 : False :  True :  Reals
                ('Memphis', 'LA') :     0 :  None :     1 : False :  True :  Reals
               ('Memphis', 'NYC') :     0 :  None :     1 : False :  True :  Reals
-    y : Size=3, Index=y_index
+    y : Size=3, Index={Harlingen, Memphis, Ashland}
         Key       : Lower : Value : Upper : Fixed : Stale : Domain
           Ashland :     0 :  None :     1 : False :  True : Binary
         Harlingen :     0 :  None :     1 : False :  True : Binary
@@ -45,7 +25,7 @@
         None :   True : minimize : 1956*x[Harlingen,NYC] + 1606*x[Harlingen,LA] + 1410*x[Harlingen,Chicago] + 330*x[Harlingen,Houston] + 1096*x[Memphis,NYC] + 1792*x[Memphis,LA] + 531*x[Memphis,Chicago] + 567*x[Memphis,Houston] + 485*x[Ashland,NYC] + 2322*x[Ashland,LA] + 324*x[Ashland,Chicago] + 1236*x[Ashland,Houston]
 
 3 Constraint Declarations
-    demand : Size=4, Index=demand_index, Active=True
+    demand : Size=4, Index={1, 2, 3, 4}, Active=True
         Key : Lower : Body                                                           : Upper : Active
           1 :   1.0 :             x[Harlingen,NYC] + x[Memphis,NYC] + x[Ashland,NYC] :   1.0 :   True
           2 :   1.0 :                x[Harlingen,LA] + x[Memphis,LA] + x[Ashland,LA] :   1.0 :   True
@@ -54,7 +34,7 @@
     num_warehouses : Size=1, Index=None, Active=True
         Key  : Lower : Body                                   : Upper : Active
         None :  -Inf : y[Harlingen] + y[Memphis] + y[Ashland] :   2.0 :   True
-    warehouse_active : Size=12, Index=warehouse_active_index, Active=True
+    warehouse_active : Size=12, Index={1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}, Active=True
         Key : Lower : Body                                : Upper : Active
           1 :  -Inf :     x[Harlingen,NYC] - y[Harlingen] :   0.0 :   True
           2 :  -Inf :      x[Harlingen,LA] - y[Harlingen] :   0.0 :   True
@@ -69,4 +49,4 @@
          11 :  -Inf :     x[Ashland,Chicago] - y[Ashland] :   0.0 :   True
          12 :  -Inf :     x[Ashland,Houston] - y[Ashland] :   0.0 :   True
 
-12 Declarations: x_index_0 x_index_1 x_index x y_index y obj demand_index demand warehouse_active_index warehouse_active num_warehouses
+6 Declarations: x y obj demand warehouse_active num_warehouses

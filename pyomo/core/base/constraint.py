@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -9,20 +9,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = [
-    'Constraint',
-    '_ConstraintData',
-    'ConstraintList',
-    'simple_constraint_rule',
-    'simple_constraintlist_rule',
-]
-
-import io
+from __future__ import annotations
 import sys
 import logging
-import math
 from weakref import ref as weakref_ref
 from pyomo.common.pyomo_typing import overload
+from typing import Union, Type
 
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.errors import DeveloperError
@@ -37,6 +29,7 @@ from pyomo.core.expr.numvalue import (
     as_numeric,
     is_fixed,
     native_numeric_types,
+    native_logical_types,
     native_types,
 )
 from pyomo.core.expr import (
@@ -51,6 +44,7 @@ from pyomo.core.base.indexed_component import (
     ActiveIndexedComponent,
     UnindexedComponent_set,
     rule_wrapper,
+    IndexedComponent,
 )
 from pyomo.core.base.set import Set
 from pyomo.core.base.disable_methods import disable_methods
@@ -94,14 +88,15 @@ def simple_constraint_rule(rule):
 
     model.c = Constraint(rule=simple_constraint_rule(...))
     """
-    return rule_wrapper(
-        rule,
-        {
-            None: Constraint.Skip,
-            True: Constraint.Feasible,
-            False: Constraint.Infeasible,
-        },
-    )
+    map_types = set([type(None)]) | native_logical_types
+    result_map = {None: Constraint.Skip}
+    for l_type in native_logical_types:
+        result_map[l_type(True)] = Constraint.Feasible
+        result_map[l_type(False)] = Constraint.Infeasible
+    # Note: some logical types hash the same as bool (e.g., np.bool_), so
+    # we will pass the set of all logical types in addition to the
+    # result_map
+    return rule_wrapper(rule, result_map, map_types=map_types)
 
 
 def simple_constraintlist_rule(rule):
@@ -119,174 +114,20 @@ def simple_constraintlist_rule(rule):
 
     model.c = ConstraintList(expr=simple_constraintlist_rule(...))
     """
-    return rule_wrapper(
-        rule,
-        {
-            None: ConstraintList.End,
-            True: Constraint.Feasible,
-            False: Constraint.Infeasible,
-        },
-    )
+    map_types = set([type(None)]) | native_logical_types
+    result_map = {None: ConstraintList.End}
+    for l_type in native_logical_types:
+        result_map[l_type(True)] = Constraint.Feasible
+        result_map[l_type(False)] = Constraint.Infeasible
+    # Note: some logical types hash the same as bool (e.g., np.bool_), so
+    # we will pass the set of all logical types in addition to the
+    # result_map
+    return rule_wrapper(rule, result_map, map_types=map_types)
 
 
-#
-# This class is a pure interface
-#
-
-
-class _ConstraintData(ActiveComponentData):
+class ConstraintData(ActiveComponentData):
     """
-    This class defines the data for a single constraint.
-
-    Constructor arguments:
-        component       The Constraint object that owns this data.
-
-    Public class attributes:
-        active          A boolean that is true if this constraint is
-                            active in the model.
-        body            The Pyomo expression for this constraint
-        lower           The Pyomo expression for the lower bound
-        upper           The Pyomo expression for the upper bound
-        equality        A boolean that indicates whether this is an
-                            equality constraint
-        strict_lower    A boolean that indicates whether this
-                            constraint uses a strict lower bound
-        strict_upper    A boolean that indicates whether this
-                            constraint uses a strict upper bound
-
-    Private class attributes:
-        _component      The objective component.
-        _active         A boolean that indicates whether this data is active
-    """
-
-    __slots__ = ()
-
-    # Set to true when a constraint class stores its expression
-    # in linear canonical form
-    _linear_canonical_form = False
-
-    def __init__(self, component=None):
-        #
-        # These lines represent in-lining of the
-        # following constructors:
-        #   - _ConstraintData,
-        #   - ActiveComponentData
-        #   - ComponentData
-        self._component = weakref_ref(component) if (component is not None) else None
-        self._index = NOTSET
-        self._active = True
-
-    #
-    # Interface
-    #
-
-    def __call__(self, exception=True):
-        """Compute the value of the body of this constraint."""
-        return value(self.body, exception=exception)
-
-    def has_lb(self):
-        """Returns :const:`False` when the lower bound is
-        :const:`None` or negative infinity"""
-        return self.lb is not None
-
-    def has_ub(self):
-        """Returns :const:`False` when the upper bound is
-        :const:`None` or positive infinity"""
-        return self.ub is not None
-
-    def lslack(self):
-        """
-        Returns the value of f(x)-L for constraints of the form:
-            L <= f(x) (<= U)
-            (U >=) f(x) >= L
-        """
-        lb = self.lb
-        if lb is None:
-            return _inf
-        else:
-            return value(self.body) - lb
-
-    def uslack(self):
-        """
-        Returns the value of U-f(x) for constraints of the form:
-            (L <=) f(x) <= U
-            U >= f(x) (>= L)
-        """
-        ub = self.ub
-        if ub is None:
-            return _inf
-        else:
-            return ub - value(self.body)
-
-    def slack(self):
-        """
-        Returns the smaller of lslack and uslack values
-        """
-        lb = self.lb
-        ub = self.ub
-        body = value(self.body)
-        if lb is None:
-            return ub - body
-        elif ub is None:
-            return body - lb
-        return min(ub - body, body - lb)
-
-    #
-    # Abstract Interface
-    #
-
-    @property
-    def body(self):
-        """Access the body of a constraint expression."""
-        raise NotImplementedError
-
-    @property
-    def lower(self):
-        """Access the lower bound of a constraint expression."""
-        raise NotImplementedError
-
-    @property
-    def upper(self):
-        """Access the upper bound of a constraint expression."""
-        raise NotImplementedError
-
-    @property
-    def lb(self):
-        """Access the value of the lower bound of a constraint expression."""
-        raise NotImplementedError
-
-    @property
-    def ub(self):
-        """Access the value of the upper bound of a constraint expression."""
-        raise NotImplementedError
-
-    @property
-    def equality(self):
-        """A boolean indicating whether this is an equality constraint."""
-        raise NotImplementedError
-
-    @property
-    def strict_lower(self):
-        """True if this constraint has a strict lower bound."""
-        raise NotImplementedError
-
-    @property
-    def strict_upper(self):
-        """True if this constraint has a strict upper bound."""
-        raise NotImplementedError
-
-    def set_value(self, expr):
-        """Set the expression on this constraint."""
-        raise NotImplementedError
-
-    def get_value(self):
-        """Get the expression on this constraint."""
-        raise NotImplementedError
-
-
-class _GeneralConstraintData(_ConstraintData):
-    """
-    This class defines the data for a single general constraint.
+    This class defines the data for a single algebraic constraint.
 
     Constructor arguments:
         component       The Constraint object that owns this data.
@@ -312,11 +153,15 @@ class _GeneralConstraintData(_ConstraintData):
 
     __slots__ = ('_body', '_lower', '_upper', '_expr')
 
+    # Set to true when a constraint class stores its expression
+    # in linear canonical form
+    _linear_canonical_form = False
+
     def __init__(self, expr=None, component=None):
         #
         # These lines represent in-lining of the
         # following constructors:
-        #   - _ConstraintData,
+        #   - ConstraintData,
         #   - ActiveComponentData
         #   - ComponentData
         self._component = weakref_ref(component) if (component is not None) else None
@@ -329,9 +174,9 @@ class _GeneralConstraintData(_ConstraintData):
         if expr is not None:
             self.set_value(expr)
 
-    #
-    # Abstract Interface
-    #
+    def __call__(self, exception=True):
+        """Compute the value of the body of this constraint."""
+        return value(self.body, exception=exception)
 
     @property
     def body(self):
@@ -454,6 +299,16 @@ class _GeneralConstraintData(_ConstraintData):
     def strict_upper(self):
         """True if this constraint has a strict upper bound."""
         return False
+
+    def has_lb(self):
+        """Returns :const:`False` when the lower bound is
+        :const:`None` or negative infinity"""
+        return self.lb is not None
+
+    def has_ub(self):
+        """Returns :const:`False` when the upper bound is
+        :const:`None` or positive infinity"""
+        return self.ub is not None
 
     @property
     def expr(self):
@@ -682,6 +537,53 @@ class _GeneralConstraintData(_ConstraintData):
                         "upper bound (%s)." % (self.name, self._upper)
                     )
 
+    def lslack(self):
+        """
+        Returns the value of f(x)-L for constraints of the form:
+            L <= f(x) (<= U)
+            (U >=) f(x) >= L
+        """
+        lb = self.lb
+        if lb is None:
+            return _inf
+        else:
+            return value(self.body) - lb
+
+    def uslack(self):
+        """
+        Returns the value of U-f(x) for constraints of the form:
+            (L <=) f(x) <= U
+            U >= f(x) (>= L)
+        """
+        ub = self.ub
+        if ub is None:
+            return _inf
+        else:
+            return ub - value(self.body)
+
+    def slack(self):
+        """
+        Returns the smaller of lslack and uslack values
+        """
+        lb = self.lb
+        ub = self.ub
+        body = value(self.body)
+        if lb is None:
+            return ub - body
+        elif ub is None:
+            return body - lb
+        return min(ub - body, body - lb)
+
+
+class _ConstraintData(metaclass=RenamedClass):
+    __renamed__new_class__ = ConstraintData
+    __renamed__version__ = '6.7.2.dev0'
+
+
+class _GeneralConstraintData(metaclass=RenamedClass):
+    __renamed__new_class__ = ConstraintData
+    __renamed__version__ = '6.7.2.dev0'
+
 
 @ModelComponentFactory.register("General constraint expressions.")
 class Constraint(ActiveIndexedComponent):
@@ -717,8 +619,6 @@ class Constraint(ActiveIndexedComponent):
             A dictionary from the index set to component data objects
         _index
             The set of valid indices
-        _implicit_subsets
-            A tuple of set objects that represents the index set
         _model
             A weakref to the model that owns this component
         _parent
@@ -727,7 +627,7 @@ class Constraint(ActiveIndexedComponent):
             The class type for the derived subclass
     """
 
-    _ComponentDataClass = _GeneralConstraintData
+    _ComponentDataClass = ConstraintData
 
     class Infeasible(object):
         pass
@@ -736,6 +636,17 @@ class Constraint(ActiveIndexedComponent):
     NoConstraint = ActiveIndexedComponent.Skip
     Violated = Infeasible
     Satisfied = Feasible
+
+    @overload
+    def __new__(
+        cls: Type[Constraint], *args, **kwds
+    ) -> Union[ScalarConstraint, IndexedConstraint]: ...
+
+    @overload
+    def __new__(cls: Type[ScalarConstraint], *args, **kwds) -> ScalarConstraint: ...
+
+    @overload
+    def __new__(cls: Type[IndexedConstraint], *args, **kwds) -> IndexedConstraint: ...
 
     def __new__(cls, *args, **kwds):
         if cls != Constraint:
@@ -746,8 +657,7 @@ class Constraint(ActiveIndexedComponent):
             return super(Constraint, cls).__new__(IndexedConstraint)
 
     @overload
-    def __init__(self, *indexes, expr=None, rule=None, name=None, doc=None):
-        ...
+    def __init__(self, *indexes, expr=None, rule=None, name=None, doc=None): ...
 
     def __init__(self, *args, **kwargs):
         _init = self._pop_from_kwargs('Constraint', kwargs, ('rule', 'expr'), None)
@@ -771,6 +681,10 @@ class Constraint(ActiveIndexedComponent):
         timer = ConstructionTimer(self)
         if is_debug_set(logger):
             logger.debug("Constructing constraint %s" % (self.name))
+
+        if self._anonymous_sets is not None:
+            for _set in self._anonymous_sets:
+                _set.construct()
 
         rule = self.rule
         try:
@@ -871,14 +785,14 @@ class Constraint(ActiveIndexedComponent):
         )
 
 
-class ScalarConstraint(_GeneralConstraintData, Constraint):
+class ScalarConstraint(ConstraintData, Constraint):
     """
     ScalarConstraint is the implementation representing a single,
     non-indexed constraint.
     """
 
     def __init__(self, *args, **kwds):
-        _GeneralConstraintData.__init__(self, component=self, expr=None)
+        ConstraintData.__init__(self, component=self, expr=None)
         Constraint.__init__(self, *args, **kwds)
         self._index = UnindexedComponent_index
 
@@ -889,7 +803,7 @@ class ScalarConstraint(_GeneralConstraintData, Constraint):
     # currently in place). So during initialization only, we will
     # treat them as "indexed" objects where things like
     # Constraint.Skip are managed. But after that they will behave
-    # like _ConstraintData objects where set_value does not handle
+    # like ConstraintData objects where set_value does not handle
     # Constraint.Skip but expects a valid expression or None.
     #
     @property
@@ -902,7 +816,7 @@ class ScalarConstraint(_GeneralConstraintData, Constraint):
                 "an expression. There is currently "
                 "nothing to access." % (self.name)
             )
-        return _GeneralConstraintData.body.fget(self)
+        return ConstraintData.body.fget(self)
 
     @property
     def lower(self):
@@ -914,7 +828,7 @@ class ScalarConstraint(_GeneralConstraintData, Constraint):
                 "an expression. There is currently "
                 "nothing to access." % (self.name)
             )
-        return _GeneralConstraintData.lower.fget(self)
+        return ConstraintData.lower.fget(self)
 
     @property
     def upper(self):
@@ -926,7 +840,7 @@ class ScalarConstraint(_GeneralConstraintData, Constraint):
                 "an expression. There is currently "
                 "nothing to access." % (self.name)
             )
-        return _GeneralConstraintData.upper.fget(self)
+        return ConstraintData.upper.fget(self)
 
     @property
     def equality(self):
@@ -938,7 +852,7 @@ class ScalarConstraint(_GeneralConstraintData, Constraint):
                 "an expression. There is currently "
                 "nothing to access." % (self.name)
             )
-        return _GeneralConstraintData.equality.fget(self)
+        return ConstraintData.equality.fget(self)
 
     @property
     def strict_lower(self):
@@ -950,7 +864,7 @@ class ScalarConstraint(_GeneralConstraintData, Constraint):
                 "an expression. There is currently "
                 "nothing to access." % (self.name)
             )
-        return _GeneralConstraintData.strict_lower.fget(self)
+        return ConstraintData.strict_lower.fget(self)
 
     @property
     def strict_upper(self):
@@ -962,7 +876,7 @@ class ScalarConstraint(_GeneralConstraintData, Constraint):
                 "an expression. There is currently "
                 "nothing to access." % (self.name)
             )
-        return _GeneralConstraintData.strict_upper.fget(self)
+        return ConstraintData.strict_upper.fget(self)
 
     def clear(self):
         self._data = {}
@@ -1026,6 +940,11 @@ class IndexedConstraint(Constraint):
         """Add a constraint with a given index."""
         return self.__setitem__(index, expr)
 
+    @overload
+    def __getitem__(self, index) -> ConstraintData: ...
+
+    __getitem__ = IndexedComponent.__getitem__  # type: ignore
+
 
 @ModelComponentFactory.register("A list of constraint expressions.")
 class ConstraintList(IndexedConstraint):
@@ -1045,8 +964,7 @@ class ConstraintList(IndexedConstraint):
         _rule = kwargs.pop('rule', None)
         self._starting_index = kwargs.pop('starting_index', 1)
 
-        args = (Set(dimen=1),)
-        super(ConstraintList, self).__init__(*args, **kwargs)
+        super(ConstraintList, self).__init__(Set(dimen=1), **kwargs)
 
         self.rule = Initializer(
             _rule, treat_sequences_as_mappings=False, allow_generators=True
@@ -1068,7 +986,9 @@ class ConstraintList(IndexedConstraint):
         if is_debug_set(logger):
             logger.debug("Constructing constraint list %s" % (self.name))
 
-        self.index_set().construct()
+        if self._anonymous_sets is not None:
+            for _set in self._anonymous_sets:
+                _set.construct()
 
         if self.rule is not None:
             _rule = self.rule(self.parent_block(), ())

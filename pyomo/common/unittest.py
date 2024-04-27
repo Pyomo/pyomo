@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -498,6 +498,10 @@ class TestCase(_unittest.TestCase):
 
     __doc__ += _unittest.TestCase.__doc__
 
+    # By default, we always want to spend the time to create the full
+    # diff of the test reault and the baseline
+    maxDiff = None
+
     def assertStructuredAlmostEqual(
         self,
         first,
@@ -554,6 +558,20 @@ class TestCase(_unittest.TestCase):
             contextClass = _unittest.case._AssertRaisesContext
         context = contextClass(expected_exception, self, expected_regex)
         return context.handle('assertRaisesRegex', args, kwargs)
+
+    def assertExpressionsEqual(self, a, b, include_named_exprs=True, places=None):
+        from pyomo.core.expr.compare import assertExpressionsEqual
+
+        return assertExpressionsEqual(self, a, b, include_named_exprs, places)
+
+    def assertExpressionsStructurallyEqual(
+        self, a, b, include_named_exprs=True, places=None
+    ):
+        from pyomo.core.expr.compare import assertExpressionsStructurallyEqual
+
+        return assertExpressionsStructurallyEqual(
+            self, a, b, include_named_exprs, places
+        )
 
 
 class BaselineTestDriver(object):
@@ -617,7 +635,7 @@ class BaselineTestDriver(object):
         cls.package_modules = {}
         packages_used = set(sum(list(cls.package_dependencies.values()), []))
         for package_ in packages_used:
-            pack, pack_avail = attempt_import(package_, defer_check=False)
+            pack, pack_avail = attempt_import(package_, defer_import=False)
             cls.package_available[package_] = pack_avail
             cls.package_modules[package_] = pack
 

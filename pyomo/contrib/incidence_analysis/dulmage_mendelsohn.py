@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -160,7 +160,7 @@ def dulmage_mendelsohn(matrix_or_graph, top_nodes=None, matching=None):
 
         partition = (
             row_partition,
-            tuple([n - M for n in subset] for subset in col_partition)
+            tuple([n - M for n in subset] for subset in col_partition),
             # Column nodes have values in [M, M+N-1]. Apply the offset
             # to get values corresponding to indices in user's matrix.
         )

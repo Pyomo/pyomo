@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -98,7 +98,7 @@ def slice_component_along_sets(comp, sets, context=None):
     sets: `pyomo.common.collections.ComponentSet`
         Contains the sets to replace with slices
     context: `pyomo.core.base.block.Block` or
-    `pyomo.core.base.block._BlockData`
+    `pyomo.core.base.block.BlockData`
         Block below which to search for sets
 
     Returns:

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -493,9 +493,8 @@ class GurobiDirect(DirectSolver):
         if not con.active:
             return None
 
-        if is_fixed(con.body):
-            if self._skip_trivial_constraints:
-                return None
+        if self._skip_trivial_constraints and is_fixed(con.body):
+            return None
 
         conname = self._symbol_map.getSymbol(con, self._labeler)
 

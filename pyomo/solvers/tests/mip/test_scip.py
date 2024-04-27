@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -105,6 +105,12 @@ class Test(unittest.TestCase):
         _out = TempfileManager.create_tempfile(".txt")
         results.write(filename=_out, times=False, format='json')
         self.compare_json(_out, join(currdir, "test_scip_solve_from_instance.baseline"))
+
+    def test_scip_solve_from_instance_with_reoptimization(self):
+        # Test scip with re-optimization option enabled
+        # This case changes the Scip output results which may break the results parser
+        self.scip.options['reoptimization/enable'] = True
+        self.test_scip_solve_from_instance()
 
 
 if __name__ == "__main__":

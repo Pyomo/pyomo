@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -29,7 +29,7 @@ from pyomo.environ import (
     value,
     sum_product,
 )
-from pyomo.core.base.expression import _GeneralExpressionData
+from pyomo.core.base.expression import ExpressionData
 from pyomo.core.expr.compare import compare_expressions, assertExpressionsEqual
 from pyomo.common.tee import capture_output
 
@@ -515,10 +515,10 @@ E : Size=2
         model.E = Expression(model.idx)
         self.assertEqual(len(model.E), 3)
         expr = model.E[1]
-        self.assertIs(type(expr), _GeneralExpressionData)
+        self.assertIs(type(expr), ExpressionData)
         model.E[1] = None
         self.assertIs(expr, model.E[1])
-        self.assertIs(type(expr), _GeneralExpressionData)
+        self.assertIs(type(expr), ExpressionData)
         self.assertIs(expr.expr, None)
         model.E[1] = 5
         self.assertIs(expr, model.E[1])
@@ -537,7 +537,7 @@ E : Size=2
 
         model.E[1] = None
         expr = model.E[1]
-        self.assertIs(type(expr), _GeneralExpressionData)
+        self.assertIs(type(expr), ExpressionData)
         self.assertIs(expr.expr, None)
         model.E[1] = 5
         self.assertIs(expr, model.E[1])
@@ -738,11 +738,11 @@ E : Size=2
         expr = model.e * model.x**2 + model.E[1]
 
         output = """\
-sum(prod(e{sum(mon(1, x), 2)}, pow(x, 2)), E[1]{sum(pow(x, 2), 1)})
+sum(prod(e{sum(x, 2)}, pow(x, 2)), E[1]{sum(pow(x, 2), 1)})
 e : Size=1, Index=None
     Key  : Expression
-    None : sum(mon(1, x), 2)
-E : Size=2, Index=E_index
+    None : sum(x, 2)
+E : Size=2, Index={1, 2}
     Key : Expression
       1 : sum(pow(x, 2), 1)
       2 : sum(pow(x, 2), 1)
@@ -761,7 +761,7 @@ sum(prod(e{1.0}, pow(x, 2)), E[1]{2.0})
 e : Size=1, Index=None
     Key  : Expression
     None :        1.0
-E : Size=2, Index=E_index
+E : Size=2, Index={1, 2}
     Key : Expression
       1 : 2.0
       2 : sum(pow(x, 2), 1)
@@ -780,7 +780,7 @@ sum(prod(e{Undefined}, pow(x, 2)), E[1]{Undefined})
 e : Size=1, Index=None
     Key  : Expression
     None :  Undefined
-E : Size=2, Index=E_index
+E : Size=2, Index={1, 2}
     Key : Expression
       1 : Undefined
       2 : sum(pow(x, 2), 1)
@@ -806,7 +806,7 @@ E : Size=2, Index=E_index
 e : Size=1, Index=None
     Key  : Expression
     None : x + 2
-E : Size=2, Index=E_index
+E : Size=2, Index={1, 2}
     Key : Expression
       1 : x**2 + 1
       2 : x**2 + 1
@@ -830,7 +830,7 @@ x**2 + 2.0
 e : Size=1, Index=None
     Key  : Expression
     None :        1.0
-E : Size=2, Index=E_index
+E : Size=2, Index={1, 2}
     Key : Expression
       1 : 2.0
       2 : x**2 + 1
@@ -849,7 +849,7 @@ e{None}*x**2 + E[1]{None}
 e : Size=1, Index=None
     Key  : Expression
     None :  Undefined
-E : Size=2, Index=E_index
+E : Size=2, Index={1, 2}
     Key : Expression
       1 : Undefined
       2 : x**2 + 1
@@ -951,12 +951,7 @@ E : Size=2, Index=E_index
         assertExpressionsEqual(
             self,
             m.e.expr,
-            EXPR.LinearExpression(
-                [
-                    EXPR.MonomialTermExpression((1, m.x)),
-                    EXPR.MonomialTermExpression((-1, m.y)),
-                ]
-            ),
+            EXPR.LinearExpression([m.x, EXPR.MonomialTermExpression((-1, m.y))]),
         )
         self.assertTrue(compare_expressions(m.e.expr, m.x - m.y))
 

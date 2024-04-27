@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -60,12 +60,12 @@ from pyomo.core.base import (
 )
 from pyomo.core.base.boolean_var import (
     ScalarBooleanVar,
-    _GeneralBooleanVarData,
+    BooleanVarData,
     IndexedBooleanVar,
 )
-from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
-from pyomo.core.base.param import IndexedParam, ScalarParam
-from pyomo.core.base.var import ScalarVar, _GeneralVarData, IndexedVar
+from pyomo.core.base.expression import ScalarExpression, ExpressionData
+from pyomo.core.base.param import IndexedParam, ScalarParam, ParamData
+from pyomo.core.base.var import ScalarVar, VarData, IndexedVar
 import pyomo.core.expr as EXPR
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor, identify_variables
 from pyomo.core.base import Set, RangeSet
@@ -805,6 +805,14 @@ def _handle_at_least_node(visitor, node, *args):
     )
 
 
+def _handle_all_diff_node(visitor, node, *args):
+    return (_GENERAL, cp.all_diff(_get_int_valued_expr(arg) for arg in args))
+
+
+def _handle_count_if_node(visitor, node, *args):
+    return (_GENERAL, cp.count((_get_bool_valued_expr(arg) for arg in args), 1))
+
+
 ## CallExpression handllers
 
 
@@ -932,6 +940,8 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         EXPR.ExactlyExpression: _handle_exactly_node,
         EXPR.AtMostExpression: _handle_at_most_node,
         EXPR.AtLeastExpression: _handle_at_least_node,
+        EXPR.AllDifferentExpression: _handle_all_diff_node,
+        EXPR.CountIfExpression: _handle_count_if_node,
         EXPR.EqualityExpression: _handle_equality_node,
         EXPR.NotEqualExpression: _handle_not_equal_node,
         EXPR.InequalityExpression: _handle_inequality_node,
@@ -939,7 +949,7 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         BeforeExpression: _handle_before_expression_node,
         AtExpression: _handle_at_expression_node,
         AlwaysIn: _handle_always_in_node,
-        _GeneralExpressionData: _handle_named_expression_node,
+        ExpressionData: _handle_named_expression_node,
         ScalarExpression: _handle_named_expression_node,
     }
     _var_handles = {
@@ -951,15 +961,16 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         IntervalVarData: _before_interval_var,
         IndexedIntervalVar: _before_indexed_interval_var,
         ScalarVar: _before_var,
-        _GeneralVarData: _before_var,
+        VarData: _before_var,
         IndexedVar: _before_indexed_var,
         ScalarBooleanVar: _before_boolean_var,
-        _GeneralBooleanVarData: _before_boolean_var,
+        BooleanVarData: _before_boolean_var,
         IndexedBooleanVar: _before_indexed_boolean_var,
-        _GeneralExpressionData: _before_named_expression,
+        ExpressionData: _before_named_expression,
         ScalarExpression: _before_named_expression,
         IndexedParam: _before_indexed_param,  # Because of indirection
         ScalarParam: _before_param,
+        ParamData: _before_param,
     }
 
     def __init__(self, cpx_model, symbolic_solver_labels=False):

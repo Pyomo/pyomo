@@ -22,14 +22,27 @@ jobs:
     name: Build wheels (${{ matrix.wheel-version }}) on ${{ matrix.os }} for native and cross-compiled architecture
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: true
       matrix:
         os: [ubuntu-22.04, windows-latest, macos-latest]
         arch: [all]
         wheel-version: ['cp38*', 'cp39*', 'cp310*', 'cp311*', 'cp312*']
+
+        include:
+        - wheel-version: 'cp38*'
+          TARGET: 'py38'
+        - wheel-version: 'cp39*'
+          TARGET: 'py39'
+        - wheel-version: 'cp310*'
+          TARGET: 'py310'
+        - wheel-version: 'cp311*'
+          TARGET: 'py311'
+        - wheel-version: 'cp312*'
+          TARGET: 'py312'
     steps:
       - uses: actions/checkout@v4
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.16.2
+        uses: pypa/cibuildwheel@v2.16.5
         with:
           output-dir: dist
         env:
@@ -41,10 +54,11 @@ jobs:
             CIBW_BUILD_VERBOSITY: 1
             CIBW_BEFORE_BUILD: pip install cython pybind11
             CIBW_CONFIG_SETTINGS: '--global-option="--with-cython --with-distributable-extensions"'
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
-          name: native_wheels
+          name: native_wheels-${{ matrix.os }}-${{ matrix.TARGET }}
           path: dist/*.whl
+          overwrite: true
 
   alternative_wheels:
     name: Build wheels (${{ matrix.wheel-version }}) on ${{ matrix.os }} for aarch64
@@ -54,6 +68,18 @@ jobs:
         os: [ubuntu-22.04]
         arch: [all]
         wheel-version: ['cp38*', 'cp39*', 'cp310*', 'cp311*', 'cp312*']
+
+        include:
+        - wheel-version: 'cp38*'
+          TARGET: 'py38'
+        - wheel-version: 'cp39*'
+          TARGET: 'py39'
+        - wheel-version: 'cp310*'
+          TARGET: 'py310'
+        - wheel-version: 'cp311*'
+          TARGET: 'py311'
+        - wheel-version: 'cp312*'
+          TARGET: 'py312'
     steps:
       - uses: actions/checkout@v4
       - name: Set up QEMU
@@ -62,7 +88,7 @@ jobs:
         with:
           platforms: all
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.16.2
+        uses: pypa/cibuildwheel@v2.16.5
         with:
           output-dir: dist
         env:
@@ -72,10 +98,11 @@ jobs:
             CIBW_BUILD_VERBOSITY: 1
             CIBW_BEFORE_BUILD: pip install cython pybind11
             CIBW_CONFIG_SETTINGS: '--global-option="--with-cython --with-distributable-extensions"'
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
-          name: alt_wheels
+          name: alt_wheels-${{ matrix.os }}-${{ matrix.TARGET }}
           path: dist/*.whl
+          overwrite: true
 
   generictarball:
     name: ${{ matrix.TARGET }}
@@ -91,7 +118,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
@@ -102,8 +129,9 @@ jobs:
       run: |
         python setup.py --without-cython sdist --format=gztar
     - name: Upload artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: generictarball
         path: dist
+        overwrite: true
 

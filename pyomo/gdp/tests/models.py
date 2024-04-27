@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 from pyomo.core import (
     Block,
     ConcreteModel,
@@ -463,7 +474,7 @@ def makeNestedDisjunctions():
 
     (makeNestedDisjunctions_NestedDisjuncts is a much simpler model. All
     this adds is that it has a nested disjunction on a DisjunctData as well
-    as on a SimpleDisjunct. So mostly it exists for historical reasons.)
+    as on a ScalarDisjunct. So mostly it exists for historical reasons.)
     """
     m = ConcreteModel()
     m.x = Var(bounds=(-9, 9))
@@ -549,6 +560,44 @@ def makeNestedDisjunctions_NestedDisjuncts():
     m.d1.d4.c = Constraint(expr=m.x >= 1.3)
     m.disj = Disjunction(expr=[m.d1, m.d2])
     m.d1.disj2 = Disjunction(expr=[m.d1.d3, m.d1.d4])
+    return m
+
+
+def why_indicator_vars_are_not_always_local():
+    m = ConcreteModel()
+    m.x = Var(bounds=(1, 10))
+
+    @m.Disjunct()
+    def Z1(d):
+        m = d.model()
+        d.c = Constraint(expr=m.x >= 1.1)
+
+    @m.Disjunct()
+    def Z2(d):
+        m = d.model()
+        d.c = Constraint(expr=m.x >= 1.2)
+
+    @m.Disjunct()
+    def Y1(d):
+        m = d.model()
+        d.c = Constraint(expr=(1.15, m.x, 8))
+        d.disjunction = Disjunction(expr=[m.Z1, m.Z2])
+
+    @m.Disjunct()
+    def Y2(d):
+        m = d.model()
+        d.c = Constraint(expr=m.x == 9)
+
+    m.disjunction = Disjunction(expr=[m.Y1, m.Y2])
+
+    m.logical_cons = LogicalConstraint(
+        expr=m.Y2.indicator_var.implies(m.Z1.indicator_var.land(m.Z2.indicator_var))
+    )
+
+    # optimal value is 9, but it will be 8 if we wrongly assume that the nested
+    # indicator_vars are local.
+    m.obj = Objective(expr=m.x, sense=maximize)
+
     return m
 
 
@@ -791,7 +840,7 @@ def makeAnyIndexedDisjunctionOfDisjunctDatas():
     build from DisjunctDatas. Identical mathematically to
     makeDisjunctionOfDisjunctDatas.
 
-    Used to test that the right things happen for a case where soemone
+    Used to test that the right things happen for a case where someone
     implements an algorithm which iteratively generates disjuncts and
     retransforms"""
     m = ConcreteModel()

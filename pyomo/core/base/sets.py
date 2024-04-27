@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -13,14 +13,12 @@
 # . rename 'filter' to something else
 # . confirm that filtering is efficient
 
-__all__ = ['Set', 'set_options', 'simple_set_rule', 'SetOf']
-
 from .set import (
     process_setarg,
     set_options,
     simple_set_rule,
     _SetDataBase,
-    _SetData,
+    SetData,
     Set,
     SetOf,
     IndexedSet,

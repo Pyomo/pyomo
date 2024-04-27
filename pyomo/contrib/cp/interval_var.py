@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -18,7 +18,7 @@ from pyomo.contrib.cp.scheduling_expr.precedence_expressions import (
 
 from pyomo.core import Integers, value
 from pyomo.core.base import Any, ScalarVar, ScalarBooleanVar
-from pyomo.core.base.block import _BlockData, Block
+from pyomo.core.base.block import BlockData, Block
 from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
@@ -87,14 +87,14 @@ class IntervalVarPresence(ScalarBooleanVar):
         return self.parent_block()
 
 
-class IntervalVarData(_BlockData):
+class IntervalVarData(BlockData):
     """This class defines the abstract interface for a single interval variable."""
 
     # We will put our four variables on this, and everything else is off limits.
     _Block_reserved_words = Any
 
     def __init__(self, component=None):
-        _BlockData.__init__(self, component)
+        BlockData.__init__(self, component)
 
         with self._declare_reserved_components():
             self.is_present = IntervalVarPresence()
@@ -161,8 +161,7 @@ class IntervalVar(Block):
         optional=False,
         name=None,
         doc=None
-    ):
-        ...
+    ): ...
 
     def __init__(self, *args, **kwargs):
         _start_arg = kwargs.pop('start', None)

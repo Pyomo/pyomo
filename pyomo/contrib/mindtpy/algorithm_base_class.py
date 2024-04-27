@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -27,13 +27,7 @@ from pyomo.contrib.mindtpy.cut_generation import add_no_good_cuts
 from operator import itemgetter
 from pyomo.common.errors import DeveloperError
 from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
-from pyomo.opt import (
-    SolverFactory,
-    SolverResults,
-    ProblemSense,
-    SolutionStatus,
-    SolverStatus,
-)
+from pyomo.opt import SolverFactory, SolverResults, SolutionStatus, SolverStatus
 from pyomo.core import (
     minimize,
     maximize,
@@ -108,7 +102,7 @@ class _MindtPyAlgorithm(object):
         self.curr_int_sol = []
         self.should_terminate = False
         self.integer_list = []
-        # Dictionary {integer solution (list): [cuts begin index, cuts end index] (list)}
+        # Dictionary {integer solution (tuple): [cuts begin index, cuts end index] (list)}
         self.integer_solution_to_cuts_index = dict()
 
         # Set up iteration counters
@@ -633,9 +627,7 @@ class _MindtPyAlgorithm(object):
             raise ValueError('Model has multiple active objectives.')
         else:
             main_obj = active_objectives[0]
-        self.results.problem.sense = (
-            ProblemSense.minimize if main_obj.sense == 1 else ProblemSense.maximize
-        )
+        self.results.problem.sense = main_obj.sense
         self.objective_sense = main_obj.sense
 
         # Move the objective to the constraints if it is nonlinear or move_objective is True.
@@ -1290,7 +1282,6 @@ class _MindtPyAlgorithm(object):
         #         elif var.has_lb() and abs(value(var) - var.lb) < config.absolute_bound_tolerance:
         #             fixed_nlp.ipopt_zU_out[var] = -1
 
-        # config.logger.info('Solving feasibility problem')
         feas_subproblem, feas_subproblem_results = self.solve_feasibility_subproblem()
         # TODO: do we really need this?
         if self.should_terminate:
@@ -1562,7 +1553,7 @@ class _MindtPyAlgorithm(object):
                 self.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result)
 
             MindtPy = self.mip.MindtPy_utils
-            # deactivate the integer cuts generated after the best solution was found.
+            # Deactivate the integer cuts generated after the best solution was found.
             self.deactivate_no_good_cuts_when_fixing_bound(MindtPy.cuts.no_good_cuts)
             if (
                 config.add_regularization is not None
@@ -2679,9 +2670,9 @@ class _MindtPyAlgorithm(object):
             if config.mip_regularization_solver == 'gams':
                 self.regularization_mip_opt.options['add_options'] = []
             if config.regularization_mip_threads > 0:
-                self.regularization_mip_opt.options[
-                    'threads'
-                ] = config.regularization_mip_threads
+                self.regularization_mip_opt.options['threads'] = (
+                    config.regularization_mip_threads
+                )
             else:
                 self.regularization_mip_opt.options['threads'] = config.threads
 
@@ -2691,9 +2682,9 @@ class _MindtPyAlgorithm(object):
                 'cplex_persistent',
             }:
                 if config.solution_limit is not None:
-                    self.regularization_mip_opt.options[
-                        'mip_limits_solutions'
-                    ] = config.solution_limit
+                    self.regularization_mip_opt.options['mip_limits_solutions'] = (
+                        config.solution_limit
+                    )
                 # We don't need to solve the regularization problem to optimality.
                 # We will choose to perform aggressive node probing during presolve.
                 self.regularization_mip_opt.options['mip_strategy_presolvenode'] = 3
@@ -2706,9 +2697,9 @@ class _MindtPyAlgorithm(object):
                     self.regularization_mip_opt.options['optimalitytarget'] = 3
             elif config.mip_regularization_solver == 'gurobi':
                 if config.solution_limit is not None:
-                    self.regularization_mip_opt.options[
-                        'SolutionLimit'
-                    ] = config.solution_limit
+                    self.regularization_mip_opt.options['SolutionLimit'] = (
+                        config.solution_limit
+                    )
                 # Same reason as mip_strategy_presolvenode.
                 self.regularization_mip_opt.options['Presolve'] = 2
 
@@ -3027,10 +3018,12 @@ class _MindtPyAlgorithm(object):
 
         # if add_no_good_cuts is True, the bound obtained in the last iteration is no reliable.
         # we correct it after the iteration.
+        # There is no need to fix the dual bound if no feasible solution has been found.
         if (
             (config.add_no_good_cuts or config.use_tabu_list)
             and not self.should_terminate
             and config.add_regularization is None
+            and self.best_solution_found is not None
         ):
             self.fix_dual_bound(self.last_iter_cuts)
         config.logger.info(
@@ -3068,10 +3061,9 @@ class _MindtPyAlgorithm(object):
             # The main problem might be unbounded, regularization is activated only when a valid bound is provided.
             if self.dual_bound != self.dual_bound_progress[0]:
                 with time_code(self.timing, 'regularization main'):
-                    (
-                        regularization_main_mip,
-                        regularization_main_mip_results,
-                    ) = self.solve_regularization_main()
+                    (regularization_main_mip, regularization_main_mip_results) = (
+                        self.solve_regularization_main()
+                    )
                 self.handle_regularization_main_tc(
                     regularization_main_mip, regularization_main_mip_results
                 )

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -258,10 +258,9 @@ class InteriorPointInterface(BaseInteriorPointInterface):
 
         # set the init_duals_primals_lb/ub from ipopt_zL_out, ipopt_zU_out if available
         # need to compress them as well and initialize the duals_primals_lb/ub
-        (
-            self._init_duals_primals_lb,
-            self._init_duals_primals_ub,
-        ) = self._get_full_duals_primals_bounds()
+        (self._init_duals_primals_lb, self._init_duals_primals_ub) = (
+            self._get_full_duals_primals_bounds()
+        )
         self._init_duals_primals_lb[np.isneginf(self._nlp.primals_lb())] = 0
         self._init_duals_primals_ub[np.isinf(self._nlp.primals_ub())] = 0
         self._duals_primals_lb = self._init_duals_primals_lb.copy()

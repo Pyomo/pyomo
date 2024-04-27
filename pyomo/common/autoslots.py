@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -29,7 +29,7 @@ def _deepcopy_tuple(obj, memo, _id):
             unchanged = False
     if unchanged:
         # Python does not duplicate "unchanged" tuples (i.e. allows the
-        # original objecct to be returned from deepcopy()).  We will
+        # original object to be returned from deepcopy()).  We will
         # preserve that behavior here.
         #
         # It also appears to be faster *not* to cache the fact that this

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -18,7 +18,7 @@ from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base import Var, Set, Constraint, value
-from pyomo.core.base.block import _BlockData, Block, declare_custom_block
+from pyomo.core.base.block import BlockData, Block, declare_custom_block
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.initializer import Initializer
 from pyomo.core.base.set import UnindexedComponent_set
@@ -316,7 +316,7 @@ class ExternalGreyBoxModel(object):
     #
 
 
-class ExternalGreyBoxBlockData(_BlockData):
+class ExternalGreyBoxBlockData(BlockData):
     def set_external_model(self, external_grey_box_model, inputs=None, outputs=None):
         """
         Parameters
@@ -424,7 +424,7 @@ class ScalarExternalGreyBoxBlock(ExternalGreyBoxBlockData, ExternalGreyBoxBlock)
     def __init__(self, *args, **kwds):
         ExternalGreyBoxBlockData.__init__(self, component=self)
         ExternalGreyBoxBlock.__init__(self, *args, **kwds)
-        # The above inherit from Block and _BlockData, so it's not until here
+        # The above inherit from Block and BlockData, so it's not until here
         # that we know it's scalar. So we set the index accordingly.
         self._index = UnindexedComponent_index
 

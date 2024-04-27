@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -33,7 +33,7 @@ from pyomo.core import (
     Any,
 )
 from pyomo.core.base import Transformation
-from pyomo.core.base.block import _BlockData, Block
+from pyomo.core.base.block import Block
 from pyomo.core.util import target_list
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.gdp.util import is_child_of
@@ -147,7 +147,7 @@ class PiecewiseLinearToGDP(Transformation):
                 self._transform_piecewise_linear_function(
                     t, config.descend_into_expressions
                 )
-            elif t.ctype is Block or isinstance(t, _BlockData):
+            elif issubclass(t.ctype, Block):
                 self._transform_block(t, config.descend_into_expressions)
             elif t.ctype is Constraint:
                 if not config.descend_into_expressions:

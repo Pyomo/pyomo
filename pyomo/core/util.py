@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -13,27 +13,12 @@
 # Utility functions
 #
 
-__all__ = [
-    'sum_product',
-    'summation',
-    'dot_product',
-    'sequence',
-    'prod',
-    'quicksum',
-    'target_list',
-]
-
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.core.expr.numvalue import native_numeric_types
-from pyomo.core.expr.numeric_expr import (
-    mutable_expression,
-    nonlinear_expression,
-    NPV_SumExpression,
-)
-import pyomo.core.expr as EXPR
+from pyomo.core.expr.numeric_expr import mutable_expression, NPV_SumExpression
 from pyomo.core.base.var import Var
 from pyomo.core.base.expression import Expression
-from pyomo.core.base.component import _ComponentBase
+from pyomo.core.base.component import ComponentBase
 import logging
 
 logger = logging.getLogger(__name__)
@@ -253,12 +238,12 @@ def sequence(*args):
 
 
 def target_list(x):
-    if isinstance(x, _ComponentBase):
+    if isinstance(x, ComponentBase):
         return [x]
     elif hasattr(x, '__iter__'):
         ans = []
         for i in x:
-            if isinstance(i, _ComponentBase):
+            if isinstance(i, ComponentBase):
                 ans.append(i)
             else:
                 raise ValueError(

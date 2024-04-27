@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -104,7 +104,7 @@ class TestMiscPiecewise(unittest.TestCase):
         model.con3 = Piecewise(*args, **keywords)
 
     # test that nonindexed Piecewise can handle
-    # _VarData (e.g model.x[1]
+    # VarData (e.g model.x[1]
     def test_nonindexed_with_indexed_vars(self):
         model = ConcreteModel()
         model.range = Var([1])

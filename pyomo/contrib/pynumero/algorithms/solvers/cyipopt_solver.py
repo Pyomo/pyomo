@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -24,6 +24,8 @@ import abc
 from pyomo.common.deprecation import relocated_module_attribute
 from pyomo.common.dependencies import attempt_import, numpy as np, numpy_available
 from pyomo.common.tee import redirect_fd, TeeStream
+from pyomo.common.modeling import unique_component_name
+from pyomo.core.base.objective import Objective
 
 # Because pynumero.interfaces requires numpy, we will leverage deferred
 # imports here so that the solver can be registered even when numpy is
@@ -63,7 +65,7 @@ relocated_module_attribute(
 from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.common.timing import TicTocTimer
 from pyomo.core.base import Block, Objective, minimize
-from pyomo.opt import SolverStatus, SolverResults, TerminationCondition, ProblemSense
+from pyomo.opt import SolverStatus, SolverResults, TerminationCondition
 from pyomo.opt.results.solution import Solution
 
 logger = logging.getLogger(__name__)
@@ -317,7 +319,13 @@ class PyomoCyIpoptSolver(object):
         return True
 
     def version(self):
-        return tuple(int(_) for _ in cyipopt.__version__.split("."))
+        def _int(x):
+            try:
+                return int(x)
+            except:
+                return x
+
+        return tuple(_int(_) for _ in cyipopt_interface.cyipopt.__version__.split("."))
 
     def solve(self, model, **kwds):
         config = self.config(kwds, preserve_implicit=True)
@@ -332,11 +340,22 @@ class PyomoCyIpoptSolver(object):
         grey_box_blocks = list(
             model.component_data_objects(egb.ExternalGreyBoxBlock, active=True)
         )
-        if grey_box_blocks:
-            # nlp = pyomo_nlp.PyomoGreyBoxNLP(model)
-            nlp = pyomo_grey_box.PyomoNLPWithGreyBoxBlocks(model)
-        else:
-            nlp = pyomo_nlp.PyomoNLP(model)
+        # if there is no objective, add one temporarily so we can construct an NLP
+        objectives = list(model.component_data_objects(Objective, active=True))
+        if not objectives:
+            objname = unique_component_name(model, "_obj")
+            objective = model.add_component(objname, Objective(expr=0.0))
+        try:
+            if grey_box_blocks:
+                # nlp = pyomo_nlp.PyomoGreyBoxNLP(model)
+                nlp = pyomo_grey_box.PyomoNLPWithGreyBoxBlocks(model)
+            else:
+                nlp = pyomo_nlp.PyomoNLP(model)
+        finally:
+            # We only need the objective to construct the NLP, so we delete
+            # it from the model ASAP
+            if not objectives:
+                model.del_component(objective)
 
         problem = cyipopt_interface.CyIpoptNLP(
             nlp,
@@ -428,11 +447,10 @@ class PyomoCyIpoptSolver(object):
 
         results.problem.name = model.name
         obj = next(model.component_data_objects(Objective, active=True))
+        results.problem.sense = obj.sense
         if obj.sense == minimize:
-            results.problem.sense = ProblemSense.minimize
             results.problem.upper_bound = info["obj_val"]
         else:
-            results.problem.sense = ProblemSense.maximize
             results.problem.lower_bound = info["obj_val"]
         results.problem.number_of_objectives = 1
         results.problem.number_of_constraints = ng

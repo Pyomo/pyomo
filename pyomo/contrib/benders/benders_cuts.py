@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.base.block import _BlockData, declare_custom_block
+from pyomo.core.base.block import BlockData, declare_custom_block
 import pyomo.environ as pyo
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.core.expr.visitor import identify_variables
@@ -166,13 +166,13 @@ def _setup_subproblem(b, root_vars, relax_subproblem_cons):
 
 
 @declare_custom_block(name='BendersCutGenerator')
-class BendersCutGeneratorData(_BlockData):
+class BendersCutGeneratorData(BlockData):
     def __init__(self, component):
         if not mpi4py_available:
             raise ImportError('BendersCutGenerator requires mpi4py.')
         if not numpy_available:
             raise ImportError('BendersCutGenerator requires numpy.')
-        _BlockData.__init__(self, component)
+        BlockData.__init__(self, component)
 
         self.num_subproblems_by_rank = 0  # np.zeros(self.comm.Get_size())
         self.subproblems = list()
@@ -335,7 +335,6 @@ class BendersCutGeneratorData(_BlockData):
                     subproblem_solver.remove_constraint(c)
                 subproblem_solver.remove_constraint(subproblem.fix_eta)
             del subproblem.fix_complicating_vars
-            del subproblem.fix_complicating_vars_index
             del subproblem.fix_eta
 
         total_num_subproblems = self.global_num_subproblems()

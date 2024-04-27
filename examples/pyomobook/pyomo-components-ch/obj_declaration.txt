@@ -14,7 +14,7 @@ declexprrule
 Model unknown
 
   Variables:
-    x : Size=2, Index=x_index
+    x : Size=2, Index={1, 2}
         Key : Lower : Value : Upper : Fixed : Stale : Domain
           1 :  None :   1.0 :  None : False : False :  Reals
           2 :  None :   1.0 :  None : False : False :  Reals
@@ -34,19 +34,19 @@ declskip
 Model unknown
 
   Variables:
-    x : Size=3, Index=x_index
+    x : Size=3, Index={Q, R, S}
         Key : Lower : Value : Upper : Fixed : Stale : Domain
           Q :  None :   1.0 :  None : False : False :  Reals
           R :  None :   1.0 :  None : False : False :  Reals
           S :  None :   1.0 :  None : False : False :  Reals
 
   Objectives:
-    d : Size=3, Index=d_index, Active=True
+    d : Size=3, Index={Q, R, S}, Active=True
         Key : Active : Value
           Q :   True :   1.0
           R :   True :   1.0
           S :   True :   1.0
-    e : Size=2, Index=e_index, Active=True
+    e : Size=2, Index={Q, R, S}, Active=True
         Key : Active : Value
           Q :   True :   1.0
           S :   True :   1.0
@@ -55,12 +55,12 @@ Model unknown
     None
 value
 x[Q] + 2*x[R]
-1
+minimize
 6.5
 Model unknown
 
   Variables:
-    x : Size=2, Index=x_index
+    x : Size=2, Index={Q, R}
         Key : Lower : Value : Upper : Fixed : Stale : Domain
           Q :  None :   1.5 :  None : False : False :  Reals
           R :  None :   2.5 :  None : False : False :  Reals

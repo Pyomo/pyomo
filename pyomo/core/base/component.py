@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -20,6 +20,7 @@ from pyomo.common import DeveloperError
 from pyomo.common.autoslots import AutoSlots, fast_deepcopy
 from pyomo.common.collections import OrderedDict
 from pyomo.common.deprecation import (
+    RenamedClass,
     deprecated,
     deprecation_warning,
     relocated_module_attribute,
@@ -79,7 +80,7 @@ class CloneError(pyomo.common.errors.PyomoException):
     pass
 
 
-class _ComponentBase(PyomoObject):
+class ComponentBase(PyomoObject):
     """A base class for Component and ComponentData
 
     This class defines some fundamental methods and properties that are
@@ -368,7 +369,7 @@ class _ComponentBase(PyomoObject):
 
     @property
     def name(self):
-        """Get the fully qualifed component name."""
+        """Get the fully qualified component name."""
         return self.getname(fully_qualified=True)
 
     # Adding a setter here to help users adapt to the new
@@ -474,7 +475,12 @@ class _ComponentBase(PyomoObject):
             ostream.write(_data)
 
 
-class Component(_ComponentBase):
+class _ComponentBase(metaclass=RenamedClass):
+    __renamed__new_class__ = ComponentBase
+    __renamed__version__ = '6.7.2.dev0'
+
+
+class Component(ComponentBase):
     """
     This is the base class for all Pyomo modeling components.
 
@@ -501,7 +507,7 @@ class Component(_ComponentBase):
         #
         self._ctype = kwds.pop('ctype', None)
         self.doc = kwds.pop('doc', None)
-        self._name = kwds.pop('name', str(type(self).__name__))
+        self._name = kwds.pop('name', None)
         if kwds:
             raise ValueError(
                 "Unexpected keyword options found while constructing '%s':\n\t%s"
@@ -625,6 +631,8 @@ class Component(_ComponentBase):
             Generate fully_qualified names relative to the specified block.
         """
         local_name = self._name
+        if local_name is None:
+            local_name = type(self).__name__
         if fully_qualified:
             pb = self.parent_block()
             if relative_to is None:
@@ -662,7 +670,7 @@ class Component(_ComponentBase):
 
     @property
     def name(self):
-        """Get the fully qualifed component name."""
+        """Get the fully qualified component name."""
         return self.getname(fully_qualified=True)
 
     # Allow setting a component's name if it is not owned by a parent
@@ -723,6 +731,27 @@ class Component(_ComponentBase):
         else:
             return suffix_or_name.get(self, default)
 
+    def _pop_from_kwargs(self, name, kwargs, namelist, notset=None):
+        args = [
+            arg
+            for arg in (kwargs.pop(name, notset) for name in namelist)
+            if arg is not notset
+        ]
+        if len(args) == 1:
+            return args[0]
+        elif not args:
+            return notset
+        else:
+            argnames = "%s%s '%s='" % (
+                ', '.join("'%s='" % _ for _ in namelist[:-1]),
+                ',' if len(namelist) > 2 else '',
+                namelist[-1],
+            )
+            raise ValueError(
+                "Duplicate initialization: %s() only accepts one of %s"
+                % (name, argnames)
+            )
+
 
 class ActiveComponent(Component):
     """A Component that makes semantic sense to activate or deactivate
@@ -756,7 +785,7 @@ class ActiveComponent(Component):
         self._active = False
 
 
-class ComponentData(_ComponentBase):
+class ComponentData(ComponentBase):
     """
     This is the base class for the component data used
     in Pyomo modeling components.  Subclasses of ComponentData are
@@ -779,11 +808,11 @@ class ComponentData(_ComponentBase):
     __autoslot_mappers__ = {'_component': AutoSlots.weakref_mapper}
 
     # NOTE: This constructor is in-lined in the constructors for the following
-    # classes: _BooleanVarData, _ConnectorData, _ConstraintData,
-    # _GeneralExpressionData, _LogicalConstraintData,
-    # _GeneralLogicalConstraintData, _GeneralObjectiveData,
-    # _ParamData,_GeneralVarData, _GeneralBooleanVarData, _DisjunctionData,
-    # _ArcData, _PortData, _LinearConstraintData, and
+    # classes: BooleanVarData, ConnectorData, ConstraintData,
+    # ExpressionData, LogicalConstraintData,
+    # LogicalConstraintData, ObjectiveData,
+    # ParamData,VarData, BooleanVarData, DisjunctionData,
+    # ArcData, PortData, _LinearConstraintData, and
     # _LinearMatrixConstraintData. Changes made here need to be made in those
     # constructors as well!
     def __init__(self, component):

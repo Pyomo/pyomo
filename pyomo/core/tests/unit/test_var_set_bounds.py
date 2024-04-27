@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -36,7 +36,7 @@ solvers = check_available_solvers('glpk')
 # GAH: These tests been temporarily disabled. It is no longer the job of Var
 #      to validate its domain at the time of construction. It only needs to
 #      ensure that whatever object is passed as its domain is suitable for
-#      interacting with the _VarData interface (e.g., has a bounds method)
+#      interacting with the VarData interface (e.g., has a bounds method)
 #      The plan is to start adding functionality to the solver interfaces
 #      that will support custom domains.
 

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -411,9 +411,7 @@ class TestModelVariants(unittest.TestCase):
             model.theta = pyo.Var(
                 model.var_names, initialize={"asymptote": 15, "rate_constant": 0.5}
             )
-            model.theta[
-                "asymptote"
-            ].fixed = (
+            model.theta["asymptote"].fixed = (
                 True  # parmest will unfix theta variables, even when they are indexed
             )
             model.theta["rate_constant"].fixed = True

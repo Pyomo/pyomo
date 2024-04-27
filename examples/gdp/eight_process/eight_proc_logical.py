@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Disjunctive re-implementation of eight-process problem.
 
 Re-implementation of Duran example 3 superstructure synthesis problem in Pyomo
@@ -22,7 +33,6 @@ page 969 of Turkay & Grossmann, 1996.
 http://dx.doi.org/10.1016/0098-1354(95)00219-7
 
 """
-from __future__ import division
 
 from pyomo.core.expr.logical_expr import land, lor
 from pyomo.core.plugins.transform.logical_to_linear import (

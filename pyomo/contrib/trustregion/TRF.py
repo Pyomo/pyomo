@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -35,7 +35,7 @@ from pyomo.opt import SolverFactory
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
 
-__version__ = '0.2.0'
+__version__ = (0, 2, 0)
 
 
 def trust_region_method(model, decision_variables, ext_fcn_surrogate_map_rule, config):

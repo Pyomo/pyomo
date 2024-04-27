@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -20,6 +20,8 @@ from pyomo.opt.base import ProblemFormat, ResultsFormat
 from pyomo.opt.base.solvers import _extract_version, SolverFactory
 from pyomo.opt.results import SolverStatus, SolverResults, TerminationCondition
 from pyomo.opt.solver import SystemCallSolver
+
+from pyomo.solvers.amplfunc_merge import amplfunc_merge
 
 import logging
 
@@ -79,7 +81,7 @@ class IPOPT(SystemCallSolver):
             return _extract_version('')
         results = subprocess.run(
             [solver_exec, "-v"],
-            timeout=1,
+            timeout=self._version_timeout,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             universal_newlines=True,
@@ -119,11 +121,9 @@ class IPOPT(SystemCallSolver):
         # Pyomo/Pyomo) with any user-specified external function
         # libraries
         #
-        if 'PYOMO_AMPLFUNC' in env:
-            if 'AMPLFUNC' in env:
-                env['AMPLFUNC'] += "\n" + env['PYOMO_AMPLFUNC']
-            else:
-                env['AMPLFUNC'] = env['PYOMO_AMPLFUNC']
+        amplfunc = amplfunc_merge(env)
+        if amplfunc:
+            env['AMPLFUNC'] = amplfunc
 
         cmd = [executable, problem_files[0], '-AMPL']
         if self._timer:

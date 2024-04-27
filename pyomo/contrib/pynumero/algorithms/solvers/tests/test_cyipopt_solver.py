@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -316,3 +316,13 @@ class TestCyIpoptSolver(unittest.TestCase):
         msg = "Error in AMPL evaluation"
         with self.assertRaisesRegex(PyNumeroEvaluationError, msg):
             res = solver.solve(m, tee=True)
+
+    def test_solve_without_objective(self):
+        m = create_model1()
+        m.o.deactivate()
+        m.x[2].fix(0.0)
+        m.x[3].fix(4.0)
+        solver = pyo.SolverFactory("cyipopt")
+        res = solver.solve(m, tee=True)
+        pyo.assert_optimal_termination(res)
+        self.assertAlmostEqual(m.x[1].value, 9.0)

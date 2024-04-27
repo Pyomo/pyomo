@@ -3,7 +3,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -66,12 +66,6 @@ class MindtPy_ECP_Solver(_MindtPyAlgorithm):
 
             add_ecp_cuts(self.mip, self.jacobians, self.config, self.timing)
 
-        # if add_no_good_cuts is True, the bound obtained in the last iteration is no reliable.
-        # we correct it after the iteration.
-        if (
-            self.config.add_no_good_cuts or self.config.use_tabu_list
-        ) and not self.should_terminate:
-            self.fix_dual_bound(self.last_iter_cuts)
         self.config.logger.info(
             ' ==============================================================================================='
         )

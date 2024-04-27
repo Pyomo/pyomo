@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -35,7 +35,11 @@ class TestOnlineDocExamples(unittest.BaselineTestDriver, unittest.TestCase):
         list(filter(os.path.isdir, glob.glob(os.path.join(currdir, '*'))))
     )
 
-    solver_dependencies = {}
+    solver_dependencies = {
+        'test_data_pyomo_diet1': ['glpk'],
+        'test_data_pyomo_diet2': ['glpk'],
+        'test_kernel_examples': ['glpk'],
+    }
     # Note on package dependencies: two tests actually need
     # pyutilib.excel.spreadsheet; however, the pyutilib importer is
     # broken on Python>=3.12, so instead of checking for spreadsheet, we

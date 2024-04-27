@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -10,35 +10,24 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
-from pyomo.contrib.benders.benders_cuts import BendersCutGenerator
 import pyomo.environ as pyo
 
-try:
-    import mpi4py
+from pyomo.common.dependencies import mpi4py_available, numpy_available
+from pyomo.contrib.benders.benders_cuts import BendersCutGenerator
 
-    mpi4py_available = True
-except:
-    mpi4py_available = False
-try:
-    import numpy as np
+ipopt_available = pyo.SolverFactory('ipopt').available(exception_flag=False)
 
-    numpy_available = True
-except:
-    numpy_available = False
-
-
-ipopt_opt = pyo.SolverFactory('ipopt')
-ipopt_available = ipopt_opt.available(exception_flag=False)
-
-cplex_opt = pyo.SolverFactory('cplex_direct')
-cplex_available = cplex_opt.available(exception_flag=False)
+for mip_name in ('cplex_direct', 'gurobi_direct', 'gurobi', 'cplex', 'glpk', 'cbc'):
+    mip_available = pyo.SolverFactory(mip_name).available(exception_flag=False)
+    if mip_available:
+        break
 
 
 @unittest.pytest.mark.mpi
 class MPITestBenders(unittest.TestCase):
     @unittest.skipIf(not mpi4py_available, 'mpi4py is not available.')
     @unittest.skipIf(not numpy_available, 'numpy is not available.')
-    @unittest.skipIf(not cplex_available, 'cplex is not available.')
+    @unittest.skipIf(not mip_available, 'MIP solver is not available.')
     def test_farmer(self):
         class Farmer(object):
             def __init__(self):
@@ -200,9 +189,9 @@ class MPITestBenders(unittest.TestCase):
                 subproblem_fn=create_subproblem,
                 subproblem_fn_kwargs=subproblem_fn_kwargs,
                 root_eta=m.eta[s],
-                subproblem_solver='cplex_direct',
+                subproblem_solver=mip_name,
             )
-        opt = pyo.SolverFactory('cplex_direct')
+        opt = pyo.SolverFactory(mip_name)
 
         for i in range(30):
             res = opt.solve(m, tee=False)
@@ -261,7 +250,7 @@ class MPITestBenders(unittest.TestCase):
 
     @unittest.skipIf(not mpi4py_available, 'mpi4py is not available.')
     @unittest.skipIf(not numpy_available, 'numpy is not available.')
-    @unittest.skipIf(not cplex_available, 'cplex is not available.')
+    @unittest.skipIf(not mip_available, 'MIP solver is not available.')
     def test_four_scen_farmer(self):
         class FourScenFarmer(object):
             def __init__(self):
@@ -430,9 +419,9 @@ class MPITestBenders(unittest.TestCase):
                 subproblem_fn=create_subproblem,
                 subproblem_fn_kwargs=subproblem_fn_kwargs,
                 root_eta=m.eta[s],
-                subproblem_solver='cplex_direct',
+                subproblem_solver=mip_name,
             )
-        opt = pyo.SolverFactory('cplex_direct')
+        opt = pyo.SolverFactory(mip_name)
 
         for i in range(30):
             res = opt.solve(m, tee=False)

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -26,7 +26,7 @@ _init_url = "$URL$"
 # main and needs a hard reference to "suitably new" development.
 major = 6
 minor = 7
-micro = 1
+micro = 2
 releaselevel = 'invalid'
 # releaselevel = 'final'
 serial = 0

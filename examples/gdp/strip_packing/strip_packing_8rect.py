@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Strip packing example from MINLP.org library.
 Strip-packing example from http://minlp.org/library/lib.php?lib=GDP
 This model packs a set of rectangles without rotation or overlap within a
@@ -10,8 +21,6 @@ Models through Generalized Disjunctive Programming paper, table 8.
 DOI: 10.1002/aic.14088
 
 """
-
-from __future__ import division
 
 from pyomo.environ import (
     ConcreteModel,

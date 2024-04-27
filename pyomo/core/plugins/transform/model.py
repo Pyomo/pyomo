@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -55,8 +55,8 @@ def to_standard_form(self):
     # N.B. Structure hierarchy:
     #
     # active_components: {class: {attr_name: object}}
-    # object -> Constraint: ._data: {ndx: _ConstraintData}
-    # _ConstraintData: .lower, .body, .upper
+    # object -> Constraint: ._data: {ndx: ConstraintData}
+    # ConstraintData: .lower, .body, .upper
     #
     # So, altogether, we access a lower bound via
     #

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -14,14 +14,12 @@ from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.indexed_component import rule_wrapper
 from pyomo.core.base.expression import (
     Expression,
-    _GeneralExpressionData,
+    ExpressionData,
     ScalarExpression,
     IndexedExpression,
 )
 from pyomo.dae.contset import ContinuousSet
 from pyomo.dae.diffvar import DAE_Error
-
-__all__ = ('Integral',)
 
 
 @ModelComponentFactory.register("Integral Expression in a DAE model.")
@@ -153,7 +151,7 @@ class ScalarIntegral(ScalarExpression, Integral):
     """
 
     def __init__(self, *args, **kwds):
-        _GeneralExpressionData.__init__(self, None, component=self)
+        ExpressionData.__init__(self, None, component=self)
         Integral.__init__(self, *args, **kwds)
 
     def clear(self):

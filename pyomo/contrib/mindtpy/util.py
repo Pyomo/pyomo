@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -29,7 +29,6 @@ from pyomo.repn import generate_standard_repn
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 import pyomo.core.expr as EXPR
-from pyomo.opt import ProblemSense
 from pyomo.contrib.gdpopt.util import get_main_elapsed_time, time_code
 from pyomo.util.model_size import build_model_size_report
 from pyomo.common.dependencies import attempt_import
@@ -57,10 +56,7 @@ def calc_jacobians(constraint_list, differentiate_mode):
     # Map nonlinear_constraint --> Map(
     #     variable --> jacobian of constraint w.r.t. variable)
     jacobians = ComponentMap()
-    if differentiate_mode == 'reverse_symbolic':
-        mode = EXPR.differentiate.Modes.reverse_symbolic
-    elif differentiate_mode == 'sympy':
-        mode = EXPR.differentiate.Modes.sympy
+    mode = EXPR.differentiate.Modes(differentiate_mode)
     for c in constraint_list:
         vars_in_constr = list(EXPR.identify_variables(c.body))
         jac_list = EXPR.differentiate(c.body, wrt_list=vars_in_constr, mode=mode)
@@ -345,9 +341,11 @@ def generate_lag_objective_function(
     with time_code(timing, 'PyomoNLP'):
         nlp = pyomo_nlp.PyomoNLP(temp_model)
         lam = [
-            -temp_model.dual[constr]
-            if abs(temp_model.dual[constr]) > config.zero_tolerance
-            else 0
+            (
+                -temp_model.dual[constr]
+                if abs(temp_model.dual[constr]) > config.zero_tolerance
+                else 0
+            )
             for constr in nlp.get_pyomo_constraints()
         ]
         nlp.set_duals(lam)
@@ -942,7 +940,7 @@ def copy_var_list_values(
     Sets to zero for NonNegativeReals if necessary
 
     from_list : list
-        The variables that provides the values to copy from.
+        The variables that provide the values to copy from.
     to_list : list
         The variables that need to set value.
     config : ConfigBlock
@@ -1022,6 +1020,6 @@ def set_var_valid_value(
         var.set_value(0)
     else:
         raise ValueError(
-            "copy_var_list_values failed with variable {}, value = {} and rounded value = {}"
+            "set_var_valid_value failed with variable {}, value = {} and rounded value = {}"
             "".format(var.name, var_val, rounded_val)
         )
