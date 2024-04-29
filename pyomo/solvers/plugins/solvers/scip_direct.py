@@ -91,7 +91,6 @@ class SCIPDirect(DirectSolver):
         # Dictionary used exclusively for SCIP, as we want the constraint expressions
         self._pyomo_var_to_solver_var_expr_map = ComponentMap()
         self._pyomo_con_to_solver_con_expr_map = dict()
-        self._pyomo_con_to_solver_expr_map = dict()
 
     def _apply_solver(self):
         StaleFlagManager.mark_all_as_stale()
@@ -353,7 +352,6 @@ class SCIPDirect(DirectSolver):
             self._referenced_variables[var] += 1
         self._vars_referenced_by_con[con] = referenced_vars
         self._pyomo_con_to_solver_con_expr_map[con] = scip_cons
-        self._pyomo_con_to_solver_expr_map[con] = scip_expr
         self._pyomo_con_to_solver_con_map[con] = scip_cons.name
         self._solver_con_to_pyomo_con_map[conname] = con
 
@@ -574,22 +572,17 @@ class SCIPDirect(DirectSolver):
         return soln
 
     def _postsolve(self):
-        # the only suffixes that we extract from SCIP are
-        # constraint slacks. constraint duals and variable
+        # Constraint duals and variable
         # reduced-costs were removed as in SCIP they contain
-        # too many caveats. scan through the solver suffix list
+        # too many caveats. Slacks were removed as later
+        # planned interfaces do not intend to support.
+        # Scan through the solver suffix list
         # and throw an exception if the user has specified
         # any others.
-        extract_slacks = False
         for suffix in self._suffixes:
-            flag = False
-            if re.match(suffix, "slack"):
-                extract_slacks = True
-                flag = True
-            if not flag:
-                raise RuntimeError(
-                    f"***The scip_direct solver plugin cannot extract solution suffix={suffix}"
-                )
+            raise RuntimeError(
+                f"***The scip_direct solver plugin cannot extract solution suffix={suffix}"
+            )
 
         scip = self._solver_model
         status = scip.getStatus()
@@ -661,8 +654,6 @@ class SCIPDirect(DirectSolver):
 
             if scip.getNSols() > 0:
                 soln_variables = soln.variable
-                soln_constraints = soln.constraint
-                scip_sol = scip.getBestSol()
 
                 scip_vars = scip.getVars()
                 scip_var_names = [scip_var.name for scip_var in scip_vars]
@@ -675,37 +666,9 @@ class SCIPDirect(DirectSolver):
                     if self._referenced_variables[pyomo_var] > 0:
                         soln_variables[name] = {"Value": val}
 
-                if extract_slacks:
-                    scip_cons = list(self._pyomo_con_to_solver_con_expr_map.values())
-                    con_names = [cons.name for cons in scip_cons]
-                    if set(self._solver_con_to_pyomo_con_map.keys()) != set(con_names):
-                        raise AssertionError(
-                            f"{set(self._solver_con_to_pyomo_con_map.keys())}, {set(con_names)}"
-                        )
-                    for cons in scip_cons:
-                        if cons.getConshdlrName() in ["linear", "nonlinear"]:
-                            soln_constraints[cons.name] = {}
-                            pyomo_con = self._solver_con_to_pyomo_con_map[cons.name]
-                            scip_expr = self._pyomo_con_to_solver_expr_map[pyomo_con]
-                            activity = scip_sol[scip_expr]
-                            if pyomo_con.has_lb():
-                                lhs = value(pyomo_con.lower)
-                            else:
-                                lhs = -1e20
-                            if pyomo_con.has_ub():
-                                rhs = value(pyomo_con.upper)
-                            else:
-                                rhs = 1e20
-                            soln_constraints[cons.name]["Slack"] = min(
-                                activity - lhs, rhs - activity
-                            )
-
         elif self._load_solutions:
             if scip.getNSols() > 0:
                 self.load_vars()
-
-                if extract_slacks:
-                    self._load_slacks()
 
         self.results.solution.insert(soln)
 
@@ -768,26 +731,7 @@ class SCIPDirect(DirectSolver):
         )
 
     def _load_slacks(self, cons_to_load=None):
-        if not hasattr(self._pyomo_model, "slack"):
-            self._pyomo_model.slack = Suffix(direction=Suffix.IMPORT)
-        slack = self._pyomo_model.slack
-        scip_sol = self._solver_model.getBestSol()
-
-        if cons_to_load is None:
-            scip_cons = list(self._pyomo_con_to_solver_con_expr_map.values())
-        else:
-            scip_cons = [
-                self._pyomo_con_to_solver_con_expr_map[pyomo_cons]
-                for pyomo_cons in cons_to_load
-            ]
-        for cons in scip_cons:
-            if cons.getConshdlrName() in ["linear", "nonlinear"]:
-                pyomo_con = self._solver_con_to_pyomo_con_map[cons.name]
-                scip_expr = self._pyomo_con_to_solver_expr_map[pyomo_con]
-                activity = scip_sol[scip_expr]
-                rhs = self._solver_model.getRhs(cons)
-                lhs = self._solver_model.getLhs(cons)
-                slack[pyomo_con] = min(activity - lhs, rhs - activity)
+        raise NotImplementedError("SCIP via Pyomo does not support slack loading")
 
     def load_duals(self, cons_to_load=None):
         """
