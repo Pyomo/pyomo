@@ -109,5 +109,13 @@ def build_ginac_interface(args=None):
     dist.run_command('build_ext')
 
 
+class GiNaCInterfaceBuilder(object):
+    def __call__(self, parallel):
+        return build_ginac_interface()
+
+    def skip(self):
+        return not find_library('ginac')
+
+
 if __name__ == '__main__':
     build_ginac_interface(sys.argv[1:])
