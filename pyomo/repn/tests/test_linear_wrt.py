@@ -62,6 +62,39 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.multiplier, 1)
         assertExpressionsEqual(self, repn.to_expression(visitor), m.x + m.z * m.y + m.z)
 
+    def test_sum_two_of_the_same(self):
+        # This hits the mult == 1 and vid in dest_dict case in _merge_dict
+        m = self.make_model()
+        e = m.x + m.x
+        cfg = VisitorConfig()
+        visitor = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x, m.y])
+
+        repn = visitor.walk_expression(e)
+
+        self.assertIsNone(repn.nonlinear)
+        self.assertEqual(len(repn.linear), 1)
+        self.assertIn(id(m.x), repn.linear)
+        self.assertEqual(repn.linear[id(m.x)], 2)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(repn.multiplier, 1)
+        assertExpressionsEqual(self, repn.to_expression(visitor), 2*m.x)
+
+    def test_sum_with_mult_0(self):
+        m = self.make_model()
+        e = 0*m.x + m.x + m.y
+        
+        cfg = VisitorConfig()
+        visitor = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x])
+
+        repn = visitor.walk_expression(e)
+        self.assertIsNone(repn.nonlinear)
+        self.assertEqual(len(repn.linear), 1)
+        self.assertIn(id(m.x), repn.linear)
+        self.assertEqual(repn.linear[id(m.x)], 1)
+        self.assertIs(repn.constant, m.y)
+        self.assertEqual(repn.multiplier, 1)
+        assertExpressionsEqual(self, repn.to_expression(visitor), m.x + m.y)
+
     def test_bilinear_term(self):
         m = self.make_model()
         e = m.x * m.y
