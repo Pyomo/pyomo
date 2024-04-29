@@ -388,7 +388,7 @@ def test_solver_cases(*args):
             name="scip_persistent",
             io="python",
             capabilities=_scip_persistent_capabilities,
-            import_suffixes=["slack"],
+            import_suffixes=[],
         )
 
         #

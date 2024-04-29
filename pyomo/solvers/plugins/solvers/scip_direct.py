@@ -10,7 +10,6 @@
 #  ___________________________________________________________________________
 
 import logging
-import re
 import sys
 
 from pyomo.common.collections import ComponentSet, ComponentMap, Bunch
@@ -36,7 +35,6 @@ from pyomo.opt.results.results_ import SolverResults
 from pyomo.opt.results.solution import Solution, SolutionStatus
 from pyomo.opt.results.solver import TerminationCondition, SolverStatus
 from pyomo.opt.base import SolverFactory
-from pyomo.core.base.suffix import Suffix
 
 
 logger = logging.getLogger("pyomo.solvers")
