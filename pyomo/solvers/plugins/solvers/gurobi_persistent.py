@@ -111,7 +111,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
         Parameters
         ----------
-        var: Var (scalar Var or single _VarData)
+        var: Var (scalar Var or single VarData)
 
         """
         # see PR #366 for discussion about handling indexed
@@ -157,7 +157,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
         Parameters
         ----------
-        con: pyomo.core.base.constraint._GeneralConstraintData
+        con: pyomo.core.base.constraint.ConstraintData
             The pyomo constraint for which the corresponding gurobi constraint attribute
             should be modified.
         attr: str
@@ -192,7 +192,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
         Parameters
         ----------
-        con: pyomo.core.base.var._GeneralVarData
+        con: pyomo.core.base.var.VarData
             The pyomo var for which the corresponding gurobi var attribute
             should be modified.
         attr: str
@@ -342,7 +342,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
         Parameters
         ----------
-        var: pyomo.core.base.var._GeneralVarData
+        var: pyomo.core.base.var.VarData
             The pyomo var for which the corresponding gurobi var attribute
             should be retrieved.
         attr: str
@@ -384,7 +384,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
         Parameters
         ----------
-        con: pyomo.core.base.constraint._GeneralConstraintData
+        con: pyomo.core.base.constraint.ConstraintData
             The pyomo constraint for which the corresponding gurobi constraint attribute
             should be retrieved.
         attr: str
@@ -413,7 +413,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
         Parameters
         ----------
-        con: pyomo.core.base.sos._SOSConstraintData
+        con: pyomo.core.base.sos.SOSConstraintData
             The pyomo SOS constraint for which the corresponding gurobi SOS constraint attribute
             should be retrieved.
         attr: str
@@ -431,7 +431,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
         Parameters
         ----------
-        con: pyomo.core.base.constraint._GeneralConstraintData
+        con: pyomo.core.base.constraint.ConstraintData
             The pyomo constraint for which the corresponding gurobi constraint attribute
             should be retrieved.
         attr: str
@@ -569,7 +569,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
         Parameters
         ----------
-        con: pyomo.core.base.constraint._GeneralConstraintData
+        con: pyomo.core.base.constraint.ConstraintData
             The cut to add
         """
         if not con.active:
@@ -647,7 +647,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         """
         Parameters
         ----------
-        con: pyomo.core.base.constraint._GeneralConstraintData
+        con: pyomo.core.base.constraint.ConstraintData
             The lazy constraint to add
         """
         if not con.active:
@@ -710,7 +710,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
         Parameters
         ----------
-        var: Var (scalar Var or single _VarData)
+        var: Var (scalar Var or single VarData)
         obj_coef: float
         constraints: list of solver constraints
         coefficients: list of coefficients to put on var in the associated constraint

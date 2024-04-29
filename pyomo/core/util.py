@@ -18,7 +18,7 @@ from pyomo.core.expr.numvalue import native_numeric_types
 from pyomo.core.expr.numeric_expr import mutable_expression, NPV_SumExpression
 from pyomo.core.base.var import Var
 from pyomo.core.base.expression import Expression
-from pyomo.core.base.component import _ComponentBase
+from pyomo.core.base.component import ComponentBase
 import logging
 
 logger = logging.getLogger(__name__)
@@ -238,12 +238,12 @@ def sequence(*args):
 
 
 def target_list(x):
-    if isinstance(x, _ComponentBase):
+    if isinstance(x, ComponentBase):
         return [x]
     elif hasattr(x, '__iter__'):
         ans = []
         for i in x:
-            if isinstance(i, _ComponentBase):
+            if isinstance(i, ComponentBase):
                 ans.append(i)
             else:
                 raise ValueError(

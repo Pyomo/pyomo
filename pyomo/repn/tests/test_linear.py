@@ -1436,6 +1436,22 @@ class TestLinear(unittest.TestCase):
         m.z = Var()
         m.y.fix(1)
 
+        expr = (m.x + 1) / m.p
+        cfg = VisitorConfig()
+        with LoggingIntercept() as LOG:
+            repn = LinearRepnVisitor(*cfg).walk_expression(expr)
+        self.assertEqual(
+            LOG.getvalue(),
+            "Exception encountered evaluating expression 'div(1, 0)'\n"
+            "\tmessage: division by zero\n"
+            "\texpression: (x + 1)/p\n",
+        )
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(str(repn.constant), 'InvalidNumber(nan)')
+        self.assertEqual(len(repn.linear), 1)
+        self.assertEqual(str(repn.linear[id(m.x)]), 'InvalidNumber(nan)')
+        self.assertEqual(repn.nonlinear, None)
+
         expr = m.y + m.x + m.z + ((3 * m.x) / m.p) / m.y
         cfg = VisitorConfig()
         with LoggingIntercept() as LOG:

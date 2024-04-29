@@ -104,7 +104,7 @@ class TestMiscPiecewise(unittest.TestCase):
         model.con3 = Piecewise(*args, **keywords)
 
     # test that nonindexed Piecewise can handle
-    # _VarData (e.g model.x[1]
+    # VarData (e.g model.x[1]
     def test_nonindexed_with_indexed_vars(self):
         model = ConcreteModel()
         model.range = Var([1])
