@@ -34,7 +34,9 @@ def build_ginac_interface(args=None):
     ginac_lib = find_library('ginac')
     if ginac_lib is None:
         raise RuntimeError(
-            'could not find GiNaC library; please make sure it is in the LD_LIBRARY_PATH environment variable'
+            'could not find the GiNaC library; please make sure either to install '
+            'the library and development headers system-wide, or include the '
+            'path tt the library in the LD_LIBRARY_PATH environment variable'
         )
     ginac_lib_dir = os.path.dirname(ginac_lib)
     ginac_build_dir = os.path.dirname(ginac_lib_dir)
@@ -45,7 +47,9 @@ def build_ginac_interface(args=None):
     cln_lib = find_library('cln')
     if cln_lib is None:
         raise RuntimeError(
-            'could not find CLN library; please make sure it is in the LD_LIBRARY_PATH environment variable'
+            'could not find the CLN library; please make sure either to install '
+            'the library and development headers system-wide, or include the '
+            'path tt the library in the LD_LIBRARY_PATH environment variable'
         )
     cln_lib_dir = os.path.dirname(cln_lib)
     cln_build_dir = os.path.dirname(cln_lib_dir)
