@@ -161,7 +161,6 @@ class SCIPDirect(DirectSolver):
             referenced_vars.add(x)
             referenced_vars.add(y)
 
-        # TODO: Introduce handling on non-linear expressions
         if repn.nonlinear_expr is not None:
 
             def get_nl_expr_recursively(pyomo_expr):
