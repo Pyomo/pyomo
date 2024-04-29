@@ -14,11 +14,11 @@ import enum
 from typing import Sequence, Dict, Optional, Mapping, NoReturn, List, Tuple
 import os
 
-from pyomo.core.base.constraint import _GeneralConstraintData
-from pyomo.core.base.var import _GeneralVarData
-from pyomo.core.base.param import _ParamData
-from pyomo.core.base.block import _BlockData
-from pyomo.core.base.objective import Objective, _GeneralObjectiveData
+from pyomo.core.base.constraint import ConstraintData
+from pyomo.core.base.var import VarData
+from pyomo.core.base.param import ParamData
+from pyomo.core.base.block import BlockData
+from pyomo.core.base.objective import Objective, ObjectiveData
 from pyomo.common.config import document_kwargs_from_configdict, ConfigValue
 from pyomo.common.errors import ApplicationError
 from pyomo.common.deprecation import deprecation_warning
@@ -110,13 +110,13 @@ class SolverBase(abc.ABC):
 
     @document_kwargs_from_configdict(CONFIG)
     @abc.abstractmethod
-    def solve(self, model: _BlockData, **kwargs) -> Results:
+    def solve(self, model: BlockData, **kwargs) -> Results:
         """
         Solve a Pyomo model.
 
         Parameters
         ----------
-        model: _BlockData
+        model: BlockData
             The Pyomo model to be solved
         **kwargs
             Additional keyword arguments (including solver_options - passthrough
@@ -184,7 +184,7 @@ class PersistentSolverBase(SolverBase):
 
     @document_kwargs_from_configdict(PersistentSolverConfig())
     @abc.abstractmethod
-    def solve(self, model: _BlockData, **kwargs) -> Results:
+    def solve(self, model: BlockData, **kwargs) -> Results:
         super().solve(model, kwargs)
 
     def is_persistent(self):
@@ -196,9 +196,7 @@ class PersistentSolverBase(SolverBase):
         """
         return True
 
-    def _load_vars(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> NoReturn:
+    def _load_vars(self, vars_to_load: Optional[Sequence[VarData]] = None) -> NoReturn:
         """
         Load the solution of the primal variables into the value attribute of the variables.
 
@@ -214,19 +212,19 @@ class PersistentSolverBase(SolverBase):
 
     @abc.abstractmethod
     def _get_primals(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
+        self, vars_to_load: Optional[Sequence[VarData]] = None
+    ) -> Mapping[VarData, float]:
         """
         Get mapping of variables to primals.
 
         Parameters
         ----------
-        vars_to_load : Optional[Sequence[_GeneralVarData]], optional
+        vars_to_load : Optional[Sequence[VarData]], optional
             Which vars to be populated into the map. The default is None.
 
         Returns
         -------
-        Mapping[_GeneralVarData, float]
+        Mapping[VarData, float]
             A map of variables to primals.
         """
         raise NotImplementedError(
@@ -234,8 +232,8 @@ class PersistentSolverBase(SolverBase):
         )
 
     def _get_duals(
-        self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None
-    ) -> Dict[_GeneralConstraintData, float]:
+        self, cons_to_load: Optional[Sequence[ConstraintData]] = None
+    ) -> Dict[ConstraintData, float]:
         """
         Declare sign convention in docstring here.
 
@@ -253,8 +251,8 @@ class PersistentSolverBase(SolverBase):
         raise NotImplementedError(f'{type(self)} does not support the get_duals method')
 
     def _get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
+        self, vars_to_load: Optional[Sequence[VarData]] = None
+    ) -> Mapping[VarData, float]:
         """
         Parameters
         ----------
@@ -278,61 +276,61 @@ class PersistentSolverBase(SolverBase):
         """
 
     @abc.abstractmethod
-    def set_objective(self, obj: _GeneralObjectiveData):
+    def set_objective(self, obj: ObjectiveData):
         """
         Set current objective for the model
         """
 
     @abc.abstractmethod
-    def add_variables(self, variables: List[_GeneralVarData]):
+    def add_variables(self, variables: List[VarData]):
         """
         Add variables to the model
         """
 
     @abc.abstractmethod
-    def add_parameters(self, params: List[_ParamData]):
+    def add_parameters(self, params: List[ParamData]):
         """
         Add parameters to the model
         """
 
     @abc.abstractmethod
-    def add_constraints(self, cons: List[_GeneralConstraintData]):
+    def add_constraints(self, cons: List[ConstraintData]):
         """
         Add constraints to the model
         """
 
     @abc.abstractmethod
-    def add_block(self, block: _BlockData):
+    def add_block(self, block: BlockData):
         """
         Add a block to the model
         """
 
     @abc.abstractmethod
-    def remove_variables(self, variables: List[_GeneralVarData]):
+    def remove_variables(self, variables: List[VarData]):
         """
         Remove variables from the model
         """
 
     @abc.abstractmethod
-    def remove_parameters(self, params: List[_ParamData]):
+    def remove_parameters(self, params: List[ParamData]):
         """
         Remove parameters from the model
         """
 
     @abc.abstractmethod
-    def remove_constraints(self, cons: List[_GeneralConstraintData]):
+    def remove_constraints(self, cons: List[ConstraintData]):
         """
         Remove constraints from the model
         """
 
     @abc.abstractmethod
-    def remove_block(self, block: _BlockData):
+    def remove_block(self, block: BlockData):
         """
         Remove a block from the model
         """
 
     @abc.abstractmethod
-    def update_variables(self, variables: List[_GeneralVarData]):
+    def update_variables(self, variables: List[VarData]):
         """
         Update variables on the model
         """
@@ -539,7 +537,7 @@ class LegacySolverWrapper:
 
     def solve(
         self,
-        model: _BlockData,
+        model: BlockData,
         tee: bool = False,
         load_solutions: bool = True,
         logfile: Optional[str] = None,

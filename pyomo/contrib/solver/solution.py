@@ -12,8 +12,8 @@
 import abc
 from typing import Sequence, Dict, Optional, Mapping, NoReturn
 
-from pyomo.core.base.constraint import _GeneralConstraintData
-from pyomo.core.base.var import _GeneralVarData
+from pyomo.core.base.constraint import ConstraintData
+from pyomo.core.base.var import VarData
 from pyomo.core.expr import value
 from pyomo.common.collections import ComponentMap
 from pyomo.common.errors import DeveloperError
@@ -30,9 +30,7 @@ class SolutionLoaderBase(abc.ABC):
     Intent of this class and its children is to load the solution back into the model.
     """
 
-    def load_vars(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> NoReturn:
+    def load_vars(self, vars_to_load: Optional[Sequence[VarData]] = None) -> NoReturn:
         """
         Load the solution of the primal variables into the value attribute of the variables.
 
@@ -49,8 +47,8 @@ class SolutionLoaderBase(abc.ABC):
 
     @abc.abstractmethod
     def get_primals(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
+        self, vars_to_load: Optional[Sequence[VarData]] = None
+    ) -> Mapping[VarData, float]:
         """
         Returns a ComponentMap mapping variable to var value.
 
@@ -67,8 +65,8 @@ class SolutionLoaderBase(abc.ABC):
         """
 
     def get_duals(
-        self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None
-    ) -> Dict[_GeneralConstraintData, float]:
+        self, cons_to_load: Optional[Sequence[ConstraintData]] = None
+    ) -> Dict[ConstraintData, float]:
         """
         Returns a dictionary mapping constraint to dual value.
 
@@ -86,8 +84,8 @@ class SolutionLoaderBase(abc.ABC):
         raise NotImplementedError(f'{type(self)} does not support the get_duals method')
 
     def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
+        self, vars_to_load: Optional[Sequence[VarData]] = None
+    ) -> Mapping[VarData, float]:
         """
         Returns a ComponentMap mapping variable to reduced cost.
 
@@ -121,14 +119,14 @@ class PersistentSolutionLoader(SolutionLoaderBase):
         return self._solver._get_primals(vars_to_load=vars_to_load)
 
     def get_duals(
-        self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None
-    ) -> Dict[_GeneralConstraintData, float]:
+        self, cons_to_load: Optional[Sequence[ConstraintData]] = None
+    ) -> Dict[ConstraintData, float]:
         self._assert_solution_still_valid()
         return self._solver._get_duals(cons_to_load=cons_to_load)
 
     def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
+        self, vars_to_load: Optional[Sequence[VarData]] = None
+    ) -> Mapping[VarData, float]:
         self._assert_solution_still_valid()
         return self._solver._get_reduced_costs(vars_to_load=vars_to_load)
 
@@ -141,9 +139,7 @@ class SolSolutionLoader(SolutionLoaderBase):
         self._sol_data = sol_data
         self._nl_info = nl_info
 
-    def load_vars(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> NoReturn:
+    def load_vars(self, vars_to_load: Optional[Sequence[VarData]] = None) -> NoReturn:
         if self._nl_info is None:
             raise RuntimeError(
                 'Solution loader does not currently have a valid solution. Please '
@@ -169,8 +165,8 @@ class SolSolutionLoader(SolutionLoaderBase):
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
     def get_primals(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
+        self, vars_to_load: Optional[Sequence[VarData]] = None
+    ) -> Mapping[VarData, float]:
         if self._nl_info is None:
             raise RuntimeError(
                 'Solution loader does not currently have a valid solution. Please '
@@ -205,8 +201,8 @@ class SolSolutionLoader(SolutionLoaderBase):
         return res
 
     def get_duals(
-        self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None
-    ) -> Dict[_GeneralConstraintData, float]:
+        self, cons_to_load: Optional[Sequence[ConstraintData]] = None
+    ) -> Dict[ConstraintData, float]:
         if self._nl_info is None:
             raise RuntimeError(
                 'Solution loader does not currently have a valid solution. Please '

@@ -60,8 +60,8 @@ from pyomo.core.base.set import (
     FiniteSetOf,
     InfiniteSetOf,
     RangeSet,
-    _FiniteRangeSetData,
-    _InfiniteRangeSetData,
+    FiniteRangeSetData,
+    InfiniteRangeSetData,
     FiniteScalarRangeSet,
     InfiniteScalarRangeSet,
     AbstractFiniteScalarRangeSet,
@@ -81,10 +81,10 @@ from pyomo.core.base.set import (
     SetProduct_InfiniteSet,
     SetProduct_FiniteSet,
     SetProduct_OrderedSet,
-    _SetData,
-    _FiniteSetData,
-    _InsertionOrderSetData,
-    _SortedSetData,
+    SetData,
+    FiniteSetData,
+    InsertionOrderSetData,
+    SortedSetData,
     _FiniteSetMixin,
     _OrderedSetMixin,
     SetInitializer,
@@ -1285,19 +1285,19 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertTrue(i.isdiscrete())
         self.assertTrue(i.isfinite())
         self.assertTrue(i.isordered())
-        self.assertIsInstance(i, _FiniteRangeSetData)
+        self.assertIsInstance(i, FiniteRangeSetData)
 
         i = RangeSet(1, 3)
         self.assertTrue(i.isdiscrete())
         self.assertTrue(i.isfinite())
         self.assertTrue(i.isordered())
-        self.assertIsInstance(i, _FiniteRangeSetData)
+        self.assertIsInstance(i, FiniteRangeSetData)
 
         i = RangeSet(1, 3, 0)
         self.assertFalse(i.isdiscrete())
         self.assertFalse(i.isfinite())
         self.assertFalse(i.isordered())
-        self.assertIsInstance(i, _InfiniteRangeSetData)
+        self.assertIsInstance(i, InfiniteRangeSetData)
 
     def test_pprint(self):
         m = ConcreteModel()
@@ -4137,9 +4137,9 @@ class TestSet(unittest.TestCase):
         self.assertFalse(m.I[1].isordered())
         self.assertFalse(m.I[2].isordered())
         self.assertFalse(m.I[3].isordered())
-        self.assertIs(type(m.I[1]), _FiniteSetData)
-        self.assertIs(type(m.I[2]), _FiniteSetData)
-        self.assertIs(type(m.I[3]), _FiniteSetData)
+        self.assertIs(type(m.I[1]), FiniteSetData)
+        self.assertIs(type(m.I[2]), FiniteSetData)
+        self.assertIs(type(m.I[3]), FiniteSetData)
         self.assertEqual(m.I.data(), {1: (1,), 2: (2,), 3: (4,)})
 
         # Explicit (constant) construction
@@ -4155,9 +4155,9 @@ class TestSet(unittest.TestCase):
         self.assertTrue(m.I[1].isordered())
         self.assertTrue(m.I[2].isordered())
         self.assertTrue(m.I[3].isordered())
-        self.assertIs(type(m.I[1]), _InsertionOrderSetData)
-        self.assertIs(type(m.I[2]), _InsertionOrderSetData)
-        self.assertIs(type(m.I[3]), _InsertionOrderSetData)
+        self.assertIs(type(m.I[1]), InsertionOrderSetData)
+        self.assertIs(type(m.I[2]), InsertionOrderSetData)
+        self.assertIs(type(m.I[3]), InsertionOrderSetData)
         self.assertEqual(m.I.data(), {1: (4, 2, 5), 2: (4, 2, 5), 3: (4, 2, 5)})
 
         # Explicit (constant) construction
@@ -4173,9 +4173,9 @@ class TestSet(unittest.TestCase):
         self.assertTrue(m.I[1].isordered())
         self.assertTrue(m.I[2].isordered())
         self.assertTrue(m.I[3].isordered())
-        self.assertIs(type(m.I[1]), _SortedSetData)
-        self.assertIs(type(m.I[2]), _SortedSetData)
-        self.assertIs(type(m.I[3]), _SortedSetData)
+        self.assertIs(type(m.I[1]), SortedSetData)
+        self.assertIs(type(m.I[2]), SortedSetData)
+        self.assertIs(type(m.I[3]), SortedSetData)
         self.assertEqual(m.I.data(), {1: (2, 4, 5), 2: (2, 4, 5), 3: (2, 4, 5)})
 
         # Explicit (procedural) construction
@@ -4300,7 +4300,7 @@ class TestSet(unittest.TestCase):
         # This tests a filter that matches the dimentionality of the
         # component.  construct() needs to recognize that the filter is
         # returning a constant in construct() and re-assign it to be the
-        # _filter for each _SetData
+        # _filter for each SetData
         def _lt_3(model, i):
             self.assertIs(model, m)
             return i < 3
@@ -5297,15 +5297,15 @@ I : Size=2, Index={1, 2, 3, 4, 5}, Ordered=Insertion
 
 
 class TestAbstractSetAPI(unittest.TestCase):
-    def test_SetData(self):
+    def testSetData(self):
         # This tests an anstract non-finite set API
 
         m = ConcreteModel()
         m.I = Set(initialize=[1])
-        s = _SetData(m.I)
+        s = SetData(m.I)
 
         #
-        # _SetData API
+        # SetData API
         #
 
         with self.assertRaises(DeveloperError):
@@ -5395,7 +5395,7 @@ class TestAbstractSetAPI(unittest.TestCase):
 
     def test_FiniteMixin(self):
         # This tests an anstract finite set API
-        class FiniteMixin(_FiniteSetMixin, _SetData):
+        class FiniteMixin(_FiniteSetMixin, SetData):
             pass
 
         m = ConcreteModel()
@@ -5403,7 +5403,7 @@ class TestAbstractSetAPI(unittest.TestCase):
         s = FiniteMixin(m.I)
 
         #
-        # _SetData API
+        # SetData API
         #
 
         with self.assertRaises(DeveloperError):
@@ -5520,7 +5520,7 @@ class TestAbstractSetAPI(unittest.TestCase):
 
     def test_OrderedMixin(self):
         # This tests an anstract ordered set API
-        class OrderedMixin(_OrderedSetMixin, _FiniteSetMixin, _SetData):
+        class OrderedMixin(_OrderedSetMixin, _FiniteSetMixin, SetData):
             pass
 
         m = ConcreteModel()
@@ -5528,7 +5528,7 @@ class TestAbstractSetAPI(unittest.TestCase):
         s = OrderedMixin(m.I)
 
         #
-        # _SetData API
+        # SetData API
         #
 
         with self.assertRaises(DeveloperError):
