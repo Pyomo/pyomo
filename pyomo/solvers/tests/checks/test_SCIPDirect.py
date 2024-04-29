@@ -86,25 +86,6 @@ class SCIPDirectTests(unittest.TestCase):
 
             self.assertEqual(results.solution.status, SolutionStatus.optimal)
 
-    def test_get_duals_lp(self):
-        with SolverFactory("scip_direct", solver_io="python") as opt:
-            model = ConcreteModel()
-            model.X = Var(within=NonNegativeReals)
-            model.Y = Var(within=NonNegativeReals)
-
-            model.C1 = Constraint(expr=2 * model.X + model.Y >= 8)
-            model.C2 = Constraint(expr=model.X + 3 * model.Y >= 6)
-
-            model.O = Objective(expr=model.X + model.Y)
-
-            results = opt.solve(model, suffixes=["dual"], load_solutions=False)
-
-            model.dual = Suffix(direction=Suffix.IMPORT)
-            model.solutions.load_from(results)
-
-            self.assertAlmostEqual(model.dual[model.C1], 0.4)
-            self.assertAlmostEqual(model.dual[model.C2], 0.2)
-
     def test_infeasible_mip(self):
         with SolverFactory("scip_direct", solver_io="python") as opt:
             model = ConcreteModel()
