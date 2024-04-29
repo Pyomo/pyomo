@@ -95,6 +95,71 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.multiplier, 1)
         assertExpressionsEqual(self, repn.to_expression(visitor), m.x + m.y)
 
+    def test_sum_nonlinear_to_linear(self):
+        m = self.make_model()
+        e = m.y * m.x**2 + m.y * m.x + 3
+
+        cfg = VisitorConfig()
+        visitor = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x])
+
+        repn = visitor.walk_expression(e)
+        assertExpressionsEqual(
+            self,
+            repn.nonlinear,
+            m.y * m.x ** 2
+        )
+        self.assertEqual(len(repn.linear), 1)
+        self.assertIn(id(m.x), repn.linear)
+        self.assertIs(repn.linear[id(m.x)], m.y)
+        self.assertEqual(repn.constant, 3)
+        self.assertEqual(repn.multiplier, 1)
+        assertExpressionsEqual(self, repn.to_expression(visitor), m.y * m.x ** 2
+                               + m.y * m.x + 3)
+
+    def test_sum_nonlinear_to_nonlinear(self):
+        m = self.make_model()
+        e = m.x ** 3 + 3 + m.x**2
+
+        cfg = VisitorConfig()
+        visitor = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x])
+
+        repn = visitor.walk_expression(e)
+        assertExpressionsEqual(
+            self,
+            repn.nonlinear,
+            m.x ** 3 + m.x ** 2
+        )
+        self.assertEqual(repn.constant, 3)
+        self.assertEqual(repn.multiplier, 1)
+        assertExpressionsEqual(self, repn.to_expression(visitor), m.x ** 3
+                               + m.x ** 2 + 3)
+
+    def test_sum_to_linear_expr(self):
+        m = self.make_model()
+        e = m.x + m.y * (m.x + 5)
+
+        cfg = VisitorConfig()
+        visitor = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x])
+
+        repn = visitor.walk_expression(e)
+        self.assertEqual(len(repn.linear), 1)
+        self.assertIn(id(m.x), repn.linear)
+        assertExpressionsEqual(
+            self,
+            repn.linear[id(m.x)],
+            1 + m.y
+        )
+        assertExpressionsEqual(
+            self,
+            repn.constant,
+            m.y * 5
+        )
+        self.assertEqual(repn.multiplier, 1)
+        assertExpressionsEqual(
+            self,
+            repn.to_expression(visitor), (1 + m.y) * m.x + m.y * 5
+        )
+
     def test_bilinear_term(self):
         m = self.make_model()
         e = m.x * m.y
