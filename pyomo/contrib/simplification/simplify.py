@@ -11,7 +11,7 @@
 
 from pyomo.core.expr.sympy_tools import sympy2pyomo_expression, sympyify_expression
 from pyomo.core.expr.numeric_expr import NumericExpression
-from pyomo.core.expr.numvalue import is_fixed, value
+from pyomo.core.expr.numvalue import value, is_constant
 import logging
 import warnings
 
@@ -28,15 +28,19 @@ logger = logging.getLogger(__name__)
 
 
 def simplify_with_sympy(expr: NumericExpression):
+    if is_constant(expr):
+        return value(expr)
     om, se = sympyify_expression(expr)
     se = se.simplify()
     new_expr = sympy2pyomo_expression(se, om)
-    if is_fixed(new_expr):
+    if is_constant(new_expr):
         new_expr = value(new_expr)
     return new_expr
 
 
 def simplify_with_ginac(expr: NumericExpression, ginac_interface):
+    if is_constant(expr):
+        return value(expr)
     gi = ginac_interface
     ginac_expr = gi.to_ginac(expr)
     ginac_expr = ginac_expr.normal()
