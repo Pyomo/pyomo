@@ -59,10 +59,10 @@ def main():
     def SSE_timeseries(model):
 
         expr = 0
-        for y, yhat in model.experiment_outputs.items():
-            num_time_points = len(yhat)
+        for y, y_hat in model.experiment_outputs.items():
+            num_time_points = len(y_hat)
             for i in range(num_time_points):
-                expr += ((y - yhat[i]) ** 2) * (1 / num_time_points)
+                expr += ((y - y_hat[i]) ** 2) * (1 / num_time_points)
 
         return expr
 

@@ -242,7 +242,7 @@ def SSE(model):
     """
     Sum of squared error between `experiment_output` model and data values
     """
-    expr = sum((y - yhat) ** 2 for y, yhat in model.experiment_outputs.items())
+    expr = sum((y - y_hat) ** 2 for y, y_hat in model.experiment_outputs.items())
     return expr
 
 
