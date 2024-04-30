@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 def build_ginac_library(parallel=None, argv=None):
-    print("\n**** Building GiNaC library ****")
+    sys.stdout.write("\n**** Building GiNaC library ****")
 
     configure_cmd = ['configure', '--prefix=' + PYOMO_CONFIG_DIR, '--disable-static']
     make_cmd = ['make']
@@ -73,7 +73,7 @@ def build_ginac_interface(parallel=None, args=None):
     from pybind11.setup_helpers import Pybind11Extension, build_ext
     from pyomo.common.cmake_builder import handleReadonly
 
-    print("\n**** Building GiNaC interface ****")
+    sys.stdout.write("\n**** Building GiNaC interface ****")
 
     if args is None:
         args = list()
@@ -90,6 +90,7 @@ def build_ginac_interface(parallel=None, args=None):
             'the library and development headers system-wide, or include the '
             'path tt the library in the LD_LIBRARY_PATH environment variable'
         )
+    print("Found GiNaC library:", ginac_lib)
     ginac_lib_dir = os.path.dirname(ginac_lib)
     ginac_build_dir = os.path.dirname(ginac_lib_dir)
     ginac_include_dir = os.path.join(ginac_build_dir, 'include')
@@ -103,6 +104,7 @@ def build_ginac_interface(parallel=None, args=None):
             'the library and development headers system-wide, or include the '
             'path tt the library in the LD_LIBRARY_PATH environment variable'
         )
+    print("Found CLN library:", cln_lib)
     cln_lib_dir = os.path.dirname(cln_lib)
     cln_build_dir = os.path.dirname(cln_lib_dir)
     cln_include_dir = os.path.join(cln_build_dir, 'include')
@@ -128,7 +130,7 @@ def build_ginac_interface(parallel=None, args=None):
                     tmpdir = this_file_dir()
                 else:
                     tmpdir = os.path.abspath(tempfile.mkdtemp())
-                print("Building in '%s'" % tmpdir)
+                sys.stdout.write("Building in '%s'" % tmpdir)
                 os.chdir(tmpdir)
                 super(ginacBuildExt, self).run()
                 if not self.inplace:
