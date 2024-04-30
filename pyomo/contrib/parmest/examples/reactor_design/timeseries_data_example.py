@@ -68,7 +68,7 @@ def main():
 
     # View one model & SSE
     # exp0_model = exp_list[0].get_labeled_model()
-    # print(exp0_model.pprint())
+    # exp0_model.pprint()
     # print(SSE_timeseries(exp0_model))
 
     pest = parmest.Estimator(exp_list, obj_function=SSE_timeseries)

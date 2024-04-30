@@ -89,9 +89,9 @@ class SimpleReactionExperiment(Experiment):
         m = self.model
 
         m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.experiment_outputs.update([(m.x1, self.data['x1'])])
-        m.experiment_outputs.update([(m.x2, self.data['x2'])])
-        m.experiment_outputs.update([(m.y, self.data['y'])])
+        m.experiment_outputs.update([(m.x1, self.data['x1']),
+                                     (m.x2, self.data['x2']),
+                                     (m.y, self.data['y'])])
 
         return m
 
@@ -156,7 +156,7 @@ def main():
 
     # View one model
     # exp0_model = exp_list[0].get_labeled_model()
-    # print(exp0_model.pprint())
+    # exp0_model.pprint()
 
     # =======================================================================
     # Parameter estimation without covariance estimate

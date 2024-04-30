@@ -427,8 +427,8 @@ class TestModelVariants(unittest.TestCase):
                 m = self.model
 
                 m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.experiment_outputs.update([(m.hour, self.data["hour"])])
-                m.experiment_outputs.update([(m.y, self.data["y"])])
+                m.experiment_outputs.update([(m.hour, self.data["hour"]),
+                                             (m.y, self.data["y"])])
 
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
                 m.unknown_parameters.update((k, pyo.ComponentUID(k)) for k in [m.theta])
@@ -506,8 +506,8 @@ class TestModelVariants(unittest.TestCase):
                 m = self.model
 
                 m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.experiment_outputs.update([(m.hour, self.data["hour"])])
-                m.experiment_outputs.update([(m.y, self.data["y"])])
+                m.experiment_outputs.update([(m.hour, self.data["hour"]),
+                                             (m.y, self.data["y"])])
 
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
                 m.unknown_parameters.update((k, pyo.ComponentUID(k)) for k in [m.theta])
