@@ -29,6 +29,7 @@ request = attempt_import('urllib.request')[0]
 urllib_error = attempt_import('urllib.error')[0]
 ssl = attempt_import('ssl')[0]
 zipfile = attempt_import('zipfile')[0]
+tarfile = attempt_import('tarfile')[0]
 gzip = attempt_import('gzip')[0]
 distro, distro_available = attempt_import('distro')
 
@@ -371,7 +372,7 @@ class FileDownloader(object):
         # Simple sanity checks
         for info in zip_file.infolist():
             f = info.filename
-            if f[0] in '\\/' or '..' in f:
+            if f[0] in '\\/' or '..' in f or os.path.isabs(f):
                 logger.error(
                     "malformed (potentially insecure) filename (%s) "
                     "found in zip archive.  Skipping file." % (f,)
@@ -386,6 +387,51 @@ class FileDownloader(object):
                 continue
             info.filename = target[-1] + '/' if f[-1] == '/' else target[-1]
             zip_file.extract(f, os.path.join(self._fname, *tuple(target[dirOffset:-1])))
+
+    def get_tar_archive(self, url, dirOffset=0):
+        if self._fname is None:
+            raise DeveloperError(
+                "target file name has not been initialized "
+                "with set_destination_filename"
+            )
+        if os.path.exists(self._fname) and not os.path.isdir(self._fname):
+            raise RuntimeError(
+                "Target directory (%s) exists, but is not a directory" % (self._fname,)
+            )
+        tar_file = tarfile.open(fileobj=io.BytesIO(self.retrieve_url(url)))
+        dest = os.path.realpath(self._fname)
+
+        def filter_fcn(info):
+            # this mocks up the `tarfile` filter introduced in Python
+            # 3.12 and backported to later releases of Python (e.g.,
+            # 3.8.17, 3.9.17, 3.10.12, and 3.11.4)
+            f = info.name
+            if os.path.isabs(f) or '..' in f or f.startswith(('/', os.sep)):
+                logger.error(
+                    "malformed (potentially insecure) filename (%s) "
+                    "found in tar archive.  Skipping file." % (f,)
+                )
+                return False
+            target = os.path.realpath(os.path.join(dest, f))
+            if os.path.commonpath([target, dest]) != dest:
+                logger.error(
+                    "malformed (potentially insecure) filename (%s) "
+                    "found in zip archive.  Skipping file." % (f,)
+                )
+                return False
+            target = self._splitpath(f)
+            if len(target) <= dirOffset:
+                if not info.isdir():
+                    logger.warning(
+                        "Skipping file (%s) in zip archive due to dirOffset" % (f,)
+                    )
+                return False
+            info.name = '/'.join(target[dirOffset:])
+            # Strip high bits & group/other write bits
+            info.mode &= 0o755
+            return True
+
+        tar_file.extractall(dest, filter(filter_fcn, tar_file.getmembers()))
 
     def get_gzipped_binary_file(self, url):
         if self._fname is None:
