@@ -78,7 +78,7 @@ from pyomo.dae import ContinuousSet
 from pyomo.common.deprecation import deprecated
 from pyomo.common.deprecation import deprecation_warning
 
-DEPRECATION_VERSION = '6.7.0'
+DEPRECATION_VERSION = '6.7.2.dev0'
 
 parmest_available = numpy_available & pandas_available & scipy_available
 
