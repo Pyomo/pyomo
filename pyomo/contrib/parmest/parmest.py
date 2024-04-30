@@ -272,7 +272,15 @@ class Estimator(object):
     # backwards compatible constructor will accept the old deprecated inputs
     # as well as the new inputs using experiment lists
     # TODO: when the deprecated Parmest API is removed, *args, can be removed from this constructor
-    def __init__(self, experiment_list, *args, obj_function=None, tee=False, diagnostic_mode=False, solver_options=None):
+    def __init__(
+        self, 
+        experiment_list, 
+        *args, 
+        obj_function=None, 
+        tee=False, 
+        diagnostic_mode=False, 
+        solver_options=None,
+    ):
 
         # use deprecated interface
         self.pest_deprecated = None
@@ -283,7 +291,14 @@ class Estimator(object):
                 'please update to the new parmest interface using experiment lists.',
                 version=DEPRECATION_VERSION,
             )
-            self.pest_deprecated = _DeprecatedEstimator(experiment_list, *args, obj_function, tee, diagnostic_mode, solver_options)
+            self.pest_deprecated = _DeprecatedEstimator(
+                experiment_list, 
+                *args, 
+                obj_function, 
+                tee, 
+                diagnostic_mode, 
+                solver_options,
+            )
             return
 
         # check that we have a (non-empty) list of experiments
@@ -309,7 +324,7 @@ class Estimator(object):
         # populate keyword argument options
         self.obj_function = obj_function
         self.tee = tee
-        self.diagnostic_mode = diagnostic_mode 
+        self.diagnostic_mode = diagnostic_mode
         self.solver_options = solver_options
 
         # TODO This might not be needed here.
