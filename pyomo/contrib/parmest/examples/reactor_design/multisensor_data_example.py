@@ -80,7 +80,7 @@ def main():
     # View one model
     # exp0_model = exp_list[0].get_labeled_model()
     # exp0_model.pprint()
-    # SSE_multisensor(exp0_model)
+    # print(SSE_multisensor(exp0_model))
 
     pest = parmest.Estimator(exp_list, obj_function=SSE_multisensor)
     obj, theta = pest.theta_est()
