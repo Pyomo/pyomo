@@ -98,7 +98,7 @@ def slice_component_along_sets(comp, sets, context=None):
     sets: `pyomo.common.collections.ComponentSet`
         Contains the sets to replace with slices
     context: `pyomo.core.base.block.Block` or
-    `pyomo.core.base.block._BlockData`
+    `pyomo.core.base.block.BlockData`
         Block below which to search for sets
 
     Returns:

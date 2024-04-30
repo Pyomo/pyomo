@@ -14,7 +14,7 @@ from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.indexed_component import rule_wrapper
 from pyomo.core.base.expression import (
     Expression,
-    _GeneralExpressionData,
+    ExpressionData,
     ScalarExpression,
     IndexedExpression,
 )
@@ -151,7 +151,7 @@ class ScalarIntegral(ScalarExpression, Integral):
     """
 
     def __init__(self, *args, **kwds):
-        _GeneralExpressionData.__init__(self, None, component=self)
+        ExpressionData.__init__(self, None, component=self)
         Integral.__init__(self, *args, **kwds)
 
     def clear(self):

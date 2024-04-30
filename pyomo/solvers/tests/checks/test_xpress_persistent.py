@@ -262,7 +262,7 @@ class TestXpressPersistent(unittest.TestCase):
 
         # add indexed constraint
         self.assertRaises(AttributeError, opt.add_column, m, m.y, -2, [m.ci], [1])
-        # add something not a _ConstraintData
+        # add something not a ConstraintData
         self.assertRaises(AttributeError, opt.add_column, m, m.y, -2, [m.x], [1])
 
         # constraint not on solver model
