@@ -31,7 +31,7 @@ def main():
 
     # View one model
     # exp0_model = exp_list[0].get_labeled_model()
-    # print(exp0_model.pprint())
+    # exp0_model.pprint()
 
     pest = parmest.Estimator(exp_list, obj_function='SSE')
 

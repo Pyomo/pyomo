@@ -41,12 +41,11 @@ class MultisensorReactorDesignExperiment(ReactorDesignExperiment):
         m = self.model
 
         m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.experiment_outputs.update(
-            [(m.ca, [self.data_i['ca1'], self.data_i['ca2'], self.data_i['ca3']])]
-        )
-        m.experiment_outputs.update([(m.cb, [self.data_i['cb']])])
-        m.experiment_outputs.update([(m.cc, [self.data_i['cc1'], self.data_i['cc2']])])
-        m.experiment_outputs.update([(m.cd, [self.data_i['cd']])])
+        m.experiment_outputs.update([
+            (m.ca, [self.data_i['ca1'], self.data_i['ca2'], self.data_i['ca3']]),
+            (m.cb, [self.data_i['cb']]),
+            (m.cc, [self.data_i['cc1'], self.data_i['cc2']]),
+            (m.cd, [self.data_i['cd']])])
 
         m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.unknown_parameters.update(
@@ -80,8 +79,8 @@ def main():
 
     # View one model
     # exp0_model = exp_list[0].get_labeled_model()
-    # print(exp0_model.pprint())
-    # print(SSE_multisensor(exp0_model))
+    # exp0_model.pprint()
+    # SSE_multisensor(exp0_model)
 
     pest = parmest.Estimator(exp_list, obj_function=SSE_multisensor)
     obj, theta = pest.theta_est()
