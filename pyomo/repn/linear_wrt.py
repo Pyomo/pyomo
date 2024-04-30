@@ -16,11 +16,13 @@ from pyomo.common.numeric_types import native_numeric_types
 from pyomo.core import Var
 from pyomo.core.expr.logical_expr import _flattened
 from pyomo.core.expr.numeric_expr import (
+    AbsExpression,
     LinearExpression,
     MonomialTermExpression,
     mutable_expression,
     ProductExpression,
     SumExpression,
+    UnaryFunctionExpression,
 )
 from pyomo.repn.linear import (
     ExitNodeDispatcher,
@@ -183,13 +185,33 @@ _exit_node_handlers = copy.deepcopy(linear._exit_node_handlers)
 def _handle_product_constant_constant(visitor, node, arg1, arg2):
     # ESJ: Can I do this? Just let the potential nans go through?
     return _CONSTANT, arg1[1] * arg2[1]
+    
 
 _exit_node_handlers[ProductExpression].update(
     {
         (_CONSTANT, _CONSTANT): _handle_product_constant_constant,
     }
 )
-    
+
+def _handle_unary_constant(visitor, node, arg):
+    # We override this because we can't blindly use apply_node_operation in this case
+    if arg.__class__ not in native_numeric_types:
+        return _CONSTANT, node.create_node_with_local_data(
+            (linear.to_expression(visitor, arg),))
+    # otherwise do the usual:
+    ans = apply_node_operation(node, (arg[1],))
+    # Unary includes sqrt() which can return complex numbers
+    if ans.__class__ in native_complex_types:
+        ans = complex_number_error(ans, visitor, node)
+    return _CONSTANT, ans
+
+_exit_node_handlers[UnaryFunctionExpression].update(
+    {
+        (_CONSTANT,): _handle_unary_constant
+    }
+)
+_exit_node_handlers[AbsExpression] = _exit_node_handlers[UnaryFunctionExpression]
+
 
 # LinearSubsystemRepnVisitor
 class MultilevelLinearRepnVisitor(LinearRepnVisitor):
