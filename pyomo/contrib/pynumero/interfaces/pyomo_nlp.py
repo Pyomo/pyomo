@@ -22,6 +22,7 @@ from pyomo.opt import WriterFactory
 import pyomo.core.base as pyo
 from pyomo.common.collections import ComponentMap
 from pyomo.common.env import CtypesEnviron
+from pyomo.solvers.amplfunc_merge import amplfunc_merge
 from ..sparse.block_matrix import BlockMatrix
 from pyomo.contrib.pynumero.interfaces.ampl_nlp import AslNLP
 from pyomo.contrib.pynumero.interfaces.nlp import NLP
@@ -92,15 +93,8 @@ class PyomoNLP(AslNLP):
             # The NL writer advertises the external function libraries
             # through the PYOMO_AMPLFUNC environment variable; merge it
             # with any preexisting AMPLFUNC definitions
-            amplfunc = "\n".join(
-                filter(
-                    None,
-                    (
-                        os.environ.get('AMPLFUNC', None),
-                        os.environ.get('PYOMO_AMPLFUNC', None),
-                    ),
-                )
-            )
+            amplfunc = amplfunc_merge(os.environ)
+
             with CtypesEnviron(AMPLFUNC=amplfunc):
                 super(PyomoNLP, self).__init__(nl_file)
 

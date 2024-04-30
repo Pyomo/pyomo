@@ -31,6 +31,8 @@ class SolverFactoryClass(Factory):
                 LegacySolver
             )
 
+            # Preserve the preferred name, as registered in the Factory
+            cls.name = name
             return cls
 
         return decorator

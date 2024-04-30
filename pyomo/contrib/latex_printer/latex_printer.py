@@ -34,8 +34,8 @@ from pyomo.core.expr import (
 
 from pyomo.core.expr.visitor import identify_components
 from pyomo.core.expr.base import ExpressionBase
-from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
-from pyomo.core.base.objective import ScalarObjective, _GeneralObjectiveData
+from pyomo.core.base.expression import ScalarExpression, ExpressionData
+from pyomo.core.base.objective import ScalarObjective, ObjectiveData
 import pyomo.core.kernel as kernel
 from pyomo.core.expr.template_expr import (
     GetItemExpression,
@@ -47,9 +47,9 @@ from pyomo.core.expr.template_expr import (
     resolve_template,
     templatize_rule,
 )
-from pyomo.core.base.var import ScalarVar, _GeneralVarData, IndexedVar
-from pyomo.core.base.param import _ParamData, ScalarParam, IndexedParam
-from pyomo.core.base.set import _SetData, SetOperator
+from pyomo.core.base.var import ScalarVar, VarData, IndexedVar
+from pyomo.core.base.param import ParamData, ScalarParam, IndexedParam
+from pyomo.core.base.set import SetData, SetOperator
 from pyomo.core.base.constraint import ScalarConstraint, IndexedConstraint
 from pyomo.common.collections.component_map import ComponentMap
 from pyomo.common.collections.component_set import ComponentSet
@@ -64,7 +64,7 @@ from pyomo.core.base.block import IndexedBlock
 from pyomo.core.base.external import _PythonCallbackFunctionID
 from pyomo.core.base.enums import SortComponents
 
-from pyomo.core.base.block import _BlockData
+from pyomo.core.base.block import BlockData
 
 from pyomo.repn.util import ExprType
 
@@ -399,12 +399,12 @@ class _LatexVisitor(StreamBasedExpressionVisitor):
             EqualityExpression: handle_equality_node,
             InequalityExpression: handle_inequality_node,
             RangedExpression: handle_ranged_inequality_node,
-            _GeneralExpressionData: handle_named_expression_node,
+            ExpressionData: handle_named_expression_node,
             ScalarExpression: handle_named_expression_node,
             kernel.expression.expression: handle_named_expression_node,
             kernel.expression.noclone: handle_named_expression_node,
-            _GeneralObjectiveData: handle_named_expression_node,
-            _GeneralVarData: handle_var_node,
+            ObjectiveData: handle_named_expression_node,
+            VarData: handle_var_node,
             ScalarObjective: handle_named_expression_node,
             kernel.objective.objective: handle_named_expression_node,
             ExternalFunctionExpression: handle_external_function_node,
@@ -417,7 +417,7 @@ class _LatexVisitor(StreamBasedExpressionVisitor):
             Numeric_GetItemExpression: handle_numericGetItemExpression_node,
             TemplateSumExpression: handle_templateSumExpression_node,
             ScalarParam: handle_param_node,
-            _ParamData: handle_param_node,
+            ParamData: handle_param_node,
             IndexedParam: handle_param_node,
             NPV_Numeric_GetItemExpression: handle_numericGetItemExpression_node,
             IndexedBlock: handle_indexedBlock_node,
@@ -587,7 +587,7 @@ def latex_printer(
 
     Parameters
     ----------
-    pyomo_component: _BlockData or Model or Objective or Constraint or Expression
+    pyomo_component: BlockData or Model or Objective or Constraint or Expression
         The Pyomo component to be printed
 
     latex_component_map: pyomo.common.collections.component_map.ComponentMap
@@ -674,7 +674,7 @@ def latex_printer(
         use_equation_environment = True
         isSingle = True
 
-    elif isinstance(pyomo_component, _BlockData):
+    elif isinstance(pyomo_component, BlockData):
         objectives = [
             obj
             for obj in pyomo_component.component_data_objects(
@@ -705,10 +705,8 @@ def latex_printer(
     if isSingle:
         temp_comp, temp_indexes = templatize_fcn(pyomo_component)
         variableList = []
-        for v in identify_components(
-            temp_comp, [ScalarVar, _GeneralVarData, IndexedVar]
-        ):
-            if isinstance(v, _GeneralVarData):
+        for v in identify_components(temp_comp, [ScalarVar, VarData, IndexedVar]):
+            if isinstance(v, VarData):
                 v_write = v.parent_component()
                 if v_write not in ComponentSet(variableList):
                     variableList.append(v_write)
@@ -717,10 +715,8 @@ def latex_printer(
                     variableList.append(v)
 
         parameterList = []
-        for p in identify_components(
-            temp_comp, [ScalarParam, _ParamData, IndexedParam]
-        ):
-            if isinstance(p, _ParamData):
+        for p in identify_components(temp_comp, [ScalarParam, ParamData, IndexedParam]):
+            if isinstance(p, ParamData):
                 p_write = p.parent_component()
                 if p_write not in ComponentSet(parameterList):
                     parameterList.append(p_write)
@@ -1275,17 +1271,17 @@ def latex_printer(
 
     rep_dict = {}
     for ky in reversed(list(latex_component_map)):
-        if isinstance(ky, (pyo.Var, _GeneralVarData)):
+        if isinstance(ky, (pyo.Var, VarData)):
             overwrite_value = latex_component_map[ky]
             if ky not in existing_components:
                 overwrite_value = overwrite_value.replace('_', '\\_')
             rep_dict[variableMap[ky]] = overwrite_value
-        elif isinstance(ky, (pyo.Param, _ParamData)):
+        elif isinstance(ky, (pyo.Param, ParamData)):
             overwrite_value = latex_component_map[ky]
             if ky not in existing_components:
                 overwrite_value = overwrite_value.replace('_', '\\_')
             rep_dict[parameterMap[ky]] = overwrite_value
-        elif isinstance(ky, _SetData):
+        elif isinstance(ky, SetData):
             # already handled
             pass
         elif isinstance(ky, (float, int)):
