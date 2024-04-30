@@ -262,7 +262,7 @@ class Estimator(object):
         "as is" and should be defined with a "FirstStageCost" and
         "SecondStageCost" expression that are used to build an objective.
     tee: bool, optional
-        Indicates that ef solver output should be teed
+        If True, print the solver output to the screen
     diagnostic_mode: bool, optional
         If True, print diagnostics from the solver
     solver_options: dict, optional
@@ -273,12 +273,12 @@ class Estimator(object):
     # as well as the new inputs using experiment lists
     # TODO: when the deprecated Parmest API is removed, *args, can be removed from this constructor
     def __init__(
-        self, 
-        experiment_list, 
-        *args, 
-        obj_function=None, 
-        tee=False, 
-        diagnostic_mode=False, 
+        self,
+        experiment_list,
+        *args,
+        obj_function=None,
+        tee=False,
+        diagnostic_mode=False,
         solver_options=None,
     ):
 
@@ -292,11 +292,11 @@ class Estimator(object):
                 version=DEPRECATION_VERSION,
             )
             self.pest_deprecated = _DeprecatedEstimator(
-                experiment_list, 
-                *args, 
-                obj_function, 
-                tee, 
-                diagnostic_mode, 
+                experiment_list,
+                *args,
+                obj_function,
+                tee,
+                diagnostic_mode,
                 solver_options,
             )
             return
