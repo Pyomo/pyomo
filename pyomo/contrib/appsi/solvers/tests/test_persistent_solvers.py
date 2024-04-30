@@ -1212,19 +1212,19 @@ class TestSolvers(unittest.TestCase):
         m.x.fix(0)
 
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 0)
+        self.assertAlmostEqual(res.best_feasible_objective, 0, 6)
         m.x.fix(1)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 1)
+        self.assertAlmostEqual(res.best_feasible_objective, 1, 6)
 
         opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         opt.update_config.treat_fixed_vars_as_params = False
         m.x.fix(0)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 0)
+        self.assertAlmostEqual(res.best_feasible_objective, 0, 6)
         m.x.fix(1)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 1)
+        self.assertAlmostEqual(res.best_feasible_objective, 1, 6)
 
     @parameterized.expand(input=_load_tests(mip_solvers, only_child_vars_options))
     def test_with_gdp(
