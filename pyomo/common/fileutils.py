@@ -384,11 +384,13 @@ def find_library(libname, cwd=True, include_PATH=True, pathlist=None):
         # where python does not return the absolute path on *nix
         try:
             libname = lib + ' '
-            with subprocess.Popen(['/sbin/ldconfig', '-p'],
-                                  stdin=subprocess.DEVNULL,
-                                  stderr=subprocess.DEVNULL,
-                                  stdout=subprocess.PIPE,
-                                  env={'LC_ALL': 'C', 'LANG': 'C'}) as p:
+            with subprocess.Popen(
+                ['/sbin/ldconfig', '-p'],
+                stdin=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                env={'LC_ALL': 'C', 'LANG': 'C'},
+            ) as p:
                 for line in os.fsdecode(p.stdout.read()).splitlines():
                     if line.lstrip().startswith(libname):
                         return os.path.realpath(line.split()[-1])
