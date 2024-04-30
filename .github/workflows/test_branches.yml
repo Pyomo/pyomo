@@ -565,7 +565,7 @@ jobs:
         ls -l $GJH_DIR
 
     - name: Install GiNaC
-      if: ${{ ! matrix.slim }}
+      if: ${{ 0 && ! matrix.slim }}
       run: |
         if test ! -e "${DOWNLOAD_DIR}/ginac.tar.gz"; then
             mkdir -p "${GITHUB_WORKSPACE}/cache/build/ginac"
