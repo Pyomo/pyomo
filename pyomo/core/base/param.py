@@ -118,7 +118,7 @@ class _ImplicitAny(_AnySet):
         pass
 
 
-class _ParamData(ComponentData, NumericValue):
+class ParamData(ComponentData, NumericValue):
     """
     This class defines the data for a mutable parameter.
 
@@ -252,6 +252,11 @@ class _ParamData(ComponentData, NumericValue):
         return 0
 
 
+class _ParamData(metaclass=RenamedClass):
+    __renamed__new_class__ = ParamData
+    __renamed__version__ = '6.7.2.dev0'
+
+
 @ModelComponentFactory.register(
     "Parameter data that is used to define a model instance."
 )
@@ -285,7 +290,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
     """
 
     DefaultMutable = False
-    _ComponentDataClass = _ParamData
+    _ComponentDataClass = ParamData
 
     class NoValue(object):
         """A dummy type that is pickle-safe that we can use as the default
@@ -523,14 +528,14 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
                 # instead of incurring the penalty of checking.
                 for index, new_value in new_values.items():
                     if index not in self._data:
-                        self._data[index] = _ParamData(self)
+                        self._data[index] = ParamData(self)
                     self._data[index]._value = new_value
             else:
                 # For scalars, we will choose an approach based on
                 # how "dense" the Param is
                 if not self._data:  # empty
                     for index in self._index_set:
-                        p = self._data[index] = _ParamData(self)
+                        p = self._data[index] = ParamData(self)
                         p._value = new_values
                 elif len(self._data) == len(self._index_set):
                     for index in self._index_set:
@@ -538,7 +543,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
                 else:
                     for index in self._index_set:
                         if index not in self._data:
-                            self._data[index] = _ParamData(self)
+                            self._data[index] = ParamData(self)
                         self._data[index]._value = new_values
         else:
             #
@@ -601,9 +606,9 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             # a default value, as long as *solving* a model without
             # reasonable values produces an informative error.
             if self._mutable:
-                # Note: _ParamData defaults to Param.NoValue
+                # Note: ParamData defaults to Param.NoValue
                 if self.is_indexed():
-                    ans = self._data[index] = _ParamData(self)
+                    ans = self._data[index] = ParamData(self)
                 else:
                     ans = self._data[index] = self
                 ans._index = index
@@ -698,8 +703,8 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             return obj
         else:
             old_value, self._data[index] = self._data[index], value
-            # Because we do not have a _ParamData, we cannot rely on the
-            # validation that occurs in _ParamData.set_value()
+            # Because we do not have a ParamData, we cannot rely on the
+            # validation that occurs in ParamData.set_value()
             try:
                 self._validate_value(index, value)
                 return value
@@ -736,14 +741,14 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
                 self._index = UnindexedComponent_index
                 return self
             elif self._mutable:
-                obj = self._data[index] = _ParamData(self)
+                obj = self._data[index] = ParamData(self)
                 obj.set_value(value, index)
                 obj._index = index
                 return obj
             else:
                 self._data[index] = value
-                # Because we do not have a _ParamData, we cannot rely on the
-                # validation that occurs in _ParamData.set_value()
+                # Because we do not have a ParamData, we cannot rely on the
+                # validation that occurs in ParamData.set_value()
                 self._validate_value(index, value, _check_domain)
                 return value
         except:
@@ -901,9 +906,9 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         return (headers, self.sparse_iteritems(), ("Value",), dataGen)
 
 
-class ScalarParam(_ParamData, Param):
+class ScalarParam(ParamData, Param):
     def __init__(self, *args, **kwds):
-        _ParamData.__init__(self, component=self)
+        ParamData.__init__(self, component=self)
         Param.__init__(self, *args, **kwds)
         self._index = UnindexedComponent_index
 
@@ -996,7 +1001,7 @@ class IndexedParam(Param):
     # between potentially variable GetItemExpression objects and
     # "constant" GetItemExpression objects.  That will need to wait for
     # the expression rework [JDS; Nov 22].
-    def __getitem__(self, args) -> _ParamData:
+    def __getitem__(self, args) -> ParamData:
         try:
             return super().__getitem__(args)
         except:

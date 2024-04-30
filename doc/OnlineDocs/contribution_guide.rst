@@ -71,6 +71,10 @@ at least 70% coverage of the lines modified in the PR and prefer coverage
 closer to 90%. We also require that all tests pass before a PR will be 
 merged.
 
+.. note::
+   If you are having issues getting tests to pass on your Pull Request,
+   please tag any of the core developers to ask for help.
+
 The Pyomo main branch provides a Github Actions workflow (configured
 in the ``.github/`` directory) that will test any changes pushed to
 a branch with a subset of the complete test harness that includes
@@ -82,12 +86,15 @@ This will enable the tests to run automatically with each push to your fork.
 
 At any point in the development cycle, a "work in progress" pull request
 may be opened by including '[WIP]' at the beginning of the PR
-title. This allows your code changes to be tested by the full suite of
-Pyomo's automatic
-testing infrastructure. Any pull requests marked '[WIP]' will not be
+title. Any pull requests marked '[WIP]' or draft will not be
 reviewed or merged by the core development team. However, any
 '[WIP]' pull request left open for an extended period of time without
 active development may be marked 'stale' and closed.
+
+.. note::
+   Draft and WIP Pull Requests will **NOT** trigger tests. This is an effort to
+   reduce our CI backlog. Please make use of the provided
+   branch test suite for evaluating / testing draft functionality.
 
 Python Version Support
 ++++++++++++++++++++++

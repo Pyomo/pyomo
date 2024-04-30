@@ -36,7 +36,6 @@ from pyomo.opt.results import (
     Solution,
     SolutionStatus,
     TerminationCondition,
-    ProblemSense,
 )
 
 from pyomo.common.dependencies import attempt_import
@@ -422,11 +421,10 @@ class GAMSDirect(_GAMSSolver):
         assert len(obj) == 1, 'Only one objective is allowed.'
         obj = obj[0]
         objctvval = t1.out_db["OBJVAL"].find_record().value
+        results.problem.sense = obj.sense
         if obj.is_minimizing():
-            results.problem.sense = ProblemSense.minimize
             results.problem.upper_bound = objctvval
         else:
-            results.problem.sense = ProblemSense.maximize
             results.problem.lower_bound = objctvval
 
         results.solver.name = "GAMS " + str(self.version())
@@ -984,11 +982,10 @@ class GAMSShell(_GAMSSolver):
         assert len(obj) == 1, 'Only one objective is allowed.'
         obj = obj[0]
         objctvval = stat_vars["OBJVAL"]
+        results.problem.sense = obj.sense
         if obj.is_minimizing():
-            results.problem.sense = ProblemSense.minimize
             results.problem.upper_bound = objctvval
         else:
-            results.problem.sense = ProblemSense.maximize
             results.problem.lower_bound = objctvval
 
         results.solver.name = "GAMS " + str(self.version())
