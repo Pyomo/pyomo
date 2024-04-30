@@ -246,18 +246,6 @@ def SSE(model):
     return expr
 
 
-class _SecondStageCostExpr(object):
-    """
-    Class to pass objective expression into the Pyomo model
-    """
-
-    def __init__(self, ssc_function):
-        self._ssc_function = ssc_function
-
-    def __call__(self, model):
-        return self._ssc_function(model)
-
-
 class Estimator(object):
     """
     Parameter estimation class
@@ -419,10 +407,10 @@ class Estimator(object):
 
             # TODO, this needs to be turned a enum class of options that still support custom functions
             if self.obj_function == 'SSE':
-                second_stage_rule = _SecondStageCostExpr(SSE)
+                second_stage_rule = SSE
             else:
                 # A custom function uses model.experiment_outputs as data
-                second_stage_rule = _SecondStageCostExpr(self.obj_function)
+                second_stage_rule = self.obj_function
 
             model.FirstStageCost = pyo.Expression(expr=0)
             model.SecondStageCost = pyo.Expression(rule=second_stage_rule)
