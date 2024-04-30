@@ -68,6 +68,16 @@ def build_ginac_library(parallel=None, argv=None):
         assert subprocess.run(install_cmd, cwd=ginac_dir).returncode == 0
 
 
+def _find_include(libdir, incpaths):
+    while 1:
+        basedir = os.path.dirname(libdir)
+        if not basedir or basedir == libdir:
+            return None
+        if os.path.exists(os.path.join(basedir, *incpaths)):
+            return os.path.join(basedir, *(incpaths[:-1]))):
+        libdir = basedir
+
+
 def build_ginac_interface(parallel=None, args=None):
     from distutils.dist import Distribution
     from pybind11.setup_helpers import Pybind11Extension, build_ext
@@ -90,11 +100,9 @@ def build_ginac_interface(parallel=None, args=None):
             'the library and development headers system-wide, or include the '
             'path tt the library in the LD_LIBRARY_PATH environment variable'
         )
-    print("Found GiNaC library:", ginac_lib)
     ginac_lib_dir = os.path.dirname(ginac_lib)
-    ginac_build_dir = os.path.dirname(ginac_lib_dir)
-    ginac_include_dir = os.path.join(ginac_build_dir, 'include')
-    if not os.path.exists(os.path.join(ginac_include_dir, 'ginac', 'ginac.h')):
+    ginac_include_dir = _find_include(ginac_lib_dir, ('ginac', 'ginac.h'))
+    if not ginac_include_dir:
         raise RuntimeError('could not find GiNaC include directory')
 
     cln_lib = find_library('cln')
@@ -104,11 +112,9 @@ def build_ginac_interface(parallel=None, args=None):
             'the library and development headers system-wide, or include the '
             'path tt the library in the LD_LIBRARY_PATH environment variable'
         )
-    print("Found CLN library:", cln_lib)
     cln_lib_dir = os.path.dirname(cln_lib)
-    cln_build_dir = os.path.dirname(cln_lib_dir)
-    cln_include_dir = os.path.join(cln_build_dir, 'include')
-    if not os.path.exists(os.path.join(cln_include_dir, 'cln', 'cln.h')):
+    cln_include_dir = _find_include(cln_lib_dir, ('cln', 'cln.h'))
+    if cln_include_dir:
         raise RuntimeError('could not find CLN include directory')
 
     extra_args = ['-std=c++11']
