@@ -1610,7 +1610,7 @@ class TestCPExpressionWalker_CumulFuncExpressions(CommonTest):
 
     def test_always_in_single_pulse(self):
         # This is a bit silly as you can tell whether or not it is feasible
-        # structurally, but there's not reason it couldn't happen.
+        # structurally, but there's no reason it couldn't happen.
         m = self.get_model()
         f = Pulse((m.i, 3))
         m.c = LogicalConstraint(expr=f.within((0, 3), (0, 10)))
