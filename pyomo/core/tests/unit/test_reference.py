@@ -800,8 +800,8 @@ class TestReference(unittest.TestCase):
             buf.getvalue(),
             """r : Size=2, Index={1, 2}, ReferenceTo=x
     Key : Object
-      1 : <class 'pyomo.core.base.var._GeneralVarData'>
-      2 : <class 'pyomo.core.base.var._GeneralVarData'>
+      1 : <class 'pyomo.core.base.var.VarData'>
+      2 : <class 'pyomo.core.base.var.VarData'>
 """,
         )
         m.s = Reference(m.x[:, ...], ctype=IndexedComponent)
@@ -811,8 +811,8 @@ class TestReference(unittest.TestCase):
             buf.getvalue(),
             """s : Size=2, Index={1, 2}, ReferenceTo=x[:, ...]
     Key : Object
-      1 : <class 'pyomo.core.base.var._GeneralVarData'>
-      2 : <class 'pyomo.core.base.var._GeneralVarData'>
+      1 : <class 'pyomo.core.base.var.VarData'>
+      2 : <class 'pyomo.core.base.var.VarData'>
 """,
         )
 
@@ -1357,8 +1357,8 @@ class TestReference(unittest.TestCase):
 1 IndexedComponent Declarations
     ref : Size=2, Index=NonNegativeIntegers, ReferenceTo=v
         Key : Object
-          3 : <class 'pyomo.core.base.var._GeneralVarData'>
-          5 : <class 'pyomo.core.base.var._GeneralVarData'>
+          3 : <class 'pyomo.core.base.var.VarData'>
+          5 : <class 'pyomo.core.base.var.VarData'>
 
 2 Declarations: v ref
 """.strip(),

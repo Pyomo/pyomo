@@ -5,10 +5,10 @@ Test objects for construction of PyROS ConfigDict.
 import logging
 import unittest
 
-from pyomo.core.base import ConcreteModel, Var, _VarData
+from pyomo.core.base import ConcreteModel, Var, VarData
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.errors import ApplicationError
-from pyomo.core.base.param import Param, _ParamData
+from pyomo.core.base.param import Param, ParamData
 from pyomo.contrib.pyros.config import (
     InputDataStandardizer,
     mutable_param_validator,
@@ -38,7 +38,7 @@ class TestInputDataStandardizer(unittest.TestCase):
         mdl = ConcreteModel()
         mdl.v = Var([0, 1])
 
-        standardizer_func = InputDataStandardizer(Var, _VarData)
+        standardizer_func = InputDataStandardizer(Var, VarData)
 
         standardizer_input = mdl.v[0]
         standardizer_output = standardizer_func(standardizer_input)
@@ -74,7 +74,7 @@ class TestInputDataStandardizer(unittest.TestCase):
         mdl = ConcreteModel()
         mdl.v = Var([0, 1])
 
-        standardizer_func = InputDataStandardizer(Var, _VarData)
+        standardizer_func = InputDataStandardizer(Var, VarData)
 
         standardizer_input = mdl.v
         standardizer_output = standardizer_func(standardizer_input)
@@ -113,7 +113,7 @@ class TestInputDataStandardizer(unittest.TestCase):
         mdl.v = Var([0, 1])
         mdl.x = Var(["a", "b"])
 
-        standardizer_func = InputDataStandardizer(Var, _VarData)
+        standardizer_func = InputDataStandardizer(Var, VarData)
 
         standardizer_input = [mdl.v[0], mdl.x]
         standardizer_output = standardizer_func(standardizer_input)
@@ -154,7 +154,7 @@ class TestInputDataStandardizer(unittest.TestCase):
         mdl.v = Var([0, 1])
         mdl.x = Var(["a", "b"])
 
-        standardizer_func = InputDataStandardizer(Var, _VarData, allow_repeats=False)
+        standardizer_func = InputDataStandardizer(Var, VarData, allow_repeats=False)
 
         exc_str = r"Standardized.*list.*contains duplicate entries\."
         with self.assertRaisesRegex(ValueError, exc_str):
@@ -165,7 +165,7 @@ class TestInputDataStandardizer(unittest.TestCase):
         Test standardizer raises exception as expected
         when input is of invalid type.
         """
-        standardizer_func = InputDataStandardizer(Var, _VarData)
+        standardizer_func = InputDataStandardizer(Var, VarData)
 
         exc_str = r"Input object .*is not of valid component type.*"
         with self.assertRaisesRegex(TypeError, exc_str):
@@ -178,7 +178,7 @@ class TestInputDataStandardizer(unittest.TestCase):
         """
         mdl = ConcreteModel()
         mdl.v = Var([0, 1])
-        standardizer_func = InputDataStandardizer(Var, _VarData)
+        standardizer_func = InputDataStandardizer(Var, VarData)
 
         exc_str = r"Input object .*entry of iterable.*is not of valid component type.*"
         with self.assertRaisesRegex(TypeError, exc_str):
@@ -189,7 +189,7 @@ class TestInputDataStandardizer(unittest.TestCase):
         Test standardizer raises exception as expected
         when input is of invalid type str.
         """
-        standardizer_func = InputDataStandardizer(Var, _VarData)
+        standardizer_func = InputDataStandardizer(Var, VarData)
 
         exc_str = r"Input object .*is not of valid component type.*"
         with self.assertRaisesRegex(TypeError, exc_str):
@@ -201,7 +201,7 @@ class TestInputDataStandardizer(unittest.TestCase):
         uninitialized entries passed.
         """
         standardizer_func = InputDataStandardizer(
-            ctype=Param, cdatatype=_ParamData, ctype_validator=mutable_param_validator
+            ctype=Param, cdatatype=ParamData, ctype_validator=mutable_param_validator
         )
 
         mdl = ConcreteModel()
@@ -217,7 +217,7 @@ class TestInputDataStandardizer(unittest.TestCase):
         Param object(s) passed.
         """
         standardizer_func = InputDataStandardizer(
-            ctype=Param, cdatatype=_ParamData, ctype_validator=mutable_param_validator
+            ctype=Param, cdatatype=ParamData, ctype_validator=mutable_param_validator
         )
 
         mdl = ConcreteModel()
@@ -237,7 +237,7 @@ class TestInputDataStandardizer(unittest.TestCase):
         mdl.p2 = Param(["a", "b"], initialize=1, mutable=True)
 
         standardizer_func = InputDataStandardizer(
-            ctype=Param, cdatatype=_ParamData, ctype_validator=mutable_param_validator
+            ctype=Param, cdatatype=ParamData, ctype_validator=mutable_param_validator
         )
 
         standardizer_input = [mdl.p1[0], mdl.p2]

@@ -292,7 +292,7 @@ def _handle_division_constant_constant(visitor, node, arg1, arg2):
 
 
 def _handle_division_ANY_constant(visitor, node, arg1, arg2):
-    arg1[1].multiplier /= arg2[1]
+    arg1[1].multiplier = apply_node_operation(node, (arg1[1].multiplier, arg2[1]))
     return arg1
 
 

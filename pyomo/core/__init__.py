@@ -101,7 +101,7 @@ from pyomo.core.expr.boolean_value import (
     BooleanValue,
     native_logical_values,
 )
-from pyomo.core.kernel.objective import minimize, maximize
+from pyomo.core.base import minimize, maximize
 from pyomo.core.base.config import PyomoOptions
 
 from pyomo.core.base.expression import Expression
