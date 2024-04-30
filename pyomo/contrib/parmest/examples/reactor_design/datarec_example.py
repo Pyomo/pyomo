@@ -132,8 +132,8 @@ def main():
     # Define sum of squared error objective function for data rec
     def SSE_with_std(model):
         expr = sum(
-            ((y - yhat) / model.experiment_outputs_std[y]) ** 2
-            for y, yhat in model.experiment_outputs.items()
+            ((y - y_hat) / model.experiment_outputs_std[y]) ** 2
+            for y, y_hat in model.experiment_outputs.items()
         )
         return expr
 

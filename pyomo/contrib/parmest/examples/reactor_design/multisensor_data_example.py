@@ -74,10 +74,10 @@ def main():
     # Define sum of squared error
     def SSE_multisensor(model):
         expr = 0
-        for y, yhat in model.experiment_outputs.items():
-            num_outputs = len(yhat)
+        for y, y_hat in model.experiment_outputs.items():
+            num_outputs = len(y_hat)
             for i in range(num_outputs):
-                expr += ((y - yhat[i]) ** 2) * (1 / num_outputs)
+                expr += ((y - y_hat[i]) ** 2) * (1 / num_outputs)
         return expr
 
     # View one model
