@@ -106,7 +106,6 @@ class TestSimplificationSympy(TestCase, SimplificationMixin):
 
 
 @unittest.skipIf(not ginac_available, 'GiNaC is not available')
-@unittest.pytest.mark.simplification
 class TestSimplificationGiNaC(TestCase, SimplificationMixin):
     def test_param(self):
         m = pe.ConcreteModel()
