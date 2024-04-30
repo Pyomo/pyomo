@@ -112,7 +112,7 @@ class ReactorDesignExperiment(Experiment):
                 (m.ca, self.data_i['ca']),
                 (m.cb, self.data_i['cb']),
                 (m.cc, self.data_i['cc']),
-                (m.cd, self.data_i['cd'])
+                (m.cd, self.data_i['cd']),
             ]
         )
 

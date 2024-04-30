@@ -46,7 +46,7 @@ class MultisensorReactorDesignExperiment(ReactorDesignExperiment):
                 (m.ca, [self.data_i['ca1'], self.data_i['ca2'], self.data_i['ca3']]),
                 (m.cb, [self.data_i['cb']]),
                 (m.cc, [self.data_i['cc1'], self.data_i['cc2']]),
-                (m.cd, [self.data_i['cd']])
+                (m.cd, [self.data_i['cd']]),
             ]
         )
 
