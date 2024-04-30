@@ -40,17 +40,25 @@ class ReactorDesignExperimentDataRec(ReactorDesignExperiment):
 
         # experiment outputs
         m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.experiment_outputs.update([(m.ca, self.data_i['ca']),
-                                     (m.cb, self.data_i['cb']),
-                                     (m.cc, self.data_i['cc']),
-                                     (m.cd, self.data_i['cd'])])
+        m.experiment_outputs.update(
+            [
+                (m.ca, self.data_i['ca']),
+                (m.cb, self.data_i['cb']),
+                (m.cc, self.data_i['cc']),
+                (m.cd, self.data_i['cd'])
+            ]
+        )
 
         # experiment standard deviations
         m.experiment_outputs_std = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.experiment_outputs_std.update([(m.ca, self.data_std['ca']),
-                                         (m.cb, self.data_std['cb']),
-                                         (m.cc, self.data_std['cc']),
-                                         (m.cd, self.data_std['cd'])])
+        m.experiment_outputs_std.update(
+            [
+                (m.ca, self.data_std['ca']),
+                (m.cb, self.data_std['cb']),
+                (m.cc, self.data_std['cc']),
+                (m.cd, self.data_std['cd'])
+            ]
+        )
 
         # no unknowns (theta names)
         m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
@@ -71,10 +79,14 @@ class ReactorDesignExperimentPostDataRec(ReactorDesignExperiment):
 
         # add experiment standard deviations
         m.experiment_outputs_std = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.experiment_outputs_std.update([(m.ca, self.data_std['ca']),
-                                         (m.cb, self.data_std['cb']),
-                                         (m.cc, self.data_std['cc']),
-                                         (m.cd, self.data_std['cd'])])
+        m.experiment_outputs_std.update(
+            [
+                (m.ca, self.data_std['ca']),
+                (m.cb, self.data_std['cb']),
+                (m.cc, self.data_std['cc']),
+                (m.cd, self.data_std['cd'])
+            ]
+        )
 
         return m
 
