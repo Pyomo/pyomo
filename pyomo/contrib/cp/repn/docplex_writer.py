@@ -77,12 +77,12 @@ from pyomo.core.base import (
 )
 from pyomo.core.base.boolean_var import (
     ScalarBooleanVar,
-    _GeneralBooleanVarData,
+    BooleanVarData,
     IndexedBooleanVar,
 )
-from pyomo.core.base.expression import _GeneralExpressionData, ScalarExpression
-from pyomo.core.base.param import IndexedParam, ScalarParam, _ParamData
-from pyomo.core.base.var import ScalarVar, _GeneralVarData, IndexedVar
+from pyomo.core.base.expression import ScalarExpression, ExpressionData
+from pyomo.core.base.param import IndexedParam, ScalarParam, ParamData
+from pyomo.core.base.var import ScalarVar, VarData, IndexedVar
 import pyomo.core.expr as EXPR
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor, identify_variables
 from pyomo.core.base import Set, RangeSet
@@ -1028,7 +1028,7 @@ _operator_handles = {
     BeforeExpression: _handle_before_expression_node,
     AtExpression: _handle_at_expression_node,
     AlwaysIn: _handle_always_in_node,
-    _GeneralExpressionData: _handle_named_expression_node,
+    ExpressionData: _handle_named_expression_node,
     ScalarExpression: _handle_named_expression_node,
     NoOverlapExpression: _handle_no_overlap_expression_node,
     FirstInSequenceExpression: _handle_first_in_sequence_expression_node,
@@ -1045,6 +1045,7 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
     exit_node_dispatcher = ExitNodeDispatcher(_operator_handles)
     # NOTE: Because of indirection, we can encounter indexed Params and Vars in
     # expressions
+
     _var_handles = {
         IntervalVarStartTime: _before_interval_var_start_time,
         IntervalVarEndTime: _before_interval_var_end_time,
@@ -1056,16 +1057,16 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         ScalarSequenceVar: _before_sequence_var,
         _SequenceVarData: _before_sequence_var,
         ScalarVar: _before_var,
-        _GeneralVarData: _before_var,
+        VarData: _before_var,
         IndexedVar: _before_indexed_var,
         ScalarBooleanVar: _before_boolean_var,
-        _GeneralBooleanVarData: _before_boolean_var,
+        BooleanVarData: _before_boolean_var,
         IndexedBooleanVar: _before_indexed_boolean_var,
-        _GeneralExpressionData: _before_named_expression,
+        ExpressionData: _before_named_expression,
         ScalarExpression: _before_named_expression,
         IndexedParam: _before_indexed_param,
         ScalarParam: _before_param,
-        _ParamData: _before_param,
+        ParamData: _before_param,
     }
 
     def __init__(self, cpx_model, symbolic_solver_labels=False):
