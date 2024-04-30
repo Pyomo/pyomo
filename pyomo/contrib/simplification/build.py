@@ -69,12 +69,13 @@ def build_ginac_library(parallel=None, argv=None):
 
 
 def _find_include(libdir, incpaths):
+    rel_path = ('include',) + incpaths
     while 1:
         basedir = os.path.dirname(libdir)
         if not basedir or basedir == libdir:
             return None
-        if os.path.exists(os.path.join(basedir, *incpaths)):
-            return os.path.join(basedir, *(incpaths[:-1]))):
+        if os.path.exists(os.path.join(basedir, *rel_path)):
+            return os.path.join(basedir, *(rel_path[:-len(incpaths)]))
         libdir = basedir
 
 
@@ -86,15 +87,13 @@ def build_ginac_interface(parallel=None, args=None):
     sys.stdout.write("\n**** Building GiNaC interface ****")
 
     if args is None:
-        args = list()
+        args = []
     dname = this_file_dir()
     _sources = ['ginac_interface.cpp']
-    sources = list()
-    for fname in _sources:
-        sources.append(os.path.join(dname, fname))
+    sources = [os.path.join(dname, fname) for fname in _sources]
 
     ginac_lib = find_library('ginac')
-    if ginac_lib is None:
+    if not ginac_lib:
         raise RuntimeError(
             'could not find the GiNaC library; please make sure either to install '
             'the library and development headers system-wide, or include the '
@@ -106,7 +105,7 @@ def build_ginac_interface(parallel=None, args=None):
         raise RuntimeError('could not find GiNaC include directory')
 
     cln_lib = find_library('cln')
-    if cln_lib is None:
+    if not cln_lib:
         raise RuntimeError(
             'could not find the CLN library; please make sure either to install '
             'the library and development headers system-wide, or include the '
@@ -114,7 +113,7 @@ def build_ginac_interface(parallel=None, args=None):
         )
     cln_lib_dir = os.path.dirname(cln_lib)
     cln_include_dir = _find_include(cln_lib_dir, ('cln', 'cln.h'))
-    if cln_include_dir:
+    if not cln_include_dir:
         raise RuntimeError('could not find CLN include directory')
 
     extra_args = ['-std=c++11']
