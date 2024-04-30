@@ -75,7 +75,7 @@ def _find_include(libdir, incpaths):
         if not basedir or basedir == libdir:
             return None
         if os.path.exists(os.path.join(basedir, *rel_path)):
-            return os.path.join(basedir, *(rel_path[:-len(incpaths)]))
+            return os.path.join(basedir, *(rel_path[: -len(incpaths)]))
         libdir = basedir
 
 
