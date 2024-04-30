@@ -71,13 +71,13 @@ def build_ginac_interface(args=None):
     class ginacBuildExt(build_ext):
         def run(self):
             basedir = os.path.abspath(os.path.curdir)
-            if self.inplace:
-                tmpdir = this_file_dir()
-            else:
-                tmpdir = os.path.abspath(tempfile.mkdtemp())
-            print("Building in '%s'" % tmpdir)
-            os.chdir(tmpdir)
-            try:
+            with TempfileManager.new_context() as tempfile:
+                if self.inplace:
+                    tmpdir = this_file_dir()
+                else:
+                    tmpdir = os.path.abspath(tempfile.mkdtemp())
+                print("Building in '%s'" % tmpdir)
+                os.chdir(tmpdir)
                 super(ginacBuildExt, self).run()
                 if not self.inplace:
                     library = glob.glob("build/*/ginac_interface.*")[0]
@@ -91,10 +91,6 @@ def build_ginac_interface(args=None):
                     if not os.path.exists(target):
                         os.makedirs(target)
                     shutil.copy(library, target)
-            finally:
-                os.chdir(basedir)
-                if not self.inplace:
-                    shutil.rmtree(tmpdir, onerror=handleReadonly)
 
     package_config = {
         'name': 'ginac_interface',
