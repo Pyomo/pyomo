@@ -65,8 +65,9 @@ class RooneyBieglerExperiment(Experiment):
         m = self.model
 
         m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.experiment_outputs.update([(m.hour, self.data['hour']),
-                                     (m.y, self.data['y'])])
+        m.experiment_outputs.update(
+            [(m.hour, self.data['hour']), (m.y, self.data['y'])]
+        )
 
         m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.unknown_parameters.update(

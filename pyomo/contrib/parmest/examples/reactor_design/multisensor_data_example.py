@@ -41,11 +41,14 @@ class MultisensorReactorDesignExperiment(ReactorDesignExperiment):
         m = self.model
 
         m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.experiment_outputs.update([
-            (m.ca, [self.data_i['ca1'], self.data_i['ca2'], self.data_i['ca3']]),
-            (m.cb, [self.data_i['cb']]),
-            (m.cc, [self.data_i['cc1'], self.data_i['cc2']]),
-            (m.cd, [self.data_i['cd']])])
+        m.experiment_outputs.update(
+            [
+                (m.ca, [self.data_i['ca1'], self.data_i['ca2'], self.data_i['ca3']]),
+                (m.cb, [self.data_i['cb']]),
+                (m.cc, [self.data_i['cc1'], self.data_i['cc2']]),
+                (m.cd, [self.data_i['cd']])
+            ]
+        )
 
         m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.unknown_parameters.update(

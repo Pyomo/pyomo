@@ -89,9 +89,9 @@ class SimpleReactionExperiment(Experiment):
         m = self.model
 
         m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.experiment_outputs.update([(m.x1, self.data['x1']),
-                                     (m.x2, self.data['x2']),
-                                     (m.y, self.data['y'])])
+        m.experiment_outputs.update(
+            [(m.x1, self.data['x1']), (m.x2, self.data['x2']), (m.y, self.data['y'])]
+        )
 
         return m
 

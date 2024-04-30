@@ -107,10 +107,14 @@ class ReactorDesignExperiment(Experiment):
         m = self.model
 
         m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.experiment_outputs.update([(m.ca, self.data_i['ca']),
-                                     (m.cb, self.data_i['cb']),
-                                     (m.cc, self.data_i['cc']),
-                                     (m.cd, self.data_i['cd'])])
+        m.experiment_outputs.update(
+            [
+                (m.ca, self.data_i['ca']),
+                (m.cb, self.data_i['cb']),
+                (m.cc, self.data_i['cc']),
+                (m.cd, self.data_i['cd'])
+            ]
+        )
 
         m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.unknown_parameters.update(
