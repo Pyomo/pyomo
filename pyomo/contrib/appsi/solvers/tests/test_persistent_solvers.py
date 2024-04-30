@@ -1211,7 +1211,7 @@ class TestSolvers(unittest.TestCase):
         m.c = pe.Constraint(expr=m.y >= m.x)
         m.x.fix(0)
 
-        if type(opt) is MAiNGO:
+        if opt_class == MAiNGO:
             opt.config.mip_gap = 1e-6
         res = opt.solve(m)
         self.assertAlmostEqual(res.best_feasible_objective, 0)
