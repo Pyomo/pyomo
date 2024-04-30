@@ -254,7 +254,7 @@ class Estimator(object):
     ----------
     experiment_list: list of Experiments
         A list of experiment objects which creates one labeled model for
-        each expeirment
+        each experiment
     obj_function: string or function (optional)
         Built in objective (currently only "SSE") or custom function used to
         formulate parameter estimation objective.
@@ -271,26 +271,25 @@ class Estimator(object):
 
     # backwards compatible constructor will accept the old deprecated inputs
     # as well as the new inputs using experiment lists
-    def __init__(self, *args, **kwargs):
-
-        # check that we have at least one argument
-        assert len(args) > 0
+    # TODO: when the deprecated Parmest API is removed, *args, can be removed from this constructor
+    def __init__(self, experiment_list, *args, obj_function=None, tee=False, diagnostic_mode=False, solver_options=None):
 
         # use deprecated interface
         self.pest_deprecated = None
-        if callable(args[0]):
+        if callable(experiment_list):
             deprecation_warning(
-                'Using deprecated parmest inputs (model_function, '
-                + 'data, theta_names), please use experiment lists instead.',
+                'Using deprecated parmest interface (model_function, '
+                'data, theta_names). This interface will be removed in a future release, '
+                'please update to the new parmest interface using experiment lists.',
                 version=DEPRECATION_VERSION,
             )
-            self.pest_deprecated = _DeprecatedEstimator(*args, **kwargs)
+            self.pest_deprecated = _DeprecatedEstimator(experiment_list, *args, obj_function, tee, diagnostic_mode, solver_options)
             return
 
         # check that we have a (non-empty) list of experiments
-        assert isinstance(args[0], list)
-        assert len(args[0]) > 0
-        self.exp_list = args[0]
+        assert isinstance(experiment_list, list)
+        assert len(args) == 0
+        self.exp_list = experiment_list
 
         # check that an experiment has experiment_outputs and unknown_parameters
         model = self.exp_list[0].get_labeled_model()
@@ -308,10 +307,10 @@ class Estimator(object):
             )
 
         # populate keyword argument options
-        self.obj_function = kwargs.get('obj_function', None)
-        self.tee = kwargs.get('tee', False)
-        self.diagnostic_mode = kwargs.get('diagnostic_mode', False)
-        self.solver_options = kwargs.get('solver_options', None)
+        self.obj_function = obj_function
+        self.tee = tee
+        self.diagnostic_mode = diagnostic_mode 
+        self.solver_options = solver_options
 
         # TODO This might not be needed here.
         # We could collect the union (or intersect?) of thetas when the models are built
