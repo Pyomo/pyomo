@@ -1210,7 +1210,8 @@ class TestSolvers(unittest.TestCase):
         m.obj = pe.Objective(expr=m.y)
         m.c = pe.Constraint(expr=m.y >= m.x)
         m.x.fix(0)
-
+        if type(opt) is MAiNGO:
+            opt.maingo_options["epsilonA"] = 1e-6
         res = opt.solve(m)
         self.assertAlmostEqual(res.best_feasible_objective, 0, 6)
         m.x.fix(1)
