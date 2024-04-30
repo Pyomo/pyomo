@@ -45,7 +45,7 @@ class ReactorDesignExperimentDataRec(ReactorDesignExperiment):
                 (m.ca, self.data_i['ca']),
                 (m.cb, self.data_i['cb']),
                 (m.cc, self.data_i['cc']),
-                (m.cd, self.data_i['cd'])
+                (m.cd, self.data_i['cd']),
             ]
         )
 
@@ -56,7 +56,7 @@ class ReactorDesignExperimentDataRec(ReactorDesignExperiment):
                 (m.ca, self.data_std['ca']),
                 (m.cb, self.data_std['cb']),
                 (m.cc, self.data_std['cc']),
-                (m.cd, self.data_std['cd'])
+                (m.cd, self.data_std['cd']),
             ]
         )
 
@@ -84,7 +84,7 @@ class ReactorDesignExperimentPostDataRec(ReactorDesignExperiment):
                 (m.ca, self.data_std['ca']),
                 (m.cb, self.data_std['cb']),
                 (m.cc, self.data_std['cc']),
-                (m.cd, self.data_std['cd'])
+                (m.cd, self.data_std['cd']),
             ]
         )
 

@@ -16,7 +16,6 @@
 # TODO: move use_mpisppy to a Pyomo configuration option
 
 # Redesign TODOS
-# TODO: _treemaker is not used in parmest, the code could be moved to scenario tree if needed
 # TODO: Create additional built in objective expressions in an Enum class which includes SSE (see SSE function below)
 # TODO: Clean up the use of theta_names through out the code.  The Experiment returns the CUID of each theta and this can be used directly (instead of the name)
 # TODO: Clean up the use of updated_theta_names, model_theta_names, estimator_theta_names.  Not sure if estimator_theta_names is the union or intersect of thetas in each model
@@ -239,60 +238,12 @@ def _experiment_instance_creation_callback(
     return instance
 
 
-# # =============================================
-# def _treemaker(scenlist):
-#     """
-#     Makes a scenario tree (avoids dependence on daps)
-
-#     Parameters
-#     ----------
-#     scenlist (list of `int`): experiment (i.e. scenario) numbers
-
-#     Returns
-#     -------
-#     a `ConcreteModel` that is the scenario tree
-#     """
-
-#     num_scenarios = len(scenlist)
-#     m = scenario_tree.tree_structure_model.CreateAbstractScenarioTreeModel()
-#     m = m.create_instance()
-#     m.Stages.add('Stage1')
-#     m.Stages.add('Stage2')
-#     m.Nodes.add('RootNode')
-#     for i in scenlist:
-#         m.Nodes.add('LeafNode_Experiment' + str(i))
-#         m.Scenarios.add('Experiment' + str(i))
-#     m.NodeStage['RootNode'] = 'Stage1'
-#     m.ConditionalProbability['RootNode'] = 1.0
-#     for node in m.Nodes:
-#         if node != 'RootNode':
-#             m.NodeStage[node] = 'Stage2'
-#             m.Children['RootNode'].add(node)
-#             m.Children[node].clear()
-#             m.ConditionalProbability[node] = 1.0 / num_scenarios
-#             m.ScenarioLeafNode[node.replace('LeafNode_', '')] = node
-
-#     return m
-
-
 def SSE(model):
     """
     Sum of squared error between `experiment_output` model and data values
     """
     expr = sum((y - yhat) ** 2 for y, yhat in model.experiment_outputs.items())
     return expr
-
-
-class _SecondStageCostExpr(object):
-    """
-    Class to pass objective expression into the Pyomo model
-    """
-
-    def __init__(self, ssc_function):
-        self._ssc_function = ssc_function
-
-    def __call__(self, model):
-        return self._ssc_function(model)
 
 
 class Estimator(object):
@@ -456,10 +407,10 @@ class Estimator(object):
 
             # TODO, this needs to be turned a enum class of options that still support custom functions
             if self.obj_function == 'SSE':
-                second_stage_rule = _SecondStageCostExpr(SSE)
+                second_stage_rule = SSE
             else:
                 # A custom function uses model.experiment_outputs as data
-                second_stage_rule = _SecondStageCostExpr(self.obj_function)
+                second_stage_rule = self.obj_function
 
             model.FirstStageCost = pyo.Expression(expr=0)
             model.SecondStageCost = pyo.Expression(rule=second_stage_rule)
