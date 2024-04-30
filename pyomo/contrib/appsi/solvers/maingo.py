@@ -110,7 +110,7 @@ class MAiNGOConfig(MIPSolverConfig):
             'epsilonA',
             ConfigValue(
                 domain=NonNegativeFloat,
-                default=1e-4,
+                default=1e-5,
                 description="Absolute optimality tolerance",
             ),
         )
@@ -118,7 +118,7 @@ class MAiNGOConfig(MIPSolverConfig):
             'epsilonR',
             ConfigValue(
                 domain=NonNegativeFloat,
-                default=1e-4,
+                default=1e-5,
                 description="Relative optimality tolerance",
             ),
         )
