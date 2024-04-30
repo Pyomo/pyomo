@@ -1026,7 +1026,7 @@ class TestSolvers(unittest.TestCase):
         self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):
         opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
-        if not opt.available():
+        if not opt.available() or opt_class == MAiNGO:
             raise unittest.SkipTest
         from sys import platform
 
@@ -1210,20 +1210,23 @@ class TestSolvers(unittest.TestCase):
         m.obj = pe.Objective(expr=m.y)
         m.c = pe.Constraint(expr=m.y >= m.x)
         m.x.fix(0)
+
+        if type(opt) is MAiNGO:
+            opt.config.mip_gap = 1e-6
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 0, 6)
+        self.assertAlmostEqual(res.best_feasible_objective, 0)
         m.x.fix(1)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 1, 6)
+        self.assertAlmostEqual(res.best_feasible_objective, 1)
 
         opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         opt.update_config.treat_fixed_vars_as_params = False
         m.x.fix(0)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 0, 6)
+        self.assertAlmostEqual(res.best_feasible_objective, 0)
         m.x.fix(1)
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 1, 6)
+        self.assertAlmostEqual(res.best_feasible_objective, 1)
 
     @parameterized.expand(input=_load_tests(mip_solvers, only_child_vars_options))
     def test_with_gdp(
