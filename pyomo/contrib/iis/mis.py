@@ -359,15 +359,15 @@ def _get_constraint(modified_model, v):
         constr = modified_model.find_component(v.local_name[len("_slack_plus_") :])
         if constr is None:
             raise RuntimeError(
-                "Bad constraint name {v.local_name[len('_slack_plus_'):]}"
+                f"Bad constraint name {v.local_name[len('_slack_plus_'):]}"
             )
         return constr
     elif "_slack_minus_" in v.name:
         constr = modified_model.find_component(v.local_name[len("_slack_minus_") :])
         if constr is None:
             raise RuntimeError(
-                "Bad constraint name {v.local_name[len('_slack_minus_'):]}"
+                f"Bad constraint name {v.local_name[len('_slack_minus_'):]}"
             )
         return constr
     else:
-        raise RuntimeError("Bad var name {v.name}")
+        raise RuntimeError(f"Bad var name {v.name}")
