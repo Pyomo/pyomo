@@ -263,12 +263,14 @@ class Estimator(object):
         If no function is specified, the model is used
         "as is" and should be defined with a "FirstStageCost" and
         "SecondStageCost" expression that are used to build an objective.
+        Default is None.
     tee: bool, optional
-        If True, print the solver output to the screen
+        If True, print the solver output to the screen. Default is False.
     diagnostic_mode: bool, optional
-        If True, print diagnostics from the solver
+        If True, print diagnostics from the solver. Default is False.
     solver_options: dict, optional
-        Provides options to the solver (also the name of an attribute)
+        Provides options to the solver (also the name of an attribute).
+        Default is None.
     """
 
     # The singledispatchmethod decorator is used here as a deprecation
