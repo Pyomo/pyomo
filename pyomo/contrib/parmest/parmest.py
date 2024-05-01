@@ -384,22 +384,14 @@ class Estimator(object):
         """
         Expand indexed variables to get full list of thetas
         """
-        model_theta_list = [k.name for k, v in model_temp.unknown_parameters.items()]
 
-        # check for indexed theta items
-        indexed_theta_list = []
-        for theta_i in model_theta_list:
-            var_cuid = ComponentUID(theta_i)
-            var_validate = var_cuid.find_component_on(model_temp)
-            for ind in var_validate.index_set():
-                if ind is not None:
-                    indexed_theta_list.append(theta_i + '[' + str(ind) + ']')
-                else:
-                    indexed_theta_list.append(theta_i)
-
-        # if we found indexed thetas, use expanded list
-        if len(indexed_theta_list) > len(model_theta_list):
-            model_theta_list = indexed_theta_list
+        model_theta_list = []
+        for c in model_temp.unknown_parameters.keys():
+            if c.is_indexed():
+                for _, ci in c.items():
+                    model_theta_list.append(ci.name)
+            else: 
+                model_theta_list.append(c.name)
 
         return model_theta_list
 
@@ -418,7 +410,11 @@ class Estimator(object):
         if self.obj_function:
 
             # Check for component naming conflicts
-            reserved_names = ['Total_Cost_Objective', 'FirstStageCost', 'SecondStageCost']
+            reserved_names = [
+                'Total_Cost_Objective',
+                'FirstStageCost',
+                'SecondStageCost',
+            ]
             for n in reserved_names:
                 if model.component(n) or hasattr(model, n):
                     raise RuntimeError(
