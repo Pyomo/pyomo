@@ -53,7 +53,9 @@ import importlib as im
 import logging
 import types
 import json
+from collections.abc import Callable
 from itertools import combinations
+from functools import singledispatchmethod
 
 from pyomo.common.dependencies import (
     attempt_import,
@@ -271,39 +273,18 @@ class Estimator(object):
 
     # backwards compatible constructor will accept the old deprecated inputs
     # as well as the new inputs using experiment lists
-    # TODO: when the deprecated Parmest API is removed, *args, can be removed from this constructor
+    @singledispatchmethod
     def __init__(
         self,
         experiment_list,
-        *args,
         obj_function=None,
         tee=False,
         diagnostic_mode=False,
         solver_options=None,
     ):
 
-        # use deprecated interface
-        self.pest_deprecated = None
-        if callable(experiment_list):
-            deprecation_warning(
-                'Using deprecated parmest interface (model_function, '
-                'data, theta_names). This interface will be removed in a future release, '
-                'please update to the new parmest interface using experiment lists.',
-                version=DEPRECATION_VERSION,
-            )
-            self.pest_deprecated = _DeprecatedEstimator(
-                experiment_list,
-                *args,
-                obj_function,
-                tee,
-                diagnostic_mode,
-                solver_options,
-            )
-            return
-
         # check that we have a (non-empty) list of experiments
         assert isinstance(experiment_list, list)
-        assert len(args) == 0
         self.exp_list = experiment_list
 
         # check that an experiment has experiment_outputs and unknown_parameters
@@ -326,6 +307,9 @@ class Estimator(object):
         self.tee = tee
         self.diagnostic_mode = diagnostic_mode
         self.solver_options = solver_options
+        self.pest_deprecated = (
+            None  # TODO: delete this when deprecated interface is removed
+        )
 
         # TODO This might not be needed here.
         # We could collect the union (or intersect?) of thetas when the models are built
@@ -338,6 +322,36 @@ class Estimator(object):
         self._second_stage_cost_exp = "SecondStageCost"
         # boolean to indicate if model is initialized using a square solve
         self.model_initialized = False
+
+    # use deprecated interface
+    @__init__.register(Callable)
+    def _deprecated_init(
+        self,
+        model_function,
+        data,
+        theta_names,
+        obj_function=None,
+        tee=False,
+        diagnostic_mode=False,
+        solver_options=None,
+    ):
+
+        deprecation_warning(
+            "You're using the deprecated parmest interface (model_function, "
+            "data, theta_names). This interface will be removed in a future release, "
+            "please update to the new parmest interface using experiment lists.",
+            version=DEPRECATION_VERSION,
+        )
+        self.pest_deprecated = _DeprecatedEstimator(
+            model_function,
+            data,
+            theta_names,
+            obj_function,
+            tee,
+            diagnostic_mode,
+            solver_options,
+        )
+        return
 
     def _return_theta_names(self):
         """
