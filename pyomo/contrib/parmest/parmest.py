@@ -15,16 +15,6 @@
 
 # TODO: move use_mpisppy to a Pyomo configuration option
 
-# Redesign TODOS
-# TODO: Create additional built in objective expressions in an Enum class which includes SSE (see SSE function below)
-# TODO: Clean up the use of theta_names through out the code.  The Experiment returns the CUID of each theta and this can be used directly (instead of the name)
-# TODO: Clean up the use of updated_theta_names, model_theta_names, estimator_theta_names.  Not sure if estimator_theta_names is the union or intersect of thetas in each model
-# TODO: _return_theta_names should no longer be needed
-# TODO: generally, theta ordering is not preserved by pyomo, so we should check that ordering
-#       matches values for each function, otherwise results will be wrong and/or inconsistent
-# TODO: return model object (m.k1) and CUIDs in dataframes instead of names ("k1")
-
-
 # False implies always use the EF that is local to parmest
 use_mpisppy = True  # Use it if we can but use local if not.
 if use_mpisppy:
