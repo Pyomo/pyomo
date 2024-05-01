@@ -111,6 +111,7 @@ def compute_infeasibility_explanation(
             A logger for messages. Uses pyomo.contrib.mis logger by default.
 
     """
+    # Suggested enhancement: It might be useful to return sets of names for each set of relaxed components, as well as the final minimal infeasible system
 
     # hold the original harmless
     modified_model = model.clone()
@@ -155,6 +156,9 @@ def compute_infeasibility_explanation(
     #       modeler to sift through. We could try to sort the constraints
     #       such that we look for those with linear coefficients `1` on
     #       some term and leave those be.
+    #       Alternatively, we could apply this tool to a version of the
+    #       model that has as many as possible of these constraints
+    #       "substituted out".
     # move the variable bounds to the constraints
     _VariableBoundsAsConstraints().apply_to(modified_model)
 
