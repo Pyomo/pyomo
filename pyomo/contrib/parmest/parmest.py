@@ -271,8 +271,11 @@ class Estimator(object):
         Provides options to the solver (also the name of an attribute)
     """
 
-    # backwards compatible constructor will accept the old deprecated inputs
-    # as well as the new inputs using experiment lists
+    # The singledispatchmethod decorator is used here as a deprecation
+    # shim to be able to support the now deprecated Estimator interface
+    # which had a different number of arguments. When the deprecated API
+    # is removed this decorator and the _deprecated_init method below
+    # can be removed
     @singledispatchmethod
     def __init__(
         self,
@@ -307,9 +310,9 @@ class Estimator(object):
         self.tee = tee
         self.diagnostic_mode = diagnostic_mode
         self.solver_options = solver_options
-        self.pest_deprecated = (
-            None  # TODO: delete this when deprecated interface is removed
-        )
+
+        # TODO: delete this when the deprecated interface is removed
+        self.pest_deprecated = None
 
         # TODO This might not be needed here.
         # We could collect the union (or intersect?) of thetas when the models are built
@@ -323,7 +326,11 @@ class Estimator(object):
         # boolean to indicate if model is initialized using a square solve
         self.model_initialized = False
 
-    # use deprecated interface
+    # The deprecated Estimator constructor
+    # This works by checking the type of the first argument passed to
+    # the class constructor. If it matches the old interface (i.e. is
+    # callable) then this _deprecated_init method is called and the
+    # deprecation warning is displayed.
     @__init__.register(Callable)
     def _deprecated_init(
         self,
