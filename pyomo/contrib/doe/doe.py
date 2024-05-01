@@ -619,7 +619,7 @@ class DesignOfExperiments:
                     var.fix(self.scenario_data.scenario[s][par])
                 # if it is a param, give it a new value
                 elif isinstance(
-                    var, (pcb.param.ScalrParam, pcb.param.IndexedParam, pcb.param.Param)
+                    var, (pcb.param.ScalarParam, pcb.param.IndexedParam, pcb.param.Param)
                 ):
                     # check if param is mutable
                     if var.mutable:
