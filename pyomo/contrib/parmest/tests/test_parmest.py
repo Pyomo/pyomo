@@ -176,7 +176,7 @@ class TestRooneyBiegler(unittest.TestCase):
         asym = np.arange(10, 30, 2)
         rate = np.arange(0, 1.5, 0.25)
         theta_vals = pd.DataFrame(
-            list(product(asym, rate)), columns=self.pest.theta_names
+            list(product(asym, rate)), columns=self.pest.estimator_theta_names
         )
 
         obj_at_theta = self.pest.objective_at_theta(theta_vals)

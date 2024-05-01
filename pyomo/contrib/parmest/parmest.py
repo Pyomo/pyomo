@@ -390,7 +390,7 @@ class Estimator(object):
             if c.is_indexed():
                 for _, ci in c.items():
                     model_theta_list.append(ci.name)
-            else: 
+            else:
                 model_theta_list.append(c.name)
 
         return model_theta_list
@@ -401,7 +401,6 @@ class Estimator(object):
         """
 
         model = self.exp_list[experiment_number].get_labeled_model()
-        self.theta_names = [k.name for k, v in model.unknown_parameters.items()]
 
         if len(model.unknown_parameters) == 0:
             model.parmest_dummy_var = pyo.Var(initialize=1.0)
@@ -443,29 +442,10 @@ class Estimator(object):
             )
 
         # Convert theta Params to Vars, and unfix theta Vars
-        model = utils.convert_params_to_vars(model, self.theta_names)
+        theta_names = [k.name for k, v in model.unknown_parameters.items()]
+        parmest_model = utils.convert_params_to_vars(model, theta_names, fix_vars=False)
 
-        # Update theta names list to use CUID string representation
-        for i, theta in enumerate(self.theta_names):
-            var_cuid = ComponentUID(theta)
-            var_validate = var_cuid.find_component_on(model)
-            if var_validate is None:
-                logger.warning(
-                    "theta_name[%s] (%s) was not found on the model", (i, theta)
-                )
-            else:
-                try:
-                    # If the component is not a variable,
-                    # this will generate an exception (and the warning
-                    # in the 'except')
-                    var_validate.unfix()
-                    self.theta_names[i] = repr(var_cuid)
-                except:
-                    logger.warning(theta + ' is not a variable')
-
-        self.parmest_model = model
-
-        return model
+        return parmest_model
 
     def _instance_creation_callback(self, experiment_number=None, cb_data=None):
         model = self._create_parmest_model(experiment_number)
@@ -1186,12 +1166,14 @@ class Estimator(object):
             # create a local instance of the pyomo model to access model variables and parameters
             model_temp = self._create_parmest_model(0)
             model_theta_list = self._expand_indexed_unknowns(model_temp)
+            # TODO: check if model_theta_list is correct if original unknown parameters
+            # are declared as params and transformed to vars during call to create_parmest_model
 
-            # if self.theta_names is not the same as temp model_theta_list,
+            # if self.estimator_theta_names is not the same as temp model_theta_list,
             # create self.theta_names_updated
             if set(self.estimator_theta_names) == set(model_theta_list) and len(
                 self.estimator_theta_names
-            ) == set(model_theta_list):
+            ) == len(set(model_theta_list)):
                 pass
             else:
                 self.theta_names_updated = model_theta_list
