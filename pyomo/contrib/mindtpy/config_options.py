@@ -328,8 +328,8 @@ def _add_common_configs(CONFIG):
         ConfigValue(
             default=_DoNothing(),
             domain=None,
-            description='Function to be executed after every subproblem',
-            doc='Callback hook after a solution of the nonlinear subproblem.',
+            description='Function to be executed before every subproblem',
+            doc='Callback hook before a solution of the nonlinear subproblem.',
         ),
     )
     CONFIG.declare(

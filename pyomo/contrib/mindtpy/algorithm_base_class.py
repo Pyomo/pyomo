@@ -2950,7 +2950,7 @@ class _MindtPyAlgorithm(object):
                     )
                     if self.curr_int_sol not in set(self.integer_list):
                         # Call the NLP pre-solve callback
-                        with time_code(self.timing, 'Call after subproblem solve'):
+                        with time_code(self.timing, 'Call before subproblem solve'):
                             config.call_before_subproblem_solve(self.fixed_nlp)
 
                         fixed_nlp, fixed_nlp_result = self.solve_subproblem()
@@ -2965,7 +2965,7 @@ class _MindtPyAlgorithm(object):
                 # The constraint linearization happens in the handlers
                 if not config.solution_pool:
                     # Call the NLP pre-solve callback
-                    with time_code(self.timing, 'Call after subproblem solve'):
+                    with time_code(self.timing, 'Call before subproblem solve'):
                         config.call_before_subproblem_solve(self.fixed_nlp)
 
                     fixed_nlp, fixed_nlp_result = self.solve_subproblem()
@@ -3002,7 +3002,7 @@ class _MindtPyAlgorithm(object):
                                 self.integer_list.append(self.curr_int_sol)
 
                         # Call the NLP pre-solve callback
-                        with time_code(self.timing, 'Call after subproblem solve'):
+                        with time_code(self.timing, 'Call before subproblem solve'):
                             config.call_before_subproblem_solve(self.fixed_nlp)
 
                         fixed_nlp, fixed_nlp_result = self.solve_subproblem()
