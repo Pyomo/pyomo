@@ -350,14 +350,13 @@ class Estimator(object):
             diagnostic_mode,
             solver_options,
         )
-        return
 
     def _return_theta_names(self):
         """
         Return list of fitted model parameter names
         """
         # check for deprecated inputs
-        if self.pest_deprecated is not None:
+        if self.pest_deprecated:
 
             # if fitted model parameter names differ from theta_names
             # created when Estimator object is created
@@ -365,9 +364,9 @@ class Estimator(object):
                 return self.pest_deprecated.theta_names_updated
 
             else:
-                return (
-                    self.pest_deprecated.theta_names
-                )  # default theta_names, created when Estimator object is created
+
+                # default theta_names, created when Estimator object is created
+                return self.pest_deprecated.theta_names
 
         else:
 
@@ -377,9 +376,9 @@ class Estimator(object):
                 return self.theta_names_updated
 
             else:
-                return (
-                    self.estimator_theta_names
-                )  # default theta_names, created when Estimator object is created
+
+                # default theta_names, created when Estimator object is created
+                return self.estimator_theta_names
 
     def _expand_indexed_unknowns(self, model_temp):
         """
@@ -417,20 +416,18 @@ class Estimator(object):
 
         # Add objective function (optional)
         if self.obj_function:
-            for obj in model.component_objects(pyo.Objective):
-                if obj.name in ["Total_Cost_Objective"]:
-                    raise RuntimeError(
-                        "Parmest will not override the existing model Objective named "
-                        + obj.name
-                    )
-                obj.deactivate()
 
-            for expr in model.component_data_objects(pyo.Expression):
-                if expr.name in ["FirstStageCost", "SecondStageCost"]:
+            # Check for component naming conflicts
+            reserved_names = ['Total_Cost_Objective', 'FirstStageCost', 'SecondStageCost']
+            for n in reserved_names:
+                if model.component(n) or hasattr(model, n):
                     raise RuntimeError(
-                        "Parmest will not override the existing model Expression named "
-                        + expr.name
+                        f"Parmest will not override the existing model component named {n}"
                     )
+
+            # Deactivate any existing objective functions
+            for obj in model.component_objects(pyo.Objective):
+                obj.deactivate()
 
             # TODO, this needs to be turned a enum class of options that still support custom functions
             if self.obj_function == 'SSE':
