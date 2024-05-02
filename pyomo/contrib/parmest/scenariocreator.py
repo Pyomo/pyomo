@@ -169,12 +169,7 @@ class ScenarioCreator(object):
             opt = pyo.SolverFactory(self.solvername)
             results = opt.solve(model)  # solves and updates model
             ## pyo.check_termination_optimal(results)
-            ThetaVals = dict()
-            for theta in self.pest.theta_names:
-                tvar = eval('model.' + theta)
-                tval = pyo.value(tvar)
-                ##print("    theta, tval=", tvar, tval)
-                ThetaVals[theta] = tval
+            ThetaVals = {k.name: pyo.value(k) for k in model.unknown_parameters.keys()}
             addtoSet.addone(ParmestScen("ExpScen" + str(exp_num), ThetaVals, prob))
 
     def ScenariosFromBootstrap(self, addtoSet, numtomake, seed=None):

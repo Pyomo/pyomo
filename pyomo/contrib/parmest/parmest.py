@@ -14,7 +14,6 @@
 #### Redesign with Experiment class Dec 2023
 
 # TODO: move use_mpisppy to a Pyomo configuration option
-
 # False implies always use the EF that is local to parmest
 use_mpisppy = True  # Use it if we can but use local if not.
 if use_mpisppy:
@@ -1194,6 +1193,7 @@ class Estimator(object):
                 ], "Theta name {} in 'theta_values' not in 'theta_names' {}".format(
                     theta_temp, model_theta_list
                 )
+
             assert len(list(theta_names)) == len(model_theta_list)
 
             all_thetas = theta_values.to_dict('records')
