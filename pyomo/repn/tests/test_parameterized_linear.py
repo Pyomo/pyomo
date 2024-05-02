@@ -13,12 +13,12 @@ from pyomo.common.log import LoggingIntercept
 import pyomo.common.unittest as unittest
 from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.environ import Any, Binary, ConcreteModel, log, Param, Var
-from pyomo.repn.linear_wrt import MultilevelLinearRepnVisitor
+from pyomo.repn.parameterized_linear import ParameterizedLinearRepnVisitor
 from pyomo.repn.tests.test_linear import VisitorConfig
 from pyomo.repn.util import InvalidNumber
 
 
-class TestMultilevelLinearRepnVisitor(unittest.TestCase):
+class TestParameterizedLinearRepnVisitor(unittest.TestCase):
     def make_model(self):
         m = ConcreteModel()
         m.x = Var(bounds=(0, 45))
@@ -31,7 +31,7 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
         m = self.make_model()
         e = m.x + m.y
         cfg = VisitorConfig()
-        visitor = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x])
+        visitor = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y, m.z])
 
         repn = visitor.walk_expression(e)
 
@@ -48,7 +48,7 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
         e = m.x + m.z * m.y + m.z
 
         cfg = VisitorConfig()
-        visitor = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x, m.y])
+        visitor = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.z])
 
         repn = visitor.walk_expression(e)
 
@@ -67,7 +67,7 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
         m = self.make_model()
         e = m.x + m.x
         cfg = VisitorConfig()
-        visitor = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x, m.y])
+        visitor = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.z])
 
         repn = visitor.walk_expression(e)
 
@@ -77,25 +77,21 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.linear[id(m.x)], 2)
         self.assertEqual(repn.constant, 0)
         self.assertEqual(repn.multiplier, 1)
-        assertExpressionsEqual(self, repn.to_expression(visitor), 2*m.x)
+        assertExpressionsEqual(self, repn.to_expression(visitor), 2 * m.x)
 
     def test_sum_with_mult_0(self):
         m = self.make_model()
-        e = 0*m.x + m.x - m.y
-        
+        e = 0 * m.x + m.x - m.y
+
         cfg = VisitorConfig()
-        visitor = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x])
+        visitor = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y, m.z])
 
         repn = visitor.walk_expression(e)
         self.assertIsNone(repn.nonlinear)
         self.assertEqual(len(repn.linear), 1)
         self.assertIn(id(m.x), repn.linear)
         self.assertEqual(repn.linear[id(m.x)], 1)
-        assertExpressionsEqual(
-            self,
-            repn.constant,
-            - m.y
-        )
+        assertExpressionsEqual(self, repn.constant, -m.y)
         self.assertEqual(repn.multiplier, 1)
         assertExpressionsEqual(self, repn.to_expression(visitor), m.x - m.y)
 
@@ -104,71 +100,56 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
         e = m.y * m.x**2 + m.y * m.x - 3
 
         cfg = VisitorConfig()
-        visitor = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x])
+        visitor = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y, m.z])
 
         repn = visitor.walk_expression(e)
-        assertExpressionsEqual(
-            self,
-            repn.nonlinear,
-            m.y * m.x ** 2
-        )
+        assertExpressionsEqual(self, repn.nonlinear, m.y * m.x**2)
         self.assertEqual(len(repn.linear), 1)
         self.assertIn(id(m.x), repn.linear)
         self.assertIs(repn.linear[id(m.x)], m.y)
         self.assertEqual(repn.constant, -3)
         self.assertEqual(repn.multiplier, 1)
-        assertExpressionsEqual(self, repn.to_expression(visitor), m.y * m.x ** 2
-                               + m.y * m.x - 3)
+        assertExpressionsEqual(
+            self, repn.to_expression(visitor), m.y * m.x**2 + m.y * m.x - 3
+        )
 
     def test_sum_nonlinear_to_nonlinear(self):
         m = self.make_model()
-        e = m.x ** 3 + 3 + m.x**2
+        e = m.x**3 + 3 + m.x**2
 
         cfg = VisitorConfig()
-        visitor = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x])
+        visitor = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y, m.z])
 
         repn = visitor.walk_expression(e)
-        assertExpressionsEqual(
-            self,
-            repn.nonlinear,
-            m.x ** 3 + m.x ** 2
-        )
+        assertExpressionsEqual(self, repn.nonlinear, m.x**3 + m.x**2)
         self.assertEqual(repn.constant, 3)
         self.assertEqual(repn.multiplier, 1)
-        assertExpressionsEqual(self, repn.to_expression(visitor), m.x ** 3
-                               + m.x ** 2 + 3)
+        assertExpressionsEqual(
+            self, repn.to_expression(visitor), m.x**3 + m.x**2 + 3
+        )
 
     def test_sum_to_linear_expr(self):
         m = self.make_model()
         e = m.x + m.y * (m.x + 5)
 
         cfg = VisitorConfig()
-        visitor = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x])
+        visitor = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y, m.z])
 
         repn = visitor.walk_expression(e)
         self.assertEqual(len(repn.linear), 1)
         self.assertIn(id(m.x), repn.linear)
-        assertExpressionsEqual(
-            self,
-            repn.linear[id(m.x)],
-            1 + m.y
-        )
-        assertExpressionsEqual(
-            self,
-            repn.constant,
-            m.y * 5
-        )
+        assertExpressionsEqual(self, repn.linear[id(m.x)], 1 + m.y)
+        assertExpressionsEqual(self, repn.constant, m.y * 5)
         self.assertEqual(repn.multiplier, 1)
         assertExpressionsEqual(
-            self,
-            repn.to_expression(visitor), (1 + m.y) * m.x + m.y * 5
+            self, repn.to_expression(visitor), (1 + m.y) * m.x + m.y * 5
         )
 
     def test_bilinear_term(self):
         m = self.make_model()
         e = m.x * m.y
         cfg = VisitorConfig()
-        visitor = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x])
+        visitor = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y, m.z])
 
         repn = visitor.walk_expression(e)
 
@@ -184,7 +165,7 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
         m = self.make_model()
         e = m.y * (m.x + 7)
         cfg = VisitorConfig()
-        visitor = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x])
+        visitor = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y, m.z])
 
         repn = visitor.walk_expression(e)
 
@@ -200,7 +181,7 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
         m = self.make_model()
         e = 45 * m.y
         cfg = VisitorConfig()
-        visitor = MultilevelLinearRepnVisitor(*cfg, wrt=[m.y])
+        visitor = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.x, m.z])
 
         repn = visitor.walk_expression(e)
 
@@ -216,7 +197,7 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
         m = self.make_model()
         e = 45 * m.y
         cfg = VisitorConfig()
-        visitor = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x])
+        visitor = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y, m.z])
 
         repn = visitor.walk_expression(e)
 
@@ -232,7 +213,7 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
         e = (m.y**2) * (m.x + m.x**2)
 
         cfg = VisitorConfig()
-        visitor = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x])
+        visitor = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y, m.z])
 
         repn = visitor.walk_expression(e)
 
@@ -247,7 +228,7 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
         e = (m.y * log(m.x)) * (m.y + 2) / m.x
 
         cfg = VisitorConfig()
-        visitor = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x])
+        visitor = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y, m.z])
 
         repn = visitor.walk_expression(e)
 
@@ -265,7 +246,7 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
         e = m.x + 2 * m.w**2 * m.y - m.x - m.w * m.z
 
         cfg = VisitorConfig()
-        repn = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x, m.y, m.z]).walk_expression(e)
+        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.w]).walk_expression(e)
         self.assertEqual(cfg.subexpr, {})
         self.assertEqual(cfg.var_map, {id(m.x): m.x, id(m.y): m.y, id(m.z): m.z})
         self.assertEqual(cfg.var_order, {id(m.x): 0, id(m.y): 1, id(m.z): 2})
@@ -273,23 +254,15 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.constant, 0)
         self.assertEqual(len(repn.linear), 2)
         self.assertIn(id(m.y), repn.linear)
-        assertExpressionsEqual(
-            self,
-            repn.linear[id(m.y)],
-            2 * m.w ** 2
-        )
+        assertExpressionsEqual(self, repn.linear[id(m.y)], 2 * m.w**2)
         self.assertIn(id(m.z), repn.linear)
-        assertExpressionsEqual(
-            self,
-            repn.linear[id(m.z)],
-            -m.w
-        )
+        assertExpressionsEqual(self, repn.linear[id(m.z)], -m.w)
         self.assertEqual(repn.nonlinear, None)
 
         e *= 5
 
         cfg = VisitorConfig()
-        repn = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x, m.y, m.z]).walk_expression(e)
+        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.w]).walk_expression(e)
         self.assertEqual(cfg.subexpr, {})
         self.assertEqual(cfg.var_map, {id(m.x): m.x, id(m.y): m.y, id(m.z): m.z})
         self.assertEqual(cfg.var_order, {id(m.x): 0, id(m.y): 1, id(m.z): 2})
@@ -298,23 +271,15 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
         self.assertEqual(len(repn.linear), 2)
         self.assertIn(id(m.y), repn.linear)
         print(repn.linear[id(m.y)])
-        assertExpressionsEqual(
-            self,
-            repn.linear[id(m.y)],
-            5 * (2 * m.w ** 2)
-        )
+        assertExpressionsEqual(self, repn.linear[id(m.y)], 5 * (2 * m.w**2))
         self.assertIn(id(m.z), repn.linear)
-        assertExpressionsEqual(
-            self,
-            repn.linear[id(m.z)],
-            -5 * m.w
-        )
+        assertExpressionsEqual(self, repn.linear[id(m.z)], -5 * m.w)
         self.assertEqual(repn.nonlinear, None)
 
         e = 5 * (m.w * m.y + m.z**2 + 3 * m.w * m.y**3)
 
         cfg = VisitorConfig()
-        repn = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x, m.y, m.z]).walk_expression(e)
+        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.w]).walk_expression(e)
         self.assertEqual(cfg.subexpr, {})
         self.assertEqual(cfg.var_map, {id(m.y): m.y, id(m.z): m.z})
         self.assertEqual(cfg.var_order, {id(m.y): 0, id(m.z): 1})
@@ -322,12 +287,10 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.constant, 0)
         self.assertEqual(len(repn.linear), 1)
         self.assertIn(id(m.y), repn.linear)
+        assertExpressionsEqual(self, repn.linear[id(m.y)], 5 * m.w)
         assertExpressionsEqual(
-            self,
-            repn.linear[id(m.y)],
-            5 * m.w
+            self, repn.nonlinear, (m.z**2 + 3 * m.w * m.y**3) * 5
         )
-        assertExpressionsEqual(self, repn.nonlinear, (m.z**2 + 3 * m.w * m.y**3) * 5)
 
     def test_ANY_over_constant_division(self):
         m = ConcreteModel()
@@ -340,21 +303,15 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
 
         expr = m.y + m.x + m.z + ((3 * m.z * m.x) / m.p) / m.y
         cfg = VisitorConfig()
-        repn = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x]).walk_expression(expr)
+        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y, m.z]).walk_expression(
+            expr
+        )
 
         self.assertEqual(repn.multiplier, 1)
-        assertExpressionsEqual(
-            self,
-            repn.constant,
-            m.y + m.z
-        )
+        assertExpressionsEqual(self, repn.constant, m.y + m.z)
         self.assertEqual(len(repn.linear), 1)
         print(repn.linear[id(m.x)])
-        assertExpressionsEqual(
-            self,
-            repn.linear[id(m.x)],
-            1 + 1.5 * m.z / m.y
-        )
+        assertExpressionsEqual(self, repn.linear[id(m.x)], 1 + 1.5 * m.z / m.y)
         self.assertEqual(repn.nonlinear, None)
 
     def test_errors_propogate_nan(self):
@@ -368,7 +325,9 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
         expr = m.y + m.x + m.z + ((3 * m.z * m.x) / m.p) / m.y
         cfg = VisitorConfig()
         with LoggingIntercept() as LOG:
-            repn = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x]).walk_expression(expr)
+            repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y, m.z]).walk_expression(
+                expr
+            )
         self.assertEqual(
             LOG.getvalue(),
             "Exception encountered evaluating expression 'div(3*z, 0)'\n"
@@ -376,61 +335,45 @@ class TestMultilevelLinearRepnVisitor(unittest.TestCase):
             "\texpression: 3*z*x/p\n",
         )
         self.assertEqual(repn.multiplier, 1)
-        assertExpressionsEqual(
-            self,
-            repn.constant,
-            m.y + m.z
-        )
+        assertExpressionsEqual(self, repn.constant, m.y + m.z)
         self.assertEqual(len(repn.linear), 1)
         self.assertIsInstance(repn.linear[id(m.x)], InvalidNumber)
-        assertExpressionsEqual(
-            self,
-            repn.linear[id(m.x)].value,
-            1 + float('nan')/m.y
-        )
+        assertExpressionsEqual(self, repn.linear[id(m.x)].value, 1 + float('nan') / m.y)
         self.assertEqual(repn.nonlinear, None)
 
         m.y.fix(None)
         expr = m.z * log(m.y) + 3
-        repn = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x]).walk_expression(expr)
+        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y, m.z]).walk_expression(
+            expr
+        )
         self.assertEqual(repn.multiplier, 1)
         self.assertIsInstance(repn.constant, InvalidNumber)
-        assertExpressionsEqual(
-            self,
-            repn.constant.value,
-            float('nan')*m.z + 3
-        )
+        assertExpressionsEqual(self, repn.constant.value, float('nan') * m.z + 3)
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
     def test_negation_constant(self):
         m = self.make_model()
-        e = - (m.y * m.z + 17)
+        e = -(m.y * m.z + 17)
 
         cfg = VisitorConfig()
-        repn = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x]).walk_expression(e)
+        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y, m.z]).walk_expression(e)
 
         self.assertEqual(len(repn.linear), 0)
         self.assertEqual(repn.multiplier, 1)
-        assertExpressionsEqual(
-            self,
-            repn.constant,
-            - 1 * (m.y * m.z + 17)
-        )
+        assertExpressionsEqual(self, repn.constant, -1 * (m.y * m.z + 17))
         self.assertIsNone(repn.nonlinear)
-        
+
     def test_product_nonlinear(self):
         m = self.make_model()
-        e = (m.x ** 2) * (log(m.y) * m.z ** 4) * m.y
+        e = (m.x**2) * (log(m.y) * m.z**4) * m.y
         cfg = VisitorConfig()
-        repn = MultilevelLinearRepnVisitor(*cfg, wrt=[m.x, m.z]).walk_expression(e)
+        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y]).walk_expression(e)
 
         self.assertEqual(len(repn.linear), 0)
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 0)
         print(repn.nonlinear)
         assertExpressionsEqual(
-            self,
-            repn.nonlinear,
-            (m.x ** 2) * (m.z ** 4 * log(m.y)) * m.y
+            self, repn.nonlinear, (m.x**2) * (m.z**4 * log(m.y)) * m.y
         )

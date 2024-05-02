@@ -52,7 +52,7 @@ def _merge_dict(dest_dict, mult, src_dict):
                 dest_dict[vid] = coef
 
 
-class LinearSubsystemRepn(LinearRepn):
+class ParameterizedLinearRepn(LinearRepn):
     def to_expression(self, visitor):
         if self.nonlinear is not None:
             # We want to start with the nonlinear term (and use
@@ -160,7 +160,7 @@ class MultiLevelLinearBeforeChildDispatcher(LinearBeforeChildDispatcher):
 
     @staticmethod
     def _before_var(visitor, child):
-        if child in visitor.wrt:
+        if child not in visitor.wrt:
             # This is a normal situation
             _id = id(child)
             if _id not in visitor.var_map:
@@ -185,19 +185,19 @@ _exit_node_handlers = copy.deepcopy(linear._exit_node_handlers)
 def _handle_product_constant_constant(visitor, node, arg1, arg2):
     # ESJ: Can I do this? Just let the potential nans go through?
     return _CONSTANT, arg1[1] * arg2[1]
-    
+
 
 _exit_node_handlers[ProductExpression].update(
-    {
-        (_CONSTANT, _CONSTANT): _handle_product_constant_constant,
-    }
+    {(_CONSTANT, _CONSTANT): _handle_product_constant_constant}
 )
+
 
 def _handle_unary_constant(visitor, node, arg):
     # We override this because we can't blindly use apply_node_operation in this case
     if arg.__class__ not in native_numeric_types:
         return _CONSTANT, node.create_node_with_local_data(
-            (linear.to_expression(visitor, arg),))
+            (linear.to_expression(visitor, arg),)
+        )
     # otherwise do the usual:
     ans = apply_node_operation(node, (arg[1],))
     # Unary includes sqrt() which can return complex numbers
@@ -205,17 +205,15 @@ def _handle_unary_constant(visitor, node, arg):
         ans = complex_number_error(ans, visitor, node)
     return _CONSTANT, ans
 
+
 _exit_node_handlers[UnaryFunctionExpression].update(
-    {
-        (_CONSTANT,): _handle_unary_constant
-    }
+    {(_CONSTANT,): _handle_unary_constant}
 )
 _exit_node_handlers[AbsExpression] = _exit_node_handlers[UnaryFunctionExpression]
 
 
-# LinearSubsystemRepnVisitor
-class MultilevelLinearRepnVisitor(LinearRepnVisitor):
-    Result = LinearSubsystemRepn
+class ParameterizedLinearRepnVisitor(LinearRepnVisitor):
+    Result = ParameterizedLinearRepn
     exit_node_handlers = _exit_node_handlers
     exit_node_dispatcher = ExitNodeDispatcher(
         _initialize_exit_node_dispatcher(_exit_node_handlers)
@@ -253,8 +251,11 @@ class MultilevelLinearRepnVisitor(LinearRepnVisitor):
                 self._factor_multiplier_into_linear_terms(ans, mult)
                 return ans
             if mult == 1:
-                zeros = [(vid, coef) for vid, coef in ans.linear.items() if
-                         coef.__class__ in native_numeric_types and not coef]
+                zeros = [
+                    (vid, coef)
+                    for vid, coef in ans.linear.items()
+                    if coef.__class__ in native_numeric_types and not coef
+                ]
                 for vid, coef in zeros:
                     del ans.linear[vid]
             elif not mult:
