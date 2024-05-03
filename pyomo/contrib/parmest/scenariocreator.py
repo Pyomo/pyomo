@@ -14,11 +14,6 @@
 
 import pyomo.environ as pyo
 
-from pyomo.common.deprecation import deprecated
-from pyomo.common.deprecation import deprecation_warning
-
-DEPRECATION_VERSION = '6.7.2.dev0'
-
 import logging
 
 logger = logging.getLogger(__name__)
@@ -129,14 +124,9 @@ class ScenarioCreator(object):
 
     def __init__(self, pest, solvername):
 
-        # is this a deprecated pest object?
+        # Check if we're using the deprecated parmest API
         self.scen_deprecated = None
         if pest.pest_deprecated is not None:
-            deprecation_warning(
-                "Using a deprecated parmest object for scenario "
-                + "creator, please recreate object using experiment lists.",
-                version=DEPRECATION_VERSION,
-            )
             self.scen_deprecated = _ScenarioCreatorDeprecated(
                 pest.pest_deprecated, solvername
             )
@@ -218,7 +208,7 @@ class _ScenarioCreatorDeprecated(object):
             a ScenarioSet
         """
 
-        # assert isinstance(addtoSet, ScenarioSet)
+        assert isinstance(addtoSet, ScenarioSet)
 
         scenario_numbers = list(range(len(self.pest.callback_data)))
 
@@ -247,7 +237,7 @@ class _ScenarioCreatorDeprecated(object):
             numtomake (int) : number of scenarios to create
         """
 
-        # assert isinstance(addtoSet, ScenarioSet)
+        assert isinstance(addtoSet, ScenarioSet)
 
         bootstrap_thetas = self.pest.theta_est_bootstrap(numtomake, seed=seed)
         addtoSet.append_bootstrap(bootstrap_thetas)
