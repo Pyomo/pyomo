@@ -111,14 +111,6 @@ jobs:
           TARGET: win
           PYENV: pip
 
-        - os: ubuntu-latest
-          python: '3.11'
-          other: /singletest
-          category: "-m 'neos or importtest'"
-          skip_doctest: 1
-          TARGET: linux
-          PYENV: pip
-
     steps:
     - name: Checkout Pyomo source
       uses: actions/checkout@v4
@@ -272,7 +264,7 @@ jobs:
         if test -z "${{matrix.slim}}"; then
             python -m pip install --cache-dir cache/pip cplex docplex \
                 || echo "WARNING: CPLEX Community Edition is not available"
-            python -m pip install --cache-dir cache/pip gurobipy\
+            python -m pip install --cache-dir cache/pip gurobipy==10.0.3\
                 || echo "WARNING: Gurobi is not available"
             python -m pip install --cache-dir cache/pip xpress \
                 || echo "WARNING: Xpress Community Edition is not available"
