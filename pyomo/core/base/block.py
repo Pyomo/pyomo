@@ -2412,8 +2412,8 @@ def declare_custom_block(name, new_ctype=None):
 
         # Declare Indexed and Scalar versions of the custom blocks.  We
         # will register them both with the calling module scope, and
-        # with the CustomBlock (so that __new__ can route the object
-        # creation to the correct class)
+        # with the CustomBlock (so that CustomBlock.__new__ can route
+        # the object creation to the correct class)
         c._indexed_custom_block = type(c)("Indexed" + name, (c,), {})
         c._scalar_custom_block = type(c)(
             "Scalar" + name, (ScalarCustomBlockMixin, cls, c), {}
