@@ -1165,8 +1165,6 @@ class Estimator(object):
             # create a local instance of the pyomo model to access model variables and parameters
             model_temp = self._create_parmest_model(0)
             model_theta_list = self._expand_indexed_unknowns(model_temp)
-            # TODO: check if model_theta_list is correct if original unknown parameters
-            # are declared as params and transformed to vars during call to create_parmest_model
 
             # if self.estimator_theta_names is not the same as temp model_theta_list,
             # create self.theta_names_updated
