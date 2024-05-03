@@ -2391,13 +2391,13 @@ def declare_custom_block(name, new_ctype=None):
         # this is the decorator function that creates the block
         # component classes
 
-        # Declare the new Block (derived from CustomBlock) corresponding
-        # to the BlockData that we are decorating
+        # Declare the new Block component (derived from CustomBlock)
+        # corresponding to the BlockData that we are decorating
         #
         # Note the use of `type(CustomBlock)` to pick up the metaclass
         # that was used to create the CustomBlock (in general, it should
         # be `type`)
-        c = type(CustomBlock)(
+        comp = type(CustomBlock)(
             name,  # name of new class
             (CustomBlock,),  # base classes
             # class body definitions (populate the new class' __dict__)
@@ -2413,9 +2413,9 @@ def declare_custom_block(name, new_ctype=None):
 
         if new_ctype is not None:
             if new_ctype is True:
-                c._default_ctype = c
+                comp._default_ctype = comp
             elif isinstance(new_ctype, type):
-                c._default_ctype = new_ctype
+                comp._default_ctype = new_ctype
             else:
                 raise ValueError(
                     "Expected new_ctype to be either type "
@@ -2426,23 +2426,23 @@ def declare_custom_block(name, new_ctype=None):
         # will register them both with the calling module scope, and
         # with the CustomBlock (so that CustomBlock.__new__ can route
         # the object creation to the correct class)
-        c._indexed_custom_block = type(c)(
+        comp._indexed_custom_block = type(comp)(
             "Indexed" + name,
-            (c,),
+            (comp,),
             {  # ensure the created class is associated with the calling module
                 "__module__": block_data.__module__
             },
         )
-        c._scalar_custom_block = type(c)(
+        comp._scalar_custom_block = type(comp)(
             "Scalar" + name,
-            (ScalarCustomBlockMixin, block_data, c),
+            (ScalarCustomBlockMixin, block_data, comp),
             {  # ensure the created class is associated with the calling module
                 "__module__": block_data.__module__
             },
         )
 
         # Register the new Block types in the same module as the BlockData
-        for _cls in (c, c._indexed_custom_block, c._scalar_custom_block):
+        for _cls in (comp, comp._indexed_custom_block, comp._scalar_custom_block):
             setattr(sys.modules[block_data.__module__], _cls.__name__, _cls)
         return block_data
 
