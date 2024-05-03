@@ -2362,9 +2362,16 @@ class CustomBlock(Block):
 
     def __new__(cls, *args, **kwargs):
         if cls.__bases__[0] is not CustomBlock:
-            # we are entering here the second time (recursive)
-            # therefore, we need to create what we have
+            # we are creating a class other than the "generic" derived
+            # custom block class.  We can assume that the routing of the
+            # generic block class to the specific Scalar or Indexed
+            # subclass has already occurred and we can pass control up
+            # to (toward) object.__new__()
             return super().__new__(cls, *args, **kwargs)
+        # If the first base class is this CustomBlock class, then the
+        # user is attempting to create the "generic" block class.
+        # Depending on the arguments, we need to map this to either the
+        # Scalar or Indexed block subclass.
         if not args or (args[0] is UnindexedComponent_set and len(args) == 1):
             return super().__new__(cls._scalar_custom_block, *args, **kwargs)
         else:
@@ -2374,7 +2381,7 @@ class CustomBlock(Block):
 def declare_custom_block(name, new_ctype=None):
     """Decorator to declare components for a custom block data class
 
-    >>> @declare_custom_block(name=FooBlock)
+    >>> @declare_custom_block(name="FooBlock")
     ... class FooBlockData(BlockData):
     ...    # custom block data class
     ...    pass
@@ -2384,19 +2391,24 @@ def declare_custom_block(name, new_ctype=None):
         # this is the decorator function that creates the block
         # component classes
 
-        # Default (derived) Block attributes
-        clsbody = {
-            "__module__": block_data.__module__,  # magic to fix the module
-            # Default IndexedComponent data object is the decorated class:
-            "_ComponentDataClass": cls,
-            # By default this new block does not declare a new ctype
-            "_default_ctype": None,
-        }
-
+        # Declare the new Block (derived from CustomBlock) corresponding
+        # to the BlockData that we are decorating
+        #
+        # Note the use of `type(CustomBlock)` to pick up the metaclass
+        # that was used to create the CustomBlock (in general, it should
+        # be `type`)
         c = type(CustomBlock)(
             name,  # name of new class
             (CustomBlock,),  # base classes
-            clsbody,  # class body definitions (will populate __dict__)
+            # class body definitions (populate the new class' __dict__)
+            {
+                # ensure the created class is associated with the calling module
+                "__module__": block_data.__module__,
+                # Default IndexedComponent data object is the decorated class:
+                "_ComponentDataClass": block_data,
+                # By default this new block does not declare a new ctype
+                "_default_ctype": None,
+            },
         )
 
         if new_ctype is not None:
@@ -2410,7 +2422,7 @@ def declare_custom_block(name, new_ctype=None):
                     "or 'True'; received: %s" % (new_ctype,)
                 )
 
-        # Declare Indexed and Scalar versions of the custom blocks.  We
+        # Declare Indexed and Scalar versions of the custom block.  We
         # will register them both with the calling module scope, and
         # with the CustomBlock (so that CustomBlock.__new__ can route
         # the object creation to the correct class)
