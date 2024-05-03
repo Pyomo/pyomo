@@ -2986,6 +2986,9 @@ class TestBlock(unittest.TestCase):
         self.assertIn('TestingBlock', globals())
         self.assertIn('ScalarTestingBlock', globals())
         self.assertIn('IndexedTestingBlock', globals())
+        self.assertIs(TestingBlock.__module__, __name__)
+        self.assertIs(ScalarTestingBlock.__module__, __name__)
+        self.assertIs(IndexedTestingBlock.__module__, __name__)
 
         with LoggingIntercept() as LOG:
             obj = TestingBlock()

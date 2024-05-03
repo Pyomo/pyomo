@@ -2380,13 +2380,13 @@ def declare_custom_block(name, new_ctype=None):
     ...    pass
     """
 
-    def block_data_decorator(cls):
+    def block_data_decorator(block_data):
         # this is the decorator function that creates the block
         # component classes
 
         # Default (derived) Block attributes
         clsbody = {
-            "__module__": cls.__module__,  # magic to fix the module
+            "__module__": block_data.__module__,  # magic to fix the module
             # Default IndexedComponent data object is the decorated class:
             "_ComponentDataClass": cls,
             # By default this new block does not declare a new ctype
@@ -2414,14 +2414,24 @@ def declare_custom_block(name, new_ctype=None):
         # will register them both with the calling module scope, and
         # with the CustomBlock (so that CustomBlock.__new__ can route
         # the object creation to the correct class)
-        c._indexed_custom_block = type(c)("Indexed" + name, (c,), {})
+        c._indexed_custom_block = type(c)(
+            "Indexed" + name,
+            (c,),
+            {  # ensure the created class is associated with the calling module
+                "__module__": block_data.__module__
+            },
+        )
         c._scalar_custom_block = type(c)(
-            "Scalar" + name, (ScalarCustomBlockMixin, cls, c), {}
+            "Scalar" + name,
+            (ScalarCustomBlockMixin, block_data, c),
+            {  # ensure the created class is associated with the calling module
+                "__module__": block_data.__module__
+            },
         )
 
         # Register the new Block types in the same module as the BlockData
         for _cls in (c, c._indexed_custom_block, c._scalar_custom_block):
-            setattr(sys.modules[cls.__module__], _cls.__name__, _cls)
-        return cls
+            setattr(sys.modules[block_data.__module__], _cls.__name__, _cls)
+        return block_data
 
     return block_data_decorator
