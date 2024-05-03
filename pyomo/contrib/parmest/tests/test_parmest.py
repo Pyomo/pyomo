@@ -118,9 +118,9 @@ class TestRooneyBiegler(unittest.TestCase):
         CR = self.pest.confidence_region_test(theta_est, "MVN", [0.5, 0.75, 1.0])
 
         self.assertTrue(set(CR.columns) >= set([0.5, 0.75, 1.0]))
-        self.assertTrue(CR[0.5].sum() == 5)
-        self.assertTrue(CR[0.75].sum() == 7)
-        self.assertTrue(CR[1.0].sum() == 10)  # all true
+        self.assertEqual(CR[0.5].sum(), 5)
+        self.assertEqual(CR[0.75].sum(), 7)
+        self.assertEqual(CR[1.0].sum(), 10)  # all true
 
         graphics.pairwise_plot(theta_est)
         graphics.pairwise_plot(theta_est, thetavals)
@@ -135,17 +135,16 @@ class TestRooneyBiegler(unittest.TestCase):
         asym = np.arange(10, 30, 2)
         rate = np.arange(0, 1.5, 0.25)
         theta_vals = pd.DataFrame(
-            list(product(asym, rate)), columns=self.pest.estimator_theta_names
+            list(product(asym, rate)), columns=['asymptote', 'rate_constant']
         )
-
         obj_at_theta = self.pest.objective_at_theta(theta_vals)
 
         LR = self.pest.likelihood_ratio_test(obj_at_theta, objval, [0.8, 0.9, 1.0])
 
         self.assertTrue(set(LR.columns) >= set([0.8, 0.9, 1.0]))
-        self.assertTrue(LR[0.8].sum() == 6)
-        self.assertTrue(LR[0.9].sum() == 10)
-        self.assertTrue(LR[1.0].sum() == 60)  # all true
+        self.assertEqual(LR[0.8].sum(), 6)
+        self.assertEqual(LR[0.9].sum(), 10)
+        self.assertEqual(LR[1.0].sum(), 60)  # all true
 
         graphics.pairwise_plot(LR, thetavals, 0.8)
 
@@ -164,9 +163,9 @@ class TestRooneyBiegler(unittest.TestCase):
         self.assertTrue(samples == [1])  # sample 1 was left out
         self.assertTrue(lno_theta.shape[0] == 1)  # lno estimate for sample 1
         self.assertTrue(set(lno_theta.columns) >= set([0.5, 1.0]))
-        self.assertTrue(lno_theta[1.0].sum() == 1)  # all true
-        self.assertTrue(bootstrap_theta.shape[0] == 3)  # bootstrap for sample 1
-        self.assertTrue(bootstrap_theta[1.0].sum() == 3)  # all true
+        self.assertEqual(lno_theta[1.0].sum(), 1)  # all true
+        self.assertEqual(bootstrap_theta.shape[0], 3)  # bootstrap for sample 1
+        self.assertEqual(bootstrap_theta[1.0].sum(), 3)  # all true
 
     def test_diagnostic_mode(self):
         self.pest.diagnostic_mode = True
@@ -176,7 +175,7 @@ class TestRooneyBiegler(unittest.TestCase):
         asym = np.arange(10, 30, 2)
         rate = np.arange(0, 1.5, 0.25)
         theta_vals = pd.DataFrame(
-            list(product(asym, rate)), columns=self.pest.estimator_theta_names
+            list(product(asym, rate)), columns=['asymptote', 'rate_constant']
         )
 
         obj_at_theta = self.pest.objective_at_theta(theta_vals)
