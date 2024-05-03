@@ -13,6 +13,7 @@
 #
 
 from io import StringIO
+import logging
 import os
 import sys
 import types
@@ -2974,6 +2975,36 @@ class TestBlock(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, ".*Cannot write model in format"):
             m.write(format="bogus")
+
+    def test_custom_block(self):
+        @declare_custom_block('TestingBlock')
+        class TestingBlockData(BlockData):
+            def __init__(self, component):
+                BlockData.__init__(self, component)
+                logging.getLogger(__name__).warning("TestingBlockData.__init__")
+
+        self.assertIn('TestingBlock', globals())
+        self.assertIn('ScalarTestingBlock', globals())
+        self.assertIn('IndexedTestingBlock', globals())
+
+        with LoggingIntercept() as LOG:
+            obj = TestingBlock()
+        self.assertIs(type(obj), ScalarTestingBlock)
+        self.assertEqual(LOG.getvalue().strip(), "TestingBlockData.__init__")
+
+        with LoggingIntercept() as LOG:
+            obj = TestingBlock([1, 2])
+        self.assertIs(type(obj), IndexedTestingBlock)
+        self.assertEqual(LOG.getvalue(), "")
+
+        # Test that we can derive from a ScalarCustomBlock
+        class DerivedScalarTstingBlock(ScalarTestingBlock):
+            pass
+
+        with LoggingIntercept() as LOG:
+            obj = DerivedScalarTstingBlock()
+        self.assertIs(type(obj), DerivedScalarTstingBlock)
+        self.assertEqual(LOG.getvalue().strip(), "TestingBlockData.__init__")
 
     def test_override_pprint(self):
         @declare_custom_block('TempBlock')
