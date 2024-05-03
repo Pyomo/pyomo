@@ -2998,12 +2998,12 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(LOG.getvalue(), "")
 
         # Test that we can derive from a ScalarCustomBlock
-        class DerivedScalarTstingBlock(ScalarTestingBlock):
+        class DerivedScalarTestingBlock(ScalarTestingBlock):
             pass
 
         with LoggingIntercept() as LOG:
-            obj = DerivedScalarTstingBlock()
-        self.assertIs(type(obj), DerivedScalarTstingBlock)
+            obj = DerivedScalarTestingBlock()
+        self.assertIs(type(obj), DerivedScalarTestingBlock)
         self.assertEqual(LOG.getvalue().strip(), "TestingBlockData.__init__")
 
     def test_override_pprint(self):
