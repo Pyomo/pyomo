@@ -3009,7 +3009,35 @@ class TestBlock(unittest.TestCase):
         self.assertIs(type(obj), DerivedScalarTestingBlock)
         self.assertEqual(LOG.getvalue().strip(), "TestingBlockData.__init__")
 
-    def test_override_pprint(self):
+    def test_custom_block_ctypes(self):
+        @declare_custom_block('TestingBlock')
+        class TestingBlockData(BlockData):
+            pass
+
+        self.assertIs(TestingBlock().ctype, Block)
+
+        @declare_custom_block('TestingBlock', True)
+        class TestingBlockData(BlockData):
+            pass
+
+        self.assertIs(TestingBlock().ctype, TestingBlock)
+
+        @declare_custom_block('TestingBlock', Constraint)
+        class TestingBlockData(BlockData):
+            pass
+
+        self.assertIs(TestingBlock().ctype, Constraint)
+
+        with self.assertRaisesRegex(
+            ValueError,
+            r"Expected new_ctype to be either type or 'True'; received: \[\]",
+        ):
+
+            @declare_custom_block('TestingBlock', [])
+            class TestingBlockData(BlockData):
+                pass
+
+    def test_custom_block_override_pprint(self):
         @declare_custom_block('TempBlock')
         class TempBlockData(BlockData):
             def pprint(self, ostream=None, verbose=False, prefix=""):
