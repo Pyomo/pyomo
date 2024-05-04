@@ -21,7 +21,7 @@ from pyomo.core.base import (
     Block,
     RangeSet,
 )
-from pyomo.core.base.var import _VarData
+from pyomo.core.base.var import VarData
 
 import logging
 
@@ -268,8 +268,8 @@ class RadixLinearization(Transformation):
                     self._collect_bilinear(e, bilin, quad)
                 # No need to check denominator, as this is poly_degree==2
                 return
-            if not isinstance(expr._numerator[0], _VarData) or not isinstance(
-                expr._numerator[1], _VarData
+            if not isinstance(expr._numerator[0], VarData) or not isinstance(
+                expr._numerator[1], VarData
             ):
                 raise RuntimeError("Cannot yet handle complex subexpressions")
             if expr._numerator[0] is expr._numerator[1]:
