@@ -529,7 +529,10 @@ class TestRenamedClass(unittest.TestCase):
         out = StringIO()
         with LoggingIntercept(out):
 
-            class DeprecatedClassSubSubclass(DeprecatedClassSubclass):
+            class otherClass:
+                pass
+
+            class DeprecatedClassSubSubclass(DeprecatedClassSubclass, otherClass):
                 attr = 'DeprecatedClassSubSubclass'
 
         self.assertEqual(out.getvalue(), "")
