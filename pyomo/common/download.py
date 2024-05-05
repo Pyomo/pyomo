@@ -408,25 +408,25 @@ class FileDownloader(object):
             f = info.name
             if os.path.isabs(f) or '..' in f or f.startswith(('/', os.sep)):
                 logger.error(
-                    "malformed (potentially insecure) filename (%s) "
-                    "found in tar archive.  Skipping file." % (f,)
-                )
-                return False
-            target = os.path.realpath(os.path.join(dest, f))
-            if os.path.commonpath([target, dest]) != dest:
-                logger.error(
-                    "malformed (potentially insecure) filename (%s) "
-                    "found in zip archive.  Skipping file." % (f,)
+                    "malformed or potentially insecure filename (%s).  "
+                    "Skipping file." % (f,)
                 )
                 return False
             target = self._splitpath(f)
             if len(target) <= dirOffset:
                 if not info.isdir():
                     logger.warning(
-                        "Skipping file (%s) in zip archive due to dirOffset" % (f,)
+                        "Skipping file (%s) in tar archive due to dirOffset." % (f,)
                     )
                 return False
-            info.name = '/'.join(target[dirOffset:])
+            info.name = f = '/'.join(target[dirOffset:])
+            target = os.path.realpath(os.path.join(dest, f))
+            if os.path.commonpath([target, dest]) != dest:
+                logger.error(
+                    "potentially insecure filename (%s) resolves outside target "
+                    "directory.  Skipping file." % (f,)
+                )
+                return False
             # Strip high bits & group/other write bits
             info.mode &= 0o755
             return True
