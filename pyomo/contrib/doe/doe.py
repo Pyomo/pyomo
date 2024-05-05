@@ -490,7 +490,7 @@ class DesignOfExperiments:
             # only set up bounds if they are variables
             if isinstance(
                 var,
-                (pcb.var.Var, pcb.var.IndexedVar, pcb.var.ScalarVar, pcb.var.SimpleVar),
+                (pcb.var.Var, pcb.var.IndexedVar, pcb.var.ScalarVar),
             ):
                 var.setlb(self.param[par])
                 var.setub(self.param[par])
@@ -613,7 +613,6 @@ class DesignOfExperiments:
                         pcb.var.Var,
                         pcb.var.IndexedVar,
                         pcb.var.ScalarVar,
-                        pcb.var.SimpleVar,
                     ),
                 ):
                     var.fix(self.scenario_data.scenario[s][par])
@@ -1133,14 +1132,36 @@ class DesignOfExperiments:
         for name in self.design_name:
             cuid = pyo.ComponentUID(name)
             var = cuid.find_component_on(m)
-            if fix_opt:
-                var.fix(design_val[name])
-            else:
-                if optimize_option is None:
-                    var.unfix()
+
+            if isinstance(
+                    var,
+                    (
+                        pcb.var.Var,
+                        pcb.var.IndexedVar,
+                        pcb.var.ScalarVar,
+                    ),
+                ):
+                if fix_opt:
+                    var.fix(design_val[name])
                 else:
-                    if optimize_option[name]:
+                    if optimize_option is None:
                         var.unfix()
+                    else:
+                        if optimize_option[name]:
+                            var.unfix()
+
+            elif isinstance(
+                var,
+                (pcb.param.ScalarParam, pcb.param.IndexedParam, pcb.param.Param),
+            ):
+                # check if param is mutable
+                if var.mutable:
+                    var = design_val[name]
+                else:
+                    raise TypeError(
+                        "If defined as a Param, parameters should be mutable by mutable=True"
+                    )
+                
         return m
 
     def _get_default_ipopt_solver(self):
