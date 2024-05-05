@@ -57,6 +57,7 @@ def create_model(
     t_range=[0.0, 1],
     CA_init=1,
     C_init=0.1,
+    design_var_as_param = True
 ):
     """
     This is an example user model provided to DoE library.
@@ -74,6 +75,7 @@ def create_model(
     t_range: time range, h
     CA_init: time-independent design (control) variable, an initial value for CA
     C_init: An initial value for C
+    design_var_as_param: if True, set up design variables as Param
 
     Return
     ------
@@ -107,9 +109,14 @@ def create_model(
 
     mod.t0 = pyo.Set(initialize=[0])
     mod.t_con = pyo.Set(initialize=control_time)
-    mod.CA0 = pyo.Var(
-        mod.t0, initialize=CA_init, bounds=(1.0, 5.0), within=pyo.NonNegativeReals
-    )  # mol/L
+    if design_var_as_param:
+        mod.CA0 = pyo.Param(
+            mod.t0, initialize=CA_init, mutable=True
+        )  # mol/L
+    else:
+        mod.CA0 = pyo.Var(
+            mod.t0, initialize=CA_init, bounds=(1.0, 5.0), within=pyo.NonNegativeReals
+        )  # mol/L
 
     # check if control_time is in time range
     assert (
@@ -117,12 +124,20 @@ def create_model(
     ), "control time is outside time range."
 
     if model_option == ModelOptionLib.stage1:
-        mod.T = pyo.Var(
-            mod.t_con,
-            initialize=controls,
-            bounds=(300, 700),
-            within=pyo.NonNegativeReals,
-        )
+        if design_var_as_param:
+            mod.T = pyo.Var(
+                mod.t_con,
+                initialize=controls,
+                mutable=True
+            )
+        
+        else:
+            mod.T = pyo.Var(
+                mod.t_con,
+                initialize=controls,
+                bounds=(300, 700),
+                within=pyo.NonNegativeReals,
+            )
         return
 
     else:
