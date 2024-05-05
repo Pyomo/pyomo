@@ -398,8 +398,6 @@ class FileDownloader(object):
             raise RuntimeError(
                 "Target directory (%s) exists, but is not a directory" % (self._fname,)
             )
-        tar_file = tarfile.open(fileobj=io.BytesIO(self.retrieve_url(url)))
-        dest = os.path.realpath(self._fname)
 
         def filter_fcn(info):
             # this mocks up the `tarfile` filter introduced in Python
@@ -431,7 +429,9 @@ class FileDownloader(object):
             info.mode &= 0o755
             return True
 
-        tar_file.extractall(dest, filter(filter_fcn, tar_file.getmembers()))
+        with tarfile.open(fileobj=io.BytesIO(self.retrieve_url(url))) as TAR:
+            dest = os.path.realpath(self._fname)
+            TAR.extractall(dest, filter(filter_fcn, TAR.getmembers()))
 
     def get_gzipped_binary_file(self, url):
         if self._fname is None:
