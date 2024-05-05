@@ -88,9 +88,10 @@ def build_ginac_interface(parallel=None, args=None):
 
     if args is None:
         args = []
-    dname = this_file_dir()
-    _sources = ['ginac_interface.cpp']
-    sources = [os.path.join(dname, fname) for fname in _sources]
+    sources = [
+        os.path.join(this_file_dir(), 'ginac', 'src', fname)
+        for fname in ['ginac_interface.cpp']
+    ]
 
     ginac_lib = find_library('ginac')
     if not ginac_lib:
@@ -132,7 +133,7 @@ def build_ginac_interface(parallel=None, args=None):
             basedir = os.path.abspath(os.path.curdir)
             with TempfileManager.new_context() as tempfile:
                 if self.inplace:
-                    tmpdir = this_file_dir()
+                    tmpdir = os.path.join(this_file_dir(), 'ginac')
                 else:
                     tmpdir = os.path.abspath(tempfile.mkdtemp())
                 sys.stdout.write("Building in '%s'" % tmpdir)

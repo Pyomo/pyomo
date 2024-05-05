@@ -15,14 +15,10 @@ from pyomo.core.expr.numvalue import value, is_constant
 import logging
 import warnings
 
-try:
-    from pyomo.contrib.simplification.ginac_interface import GinacInterface
-
-    ginac_available = True
-except:
-    GinacInterface = None
-    ginac_available = False
-
+from pyomo.contrib.simplification.ginac import (
+    interface as ginac_interface,
+    interface_available as ginac_available,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +47,7 @@ def simplify_with_ginac(expr: NumericExpression, ginac_interface):
 class Simplifier(object):
     def __init__(self, suppress_no_ginac_warnings: bool = False) -> None:
         if ginac_available:
-            self.gi = GinacInterface(False)
+            self.gi = ginac_interface.GinacInterface(False)
         self.suppress_no_ginac_warnings = suppress_no_ginac_warnings
 
     def simplify(self, expr: NumericExpression):
