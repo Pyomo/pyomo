@@ -27,7 +27,11 @@
 
 
 from pyomo.common.dependencies import numpy as np
-from pyomo.contrib.doe.examples.reactor_kinetics import create_model, disc_for_measure
+from pyomo.contrib.doe.examples.reactor_kinetics import (
+    create_model,
+    disc_for_measure,
+    create_model_design_as_param,
+)
 from pyomo.contrib.doe import DesignOfExperiments, MeasurementVariables, DesignVariables
 
 
@@ -105,6 +109,24 @@ def main():
 
     relative_error = abs(np.log10(result.det) - 2.99)
     assert relative_error < 0.01
+
+    ### Compute the FIM of a square model-based Design of Experiments problem
+    ### Test if we can set up design variables as Param instead of Var
+    doe_object2 = DesignOfExperiments(
+        parameter_dict,  # parameter dictionary
+        exp_design,  # DesignVariables object
+        measurements,  # MeasurementVariables object
+        create_model_design_as_param,  # create model function
+        discretize_model=disc_for_measure,  # discretize model function
+    )
+
+    result2 = doe_object2.compute_FIM(
+        mode="direct_kaug",  # calculation mode
+        scale_nominal_param_value=True,  # scale nominal parameter value
+        formula="central",  # formula for finite difference
+    )
+
+    result2.result_analysis()
 
 
 if __name__ == "__main__":

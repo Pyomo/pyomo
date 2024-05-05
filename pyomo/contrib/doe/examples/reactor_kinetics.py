@@ -122,12 +122,15 @@ def create_model(
     ), "control time is outside time range."
 
     if model_option == ModelOptionLib.stage1:
-        mod.T = pyo.Var(
-            mod.t_con,
-            initialize=controls,
-            bounds=(300, 700),
-            within=pyo.NonNegativeReals,
-        )
+        if design_var_as_param:
+            mod.T = pyo.Param(mod.t_con, initialize=controls, mutable=True)
+        else:
+            mod.T = pyo.Var(
+                mod.t_con,
+                initialize=controls,
+                bounds=(300, 700),
+                within=pyo.NonNegativeReals,
+            )
         return
 
     else:
@@ -149,7 +152,7 @@ def create_model(
                 # locate the nearest neighbouring control point before this t
                 neighbour_t = max(tc for tc in control_time if tc < t)
                 return controls[neighbour_t]
-        
+
         mod.T = pyo.Var(
             mod.t, initialize=T_initial, bounds=(300, 700), within=pyo.NonNegativeReals
         )
@@ -250,7 +253,8 @@ def create_model(
 
         if return_m:
             return mod
-        
+
+
 def create_model_design_as_param(
     mod=None,
     model_option="stage2",
@@ -264,6 +268,7 @@ def create_model_design_as_param(
     """
     This is an example user model provided to DoE library.
     It is a dynamic problem solved by Pyomo.DAE.
+    This problem defines design variable CA0 as Param, instead of Var.
 
     Arguments
     ---------
@@ -324,12 +329,15 @@ def create_model_design_as_param(
     ), "control time is outside time range."
 
     if model_option == ModelOptionLib.stage1:
-        mod.T = pyo.Var(
-            mod.t_con,
-            initialize=controls,
-            bounds=(300, 700),
-            within=pyo.NonNegativeReals,
-        )
+        if design_var_as_param:
+            mod.T = pyo.Param(mod.t_con, initialize=controls, mutable=True)
+        else:
+            mod.T = pyo.Var(
+                mod.t_con,
+                initialize=controls,
+                bounds=(300, 700),
+                within=pyo.NonNegativeReals,
+            )
         return
 
     else:
@@ -351,7 +359,7 @@ def create_model_design_as_param(
                 # locate the nearest neighbouring control point before this t
                 neighbour_t = max(tc for tc in control_time if tc < t)
                 return controls[neighbour_t]
-        
+
         mod.T = pyo.Var(
             mod.t, initialize=T_initial, bounds=(300, 700), within=pyo.NonNegativeReals
         )

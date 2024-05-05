@@ -488,10 +488,7 @@ class DesignOfExperiments:
             var = cuid.find_component_on(mod)
 
             # only set up bounds if they are variables
-            if isinstance(
-                var,
-                (pcb.var.Var, pcb.var.IndexedVar, pcb.var.ScalarVar),
-            ):
+            if isinstance(var, (pcb.var.Var, pcb.var.IndexedVar, pcb.var.ScalarVar)):
                 var.setlb(self.param[par])
                 var.setub(self.param[par])
 
@@ -608,12 +605,7 @@ class DesignOfExperiments:
 
                 # if it is a variable, fix it to a new value
                 if isinstance(
-                    var,
-                    (
-                        pcb.var.Var,
-                        pcb.var.IndexedVar,
-                        pcb.var.ScalarVar,
-                    ),
+                    var, (pcb.var.Var, pcb.var.IndexedVar, pcb.var.ScalarVar)
                 ):
                     var.fix(self.scenario_data.scenario[s][par])
                 # if it is a param, give it a new value
@@ -1134,13 +1126,14 @@ class DesignOfExperiments:
             var = cuid.find_component_on(m)
 
             if isinstance(
-                    var,
-                    (
-                        pcb.var.Var,
-                        pcb.var.IndexedVar,
-                        pcb.var.ScalarVar,
-                    ),
-                ):
+                var,
+                (
+                    pcb.var.Var,
+                    pcb.var.IndexedVar,
+                    pcb.var.ScalarVar,
+                    pcb.var._GeneralVarData,
+                ),
+            ):
                 if fix_opt:
                     var.fix(design_val[name])
                 else:
@@ -1151,8 +1144,7 @@ class DesignOfExperiments:
                             var.unfix()
 
             elif isinstance(
-                var,
-                (pcb.param.ScalarParam, pcb.param.IndexedParam, pcb.param.Param),
+                var, (pcb.param.ScalarParam, pcb.param.IndexedParam, pcb.param.Param)
             ):
                 # check if param is mutable
                 if var.mutable:
@@ -1161,7 +1153,7 @@ class DesignOfExperiments:
                     raise TypeError(
                         "If defined as a Param, parameters should be mutable by mutable=True"
                     )
-                
+
         return m
 
     def _get_default_ipopt_solver(self):
