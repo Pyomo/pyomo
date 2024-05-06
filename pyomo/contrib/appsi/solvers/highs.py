@@ -187,11 +187,7 @@ class Highs(PersistentBase, PersistentSolver):
             # and the solver version can only be obtained by making
             # an instance of the solver class.
             tmp = highspy.Highs()
-            version = (
-                tmp.versionMajor(),
-                tmp.versionMinor(),
-                tmp.versionPatch(),
-            )
+            version = (tmp.versionMajor(), tmp.versionMinor(), tmp.versionPatch())
 
         return version
 
