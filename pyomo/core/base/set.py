@@ -50,7 +50,7 @@ from pyomo.core.base.range import (
     RangeDifferenceError,
 )
 from pyomo.core.base.component import (
-    _ComponentBase,
+    ComponentBase,
     Component,
     ComponentData,
     ModelComponentFactory,
@@ -84,10 +84,7 @@ API (e.g., only finite discrete Sets support `add()`).
 
 All Sets implement one of the following APIs:
 
-0. `class _SetDataBase(ComponentData)`
-   *(pure virtual interface)*
-
-1. `class _SetData(_SetDataBase)`
+1. `class SetData(ComponentData)`
    *(base class for all AML Sets)*
 
 2. `class _FiniteSetMixin(object)`
@@ -102,7 +99,7 @@ sets that contain an infinite number of values (this includes both
 bounded continuous ranges as well as unbounded discrete ranges).  As
 there are an infinite number of values, iteration is *not*
 supported. The base class also implements all Python set operations.
-Note that `_SetData` does *not* implement `len()`, as Python requires
+Note that `SetData` does *not* implement `len()`, as Python requires
 `len()` to return a positive integer.
 
 Finite sets add iteration and support for `len()`.  In addition, they
@@ -128,7 +125,7 @@ implemented) through Mixin classes.
 
 
 def process_setarg(arg):
-    if isinstance(arg, _SetDataBase):
+    if isinstance(arg, SetData):
         if (
             getattr(arg, '_parent', None) is not None
             or getattr(arg, '_anonymous_sets', None) is GlobalSetBase
@@ -140,7 +137,7 @@ def process_setarg(arg):
             _anonymous.update(arg._anonymous_sets)
         return arg, _anonymous
 
-    elif isinstance(arg, _ComponentBase):
+    elif isinstance(arg, ComponentBase):
         if isinstance(arg, IndexedComponent) and arg.is_indexed():
             raise TypeError(
                 "Cannot apply a Set operator to an "
@@ -512,16 +509,8 @@ class _NotFound(object):
     pass
 
 
-# A trivial class that we can use to test if an object is a "legitimate"
-# set (either ScalarSet, or a member of an IndexedSet)
-class _SetDataBase(ComponentData):
-    """The base for all objects that can be used as a component indexing set."""
-
-    __slots__ = ()
-
-
-class _SetData(_SetDataBase):
-    """The base for all Pyomo AML objects that can be used as a component
+class SetData(ComponentData):
+    """The base for all Pyomo objects that can be used as a component
     indexing set.
 
     Derived versions of this class can be used as the Index for any
@@ -534,13 +523,13 @@ class _SetData(_SetDataBase):
             ans = self.get(value, _NotFound)
         except TypeError:
             # In Python 3.x, Sets are unhashable
-            if isinstance(value, _SetData):
+            if isinstance(value, SetData):
                 ans = _NotFound
             else:
                 raise
 
         if ans is _NotFound:
-            if isinstance(value, _SetData):
+            if isinstance(value, SetData):
                 deprecation_warning(
                     "Testing for set subsets with 'a in b' is deprecated.  "
                     "Use 'a.issubset(b)'.",
@@ -894,7 +883,7 @@ class _SetData(_SetDataBase):
     @property
     @deprecated("The 'virtual' attribute is no longer supported", version='5.7')
     def virtual(self):
-        return isinstance(self, (_AnySet, SetOperator, _InfiniteRangeSetData))
+        return isinstance(self, (_AnySet, SetOperator, InfiniteRangeSetData))
 
     @virtual.setter
     def virtual(self, value):
@@ -1188,6 +1177,16 @@ class _SetData(_SetDataBase):
         return self >= other and not self == other
 
 
+class _SetData(metaclass=RenamedClass):
+    __renamed__new_class__ = SetData
+    __renamed__version__ = '6.7.2.dev0'
+
+
+class _SetDataBase(metaclass=RenamedClass):
+    __renamed__new_class__ = SetData
+    __renamed__version__ = '6.7.2.dev0'
+
+
 class _FiniteSetMixin(object):
     __slots__ = ()
 
@@ -1294,14 +1293,14 @@ class _FiniteSetMixin(object):
                     yield NonNumericRange(i)
 
 
-class _FiniteSetData(_FiniteSetMixin, _SetData):
+class FiniteSetData(_FiniteSetMixin, SetData):
     """A general unordered iterable Set"""
 
     __slots__ = ('_values', '_domain', '_validate', '_filter', '_dimen')
 
     def __init__(self, component):
-        _SetData.__init__(self, component=component)
-        # Derived classes (like _OrderedSetData) may want to change the
+        SetData.__init__(self, component=component)
+        # Derived classes (like OrderedSetData) may want to change the
         # storage
         if not hasattr(self, '_values'):
             self._values = set()
@@ -1470,6 +1469,11 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
         return self._values.pop()
 
 
+class _FiniteSetData(metaclass=RenamedClass):
+    __renamed__new_class__ = FiniteSetData
+    __renamed__version__ = '6.7.2.dev0'
+
+
 class _ScalarOrderedSetMixin(object):
     # This mixin is required because scalar ordered sets implement
     # __getitem__() as an alias of at()
@@ -1630,16 +1634,16 @@ class _OrderedSetMixin(object):
             )
 
 
-class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
+class OrderedSetData(_OrderedSetMixin, FiniteSetData):
     """
     This class defines the base class for an ordered set of concrete data.
 
     In older Pyomo terms, this defines a "concrete" ordered set - that is,
     a set that "owns" the list of set members.  While this class actually
     implements a set ordered by insertion order, we make the "official"
-    _InsertionOrderSetData an empty derivative class, so that
+    InsertionOrderSetData an empty derivative class, so that
 
-         issubclass(_SortedSetData, _InsertionOrderSetData) == False
+         issubclass(SortedSetData, InsertionOrderSetData) == False
 
     Constructor Arguments:
         component   The Set object that owns this data.
@@ -1652,7 +1656,7 @@ class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
     def __init__(self, component):
         self._values = {}
         self._ordered_values = []
-        _FiniteSetData.__init__(self, component=component)
+        FiniteSetData.__init__(self, component=component)
 
     def _iter_impl(self):
         """
@@ -1730,7 +1734,12 @@ class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
             raise ValueError("%s.ord(x): x not in %s" % (self.name, self.name))
 
 
-class _InsertionOrderSetData(_OrderedSetData):
+class _OrderedSetData(metaclass=RenamedClass):
+    __renamed__new_class__ = OrderedSetData
+    __renamed__version__ = '6.7.2.dev0'
+
+
+class InsertionOrderSetData(OrderedSetData):
     """
     This class defines the data for a ordered set where the items are ordered
     in insertion order (similar to Python's OrderedSet.
@@ -1751,7 +1760,7 @@ class _InsertionOrderSetData(_OrderedSetData):
                 "This WILL potentially lead to nondeterministic behavior "
                 "in Pyomo" % (type(val).__name__,)
             )
-        super(_InsertionOrderSetData, self).set_value(val)
+        super(InsertionOrderSetData, self).set_value(val)
 
     def update(self, values):
         if type(values) in Set._UnorderedInitializers:
@@ -1761,7 +1770,12 @@ class _InsertionOrderSetData(_OrderedSetData):
                 "This WILL potentially lead to nondeterministic behavior "
                 "in Pyomo" % (type(values).__name__,)
             )
-        super(_InsertionOrderSetData, self).update(values)
+        super(InsertionOrderSetData, self).update(values)
+
+
+class _InsertionOrderSetData(metaclass=RenamedClass):
+    __renamed__new_class__ = InsertionOrderSetData
+    __renamed__version__ = '6.7.2.dev0'
 
 
 class _SortedSetMixin(object):
@@ -1776,7 +1790,7 @@ class _SortedSetMixin(object):
         return iter(self)
 
 
-class _SortedSetData(_SortedSetMixin, _OrderedSetData):
+class SortedSetData(_SortedSetMixin, OrderedSetData):
     """
     This class defines the data for a sorted set.
 
@@ -1791,7 +1805,7 @@ class _SortedSetData(_SortedSetMixin, _OrderedSetData):
     def __init__(self, component):
         # An empty set is sorted...
         self._is_sorted = True
-        _OrderedSetData.__init__(self, component=component)
+        OrderedSetData.__init__(self, component=component)
 
     def _iter_impl(self):
         """
@@ -1799,12 +1813,12 @@ class _SortedSetData(_SortedSetMixin, _OrderedSetData):
         """
         if not self._is_sorted:
             self._sort()
-        return super(_SortedSetData, self)._iter_impl()
+        return super(SortedSetData, self)._iter_impl()
 
     def __reversed__(self):
         if not self._is_sorted:
             self._sort()
-        return super(_SortedSetData, self).__reversed__()
+        return super(SortedSetData, self).__reversed__()
 
     def _add_impl(self, value):
         # Note that the sorted status has no bearing on insertion,
@@ -1818,7 +1832,7 @@ class _SortedSetData(_SortedSetMixin, _OrderedSetData):
     # def discard(self, val):
 
     def clear(self):
-        super(_SortedSetData, self).clear()
+        super(SortedSetData, self).clear()
         self._is_sorted = True
 
     def at(self, index):
@@ -1830,7 +1844,7 @@ class _SortedSetData(_SortedSetMixin, _OrderedSetData):
         """
         if not self._is_sorted:
             self._sort()
-        return super(_SortedSetData, self).at(index)
+        return super(SortedSetData, self).at(index)
 
     def ord(self, item):
         """
@@ -1842,7 +1856,7 @@ class _SortedSetData(_SortedSetMixin, _OrderedSetData):
         """
         if not self._is_sorted:
             self._sort()
-        return super(_SortedSetData, self).ord(item)
+        return super(SortedSetData, self).ord(item)
 
     def sorted_data(self):
         return self.data()
@@ -1853,6 +1867,11 @@ class _SortedSetData(_SortedSetMixin, _OrderedSetData):
         )
         self._values = {j: i for i, j in enumerate(self._ordered_values)}
         self._is_sorted = True
+
+
+class _SortedSetData(metaclass=RenamedClass):
+    __renamed__new_class__ = SortedSetData
+    __renamed__version__ = '6.7.2.dev0'
 
 
 ############################################################################
@@ -1971,7 +1990,7 @@ class Set(IndexedComponent):
     _UnorderedInitializers = {set}
 
     @overload
-    def __new__(cls: Type[Set], *args, **kwds) -> Union[_SetData, IndexedSet]: ...
+    def __new__(cls: Type[Set], *args, **kwds) -> Union[SetData, IndexedSet]: ...
 
     @overload
     def __new__(cls: Type[OrderedScalarSet], *args, **kwds) -> OrderedScalarSet: ...
@@ -1985,7 +2004,7 @@ class Set(IndexedComponent):
         # Many things are easier by forcing it to be consistent across
         # the set (namely, the _ComponentDataClass is constant).
         # However, it is a bit off that 'ordered' it the only arg NOT
-        # processed by Initializer.  We can mock up a _SortedSetData
+        # processed by Initializer.  We can mock up a SortedSetData
         # sort function that preserves Insertion Order (lambda x: x), but
         # the unsorted is harder (it would effectively be insertion
         # order, but ordered() may not be deterministic based on how the
@@ -2030,11 +2049,11 @@ class Set(IndexedComponent):
         else:
             newObj = super(Set, cls).__new__(IndexedSet)
             if ordered is Set.InsertionOrder:
-                newObj._ComponentDataClass = _InsertionOrderSetData
+                newObj._ComponentDataClass = InsertionOrderSetData
             elif ordered is Set.SortedOrder:
-                newObj._ComponentDataClass = _SortedSetData
+                newObj._ComponentDataClass = SortedSetData
             else:
-                newObj._ComponentDataClass = _FiniteSetData
+                newObj._ComponentDataClass = FiniteSetData
             return newObj
 
     @overload
@@ -2178,7 +2197,7 @@ class Set(IndexedComponent):
         """Returns the default component data value."""
         # Because we allow sets within an IndexedSet to have different
         # dimen, we have moved the tuplization logic from PyomoModel
-        # into Set (because we cannot know the dimen of a _SetData until
+        # into Set (because we cannot know the dimen of a SetData until
         # we are actually constructing that index).  This also means
         # that we need to potentially communicate the dimen to the
         # (wrapped) value initializer.  So, we will get the dimen first,
@@ -2338,7 +2357,7 @@ class Set(IndexedComponent):
         #         else:
         #             return '{' + str(ans)[1:-1] + "}"
 
-        # TBD: In the current design, we force all _SetData within an
+        # TBD: In the current design, we force all SetData within an
         # indexed Set to have the same isordered value, so we will only
         # print it once in the header.  Is this a good design?
         try:
@@ -2358,7 +2377,7 @@ class Set(IndexedComponent):
                     _ordered = "Sorted"
                 else:
                     _ordered = "{user}"
-            elif issubclass(_refClass, _InsertionOrderSetData):
+            elif issubclass(_refClass, InsertionOrderSetData):
                 _ordered = "Insertion"
         return (
             [
@@ -2383,14 +2402,14 @@ class IndexedSet(Set):
         return {k: v.data() for k, v in self.items()}
 
     @overload
-    def __getitem__(self, index) -> _SetData: ...
+    def __getitem__(self, index) -> SetData: ...
 
     __getitem__ = IndexedComponent.__getitem__  # type: ignore
 
 
-class FiniteScalarSet(_FiniteSetData, Set):
+class FiniteScalarSet(FiniteSetData, Set):
     def __init__(self, **kwds):
-        _FiniteSetData.__init__(self, component=self)
+        FiniteSetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
         self._index = UnindexedComponent_index
 
@@ -2400,13 +2419,13 @@ class FiniteSimpleSet(metaclass=RenamedClass):
     __renamed__version__ = '6.0'
 
 
-class OrderedScalarSet(_ScalarOrderedSetMixin, _InsertionOrderSetData, Set):
+class OrderedScalarSet(_ScalarOrderedSetMixin, InsertionOrderSetData, Set):
     def __init__(self, **kwds):
         # In case someone inherits from us, we will provide a rational
         # default for the "ordered" flag
         kwds.setdefault('ordered', Set.InsertionOrder)
 
-        _InsertionOrderSetData.__init__(self, component=self)
+        InsertionOrderSetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
 
 
@@ -2415,13 +2434,13 @@ class OrderedSimpleSet(metaclass=RenamedClass):
     __renamed__version__ = '6.0'
 
 
-class SortedScalarSet(_ScalarOrderedSetMixin, _SortedSetData, Set):
+class SortedScalarSet(_ScalarOrderedSetMixin, SortedSetData, Set):
     def __init__(self, **kwds):
         # In case someone inherits from us, we will provide a rational
         # default for the "ordered" flag
         kwds.setdefault('ordered', Set.SortedOrder)
 
-        _SortedSetData.__init__(self, component=self)
+        SortedSetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
         self._index = UnindexedComponent_index
 
@@ -2464,14 +2483,14 @@ class AbstractSortedSimpleSet(metaclass=RenamedClass):
 ############################################################################
 
 
-class SetOf(_SetData, Component):
+class SetOf(SetData, Component):
     """"""
 
     def __new__(cls, *args, **kwds):
         if cls is not SetOf:
             return super(SetOf, cls).__new__(cls)
         (reference,) = args
-        if isinstance(reference, (_SetData, GlobalSetBase)):
+        if isinstance(reference, (SetData, GlobalSetBase)):
             if reference.isfinite():
                 if reference.isordered():
                     return super(SetOf, cls).__new__(OrderedSetOf)
@@ -2485,7 +2504,7 @@ class SetOf(_SetData, Component):
             return super(SetOf, cls).__new__(FiniteSetOf)
 
     def __init__(self, reference, **kwds):
-        _SetData.__init__(self, component=self)
+        SetData.__init__(self, component=self)
         kwds.setdefault('ctype', SetOf)
         Component.__init__(self, **kwds)
         self._ref = reference
@@ -2508,7 +2527,7 @@ class SetOf(_SetData, Component):
 
     @property
     def dimen(self):
-        if isinstance(self._ref, _SetData):
+        if isinstance(self._ref, SetData):
             return self._ref.dimen
         _iter = iter(self)
         try:
@@ -2603,7 +2622,7 @@ class OrderedSetOf(_ScalarOrderedSetMixin, _OrderedSetMixin, FiniteSetOf):
 ############################################################################
 
 
-class _InfiniteRangeSetData(_SetData):
+class InfiniteRangeSetData(SetData):
     """Data class for a infinite set.
 
     This Set implements an interface to an *infinite set* defined by one
@@ -2615,7 +2634,7 @@ class _InfiniteRangeSetData(_SetData):
     __slots__ = ('_ranges',)
 
     def __init__(self, component):
-        _SetData.__init__(self, component=component)
+        SetData.__init__(self, component=component)
         self._ranges = None
 
     def get(self, value, default=None):
@@ -2648,8 +2667,13 @@ class _InfiniteRangeSetData(_SetData):
         return iter(self._ranges)
 
 
-class _FiniteRangeSetData(
-    _SortedSetMixin, _OrderedSetMixin, _FiniteSetMixin, _InfiniteRangeSetData
+class _InfiniteRangeSetData(metaclass=RenamedClass):
+    __renamed__new_class__ = InfiniteRangeSetData
+    __renamed__version__ = '6.7.2.dev0'
+
+
+class FiniteRangeSetData(
+    _SortedSetMixin, _OrderedSetMixin, _FiniteSetMixin, InfiniteRangeSetData
 ):
     __slots__ = ()
 
@@ -2672,7 +2696,7 @@ class _FiniteRangeSetData(
         # iterate over it
         nIters = len(self._ranges) - 1
         if not nIters:
-            yield from _FiniteRangeSetData._range_gen(self._ranges[0])
+            yield from FiniteRangeSetData._range_gen(self._ranges[0])
             return
 
         # The trick here is that we need to remove any duplicates from
@@ -2683,7 +2707,7 @@ class _FiniteRangeSetData(
         for r in self._ranges:
             # Note: there should always be at least 1 member in each
             # NumericRange
-            i = _FiniteRangeSetData._range_gen(r)
+            i = FiniteRangeSetData._range_gen(r)
             iters.append([next(i), i])
 
         iters.sort(reverse=True, key=lambda x: x[0])
@@ -2749,11 +2773,16 @@ class _FiniteRangeSetData(
         )
 
     # We must redefine ranges(), bounds(), and domain so that we get the
-    # _InfiniteRangeSetData version and not the one from
+    # InfiniteRangeSetData version and not the one from
     # _FiniteSetMixin.
-    bounds = _InfiniteRangeSetData.bounds
-    ranges = _InfiniteRangeSetData.ranges
-    domain = _InfiniteRangeSetData.domain
+    bounds = InfiniteRangeSetData.bounds
+    ranges = InfiniteRangeSetData.ranges
+    domain = InfiniteRangeSetData.domain
+
+
+class _FiniteRangeSetData(metaclass=RenamedClass):
+    __renamed__new_class__ = FiniteRangeSetData
+    __renamed__version__ = '6.7.2.dev0'
 
 
 @ModelComponentFactory.register(
@@ -3120,7 +3149,7 @@ class RangeSet(Component):
             old_ranges.reverse()
             while old_ranges:
                 r = old_ranges.pop()
-                for i, val in enumerate(_FiniteRangeSetData._range_gen(r)):
+                for i, val in enumerate(FiniteRangeSetData._range_gen(r)):
                     if not _filter(_block, val):
                         split_r = r.range_difference((NumericRange(val, val, 0),))
                         if len(split_r) == 2:
@@ -3218,9 +3247,9 @@ class RangeSet(Component):
         )
 
 
-class InfiniteScalarRangeSet(_InfiniteRangeSetData, RangeSet):
+class InfiniteScalarRangeSet(InfiniteRangeSetData, RangeSet):
     def __init__(self, *args, **kwds):
-        _InfiniteRangeSetData.__init__(self, component=self)
+        InfiniteRangeSetData.__init__(self, component=self)
         RangeSet.__init__(self, *args, **kwds)
         self._index = UnindexedComponent_index
 
@@ -3233,9 +3262,9 @@ class InfiniteSimpleRangeSet(metaclass=RenamedClass):
     __renamed__version__ = '6.0'
 
 
-class FiniteScalarRangeSet(_ScalarOrderedSetMixin, _FiniteRangeSetData, RangeSet):
+class FiniteScalarRangeSet(_ScalarOrderedSetMixin, FiniteRangeSetData, RangeSet):
     def __init__(self, *args, **kwds):
-        _FiniteRangeSetData.__init__(self, component=self)
+        FiniteRangeSetData.__init__(self, component=self)
         RangeSet.__init__(self, *args, **kwds)
         self._index = UnindexedComponent_index
 
@@ -3273,11 +3302,11 @@ class AbstractFiniteSimpleRangeSet(metaclass=RenamedClass):
 ############################################################################
 
 
-class SetOperator(_SetData, Set):
+class SetOperator(SetData, Set):
     __slots__ = ('_sets',)
 
     def __init__(self, *args, **kwds):
-        _SetData.__init__(self, component=self)
+        SetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
         self._sets, _anonymous = zip(*(process_setarg(_set) for _set in args))
         _anonymous = tuple(filter(None, _anonymous))
@@ -3461,7 +3490,7 @@ class SetOperator(_SetData, Set):
     def _checkArgs(*sets):
         ans = []
         for s in sets:
-            if isinstance(s, _SetDataBase):
+            if isinstance(s, SetData):
                 ans.append((s.isordered(), s.isfinite()))
             elif type(s) in {tuple, list}:
                 ans.append((True, True))
@@ -4217,9 +4246,9 @@ class SetProduct_OrderedSet(
 ############################################################################
 
 
-class _AnySet(_SetData, Set):
+class _AnySet(SetData, Set):
     def __init__(self, **kwds):
-        _SetData.__init__(self, component=self)
+        SetData.__init__(self, component=self)
         # There is a chicken-and-egg game here: the SetInitializer uses
         # Any as part of the processing of the domain/within/bounds
         # domain restrictions.  However, Any has not been declared when
@@ -4273,9 +4302,9 @@ class _AnyWithNoneSet(_AnySet):
         return super(_AnyWithNoneSet, self).get(val, default)
 
 
-class _EmptySet(_FiniteSetMixin, _SetData, Set):
+class _EmptySet(_FiniteSetMixin, SetData, Set):
     def __init__(self, **kwds):
-        _SetData.__init__(self, component=self)
+        SetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
         self.construct()
 

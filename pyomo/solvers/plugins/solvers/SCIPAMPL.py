@@ -20,12 +20,7 @@ from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat
 from pyomo.opt.base.solvers import _extract_version, SolverFactory
-from pyomo.opt.results import (
-    SolverStatus,
-    TerminationCondition,
-    SolutionStatus,
-    ProblemSense,
-)
+from pyomo.opt.results import SolverStatus, TerminationCondition, SolutionStatus
 from pyomo.opt.solver import SystemCallSolver
 
 import logging
@@ -374,9 +369,11 @@ class SCIPAMPL(SystemCallSolver):
             if len(results.solution) > 0:
                 results.solution(0).status = SolutionStatus.optimal
             try:
-                if results.problem.sense == ProblemSense.minimize:
+                if results.solver.primal_bound < results.solver.dual_bound:
                     results.problem.lower_bound = results.solver.primal_bound
+                    results.problem.upper_bound = results.solver.dual_bound
                 else:
+                    results.problem.lower_bound = results.solver.dual_bound
                     results.problem.upper_bound = results.solver.primal_bound
             except AttributeError:
                 """
@@ -455,7 +452,7 @@ class SCIPAMPL(SystemCallSolver):
         solver_status = scip_lines[0][colon_position + 2 : scip_lines[0].index('\n')]
 
         solving_time = float(
-            scip_lines[1][colon_position + 2 : scip_lines[1].index('\n')]
+            scip_lines[1][colon_position + 2 : scip_lines[1].index('\n')].split(' ')[0]
         )
 
         try:

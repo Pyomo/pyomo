@@ -44,7 +44,7 @@ from pyomo.core.expr import (
     InequalityExpression,
     RangedExpression,
 )
-from pyomo.core.base.constraint import _GeneralConstraintData
+from pyomo.core.base.constraint import ConstraintData
 
 
 class TestConstraintCreation(unittest.TestCase):
@@ -1074,7 +1074,7 @@ class TestArrayCon(unittest.TestCase):
         m.c[2] = m.x**2 <= 4
         self.assertEqual(len(m.c), 1)
         self.assertEqual(list(m.c.keys()), [2])
-        self.assertIsInstance(m.c[2], _GeneralConstraintData)
+        self.assertIsInstance(m.c[2], ConstraintData)
         self.assertEqual(m.c[2].upper, 4)
 
         m.c[3] = Constraint.Skip
@@ -1388,7 +1388,7 @@ class MiscConTests(unittest.TestCase):
         # Even though we construct a ScalarConstraint,
         # if it is not initialized that means it is "empty"
         # and we should encounter errors when trying to access the
-        # _ConstraintData interface methods until we assign
+        # ConstraintData interface methods until we assign
         # something to the constraint.
         #
         self.assertEqual(a._constructed, True)
