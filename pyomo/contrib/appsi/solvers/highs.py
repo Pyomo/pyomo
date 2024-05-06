@@ -176,11 +176,23 @@ class Highs(PersistentBase, PersistentSolver):
             return self.Availability.NotFound
 
     def version(self):
-        version = (
-            highspy.HIGHS_VERSION_MAJOR,
-            highspy.HIGHS_VERSION_MINOR,
-            highspy.HIGHS_VERSION_PATCH,
-        )
+        try:        
+            version = (
+                highspy.HIGHS_VERSION_MAJOR,
+                highspy.HIGHS_VERSION_MINOR,
+                highspy.HIGHS_VERSION_PATCH,
+            )
+        except AttributeError:
+            # Older versions of Highs do not have the above attributes
+            # and the solver version can only be obtained by making
+            # an instance of the solver class.
+            tmp = highspy.Highs()
+            version = (
+                tmp.versionMajor(),
+                tmp.versionMinor(),
+                tmp.versionPatch(),
+            )
+
         return version
 
     @property
