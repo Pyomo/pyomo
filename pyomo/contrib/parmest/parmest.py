@@ -423,7 +423,8 @@ class Estimator(object):
             for obj in model.component_objects(pyo.Objective):
                 obj.deactivate()
 
-            # TODO, this needs to be turned a enum class of options that still support custom functions
+            # TODO, this needs to be turned into an enum class of options that still support
+            # custom functions
             if self.obj_function == 'SSE':
                 second_stage_rule = SSE
             else:
@@ -635,7 +636,7 @@ class Estimator(object):
 
         initialize_parmest_model: boolean
             If True: Solve square problem instance, build extensive form of the model for
-            parameter estimation, and set flag model_initialized to True
+            parameter estimation, and set flag model_initialized to True. Default is False.
 
         Returns
         -------
@@ -866,10 +867,11 @@ class Estimator(object):
         return_values: list, optional
             List of Variable names, used to return values from the model for data reconciliation
         calc_cov: boolean, optional
-            If True, calculate and return the covariance matrix (only for "ef_ipopt" solver)
+            If True, calculate and return the covariance matrix (only for "ef_ipopt" solver).
+            Default is False.
         cov_n: int, optional
             If calc_cov=True, then the user needs to supply the number of datapoints
-            that are used in the objective function
+            that are used in the objective function.
 
         Returns
         -------
@@ -902,9 +904,10 @@ class Estimator(object):
                     for experiment in self.exp_list
                 ]
             )
-            assert isinstance(
-                cov_n, int
-            ), "The number of datapoints that are used in the objective function is required to calculate the covariance matrix"
+            assert isinstance(cov_n, int), (
+                "The number of datapoints that are used in the objective function is "
+                "required to calculate the covariance matrix"
+            )
             assert (
                 cov_n > num_unknowns
             ), "The number of datapoints must be greater than the number of parameters to estimate"
@@ -936,11 +939,12 @@ class Estimator(object):
             Size of each bootstrap sample. If samplesize=None, samplesize will be
             set to the number of samples in the data
         replacement: bool, optional
-            Sample with or without replacement
+            Sample with or without replacement. Default is True.
         seed: int or None, optional
             Random seed
         return_samples: bool, optional
-            Return a list of sample numbers used in each bootstrap estimation
+            Return a list of sample numbers used in each bootstrap estimation.
+            Default is False.
 
         Returns
         -------
@@ -1006,7 +1010,7 @@ class Estimator(object):
         seed: int or None, optional
             Random seed
         return_samples: bool, optional
-            Return a list of sample numbers that were left out
+            Return a list of sample numbers that were left out. Default is False.
 
         Returns
         -------
@@ -1080,7 +1084,7 @@ class Estimator(object):
             Random seed
 
         Returns
-        ----------
+        -------
         List of tuples with one entry per lNo_sample:
 
         * The first item in each tuple is the list of N samples that are left
@@ -1141,8 +1145,9 @@ class Estimator(object):
             Values of theta used to compute the objective
 
         initialize_parmest_model: boolean
-            If True: Solve square problem instance, build extensive form of the model for
-            parameter estimation, and set flag model_initialized to True
+            If True: Solve square problem instance, build extensive form
+            of the model for parameter estimation, and set flag
+            model_initialized to True. Default is False.
 
 
         Returns
@@ -1243,7 +1248,7 @@ class Estimator(object):
         alphas: list
             List of alpha values to use in the chi2 test
         return_thresholds: bool, optional
-            Return the threshold value for each alpha
+            Return the threshold value for each alpha. Default is False.
 
         Returns
         -------
@@ -1305,6 +1310,7 @@ class Estimator(object):
             to determine if they are inside or outside.
 
         Returns
+        -------
         training_results: pd.DataFrame
             Theta value used to generate the confidence region along with True
             (inside) or False (outside) for each alpha
