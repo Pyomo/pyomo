@@ -1083,7 +1083,7 @@ class DesignOfExperiments:
             # Calculate the eigenvalues of the FIM matrix
             eig = np.linalg.eigvals(fim)
 
-            # If the smallest eigenvalue is (pratcially) negative, add a diagonal matrix to make it positive definite
+            # If the smallest eigenvalue is (practically) negative, add a diagonal matrix to make it positive definite
             small_number = 1e-10
             if min(eig) < small_number:
                 fim = fim + np.eye(len(self.param)) * (small_number - min(eig))
