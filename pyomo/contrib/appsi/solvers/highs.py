@@ -176,7 +176,7 @@ class Highs(PersistentBase, PersistentSolver):
             return self.Availability.NotFound
 
     def version(self):
-        try:        
+        try:
             version = (
                 highspy.HIGHS_VERSION_MAJOR,
                 highspy.HIGHS_VERSION_MINOR,
