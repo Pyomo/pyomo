@@ -59,7 +59,8 @@ class TestRooneyBiegler(unittest.TestCase):
             RooneyBieglerExperiment,
         )
 
-        # Note, the data used in this test has been corrected to use data.loc[5,'hour'] = 7 (instead of 6)
+        # Note, the data used in this test has been corrected to use
+        # data.loc[5,'hour'] = 7 (instead of 6)
         data = pd.DataFrame(
             data=[[1, 8.3], [2, 10.3], [3, 19.0], [4, 16.0], [5, 15.6], [7, 19.8]],
             columns=["hour", "y"],
@@ -109,7 +110,7 @@ class TestRooneyBiegler(unittest.TestCase):
         theta_est = self.pest.theta_est_bootstrap(num_bootstraps, return_samples=True)
 
         num_samples = theta_est["samples"].apply(len)
-        self.assertTrue(len(theta_est.index), 10)
+        self.assertEqual(len(theta_est.index), 10)
         self.assertTrue(num_samples.equals(pd.Series([6] * 10)))
 
         del theta_est["samples"]
@@ -155,13 +156,13 @@ class TestRooneyBiegler(unittest.TestCase):
         results = self.pest.leaveNout_bootstrap_test(
             1, None, 3, "Rect", [0.5, 1.0], seed=5436
         )
-        self.assertTrue(len(results) == 6)  # 6 lNo samples
+        self.assertEqual(len(results), 6)  # 6 lNo samples
         i = 1
         samples = results[i][0]  # list of N samples that are left out
         lno_theta = results[i][1]
         bootstrap_theta = results[i][2]
         self.assertTrue(samples == [1])  # sample 1 was left out
-        self.assertTrue(lno_theta.shape[0] == 1)  # lno estimate for sample 1
+        self.assertEqual(lno_theta.shape[0], 1)  # lno estimate for sample 1
         self.assertTrue(set(lno_theta.columns) >= set([0.5, 1.0]))
         self.assertEqual(lno_theta[1.0].sum(), 1)  # all true
         self.assertEqual(bootstrap_theta.shape[0], 3)  # bootstrap for sample 1
@@ -205,7 +206,7 @@ class TestRooneyBiegler(unittest.TestCase):
             retcode = ret.returncode
         else:
             retcode = subprocess.call(rlist)
-        assert retcode == 0
+        self.assertEqual(retcode, 0)
 
     @unittest.skip("Most folks don't have k_aug installed")
     def test_theta_k_aug_for_Hessian(self):
