@@ -9,17 +9,15 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.unittest import TestCase
 from pyomo.common import unittest
+from pyomo.common.fileutils import this_file_dir
 from pyomo.contrib.simplification import Simplifier
 from pyomo.contrib.simplification.simplify import ginac_available
 from pyomo.core.expr.compare import assertExpressionsEqual, compare_expressions
-import pyomo.environ as pe
 from pyomo.core.expr.calculus.diff_with_pyomo import reverse_sd
-from pyomo.common.dependencies import attempt_import
+from pyomo.core.expr.sympy_tools import sympy_available
 
-
-sympy, sympy_available = attempt_import('sympy')
+import pyomo.environ as pe
 
 
 class SimplificationMixin:
@@ -37,8 +35,7 @@ class SimplificationMixin:
         e = x * pe.log(x)
         der1 = reverse_sd(e)[x]
         der2 = reverse_sd(der1)[x]
-        simp = Simplifier()
-        der2_simp = simp.simplify(der2)
+        der2_simp = self.simp.simplify(der2)
         expected = x**-1.0
         assertExpressionsEqual(self, expected, der2_simp)
 
@@ -46,8 +43,7 @@ class SimplificationMixin:
         m = pe.ConcreteModel()
         x = m.x = pe.Var()
         e = 2 * x
-        simp = Simplifier()
-        e2 = simp.simplify(e)
+        e2 = self.simp.simplify(e)
         expected = 2.0 * x
         assertExpressionsEqual(self, expected, e2)
 
@@ -55,16 +51,14 @@ class SimplificationMixin:
         m = pe.ConcreteModel()
         x = m.x = pe.Var()
         e = 2 + x
-        simp = Simplifier()
-        e2 = simp.simplify(e)
+        e2 = self.simp.simplify(e)
         self.compare_against_possible_results(e2, [2.0 + x, x + 2.0])
 
     def test_neg(self):
         m = pe.ConcreteModel()
         x = m.x = pe.Var()
         e = -pe.log(x)
-        simp = Simplifier()
-        e2 = simp.simplify(e)
+        e2 = self.simp.simplify(e)
         self.compare_against_possible_results(
             e2, [(-1.0) * pe.log(x), pe.log(x) * (-1.0), -pe.log(x)]
         )
@@ -73,8 +67,7 @@ class SimplificationMixin:
         m = pe.ConcreteModel()
         x = m.x = pe.Var()
         e = x**2.0
-        simp = Simplifier()
-        e2 = simp.simplify(e)
+        e2 = self.simp.simplify(e)
         assertExpressionsEqual(self, e, e2)
 
     def test_div(self):
@@ -82,9 +75,7 @@ class SimplificationMixin:
         x = m.x = pe.Var()
         y = m.y = pe.Var()
         e = x / y + y / x - x / y
-        simp = Simplifier()
-        e2 = simp.simplify(e)
-        print(e2)
+        e2 = self.simp.simplify(e)
         self.compare_against_possible_results(
             e2, [y / x, y * (1.0 / x), y * x**-1.0, x**-1.0 * y]
         )
@@ -95,26 +86,27 @@ class SimplificationMixin:
         func_list = [pe.log, pe.sin, pe.cos, pe.tan, pe.asin, pe.acos, pe.atan]
         for func in func_list:
             e = func(x)
-            simp = Simplifier()
-            e2 = simp.simplify(e)
+            e2 = self.simp.simplify(e)
             assertExpressionsEqual(self, e, e2)
 
 
-@unittest.skipIf((not sympy_available) or (ginac_available), 'sympy is not available')
-class TestSimplificationSympy(TestCase, SimplificationMixin):
-    pass
+@unittest.skipUnless(sympy_available, 'sympy is not available')
+class TestSimplificationSympy(unittest.TestCase, SimplificationMixin):
+    def setUp(self):
+        self.simp = Simplifier(mode=Simplifier.Mode.sympy)
 
 
-@unittest.skipIf(not ginac_available, 'GiNaC is not available')
-@unittest.pytest.mark.simplification
-class TestSimplificationGiNaC(TestCase, SimplificationMixin):
+@unittest.skipUnless(ginac_available, 'GiNaC is not available')
+class TestSimplificationGiNaC(unittest.TestCase, SimplificationMixin):
+    def setUp(self):
+        self.simp = Simplifier(mode=Simplifier.Mode.ginac)
+
     def test_param(self):
         m = pe.ConcreteModel()
         x = m.x = pe.Var()
         p = m.p = pe.Param(mutable=True)
         e1 = p * x**2 + p * x + p * x**2
-        simp = Simplifier()
-        e2 = simp.simplify(e1)
+        e2 = self.simp.simplify(e1)
         self.compare_against_possible_results(
             e2,
             [
