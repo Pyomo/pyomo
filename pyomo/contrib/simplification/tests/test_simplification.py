@@ -89,18 +89,6 @@ class SimplificationMixin:
             e2 = self.simp.simplify(e)
             assertExpressionsEqual(self, e, e2)
 
-
-@unittest.skipUnless(sympy_available, 'sympy is not available')
-class TestSimplificationSympy(unittest.TestCase, SimplificationMixin):
-    def setUp(self):
-        self.simp = Simplifier(mode=Simplifier.Mode.sympy)
-
-
-@unittest.skipUnless(ginac_available, 'GiNaC is not available')
-class TestSimplificationGiNaC(unittest.TestCase, SimplificationMixin):
-    def setUp(self):
-        self.simp = Simplifier(mode=Simplifier.Mode.ginac)
-
     def test_param(self):
         m = pe.ConcreteModel()
         x = m.x = pe.Var()
@@ -116,5 +104,18 @@ class TestSimplificationGiNaC(unittest.TestCase, SimplificationMixin):
                 p * x + 2.0 * p * x**2.0,
                 x**2.0 * p * 2.0 + p * x,
                 p * x + x**2.0 * p * 2.0,
+                p * x * (1 + 2 * x),
             ],
         )
+
+
+@unittest.skipUnless(sympy_available, 'sympy is not available')
+class TestSimplificationSympy(unittest.TestCase, SimplificationMixin):
+    def setUp(self):
+        self.simp = Simplifier(mode=Simplifier.Mode.sympy)
+
+
+@unittest.skipUnless(ginac_available, 'GiNaC is not available')
+class TestSimplificationGiNaC(unittest.TestCase, SimplificationMixin):
+    def setUp(self):
+        self.simp = Simplifier(mode=Simplifier.Mode.ginac)
