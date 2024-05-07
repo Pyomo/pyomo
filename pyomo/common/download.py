@@ -419,11 +419,17 @@ class FileDownloader(object):
                 return False
             info.name = f = '/'.join(target[dirOffset:])
             target = os.path.realpath(os.path.join(dest, f))
-            if os.path.commonpath([target, dest]) != dest:
-                logger.error(
-                    "potentially insecure filename (%s) resolves outside target "
-                    "directory.  Skipping file." % (f,)
-                )
+            try:
+                if os.path.commonpath([target, dest]) != dest:
+                    logger.error(
+                        "potentially insecure filename (%s) resolves outside target "
+                        "directory.  Skipping file." % (f,)
+                    )
+                    return False
+            except ValueError:
+                # commonpath() will raise ValueError for paths that
+                # don't have anything in common (notably, when files are
+                # on different drives on Windows)
                 return False
             # Strip high bits & group/other write bits
             info.mode &= 0o755
