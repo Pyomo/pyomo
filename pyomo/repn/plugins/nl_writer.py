@@ -69,15 +69,11 @@ from pyomo.core.base import (
     minimize,
 )
 from pyomo.core.base.component import ActiveComponent
-from pyomo.core.base.constraint import _ConstraintData
-from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
-from pyomo.core.base.objective import (
-    ScalarObjective,
-    _GeneralObjectiveData,
-    _ObjectiveData,
-)
+from pyomo.core.base.constraint import ConstraintData
+from pyomo.core.base.expression import ScalarExpression, ExpressionData
+from pyomo.core.base.objective import ScalarObjective, ObjectiveData
 from pyomo.core.base.suffix import SuffixFinder
-from pyomo.core.base.var import _VarData
+from pyomo.core.base.var import VarData
 import pyomo.core.kernel as kernel
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.opt import WriterFactory
@@ -113,6 +109,7 @@ logger = logging.getLogger(__name__)
 TOL = 1e-8
 inf = float('inf')
 minus_inf = -inf
+allowable_binary_var_bounds = {(0, 0), (0, 1), (1, 1)}
 
 _CONSTANT = ExprType.CONSTANT
 _MONOMIAL = ExprType.MONOMIAL
@@ -129,17 +126,17 @@ class NLWriterInfo(object):
 
     Attributes
     ----------
-    variables: List[_VarData]
+    variables: List[VarData]
 
         The list of (unfixed) Pyomo model variables in the order written
         to the NL file
 
-    constraints: List[_ConstraintData]
+    constraints: List[ConstraintData]
 
         The list of (active) Pyomo model constraints in the order written
         to the NL file
 
-    objectives: List[_ObjectiveData]
+    objectives: List[ObjectiveData]
 
         The list of (active) Pyomo model objectives in the order written
         to the NL file
@@ -162,10 +159,10 @@ class NLWriterInfo(object):
         file in the same order as the :py:attr:`variables` and generated
         .col file.
 
-    eliminated_vars: List[Tuple[_VarData, NumericExpression]]
+    eliminated_vars: List[Tuple[VarData, NumericExpression]]
 
         The list of variables in the model that were eliminated by the
-        presolve.  Each entry is a 2-tuple of (:py:class:`_VarData`,
+        presolve.  Each entry is a 2-tuple of (:py:class:`VarData`,
         :py:class`NumericExpression`|`float`).  The list is in the
         necessary order for correct evaluation (i.e., all variables
         appearing in the expression must either have been sent to the
@@ -441,6 +438,7 @@ class _SuffixData(object):
         self.values[obj] = val
 
     def compile(self, column_order, row_order, obj_order, model_id):
+        var_con_obj = {Var, Constraint, Objective}
         missing_component_data = ComponentSet()
         unknown_data = ComponentSet()
         queue = [self.values.items()]
@@ -466,18 +464,20 @@ class _SuffixData(object):
                     self.obj[obj_order[_id]] = val
                 elif _id == model_id:
                     self.prob[0] = val
-                elif isinstance(obj, (_VarData, _ConstraintData, _ObjectiveData)):
-                    missing_component_data.add(obj)
-                elif isinstance(obj, (Var, Constraint, Objective)):
-                    # Expand this indexed component to store the
-                    # individual ComponentDatas, but ONLY if the
-                    # component data is not in the original dictionary
-                    # of values that we extracted from the Suffixes
-                    queue.append(
-                        product(
-                            filterfalse(self.values.__contains__, obj.values()), (val,)
+                elif getattr(obj, 'ctype', None) in var_con_obj:
+                    if obj.is_indexed():
+                        # Expand this indexed component to store the
+                        # individual ComponentDatas, but ONLY if the
+                        # component data is not in the original dictionary
+                        # of values that we extracted from the Suffixes
+                        queue.append(
+                            product(
+                                filterfalse(self.values.__contains__, obj.values()),
+                                (val,),
+                            )
                         )
-                    )
+                    else:
+                        missing_component_data.add(obj)
                 else:
                     unknown_data.add(obj)
         if missing_component_data:
@@ -882,7 +882,12 @@ class _NLWriter_impl(object):
             elif v.is_binary():
                 binary_vars.add(_id)
             elif v.is_integer():
-                integer_vars.add(_id)
+                # Note: integer variables whose bounds are in {0, 1}
+                # should be classified as binary
+                if var_bounds[_id] in allowable_binary_var_bounds:
+                    binary_vars.add(_id)
+                else:
+                    integer_vars.add(_id)
             else:
                 raise ValueError(
                     f"Variable '{v.name}' has a domain that is not Real, "
@@ -1277,8 +1282,8 @@ class _NLWriter_impl(object):
                 len(linear_binary_vars),
                 len(linear_integer_vars),
                 len(both_vars_nonlinear.intersection(discrete_vars)),
-                len(con_vars_nonlinear.intersection(discrete_vars)),
-                len(obj_vars_nonlinear.intersection(discrete_vars)),
+                len(con_only_nonlinear_vars.intersection(discrete_vars)),
+                len(obj_only_nonlinear_vars.intersection(discrete_vars)),
             )
         )
         #

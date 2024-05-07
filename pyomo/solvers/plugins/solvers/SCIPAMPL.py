@@ -452,7 +452,7 @@ class SCIPAMPL(SystemCallSolver):
         solver_status = scip_lines[0][colon_position + 2 : scip_lines[0].index('\n')]
 
         solving_time = float(
-            scip_lines[1][colon_position + 2 : scip_lines[1].index('\n')]
+            scip_lines[1][colon_position + 2 : scip_lines[1].index('\n')].split(' ')[0]
         )
 
         try:

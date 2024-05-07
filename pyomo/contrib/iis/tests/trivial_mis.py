@@ -8,26 +8,17 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.environ as pyo
 
-# TODO
-# . rename 'filter' to something else
-# . confirm that filtering is efficient
+m = pyo.ConcreteModel("Trivial Quad")
+m.x = pyo.Var([1, 2], bounds=(0, 1))
+m.y = pyo.Var(bounds=(0, 1))
+m.c = pyo.Constraint(expr=m.x[1] * m.x[2] == -1)
+m.d = pyo.Constraint(expr=m.x[1] + m.y >= 1)
 
-from .set import (
-    process_setarg,
-    set_options,
-    simple_set_rule,
-    _SetDataBase,
-    SetData,
-    Set,
-    SetOf,
-    IndexedSet,
-)
+from pyomo.contrib.iis.mis import compute_infeasibility_explanation
 
-from pyomo.common.deprecation import deprecation_warning
-
-deprecation_warning(
-    'The pyomo.core.base.sets module is deprecated.  '
-    'Import Set objects from pyomo.core.base.set or pyomo.core.',
-    version='5.7',
-)
+# Note: this particular little problem is quadratic
+# As of 18Feb2024 DLW is not sure the explanation code works with solvers other than ipopt
+ipopt = pyo.SolverFactory("ipopt")
+compute_infeasibility_explanation(m, solver=ipopt)

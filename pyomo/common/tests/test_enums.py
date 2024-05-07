@@ -59,6 +59,8 @@ class TestExtendedEnumType(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "'foo' is not a valid ProblemSense"):
             ProblemSense('foo')
+        with self.assertRaisesRegex(ValueError, "2 is not a valid ProblemSense"):
+            ProblemSense(2)
 
     def test_contains(self):
         self.assertIn(ProblemSense.unknown, ProblemSense)

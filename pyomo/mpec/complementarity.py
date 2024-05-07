@@ -19,7 +19,7 @@ from pyomo.core.expr.numvalue import ZeroConstant, native_numeric_types, as_nume
 from pyomo.core import Constraint, Var, Block, Set
 from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
-from pyomo.core.base.block import _BlockData
+from pyomo.core.base.block import BlockData
 from pyomo.core.base.disable_methods import disable_methods
 from pyomo.core.base.initializer import (
     Initializer,
@@ -43,7 +43,7 @@ def complements(a, b):
     return ComplementarityTuple(a, b)
 
 
-class _ComplementarityData(_BlockData):
+class ComplementarityData(BlockData):
     def _canonical_expression(self, e):
         # Note: as the complimentarity component maintains references to
         # the original expression (e), it is NOT safe or valid to bypass
@@ -179,9 +179,14 @@ class _ComplementarityData(_BlockData):
             )
 
 
+class _ComplementarityData(metaclass=RenamedClass):
+    __renamed__new_class__ = ComplementarityData
+    __renamed__version__ = '6.7.2.dev0'
+
+
 @ModelComponentFactory.register("Complementarity conditions.")
 class Complementarity(Block):
-    _ComponentDataClass = _ComplementarityData
+    _ComponentDataClass = ComplementarityData
 
     def __new__(cls, *args, **kwds):
         if cls != Complementarity:
@@ -298,9 +303,9 @@ Error thrown for Complementarity "%s"."""
         )
 
 
-class ScalarComplementarity(_ComplementarityData, Complementarity):
+class ScalarComplementarity(ComplementarityData, Complementarity):
     def __init__(self, *args, **kwds):
-        _ComplementarityData.__init__(self, self)
+        ComplementarityData.__init__(self, self)
         Complementarity.__init__(self, *args, **kwds)
         self._data[None] = self
         self._index = UnindexedComponent_index

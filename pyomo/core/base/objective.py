@@ -31,7 +31,7 @@ from pyomo.core.base.indexed_component import (
     UnindexedComponent_set,
     rule_wrapper,
 )
-from pyomo.core.base.expression import _ExpressionData, _GeneralExpressionDataImpl
+from pyomo.core.base.expression import NamedExpressionData
 from pyomo.core.base.set import Set
 from pyomo.core.base.initializer import (
     Initializer,
@@ -85,47 +85,7 @@ def simple_objectivelist_rule(rule):
     return rule_wrapper(rule, {None: ObjectiveList.End})
 
 
-#
-# This class is a pure interface
-#
-
-
-class _ObjectiveData(_ExpressionData):
-    """
-    This class defines the data for a single objective.
-
-    Public class attributes:
-        expr            The Pyomo expression for this objective
-        sense           The direction for this objective.
-    """
-
-    __slots__ = ()
-
-    #
-    # Interface
-    #
-
-    def is_minimizing(self):
-        """Return True if this is a minimization objective."""
-        return self.sense == minimize
-
-    #
-    # Abstract Interface
-    #
-
-    @property
-    def sense(self):
-        """Access sense (direction) of this objective."""
-        raise NotImplementedError
-
-    def set_sense(self, sense):
-        """Set the sense (direction) of this objective."""
-        raise NotImplementedError
-
-
-class _GeneralObjectiveData(
-    _GeneralExpressionDataImpl, _ObjectiveData, ActiveComponentData
-):
+class ObjectiveData(NamedExpressionData, ActiveComponentData):
     """
     This class defines the data for a single objective.
 
@@ -148,15 +108,20 @@ class _GeneralObjectiveData(
         _active         A boolean that indicates whether this data is active
     """
 
-    __slots__ = ("_sense", "_args_")
+    __slots__ = ("_args_", "_sense")
 
     def __init__(self, expr=None, sense=minimize, component=None):
-        _GeneralExpressionDataImpl.__init__(self, expr)
+        # Inlining NamedExpressionData.__init__
+        self._args_ = (expr,)
         # Inlining ActiveComponentData.__init__
         self._component = weakref_ref(component) if (component is not None) else None
         self._index = NOTSET
         self._active = True
         self._sense = ObjectiveSense(sense)
+
+    def is_minimizing(self):
+        """Return True if this is a minimization objective."""
+        return self.sense == minimize
 
     def set_value(self, expr):
         if expr is None:
@@ -180,6 +145,16 @@ class _GeneralObjectiveData(
     def set_sense(self, sense):
         """Set the sense (direction) of this objective."""
         self._sense = ObjectiveSense(sense)
+
+
+class _ObjectiveData(metaclass=RenamedClass):
+    __renamed__new_class__ = ObjectiveData
+    __renamed__version__ = '6.7.2.dev0'
+
+
+class _GeneralObjectiveData(metaclass=RenamedClass):
+    __renamed__new_class__ = ObjectiveData
+    __renamed__version__ = '6.7.2.dev0'
 
 
 @ModelComponentFactory.register("Expressions that are minimized or maximized.")
@@ -230,7 +205,7 @@ class Objective(ActiveIndexedComponent):
             The class type for the derived subclass
     """
 
-    _ComponentDataClass = _GeneralObjectiveData
+    _ComponentDataClass = ObjectiveData
     NoObjective = ActiveIndexedComponent.Skip
 
     def __new__(cls, *args, **kwds):
@@ -383,14 +358,14 @@ class Objective(ActiveIndexedComponent):
         )
 
 
-class ScalarObjective(_GeneralObjectiveData, Objective):
+class ScalarObjective(ObjectiveData, Objective):
     """
     ScalarObjective is the implementation representing a single,
     non-indexed objective.
     """
 
     def __init__(self, *args, **kwd):
-        _GeneralObjectiveData.__init__(self, expr=None, component=self)
+        ObjectiveData.__init__(self, expr=None, component=self)
         Objective.__init__(self, *args, **kwd)
         self._index = UnindexedComponent_index
 
@@ -426,7 +401,7 @@ class ScalarObjective(_GeneralObjectiveData, Objective):
                     "a sense or expression (there is currently "
                     "no value to return)." % (self.name)
                 )
-            return _GeneralObjectiveData.expr.fget(self)
+            return ObjectiveData.expr.fget(self)
         raise ValueError(
             "Accessing the expression of objective '%s' "
             "before the Objective has been constructed (there "
@@ -449,7 +424,7 @@ class ScalarObjective(_GeneralObjectiveData, Objective):
                     "a sense or expression (there is currently "
                     "no value to return)." % (self.name)
                 )
-            return _GeneralObjectiveData.sense.fget(self)
+            return ObjectiveData.sense.fget(self)
         raise ValueError(
             "Accessing the sense of objective '%s' "
             "before the Objective has been constructed (there "
@@ -468,7 +443,7 @@ class ScalarObjective(_GeneralObjectiveData, Objective):
     # currently in place). So during initialization only, we will
     # treat them as "indexed" objects where things like
     # Objective.Skip are managed. But after that they will behave
-    # like _ObjectiveData objects where set_value does not handle
+    # like ObjectiveData objects where set_value does not handle
     # Objective.Skip but expects a valid expression or None
     #
 
@@ -492,7 +467,7 @@ class ScalarObjective(_GeneralObjectiveData, Objective):
         if self._constructed:
             if len(self._data) == 0:
                 self._data[None] = self
-            return _GeneralObjectiveData.set_sense(self, sense)
+            return ObjectiveData.set_sense(self, sense)
         raise ValueError(
             "Setting the sense of objective '%s' "
             "before the Objective has been constructed (there "
