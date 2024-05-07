@@ -101,6 +101,30 @@ class TestMindtPy(unittest.TestCase):
                 )
                 self.check_optimal_solution(model)
 
+    def test_OA_callback(self):
+        """Test the outer approximation decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+
+            def callback(model):
+                model.Y[1].value = 0
+                model.Y[2].value = 0
+                model.Y[3].value = 0
+
+            model = SimpleMINLP2()
+            # The callback function will make the OA method cycling.
+            results = opt.solve(
+                model,
+                strategy='OA',
+                init_strategy='rNLP',
+                mip_solver=required_solvers[1],
+                nlp_solver=required_solvers[0],
+                call_before_subproblem_solve=callback,
+            )
+            self.assertIs(
+                results.solver.termination_condition, TerminationCondition.feasible
+            )
+            self.assertAlmostEqual(value(results.problem.lower_bound), 5, places=1)
+
     def test_OA_extreme_model(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
