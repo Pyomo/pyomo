@@ -26,7 +26,7 @@ from pyomo.contrib.simplification.ginac import (
 def simplify_with_sympy(expr: NumericExpression):
     if is_constant(expr):
         return value(expr)
-    object_map, sympy_expr = sympyify_expression(expr)
+    object_map, sympy_expr = sympyify_expression(expr, keep_mutable_parameters=True)
     new_expr = sympy2pyomo_expression(sympy_expr.simplify(), object_map)
     if is_constant(new_expr):
         new_expr = value(new_expr)
