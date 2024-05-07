@@ -175,10 +175,11 @@ class PyomoSympyBimap(object):
 
 
 class Pyomo2SympyVisitor(EXPR.StreamBasedExpressionVisitor):
-    def __init__(self, object_map):
+    def __init__(self, object_map, keep_mutable_parameters=True):
         sympy.Add  # this ensures _configure_sympy gets run
         super(Pyomo2SympyVisitor, self).__init__()
         self.object_map = object_map
+        self.keep_mutable_parameters = keep_mutable_parameters
 
     def initializeWalker(self, expr):
         return self.beforeChild(None, expr, None)
@@ -212,6 +213,8 @@ class Pyomo2SympyVisitor(EXPR.StreamBasedExpressionVisitor):
         #
         # Everything else is a constant...
         #
+        if self.keep_mutable_parameters and child.is_parameter_type() and child.mutable:
+            return False, self.object_map.getSympySymbol(child)
         return False, value(child)
 
 
@@ -245,13 +248,15 @@ class Sympy2PyomoVisitor(EXPR.StreamBasedExpressionVisitor):
         return True, None
 
 
-def sympyify_expression(expr):
+def sympyify_expression(expr, keep_mutable_parameters=True):
     """Convert a Pyomo expression to a Sympy expression"""
     #
     # Create the visitor and call it.
     #
     object_map = PyomoSympyBimap()
-    visitor = Pyomo2SympyVisitor(object_map)
+    visitor = Pyomo2SympyVisitor(
+        object_map, keep_mutable_parameters=keep_mutable_parameters
+    )
     return object_map, visitor.walk_expression(expr)
 
 
