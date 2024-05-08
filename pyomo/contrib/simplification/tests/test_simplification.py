@@ -115,6 +115,8 @@ class TestSimplificationSympy(unittest.TestCase, SimplificationMixin):
         self.simp = Simplifier(mode=Simplifier.Mode.sympy)
 
 
+@unittest.pytest.mark.default
+@unittest.pytest.mark.builders
 @unittest.skipUnless(ginac_available, 'GiNaC is not available')
 class TestSimplificationGiNaC(unittest.TestCase, SimplificationMixin):
     def setUp(self):

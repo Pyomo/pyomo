@@ -122,6 +122,13 @@ if test -z "$MODE" -o "$MODE" == setup; then
     echo "PYOMO_CONFIG_DIR=$PYOMO_CONFIG_DIR"
     echo ""
 
+    # Call Pyomo build scripts to build TPLs that would normally be
+    # skipped by the pyomo download-extensions / build-extensions
+    # actions below
+    if test [ " $CATEGORY " == *" builders "*; then
+        python pyomo/contrib/simplification/build.py --build-deps || exit 1
+    fi
+
     # Use Pyomo to download & compile binary extensions
     i=0
     while /bin/true; do
