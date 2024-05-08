@@ -298,7 +298,8 @@ py::object GinacInterface::from_ginac(ex &ge) {
 
 PYBIND11_MODULE(ginac_interface, m) {
   m.def("pyomo_to_ginac", &pyomo_to_ginac);
-  py::class_<PyomoExprTypes>(m, "PyomoExprTypes").def(py::init<>());
+  py::class_<PyomoExprTypes>(m, "PyomoExprTypes", py::module_local())
+    .def(py::init<>());
   py::class_<ex>(m, "ginac_expression")
     .def("expand", [](ex &ge) {
       return ge.expand();
@@ -313,7 +314,7 @@ PYBIND11_MODULE(ginac_interface, m) {
     .def(py::init<bool>())
     .def("to_ginac", &GinacInterface::to_ginac)
     .def("from_ginac", &GinacInterface::from_ginac);
-  py::enum_<ExprType>(m, "ExprType")
+  py::enum_<ExprType>(m, "ExprType", py::module_local())
       .value("py_float", ExprType::py_float)
       .value("var", ExprType::var)
       .value("param", ExprType::param)
