@@ -20,6 +20,7 @@ from pyomo.common.config import (
     document_kwargs_from_configdict,
 )
 from pyomo.common.dependencies import scipy, numpy as np
+from pyomo.common.enums import ObjectiveSense
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.timing import TicTocTimer
 
@@ -61,11 +62,15 @@ class LinearStandardFormInfo(object):
 
     Attributes
     ----------
-    c : scipy.sparse.csr_array
+    c : scipy.sparse.csc_array
 
         The objective coefficients.  Note that this is a sparse array
         and may contain multiple rows (for multiobjective problems).  The
         objectives may be calculated by "c @ x"
+
+    c_offset : numpy.ndarray
+
+        The list of objective constant offsets
 
     A : scipy.sparse.csc_array
 
@@ -89,6 +94,10 @@ class LinearStandardFormInfo(object):
         The list of Pyomo variable objects corresponding to columns in
         the `A` and `c` matrices.
 
+    objectives : List[ObjectiveData]
+
+        The list of Pyomo objective objects corresponding to the active objectives
+
     eliminated_vars: List[Tuple[VarData, NumericExpression]]
 
         The list of variables from the original model that do not appear
@@ -101,12 +110,14 @@ class LinearStandardFormInfo(object):
 
     """
 
-    def __init__(self, c, A, rhs, rows, columns, eliminated_vars):
+    def __init__(self, c, c_offset, A, rhs, rows, columns, objectives, eliminated_vars):
         self.c = c
+        self.c_offset = c_offset
         self.A = A
         self.rhs = rhs
         self.rows = rows
         self.columns = columns
+        self.objectives = objectives
         self.eliminated_vars = eliminated_vars
 
     @property
@@ -146,6 +157,14 @@ class LinearStandardFormCompiler(object):
             domain=bool,
             description='Return A in mixed form (the comparison operator is a '
             'mix of <=, ==, and >=)',
+        ),
+    )
+    CONFIG.declare(
+        'set_sense',
+        ConfigValue(
+            default=ObjectiveSense.minimize,
+            domain=InEnum(ObjectiveSense),
+            description='If not None, map all objectives to the specified sense.',
         ),
     )
     CONFIG.declare(
@@ -305,21 +324,19 @@ class _LinearStandardFormCompiler_impl(object):
         #
         # Process objective
         #
-        if not component_map[Objective]:
-            objectives = [Objective(expr=1)]
-            objectives[0].construct()
-        else:
-            objectives = []
-            for blk in component_map[Objective]:
-                objectives.extend(
-                    blk.component_data_objects(
-                        Objective, active=True, descend_into=False, sort=sorter
-                    )
+        set_sense = self.config.set_sense
+        objectives = []
+        for blk in component_map[Objective]:
+            objectives.extend(
+                blk.component_data_objects(
+                    Objective, active=True, descend_into=False, sort=sorter
                 )
+            )
+        obj_offset = []
         obj_data = []
         obj_index = []
         obj_index_ptr = [0]
-        for i, obj in enumerate(objectives):
+        for obj in objectives:
             repn = visitor.walk_expression(obj.expr)
             if repn.nonlinear is not None:
                 raise ValueError(
@@ -328,8 +345,10 @@ class _LinearStandardFormCompiler_impl(object):
                 )
             N = len(repn.linear)
             obj_data.append(np.fromiter(repn.linear.values(), float, N))
-            if obj.sense == maximize:
+            obj_offset.append(repn.constant)
+            if set_sense is not None and set_sense != obj.sense:
                 obj_data[-1] *= -1
+                obj_offset[-1] *= -1
             obj_index.append(
                 np.fromiter(map(var_order.__getitem__, repn.linear), float, N)
             )
@@ -456,13 +475,17 @@ class _LinearStandardFormCompiler_impl(object):
         # Get the variable list
         columns = list(var_map.values())
         # Convert the compiled data to scipy sparse matrices
+        if obj_data:
+            obj_data = np.concatenate(obj_data)
+            obj_index = np.concatenate(obj_index)
         c = scipy.sparse.csr_array(
-            (np.concatenate(obj_data), np.concatenate(obj_index), obj_index_ptr),
-            [len(obj_index_ptr) - 1, len(columns)],
+            (obj_data, obj_index, obj_index_ptr), [len(obj_index_ptr) - 1, len(columns)]
         ).tocsc()
+        if rows:
+            con_data = np.concatenate(con_data)
+            con_index = np.concatenate(con_index)
         A = scipy.sparse.csr_array(
-            (np.concatenate(con_data), np.concatenate(con_index), con_index_ptr),
-            [len(rows), len(columns)],
+            (con_data, con_index, con_index_ptr), [len(rows), len(columns)]
         ).tocsc()
 
         # Some variables in the var_map may not actually appear in the
@@ -495,7 +518,9 @@ class _LinearStandardFormCompiler_impl(object):
         else:
             eliminated_vars = []
 
-        info = LinearStandardFormInfo(c, A, rhs, rows, columns, eliminated_vars)
+        info = LinearStandardFormInfo(
+            c, np.array(obj_offset), A, rhs, rows, columns, objectives, eliminated_vars
+        )
         timer.toc("Generated linear standard form representation", delta=False)
         return info
 
