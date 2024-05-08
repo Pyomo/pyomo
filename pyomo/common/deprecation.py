@@ -542,7 +542,7 @@ class RenamedClass(type):
 
         if new_class is None and '__renamed__new_class__' not in classdict:
             if not any(
-                hasattr(base, '__renamed__new_class__')
+                hasattr(mro, '__renamed__new_class__')
                 for mro in itertools.chain.from_iterable(
                     base.__mro__ for base in renamed_bases
                 )

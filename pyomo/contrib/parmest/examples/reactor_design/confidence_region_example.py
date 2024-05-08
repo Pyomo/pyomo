@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.dependencies import pandas as pd
+import pandas as pd
 from os.path import join, abspath, dirname
 import pyomo.contrib.parmest.parmest as parmest
 from pyomo.contrib.parmest.examples.reactor_design.reactor_design import (
@@ -38,18 +38,13 @@ def main():
     # Parameter estimation
     obj, theta = pest.theta_est()
 
-    # Parameter estimation with bootstrap resampling
-    bootstrap_theta = pest.theta_est_bootstrap(50)
+    # Bootstrapping
+    bootstrap_theta = pest.theta_est_bootstrap(10)
+    print(bootstrap_theta)
 
-    # Plot results
-    parmest.graphics.pairwise_plot(bootstrap_theta, title="Bootstrap theta")
-    parmest.graphics.pairwise_plot(
-        bootstrap_theta,
-        theta,
-        0.8,
-        ["MVN", "KDE", "Rect"],
-        title="Bootstrap theta with confidence regions",
-    )
+    # Confidence region test
+    CR = pest.confidence_region_test(bootstrap_theta, "MVN", [0.5, 0.75, 1.0])
+    print(CR)
 
 
 if __name__ == "__main__":
