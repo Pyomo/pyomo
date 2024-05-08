@@ -11,8 +11,9 @@
 
 import pytest
 
-_implicit_markers = {'default',}
-_extended_implicit_markers = _implicit_markers.union({'solver',})
+_implicit_markers = {'default'}
+_extended_implicit_markers = _implicit_markers.union({'solver'})
+
 
 def pytest_collection_modifyitems(items):
     """
@@ -25,6 +26,7 @@ def pytest_collection_modifyitems(items):
         except StopIteration:
             for marker in _implicit_markers:
                 item.add_marker(getattr(pytest.mark, marker))
+
 
 def pytest_runtest_setup(item):
     """
@@ -57,9 +59,9 @@ def pytest_runtest_setup(item):
     elif markeroption:
         return
     elif item_markers:
-        if not _implicit_markers.issubset(
-            item_markers
-        ) and not item_markers.issubset(_extended_implicit_markers):
+        if not _implicit_markers.issubset(item_markers) and not item_markers.issubset(
+            _extended_implicit_markers
+        ):
             pytest.skip('SKIPPED: Only running default, solver, and unmarked tests.')
 
 
