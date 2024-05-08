@@ -10,16 +10,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.collections import ComponentMap
-from pyomo.core.base import (
-    Block,
-    Var,
-    Constraint,
-    Objective,
-    _ConstraintData,
-    _ObjectiveData,
-    Suffix,
-    value,
-)
+from pyomo.core.base import Block, Var, Constraint, Objective, Suffix, value
 from pyomo.core.plugins.transform.hierarchy import Transformation
 from pyomo.core.base import TransformationFactory
 from pyomo.core.base.suffix import SuffixFinder
@@ -197,7 +188,7 @@ class ScaleModel(Transformation):
                 already_scaled.add(id(c))
                 # perform the constraint/objective scaling and variable sub
                 scaling_factor = component_scaling_factor_map[c]
-                if isinstance(c, _ConstraintData):
+                if c.ctype is Constraint:
                     body = scaling_factor * replace_expressions(
                         expr=c.body,
                         substitution_map=variable_substitution_dict,
@@ -226,7 +217,7 @@ class ScaleModel(Transformation):
                     else:
                         c.set_value((lower, body, upper))
 
-                elif isinstance(c, _ObjectiveData):
+                elif c.ctype is Objective:
                     c.expr = scaling_factor * replace_expressions(
                         expr=c.expr,
                         substitution_map=variable_substitution_dict,

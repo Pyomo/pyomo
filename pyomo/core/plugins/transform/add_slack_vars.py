@@ -23,7 +23,6 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.core.plugins.transform.hierarchy import NonIsomorphicTransformation
 from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.core.base import ComponentUID
-from pyomo.core.base.constraint import _ConstraintData
 from pyomo.common.deprecation import deprecation_warning
 
 
@@ -42,7 +41,7 @@ def target_list(x):
         # [ESJ 07/15/2020] We have to just pass it through because we need the
         # instance in order to be able to do anything about it...
         return [x]
-    elif isinstance(x, (Constraint, _ConstraintData)):
+    elif getattr(x, 'ctype', None) is Constraint:
         return [x]
     elif hasattr(x, '__iter__'):
         ans = []
@@ -53,7 +52,7 @@ def target_list(x):
                     deprecation_msg = None
                 # same as above...
                 ans.append(i)
-            elif isinstance(i, (Constraint, _ConstraintData)):
+            elif getattr(i, 'ctype', None) is Constraint:
                 ans.append(i)
             else:
                 raise ValueError(

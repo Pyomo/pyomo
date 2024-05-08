@@ -20,7 +20,7 @@ Additional use cases include:
 * Parameter estimation using mpi4py, the example saves results to a file
   for later analysis/graphics (semibatch example)
 
-The description below uses the reactor design example.  The file
+The example below uses the reactor design example.  The file
 **reactor_design.py** includes a function which returns an populated
 instance of the Pyomo model.  Note that the model is defined to maximize
 `cb` and that `k1`, `k2`, and `k3` are fixed.  The _main_ program is

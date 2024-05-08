@@ -33,7 +33,7 @@ from pyomo.core import (
     Any,
 )
 from pyomo.core.base import Transformation
-from pyomo.core.base.block import _BlockData, Block
+from pyomo.core.base.block import Block
 from pyomo.core.util import target_list
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.gdp.util import is_child_of
@@ -147,7 +147,7 @@ class PiecewiseLinearTransformationBase(Transformation):
                 self._transform_piecewise_linear_function(
                     t, config.descend_into_expressions
                 )
-            elif t.ctype is Block or isinstance(t, _BlockData):
+            elif issubclass(t.ctype, Block):
                 self._transform_block(t, config.descend_into_expressions)
             elif t.ctype is Constraint:
                 if not config.descend_into_expressions:

@@ -26,7 +26,7 @@ from pyomo.core import (
     Transformation,
     NonNegativeIntegers,
 )
-from pyomo.core.base.block import _BlockData
+from pyomo.core.base.block import BlockData
 from pyomo.core.base import SortComponents
 from pyomo.core.util import target_list
 from pyomo.gdp import Disjunct, Disjunction
@@ -73,7 +73,7 @@ class LogicalToDisjunctive(Transformation):
         transBlocks = {}
         visitor = LogicalToDisjunctiveVisitor()
         for t in targets:
-            if t.ctype is Block or isinstance(t, _BlockData):
+            if t.ctype is Block or isinstance(t, BlockData):
                 self._transform_block(t, model, visitor, transBlocks)
             elif t.ctype is LogicalConstraint:
                 if t.is_indexed():
