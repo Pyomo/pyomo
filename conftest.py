@@ -14,6 +14,18 @@ import pytest
 _implicit_markers = {'default',}
 _extended_implicit_markers = _implicit_markers.union({'solver',})
 
+def pytest_collection_modifyitems(items):
+    """
+    This method will mark any unmarked tests with the implicit marker ('default')
+
+    """
+    for item in items:
+        try:
+            next(item.iter_markers())
+        except StopIteration:
+            for marker in _implicit_markers:
+                item.add_marker(getattr(pytest.mark, marker))
+
 def pytest_runtest_setup(item):
     """
     This method overrides pytest's default behavior for marked tests.
