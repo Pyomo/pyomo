@@ -11,6 +11,8 @@
 
 import pytest
 
+_implicit_markers = {'default',}
+_extended_implicit_markers = _implicit_markers.union({'solver',})
 
 def pytest_runtest_setup(item):
     """
@@ -32,13 +34,10 @@ def pytest_runtest_setup(item):
     the default mode; but if solver tests are also marked with an explicit
     category (e.g., "expensive"), we will skip them.
     """
-    marker = item.iter_markers()
     solvernames = [mark.args[0] for mark in item.iter_markers(name="solver")]
     solveroption = item.config.getoption("--solver")
     markeroption = item.config.getoption("-m")
-    implicit_markers = ['default']
-    extended_implicit_markers = implicit_markers + ['solver']
-    item_markers = set(mark.name for mark in marker)
+    item_markers = set(mark.name for mark in item.iter_markers())
     if solveroption:
         if solveroption not in solvernames:
             pytest.skip("SKIPPED: Test not marked {!r}".format(solveroption))
@@ -46,9 +45,9 @@ def pytest_runtest_setup(item):
     elif markeroption:
         return
     elif item_markers:
-        if not set(implicit_markers).issubset(
+        if not _implicit_markers.issubset(
             item_markers
-        ) and not item_markers.issubset(set(extended_implicit_markers)):
+        ) and not item_markers.issubset(_extended_implicit_markers):
             pytest.skip('SKIPPED: Only running default, solver, and unmarked tests.')
 
 
