@@ -71,6 +71,7 @@ def build_ginac_library(parallel=None, argv=None, env=None):
         logger.info("\nBuilding GiNaC\n")
         assert subprocess.run(make_cmd, cwd=ginac_dir, env=env).returncode == 0
         assert subprocess.run(install_cmd, cwd=ginac_dir, env=env).returncode == 0
+        print("Installed GiNaC to %s" % (ginac_dir,))
 
 
 def _find_include(libdir, incpaths):
