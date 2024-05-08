@@ -13,3 +13,4 @@ Solvers
    appsi.solvers.cplex
    appsi.solvers.cbc
    appsi.solvers.highs
+   appsi.solvers.maingo
