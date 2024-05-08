@@ -26,7 +26,7 @@ from weakref import ref as weakref_ref
 logger = logging.getLogger(__name__)
 
 
-class _SequenceVarData(ActiveComponentData):
+class SequenceVarData(ActiveComponentData):
     """This class defines the abstract interface for a single sequence variable."""
 
     __slots__ = ('interval_vars',)
@@ -62,7 +62,7 @@ class _SequenceVarData(ActiveComponentData):
 
 @ModelComponentFactory.register("Sequences of IntervalVars")
 class SequenceVar(ActiveIndexedComponent):
-    _ComponentDataClass = _SequenceVarData
+    _ComponentDataClass = SequenceVarData
 
     def __new__(cls, *args, **kwds):
         if cls != SequenceVar:
@@ -100,7 +100,7 @@ class SequenceVar(ActiveIndexedComponent):
 
     def construct(self, data=None):
         """
-        Construct the _SequenceVarData objects for this SequenceVar
+        Construct the SequenceVarData objects for this SequenceVar
         """
         if self._constructed:
             return
@@ -140,9 +140,9 @@ class SequenceVar(ActiveIndexedComponent):
         )
 
 
-class ScalarSequenceVar(_SequenceVarData, SequenceVar):
+class ScalarSequenceVar(SequenceVarData, SequenceVar):
     def __init__(self, *args, **kwds):
-        _SequenceVarData.__init__(self, component=self)
+        SequenceVarData.__init__(self, component=self)
         SequenceVar.__init__(self, *args, **kwds)
         self._index = UnindexedComponent_index
 

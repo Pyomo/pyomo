@@ -33,7 +33,7 @@ from pyomo.contrib.cp.interval_var import (
 from pyomo.contrib.cp.sequence_var import (
     SequenceVar,
     ScalarSequenceVar,
-    _SequenceVarData,
+    SequenceVarData,
 )
 from pyomo.contrib.cp.scheduling_expr.scheduling_logic import (
     AlternativeExpression,
@@ -1055,7 +1055,7 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         IntervalVarData: _before_interval_var,
         IndexedIntervalVar: _before_indexed_interval_var,
         ScalarSequenceVar: _before_sequence_var,
-        _SequenceVarData: _before_sequence_var,
+        SequenceVarData: _before_sequence_var,
         ScalarVar: _before_var,
         VarData: _before_var,
         IndexedVar: _before_indexed_var,
