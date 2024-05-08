@@ -430,6 +430,10 @@ class FileDownloader(object):
                 # commonpath() will raise ValueError for paths that
                 # don't have anything in common (notably, when files are
                 # on different drives on Windows)
+                logger.error(
+                    "potentially insecure filename (%s) resolves outside target "
+                    "directory.  Skipping file." % (f,)
+                )
                 return False
             # Strip high bits & group/other write bits
             info.mode &= 0o755
