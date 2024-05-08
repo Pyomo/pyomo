@@ -43,8 +43,8 @@ fi
 if test -z "$SLIM"; then
     export VENV_SYSTEM_PACKAGES='--system-site-packages'
 fi
-if test ! -z "$CATEGORY"; then
-    export PY_CAT="-m $CATEGORY"
+if test -n "$CATEGORY"; then
+    export PY_CAT="-m '"`echo "$CATEGORY" | sed -r "s/ +/ or /g"`"'"
 fi
 
 if test "$WORKSPACE" != "`pwd`"; then
