@@ -43,9 +43,6 @@ fi
 if test -z "$SLIM"; then
     export VENV_SYSTEM_PACKAGES='--system-site-packages'
 fi
-if test -n "$CATEGORY"; then
-    export PY_CAT="-m '"`echo "$CATEGORY" | sed -r "s/ +/ or /g"`"'"
-fi
 
 if test "$WORKSPACE" != "`pwd`"; then
     echo "ERROR: pwd is not WORKSPACE"
@@ -185,7 +182,7 @@ if test -z "$MODE" -o "$MODE" == test; then
     python -m pytest -v \
         -W ignore::Warning \
         --junitxml="TEST-pyomo.xml" \
-        $PY_CAT $TEST_SUITES $PYTEST_EXTRA_ARGS
+        -m "$CATEGORY" $TEST_SUITES $PYTEST_EXTRA_ARGS
 
     # Combine the coverage results and upload
     if test -z "$DISABLE_COVERAGE"; then
