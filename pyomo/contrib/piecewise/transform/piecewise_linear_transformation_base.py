@@ -40,7 +40,7 @@ from pyomo.gdp.util import is_child_of
 from pyomo.network import Port
 
 
-class PiecewiseLinearToGDP(Transformation):
+class PiecewiseLinearTransformationBase(Transformation):
     """
     Base class for transformations of piecewise-linear models to GDPs
     """
