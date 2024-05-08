@@ -277,18 +277,11 @@ def _handle_product_nonlinear(visitor, node, arg1, arg2):
 
 _exit_node_handlers[ProductExpression].update(
     {
+        None: _handle_product_nonlinear,
         (_CONSTANT, _QUADRATIC): linear._handle_product_constant_ANY,
-        (_LINEAR, _QUADRATIC): _handle_product_nonlinear,
-        (_QUADRATIC, _QUADRATIC): _handle_product_nonlinear,
-        (_GENERAL, _QUADRATIC): _handle_product_nonlinear,
         (_QUADRATIC, _CONSTANT): linear._handle_product_ANY_constant,
-        (_QUADRATIC, _LINEAR): _handle_product_nonlinear,
-        (_QUADRATIC, _GENERAL): _handle_product_nonlinear,
         # Replace handler from the linear walker
         (_LINEAR, _LINEAR): _handle_product_linear_linear,
-        (_GENERAL, _GENERAL): _handle_product_nonlinear,
-        (_GENERAL, _LINEAR): _handle_product_nonlinear,
-        (_LINEAR, _GENERAL): _handle_product_nonlinear,
     }
 )
 
@@ -296,15 +289,7 @@ _exit_node_handlers[ProductExpression].update(
 # DIVISION
 #
 _exit_node_handlers[DivisionExpression].update(
-    {
-        (_CONSTANT, _QUADRATIC): linear._handle_division_nonlinear,
-        (_LINEAR, _QUADRATIC): linear._handle_division_nonlinear,
-        (_QUADRATIC, _QUADRATIC): linear._handle_division_nonlinear,
-        (_GENERAL, _QUADRATIC): linear._handle_division_nonlinear,
-        (_QUADRATIC, _CONSTANT): linear._handle_division_ANY_constant,
-        (_QUADRATIC, _LINEAR): linear._handle_division_nonlinear,
-        (_QUADRATIC, _GENERAL): linear._handle_division_nonlinear,
-    }
+    {(_QUADRATIC, _CONSTANT): linear._handle_division_ANY_constant}
 )
 
 
@@ -312,83 +297,41 @@ _exit_node_handlers[DivisionExpression].update(
 # EXPONENTIATION
 #
 _exit_node_handlers[PowExpression].update(
-    {
-        (_CONSTANT, _QUADRATIC): linear._handle_pow_nonlinear,
-        (_LINEAR, _QUADRATIC): linear._handle_pow_nonlinear,
-        (_QUADRATIC, _QUADRATIC): linear._handle_pow_nonlinear,
-        (_GENERAL, _QUADRATIC): linear._handle_pow_nonlinear,
-        (_QUADRATIC, _CONSTANT): linear._handle_pow_ANY_constant,
-        (_QUADRATIC, _LINEAR): linear._handle_pow_nonlinear,
-        (_QUADRATIC, _GENERAL): linear._handle_pow_nonlinear,
-    }
+    {(_QUADRATIC, _CONSTANT): linear._handle_pow_ANY_constant}
 )
 
 #
 # ABS and UNARY handlers
 #
-_exit_node_handlers[AbsExpression][(_QUADRATIC,)] = linear._handle_unary_nonlinear
-_exit_node_handlers[UnaryFunctionExpression][
-    (_QUADRATIC,)
-] = linear._handle_unary_nonlinear
+# (no changes needed)
 
 #
 # NAMED EXPRESSION handlers
 #
-_exit_node_handlers[Expression][(_QUADRATIC,)] = linear._handle_named_ANY
+# (no changes needed)
 
 #
 # EXPR_IF handlers
 #
 # Note: it is easier to just recreate the entire data structure, rather
 # than update it
-_exit_node_handlers[Expr_ifExpression] = {
-    (i, j, k): linear._handle_expr_if_nonlinear
-    for i in (_LINEAR, _QUADRATIC, _GENERAL)
-    for j in (_CONSTANT, _LINEAR, _QUADRATIC, _GENERAL)
-    for k in (_CONSTANT, _LINEAR, _QUADRATIC, _GENERAL)
-}
-for j in (_CONSTANT, _LINEAR, _QUADRATIC, _GENERAL):
-    for k in (_CONSTANT, _LINEAR, _QUADRATIC, _GENERAL):
-        _exit_node_handlers[Expr_ifExpression][
-            _CONSTANT, j, k
-        ] = linear._handle_expr_if_const
+_exit_node_handlers[Expr_ifExpression].update(
+    {
+        (_CONSTANT, i, _QUADRATIC): linear._handle_expr_if_const
+        for i in (_CONSTANT, _LINEAR, _QUADRATIC, _GENERAL)
+    }
+)
+_exit_node_handlers[Expr_ifExpression].update(
+    {
+        (_CONSTANT, _QUADRATIC, i): linear._handle_expr_if_const
+        for i in (_CONSTANT, _LINEAR, _GENERAL)
+    }
+)
 
 #
 # RELATIONAL handlers
 #
-_exit_node_handlers[EqualityExpression].update(
-    {
-        (_CONSTANT, _QUADRATIC): linear._handle_equality_general,
-        (_LINEAR, _QUADRATIC): linear._handle_equality_general,
-        (_QUADRATIC, _QUADRATIC): linear._handle_equality_general,
-        (_GENERAL, _QUADRATIC): linear._handle_equality_general,
-        (_QUADRATIC, _CONSTANT): linear._handle_equality_general,
-        (_QUADRATIC, _LINEAR): linear._handle_equality_general,
-        (_QUADRATIC, _GENERAL): linear._handle_equality_general,
-    }
-)
-_exit_node_handlers[InequalityExpression].update(
-    {
-        (_CONSTANT, _QUADRATIC): linear._handle_inequality_general,
-        (_LINEAR, _QUADRATIC): linear._handle_inequality_general,
-        (_QUADRATIC, _QUADRATIC): linear._handle_inequality_general,
-        (_GENERAL, _QUADRATIC): linear._handle_inequality_general,
-        (_QUADRATIC, _CONSTANT): linear._handle_inequality_general,
-        (_QUADRATIC, _LINEAR): linear._handle_inequality_general,
-        (_QUADRATIC, _GENERAL): linear._handle_inequality_general,
-    }
-)
-_exit_node_handlers[RangedExpression].update(
-    {
-        (_CONSTANT, _QUADRATIC): linear._handle_ranged_general,
-        (_LINEAR, _QUADRATIC): linear._handle_ranged_general,
-        (_QUADRATIC, _QUADRATIC): linear._handle_ranged_general,
-        (_GENERAL, _QUADRATIC): linear._handle_ranged_general,
-        (_QUADRATIC, _CONSTANT): linear._handle_ranged_general,
-        (_QUADRATIC, _LINEAR): linear._handle_ranged_general,
-        (_QUADRATIC, _GENERAL): linear._handle_ranged_general,
-    }
-)
+# (no changes needed)
 
 
 class QuadraticRepnVisitor(linear.LinearRepnVisitor):

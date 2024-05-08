@@ -35,7 +35,7 @@ from pyomo.environ import (
     Any,
     TransformationFactory,
 )
-from pyomo.core.base.var import _VarData
+from pyomo.core.base.var import VarData
 
 
 class _pseudo_component(Var):
@@ -62,7 +62,7 @@ class TestTiming(unittest.TestCase):
         )
         v = Var()
         v.construct()
-        a = ConstructionTimer(_VarData(v))
+        a = ConstructionTimer(VarData(v))
         self.assertRegex(
             str(a),
             r"ConstructionTimer object for Var ScalarVar\[NOTSET\]; "
