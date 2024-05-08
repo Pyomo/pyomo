@@ -155,6 +155,7 @@ def build_ginac_interface(parallel=None, args=None):
                     )
                     if not os.path.exists(target):
                         os.makedirs(target)
+                    sys.stdout.write(f"Installing {library} in {target}\n")
                     shutil.copy(library, target)
 
     package_config = {
