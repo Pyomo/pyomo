@@ -45,7 +45,6 @@ import collections.abc
 import inspect
 
 
-
 class CalculationMode(Enum):
     sequential_finite = "sequential_finite"
     direct_kaug = "direct_kaug"
