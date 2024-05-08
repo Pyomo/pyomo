@@ -45,9 +45,12 @@ with existing interfaces).
    * - Ipopt
      - ``ipopt``
      - ``ipopt_v2``
-   * - Gurobi
+   * - Gurobi (persistent)
      - ``gurobi``
      - ``gurobi_v2``
+   * - Gurobi (direct)
+     - ``gurobi_direct``
+     - ``gurobi_direct_v2``
 
 Using the new interfaces through the legacy interface
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
