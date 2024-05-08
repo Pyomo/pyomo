@@ -56,6 +56,7 @@ Pyomo 6.7.2   (9 May 2024)
   - APPSI: Allow cmodel to handle non-mutable params in var and constraint bounds (#3182)
   - APPSI: Allow APPSI FBBT to handle nested named Expressions (#3185)
   - APPSI: Add MAiNGO solver interface (#3165)
+  - CP: Add SequenceVar and other logical expressions for scheduling (#3227)
   - DoE: Bug fixes (#3245)
   - incidence_analysis: Improve performance of `solve_strongly_connected_components` for
     models with named expressions (#3186)
