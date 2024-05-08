@@ -15,7 +15,6 @@ from pyomo.contrib.cp.interval_var import (
     IntervalVarStartTime,
     IntervalVarEndTime,
 )
-from pyomo.core.base.component import Component
 from pyomo.core.expr.base import ExpressionBase
 from pyomo.core.expr.logical_expr import BooleanExpression
 

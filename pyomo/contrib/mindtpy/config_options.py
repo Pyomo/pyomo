@@ -324,6 +324,15 @@ def _add_common_configs(CONFIG):
         ),
     )
     CONFIG.declare(
+        'call_before_subproblem_solve',
+        ConfigValue(
+            default=_DoNothing(),
+            domain=None,
+            description='Function to be executed before every subproblem',
+            doc='Callback hook before a solution of the nonlinear subproblem.',
+        ),
+    )
+    CONFIG.declare(
         'call_after_subproblem_solve',
         ConfigValue(
             default=_DoNothing(),
@@ -549,7 +558,7 @@ def _add_subsolver_configs(CONFIG):
                     'cplex_persistent',
                     'appsi_cplex',
                     'appsi_gurobi',
-                    # 'appsi_highs', TODO: feasibility pump now fails with appsi_highs #2951
+                    'appsi_highs',
                 ]
             ),
             description='MIP subsolver name',
@@ -631,7 +640,7 @@ def _add_subsolver_configs(CONFIG):
                     'cplex_persistent',
                     'appsi_cplex',
                     'appsi_gurobi',
-                    # 'appsi_highs',
+                    'appsi_highs',
                 ]
             ),
             description='MIP subsolver for regularization problem',

@@ -11,6 +11,7 @@
 
 from pyomo.common.collections import ComponentSet
 from pyomo.common.pyomo_typing import overload
+from pyomo.contrib.cp.scheduling_expr.scheduling_logic import SpanExpression
 from pyomo.contrib.cp.scheduling_expr.precedence_expressions import (
     BeforeExpression,
     AtExpression,
@@ -24,6 +25,7 @@ from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
 from pyomo.core.base.initializer import BoundInitializer, Initializer
 from pyomo.core.expr import GetItemExpression
+from pyomo.core.expr.logical_expr import _flattened
 
 
 class IntervalVarTimePoint(ScalarVar):
@@ -49,7 +51,7 @@ class IntervalVarStartTime(IntervalVarTimePoint):
     """This class defines a single variable denoting a start time point
     of an IntervalVar"""
 
-    def __init__(self):
+    def __init__(self, *args, **kwd):
         super().__init__(domain=Integers, ctype=IntervalVarStartTime)
 
 
@@ -57,7 +59,7 @@ class IntervalVarEndTime(IntervalVarTimePoint):
     """This class defines a single variable denoting an end time point
     of an IntervalVar"""
 
-    def __init__(self):
+    def __init__(self, *args, **kwd):
         super().__init__(domain=Integers, ctype=IntervalVarEndTime)
 
 
@@ -67,7 +69,7 @@ class IntervalVarLength(ScalarVar):
 
     __slots__ = ()
 
-    def __init__(self):
+    def __init__(self, *args, **kwd):
         super().__init__(domain=Integers, ctype=IntervalVarLength)
 
     def get_associated_interval_var(self):
@@ -80,7 +82,9 @@ class IntervalVarPresence(ScalarBooleanVar):
 
     __slots__ = ()
 
-    def __init__(self):
+    def __init__(self, *args, **kwd):
+        # TODO: adding args and kwd above made Reference work, but we
+        # probably shouldn't just swallow them, right?
         super().__init__(ctype=IntervalVarPresence)
 
     def get_associated_interval_var(self):
@@ -121,6 +125,9 @@ class IntervalVarData(BlockData):
             self.is_present.unfix()
         else:
             self.is_present.fix(True)
+
+    def spans(self, *args):
+        return SpanExpression([self] + list(_flattened(args)))
 
 
 @ModelComponentFactory.register("Interval variables for scheduling.")

@@ -30,7 +30,7 @@ def _importer():
         # GiNaC needs 2 libraries that are generally dynamically linked
         # to the interface library.  If we built those ourselves, then
         # the libraries will be PYOMO_CONFIG_DIR/lib ... but that
-        # directlor is very likely to NOT be on the library search path
+        # directory is very likely to NOT be on the library search path
         # when the Python interpreter was started.  We will manually
         # look for those two libraries, and if we find them, load them
         # into this process (so the interface can find them)
