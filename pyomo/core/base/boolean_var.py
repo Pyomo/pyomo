@@ -252,12 +252,12 @@ class BooleanVarData(ComponentData, BooleanValue):
 
 class _BooleanVarData(metaclass=RenamedClass):
     __renamed__new_class__ = BooleanVarData
-    __renamed__version__ = '6.7.2.dev0'
+    __renamed__version__ = '6.7.2'
 
 
 class _GeneralBooleanVarData(metaclass=RenamedClass):
     __renamed__new_class__ = BooleanVarData
-    __renamed__version__ = '6.7.2.dev0'
+    __renamed__version__ = '6.7.2'
 
 
 @ModelComponentFactory.register("Logical decision variables.")

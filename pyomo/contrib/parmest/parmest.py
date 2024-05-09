@@ -68,8 +68,6 @@ from pyomo.dae import ContinuousSet
 from pyomo.common.deprecation import deprecated
 from pyomo.common.deprecation import deprecation_warning
 
-DEPRECATION_VERSION = '6.7.2.dev0'
-
 parmest_available = numpy_available & pandas_available & scipy_available
 
 inverse_reduced_hessian, inverse_reduced_hessian_available = attempt_import(
@@ -338,7 +336,7 @@ class Estimator(object):
             "You're using the deprecated parmest interface (model_function, "
             "data, theta_names). This interface will be removed in a future release, "
             "please update to the new parmest interface using experiment lists.",
-            version=DEPRECATION_VERSION,
+            version='6.7.2',
         )
         self.pest_deprecated = _DeprecatedEstimator(
             model_function,
@@ -1386,7 +1384,7 @@ class Estimator(object):
 ################################
 
 
-@deprecated(version=DEPRECATION_VERSION)
+@deprecated(version='6.7.2')
 def group_data(data, groupby_column_name, use_mean=None):
     """
     Group data by scenario

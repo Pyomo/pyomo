@@ -107,7 +107,7 @@ class ConnectorData(ComponentData, NumericValue):
 
 class _ConnectorData(metaclass=RenamedClass):
     __renamed__new_class__ = ConnectorData
-    __renamed__version__ = '6.7.2.dev0'
+    __renamed__version__ = '6.7.2'
 
 
 @ModelComponentFactory.register(
