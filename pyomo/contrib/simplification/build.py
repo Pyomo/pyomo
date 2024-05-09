@@ -27,7 +27,11 @@ logger = logging.getLogger(__name__ if __name__ != '__main__' else 'pyomo')
 def build_ginac_library(parallel=None, argv=None, env=None):
     sys.stdout.write("\n**** Building GiNaC library ****\n")
 
-    configure_cmd = ['configure', '--prefix=' + PYOMO_CONFIG_DIR, '--disable-static']
+    configure_cmd = [
+        os.path.join('.', 'configure'),
+        '--prefix=' + PYOMO_CONFIG_DIR,
+        '--disable-static',
+    ]
     make_cmd = ['make']
     if parallel:
         make_cmd.append(f'-j{parallel}')
