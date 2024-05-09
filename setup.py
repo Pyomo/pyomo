@@ -256,7 +256,7 @@ setup_kwargs = dict(
             'sphinx-toolbox>=2.16.0',
             'sphinx-jinja2-compat>=0.1.1',
             'enum_tools',
-            'numpy<2.0.0',  # Needed by autodoc for pynumero
+            'numpy',  # Needed by autodoc for pynumero
             'scipy',  # Needed by autodoc for pynumero
         ],
         'optional': [
@@ -271,7 +271,7 @@ setup_kwargs = dict(
             # installed on python 3.8
             'networkx<3.2; python_version<"3.9"',
             'networkx; python_version>="3.9"',
-            'numpy<2.0.0',
+            'numpy',
             'openpyxl',  # dataportals
             #'pathos',   # requested for #963, but PR currently closed
             'pint',  # units
