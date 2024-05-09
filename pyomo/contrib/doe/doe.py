@@ -1231,9 +1231,7 @@ class DesignOfExperiments:
                         if optimize_option[name]:
                             var.unfix()
 
-            elif isinstance(
-                var, (pcb.param.ScalarParam, pcb.param.IndexedParam, pcb.param.Param)
-            ):
+            elif var.ctype is Param:
                 # check if param is mutable
                 if var.mutable:
                     var = design_val[name]
