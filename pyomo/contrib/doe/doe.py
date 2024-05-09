@@ -1210,15 +1210,7 @@ class DesignOfExperiments:
             cuid = pyo.ComponentUID(name)
             var = cuid.find_component_on(m)
 
-            if isinstance(
-                var,
-                (
-                    pcb.var.Var,
-                    pcb.var.IndexedVar,
-                    pcb.var.ScalarVar,
-                    pcb.var._GeneralVarData,
-                ),
-            ):
+            if var.ctype is Var:
                 if fix_opt:
                     var.fix(design_val[name])
                 else:
