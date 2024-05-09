@@ -498,7 +498,7 @@ class DesignOfExperiments:
             var = cuid.find_component_on(mod)
 
             # only set up bounds if they are variables
-            if isinstance(var, (pcb.var.Var, pcb.var.IndexedVar, pcb.var.ScalarVar)):
+            if var.ctype is Var:
                 var.setlb(self.param[par])
                 var.setub(self.param[par])
 
