@@ -123,13 +123,19 @@ if test -z "$MODE" -o "$MODE" == setup; then
     # skipped by the pyomo download-extensions / build-extensions
     # actions below
     if [[ " $CATEGORY " == *" builders "* ]]; then
+        echo ""
+        echo "Running local build scripts..."
+        echo ""
+        set -x
         python pyomo/contrib/simplification/build.py --build-deps || exit 1
+        set +x
     fi
 
     # Use Pyomo to download & compile binary extensions
     i=0
     while /bin/true; do
         i=$[$i+1]
+        echo ""
         echo "Downloading pyomo extensions (attempt $i)"
         pyomo download-extensions $PYOMO_DOWNLOAD_ARGS
         if test $? == 0; then
