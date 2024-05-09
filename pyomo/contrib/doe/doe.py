@@ -639,9 +639,7 @@ class DesignOfExperiments:
                 var = cuid.find_component_on(b)
 
                 # if it is a variable, fix it to a new value
-                if isinstance(
-                    var, (pcb.var.Var, pcb.var.IndexedVar, pcb.var.ScalarVar)
-                ):
+                if var.ctype is Var:
                     var.fix(self.scenario_data.scenario[s][par])
                 # if it is a param, give it a new value
                 elif var.ctype is Param:
