@@ -198,12 +198,12 @@ class NamedExpressionData(numeric_expr.NumericValue):
 
 class _ExpressionData(metaclass=RenamedClass):
     __renamed__new_class__ = NamedExpressionData
-    __renamed__version__ = '6.7.2.dev0'
+    __renamed__version__ = '6.7.2'
 
 
 class _GeneralExpressionDataImpl(metaclass=RenamedClass):
     __renamed__new_class__ = NamedExpressionData
-    __renamed__version__ = '6.7.2.dev0'
+    __renamed__version__ = '6.7.2'
 
 
 class ExpressionData(NamedExpressionData, ComponentData):
@@ -231,7 +231,7 @@ class ExpressionData(NamedExpressionData, ComponentData):
 
 class _GeneralExpressionData(metaclass=RenamedClass):
     __renamed__new_class__ = ExpressionData
-    __renamed__version__ = '6.7.2.dev0'
+    __renamed__version__ = '6.7.2'
 
 
 @ModelComponentFactory.register(

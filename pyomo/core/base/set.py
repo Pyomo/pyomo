@@ -1179,12 +1179,12 @@ class SetData(ComponentData):
 
 class _SetData(metaclass=RenamedClass):
     __renamed__new_class__ = SetData
-    __renamed__version__ = '6.7.2.dev0'
+    __renamed__version__ = '6.7.2'
 
 
 class _SetDataBase(metaclass=RenamedClass):
     __renamed__new_class__ = SetData
-    __renamed__version__ = '6.7.2.dev0'
+    __renamed__version__ = '6.7.2'
 
 
 class _FiniteSetMixin(object):
@@ -1471,7 +1471,7 @@ class FiniteSetData(_FiniteSetMixin, SetData):
 
 class _FiniteSetData(metaclass=RenamedClass):
     __renamed__new_class__ = FiniteSetData
-    __renamed__version__ = '6.7.2.dev0'
+    __renamed__version__ = '6.7.2'
 
 
 class _ScalarOrderedSetMixin(object):
@@ -1736,7 +1736,7 @@ class OrderedSetData(_OrderedSetMixin, FiniteSetData):
 
 class _OrderedSetData(metaclass=RenamedClass):
     __renamed__new_class__ = OrderedSetData
-    __renamed__version__ = '6.7.2.dev0'
+    __renamed__version__ = '6.7.2'
 
 
 class InsertionOrderSetData(OrderedSetData):
@@ -1775,7 +1775,7 @@ class InsertionOrderSetData(OrderedSetData):
 
 class _InsertionOrderSetData(metaclass=RenamedClass):
     __renamed__new_class__ = InsertionOrderSetData
-    __renamed__version__ = '6.7.2.dev0'
+    __renamed__version__ = '6.7.2'
 
 
 class _SortedSetMixin(object):
@@ -1871,7 +1871,7 @@ class SortedSetData(_SortedSetMixin, OrderedSetData):
 
 class _SortedSetData(metaclass=RenamedClass):
     __renamed__new_class__ = SortedSetData
-    __renamed__version__ = '6.7.2.dev0'
+    __renamed__version__ = '6.7.2'
 
 
 ############################################################################
@@ -2669,7 +2669,7 @@ class InfiniteRangeSetData(SetData):
 
 class _InfiniteRangeSetData(metaclass=RenamedClass):
     __renamed__new_class__ = InfiniteRangeSetData
-    __renamed__version__ = '6.7.2.dev0'
+    __renamed__version__ = '6.7.2'
 
 
 class FiniteRangeSetData(
@@ -2782,7 +2782,7 @@ class FiniteRangeSetData(
 
 class _FiniteRangeSetData(metaclass=RenamedClass):
     __renamed__new_class__ = FiniteRangeSetData
-    __renamed__version__ = '6.7.2.dev0'
+    __renamed__version__ = '6.7.2'
 
 
 @ModelComponentFactory.register(
