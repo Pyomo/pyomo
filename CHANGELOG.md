@@ -73,6 +73,7 @@ Pyomo 6.7.2   (9 May 2024)
   - PyROS: Simplify custom domain validators (#3169)
   - PyROS: Fix iteration logging for edge case involving discrete sets  (#3170)
   - PyROS: Update solver timing system (#3198)
+  - simplification: New module for expression simplification using GiNaC or SymPy (#3088)
 
 -------------------------------------------------------------------------------
 Pyomo 6.7.1   (21 Feb 2024)
