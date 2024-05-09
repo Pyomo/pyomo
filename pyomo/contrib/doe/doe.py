@@ -642,13 +642,7 @@ class DesignOfExperiments:
                     var.fix(self.scenario_data.scenario[s][par])
                 # if it is a param, give it a new value
                 elif var.ctype is Param:
-                    # check if param is mutable
-                    if var.mutable:
-                        var = self.scenario_data.scenario[s][par]
-                    else:
-                        raise TypeError(
-                            "If defined as a Param, parameters should be mutable by mutable=True"
-                        )
+                    var = self.scenario_data.scenario[s][par]
 
         mod.block = pyo.Block(mod.scenario, rule=block_build)
 
@@ -1218,13 +1212,7 @@ class DesignOfExperiments:
                             var.unfix()
 
             elif var.ctype is Param:
-                # check if param is mutable
-                if var.mutable:
-                    var = design_val[name]
-                else:
-                    raise TypeError(
-                        "If defined as a Param, parameters should be mutable by mutable=True"
-                    )
+                var = design_val[name]
 
         return m
 
