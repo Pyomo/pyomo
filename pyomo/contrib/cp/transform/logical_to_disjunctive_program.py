@@ -12,7 +12,6 @@
 from pyomo.contrib.cp.transform.logical_to_disjunctive_walker import (
     LogicalToDisjunctiveVisitor,
 )
-from pyomo.common.collections import ComponentMap
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.config import ConfigDict, ConfigValue
 
