@@ -499,8 +499,7 @@ class DesignOfExperiments:
 
             # only set up bounds if they are variables
             if var.ctype is Var:
-                var.setlb(self.param[par])
-                var.setub(self.param[par])
+                var.fix(self.param[par])
 
         # generate parameter name list and value dictionary with index
         var_name = list(self.param.keys())
