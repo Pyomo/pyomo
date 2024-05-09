@@ -122,7 +122,7 @@ if test -z "$MODE" -o "$MODE" == setup; then
     # Call Pyomo build scripts to build TPLs that would normally be
     # skipped by the pyomo download-extensions / build-extensions
     # actions below
-    if test [ " $CATEGORY " == *" builders "*; then
+    if test [[ " $CATEGORY " == *" builders "* ]]; then
         python pyomo/contrib/simplification/build.py --build-deps || exit 1
     fi
 
