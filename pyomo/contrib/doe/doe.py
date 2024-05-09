@@ -39,7 +39,7 @@ from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 from pyomo.contrib.doe.scenario import ScenarioGenerator, FiniteDifferenceStep
 from pyomo.contrib.doe.result import FisherResults, GridSearchResult
 
-import pyomo.core.base as pcb
+from pyomo.environ import Var, Param
 import collections.abc
 
 import inspect
