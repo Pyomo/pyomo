@@ -218,7 +218,7 @@ jobs:
         # Notes:
         #  - install glpk
         #  - pyodbc needs: gcc pkg-config unixodbc freetds
-        for pkg in bash pkg-config unixodbc freetds glpk; do
+        for pkg in bash pkg-config unixodbc freetds glpk ginac; do
             brew list $pkg || brew install $pkg
         done
 
@@ -230,7 +230,8 @@ jobs:
         #  - install glpk
         #  - ipopt needs: libopenblas-dev gfortran liblapack-dev
         sudo apt-get -o Dir::Cache=${GITHUB_WORKSPACE}/cache/os \
-            install libopenblas-dev gfortran liblapack-dev glpk-utils
+            install libopenblas-dev gfortran liblapack-dev glpk-utils \
+            libginac-dev
         sudo chmod -R 777 ${GITHUB_WORKSPACE}/cache/os
 
     - name: Update Windows
@@ -372,6 +373,7 @@ jobs:
                 CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES $PKG"
             fi
         done
+        echo ""
         echo "*** Install Pyomo dependencies ***"
         # Note: this will fail the build if any installation fails (or
         # possibly if it outputs messages to stderr)

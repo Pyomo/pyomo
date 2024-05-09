@@ -181,7 +181,7 @@ jobs:
         # Notes:
         #  - install glpk
         #  - pyodbc needs: gcc pkg-config unixodbc freetds
-        for pkg in bash pkg-config unixodbc freetds glpk; do
+        for pkg in bash pkg-config unixodbc freetds glpk ginac; do
             brew list $pkg || brew install $pkg
         done
 
@@ -193,7 +193,8 @@ jobs:
         #  - install glpk
         #  - ipopt needs: libopenblas-dev gfortran liblapack-dev
         sudo apt-get -o Dir::Cache=${GITHUB_WORKSPACE}/cache/os \
-            install libopenblas-dev gfortran liblapack-dev glpk-utils
+            install libopenblas-dev gfortran liblapack-dev glpk-utils \
+            libginac-dev
         sudo chmod -R 777 ${GITHUB_WORKSPACE}/cache/os
 
     - name: Update Windows
@@ -264,7 +265,7 @@ jobs:
         if test -z "${{matrix.slim}}"; then
             python -m pip install --cache-dir cache/pip cplex docplex \
                 || echo "WARNING: CPLEX Community Edition is not available"
-            python -m pip install --cache-dir cache/pip gurobipy==10.0.3\
+            python -m pip install --cache-dir cache/pip gurobipy==10.0.3 \
                 || echo "WARNING: Gurobi is not available"
             python -m pip install --cache-dir cache/pip xpress \
                 || echo "WARNING: Xpress Community Edition is not available"
@@ -339,7 +340,7 @@ jobs:
         echo "*** Install Pyomo dependencies ***"
         # Note: this will fail the build if any installation fails (or
         # possibly if it outputs messages to stderr)
-        conda install --update-deps -y $CONDA_DEPENDENCIES
+        conda install --update-deps -q -y $CONDA_DEPENDENCIES
         if test -z "${{matrix.slim}}"; then
             PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
             echo "Installing for $PYVER"
