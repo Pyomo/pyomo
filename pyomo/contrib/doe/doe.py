@@ -492,7 +492,7 @@ class DesignOfExperiments:
         # add objective function
         mod.Obj = pyo.Objective(expr=0, sense=pyo.minimize)
 
-        # set ub and lb to parameters
+        # set parameters to given values
         for par in self.param.keys():
             cuid = pyo.ComponentUID(par)
             var = cuid.find_component_on(mod)
@@ -500,6 +500,9 @@ class DesignOfExperiments:
             # only set up bounds if they are variables
             if var.ctype is Var:
                 var.fix(self.param[par])
+            # if it is a param, give it a new value
+            elif var.ctype is Param:
+                var.value = self.param[par]
 
         # generate parameter name list and value dictionary with index
         var_name = list(self.param.keys())
@@ -609,13 +612,25 @@ class DesignOfExperiments:
         self.create_model(mod=mod, model_option=ModelOptionLib.stage1)
 
         # Fix parameter values in the copy of the stage1 model (if they exist)
+        #for par in self.param:
+        #    cuid = pyo.ComponentUID(par)
+        #    var = cuid.find_component_on(mod)
+        #    if var is not None:
+        #        # Fix the parameter value
+        #        # Otherwise, the parameter does not exist on the stage 1 model
+        #        var.fix(self.param[par])
+
         for par in self.param:
             cuid = pyo.ComponentUID(par)
             var = cuid.find_component_on(mod)
+
             if var is not None:
-                # Fix the parameter value
-                # Otherwise, the parameter does not exist on the stage 1 model
-                var.fix(self.param[par])
+                # if it is a variable, fix it to a new value
+                if var.ctype is Var:
+                    var.fix(self.param[par])
+                # if it is a param, give it a new value
+                elif var.ctype is Param:
+                    var.value = self.param[par]
 
         def block_build(b, s):
             # create block scenarios
@@ -642,7 +657,7 @@ class DesignOfExperiments:
                     var.fix(self.scenario_data.scenario[s][par])
                 # if it is a param, give it a new value
                 elif var.ctype is Param:
-                    var = self.scenario_data.scenario[s][par]
+                    var.value = self.scenario_data.scenario[s][par]
 
         mod.block = pyo.Block(mod.scenario, rule=block_build)
 
@@ -1205,6 +1220,7 @@ class DesignOfExperiments:
                 if fix_opt:
                     var.fix(design_val[name])
                 else:
+                    # Otherwise, unfix only the design variables listed in optimize_option with value True 
                     if optimize_option is None:
                         var.unfix()
                     else:
@@ -1212,7 +1228,7 @@ class DesignOfExperiments:
                             var.unfix()
 
             elif var.ctype is Param:
-                var = design_val[name]
+                var.value = design_val[name]
 
         return m
 
