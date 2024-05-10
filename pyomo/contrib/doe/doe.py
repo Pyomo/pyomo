@@ -85,9 +85,11 @@ class DesignOfExperiments:
         param_init:
             A  ``dictionary`` of parameter names and values.
             If they defined as indexed Pyomo variable, put the variable name and index, such as 'theta["A1"]'.
+            In create_model function, they can be defined either as `Param` or `Var` components.
         design_vars:
             A ``DesignVariables`` which contains the Pyomo variable names and their corresponding indices
             and bounds for experiment degrees of freedom
+            In create_model function, they can be defined either as `Param` or `Var` components.
         measurement_vars:
             A ``MeasurementVariables`` which contains the Pyomo variable names and their corresponding indices and
             bounds for experimental measurements
@@ -612,7 +614,7 @@ class DesignOfExperiments:
         self.create_model(mod=mod, model_option=ModelOptionLib.stage1)
 
         # Fix parameter values in the copy of the stage1 model (if they exist)
-        #for par in self.param:
+        # for par in self.param:
         #    cuid = pyo.ComponentUID(par)
         #    var = cuid.find_component_on(mod)
         #    if var is not None:
@@ -1220,7 +1222,7 @@ class DesignOfExperiments:
                 if fix_opt:
                     var.fix(design_val[name])
                 else:
-                    # Otherwise, unfix only the design variables listed in optimize_option with value True 
+                    # Otherwise, unfix only the design variables listed in optimize_option with value True
                     if optimize_option is None:
                         var.unfix()
                     else:

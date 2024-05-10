@@ -255,7 +255,7 @@ def create_model(
             return mod
 
 
-def create_model_design_as_param(
+def create_model_para_design_param(
     mod=None,
     model_option="stage2",
     control_time=[0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1],
@@ -269,6 +269,7 @@ def create_model_design_as_param(
     This is an example user model provided to DoE library.
     It is a dynamic problem solved by Pyomo.DAE.
     This problem defines design variable CA0 as Param, instead of Var.
+    This problem also defines the parameters as Param, instead of Var.
 
     Arguments
     ---------
@@ -367,10 +368,10 @@ def create_model_design_as_param(
         mod.R = 8.31446261815324  # J / K / mole
 
         # Define parameters as Param
-        mod.A1 = pyo.Var(initialize=theta["A1"])
-        mod.A2 = pyo.Var(initialize=theta["A2"])
-        mod.E1 = pyo.Var(initialize=theta["E1"])
-        mod.E2 = pyo.Var(initialize=theta["E2"])
+        mod.A1 = pyo.Param(initialize=theta["A1"], mutable=True)
+        mod.A2 = pyo.Param(initialize=theta["A2"], mutable=True)
+        mod.E1 = pyo.Param(initialize=theta["E1"], mutable=True)
+        mod.E2 = pyo.Param(initialize=theta["E2"], mutable=True)
 
         # Concentration variables under perturbation
         mod.C_set = pyo.Set(initialize=["CA", "CB", "CC"])
