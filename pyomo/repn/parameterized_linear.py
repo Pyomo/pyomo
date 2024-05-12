@@ -10,8 +10,10 @@
 #  ___________________________________________________________________________
 
 import copy
+import enum
 
 from pyomo.common.collections import ComponentSet
+from pyomo.common.enums import ExtendedEnumType
 from pyomo.common.numeric_types import native_numeric_types
 from pyomo.core import Var
 from pyomo.core.expr.logical_expr import _flattened
@@ -34,7 +36,12 @@ from pyomo.repn.linear import (
 from pyomo.repn.util import ExprType
 from . import linear
 
-_CONSTANT = ExprType.CONSTANT
+
+class ParameterizedExprType(enum.IntEnum, metaclass=ExtendedEnumType):
+    __base_enum__ = ExprType
+    PSUEDO_CONSTANT = 50
+
+_CONSTANT = ParameterizedExprType.CONSTANT
 
 
 def _merge_dict(dest_dict, mult, src_dict):
