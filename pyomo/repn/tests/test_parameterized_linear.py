@@ -298,7 +298,8 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         m.x = Var()
         m.z = Var()
         m.y = Var()
-        # We aren't treating this as a Var, so we don't really care that it's fixed.
+        # We will use the fixed value regardless of the fact that we aren't
+        # treating this as a Var.
         m.y.fix(1)
 
         expr = m.y + m.x + m.z + ((3 * m.z * m.x) / m.p) / m.y
@@ -308,10 +309,10 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         )
 
         self.assertEqual(repn.multiplier, 1)
-        assertExpressionsEqual(self, repn.constant, m.y + m.z)
+        assertExpressionsEqual(self, repn.constant, 1 + m.z)
         self.assertEqual(len(repn.linear), 1)
         print(repn.linear[id(m.x)])
-        assertExpressionsEqual(self, repn.linear[id(m.x)], 1 + 1.5 * m.z / m.y)
+        assertExpressionsEqual(self, repn.linear[id(m.x)], 1 + 1.5 * m.z)
         self.assertEqual(repn.nonlinear, None)
 
     def test_errors_propogate_nan(self):
@@ -335,10 +336,10 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
             "\texpression: 3*z*x/p\n",
         )
         self.assertEqual(repn.multiplier, 1)
-        assertExpressionsEqual(self, repn.constant, m.y + m.z)
+        assertExpressionsEqual(self, repn.constant, 1 + m.z)
         self.assertEqual(len(repn.linear), 1)
         self.assertIsInstance(repn.linear[id(m.x)], InvalidNumber)
-        assertExpressionsEqual(self, repn.linear[id(m.x)].value, 1 + float('nan') / m.y)
+        assertExpressionsEqual(self, repn.linear[id(m.x)].value, 1 + float('nan'))
         self.assertEqual(repn.nonlinear, None)
 
         m.y.fix(None)
@@ -347,6 +348,8 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
             expr
         )
         self.assertEqual(repn.multiplier, 1)
+        # TODO: Is this expected to just wrap up into a single InvalidNumber?
+        print(repn.constant)
         self.assertIsInstance(repn.constant, InvalidNumber)
         assertExpressionsEqual(self, repn.constant.value, float('nan') * m.z + 3)
         self.assertEqual(repn.linear, {})

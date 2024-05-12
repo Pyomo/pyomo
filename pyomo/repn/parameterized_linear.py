@@ -160,22 +160,23 @@ class MultiLevelLinearBeforeChildDispatcher(LinearBeforeChildDispatcher):
 
     @staticmethod
     def _before_var(visitor, child):
-        if child not in visitor.wrt:
+        _id = id(child)
+        if _id not in visitor.var_map:
+            if child.fixed:
+                return False, (
+                    _CONSTANT,
+                    visitor.check_constant(child.value, child),
+                )
+            if child in visitor.wrt:
+                # psueudo-constant
+                # We aren't treating this Var as a Var for the purposes of this walker
+                return False, (_CONSTANT, child)
             # This is a normal situation
-            _id = id(child)
-            if _id not in visitor.var_map:
-                if child.fixed:
-                    return False, (
-                        _CONSTANT,
-                        visitor.check_constant(child.value, child),
-                    )
-                MultiLevelLinearBeforeChildDispatcher._record_var(visitor, child)
-            ans = visitor.Result()
-            ans.linear[_id] = 1
-            return False, (ExprType.LINEAR, ans)
-        else:
-            # We aren't treating this Var as a Var for the purposes of this walker
-            return False, (_CONSTANT, child)
+            # TODO: override record var to not record things in wrt
+            MultiLevelLinearBeforeChildDispatcher._record_var(visitor, child)
+        ans = visitor.Result()
+        ans.linear[_id] = 1
+        return False, (ExprType.LINEAR, ans)
 
 
 _before_child_dispatcher = MultiLevelLinearBeforeChildDispatcher()
@@ -259,7 +260,7 @@ class ParameterizedLinearRepnVisitor(LinearRepnVisitor):
                 for vid, coef in zeros:
                     del ans.linear[vid]
             elif not mult:
-                # the mulltiplier has cleared out the entire expression.
+                # the multiplier has cleared out the entire expression.
                 # Warn if this is suppressing a NaN (unusual, and
                 # non-standard, but we will wait to remove this behavior
                 # for the time being)
