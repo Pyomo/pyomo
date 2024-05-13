@@ -19,9 +19,12 @@ from pyomo.core import Var
 from pyomo.core.expr.logical_expr import _flattened
 from pyomo.core.expr.numeric_expr import (
     AbsExpression,
+    DivisionExpression,
     LinearExpression,
     MonomialTermExpression,
+    NegationExpression,
     mutable_expression,
+    PowExpression,
     ProductExpression,
     SumExpression,
     UnaryFunctionExpression,
@@ -41,7 +44,10 @@ class ParameterizedExprType(enum.IntEnum, metaclass=ExtendedEnumType):
     __base_enum__ = ExprType
     PSUEDO_CONSTANT = 50
 
+_PSEUDO_CONSTANT = ParameterizedExprType.PSUEDO_CONSTANT
 _CONSTANT = ParameterizedExprType.CONSTANT
+_LINEAR = ParameterizedExprType.LINEAR
+_GENERAL = ParameterizedExprType.GENERAL
 
 
 def _merge_dict(dest_dict, mult, src_dict):
@@ -177,7 +183,7 @@ class MultiLevelLinearBeforeChildDispatcher(LinearBeforeChildDispatcher):
             if child in visitor.wrt:
                 # psueudo-constant
                 # We aren't treating this Var as a Var for the purposes of this walker
-                return False, (_CONSTANT, child)
+                return False, (_PSEUDO_CONSTANT, child)
             # This is a normal situation
             # TODO: override record var to not record things in wrt
             MultiLevelLinearBeforeChildDispatcher._record_var(visitor, child)
@@ -189,14 +195,93 @@ class MultiLevelLinearBeforeChildDispatcher(LinearBeforeChildDispatcher):
 _before_child_dispatcher = MultiLevelLinearBeforeChildDispatcher()
 _exit_node_handlers = copy.deepcopy(linear._exit_node_handlers)
 
+#
+# NEGATION handler
+#
 
-def _handle_product_constant_constant(visitor, node, arg1, arg2):
-    # ESJ: Can I do this? Just let the potential nans go through?
-    return _CONSTANT, arg1[1] * arg2[1]
+def _handle_negation_pseudo_constant(visitor, node, arg):
+    return (_PSEUDO_CONSTANT, -1 * arg[1])
+
+
+_exit_node_handlers[NegationExpression].update(
+    {(_PSEUDO_CONSTANT,): _handle_negation_pseudo_constant,}
+)
+
+
+#
+# PRODUCT handler
+#
+
+
+def _handle_product_pseudo_constant_pseudo_constant(visitor, node, arg1, arg2):
+    return _PSEUDO_CONSTANT, arg1[1] * arg2[1]
+
+
+def _handle_product_pseudo_constant_constant(visitor, node, arg1, arg2):
+    return _PSEUDO_CONSTANT, arg1[1] * arg2[1]
 
 
 _exit_node_handlers[ProductExpression].update(
-    {(_CONSTANT, _CONSTANT): _handle_product_constant_constant}
+    {
+        (_PSEUDO_CONSTANT, _PSEUDO_CONSTANT): _handle_product_pseudo_constant_pseudo_constant,
+        (_PSEUDO_CONSTANT, _CONSTANT): _handle_product_pseudo_constant_constant,
+        (_CONSTANT, _PSEUDO_CONSTANT): _handle_product_pseudo_constant_constant,
+        (_PSEUDO_CONSTANT, _LINEAR): linear._handle_product_constant_ANY,
+        (_LINEAR, _PSEUDO_CONSTANT): linear._handle_product_ANY_constant,
+        (_PSEUDO_CONSTANT, _GENERAL): linear._handle_product_constant_ANY,
+        (_GENERAL, _PSEUDO_CONSTANT): linear._handle_product_ANY_constant,
+    }
+)
+_exit_node_handlers[MonomialTermExpression].update(_exit_node_handlers[ProductExpression])
+
+#
+# DIVISION handlers
+#
+
+def _handle_division_pseudo_constant_pseudo_constant(visitor, node, arg1, arg2):
+    return _PSEUDO_CONSTANT, arg1[1] / arg2[1]
+
+
+def _handle_division_pseudo_constant_constant(visitor, node, arg1, arg2):
+    return _PSEUDO_CONSTANT, arg[1] / arg2[1]
+
+
+def _handle_division_ANY_pseudo_constant(visitor, node, arg1, arg2):
+    arg1[1].multiplier = arg1[1].multiplier / arg2[1]
+    return arg1
+
+
+_exit_node_handlers[DivisionExpression].update(
+    {
+        (_PSEUDO_CONSTANT, _PSEUDO_CONSTANT): _handle_division_pseudo_constant_pseudo_constant,
+        (_PSEUDO_CONSTANT, _CONSTANT): _handle_division_pseudo_constant_constant,
+        (_CONSTANT, _PSEUDO_CONSTANT): _handle_division_pseudo_constant_constant,
+        (_LINEAR, _PSEUDO_CONSTANT): _handle_division_ANY_pseudo_constant,
+        (_GENERAL, _PSEUDO_CONSTANT): _handle_division_ANY_pseudo_constant,
+    }
+)
+
+#
+# EXPONENTIATION handlers
+#
+
+def _handle_pow_pseudo_constant_pseudo_constant(visitor, node, arg1, arg2):
+    return _PSEUDO_CONSTANT, node.create_node_with_local_data(
+        linear.to_expression(visitor, arg1), linear.to_expression(visitor, arg2))
+
+
+def _handle_pow_ANY_pseudo_constant(visitor, node, arg1, arg2):
+    # TODO
+    pass
+
+
+_exit_node_handlers[PowExpression].update(
+    {
+        (_PSEUDO_CONSTANT, _PSEUDO_CONSTANT): _handle_pow_pseudo_constant_pseudo_constant,
+        (_PSEUDO_CONSTANT, _CONSTANT): _handle_pow_pseudo_constant_pseudo_constant,
+        (_CONSTANT, _PSEUDO_CONSTANT): _handle_pow_pseudo_constant_pseudo_constant,
+        (_LINEAR, _PSEUDO_CONSTANT): _handle_pow_ANY_pseudo_constant,
+    }
 )
 
 
