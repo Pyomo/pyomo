@@ -412,7 +412,7 @@ Including External Packages
 +++++++++++++++++++++++++++
 
 The `pyomocontrib_simplemodel
-<http://pyomocontrib-simplemodel.readthedocs.io/en/latest/>`_ package
+<https://pyomo-simplemodel.readthedocs.io/en/latest/>`_ package
 is derived from Pyomo, and it defines the class SimpleModel that
 illustrates how Pyomo can be used in a simple, less object-oriented
 manner. Specifically, this class mimics the modeling style supported
