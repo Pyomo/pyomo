@@ -59,7 +59,7 @@ jobs:
         # How many times to retry a failed request (defaults to 1)
         retry_count: 3
         # Exclude Jenkins because it's behind a firewall
-        exclude_urls: https://pyomo-jenkins.sandia.gov
+        exclude_urls: https://pyomo-jenkins.sandia.gov/
 
   build:
     name: ${{ matrix.TARGET }}/${{ matrix.python }}${{ matrix.other }}
