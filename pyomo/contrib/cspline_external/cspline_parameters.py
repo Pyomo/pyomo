@@ -17,8 +17,10 @@ np, numpy_available = attempt_import("numpy")
 if numpy_available:
     searchsorted = np.searchsorted
 else:
+
     def searchsorted(x, y):
         raise NotImplementedError("cubic_parameters_model() currently relies on Numpy")
+
 
 def _f_cubic(x, alpha, s=None):
     """
@@ -101,10 +103,10 @@ def cubic_parameters_model(
     this creates a square linear model, but optionally it can leave off the endpoint
     second derivative constraints and add an objective function for fitting data
     instead.  The purpose of alternative least squares form is to allow the spline to
-    be constrained in other wats that don't require a perfect data match. The knots 
+    be constrained in other wats that don't require a perfect data match. The knots
     don't need to be the same as the x data to allow, for example, additional segments
     for extrapolation. This is not the most computationally efficient way to calculate
-    parameters, but since it is used to precalculate parameters, speed is not important.  
+    parameters, but since it is used to precalculate parameters, speed is not important.
 
     Args:
         x_data: sorted list of x data
@@ -150,14 +152,18 @@ def cubic_parameters_model(
     def yx_eqn(blk, s):
         if s == m.seg_idx.last():
             return pyo.Constraint.Skip
-        return _fx_cubic(m.x[s + 1], m.alpha, s) == _fx_cubic(m.x[s + 1], m.alpha, s + 1)
+        return _fx_cubic(m.x[s + 1], m.alpha, s) == _fx_cubic(
+            m.x[s + 1], m.alpha, s + 1
+        )
 
     # f"_s(x) = f"_s+1(x)
     @m.Constraint(m.seg_idx)
     def yxx_eqn(blk, s):
         if s == m.seg_idx.last():
             return pyo.Constraint.Skip
-        return _fxx_cubic(m.x[s + 1], m.alpha, s) == _fxx_cubic(m.x[s + 1], m.alpha, s + 1)
+        return _fxx_cubic(m.x[s + 1], m.alpha, s) == _fxx_cubic(
+            m.x[s + 1], m.alpha, s + 1
+        )
 
     # Identify segments used to predict y_data at each x_data.  We use search in
     # instead of a dict lookup, since we don't want to require the data to be at

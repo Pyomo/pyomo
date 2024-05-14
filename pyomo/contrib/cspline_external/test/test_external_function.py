@@ -9,14 +9,16 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 import os
+import platform
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 from pyomo.common.fileutils import find_library, this_file_dir
 
 _lib = find_library("cspline_external")
-is_pypy = platform.python_implementation().lower().startswith('pypy')
+is_pypy = platform.python_implementation().lower().startswith("pypy")
 
-@unittest.skipIf(is_pypy, 'Cannot evaluate external functions under pypy')
+
+@unittest.skipIf(is_pypy, "Cannot evaluate external functions under pypy")
 @unittest.skipIf(not _lib, "cspline library is not available.")
 class CsplineExternal1DTest(unittest.TestCase):
 

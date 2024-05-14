@@ -14,6 +14,4 @@ from pyomo.contrib.cspline_external.build import AMPLCsplineExternalBuilder
 
 
 def load():
-    ExtensionBuilderFactory.register("cspline_external")(
-        AMPLCsplineExternalBuilder
-    )
+    ExtensionBuilderFactory.register("cspline_external")(AMPLCsplineExternalBuilder)
