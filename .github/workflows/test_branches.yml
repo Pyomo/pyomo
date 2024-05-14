@@ -51,7 +51,7 @@ jobs:
       uses: urlstechie/urlchecker-action@0.0.34
       with:
         # A comma-separated list of file types to cover in the URL checks
-        file_types: .md,.rst
+        file_types: .md,.rst,.py
         # Choose whether to include file with no URLs in the prints.
         print_all: false
         # More verbose summary at the end of a run
