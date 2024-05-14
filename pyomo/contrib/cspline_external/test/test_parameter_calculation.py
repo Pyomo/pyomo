@@ -16,16 +16,17 @@ from pyomo.contrib.cspline_external.cspline_parameters import (
     cubic_parameters_model,
     get_parameters,
 )
+from pyomo.opt import check_available_solvers
 import pyomo.environ as pyo
 from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
 
 np, numpy_available = attempt_import("numpy")
 
-# REMOVE, temporary just to set solver path
-import idaes
 
-
+@unittest.skipUnless(
+    check_available_solvers("ipopt"), "The 'ipopt' solver is not available"
+)
 @unittest.skipIf(not numpy_available, "numpy is not available.")
 class CsplineExternalParamsTest(unittest.TestCase):
     def test_param_gen(self):
