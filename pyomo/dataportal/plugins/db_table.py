@@ -385,8 +385,10 @@ class ODBCConfig:
         will override that in the file.
         """
 
-        # ugh hardcoded strings. See following URL for info:
-        # http://publib.boulder.ibm.com/infocenter/idshelp/v10/index.jsp?topic=/com.ibm.odbc.doc/odbc58.htm
+        # These hardcoded strings were originally explained via a link
+        # to documentation that has since been moved and deleted.
+        # We have lost the historical knowledge as to why these strings
+        # are hardcoded as such.
         self.ODBC_DS_KEY = 'ODBC Data Sources'
         self.ODBC_INFO_KEY = 'ODBC'
 
