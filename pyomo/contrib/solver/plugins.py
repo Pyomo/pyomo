@@ -30,7 +30,5 @@ def load():
         doc='Direct (scipy-based) interface to Gurobi',
     )(GurobiDirect)
     SolverFactory.register(
-        name='highs',
-        legacy_name='highs',
-        doc='Persistent interface to HiGHS'
+        name='highs', legacy_name='highs', doc='Persistent interface to HiGHS'
     )(Highs)

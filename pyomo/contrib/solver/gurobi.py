@@ -238,7 +238,9 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
     def __init__(self, **kwds):
         treat_fixed_vars_as_params = kwds.pop('treat_fixed_vars_as_params', True)
         PersistentSolverBase.__init__(self, **kwds)
-        PersistentSolverUtils.__init__(self, treat_fixed_vars_as_params=treat_fixed_vars_as_params)
+        PersistentSolverUtils.__init__(
+            self, treat_fixed_vars_as_params=treat_fixed_vars_as_params
+        )
         Gurobi._num_instances += 1
         self._solver_model = None
         self._symbol_map = SymbolMap()

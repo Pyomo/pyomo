@@ -34,7 +34,12 @@ parameterized = parameterized.parameterized
 if not param_available:
     raise unittest.SkipTest('Parameterized is not available.')
 
-all_solvers = [('gurobi', Gurobi), ('gurobi_direct', GurobiDirect), ('ipopt', Ipopt), ('highs', Highs)]
+all_solvers = [
+    ('gurobi', Gurobi),
+    ('gurobi_direct', GurobiDirect),
+    ('ipopt', Ipopt),
+    ('highs', Highs),
+]
 mip_solvers = [('gurobi', Gurobi), ('gurobi_direct', GurobiDirect), ('highs', Highs)]
 nlp_solvers = [('ipopt', Ipopt)]
 qcp_solvers = [('gurobi', Gurobi), ('ipopt', Ipopt)]

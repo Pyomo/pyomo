@@ -126,7 +126,9 @@ class Highs(PersistentSolverUtils, PersistentSolverBase):
     def __init__(self, **kwds):
         treat_fixed_vars_as_params = kwds.pop('treat_fixed_vars_as_params', True)
         PersistentSolverBase.__init__(self, **kwds)
-        PersistentSolverUtils.__init__(self, treat_fixed_vars_as_params=treat_fixed_vars_as_params)
+        PersistentSolverUtils.__init__(
+            self, treat_fixed_vars_as_params=treat_fixed_vars_as_params
+        )
         self._solver_model = None
         self._pyomo_var_to_solver_var_map = dict()
         self._pyomo_con_to_solver_con_map = dict()
@@ -585,7 +587,9 @@ class Highs(PersistentSolverUtils, PersistentSolverBase):
         elif status == highspy.HighsModelStatus.kModelEmpty:
             results.termination_condition = TerminationCondition.unknown
         elif status == highspy.HighsModelStatus.kOptimal:
-            results.termination_condition = TerminationCondition.convergenceCriteriaSatisfied
+            results.termination_condition = (
+                TerminationCondition.convergenceCriteriaSatisfied
+            )
         elif status == highspy.HighsModelStatus.kInfeasible:
             results.termination_condition = TerminationCondition.provenInfeasible
         elif status == highspy.HighsModelStatus.kUnboundedOrInfeasible:
@@ -606,8 +610,8 @@ class Highs(PersistentSolverUtils, PersistentSolverBase):
             results.termination_condition = TerminationCondition.unknown
 
         if (
-            results.termination_condition 
-            != TerminationCondition.convergenceCriteriaSatisfied 
+            results.termination_condition
+            != TerminationCondition.convergenceCriteriaSatisfied
             and config.raise_exception_on_nonoptimal_result
         ):
             raise RuntimeError(
