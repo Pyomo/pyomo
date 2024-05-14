@@ -334,24 +334,6 @@ class AutoUpdateConfig(ConfigDict):
                 certain objectives are not being modified.""",
             ),
         )
-        self.treat_fixed_vars_as_params: bool = self.declare(
-            'treat_fixed_vars_as_params',
-            ConfigValue(
-                domain=bool,
-                default=True,
-                visibility=ADVANCED_OPTION,
-                description="""
-                This is an advanced option that should only be used in special circumstances. 
-                With the default setting of True, fixed variables will be treated like parameters. 
-                This means that z == x*y will be linear if x or y is fixed and the constraint 
-                can be written to an LP file. If the value of the fixed variable gets changed, we have 
-                to completely reprocess all constraints using that variable. If 
-                treat_fixed_vars_as_params is False, then constraints will be processed as if fixed 
-                variables are not fixed, and the solver will be told the variable is fixed. This means 
-                z == x*y could not be written to an LP file even if x and/or y is fixed. However, 
-                updating the values of fixed variables is much faster this way.""",
-            ),
-        )
 
 
 class PersistentSolverConfig(SolverConfig):

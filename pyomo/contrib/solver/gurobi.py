@@ -236,8 +236,9 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
     _num_instances = 0
 
     def __init__(self, **kwds):
-        PersistentSolverUtils.__init__(self)
+        treat_fixed_vars_as_params = kwds.pop('treat_fixed_vars_as_params', True)
         PersistentSolverBase.__init__(self, **kwds)
+        PersistentSolverUtils.__init__(self, treat_fixed_vars_as_params=treat_fixed_vars_as_params)
         Gurobi._num_instances += 1
         self._solver_model = None
         self._symbol_map = SymbolMap()
@@ -257,7 +258,6 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         self._constraints_added_since_update = OrderedSet()
         self._vars_added_since_update = ComponentSet()
         self._last_results_object: Optional[Results] = None
-        self._config: Optional[GurobiConfig] = None
 
     def available(self):
         if not gurobipy_available:  # this triggers the deferred import
@@ -323,7 +323,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         return self._symbol_map
 
     def _solve(self):
-        config = self._config
+        config = self._active_config
         timer = config.timer
         ostreams = [io.StringIO()] + config.tee
 
@@ -367,7 +367,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
 
     def solve(self, model, **kwds) -> Results:
         start_timestamp = datetime.datetime.now(datetime.timezone.utc)
-        self._config = config = self.config(value=kwds, preserve_implicit=True)
+        self._active_config = config = self.config(value=kwds, preserve_implicit=True)
         StaleFlagManager.mark_all_as_stale()
         # Note: solver availability check happens in set_instance(),
         # which will be called (either by the user before this call, or
@@ -391,6 +391,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         res.timing_info.start_timestamp = start_timestamp
         res.timing_info.wall_time = (end_timestamp - start_timestamp).total_seconds()
         res.timing_info.timer = timer
+        self._active_config = self.config
         return res
 
     def _process_domain_and_bounds(
@@ -474,10 +475,10 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
 
     def _reinit(self):
         saved_config = self.config
-        saved_tmp_config = self._config
-        self.__init__()
+        saved_tmp_config = self._active_config
+        self.__init__(treat_fixed_vars_as_params=self._treat_fixed_vars_as_params)
         self.config = saved_config
-        self._config = saved_tmp_config
+        self._active_config = saved_tmp_config
 
     def set_instance(self, model):
         if self._last_results_object is not None:
@@ -849,7 +850,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         self._needs_updated = True
 
     def _postsolve(self, timer: HierarchicalTimer):
-        config = self._config
+        config = self._active_config
 
         gprob = self._solver_model
         grb = gurobipy.GRB

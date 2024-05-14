@@ -182,6 +182,10 @@ class PersistentSolverBase(SolverBase):
     Example usage can be seen in the Gurobi interface.
     """
 
+    def __init__(self, **kwds) -> None:
+        super().__init__(**kwds)
+        self._active_config = self.config
+
     @document_kwargs_from_configdict(PersistentSolverConfig())
     @abc.abstractmethod
     def solve(self, model: BlockData, **kwargs) -> Results:

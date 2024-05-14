@@ -14,6 +14,7 @@ from .factory import SolverFactory
 from .ipopt import Ipopt
 from .gurobi import Gurobi
 from .gurobi_direct import GurobiDirect
+from .highs import Highs
 
 
 def load():
@@ -28,3 +29,8 @@ def load():
         legacy_name='gurobi_direct_v2',
         doc='Direct (scipy-based) interface to Gurobi',
     )(GurobiDirect)
+    SolverFactory.register(
+        name='highs',
+        legacy_name='highs',
+        doc='Persistent interface to HiGHS'
+    )(Highs)

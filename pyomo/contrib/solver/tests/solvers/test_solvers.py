@@ -22,6 +22,7 @@ from pyomo.contrib.solver.base import SolverBase
 from pyomo.contrib.solver.ipopt import Ipopt
 from pyomo.contrib.solver.gurobi import Gurobi
 from pyomo.contrib.solver.gurobi_direct import GurobiDirect
+from pyomo.contrib.solver.highs import Highs
 from pyomo.core.expr.numeric_expr import LinearExpression
 
 
@@ -33,8 +34,8 @@ parameterized = parameterized.parameterized
 if not param_available:
     raise unittest.SkipTest('Parameterized is not available.')
 
-all_solvers = [('gurobi', Gurobi), ('gurobi_direct', GurobiDirect), ('ipopt', Ipopt)]
-mip_solvers = [('gurobi', Gurobi), ('gurobi_direct', GurobiDirect)]
+all_solvers = [('gurobi', Gurobi), ('gurobi_direct', GurobiDirect), ('ipopt', Ipopt), ('highs', Highs)]
+mip_solvers = [('gurobi', Gurobi), ('gurobi_direct', GurobiDirect), ('highs', Highs)]
 nlp_solvers = [('ipopt', Ipopt)]
 qcp_solvers = [('gurobi', Gurobi), ('ipopt', Ipopt)]
 miqcqp_solvers = [('gurobi', Gurobi)]
@@ -655,9 +656,7 @@ class TestSolvers(unittest.TestCase):
         for treat_fixed_vars_as_params in [True, False]:
             opt: SolverBase = opt_class()
             if opt.is_persistent():
-                opt.config.auto_updates.treat_fixed_vars_as_params = (
-                    treat_fixed_vars_as_params
-                )
+                opt = opt_class(treat_fixed_vars_as_params=treat_fixed_vars_as_params)
             if not opt.available():
                 raise unittest.SkipTest(f'Solver {opt.name} not available.')
             if any(name.startswith(i) for i in nl_solvers_set):
@@ -702,7 +701,7 @@ class TestSolvers(unittest.TestCase):
     ):
         opt: SolverBase = opt_class()
         if opt.is_persistent():
-            opt.config.auto_updates.treat_fixed_vars_as_params = True
+            opt = opt_class(treat_fixed_vars_as_params=True)
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
         if any(name.startswith(i) for i in nl_solvers_set):
@@ -747,7 +746,7 @@ class TestSolvers(unittest.TestCase):
     ):
         opt: SolverBase = opt_class()
         if opt.is_persistent():
-            opt.config.auto_updates.treat_fixed_vars_as_params = True
+            opt = opt_class(treat_fixed_vars_as_params=True)
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
         if any(name.startswith(i) for i in nl_solvers_set):
@@ -771,7 +770,7 @@ class TestSolvers(unittest.TestCase):
     ):
         opt: SolverBase = opt_class()
         if opt.is_persistent():
-            opt.config.auto_updates.treat_fixed_vars_as_params = True
+            opt = opt_class(treat_fixed_vars_as_params=True)
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
         if any(name.startswith(i) for i in nl_solvers_set):
@@ -1325,9 +1324,10 @@ class TestSolvers(unittest.TestCase):
         res = opt.solve(m)
         self.assertAlmostEqual(res.incumbent_objective, 1)
 
-        opt: SolverBase = opt_class()
         if opt.is_persistent():
-            opt.config.auto_updates.treat_fixed_vars_as_params = False
+            opt: SolverBase = opt_class(treat_fixed_vars_as_params=False)
+        else:
+            opt = opt_class()
         m.x.fix(0)
         res = opt.solve(m)
         self.assertAlmostEqual(res.incumbent_objective, 0)
@@ -1483,6 +1483,8 @@ class TestSolvers(unittest.TestCase):
         """
         for fixed_var_option in [True, False]:
             opt: SolverBase = opt_class()
+            if opt.is_persistent():
+                opt = opt_class(treat_fixed_vars_as_params=fixed_var_option)
             if not opt.available():
                 raise unittest.SkipTest(f'Solver {opt.name} not available.')
             if any(name.startswith(i) for i in nl_solvers_set):
@@ -1490,8 +1492,6 @@ class TestSolvers(unittest.TestCase):
                     opt.config.writer_config.linear_presolve = True
                 else:
                     opt.config.writer_config.linear_presolve = False
-            if opt.is_persistent():
-                opt.config.auto_updates.treat_fixed_vars_as_params = fixed_var_option
 
             m = pe.ConcreteModel()
             m.x = pe.Var(bounds=(-10, 10))
