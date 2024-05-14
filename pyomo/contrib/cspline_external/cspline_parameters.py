@@ -16,7 +16,8 @@ np, numpy_available = attempt_import("numpy")
 plt, plt_available = attempt_import("matplotlib.pyplot")
 
 
-def f(x, alpha, s=None):
+
+def _f_cubic(x, alpha, s=None):
     """
     Cubic function:
         y = a1 + a2 * x + a3 * x^2 + a4 * x^3
@@ -39,7 +40,7 @@ def f(x, alpha, s=None):
     return alpha[s, 1] + alpha[s, 2] * x + alpha[s, 3] * x**2 + alpha[s, 4] * x**3
 
 
-def fx(x, alpha, s=None):
+def _fx_cubic(x, alpha, s=None):
     """
     Cubic function first derivative:
         dy/dx = a2 + 2 * a3 * x + 3 * a4 * x^2
@@ -62,7 +63,7 @@ def fx(x, alpha, s=None):
     return alpha[s, 2] + 2 * alpha[s, 3] * x + 3 * alpha[s, 4] * x**2
 
 
-def fxx(x, alpha, s=None):
+def _fxx_cubic(x, alpha, s=None):
     """
     Cubic function second derivative:
         d2y/dx2 = 2 * a3 + 6 * a4 * x
@@ -97,18 +98,19 @@ def cubic_parameters_model(
     this creates a square linear model, but optionally it can leave off the endpoint
     second derivative constraints and add an objective function for fitting data
     instead.  The purpose of alternative least squares form is to allow the spline to
-    be constrained in other that don't require a perfect data match.  The knots don't
-    need to be the same as the x data to allow, for example, additional segments for
-    extrapolation.
+    be constrained in other wats that don't require a perfect data match. The knots 
+    don't need to be the same as the x data to allow, for example, additional segments
+    for extrapolation. This is not the most computationally efficient way to calculate
+    parameters, but since it is used to precalculate parameters, speed is not important.  
 
     Args:
         x_data: list of x data
         y_data: list of y data
-        x_knots: optional list of knots
-        end_point_constraint: if true add constraint that second derivative = 0 at
-            endpoints
-        objective_form: if true write a least squares objective rather than constraints
-            to match data
+        x_knots: optional list of knots (default is to use x_data)
+        end_point_constraint: if True add constraint that second derivative = 0 at
+            endpoints (default=True)
+        objective_form: if True write a least squares objective rather than constraints
+            to match data (default=False)
         name: optional model name
 
     Returns:
@@ -118,11 +120,9 @@ def cubic_parameters_model(
     assert n_data == len(y_data)
     if x_knots is None:
         n_knots = n_data
-        n_seg = n_data - 1
         x_knots = x_data
     else:
         n_knots = len(x_knots)
-        n_seg = n_knots - 1
 
     m = pyo.ConcreteModel(name=name)
     # Sets of indexes for knots, segments, and data
@@ -140,21 +140,21 @@ def cubic_parameters_model(
     def y_eqn(blk, s):
         if s == m.seg_idx.last():
             return pyo.Constraint.Skip
-        return f(m.x[s + 1], m.alpha, s) == f(m.x[s + 1], m.alpha, s + 1)
+        return _f_cubic(m.x[s + 1], m.alpha, s) == _f_cubic(m.x[s + 1], m.alpha, s + 1)
 
     # f'_s(x) = f'_s+1(x)
     @m.Constraint(m.seg_idx)
     def yx_eqn(blk, s):
         if s == m.seg_idx.last():
             return pyo.Constraint.Skip
-        return fx(m.x[s + 1], m.alpha, s) == fx(m.x[s + 1], m.alpha, s + 1)
+        return _fx_cubic(m.x[s + 1], m.alpha, s) == _fx_cubic(m.x[s + 1], m.alpha, s + 1)
 
     # f"_s(x) = f"_s+1(x)
     @m.Constraint(m.seg_idx)
     def yxx_eqn(blk, s):
         if s == m.seg_idx.last():
             return pyo.Constraint.Skip
-        return fxx(m.x[s + 1], m.alpha, s) == fxx(m.x[s + 1], m.alpha, s + 1)
+        return _fxx_cubic(m.x[s + 1], m.alpha, s) == _fxx_cubic(m.x[s + 1], m.alpha, s + 1)
 
     # Identify segments used to predict y_data at each x_data.  We use search in
     # instead of a dict lookup, since we don't want to require the data to be at
@@ -170,7 +170,7 @@ def cubic_parameters_model(
         s = idx[d - 1] + 1
         if s >= m.seg_idx.last():
             s -= 1
-        return m.y_data[d] - f(m.x_data[d], m.alpha, s)
+        return m.y_data[d] - _f_cubic(m.x_data[d], m.alpha, s)
 
     if objective_form:
         # least squares objective
@@ -195,7 +195,7 @@ def add_endpoint_second_derivative_constraints(m):
             j = m.knt_idx.last()
         else:
             j = s
-        return fxx(m.x[j], m.alpha, s) == 0
+        return _fxx_cubic(m.x[j], m.alpha, s) == 0
 
 
 def get_parameters(m, file_name=None):
@@ -233,77 +233,3 @@ def _extract_params(m):
         alpha[s][3] = pyo.value(m.alpha[s, 3])
         alpha[s][4] = pyo.value(m.alpha[s, 4])
     return alpha
-
-
-def plot_f(m, file_name=None, **kwargs):
-    """Plot the cspline function.
-
-    Args:
-        m: Pyomo model with data and parameters
-        file_name: optional file to save plot to
-
-    Returns:
-        pyplot object
-    """
-    if not plt_available:
-        raise ModuleNotFoundError("Matplotlib is not available")
-    plt.close()
-    alpha = _extract_params(m)
-    for s in m.seg_idx:
-        xvec = np.linspace(pyo.value(m.x[s]), pyo.value(m.x[s + 1]), 20)
-        plt.plot(xvec, f(xvec, alpha[s]))
-    plt.title("f(x)")
-    x = []
-    y = []
-    for i in m.dat_idx:
-        x.append(pyo.value(m.x_data[i]))
-        y.append(pyo.value(m.y_data[i]))
-    plt.scatter(x, y)
-    if file_name is not None:
-        plt.savefig(file_name, **kwargs)
-    return plt
-
-
-def plot_fx(m, file_name=None, **kwargs):
-    """Plot the cspline derivative function.
-
-    Args:
-        m: Pyomo model with data and parameters
-        file_name: optional file to save plot to
-
-    Returns:
-        pyplot object
-    """
-    if not plt_available:
-        raise ModuleNotFoundError("Matplotlib is not available")
-    plt.close()
-    alpha = _extract_params(m)
-    for s in m.seg_idx:
-        xvec = np.linspace(pyo.value(m.x[s]), pyo.value(m.x[s + 1]), 20)
-        plt.plot(xvec, fx(xvec, alpha[s]))
-    plt.title("f'(x)")
-    if file_name is not None:
-        plt.savefig(file_name, **kwargs)
-    return plt
-
-
-def plot_fxx(m, file_name=None, **kwargs):
-    """Plot the cspline second derivative function.
-
-    Args:
-        m: Pyomo model with data and parameters
-        file_name: optional file to save plot to
-
-    Returns:
-        pyplot object
-    """
-    if not plt_available:
-        raise ModuleNotFoundError("Matplotlib is not available")
-    plt.close()
-    alpha = _extract_params(m)
-    for s in m.seg_idx:
-        xvec = np.linspace(pyo.value(m.x[s]), pyo.value(m.x[s + 1]), 20)
-        plt.plot(xvec, fxx(xvec, alpha[s]))
-    if file_name is not None:
-        plt.savefig(file_name, **kwargs)
-    return plt
