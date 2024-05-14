@@ -306,6 +306,7 @@ setup_kwargs = dict(
         "pyomo.contrib.mcpp": ["*.cpp"],
         "pyomo.contrib.pynumero": ['src/*', 'src/tests/*'],
         "pyomo.contrib.viewer": ["*.ui"],
+        "pyomo.contrib.simplification.ginac": ["src/*.cpp", "src/*.hpp"],
     },
     ext_modules=ext_modules,
     entry_points="""

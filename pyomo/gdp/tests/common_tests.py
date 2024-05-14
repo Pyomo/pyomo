@@ -30,7 +30,7 @@ from pyomo.environ import (
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.core.base import constraint, ComponentUID
-from pyomo.core.base.block import _BlockData
+from pyomo.core.base.block import BlockData
 from pyomo.repn import generate_standard_repn
 import pyomo.core.expr as EXPR
 import pyomo.gdp.tests.models as models
@@ -952,9 +952,7 @@ def check_disjunction_data_target(self, transformation):
     transBlock = m.component("_pyomo_gdp_%s_reformulation" % transformation)
     self.assertIsInstance(transBlock, Block)
     self.assertIsInstance(transBlock.component("disjunction_xor"), Constraint)
-    self.assertIsInstance(
-        transBlock.disjunction_xor[2], constraint._GeneralConstraintData
-    )
+    self.assertIsInstance(transBlock.disjunction_xor[2], constraint.ConstraintData)
     self.assertIsInstance(transBlock.component("relaxedDisjuncts"), Block)
     self.assertEqual(len(transBlock.relaxedDisjuncts), 3)
 
@@ -963,7 +961,7 @@ def check_disjunction_data_target(self, transformation):
         m, targets=[m.disjunction[1]]
     )
     self.assertIsInstance(
-        m.disjunction[1].algebraic_constraint, constraint._GeneralConstraintData
+        m.disjunction[1].algebraic_constraint, constraint.ConstraintData
     )
     transBlock = m.component("_pyomo_gdp_%s_reformulation_4" % transformation)
     self.assertIsInstance(transBlock, Block)
@@ -1704,10 +1702,10 @@ def check_all_components_transformed(self, m):
     # makeNestedDisjunctions_NestedDisjuncts model.
     self.assertIsInstance(m.disj.algebraic_constraint, Constraint)
     self.assertIsInstance(m.d1.disj2.algebraic_constraint, Constraint)
-    self.assertIsInstance(m.d1.transformation_block, _BlockData)
-    self.assertIsInstance(m.d2.transformation_block, _BlockData)
-    self.assertIsInstance(m.d1.d3.transformation_block, _BlockData)
-    self.assertIsInstance(m.d1.d4.transformation_block, _BlockData)
+    self.assertIsInstance(m.d1.transformation_block, BlockData)
+    self.assertIsInstance(m.d2.transformation_block, BlockData)
+    self.assertIsInstance(m.d1.d3.transformation_block, BlockData)
+    self.assertIsInstance(m.d1.d4.transformation_block, BlockData)
 
 
 def check_transformation_blocks_nestedDisjunctions(self, m, transformation):

@@ -10,3 +10,4 @@
 #  ___________________________________________________________________________
 
 from pyomo.contrib.iis.iis import write_iis
+from pyomo.contrib.iis.mis import compute_infeasibility_explanation
