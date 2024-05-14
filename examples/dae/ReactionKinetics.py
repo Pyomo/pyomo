@@ -307,7 +307,7 @@ def regression_model():
     # https://doiserbia.nb.rs/img/doi/0367-598X/2014/0367-598X1300037A.pdf
     # Almagrbi, A. M., Hatami, T., Glišić, S., & Orlović, A. (2014).
     # Determination of kinetic parameters for complex transesterification
-    # reaction by standard optimisation methods. Hemijska industrija, 68(2), 149-159.
+    # reaction by standard optimisation methods.
     #
     model = ConcreteModel()
 
