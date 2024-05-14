@@ -12,7 +12,7 @@
 cmake_minimum_required(VERSION 3.0)
 # CMake 3.0 needed by AMPL/asl build
 
-PROJECT( ampl_function_demo )
+PROJECT( cspline_external )
 
 INCLUDE(
   "${CMAKE_CURRENT_SOURCE_DIR}/../../cspline_external/src/FindASL.cmake")

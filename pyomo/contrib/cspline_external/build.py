@@ -13,7 +13,7 @@ import sys
 from pyomo.common.cmake_builder import build_cmake_project
 
 
-def build_cspline_1d_external(user_args=[], parallel=None):
+def build_cspline_external(user_args=[], parallel=None):
     return build_cmake_project(
         targets=["src"],
         package_name="cspline_1d_external",
@@ -23,10 +23,10 @@ def build_cspline_1d_external(user_args=[], parallel=None):
     )
 
 
-class AMPLCspline1DExternalBuilder(object):
+class AMPLCsplineExternalBuilder(object):
     def __call__(self, parallel):
-        return build_cspline_1d_external(parallel=parallel)
+        return build_cspline_external(parallel=parallel)
 
 
 if __name__ == "__main__":
-    build_cspline_1d_external(sys.argv[1:])
+    build_cspline_external(sys.argv[1:])

@@ -10,10 +10,10 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.extensions import ExtensionBuilderFactory
-from pyomo.contrib.cspline_1d_external.build import AMPLCspline1DExternalBuilder
+from pyomo.contrib.cspline_external.build import AMPLCsplineExternalBuilder
 
 
 def load():
-    ExtensionBuilderFactory.register("cspline_1d_external")(
-        AMPLCspline1DExternalBuilder
+    ExtensionBuilderFactory.register("cspline_external")(
+        AMPLCsplineExternalBuilder
     )
