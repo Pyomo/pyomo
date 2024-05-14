@@ -13,9 +13,12 @@ from pyomo.common.dependencies import attempt_import
 import pyomo.environ as pyo
 
 np, numpy_available = attempt_import("numpy")
-plt, plt_available = attempt_import("matplotlib.pyplot")
 
-
+if numpy_available:
+    searchsorted = np.searchsorted
+else:
+    def searchsorted(x, y):
+        raise NotImplementedError("cubic_parameters_model() currently relies on Numpy")
 
 def _f_cubic(x, alpha, s=None):
     """
@@ -104,9 +107,9 @@ def cubic_parameters_model(
     parameters, but since it is used to precalculate parameters, speed is not important.  
 
     Args:
-        x_data: list of x data
+        x_data: sorted list of x data
         y_data: list of y data
-        x_knots: optional list of knots (default is to use x_data)
+        x_knots: optional sorted list of knots (default is to use x_data)
         end_point_constraint: if True add constraint that second derivative = 0 at
             endpoints (default=True)
         objective_form: if True write a least squares objective rather than constraints
@@ -159,7 +162,7 @@ def cubic_parameters_model(
     # Identify segments used to predict y_data at each x_data.  We use search in
     # instead of a dict lookup, since we don't want to require the data to be at
     # the knots, even though that is almost always the case.
-    idx = np.searchsorted(x_knots, x_data)
+    idx = searchsorted(x_knots, x_data)
 
     if end_point_constraint:
         add_endpoint_second_derivative_constraints(m)
