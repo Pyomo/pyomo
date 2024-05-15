@@ -511,7 +511,6 @@ would be line-wrapped
             "\n"
             "    quote block\n"
         )
-        self.maxDiff = None
         self.assertEqual(self.stream.getvalue(), ans)
 
 

@@ -897,18 +897,10 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         hull = TransformationFactory('gdp.hull')
         hull.apply_to(m)
         # can't ask for simpledisj1.c[1]: it wasn't transformed
-        log = StringIO()
-        with LoggingIntercept(log, 'pyomo.gdp', logging.ERROR):
-            self.assertRaisesRegex(
-                KeyError,
-                r".*b.simpledisj1.c\[1\]",
-                hull.get_transformed_constraints,
-                m.b.simpledisj1.c[1],
-            )
-        self.assertRegex(
-            log.getvalue(),
-            r".*Constraint 'b.simpledisj1.c\[1\]' has not been transformed.",
-        )
+        with self.assertRaisesRegex(
+            GDP_Error, r"Constraint 'b.simpledisj1.c\[1\]' has not been transformed."
+        ):
+            hull.get_transformed_constraints(m.b.simpledisj1.c[1])
 
         # this fixes a[2] to 0, so we should get the disggregated var
         transformed = hull.get_transformed_constraints(m.b.simpledisj1.c[2])
@@ -1260,12 +1252,10 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
 
         orig = model.component("_pyomo_gdp_hull_reformulation")
         self.assertIsInstance(
-            model.disjunctionList[1].algebraic_constraint,
-            constraint._GeneralConstraintData,
+            model.disjunctionList[1].algebraic_constraint, constraint.ConstraintData
         )
         self.assertIsInstance(
-            model.disjunctionList[0].algebraic_constraint,
-            constraint._GeneralConstraintData,
+            model.disjunctionList[0].algebraic_constraint, constraint.ConstraintData
         )
         self.assertFalse(model.disjunctionList[1].active)
         self.assertFalse(model.disjunctionList[0].active)
@@ -2314,8 +2304,7 @@ class TestErrors(unittest.TestCase):
         with LoggingIntercept(log, 'pyomo.gdp.hull', logging.ERROR):
             self.assertRaisesRegex(
                 KeyError,
-                r".*_pyomo_gdp_hull_reformulation.relaxedDisjuncts\[1\]."
-                r"disaggregatedVars.w",
+                r".*disjunction",
                 hull.get_disaggregation_constraint,
                 m.d[1].transformation_block.disaggregatedVars.w,
                 m.disjunction,

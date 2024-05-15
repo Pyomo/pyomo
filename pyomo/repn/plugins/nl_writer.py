@@ -69,15 +69,11 @@ from pyomo.core.base import (
     minimize,
 )
 from pyomo.core.base.component import ActiveComponent
-from pyomo.core.base.constraint import _ConstraintData
-from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
-from pyomo.core.base.objective import (
-    ScalarObjective,
-    _GeneralObjectiveData,
-    _ObjectiveData,
-)
+from pyomo.core.base.constraint import ConstraintData
+from pyomo.core.base.expression import ScalarExpression, ExpressionData
+from pyomo.core.base.objective import ScalarObjective, ObjectiveData
 from pyomo.core.base.suffix import SuffixFinder
-from pyomo.core.base.var import _VarData
+from pyomo.core.base.var import VarData
 import pyomo.core.kernel as kernel
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.opt import WriterFactory
@@ -113,6 +109,7 @@ logger = logging.getLogger(__name__)
 TOL = 1e-8
 inf = float('inf')
 minus_inf = -inf
+allowable_binary_var_bounds = {(0, 0), (0, 1), (1, 1)}
 
 _CONSTANT = ExprType.CONSTANT
 _MONOMIAL = ExprType.MONOMIAL
@@ -129,17 +126,17 @@ class NLWriterInfo(object):
 
     Attributes
     ----------
-    variables: List[_VarData]
+    variables: List[VarData]
 
         The list of (unfixed) Pyomo model variables in the order written
         to the NL file
 
-    constraints: List[_ConstraintData]
+    constraints: List[ConstraintData]
 
         The list of (active) Pyomo model constraints in the order written
         to the NL file
 
-    objectives: List[_ObjectiveData]
+    objectives: List[ObjectiveData]
 
         The list of (active) Pyomo model objectives in the order written
         to the NL file
@@ -162,10 +159,10 @@ class NLWriterInfo(object):
         file in the same order as the :py:attr:`variables` and generated
         .col file.
 
-    eliminated_vars: List[Tuple[_VarData, NumericExpression]]
+    eliminated_vars: List[Tuple[VarData, NumericExpression]]
 
         The list of variables in the model that were eliminated by the
-        presolve.  Each entry is a 2-tuple of (:py:class:`_VarData`,
+        presolve.  Each entry is a 2-tuple of (:py:class:`VarData`,
         :py:class`NumericExpression`|`float`).  The list is in the
         necessary order for correct evaluation (i.e., all variables
         appearing in the expression must either have been sent to the
@@ -441,6 +438,7 @@ class _SuffixData(object):
         self.values[obj] = val
 
     def compile(self, column_order, row_order, obj_order, model_id):
+        var_con_obj = {Var, Constraint, Objective}
         missing_component_data = ComponentSet()
         unknown_data = ComponentSet()
         queue = [self.values.items()]
@@ -466,18 +464,20 @@ class _SuffixData(object):
                     self.obj[obj_order[_id]] = val
                 elif _id == model_id:
                     self.prob[0] = val
-                elif isinstance(obj, (_VarData, _ConstraintData, _ObjectiveData)):
-                    missing_component_data.add(obj)
-                elif isinstance(obj, (Var, Constraint, Objective)):
-                    # Expand this indexed component to store the
-                    # individual ComponentDatas, but ONLY if the
-                    # component data is not in the original dictionary
-                    # of values that we extracted from the Suffixes
-                    queue.append(
-                        product(
-                            filterfalse(self.values.__contains__, obj.values()), (val,)
+                elif getattr(obj, 'ctype', None) in var_con_obj:
+                    if obj.is_indexed():
+                        # Expand this indexed component to store the
+                        # individual ComponentDatas, but ONLY if the
+                        # component data is not in the original dictionary
+                        # of values that we extracted from the Suffixes
+                        queue.append(
+                            product(
+                                filterfalse(self.values.__contains__, obj.values()),
+                                (val,),
+                            )
                         )
-                    )
+                    else:
+                        missing_component_data.add(obj)
                 else:
                     unknown_data.add(obj)
         if missing_component_data:
@@ -882,7 +882,12 @@ class _NLWriter_impl(object):
             elif v.is_binary():
                 binary_vars.add(_id)
             elif v.is_integer():
-                integer_vars.add(_id)
+                # Note: integer variables whose bounds are in {0, 1}
+                # should be classified as binary
+                if var_bounds[_id] in allowable_binary_var_bounds:
+                    binary_vars.add(_id)
+                else:
+                    integer_vars.add(_id)
             else:
                 raise ValueError(
                     f"Variable '{v.name}' has a domain that is not Real, "
@@ -1081,9 +1086,37 @@ class _NLWriter_impl(object):
 
         # Update any eliminated variables to point to the (potentially
         # scaled) substituted variables
-        for _id, expr_info in eliminated_vars.items():
+        for _id, expr_info in list(eliminated_vars.items()):
             nl, args, _ = expr_info.compile_repn(visitor)
-            _vmap[_id] = nl.rstrip() % tuple(_vmap[_id] for _id in args)
+            for _i in args:
+                # It is possible that the eliminated variable could
+                # reference another variable that is no longer part of
+                # the model and therefore does not have a _vmap entry.
+                # This can happen when there is an underdetermined
+                # independent linear subsystem and the presolve removed
+                # all the constraints from the subsystem.  Because the
+                # free variables in the subsystem are not referenced
+                # anywhere else in the model, they are not part of the
+                # `variables` list.  Implicitly "fix" it to an arbitrary
+                # valid value from the presolved domain (see #3192).
+                if _i not in _vmap:
+                    lb, ub = var_bounds[_i]
+                    if lb is None:
+                        lb = -inf
+                    if ub is None:
+                        ub = inf
+                    if lb <= 0 <= ub:
+                        val = 0
+                    else:
+                        val = lb if abs(lb) < abs(ub) else ub
+                    eliminated_vars[_i] = AMPLRepn(val, {}, None)
+                    _vmap[_i] = expr_info.compile_repn(visitor)[0]
+                    logger.warning(
+                        "presolve identified an underdetermined independent "
+                        "linear subsystem that was removed from the model.  "
+                        f"Setting '{var_map[_i]}' == {val}"
+                    )
+            _vmap[_id] = nl.rstrip() % tuple(_vmap[_i] for _i in args)
 
         r_lines = [None] * n_cons
         for idx, (con, expr_info, lb, ub) in enumerate(constraints):
@@ -1249,8 +1282,8 @@ class _NLWriter_impl(object):
                 len(linear_binary_vars),
                 len(linear_integer_vars),
                 len(both_vars_nonlinear.intersection(discrete_vars)),
-                len(con_vars_nonlinear.intersection(discrete_vars)),
-                len(obj_vars_nonlinear.intersection(discrete_vars)),
+                len(con_only_nonlinear_vars.intersection(discrete_vars)),
+                len(obj_only_nonlinear_vars.intersection(discrete_vars)),
             )
         )
         #
@@ -1760,7 +1793,7 @@ class _NLWriter_impl(object):
                 id2_isdiscrete = var_map[id2].domain.isdiscrete()
                 if var_map[_id].domain.isdiscrete() ^ id2_isdiscrete:
                     # if only one variable is discrete, then we need to
-                    # substiitute out the other
+                    # substitute out the other
                     if id2_isdiscrete:
                         _id, id2 = id2, _id
                         coef, coef2 = coef2, coef
@@ -1820,10 +1853,15 @@ class _NLWriter_impl(object):
                 # appropriately (that expr_info is persisting in the
                 # eliminated_vars dict - and we will use that to
                 # update other linear expressions later.)
+                old_nnz = len(expr_info.linear)
                 c = expr_info.linear.pop(_id, 0)
+                nnz = old_nnz - 1
                 expr_info.const += c * b
                 if x in expr_info.linear:
                     expr_info.linear[x] += c * a
+                    if expr_info.linear[x] == 0:
+                        nnz -= 1
+                        coef = expr_info.linear.pop(x)
                 elif a:
                     expr_info.linear[x] = c * a
                     # replacing _id with x... NNZ is not changing,
@@ -1831,10 +1869,17 @@ class _NLWriter_impl(object):
                     # this constraint
                     comp_by_linear_var[x].append((con_id, expr_info))
                     continue
-                # NNZ has been reduced by 1
-                nnz = len(expr_info.linear)
-                _old = lcon_by_linear_nnz[nnz + 1]
+                _old = lcon_by_linear_nnz[old_nnz]
                 if con_id in _old:
+                    if not nnz:
+                        if abs(expr_info.const) > TOL:
+                            # constraint is trivially infeasible
+                            raise InfeasibleConstraintException(
+                                "model contains a trivially infeasible constraint "
+                                f"{expr_info.const} == {coef}*{var_map[x]}"
+                            )
+                        # constraint is trivially feasible
+                        eliminated_cons.add(con_id)
                     lcon_by_linear_nnz[nnz][con_id] = _old.pop(con_id)
             # If variables were replaced by the variable that
             # we are currently eliminating, then we need to update
@@ -2768,6 +2813,20 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
                     linear[_id] = arg1
             elif arg.__class__ in native_types:
                 const += arg
+            elif arg.is_variable_type():
+                _id = id(arg)
+                if _id not in var_map:
+                    if arg.fixed:
+                        if _id not in visitor.fixed_vars:
+                            visitor.cache_fixed_var(_id, arg)
+                        const += visitor.fixed_vars[_id]
+                        continue
+                    _before_child_handlers._record_var(visitor, arg)
+                    linear[_id] = 1
+                elif _id in linear:
+                    linear[_id] += 1
+                else:
+                    linear[_id] = 1
             else:
                 try:
                     const += visitor.check_constant(visitor.evaluate(arg), arg)

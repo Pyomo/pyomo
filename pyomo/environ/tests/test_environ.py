@@ -140,6 +140,7 @@ class TestPyomoEnviron(unittest.TestCase):
             'cPickle',
             'csv',
             'ctypes',  # mandatory import in core/base/external.py; TODO: fix this
+            'datetime',  # imported by contrib.solver
             'decimal',
             'gc',  # Imported on MacOS, Windows; Linux in 3.10
             'glob',

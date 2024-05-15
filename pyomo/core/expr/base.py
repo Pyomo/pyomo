@@ -360,7 +360,7 @@ class ExpressionBase(PyomoObject):
         """
         return visitor.sizeof_expression(self)
 
-    def _apply_operation(self, result):  # pragma: no cover
+    def _apply_operation(self, result):
         """
         Compute the values of this node given the values of its children.
 

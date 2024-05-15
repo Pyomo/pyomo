@@ -5,16 +5,16 @@ Test objects for construction of PyROS ConfigDict.
 import logging
 import unittest
 
-from pyomo.core.base import ConcreteModel, Var, _VarData
+from pyomo.core.base import ConcreteModel, Var, VarData
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.errors import ApplicationError
-from pyomo.core.base.param import Param, _ParamData
+from pyomo.core.base.param import Param, ParamData
 from pyomo.contrib.pyros.config import (
     InputDataStandardizer,
     mutable_param_validator,
-    LoggerType,
+    logger_domain,
     SolverNotResolvable,
-    PositiveIntOrMinusOne,
+    positive_int_or_minus_one,
     pyros_config,
     SolverIterable,
     SolverResolvable,
@@ -38,7 +38,7 @@ class TestInputDataStandardizer(unittest.TestCase):
         mdl = ConcreteModel()
         mdl.v = Var([0, 1])
 
-        standardizer_func = InputDataStandardizer(Var, _VarData)
+        standardizer_func = InputDataStandardizer(Var, VarData)
 
         standardizer_input = mdl.v[0]
         standardizer_output = standardizer_func(standardizer_input)
@@ -74,7 +74,7 @@ class TestInputDataStandardizer(unittest.TestCase):
         mdl = ConcreteModel()
         mdl.v = Var([0, 1])
 
-        standardizer_func = InputDataStandardizer(Var, _VarData)
+        standardizer_func = InputDataStandardizer(Var, VarData)
 
         standardizer_input = mdl.v
         standardizer_output = standardizer_func(standardizer_input)
@@ -113,7 +113,7 @@ class TestInputDataStandardizer(unittest.TestCase):
         mdl.v = Var([0, 1])
         mdl.x = Var(["a", "b"])
 
-        standardizer_func = InputDataStandardizer(Var, _VarData)
+        standardizer_func = InputDataStandardizer(Var, VarData)
 
         standardizer_input = [mdl.v[0], mdl.x]
         standardizer_output = standardizer_func(standardizer_input)
@@ -154,7 +154,7 @@ class TestInputDataStandardizer(unittest.TestCase):
         mdl.v = Var([0, 1])
         mdl.x = Var(["a", "b"])
 
-        standardizer_func = InputDataStandardizer(Var, _VarData, allow_repeats=False)
+        standardizer_func = InputDataStandardizer(Var, VarData, allow_repeats=False)
 
         exc_str = r"Standardized.*list.*contains duplicate entries\."
         with self.assertRaisesRegex(ValueError, exc_str):
@@ -165,7 +165,7 @@ class TestInputDataStandardizer(unittest.TestCase):
         Test standardizer raises exception as expected
         when input is of invalid type.
         """
-        standardizer_func = InputDataStandardizer(Var, _VarData)
+        standardizer_func = InputDataStandardizer(Var, VarData)
 
         exc_str = r"Input object .*is not of valid component type.*"
         with self.assertRaisesRegex(TypeError, exc_str):
@@ -178,7 +178,7 @@ class TestInputDataStandardizer(unittest.TestCase):
         """
         mdl = ConcreteModel()
         mdl.v = Var([0, 1])
-        standardizer_func = InputDataStandardizer(Var, _VarData)
+        standardizer_func = InputDataStandardizer(Var, VarData)
 
         exc_str = r"Input object .*entry of iterable.*is not of valid component type.*"
         with self.assertRaisesRegex(TypeError, exc_str):
@@ -189,7 +189,7 @@ class TestInputDataStandardizer(unittest.TestCase):
         Test standardizer raises exception as expected
         when input is of invalid type str.
         """
-        standardizer_func = InputDataStandardizer(Var, _VarData)
+        standardizer_func = InputDataStandardizer(Var, VarData)
 
         exc_str = r"Input object .*is not of valid component type.*"
         with self.assertRaisesRegex(TypeError, exc_str):
@@ -201,7 +201,7 @@ class TestInputDataStandardizer(unittest.TestCase):
         uninitialized entries passed.
         """
         standardizer_func = InputDataStandardizer(
-            ctype=Param, cdatatype=_ParamData, ctype_validator=mutable_param_validator
+            ctype=Param, cdatatype=ParamData, ctype_validator=mutable_param_validator
         )
 
         mdl = ConcreteModel()
@@ -217,7 +217,7 @@ class TestInputDataStandardizer(unittest.TestCase):
         Param object(s) passed.
         """
         standardizer_func = InputDataStandardizer(
-            ctype=Param, cdatatype=_ParamData, ctype_validator=mutable_param_validator
+            ctype=Param, cdatatype=ParamData, ctype_validator=mutable_param_validator
         )
 
         mdl = ConcreteModel()
@@ -237,7 +237,7 @@ class TestInputDataStandardizer(unittest.TestCase):
         mdl.p2 = Param(["a", "b"], initialize=1, mutable=True)
 
         standardizer_func = InputDataStandardizer(
-            ctype=Param, cdatatype=_ParamData, ctype_validator=mutable_param_validator
+            ctype=Param, cdatatype=ParamData, ctype_validator=mutable_param_validator
         )
 
         standardizer_input = [mdl.p1[0], mdl.p2]
@@ -557,16 +557,29 @@ class TestPositiveIntOrMinusOne(unittest.TestCase):
         """
         Test positive int or -1 validator works as expected.
         """
-        standardizer_func = PositiveIntOrMinusOne()
-        self.assertIs(
-            standardizer_func(1.0),
-            1,
-            msg=(f"{PositiveIntOrMinusOne.__name__} does not standardize as expected."),
-        )
+        standardizer_func = positive_int_or_minus_one
+        ans = standardizer_func(1.0)
         self.assertEqual(
-            standardizer_func(-1.00),
+            ans,
+            1,
+            msg=f"{positive_int_or_minus_one.__name__} output value not as expected.",
+        )
+        self.assertIs(
+            type(ans),
+            int,
+            msg=f"{positive_int_or_minus_one.__name__} output type not as expected.",
+        )
+
+        ans = standardizer_func(-1.0)
+        self.assertEqual(
+            ans,
             -1,
-            msg=(f"{PositiveIntOrMinusOne.__name__} does not standardize as expected."),
+            msg=f"{positive_int_or_minus_one.__name__} output value not as expected.",
+        )
+        self.assertIs(
+            type(ans),
+            int,
+            msg=f"{positive_int_or_minus_one.__name__} output type not as expected.",
         )
 
         exc_str = r"Expected positive int or -1, but received value.*"
@@ -576,26 +589,26 @@ class TestPositiveIntOrMinusOne(unittest.TestCase):
             standardizer_func(0)
 
 
-class TestLoggerType(unittest.TestCase):
+class TestLoggerDomain(unittest.TestCase):
     """
-    Test logger type validator.
+    Test logger type domain validator.
     """
 
     def test_logger_type(self):
         """
         Test logger type validator.
         """
-        standardizer_func = LoggerType()
+        standardizer_func = logger_domain
         mylogger = logging.getLogger("example")
         self.assertIs(
             standardizer_func(mylogger),
             mylogger,
-            msg=f"{LoggerType.__name__} output not as expected",
+            msg=f"{standardizer_func.__name__} output not as expected",
         )
         self.assertIs(
             standardizer_func(mylogger.name),
             mylogger,
-            msg=f"{LoggerType.__name__} output not as expected",
+            msg=f"{standardizer_func.__name__} output not as expected",
         )
 
         exc_str = r"A logger name must be a string"
