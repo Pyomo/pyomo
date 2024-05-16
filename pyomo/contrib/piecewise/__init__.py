@@ -39,3 +39,4 @@ from pyomo.contrib.piecewise.transform.nested_inner_repn import (
 from pyomo.contrib.piecewise.transform.disaggregated_logarithmic import (
     DisaggregatedLogarithmicMIPTransformation,
 )
+from pyomo.contrib.piecewise.triangulations import Triangulation

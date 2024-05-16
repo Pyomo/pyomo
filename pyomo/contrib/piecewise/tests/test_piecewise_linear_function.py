@@ -16,7 +16,7 @@ import pickle
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.log import LoggingIntercept
 import pyomo.common.unittest as unittest
-from pyomo.contrib.piecewise import PiecewiseLinearFunction
+from pyomo.contrib.piecewise import PiecewiseLinearFunction, Triangulation
 from pyomo.core.expr.compare import (
     assertExpressionsEqual,
     assertExpressionsStructurallyEqual,
@@ -117,6 +117,13 @@ class TestPiecewiseLinearFunction2D(unittest.TestCase):
             tabular_data={1: 0, 3: log(3), 6: log(6), 10: log(10)}
         )
         self.check_ln_x_approx(m.pw, m.x)
+
+    def test_pw_linear_approx_of_ln_x_j1(self):
+        m = self.make_ln_x_model()
+        m.pw = PiecewiseLinearFunction(
+            points=[1, 3, 6, 10], triangulation=Triangulation.J1, function=m.f)
+        self.check_ln_x_approx(m.pw, m.x)
+        self.assertEqual(m.pw.triangulation, Triangulation.J1)
 
     def test_use_pw_function_in_constraint(self):
         m = self.make_ln_x_model()
@@ -301,6 +308,14 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
             points=[(0, 1), (0, 4), (0, 7), (3, 1), (3, 4), (3, 7)], function=m.g
         )
         self.check_pw_linear_approximation(m)
+
+    def test_pw_linear_approx_of_paraboloid_j1(self):
+        m = self.make_model()
+        m.pw = PiecewiseLinearFunction(
+            points=[(0, 1), (0, 4), (0, 7), (3, 1), (3, 4), (3, 7)], function=m.g,
+            triangulation=Triangulation.J1
+        )
+        self.check_pw_linear_approximation(m)        
 
     @unittest.skipUnless(scipy_available, "scipy is not available")
     def test_pw_linear_approx_tabular_data(self):
