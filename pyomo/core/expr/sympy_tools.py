@@ -9,7 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 import operator
-import sys
 from math import prod as _prod
 
 import pyomo.core.expr as EXPR
