@@ -28,6 +28,25 @@ _pyomo_operator_map = {}
 _functionMap = {}
 
 
+def _nondifferentiable(x):
+    if type(x[1]) is tuple:
+        # sympy >= 1.3 returns tuples (var, order)
+        wrt = x[1][0]
+    else:
+        # early versions of sympy returned the bare var
+        wrt = x[1]
+    raise NondifferentiableError(
+        "The sub-expression '%s' is not differentiable with respect to %s" % (x[0], wrt)
+    )
+
+
+def _external_fcn(*x):
+    raise TypeError(
+        "Expressions containing external functions are not convertible to "
+        f"sympy expressions (found 'f{x}')"
+    )
+
+
 def _configure_sympy(sympy, available):
     if not available:
         return
@@ -111,25 +130,6 @@ def _configure_sympy(sympy, available):
 
 
 sympy, sympy_available = attempt_import('sympy', callback=_configure_sympy)
-
-
-def _nondifferentiable(x):
-    if type(x[1]) is tuple:
-        # sympy >= 1.3 returns tuples (var, order)
-        wrt = x[1][0]
-    else:
-        # early versions of sympy returned the bare var
-        wrt = x[1]
-    raise NondifferentiableError(
-        "The sub-expression '%s' is not differentiable with respect to %s" % (x[0], wrt)
-    )
-
-
-def _external_fcn(*x):
-    raise TypeError(
-        "Expressions containing external functions are not convertible to "
-        f"sympy expressions (found 'f{x}')"
-    )
 
 
 class PyomoSympyBimap(object):
