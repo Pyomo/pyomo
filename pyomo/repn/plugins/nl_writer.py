@@ -16,7 +16,7 @@ import operator
 import os
 from collections import deque, defaultdict, namedtuple
 from contextlib import nullcontext
-from itertools import filterfalse, product
+from itertools import filterfalse, product, chain
 from math import log10 as _log10
 from operator import itemgetter, attrgetter, setitem
 
@@ -549,6 +549,7 @@ class _NLWriter_impl(object):
         self.external_functions = {}
         self.used_named_expressions = set()
         self.var_map = {}
+        self.var_id_to_nl = None
         self.sorter = FileDeterminism_to_SortComponents(config.file_determinism)
         self.visitor = AMPLRepnVisitor(
             self.template,
@@ -1646,6 +1647,9 @@ class _NLWriter_impl(object):
             Count of the number of components that each var appears in.
 
         """
+        subexpression_cache = self.subexpression_cache
+        used_named_expressions = self.used_named_expressions
+        var_map = self.var_map
         all_linear_vars = set()
         all_nonlinear_vars = set()
         nnz_by_var = {}
@@ -1673,8 +1677,13 @@ class _NLWriter_impl(object):
             # Process the nonlinear portion of this component
             if expr_info.nonlinear:
                 nonlinear_vars = set()
-                for _id in expr_info.nonlinear[1]:
+                _id_src = [expr_info.nonlinear[1]]
+                for _id in chain.from_iterable(_id_src):
                     if _id in nonlinear_vars:
+                        continue
+                    if _id not in var_map and _id not in used_named_expressions:
+                        _sub_info = subexpression_cache[_id][1]
+                        _id_src.append(_sub_info.nonlinear[1])
                         continue
                     if _id in linear_by_comp:
                         nonlinear_vars.update(linear_by_comp[_id])
@@ -1945,7 +1954,22 @@ class _NLWriter_impl(object):
                 # Add the constant to the NL expression.  AMPL adds the
                 # constant as the second argument, so we will too.
                 nl = self.template.binary_sum + nl + self.template.const % repn.const
-            self.ostream.write(nl % tuple(map(self.var_id_to_nl.__getitem__, args)))
+            try:
+                self.ostream.write(nl % tuple(map(self.var_id_to_nl.__getitem__, args)))
+            except KeyError:
+                final_args = []
+                for arg in args:
+                    if arg in self.var_id_to_nl:
+                        final_args.append(self.var_id_to_nl[arg])
+                    else:
+                        _nl, _ids, _ = self.subexpression_cache[arg][1].compile_repn(
+                            self.visitor
+                        )
+                        final_args.append(
+                            _nl % tuple(map(self.var_id_to_nl.__getitem__, _ids))
+                        )
+                self.ostream.write(nl % tuple(final_args))
+
         elif include_const:
             self.ostream.write(self.template.const % repn.const)
         else:
@@ -2708,14 +2732,33 @@ def handle_external_function_node(visitor, node, *args):
     else:
         visitor.external_functions[func] = (len(visitor.external_functions), node._fcn)
     comment = f'\t#{node.local_name}' if visitor.symbolic_solver_labels else ''
-    nonlin = node_result_to_amplrepn(args[0]).compile_repn(
-        visitor,
-        visitor.template.external_fcn
-        % (visitor.external_functions[func][0], len(args), comment),
+    nl = visitor.template.external_fcn % (
+        visitor.external_functions[func][0],
+        len(args),
+        comment,
     )
-    for arg in args[1:]:
-        nonlin = node_result_to_amplrepn(arg).compile_repn(visitor, *nonlin)
-    return (_GENERAL, AMPLRepn(0, None, nonlin))
+    arg_ids = []
+    for arg in args:
+        _id = id(arg)
+        arg_ids.append(_id)
+        named_exprs = set()
+        visitor.subexpression_cache[_id] = (
+            arg,
+            AMPLRepn(
+                0,
+                None,
+                node_result_to_amplrepn(arg).compile_repn(
+                    visitor, named_exprs=named_exprs
+                ),
+            ),
+            (None, None, True),
+        )
+        if not named_exprs:
+            named_exprs = None
+    return (
+        _GENERAL,
+        AMPLRepn(0, None, (nl + '%s' * len(arg_ids), arg_ids, named_exprs)),
+    )
 
 
 _operator_handles = ExitNodeDispatcher(
