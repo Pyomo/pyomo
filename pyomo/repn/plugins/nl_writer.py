@@ -774,9 +774,10 @@ class _NLWriter_impl(object):
         # expressions, or when users provide superfluous variables in
         # the column ordering.
         var_bounds = {_id: v.bounds for _id, v in var_map.items()}
+        var_values = {_id: v.value for _id, v in var_map.items()}
 
         eliminated_cons, eliminated_vars = self._linear_presolve(
-            comp_by_linear_var, lcon_by_linear_nnz, var_bounds
+            comp_by_linear_var, lcon_by_linear_nnz, var_bounds, var_values
         )
         del comp_by_linear_var
         del lcon_by_linear_nnz
@@ -1472,7 +1473,7 @@ class _NLWriter_impl(object):
         #
         _init_lines = [
             (var_idx, val if val.__class__ in int_float else float(val))
-            for var_idx, val in enumerate(var_map[_id].value for _id in variables)
+            for var_idx, val in enumerate(map(var_values.__getitem__, variables))
             if val is not None
         ]
         if scale_model:
@@ -1746,7 +1747,9 @@ class _NLWriter_impl(object):
                 n_subexpressions[0] += 1
         return n_subexpressions
 
-    def _linear_presolve(self, comp_by_linear_var, lcon_by_linear_nnz, var_bounds):
+    def _linear_presolve(
+        self, comp_by_linear_var, lcon_by_linear_nnz, var_bounds, var_values
+    ):
         eliminated_vars = {}
         eliminated_cons = set()
         if not self.config.linear_presolve:
@@ -1819,7 +1822,7 @@ class _NLWriter_impl(object):
                     ):
                         _id, id2 = id2, _id
                         coef, coef2 = coef2, coef
-                # substituting _id with a*x + b
+                # eliminating _id and replacing it with a*x + b
                 a = -coef2 / coef
                 x = id2
                 b = expr_info.const = (lb - expr_info.const) / coef
@@ -1849,6 +1852,25 @@ class _NLWriter_impl(object):
                 var_bounds[x] = x_lb, x_ub
                 if x_lb == x_ub and x_lb is not None:
                     fixed_vars.append(x)
+                # Given that we are eliminating a variable, we want to
+                # attempt to sanely resolve the initial variable values.
+                y_init = var_values[_id]
+                if y_init is not None:
+                    # Y has a value
+                    x_init = var_values[x]
+                    if x_init is None:
+                        # X does not; just use the one calculated from Y
+                        x_init = (y_init - b) / a
+                    else:
+                        # X does too, use the average of the two values
+                        x_init = (x_init + (y_init - b) / a) / 2.0
+                    # Ensure that the initial value respects the
+                    # tightened bounds
+                    if x_ub is not None and x_init > x_ub:
+                        x_init = x_ub
+                    if x_lb is not None and x_init < x_lb:
+                        x_init = x_lb
+                    var_values[x] = x_init
                 eliminated_cons.add(con_id)
             else:
                 break
