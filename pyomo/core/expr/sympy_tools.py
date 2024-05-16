@@ -10,12 +10,13 @@
 #  ___________________________________________________________________________
 import operator
 import sys
+from math import prod as _prod
 
+import pyomo.core.expr as EXPR
 from pyomo.common import DeveloperError
 from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import NondifferentiableError
-import pyomo.core.expr as EXPR
 from pyomo.core.expr.numvalue import value, native_types
 
 #
@@ -111,18 +112,6 @@ def _configure_sympy(sympy, available):
 
 
 sympy, sympy_available = attempt_import('sympy', callback=_configure_sympy)
-
-
-if sys.version_info[:2] < (3, 8):
-
-    def _prod(args):
-        ans = 1
-        for arg in args:
-            ans *= arg
-        return ans
-
-else:
-    from math import prod as _prod
 
 
 def _nondifferentiable(x):
