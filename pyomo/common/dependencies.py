@@ -965,6 +965,7 @@ def _finalize_matplotlib(module, available):
     import matplotlib.pyplot
     import matplotlib.pylab
     import matplotlib.backends
+    import matplotlib.cm  # explicit import required for matplotlib>=3.9.0
 
 
 def _finalize_numpy(np, available):
