@@ -16,6 +16,7 @@ import logging
 import subprocess
 
 from pyomo.common import Executable
+from pyomo.common.enums import maximize, minimize
 from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import Bunch
 from pyomo.common.tempfiles import TempfileManager
@@ -29,7 +30,6 @@ from pyomo.opt.results import (
     SolverStatus,
     TerminationCondition,
     SolutionStatus,
-    ProblemSense,
     Solution,
 )
 from pyomo.opt.solver import SystemCallSolver
@@ -443,7 +443,7 @@ class CBCSHELL(SystemCallSolver):
         #
         # Parse logfile lines
         #
-        results.problem.sense = ProblemSense.minimize
+        results.problem.sense = minimize
         results.problem.name = None
         optim_value = float('inf')
         lower_bound = None
@@ -578,7 +578,7 @@ class CBCSHELL(SystemCallSolver):
                     'CoinLpIO::readLp(): Maximization problem reformulated as minimization'
                     in ' '.join(tokens)
                 ):
-                    results.problem.sense = ProblemSense.maximize
+                    results.problem.sense = maximize
                 # https://projects.coin-or.org/Cbc/browser/trunk/Cbc/src/CbcSolver.cpp?rev=2497#L3047
                 elif n_tokens > 3 and tokens[:2] == ('Result', '-'):
                     if tokens[2:4] in [('Run', 'abandoned'), ('User', 'ctrl-c')]:
@@ -752,9 +752,9 @@ class CBCSHELL(SystemCallSolver):
                     "maxIterations parameter."
                 )
         soln.gap = gap
-        if results.problem.sense == ProblemSense.minimize:
+        if results.problem.sense == minimize:
             upper_bound = optim_value
-        elif results.problem.sense == ProblemSense.maximize:
+        elif results.problem.sense == maximize:
             _ver = self.version()
             if _ver and _ver[:3] < (2, 10, 2):
                 optim_value *= -1
@@ -824,7 +824,7 @@ class CBCSHELL(SystemCallSolver):
             INPUT = []
 
         _ver = self.version()
-        invert_objective_sense = results.problem.sense == ProblemSense.maximize and (
+        invert_objective_sense = results.problem.sense == maximize and (
             _ver and _ver[:3] < (2, 10, 2)
         )
 

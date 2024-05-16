@@ -13,6 +13,7 @@
 from .factory import SolverFactory
 from .ipopt import Ipopt
 from .gurobi import Gurobi
+from .gurobi_direct import GurobiDirect
 
 
 def load():
@@ -22,3 +23,8 @@ def load():
     SolverFactory.register(
         name='gurobi', legacy_name='gurobi_v2', doc='Persistent interface to Gurobi'
     )(Gurobi)
+    SolverFactory.register(
+        name='gurobi_direct',
+        legacy_name='gurobi_direct_v2',
+        doc='Direct (scipy-based) interface to Gurobi',
+    )(GurobiDirect)

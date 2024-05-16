@@ -29,7 +29,7 @@ from pyomo.environ import (
     value,
     sum_product,
 )
-from pyomo.core.base.expression import _GeneralExpressionData
+from pyomo.core.base.expression import ExpressionData
 from pyomo.core.expr.compare import compare_expressions, assertExpressionsEqual
 from pyomo.common.tee import capture_output
 
@@ -515,10 +515,10 @@ E : Size=2
         model.E = Expression(model.idx)
         self.assertEqual(len(model.E), 3)
         expr = model.E[1]
-        self.assertIs(type(expr), _GeneralExpressionData)
+        self.assertIs(type(expr), ExpressionData)
         model.E[1] = None
         self.assertIs(expr, model.E[1])
-        self.assertIs(type(expr), _GeneralExpressionData)
+        self.assertIs(type(expr), ExpressionData)
         self.assertIs(expr.expr, None)
         model.E[1] = 5
         self.assertIs(expr, model.E[1])
@@ -537,7 +537,7 @@ E : Size=2
 
         model.E[1] = None
         expr = model.E[1]
-        self.assertIs(type(expr), _GeneralExpressionData)
+        self.assertIs(type(expr), ExpressionData)
         self.assertIs(expr.expr, None)
         model.E[1] = 5
         self.assertIs(expr, model.E[1])

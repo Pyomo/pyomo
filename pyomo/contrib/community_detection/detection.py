@@ -31,7 +31,7 @@ from pyomo.core import (
     Objective,
     ConstraintList,
 )
-from pyomo.core.base.objective import _GeneralObjectiveData
+from pyomo.core.base.objective import ObjectiveData
 from pyomo.core.expr.visitor import replace_expressions, identify_variables
 from pyomo.contrib.community_detection.community_graph import generate_model_graph
 from pyomo.common.dependencies import networkx as nx
@@ -750,7 +750,7 @@ class CommunityMap(object):
                 # Check to see whether 'stored_constraint' is actually an objective (since constraints and objectives
                 # grouped together)
                 if self.with_objective and isinstance(
-                    stored_constraint, (_GeneralObjectiveData, Objective)
+                    stored_constraint, (ObjectiveData, Objective)
                 ):
                     # If the constraint is actually an objective, we add it to the block as an objective
                     new_objective = Objective(

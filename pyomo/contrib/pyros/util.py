@@ -16,7 +16,9 @@ Utility functions for the PyROS solver
 import copy
 from enum import Enum, auto
 from pyomo.common.collections import ComponentSet, ComponentMap
+from pyomo.common.errors import ApplicationError
 from pyomo.common.modeling import unique_component_name
+from pyomo.common.timing import TicTocTimer
 from pyomo.core.base import (
     Constraint,
     Var,
@@ -230,15 +232,15 @@ def get_main_elapsed_time(timing_data_obj):
 
 def adjust_solver_time_settings(timing_data_obj, solver, config):
     """
-    Adjust solver max time setting based on current PyROS elapsed
-    time.
+    Adjust maximum time allowed for subordinate solver, based
+    on total PyROS solver elapsed time up to this point.
 
     Parameters
     ----------
     timing_data_obj : Bunch
         PyROS timekeeper.
     solver : solver type
-        Solver for which to adjust the max time setting.
+        Subordinate solver for which to adjust the max time setting.
     config : ConfigDict
         PyROS solver config.
 
@@ -260,26 +262,37 @@ def adjust_solver_time_settings(timing_data_obj, solver, config):
     ----
     (1) Adjustment only supported for GAMS, BARON, and IPOPT
         interfaces. This routine can be generalized to other solvers
-        after a generic interface to the time limit setting
+        after a generic Pyomo interface to the time limit setting
         is introduced.
-    (2) For IPOPT, and probably also BARON, the CPU time limit
-        rather than the wallclock time limit, is adjusted, as
-        no interface to wallclock limit available.
-        For this reason, extra 30s is added to time remaining
-        for subsolver time limit.
-        (The extra 30s is large enough to ensure solver
-        elapsed time is not beneath elapsed time - user time limit,
-        but not so large as to overshoot the user-specified time limit
-        by an inordinate margin.)
+    (2) For IPOPT and BARON, the CPU time limit,
+        rather than the wallclock time limit, may be adjusted,
+        as there may be no means by which to specify the wall time
+        limit explicitly.
+    (3) For GAMS, we adjust the time limit through the GAMS Reslim
+        option. However, this may be overridden by any user
+        specifications included in a GAMS optfile, which may be
+        difficult to track down.
+    (4) To ensure the time limit is specified to a strictly
+        positive value, the time limit is adjusted to a value of
+        at least 1 second.
     """
+    # in case there is no time remaining: we set time limit
+    # to a minimum of 1s, as some solvers require a strictly
+    # positive time limit
+    time_limit_buffer = 1
+
     if config.time_limit is not None:
         time_remaining = config.time_limit - get_main_elapsed_time(timing_data_obj)
         if isinstance(solver, type(SolverFactory("gams", solver_io="shell"))):
             original_max_time_setting = solver.options["add_options"]
             custom_setting_present = "add_options" in solver.options
 
-            # adjust GAMS solver time
-            reslim_str = f"option reslim={max(30, 30 + time_remaining)};"
+            # note: our time limit will be overridden by any
+            #       time limits specified by the user through a
+            #       GAMS optfile, but tracking down the optfile
+            #       and/or the GAMS subsolver specific option
+            #       is more difficult
+            reslim_str = "option reslim=" f"{max(time_limit_buffer, time_remaining)};"
             if isinstance(solver.options["add_options"], list):
                 solver.options["add_options"].append(reslim_str)
             else:
@@ -289,7 +302,16 @@ def adjust_solver_time_settings(timing_data_obj, solver, config):
             if isinstance(solver, SolverFactory.get_class("baron")):
                 options_key = "MaxTime"
             elif isinstance(solver, SolverFactory.get_class("ipopt")):
-                options_key = "max_cpu_time"
+                options_key = (
+                    # IPOPT 3.14.0+ added support for specifying
+                    # wall time limit explicitly; this is preferred
+                    # over CPU time limit
+                    "max_wall_time"
+                    if solver.version() >= (3, 14, 0, 0)
+                    else "max_cpu_time"
+                )
+            elif isinstance(solver, SolverFactory.get_class("scip")):
+                options_key = "limits/time"
             else:
                 options_key = None
 
@@ -297,8 +319,19 @@ def adjust_solver_time_settings(timing_data_obj, solver, config):
                 custom_setting_present = options_key in solver.options
                 original_max_time_setting = solver.options[options_key]
 
-                # ensure positive value assigned to avoid application error
-                solver.options[options_key] = max(30, 30 + time_remaining)
+                # account for elapsed time remaining and
+                # original time limit setting.
+                # if no original time limit is set, then we assume
+                # there is no time limit, rather than tracking
+                # down the solver-specific default
+                orig_max_time = (
+                    float("inf")
+                    if original_max_time_setting is None
+                    else original_max_time_setting
+                )
+                solver.options[options_key] = min(
+                    max(time_limit_buffer, time_remaining), orig_max_time
+                )
             else:
                 custom_setting_present = False
                 original_max_time_setting = None
@@ -345,6 +378,8 @@ def revert_solver_max_time_adjustment(
             options_key = "MaxTime"
         elif isinstance(solver, SolverFactory.get_class("ipopt")):
             options_key = "max_cpu_time"
+        elif isinstance(solver, SolverFactory.get_class("scip")):
+            options_key = "limits/time"
         else:
             options_key = None
 
@@ -359,12 +394,7 @@ def revert_solver_max_time_adjustment(
                 if isinstance(solver, type(SolverFactory("gams", solver_io="shell"))):
                     solver.options[options_key].pop()
             else:
-                # remove the max time specification introduced.
-                # All lines are needed here to completely remove the option
-                # from access through getattr and dictionary reference.
                 delattr(solver.options, options_key)
-                if options_key in solver.options.keys():
-                    del solver.options[options_key]
 
 
 class PreformattedLogger(logging.Logger):
@@ -832,7 +862,7 @@ def get_state_vars(blk, first_stage_variables, second_stage_variables):
     Get state variables of a modeling block.
 
     The state variables with respect to `blk` are the unfixed
-    `_VarData` objects participating in the active objective
+    `VarData` objects participating in the active objective
     or constraints descended from `blk` which are not
     first-stage variables or second-stage variables.
 
@@ -847,7 +877,7 @@ def get_state_vars(blk, first_stage_variables, second_stage_variables):
 
     Yields
     ------
-    _VarData
+    VarData
         State variable.
     """
     dof_var_set = ComponentSet(first_stage_variables) | ComponentSet(
@@ -954,7 +984,7 @@ def validate_variable_partitioning(model, config):
 
     Returns
     -------
-    list of _VarData
+    list of VarData
         State variables of the model.
 
     Raises
@@ -1729,6 +1759,80 @@ def process_termination_condition_master_problem(config, results):
                 "This solver return termination condition (%s) "
                 "is currently not supported by PyROS." % termination_condition
             )
+
+
+def call_solver(model, solver, config, timing_obj, timer_name, err_msg):
+    """
+    Solve a model with a given optimizer, keeping track of
+    wall time requirements.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        Model of interest.
+    solver : Pyomo solver type
+        Subordinate optimizer.
+    config : ConfigDict
+        PyROS solver settings.
+    timing_obj : TimingData
+        PyROS solver timing data object.
+    timer_name : str
+        Name of sub timer under the hierarchical timer contained in
+        ``timing_obj`` to start/stop for keeping track of solve
+        time requirements.
+    err_msg : str
+        Message to log through ``config.progress_logger.exception()``
+        in event an ApplicationError is raised while attempting to
+        solve the model.
+
+    Returns
+    -------
+    SolverResults
+        Solve results. Note that ``results.solver`` contains
+        an additional attribute, named after
+        ``TIC_TOC_SOLVE_TIME_ATTR``, of which the value is set to the
+        recorded solver wall time.
+
+    Raises
+    ------
+    ApplicationError
+        If ApplicationError is raised by the solver.
+        In this case, `err_msg` is logged through
+        ``config.progress_logger.exception()`` before
+        the exception is raised.
+    """
+    tt_timer = TicTocTimer()
+
+    orig_setting, custom_setting_present = adjust_solver_time_settings(
+        timing_obj, solver, config
+    )
+    timing_obj.start_timer(timer_name)
+    tt_timer.tic(msg=None)
+
+    try:
+        results = solver.solve(
+            model,
+            tee=config.tee,
+            load_solutions=False,
+            symbolic_solver_labels=config.symbolic_solver_labels,
+        )
+    except ApplicationError:
+        # account for possible external subsolver errors
+        # (such as segmentation faults, function evaluation
+        # errors, etc.)
+        config.progress_logger.error(err_msg)
+        raise
+    else:
+        setattr(
+            results.solver, TIC_TOC_SOLVE_TIME_ATTR, tt_timer.toc(msg=None, delta=True)
+        )
+    finally:
+        timing_obj.stop_timer(timer_name)
+        revert_solver_max_time_adjustment(
+            solver, orig_setting, custom_setting_present, config
+        )
+
+    return results
 
 
 class IterationLogRecord:

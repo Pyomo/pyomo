@@ -16,15 +16,6 @@ import sys
 import tempfile
 
 
-def handleReadonly(function, path, excinfo):
-    excvalue = excinfo[1]
-    if excvalue.errno == errno.EACCES:
-        os.chmod(path, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)  # 0777
-        function(path)
-    else:
-        raise
-
-
 def get_appsi_extension(in_setup=False, appsi_root=None):
     from pybind11.setup_helpers import Pybind11Extension
 
@@ -66,6 +57,7 @@ def build_appsi(args=[]):
     from setuptools import Distribution
     from pybind11.setup_helpers import build_ext
     import pybind11.setup_helpers
+    from pyomo.common.cmake_builder import handleReadonly
     from pyomo.common.envvar import PYOMO_CONFIG_DIR
     from pyomo.common.fileutils import this_file_dir
 
