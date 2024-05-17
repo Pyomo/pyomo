@@ -833,12 +833,12 @@ class CBCSHELL(SystemCallSolver):
             n_tokens = len(tokens)
             #
             # These are the only header entries CBC will generate
-            # (identified via browsing CbcSolver.cpp) See
+            # (identified via browsing CbcSolver.cpp).  See
             #     https://github.com/coin-or/Cbc/tree/master/src/CbcSolver.cpp
             # Search for "(no integer solution - continuous used)"
             # (L10796 as of cb855c7)
             #
-            # Note that since this possibly also covers old CBC
+            # Note that since this possibly also supports old CBC
             # versions, we shall not be removing any functionality, even
             # if it is not seen in the current revision
             #
