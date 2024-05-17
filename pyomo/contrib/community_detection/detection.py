@@ -580,7 +580,7 @@ class CommunityMap(object):
                 pos = nx.spring_layout(model_graph)
 
         # Define color_map
-        color_map = plt.cm.get_cmap('viridis', len(numbered_community_map))
+        color_map = plt.get_cmap('viridis', len(numbered_community_map))
 
         # Create the figure and draw the graph
         fig = plt.figure()
