@@ -385,10 +385,9 @@ class ODBCConfig:
         will override that in the file.
         """
 
-        # These hardcoded strings were originally explained via a link
-        # to documentation that has since been moved and deleted.
-        # We have lost the historical knowledge as to why these strings
-        # are hardcoded as such.
+        # Hardcoded string required here.
+        # See documentation:
+        # https://www.ibm.com/docs/en/informix-servers/12.10?topic=SSGU8G_12.1.0/com.ibm.odbc.doc/ids_odbc_062.html
         self.ODBC_DS_KEY = 'ODBC Data Sources'
         self.ODBC_INFO_KEY = 'ODBC'
 

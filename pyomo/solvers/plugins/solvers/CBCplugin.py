@@ -455,6 +455,7 @@ class CBCSHELL(SystemCallSolver):
             tokens = tuple(re.split('[ \t]+', line.strip()))
             n_tokens = len(tokens)
             if n_tokens > 1:
+                # https://github.com/coin-or/Cbc/blob/cb6bf98/Cbc/src/CbcSolver.cpp#L3769
                 if n_tokens > 4 and tokens[:4] == (
                     'Continuous',
                     'objective',
@@ -538,6 +539,7 @@ class CBCSHELL(SystemCallSolver):
                         results.problem.name = results.problem.name.split('/')[-1]
                     if '\\' in results.problem.name:
                         results.problem.name = results.problem.name.split('\\')[-1]
+                # https://github.com/coin-or/Cbc/blob/cb6bf98/Cbc/src/CbcSolver.cpp#L10840
                 elif tokens[0] == 'Presolve':
                     if n_tokens > 9 and tokens[3] == 'rows,' and tokens[6] == 'columns':
                         results.problem.number_of_variables = int(tokens[4]) - int(
@@ -549,6 +551,7 @@ class CBCSHELL(SystemCallSolver):
                         results.problem.number_of_objectives = 1
                     elif n_tokens > 6 and tokens[6] == 'infeasible':
                         soln.status = SolutionStatus.infeasible
+                # https://github.com/coin-or/Cbc/blob/cb6bf98/Cbc/src/CbcSolver.cpp#L11105
                 elif (
                     n_tokens > 11
                     and tokens[:2] == ('Problem', 'has')
@@ -560,6 +563,7 @@ class CBCSHELL(SystemCallSolver):
                     results.problem.number_of_constraints = int(tokens[2])
                     results.problem.number_of_nonzeros = int(tokens[6][1:])
                     results.problem.number_of_objectives = 1
+                # https://github.com/coin-or/Cbc/blob/cb6bf98/Cbc/src/CbcSolver.cpp#L10814
                 elif (
                     n_tokens > 8
                     and tokens[:3] == ('Original', 'problem', 'has')
@@ -575,6 +579,7 @@ class CBCSHELL(SystemCallSolver):
                     in ' '.join(tokens)
                 ):
                     results.problem.sense = maximize
+                # https://github.com/coin-or/Cbc/blob/cb6bf98/Cbc/src/CbcSolver.cpp#L3047
                 elif n_tokens > 3 and tokens[:2] == ('Result', '-'):
                     if tokens[2:4] in [('Run', 'abandoned'), ('User', 'ctrl-c')]:
                         results.solver.termination_condition = (
@@ -604,12 +609,15 @@ class CBCSHELL(SystemCallSolver):
                                 'solution': TerminationCondition.other,
                                 'iterations': TerminationCondition.maxIterations,
                             }.get(tokens[4], TerminationCondition.other)
+                    # https://github.com/coin-or/Cbc/blob/cb6bf98/Cbc/src/CbcSolver.cpp#L12318
                     elif n_tokens > 3 and tokens[2] == "Finished":
                         soln.status = SolutionStatus.optimal
                         optim_value = _float(tokens[4])
+                # https://github.com/coin-or/Cbc/blob/cb6bf98/Cbc/src/CbcSolver.cpp#L7904
                 elif n_tokens >= 3 and tokens[:2] == ('Objective', 'value:'):
                     # parser for log file generetated with discrete variable
                     optim_value = _float(tokens[2])
+                # https://github.com/coin-or/Cbc/blob/cb6bf98/Cbc/src/CbcSolver.cpp#L7904
                 elif n_tokens >= 4 and tokens[:4] == (
                     'No',
                     'feasible',
@@ -622,19 +630,25 @@ class CBCSHELL(SystemCallSolver):
                         lower_bound is None
                     ):  # Only use if not already found since this is to less decimal places
                         results.problem.lower_bound = _float(tokens[2])
+                # https://github.com/coin-or/Cbc/blob/cb6bf98/Cbc/src/CbcSolver.cpp#L7918
                 elif tokens[0] == 'Gap:':
                     # This is relative and only to 2 decimal places - could calculate explicitly using lower bound
                     gap = _float(tokens[1])
+                # https://github.com/coin-or/Cbc/blob/cb6bf98/Cbc/src/CbcSolver.cpp#L7923
                 elif n_tokens > 2 and tokens[:2] == ('Enumerated', 'nodes:'):
                     nodes = int(tokens[2])
+                # https://github.com/coin-or/Cbc/blob/cb6bf98/Cbc/src/CbcSolver.cpp#L7926
                 elif n_tokens > 2 and tokens[:2] == ('Total', 'iterations:'):
                     results.solver.statistics.black_box.number_of_iterations = int(
                         tokens[2]
                     )
+                # https://github.com/coin-or/Cbc/blob/cb6bf98/Cbc/src/CbcSolver.cpp#L7930
                 elif n_tokens > 3 and tokens[:3] == ('Time', '(CPU', 'seconds):'):
                     results.solver.system_time = _float(tokens[3])
+                # https://github.com/coin-or/Cbc/blob/cb6bf98/Cbc/src/CbcSolver.cpp#L7933
                 elif n_tokens > 3 and tokens[:3] == ('Time', '(Wallclock', 'Seconds):'):
                     results.solver.wallclock_time = _float(tokens[3])
+                # https://github.com/coin-or/Cbc/blob/cb6bf98/Cbc/src/CbcSolver.cpp#L10477
                 elif n_tokens > 4 and tokens[:4] == (
                     'Total',
                     'time',
