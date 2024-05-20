@@ -102,7 +102,6 @@ class VariablesWithIndices:
             # this dictionary keys are special set, values are its value
             self.variable_names_value.update(zip(added_names, values))
 
-            
         if lower_bounds is not None:
             # if a scalar (int or float) is given, set it as the lower bound for all variables
             if type(lower_bounds) in native_numeric_types:
@@ -184,22 +183,27 @@ class VariablesWithIndices:
         assert isinstance(var_name, str), "var_name should be a string."
 
         # check if time_index_position is in indices
-        if (indices is not None # ensure not None
-            and time_index_position is None # ensure not None
-            and time_index_position not in indices # ensure time_index_position is in indices
+        if (
+            indices is not None  # ensure not None
+            and time_index_position is None  # ensure not None
+            and time_index_position
+            not in indices  # ensure time_index_position is in indices
         ):
             raise ValueError("time index cannot be found in indices.")
 
         # if given a list, check if bounds have the same length with flattened variable
-        if (values is not None # ensure not None
-            and not type(values) in native_numeric_types # skip this test if scalar (int or float) 
+        if (
+            values is not None  # ensure not None
+            and not type(values)
+            in native_numeric_types  # skip this test if scalar (int or float)
             and len(values) != len_indices
         ):
             raise ValueError("Values is of different length with indices.")
 
         if (
             lower_bounds is not None  # ensure not None
-            and not type(lower_bounds) in native_numeric_types # skip this test if scalar (int or float)
+            and not type(lower_bounds)
+            in native_numeric_types  # skip this test if scalar (int or float)
             and isinstance(lower_bounds, collections.abc.Sequence)  # ensure list-like
             and len(lower_bounds) != len_indices  # ensure same length
         ):
@@ -207,7 +211,8 @@ class VariablesWithIndices:
 
         if (
             upper_bounds is not None  # ensure not None
-            and not type(upper_bounds) in native_numeric_types # skip this test if scalar (int or float)
+            and not type(upper_bounds)
+            in native_numeric_types  # skip this test if scalar (int or float)
             and isinstance(upper_bounds, collections.abc.Sequence)  # ensure list-like
             and len(upper_bounds) != len_indices  # ensure same length
         ):

@@ -71,7 +71,7 @@ class DesignOfExperiments:
         prior_FIM=None,
         discretize_model=None,
         args=None,
-        logger_level=logging.INFO
+        logger_level=logging.INFO,
     ):
         """
         This package enables model-based design of experiments analysis with Pyomo.
@@ -508,10 +508,10 @@ class DesignOfExperiments:
 
         # call k_aug get_dsdp function
         square_result = self._solve_doe(mod, fix=True)
-        
+
         # save model from optional post processing function
         self._square_model_from_compute_FIM = mod
-        
+
         dsdp_re, col = get_dsdp(
             mod, list(self.param.keys()), self.param, tee=self.tee_opt
         )
@@ -737,7 +737,7 @@ class DesignOfExperiments:
         store_optimality_as_csv=None,
         formula="central",
         step=0.001,
-        post_processing_function=None
+        post_processing_function=None,
     ):
         """
         Enumerate through full grid search for any number of design variables;
@@ -833,7 +833,9 @@ class DesignOfExperiments:
                 else:
                     # otherwise just copy the value
                     # design_iter[names] = list(design_set_iter)[i]
-                    raise NotImplementedError('You should not see this error message. Please report it to the Pyomo.DoE developers.')
+                    raise NotImplementedError(
+                        'You should not see this error message. Please report it to the Pyomo.DoE developers.'
+                    )
 
             self.design_vars.variable_names_value = design_iter
             iter_timer = TicTocTimer()
@@ -876,10 +878,14 @@ class DesignOfExperiments:
 
                 # give run information at each iteration
                 self.logger.info('This is run %s out of %s.', count, total_count)
-                self.logger.info('The code has run  %s seconds.', round(sum(time_set),2))
+                self.logger.info(
+                    'The code has run  %s seconds.', round(sum(time_set), 2)
+                )
                 self.logger.info(
                     'Estimated remaining time:  %s seconds',
-                    round(sum(time_set) / (count) * (total_count - count), 2), # need to check this math... it gives a negative number for the final count
+                    round(
+                        sum(time_set) / (count) * (total_count - count), 2
+                    ),  # need to check this math... it gives a negative number for the final count
                 )
 
                 if post_processing_function is not None:
@@ -990,7 +996,7 @@ class DesignOfExperiments:
 
         # if cholesky, define L elements as variables
         if self.Cholesky_option and self.objective_option == ObjectiveLib.det:
-            
+
             # move the L matrix initial point to a dictionary
             if type(self.L_initial) != type(None):
                 dict_cho = {}
@@ -1003,7 +1009,7 @@ class DesignOfExperiments:
             # use the L dictionary to initialize L matrix
             def init_cho(m, i, j):
                 return dict_cho[(i, j)]
-                
+
             # Define elements of Cholesky decomposition matrix as Pyomo variables and either
             # Initialize with L in L_initial
             if type(self.L_initial) != type(None):
@@ -1098,7 +1104,7 @@ class DesignOfExperiments:
 
     def _add_objective(self, m):
 
-        small_number = 1E-10
+        small_number = 1e-10
 
         # Assemble the FIM matrix. This is helpful for initialization!
         fim = np.zeros((len(self.param), len(self.param)))
@@ -1112,8 +1118,6 @@ class DesignOfExperiments:
 
         ### Initialize the Cholesky decomposition matrix
         if self.Cholesky_option and self.objective_option == ObjectiveLib.det:
-
-
 
             # Calculate the eigenvalues of the FIM matrix
             eig = np.linalg.eigvals(fim)
@@ -1192,26 +1196,28 @@ class DesignOfExperiments:
                 expr=2 * sum(pyo.log(m.L_ele[j, j]) for j in m.regression_parameters),
                 sense=pyo.maximize,
             )
-        
+
         elif self.objective_option == ObjectiveLib.det:
             # if not cholesky but determinant, calculating det and evaluate the OBJ with det
             m.det = pyo.Var(initialize=np.linalg.det(fim), bounds=(small_number, None))
             m.det_rule = pyo.Constraint(rule=det_general)
             m.Obj = pyo.Objective(expr=pyo.log(m.det), sense=pyo.maximize)
-        
+
         elif self.objective_option == ObjectiveLib.trace:
             # if not determinant or cholesky, calculating the OBJ with trace
             m.trace = pyo.Var(initialize=np.trace(fim), bounds=(small_number, None))
             m.trace_rule = pyo.Constraint(rule=trace_calc)
             m.Obj = pyo.Objective(expr=pyo.log(m.trace), sense=pyo.maximize)
-            #m.Obj = pyo.Objective(expr=m.trace, sense=pyo.maximize)
-        
+            # m.Obj = pyo.Objective(expr=m.trace, sense=pyo.maximize)
+
         elif self.objective_option == ObjectiveLib.zero:
             # add dummy objective function
             m.Obj = pyo.Objective(expr=0)
         else:
             # something went wrong!
-            raise ValueError("Objective option not recognized. Please contact the developers as you should not see this error.")
+            raise ValueError(
+                "Objective option not recognized. Please contact the developers as you should not see this error."
+            )
 
         return m
 
