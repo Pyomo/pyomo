@@ -816,7 +816,6 @@ class DesignOfExperiments:
             design_iter = self.design_vars.variable_names_value.copy()
             # update the controlled value of certain time points for certain design variables
             for i, names in enumerate(design_dimension_names):
-                print("names =",names,"for i=",i)
                 if isinstance(names, str):
                     # if 'names' is simply a string, copy the new value
                     design_iter[names] = list(design_set_iter)[i]
