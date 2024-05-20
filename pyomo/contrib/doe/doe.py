@@ -70,7 +70,7 @@ class DesignOfExperiments:
         solver=None,
         prior_FIM=None,
         discretize_model=None,
-        args=None,
+        args={},
         logger_level=logging.INFO,
     ):
         """
@@ -487,7 +487,7 @@ class DesignOfExperiments:
 
     def _direct_kaug(self):
         # create model
-        mod = self.create_model(model_option=ModelOptionLib.parmest)
+        mod = self.create_model(model_option=ModelOptionLib.parmest, **self.args)
 
         # discretize if needed
         if self.discretize_model is not None:
@@ -612,7 +612,7 @@ class DesignOfExperiments:
         )
 
         # Allow user to self-define complex design variables
-        self.create_model(mod=mod, model_option=ModelOptionLib.stage1)
+        self.create_model(mod=mod, model_option=ModelOptionLib.stage1, **self.args)
 
         # Fix parameter values in the copy of the stage1 model (if they exist)
         for par in self.param:
@@ -632,11 +632,11 @@ class DesignOfExperiments:
                 theta_initialize = self.scenario_data.scenario[s]
                 # Add model on block with theta values
                 self.create_model(
-                    mod=b, model_option=ModelOptionLib.stage2, theta=theta_initialize
+                    mod=b, model_option=ModelOptionLib.stage2, theta=theta_initialize, **self.args,
                 )
             else:
                 # Otherwise add model on block without theta values
-                self.create_model(mod=b, model_option=ModelOptionLib.stage2)
+                self.create_model(mod=b, model_option=ModelOptionLib.stage2, **self.args)
 
             # fix parameter values to perturbed values
             for par in self.param:
