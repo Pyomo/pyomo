@@ -17,6 +17,7 @@ Utilities:
 .. autosummary::
 
    ExtendedEnumType
+   NamedIntEnum
 
 Standard Enums:
 
@@ -130,7 +131,21 @@ class ExtendedEnumType(_EnumType):
         return super().__new__(metacls, cls, bases, classdict, **kwds)
 
 
-class ObjectiveSense(enum.IntEnum):
+class NamedIntEnum(enum.IntEnum):
+    """An extended version of :py:class:`enum.IntEnum` that supports
+    creating members by name as well as value.
+
+    """
+
+    @classmethod
+    def _missing_(cls, value):
+        for member in cls:
+            if member.name == value:
+                return member
+        return None
+
+
+class ObjectiveSense(NamedIntEnum):
     """Flag indicating if an objective is minimizing (1) or maximizing (-1).
 
     While the numeric values are arbitrary, there are parts of Pyomo
@@ -149,13 +164,6 @@ class ObjectiveSense(enum.IntEnum):
     # need to do this.
     def __str__(self):
         return self.name
-
-    @classmethod
-    def _missing_(cls, value):
-        for member in cls:
-            if member.name == value:
-                return member
-        return None
 
 
 minimize = ObjectiveSense.minimize

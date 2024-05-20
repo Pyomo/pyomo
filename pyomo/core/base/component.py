@@ -477,7 +477,7 @@ class ComponentBase(PyomoObject):
 
 class _ComponentBase(metaclass=RenamedClass):
     __renamed__new_class__ = ComponentBase
-    __renamed__version__ = '6.7.2.dev0'
+    __renamed__version__ = '6.7.2'
 
 
 class Component(ComponentBase):
@@ -663,7 +663,7 @@ class Component(ComponentBase):
                 "use of this argument poses risks if the buffer contains "
                 "names relative to different Blocks in the model hierarchy or "
                 "a mixture of local and fully_qualified names.",
-                version='TODO',
+                version='6.4.1',
             )
             name_buffer[id(self)] = ans
         return ans
@@ -922,7 +922,7 @@ class ComponentData(ComponentBase):
                 "use of this argument poses risks if the buffer contains "
                 "names relative to different Blocks in the model hierarchy or "
                 "a mixture of local and fully_qualified names.",
-                version='TODO',
+                version='6.4.1',
             )
             if id(self) in name_buffer:
                 # Return the name if it is in the buffer
