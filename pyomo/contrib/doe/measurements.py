@@ -182,6 +182,7 @@ class VariablesWithIndices:
         """
         assert isinstance(var_name, str), "var_name should be a string."
 
+        # debugging note: what is an integer versus a list versus a dictionary here?
         # check if time_index_position is in indices
         if (
             indices is not None  # ensure not None
