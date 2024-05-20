@@ -124,9 +124,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         assertExpressionsEqual(self, repn.nonlinear, m.x**3 + m.x**2)
         self.assertEqual(repn.constant, 3)
         self.assertEqual(repn.multiplier, 1)
-        assertExpressionsEqual(
-            self, repn.to_expression(visitor), m.x**3 + m.x**2 + 3
-        )
+        assertExpressionsEqual(self, repn.to_expression(visitor), m.x**3 + m.x**2 + 3)
 
     def test_sum_to_linear_expr(self):
         m = self.make_model()
@@ -288,9 +286,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         self.assertEqual(len(repn.linear), 1)
         self.assertIn(id(m.y), repn.linear)
         assertExpressionsEqual(self, repn.linear[id(m.y)], 5 * m.w)
-        assertExpressionsEqual(
-            self, repn.nonlinear, (m.z**2 + 3 * m.w * m.y**3) * 5
-        )
+        assertExpressionsEqual(self, repn.nonlinear, (m.z**2 + 3 * m.w * m.y**3) * 5)
 
     def test_ANY_over_constant_division(self):
         m = ConcreteModel()
