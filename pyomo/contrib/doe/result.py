@@ -549,7 +549,7 @@ class GridSearchResult:
         ax.scatter(x_range, y_range_A)
         ax.set_ylabel('$log_{10}$ Trace')
         ax.set_xlabel(xlabel_text)
-        plt.pyplot.title(title_text + ' - A optimality')
+        plt.pyplot.title(title_text + ': A-optimality')
         plt.pyplot.show()
 
         # Draw D-optimality
@@ -565,7 +565,7 @@ class GridSearchResult:
         ax.scatter(x_range, y_range_D)
         ax.set_ylabel('$log_{10}$ Determinant')
         ax.set_xlabel(xlabel_text)
-        plt.pyplot.title(title_text + ' - D optimality')
+        plt.pyplot.title(title_text + ': D-optimality')
         plt.pyplot.show()
 
         # Draw E-optimality
@@ -581,7 +581,7 @@ class GridSearchResult:
         ax.scatter(x_range, y_range_E)
         ax.set_ylabel('$log_{10}$ Minimal eigenvalue')
         ax.set_xlabel(xlabel_text)
-        plt.pyplot.title(title_text + ' - E optimality')
+        plt.pyplot.title(title_text + ': E-optimality')
         plt.pyplot.show()
 
         # Draw Modified E-optimality
@@ -597,7 +597,7 @@ class GridSearchResult:
         ax.scatter(x_range, y_range_ME)
         ax.set_ylabel('$log_{10}$ Condition number')
         ax.set_xlabel(xlabel_text)
-        plt.pyplot.title(title_text + ' - Modified E optimality')
+        plt.pyplot.title(title_text + ': Modified E-optimality')
         plt.pyplot.show()
 
     def _heatmap(
@@ -691,7 +691,7 @@ class GridSearchResult:
         im = ax.imshow(hes_a.T, cmap=plt.pyplot.cm.hot_r)
         ba = plt.pyplot.colorbar(im)
         ba.set_label('log10(trace(FIM))')
-        plt.pyplot.title(title_text + ' - A optimality')
+        plt.pyplot.title(title_text + ': A-optimality')
         plt.pyplot.show()
 
         # D-optimality
@@ -712,7 +712,7 @@ class GridSearchResult:
         im = ax.imshow(hes_d.T, cmap=plt.pyplot.cm.hot_r)
         ba = plt.pyplot.colorbar(im)
         ba.set_label('log10(det(FIM))')
-        plt.pyplot.title(title_text + ' - D optimality')
+        plt.pyplot.title(title_text + ': D-optimality')
         plt.pyplot.show()
 
         # E-optimality
@@ -733,7 +733,7 @@ class GridSearchResult:
         im = ax.imshow(hes_e.T, cmap=plt.pyplot.cm.hot_r)
         ba = plt.pyplot.colorbar(im)
         ba.set_label('log10(minimal eig(FIM))')
-        plt.pyplot.title(title_text + ' - E optimality')
+        plt.pyplot.title(title_text + ': E-optimality')
         plt.pyplot.show()
 
         # modified E-optimality
@@ -754,5 +754,5 @@ class GridSearchResult:
         im = ax.imshow(hes_e2.T, cmap=plt.pyplot.cm.hot_r)
         ba = plt.pyplot.colorbar(im)
         ba.set_label('log10(cond(FIM))')
-        plt.pyplot.title(title_text + ' - Modified E-optimality')
+        plt.pyplot.title(title_text + ': Modified E-optimality')
         plt.pyplot.show()

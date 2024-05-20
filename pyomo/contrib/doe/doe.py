@@ -423,6 +423,9 @@ class DesignOfExperiments:
             # solve model
             square_result = self._solve_doe(mod, fix=True)
 
+            # save model from optional post processing function
+            self._square_model_from_compute_FIM = mod
+
             if extract_single_model:
                 mod_name = store_output + '.csv'
                 dataframe = extract_single_model(mod, square_result)
@@ -487,10 +490,10 @@ class DesignOfExperiments:
         mod = self.create_model(model_option=ModelOptionLib.parmest)
 
         # discretize if needed
-        if self.discretize_model:
+        if self.discretize_model is not None:
             mod = self.discretize_model(mod, block=False)
 
-        # add objective function
+        # add zero (dummy/placeholder) objective function
         mod.Obj = pyo.Objective(expr=0, sense=pyo.minimize)
 
         # set ub and lb to parameters
@@ -505,6 +508,10 @@ class DesignOfExperiments:
 
         # call k_aug get_dsdp function
         square_result = self._solve_doe(mod, fix=True)
+        
+        # save model from optional post processing function
+        self._square_model_from_compute_FIM = mod
+        
         dsdp_re, col = get_dsdp(
             mod, list(self.param.keys()), self.param, tee=self.tee_opt
         )
@@ -877,7 +884,7 @@ class DesignOfExperiments:
 
                 if post_processing_function is not None:
                     # Call the post processing function
-                    post_processing_function(self.model)
+                    post_processing_function(self._square_model_from_compute_FIM)
 
                 # the combined result object are organized as a dictionary, keys are a tuple of the design variable values, values are a result object
                 result_combine[tuple(design_set_iter)] = result_iter
