@@ -268,7 +268,6 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.constant, 0)
         self.assertEqual(len(repn.linear), 2)
         self.assertIn(id(m.y), repn.linear)
-        print(repn.linear[id(m.y)])
         assertExpressionsEqual(self, repn.linear[id(m.y)], 5 * (2 * m.w**2))
         self.assertIn(id(m.z), repn.linear)
         assertExpressionsEqual(self, repn.linear[id(m.z)], -5 * m.w)
@@ -307,7 +306,6 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.multiplier, 1)
         assertExpressionsEqual(self, repn.constant, 1 + m.z)
         self.assertEqual(len(repn.linear), 1)
-        print(repn.linear[id(m.x)])
         assertExpressionsEqual(self, repn.linear[id(m.x)], 1 + 1.5 * m.z)
         self.assertEqual(repn.nonlinear, None)
 
@@ -344,8 +342,6 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
             expr
         )
         self.assertEqual(repn.multiplier, 1)
-        # TODO: Is this expected to just wrap up into a single InvalidNumber?
-        print(repn.constant)
         self.assertIsInstance(repn.constant, InvalidNumber)
         assertExpressionsEqual(self, repn.constant.value, float('nan') * m.z + 3)
         self.assertEqual(repn.linear, {})
@@ -372,7 +368,106 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         self.assertEqual(len(repn.linear), 0)
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 0)
-        print(repn.nonlinear)
         assertExpressionsEqual(
             self, repn.nonlinear, (m.x**2) * (m.z**4 * log(m.y)) * m.y
         )
+
+    def test_division_pseudo_constant_constant(self):
+        m = self.make_model()
+        e = m.x / 4 + m.y
+
+        cfg = VisitorConfig()
+        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.x]).walk_expression(e)
+
+        self.assertEqual(len(repn.linear), 1)
+        self.assertIn(id(m.y), repn.linear)
+        self.assertEqual(repn.linear[id(m.y)], 1)
+        self.assertEqual(repn.multiplier, 1)
+        assertExpressionsEqual(self, repn.constant, m.x / 4)
+        self.assertIsNone(repn.nonlinear)
+
+        e = 4 / m.x + m.y
+        cfg = VisitorConfig()
+        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.x]).walk_expression(e)
+
+        self.assertEqual(len(repn.linear), 1)
+        self.assertIn(id(m.y), repn.linear)
+        self.assertEqual(repn.linear[id(m.y)], 1)
+        self.assertEqual(repn.multiplier, 1)
+        assertExpressionsEqual(self, repn.constant, 4 / m.x)
+        self.assertIsNone(repn.nonlinear)
+
+        e = m.z / m.x + m.y
+        cfg = VisitorConfig()
+        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.x, m.z]).walk_expression(e)
+
+        self.assertEqual(len(repn.linear), 1)
+        self.assertIn(id(m.y), repn.linear)
+        self.assertEqual(repn.linear[id(m.y)], 1)
+        self.assertEqual(repn.multiplier, 1)
+        assertExpressionsEqual(self, repn.constant, m.z / m.x)
+        self.assertIsNone(repn.nonlinear)
+
+    def test_division_ANY_psuedo_constant(self):
+        m = self.make_model()
+        e = (m.x + 3 * m.z) / m.y
+
+        cfg = VisitorConfig()
+        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y]).walk_expression(e)
+
+        self.assertEqual(len(repn.linear), 2)
+        self.assertIn(id(m.x), repn.linear)
+        assertExpressionsEqual(self, repn.linear[id(m.x)], 1 / m.y)
+        self.assertIn(id(m.z), repn.linear)
+        assertExpressionsEqual(self, repn.linear[id(m.z)], (1 / m.y) * 3)
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 0)
+        self.assertIsNone(repn.nonlinear)
+
+    def test_pow_ANY_psuedo_constant(self):
+        m = self.make_model()
+        e = (m.x**2 + 3 * m.z) ** m.y
+
+        cfg = VisitorConfig()
+        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y]).walk_expression(e)
+
+        self.assertEqual(len(repn.linear), 0)
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 0)
+        assertExpressionsEqual(self, repn.nonlinear, (m.x**2 + 3 * m.z) ** m.y)
+
+    def test_pow_psuedo_constant_ANY(self):
+        m = self.make_model()
+        e = m.y ** (m.x**2 + 3 * m.z)
+
+        cfg = VisitorConfig()
+        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y]).walk_expression(e)
+
+        self.assertEqual(len(repn.linear), 0)
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 0)
+        assertExpressionsEqual(self, repn.nonlinear, m.y ** (m.x**2 + 3 * m.z))
+
+    def test_pow_linear_pseudo_constant(self):
+        m = self.make_model()
+        e = (m.x + 3 * m.z) ** m.y
+
+        cfg = VisitorConfig()
+        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y]).walk_expression(e)
+
+        self.assertEqual(len(repn.linear), 0)
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 0)
+        assertExpressionsEqual(self, repn.nonlinear, (m.x + 3 * m.z) ** m.y)
+
+    def test_pow_pseudo_constant_linear(self):
+        m = self.make_model()
+        e = m.y ** (m.x + 3 * m.z)
+
+        cfg = VisitorConfig()
+        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y]).walk_expression(e)
+
+        self.assertEqual(len(repn.linear), 0)
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 0)
+        assertExpressionsEqual(self, repn.nonlinear, m.y ** (m.x + 3 * m.z))

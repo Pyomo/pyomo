@@ -74,6 +74,16 @@ def to_expression(visitor, arg):
 
 
 class ParameterizedLinearRepn(LinearRepn):
+    def walker_exitNode(self):
+        if self.nonlinear is not None:
+            return _GENERAL, self
+        elif self.linear:
+            return _LINEAR, self
+        elif self.constant.__class__ in native_numeric_types:
+            return _CONSTANT, self.multiplier * self.constant
+        else:
+            return _PSEUDO_CONSTANT, self.multiplier * self.constant
+
     def to_expression(self, visitor):
         if self.nonlinear is not None:
             # We want to start with the nonlinear term (and use
@@ -268,16 +278,17 @@ _exit_node_handlers[DivisionExpression].update(
 
 
 def _handle_pow_pseudo_constant_constant(visitor, node, arg1, arg2):
-    print("creating node")
-    print(to_expression(visitor, arg1))
-    print(to_expression(visitor, arg2))
     return _PSEUDO_CONSTANT, to_expression(visitor, arg1) ** to_expression(
         visitor, arg2
     )
 
 
-def _handle_pow_ANY_psuedo_constant(visitor, node, arg1, arg2):
-    return linear._handle_pow_nonlinear(visitor, node, arg1, arg2)
+def _handle_pow_nonlinear(visitor, node, arg1, arg2):
+    # ESJ: We override this because we need our own to_expression implementation
+    # if pseudo constants are involved.
+    ans = visitor.Result()
+    ans.nonlinear = to_expression(visitor, arg1) ** to_expression(visitor, arg2)
+    return _GENERAL, ans
 
 
 _exit_node_handlers[PowExpression].update(
@@ -285,8 +296,10 @@ _exit_node_handlers[PowExpression].update(
         (_PSEUDO_CONSTANT, _PSEUDO_CONSTANT): _handle_pow_pseudo_constant_constant,
         (_PSEUDO_CONSTANT, _CONSTANT): _handle_pow_pseudo_constant_constant,
         (_CONSTANT, _PSEUDO_CONSTANT): _handle_pow_pseudo_constant_constant,
-        (_LINEAR, _PSEUDO_CONSTANT): _handle_pow_pseudo_constant_constant,
-        (_GENERAL, _PSEUDO_CONSTANT): _handle_pow_ANY_psuedo_constant,
+        (_LINEAR, _PSEUDO_CONSTANT): _handle_pow_nonlinear,
+        (_PSEUDO_CONSTANT, _LINEAR): _handle_pow_nonlinear,
+        (_GENERAL, _PSEUDO_CONSTANT): _handle_pow_nonlinear,
+        (_PSEUDO_CONSTANT, _GENERAL): _handle_pow_nonlinear,
     }
 )
 
