@@ -2496,10 +2496,7 @@ J1 2	#c2
 
         OUT = io.StringIO()
         nl_writer.NLWriter().write(
-            m,
-            OUT,
-            symbolic_solver_labels=True,
-            linear_presolve=False,
+            m, OUT, symbolic_solver_labels=True, linear_presolve=False
         )
         self.assertEqual(
             *nl_diff(
@@ -2553,10 +2550,7 @@ G0 3   #o
 
         OUT = io.StringIO()
         nl_writer.NLWriter().write(
-            m,
-            OUT,
-            symbolic_solver_labels=True,
-            linear_presolve=True,
+            m, OUT, symbolic_solver_labels=True, linear_presolve=True
         )
         self.assertEqual(
             *nl_diff(
