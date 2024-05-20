@@ -851,6 +851,7 @@ class _NLWriter_impl(object):
                     if _id not in var_map:
                         var_map[_id] = _v
                         var_bounds[_id] = _v.bounds
+                        var_values[_id] = _v.value
                     con_vars_nonlinear.add(_id)
 
         con_nnz = sum(con_nnz_by_var.values())
