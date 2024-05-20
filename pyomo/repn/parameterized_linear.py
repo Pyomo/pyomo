@@ -200,7 +200,6 @@ class MultiLevelLinearBeforeChildDispatcher(LinearBeforeChildDispatcher):
                 # We aren't treating this Var as a Var for the purposes of this walker
                 return False, (_PSEUDO_CONSTANT, child)
             # This is a normal situation
-            # TODO: override record var to not record things in wrt
             MultiLevelLinearBeforeChildDispatcher._record_var(visitor, child)
         ans = visitor.Result()
         ans.linear[_id] = 1
@@ -228,6 +227,8 @@ _exit_node_handlers[NegationExpression].update(
 # PRODUCT handler
 #
 
+def _handle_product_constant_constant(visitor, node, arg1, arg2):
+    return _CONSTANT, arg1[1] * arg2[1]
 
 def _handle_product_pseudo_constant_constant(visitor, node, arg1, arg2):
     return _PSEUDO_CONSTANT, arg1[1] * arg2[1]
@@ -235,6 +236,7 @@ def _handle_product_pseudo_constant_constant(visitor, node, arg1, arg2):
 
 _exit_node_handlers[ProductExpression].update(
     {
+        (_CONSTANT, _CONSTANT): _handle_product_constant_constant,
         (_PSEUDO_CONSTANT, _PSEUDO_CONSTANT): _handle_product_pseudo_constant_constant,
         (_PSEUDO_CONSTANT, _CONSTANT): _handle_product_pseudo_constant_constant,
         (_CONSTANT, _PSEUDO_CONSTANT): _handle_product_pseudo_constant_constant,
@@ -372,18 +374,11 @@ class ParameterizedLinearRepnVisitor(LinearRepnVisitor):
                 # Warn if this is suppressing a NaN (unusual, and
                 # non-standard, but we will wait to remove this behavior
                 # for the time being)
-                # ESJ TODO: This won't work either actually...
-                # I'm not sure how to do it.
                 if ans.constant != ans.constant or any(
                     c != c for c in ans.linear.values()
                 ):
-                    deprecation_warning(
-                        f"Encountered {str(mult)}*nan in expression tree.  "
-                        "Mapping the NaN result to 0 for compatibility "
-                        "with the lp_v1 writer.  In the future, this NaN "
-                        "will be preserved/emitted to comply with IEEE-754.",
-                        version='6.6.0',
-                    )
+                    # There's a nan in here, so we keep it
+                    self._factor_multiplier_into_linear_terms(ans, mult)
                 return self.Result()
             else:
                 # mult not in {0, 1}: factor it into the constant,
