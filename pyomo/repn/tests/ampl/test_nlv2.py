@@ -25,6 +25,7 @@ from pyomo.repn.tests.nl_diff import nl_diff
 
 from pyomo.common.dependencies import numpy, numpy_available
 from pyomo.common.errors import MouseTrap
+from pyomo.common.gsl import find_GSL
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tee import capture_output
 from pyomo.common.tempfiles import TempfileManager
@@ -2311,7 +2312,7 @@ G0 8   #OBJ
 
     def test_presolve_fixes_nl_defined_variables(self):
         # This tests a workaround for a bug in the ASL where defined
-        # variables with nonstant expressions in the NL portion are not
+        # variables with constant expressions in the NL portion are not
         # evaluated correctly.
         m = ConcreteModel()
         m.x = Var()
@@ -2471,6 +2472,123 @@ J0 3	#c1
 J1 2	#c2
 0 1
 2 -1
+""",
+                OUT.getvalue(),
+            )
+        )
+
+    def test_presolve_fixes_nl_exernal_function(self):
+        # This tests a workaround for a bug in the ASL where external
+        # functions with constant argument expressions are not
+        # evaluated correctly.
+        DLL = find_GSL()
+        if not DLL:
+            self.skipTest("Could not find the amplgsl.dll library")
+
+        m = ConcreteModel()
+        m.hypot = ExternalFunction(library=DLL, function="gsl_hypot")
+        m.p = Param(initialize=1, mutable=True)
+        m.x = Var(bounds=(None, 3))
+        m.y = Var(bounds=(3, None))
+        m.z = Var(initialize=1)
+        m.o = Objective(expr=m.z**2 * m.hypot(m.p * m.x, m.p + m.y) ** 2)
+        m.c = Constraint(expr=m.x == m.y)
+
+        OUT = io.StringIO()
+        nl_writer.NLWriter().write(
+            m,
+            OUT,
+            symbolic_solver_labels=True,
+            linear_presolve=False,
+        )
+        self.assertEqual(
+            *nl_diff(
+                """g3 1 1 0       #problem unknown
+ 3 1 1 0 1     #vars, constraints, objectives, ranges, eqns
+ 0 1 0 0 0 0   #nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0   #network constraints: nonlinear, linear
+ 0 3 0 #nonlinear vars in constraints, objectives, both
+ 0 1 0 1       #linear network variables; functions; arith, flags
+ 0 0 0 0 0     #discrete variables: binary, integer, nonlinear (b,c,o)
+ 2 3   #nonzeros in Jacobian, obj. gradient
+ 1 1   #max name lengths: constraints, variables
+ 0 0 0 0 0     #common exprs: b,c,o,c1,o1
+F0 1 -1 gsl_hypot
+C0     #c
+n0
+O0 0   #o
+o2     #*
+o5     #^
+v0     #z
+n2
+o5     #^
+f0 2   #hypot
+v1     #x
+o0     #+
+v2     #y
+n1
+n2
+x1     #initial guess
+0 1    #z
+r      #1 ranges (rhs's)
+4 0    #c
+b      #3 bounds (on variables)
+3      #z
+1 3    #x
+2 3    #y
+k2     #intermediate Jacobian column lengths
+0
+1
+J0 2   #c
+1 1
+2 -1
+G0 3   #o
+0 0
+1 0
+2 0
+""",
+                OUT.getvalue(),
+            )
+        )
+
+        OUT = io.StringIO()
+        nl_writer.NLWriter().write(
+            m,
+            OUT,
+            symbolic_solver_labels=True,
+            linear_presolve=True,
+        )
+        self.assertEqual(
+            *nl_diff(
+                """g3 1 1 0       #problem unknown
+ 1 0 1 0 0     #vars, constraints, objectives, ranges, eqns
+ 0 1 0 0 0 0   #nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0   #network constraints: nonlinear, linear
+ 0 1 0 #nonlinear vars in constraints, objectives, both
+ 0 1 0 1       #linear network variables; functions; arith, flags
+ 0 0 0 0 0     #discrete variables: binary, integer, nonlinear (b,c,o)
+ 0 1   #nonzeros in Jacobian, obj. gradient
+ 1 1   #max name lengths: constraints, variables
+ 0 0 0 0 0     #common exprs: b,c,o,c1,o1
+F0 1 -1 gsl_hypot
+O0 0   #o
+o2     #*
+o5     #^
+v0     #z
+n2
+o5     #^
+f0 2   #hypot
+n3
+n4
+n2
+x1     #initial guess
+0 1    #z
+r      #0 ranges (rhs's)
+b      #1 bounds (on variables)
+3      #z
+k0     #intermediate Jacobian column lengths
+G0 1   #o
+0 0
 """,
                 OUT.getvalue(),
             )
