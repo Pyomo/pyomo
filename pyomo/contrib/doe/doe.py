@@ -988,19 +988,22 @@ class DesignOfExperiments:
                 initialize=identity_matrix,
             )
 
-        # move the L matrix initial point to a dictionary
-        if type(self.L_initial) != type(None):
-            dict_cho = {}
-            for i, bu in enumerate(model.regression_parameters):
-                for j, un in enumerate(model.regression_parameters):
-                    dict_cho[(bu, un)] = self.L_initial[i][j]
-
-        # use the L dictionary to initialize L matrix
-        def init_cho(m, i, j):
-            return dict_cho[(i, j)]
-
         # if cholesky, define L elements as variables
-        if self.Cholesky_option:
+        if self.Cholesky_option and self.objective_option == ObjectiveLib.det:
+            
+            # move the L matrix initial point to a dictionary
+            if type(self.L_initial) != type(None):
+                dict_cho = {}
+                # Loop over rows
+                for i, bu in enumerate(model.regression_parameters):
+                    # Loop over columns
+                    for j, un in enumerate(model.regression_parameters):
+                        dict_cho[(bu, un)] = self.L_initial[i][j]
+
+            # use the L dictionary to initialize L matrix
+            def init_cho(m, i, j):
+                return dict_cho[(i, j)]
+                
             # Define elements of Cholesky decomposition matrix as Pyomo variables and either
             # Initialize with L in L_initial
             if type(self.L_initial) != type(None):
@@ -1095,14 +1098,22 @@ class DesignOfExperiments:
 
     def _add_objective(self, m):
 
-        ### Initialize the Cholesky decomposition matrix
-        if self.Cholesky_option:
+        small_number = 1E-10
 
-            # Assemble the FIM matrix
-            fim = np.zeros((len(self.param), len(self.param)))
-            for i, bu in enumerate(m.regression_parameters):
-                for j, un in enumerate(m.regression_parameters):
-                    fim[i][j] = m.fim[bu, un].value
+        # Assemble the FIM matrix. This is helpful for initialization!
+        fim = np.zeros((len(self.param), len(self.param)))
+        for i, bu in enumerate(m.regression_parameters):
+            for j, un in enumerate(m.regression_parameters):
+                # Copy value from Pyomo model into numpy array
+                fim[i][j] = m.fim[bu, un].value
+
+                # Set lower bound to ensure diagonal elements are (almost) non-negative
+                # m.fim[bu, un].setlb(-small_number)
+
+        ### Initialize the Cholesky decomposition matrix
+        if self.Cholesky_option and self.objective_option == ObjectiveLib.det:
+
+
 
             # Calculate the eigenvalues of the FIM matrix
             eig = np.linalg.eigvals(fim)
@@ -1115,10 +1126,10 @@ class DesignOfExperiments:
             # Compute the Cholesky decomposition of the FIM matrix
             L = np.linalg.cholesky(fim)
 
-        # Initialize the Cholesky matrix
-        for i, c in enumerate(m.regression_parameters):
-            for j, d in enumerate(m.regression_parameters):
-                m.L_ele[c, d].value = L[i, j]
+            # Initialize the Cholesky matrix
+            for i, c in enumerate(m.regression_parameters):
+                for j, d in enumerate(m.regression_parameters):
+                    m.L_ele[c, d].value = L[i, j]
 
         def cholesky_imp(m, c, d):
             """
@@ -1173,7 +1184,7 @@ class DesignOfExperiments:
             )
             return m.det == det_perm
 
-        if self.Cholesky_option:
+        if self.Cholesky_option and self.objective_option == ObjectiveLib.det:
             m.cholesky_cons = pyo.Constraint(
                 m.regression_parameters, m.regression_parameters, rule=cholesky_imp
             )
@@ -1181,16 +1192,26 @@ class DesignOfExperiments:
                 expr=2 * sum(pyo.log(m.L_ele[j, j]) for j in m.regression_parameters),
                 sense=pyo.maximize,
             )
-        # if not cholesky but determinant, calculating det and evaluate the OBJ with det
+        
         elif self.objective_option == ObjectiveLib.det:
+            # if not cholesky but determinant, calculating det and evaluate the OBJ with det
+            m.det = pyo.Var(initialize=np.linalg.det(fim), bounds=(small_number, None))
             m.det_rule = pyo.Constraint(rule=det_general)
             m.Obj = pyo.Objective(expr=pyo.log(m.det), sense=pyo.maximize)
-        # if not determinant or cholesky, calculating the OBJ with trace
+        
         elif self.objective_option == ObjectiveLib.trace:
+            # if not determinant or cholesky, calculating the OBJ with trace
+            m.trace = pyo.Var(initialize=np.trace(fim), bounds=(small_number, None))
             m.trace_rule = pyo.Constraint(rule=trace_calc)
             m.Obj = pyo.Objective(expr=pyo.log(m.trace), sense=pyo.maximize)
+            #m.Obj = pyo.Objective(expr=m.trace, sense=pyo.maximize)
+        
         elif self.objective_option == ObjectiveLib.zero:
+            # add dummy objective function
             m.Obj = pyo.Objective(expr=0)
+        else:
+            # something went wrong!
+            raise ValueError("Objective option not recognized. Please contact the developers as you should not see this error.")
 
         return m
 
