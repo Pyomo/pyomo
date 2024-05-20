@@ -71,6 +71,7 @@ class DesignOfExperiments:
         prior_FIM=None,
         discretize_model=None,
         args=None,
+        logger_level=logging.INFO
     ):
         """
         This package enables model-based design of experiments analysis with Pyomo.
@@ -101,6 +102,8 @@ class DesignOfExperiments:
             A user-specified ``function`` that discretizes the model. Only use with Pyomo.DAE, default=None
         args:
             Additional arguments for the create_model function.
+        logger_level:
+            Specify the level of the logger. Changer to logging.DEBUG for all messages.
         """
 
         # parameters
@@ -136,7 +139,7 @@ class DesignOfExperiments:
 
         # if print statements
         self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(level=logging.INFO)
+        self.logger.setLevel(level=logger_level)
 
     def _check_inputs(self):
         """
@@ -727,6 +730,7 @@ class DesignOfExperiments:
         store_optimality_as_csv=None,
         formula="central",
         step=0.001,
+        post_processing_function=None
     ):
         """
         Enumerate through full grid search for any number of design variables;
@@ -768,6 +772,10 @@ class DesignOfExperiments:
             This option is only used for CalculationMode.sequential_finite.
         step:
             Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
+        post_processing_function:
+            An optional function that executes after each solve of the grid search.
+            The function should take one input: the Pyomo model. This could be a plotting function.
+            Default is None.
 
         Returns
         -------
@@ -808,12 +816,18 @@ class DesignOfExperiments:
             design_iter = self.design_vars.variable_names_value.copy()
             # update the controlled value of certain time points for certain design variables
             for i, names in enumerate(design_dimension_names):
-                # if the element is a list, all design variables in this list share the same values
-                if isinstance(names, collections.abc.Sequence):
+                print("names =",names,"for i=",i)
+                if isinstance(names, str):
+                    # if 'names' is simply a string, copy the new value
+                    design_iter[names] = list(design_set_iter)[i]
+                elif isinstance(names, collections.abc.Sequence):
+                    # if the element is a list, all design variables in this list share the same values
                     for n in names:
                         design_iter[n] = list(design_set_iter)[i]
                 else:
-                    design_iter[names] = list(design_set_iter)[i]
+                    # otherwise just copy the value
+                    # design_iter[names] = list(design_set_iter)[i]
+                    raise NotImplementedError('You should not see this error message. Please report it to the Pyomo.DoE developers.')
 
             self.design_vars.variable_names_value = design_iter
             iter_timer = TicTocTimer()
@@ -828,7 +842,7 @@ class DesignOfExperiments:
             else:
                 store_output_name = store_name + str(count)
 
-            if read_name:
+            if read_name is not None:
                 read_input_name = read_name + str(count)
             else:
                 read_input_name = None
@@ -856,11 +870,15 @@ class DesignOfExperiments:
 
                 # give run information at each iteration
                 self.logger.info('This is run %s out of %s.', count, total_count)
-                self.logger.info('The code has run  %s seconds.', sum(time_set))
+                self.logger.info('The code has run  %s seconds.', round(sum(time_set),2))
                 self.logger.info(
                     'Estimated remaining time:  %s seconds',
-                    (sum(time_set) / (count + 1) * (total_count - count - 1)),
+                    round(sum(time_set) / (count) * (total_count - count), 2), # need to check this math... it gives a negative number for the final count
                 )
+
+                if post_processing_function is not None:
+                    # Call the post processing function
+                    post_processing_function(self.model)
 
                 # the combined result object are organized as a dictionary, keys are a tuple of the design variable values, values are a result object
                 result_combine[tuple(design_set_iter)] = result_iter
