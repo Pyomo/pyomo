@@ -1683,8 +1683,9 @@ class _NLWriter_impl(object):
                     if _id in nonlinear_vars:
                         continue
                     if _id not in var_map and _id not in used_named_expressions:
-                        _sub_info = subexpression_cache[_id][1]
-                        _id_src.append(_sub_info.nonlinear[1])
+                        _sub_info = subexpression_cache[_id][1].nonlinear
+                        if _sub_info:
+                            _id_src.append(_sub_info[1])
                         continue
                     if _id in linear_by_comp:
                         nonlinear_vars.update(linear_by_comp[_id])
