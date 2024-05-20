@@ -227,8 +227,10 @@ _exit_node_handlers[NegationExpression].update(
 # PRODUCT handler
 #
 
+
 def _handle_product_constant_constant(visitor, node, arg1, arg2):
     return _CONSTANT, arg1[1] * arg2[1]
+
 
 def _handle_product_pseudo_constant_constant(visitor, node, arg1, arg2):
     return _PSEUDO_CONSTANT, arg1[1] * arg2[1]
