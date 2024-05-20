@@ -662,6 +662,13 @@ class DesignOfExperiments:
             con_name = "con" + name
             mod.add_component(con_name, pyo.Constraint(mod.scenario, expr=fix1))
 
+            # Add user-defined design variable bounds
+            cuid = pyo.ComponentUID(name)
+            design_var_global = cuid.find_component_on(mod)
+            # Set the lower and upper bounds of the design variables
+            design_var_global.setlb(self.design_vars.lower_bounds[name])
+            design_var_global.setub(self.design_vars.upper_bounds[name])
+
         return mod
 
     def _finite_calculation(self, output_record):
