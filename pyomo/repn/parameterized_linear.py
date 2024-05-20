@@ -42,10 +42,10 @@ from . import linear
 
 class ParameterizedExprType(enum.IntEnum, metaclass=ExtendedEnumType):
     __base_enum__ = ExprType
-    PSUEDO_CONSTANT = 50
+    PSEUDO_CONSTANT = 50
 
 
-_PSEUDO_CONSTANT = ParameterizedExprType.PSUEDO_CONSTANT
+_PSEUDO_CONSTANT = ParameterizedExprType.PSEUDO_CONSTANT
 _CONSTANT = ParameterizedExprType.CONSTANT
 _LINEAR = ParameterizedExprType.LINEAR
 _GENERAL = ParameterizedExprType.GENERAL
@@ -196,7 +196,7 @@ class MultiLevelLinearBeforeChildDispatcher(LinearBeforeChildDispatcher):
             if child.fixed:
                 return False, (_CONSTANT, visitor.check_constant(child.value, child))
             if child in visitor.wrt:
-                # psueudo-constant
+                # pseudo-constant
                 # We aren't treating this Var as a Var for the purposes of this walker
                 return False, (_PSEUDO_CONSTANT, child)
             # This is a normal situation

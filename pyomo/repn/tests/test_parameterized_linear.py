@@ -309,7 +309,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         assertExpressionsEqual(self, repn.linear[id(m.x)], 1 + 1.5 * m.z)
         self.assertEqual(repn.nonlinear, None)
 
-    def test_errors_propogate_nan(self):
+    def test_errors_propagate_nan(self):
         m = ConcreteModel()
         m.p = Param(mutable=True, initialize=0, domain=Any)
         m.x = Var()
