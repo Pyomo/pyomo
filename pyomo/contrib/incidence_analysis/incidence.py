@@ -83,6 +83,17 @@ def _get_incident_via_standard_repn(
 
 
 def _get_incident_via_ampl_repn(expr, linear_only, visitor):
+    def _nonlinear_var_id_collector(idlist):
+        for _id in idlist:
+            if _id in visitor.subexpression_cache:
+                info = visitor.subexpression_cache[_id][1]
+                if info.nonlinear:
+                    yield from _nonlinear_var_id_collector(info.nonlinear[1])
+                if info.linear:
+                    yield from _nonlinear_var_id_collector(info.linear)
+            else:
+                yield _id
+
     var_map = visitor.var_map
     orig_activevisitor = AMPLRepn.ActiveVisitor
     AMPLRepn.ActiveVisitor = visitor
@@ -91,13 +102,13 @@ def _get_incident_via_ampl_repn(expr, linear_only, visitor):
     finally:
         AMPLRepn.ActiveVisitor = orig_activevisitor
 
-    nonlinear_var_ids = [] if repn.nonlinear is None else repn.nonlinear[1]
     nonlinear_var_id_set = set()
     unique_nonlinear_var_ids = []
-    for v_id in nonlinear_var_ids:
-        if v_id not in nonlinear_var_id_set:
-            nonlinear_var_id_set.add(v_id)
-            unique_nonlinear_var_ids.append(v_id)
+    if repn.nonlinear:
+        for v_id in _nonlinear_var_id_collector(repn.nonlinear[1]):
+            if v_id not in nonlinear_var_id_set:
+                nonlinear_var_id_set.add(v_id)
+                unique_nonlinear_var_ids.append(v_id)
 
     nonlinear_vars = [var_map[v_id] for v_id in unique_nonlinear_var_ids]
     linear_only_vars = [
