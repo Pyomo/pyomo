@@ -74,6 +74,12 @@ def to_expression(visitor, arg):
 
 
 class ParameterizedLinearRepn(LinearRepn):
+    def __str__(self):
+        return (
+            f"ParameterizedLinearRepn(mult={self.multiplier}, const={self.constant}, "
+            f"linear={self.linear}, nonlinear={self.nonlinear})"
+        )
+
     def walker_exitNode(self):
         if self.nonlinear is not None:
             return _GENERAL, self

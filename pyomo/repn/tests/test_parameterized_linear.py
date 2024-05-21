@@ -424,6 +424,20 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.constant, 0)
         self.assertIsNone(repn.nonlinear)
 
+    def test_duplicate(self):
+        m = self.make_model()
+        e = (1 + m.x) ** 2 + m.y
+
+        cfg = VisitorConfig()
+        visitor = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y])
+        visitor.max_exponential_expansion = 2
+        repn = visitor.walk_expression(e)
+
+        self.assertEqual(len(repn.linear), 0)
+        self.assertEqual(repn.multiplier, 1)
+        self.assertIs(repn.constant, m.y)
+        assertExpressionsEqual(self, repn.nonlinear, (m.x + 1) * (m.x + 1))
+
     def test_pow_ANY_pseudo_constant(self):
         m = self.make_model()
         e = (m.x**2 + 3 * m.z) ** m.y
