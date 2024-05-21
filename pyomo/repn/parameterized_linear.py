@@ -175,7 +175,7 @@ class ParameterizedLinearRepn(LinearRepn):
                     self.nonlinear += nl
 
 
-class MultiLevelLinearBeforeChildDispatcher(LinearBeforeChildDispatcher):
+class ParameterizedLinearBeforeChildDispatcher(LinearBeforeChildDispatcher):
     def __init__(self):
         super().__init__()
         self[Var] = self._before_var
@@ -206,13 +206,13 @@ class MultiLevelLinearBeforeChildDispatcher(LinearBeforeChildDispatcher):
                 # We aren't treating this Var as a Var for the purposes of this walker
                 return False, (_PSEUDO_CONSTANT, child)
             # This is a normal situation
-            MultiLevelLinearBeforeChildDispatcher._record_var(visitor, child)
+            ParameterizedLinearBeforeChildDispatcher._record_var(visitor, child)
         ans = visitor.Result()
         ans.linear[_id] = 1
         return False, (ExprType.LINEAR, ans)
 
 
-_before_child_dispatcher = MultiLevelLinearBeforeChildDispatcher()
+_before_child_dispatcher = ParameterizedLinearBeforeChildDispatcher()
 _exit_node_handlers = copy.deepcopy(linear._exit_node_handlers)
 
 #
