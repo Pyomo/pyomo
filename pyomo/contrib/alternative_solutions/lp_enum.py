@@ -31,51 +31,61 @@ def enumerate_linear_solutions(
     solver_options={},
     tee=False,
     quiet=True,
+    debug=False,
     seed=None,
 ):
     """
     Finds alternative optimal solutions a (mixed-integer) linear program.
 
-        Parameters
-        ----------
-        model : ConcreteModel
-            A concrete Pyomo model
-        num_solutions : int
-            The maximum number of solutions to generate.
-        variables: 'all' or a collection of Pyomo _GeneralVarData variables
-            The variables for which bounds will be generated. 'all' indicates
-            that all variables will be included. Alternatively, a collection of
-            _GenereralVarData variables can be provided.
-        rel_opt_gap : float or None
-            The relative optimality gap for the original objective for which
-            variable bounds will be found. None indicates that a relative gap
-            constraint will not be added to the model.
-        abs_opt_gap : float or None
-            The absolute optimality gap for the original objective for which
-            variable bounds will be found. None indicates that an absolute gap
-            constraint will not be added to the model.
-        search_mode : 'optimal', 'random', or 'norm'
-            Indicates the mode that is used to generate alternative solutions.
-            The optimal mode finds the next best solution. The random mode
-            finds an alternative solution in the direction of a random ray. The
-            norm mode iteratively finds solution that maximize the L2 distance
-            from previously discovered solutions.
-        solver : string
-            The solver to be used.
-        solver_options : dict
-            Solver option-value pairs to be passed to the solver.
-        tee : boolean
-            Boolean indicating that the solver output should be displayed.
-        quiet : boolean
-            Boolean indicating whether to suppress all output.
-        seed : int
-            Optional integer seed for the numpy random number generator
+    This function implements the technique described here:
 
-        Returns
-        -------
-        solutions
-            A list of Solution objects.
-            [Solution]
+        S. Lee, C. Phalakornkule, M.M. Domach, and I.E. Grossmann,
+        "Recursive MILP model for finding all the alternative optima in LP
+        models for metabolic networks", Computers and Chemical Engineering,
+        24 (2000) 711-716.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        A concrete Pyomo model
+    num_solutions : int
+        The maximum number of solutions to generate.
+    variables: 'all' or a collection of Pyomo _GeneralVarData variables
+        The variables for which bounds will be generated. 'all' indicates
+        that all variables will be included. Alternatively, a collection of
+        _GenereralVarData variables can be provided.
+    rel_opt_gap : float or None
+        The relative optimality gap for the original objective for which
+        variable bounds will be found. None indicates that a relative gap
+        constraint will not be added to the model.
+    abs_opt_gap : float or None
+        The absolute optimality gap for the original objective for which
+        variable bounds will be found. None indicates that an absolute gap
+        constraint will not be added to the model.
+    search_mode : 'optimal', 'random', or 'norm'
+        Indicates the mode that is used to generate alternative solutions.
+        The optimal mode finds the next best solution. The random mode
+        finds an alternative solution in the direction of a random ray. The
+        norm mode iteratively finds solution that maximize the L2 distance
+        from previously discovered solutions.
+    solver : string
+        The solver to be used.
+    solver_options : dict
+        Solver option-value pairs to be passed to the solver.
+    tee : boolean
+        Boolean indicating that the solver output should be displayed.
+    quiet : boolean
+        Boolean indicating whether to suppress all output.
+    debug : boolean
+        Boolean indicating whether to include debugging output.
+    seed : int
+        Optional integer seed for the numpy random number generator
+
+    Returns
+    -------
+    solutions
+        A list of Solution objects.
+        [Solution]
     """
     if not quiet:  # pragma: no cover
         print("STARTING LP ENUMERATION ANALYSIS")
@@ -202,7 +212,11 @@ def enumerate_linear_solutions(
     cb.cut_set = pe.Constraint(pe.PositiveIntegers)
 
     variable_groups = [
-        (cb.var_lower, cb.basic_lower, cb.bound_lower),
+        (
+            cb.var_lower,
+            cb.basic_lower,
+            cb.bound_lower,
+        ),  # (continuous, binary, constraint)
         (cb.var_upper, cb.basic_upper, cb.bound_upper),
         (cb.slack_vars, cb.basic_slack, cb.bound_slack),
     ]
@@ -213,12 +227,15 @@ def enumerate_linear_solutions(
         if not quiet:  # pragma: no cover
             print("Solving Iteration {}: ".format(solution_number), end="")
 
+        if debug:
+            model.pprint()
         if use_appsi:
             results = opt.solve(model)
             condition = results.termination_condition
         else:
             results = opt.solve(cb, tee=tee, load_solutions=False)
             condition = results.solver.termination_condition
+
         if condition == optimal_tc:
             if use_appsi:
                 results.solution_loader.load_vars(solution_number=0)
@@ -237,6 +254,8 @@ def enumerate_linear_solutions(
                     print(
                         "{} = {}".format(var.name, var.lb + cb.var_lower[index].value)
                     )
+            if debug:
+                model.display()
 
             if hasattr(cb, "force_out"):
                 cb.del_component("force_out")
@@ -276,8 +295,14 @@ def enumerate_linear_solutions(
                         non_zero_basic_expr += binary_var[var]
                         basic_var = basic_last_list[idx][var]
                         force_out_expr += basic_var
+                        # Eqn (4): if binary choice variable is selected, then
+                        #           basic variable is zero
                         cb.link_in_out[var] = basic_var + binary_var[var] <= 1
+            # Eqn (1): at least one of the non-zero basic variables in the
+            #   previous solution is selected
             cb.force_out = pe.Constraint(expr=force_out_expr >= 0)
+            # Eqn (2): At most (# non-zero basic variables)-1 binary choice
+            # variables can be selected
             cb.cut_set[solution_number] = non_zero_basic_expr <= num_non_zero
 
             solution_number += 1
@@ -298,6 +323,10 @@ def enumerate_linear_solutions(
                     ).format(status.value, condition.value)
                 )
             break
+        if debug:
+            print("")
+            print("=" * 80)
+            print("")
 
     model.del_component("aos_block")
 
