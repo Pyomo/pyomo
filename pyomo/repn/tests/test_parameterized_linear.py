@@ -408,7 +408,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         assertExpressionsEqual(self, repn.constant, m.z / m.x)
         self.assertIsNone(repn.nonlinear)
 
-    def test_division_ANY_psuedo_constant(self):
+    def test_division_ANY_pseudo_constant(self):
         m = self.make_model()
         e = (m.x + 3 * m.z) / m.y
 
@@ -424,7 +424,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.constant, 0)
         self.assertIsNone(repn.nonlinear)
 
-    def test_pow_ANY_psuedo_constant(self):
+    def test_pow_ANY_pseudo_constant(self):
         m = self.make_model()
         e = (m.x**2 + 3 * m.z) ** m.y
 
@@ -436,7 +436,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.constant, 0)
         assertExpressionsEqual(self, repn.nonlinear, (m.x**2 + 3 * m.z) ** m.y)
 
-    def test_pow_psuedo_constant_ANY(self):
+    def test_pow_pseudo_constant_ANY(self):
         m = self.make_model()
         e = m.y ** (m.x**2 + 3 * m.z)
 
