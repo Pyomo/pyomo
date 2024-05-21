@@ -372,15 +372,15 @@ class ParameterizedLinearRepnVisitor(LinearRepnVisitor):
                 for vid, coef in zeros:
                     del ans.linear[vid]
             elif not mult:
-                # the multiplier has cleared out the entire expression.
-                # Warn if this is suppressing a NaN (unusual, and
-                # non-standard, but we will wait to remove this behavior
-                # for the time being)
+                # the multiplier has cleared out the entire expression.  Check
+                # if this is suppressing a NaN because we can't clear everything
+                # out if it is
                 if ans.constant != ans.constant or any(
                     c != c for c in ans.linear.values()
                 ):
-                    # There's a nan in here, so we keep it
+                    # There's a nan in here, so we distribute the 0
                     self._factor_multiplier_into_linear_terms(ans, mult)
+                    return ans
                 return self.Result()
             else:
                 # mult not in {0, 1}: factor it into the constant,

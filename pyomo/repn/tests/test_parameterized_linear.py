@@ -516,3 +516,23 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         self.assertIsNone(repn.nonlinear)
         self.assertIsInstance(repn.constant, InvalidNumber)
         assertExpressionsEqual(self, repn.constant.value, 0 * float('nan'))
+
+    def test_0_mult_linear_with_nan(self):
+        m = self.make_model()
+        m.p = Param(initialize=0, mutable=True)
+        m.x.domain = Any
+        m.x.fix(float('nan'))
+        e = m.p * (3 * m.x * m.y + m.z)
+
+        cfg = VisitorConfig()
+        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.x]).walk_expression(e)
+
+        self.assertEqual(len(repn.linear), 2)
+        self.assertIn(id(m.y), repn.linear)
+        self.assertIsInstance(repn.linear[id(m.y)], InvalidNumber)
+        assertExpressionsEqual(self, repn.linear[id(m.y)].value, 0 * 3 * float('nan'))
+        self.assertIn(id(m.z), repn.linear)
+        self.assertEqual(repn.linear[id(m.z)], 0)
+        self.assertEqual(repn.multiplier, 1)
+        self.assertIsNone(repn.nonlinear)
+        self.assertEqual(repn.constant, 0)
