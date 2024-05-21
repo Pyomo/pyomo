@@ -58,7 +58,6 @@ class INFO(object):
         else:
             self.template = nl_writer.text_nl_template
         self.subexpression_cache = {}
-        self.subexpression_order = []
         self.external_functions = {}
         self.var_map = {}
         self.used_named_expressions = set()
@@ -67,7 +66,6 @@ class INFO(object):
         self.visitor = nl_writer.AMPLRepnVisitor(
             self.template,
             self.subexpression_cache,
-            self.subexpression_order,
             self.external_functions,
             self.var_map,
             self.used_named_expressions,

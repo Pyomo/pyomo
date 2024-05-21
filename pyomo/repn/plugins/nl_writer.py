@@ -544,7 +544,7 @@ class _NLWriter_impl(object):
         else:
             self.template = text_nl_template
         self.subexpression_cache = {}
-        self.subexpression_order = []
+        self.subexpression_order = None  # set to [] later
         self.external_functions = {}
         self.used_named_expressions = set()
         self.var_map = {}
@@ -553,7 +553,6 @@ class _NLWriter_impl(object):
         self.visitor = AMPLRepnVisitor(
             self.template,
             self.subexpression_cache,
-            self.subexpression_order,
             self.external_functions,
             self.var_map,
             self.used_named_expressions,
@@ -802,7 +801,7 @@ class _NLWriter_impl(object):
 
         # Filter out any unused named expressions
         self.subexpression_order = list(
-            filter(self.used_named_expressions.__contains__, self.subexpression_order)
+            filter(self.used_named_expressions.__contains__, self.subexpression_cache)
         )
 
         # linear contribution by (constraint, objective, variable) component.
@@ -824,10 +823,7 @@ class _NLWriter_impl(object):
         # We need to categorize the named subexpressions first so that
         # we know their linear / nonlinear vars when we encounter them
         # in constraints / objectives
-        self._categorize_vars(
-            map(self.subexpression_cache.__getitem__, self.subexpression_order),
-            linear_by_comp,
-        )
+        self._categorize_vars(self.subexpression_cache.values(), linear_by_comp)
         n_subexpressions = self._count_subexpression_occurrences()
         obj_vars_linear, obj_vars_nonlinear, obj_nnz_by_var = self._categorize_vars(
             objectives, linear_by_comp
@@ -2672,8 +2668,10 @@ def handle_named_expression_node(visitor, node, arg1):
             nl_info = list(expression_source)
             visitor.subexpression_cache[sub_id] = (sub_node, sub_repn, nl_info)
             # It is important that the NL subexpression comes before the
-            # main named expression:
-            visitor.subexpression_order.append(sub_id)
+            # main named expression: re-insert the original named
+            # expression (so that the nonlinear sub_node comes first
+            # when iterating over subexpression_cache)
+            visitor.subexpression_cache[_id] = visitor.subexpression_cache.pop(_id)
         else:
             nl_info = expression_source
     else:
@@ -2715,11 +2713,6 @@ def handle_named_expression_node(visitor, node, arg1):
             return (_MONOMIAL, next(iter(repn.linear)), 1)
         else:
             return (_CONSTANT, repn.const)
-
-    # Defer recording this _id until after we know that this repn will
-    # not be directly substituted (and to ensure that the NL fragment is
-    # added to the order first).
-    visitor.subexpression_order.append(_id)
 
     return (_GENERAL, repn.duplicate())
 
@@ -2989,7 +2982,6 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         self,
         template,
         subexpression_cache,
-        subexpression_order,
         external_functions,
         var_map,
         used_named_expressions,
@@ -3000,7 +2992,6 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         super().__init__()
         self.template = template
         self.subexpression_cache = subexpression_cache
-        self.subexpression_order = subexpression_order
         self.external_functions = external_functions
         self.active_expression_source = None
         self.var_map = var_map
