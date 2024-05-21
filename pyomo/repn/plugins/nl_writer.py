@@ -2702,7 +2702,8 @@ def handle_named_expression_node(visitor, node, arg1):
 
     if expression_source[2]:
         if repn.linear:
-            return (_MONOMIAL, next(iter(repn.linear)), 1)
+            assert len(repn.linear) == 1 and not repn.const
+            return (_MONOMIAL,) + next(iter(repn.linear.items()))
         else:
             return (_CONSTANT, repn.const)
 
