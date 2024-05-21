@@ -1082,6 +1082,11 @@ class DesignOfExperiments:
             model.regression_parameters, model.regression_parameters, rule=read_prior
         )
 
+        # TODO: explore exploiting the symmetry of the FIM matrix
+        # The off-diagonal elements are symmetric, thus only half of the elements need to be calculated
+        # Syntax challenge: determine the order of p and q, i.e., if p > q, then replace with
+        # equality constraint fim[p, q] == fim[q, p]
+
         def fim_rule(m, p, q):
             """
             m: Pyomo model
