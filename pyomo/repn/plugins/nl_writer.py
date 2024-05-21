@@ -2077,7 +2077,7 @@ class AMPLRepn(object):
         ans.const = self.const
         ans.linear = None if self.linear is None else dict(self.linear)
         ans.nonlinear = self.nonlinear
-        ans.named_exprs = self.named_exprs
+        ans.named_exprs = None if self.named_exprs is None else set(self.named_exprs)
         return ans
 
     def compile_repn(self, visitor, prefix='', args=None, named_exprs=None):
