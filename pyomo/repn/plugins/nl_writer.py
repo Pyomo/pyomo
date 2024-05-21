@@ -1691,12 +1691,13 @@ class _NLWriter_impl(object):
                     expr_info.linear = dict.fromkeys(nonlinear_vars, 0)
                 all_nonlinear_vars.update(nonlinear_vars)
 
-            # Update the count of components that each variable appears in
-            for v in expr_info.linear:
-                if v in nnz_by_var:
-                    nnz_by_var[v] += 1
-                else:
-                    nnz_by_var[v] = 1
+            if expr_info.linear:
+                # Update the count of components that each variable appears in
+                for v in expr_info.linear:
+                    if v in nnz_by_var:
+                        nnz_by_var[v] += 1
+                    else:
+                        nnz_by_var[v] = 1
             # Record all nonzero variable ids for this component
             linear_by_comp[id(comp_info[0])] = expr_info.linear
         # Linear models (or objectives) are common.  Avoid the set
