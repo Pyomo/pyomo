@@ -280,18 +280,18 @@ def get_pentagonal_lp():
     """
     var_max = 5
     m = pe.ConcreteModel()
-    m.x = pe.Var(within=pe.Reals, bounds=(0, 2*var_max))
-    m.y = pe.Var(within=pe.Reals, bounds=(0, 2*var_max))
-    m.z = pe.Var(within=pe.NonNegativeReals, bounds=(0, 2*var_max))
+    m.x = pe.Var(within=pe.Reals, bounds=(0, 2 * var_max))
+    m.y = pe.Var(within=pe.Reals, bounds=(0, 2 * var_max))
+    m.z = pe.Var(within=pe.NonNegativeReals, bounds=(0, 2 * var_max))
     m.o = pe.Objective(expr=m.z, sense=pe.minimize)
 
     base_points = np.array(
         [
-            [var_max,           2*var_max,  0],
-            [2*var_max,         var_max,    0],
-            [3.0*var_max/2.0,   0,          0],
-            [var_max/2.0,       0,          0],
-            [0,                 var_max,    0],
+            [var_max, 2 * var_max, 0],
+            [2 * var_max, var_max, 0],
+            [3.0 * var_max / 2.0, 0, 0],
+            [var_max / 2.0, 0, 0],
+            [0, var_max, 0],
         ]
     )
     apex_point = np.array([var_max, var_max, var_max])

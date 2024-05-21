@@ -203,7 +203,7 @@ def enumerate_linear_solutions(
     cb.basic_upper = pe.Var(pe.Any, domain=pe.Binary, dense=False)
     cb.basic_slack = pe.Var(pe.Any, domain=pe.Binary, dense=False)
 
-    # w upper bounds constraints
+    # w upper bounds constraints (Eqn (3))
     cb.bound_lower = pe.Constraint(pe.Any)
     cb.bound_upper = pe.Constraint(pe.Any)
     cb.bound_slack = pe.Constraint(pe.Any)
@@ -211,12 +211,9 @@ def enumerate_linear_solutions(
     # non-zero basic variable no-good cut set
     cb.cut_set = pe.Constraint(pe.PositiveIntegers)
 
+    # [ (continuous, binary, constraint) ]
     variable_groups = [
-        (
-            cb.var_lower,
-            cb.basic_lower,
-            cb.bound_lower,
-        ),  # (continuous, binary, constraint)
+        (cb.var_lower, cb.basic_lower, cb.bound_lower),
         (cb.var_upper, cb.basic_upper, cb.bound_upper),
         (cb.slack_vars, cb.basic_slack, cb.bound_slack),
     ]
@@ -269,6 +266,7 @@ def enumerate_linear_solutions(
                 cb.del_component("basic_last_slack")
 
             cb.link_in_out = pe.Constraint(pe.Any)
+            # y variables
             cb.basic_last_lower = pe.Var(pe.Any, domain=pe.Binary, dense=False)
             cb.basic_last_upper = pe.Var(pe.Any, domain=pe.Binary, dense=False)
             cb.basic_last_slack = pe.Var(pe.Any, domain=pe.Binary, dense=False)
@@ -286,12 +284,17 @@ def enumerate_linear_solutions(
                 for var in continuous_var:
                     if continuous_var[var].value > zero_threshold:
                         num_non_zero += 1
-                        if var not in binary_var:
-                            binary_var[var]
-                            constraint[var] = (
-                                continuous_var[var]
-                                <= continuous_var[var].ub * binary_var[var]
-                            )
+                        # WEH - I don't think you need to add the binary variable.  It
+                        #       should be automaticaly added when used.
+                        # if var not in binary_var:
+                        #    binary_var[var]
+
+                        # Eqn (3): if binary choice variable is not selected, then
+                        # continuous variable is zero.
+                        constraint[var] = (
+                            continuous_var[var]
+                            <= continuous_var[var].ub * binary_var[var]
+                        )
                         non_zero_basic_expr += binary_var[var]
                         basic_var = basic_last_list[idx][var]
                         force_out_expr += basic_var
