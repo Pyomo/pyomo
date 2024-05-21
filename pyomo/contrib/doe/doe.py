@@ -1121,7 +1121,8 @@ class DesignOfExperiments:
                 fim[i][j] = m.fim[bu, un].value
 
                 # Set lower bound to ensure diagonal elements are (almost) non-negative
-                # m.fim[bu, un].setlb(-small_number)
+                # if i == j:
+                #     m.fim[bu, un].setlb(-small_number)
 
         ### Initialize the Cholesky decomposition matrix
         if self.Cholesky_option and self.objective_option == ObjectiveLib.det:
