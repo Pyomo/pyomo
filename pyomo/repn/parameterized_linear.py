@@ -216,7 +216,7 @@ _before_child_dispatcher = MultiLevelLinearBeforeChildDispatcher()
 _exit_node_handlers = copy.deepcopy(linear._exit_node_handlers)
 
 #
-# NEGATION handler
+# NEGATION handlers
 #
 
 
@@ -230,7 +230,7 @@ _exit_node_handlers[NegationExpression].update(
 
 
 #
-# PRODUCT handler
+# PRODUCT handlers
 #
 
 
