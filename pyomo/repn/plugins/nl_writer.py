@@ -1644,9 +1644,6 @@ class _NLWriter_impl(object):
             Count of the number of components that each var appears in.
 
         """
-        subexpression_cache = self.subexpression_cache
-        used_named_expressions = self.used_named_expressions
-        var_map = self.var_map
         all_linear_vars = set()
         all_nonlinear_vars = set()
         nnz_by_var = {}
@@ -1674,14 +1671,8 @@ class _NLWriter_impl(object):
             # Process the nonlinear portion of this component
             if expr_info.nonlinear:
                 nonlinear_vars = set()
-                _id_src = [expr_info.nonlinear[1]]
-                for _id in chain.from_iterable(_id_src):
+                for _id in expr_info.nonlinear[1]:
                     if _id in nonlinear_vars:
-                        continue
-                    if _id not in var_map and _id not in used_named_expressions:
-                        _sub_info = subexpression_cache[_id][1].nonlinear
-                        if _sub_info:
-                            _id_src.append(_sub_info[1])
                         continue
                     if _id in linear_by_comp:
                         nonlinear_vars.update(linear_by_comp[_id])
