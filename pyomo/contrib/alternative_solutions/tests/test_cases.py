@@ -274,6 +274,43 @@ def get_aos_test_knapsack(
     return m
 
 
+def get_pentagonal_lp():
+    """
+    Pentagonal LP
+    """
+    var_max = 5
+    m = pe.ConcreteModel()
+    m.x = pe.Var(within=pe.Reals, bounds=(0, 2*var_max))
+    m.y = pe.Var(within=pe.Reals, bounds=(0, 2*var_max))
+    m.z = pe.Var(within=pe.NonNegativeReals, bounds=(0, 2*var_max))
+    m.o = pe.Objective(expr=m.z, sense=pe.minimize)
+
+    base_points = np.array(
+        [
+            [var_max,           2*var_max,  0],
+            [2*var_max,         var_max,    0],
+            [3.0*var_max/2.0,   0,          0],
+            [var_max/2.0,       0,          0],
+            [0,                 var_max,    0],
+        ]
+    )
+    apex_point = np.array([var_max, var_max, var_max])
+
+    m.c = pe.ConstraintList()
+    for i in range(5):
+        vec_1 = base_points[i] - apex_point
+        vec_2 = base_points[(i + 1) % var_max] - base_points[i]
+        n = np.cross(vec_1, vec_2)
+        m.c.add(
+            n[0] * (m.x - apex_point[0])
+            + n[1] * (m.y - apex_point[1])
+            + n[2] * (m.z - apex_point[2])
+            >= 0
+        )
+
+    return m
+
+
 def get_pentagonal_pyramid_mip():
     """
     Pentagonal pyramid with integer coordinates in the first two dimensions and

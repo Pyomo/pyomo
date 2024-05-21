@@ -10,7 +10,7 @@ from pyomo.contrib.alternative_solutions import lp_enum
 #
 # Find available solvers. Just use GLPK if it's available.
 #
-solvers = list(pyomo.opt.check_available_solvers("glpk", "gurobi", "appsi_gurobi"))
+solvers = list(pyomo.opt.check_available_solvers("glpk", "gurobi")) #, "appsi_gurobi"))
 pytestmark = pytest.mark.parametrize("mip_solver", solvers)
 
 timelimit = {"gurobi": "TimeLimit", "appsi_gurobi": "TimeLimit", "glpk": "tmlim"}
@@ -67,7 +67,15 @@ class TestLPEnum:
         n.x.domain = pe.Reals
         n.y.domain = pe.Reals
 
-        sols = lp_enum.enumerate_linear_solutions(n, solver=mip_solver)
+        sols = lp_enum.enumerate_linear_solutions(n, solver=mip_solver, quiet=False, debug=True)
+        for s in sols:
+            print(s)
+        assert len(sols) == 6
+
+    def test_pentagon(self, mip_solver):
+        n = tc.get_pentagonal_lp()
+
+        sols = lp_enum.enumerate_linear_solutions(n, solver=mip_solver, quiet=False, debug=True)
         for s in sols:
             print(s)
         assert len(sols) == 6
