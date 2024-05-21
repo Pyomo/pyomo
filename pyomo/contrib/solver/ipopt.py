@@ -25,12 +25,11 @@ from pyomo.common.errors import (
 )
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.timing import HierarchicalTimer
-from pyomo.core.base.var import _GeneralVarData
+from pyomo.core.base.var import VarData
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn.plugins.nl_writer import NLWriter, NLWriterInfo
 from pyomo.contrib.solver.base import SolverBase
 from pyomo.contrib.solver.config import SolverConfig
-from pyomo.contrib.solver.factory import SolverFactory
 from pyomo.contrib.solver.results import Results, TerminationCondition, SolutionStatus
 from pyomo.contrib.solver.sol_reader import parse_sol_file
 from pyomo.contrib.solver.solution import SolSolutionLoader
@@ -81,8 +80,8 @@ class IpoptConfig(SolverConfig):
 
 class IpoptSolutionLoader(SolSolutionLoader):
     def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
+        self, vars_to_load: Optional[Sequence[VarData]] = None
+    ) -> Mapping[VarData, float]:
         if self._nl_info is None:
             raise RuntimeError(
                 'Solution loader does not currently have a valid solution. Please '
@@ -197,7 +196,6 @@ ipopt_command_line_options = {
 }
 
 
-@SolverFactory.register('ipopt_v2', doc='The ipopt NLP solver (new interface)')
 class Ipopt(SolverBase):
     CONFIG = IpoptConfig()
 
@@ -309,7 +307,12 @@ class Ipopt(SolverBase):
                 raise RuntimeError(
                     f"NL file with the same name {basename + '.nl'} already exists!"
                 )
-            with open(basename + '.nl', 'w') as nl_file, open(
+            # Note: the ASL has an issue where string constants written
+            # to the NL file (e.g. arguments in external functions) MUST
+            # be terminated with '\n' regardless of platform.  We will
+            # disable universal newlines in the NL file to prevent
+            # Python from mapping those '\n' to '\r\n' on Windows.
+            with open(basename + '.nl', 'w', newline='\n') as nl_file, open(
                 basename + '.row', 'w'
             ) as row_file, open(basename + '.col', 'w') as col_file:
                 timer.start('write_nl_file')

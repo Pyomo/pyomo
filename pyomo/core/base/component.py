@@ -20,6 +20,7 @@ from pyomo.common import DeveloperError
 from pyomo.common.autoslots import AutoSlots, fast_deepcopy
 from pyomo.common.collections import OrderedDict
 from pyomo.common.deprecation import (
+    RenamedClass,
     deprecated,
     deprecation_warning,
     relocated_module_attribute,
@@ -79,7 +80,7 @@ class CloneError(pyomo.common.errors.PyomoException):
     pass
 
 
-class _ComponentBase(PyomoObject):
+class ComponentBase(PyomoObject):
     """A base class for Component and ComponentData
 
     This class defines some fundamental methods and properties that are
@@ -368,7 +369,7 @@ class _ComponentBase(PyomoObject):
 
     @property
     def name(self):
-        """Get the fully qualifed component name."""
+        """Get the fully qualified component name."""
         return self.getname(fully_qualified=True)
 
     # Adding a setter here to help users adapt to the new
@@ -474,7 +475,12 @@ class _ComponentBase(PyomoObject):
             ostream.write(_data)
 
 
-class Component(_ComponentBase):
+class _ComponentBase(metaclass=RenamedClass):
+    __renamed__new_class__ = ComponentBase
+    __renamed__version__ = '6.7.2'
+
+
+class Component(ComponentBase):
     """
     This is the base class for all Pyomo modeling components.
 
@@ -657,14 +663,14 @@ class Component(_ComponentBase):
                 "use of this argument poses risks if the buffer contains "
                 "names relative to different Blocks in the model hierarchy or "
                 "a mixture of local and fully_qualified names.",
-                version='TODO',
+                version='6.4.1',
             )
             name_buffer[id(self)] = ans
         return ans
 
     @property
     def name(self):
-        """Get the fully qualifed component name."""
+        """Get the fully qualified component name."""
         return self.getname(fully_qualified=True)
 
     # Allow setting a component's name if it is not owned by a parent
@@ -779,7 +785,7 @@ class ActiveComponent(Component):
         self._active = False
 
 
-class ComponentData(_ComponentBase):
+class ComponentData(ComponentBase):
     """
     This is the base class for the component data used
     in Pyomo modeling components.  Subclasses of ComponentData are
@@ -802,11 +808,11 @@ class ComponentData(_ComponentBase):
     __autoslot_mappers__ = {'_component': AutoSlots.weakref_mapper}
 
     # NOTE: This constructor is in-lined in the constructors for the following
-    # classes: _BooleanVarData, _ConnectorData, _ConstraintData,
-    # _GeneralExpressionData, _LogicalConstraintData,
-    # _GeneralLogicalConstraintData, _GeneralObjectiveData,
-    # _ParamData,_GeneralVarData, _GeneralBooleanVarData, _DisjunctionData,
-    # _ArcData, _PortData, _LinearConstraintData, and
+    # classes: BooleanVarData, ConnectorData, ConstraintData,
+    # ExpressionData, LogicalConstraintData,
+    # LogicalConstraintData, ObjectiveData,
+    # ParamData,VarData, BooleanVarData, DisjunctionData,
+    # ArcData, PortData, _LinearConstraintData, and
     # _LinearMatrixConstraintData. Changes made here need to be made in those
     # constructors as well!
     def __init__(self, component):
@@ -916,7 +922,7 @@ class ComponentData(_ComponentBase):
                 "use of this argument poses risks if the buffer contains "
                 "names relative to different Blocks in the model hierarchy or "
                 "a mixture of local and fully_qualified names.",
-                version='TODO',
+                version='6.4.1',
             )
             if id(self) in name_buffer:
                 # Return the name if it is in the buffer

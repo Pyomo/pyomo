@@ -31,8 +31,8 @@ from pyomo.core.expr.numeric_expr import (
     MonomialTermExpression,
     LinearExpression,
     SumExpression,
-    NPV_SumExpression,
     ExternalFunctionExpression,
+    mutable_expression,
 )
 from pyomo.core.expr.relational_expr import (
     EqualityExpression,
@@ -120,22 +120,14 @@ class LinearRepn(object):
             ans = 0
         if self.linear:
             var_map = visitor.var_map
-            if len(self.linear) == 1:
-                vid, coef = next(iter(self.linear.items()))
-                if coef == 1:
-                    ans += var_map[vid]
-                elif coef:
-                    ans += MonomialTermExpression((coef, var_map[vid]))
-                else:
-                    pass
-            else:
-                ans += LinearExpression(
-                    [
-                        MonomialTermExpression((coef, var_map[vid]))
-                        for vid, coef in self.linear.items()
-                        if coef
-                    ]
-                )
+            with mutable_expression() as e:
+                for vid, coef in self.linear.items():
+                    if coef:
+                        e += coef * var_map[vid]
+            if e.nargs() > 1:
+                ans += e
+            elif e.nargs() == 1:
+                ans += e.arg(0)
         if self.constant:
             ans += self.constant
         if self.multiplier != 1:
@@ -208,9 +200,8 @@ def _handle_negation_ANY(visitor, node, arg):
 
 
 _exit_node_handlers[NegationExpression] = {
+    None: _handle_negation_ANY,
     (_CONSTANT,): _handle_negation_constant,
-    (_LINEAR,): _handle_negation_ANY,
-    (_GENERAL,): _handle_negation_ANY,
 }
 
 #
@@ -219,20 +210,18 @@ _exit_node_handlers[NegationExpression] = {
 
 
 def _handle_product_constant_constant(visitor, node, arg1, arg2):
-    _, arg1 = arg1
-    _, arg2 = arg2
-    ans = arg1 * arg2
+    ans = arg1[1] * arg2[1]
     if ans != ans:
-        if not arg1 or not arg2:
+        if not arg1[1] or not arg2[1]:
             deprecation_warning(
-                f"Encountered {str(arg1)}*{str(arg2)} in expression tree.  "
+                f"Encountered {str(arg1[1])}*{str(arg2[1])} in expression tree.  "
                 "Mapping the NaN result to 0 for compatibility "
                 "with the lp_v1 writer.  In the future, this NaN "
                 "will be preserved/emitted to comply with IEEE-754.",
                 version='6.6.0',
             )
-            return _, 0
-    return _, arg1 * arg2
+            return _CONSTANT, 0
+    return _CONSTANT, ans
 
 
 def _handle_product_constant_ANY(visitor, node, arg1, arg2):
@@ -284,15 +273,12 @@ def _handle_product_nonlinear(visitor, node, arg1, arg2):
 
 
 _exit_node_handlers[ProductExpression] = {
+    None: _handle_product_nonlinear,
     (_CONSTANT, _CONSTANT): _handle_product_constant_constant,
     (_CONSTANT, _LINEAR): _handle_product_constant_ANY,
     (_CONSTANT, _GENERAL): _handle_product_constant_ANY,
     (_LINEAR, _CONSTANT): _handle_product_ANY_constant,
-    (_LINEAR, _LINEAR): _handle_product_nonlinear,
-    (_LINEAR, _GENERAL): _handle_product_nonlinear,
     (_GENERAL, _CONSTANT): _handle_product_ANY_constant,
-    (_GENERAL, _LINEAR): _handle_product_nonlinear,
-    (_GENERAL, _GENERAL): _handle_product_nonlinear,
 }
 _exit_node_handlers[MonomialTermExpression] = _exit_node_handlers[ProductExpression]
 
@@ -306,7 +292,7 @@ def _handle_division_constant_constant(visitor, node, arg1, arg2):
 
 
 def _handle_division_ANY_constant(visitor, node, arg1, arg2):
-    arg1[1].multiplier /= arg2[1]
+    arg1[1].multiplier = apply_node_operation(node, (arg1[1].multiplier, arg2[1]))
     return arg1
 
 
@@ -317,15 +303,10 @@ def _handle_division_nonlinear(visitor, node, arg1, arg2):
 
 
 _exit_node_handlers[DivisionExpression] = {
+    None: _handle_division_nonlinear,
     (_CONSTANT, _CONSTANT): _handle_division_constant_constant,
-    (_CONSTANT, _LINEAR): _handle_division_nonlinear,
-    (_CONSTANT, _GENERAL): _handle_division_nonlinear,
     (_LINEAR, _CONSTANT): _handle_division_ANY_constant,
-    (_LINEAR, _LINEAR): _handle_division_nonlinear,
-    (_LINEAR, _GENERAL): _handle_division_nonlinear,
     (_GENERAL, _CONSTANT): _handle_division_ANY_constant,
-    (_GENERAL, _LINEAR): _handle_division_nonlinear,
-    (_GENERAL, _GENERAL): _handle_division_nonlinear,
 }
 
 #
@@ -333,8 +314,7 @@ _exit_node_handlers[DivisionExpression] = {
 #
 
 
-def _handle_pow_constant_constant(visitor, node, *args):
-    arg1, arg2 = args
+def _handle_pow_constant_constant(visitor, node, arg1, arg2):
     ans = apply_node_operation(node, (arg1[1], arg2[1]))
     if ans.__class__ in native_complex_types:
         ans = complex_number_error(ans, visitor, node)
@@ -366,15 +346,10 @@ def _handle_pow_nonlinear(visitor, node, arg1, arg2):
 
 
 _exit_node_handlers[PowExpression] = {
+    None: _handle_pow_nonlinear,
     (_CONSTANT, _CONSTANT): _handle_pow_constant_constant,
-    (_CONSTANT, _LINEAR): _handle_pow_nonlinear,
-    (_CONSTANT, _GENERAL): _handle_pow_nonlinear,
     (_LINEAR, _CONSTANT): _handle_pow_ANY_constant,
-    (_LINEAR, _LINEAR): _handle_pow_nonlinear,
-    (_LINEAR, _GENERAL): _handle_pow_nonlinear,
     (_GENERAL, _CONSTANT): _handle_pow_ANY_constant,
-    (_GENERAL, _LINEAR): _handle_pow_nonlinear,
-    (_GENERAL, _GENERAL): _handle_pow_nonlinear,
 }
 
 #
@@ -397,9 +372,8 @@ def _handle_unary_nonlinear(visitor, node, arg):
 
 
 _exit_node_handlers[UnaryFunctionExpression] = {
+    None: _handle_unary_nonlinear,
     (_CONSTANT,): _handle_unary_constant,
-    (_LINEAR,): _handle_unary_nonlinear,
-    (_GENERAL,): _handle_unary_nonlinear,
 }
 _exit_node_handlers[AbsExpression] = _exit_node_handlers[UnaryFunctionExpression]
 
@@ -422,9 +396,8 @@ def _handle_named_ANY(visitor, node, arg1):
 
 
 _exit_node_handlers[Expression] = {
+    None: _handle_named_ANY,
     (_CONSTANT,): _handle_named_constant,
-    (_LINEAR,): _handle_named_ANY,
-    (_GENERAL,): _handle_named_ANY,
 }
 
 #
@@ -457,12 +430,7 @@ def _handle_expr_if_nonlinear(visitor, node, arg1, arg2, arg3):
     return _GENERAL, ans
 
 
-_exit_node_handlers[Expr_ifExpression] = {
-    (i, j, k): _handle_expr_if_nonlinear
-    for i in (_LINEAR, _GENERAL)
-    for j in (_CONSTANT, _LINEAR, _GENERAL)
-    for k in (_CONSTANT, _LINEAR, _GENERAL)
-}
+_exit_node_handlers[Expr_ifExpression] = {None: _handle_expr_if_nonlinear}
 for j in (_CONSTANT, _LINEAR, _GENERAL):
     for k in (_CONSTANT, _LINEAR, _GENERAL):
         _exit_node_handlers[Expr_ifExpression][_CONSTANT, j, k] = _handle_expr_if_const
@@ -495,11 +463,9 @@ def _handle_equality_general(visitor, node, arg1, arg2):
 
 
 _exit_node_handlers[EqualityExpression] = {
-    (i, j): _handle_equality_general
-    for i in (_CONSTANT, _LINEAR, _GENERAL)
-    for j in (_CONSTANT, _LINEAR, _GENERAL)
+    None: _handle_equality_general,
+    (_CONSTANT, _CONSTANT): _handle_equality_const,
 }
-_exit_node_handlers[EqualityExpression][_CONSTANT, _CONSTANT] = _handle_equality_const
 
 
 def _handle_inequality_const(visitor, node, arg1, arg2):
@@ -525,13 +491,9 @@ def _handle_inequality_general(visitor, node, arg1, arg2):
 
 
 _exit_node_handlers[InequalityExpression] = {
-    (i, j): _handle_inequality_general
-    for i in (_CONSTANT, _LINEAR, _GENERAL)
-    for j in (_CONSTANT, _LINEAR, _GENERAL)
+    None: _handle_inequality_general,
+    (_CONSTANT, _CONSTANT): _handle_inequality_const,
 }
-_exit_node_handlers[InequalityExpression][
-    _CONSTANT, _CONSTANT
-] = _handle_inequality_const
 
 
 def _handle_ranged_const(visitor, node, arg1, arg2, arg3):
@@ -562,14 +524,9 @@ def _handle_ranged_general(visitor, node, arg1, arg2, arg3):
 
 
 _exit_node_handlers[RangedExpression] = {
-    (i, j, k): _handle_ranged_general
-    for i in (_CONSTANT, _LINEAR, _GENERAL)
-    for j in (_CONSTANT, _LINEAR, _GENERAL)
-    for k in (_CONSTANT, _LINEAR, _GENERAL)
+    None: _handle_ranged_general,
+    (_CONSTANT, _CONSTANT, _CONSTANT): _handle_ranged_const,
 }
-_exit_node_handlers[RangedExpression][
-    _CONSTANT, _CONSTANT, _CONSTANT
-] = _handle_ranged_const
 
 
 class LinearBeforeChildDispatcher(BeforeChildDispatcher):
@@ -704,6 +661,18 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                     linear[_id] = arg1
             elif arg.__class__ in native_numeric_types:
                 const += arg
+            elif arg.is_variable_type():
+                _id = id(arg)
+                if _id not in var_map:
+                    if arg.fixed:
+                        const += visitor.check_constant(arg.value, arg)
+                        continue
+                    LinearBeforeChildDispatcher._record_var(visitor, arg)
+                    linear[_id] = 1
+                elif _id in linear:
+                    linear[_id] += 1
+                else:
+                    linear[_id] = 1
             else:
                 try:
                     const += visitor.check_constant(visitor.evaluate(arg), arg)
@@ -750,7 +719,10 @@ def _initialize_exit_node_dispatcher(exit_handlers):
     exit_dispatcher = {}
     for cls, handlers in exit_handlers.items():
         for args, fcn in handlers.items():
-            exit_dispatcher[(cls, *args)] = fcn
+            if args is None:
+                exit_dispatcher[cls] = fcn
+            else:
+                exit_dispatcher[(cls, *args)] = fcn
     return exit_dispatcher
 
 

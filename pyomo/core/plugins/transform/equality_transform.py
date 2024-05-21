@@ -66,7 +66,7 @@ class EqualityTransform(IsomorphicTransformation):
             con = equality.__getattribute__(con_name)
 
             #
-            # Get all _ConstraintData objects
+            # Get all ConstraintData objects
             #
             # We need to get the keys ahead of time because we are modifying
             # con._data on-the-fly.
@@ -104,7 +104,7 @@ class EqualityTransform(IsomorphicTransformation):
                     con.add(ub_name, new_expr)
 
                 # Since we explicitly `continue` for equality constraints, we
-                # can safely remove the old _ConstraintData object
+                # can safely remove the old ConstraintData object
                 del con._data[ndx]
 
         return equality.create()
