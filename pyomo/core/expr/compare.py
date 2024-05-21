@@ -196,7 +196,7 @@ def compare_expressions(expr1, expr2, include_named_exprs=True):
     )
     try:
         res = pn1 == pn2
-    except PyomoException:
+    except (PyomoException, AttributeError):
         res = False
     return res
 

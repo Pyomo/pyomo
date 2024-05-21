@@ -1057,26 +1057,13 @@ component, use the block del_component() and add_component() methods.
         # Error, for disabled support implicit rule names
         #
         if '_rule' in val.__dict__ and val._rule is None:
-            _found = False
             try:
                 _test = val.local_name + '_rule'
                 for i in (1, 2):
                     frame = sys._getframe(i)
-                    _found |= _test in frame.f_locals
             except:
                 pass
-            if _found:
-                # JDS: Do not blindly reformat this message.  The
-                # formatter inserts arbitrarily-long names(), which can
-                # cause the resulting logged message to be very poorly
-                # formatted due to long lines.
-                logger.warning(
-                    """As of Pyomo 4.0, Pyomo components no longer support implicit rules.
-You defined a component (%s) that appears
-to rely on an implicit rule (%s).
-Components must now specify their rules explicitly using 'rule=' keywords."""
-                    % (val.name, _test)
-                )
+
         #
         # Don't reconstruct if this component has already been constructed.
         # This allows a user to move a component from one block to
@@ -1996,7 +1983,7 @@ Components must now specify their rules explicitly using 'rule=' keywords."""
 
 class _BlockData(metaclass=RenamedClass):
     __renamed__new_class__ = BlockData
-    __renamed__version__ = '6.7.2.dev0'
+    __renamed__version__ = '6.7.2'
 
 
 @ModelComponentFactory.register(
@@ -2333,98 +2320,117 @@ def components_data(block, ctype, sort=None, sort_by_keys=False, sort_by_names=F
 BlockData._Block_reserved_words = set(dir(Block()))
 
 
-class _IndexedCustomBlockMeta(type):
-    """Metaclass for creating an indexed custom block."""
-
-    pass
-
-
-class _ScalarCustomBlockMeta(type):
-    """Metaclass for creating a scalar custom block."""
-
-    def __new__(meta, name, bases, dct):
-        def __init__(self, *args, **kwargs):
-            # bases[0] is the custom block data object
-            bases[0].__init__(self, component=self)
-            # bases[1] is the custom block object that
-            # is used for declaration
-            bases[1].__init__(self, *args, **kwargs)
-
-        dct["__init__"] = __init__
-        return type.__new__(meta, name, bases, dct)
+class ScalarCustomBlockMixin(object):
+    def __init__(self, *args, **kwargs):
+        # __bases__ for the ScalarCustomBlock is
+        #
+        #    (ScalarCustomBlockMixin, {custom_data}, {custom_block})
+        #
+        # Unfortunately, we cannot guarantee that this is being called
+        # from the ScalarCustomBlock (someone could have inherited from
+        # that class to make another scalar class).  We will walk up the
+        # MRO to find the Scalar class (which should be the only class
+        # that has this Mixin as the first base class)
+        for cls in self.__class__.__mro__:
+            if cls.__bases__[0] is ScalarCustomBlockMixin:
+                _mixin, _data, _block = cls.__bases__
+                _data.__init__(self, component=self)
+                _block.__init__(self, *args, **kwargs)
+                break
 
 
 class CustomBlock(Block):
     """The base class used by instances of custom block components"""
 
-    def __init__(self, *args, **kwds):
+    def __init__(self, *args, **kwargs):
         if self._default_ctype is not None:
-            kwds.setdefault('ctype', self._default_ctype)
-        Block.__init__(self, *args, **kwds)
+            kwargs.setdefault('ctype', self._default_ctype)
+        Block.__init__(self, *args, **kwargs)
 
-    def __new__(cls, *args, **kwds):
-        if cls.__name__.startswith('_Indexed') or cls.__name__.startswith('_Scalar'):
-            # we are entering here the second time (recursive)
-            # therefore, we need to create what we have
-            return super(CustomBlock, cls).__new__(cls)
+    def __new__(cls, *args, **kwargs):
+        if cls.__bases__[0] is not CustomBlock:
+            # we are creating a class other than the "generic" derived
+            # custom block class.  We can assume that the routing of the
+            # generic block class to the specific Scalar or Indexed
+            # subclass has already occurred and we can pass control up
+            # to (toward) object.__new__()
+            return super().__new__(cls, *args, **kwargs)
+        # If the first base class is this CustomBlock class, then the
+        # user is attempting to create the "generic" block class.
+        # Depending on the arguments, we need to map this to either the
+        # Scalar or Indexed block subclass.
         if not args or (args[0] is UnindexedComponent_set and len(args) == 1):
-            n = _ScalarCustomBlockMeta(
-                "_Scalar%s" % (cls.__name__,), (cls._ComponentDataClass, cls), {}
-            )
-            return n.__new__(n)
+            return super().__new__(cls._scalar_custom_block, *args, **kwargs)
         else:
-            n = _IndexedCustomBlockMeta("_Indexed%s" % (cls.__name__,), (cls,), {})
-            return n.__new__(n)
+            return super().__new__(cls._indexed_custom_block, *args, **kwargs)
 
 
 def declare_custom_block(name, new_ctype=None):
     """Decorator to declare components for a custom block data class
 
-    >>> @declare_custom_block(name=FooBlock)
+    >>> @declare_custom_block(name="FooBlock")
     ... class FooBlockData(BlockData):
     ...    # custom block data class
     ...    pass
     """
 
-    def proc_dec(cls):
-        # this is the decorator function that
-        # creates the block component class
+    def block_data_decorator(block_data):
+        # this is the decorator function that creates the block
+        # component classes
 
-        # Default (derived) Block attributes
-        clsbody = {
-            "__module__": cls.__module__,  # magic to fix the module
-            # Default IndexedComponent data object is the decorated class:
-            "_ComponentDataClass": cls,
-            # By default this new block does not declare a new ctype
-            "_default_ctype": None,
-        }
-
-        c = type(
+        # Declare the new Block component (derived from CustomBlock)
+        # corresponding to the BlockData that we are decorating
+        #
+        # Note the use of `type(CustomBlock)` to pick up the metaclass
+        # that was used to create the CustomBlock (in general, it should
+        # be `type`)
+        comp = type(CustomBlock)(
             name,  # name of new class
             (CustomBlock,),  # base classes
-            clsbody,  # class body definitions (will populate __dict__)
+            # class body definitions (populate the new class' __dict__)
+            {
+                # ensure the created class is associated with the calling module
+                "__module__": block_data.__module__,
+                # Default IndexedComponent data object is the decorated class:
+                "_ComponentDataClass": block_data,
+                # By default this new block does not declare a new ctype
+                "_default_ctype": None,
+            },
         )
 
         if new_ctype is not None:
             if new_ctype is True:
-                c._default_ctype = c
-            elif type(new_ctype) is type:
-                c._default_ctype = new_ctype
+                comp._default_ctype = comp
+            elif isinstance(new_ctype, type):
+                comp._default_ctype = new_ctype
             else:
                 raise ValueError(
                     "Expected new_ctype to be either type "
                     "or 'True'; received: %s" % (new_ctype,)
                 )
 
-        # Register the new Block type in the same module as the BlockData
-        setattr(sys.modules[cls.__module__], name, c)
-        # TODO: can we also register concrete Indexed* and Scalar*
-        # classes into the original BlockData module (instead of relying
-        # on metaclasses)?
+        # Declare Indexed and Scalar versions of the custom block.  We
+        # will register them both with the calling module scope, and
+        # with the CustomBlock (so that CustomBlock.__new__ can route
+        # the object creation to the correct class)
+        comp._indexed_custom_block = type(comp)(
+            "Indexed" + name,
+            (comp,),
+            {  # ensure the created class is associated with the calling module
+                "__module__": block_data.__module__
+            },
+        )
+        comp._scalar_custom_block = type(comp)(
+            "Scalar" + name,
+            (ScalarCustomBlockMixin, block_data, comp),
+            {  # ensure the created class is associated with the calling module
+                "__module__": block_data.__module__
+            },
+        )
 
-        # are these necessary?
-        setattr(cls, '_orig_name', name)
-        setattr(cls, '_orig_module', cls.__module__)
-        return cls
+        # Register the new Block types in the same module as the BlockData
+        for _cls in (comp, comp._indexed_custom_block, comp._scalar_custom_block):
+            setattr(sys.modules[block_data.__module__], _cls.__name__, _cls)
+        return block_data
 
-    return proc_dec
+    return block_data_decorator

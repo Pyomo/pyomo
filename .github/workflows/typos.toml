@@ -40,6 +40,9 @@ WRONLY = "WRONLY"
 Hax = "Hax"
 # Big Sur
 Sur = "Sur"
+# contrib package named mis and the acronym whence the name comes
+mis = "mis"
+MIS = "MIS"
 # Ignore the shorthand ans for answer
 ans = "ans"
 # Ignore the keyword arange

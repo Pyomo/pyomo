@@ -450,7 +450,7 @@ class DisjunctData(BlockData):
 
 class _DisjunctData(metaclass=RenamedClass):
     __renamed__new_class__ = DisjunctData
-    __renamed__version__ = '6.7.2.dev0'
+    __renamed__version__ = '6.7.2'
 
 
 @ModelComponentFactory.register("Disjunctive blocks.")
@@ -627,7 +627,7 @@ class DisjunctionData(ActiveComponentData):
 
 class _DisjunctionData(metaclass=RenamedClass):
     __renamed__new_class__ = DisjunctionData
-    __renamed__version__ = '6.7.2.dev0'
+    __renamed__version__ = '6.7.2'
 
 
 @ModelComponentFactory.register("Disjunction expressions.")

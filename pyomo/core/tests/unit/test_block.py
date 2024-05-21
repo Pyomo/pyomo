@@ -13,6 +13,7 @@
 #
 
 from io import StringIO
+import logging
 import os
 import sys
 import types
@@ -2975,7 +2976,68 @@ class TestBlock(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, ".*Cannot write model in format"):
             m.write(format="bogus")
 
-    def test_override_pprint(self):
+    def test_custom_block(self):
+        @declare_custom_block('TestingBlock')
+        class TestingBlockData(BlockData):
+            def __init__(self, component):
+                BlockData.__init__(self, component)
+                logging.getLogger(__name__).warning("TestingBlockData.__init__")
+
+        self.assertIn('TestingBlock', globals())
+        self.assertIn('ScalarTestingBlock', globals())
+        self.assertIn('IndexedTestingBlock', globals())
+        self.assertIs(TestingBlock.__module__, __name__)
+        self.assertIs(ScalarTestingBlock.__module__, __name__)
+        self.assertIs(IndexedTestingBlock.__module__, __name__)
+
+        with LoggingIntercept() as LOG:
+            obj = TestingBlock()
+        self.assertIs(type(obj), ScalarTestingBlock)
+        self.assertEqual(LOG.getvalue().strip(), "TestingBlockData.__init__")
+
+        with LoggingIntercept() as LOG:
+            obj = TestingBlock([1, 2])
+        self.assertIs(type(obj), IndexedTestingBlock)
+        self.assertEqual(LOG.getvalue(), "")
+
+        # Test that we can derive from a ScalarCustomBlock
+        class DerivedScalarTestingBlock(ScalarTestingBlock):
+            pass
+
+        with LoggingIntercept() as LOG:
+            obj = DerivedScalarTestingBlock()
+        self.assertIs(type(obj), DerivedScalarTestingBlock)
+        self.assertEqual(LOG.getvalue().strip(), "TestingBlockData.__init__")
+
+    def test_custom_block_ctypes(self):
+        @declare_custom_block('TestingBlock')
+        class TestingBlockData(BlockData):
+            pass
+
+        self.assertIs(TestingBlock().ctype, Block)
+
+        @declare_custom_block('TestingBlock', True)
+        class TestingBlockData(BlockData):
+            pass
+
+        self.assertIs(TestingBlock().ctype, TestingBlock)
+
+        @declare_custom_block('TestingBlock', Constraint)
+        class TestingBlockData(BlockData):
+            pass
+
+        self.assertIs(TestingBlock().ctype, Constraint)
+
+        with self.assertRaisesRegex(
+            ValueError,
+            r"Expected new_ctype to be either type or 'True'; received: \[\]",
+        ):
+
+            @declare_custom_block('TestingBlock', [])
+            class TestingBlockData(BlockData):
+                pass
+
+    def test_custom_block_override_pprint(self):
         @declare_custom_block('TempBlock')
         class TempBlockData(BlockData):
             def pprint(self, ostream=None, verbose=False, prefix=""):
