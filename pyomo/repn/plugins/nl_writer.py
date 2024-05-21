@@ -2747,10 +2747,10 @@ def handle_external_function_node(visitor, node, *args):
         comment,
     )
     arg_ids = []
+    named_exprs = set()
     for arg in args:
         _id = id(arg)
         arg_ids.append(_id)
-        named_exprs = set()
         visitor.subexpression_cache[_id] = (
             arg,
             AMPLRepn(
@@ -2762,8 +2762,8 @@ def handle_external_function_node(visitor, node, *args):
             ),
             (None, None, True),
         )
-        if not named_exprs:
-            named_exprs = None
+    if not named_exprs:
+        named_exprs = None
     return (
         _GENERAL,
         AMPLRepn(0, None, (nl + '%s' * len(arg_ids), arg_ids, named_exprs)),
