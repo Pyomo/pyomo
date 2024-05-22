@@ -304,7 +304,10 @@ def regression_model():
 
     # Model & data from:
     #
-    # http://www.doiserbia.nb.rs/img/doi/0367-598X/2014/0367-598X1300037A.pdf
+    # https://doiserbia.nb.rs/img/doi/0367-598X/2014/0367-598X1300037A.pdf
+    # Almagrbi, A. M., Hatami, T., Glišić, S., & Orlović, A. (2014).
+    # Determination of kinetic parameters for complex transesterification
+    # reaction by standard optimisation methods.
     #
     model = ConcreteModel()
 
