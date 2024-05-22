@@ -11,17 +11,64 @@
 
 from pyomo.common.autoslots import AutoSlots
 from pyomo.common.collections import ComponentMap
+from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.common.errors import MouseTrap
 from pyomo.common.dependencies import scipy
 from pyomo.core import (
-    ConcreteModel, Var, Constraint, Objective, TransformationFactory,
-    NonPositiveReals, maximize
+    ConcreteModel,
+    Var,
+    Constraint,
+    Objective,
+    TransformationFactory,
+    NonNegativeReals,
+    NonPositiveReals,
+    maximize,
+    minimize,
+    Reals,
 )
 from pyomo.opt import WriterFactory
 
+
+# ESJ: TODO: copied from FME basically, should centralize.
+def var_list(x):
+    if x.ctype is Var:
+        if not x.is_indexed():
+            return ComponentSet([x])
+        ans = ComponentSet()
+        for j in x.index_set():
+            ans.add(x[j])
+        return ans
+    elif hasattr(x, '__iter__'):
+        ans = ComponentSet()
+        for i in x:
+            ans.update(vars_to_eliminate_list(i))
+        return ans
+    else:
+        raise ValueError("Expected Var or list of Vars.\n\tReceived %s" % type(x))
+
+
 @TransformationFactory.register(
-    'core.lp_dual', 'Generate the linear programming dual of the given model')
+    'core.lp_dual', 'Generate the linear programming dual of the given model'
+)
 class LinearProgrammingDual(object):
+    CONFIG = ConfigDict("core.lp_dual")
+    CONFIG.declare(
+        'parameterize_wrt',
+        ConfigValue(
+            default=None,
+            domain=var_list,
+            description="Vars to treat as data for the purposes of taking the dual",
+            doc="""
+            Optional list of Vars to be treated as data while taking the LP dual.
+
+            For example, if this is the dual of the inner problem in a multilevel
+            optimization problem, then the outer problem's Vars would be specified
+            in this list since they are not variables from the perspective of the 
+            inner problem.
+            """,
+        ),
+    )
+
     def apply_to(self, model, **options):
         raise MouseTrap(
             "The 'core.lp_dual' transformation does not currently implement "
@@ -30,7 +77,7 @@ class LinearProgrammingDual(object):
             "returned model."
         )
 
-    def create_using(self, model, ostream=None, **options):
+    def create_using(self, model, ostream=None, **kwds):
         """Take linear programming dual of a model
 
         Returns
@@ -47,19 +94,72 @@ class LinearProgrammingDual(object):
             and is ignored here.
 
         """
-        std_form = WriterFactory('compile_standard_form').write(model,
-                                                                nonnegative_vars=True)
+        config = self.CONFIG(kwds.pop('options', {}))
+        config.set_value(kwds)
+
+        if config.parameterize_wrt is None:
+            return self._take_dual(model)
+
+        return self._take_parameterized_dual(model, config.parameterize_wrt)
+
+    def _take_dual(self, model):
+        std_form = WriterFactory('compile_standard_form').write(
+            model, mixed_form=True, set_sense=None
+        )
+        if len(std_form.objectives) != 1:
+            raise ValueError(
+                "Model '%s' has n o objective or multiple active objectives. Cannot "
+                "take dual with more than one objective!" % model.name
+            )
+        primal_sense = std_form.objectives[0].sense
+
         dual = ConcreteModel(name="%s dual" % model.name)
         A_transpose = scipy.sparse.csc_matrix.transpose(std_form.A)
         rows = range(A_transpose.shape[0])
         cols = range(A_transpose.shape[1])
-        dual.x = Var(cols, domain=NonPositiveReals)
+        dual.x = Var(cols, domain=NonNegativeReals)
+        for j, (primal_cons, ineq) in enumerate(std_form.rows):
+            if primal_sense is minimize and ineq == 1:
+                dual.x[j].domain = NonPositiveReals
+            elif primal_sense is maximzie and ineq == -1:
+                dual.x[j].domain = NonPositiveReals
+            from pytest import set_trace
+            set_trace()
+            
         dual.constraints = Constraint(rows)
-        for i in rows:
-            dual.constraints[i] = sum(A_transpose[i, j]*dual.x[j] for j in cols) <= \
-                                  std_form.c[0, i]
-        
-        dual.obj = Objective(expr=sum(std_form.rhs[j]*dual.x[j] for j in cols),
-                             sense=maximize)
+        for i, primal in enumerate(std_form.columns):
+            if primal_sense is minimize:
+                if primal.domain is NonNegativeReals:
+                    dual.constraints[i] = (
+                        sum(A_transpose[i, j] * dual.x[j] for j in cols)
+                        >= std_form.c[0, i]
+                    )
+                elif primal.domain is NonPositiveReals:
+                    dual.constraints[i] = (
+                        sum(A_transpose[i, j] * dual.x[j] for j in cols)
+                        <= std_form.c[0, i]
+                    )
+            else:
+                if primal.domain is NonNegativeReals:
+                    dual.constraints[i] = (
+                        sum(A_transpose[i, j] * dual.x[j] for j in cols)
+                        <= std_form.c[0, i]
+                    )
+                elif primal.domain is NonPositiveReals:
+                    dual.constraints[i] = (
+                        sum(A_transpose[i, j] * dual.x[j] for j in cols)
+                        >= std_form.c[0, i]
+                    )
+            if primal.domain is Reals:
+                dual.constraints[i] = (
+                    sum(A_transpose[i, j] * dual.x[j] for j in cols) == std_form.c[0, i]
+                )
+
+        dual.obj = Objective(
+            expr=sum(std_form.rhs[j] * dual.x[j] for j in cols), sense=-primal_sense
+        )
 
         return dual
+
+    def _take_parameterized_dual(self, model, wrt):
+        pass

@@ -63,3 +63,20 @@ class TestLPDual(unittest.TestCase):
             self.assertAlmostEqual(value(dual.x[idx]), value(m.dual[cons]))
         # for idx, (mult, v) in enumerate([(1, m.x), (-1, m.y), (1, m.z)]):
         #     self.assertAlmostEqual(mult*value(v), value(dual.dual[dual_cons]))
+
+
+    def test_lp_dual(self):
+        m = ConcreteModel()
+        m.x = Var(domain=NonNegativeReals)
+        m.y = Var(domain=NonPositiveReals)
+        m.z = Var(domain=Reals)
+
+        m.obj = Objective(expr=m.x + 2*m.y - 3*m.z)
+        m.c1 = Constraint(expr=-4*m.x - 2*m.y - m.z <= -5)
+        m.c2 = Constraint(expr=m.x + m.y >= 3)
+        m.c3 = Constraint(expr=- m.y - m.z == -4.2)
+        m.c4 = Constraint(expr=m.z <= 42)
+        m.dual = Suffix(direction=Suffix.IMPORT)
+
+        lp_dual = TransformationFactory('core.lp_dual')
+        dual = lp_dual.create_using(m)
