@@ -9,7 +9,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import gurobipy
+try:
+    import gurobipy
+    gurobi_available=True
+except:
+    gurobi_available=False
 import pyomo.environ as pe
 from pyomo.contrib import appsi
 import pyomo.contrib.alternative_solutions.aos_utils as aos_utils
@@ -61,6 +65,8 @@ def gurobi_generate_solutions(
     #
     # Setup gurobi
     #
+    if not gurobi_available:
+        return []
     opt = appsi.solvers.Gurobi()
     if not opt.available():  # pragma: no cover
         return []
