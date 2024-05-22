@@ -37,12 +37,12 @@ from pyomo.repn.linear import (
     LinearRepnVisitor,
 )
 from pyomo.repn.util import ExprType
-from . import linear
+import pyomo.repn.linear as linear
 
 
 class ParameterizedExprType(enum.IntEnum, metaclass=ExtendedEnumType):
     __base_enum__ = ExprType
-    PSEUDO_CONSTANT = 50
+    PSEUDO_CONSTANT = 5
 
 
 _PSEUDO_CONSTANT = ParameterizedExprType.PSEUDO_CONSTANT
@@ -123,7 +123,7 @@ class ParameterizedLinearRepn(LinearRepn):
         Notes
         -----
         This method assumes that the operator was "+". It is implemented
-        so that we can directly use a LinearRepn() as a `data` object in
+        so that we can directly use a ParameterizedLinearRepn() as a `data` object in
         the expression walker (thereby allowing us to use the default
         implementation of acceptChildResult [which calls
         `data.append()`] and avoid the function call for a custom
@@ -131,7 +131,7 @@ class ParameterizedLinearRepn(LinearRepn):
 
         """
         _type, other = other
-        if _type in (_CONSTANT, _PSEUDO_CONSTANT):
+        if _type is _CONSTANT or type is _PSEUDO_CONSTANT:
             self.constant += other
             return
 
@@ -235,6 +235,8 @@ _exit_node_handlers[NegationExpression].update(
 
 
 def _handle_product_constant_constant(visitor, node, arg1, arg2):
+    # [ESJ 5/22/24]: Overriding this handler to exclude the deprecation path for
+    # 0 * nan. It doesn't need overridden when that deprecation path goes away.
     return _CONSTANT, arg1[1] * arg2[1]
 
 
