@@ -71,6 +71,10 @@ at least 70% coverage of the lines modified in the PR and prefer coverage
 closer to 90%. We also require that all tests pass before a PR will be 
 merged.
 
+.. note::
+   If you are having issues getting tests to pass on your Pull Request,
+   please tag any of the core developers to ask for help.
+
 The Pyomo main branch provides a Github Actions workflow (configured
 in the ``.github/`` directory) that will test any changes pushed to
 a branch with a subset of the complete test harness that includes
@@ -82,12 +86,15 @@ This will enable the tests to run automatically with each push to your fork.
 
 At any point in the development cycle, a "work in progress" pull request
 may be opened by including '[WIP]' at the beginning of the PR
-title. This allows your code changes to be tested by the full suite of
-Pyomo's automatic
-testing infrastructure. Any pull requests marked '[WIP]' will not be
+title. Any pull requests marked '[WIP]' or draft will not be
 reviewed or merged by the core development team. However, any
 '[WIP]' pull request left open for an extended period of time without
 active development may be marked 'stale' and closed.
+
+.. note::
+   Draft and WIP Pull Requests will **NOT** trigger tests. This is an effort to
+   reduce our CI backlog. Please make use of the provided
+   branch test suite for evaluating / testing draft functionality.
 
 Python Version Support
 ++++++++++++++++++++++
@@ -397,50 +404,10 @@ Contrib packages will be tested along with Pyomo.  If test failures
 arise, then these packages will be disabled and an issue will be
 created to resolve these test failures.
 
-The following two examples illustrate the two ways
-that ``pyomo.contrib`` can be used to integrate third-party
-contributions.
-
-Including External Packages
-+++++++++++++++++++++++++++
-
-The `pyomocontrib_simplemodel
-<http://pyomocontrib-simplemodel.readthedocs.io/en/latest/>`_ package
-is derived from Pyomo, and it defines the class SimpleModel that
-illustrates how Pyomo can be used in a simple, less object-oriented
-manner. Specifically, this class mimics the modeling style supported
-by `PuLP <https://github.com/coin-or/pulp>`_.
-
-While ``pyomocontrib_simplemodel`` can be installed and used separate
-from Pyomo, this package is included in ``pyomo/contrib/simplemodel``.
-This allows this package to be referenced as if were defined as a
-subpackage of ``pyomo.contrib``.  For example::
-
-    from pyomo.contrib.simplemodel import *
-    from math import pi
-
-    m = SimpleModel()
-
-    r = m.var('r', bounds=(0,None))
-    h = m.var('h', bounds=(0,None))
-
-    m += 2*pi*r*(r + h)
-    m += pi*h*r**2 == 355
-
-    status = m.solve("ipopt")
-
-This example illustrates that a package can be distributed separate
-from Pyomo while appearing to be included in the ``pyomo.contrib``
-subpackage.  Pyomo requires a separate directory be defined under
-``pyomo/contrib`` for each such package, and the Pyomo developer
-team will approve the inclusion of third-party packages in this
-manner.
-
-
 Contrib Packages within Pyomo
 +++++++++++++++++++++++++++++
 
-Third-party contributions can also be included directly within the
+Third-party contributions can be included directly within the
 ``pyomo.contrib`` package.  The ``pyomo/contrib/example`` package
 provides an example of how this can be done, including a directory
 for plugins and package tests.  For example, this package can be
@@ -458,7 +425,7 @@ import this package, but if an import failure occurs, Pyomo will
 silently ignore it.  Otherwise, this pyomo package will be treated
 like any other.  Specifically:
 
-* Plugin classes defined in this package are loaded when `pyomo.environ` is loaded.
+* Plugin classes defined in this package are loaded when ``pyomo.environ`` is loaded.
 
 * Tests in this package are run with other Pyomo tests.
 

@@ -555,7 +555,7 @@ class MOSEKDirect(DirectSolver):
 
         Parameters
         ----------
-        block: Block (scalar Block or single _BlockData)
+        block: Block (scalar Block or single BlockData)
         """
         var_seq = tuple(
             block.component_data_objects(

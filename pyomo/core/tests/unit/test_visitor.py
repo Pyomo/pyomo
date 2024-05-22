@@ -72,7 +72,7 @@ from pyomo.core.expr.visitor import (
     RECURSION_LIMIT,
     get_stack_depth,
 )
-from pyomo.core.base.param import _ParamData, ScalarParam
+from pyomo.core.base.param import ParamData, ScalarParam
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.common.collections import ComponentSet
 from pyomo.common.errors import TemplateExpressionError
@@ -145,7 +145,8 @@ class TestExpressionUtilities(unittest.TestCase):
         self.assertEqual(list(identify_variables(m.a + m.b[1])), [m.a, m.b[1]])
         self.assertEqual(list(identify_variables(m.a ** m.b[1])), [m.a, m.b[1]])
         self.assertEqual(
-            list(identify_variables(m.a ** m.b[1] + m.b[2])), [m.b[2], m.a, m.b[1]]
+            ComponentSet(identify_variables(m.a ** m.b[1] + m.b[2])),
+            ComponentSet([m.b[2], m.a, m.b[1]]),
         )
         self.assertEqual(
             list(identify_variables(m.a ** m.b[1] + m.b[2] * m.b[3] * m.b[2])),
@@ -159,14 +160,20 @@ class TestExpressionUtilities(unittest.TestCase):
         # Identify variables in the arguments to functions
         #
         self.assertEqual(
-            list(identify_variables(m.x(m.a, 'string_param', 1, []) * m.b[1])),
-            [m.b[1], m.a],
+            ComponentSet(identify_variables(m.x(m.a, 'string_param', 1, []) * m.b[1])),
+            ComponentSet([m.b[1], m.a]),
         )
         self.assertEqual(
             list(identify_variables(m.x(m.p, 'string_param', 1, []) * m.b[1])), [m.b[1]]
         )
-        self.assertEqual(list(identify_variables(tanh(m.a) * m.b[1])), [m.b[1], m.a])
-        self.assertEqual(list(identify_variables(abs(m.a) * m.b[1])), [m.b[1], m.a])
+        self.assertEqual(
+            ComponentSet(identify_variables(tanh(m.a) * m.b[1])),
+            ComponentSet([m.b[1], m.a]),
+        )
+        self.assertEqual(
+            ComponentSet(identify_variables(abs(m.a) * m.b[1])),
+            ComponentSet([m.b[1], m.a]),
+        )
         #
         # Check logic for allowing duplicates
         #
@@ -685,7 +692,7 @@ class ReplacementWalkerTest3(ExpressionReplacementVisitor):
         self.model = model
 
     def visiting_potential_leaf(self, node):
-        if node.__class__ in (_ParamData, ScalarParam):
+        if node.__class__ in (ParamData, ScalarParam):
             if id(node) in self.substitute:
                 return True, self.substitute[id(node)]
             self.substitute[id(node)] = 2 * self.model.w.add()

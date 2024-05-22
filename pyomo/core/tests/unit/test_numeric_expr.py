@@ -112,7 +112,7 @@ from pyomo.core.expr import Expr_if
 from pyomo.core.base.label import NumericLabeler
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr import expr_common
-from pyomo.core.base.var import _GeneralVarData
+from pyomo.core.base.var import VarData
 
 from pyomo.repn import generate_standard_repn
 from pyomo.core.expr.numvalue import NumericValue
@@ -294,7 +294,7 @@ class TestExpression_EvaluateNumericValue(TestExpression_EvaluateNumericConstant
 
 class TestExpression_EvaluateVarData(TestExpression_EvaluateNumericValue):
     def create(self, val, domain):
-        tmp = _GeneralVarData()
+        tmp = VarData()
         tmp.domain = domain
         tmp.value = val
         return tmp

@@ -106,6 +106,12 @@ class Test(unittest.TestCase):
         results.write(filename=_out, times=False, format='json')
         self.compare_json(_out, join(currdir, "test_scip_solve_from_instance.baseline"))
 
+    def test_scip_solve_from_instance_with_reoptimization(self):
+        # Test scip with re-optimization option enabled
+        # This case changes the Scip output results which may break the results parser
+        self.scip.options['reoptimization/enable'] = True
+        self.test_scip_solve_from_instance()
+
 
 if __name__ == "__main__":
     deleteFiles = False
