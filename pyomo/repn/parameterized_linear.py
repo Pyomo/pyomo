@@ -131,7 +131,7 @@ class ParameterizedLinearRepn(LinearRepn):
 
         """
         _type, other = other
-        if _type is _CONSTANT or type is _PSEUDO_CONSTANT:
+        if _type is _CONSTANT or _type is _PSEUDO_CONSTANT:
             self.constant += other
             return
 
