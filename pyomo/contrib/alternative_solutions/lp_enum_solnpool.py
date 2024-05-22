@@ -75,7 +75,7 @@ def enumerate_linear_solutions_soln_pool(
     for parameter, value in solver_options.items():
         opt.options[parameter] = value
 
-    print("Peforming initial solve of model.")
+    print("Performing initial solve of model.")
     results = opt.solve(model, tee=tee)
     status = results.solver.status
     condition = results.solver.termination_condition
@@ -98,8 +98,8 @@ def enumerate_linear_solutions_soln_pool(
         aos_block, orig_objective, orig_objective_value, rel_opt_gap, abs_opt_gap
     )
 
-    cannonical_block = shifted_lp.get_shifted_linear_model(model)
-    cb = cannonical_block
+    canonical_block = shifted_lp.get_shifted_linear_model(model)
+    cb = canonical_block
 
     # w variables
     cb.basic_lower = pe.Var(cb.var_lower_index, domain=pe.Binary)

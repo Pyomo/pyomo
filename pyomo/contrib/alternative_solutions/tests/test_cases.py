@@ -11,11 +11,11 @@ That is, simple problems where the alternative solutions can be found manually.
 """
 
 
-def _is_satified(constraint, feasability_tol=1e-6):
+def _is_satisfied(constraint, feasibility_tol=1e-6):
     value = pe.value(constraint.body)
-    if constraint.has_lb() and value < constraint.lb - feasability_tol:
+    if constraint.has_lb() and value < constraint.lb - feasibility_tol:
         return False
-    if constraint.has_ub() and value > constraint.ub + feasability_tol:
+    if constraint.has_ub() and value > constraint.ub + feasibility_tol:
         return False
     return True
 
@@ -80,7 +80,7 @@ def get_2d_diamond_problem(discrete_x=False, discrete_y=False):
             m.y.set_value(y_value)
             is_feasible = True
             for con in cons:
-                if not _is_satified(con):
+                if not _is_satisfied(con):
                     is_feasible = False
                     break
             if is_feasible:
@@ -156,7 +156,7 @@ def get_2d_unbounded_problem():
 
 def get_2d_degenerate_lp():
     """
-    Simple 2d problem that includes a redundant contraint such that three
+    Simple 2d problem that includes a redundant constraint such that three
     constraints are active at optimality.
     """
     m = pe.ConcreteModel()

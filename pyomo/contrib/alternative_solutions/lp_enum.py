@@ -161,7 +161,7 @@ def enumerate_linear_solutions(
             opt.options["Heuristics"] = 0.0
 
     if not quiet:  # pragma: no cover
-        print("Peforming initial solve of model.")
+        print("Performing initial solve of model.")
 
     if use_appsi:
         results = opt.solve(model)
@@ -291,7 +291,7 @@ def enumerate_linear_solutions(
                     if continuous_var[var].value > zero_threshold:
                         num_non_zero += 1
                         # WEH - I don't think you need to add the binary variable.  It
-                        #       should be automaticaly added when used.
+                        #       should be automatically added when used.
                         # if var not in binary_var:
                         #    binary_var[var]
 

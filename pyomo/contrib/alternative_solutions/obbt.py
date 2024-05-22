@@ -197,7 +197,7 @@ def obbt_analysis_bounds_and_solutions(
         infeas_or_unbdd_tc = pe.TerminationCondition.infeasibleOrUnbounded
         unbdd_tc = pe.TerminationCondition.unbounded
     if not quiet:  # pragma: no cover
-        print("Peforming initial solve of model.")
+        print("Performing initial solve of model.")
 
     if condition != optimal_tc:
         raise RuntimeError(

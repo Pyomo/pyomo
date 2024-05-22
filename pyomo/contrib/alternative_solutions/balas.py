@@ -135,7 +135,7 @@ def enumerate_binary_solutions(
     # Initial solve of the model
     #
     if not quiet:  # pragma: no cover
-        print("Peforming initial solve of model.")
+        print("Performing initial solve of model.")
     results = opt.solve(model, tee=tee, load_solutions=False)
     status = results.solver.status
     condition = results.solver.termination_condition

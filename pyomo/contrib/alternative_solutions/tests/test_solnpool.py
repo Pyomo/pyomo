@@ -13,7 +13,7 @@ class TestSolnPoolUnit(unittest.TestCase):
     """
     Cases to cover:
 
-        LP feasability (for an LP just one solution should be returned since gurobi cannot enumerate over continuous vars)
+        LP feasibility (for an LP just one solution should be returned since gurobi cannot enumerate over continuous vars)
 
         Pass at least one solver option to make sure that work, e.g. time limit
 
