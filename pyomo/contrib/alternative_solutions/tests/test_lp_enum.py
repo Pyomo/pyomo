@@ -70,7 +70,7 @@ class TestLPEnum:
         n.y.domain = pe.Reals
 
         sols = lp_enum.enumerate_linear_solutions(
-            n, solver=mip_solver, quiet=False, debug=True
+            n, solver=mip_solver, quiet=True, debug=False, tee=False
         )
         for s in sols:
             print(s)
@@ -80,7 +80,7 @@ class TestLPEnum:
         n = tc.get_pentagonal_lp()
 
         sols = lp_enum.enumerate_linear_solutions(
-            n, solver=mip_solver, quiet=False, debug=True
+            n, solver=mip_solver, quiet=True, debug=False
         )
         for s in sols:
             print(s)

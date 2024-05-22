@@ -155,6 +155,10 @@ def enumerate_linear_solutions(
         opt = pe.SolverFactory(solver)
         for parameter, value in solver_options.items():
             opt.options[parameter] = value
+        if solver == "gurobi":
+            # Disable gurobi heuristics, which can return
+            #   solutions not at a vertex
+            opt.options["Heuristics"] = 0.0
 
     if not quiet:  # pragma: no cover
         print("Peforming initial solve of model.")
@@ -226,6 +230,8 @@ def enumerate_linear_solutions(
 
         if debug:
             model.pprint()
+            # print("Writing test{}.lp".format(solution_number))
+            # cb.write("test{}.lp".format(solution_number))
         if use_appsi:
             results = opt.solve(model)
             condition = results.termination_condition
