@@ -66,7 +66,9 @@ for _err in myqt.import_errors:
     _log.error(_err)
 
 
-def get_mainwindow(model=None, show=True, ask_close=True, testing=False):
+def get_mainwindow(
+    model=None, show=True, ask_close=True, model_var_name_in_main=None, testing=False
+):
     """
     Create a UI MainWindow.
 
@@ -79,18 +81,19 @@ def get_mainwindow(model=None, show=True, ask_close=True, testing=False):
         (ui, model): ui is the MainWindow widget, and model is the linked Pyomo
             model.  If no model is provided a new ConcreteModel is created
     """
-    model_name = None
+    model_name = model_var_name_in_main
     if model is None:
         import __main__
-        if "model" in dir(__main__):
-            if isinstance(getattr(__main__, "model"), pyo.Block):
-                model = getattr(__main__, "model")
-                model_name = "model"
-        for s in dir(__main__):
-            if isinstance(getattr(__main__, s), pyo.Block):
-                model = getattr(__main__, s)
-                model_name = s
-                break
+
+        if model_name in dir(__main__):
+            if isinstance(getattr(__main__, model_name), pyo.Block):
+                model = getattr(__main__, model_name)
+        else:
+            for s in dir(__main__):
+                if isinstance(getattr(__main__, s), pyo.Block):
+                    model = getattr(__main__, s)
+                    model_name = s
+                    break
     ui = MainWindow(
         model=model,
         model_var_name_in_main=model_name,
