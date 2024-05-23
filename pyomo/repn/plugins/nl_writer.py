@@ -1924,7 +1924,10 @@ class _NLWriter_impl(object):
             if not info.nonlinear:
                 continue
             nl, args = info.nonlinear
-            if not args or any(vid not in eliminated_vars for vid in args):
+            if not args or any(
+                vid not in eliminated_vars or eliminated_vars[vid].linear
+                for vid in args
+            ):
                 continue
             # Ideally, we would just evaluate the named expression.
             # However, there might be a linear portion of the named
