@@ -70,7 +70,7 @@ class DesignOfExperiments:
         solver=None,
         prior_FIM=None,
         discretize_model=None,
-        args={},
+        args=None,
         logger_level=logging.INFO,
     ):
         """
@@ -103,7 +103,7 @@ class DesignOfExperiments:
         args:
             Additional arguments for the create_model function.
         logger_level:
-            Specify the level of the logger. Changer to logging.DEBUG for all messages.
+            Specify the level of the logger. Change to logging.DEBUG for all messages.
         """
 
         # parameters
@@ -114,6 +114,9 @@ class DesignOfExperiments:
         self.design_name = design_vars.variable_names
         self.design_vars = design_vars
         self.create_model = create_model
+        
+        if args is None:
+            args = {}
         self.args = args
 
         # create the measurement information object
@@ -145,7 +148,7 @@ class DesignOfExperiments:
         """
         Check if the prior FIM is N*N matrix, where N is the number of parameter
         """
-        if type(self.prior_FIM) != type(None):
+        if self.prior_FIM is not None:
             if np.shape(self.prior_FIM)[0] != np.shape(self.prior_FIM)[1]:
                 raise ValueError('Found wrong prior information matrix shape.')
             elif np.shape(self.prior_FIM)[0] != len(self.param):
@@ -980,10 +983,12 @@ class DesignOfExperiments:
         )
 
         if self.fim_initial is not None:
-            dict_fim_initialize = {}
-            for i, bu in enumerate(model.regression_parameters):
-                for j, un in enumerate(model.regression_parameters):
-                    dict_fim_initialize[(bu, un)] = self.fim_initial[i][j]
+            dict_fim_initialize = {
+                (bu, un): self.fim_initial[i][j]
+                for i, bu in enumerate(model.regression_parameters)
+                for j, un in enumerate(model.regression_parameters)
+
+            }
 
         def initialize_fim(m, j, d):
             return dict_fim_initialize[(j, d)]
@@ -1005,13 +1010,12 @@ class DesignOfExperiments:
         if self.Cholesky_option and self.objective_option == ObjectiveLib.det:
 
             # move the L matrix initial point to a dictionary
-            if type(self.L_initial) != type(None):
-                dict_cho = {}
-                # Loop over rows
-                for i, bu in enumerate(model.regression_parameters):
-                    # Loop over columns
-                    for j, un in enumerate(model.regression_parameters):
-                        dict_cho[(bu, un)] = self.L_initial[i][j]
+            if self.L_initial is not None:
+                dict_cho = {
+                    (bu, un): self.L_initial[i][j] 
+                    for i, bu in enumerate(model.regression_parameters)
+                    for j, un in enumerate(model.regression_parameters)
+                }
 
             # use the L dictionary to initialize L matrix
             def init_cho(m, i, j):
@@ -1019,7 +1023,7 @@ class DesignOfExperiments:
 
             # Define elements of Cholesky decomposition matrix as Pyomo variables and either
             # Initialize with L in L_initial
-            if type(self.L_initial) != type(None):
+            if self.L_initial is not None:
                 model.L_ele = pyo.Var(
                     model.regression_parameters,
                     model.regression_parameters,
@@ -1070,10 +1074,11 @@ class DesignOfExperiments:
 
         # A constraint to calculate elements in Hessian matrix
         # transfer prior FIM to be Expressions
-        fim_initial_dict = {}
-        for i, bu in enumerate(model.regression_parameters):
-            for j, un in enumerate(model.regression_parameters):
-                fim_initial_dict[(bu, un)] = self.prior_FIM[i][j]
+        fim_initial_dict = {
+            (bu, un): self.prior_FIM[i][j]
+            for i, bu in enumerate(model.regression_parameters)
+            for j, un in enumerate(model.regression_parameters)
+        }
 
         def read_prior(m, i, j):
             return fim_initial_dict[(i, j)]
@@ -1119,6 +1124,10 @@ class DesignOfExperiments:
         small_number = 1e-10
 
         # Assemble the FIM matrix. This is helpful for initialization!
+        # 
+        # Suggestion from JS: "It might be more efficient to form the NP array in one shot 
+        # (from a list or using fromiter), and then reshaping to the 2-D matrix"
+        #
         fim = np.zeros((len(self.param), len(self.param)))
         for i, bu in enumerate(m.regression_parameters):
             for j, un in enumerate(m.regression_parameters):
@@ -1228,7 +1237,7 @@ class DesignOfExperiments:
             m.Obj = pyo.Objective(expr=0)
         else:
             # something went wrong!
-            raise ValueError(
+            raise DeveloperError(
                 "Objective option not recognized. Please contact the developers as you should not see this error."
             )
 

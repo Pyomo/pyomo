@@ -148,6 +148,9 @@ class VariablesWithIndices:
         # iterate over index combinations ["CA", 1], ["CA", 2], ..., ["CC", 2], ["CC", 3]
         for index_instance in all_variable_indices:
             var_name_index_string = var_name
+            #
+            # Suggestion from JS: "Can you re-use name_repr and index_repr from pyomo.core.base.component_namer here?"
+            #
             for i, idx in enumerate(index_instance):
                 # if i is the first index, open the []
                 if i == 0:
