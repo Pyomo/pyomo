@@ -38,18 +38,128 @@ from pyomo.contrib.doe.examples.reactor_kinetics import create_model, disc_for_m
 
 
 class TestMeasurementError(unittest.TestCase):
-    def test(self):
-        t_control = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]
-        variable_name = "C"
-        indices = {0: ['CA', 'CB', 'CC'], 1: t_control}
-        # measurement object
-        measurements = MeasurementVariables()
+
+    def test_with_time_plus_one_extra_index(self):
+        """ This tests confirms the typical usage with a time index plus one extra index.
+
+        This test should execute without throwing any errors.
+        
+        """
+
+        MeasurementVariables().add_variables(
+            "C",
+            indices={0: ['A', 'B', 'C'], 1: [0, 0.5, 1.0]},
+            time_index_position=1
+        )
+
+    def test_with_time_plus_two_extra_indices(self):
+        """ This tests confirms the typical usage with a time index plus two extra indices.
+
+        This test should execute without throwing any errors.
+        
+        """
+
+        MeasurementVariables().add_variables(
+            "C",
+            indices={0: ['A', 'B', 'C'], # species
+                     1: [0, 0.5, 1.0], # time
+                     2: [1, 2, 3]}, # position
+            time_index_position=1
+        )
+
+    def test_time_index_position_out_of_bounds(self):
+        """ This test confirms that an error is thrown when the time index position is out of bounds.
+        
+        """
+
         # if time index is not in indices, an value error is thrown.
         with self.assertRaises(ValueError):
-            measurements.add_variables(
-                variable_name, indices=indices, time_index_position=2
+            MeasurementVariables().add_variables(
+                "C", 
+                indices={0: ['CA', 'CB', 'CC'], # species 
+                         1: [0, 0.5, 1.0],}, # time
+                time_index_position=2 # this is out of bounds
             )
 
+    def test_single_measurement_variable(self):
+        """ This test confirms we can specify a single measurement variable without
+        specifying the indices.
+
+        The test should execute with no errors.
+        """
+        measurements = MeasurementVariables()
+        measurements.add_variables(
+            "HelloWorld", 
+            indices=None, 
+            time_index_position=None)
+
+    def test_without_time_index(self):
+        """ This test confirms we can add a measurement variable without specifying the time index.
+
+        The test should execute with no errors.
+
+        """
+        variable_name = "C"
+        indices = {0: ['CA', 'CB', 'CC']} # specify the indices
+        # no time index
+
+        # measurement object
+        measurements = MeasurementVariables()
+        measurements.add_variables(
+                variable_name, indices=indices, time_index_position=None
+            )
+        
+    def test_only_time_index(self):
+        """ This test confirms we can add a measurement variable without specifying the variable name.
+
+        The test should execute with no errors.
+
+        """
+
+        MeasurementVariables().add_variables(
+            "HelloWorld", # name of the variable
+            indices={0: [0, 0.5, 1.0]}, 
+            time_index_position=0
+        )
+
+    def test_with_no_measurement_name(self):
+        """ This test confirms that an error is thrown when None is used as the measurement name.
+
+        """
+
+        with self.assertRaises(TypeError):
+            MeasurementVariables().add_variables(
+                None, 
+                indices={0: [0, 0.5, 1.0]}, 
+                time_index_position=0
+            )
+    
+    def test_with_non_string_measurement_name(self):
+        """ This test confirms that an error is thrown when a non-string is used as the measurement name.
+
+        """
+
+        with self.assertRaises(TypeError):
+            MeasurementVariables().add_variables(
+                1, 
+                indices={0: [0, 0.5, 1.0]}, 
+                time_index_position=0
+            )
+
+    def test_non_integer_index_keys(self):
+        """ This test confirms that strings can be used as keys for specifying the indices.
+
+        Warning: it is possible this usage breaks something else in Pyomo.DoE.
+        There may be an implicit assumption that the order of the keys must match the order 
+        of the indices in the Pyomo model.
+
+        """
+
+        MeasurementVariables().add_variables(
+            "C",
+            indices={"species": ['CA', 'CB', 'CC'], "time": [0, 0.5, 1.0]},
+            time_index_position="time"
+        )
 
 class TestDesignError(unittest.TestCase):
     def test(self):

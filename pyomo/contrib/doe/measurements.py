@@ -183,7 +183,8 @@ class VariablesWithIndices:
         """
         Check if the measurement information provided are valid to use.
         """
-        assert isinstance(var_name, str), "var_name should be a string."
+        if not isinstance(var_name, str):
+            raise TypeError("Variable name must be a string.")
 
         # debugging note: what is an integer versus a list versus a dictionary here?
         # check if time_index_position is in indices
