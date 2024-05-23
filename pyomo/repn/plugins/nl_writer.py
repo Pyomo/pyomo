@@ -2714,9 +2714,12 @@ def handle_external_function_node(visitor, node, *args):
     func = node._fcn._function
     # There is a special case for external functions: these are the only
     # expressions that can accept string arguments. As we currently pass
-    # these as 'precompiled' general NL fragments, the normal trap for
-    # constant subexpressions will miss constant external function calls
-    # that contain strings.  We will catch that case here.
+    # these as 'precompiled' GENERAL AMPLRepns, the normal trap for
+    # constant subexpressions will miss string arguments.  We will catch
+    # that case here by looking for NL fragments with no variable
+    # references.  Note that the NL fragment is NOT the raw string
+    # argument that we want to evaluate: the raw string is in the
+    # `const` field.
     if all(
         arg[0] is _CONSTANT or (arg[0] is _GENERAL and arg[1].nl and not arg[1].nl[1])
         for arg in args
