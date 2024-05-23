@@ -99,14 +99,11 @@ class TestMeasurementError(unittest.TestCase):
         The test should execute with no errors.
 
         """
-        variable_name = "C"
-        indices = {0: ['CA', 'CB', 'CC']} # specify the indices
-        # no time index
 
-        # measurement object
-        measurements = MeasurementVariables()
-        measurements.add_variables(
-                variable_name, indices=indices, time_index_position=None
+        MeasurementVariables().add_variables(
+                "C", 
+                indices= {0: ['CA', 'CB', 'CC']}, # species as only index 
+                time_index_position=None # no time index
             )
         
     def test_only_time_index(self):

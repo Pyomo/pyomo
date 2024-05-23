@@ -190,13 +190,13 @@ class VariablesWithIndices:
         # check if time_index_position is in indices
         if (
             indices is not None  # ensure not None
-            and time_index_position is None  # ensure not None
+            and time_index_position is not None  # ensure not None
             and time_index_position
-            not in indices  # ensure time_index_position is in indices
+            not in indices.keys()  # ensure time_index_position is in indices
         ):
             raise ValueError("time index cannot be found in indices.")
 
-        # if given a list, check if bounds have the same length with flattened variable
+        # if given a list, check if values have the same length with flattened variable
         if (
             values is not None  # ensure not None
             and not type(values)
@@ -212,7 +212,7 @@ class VariablesWithIndices:
             and isinstance(lower_bounds, collections.abc.Sequence)  # ensure list-like
             and len(lower_bounds) != len_indices  # ensure same length
         ):
-            raise ValueError("Lowerbounds is of different length with indices.")
+            raise ValueError("Lowerbounds have a different length with indices.")
 
         if (
             upper_bounds is not None  # ensure not None
@@ -221,7 +221,7 @@ class VariablesWithIndices:
             and isinstance(upper_bounds, collections.abc.Sequence)  # ensure list-like
             and len(upper_bounds) != len_indices  # ensure same length
         ):
-            raise ValueError("Upperbounds is of different length with indices.")
+            raise ValueError("Upperbounds have a different length with indices.")
 
 
 class MeasurementVariables(VariablesWithIndices):
