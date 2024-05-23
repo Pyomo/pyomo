@@ -34,7 +34,7 @@ from pyomo.environ import value, ConcreteModel
 from pyomo.contrib.doe.examples.reactor_kinetics import create_model, disc_for_measure
 from pyomo.opt import SolverFactory
 
-ipopt_available = SolverFactory('ipopt').available()
+ipopt_available = SolverFactory("ipopt").available()
 
 
 class Test_example_options(unittest.TestCase):
@@ -70,11 +70,11 @@ class Test_doe_object(unittest.TestCase):
         # Control time set [h]
         t_control = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]
         # Define parameter nominal value
-        parameter_dict = {'A1': 84.79, 'A2': 371.72, 'E1': 7.78, 'E2': 15.05}
+        parameter_dict = {"A1": 84.79, "A2": 371.72, "E1": 7.78, "E2": 15.05}
 
         # measurement object
         variable_name = "C"
-        indices = {0: ['CA', 'CB', 'CC'], 1: t_control}
+        indices = {0: ["CA", "CB", "CC"], 1: t_control}
 
         measurements = MeasurementVariables()
         measurements.add_variables(
@@ -85,7 +85,7 @@ class Test_doe_object(unittest.TestCase):
         exp_design = DesignVariables()
 
         # add CAO as design variable
-        var_C = 'CA0'
+        var_C = "CA0"
         indices_C = {0: [0]}
         exp1_C = [5]
         exp_design.add_variables(
@@ -98,7 +98,7 @@ class Test_doe_object(unittest.TestCase):
         )
 
         # add T as design variable
-        var_T = 'T'
+        var_T = "T"
         indices_T = {0: t_control}
         exp1_T = [470, 300, 300, 300, 300, 300, 300, 300, 300]
 
@@ -216,5 +216,5 @@ class Test_doe_object(unittest.TestCase):
         self.assertAlmostEqual(value(optimize_result.model.T[0.5]), 300, places=2)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

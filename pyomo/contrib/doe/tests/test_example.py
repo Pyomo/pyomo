@@ -38,7 +38,7 @@ import pyomo.common.unittest as unittest
 
 from pyomo.opt import SolverFactory
 
-ipopt_available = SolverFactory('ipopt').available()
+ipopt_available = SolverFactory("ipopt").available()
 
 
 class TestReactorExample(unittest.TestCase):

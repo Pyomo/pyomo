@@ -150,5 +150,5 @@ class ScenarioGenerator:
 
         # store scenario
         if self.store:
-            with open('scenario_simultaneous.pickle', 'wb') as f:
+            with open("scenario_simultaneous.pickle", "wb") as f:
                 pickle.dump(self.scenario_data, f)

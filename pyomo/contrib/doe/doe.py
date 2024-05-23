@@ -114,7 +114,7 @@ class DesignOfExperiments:
         self.design_name = design_vars.variable_names
         self.design_vars = design_vars
         self.create_model = create_model
-        
+
         if args is None:
             args = {}
         self.args = args
@@ -150,9 +150,9 @@ class DesignOfExperiments:
         """
         if self.prior_FIM is not None:
             if np.shape(self.prior_FIM)[0] != np.shape(self.prior_FIM)[1]:
-                raise ValueError('Found wrong prior information matrix shape.')
+                raise ValueError("Found wrong prior information matrix shape.")
             elif np.shape(self.prior_FIM)[0] != len(self.param):
-                raise ValueError('Found wrong prior information matrix shape.')
+                raise ValueError("Found wrong prior information matrix shape.")
 
     def stochastic_program(
         self,
@@ -411,7 +411,7 @@ class DesignOfExperiments:
 
         # if measurements are provided
         if read_output:
-            with open(read_output, 'rb') as f:
+            with open(read_output, "rb") as f:
                 output_record = pickle.load(f)
                 f.close()
             jac = self._finite_calculation(output_record)
@@ -430,7 +430,7 @@ class DesignOfExperiments:
             self._square_model_from_compute_FIM = mod
 
             if extract_single_model:
-                mod_name = store_output + '.csv'
+                mod_name = store_output + ".csv"
                 dataframe = extract_single_model(mod, square_result)
                 dataframe.to_csv(mod_name)
 
@@ -452,10 +452,10 @@ class DesignOfExperiments:
 
                 output_record[s] = output_iter
 
-                output_record['design'] = self.design_values
+                output_record["design"] = self.design_values
 
                 if store_output:
-                    f = open(store_output, 'wb')
+                    f = open(store_output, "wb")
                     pickle.dump(output_record, f)
                     f.close()
 
@@ -537,7 +537,7 @@ class DesignOfExperiments:
                 dsdp_extract.append(dsdp_array[kaug_no])
             except:
                 # k_aug does not provide value for fixed variables
-                self.logger.debug('The variable is fixed:  %s', mname)
+                self.logger.debug("The variable is fixed:  %s", mname)
                 # produce the sensitivity for fixed variables
                 zero_sens = np.zeros(len(self.param))
                 # for fixed variables, the sensitivity are a zero vector
@@ -611,7 +611,7 @@ class DesignOfExperiments:
 
         # Determine if create_model takes theta as an optional input
         pass_theta_to_initialize = (
-            'theta' in inspect.getfullargspec(self.create_model).args
+            "theta" in inspect.getfullargspec(self.create_model).args
         )
 
         # Allow user to self-define complex design variables
@@ -635,11 +635,16 @@ class DesignOfExperiments:
                 theta_initialize = self.scenario_data.scenario[s]
                 # Add model on block with theta values
                 self.create_model(
-                    mod=b, model_option=ModelOptionLib.stage2, theta=theta_initialize, **self.args,
+                    mod=b,
+                    model_option=ModelOptionLib.stage2,
+                    theta=theta_initialize,
+                    **self.args,
                 )
             else:
                 # Otherwise add model on block without theta values
-                self.create_model(mod=b, model_option=ModelOptionLib.stage2, **self.args)
+                self.create_model(
+                    mod=b, model_option=ModelOptionLib.stage2, **self.args
+                )
 
             # fix parameter values to perturbed values
             for par in self.param:
@@ -831,27 +836,31 @@ class DesignOfExperiments:
             # generate the design variable dictionary needed for running compute_FIM
             # first copy value from design_values
             design_iter = self.design_vars.variable_names_value.copy()
+
+            # convert to a list and cache
+            list_design_set_iter = list(design_set_iter)
+
             # update the controlled value of certain time points for certain design variables
             for i, names in enumerate(design_dimension_names):
                 if isinstance(names, str):
                     # if 'names' is simply a string, copy the new value
-                    design_iter[names] = list(design_set_iter)[i]
+                    design_iter[names] = list_design_set_iter[i]
                 elif isinstance(names, collections.abc.Sequence):
                     # if the element is a list, all design variables in this list share the same values
                     for n in names:
-                        design_iter[n] = list(design_set_iter)[i]
+                        design_iter[n] = list_design_set_iter[i]
                 else:
                     # otherwise just copy the value
                     # design_iter[names] = list(design_set_iter)[i]
                     raise NotImplementedError(
-                        'You should not see this error message. Please report it to the Pyomo.DoE developers.'
+                        "You should not see this error message. Please report it to the Pyomo.DoE developers."
                     )
 
             self.design_vars.variable_names_value = design_iter
             iter_timer = TicTocTimer()
-            self.logger.info('=======Iteration Number: %s =====', count + 1)
+            self.logger.info("=======Iteration Number: %s =====", count + 1)
             self.logger.debug(
-                'Design variable values of this iteration: %s', design_iter
+                "Design variable values of this iteration: %s", design_iter
             )
             iter_timer.tic(msg=None)
             # generate store name
@@ -887,12 +896,12 @@ class DesignOfExperiments:
                 time_set.append(iter_t)
 
                 # give run information at each iteration
-                self.logger.info('This is run %s out of %s.', count, total_count)
+                self.logger.info("This is run %s out of %s.", count, total_count)
                 self.logger.info(
-                    'The code has run  %s seconds.', round(sum(time_set), 2)
+                    "The code has run  %s seconds.", round(sum(time_set), 2)
                 )
                 self.logger.info(
-                    'Estimated remaining time:  %s seconds',
+                    "Estimated remaining time:  %s seconds",
                     round(
                         sum(time_set) / (count) * (total_count - count), 2
                     ),  # need to check this math... it gives a negative number for the final count
@@ -907,11 +916,11 @@ class DesignOfExperiments:
 
             except:
                 self.logger.warning(
-                    ':::::::::::Warning: Cannot converge this run.::::::::::::'
+                    ":::::::::::Warning: Cannot converge this run.::::::::::::"
                 )
                 count += 1
                 failed_count += 1
-                self.logger.warning('failed count:', failed_count)
+                self.logger.warning("failed count:", failed_count)
                 result_combine[tuple(design_set_iter)] = None
 
         # For user's access
@@ -925,7 +934,7 @@ class DesignOfExperiments:
             store_optimality_name=store_optimality_as_csv,
         )
 
-        self.logger.info('Overall wall clock time [s]:  %s', sum(time_set))
+        self.logger.info("Overall wall clock time [s]:  %s", sum(time_set))
 
         return figure_draw_object
 
@@ -987,7 +996,6 @@ class DesignOfExperiments:
                 (bu, un): self.fim_initial[i][j]
                 for i, bu in enumerate(model.regression_parameters)
                 for j, un in enumerate(model.regression_parameters)
-
             }
 
         def initialize_fim(m, j, d):
@@ -1012,7 +1020,7 @@ class DesignOfExperiments:
             # move the L matrix initial point to a dictionary
             if self.L_initial is not None:
                 dict_cho = {
-                    (bu, un): self.L_initial[i][j] 
+                    (bu, un): self.L_initial[i][j]
                     for i, bu in enumerate(model.regression_parameters)
                     for j, un in enumerate(model.regression_parameters)
                 }
@@ -1124,8 +1132,8 @@ class DesignOfExperiments:
         small_number = 1e-10
 
         # Assemble the FIM matrix. This is helpful for initialization!
-        # 
-        # Suggestion from JS: "It might be more efficient to form the NP array in one shot 
+        #
+        # Suggestion from JS: "It might be more efficient to form the NP array in one shot
         # (from a list or using fromiter), and then reshaping to the 2-D matrix"
         #
         fim = np.zeros((len(self.param), len(self.param)))
@@ -1279,10 +1287,10 @@ class DesignOfExperiments:
 
     def _get_default_ipopt_solver(self):
         """Default solver"""
-        solver = SolverFactory('ipopt')
-        solver.options['linear_solver'] = 'ma57'
-        solver.options['halt_on_ampl_error'] = 'yes'
-        solver.options['max_iter'] = 3000
+        solver = SolverFactory("ipopt")
+        solver.options["linear_solver"] = "ma57"
+        solver.options["halt_on_ampl_error"] = "yes"
+        solver.options["max_iter"] = 3000
         return solver
 
     def _solve_doe(self, m, fix=False, opt_option=None):
