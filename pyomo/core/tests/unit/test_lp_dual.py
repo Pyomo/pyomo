@@ -80,3 +80,50 @@ class TestLPDual(unittest.TestCase):
 
         lp_dual = TransformationFactory('core.lp_dual')
         dual = lp_dual.create_using(m)
+
+        alpha = lp_dual.get_dual_var(m.c1)
+        beta = lp_dual.get_dual_var(m.c2)
+        lamb = lp_dual.get_dual_var(m.c3)
+        xi = lp_dual.get_dual_var(m.c4)
+
+        self.assertIs(lp_dual.get_primal_constraint[alpha], m.c1)
+        self.assertIs(lp_dual.get_primal_constraint[beta], m.c2)
+        self.assertIs(lp_dual.get_primal_constraint[lamb], m.c3)
+        self.assertIs(lp_dual.get_primal_constraint[xi], m.c4)
+
+        dx = lp_dual.get_dual_constraint[m.x]
+        dy = lp_dual.get_dual_constraint[m.y]
+        dz = lp_dual.get_dual_constraint[m.z]
+
+        self.assertIs(lp_dual.get_primal_var[dx], m.x)
+        self.assertIs(lp_dual.get_primal_var[dy], m.y)
+        self.assertIs(lp_dual.get_primal_var[dz], m.z)
+
+        self.assertIsInstance(alpha, Var)
+        self.assertIs(alpha.domain, NonPositiveReals)
+        self.assertEqual(alpha.ub, 0)
+        self.assertIsNone(alpha.lb)
+        self.assertIsInstance(beta, Var)
+        self.assertIs(alpha.domain, NonNegativeReals)
+        self.assertEqual(alpha.lb, 0)
+        self.assertIsNone(alpha.ub)
+        self.assertIsInstance(lamb, Var)
+        self.assertIs(lamb.domain, Reals)
+        self.assertIsNone(lamb.ub)
+        self.assertIsNone(lamb.lb)
+        self.assertIsInstance(xi, Var)
+        self.assertIs(xi.domain, NonPositiveReals)
+        self.assertEqual(xi.ub, 0)
+        self.assertIsNone(xi.lb)
+
+        self.assertIsInstance(dx, Constraint)
+        self.assertIsInstance(dy, Constraint)
+        self.assertIsInstance(dz, Constraint)
+
+        assertExpressionsEqual(
+            self,
+            dx.expr,
+            -4 * alpha + beta <= 1
+        )
+
+        # TODO: map objectives, and test them

@@ -16,6 +16,7 @@ from pyomo.common.errors import MouseTrap
 from pyomo.common.dependencies import scipy
 from pyomo.core import (
     ConcreteModel,
+    Block,
     Var,
     Constraint,
     Objective,
@@ -45,6 +46,18 @@ def var_list(x):
         return ans
     else:
         raise ValueError("Expected Var or list of Vars.\n\tReceived %s" % type(x))
+
+
+class _LPDualData(AutoSlots.Mixin):
+    __slots__ = ('primal_var', 'dual_var', 'primal_constraint', 'dual_constraint')
+    def __init__(self):
+        self.primal_var = {}
+        self.dual_var = {}
+        self.primal_constraint = ComponentMap()
+        self.dual_constraint = ComponentMap()
+
+
+Block.register_private_data_initializer(_LPDualData)
 
 
 @TransformationFactory.register(
@@ -118,13 +131,17 @@ class LinearProgrammingDual(object):
         rows = range(A_transpose.shape[0])
         cols = range(A_transpose.shape[1])
         dual.x = Var(cols, domain=NonNegativeReals)
+        trans_info = model.private_data()
         for j, (primal_cons, ineq) in enumerate(std_form.rows):
             if primal_sense is minimize and ineq == 1:
                 dual.x[j].domain = NonPositiveReals
-            elif primal_sense is maximzie and ineq == -1:
+            elif primal_sense is maximize and ineq == -1:
                 dual.x[j].domain = NonPositiveReals
-            from pytest import set_trace
-            set_trace()
+            if ineq == 0:
+                # equality
+                dual.x[j].domain = Reals
+            trans_info.primal_constraint[dual.x[j]] = primal_cons
+            trans_info.dual_var[primal_cons] = dual.x[j]
             
         dual.constraints = Constraint(rows)
         for i, primal in enumerate(std_form.columns):
@@ -154,6 +171,8 @@ class LinearProgrammingDual(object):
                 dual.constraints[i] = (
                     sum(A_transpose[i, j] * dual.x[j] for j in cols) == std_form.c[0, i]
                 )
+            trans_info.dual_constraint[primal] = dual.constraints[i]
+            trans_info.primal_var[dual.constraints[i]] = primal
 
         dual.obj = Objective(
             expr=sum(std_form.rhs[j] * dual.x[j] for j in cols), sense=-primal_sense
@@ -163,3 +182,41 @@ class LinearProgrammingDual(object):
 
     def _take_parameterized_dual(self, model, wrt):
         pass
+
+    def get_primal_constraint(self, model, dual_var):
+        primal_constraint = model.private_data().primal_constraint
+        if dual_var in primal_constraint:
+            return primal_constraint[dual_var]
+        else:
+            raise ValueError(
+                "It does not appear that Var '%s' is a dual variable on model '%s'"
+                % (dual_var.name, model.name)
+            )
+
+    def get_dual_constraint(self, model, primal_var):
+        dual_constraint = model.private_data().dual_constraint
+        if primal_var in dual_constraint:
+            return dual_constraint[primal_var]
+        else:
+            raise ValueError(
+                "It does not appear that Var '%s' is a primal variable from model '%s'"
+                % (primal_var.name, model.name)
+            )
+
+    def get_primal_var(self, model, dual_constraint):
+        primal_var = model.private_data().primal_var
+        if dual_constraint in primal_var:
+            return primal_var[dual_constraint]
+        else:
+            raise ValueError(
+                "It does not appear that Constraint '%s' is a dual constraint on "
+                "model '%s'" % (dual_constraint.name, model.name))
+
+    def get_dual_var(self, model, primal_constraint):
+        dual_var = model.private_data().dual_var
+        if primal_constraint in dual_var:
+            return dual_var[primal_constraint]
+        else:
+            raise ValueError(
+                "It does not appear that Constraint '%s' is a primal constraint from "
+                "model '%s'" % (primal_constraint.name, model.name))
