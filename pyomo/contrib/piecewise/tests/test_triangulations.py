@@ -15,7 +15,8 @@ from unittest import skipUnless
 import pyomo.common.unittest as unittest
 from pyomo.contrib.piecewise.triangulations import (
     get_j1_triangulation,
-    get_incremental_simplex_ordering
+    get_incremental_simplex_ordering,
+    get_incremental_simplex_ordering_assume_connected_by_n_face,
 )
 
 class TestTriangulations(unittest.TestCase):
@@ -77,6 +78,26 @@ class TestTriangulations(unittest.TestCase):
         points = list(itertools.product([0, 1, 2, 4, 5], [1, 2.4, 3, 5, 6]))
         triangulation = get_j1_triangulation(points, 2)
         reordered_simplices = get_incremental_simplex_ordering(triangulation.simplices)
+        for idx, first_simplex in reordered_simplices.items():
+            if idx != len(triangulation.points) - 1:
+                second_simplex = reordered_simplices[idx + 1]
+                # test property (2) which also guarantees property (1)
+                self.assertEqual(first_simplex[-1], second_simplex[0], msg="Last and first vertices of adjacent simplices did not match")
+
+    def test_J1_medium_ordering_alt(self):
+        points = list(itertools.product([0, 1, 2, 4, 5], [1, 2.4, 3, 5, 6]))
+        triangulation = get_j1_triangulation(points, 2)
+        reordered_simplices = get_incremental_simplex_ordering_assume_connected_by_n_face(triangulation.simplices, 1)
+        for idx, first_simplex in reordered_simplices.items():
+            if idx != len(triangulation.points) - 1:
+                second_simplex = reordered_simplices[idx + 1]
+                # test property (2) which also guarantees property (1)
+                self.assertEqual(first_simplex[-1], second_simplex[0], msg="Last and first vertices of adjacent simplices did not match")
+
+    def test_J1_medium_ordering_3d(self):
+        points = list(itertools.product([0, 1, 2, 4, 5], [1, 2.4, 3, 5, 6], [-5, -1, 0.2, 3, 10]))
+        triangulation = get_j1_triangulation(points, 3)
+        reordered_simplices = get_incremental_simplex_ordering_assume_connected_by_n_face(triangulation.simplices, 2)
         for idx, first_simplex in reordered_simplices.items():
             if idx != len(triangulation.points) - 1:
                 second_simplex = reordered_simplices[idx + 1]

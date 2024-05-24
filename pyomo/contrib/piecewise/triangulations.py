@@ -14,6 +14,7 @@ import math
 import itertools
 from types import SimpleNamespace
 from functools import cmp_to_key
+from pyomo.common.errors import DeveloperError
 from pyomo.environ import (
     ConcreteModel,
     RangeSet,
@@ -25,6 +26,10 @@ from pyomo.environ import (
     value,
     Objective,
     TerminationCondition,
+)
+from pyomo.common.dependencies import attempt_import
+nx, nx_available = attempt_import(
+    'networkx', 'Networkx is required to calculate incremental ordering.'
 )
 
 class Triangulation:
@@ -55,15 +60,13 @@ def get_j1_triangulation(points, dimension):
 def _process_points_j1(points, dimension):
     if not len(points[0]) == dimension:
         raise ValueError("Points not consistent with specified dimension")
-    num_pts = math.floor(len(points) ** (1 / dimension))
+    num_pts = round(len(points) ** (1 / dimension))
     if not len(points) == num_pts**dimension:
         raise ValueError("'points' must have points forming an n-dimensional grid with straight grid lines and the same odd number of points in each axis")
     if not num_pts % 2 == 1:
         raise ValueError("'points' must have points forming an n-dimensional grid with straight grid lines and the same odd number of points in each axis")
     
     # munge the points into an organized map with n-dimensional keys
-    #points.sort(key=cmp_to_key(_compare_lexicographic(dimension)))
-    # verify: does this do correct sorting by default?
     points.sort()
     points_map = {}
     for point_index in itertools.product(range(num_pts), repeat=dimension):
@@ -72,16 +75,6 @@ def _process_points_j1(points, dimension):
             point_flat_index += point_index[dimension - 1 - n] * num_pts**n
         points_map[point_index] = points[point_flat_index]
     return points_map, num_pts
-
-#def _compare_lexicographic(dimension):
-#    def compare_lexicographic_real(x, y):
-#        for n in range(dimension):
-#            if x[n] < y[n]:
-#                return -1
-#            elif y[n] < x[n]:
-#                return 1
-#        return 0
-#    return compare_lexicographic_real
 
 # This implements the J1 "Union Jack" triangulation (Todd 77) as explained by
 # Vielma 2010.
@@ -193,13 +186,6 @@ def get_incremental_simplex_ordering(simplices, subsolver='gurobi'):
     @m.Constraint(m.SIMPLICES)
     def schedule_each_slot(m, j):
         return sum(m.x[i, j] for i in m.SIMPLICES) == 1
-    
-    # Enforce property (1), but this is guaranteed by (2) so unnecessary
-    #@m.Constraint(m.SIMPLICES)
-    #def simplex_order(m, i):
-    #    # anything with at least a vertex in common is a neighbor
-    #    neighbors = [s for s in m.SIMPLICES if sum(m.TestVerticesEqual[i, n, s, k] for n in m.VERTEX_INDICES for k in m.VERTEX_INDICES) >= 1]
-    #    return sum(m.x[i, j] * m.x[k, j+1] for j in m.SIMPLICES if j != m.SimplicesCount - 1 for k in neighbors) == 1
 
     # Each simplex needs exactly one first and exactly one last vertex
     @m.Constraint(m.SIMPLICES)
@@ -262,3 +248,117 @@ def get_incremental_simplex_ordering(simplices, subsolver='gurobi'):
                 new_simplices[j] = new_simplex
                 break
     return new_simplices
+
+# If we have the assumption that our ordering is possible such that consecutively
+# ordered simplices share at least a one-face, then getting an order for the
+# simplices is enough to get one for the edges and we "just" need to find a 
+# Hamiltonian path
+def get_incremental_simplex_ordering_assume_connected_by_n_face(simplices, connected_face_dim, subsolver='gurobi'):
+    if connected_face_dim == 0:
+        return get_incremental_simplex_ordering(simplices)
+    #if not nx_available:
+    #    raise ImportError('Missing Networkx')
+    #G = nx.Graph()
+    #G.add_nodes_from(range(len(simplices)))
+    #for i in range(len(simplices)):
+    #    for j in range(i + 1, len(simplices)):
+    #        if len(set(simplices[i]) & set(simplices[j])) >= n + 1:
+    #            G.add_edge(i, j)
+    
+    # ask Gurobi again because networkx doesn't seem to have a general hamiltonian
+    # path and I don't want to implement it myself
+
+    m = ConcreteModel()
+
+    # Sets and Params
+    m.SimplicesCount = Param(initialize=len(simplices))
+    m.SIMPLICES = RangeSet(0, m.SimplicesCount - 1)
+    # For each of the simplices we need to choose an initial and a final vertex.
+    # The rest we can order arbitrarily after finishing the MIP solve.
+    m.SimplexVerticesCount = Param(initialize=len(simplices[0]))
+    m.VERTEX_INDICES = RangeSet(0, m.SimplexVerticesCount - 1)
+    @m.Param(m.SIMPLICES, m.VERTEX_INDICES, m.SIMPLICES, m.VERTEX_INDICES, domain=Binary)
+    def TestVerticesEqual(m, i, n, j, k):
+        return 1 if simplices[i][n] == simplices[j][k] else 0
+
+    # Vars
+    # x_ij means simplex i is placed in slot j
+    m.x = Var(m.SIMPLICES, m.SIMPLICES, domain=Binary)
+
+    # Constraints
+    # Each simplex should have a slot and each slot should have a simplex
+    @m.Constraint(m.SIMPLICES)
+    def schedule_each_simplex(m, i):
+        return sum(m.x[i, j] for j in m.SIMPLICES) == 1
+    @m.Constraint(m.SIMPLICES)
+    def schedule_each_slot(m, j):
+        return sum(m.x[i, j] for i in m.SIMPLICES) == 1
+    
+    # Enforce property (1)
+    @m.Constraint(m.SIMPLICES)
+    def simplex_order(m, i):
+        # anything with at least a vertex in common is a neighbor
+        neighbors = [s for s in m.SIMPLICES if sum(m.TestVerticesEqual[i, n, s, k] for n in m.VERTEX_INDICES for k in m.VERTEX_INDICES) >= connected_face_dim + 1 and s != i]
+        #print(f'neighbors of {i} are {neighbors}')
+        return sum(m.x[i, j] * m.x[k, j + 1] for j in m.SIMPLICES if j != m.SimplicesCount - 1 for k in neighbors) + m.x[i, m.SimplicesCount - 1] == 1
+    
+    # Trivial objective (do I need this?)
+    m.obj = Objective(expr=0)
+    
+    #m.pprint()
+    # Solve model
+    results = SolverFactory(subsolver).solve(m, tee=True)
+    match(results.solver.termination_condition):
+        case TerminationCondition.infeasible:
+            raise ValueError(f"The triangulation was impossible to suitably order for the incremental transformation under the assumption that consecutive simplices share {connected_face_dim}-faces. Try relaxing that assumption, or try a different triangulation, such as J1.")
+        case TerminationCondition.optimal:
+            pass
+        case _:
+            raise ValueError(f"Failed to generate suitable ordering for incremental transformation due to unexpected solver termination condition {results.solver.termination_condition}")
+
+    # Retrieve data
+    new_simplices = {}
+    for j in m.SIMPLICES:
+        for i in m.SIMPLICES:
+            if abs(value(m.x[i, j]) - 1) < 1e-5:
+                # The jth slot is occupied by the ith simplex
+                new_simplices[j] = simplices[i]
+                # Note vertices need to be fixed after the fact now
+                break
+    fix_vertices_incremental_order(new_simplices)
+    return new_simplices
+
+# Fix vertices (in place) when the simplices are right but vertices are not
+def fix_vertices_incremental_order(simplices):
+    last_vertex_index = len(simplices[0]) - 1
+    for i, simplex in simplices.items():
+        # Choose vertices like this: first is always the same as last
+        # of the previous simplex. Last is arbitrarily chosen from the
+        # intersection with the next simplex.
+        first = None
+        last = None
+        if i == 0:
+            first = 0
+        else:
+            for n in range(last_vertex_index + 1):
+                if simplex[n] == simplices[i - 1][last_vertex_index]:
+                    first = n
+                    break
+            
+        if i == len(simplices) - 1:
+            last = last_vertex_index
+        else:
+            for n in range(last_vertex_index + 1):
+                if simplex[n] in simplices[i + 1] and n != first:
+                    last = n
+                    break
+        if first == None or last == None:
+            raise DeveloperError("Couldn't fix vertex ordering for incremental.")
+        
+        # reorder the simplex with the desired first and last
+        new_simplex = [simplex[first]]
+        for n in range(last_vertex_index + 1):
+            if n != first and n != last:
+                new_simplex.append(simplex[n])
+        new_simplex.append(simplex[last])
+        simplices[i] = new_simplex
