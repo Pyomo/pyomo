@@ -103,3 +103,43 @@ class TestTriangulations(unittest.TestCase):
                 second_simplex = reordered_simplices[idx + 1]
                 # test property (2) which also guarantees property (1)
                 self.assertEqual(first_simplex[-1], second_simplex[0], msg="Last and first vertices of adjacent simplices did not match")
+    
+    def test_J1_2d_ordering_0(self):
+        points = list(itertools.product([0, 1, 2], [1, 2.4, 3]))
+        ordered_triangulation = get_j1_triangulation(points, 2, ordered=True).simplices
+        self.assertEqual(len(ordered_triangulation), 8)
+        for idx, first_simplex in ordered_triangulation.items():
+            if idx != len(ordered_triangulation) - 1:
+                second_simplex = ordered_triangulation[idx + 1]
+                # test property (2) which also guarantees property (1)
+                self.assertEqual(first_simplex[-1], second_simplex[0], msg="Last and first vertices of adjacent simplices did not match")
+
+    def test_J1_2d_ordering_1(self):
+        points = list(itertools.product([0, 1, 2, 4, 5], [1, 2.4, 3, 5, 6]))
+        ordered_triangulation = get_j1_triangulation(points, 2, ordered=True).simplices
+        self.assertEqual(len(ordered_triangulation), 32)
+        for idx, first_simplex in ordered_triangulation.items():
+            if idx != len(ordered_triangulation) - 1:
+                second_simplex = ordered_triangulation[idx + 1]
+                # test property (2) which also guarantees property (1)
+                self.assertEqual(first_simplex[-1], second_simplex[0], msg="Last and first vertices of adjacent simplices did not match")
+
+    def test_J1_2d_ordering_2(self):
+        points = list(itertools.product([0, 1, 2, 4, 5, 6.3, 7.1], [1, 2.4, 3, 5, 6, 9.1, 10]))
+        ordered_triangulation = get_j1_triangulation(points, 2, ordered=True).simplices
+        self.assertEqual(len(ordered_triangulation), 72)
+        for idx, first_simplex in ordered_triangulation.items():
+            if idx != len(ordered_triangulation) - 1:
+                second_simplex = ordered_triangulation[idx + 1]
+                # test property (2) which also guarantees property (1)
+                self.assertEqual(first_simplex[-1], second_simplex[0], msg="Last and first vertices of adjacent simplices did not match")
+
+    def test_J1_2d_ordering_3(self):
+        points = list(itertools.product([0, 1, 2, 4, 5, 6.3, 7.1, 7.2, 7.3], [1, 2.4, 3, 5, 6, 9.1, 10, 11, 12]))
+        ordered_triangulation = get_j1_triangulation(points, 2, ordered=True).simplices
+        self.assertEqual(len(ordered_triangulation), 128)
+        for idx, first_simplex in ordered_triangulation.items():
+            if idx != len(ordered_triangulation) - 1:
+                second_simplex = ordered_triangulation[idx + 1]
+                # test property (2) which also guarantees property (1)
+                self.assertEqual(first_simplex[-1], second_simplex[0], msg="Last and first vertices of adjacent simplices did not match")
