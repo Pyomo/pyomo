@@ -114,7 +114,7 @@ def main():
     measurements.add_variables(
         "ca",
         indices=None,
-        time_index_position=None,
+        time_index_position=None
     )
     measurements.add_variables(
         "cb",
@@ -155,8 +155,8 @@ def main():
 
     doe1 = DesignOfExperiments(
         theta_values,
-        measurements,
         exp_design,
+        measurements,
         create_model,
         prior_FIM=None
     )
@@ -167,7 +167,7 @@ def main():
         formula="central",  # formula for finite difference
     )
 
-    doe1.result.result_analysis()
+    doe1.result_analysis()
 
 if __name__ == "__main__":
     main()
