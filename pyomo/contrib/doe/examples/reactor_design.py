@@ -161,13 +161,13 @@ def main():
         prior_FIM=None
     )
 
-    doe1.compute_FIM(
+    result = doe1.compute_FIM(
         mode="sequential_finite",  # calculation mode
         scale_nominal_param_value=True,  # scale nominal parameter value
         formula="central",  # formula for finite difference
     )
 
-    doe1.result_analysis()
+    result.result_analysis()
 
 if __name__ == "__main__":
     main()
