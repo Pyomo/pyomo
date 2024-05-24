@@ -65,6 +65,14 @@ class TestReactorExample(unittest.TestCase):
 
         reactor_grid_search.main()
 
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    @unittest.skipIf(not pandas_available, "pandas is not available")
+    @unittest.skipIf(not numpy_available, "Numpy is not available")
+    def test_reactor_design(self):
+        from pyomo.contrib.doe.examples import reactor_design
+
+        reactor_design.main()
+
 
 if __name__ == "__main__":
     unittest.main()

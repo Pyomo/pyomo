@@ -26,17 +26,22 @@
 #  ___________________________________________________________________________
 
 # from pyomo.contrib.parmest.examples.reactor_design import reactor_design_model
-# if we refactor to use the same create_model function as parmest, 
+# if we refactor to use the same create_model function as parmest,
 # we can just import instead of redefining the model
 
 import pyomo.environ as pyo
 from pyomo.dae import ContinuousSet, DerivativeVar
-from pyomo.contrib.doe import ModelOptionLib, DesignOfExperiments, MeasurementVariables, DesignVariables
+from pyomo.contrib.doe import (
+    ModelOptionLib,
+    DesignOfExperiments,
+    MeasurementVariables,
+    DesignVariables,
+)
+from pyomo.common.dependencies import numpy as np
 
-def create_model(
-        mod=None,
-        model_option="stage2"):
-    
+
+def create_model(mod=None, model_option="stage2"):
+
     model_option = ModelOptionLib(model_option)
 
     model = mod
@@ -54,14 +59,10 @@ def create_model(
         raise ValueError(
             "model_option needs to be defined as parmest, stage1, or stage2."
         )
-    
+
     # Rate constants
-    model.k1 = pyo.Var(
-        initialize=5.0 / 6.0, within=pyo.PositiveReals
-    )  # min^-1
-    model.k2 = pyo.Var(
-        initialize=5.0 / 3.0, within=pyo.PositiveReals
-    )  # min^-1
+    model.k1 = pyo.Var(initialize=5.0 / 6.0, within=pyo.PositiveReals)  # min^-1
+    model.k2 = pyo.Var(initialize=5.0 / 3.0, within=pyo.PositiveReals)  # min^-1
     model.k3 = pyo.Var(
         initialize=1.0 / 6000.0, within=pyo.PositiveReals
     )  # m^3/(gmol min)
@@ -103,31 +104,16 @@ def create_model(
 
     if return_m:
         return model
-    
+
+
 def main():
 
     # measurement object
     measurements = MeasurementVariables()
-    measurements.add_variables(
-        "ca",
-        indices=None,
-        time_index_position=None
-    )
-    measurements.add_variables(
-        "cb",
-        indices=None,
-        time_index_position=None
-    )
-    measurements.add_variables(
-        "cc",
-        indices=None,
-        time_index_position=None
-    )
-    measurements.add_variables(
-        "cd",
-        indices=None,
-        time_index_position=None
-    )
+    measurements.add_variables("ca", indices=None, time_index_position=None)
+    measurements.add_variables("cb", indices=None, time_index_position=None)
+    measurements.add_variables("cc", indices=None, time_index_position=None)
+    measurements.add_variables("cd", indices=None, time_index_position=None)
 
     # design object
     exp_design = DesignVariables()
@@ -137,7 +123,7 @@ def main():
         time_index_position=None,
         values=1.0,
         lower_bounds=0.1,
-        upper_bounds=10.0
+        upper_bounds=10.0,
     )
     exp_design.add_variables(
         "caf",
@@ -145,17 +131,13 @@ def main():
         time_index_position=None,
         values=10000,
         lower_bounds=5000,
-        upper_bounds=15000
+        upper_bounds=15000,
     )
 
     theta_values = {"k1": 5.0 / 6.0, "k2": 5.0 / 3.0, "k3": 1.0 / 6000.0}
 
     doe1 = DesignOfExperiments(
-        theta_values,
-        exp_design,
-        measurements,
-        create_model,
-        prior_FIM=None
+        theta_values, exp_design, measurements, create_model, prior_FIM=None
     )
 
     result = doe1.compute_FIM(
@@ -166,6 +148,20 @@ def main():
 
     result.result_analysis()
 
+    # print("log10 Trace of FIM: ", np.log10(result.trace))
+    # print("log10 Determinant of FIM: ", np.log10(result.det))
+
+    # test result
+    relative_error_trace = abs(np.log10(result.trace) - 6.815)
+    assert (
+        relative_error_trace < 0.01
+    ), "log10(tr(FIM)) regression test failed, answer does not match previous result"
+
+    relative_error_det = abs(np.log10(result.det) - 18.719)
+    assert (
+        relative_error_det < 0.01
+    ), "log10(det(FIM)) regression test failed, answer does not match previous result"
+
+
 if __name__ == "__main__":
     main()
-
