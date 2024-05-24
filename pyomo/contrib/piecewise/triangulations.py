@@ -110,7 +110,8 @@ def _get_j1_triangulation(points_map, K, n):
 
 # Implement proof-by-picture from Todd 1977. I do the reverse order he does
 # and also keep the pictures slightly more regular to make things easier to
-# implement.
+# implement. Also remember that Todd's drawing is misleading to the point of
+# almost being wrong so make sure you draw it properly first.
 def _get_j1_triangulation_2d_ordered(points_map, num_pts):
     # check when square has simplices in top-left and bottom-right
     square_parity_tlbr = lambda x, y: x % 2 == y % 2
