@@ -1763,7 +1763,11 @@ G0 1	#obj
         OUT = io.StringIO()
         with LoggingIntercept() as LOG:
             nlinfo = nl_writer.NLWriter().write(
-                m, OUT, symbolic_solver_labels=True, linear_presolve=True
+                m,
+                OUT,
+                symbolic_solver_labels=True,
+                linear_presolve=True,
+                skip_trivial_constraints=False,
             )
         self.assertEqual(LOG.getvalue(), "")
 
@@ -1803,6 +1807,56 @@ n2
 x0	#initial guess
 r	#1 ranges (rhs's)
 1 0.5	#c1
+b	#1 bounds (on variables)
+3	#z
+k0	#intermediate Jacobian column lengths
+G0 1	#obj
+0 0
+""",
+                OUT.getvalue(),
+            )
+        )
+
+        OUT = io.StringIO()
+        with LoggingIntercept() as LOG:
+            nlinfo = nl_writer.NLWriter().write(
+                m, OUT, symbolic_solver_labels=True, linear_presolve=True
+            )
+        self.assertEqual(LOG.getvalue(), "")
+
+        self.assertIs(nlinfo.eliminated_vars[0][0], m.y)
+        self.assertExpressionsEqual(
+            nlinfo.eliminated_vars[0][1], LinearExpression([-1.0 * m.z])
+        )
+        self.assertEqual(nlinfo.eliminated_vars[1], (m.x, 2))
+
+        self.assertEqual(
+            *nl_diff(
+                """g3 1 1 0	# problem unknown
+ 1 0 1 0 0	#vars, constraints, objectives, ranges, eqns
+ 0 1 0 0 0 0	#nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0	#network constraints: nonlinear, linear
+ 0 1 0	#nonlinear vars in constraints, objectives, both
+ 0 0 0 1	#linear network variables; functions; arith, flags
+ 0 0 0 0 0	#discrete variables: binary, integer, nonlinear (b,c,o)
+ 0 1	#nonzeros in Jacobian, obj. gradient
+ 3 1	#max name lengths: constraints, variables
+ 0 0 0 0 0	#common exprs: b,c,o,c1,o1
+O0 0	#obj
+o54	#sumlist
+3	#(n)
+o5	#^
+n2
+n2
+o5	#^
+o16	#-
+v0	#z
+n2
+o5	#^
+v0	#z
+n2
+x0	#initial guess
+r	#1 ranges (rhs's)
 b	#1 bounds (on variables)
 3	#z
 k0	#intermediate Jacobian column lengths

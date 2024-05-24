@@ -702,8 +702,7 @@ class _NLWriter_impl(object):
         objectives.extend(linear_objs)
         n_objs = len(objectives)
 
-        constraints = []
-        linear_cons = []
+        all_constraints = []
         n_ranges = 0
         n_equality = 0
         n_complementarity_nonlin = 0
@@ -740,22 +739,7 @@ class _NLWriter_impl(object):
                     ub = ub * scale
                 if scale < 0:
                     lb, ub = ub, lb
-            if expr_info.nonlinear:
-                constraints.append((con, expr_info, lb, ub))
-            elif expr_info.linear:
-                linear_cons.append((con, expr_info, lb, ub))
-            elif not self.config.skip_trivial_constraints:
-                linear_cons.append((con, expr_info, lb, ub))
-            else:  # constant constraint and skip_trivial_constraints
-                c = expr_info.const
-                if (lb is not None and lb - c > TOL) or (
-                    ub is not None and ub - c < -TOL
-                ):
-                    raise InfeasibleConstraintException(
-                        "model contains a trivially infeasible "
-                        f"constraint '{con.name}' (fixed body value "
-                        f"{c} outside bounds [{lb}, {ub}])."
-                    )
+            all_constraints.append((con, expr_info, lb, ub))
             if linear_presolve:
                 con_id = id(con)
                 if not expr_info.nonlinear and lb == ub and lb is not None:
@@ -766,7 +750,7 @@ class _NLWriter_impl(object):
             # report the last constraint
             timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
         else:
-            timer.toc('Processed %s constraints', len(constraints))
+            timer.toc('Processed %s constraints', len(all_constraints))
 
         # This may fetch more bounds than needed, but only in the cases
         # where variables were completely eliminated while walking the
@@ -781,14 +765,44 @@ class _NLWriter_impl(object):
         del comp_by_linear_var
         del lcon_by_linear_nnz
 
+        # Note: defer categorizing constraints until after presolve, as
+        # the presolver could result in nonlinear constraints to become
+        # linear (or trivial)
+        constraints = []
+        linear_cons = []
+        if eliminated_cons:
+            _removed = eliminated_cons.__contains__
+            _constraints = filterfalse(lambda c: _removed(id(c[0])), all_constraints)
+        else:
+            _constraints = all_constraints
+        for info in _constraints:
+            expr_info = info[1]
+            if expr_info.nonlinear:
+                if expr_info.nonlinear[1]:
+                    constraints.append(info)
+                    continue
+                expr_info.const += _evaluate_constant_nl(expr_info.nonlinear[0])
+                expr_info.nonlinear = None
+            if expr_info.linear:
+                linear_cons.append(info)
+            elif not self.config.skip_trivial_constraints:
+                linear_cons.append(info)
+            else:  # constant constraint and skip_trivial_constraints
+                c = expr_info.const
+                con, expr_info, lb, ub = info
+                if (lb is not None and lb - c > TOL) or (
+                    ub is not None and ub - c < -TOL
+                ):
+                    raise InfeasibleConstraintException(
+                        "model contains a trivially infeasible "
+                        f"constraint '{con.name}' (fixed body value "
+                        f"{c} outside bounds [{lb}, {ub}])."
+                    )
+
         # Order the constraints, moving all nonlinear constraints to
         # the beginning
         n_nonlinear_cons = len(constraints)
-        if eliminated_cons:
-            _removed = eliminated_cons.__contains__
-            constraints.extend(filterfalse(lambda c: _removed(id(c[0])), linear_cons))
-        else:
-            constraints.extend(linear_cons)
+        constraints.extend(linear_cons)
         n_cons = len(constraints)
 
         #
