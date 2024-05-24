@@ -423,6 +423,11 @@ class DesignOfExperiments:
             # dict for storing model outputs
             output_record = {}
 
+            # add zero (dummy/placeholder) objective function
+            mod.Obj = pyo.Objective(expr=0, sense=pyo.minimize)
+
+            mod.pprint()
+
             # solve model
             square_result = self._solve_doe(mod, fix=True)
 

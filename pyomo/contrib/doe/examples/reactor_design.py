@@ -78,9 +78,6 @@ def create_model(
     model.cc = pyo.Var(initialize=2000.0, within=pyo.PositiveReals)
     model.cd = pyo.Var(initialize=1000.0, within=pyo.PositiveReals)
 
-    # Objective
-    model.obj = pyo.Objective(expr=model.cb, sense=pyo.maximize)
-
     # Constraints
     model.ca_bal = pyo.Constraint(
         expr=(
