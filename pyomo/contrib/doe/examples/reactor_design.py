@@ -40,8 +40,10 @@ from pyomo.contrib.doe import (
 from pyomo.common.dependencies import numpy as np
 
 
-def create_model(mod=None, model_option="stage2"):
+def create_model():
 
+    # This is the old Pyomo.DoE interface
+    '''
     model_option = ModelOptionLib(model_option)
 
     model = mod
@@ -59,6 +61,10 @@ def create_model(mod=None, model_option="stage2"):
         raise ValueError(
             "model_option needs to be defined as parmest, stage1, or stage2."
         )
+    '''
+
+    # This is the streamlined Pyomo.DoE interface
+    model = pyo.ConcreteModel()
 
     # Rate constants
     model.k1 = pyo.Var(initialize=5.0 / 6.0, within=pyo.PositiveReals)  # min^-1
@@ -102,8 +108,11 @@ def create_model(mod=None, model_option="stage2"):
         expr=(0 == -model.sv * model.cd + model.k3 * model.ca**2.0)
     )
 
+    '''
     if return_m:
         return model
+    '''
+    return model
 
 
 def main():
