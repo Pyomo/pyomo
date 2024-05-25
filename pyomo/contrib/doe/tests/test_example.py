@@ -68,11 +68,17 @@ class TestReactorExample(unittest.TestCase):
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     @unittest.skipIf(not pandas_available, "pandas is not available")
     @unittest.skipIf(not numpy_available, "Numpy is not available")
-    def test_reactor_design(self):
+    def test_reactor_design_slim_create_model_interface(self):
         from pyomo.contrib.doe.examples import reactor_design
-
-        reactor_design.main()
-
+        reactor_design.main(legacy_create_model_interface=False)
+    
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    @unittest.skipIf(not pandas_available, "pandas is not available")
+    @unittest.skipIf(not numpy_available, "Numpy is not available")
+    
+    def test_reactor_design_legacy_create_model_interface(self):
+        from pyomo.contrib.doe.examples import reactor_design
+        reactor_design.main(legacy_create_model_interface=True)
 
 if __name__ == "__main__":
     unittest.main()

@@ -680,8 +680,6 @@ class DesignOfExperiments:
             # create block scenarios
             # idea: check if create_model takes theta as an optional input, if so, pass parameter values to create_model
 
-            # TODO: Check if this is correct syntax for adding a model to a block
-
             if self._original_create_model_interface:
                 if pass_theta_to_initialize:
                     # Grab the values of theta for this scenario/block
@@ -698,21 +696,27 @@ class DesignOfExperiments:
                     self.create_model(
                         mod=b, model_option=ModelOptionLib.stage2, **self.args
                     )
+
+                # save block in a temporary variable
+                mod_ = b
             else:
                 # Add model on block
                 if pass_theta_to_initialize:
                     # Grab the values of theta for this scenario/block
                     theta_initialize = self.scenario_data.scenario[s]
-                    # This syntax is not yet correct :(
-                    b = self.create_model(theta=theta_initialize, **self.args)
+                    mod_ = self.create_model(theta=theta_initialize, **self.args)
                 else:
-                    b = self.create_model(**self.args)
+                    mod_ = self.create_model(**self.args)
 
             # fix parameter values to perturbed values
             for par in self.param:
                 cuid = pyo.ComponentUID(par)
-                var = cuid.find_component_on(b)
+                var = cuid.find_component_on(mod_)
                 var.fix(self.scenario_data.scenario[s][par])
+
+            if not self._original_create_model_interface:
+                # for the "new"/"slim" interface, we need to add the block to the model
+                return mod_
 
         mod.block = pyo.Block(mod.scenario, rule=block_build)
 
@@ -1377,7 +1381,10 @@ class DesignOfExperiments:
 
         # either fix or unfix the design variables
         mod = self._fix_design(
-            m, self.design_values, fix_opt=fix, optimize_option=opt_option
+            m, 
+            self.design_values, 
+            fix_opt=fix, 
+            optimize_option=opt_option
         )
 
         # if user gives solver, use this solver. if not, use default IPOPT solver

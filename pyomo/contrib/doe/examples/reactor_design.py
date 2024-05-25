@@ -40,10 +40,7 @@ from pyomo.contrib.doe import (
 from pyomo.common.dependencies import numpy as np
 
 
-def create_model():
-
-    # This is the old Pyomo.DoE interface
-    '''
+def create_model_legacy(mod=None, model_option=None):
     model_option = ModelOptionLib(model_option)
 
     model = mod
@@ -61,10 +58,18 @@ def create_model():
         raise ValueError(
             "model_option needs to be defined as parmest, stage1, or stage2."
         )
-    '''
+    
+    model = _create_model_details(model)
+    
+    if return_m:
+        return model
+    
 
-    # This is the streamlined Pyomo.DoE interface
+def create_model():
     model = pyo.ConcreteModel()
+    return _create_model_details(model)
+
+def _create_model_details(model):
 
     # Rate constants
     model.k1 = pyo.Var(initialize=5.0 / 6.0, within=pyo.PositiveReals)  # min^-1
@@ -108,14 +113,10 @@ def create_model():
         expr=(0 == -model.sv * model.cd + model.k3 * model.ca**2.0)
     )
 
-    '''
-    if return_m:
-        return model
-    '''
     return model
 
 
-def main():
+def main(legacy_create_model_interface=False):
 
     # measurement object
     measurements = MeasurementVariables()
@@ -145,9 +146,20 @@ def main():
 
     theta_values = {"k1": 5.0 / 6.0, "k2": 5.0 / 3.0, "k3": 1.0 / 6000.0}
 
+    if legacy_create_model_interface:
+        create_model_ = create_model_legacy
+    else:
+        create_model_ = create_model
+
     doe1 = DesignOfExperiments(
-        theta_values, exp_design, measurements, create_model, prior_FIM=None
+        theta_values, 
+        exp_design, 
+        measurements, 
+        create_model_, 
+        prior_FIM=None
     )
+
+    
 
     result = doe1.compute_FIM(
         mode="sequential_finite",  # calculation mode
@@ -155,22 +167,29 @@ def main():
         formula="central",  # formula for finite difference
     )
 
+    doe1.model.pprint()
+
     result.result_analysis()
 
+    # print("FIM =\n",result.FIM)
+    # print("jac =\n",result.jaco_information)
     # print("log10 Trace of FIM: ", np.log10(result.trace))
     # print("log10 Determinant of FIM: ", np.log10(result.det))
 
     # test result
-    relative_error_trace = abs(np.log10(result.trace) - 6.815)
+    expected_log10_trace = 6.815
+    log10_trace = np.log10(result.trace)
+    relative_error_trace = abs(log10_trace - 6.815)
     assert (
         relative_error_trace < 0.01
-    ), "log10(tr(FIM)) regression test failed, answer does not match previous result"
+    ), "log10(tr(FIM)) regression test failed, answer "+str(round(log10_trace,3))+" does not match expected answer of "+str(expected_log10_trace)
 
-    relative_error_det = abs(np.log10(result.det) - 18.719)
+    expected_log10_det = 18.719
+    log10_det = np.log10(result.det)
+    relative_error_det = abs(log10_det - 18.719)
     assert (
         relative_error_det < 0.01
-    ), "log10(det(FIM)) regression test failed, answer does not match previous result"
-
+    ), "log10(det(FIM)) regression test failed, answer "+str(round(log10_det,3))+" does not match expected answer of "+str(expected_log10_det)
 
 if __name__ == "__main__":
-    main()
+    main(legacy_create_model_interface=False)
