@@ -58,16 +58,17 @@ def create_model_legacy(mod=None, model_option=None):
         raise ValueError(
             "model_option needs to be defined as parmest, stage1, or stage2."
         )
-    
+
     model = _create_model_details(model)
-    
+
     if return_m:
         return model
-    
+
 
 def create_model():
     model = pyo.ConcreteModel()
     return _create_model_details(model)
+
 
 def _create_model_details(model):
 
@@ -152,14 +153,8 @@ def main(legacy_create_model_interface=False):
         create_model_ = create_model
 
     doe1 = DesignOfExperiments(
-        theta_values, 
-        exp_design, 
-        measurements, 
-        create_model_, 
-        prior_FIM=None
+        theta_values, exp_design, measurements, create_model_, prior_FIM=None
     )
-
-    
 
     result = doe1.compute_FIM(
         mode="sequential_finite",  # calculation mode
@@ -180,16 +175,23 @@ def main(legacy_create_model_interface=False):
     expected_log10_trace = 6.815
     log10_trace = np.log10(result.trace)
     relative_error_trace = abs(log10_trace - 6.815)
-    assert (
-        relative_error_trace < 0.01
-    ), "log10(tr(FIM)) regression test failed, answer "+str(round(log10_trace,3))+" does not match expected answer of "+str(expected_log10_trace)
+    assert relative_error_trace < 0.01, (
+        "log10(tr(FIM)) regression test failed, answer "
+        + str(round(log10_trace, 3))
+        + " does not match expected answer of "
+        + str(expected_log10_trace)
+    )
 
     expected_log10_det = 18.719
     log10_det = np.log10(result.det)
     relative_error_det = abs(log10_det - 18.719)
-    assert (
-        relative_error_det < 0.01
-    ), "log10(det(FIM)) regression test failed, answer "+str(round(log10_det,3))+" does not match expected answer of "+str(expected_log10_det)
+    assert relative_error_det < 0.01, (
+        "log10(det(FIM)) regression test failed, answer "
+        + str(round(log10_det, 3))
+        + " does not match expected answer of "
+        + str(expected_log10_det)
+    )
+
 
 if __name__ == "__main__":
     main(legacy_create_model_interface=False)

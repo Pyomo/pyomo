@@ -44,6 +44,7 @@ import inspect
 
 import pyomo.contrib.parmest.utils as utils
 
+
 class CalculationMode(Enum):
     sequential_finite = "sequential_finite"
     direct_kaug = "direct_kaug"
@@ -118,7 +119,9 @@ class DesignOfExperiments:
 
         # check if create model function conforms to the original
         # Pyomo.DoE interface
-        model_option_arg = "model_option" in inspect.getfullargspec(self.create_model).args
+        model_option_arg = (
+            "model_option" in inspect.getfullargspec(self.create_model).args
+        )
         mod_arg = "mod" in inspect.getfullargspec(self.create_model).args
         if model_option_arg and mod_arg:
             self._original_create_model_interface = True
@@ -656,9 +659,9 @@ class DesignOfExperiments:
                 )
             else:
                 # Add model on block without theta values
-                self.create_model(mod=mod, 
-                                  model_option=ModelOptionLib.stage1, 
-                                  **self.args)
+                self.create_model(
+                    mod=mod, model_option=ModelOptionLib.stage1, **self.args
+                )
 
         else:
             # Create a global model
@@ -1381,10 +1384,7 @@ class DesignOfExperiments:
 
         # either fix or unfix the design variables
         mod = self._fix_design(
-            m, 
-            self.design_values, 
-            fix_opt=fix, 
-            optimize_option=opt_option
+            m, self.design_values, fix_opt=fix, optimize_option=opt_option
         )
 
         # if user gives solver, use this solver. if not, use default IPOPT solver
