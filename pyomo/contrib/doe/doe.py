@@ -42,6 +42,7 @@ import collections.abc
 
 import inspect
 
+import pyomo.contrib.parmest.utils as utils
 
 class CalculationMode(Enum):
     sequential_finite = "sequential_finite"
@@ -114,6 +115,15 @@ class DesignOfExperiments:
         self.design_name = design_vars.variable_names
         self.design_vars = design_vars
         self.create_model = create_model
+
+        # check if create model function conforms to the original
+        # Pyomo.DoE interface
+        model_option_arg = "model_option" in inspect.getfullargspec(self.create_model).args
+        mod_arg = "mod" in inspect.getfullargspec(self.create_model).args
+        if model_option_arg and mod_arg:
+            self._original_create_model_interface = True
+        else:
+            self._original_create_model_interface = False
 
         if args is None:
             args = {}
@@ -423,10 +433,17 @@ class DesignOfExperiments:
             # dict for storing model outputs
             output_record = {}
 
+            # Deactivate any existing objective functions
+            for obj in mod.component_objects(pyo.Objective):
+                obj.deactivate()
+
             # add zero (dummy/placeholder) objective function
             mod.Obj = pyo.Objective(expr=0, sense=pyo.minimize)
 
-            mod.pprint()
+            # convert params to vars
+            # print("self.param.keys():", self.param.keys())
+            # mod = utils.convert_params_to_vars(mod, self.param.keys(), fix_vars=True)
+            # mod.pprint()
 
             # solve model
             square_result = self._solve_doe(mod, fix=True)
@@ -495,14 +512,24 @@ class DesignOfExperiments:
 
     def _direct_kaug(self):
         # create model
-        mod = self.create_model(model_option=ModelOptionLib.parmest, **self.args)
+        if self._original_create_model_interface:
+            mod = self.create_model(model_option=ModelOptionLib.parmest, **self.args)
+        else:
+            mod = self.create_model(**self.args)
 
         # discretize if needed
         if self.discretize_model is not None:
             mod = self.discretize_model(mod, block=False)
 
+        # Deactivate any existing objective functions
+        for obj in mod.component_objects(pyo.Objective):
+            obj.deactivate()
+
         # add zero (dummy/placeholder) objective function
         mod.Obj = pyo.Objective(expr=0, sense=pyo.minimize)
+
+        # convert params to vars
+        # mod = utils.convert_params_to_vars(mod, self.param.keys(), fix_vars=True)
 
         # set ub and lb to parameters
         for par in self.param.keys():
@@ -608,19 +635,37 @@ class DesignOfExperiments:
         self.eps_abs = self.scenario_data.eps_abs
         self.scena_gen = scena_gen
 
-        # Create a global model
-        mod = pyo.ConcreteModel()
-
-        # Set for block/scenarios
-        mod.scenario = pyo.Set(initialize=self.scenario_data.scenario_indices)
-
         # Determine if create_model takes theta as an optional input
         pass_theta_to_initialize = (
             "theta" in inspect.getfullargspec(self.create_model).args
         )
 
         # Allow user to self-define complex design variables
-        self.create_model(mod=mod, model_option=ModelOptionLib.stage1, **self.args)
+        if self._original_create_model_interface:
+
+            # Create a global model
+            mod = pyo.ConcreteModel()
+
+            if pass_theta_to_initialize:
+                # Add model on block with theta values
+                self.create_model(
+                    mod=mod,
+                    model_option=ModelOptionLib.stage1,
+                    theta=self.param,
+                    **self.args,
+                )
+            else:
+                # Add model on block without theta values
+                self.create_model(mod=mod, 
+                                  model_option=ModelOptionLib.stage1, 
+                                  **self.args)
+
+        else:
+            # Create a global model
+            mod = self.create_model(**self.args)
+
+        # Set for block/scenarios
+        mod.scenario = pyo.Set(initialize=self.scenario_data.scenario_indices)
 
         # Fix parameter values in the copy of the stage1 model (if they exist)
         for par in self.param:
@@ -635,27 +680,43 @@ class DesignOfExperiments:
             # create block scenarios
             # idea: check if create_model takes theta as an optional input, if so, pass parameter values to create_model
 
-            if pass_theta_to_initialize:
-                # Grab the values of theta for this scenario/block
-                theta_initialize = self.scenario_data.scenario[s]
-                # Add model on block with theta values
-                self.create_model(
-                    mod=b,
-                    model_option=ModelOptionLib.stage2,
-                    theta=theta_initialize,
-                    **self.args,
-                )
+            if self._original_create_model_interface:
+                if pass_theta_to_initialize:
+                    # Grab the values of theta for this scenario/block
+                    theta_initialize = self.scenario_data.scenario[s]
+                    # Add model on block with theta values
+                    self.create_model(
+                        mod=b,
+                        model_option=ModelOptionLib.stage2,
+                        theta=theta_initialize,
+                        **self.args,
+                    )
+                else:
+                    # Otherwise add model on block without theta values
+                    self.create_model(
+                        mod=b, model_option=ModelOptionLib.stage2, **self.args
+                    )
+
+                # save block in a temporary variable
+                mod_ = b
             else:
-                # Otherwise add model on block without theta values
-                self.create_model(
-                    mod=b, model_option=ModelOptionLib.stage2, **self.args
-                )
+                # Add model on block
+                if pass_theta_to_initialize:
+                    # Grab the values of theta for this scenario/block
+                    theta_initialize = self.scenario_data.scenario[s]
+                    mod_ = self.create_model(theta=theta_initialize, **self.args)
+                else:
+                    mod_ = self.create_model(**self.args)
 
             # fix parameter values to perturbed values
             for par in self.param:
                 cuid = pyo.ComponentUID(par)
-                var = cuid.find_component_on(b)
+                var = cuid.find_component_on(mod_)
                 var.fix(self.scenario_data.scenario[s][par])
+
+            if not self._original_create_model_interface:
+                # for the "new"/"slim" interface, we need to add the block to the model
+                return mod_
 
         mod.block = pyo.Block(mod.scenario, rule=block_build)
 
@@ -1320,7 +1381,10 @@ class DesignOfExperiments:
 
         # either fix or unfix the design variables
         mod = self._fix_design(
-            m, self.design_values, fix_opt=fix, optimize_option=opt_option
+            m, 
+            self.design_values, 
+            fix_opt=fix, 
+            optimize_option=opt_option
         )
 
         # if user gives solver, use this solver. if not, use default IPOPT solver
