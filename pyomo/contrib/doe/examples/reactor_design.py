@@ -193,11 +193,7 @@ def main(legacy_create_model_interface=False):
     )
 
     doe2 = DesignOfExperiments(
-        theta_values, 
-        exp_design, 
-        measurements, 
-        create_model_, 
-        prior_FIM=None
+        theta_values, exp_design, measurements, create_model_, prior_FIM=None
     )
 
     square_result2, optimize_result2 = doe2.stochastic_program(
@@ -206,21 +202,17 @@ def main(legacy_create_model_interface=False):
         scale_nominal_param_value=True,
         objective_option="det",
         jac_initial=result.jaco_information.copy(),
-        step = 0.1
+        step=0.1,
     )
 
     optimize_result2.result_analysis()
     log_det = np.log(optimize_result2.det)
-    print("log(det) = ",round(log_det,3))
+    print("log(det) = ", round(log_det, 3))
     log_det_expected = 45.199
     assert abs(log_det - log_det_expected) < 0.01, "log(det) regression test failed"
 
     doe3 = DesignOfExperiments(
-        theta_values, 
-        exp_design, 
-        measurements, 
-        create_model_, 
-        prior_FIM=None
+        theta_values, exp_design, measurements, create_model_, prior_FIM=None
     )
 
     square_result3, optimize_result3 = doe3.stochastic_program(
@@ -228,17 +220,17 @@ def main(legacy_create_model_interface=False):
         scale_nominal_param_value=True,
         objective_option="trace",
         jac_initial=result.jaco_information.copy(),
-        step = 0.1
+        step=0.1,
     )
 
     optimize_result3.result_analysis()
     log_trace = np.log(optimize_result3.trace)
     log_trace_expected = 17.29
-    print("log(trace) = ",round(log_trace,3))
-    assert abs(log_trace - log_trace_expected) < 0.01, "log(trace) regression test failed"
+    print("log(trace) = ", round(log_trace, 3))
+    assert (
+        abs(log_trace - log_trace_expected) < 0.01
+    ), "log(trace) regression test failed"
 
-    
-    
 
 if __name__ == "__main__":
     main(legacy_create_model_interface=False)
