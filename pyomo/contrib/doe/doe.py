@@ -74,6 +74,7 @@ class DesignOfExperiments:
         discretize_model=None,
         args=None,
         logger_level=logging.INFO,
+        only_compute_fim_lower=True,
     ):
         """
         This package enables model-based design of experiments analysis with Pyomo.
@@ -106,6 +107,8 @@ class DesignOfExperiments:
             Additional arguments for the create_model function.
         logger_level:
             Specify the level of the logger. Change to logging.DEBUG for all messages.
+        only_compute_fim_lower:
+            If True, only the lower triangle of the FIM is computed. Default is True.
         """
 
         # parameters
@@ -156,6 +159,8 @@ class DesignOfExperiments:
         # if print statements
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(level=logger_level)
+
+        self.only_compute_fim_lower = only_compute_fim_lower
 
     def _check_inputs(self):
         """
@@ -342,6 +347,7 @@ class DesignOfExperiments:
         extract_single_model=None,
         formula="central",
         step=0.001,
+        only_compute_fim_lower=False,
     ):
         """
         This function calculates the Fisher information matrix (FIM) using sensitivity information obtained
@@ -1019,6 +1025,18 @@ class DesignOfExperiments:
         -------
         model: the DOE model
         """
+
+        # Developer recommendation: use the Cholesky decomposition for D-optimality
+        # The explicit formula is available for benchmarking purposes and is NOT recommended
+        if (
+            self.only_compute_fim_lower
+            and self.objective_option == ObjectiveLib.det
+            and not self.Cholesky_option
+        ):
+            raise ValueError(
+                "Cannot compute determinant with explicit formula if only_compute_fim_lower is True."
+            )
+
         model = self._create_block()
 
         # variables for jacobian and FIM
@@ -1175,17 +1193,24 @@ class DesignOfExperiments:
             p: parameter
             q: parameter
             """
-            return (
-                m.fim[p, q]
-                == sum(
-                    1
-                    / self.measurement_vars.variance[n]
-                    * m.sensitivity_jacobian[p, n]
-                    * m.sensitivity_jacobian[q, n]
-                    for n in model.measured_variables
+
+            if p > q:
+                if self.only_compute_fim_lower:
+                    return pyo.Constraint.Skip
+                else:
+                    return m.fim[p, q] == m.fim[q, p]
+            else:
+                return (
+                    m.fim[p, q]
+                    == sum(
+                        1
+                        / self.measurement_vars.variance[n]
+                        * m.sensitivity_jacobian[p, n]
+                        * m.sensitivity_jacobian[q, n]
+                        for n in model.measured_variables
+                    )
+                    + m.priorFIM[p, q] * self.fim_scale_constant_value
                 )
-                + m.priorFIM[p, q] * self.fim_scale_constant_value
-            )
 
         model.jacobian_constraint = pyo.Constraint(
             model.regression_parameters, model.measured_variables, rule=jacobian_rule
@@ -1256,7 +1281,7 @@ class DesignOfExperiments:
             return m.trace == sum(m.fim[j, j] for j in m.regression_parameters)
 
         def det_general(m):
-            r"""Calculate determinant. Can be applied to FIM of any size.
+            """Calculate determinant. Can be applied to FIM of any size.
             det(A) = sum_{\sigma \in \S_n} (sgn(\sigma) * \Prod_{i=1}^n a_{i,\sigma_i})
             Use permutation() to get permutations, sgn() to get signature
             """
@@ -1292,7 +1317,7 @@ class DesignOfExperiments:
                 m.regression_parameters, m.regression_parameters, rule=cholesky_imp
             )
             m.Obj = pyo.Objective(
-                expr=2 * sum(pyo.log(m.L_ele[j, j]) for j in m.regression_parameters),
+                expr=2 * sum(pyo.log10(m.L_ele[j, j]) for j in m.regression_parameters),
                 sense=pyo.maximize,
             )
 
@@ -1300,13 +1325,13 @@ class DesignOfExperiments:
             # if not cholesky but determinant, calculating det and evaluate the OBJ with det
             m.det = pyo.Var(initialize=np.linalg.det(fim), bounds=(small_number, None))
             m.det_rule = pyo.Constraint(rule=det_general)
-            m.Obj = pyo.Objective(expr=pyo.log(m.det), sense=pyo.maximize)
+            m.Obj = pyo.Objective(expr=pyo.log10(m.det), sense=pyo.maximize)
 
         elif self.objective_option == ObjectiveLib.trace:
             # if not determinant or cholesky, calculating the OBJ with trace
             m.trace = pyo.Var(initialize=np.trace(fim), bounds=(small_number, None))
             m.trace_rule = pyo.Constraint(rule=trace_calc)
-            m.Obj = pyo.Objective(expr=pyo.log(m.trace), sense=pyo.maximize)
+            m.Obj = pyo.Objective(expr=pyo.log10(m.trace), sense=pyo.maximize)
             # m.Obj = pyo.Objective(expr=m.trace, sense=pyo.maximize)
 
         elif self.objective_option == ObjectiveLib.zero:
