@@ -1028,8 +1028,14 @@ class DesignOfExperiments:
 
         # Developer recommendation: use the Cholesky decomposition for D-optimality
         # The explicit formula is available for benchmarking purposes and is NOT recommended
-        if self.only_compute_fim_lower and self.objective_option == ObjectiveLib.det and not self.Cholesky_option:
-            raise ValueError("Cannot compute determinant with explicit formula if only_compute_fim_lower is True.")
+        if (
+            self.only_compute_fim_lower
+            and self.objective_option == ObjectiveLib.det
+            and not self.Cholesky_option
+        ):
+            raise ValueError(
+                "Cannot compute determinant with explicit formula if only_compute_fim_lower is True."
+            )
 
         model = self._create_block()
 
