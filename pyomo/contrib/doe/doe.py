@@ -1311,7 +1311,7 @@ class DesignOfExperiments:
                 m.regression_parameters, m.regression_parameters, rule=cholesky_imp
             )
             m.Obj = pyo.Objective(
-                expr=2 * sum(pyo.log(m.L_ele[j, j]) for j in m.regression_parameters),
+                expr=2 * sum(pyo.log10(m.L_ele[j, j]) for j in m.regression_parameters),
                 sense=pyo.maximize,
             )
 
@@ -1319,13 +1319,13 @@ class DesignOfExperiments:
             # if not cholesky but determinant, calculating det and evaluate the OBJ with det
             m.det = pyo.Var(initialize=np.linalg.det(fim), bounds=(small_number, None))
             m.det_rule = pyo.Constraint(rule=det_general)
-            m.Obj = pyo.Objective(expr=pyo.log(m.det), sense=pyo.maximize)
+            m.Obj = pyo.Objective(expr=pyo.log10(m.det), sense=pyo.maximize)
 
         elif self.objective_option == ObjectiveLib.trace:
             # if not determinant or cholesky, calculating the OBJ with trace
             m.trace = pyo.Var(initialize=np.trace(fim), bounds=(small_number, None))
             m.trace_rule = pyo.Constraint(rule=trace_calc)
-            m.Obj = pyo.Objective(expr=pyo.log(m.trace), sense=pyo.maximize)
+            m.Obj = pyo.Objective(expr=pyo.log10(m.trace), sense=pyo.maximize)
             # m.Obj = pyo.Objective(expr=m.trace, sense=pyo.maximize)
 
         elif self.objective_option == ObjectiveLib.zero:

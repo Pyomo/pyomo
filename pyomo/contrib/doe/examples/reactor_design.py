@@ -206,10 +206,9 @@ def main(legacy_create_model_interface=False):
     )
 
     optimize_result2.result_analysis()
-    log_det = np.log(optimize_result2.det)
+    log_det = np.log10(optimize_result2.det)
     print("log(det) = ", round(log_det, 3))
-    #log_det_expected = 45.199
-    log_det_expected = 44.362
+    log_det_expected = 19.266
     assert abs(log_det - log_det_expected) < 0.01, "log(det) regression test failed"
 
     doe3 = DesignOfExperiments(
@@ -225,8 +224,8 @@ def main(legacy_create_model_interface=False):
     )
 
     optimize_result3.result_analysis()
-    log_trace = np.log(optimize_result3.trace)
-    log_trace_expected = 17.29
+    log_trace = np.log10(optimize_result3.trace)
+    log_trace_expected = 7.509
     print("log(trace) = ", round(log_trace, 3))
     assert (
         abs(log_trace - log_trace_expected) < 0.01
