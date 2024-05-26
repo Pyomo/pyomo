@@ -74,6 +74,7 @@ class DesignOfExperiments:
         discretize_model=None,
         args=None,
         logger_level=logging.INFO,
+        only_compute_fim_lower=True,
     ):
         """
         This package enables model-based design of experiments analysis with Pyomo.
@@ -106,6 +107,8 @@ class DesignOfExperiments:
             Additional arguments for the create_model function.
         logger_level:
             Specify the level of the logger. Change to logging.DEBUG for all messages.
+        only_compute_fim_lower:
+            If True, only the lower triangle of the FIM is computed. Default is True.
         """
 
         # parameters
@@ -156,6 +159,8 @@ class DesignOfExperiments:
         # if print statements
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(level=logger_level)
+
+        self.only_compute_fim_lower = only_compute_fim_lower
 
     def _check_inputs(self):
         """
@@ -342,6 +347,7 @@ class DesignOfExperiments:
         extract_single_model=None,
         formula="central",
         step=0.001,
+        only_compute_fim_lower=False,
     ):
         """
         This function calculates the Fisher information matrix (FIM) using sensitivity information obtained
@@ -1019,6 +1025,12 @@ class DesignOfExperiments:
         -------
         model: the DOE model
         """
+
+        # Developer recommendation: use the Cholesky decomposition for D-optimality
+        # The explicit formula is available for benchmarking purposes and is NOT recommended
+        if self.only_compute_fim_lower and self.objective_option == ObjectiveLib.det and not self.Cholesky_option:
+            raise ValueError("Cannot compute determinant with explicit formula if only_compute_fim_lower is True.")
+
         model = self._create_block()
 
         # variables for jacobian and FIM
@@ -1177,7 +1189,10 @@ class DesignOfExperiments:
             """
 
             if p > q:
-                return m.fim[p, q] == m.fim[q, p]
+                if self.only_compute_fim_lower:
+                    return pyo.Constraint.Skip
+                else:
+                    return m.fim[p, q] == m.fim[q, p]
             else:
                 return (
                     m.fim[p, q]
@@ -1260,7 +1275,7 @@ class DesignOfExperiments:
             return m.trace == sum(m.fim[j, j] for j in m.regression_parameters)
 
         def det_general(m):
-            r"""Calculate determinant. Can be applied to FIM of any size.
+            """Calculate determinant. Can be applied to FIM of any size.
             det(A) = sum_{\sigma \in \S_n} (sgn(\sigma) * \Prod_{i=1}^n a_{i,\sigma_i})
             Use permutation() to get permutations, sgn() to get signature
             """

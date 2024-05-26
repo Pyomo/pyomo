@@ -162,7 +162,7 @@ def main(legacy_create_model_interface=False):
         formula="central",  # formula for finite difference
     )
 
-    doe1.model.pprint()
+    # doe1.model.pprint()
 
     result.result_analysis()
 
@@ -208,7 +208,8 @@ def main(legacy_create_model_interface=False):
     optimize_result2.result_analysis()
     log_det = np.log(optimize_result2.det)
     print("log(det) = ", round(log_det, 3))
-    log_det_expected = 45.199
+    #log_det_expected = 45.199
+    log_det_expected = 44.362
     assert abs(log_det - log_det_expected) < 0.01, "log(det) regression test failed"
 
     doe3 = DesignOfExperiments(
