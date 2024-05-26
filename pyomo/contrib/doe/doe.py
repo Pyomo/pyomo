@@ -1175,17 +1175,21 @@ class DesignOfExperiments:
             p: parameter
             q: parameter
             """
-            return (
-                m.fim[p, q]
-                == sum(
-                    1
-                    / self.measurement_vars.variance[n]
-                    * m.sensitivity_jacobian[p, n]
-                    * m.sensitivity_jacobian[q, n]
-                    for n in model.measured_variables
+
+            if p > q:
+                return m.fim[p, q] == m.fim[q, p]
+            else:
+                return (
+                    m.fim[p, q]
+                    == sum(
+                        1
+                        / self.measurement_vars.variance[n]
+                        * m.sensitivity_jacobian[p, n]
+                        * m.sensitivity_jacobian[q, n]
+                        for n in model.measured_variables
+                    )
+                    + m.priorFIM[p, q] * self.fim_scale_constant_value
                 )
-                + m.priorFIM[p, q] * self.fim_scale_constant_value
-            )
 
         model.jacobian_constraint = pyo.Constraint(
             model.regression_parameters, model.measured_variables, rule=jacobian_rule
