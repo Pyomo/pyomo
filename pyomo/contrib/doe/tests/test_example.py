@@ -41,7 +41,7 @@ from pyomo.opt import SolverFactory
 ipopt_available = SolverFactory("ipopt").available()
 
 
-class TestReactorExample(unittest.TestCase):
+class TestReactorExamples(unittest.TestCase):
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     @unittest.skipIf(not scipy_available, "scipy is not available")
     @unittest.skipIf(not numpy_available, "Numpy is not available")
