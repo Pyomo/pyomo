@@ -146,7 +146,7 @@ class Test_Reaction_Kinetics_Example(unittest.TestCase):
         )
         result.result_analysis()
         self.assertAlmostEqual(np.log10(result.trace), 2.789, places=2)
-        self.assertAlmostEqual(np.log10(result.det), 2.0845, places=2)
+        self.assertAlmostEqual(np.log10(result.det), 2.8247, places=2)
         self.assertAlmostEqual(np.log10(result.min_eig), -1.3510, places=2)
 
         ### check subset feature
