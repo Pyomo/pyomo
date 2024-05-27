@@ -1182,11 +1182,7 @@ class DesignOfExperiments:
             model.regression_parameters, model.regression_parameters, rule=read_prior
         )
 
-        # TODO: explore exploiting the symmetry of the FIM matrix
         # The off-diagonal elements are symmetric, thus only half of the elements need to be calculated
-        # Syntax challenge: determine the order of p and q, i.e., if p > q, then replace with
-        # equality constraint fim[p, q] == fim[q, p]
-
         def fim_rule(m, p, q):
             """
             m: Pyomo model
@@ -1218,6 +1214,15 @@ class DesignOfExperiments:
         model.fim_constraint = pyo.Constraint(
             model.regression_parameters, model.regression_parameters, rule=fim_rule
         )
+
+        if self.only_compute_fim_lower:
+            # Fix the upper half of the FIM matrix elements to be 0.0.
+            # This eliminates extra variables and ensures the expected number of
+            # degrees of freedom in the optimization problem.
+            for p in model.regression_parameters:
+                for q in model.regression_parameters:
+                    if p > q:
+                        model.fim[p, q].fix(0.0)
 
         return model
 
