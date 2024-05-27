@@ -139,6 +139,14 @@ class DesignOfExperiments:
         self.measurement_vars = measurement_vars
         self.measure_name = self.measurement_vars.variable_names
 
+        if (
+            self.measurement_vars.variable_names is None
+            or not self.measurement_vars.variable_names
+        ):
+            raise ValueError(
+                "There are no measurement variables. Check for a modeling mistake."
+            )
+
         # check if user-defined solver is given
         if solver:
             self.solver = solver

@@ -144,6 +144,20 @@ class TestMeasurementError(unittest.TestCase):
             time_index_position="time",
         )
 
+    def test_no_measurements(self):
+        """This test confirms that an error is thrown when the user forgets to add any measurements.
+
+        It's okay to have no decision variables. With no measurement variables, the FIM is the zero matrix.
+        This (no measurements) is a common user mistake.
+        """
+
+        with self.assertRaises(ValueError):
+            decisions = DesignVariables()
+            measurements = MeasurementVariables()
+            DesignOfExperiments(
+                {}, decisions, measurements, create_model, disc_for_measure
+            )
+
 
 class TestDesignError(unittest.TestCase):
     def test(self):
