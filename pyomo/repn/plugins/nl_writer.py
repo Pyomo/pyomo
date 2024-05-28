@@ -1097,9 +1097,7 @@ class _NLWriter_impl(object):
                     ub *= scale
                 var_bounds[_id] = lb, ub
                 # Update _vmap to output scaled variables in NL expressions
-                _vmap[_id] = (
-                    template.division + _vmap[_id] + '\n' + template.const % scale
-                ).rstrip()
+                _vmap[_id] = template.division + _vmap[_id] + template.const % scale
 
         # Update any eliminated variables to point to the (potentially
         # scaled) substituted variables
@@ -1133,7 +1131,7 @@ class _NLWriter_impl(object):
                         "linear subsystem that was removed from the model.  "
                         f"Setting '{var_map[_i]}' == {val}"
                     )
-            _vmap[_id] = nl.rstrip() % tuple(_vmap[_i] for _i in args)
+            _vmap[_id] = nl % tuple(_vmap[_i] for _i in args)
 
         r_lines = [None] * n_cons
         for idx, (con, expr_info, lb, ub) in enumerate(constraints):
@@ -2020,7 +2018,7 @@ class _NLWriter_impl(object):
             lbl = '\t#%s' % info[0].name
         else:
             lbl = ''
-        self.var_id_to_nl[expr_id] = f"v{self.next_V_line_id}{lbl}"
+        self.var_id_to_nl[expr_id] = f"v{self.next_V_line_id}{lbl}\n"
         # Do NOT write out 0 coefficients here: doing so fouls up the
         # ASL's logic for calculating derivatives, leading to 'nan' in
         # the Hessian results.
@@ -2348,7 +2346,9 @@ class text_nl_debug_template(object):
     less_equal = 'o23\t# le\n'
     equality = 'o24\t# eq\n'
     external_fcn = 'f%d %d%s\n'
-    var = '%s\n'  # NOTE: to support scaling, we do NOT include the 'v' here
+    # NOTE: to support scaling and substitutions, we do NOT include the
+    # 'v' or the EOL here:
+    var = '%s'
     const = 'n%r\n'
     string = 'h%d:%s\n'
     monomial = product + const + var.replace('%', '%%')
@@ -2392,7 +2392,10 @@ nl_operators = {
 
 
 def _strip_template_comments(vars_, base_):
-    vars_['unary'] = {k: v[: v.find('\t#')] + '\n' for k, v in base_.unary.items()}
+    vars_['unary'] = {
+        k: v[: v.find('\t#')] + '\n' if v[-1] == '\n' else ''
+        for k, v in base_.unary.items()
+    }
     for k, v in base_.__dict__.items():
         if type(v) is str and '\t#' in v:
             v_lines = v.split('\n')

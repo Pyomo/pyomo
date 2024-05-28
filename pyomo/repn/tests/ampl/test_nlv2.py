@@ -98,7 +98,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 0)
         self.assertEqual(repn.linear, {})
-        self.assertEqual(repn.nonlinear, ('o5\n%s\nn2\n', [id(m.x)]))
+        self.assertEqual(repn.nonlinear, ('o5\n%sn2\n', [id(m.x)]))
 
         m.p = 2
 
@@ -150,7 +150,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 0)
         self.assertEqual(repn.linear, {})
-        self.assertEqual(repn.nonlinear, ('o2\nn0.5\no5\n%s\nn2\n', [id(m.x)]))
+        self.assertEqual(repn.nonlinear, ('o2\nn0.5\no5\n%sn2\n', [id(m.x)]))
 
         info = INFO()
         with LoggingIntercept() as LOG:
@@ -160,7 +160,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 0)
         self.assertEqual(repn.linear, {})
-        self.assertEqual(repn.nonlinear, ('o3\no43\n%s\n%s\n', [id(m.x), id(m.x)]))
+        self.assertEqual(repn.nonlinear, ('o3\no43\n%s%s', [id(m.x), id(m.x)]))
 
     def test_errors_divide_by_0(self):
         m = ConcreteModel()
@@ -255,7 +255,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 0)
         self.assertEqual(repn.linear, {})
-        self.assertEqual(repn.nonlinear, ('o5\n%s\nn2\n', [id(m.x)]))
+        self.assertEqual(repn.nonlinear, ('o5\n%sn2\n', [id(m.x)]))
 
         m.p = 1
         info = INFO()
@@ -542,7 +542,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, InvalidNumber(None))
         self.assertEqual(repn.linear, {})
-        self.assertEqual(repn.nonlinear[0], 'o16\no2\no2\n%s\n%s\n%s\n')
+        self.assertEqual(repn.nonlinear[0], 'o16\no2\no2\n%s%s%s')
         self.assertEqual(repn.nonlinear[1], [id(m.z[2]), id(m.z[3]), id(m.z[4])])
 
         m.z[3].fix(float('nan'))
@@ -592,7 +592,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 0)
         self.assertEqual(repn.linear, {})
-        self.assertEqual(repn.nonlinear, ('o5\n%s\nn0.5\n', [id(m.x)]))
+        self.assertEqual(repn.nonlinear, ('o5\n%sn0.5\n', [id(m.x)]))
 
         m.x.fix()
         info = INFO()
@@ -617,7 +617,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 0)
         self.assertEqual(repn.linear, {})
-        self.assertEqual(repn.nonlinear, ('o15\n%s\n', [id(m.x)]))
+        self.assertEqual(repn.nonlinear, ('o15\n%s', [id(m.x)]))
 
         m.x.fix()
         info = INFO()
@@ -642,7 +642,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 0)
         self.assertEqual(repn.linear, {})
-        self.assertEqual(repn.nonlinear, ('o43\n%s\n', [id(m.x)]))
+        self.assertEqual(repn.nonlinear, ('o43\n%s', [id(m.x)]))
 
         m.x.fix()
         info = INFO()
@@ -671,7 +671,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.linear, {})
         self.assertEqual(
             repn.nonlinear,
-            ('o35\no23\n%s\nn4\no5\n%s\nn2\n%s\n', [id(m.x), id(m.x), id(m.y)]),
+            ('o35\no23\n%sn4\no5\n%sn2\n%s', [id(m.x), id(m.x), id(m.y)]),
         )
 
         m.x.fix()
@@ -712,7 +712,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.linear, {})
         self.assertEqual(
             repn.nonlinear,
-            ('o35\no24\n%s\nn4\no5\n%s\nn2\n%s\n', [id(m.x), id(m.x), id(m.y)]),
+            ('o35\no24\n%sn4\no5\n%sn2\n%s', [id(m.x), id(m.x), id(m.y)]),
         )
 
         m.x.fix()
@@ -754,7 +754,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(
             repn.nonlinear,
             (
-                'o35\no21\no23\nn1\n%s\no23\n%s\nn4\no5\n%s\nn2\n%s\n',
+                'o35\no21\no23\nn1\n%so23\n%sn4\no5\n%sn2\n%s',
                 [id(m.x), id(m.x), id(m.x), id(m.y)],
             ),
         )
@@ -815,7 +815,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(len(info.subexpression_cache), 1)
         obj, repn, info = info.subexpression_cache[id(m.e)]
         self.assertIs(obj, m.e)
-        self.assertEqual(repn.nl, ('%s\n', (id(m.e),)))
+        self.assertEqual(repn.nl, ('%s', (id(m.e),)))
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 3)
         self.assertEqual(repn.linear, {id(m.x): 1})
@@ -842,7 +842,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 0)
         self.assertEqual(repn.linear, {})
-        self.assertEqual(repn.nonlinear, ('o24\no3\nn1\n%s\nn0\n', [id(m.x)]))
+        self.assertEqual(repn.nonlinear, ('o24\no3\nn1\n%sn0\n', [id(m.x)]))
 
     def test_duplicate_shared_linear_expressions(self):
         # This tests an issue where AMPLRepn.duplicate() was not copying
@@ -929,7 +929,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 0)
         self.assertEqual(repn.linear, {id(m.x[2]): 4, id(m.x[3]): 9, id(m.x[4]): 16})
-        self.assertEqual(repn.nonlinear, ('o5\n%s\nn2\n', [id(m.x[2])]))
+        self.assertEqual(repn.nonlinear, ('o5\n%sn2\n', [id(m.x[2])]))
         with self.assertRaisesRegex(
             MouseTrap, "Cannot convert nonlinear AMPLRepn to Pyomo Expression"
         ):
