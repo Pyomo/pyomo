@@ -2393,16 +2393,14 @@ G0 8   #OBJ
  0 0 0 0 0	#discrete variables: binary, integer, nonlinear (b,c,o)
  1 0	#nonzeros in Jacobian, obj. gradient
  2 1	#max name lengths: constraints, variables
- 0 0 0 2 0	#common exprs: b,c,o,c1,o1
-V1 0 1	#nl(e)
-n19
-V2 1 1	#e
+ 0 0 0 1 0	#common exprs: b,c,o,c1,o1
+V1 1 1	#e
 0 1
-v1	#nl(e)
+n19
 C0	#c1
 o2	#*
 n3
-v2	#e
+v1	#e
 x0	#initial guess
 r	#1 ranges (rhs's)
 2 0	#c1

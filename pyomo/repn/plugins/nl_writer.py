@@ -548,7 +548,7 @@ class _NLWriter_impl(object):
         self.external_functions = {}
         self.used_named_expressions = set()
         self.var_map = {}
-        self.var_id_to_nl = None
+        self.var_id_to_nl = {}
         self.sorter = FileDeterminism_to_SortComponents(config.file_determinism)
         self.visitor = AMPLRepnVisitor(
             self.template,
@@ -1056,8 +1056,8 @@ class _NLWriter_impl(object):
             row_comments = [f'\t#{lbl}' for lbl in row_labels]
             col_labels = [labeler(var_map[_id]) for _id in variables]
             col_comments = [f'\t#{lbl}' for lbl in col_labels]
-            self.var_id_to_nl = {
-                _id: f'v{var_idx}{col_comments[var_idx]}'
+            id2nl = {
+                _id: f'v{var_idx}{col_comments[var_idx]}\n'
                 for var_idx, _id in enumerate(variables)
             }
             # Write out the .row and .col data
@@ -1070,10 +1070,12 @@ class _NLWriter_impl(object):
         else:
             row_labels = row_comments = [''] * (n_cons + n_objs)
             col_labels = col_comments = [''] * len(variables)
-            self.var_id_to_nl = {
-                _id: f"v{var_idx}" for var_idx, _id in enumerate(variables)
-            }
+            id2nl = {_id: f"v{var_idx}\n" for var_idx, _id in enumerate(variables)}
 
+        if self.var_id_to_nl:
+            self.var_id_to_nl.update(id2nl)
+        else:
+            self.var_id_to_nl = id2nl
         _vmap = self.var_id_to_nl
         if scale_model:
             template = self.template
@@ -1934,7 +1936,7 @@ class _NLWriter_impl(object):
         # nonlinear portion of a defined variable is a constant
         # expression.  This may now be the case if all the variables in
         # the original nonlinear expression have been fixed.
-        for expr, info, _ in self.subexpression_cache.values():
+        for _id, (expr, info, sub) in self.subexpression_cache.items():
             if not info.nonlinear:
                 continue
             nl, args = info.nonlinear
@@ -1949,12 +1951,19 @@ class _NLWriter_impl(object):
             # guarantee that the user actually initialized the
             # variables.  So, we will fall back on parsing the (now
             # constant) nonlinear fragment and evaluating it.
-            if info.linear is None:
-                info.linear = {}
             info.nonlinear = None
             info.const += _evaluate_constant_nl(
                 nl % tuple(template.const % eliminated_vars[i].const for i in args)
             )
+            if not info.linear:
+                # This has resolved to a constant: the ASL will fail for
+                # defined variables containing ONLY a constant.  We
+                # need to substitute the constant directly into the
+                # original constraint/objective expression(s)
+                info.linear = {}
+                self.used_named_expressions.discard(_id)
+                self.var_id_to_nl[_id] = self.template.const % info.const
+                self.subexpression_cache[_id] = (expr, info, [None, None, True])
 
         return eliminated_cons, eliminated_vars
 
