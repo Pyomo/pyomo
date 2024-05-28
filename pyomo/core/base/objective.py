@@ -145,12 +145,12 @@ class ObjectiveData(NamedExpressionData, ActiveComponentData):
 
 class _ObjectiveData(metaclass=RenamedClass):
     __renamed__new_class__ = ObjectiveData
-    __renamed__version__ = '6.7.2.dev0'
+    __renamed__version__ = '6.7.2'
 
 
 class _GeneralObjectiveData(metaclass=RenamedClass):
     __renamed__new_class__ = ObjectiveData
-    __renamed__version__ = '6.7.2.dev0'
+    __renamed__version__ = '6.7.2'
 
 
 @ModelComponentFactory.register("Expressions that are minimized or maximized.")
