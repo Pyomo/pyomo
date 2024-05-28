@@ -2637,3 +2637,67 @@ G0 1   #o
                 OUT.getvalue(),
             )
         )
+
+    def test_presolve_defined_var_to_const(self):
+        # This test is derived from a step in an IDAES initiaization
+        # where the presolver is able to fix enough variables to cause
+        # the defined variable to be reduced to a constant.  We must not
+        # emit the defined variable (because doing so generates an error
+        # in the ASL)
+        m = ConcreteModel()
+        m.eq = Var(initialize=100)
+        m.co2 = Var()
+        m.n2 = Var()
+        m.E = Expression(expr=60 / (3 * m.co2 - 4 * m.n2 - 5))
+        m.con1 = Constraint(expr=m.co2 == 6)
+        m.con2 = Constraint(expr=m.n2 == 7)
+        m.con3 = Constraint(expr=8 / m.E == m.eq)
+
+        OUT = io.StringIO()
+        nl_writer.NLWriter().write(
+            m, OUT, symbolic_solver_labels=True, linear_presolve=True
+        )
+        self.assertEqual(
+            *nl_diff(
+                """g3 1 1 0	#problem unknown
+ 1 1 0 0 1	#vars, constraints, objectives, ranges, eqns
+ 1 0 0 0 0 0	#nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0	#network constraints: nonlinear, linear
+ 0 0 0	#nonlinear vars in constraints, objectives, both
+ 0 0 0 1	#linear network variables; functions; arith, flags
+ 0 0 0 0 0	#discrete variables: binary, integer, nonlinear (b,c,o)
+ 1 0	#nonzeros in Jacobian, obj. gradient
+ 4 2	#max name lengths: constraints, variables
+ 0 0 0 0 0	#common exprs: b,c,o,c1,o1
+C0	#con3
+o3	#/
+n8
+n-4
+x1	#initial guess
+0 100	#eq
+r	#1 ranges (rhs's)
+4 0	#con3
+b	#1 bounds (on variables)
+3	#eq
+k0	#intermediate Jacobian column lengths
+J0 1	#con3
+0 -1
+""",
+                OUT.getvalue(),
+            )
+        )
+
+    def test_presolve_check_invalid_monomial_constraints(self):
+        # This checks issue #3272
+        m = ConcreteModel()
+        m.x = Var()
+        m.c = Constraint(expr=m.x == 5)
+        m.d = Constraint(expr=m.x >= 10)
+
+        OUT = io.StringIO()
+        with self.assertRaisesRegex(
+            nl_writer.InfeasibleConstraintException,
+            r"model contains a trivially infeasible constraint 'd' "
+            r"\(fixed body value 5.0 outside bounds \[10, None\]\)\.",
+        ):
+            nl_writer.NLWriter().write(m, OUT, linear_presolve=True)
