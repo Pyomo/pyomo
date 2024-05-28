@@ -2527,7 +2527,7 @@ J1 2	#c2
             )
         )
 
-    def test_presolve_fixes_nl_exernal_function(self):
+    def test_presolve_fixes_nl_external_function(self):
         # This tests a workaround for a bug in the ASL where external
         # functions with constant argument expressions are not
         # evaluated correctly.
