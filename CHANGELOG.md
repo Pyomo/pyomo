@@ -9,6 +9,8 @@ Pyomo 6.7.3   (29 May 2024)
 - Core
   - Deprecate `pyomo.core.plugins.transform.model.to_standard_form()` (#3265)
   - Reorder definitions to avoid `NameError` in some situations (#3264)
+- Solver Interfaces
+  - NLv2: Fix linear presolver with constant defined vars/external fcns (#3276)
 - Testing
   - Add URL checking to GHA linting job (#3259, #3261)
   - Skip Windows Python 3.8 conda GHA job (#3269)
