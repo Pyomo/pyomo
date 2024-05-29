@@ -38,6 +38,8 @@ from pyomo.common.timing import TicTocTimer
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 from pyomo.contrib.doe.scenario import ScenarioGenerator, FiniteDifferenceStep
 from pyomo.contrib.doe.result import FisherResults, GridSearchResult
+
+from pyomo.environ import Var, Param
 import collections.abc
 
 import inspect
@@ -83,9 +85,11 @@ class DesignOfExperiments:
         param_init:
             A  ``dictionary`` of parameter names and values.
             If they defined as indexed Pyomo variable, put the variable name and index, such as 'theta["A1"]'.
+            In create_model function, they can be defined either as `Param` or `Var` components.
         design_vars:
             A ``DesignVariables`` which contains the Pyomo variable names and their corresponding indices
             and bounds for experiment degrees of freedom
+            In create_model function, they can be defined either as `Param` or `Var` components.
         measurement_vars:
             A ``MeasurementVariables`` which contains the Pyomo variable names and their corresponding indices and
             bounds for experimental measurements
@@ -490,12 +494,17 @@ class DesignOfExperiments:
         # add objective function
         mod.Obj = pyo.Objective(expr=0, sense=pyo.minimize)
 
-        # set ub and lb to parameters
+        # set parameters to given values
         for par in self.param.keys():
             cuid = pyo.ComponentUID(par)
             var = cuid.find_component_on(mod)
-            var.setlb(self.param[par])
-            var.setub(self.param[par])
+
+            # only set up bounds if they are variables
+            if var.ctype is Var:
+                var.fix(self.param[par])
+            # if it is a param, give it a new value
+            elif var.ctype is Param:
+                var.value = self.param[par]
 
         # generate parameter name list and value dictionary with index
         var_name = list(self.param.keys())
@@ -608,10 +617,15 @@ class DesignOfExperiments:
         for par in self.param:
             cuid = pyo.ComponentUID(par)
             var = cuid.find_component_on(mod)
+
             if var is not None:
-                # Fix the parameter value
+                # if it is a variable, fix it to a new value
                 # Otherwise, the parameter does not exist on the stage 1 model
-                var.fix(self.param[par])
+                if var.ctype is Var:
+                    var.fix(self.param[par])
+                # if it is a param, give it a new value
+                elif var.ctype is Param:
+                    var.value = self.param[par]
 
         def block_build(b, s):
             # create block scenarios
@@ -632,7 +646,13 @@ class DesignOfExperiments:
             for par in self.param:
                 cuid = pyo.ComponentUID(par)
                 var = cuid.find_component_on(b)
-                var.fix(self.scenario_data.scenario[s][par])
+
+                # if it is a variable, fix it to a new value
+                if var.ctype is Var:
+                    var.fix(self.scenario_data.scenario[s][par])
+                # if it is a param, give it a new value
+                elif var.ctype is Param:
+                    var.value = self.scenario_data.scenario[s][par]
 
         mod.block = pyo.Block(mod.scenario, rule=block_build)
 
@@ -1190,18 +1210,24 @@ class DesignOfExperiments:
             # Get Pyomo variable object
             cuid = pyo.ComponentUID(name)
             var = cuid.find_component_on(m)
-            if fix_opt:
-                # If fix_opt is True, fix the design variable
-                var.fix(design_val[name])
-            else:
-                # Otherwise check optimize_option
-                if optimize_option is None:
-                    # If optimize_option is None, unfix all design variables
-                    var.unfix()
+
+            if var.ctype is Var:
+                if fix_opt:
+                    # If fix_opt is True, fix the design variable
+                    var.fix(design_val[name])
                 else:
-                    # Otherwise, unfix only the design variables listed in optimize_option with value True
-                    if optimize_option[name]:
+                    # Otherwise check optimize_option
+                    if optimize_option is None:
+                        # If optimize_option is None, unfix all design variables
                         var.unfix()
+                    else:
+                        # Otherwise, unfix only the design variables listed in optimize_option with value True
+                        if optimize_option[name]:
+                            var.unfix()
+
+            elif var.ctype is Param:
+                var.value = design_val[name]
+
         return m
 
     def _get_default_ipopt_solver(self):
