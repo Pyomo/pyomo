@@ -46,15 +46,10 @@ import pyomo.environ as pyo
 from pyomo.contrib.viewer.model_browser import ComponentDataItem
 from pyomo.contrib.viewer.ui_data import UIData
 from pyomo.common.dependencies import DeferredImportError
-
-try:
-    x = pyo.units.m
-    units_available = True
-except DeferredImportError:
-    units_available = False
+from pyomo.core.base.units_container import pint_available
 
 
-@unittest.skipIf(not units_available, "Pyomo units are not available")
+@unittest.skipIf(not pint_available, "Pyomo units are not available")
 class TestDataModelItem(unittest.TestCase):
     def setUp(self):
         # Borrowed this test model from the trust region tests
