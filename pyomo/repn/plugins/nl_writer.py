@@ -2779,8 +2779,8 @@ def handle_external_function_node(visitor, node, *args):
                 "correctly."
                 % (
                     func,
-                    visitor.external_byFcn[func]._library,
-                    visitor.external_byFcn[func]._library.name,
+                    visitor.external_functions[func]._library,
+                    visitor.external_functions[func]._library.name,
                     node._fcn._library,
                     node._fcn.name,
                 )
