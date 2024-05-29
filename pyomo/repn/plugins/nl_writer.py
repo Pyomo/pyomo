@@ -548,7 +548,7 @@ class _NLWriter_impl(object):
         self.external_functions = {}
         self.used_named_expressions = set()
         self.var_map = {}
-        self.var_id_to_nl = {}
+        self.var_id_to_nl_map = {}
         self.sorter = FileDeterminism_to_SortComponents(config.file_determinism)
         self.visitor = AMPLRepnVisitor(
             self.template,
@@ -622,6 +622,7 @@ class _NLWriter_impl(object):
         ostream = self.ostream
         linear_presolve = self.config.linear_presolve
 
+        nl_map = self.var_id_to_nl_map
         var_map = self.var_map
         initialize_var_map_from_column_order(model, self.config, var_map)
         timer.toc('Initialized column order', level=logging.DEBUG)
@@ -752,6 +753,12 @@ class _NLWriter_impl(object):
         else:
             timer.toc('Processed %s constraints', len(all_constraints))
 
+        # We have identified all the external functions (resolving them
+        # by name).  Now we may need to resolve the function by the
+        # (local) FID, which we know is indexed by integers starting at
+        # 0.  We will convert the dict to a list for efficient lookup.
+        self.external_functions = list(self.external_functions.values())
+
         # This may fetch more bounds than needed, but only in the cases
         # where variables were completely eliminated while walking the
         # expressions, or when users provide superfluous variables in
@@ -766,7 +773,7 @@ class _NLWriter_impl(object):
         del lcon_by_linear_nnz
 
         # Note: defer categorizing constraints until after presolve, as
-        # the presolver could result in nonlinear constraints to become
+        # the presolver could result in nonlinear constraints becoming
         # linear (or trivial)
         constraints = []
         linear_cons = []
@@ -778,10 +785,13 @@ class _NLWriter_impl(object):
         for info in _constraints:
             expr_info = info[1]
             if expr_info.nonlinear:
-                if expr_info.nonlinear[1]:
+                nl, args = expr_info.nonlinear
+                if any(vid not in nl_map for vid in args):
                     constraints.append(info)
                     continue
-                expr_info.const += _evaluate_constant_nl(expr_info.nonlinear[0])
+                expr_info.const += _evaluate_constant_nl(
+                    nl % tuple(nl_map[i] for i in args), self.external_functions
+                )
                 expr_info.nonlinear = None
             if expr_info.linear:
                 linear_cons.append(info)
@@ -1072,11 +1082,10 @@ class _NLWriter_impl(object):
             col_labels = col_comments = [''] * len(variables)
             id2nl = {_id: f"v{var_idx}\n" for var_idx, _id in enumerate(variables)}
 
-        if self.var_id_to_nl:
-            self.var_id_to_nl.update(id2nl)
+        if nl_map:
+            nl_map.update(id2nl)
         else:
-            self.var_id_to_nl = id2nl
-        _vmap = self.var_id_to_nl
+            self.var_id_to_nl_map = nl_map = id2nl
         if scale_model:
             template = self.template
             objective_scaling = [scaling_cache[id(info[0])] for info in objectives]
@@ -1096,8 +1105,8 @@ class _NLWriter_impl(object):
                 if ub is not None:
                     ub *= scale
                 var_bounds[_id] = lb, ub
-                # Update _vmap to output scaled variables in NL expressions
-                _vmap[_id] = template.division + _vmap[_id] + template.const % scale
+                # Update nl_map to output scaled variables in NL expressions
+                nl_map[_id] = template.division + nl_map[_id] + template.const % scale
 
         # Update any eliminated variables to point to the (potentially
         # scaled) substituted variables
@@ -1106,7 +1115,7 @@ class _NLWriter_impl(object):
             for _i in args:
                 # It is possible that the eliminated variable could
                 # reference another variable that is no longer part of
-                # the model and therefore does not have a _vmap entry.
+                # the model and therefore does not have a nl_map entry.
                 # This can happen when there is an underdetermined
                 # independent linear subsystem and the presolve removed
                 # all the constraints from the subsystem.  Because the
@@ -1114,7 +1123,7 @@ class _NLWriter_impl(object):
                 # anywhere else in the model, they are not part of the
                 # `variables` list.  Implicitly "fix" it to an arbitrary
                 # valid value from the presolved domain (see #3192).
-                if _i not in _vmap:
+                if _i not in nl_map:
                     lb, ub = var_bounds[_i]
                     if lb is None:
                         lb = -inf
@@ -1125,13 +1134,13 @@ class _NLWriter_impl(object):
                     else:
                         val = lb if abs(lb) < abs(ub) else ub
                     eliminated_vars[_i] = AMPLRepn(val, {}, None)
-                    _vmap[_i] = expr_info.compile_repn(visitor)[0]
+                    nl_map[_i] = expr_info.compile_repn(visitor)[0]
                     logger.warning(
                         "presolve identified an underdetermined independent "
                         "linear subsystem that was removed from the model.  "
                         f"Setting '{var_map[_i]}' == {val}"
                     )
-            _vmap[_id] = nl % tuple(_vmap[_i] for _i in args)
+            nl_map[_id] = nl % tuple(nl_map[_i] for _i in args)
 
         r_lines = [None] * n_cons
         for idx, (con, expr_info, lb, ub) in enumerate(constraints):
@@ -1330,7 +1339,7 @@ class _NLWriter_impl(object):
         # "F" lines (external function definitions)
         #
         amplfunc_libraries = set()
-        for fid, fcn in sorted(self.external_functions.values()):
+        for fid, fcn in self.external_functions:
             amplfunc_libraries.add(fcn._library)
             ostream.write("F%d 1 -1 %s\n" % (fid, fcn._function))
 
@@ -1774,6 +1783,7 @@ class _NLWriter_impl(object):
         var_map = self.var_map
         substitutions_by_linear_var = defaultdict(set)
         template = self.template
+        nl_map = self.var_id_to_nl_map
         one_var = lcon_by_linear_nnz[1]
         two_var = lcon_by_linear_nnz[2]
         while 1:
@@ -1783,6 +1793,7 @@ class _NLWriter_impl(object):
                 b, _ = var_bounds[_id]
                 logger.debug("NL presolve: bounds fixed %s := %s", var_map[_id], b)
                 eliminated_vars[_id] = AMPLRepn(b, {}, None)
+                nl_map[_id] = template.const % b
             elif one_var:
                 con_id, info = one_var.popitem()
                 expr_info, lb = info
@@ -1792,6 +1803,7 @@ class _NLWriter_impl(object):
                 b = expr_info.const = (lb - expr_info.const) / coef
                 logger.debug("NL presolve: substituting %s := %s", var_map[_id], b)
                 eliminated_vars[_id] = expr_info
+                nl_map[_id] = template.const % b
                 lb, ub = var_bounds[_id]
                 if (lb is not None and lb - b > TOL) or (
                     ub is not None and ub - b < -TOL
@@ -1929,30 +1941,31 @@ class _NLWriter_impl(object):
                     expr_info.linear[x] += c * a
                 elif a:
                     expr_info.linear[x] = c * a
+                elif not expr_info.linear:
+                    nl_map[resubst] = template.const % expr_info.const
 
         # Note: the ASL will (silently) produce incorrect answers if the
         # nonlinear portion of a defined variable is a constant
         # expression.  This may now be the case if all the variables in
         # the original nonlinear expression have been fixed.
         for _id, (expr, info, sub) in self.subexpression_cache.items():
-            if not info.nonlinear:
-                continue
-            nl, args = info.nonlinear
-            if not args or any(
-                vid not in eliminated_vars or eliminated_vars[vid].linear
-                for vid in args
-            ):
-                continue
-            # Ideally, we would just evaluate the named expression.
-            # However, there might be a linear portion of the named
-            # expression that still has free variables, and there is no
-            # guarantee that the user actually initialized the
-            # variables.  So, we will fall back on parsing the (now
-            # constant) nonlinear fragment and evaluating it.
-            info.nonlinear = None
-            info.const += _evaluate_constant_nl(
-                nl % tuple(template.const % eliminated_vars[i].const for i in args)
-            )
+            if info.nonlinear:
+                nl, args = info.nonlinear
+                # Note: 'not args' skips string arguments
+                # Note: 'vid in nl_map' skips eliminated
+                #   variables and defined variables reduced to constants
+                if not args or any(vid not in nl_map for vid in args):
+                    continue
+                # Ideally, we would just evaluate the named expression.
+                # However, there might be a linear portion of the named
+                # expression that still has free variables, and there is no
+                # guarantee that the user actually initialized the
+                # variables.  So, we will fall back on parsing the (now
+                # constant) nonlinear fragment and evaluating it.
+                info.nonlinear = None
+                info.const += _evaluate_constant_nl(
+                    nl % tuple(nl_map[i] for i in args), self.external_functions
+                )
             if not info.linear:
                 # This has resolved to a constant: the ASL will fail for
                 # defined variables containing ONLY a constant.  We
@@ -1960,7 +1973,7 @@ class _NLWriter_impl(object):
                 # original constraint/objective expression(s)
                 info.linear = {}
                 self.used_named_expressions.discard(_id)
-                self.var_id_to_nl[_id] = self.template.const % info.const
+                nl_map[_id] = template.const % info.const
                 self.subexpression_cache[_id] = (expr, info, [None, None, True])
 
         return eliminated_cons, eliminated_vars
@@ -1990,18 +2003,20 @@ class _NLWriter_impl(object):
                 # constant as the second argument, so we will too.
                 nl = self.template.binary_sum + nl + self.template.const % repn.const
             try:
-                self.ostream.write(nl % tuple(map(self.var_id_to_nl.__getitem__, args)))
+                self.ostream.write(
+                    nl % tuple(map(self.var_id_to_nl_map.__getitem__, args))
+                )
             except KeyError:
                 final_args = []
                 for arg in args:
-                    if arg in self.var_id_to_nl:
-                        final_args.append(self.var_id_to_nl[arg])
+                    if arg in self.var_id_to_nl_map:
+                        final_args.append(self.var_id_to_nl_map[arg])
                     else:
                         _nl, _ids, _ = self.subexpression_cache[arg][1].compile_repn(
                             self.visitor
                         )
                         final_args.append(
-                            _nl % tuple(map(self.var_id_to_nl.__getitem__, _ids))
+                            _nl % tuple(map(self.var_id_to_nl_map.__getitem__, _ids))
                         )
                 self.ostream.write(nl % tuple(final_args))
 
@@ -2018,7 +2033,7 @@ class _NLWriter_impl(object):
             lbl = '\t#%s' % info[0].name
         else:
             lbl = ''
-        self.var_id_to_nl[expr_id] = f"v{self.next_V_line_id}{lbl}\n"
+        self.var_id_to_nl_map[expr_id] = f"v{self.next_V_line_id}{lbl}\n"
         # Do NOT write out 0 coefficients here: doing so fouls up the
         # ASL's logic for calculating derivatives, leading to 'nan' in
         # the Hessian results.
@@ -3167,7 +3182,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         return ans
 
 
-def _evaluate_constant_nl(nl):
+def _evaluate_constant_nl(nl, external_functions):
     expr = nl.splitlines()
     stack = []
     while expr:
@@ -3181,6 +3196,15 @@ def _evaluate_constant_nl(nl):
         if len(tokens) != 1:
             # skip blank lines
             if not tokens:
+                continue
+            if tokens[0][0] == 'f':
+                # external function
+                fid, nargs = tokens
+                fid = int(fid[1:])
+                nargs = int(nargs)
+                fcn_id, ef = external_functions[fid]
+                assert fid == fcn_id
+                stack.append(ef.evaluate(tuple(stack.pop() for i in range(nargs))))
                 continue
             raise DeveloperError(
                 f"Unsupported line format _evaluate_constant_nl() "
@@ -3205,6 +3229,8 @@ def _evaluate_constant_nl(nl):
             # sum) or a string argument.  Preserve it as-is until later
             # when we know which we are expecting.
             stack.append(term)
+        elif cmd == 'h':
+            stack.append(term.split(':', 1)[1])
         else:
             raise DeveloperError(
                 f"Unsupported NL operator in _evaluate_constant_nl(): '{line}'"
