@@ -2639,7 +2639,7 @@ G0 1   #o
         )
 
     def test_presolve_defined_var_to_const(self):
-        # This test is derived from a step in an IDAES initiaization
+        # This test is derived from a step in an IDAES initialization
         # where the presolver is able to fix enough variables to cause
         # the defined variable to be reduced to a constant.  We must not
         # emit the defined variable (because doing so generates an error
