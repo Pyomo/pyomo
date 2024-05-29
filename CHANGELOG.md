@@ -16,6 +16,7 @@ Pyomo 6.7.3   (29 May 2024)
   - Skip Windows Python 3.8 conda GHA job (#3269)
 - Contributed Packages
   - DoE: Bug fixes for workshop (#3267)
+  - viewer: Update guard for pint import (#3277)
 
 -------------------------------------------------------------------------------
 Pyomo 6.7.2   (9 May 2024)
