@@ -2657,11 +2657,15 @@ G0 1   #o
         nl_writer.NLWriter().write(
             m, OUT, symbolic_solver_labels=True, linear_presolve=True
         )
+        # Note that the presolve will end up recognizing con3 as a
+        # linear constraint; however, it does not do so until processing
+        # the constraints after presolve (so the constraint is not
+        # actually removed and the eq variable still appears in the model)
         self.assertEqual(
             *nl_diff(
                 """g3 1 1 0	#problem unknown
  1 1 0 0 1	#vars, constraints, objectives, ranges, eqns
- 1 0 0 0 0 0	#nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0 0 0 0 0	#nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
  0 0	#network constraints: nonlinear, linear
  0 0 0	#nonlinear vars in constraints, objectives, both
  0 0 0 1	#linear network variables; functions; arith, flags
@@ -2670,13 +2674,11 @@ G0 1   #o
  4 2	#max name lengths: constraints, variables
  0 0 0 0 0	#common exprs: b,c,o,c1,o1
 C0	#con3
-o3	#/
-n8
-n-4
+n0
 x1	#initial guess
 0 100	#eq
 r	#1 ranges (rhs's)
-4 0	#con3
+4 2.0	#con3
 b	#1 bounds (on variables)
 3	#eq
 k0	#intermediate Jacobian column lengths
