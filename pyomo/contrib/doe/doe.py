@@ -614,20 +614,13 @@ class DesignOfExperiments:
         self.create_model(mod=mod, model_option=ModelOptionLib.stage1)
 
         # Fix parameter values in the copy of the stage1 model (if they exist)
-        # for par in self.param:
-        #    cuid = pyo.ComponentUID(par)
-        #    var = cuid.find_component_on(mod)
-        #    if var is not None:
-        #        # Fix the parameter value
-        #        # Otherwise, the parameter does not exist on the stage 1 model
-        #        var.fix(self.param[par])
-
         for par in self.param:
             cuid = pyo.ComponentUID(par)
             var = cuid.find_component_on(mod)
 
             if var is not None:
                 # if it is a variable, fix it to a new value
+                # Otherwise, the parameter does not exist on the stage 1 model
                 if var.ctype is Var:
                     var.fix(self.param[par])
                 # if it is a param, give it a new value
@@ -1220,12 +1213,15 @@ class DesignOfExperiments:
 
             if var.ctype is Var:
                 if fix_opt:
+                    # If fix_opt is True, fix the design variable
                     var.fix(design_val[name])
                 else:
-                    # Otherwise, unfix only the design variables listed in optimize_option with value True
+                    # Otherwise check optimize_option
                     if optimize_option is None:
+                        # If optimize_option is None, unfix all design variables
                         var.unfix()
                     else:
+                        # Otherwise, unfix only the design variables listed in optimize_option with value True
                         if optimize_option[name]:
                             var.unfix()
 
