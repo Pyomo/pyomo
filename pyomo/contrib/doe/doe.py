@@ -42,7 +42,7 @@ import collections.abc
 
 import inspect
 
-import pyomo.contrib.parmest.utils as utils
+from pyomo.common import DeveloperError
 
 
 class CalculationMode(Enum):
@@ -457,11 +457,6 @@ class DesignOfExperiments:
             # add zero (dummy/placeholder) objective function
             mod.Obj = pyo.Objective(expr=0, sense=pyo.minimize)
 
-            # convert params to vars
-            # print("self.param.keys():", self.param.keys())
-            # mod = utils.convert_params_to_vars(mod, self.param.keys(), fix_vars=True)
-            # mod.pprint()
-
             # solve model
             square_result = self._solve_doe(mod, fix=True)
 
@@ -544,9 +539,6 @@ class DesignOfExperiments:
 
         # add zero (dummy/placeholder) objective function
         mod.Obj = pyo.Objective(expr=0, sense=pyo.minimize)
-
-        # convert params to vars
-        # mod = utils.convert_params_to_vars(mod, self.param.keys(), fix_vars=True)
 
         # set ub and lb to parameters
         for par in self.param.keys():
@@ -1294,8 +1286,8 @@ class DesignOfExperiments:
             return m.trace == sum(m.fim[j, j] for j in m.regression_parameters)
 
         def det_general(m):
-            """Calculate determinant. Can be applied to FIM of any size.
-            det(A) = sum_{sigma in Sn} (sgn(sigma) * Prod_{i=1}^n a_{i,sigma_i})
+            r"""Calculate determinant. Can be applied to FIM of any size.
+            det(A) = \sum_{\sigma in \S_n} (sgn(\sigma) * \Prod_{i=1}^n a_{i,\sigma_i})
             Use permutation() to get permutations, sgn() to get signature
             """
             r_list = list(range(len(m.regression_parameters)))
