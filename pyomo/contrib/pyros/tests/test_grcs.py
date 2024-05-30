@@ -4617,6 +4617,7 @@ class RegressionTest(unittest.TestCase):
             ),
         )
 
+    @unittest.skipUnless(ipopt_available, "IPOPT is not available.")
     def test_pyros_nl_writer_tol(self):
         """
         Test PyROS subsolver call routine behavior
