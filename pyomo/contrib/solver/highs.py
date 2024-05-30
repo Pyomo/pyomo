@@ -413,7 +413,7 @@ class Highs(PersistentSolverUtils, PersistentSolverBase):
             indices_to_remove.append(con_ndx)
             self._mutable_helpers.pop(con, None)
         self._solver_model.deleteRows(
-            len(indices_to_remove), np.array(indices_to_remove)
+            len(indices_to_remove), np.array(list(sorted(indices_to_remove)))
         )
         con_ndx = 0
         new_con_map = dict()
@@ -445,7 +445,7 @@ class Highs(PersistentSolverUtils, PersistentSolverBase):
             self._mutable_bounds.pop(v_id, None)
         indices_to_remove.sort()
         self._solver_model.deleteVars(
-            len(indices_to_remove), np.array(indices_to_remove)
+            len(indices_to_remove), np.array(list(sorted(indices_to_remove)))
         )
         v_ndx = 0
         new_var_map = dict()
