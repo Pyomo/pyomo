@@ -378,7 +378,14 @@ def revert_solver_max_time_adjustment(
         elif isinstance(solver, SolverFactory.get_class("baron")):
             options_key = "MaxTime"
         elif isinstance(solver, SolverFactory.get_class("ipopt")):
-            options_key = "max_cpu_time"
+            options_key = (
+                # IPOPT 3.14.0+ added support for specifying
+                # wall time limit explicitly; this is preferred
+                # over CPU time limit
+                "max_wall_time"
+                if solver.version() >= (3, 14, 0, 0)
+                else "max_cpu_time"
+            )
         elif isinstance(solver, SolverFactory.get_class("scip")):
             options_key = "limits/time"
         else:
