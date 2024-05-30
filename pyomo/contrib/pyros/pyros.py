@@ -275,9 +275,9 @@ class PyROS(object):
         """
         config = self.CONFIG(kwds.pop("options", {}))
         config = config(kwds)
-        state_vars = validate_pyros_inputs(model, config)
+        var_partitioning = validate_pyros_inputs(model, config)
 
-        return config, state_vars
+        return config, var_partitioning
 
     @document_kwargs_from_configdict(
         config=CONFIG,
@@ -363,7 +363,10 @@ class PyROS(object):
             self._log_intro(logger=progress_logger, level=logging.INFO)
             self._log_disclaimer(logger=progress_logger, level=logging.INFO)
 
-            config, state_vars = self._resolve_and_validate_pyros_args(model, **kwds)
+            config, var_partitioning = self._resolve_and_validate_pyros_args(
+                model,
+                **kwds,
+            )
             self._log_config(
                 logger=config.progress_logger,
                 config=config,
@@ -379,7 +382,7 @@ class PyROS(object):
             util = Block(concrete=True)
             util.first_stage_variables = config.first_stage_variables
             util.second_stage_variables = config.second_stage_variables
-            util.state_vars = state_vars
+            util.state_vars = var_partitioning.state_variables
             util.uncertain_params = config.uncertain_params
 
             model_data.util_block = unique_component_name(model, 'util')

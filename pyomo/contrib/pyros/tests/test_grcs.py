@@ -6711,47 +6711,37 @@ class TestPyROSSolverAdvancedValidation(unittest.TestCase):
         global_solver = SimpleTestSolver()
         pyros = SolverFactory("pyros")
 
-        mdl.bad_con = Constraint(expr=mdl2.x1 + mdl2.x2 >= 1)
-
-        desc_dof_map = [
-            ("first-stage", [mdl2.x1], [], 2),
-            ("second-stage", [], [mdl2.x2], 2),
-            ("state", [mdl.x1], [], 3),
-        ]
+        mdl.bad_con = Constraint(expr=mdl.x1 + mdl2.x2 >= 1)
+        mdl2.x3 = Var(initialize=1)
 
         # now perform checks
-        for vardesc, first_stage_vars, second_stage_vars, numlines in desc_dof_map:
-            with LoggingIntercept(level=logging.ERROR) as LOG:
-                exc_str = (
-                    "Found entries of "
-                    f"{vardesc} variables not descended from.*model.*"
+        with LoggingIntercept(level=logging.ERROR) as LOG:
+            exc_str = (
+                "Found Vars.*active.*"
+                "not descended from.*model.*"
+            )
+            with self.assertRaisesRegex(ValueError, exc_str):
+                pyros.solve(
+                    model=mdl,
+                    first_stage_variables=[mdl.x1, mdl.x2],
+                    second_stage_variables=[mdl2.x3],
+                    uncertain_params=[mdl.u],
+                    uncertainty_set=BoxSet([[1 / 4, 2]]),
+                    local_solver=local_solver,
+                    global_solver=global_solver,
                 )
-                with self.assertRaisesRegex(ValueError, exc_str):
-                    pyros.solve(
-                        model=mdl,
-                        first_stage_variables=first_stage_vars,
-                        second_stage_variables=second_stage_vars,
-                        uncertain_params=[mdl.u],
-                        uncertainty_set=BoxSet([[1 / 4, 2]]),
-                        local_solver=local_solver,
-                        global_solver=global_solver,
-                    )
 
-            log_msgs = LOG.getvalue().split("\n")[:-1]
-
-            # check detailed log message is as expected
-            self.assertEqual(
-                len(log_msgs),
-                numlines,
-                "Error-level log message does not contain expected number of lines.",
-            )
-            self.assertRegex(
-                text=log_msgs[0],
-                expected_regex=(
-                    f"The following {vardesc} variables"
-                    ".*not descended from.*model with name 'model1'"
-                ),
-            )
+        log_msgs = LOG.getvalue().split("\n")
+        invalid_vars_strs_list = log_msgs[1:-1]
+        self.assertEqual(
+            len(invalid_vars_strs_list),
+            1,
+            msg="Number of lines referencing name of invalid Vars not as expected.",
+        )
+        self.assertRegex(
+            text=invalid_vars_strs_list[0],
+            expected_regex=f"{mdl2.x2.name!r}",
+        )
 
     def test_pyros_non_continuous_vars(self):
         """
