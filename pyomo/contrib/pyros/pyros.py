@@ -14,24 +14,15 @@ import logging
 from pyomo.common.config import document_kwargs_from_configdict
 from pyomo.core.base.block import Block
 from pyomo.core.expr import value
-from pyomo.core.base.var import Var
-from pyomo.core.base.objective import Objective
 from pyomo.contrib.pyros.util import time_code
-from pyomo.common.modeling import unique_component_name
 from pyomo.opt import SolverFactory
 from pyomo.contrib.pyros.config import pyros_config, logger_domain
 from pyomo.contrib.pyros.util import (
-    recast_to_min_obj,
-    add_decision_rule_constraints,
-    add_decision_rule_variables,
     load_final_solution,
     pyrosTerminationCondition,
     ObjectiveType,
-    identify_objective_functions,
     validate_pyros_inputs,
-    transform_to_standard_form,
-    turn_bounds_to_constraints,
-    replace_uncertain_bounds_with_constraints,
+    preprocess_model_data,
     IterationLogRecord,
     setup_pyros_logger,
     TimingData,
@@ -331,6 +322,7 @@ class PyROS(object):
         """
         model_data = ROSolveResults()
         model_data.timing = TimingData()
+        model_data.original_model = model
         with time_code(
             timing_data_obj=model_data.timing,
             code_block_name="main",
@@ -374,77 +366,9 @@ class PyROS(object):
                 level=logging.INFO,
             )
 
-            # begin preprocessing
             config.progress_logger.info("Preprocessing...")
             model_data.timing.start_timer("main.preprocessing")
-
-            # === A block to hold list-type data to make cloning easy
-            util = Block(concrete=True)
-            util.first_stage_variables = config.first_stage_variables
-            util.second_stage_variables = config.second_stage_variables
-            util.state_vars = var_partitioning.state_variables
-            util.uncertain_params = config.uncertain_params
-
-            model_data.util_block = unique_component_name(model, 'util')
-            model.add_component(model_data.util_block, util)
-            # Note:  model.component(model_data.util_block) is util
-
-            # === Leads to a logger warning here for inactive obj when cloning
-            model_data.original_model = model
-            # === For keeping track of variables after cloning
-            cname = unique_component_name(model_data.original_model, 'tmp_var_list')
-            src_vars = list(model_data.original_model.component_data_objects(Var))
-            setattr(model_data.original_model, cname, src_vars)
-            model_data.working_model = model_data.original_model.clone()
-
-            # identify active objective function
-            # (there should only be one at this point)
-            # recast to minimization if necessary
-            active_objs = list(
-                model_data.working_model.component_data_objects(
-                    Objective, active=True, descend_into=True
-                )
-            )
-            assert len(active_objs) == 1
-            active_obj = active_objs[0]
-            active_obj_original_sense = active_obj.sense
-            recast_to_min_obj(model_data.working_model, active_obj)
-
-            # === Determine first and second-stage objectives
-            identify_objective_functions(model_data.working_model, active_obj)
-            active_obj.deactivate()
-
-            # === Put model in standard form
-            transform_to_standard_form(model_data.working_model)
-
-            # === Replace variable bounds depending on uncertain params with
-            #     explicit inequality constraints
-            replace_uncertain_bounds_with_constraints(
-                model_data.working_model, model_data.working_model.util.uncertain_params
-            )
-
-            # === Add decision rule information
-            add_decision_rule_variables(model_data, config)
-            add_decision_rule_constraints(model_data, config)
-
-            # === Move bounds on control variables to explicit ineq constraints
-            wm_util = model_data.working_model
-
-            # cast bounds on second-stage and state variables to
-            # explicit constraints for separation objectives
-            for c in model_data.working_model.util.second_stage_variables:
-                turn_bounds_to_constraints(c, wm_util, config)
-            for c in model_data.working_model.util.state_vars:
-                turn_bounds_to_constraints(c, wm_util, config)
-
-            # === Make control_variable_bounds array
-            wm_util.ssv_bounds = []
-            for c in model_data.working_model.component_data_objects(
-                Constraint, descend_into=True
-            ):
-                if "bound_con" in c.name:
-                    wm_util.ssv_bounds.append(c)
-
+            preprocess_model_data(model_data, config, var_partitioning)
             model_data.timing.stop_timer("main.preprocessing")
             preprocessing_time = model_data.timing.get_total_time("main.preprocessing")
             config.progress_logger.info(
@@ -472,6 +396,7 @@ class PyROS(object):
                 # when reporting the final PyROS (master) objective,
                 # since maximization objective is changed to
                 # minimization objective during preprocessing
+                active_obj_original_sense = model_data.active_obj_original_sense
                 if config.objective_focus == ObjectiveType.nominal:
                     return_soln.final_objective_value = (
                         active_obj_original_sense

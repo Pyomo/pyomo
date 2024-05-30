@@ -1151,6 +1151,79 @@ def validate_pyros_inputs(model, config):
     return state_vars
 
 
+def preprocess_model_data(model_data, config, var_partitioning):
+    """
+    Preprocess model data.
+    """
+    original_model = model_data.original_model
+
+    # temporary block to track variable partitioning
+    # and uncertain parameters after cloning.
+    # TODO: model may already have an attribute called `util`;
+    #       fix that edge case
+    original_model.util = Block(concrete=True)
+    original_model.util.first_stage_variables = var_partitioning.first_stage_variables
+    original_model.util.second_stage_variables = var_partitioning.second_stage_variables
+    original_model.util.state_vars = var_partitioning.state_variables
+    original_model.util.uncertain_params = config.uncertain_params
+
+    model_data.util_block = original_model.util
+
+    # keep track of variables after cloning
+    cname = unique_component_name(model_data.original_model, 'tmp_var_list')
+    src_vars = list(model_data.original_model.component_data_objects(Var))
+    setattr(model_data.original_model, cname, src_vars)
+    model_data.working_model = model_data.original_model.clone()
+
+    # identify active objective function.
+    # (there should only be one at this point)
+    # recast to minimization if necessary
+    active_objs = list(
+        model_data.working_model.component_data_objects(
+            Objective, active=True, descend_into=True
+        )
+    )
+    assert len(active_objs) == 1
+    active_obj = active_objs[0]
+    model_data.active_obj_original_sense = active_obj.sense
+    recast_to_min_obj(model_data.working_model, active_obj)
+
+    # === Determine first and second-stage objectives
+    identify_objective_functions(model_data.working_model, active_obj)
+    active_obj.deactivate()
+
+    # === Put model in standard form
+    transform_to_standard_form(model_data.working_model)
+
+    # === Replace variable bounds depending on uncertain params with
+    #     explicit inequality constraints
+    replace_uncertain_bounds_with_constraints(
+        model_data.working_model, model_data.working_model.util.uncertain_params
+    )
+
+    # === Add decision rule information
+    add_decision_rule_variables(model_data, config)
+    add_decision_rule_constraints(model_data, config)
+
+    # === Move bounds on control variables to explicit ineq constraints
+    wm_util = model_data.working_model
+
+    # cast bounds on second-stage and state variables to
+    # explicit constraints for separation objectives
+    for c in model_data.working_model.util.second_stage_variables:
+        turn_bounds_to_constraints(c, wm_util, config)
+    for c in model_data.working_model.util.state_vars:
+        turn_bounds_to_constraints(c, wm_util, config)
+
+    # === Make control_variable_bounds array
+    wm_util.ssv_bounds = []
+    for c in model_data.working_model.component_data_objects(
+        Constraint, descend_into=True
+    ):
+        if "bound_con" in c.name:
+            wm_util.ssv_bounds.append(c)
+
+
 def substitute_ssv_in_dr_constraints(model, constraint):
     '''
     Generate the standard_repn for the dr constraints. Generate new expression with replace_expression to ignore
