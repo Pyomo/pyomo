@@ -42,6 +42,8 @@ import collections.abc
 
 import inspect
 
+from pyomo.common import DeveloperError
+
 
 class CalculationMode(Enum):
     sequential_finite = "sequential_finite"
@@ -71,6 +73,8 @@ class DesignOfExperiments:
         prior_FIM=None,
         discretize_model=None,
         args=None,
+        logger_level=logging.INFO,
+        only_compute_fim_lower=True,
     ):
         """
         This package enables model-based design of experiments analysis with Pyomo.
@@ -101,6 +105,10 @@ class DesignOfExperiments:
             A user-specified ``function`` that discretizes the model. Only use with Pyomo.DAE, default=None
         args:
             Additional arguments for the create_model function.
+        logger_level:
+            Specify the level of the logger. Change to logging.DEBUG for all messages.
+        only_compute_fim_lower:
+            If True, only the lower triangle of the FIM is computed. Default is True.
         """
 
         # parameters
@@ -111,11 +119,33 @@ class DesignOfExperiments:
         self.design_name = design_vars.variable_names
         self.design_vars = design_vars
         self.create_model = create_model
+
+        # check if create model function conforms to the original
+        # Pyomo.DoE interface
+        model_option_arg = (
+            "model_option" in inspect.getfullargspec(self.create_model).args
+        )
+        mod_arg = "mod" in inspect.getfullargspec(self.create_model).args
+        if model_option_arg and mod_arg:
+            self._original_create_model_interface = True
+        else:
+            self._original_create_model_interface = False
+
+        if args is None:
+            args = {}
         self.args = args
 
         # create the measurement information object
         self.measurement_vars = measurement_vars
         self.measure_name = self.measurement_vars.variable_names
+
+        if (
+            self.measurement_vars.variable_names is None
+            or not self.measurement_vars.variable_names
+        ):
+            raise ValueError(
+                "There are no measurement variables. Check for a modeling mistake."
+            )
 
         # check if user-defined solver is given
         if solver:
@@ -136,17 +166,19 @@ class DesignOfExperiments:
 
         # if print statements
         self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(level=logging.INFO)
+        self.logger.setLevel(level=logger_level)
+
+        self.only_compute_fim_lower = only_compute_fim_lower
 
     def _check_inputs(self):
         """
         Check if the prior FIM is N*N matrix, where N is the number of parameter
         """
-        if type(self.prior_FIM) != type(None):
+        if self.prior_FIM is not None:
             if np.shape(self.prior_FIM)[0] != np.shape(self.prior_FIM)[1]:
-                raise ValueError('Found wrong prior information matrix shape.')
+                raise ValueError("Found wrong prior information matrix shape.")
             elif np.shape(self.prior_FIM)[0] != len(self.param):
-                raise ValueError('Found wrong prior information matrix shape.')
+                raise ValueError("Found wrong prior information matrix shape.")
 
     def stochastic_program(
         self,
@@ -323,6 +355,7 @@ class DesignOfExperiments:
         extract_single_model=None,
         formula="central",
         step=0.001,
+        only_compute_fim_lower=False,
     ):
         """
         This function calculates the Fisher information matrix (FIM) using sensitivity information obtained
@@ -405,7 +438,7 @@ class DesignOfExperiments:
 
         # if measurements are provided
         if read_output:
-            with open(read_output, 'rb') as f:
+            with open(read_output, "rb") as f:
                 output_record = pickle.load(f)
                 f.close()
             jac = self._finite_calculation(output_record)
@@ -417,11 +450,21 @@ class DesignOfExperiments:
             # dict for storing model outputs
             output_record = {}
 
+            # Deactivate any existing objective functions
+            for obj in mod.component_objects(pyo.Objective):
+                obj.deactivate()
+
+            # add zero (dummy/placeholder) objective function
+            mod.Obj = pyo.Objective(expr=0, sense=pyo.minimize)
+
             # solve model
             square_result = self._solve_doe(mod, fix=True)
 
+            # save model from optional post processing function
+            self._square_model_from_compute_FIM = mod
+
             if extract_single_model:
-                mod_name = store_output + '.csv'
+                mod_name = store_output + ".csv"
                 dataframe = extract_single_model(mod, square_result)
                 dataframe.to_csv(mod_name)
 
@@ -443,10 +486,10 @@ class DesignOfExperiments:
 
                 output_record[s] = output_iter
 
-                output_record['design'] = self.design_values
+                output_record["design"] = self.design_values
 
                 if store_output:
-                    f = open(store_output, 'wb')
+                    f = open(store_output, "wb")
                     pickle.dump(output_record, f)
                     f.close()
 
@@ -481,13 +524,20 @@ class DesignOfExperiments:
 
     def _direct_kaug(self):
         # create model
-        mod = self.create_model(model_option=ModelOptionLib.parmest)
+        if self._original_create_model_interface:
+            mod = self.create_model(model_option=ModelOptionLib.parmest, **self.args)
+        else:
+            mod = self.create_model(**self.args)
 
         # discretize if needed
-        if self.discretize_model:
+        if self.discretize_model is not None:
             mod = self.discretize_model(mod, block=False)
 
-        # add objective function
+        # Deactivate any existing objective functions
+        for obj in mod.component_objects(pyo.Objective):
+            obj.deactivate()
+
+        # add zero (dummy/placeholder) objective function
         mod.Obj = pyo.Objective(expr=0, sense=pyo.minimize)
 
         # set ub and lb to parameters
@@ -502,6 +552,10 @@ class DesignOfExperiments:
 
         # call k_aug get_dsdp function
         square_result = self._solve_doe(mod, fix=True)
+
+        # save model from optional post processing function
+        self._square_model_from_compute_FIM = mod
+
         dsdp_re, col = get_dsdp(
             mod, list(self.param.keys()), self.param, tee=self.tee_opt
         )
@@ -524,7 +578,7 @@ class DesignOfExperiments:
                 dsdp_extract.append(dsdp_array[kaug_no])
             except:
                 # k_aug does not provide value for fixed variables
-                self.logger.debug('The variable is fixed:  %s', mname)
+                self.logger.debug("The variable is fixed:  %s", mname)
                 # produce the sensitivity for fixed variables
                 zero_sens = np.zeros(len(self.param))
                 # for fixed variables, the sensitivity are a zero vector
@@ -590,19 +644,37 @@ class DesignOfExperiments:
         self.eps_abs = self.scenario_data.eps_abs
         self.scena_gen = scena_gen
 
-        # Create a global model
-        mod = pyo.ConcreteModel()
-
-        # Set for block/scenarios
-        mod.scenario = pyo.Set(initialize=self.scenario_data.scenario_indices)
-
         # Determine if create_model takes theta as an optional input
         pass_theta_to_initialize = (
-            'theta' in inspect.getfullargspec(self.create_model).args
+            "theta" in inspect.getfullargspec(self.create_model).args
         )
 
         # Allow user to self-define complex design variables
-        self.create_model(mod=mod, model_option=ModelOptionLib.stage1)
+        if self._original_create_model_interface:
+
+            # Create a global model
+            mod = pyo.ConcreteModel()
+
+            if pass_theta_to_initialize:
+                # Add model on block with theta values
+                self.create_model(
+                    mod=mod,
+                    model_option=ModelOptionLib.stage1,
+                    theta=self.param,
+                    **self.args,
+                )
+            else:
+                # Add model on block without theta values
+                self.create_model(
+                    mod=mod, model_option=ModelOptionLib.stage1, **self.args
+                )
+
+        else:
+            # Create a global model
+            mod = self.create_model(**self.args)
+
+        # Set for block/scenarios
+        mod.scenario = pyo.Set(initialize=self.scenario_data.scenario_indices)
 
         # Fix parameter values in the copy of the stage1 model (if they exist)
         for par in self.param:
@@ -617,22 +689,43 @@ class DesignOfExperiments:
             # create block scenarios
             # idea: check if create_model takes theta as an optional input, if so, pass parameter values to create_model
 
-            if pass_theta_to_initialize:
-                # Grab the values of theta for this scenario/block
-                theta_initialize = self.scenario_data.scenario[s]
-                # Add model on block with theta values
-                self.create_model(
-                    mod=b, model_option=ModelOptionLib.stage2, theta=theta_initialize
-                )
+            if self._original_create_model_interface:
+                if pass_theta_to_initialize:
+                    # Grab the values of theta for this scenario/block
+                    theta_initialize = self.scenario_data.scenario[s]
+                    # Add model on block with theta values
+                    self.create_model(
+                        mod=b,
+                        model_option=ModelOptionLib.stage2,
+                        theta=theta_initialize,
+                        **self.args,
+                    )
+                else:
+                    # Otherwise add model on block without theta values
+                    self.create_model(
+                        mod=b, model_option=ModelOptionLib.stage2, **self.args
+                    )
+
+                # save block in a temporary variable
+                mod_ = b
             else:
-                # Otherwise add model on block without theta values
-                self.create_model(mod=b, model_option=ModelOptionLib.stage2)
+                # Add model on block
+                if pass_theta_to_initialize:
+                    # Grab the values of theta for this scenario/block
+                    theta_initialize = self.scenario_data.scenario[s]
+                    mod_ = self.create_model(theta=theta_initialize, **self.args)
+                else:
+                    mod_ = self.create_model(**self.args)
 
             # fix parameter values to perturbed values
             for par in self.param:
                 cuid = pyo.ComponentUID(par)
-                var = cuid.find_component_on(b)
+                var = cuid.find_component_on(mod_)
                 var.fix(self.scenario_data.scenario[s][par])
+
+            if not self._original_create_model_interface:
+                # for the "new"/"slim" interface, we need to add the block to the model
+                return mod_
 
         mod.block = pyo.Block(mod.scenario, rule=block_build)
 
@@ -651,6 +744,13 @@ class DesignOfExperiments:
 
             con_name = "con" + name
             mod.add_component(con_name, pyo.Constraint(mod.scenario, expr=fix1))
+
+            # Add user-defined design variable bounds
+            cuid = pyo.ComponentUID(name)
+            design_var_global = cuid.find_component_on(mod)
+            # Set the lower and upper bounds of the design variables
+            design_var_global.setlb(self.design_vars.lower_bounds[name])
+            design_var_global.setub(self.design_vars.upper_bounds[name])
 
         return mod
 
@@ -727,6 +827,7 @@ class DesignOfExperiments:
         store_optimality_as_csv=None,
         formula="central",
         step=0.001,
+        post_processing_function=None,
     ):
         """
         Enumerate through full grid search for any number of design variables;
@@ -768,6 +869,10 @@ class DesignOfExperiments:
             This option is only used for CalculationMode.sequential_finite.
         step:
             Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
+        post_processing_function:
+            An optional function that executes after each solve of the grid search.
+            The function should take one input: the Pyomo model. This could be a plotting function.
+            Default is None.
 
         Returns
         -------
@@ -806,20 +911,31 @@ class DesignOfExperiments:
             # generate the design variable dictionary needed for running compute_FIM
             # first copy value from design_values
             design_iter = self.design_vars.variable_names_value.copy()
+
+            # convert to a list and cache
+            list_design_set_iter = list(design_set_iter)
+
             # update the controlled value of certain time points for certain design variables
             for i, names in enumerate(design_dimension_names):
-                # if the element is a list, all design variables in this list share the same values
-                if isinstance(names, collections.abc.Sequence):
+                if isinstance(names, str):
+                    # if 'names' is simply a string, copy the new value
+                    design_iter[names] = list_design_set_iter[i]
+                elif isinstance(names, collections.abc.Sequence):
+                    # if the element is a list, all design variables in this list share the same values
                     for n in names:
-                        design_iter[n] = list(design_set_iter)[i]
+                        design_iter[n] = list_design_set_iter[i]
                 else:
-                    design_iter[names] = list(design_set_iter)[i]
+                    # otherwise just copy the value
+                    # design_iter[names] = list(design_set_iter)[i]
+                    raise NotImplementedError(
+                        "You should not see this error message. Please report it to the Pyomo.DoE developers."
+                    )
 
             self.design_vars.variable_names_value = design_iter
             iter_timer = TicTocTimer()
-            self.logger.info('=======Iteration Number: %s =====', count + 1)
+            self.logger.info("=======Iteration Number: %s =====", count + 1)
             self.logger.debug(
-                'Design variable values of this iteration: %s', design_iter
+                "Design variable values of this iteration: %s", design_iter
             )
             iter_timer.tic(msg=None)
             # generate store name
@@ -828,7 +944,7 @@ class DesignOfExperiments:
             else:
                 store_output_name = store_name + str(count)
 
-            if read_name:
+            if read_name is not None:
                 read_input_name = read_name + str(count)
             else:
                 read_input_name = None
@@ -855,23 +971,31 @@ class DesignOfExperiments:
                 time_set.append(iter_t)
 
                 # give run information at each iteration
-                self.logger.info('This is run %s out of %s.', count, total_count)
-                self.logger.info('The code has run  %s seconds.', sum(time_set))
+                self.logger.info("This is run %s out of %s.", count, total_count)
                 self.logger.info(
-                    'Estimated remaining time:  %s seconds',
-                    (sum(time_set) / (count + 1) * (total_count - count - 1)),
+                    "The code has run  %s seconds.", round(sum(time_set), 2)
                 )
+                self.logger.info(
+                    "Estimated remaining time:  %s seconds",
+                    round(
+                        sum(time_set) / (count) * (total_count - count), 2
+                    ),  # need to check this math... it gives a negative number for the final count
+                )
+
+                if post_processing_function is not None:
+                    # Call the post processing function
+                    post_processing_function(self._square_model_from_compute_FIM)
 
                 # the combined result object are organized as a dictionary, keys are a tuple of the design variable values, values are a result object
                 result_combine[tuple(design_set_iter)] = result_iter
 
             except:
                 self.logger.warning(
-                    ':::::::::::Warning: Cannot converge this run.::::::::::::'
+                    ":::::::::::Warning: Cannot converge this run.::::::::::::"
                 )
                 count += 1
                 failed_count += 1
-                self.logger.warning('failed count:', failed_count)
+                self.logger.warning("failed count:", failed_count)
                 result_combine[tuple(design_set_iter)] = None
 
         # For user's access
@@ -885,7 +1009,7 @@ class DesignOfExperiments:
             store_optimality_name=store_optimality_as_csv,
         )
 
-        self.logger.info('Overall wall clock time [s]:  %s', sum(time_set))
+        self.logger.info("Overall wall clock time [s]:  %s", sum(time_set))
 
         return figure_draw_object
 
@@ -901,6 +1025,18 @@ class DesignOfExperiments:
         -------
         model: the DOE model
         """
+
+        # Developer recommendation: use the Cholesky decomposition for D-optimality
+        # The explicit formula is available for benchmarking purposes and is NOT recommended
+        if (
+            self.only_compute_fim_lower
+            and self.objective_option == ObjectiveLib.det
+            and not self.Cholesky_option
+        ):
+            raise ValueError(
+                "Cannot compute determinant with explicit formula if only_compute_fim_lower is True."
+            )
+
         model = self._create_block()
 
         # variables for jacobian and FIM
@@ -943,10 +1079,11 @@ class DesignOfExperiments:
         )
 
         if self.fim_initial is not None:
-            dict_fim_initialize = {}
-            for i, bu in enumerate(model.regression_parameters):
-                for j, un in enumerate(model.regression_parameters):
-                    dict_fim_initialize[(bu, un)] = self.fim_initial[i][j]
+            dict_fim_initialize = {
+                (bu, un): self.fim_initial[i][j]
+                for i, bu in enumerate(model.regression_parameters)
+                for j, un in enumerate(model.regression_parameters)
+            }
 
         def initialize_fim(m, j, d):
             return dict_fim_initialize[(j, d)]
@@ -964,22 +1101,24 @@ class DesignOfExperiments:
                 initialize=identity_matrix,
             )
 
-        # move the L matrix initial point to a dictionary
-        if type(self.L_initial) != type(None):
-            dict_cho = {}
-            for i, bu in enumerate(model.regression_parameters):
-                for j, un in enumerate(model.regression_parameters):
-                    dict_cho[(bu, un)] = self.L_initial[i][j]
-
-        # use the L dictionary to initialize L matrix
-        def init_cho(m, i, j):
-            return dict_cho[(i, j)]
-
         # if cholesky, define L elements as variables
-        if self.Cholesky_option:
+        if self.Cholesky_option and self.objective_option == ObjectiveLib.det:
+
+            # move the L matrix initial point to a dictionary
+            if self.L_initial is not None:
+                dict_cho = {
+                    (bu, un): self.L_initial[i][j]
+                    for i, bu in enumerate(model.regression_parameters)
+                    for j, un in enumerate(model.regression_parameters)
+                }
+
+            # use the L dictionary to initialize L matrix
+            def init_cho(m, i, j):
+                return dict_cho[(i, j)]
+
             # Define elements of Cholesky decomposition matrix as Pyomo variables and either
             # Initialize with L in L_initial
-            if type(self.L_initial) != type(None):
+            if self.L_initial is not None:
                 model.L_ele = pyo.Var(
                     model.regression_parameters,
                     model.regression_parameters,
@@ -1030,10 +1169,11 @@ class DesignOfExperiments:
 
         # A constraint to calculate elements in Hessian matrix
         # transfer prior FIM to be Expressions
-        fim_initial_dict = {}
-        for i, bu in enumerate(model.regression_parameters):
-            for j, un in enumerate(model.regression_parameters):
-                fim_initial_dict[(bu, un)] = self.prior_FIM[i][j]
+        fim_initial_dict = {
+            (bu, un): self.prior_FIM[i][j]
+            for i, bu in enumerate(model.regression_parameters)
+            for j, un in enumerate(model.regression_parameters)
+        }
 
         def read_prior(m, i, j):
             return fim_initial_dict[(i, j)]
@@ -1042,23 +1182,31 @@ class DesignOfExperiments:
             model.regression_parameters, model.regression_parameters, rule=read_prior
         )
 
+        # The off-diagonal elements are symmetric, thus only half of the elements need to be calculated
         def fim_rule(m, p, q):
             """
             m: Pyomo model
             p: parameter
             q: parameter
             """
-            return (
-                m.fim[p, q]
-                == sum(
-                    1
-                    / self.measurement_vars.variance[n]
-                    * m.sensitivity_jacobian[p, n]
-                    * m.sensitivity_jacobian[q, n]
-                    for n in model.measured_variables
+
+            if p > q:
+                if self.only_compute_fim_lower:
+                    return pyo.Constraint.Skip
+                else:
+                    return m.fim[p, q] == m.fim[q, p]
+            else:
+                return (
+                    m.fim[p, q]
+                    == sum(
+                        1
+                        / self.measurement_vars.variance[n]
+                        * m.sensitivity_jacobian[p, n]
+                        * m.sensitivity_jacobian[q, n]
+                        for n in model.measured_variables
+                    )
+                    + m.priorFIM[p, q] * self.fim_scale_constant_value
                 )
-                + m.priorFIM[p, q] * self.fim_scale_constant_value
-            )
 
         model.jacobian_constraint = pyo.Constraint(
             model.regression_parameters, model.measured_variables, rule=jacobian_rule
@@ -1067,18 +1215,38 @@ class DesignOfExperiments:
             model.regression_parameters, model.regression_parameters, rule=fim_rule
         )
 
+        if self.only_compute_fim_lower:
+            # Fix the upper half of the FIM matrix elements to be 0.0.
+            # This eliminates extra variables and ensures the expected number of
+            # degrees of freedom in the optimization problem.
+            for p in model.regression_parameters:
+                for q in model.regression_parameters:
+                    if p > q:
+                        model.fim[p, q].fix(0.0)
+
         return model
 
     def _add_objective(self, m):
 
-        ### Initialize the Cholesky decomposition matrix
-        if self.Cholesky_option:
+        small_number = 1e-10
 
-            # Assemble the FIM matrix
-            fim = np.zeros((len(self.param), len(self.param)))
-            for i, bu in enumerate(m.regression_parameters):
-                for j, un in enumerate(m.regression_parameters):
-                    fim[i][j] = m.fim[bu, un].value
+        # Assemble the FIM matrix. This is helpful for initialization!
+        #
+        # Suggestion from JS: "It might be more efficient to form the NP array in one shot
+        # (from a list or using fromiter), and then reshaping to the 2-D matrix"
+        #
+        fim = np.zeros((len(self.param), len(self.param)))
+        for i, bu in enumerate(m.regression_parameters):
+            for j, un in enumerate(m.regression_parameters):
+                # Copy value from Pyomo model into numpy array
+                fim[i][j] = m.fim[bu, un].value
+
+                # Set lower bound to ensure diagonal elements are (almost) non-negative
+                # if i == j:
+                #     m.fim[bu, un].setlb(-small_number)
+
+        ### Initialize the Cholesky decomposition matrix
+        if self.Cholesky_option and self.objective_option == ObjectiveLib.det:
 
             # Calculate the eigenvalues of the FIM matrix
             eig = np.linalg.eigvals(fim)
@@ -1091,10 +1259,10 @@ class DesignOfExperiments:
             # Compute the Cholesky decomposition of the FIM matrix
             L = np.linalg.cholesky(fim)
 
-        # Initialize the Cholesky matrix
-        for i, c in enumerate(m.regression_parameters):
-            for j, d in enumerate(m.regression_parameters):
-                m.L_ele[c, d].value = L[i, j]
+            # Initialize the Cholesky matrix
+            for i, c in enumerate(m.regression_parameters):
+                for j, d in enumerate(m.regression_parameters):
+                    m.L_ele[c, d].value = L[i, j]
 
         def cholesky_imp(m, c, d):
             """
@@ -1119,7 +1287,7 @@ class DesignOfExperiments:
 
         def det_general(m):
             r"""Calculate determinant. Can be applied to FIM of any size.
-            det(A) = sum_{\sigma \in \S_n} (sgn(\sigma) * \Prod_{i=1}^n a_{i,\sigma_i})
+            det(A) = \sum_{\sigma in \S_n} (sgn(\sigma) * \Prod_{i=1}^n a_{i,\sigma_i})
             Use permutation() to get permutations, sgn() to get signature
             """
             r_list = list(range(len(m.regression_parameters)))
@@ -1149,24 +1317,36 @@ class DesignOfExperiments:
             )
             return m.det == det_perm
 
-        if self.Cholesky_option:
+        if self.Cholesky_option and self.objective_option == ObjectiveLib.det:
             m.cholesky_cons = pyo.Constraint(
                 m.regression_parameters, m.regression_parameters, rule=cholesky_imp
             )
             m.Obj = pyo.Objective(
-                expr=2 * sum(pyo.log(m.L_ele[j, j]) for j in m.regression_parameters),
+                expr=2 * sum(pyo.log10(m.L_ele[j, j]) for j in m.regression_parameters),
                 sense=pyo.maximize,
             )
-        # if not cholesky but determinant, calculating det and evaluate the OBJ with det
+
         elif self.objective_option == ObjectiveLib.det:
+            # if not cholesky but determinant, calculating det and evaluate the OBJ with det
+            m.det = pyo.Var(initialize=np.linalg.det(fim), bounds=(small_number, None))
             m.det_rule = pyo.Constraint(rule=det_general)
-            m.Obj = pyo.Objective(expr=pyo.log(m.det), sense=pyo.maximize)
-        # if not determinant or cholesky, calculating the OBJ with trace
+            m.Obj = pyo.Objective(expr=pyo.log10(m.det), sense=pyo.maximize)
+
         elif self.objective_option == ObjectiveLib.trace:
+            # if not determinant or cholesky, calculating the OBJ with trace
+            m.trace = pyo.Var(initialize=np.trace(fim), bounds=(small_number, None))
             m.trace_rule = pyo.Constraint(rule=trace_calc)
-            m.Obj = pyo.Objective(expr=pyo.log(m.trace), sense=pyo.maximize)
+            m.Obj = pyo.Objective(expr=pyo.log10(m.trace), sense=pyo.maximize)
+            # m.Obj = pyo.Objective(expr=m.trace, sense=pyo.maximize)
+
         elif self.objective_option == ObjectiveLib.zero:
+            # add dummy objective function
             m.Obj = pyo.Objective(expr=0)
+        else:
+            # something went wrong!
+            raise DeveloperError(
+                "Objective option not recognized. Please contact the developers as you should not see this error."
+            )
 
         return m
 
@@ -1206,10 +1386,10 @@ class DesignOfExperiments:
 
     def _get_default_ipopt_solver(self):
         """Default solver"""
-        solver = SolverFactory('ipopt')
-        solver.options['linear_solver'] = 'ma57'
-        solver.options['halt_on_ampl_error'] = 'yes'
-        solver.options['max_iter'] = 3000
+        solver = SolverFactory("ipopt")
+        solver.options["linear_solver"] = "ma57"
+        solver.options["halt_on_ampl_error"] = "yes"
+        solver.options["max_iter"] = 3000
         return solver
 
     def _solve_doe(self, m, fix=False, opt_option=None):
