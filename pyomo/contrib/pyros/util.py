@@ -14,6 +14,7 @@ Utility functions for the PyROS solver
 '''
 
 from collections import namedtuple
+from itertools import count
 import copy
 from enum import Enum, auto
 from pyomo.common.collections import ComponentSet, ComponentMap
@@ -1151,6 +1152,273 @@ def validate_pyros_inputs(model, config):
     return state_vars
 
 
+def resolve_certain_and_uncertain_bounds(
+        domain_bound,
+        interval_bound,
+        uncertain_params,
+        bound_type,
+        ):
+    """
+    Resolve the (lower or upper)
+    domain and interval bound of a variable
+    to a certain and uncertain bound,
+    based on whether the interval bound is an expression
+    in the uncertain parameters.
+    """
+    assert bound_type in ["lower", "upper"]
+
+    if interval_bound is not None:
+        uncertain_params_in_interval_bound = (
+            ComponentSet(uncertain_params)
+            & ComponentSet(identify_mutable_parameters(interval_bound))
+        )
+    else:
+        uncertain_params_in_interval_bound = False
+
+    if not uncertain_params_in_interval_bound:
+        uncertain_bound = None
+
+        if interval_bound is None:
+            certain_bound = domain_bound
+        elif domain_bound is None:
+            certain_bound = interval_bound
+        else:
+            if bound_type == "lower":
+                certain_bound = (
+                    interval_bound if value(interval_bound) >= domain_bound
+                    else domain_bound
+                )
+            else:
+                certain_bound = (
+                    interval_bound if value(interval_bound) <= domain_bound
+                    else domain_bound
+                )
+    else:
+        uncertain_bound = interval_bound
+        certain_bound = domain_bound
+
+    return certain_bound, uncertain_bound
+
+
+VariableBounds = namedtuple(
+    "VariableBounds",
+    ("lower", "eq", "upper"),
+)
+
+
+def resolve_bound_types(lower_bound, upper_bound):
+    """
+    Resolve lower and upper bound into lower bound, equality bound,
+    and upper bound, by comparison of the lower and upper bounds.
+    """
+    if lower_bound is not None and lower_bound is upper_bound:
+        eq_bound = upper_bound
+        lower_bound = None
+        upper_bound = None
+    else:
+        eq_bound = None
+
+    return VariableBounds(lower_bound, eq_bound, upper_bound)
+
+
+def get_var_bounds(var, uncertain_params):
+    """
+    Get variable bounds.
+    """
+    # temporarily set domain to Reals to cleanly retrieve
+    # the interval bound expressions
+    orig_var_domain = var.domain
+    var.domain = Reals
+
+    domain_lb, domain_ub = orig_var_domain.bounds()
+    interval_lb, interval_ub = var.lower, var.upper
+
+    certain_lb, uncertain_lb = resolve_certain_and_uncertain_bounds(
+        domain_bound=domain_lb,
+        interval_bound=interval_lb,
+        uncertain_params=uncertain_params,
+        bound_type="lower",
+    )
+    certain_ub, uncertain_ub = resolve_certain_and_uncertain_bounds(
+        domain_bound=domain_ub,
+        interval_bound=interval_ub,
+        uncertain_params=uncertain_params,
+        bound_type="upper",
+    )
+
+    certain_bounds = resolve_bound_types(
+        lower_bound=certain_lb, upper_bound=certain_ub,
+    )
+    uncertain_bounds = resolve_bound_types(
+        lower_bound=uncertain_lb, upper_bound=uncertain_ub
+    )
+
+    # restore variable domain
+    var.domain = orig_var_domain
+
+    return certain_bounds, uncertain_bounds
+
+
+def get_effective_var_partitioning(model_data, config):
+    """
+    Establish effective variable partitioning.
+    """
+    working_model = model_data.working_model
+    util_blk = working_model.util
+
+    # variables constrained to a single value:
+    # - explicitly by the user (`fixed=True`),
+    # - implicitly by domains/bounds
+    # - implicitly by equality constraints
+    effective_fixed_var_to_val_map = ComponentMap()
+
+    # truly nonadjustable variables
+    effective_first_stage_vars = []
+
+    # the following variables are immediately known to be nonadjustable:
+    # - first-stage variables
+    # - (if decision rule order is 0) second-stage variables
+    # - all variables fixed explicitly by user or implicitly by bounds
+    var_type_zip = (
+        ("first-stage", util_blk.first_stage_variables),
+        ("second-stage", util_blk.second_stage_variables),
+        ("state", util_blk.state_vars),
+    )
+    for vartype, varlist in var_type_zip:
+        for wvar in varlist:
+            certain_var_bounds, _ = get_var_bounds(wvar, util_blk.uncertain_params)
+
+            # keep track of fixed variables and the values to
+            # which they are fixed
+            if wvar.fixed:
+                config.progress_logger.debug(
+                    f"The {vartype} variable with name {wvar.name!r} "
+                    "is explicitly fixed."
+                )
+                effective_fixed_var_to_val_map[wvar] = value(wvar)
+            if certain_var_bounds.eq is not None:
+                config.progress_logger.debug(
+                    f"The {vartype} variable with name {wvar.name!r} "
+                    "is fixed implicitly by its domain/bounds."
+                )
+                effective_fixed_var_to_val_map[wvar] = value(certain_var_bounds.eq)
+
+            is_var_nonadjustable = (
+                wvar.fixed
+                or certain_var_bounds.eq is not None
+                or vartype == "first-stage"
+                or (vartype == "second-stage" and config.decision_rule_order == 0)
+            )
+            if is_var_nonadjustable:
+                effective_first_stage_vars.append(wvar)
+                if vartype != "first-stage":
+                    config.progress_logger.debug(
+                        f"Found {vartype} variable with name {wvar.name!r} "
+                        "to be nonadjustable."
+                    )
+
+    # PRETRIANGULARIZATION
+    uncertain_params_set = ComponentSet(util_blk.uncertain_params)
+    applicable_eq_cons = []
+    for wcon in working_model.component_data_objects(Constraint, active=True):
+        if not wcon.equality:
+            continue
+        if ComponentSet(identify_mutable_parameters(wcon.expr)) & uncertain_params_set:
+            continue
+
+        adjustable_vars_in_con = (
+            ComponentSet(identify_variables(wcon.body))
+            - ComponentSet(effective_first_stage_vars)
+        )
+        if adjustable_vars_in_con:
+            applicable_eq_cons.append(wcon)
+
+    pretriangular_con_var_map = ComponentMap()
+    for num_passes in count(1):
+        new_pretriangular_cons_and_vars = ComponentMap()
+        for con in applicable_eq_cons:
+            nonadj_vars_in_con = list(
+                ComponentSet(identify_variables(con.body))
+                - effective_first_stage_vars
+            )
+            if len(nonadj_vars_in_con) == 1:
+                new_pretriangular_cons_and_vars[con] = nonadj_vars_in_con[0]
+        if not new_pretriangular_cons_and_vars:
+            break
+
+        for eqcon, nonadj_var in new_pretriangular_cons_and_vars.items():
+            expr_without_fixed_vars = replace_expressions(
+                expr=eqcon.body - eqcon.upper,
+                substitution_map={
+                    id(var): val for var, val in effective_fixed_var_to_val_map.items()
+                },
+            )
+            expr_repn = generate_standard_repn(
+                expr=expr_without_fixed_vars,
+                quadratic=False,
+            )
+            if nonadj_var in ComponentSet(expr_repn.linear_vars):
+                if nonadj_var not in ComponentSet(effective_first_stage_vars):
+                    config.progress_logger.debug(
+                        f"Identified pretriangular constraint {eqcon.name!r} "
+                        f"and nonadjustable variable {nonadj_var.name!r}."
+                    )
+                    effective_first_stage_vars.append(nonadj_var)
+                    pretriangular_con_var_map.setdefault(eqcon, []).append(nonadj_var)
+                if not expr_repn.nonlinear_vars and len(expr_repn.linear_vars) == 1:
+                    implicit_var_val = (
+                        -expr_repn.constant / expr_repn.linear_coefs[0]
+                    )
+                    known_var_val = effective_fixed_var_to_val_map.get(
+                        nonadj_var,
+                        implicit_var_val,
+                    )
+                    inconsistent_fixed_vals = not math.isclose(
+                        implicit_var_val,
+                        known_var_val,
+                    )
+                    if inconsistent_fixed_vals:
+                        raise ValueError(
+                            f"The pretriangular var  "
+                            "is implicitly fixed by the paired constraint "
+                            f"to the value {implicit_var_val}, which "
+                            "does not match the currently recorded value "
+                            f"{known_var_val}."
+                        )
+                    config.progress_logger.debug(
+                        "The pretriangular var "
+                        "is fixed implicitly by the paired "
+                        f"constraint to the value {implicit_var_val}."
+                    )
+                    effective_fixed_var_to_val_map[nonadj_var] = implicit_var_val
+
+    num_pretriangular_vars = (
+        sum(len(pvars) for pvars in pretriangular_con_var_map.values())
+    )
+    config.progress_logger.debug(
+        f"Identified {len(pretriangular_con_var_map)} pretriangular constraints "
+        f"and {num_pretriangular_vars} pretriangular nonadjustable variables."
+    )
+
+    effective_first_stage_var_set = ComponentSet(effective_first_stage_vars)
+    effective_second_stage_vars = [
+        var
+        for var in util_blk.second_stage_variables
+        if var not in effective_first_stage_var_set
+    ]
+    effective_state_vars = [
+        var
+        for var in util_blk.state_vars
+        if var not in effective_first_stage_var_set
+    ]
+
+    return VariablePartitioning(
+        first_stage_variables=effective_first_stage_vars,
+        second_stage_variables=effective_second_stage_vars,
+        state_variables=effective_state_vars,
+    )
+
+
 def preprocess_model_data(model_data, config, var_partitioning):
     """
     Preprocess model data.
@@ -1174,6 +1442,10 @@ def preprocess_model_data(model_data, config, var_partitioning):
     src_vars = list(model_data.original_model.component_data_objects(Var))
     setattr(model_data.original_model, cname, src_vars)
     model_data.working_model = model_data.original_model.clone()
+
+    # # extract as many truly nonadjustable variables as possible
+    # # from the second-stage and state variables
+    # get_effective_var_partitioning(model_data, config)
 
     # identify active objective function.
     # (there should only be one at this point)
