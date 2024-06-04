@@ -29,22 +29,23 @@ from pyomo.environ import (
     TerminationCondition,
 )
 from pyomo.common.dependencies import attempt_import
+
 nx, nx_available = attempt_import(
     'networkx', 'Networkx is required to calculate incremental ordering.'
 )
 
+
 class Triangulation:
+    AssumeValid = 0
     Delaunay = 1
     J1 = 2
+    OrderedJ1 = 3
+
 
 def get_j1_triangulation(points, dimension, ordered=False):
     points_map, num_pts = _process_points_j1(points, dimension)
-
-    if ordered and dimension == 2:
-        simplices_list = _get_j1_triangulation_2d_ordered(points_map, num_pts - 1)
-    else:
-        simplices_list = _get_j1_triangulation(points_map, num_pts - 1, dimension)
-    # make a duck-typed thing that superficially looks like an instance of 
+    simplices_list = _get_j1_triangulation(points_map, num_pts - 1, dimension)
+    # make a duck-typed thing that superficially looks like an instance of
     # scipy.spatial.Delaunay (these are NDarrays in the original)
     triangulation = SimpleNamespace()
     triangulation.points = list(range(len(simplices_list)))
@@ -53,12 +54,23 @@ def get_j1_triangulation(points, dimension, ordered=False):
 
     return triangulation
 
-    #if dimension == 2:
-    #    return _get_j1_triangulation_2d(points_map, num_pts)
-    #elif dimension == 3:
-    #    return _get_j1_triangulation_3d(points, dimension)
-    #else:
-    #    return _get_j1_triangulation_for_more_than_4d(points, dimension)
+
+def get_ordered_j1_triangulation(points, dimension):
+    points_map, num_pts = _process_points_j1(points, dimension)
+    if dimension == 2:
+        simplices_list = _get_j1_triangulation_2d_ordered(points_map, num_pts - 1)
+    else:
+        raise DeveloperError("Unimplemented!")
+    # elif dimension == 3:
+    #    return _get_j1_triangulation_3d(points_map, num_pts - 1)
+    # else:
+    #    return _get_j1_triangulation_for_more_than_4d(points_map, num_pts - 1)
+    triangulation = SimpleNamespace()
+    triangulation.points = list(range(len(simplices_list)))
+    triangulation.simplices = {i: simplices_list[i] for i in triangulation.points}
+    triangulation.coplanar = []
+
+    return triangulation
 
 
 # Does some validation but mostly assumes the user did the right thing
@@ -67,10 +79,14 @@ def _process_points_j1(points, dimension):
         raise ValueError("Points not consistent with specified dimension")
     num_pts = round(len(points) ** (1 / dimension))
     if not len(points) == num_pts**dimension:
-        raise ValueError("'points' must have points forming an n-dimensional grid with straight grid lines and the same odd number of points in each axis")
+        raise ValueError(
+            "'points' must have points forming an n-dimensional grid with straight grid lines and the same odd number of points in each axis"
+        )
     if not num_pts % 2 == 1:
-        raise ValueError("'points' must have points forming an n-dimensional grid with straight grid lines and the same odd number of points in each axis")
-    
+        raise ValueError(
+            "'points' must have points forming an n-dimensional grid with straight grid lines and the same odd number of points in each axis"
+        )
+
     # munge the points into an organized map with n-dimensional keys
     points.sort()
     points_map = {}
@@ -80,6 +96,7 @@ def _process_points_j1(points, dimension):
             point_flat_index += point_index[dimension - 1 - n] * num_pts**n
         points_map[point_index] = points[point_flat_index]
     return points_map, num_pts
+
 
 # This implements the J1 "Union Jack" triangulation (Todd 77) as explained by
 # Vielma 2010.
@@ -91,9 +108,11 @@ def _get_j1_triangulation(points_map, K, n):
     # 1, 3, ..., K - 1
     axis_odds = range(1, K, 2)
     V_0 = itertools.product(axis_odds, repeat=n)
-    big_iterator = itertools.product(V_0, 
-                                     itertools.permutations(range(0, n), n), 
-                                     itertools.product((-1, 1), repeat=n))
+    big_iterator = itertools.product(
+        V_0,
+        itertools.permutations(range(0, n), n),
+        itertools.product((-1, 1), repeat=n),
+    )
     ret = []
     for v_0, pi, s in big_iterator:
         simplex = []
@@ -105,8 +124,9 @@ def _get_j1_triangulation(points_map, K, n):
             simplex.append(points_map[*current])
         # sort this because it might happen again later and we'd like to stay
         # consistent. Undo this if it's slow.
-        ret.append(sorted(simplex)) 
+        ret.append(sorted(simplex))
     return ret
+
 
 # Implement proof-by-picture from Todd 1977. I do the reverse order he does
 # and also keep the pictures slightly more regular to make things easier to
@@ -117,11 +137,13 @@ def _get_j1_triangulation_2d_ordered(points_map, num_pts):
     square_parity_tlbr = lambda x, y: x % 2 == y % 2
     # check when we are in a "turnaround square" as seen in the picture
     is_turnaround = lambda x, y: x >= num_pts / 2 and y == (num_pts / 2) - 1
+
     class Direction(Enum):
         left = 0
         down = 1
         up = 2
         right = 3
+
     facing = None
 
     simplices = {}
@@ -129,18 +151,36 @@ def _get_j1_triangulation_2d_ordered(points_map, num_pts):
 
     # make it easier to read what I'm doing
     def add_bottom_right():
-        simplices[len(simplices)] = (points_map[x, y], points_map[x + 1, y], points_map[x + 1, y + 1])
-    def add_top_right():
-        simplices[len(simplices)] = (points_map[x, y + 1], points_map[x + 1, y], points_map[x + 1, y + 1])
-    def add_bottom_left():
-        simplices[len(simplices)] = (points_map[x, y], points_map[x, y + 1], points_map[x + 1, y])
-    def add_top_left():
-        simplices[len(simplices)] = (points_map[x, y], points_map[x, y + 1], points_map[x + 1, y + 1])
+        simplices[len(simplices)] = (
+            points_map[x, y],
+            points_map[x + 1, y],
+            points_map[x + 1, y + 1],
+        )
 
+    def add_top_right():
+        simplices[len(simplices)] = (
+            points_map[x, y + 1],
+            points_map[x + 1, y],
+            points_map[x + 1, y + 1],
+        )
+
+    def add_bottom_left():
+        simplices[len(simplices)] = (
+            points_map[x, y],
+            points_map[x, y + 1],
+            points_map[x + 1, y],
+        )
+
+    def add_top_left():
+        simplices[len(simplices)] = (
+            points_map[x, y],
+            points_map[x, y + 1],
+            points_map[x + 1, y + 1],
+        )
 
     # identify square by bottom-left corner
     x, y = start_square
-    used_squares = set() # not used for the turnaround squares
+    used_squares = set()  # not used for the turnaround squares
 
     # depending on parity we will need to go either up or down to start
     if square_parity_tlbr(x, y):
@@ -151,10 +191,10 @@ def _get_j1_triangulation_2d_ordered(points_map, num_pts):
         add_top_right()
         facing = Direction.up
         y += 1
-    
+
     # state machine
-    while (True):
-        match(facing):
+    while True:
+        match (facing):
             case Direction.left:
                 if square_parity_tlbr(x, y):
                     add_bottom_right()
@@ -276,8 +316,10 @@ def _get_j1_triangulation_2d_ordered(points_map, num_pts):
 def _get_j1_triangulation_3d(points, dimension):
     pass
 
+
 def _get_j1_triangulation_for_more_than_4d(points, dimension):
     pass
+
 
 def get_incremental_simplex_ordering(simplices, subsolver='gurobi'):
     # Set up a MIP (err, MIQCP) that orders our simplices and their vertices for us
@@ -287,7 +329,7 @@ def get_incremental_simplex_ordering(simplices, subsolver='gurobi'):
     #     with T_{i+1}. It doesn't have to be a whole face; just a vertex is enough.
     # (2) On each simplex T_i, the vertices are ordered T_i^1, ..., T_i^n such
     #     that T_i^n = T_{i+1}^1
-    # 
+    #
     # Note that (2) implies (1), so we only need to enforce that.
     #
     # TODO: issue: I don't think gurobi is magical enough to notice the special structure
@@ -310,7 +352,10 @@ def get_incremental_simplex_ordering(simplices, subsolver='gurobi'):
     # The rest we can order arbitrarily after finishing the MIP solve.
     m.SimplexVerticesCount = Param(initialize=len(simplices[0]))
     m.VERTEX_INDICES = RangeSet(0, m.SimplexVerticesCount - 1)
-    @m.Param(m.SIMPLICES, m.VERTEX_INDICES, m.SIMPLICES, m.VERTEX_INDICES, domain=Binary)
+
+    @m.Param(
+        m.SIMPLICES, m.VERTEX_INDICES, m.SIMPLICES, m.VERTEX_INDICES, domain=Binary
+    )
     def TestVerticesEqual(m, i, n, j, k):
         return 1 if simplices[i][n] == simplices[j][k] else 0
 
@@ -320,12 +365,12 @@ def get_incremental_simplex_ordering(simplices, subsolver='gurobi'):
     m.vertex_is_first = Var(m.SIMPLICES, m.VERTEX_INDICES, domain=Binary)
     m.vertex_is_last = Var(m.SIMPLICES, m.VERTEX_INDICES, domain=Binary)
 
-
     # Constraints
     # Each simplex should have a slot and each slot should have a simplex
     @m.Constraint(m.SIMPLICES)
     def schedule_each_simplex(m, i):
         return sum(m.x[i, j] for j in m.SIMPLICES) == 1
+
     @m.Constraint(m.SIMPLICES)
     def schedule_each_slot(m, j):
         return sum(m.x[i, j] for i in m.SIMPLICES) == 1
@@ -334,39 +379,49 @@ def get_incremental_simplex_ordering(simplices, subsolver='gurobi'):
     @m.Constraint(m.SIMPLICES)
     def one_first_vertex(m, i):
         return sum(m.vertex_is_first[i, n] for n in m.VERTEX_INDICES) == 1
+
     @m.Constraint(m.SIMPLICES)
     def one_last_vertex(m, i):
         return sum(m.vertex_is_last[i, n] for n in m.VERTEX_INDICES) == 1
-    
+
     # The last vertex cannot be the same as the first vertex
     @m.Constraint(m.SIMPLICES, m.VERTEX_INDICES)
     def first_last_distinct(m, i, n):
         return m.vertex_is_first[i, n] * m.vertex_is_last[i, n] == 0
-    
+
     # Enforce property (2). This also guarantees property (1)
     @m.Constraint(m.SIMPLICES, m.SIMPLICES)
     def vertex_order(m, i, j):
         # Enforce only when j is the simplex following i. If not, RHS is zero
-        return (
-            sum(m.vertex_is_last[i, n] * m.vertex_is_first[j, k] * m.TestVerticesEqual[i, n, j, k] for n in m.VERTEX_INDICES for k in m.VERTEX_INDICES) 
-            >= sum(m.x[i, p] * m.x[j, p + 1] for p in m.SIMPLICES if p != m.SimplicesCount - 1)
+        return sum(
+            m.vertex_is_last[i, n]
+            * m.vertex_is_first[j, k]
+            * m.TestVerticesEqual[i, n, j, k]
+            for n in m.VERTEX_INDICES
+            for k in m.VERTEX_INDICES
+        ) >= sum(
+            m.x[i, p] * m.x[j, p + 1] for p in m.SIMPLICES if p != m.SimplicesCount - 1
         )
-    
+
     # Trivial objective (do I need this?)
     m.obj = Objective(expr=0)
-    
+
     # Solve model
     results = SolverFactory(subsolver).solve(m, tee=True)
-    match(results.solver.termination_condition):
+    match (results.solver.termination_condition):
         case TerminationCondition.infeasible:
-            raise ValueError("The triangulation was impossible to suitably order for the incremental transformation. Try a different triangulation, such as J1.")
+            raise ValueError(
+                "The triangulation was impossible to suitably order for the incremental transformation. Try a different triangulation, such as J1."
+            )
         case TerminationCondition.optimal:
             pass
         case _:
-            raise ValueError(f"Failed to generate suitable ordering for incremental transformation due to unexpected solver termination condition {results.solver.termination_condition}")
-    
+            raise ValueError(
+                f"Failed to generate suitable ordering for incremental transformation due to unexpected solver termination condition {results.solver.termination_condition}"
+            )
+
     # Retrieve data
-    #m.pprint()
+    # m.pprint()
     new_simplices = {}
     for j in m.SIMPLICES:
         for i in m.SIMPLICES:
@@ -392,22 +447,25 @@ def get_incremental_simplex_ordering(simplices, subsolver='gurobi'):
                 break
     return new_simplices
 
+
 # If we have the assumption that our ordering is possible such that consecutively
 # ordered simplices share at least a one-face, then getting an order for the
-# simplices is enough to get one for the edges and we "just" need to find a 
+# simplices is enough to get one for the edges and we "just" need to find a
 # Hamiltonian path
-def get_incremental_simplex_ordering_assume_connected_by_n_face(simplices, connected_face_dim, subsolver='gurobi'):
+def get_incremental_simplex_ordering_assume_connected_by_n_face(
+    simplices, connected_face_dim, subsolver='gurobi'
+):
     if connected_face_dim == 0:
         return get_incremental_simplex_ordering(simplices)
-    #if not nx_available:
+    # if not nx_available:
     #    raise ImportError('Missing Networkx')
-    #G = nx.Graph()
-    #G.add_nodes_from(range(len(simplices)))
-    #for i in range(len(simplices)):
+    # G = nx.Graph()
+    # G.add_nodes_from(range(len(simplices)))
+    # for i in range(len(simplices)):
     #    for j in range(i + 1, len(simplices)):
     #        if len(set(simplices[i]) & set(simplices[j])) >= n + 1:
     #            G.add_edge(i, j)
-    
+
     # ask Gurobi again because networkx doesn't seem to have a general hamiltonian
     # path and I don't want to implement it myself
 
@@ -420,7 +478,10 @@ def get_incremental_simplex_ordering_assume_connected_by_n_face(simplices, conne
     # The rest we can order arbitrarily after finishing the MIP solve.
     m.SimplexVerticesCount = Param(initialize=len(simplices[0]))
     m.VERTEX_INDICES = RangeSet(0, m.SimplexVerticesCount - 1)
-    @m.Param(m.SIMPLICES, m.VERTEX_INDICES, m.SIMPLICES, m.VERTEX_INDICES, domain=Binary)
+
+    @m.Param(
+        m.SIMPLICES, m.VERTEX_INDICES, m.SIMPLICES, m.VERTEX_INDICES, domain=Binary
+    )
     def TestVerticesEqual(m, i, n, j, k):
         return 1 if simplices[i][n] == simplices[j][k] else 0
 
@@ -433,31 +494,55 @@ def get_incremental_simplex_ordering_assume_connected_by_n_face(simplices, conne
     @m.Constraint(m.SIMPLICES)
     def schedule_each_simplex(m, i):
         return sum(m.x[i, j] for j in m.SIMPLICES) == 1
+
     @m.Constraint(m.SIMPLICES)
     def schedule_each_slot(m, j):
         return sum(m.x[i, j] for i in m.SIMPLICES) == 1
-    
+
     # Enforce property (1)
     @m.Constraint(m.SIMPLICES)
     def simplex_order(m, i):
         # anything with at least a vertex in common is a neighbor
-        neighbors = [s for s in m.SIMPLICES if sum(m.TestVerticesEqual[i, n, s, k] for n in m.VERTEX_INDICES for k in m.VERTEX_INDICES) >= connected_face_dim + 1 and s != i]
-        #print(f'neighbors of {i} are {neighbors}')
-        return sum(m.x[i, j] * m.x[k, j + 1] for j in m.SIMPLICES if j != m.SimplicesCount - 1 for k in neighbors) + m.x[i, m.SimplicesCount - 1] == 1
-    
+        neighbors = [
+            s
+            for s in m.SIMPLICES
+            if sum(
+                m.TestVerticesEqual[i, n, s, k]
+                for n in m.VERTEX_INDICES
+                for k in m.VERTEX_INDICES
+            )
+            >= connected_face_dim + 1
+            and s != i
+        ]
+        # print(f'neighbors of {i} are {neighbors}')
+        return (
+            sum(
+                m.x[i, j] * m.x[k, j + 1]
+                for j in m.SIMPLICES
+                if j != m.SimplicesCount - 1
+                for k in neighbors
+            )
+            + m.x[i, m.SimplicesCount - 1]
+            == 1
+        )
+
     # Trivial objective (do I need this?)
     m.obj = Objective(expr=0)
-    
-    #m.pprint()
+
+    # m.pprint()
     # Solve model
     results = SolverFactory(subsolver).solve(m, tee=True)
-    match(results.solver.termination_condition):
+    match (results.solver.termination_condition):
         case TerminationCondition.infeasible:
-            raise ValueError(f"The triangulation was impossible to suitably order for the incremental transformation under the assumption that consecutive simplices share {connected_face_dim}-faces. Try relaxing that assumption, or try a different triangulation, such as J1.")
+            raise ValueError(
+                f"The triangulation was impossible to suitably order for the incremental transformation under the assumption that consecutive simplices share {connected_face_dim}-faces. Try relaxing that assumption, or try a different triangulation, such as J1."
+            )
         case TerminationCondition.optimal:
             pass
         case _:
-            raise ValueError(f"Failed to generate suitable ordering for incremental transformation due to unexpected solver termination condition {results.solver.termination_condition}")
+            raise ValueError(
+                f"Failed to generate suitable ordering for incremental transformation due to unexpected solver termination condition {results.solver.termination_condition}"
+            )
 
     # Retrieve data
     new_simplices = {}
@@ -470,6 +555,7 @@ def get_incremental_simplex_ordering_assume_connected_by_n_face(simplices, conne
                 break
     fix_vertices_incremental_order(new_simplices)
     return new_simplices
+
 
 # Fix vertices (in place) when the simplices are right but vertices are not
 def fix_vertices_incremental_order(simplices):
@@ -487,7 +573,7 @@ def fix_vertices_incremental_order(simplices):
                 if simplex[n] == simplices[i - 1][last_vertex_index]:
                     first = n
                     break
-            
+
         if i == len(simplices) - 1:
             last = last_vertex_index
         else:
@@ -497,7 +583,7 @@ def fix_vertices_incremental_order(simplices):
                     break
         if first == None or last == None:
             raise DeveloperError("Couldn't fix vertex ordering for incremental.")
-        
+
         # reorder the simplex with the desired first and last
         new_simplex = [simplex[first]]
         for n in range(last_vertex_index + 1):
@@ -505,3 +591,200 @@ def fix_vertices_incremental_order(simplices):
                 new_simplex.append(simplex[n])
         new_simplex.append(simplex[last])
         simplices[i] = new_simplex
+
+
+# G_n is the graph on n! vertices where the vertices are permutations in S_n and
+# two vertices are adjacent if they are related by swapping the values of
+# pi(i - 1) and pi(i) for some i in {2, ..., n}.
+#
+# This function gets a hamiltonian path through G_n, starting from a fixed
+# starting permutation, such that a fixed target symbol is either the image
+# rho(1), or it is rho(n), depending on whether first or last is requested,
+# where rho is the final permutation.
+def get_Gn_hamiltonian(n, start_permutation, target_symbol, last):
+    if n < 4:
+        raise ValueError("n must be at least 4 for this operation to be possible")
+    # first is enough because we can just reverse every permutation
+    if last:
+        return [
+            tuple(reversed(pi))
+            for pi in get_Gn_hamiltonian(
+                n, tuple(reversed(start_permutation)), target_symbol, False
+            )
+        ]
+    # trivial start permutation is enough because we can map it through at the end
+    if start_permutation != tuple(range(1, n + 1)):
+        new_target_symbol = [
+            x for x in range(1, n + 1) if start_permutation[x - 1] == target_symbol
+        ][0]  # pi^-1(j)
+        return [
+            tuple(start_permutation[pi[i] - 1] for i in range(n))
+            for pi in _get_Gn_hamiltonian(n, new_target_symbol)
+        ]
+    else:
+        return _get_Gn_hamiltonian(n, target_symbol)
+
+
+# Assume the starting permutation is (1, ..., n) and the target symbol needs to
+# be in the first position of the last permutation
+def _get_Gn_hamiltonian(n, target_symbol):
+    # base case: proof by picture from Todd, Figure 2
+    # note: Figure 2 contains an error, like half the figures and paragraphs do
+    if n == 4:
+        if target_symbol == 1:
+            return [
+                (1, 2, 3, 4),
+                (2, 1, 3, 4),
+                (2, 1, 4, 3),
+                (2, 4, 1, 3),
+                (4, 2, 1, 3),
+                (4, 2, 3, 1),
+                (2, 4, 3, 1),
+                (2, 3, 4, 1),
+                (2, 3, 1, 4),
+                (3, 2, 1, 4),
+                (3, 2, 4, 1),
+                (3, 4, 2, 1),
+                (4, 3, 2, 1),
+                (4, 3, 1, 2),
+                (3, 4, 1, 2),
+                (3, 1, 4, 2),
+                (3, 1, 2, 4),
+                (1, 3, 2, 4),
+                (1, 3, 4, 2),
+                (1, 4, 3, 2),
+                (4, 1, 3, 2),
+                (4, 1, 2, 3),
+                (1, 4, 2, 3),
+                (1, 2, 4, 3),
+            ]
+        elif target_symbol == 2:
+            return [
+                (1, 2, 3, 4),
+                (1, 2, 4, 3),
+                (1, 4, 2, 3),
+                (4, 1, 2, 3),
+                (4, 1, 3, 2),
+                (1, 4, 3, 2),
+                (1, 3, 4, 2),
+                (1, 3, 2, 4),
+                (3, 1, 2, 4),
+                (3, 1, 4, 2),
+                (3, 4, 1, 2),
+                (4, 3, 1, 2),
+                (4, 3, 2, 1),
+                (3, 4, 2, 1),
+                (3, 2, 4, 1),
+                (3, 2, 1, 4),
+                (2, 3, 1, 4),
+                (2, 3, 4, 1),
+                (2, 4, 3, 1),
+                (4, 2, 3, 1),
+                (4, 2, 1, 3),
+                (2, 4, 1, 3),
+                (2, 1, 4, 3),
+                (2, 1, 3, 4),
+            ]
+        elif target_symbol == 3:
+            return [
+                (1, 2, 3, 4),
+                (1, 2, 4, 3),
+                (1, 4, 2, 3),
+                (4, 1, 2, 3),
+                (4, 1, 3, 2),
+                (1, 4, 3, 2),
+                (1, 3, 4, 2),
+                (1, 3, 2, 4),
+                (3, 1, 2, 4),
+                (3, 1, 4, 2),
+                (3, 4, 1, 2),
+                (4, 3, 1, 2),
+                (4, 3, 2, 1),
+                (3, 4, 2, 1),
+                (3, 2, 4, 1),
+                (2, 3, 4, 1),
+                (2, 4, 3, 1),
+                (4, 2, 3, 1),
+                (4, 2, 1, 3),
+                (2, 4, 1, 3),
+                (2, 1, 4, 3),
+                (2, 1, 3, 4),
+                (2, 3, 1, 4),
+                (3, 2, 1, 4),
+            ]
+        elif target_symbol == 4:
+            return [
+                (1, 2, 3, 4),
+                (2, 1, 3, 4),
+                (2, 3, 1, 4),
+                (3, 2, 1, 4),
+                (3, 1, 2, 4),
+                (1, 3, 2, 4),
+                (1, 3, 4, 2),
+                (3, 1, 4, 2),
+                (3, 4, 1, 2),
+                (3, 4, 2, 1),
+                (3, 2, 4, 1),
+                (2, 3, 4, 1),
+                (2, 4, 3, 1),
+                (2, 4, 1, 3),
+                (2, 1, 4, 3),
+                (1, 2, 4, 3),
+                (1, 4, 2, 3),
+                (1, 4, 3, 2),
+                (4, 1, 3, 2),
+                (4, 3, 1, 2),
+                (4, 3, 2, 1),
+                (4, 2, 3, 1),
+                (4, 2, 1, 3),
+                (4, 1, 2, 3),
+            ]
+        # unreachable
+    else:
+        # recursive case
+        if target_symbol < n: # non-awful case
+            # Well, it's still pretty awful.
+            idx = n - 1
+            facing = -1
+            ret = []
+            for pi in _get_Gn_hamiltonian(n - 1, target_symbol):
+                for _ in range(n):
+                    l = list(pi)
+                    l.insert(idx, n)
+                    ret.append(tuple(l))
+                    idx += facing
+                    if (idx == -1 or idx == n): # went too far
+                        facing *= -1
+                        idx += facing # stay once because we get a new pi
+            return ret
+        else: # awful case, target_symbol = n
+            idx = 0
+            facing = 1
+            ret = []
+            for pi in _get_Gn_hamiltonian(n - 1, n - 1):
+                for _ in range(n):
+                    l = [x + 1 for x in pi]
+                    l.insert(idx, 1)
+                    ret.append(tuple(l))
+                    idx += facing
+                    if (idx == -1 or idx == n): # went too far
+                        facing *= -1
+                        idx += facing # stay once because we get a new pi
+            # now we almost have a correct sequence, but it ends with (1, n, ...)
+            # instead of (n, 1, ...) so we need to do some surgery
+            last = ret.pop() # of form (1, n, i, j, ...)
+            second_last = ret.pop() # of form (n, 1, i, j, ...)
+            i = last[2]
+            j = last[3]
+            test = list(last)
+            test[0] = n
+            test[1] = 1
+            test[2] = j
+            test[3] = i
+            idx = ret.index(tuple(test))
+            ret.insert(idx, second_last)
+            ret.insert(idx, last)
+            return ret
+
+
+

@@ -17,7 +17,10 @@ from pyomo.contrib.piecewise.triangulations import (
     get_j1_triangulation,
     get_incremental_simplex_ordering,
     get_incremental_simplex_ordering_assume_connected_by_n_face,
+    get_Gn_hamiltonian,
 )
+from math import factorial
+import itertools
 
 class TestTriangulations(unittest.TestCase):
 
@@ -143,3 +146,41 @@ class TestTriangulations(unittest.TestCase):
                 second_simplex = ordered_triangulation[idx + 1]
                 # test property (2) which also guarantees property (1)
                 self.assertEqual(first_simplex[-1], second_simplex[0], msg="Last and first vertices of adjacent simplices did not match")
+    
+    def check_Gn_hamiltonian_path(self, n, start_permutation, target_symbol, last):
+        path = get_Gn_hamiltonian(n, start_permutation, target_symbol, last)
+        self.assertEqual(len(path), factorial(n))
+        self.assertEqual(path[0], start_permutation)
+        if last:
+            self.assertEqual(path[-1][-1], target_symbol)
+        else:
+            self.assertEqual(path[-1][0], target_symbol)
+        for pi in itertools.permutations(range(1, n + 1), n):
+            self.assertTrue(tuple(pi) in path)
+        for i in range(len(path) - 1):
+            diff_indices = [j for j in range(n) if path[i][j] != path[i + 1][j]]
+            self.assertEqual(len(diff_indices), 2)
+            self.assertEqual(diff_indices[0], diff_indices[1] - 1)
+            self.assertEqual(path[i][diff_indices[0]], path[i + 1][diff_indices[1]])
+            self.assertEqual(path[i][diff_indices[1]], path[i + 1][diff_indices[0]])
+
+    def test_Gn_hamiltonian_paths(self):
+        # each of the base cases
+        self.check_Gn_hamiltonian_path(4, (1, 2, 3, 4), 1, False)
+        self.check_Gn_hamiltonian_path(4, (1, 2, 3, 4), 2, False)
+        self.check_Gn_hamiltonian_path(4, (1, 2, 3, 4), 3, False)
+        self.check_Gn_hamiltonian_path(4, (1, 2, 3, 4), 4, False)
+        # some variants with start permutations and/or last
+        self.check_Gn_hamiltonian_path(4, (3, 4, 1, 2), 2, False)
+        self.check_Gn_hamiltonian_path(4, (1, 3, 2, 4), 3, True)
+        self.check_Gn_hamiltonian_path(4, (1, 4, 2, 3), 4, True)
+        self.check_Gn_hamiltonian_path(4, (1, 2, 3, 4), 2, True)
+        # some recursive cases
+        self.check_Gn_hamiltonian_path(5, (1, 2, 3, 4, 5), 1, False)
+        self.check_Gn_hamiltonian_path(5, (1, 2, 3, 4, 5), 3, False)
+        self.check_Gn_hamiltonian_path(5, (1, 2, 3, 4, 5), 5, False)
+        self.check_Gn_hamiltonian_path(5, (1, 2, 4, 3, 5), 5, True)
+        self.check_Gn_hamiltonian_path(6, (6, 1, 2, 4, 3, 5), 5, True)
+        self.check_Gn_hamiltonian_path(6, (6, 1, 2, 4, 3, 5), 5, False)
+        self.check_Gn_hamiltonian_path(7, (1, 2, 3, 4, 5, 6, 7), 7, False)
+        

@@ -10,9 +10,10 @@
 #  ___________________________________________________________________________
 
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
-from pyomo.contrib.piecewise.transform.piecewise_to_gdp_transformation import (
-    PiecewiseLinearToGDP,
+from pyomo.contrib.piecewise.transform.piecewise_linear_transformation_base import (
+    PiecewiseLinearTransformationBase,
 )
+from pyomo.contrib.piecewise.triangulations import Triangulation
 from pyomo.core import Constraint, Binary, NonNegativeIntegers, Suffix, Var, RangeSet, Param
 from pyomo.core.base import TransformationFactory
 from pyomo.gdp import Disjunct, Disjunction
@@ -20,6 +21,7 @@ from pyomo.common.errors import DeveloperError
 from pyomo.core.expr.visitor import SimpleExpressionVisitor
 from pyomo.core.expr.current import identify_components
 from math import ceil, log2
+import logging
 
 @TransformationFactory.register(
     "contrib.piecewise.incremental",
@@ -27,18 +29,20 @@ from math import ceil, log2
     TODO document
     """,
 )
-class IncrementalInnerGDPTransformation(PiecewiseLinearToGDP):
+class IncrementalGDPTransformation(PiecewiseLinearTransformationBase):
     """
     TODO document
     """
 
-    CONFIG = PiecewiseLinearToGDP.CONFIG()
+    CONFIG = PiecewiseLinearTransformationBase.CONFIG()
     _transformation_name = "pw_linear_incremental"
 
     # Implement to use PiecewiseLinearToGDP. This function returns the Var
     # that replaces the transformed piecewise linear expr
     def _transform_pw_linear_expr(self, pw_expr, pw_linear_func, transformation_block):
         self.DEBUG = False
+        if not (pw_linear_func.triangulation == Triangulation.OrderedJ1 or pw_linear_func.triangulation == Triangulation.AssumeValid):
+            logging.getLogger('pyomo.contrib.piecewise.transform.incremental').warning("Incremental transformation specified, but the triangulation may not be appropriately ordered. This is likely to lead to incorrect results!")       
         # Get a new Block() in transformation_block.transformed_functions, which
         # is a Block(Any)
         transBlock = transformation_block.transformed_functions[

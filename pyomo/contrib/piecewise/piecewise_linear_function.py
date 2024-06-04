@@ -21,6 +21,7 @@ from pyomo.contrib.piecewise.piecewise_linear_expression import (
 )
 from pyomo.contrib.piecewise.triangulations import (
     get_j1_triangulation,
+    get_ordered_j1_triangulation,
     Triangulation,
 )
 from pyomo.core import Any, NonNegativeIntegers, value, Var
@@ -308,6 +309,9 @@ class PiecewiseLinearFunction(Block):
             obj._triangulation = tri
         elif tri == Triangulation.J1:
             triangulation = get_j1_triangulation(points, dimension)
+            obj._triangulation = tri
+        elif tri == Triangulation.OrderedJ1:
+            triangulation = get_ordered_j1_triangulation(points, dimension)
             obj._triangulation = tri
         else:
             raise ValueError(
