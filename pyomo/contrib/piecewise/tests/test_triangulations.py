@@ -14,10 +14,13 @@ import itertools
 from unittest import skipUnless
 import pyomo.common.unittest as unittest
 from pyomo.contrib.piecewise.triangulations import (
-    get_j1_triangulation,
+    get_unordered_j1_triangulation,
+    get_ordered_j1_triangulation,
     get_incremental_simplex_ordering,
     get_incremental_simplex_ordering_assume_connected_by_n_face,
     get_Gn_hamiltonian,
+    get_grid_hamiltonian,
+
 )
 from math import factorial
 import itertools
@@ -30,7 +33,7 @@ class TestTriangulations(unittest.TestCase):
             [1, 0], [1, 1], [1, 2],
             [2, 0], [2, 1], [2, 2],
         ]
-        triangulation = get_j1_triangulation(points, 2)
+        triangulation = get_unordered_j1_triangulation(points, 2)
         self.assertEqual(triangulation.simplices,
         {
             0: [[0, 0], [0, 1], [1, 1]],
@@ -50,7 +53,7 @@ class TestTriangulations(unittest.TestCase):
             [1.5, 0.5], [1.5, 1.5], [1.5, 2.5],
             [2.5, 0.5], [2.5, 1.5], [2.5, 2.5],
         ]
-        triangulation = get_j1_triangulation(points, 2)
+        triangulation = get_unordered_j1_triangulation(points, 2)
         self.assertEqual(triangulation.simplices,
         {
             0: [[0.5, 0.5], [0.5, 1.5], [1.5, 1.5]],
@@ -62,90 +65,73 @@ class TestTriangulations(unittest.TestCase):
             6: [[1.5, 0.5], [1.5, 1.5], [2.5, 0.5]],
             7: [[1.5, 1.5], [1.5, 2.5], [2.5, 2.5]],
         })
+
+    def check_J1_ordered(self, points, num_points, dim):
+        ordered_triangulation = get_ordered_j1_triangulation(points, dim).simplices
+        #print(ordered_triangulation)
+        self.assertEqual(len(ordered_triangulation), factorial(dim) * (num_points - 1) ** dim)
+        for idx, first_simplex in ordered_triangulation.items():
+            if idx != len(ordered_triangulation) - 1:
+                second_simplex = ordered_triangulation[idx + 1]
+                # test property (2) which also guarantees property (1)
+                self.assertEqual(first_simplex[-1], second_simplex[0], msg="Last and first vertices of adjacent simplices did not match")
+                # The way I am constructing these, they should always share an (n-1)-face.
+                # Check that too for good measure.
+                count = 0
+                for pt in first_simplex:
+                    if pt in second_simplex:
+                        count += 1
+                #print(f"first_simplex={first_simplex}; second_simplex={second_simplex}")
+                self.assertEqual(count, dim) # (n-1)-face has n points
+                #if count != dim:
+                #    print(f"error: count {count} was not the correct {dim}")
     
-    def test_J1_small_ordering(self):
-        points = [
-            [0.5, 0.5], [0.5, 1.5], [0.5, 2.5],
-            [1.5, 0.5], [1.5, 1.5], [1.5, 2.5],
-            [2.5, 0.5], [2.5, 1.5], [2.5, 2.5],
-        ]
-        triangulation = get_j1_triangulation(points, 2)
-        reordered_simplices = get_incremental_simplex_ordering(triangulation.simplices)
-        for idx, first_simplex in reordered_simplices.items():
-            if idx != len(triangulation.points) - 1:
-                second_simplex = reordered_simplices[idx + 1]
-                # test property (2) which also guarantees property (1)
-                self.assertEqual(first_simplex[-1], second_simplex[0], msg="Last and first vertices of adjacent simplices did not match")
+    def test_J1_ordered_2d(self):
+        self.check_J1_ordered(
+            list(itertools.product([0, 1, 2], [1, 2.4, 3])),
+            3,
+            2,
+        )
+        self.check_J1_ordered(
+            list(itertools.product([0, 1, 2, 4, 5], [1, 2.4, 3, 5, 6])),
+            5,
+            2,
+        )
+        self.check_J1_ordered(
+            list(itertools.product([0, 1, 2, 4, 5, 6.3, 7.1], [1, 2.4, 3, 5, 6, 9.1, 10])),
+            7,
+            2,
+        )
+        self.check_J1_ordered(
+            list(itertools.product([0, 1, 2, 4, 5, 6.3, 7.1, 7.2, 7.3], [1, 2.4, 3, 5, 6, 9.1, 10, 11, 12])),
+            9,
+            2,
+        )
     
-    def test_J1_medium_ordering(self):
-        points = list(itertools.product([0, 1, 2, 4, 5], [1, 2.4, 3, 5, 6]))
-        triangulation = get_j1_triangulation(points, 2)
-        reordered_simplices = get_incremental_simplex_ordering(triangulation.simplices)
-        for idx, first_simplex in reordered_simplices.items():
-            if idx != len(triangulation.points) - 1:
-                second_simplex = reordered_simplices[idx + 1]
-                # test property (2) which also guarantees property (1)
-                self.assertEqual(first_simplex[-1], second_simplex[0], msg="Last and first vertices of adjacent simplices did not match")
-
-    def test_J1_medium_ordering_alt(self):
-        points = list(itertools.product([0, 1, 2, 4, 5], [1, 2.4, 3, 5, 6]))
-        triangulation = get_j1_triangulation(points, 2)
-        reordered_simplices = get_incremental_simplex_ordering_assume_connected_by_n_face(triangulation.simplices, 1)
-        for idx, first_simplex in reordered_simplices.items():
-            if idx != len(triangulation.points) - 1:
-                second_simplex = reordered_simplices[idx + 1]
-                # test property (2) which also guarantees property (1)
-                self.assertEqual(first_simplex[-1], second_simplex[0], msg="Last and first vertices of adjacent simplices did not match")
-
-    def test_J1_medium_ordering_3d(self):
-        points = list(itertools.product([0, 1, 2, 4, 5], [1, 2.4, 3, 5, 6], [-5, -1, 0.2, 3, 10]))
-        triangulation = get_j1_triangulation(points, 3)
-        reordered_simplices = get_incremental_simplex_ordering_assume_connected_by_n_face(triangulation.simplices, 2)
-        for idx, first_simplex in reordered_simplices.items():
-            if idx != len(triangulation.points) - 1:
-                second_simplex = reordered_simplices[idx + 1]
-                # test property (2) which also guarantees property (1)
-                self.assertEqual(first_simplex[-1], second_simplex[0], msg="Last and first vertices of adjacent simplices did not match")
+    def test_J1_ordered_3d(self):
+        self.check_J1_ordered(
+            list(itertools.product([0, 1, 2], [1, 2.4, 3], [2, 3, 4])),
+            3,
+            3,
+        )
+        self.check_J1_ordered(
+            list(itertools.product([0, 1, 2, 4, 5], [1, 2.4, 3, 5, 6], [-1, 0, 1, 2, 3])),
+            5,
+            3,
+        )
     
-    def test_J1_2d_ordering_0(self):
-        points = list(itertools.product([0, 1, 2], [1, 2.4, 3]))
-        ordered_triangulation = get_j1_triangulation(points, 2, ordered=True).simplices
-        self.assertEqual(len(ordered_triangulation), 8)
-        for idx, first_simplex in ordered_triangulation.items():
-            if idx != len(ordered_triangulation) - 1:
-                second_simplex = ordered_triangulation[idx + 1]
-                # test property (2) which also guarantees property (1)
-                self.assertEqual(first_simplex[-1], second_simplex[0], msg="Last and first vertices of adjacent simplices did not match")
+    def test_J1_ordered_4d_and_above(self):
+        self.check_J1_ordered(
+            list(itertools.product([0, 1, 2, 4, 5], [1, 2.4, 3, 5, 6], [-1, 0, 1, 2, 3], [1, 2, 3, 4, 5])),
+            5,
+            4,
+        )
+        self.check_J1_ordered(
+            list(itertools.product([0, 1, 2, 4, 5], [1, 2.4, 3, 5, 6], [-1, 0, 1, 2, 3], [1, 2, 3, 4, 5], [2, 3, 4, 5, 6])),
+            5,
+            5,
+        )
 
-    def test_J1_2d_ordering_1(self):
-        points = list(itertools.product([0, 1, 2, 4, 5], [1, 2.4, 3, 5, 6]))
-        ordered_triangulation = get_j1_triangulation(points, 2, ordered=True).simplices
-        self.assertEqual(len(ordered_triangulation), 32)
-        for idx, first_simplex in ordered_triangulation.items():
-            if idx != len(ordered_triangulation) - 1:
-                second_simplex = ordered_triangulation[idx + 1]
-                # test property (2) which also guarantees property (1)
-                self.assertEqual(first_simplex[-1], second_simplex[0], msg="Last and first vertices of adjacent simplices did not match")
-
-    def test_J1_2d_ordering_2(self):
-        points = list(itertools.product([0, 1, 2, 4, 5, 6.3, 7.1], [1, 2.4, 3, 5, 6, 9.1, 10]))
-        ordered_triangulation = get_j1_triangulation(points, 2, ordered=True).simplices
-        self.assertEqual(len(ordered_triangulation), 72)
-        for idx, first_simplex in ordered_triangulation.items():
-            if idx != len(ordered_triangulation) - 1:
-                second_simplex = ordered_triangulation[idx + 1]
-                # test property (2) which also guarantees property (1)
-                self.assertEqual(first_simplex[-1], second_simplex[0], msg="Last and first vertices of adjacent simplices did not match")
-
-    def test_J1_2d_ordering_3(self):
-        points = list(itertools.product([0, 1, 2, 4, 5, 6.3, 7.1, 7.2, 7.3], [1, 2.4, 3, 5, 6, 9.1, 10, 11, 12]))
-        ordered_triangulation = get_j1_triangulation(points, 2, ordered=True).simplices
-        self.assertEqual(len(ordered_triangulation), 128)
-        for idx, first_simplex in ordered_triangulation.items():
-            if idx != len(ordered_triangulation) - 1:
-                second_simplex = ordered_triangulation[idx + 1]
-                # test property (2) which also guarantees property (1)
-                self.assertEqual(first_simplex[-1], second_simplex[0], msg="Last and first vertices of adjacent simplices did not match")
     
     def check_Gn_hamiltonian_path(self, n, start_permutation, target_symbol, last):
         path = get_Gn_hamiltonian(n, start_permutation, target_symbol, last)
@@ -183,4 +169,22 @@ class TestTriangulations(unittest.TestCase):
         self.check_Gn_hamiltonian_path(6, (6, 1, 2, 4, 3, 5), 5, True)
         self.check_Gn_hamiltonian_path(6, (6, 1, 2, 4, 3, 5), 5, False)
         self.check_Gn_hamiltonian_path(7, (1, 2, 3, 4, 5, 6, 7), 7, False)
+    
+    def check_grid_hamiltonian(self, dim, length):
+        path = get_grid_hamiltonian(dim, length)
+        self.assertEqual(len(path), length ** dim)
+        for x in itertools.product(range(length), repeat=dim):
+            self.assertTrue(list(x) in path)
+        for i in range(len(path) - 1):
+            diff_indices = [j for j in range(dim) if path[i][j] != path[i + 1][j]]
+            self.assertEqual(len(diff_indices), 1)
+            self.assertEqual(abs(path[i][diff_indices[0]] - path[i + 1][diff_indices[0]]), 1)
+    
+    def test_grid_hamiltonian_paths(self):
+        self.check_grid_hamiltonian(1, 5)
+        self.check_grid_hamiltonian(2, 5)
+        self.check_grid_hamiltonian(2, 8)
+        self.check_grid_hamiltonian(3, 5)
+        self.check_grid_hamiltonian(4, 3)
+        
         

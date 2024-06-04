@@ -28,21 +28,15 @@ from pyomo.environ import (
     Objective,
     TerminationCondition,
 )
-from pyomo.common.dependencies import attempt_import
 
-nx, nx_available = attempt_import(
-    'networkx', 'Networkx is required to calculate incremental ordering.'
-)
-
-
-class Triangulation:
+class Triangulation(Enum):
     AssumeValid = 0
     Delaunay = 1
     J1 = 2
     OrderedJ1 = 3
 
 
-def get_j1_triangulation(points, dimension, ordered=False):
+def get_unordered_j1_triangulation(points, dimension):
     points_map, num_pts = _process_points_j1(points, dimension)
     simplices_list = _get_j1_triangulation(points_map, num_pts - 1, dimension)
     # make a duck-typed thing that superficially looks like an instance of
@@ -58,13 +52,12 @@ def get_j1_triangulation(points, dimension, ordered=False):
 def get_ordered_j1_triangulation(points, dimension):
     points_map, num_pts = _process_points_j1(points, dimension)
     if dimension == 2:
-        simplices_list = _get_j1_triangulation_2d_ordered(points_map, num_pts - 1)
-    else:
+        simplices_list = _get_ordered_j1_triangulation_2d(points_map, num_pts - 1)
+    elif dimension == 3:
         raise DeveloperError("Unimplemented!")
-    # elif dimension == 3:
-    #    return _get_j1_triangulation_3d(points_map, num_pts - 1)
-    # else:
-    #    return _get_j1_triangulation_for_more_than_4d(points_map, num_pts - 1)
+        #simplices_list = _get_ordered_j1_triangulation_3d(points_map, num_pts - 1)
+    else:
+        simplices_list = _get_ordered_j1_triangulation_4d_and_above(points_map, num_pts - 1, dimension)
     triangulation = SimpleNamespace()
     triangulation.points = list(range(len(simplices_list)))
     triangulation.simplices = {i: simplices_list[i] for i in triangulation.points}
@@ -132,7 +125,7 @@ def _get_j1_triangulation(points_map, K, n):
 # and also keep the pictures slightly more regular to make things easier to
 # implement. Also remember that Todd's drawing is misleading to the point of
 # almost being wrong so make sure you draw it properly first.
-def _get_j1_triangulation_2d_ordered(points_map, num_pts):
+def _get_ordered_j1_triangulation_2d(points_map, num_pts):
     # check when square has simplices in top-left and bottom-right
     square_parity_tlbr = lambda x, y: x % 2 == y % 2
     # check when we are in a "turnaround square" as seen in the picture
@@ -313,12 +306,98 @@ def _get_j1_triangulation_2d_ordered(points_map, num_pts):
                         continue
 
 
-def _get_j1_triangulation_3d(points, dimension):
+def _get_ordered_j1_triangulation_3d(points_map, num_pts):
     pass
 
 
-def _get_j1_triangulation_for_more_than_4d(points, dimension):
-    pass
+def _get_ordered_j1_triangulation_4d_and_above(points_map, num_pts, dim):
+    # step one: get a hamiltonian path in the appropriate grid graph (low-coordinate
+    # corners of the grid squares)
+    grid_hamiltonian = get_grid_hamiltonian(dim, num_pts)
+
+    # step 1.5: get a starting simplex. Anything that is *not* adjacent to the
+    # second square is fine. Since we always go from [0, ..., 0] to [0, ..., 1],
+    # i.e., j=`dim`, anything where `dim` is not the first or last symbol should
+    # always work. Let's stick it in the second place
+    start_perm = tuple([1] + [dim] + list(range(2, dim)))
+
+    # step two: for each square, get a sequence of simplices from a starting simplex,
+    # through the square, and then ending with a simplex adjacent to the next square.
+    # Then find the appropriate adjacent simplex to start on the next square
+    simplices = {}
+    for i in range(len(grid_hamiltonian) - 1):
+        current_corner = grid_hamiltonian[i]
+        next_corner = grid_hamiltonian[i + 1]
+        # differing index
+        j = [k + 1 for k in range(dim) if current_corner[k] != next_corner[k]][0]
+        # border x_j value between this square and next
+        c = max(current_corner[j - 1], next_corner[j - 1])
+        v_0, sign = get_nearest_odd_and_sign_vec(current_corner)
+        # According to Todd, what we need is to end with a permutation where rho(n) = j
+        # if c is odd, and end with one where rho(1) = j if c is even. I think this
+        # is right -- basically the sign from the sign vector sometimes cancels
+        # out the sign from whether we are entering in the +c or -c direction.
+        if c % 2 == 0:
+            perm_sequence = get_Gn_hamiltonian(dim, start_perm, j, False)
+            for pi in perm_sequence:
+                simplices[len(simplices)] = get_one_j1_simplex(v_0, pi, sign, dim, points_map)
+        else:
+            perm_sequence = get_Gn_hamiltonian(dim, start_perm, j, True)
+            for pi in perm_sequence:
+                simplices[len(simplices)] = get_one_j1_simplex(v_0, pi, sign, dim, points_map)
+        # should be true regardless of odd or even? I hope
+        start_perm = perm_sequence[-1]
+
+    # step three: finish out the last square
+    # Any final permutation is fine; we are going nowhere after this
+    v_0, sign = get_nearest_odd_and_sign_vec(grid_hamiltonian[-1])
+    for pi in get_Gn_hamiltonian(dim, start_perm, 1, False):
+        simplices[len(simplices)] = get_one_j1_simplex(v_0, pi, sign, dim, points_map)
+    
+    # fix vertices and return
+    fix_vertices_incremental_order(simplices)
+    return simplices
+
+def get_one_j1_simplex(v_0, pi, sign, dim, points_map):
+    simplex = []
+    current = list(v_0)
+    simplex.append(points_map[*current])
+    for i in range(0, dim):
+        current = current.copy()
+        current[pi[i] - 1] += sign[pi[i] - 1]
+        simplex.append(points_map[*current])
+    return sorted(simplex)
+
+# get the v_0 and sign vectors corresponding to a given square, identified by its
+# low-coordinate corner
+def get_nearest_odd_and_sign_vec(corner):
+    v_0 = []
+    sign = []
+    for x in corner:
+        if x % 2 == 0:
+            v_0.append(x + 1)
+            sign.append(-1)
+        else:
+            v_0.append(x)
+            sign.append(1)
+    return v_0, sign
+
+def get_grid_hamiltonian(dim, length):
+    if dim == 1:
+        return [[n] for n in range(length)]
+    else:
+        ret = []
+        prev = get_grid_hamiltonian(dim - 1, length)
+        for n in range(length):
+            # if n is even, add the previous hamiltonian with n in its new first
+            # coordinate. If odd, do the same with the previous hamiltonian in reverse.
+            if n % 2 == 0:
+                for x in prev:
+                    ret.append([n] + x)
+            else:
+                for x in reversed(prev):
+                    ret.append([n] + x)
+        return ret
 
 
 def get_incremental_simplex_ordering(simplices, subsolver='gurobi'):
@@ -776,7 +855,7 @@ def _get_Gn_hamiltonian(n, target_symbol):
             second_last = ret.pop() # of form (n, 1, i, j, ...)
             i = last[2]
             j = last[3]
-            test = list(last)
+            test = list(last) # want permutation of form (n, 1, j, i, ...) with same tail
             test[0] = n
             test[1] = 1
             test[2] = j

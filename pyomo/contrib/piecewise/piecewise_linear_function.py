@@ -20,7 +20,7 @@ from pyomo.contrib.piecewise.piecewise_linear_expression import (
     PiecewiseLinearExpression,
 )
 from pyomo.contrib.piecewise.triangulations import (
-    get_j1_triangulation,
+    get_unordered_j1_triangulation,
     get_ordered_j1_triangulation,
     Triangulation,
 )
@@ -308,7 +308,7 @@ class PiecewiseLinearFunction(Block):
                 raise
             obj._triangulation = tri
         elif tri == Triangulation.J1:
-            triangulation = get_j1_triangulation(points, dimension)
+            triangulation = get_unordered_j1_triangulation(points, dimension)
             obj._triangulation = tri
         elif tri == Triangulation.OrderedJ1:
             triangulation = get_ordered_j1_triangulation(points, dimension)
