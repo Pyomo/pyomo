@@ -41,6 +41,7 @@ class TestTransformPiecewiseModelToIncrementalMIP(unittest.TestCase):
         SolverFactory('gurobi').solve(m)
         ct.check_log_x_model_soln(self, m)
 
+
 # Make a version of the log_x model with the simplices properly ordered for the
 # incremental transform
 def make_log_x_model_ordered():

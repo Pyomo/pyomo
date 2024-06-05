@@ -14,7 +14,15 @@ from pyomo.contrib.piecewise.transform.piecewise_linear_transformation_base impo
     PiecewiseLinearTransformationBase,
 )
 from pyomo.contrib.piecewise.triangulations import Triangulation
-from pyomo.core import Constraint, Binary, NonNegativeIntegers, Suffix, Var, RangeSet, Param
+from pyomo.core import (
+    Constraint,
+    Binary,
+    NonNegativeIntegers,
+    Suffix,
+    Var,
+    RangeSet,
+    Param,
+)
 from pyomo.core.base import TransformationFactory
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.common.errors import DeveloperError
@@ -22,6 +30,7 @@ from pyomo.core.expr.visitor import SimpleExpressionVisitor
 from pyomo.core.expr.current import identify_components
 from math import ceil, log2
 import logging
+
 
 @TransformationFactory.register(
     "contrib.piecewise.incremental",
@@ -52,9 +61,14 @@ class IncrementalMIPTransformation(PiecewiseLinearTransformationBase):
     # Implement to use PiecewiseLinearToGDP. This function returns the Var
     # that replaces the transformed piecewise linear expr
     def _transform_pw_linear_expr(self, pw_expr, pw_linear_func, transformation_block):
-        if pw_linear_func.triangulation not in (Triangulation.OrderedJ1, Triangulation.AssumeValid):
+        if pw_linear_func.triangulation not in (
+            Triangulation.OrderedJ1,
+            Triangulation.AssumeValid,
+        ):
             # almost certain not to work
-            logging.getLogger('pyomo.contrib.piecewise.transform.incremental').error("Incremental transformation specified, but the triangulation may not be appropriately ordered. This is likely to lead to incorrect results!")       
+            logging.getLogger('pyomo.contrib.piecewise.transform.incremental').error(
+                "Incremental transformation specified, but the triangulation may not be appropriately ordered. This is likely to lead to incorrect results!"
+            )
         # Get a new Block() in transformation_block.transformed_functions, which
         # is a Block(Any)
         transBlock = transformation_block.transformed_functions[
@@ -84,9 +98,11 @@ class IncrementalMIPTransformation(PiecewiseLinearTransformationBase):
         transBlock.nonzero_simplex_point_indices = RangeSet(1, dimension)
         transBlock.last_simplex_point_index = Param(initialize=dimension)
 
-        # We don't seem to get a convenient opportunity later, so let's just widen 
+        # We don't seem to get a convenient opportunity later, so let's just widen
         # the bounds here. All we need to do is go through the corners of each simplex.
-        for P, linear_func in zip(transBlock.simplex_indices, pw_linear_func._linear_functions):
+        for P, linear_func in zip(
+            transBlock.simplex_indices, pw_linear_func._linear_functions
+        ):
             for v in transBlock.simplex_point_indices:
                 val = linear_func(*pw_linear_func._points[simplices[P][v]])
                 if val < substitute_var_lb:
@@ -116,16 +132,18 @@ class IncrementalMIPTransformation(PiecewiseLinearTransformationBase):
         # Set up the binary y_i variables, which interleave with the delta_i^j in
         # an odd way
         transBlock.y_binaries = Var(
-            transBlock.simplex_indices_except_last,
-            domain=Binary
+            transBlock.simplex_indices_except_last, domain=Binary
         )
 
         # If the delta for the final point in simplex i is not one, y_i must be zero. That is,
         # y_i is one for and only for simplices that are completely "used"
         @transBlock.Constraint(transBlock.simplex_indices_except_last)
         def y_below_delta(m, i):
-            return (transBlock.y_binaries[i] <= transBlock.delta[i, transBlock.last_simplex_point_index])
-        
+            return (
+                transBlock.y_binaries[i]
+                <= transBlock.delta[i, transBlock.last_simplex_point_index]
+            )
+
         # The sum of the deltas for simplex i+1 should be less than y_i. The overall
         # effect of these two constraints is that for simplices with y_i=1, the final
         # delta being one and others zero is enforced. For the first simplex with y_i=0,
@@ -133,36 +151,51 @@ class IncrementalMIPTransformation(PiecewiseLinearTransformationBase):
         # simplices with y_i=0, all deltas are fixed at zero.
         @transBlock.Constraint(transBlock.simplex_indices_except_last)
         def deltas_below_y(m, i):
-            return (sum(transBlock.delta[i + 1, j] for j in transBlock.nonzero_simplex_point_indices) <= transBlock.y_binaries[i])
+            return (
+                sum(
+                    transBlock.delta[i + 1, j]
+                    for j in transBlock.nonzero_simplex_point_indices
+                )
+                <= transBlock.y_binaries[i]
+            )
 
-        # Now we can relate the deltas and x. x is a sum along differences of points, 
+        # Now we can relate the deltas and x. x is a sum along differences of points,
         # weighted by deltas (12a.1)
         @transBlock.Constraint(transBlock.dimension_indices)
         def x_constraint(b, n):
-            return (pw_expr.args[n] ==
-                initial_vertex[n] + sum(
-                    sum(
-                        # delta_i^j * (v_i^j - v_i^0)
-                        transBlock.delta[i, j] * (pw_linear_func._points[simplices[i][j]][n]
-                                                - pw_linear_func._points[simplices[i][0]][n])
-                        for j in transBlock.nonzero_simplex_point_indices
+            return pw_expr.args[n] == initial_vertex[n] + sum(
+                sum(
+                    # delta_i^j * (v_i^j - v_i^0)
+                    transBlock.delta[i, j]
+                    * (
+                        pw_linear_func._points[simplices[i][j]][n]
+                        - pw_linear_func._points[simplices[i][0]][n]
                     )
-                    for i in transBlock.simplex_indices
+                    for j in transBlock.nonzero_simplex_point_indices
                 )
+                for i in transBlock.simplex_indices
             )
 
         # Now we can set the substitute Var for the PWLE (12a.2)
         transBlock.set_substitute = Constraint(
             expr=substitute_var
-            == pw_linear_func._linear_functions[0](*initial_vertex) + sum(
-                    sum(
-                        # delta_i^j * (f(v_i^j) - f(v_i^0))
-                        transBlock.delta[i, j] * (pw_linear_func._linear_functions[i](*pw_linear_func._points[simplices[i][j]])
-                                                - pw_linear_func._linear_functions[i](*pw_linear_func._points[simplices[i][0]]))
-                        for j in transBlock.nonzero_simplex_point_indices
+            == pw_linear_func._linear_functions[0](*initial_vertex)
+            + sum(
+                sum(
+                    # delta_i^j * (f(v_i^j) - f(v_i^0))
+                    transBlock.delta[i, j]
+                    * (
+                        pw_linear_func._linear_functions[i](
+                            *pw_linear_func._points[simplices[i][j]]
+                        )
+                        - pw_linear_func._linear_functions[i](
+                            *pw_linear_func._points[simplices[i][0]]
+                        )
                     )
-                    for i in transBlock.simplex_indices
+                    for j in transBlock.nonzero_simplex_point_indices
                 )
+                for i in transBlock.simplex_indices
+            )
         )
 
         return substitute_var
