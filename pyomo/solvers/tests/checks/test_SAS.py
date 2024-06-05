@@ -29,6 +29,8 @@ from pyomo.opt.results import SolverStatus, TerminationCondition, ProblemSense
 from pyomo.opt import SolverFactory, check_available_solvers
 import warnings
 
+CFGFILE = os.environ.get("SAS_CFG_FILE_PATH", None)
+
 CAS_OPTIONS = {
     "hostname": os.environ.get("CASHOST", None),
     "port": os.environ.get("CASPORT", None),
@@ -42,11 +44,12 @@ sas_available = check_available_solvers("sas")
 class SASTestAbc:
     solver_io = "_sas94"
     session_options = {}
+    cfgfile = CFGFILE
 
     @classmethod
     def setUpClass(cls):
         cls.opt_sas = SolverFactory(
-            "sas", solver_io=cls.solver_io, **cls.session_options
+            "sas", solver_io=cls.solver_io, cfgfile=cls.cfgfile, **cls.session_options
         )
 
     @classmethod
@@ -322,7 +325,8 @@ class SASTestLP94(SASTestLP, unittest.TestCase):
         self.assertEqual(results.solver.status, SolverStatus.error)
 
 
-@unittest.skipIf(not sas_available, "The SAS solver is not available")
+#@unittest.skipIf(not sas_available, "The SAS solver is not available")
+@unittest.skip("Tests not yet configured for SAS Viya interface.")
 class SASTestLPCAS(SASTestLP, unittest.TestCase):
     solver_io = "_sascas"
     session_options = CAS_OPTIONS
@@ -528,6 +532,7 @@ class SASTestMILP94(SASTestMILP, unittest.TestCase):
 
 
 @unittest.skipIf(not sas_available, "The SAS solver is not available")
+@unittest.skip("Tests not yet configured for SAS Viya interface.")
 class SASTestMILPCAS(SASTestMILP, unittest.TestCase):
     solver_io = "_sascas"
     session_options = CAS_OPTIONS
