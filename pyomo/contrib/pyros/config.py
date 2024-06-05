@@ -16,8 +16,8 @@ from pyomo.common.config import (
     Path,
 )
 from pyomo.common.errors import ApplicationError, PyomoException
-from pyomo.core.base import Var, _VarData
-from pyomo.core.base.param import Param, _ParamData
+from pyomo.core.base import Var, VarData
+from pyomo.core.base.param import Param, ParamData
 from pyomo.opt import SolverFactory
 from pyomo.contrib.pyros.util import ObjectiveType, setup_pyros_logger
 from pyomo.contrib.pyros.uncertainty_sets import UncertaintySet
@@ -62,7 +62,7 @@ def mutable_param_validator(param_obj):
 
     Parameters
     ----------
-    param_obj : Param or _ParamData
+    param_obj : Param or ParamData
         Param-like object of interest.
 
     Raises
@@ -98,7 +98,7 @@ class InputDataStandardizer(object):
         Pyomo component type, such as Component, Var or Param.
     cdatatype : type
         Corresponding Pyomo component data type, such as
-        _ComponentData, _VarData, or _ParamData.
+        ComponentData, VarData, or ParamData.
     ctype_validator : callable, optional
         Validator function for objects of type `ctype`.
     cdatatype_validator : callable, optional
@@ -503,6 +503,21 @@ def pyros_config():
             ),
         ),
     )
+    CONFIG.declare(
+        'symbolic_solver_labels',
+        ConfigValue(
+            default=False,
+            domain=bool,
+            description=(
+                """
+                True to ensure the component names given to the
+                subordinate solvers for every subproblem reflect
+                the names of the corresponding Pyomo modeling components,
+                False otherwise.
+                """
+            ),
+        ),
+    )
 
     # ================================================
     # === Required User Inputs
@@ -511,7 +526,7 @@ def pyros_config():
         "first_stage_variables",
         ConfigValue(
             default=[],
-            domain=InputDataStandardizer(Var, _VarData, allow_repeats=False),
+            domain=InputDataStandardizer(Var, VarData, allow_repeats=False),
             description="First-stage (or design) variables.",
             visibility=1,
         ),
@@ -520,7 +535,7 @@ def pyros_config():
         "second_stage_variables",
         ConfigValue(
             default=[],
-            domain=InputDataStandardizer(Var, _VarData, allow_repeats=False),
+            domain=InputDataStandardizer(Var, VarData, allow_repeats=False),
             description="Second-stage (or control) variables.",
             visibility=1,
         ),
@@ -531,7 +546,7 @@ def pyros_config():
             default=[],
             domain=InputDataStandardizer(
                 ctype=Param,
-                cdatatype=_ParamData,
+                cdatatype=ParamData,
                 ctype_validator=mutable_param_validator,
                 allow_repeats=False,
             ),

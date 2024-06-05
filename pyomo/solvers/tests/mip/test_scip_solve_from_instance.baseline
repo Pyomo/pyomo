@@ -1,7 +1,7 @@
 {
     "Problem": [
         {
-            "Lower bound": -Infinity,
+            "Lower bound": 1.0,
             "Number of constraints": 0, 
             "Number of objectives": 1, 
             "Number of variables": 1, 

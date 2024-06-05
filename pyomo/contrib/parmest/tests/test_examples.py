@@ -181,7 +181,10 @@ class TestReactorDesignExamples(unittest.TestCase):
 
         multisensor_data_example.main()
 
-    @unittest.skipUnless(matplotlib_available, "test requires matplotlib")
+    @unittest.skipUnless(
+        matplotlib_available and seaborn_available,
+        "test requires matplotlib and seaborn",
+    )
     def test_datarec_example(self):
         from pyomo.contrib.parmest.examples.reactor_design import datarec_example
 

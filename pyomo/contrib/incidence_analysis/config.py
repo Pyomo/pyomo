@@ -36,6 +36,13 @@ class IncidenceMethod(enum.Enum):
     """Use ``pyomo.repn.plugins.nl_writer.AMPLRepnVisitor``"""
 
 
+class IncidenceOrder(enum.Enum):
+
+    dulmage_mendelsohn_upper = 0
+
+    dulmage_mendelsohn_lower = 1
+
+
 _include_fixed = ConfigValue(
     default=False,
     domain=bool,
@@ -123,7 +130,6 @@ def get_config_from_kwds(**kwds):
         and kwds.get("_ampl_repn_visitor", None) is None
     ):
         subexpression_cache = {}
-        subexpression_order = []
         external_functions = {}
         var_map = {}
         used_named_expressions = set()
@@ -136,7 +142,6 @@ def get_config_from_kwds(**kwds):
         amplvisitor = AMPLRepnVisitor(
             text_nl_template,
             subexpression_cache,
-            subexpression_order,
             external_functions,
             var_map,
             used_named_expressions,

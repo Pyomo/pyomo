@@ -52,7 +52,7 @@ class GDP_Disjunct_Fixer(Transformation):
 
     This reclassifies all disjuncts in the passed model instance as ctype Block
     and deactivates the constraints and disjunctions within inactive disjuncts.
-    In addition, it transforms relvant LogicalConstraints and BooleanVars so
+    In addition, it transforms relevant LogicalConstraints and BooleanVars so
     that the resulting model is a (MI)(N)LP (where it is only mixed-integer
     if the model contains integer-domain Vars or BooleanVars which were not
     indicator_vars of Disjuncs.
