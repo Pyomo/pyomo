@@ -16,17 +16,15 @@ import pyomo.common.unittest as unittest
 from pyomo.contrib.piecewise.triangulations import (
     get_unordered_j1_triangulation,
     get_ordered_j1_triangulation,
-    get_incremental_simplex_ordering,
-    get_incremental_simplex_ordering_assume_connected_by_n_face,
     get_Gn_hamiltonian,
     get_grid_hamiltonian,
-
 )
 from math import factorial
 import itertools
 
 class TestTriangulations(unittest.TestCase):
 
+    # check basic functionality for the unordered j1 triangulation.
     def test_J1_small(self):
         points = [
             [0, 0], [0, 1], [0, 2],
@@ -117,6 +115,16 @@ class TestTriangulations(unittest.TestCase):
         self.check_J1_ordered(
             list(itertools.product([0, 1, 2, 4, 5], [1, 2.4, 3, 5, 6], [-1, 0, 1, 2, 3])),
             5,
+            3,
+        )
+        self.check_J1_ordered(
+            list(itertools.product([0, 1, 2, 4, 5, 6, 7], [1, 2.4, 3, 5, 6, 6.5, 7], [-1, 0, 1, 2, 3, 4, 5])),
+            7,
+            3,
+        )
+        self.check_J1_ordered(
+            list(itertools.product([0, 1, 2, 4, 5, 6, 7, 8, 9], [1, 2.4, 3, 5, 6, 6.5, 7, 8, 9], [-1, 0, 1, 2, 3, 4, 5, 6, 7])),
+            9,
             3,
         )
     

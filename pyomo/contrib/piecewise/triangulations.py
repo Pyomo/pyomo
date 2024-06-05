@@ -30,16 +30,17 @@ from pyomo.environ import (
 )
 
 class Triangulation(Enum):
-    AssumeValid = 0
-    Delaunay = 1
-    J1 = 2
-    OrderedJ1 = 3
+    Unknown = 0
+    AssumeValid = 1
+    Delaunay = 2
+    J1 = 3
+    OrderedJ1 = 4
 
 
 def get_unordered_j1_triangulation(points, dimension):
     points_map, num_pts = _process_points_j1(points, dimension)
     simplices_list = _get_j1_triangulation(points_map, num_pts - 1, dimension)
-    # make a duck-typed thing that superficially looks like an instance of
+    # for now make a duck-typed thing that superficially looks like an instance of
     # scipy.spatial.Delaunay (these are NDarrays in the original)
     triangulation = SimpleNamespace()
     triangulation.points = list(range(len(simplices_list)))
@@ -54,8 +55,7 @@ def get_ordered_j1_triangulation(points, dimension):
     if dimension == 2:
         simplices_list = _get_ordered_j1_triangulation_2d(points_map, num_pts - 1)
     elif dimension == 3:
-        raise DeveloperError("Unimplemented!")
-        #simplices_list = _get_ordered_j1_triangulation_3d(points_map, num_pts - 1)
+        simplices_list = _get_ordered_j1_triangulation_3d(points_map, num_pts - 1)
     else:
         simplices_list = _get_ordered_j1_triangulation_4d_and_above(points_map, num_pts - 1, dimension)
     triangulation = SimpleNamespace()
@@ -307,7 +307,54 @@ def _get_ordered_j1_triangulation_2d(points_map, num_pts):
 
 
 def _get_ordered_j1_triangulation_3d(points_map, num_pts):
-    pass
+    # Import these precomputed paths
+    from pyomo.contrib.piecewise.ordered_3d_j1_triangulation_data import hamiltonian_paths as simplex_pair_to_path
+
+    # To start, we need a hamiltonian path in the grid graph of *double* cubes
+    # (2x2x2 cubes)
+    grid_hamiltonian = get_grid_hamiltonian(3, round(num_pts / 2)) # division is exact
+
+    # We always start by going from [0, 0, 0] to [0, 0, 1], so we can safely
+    # start from the -x side
+    start_data = ((-1, 0, 0), 1)
+
+    simplices = {}
+    for i in range(len(grid_hamiltonian) - 1):
+        current_double_cube_idx = grid_hamiltonian[i]
+        next_double_cube_idx = grid_hamiltonian[i + 1]
+        direction_to_next = tuple(next_double_cube_idx[j] - current_double_cube_idx[j] for j in range(3))
+
+        current_v_0 = tuple(2 * current_double_cube_idx[j] + 1 for j in range(3))
+
+        current_cube_path = None
+        if (start_data, (direction_to_next, 1)) in simplex_pair_to_path.keys():
+            current_cube_path = simplex_pair_to_path[(start_data, (direction_to_next, 1))]
+            # set the start data for the next iteration now
+            start_data = (tuple(-1 * i for i in direction_to_next), 1)
+        else:
+            current_cube_path = simplex_pair_to_path[(start_data, (direction_to_next, 2))]
+            start_data = (tuple(-1 * i for i in direction_to_next), 2)
+        
+        for simplex_data in current_cube_path:
+            simplices[len(simplices)] = get_one_j1_simplex(current_v_0, simplex_data[1], simplex_data[0], 3, points_map)
+    
+    # fill in the last cube. We have a good start_data but we need to invent a
+    # direction_to_next. Let's go straight in the direction we came from.
+    direction_to_next = tuple(-1 * i for i in start_data[0])
+    current_v_0 = tuple(2 * grid_hamiltonian[-1][j] + 1 for j in range(3))
+    if (start_data, (direction_to_next, 1)) in simplex_pair_to_path.keys():
+        current_cube_path = simplex_pair_to_path[(start_data, (direction_to_next, 1))]
+    else:
+        current_cube_path = simplex_pair_to_path[(start_data, (direction_to_next, 2))]
+
+    for simplex_data in current_cube_path:
+        simplices[len(simplices)] = get_one_j1_simplex(current_v_0, simplex_data[1], simplex_data[0], 3, points_map)
+
+    fix_vertices_incremental_order(simplices)
+    return simplices
+
+        
+
 
 
 def _get_ordered_j1_triangulation_4d_and_above(points_map, num_pts, dim):
