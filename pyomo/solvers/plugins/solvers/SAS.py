@@ -12,7 +12,7 @@
 import logging
 import sys
 from os import stat
-import uuid
+from uuid import uuid4
 from abc import ABC, abstractmethod
 from io import StringIO
 
@@ -334,7 +334,7 @@ class SAS94(SASAbc):
         rootnode_str = self._create_statement_str("rootnode")
 
         # Get a unique identifier, always use the same with different prefixes
-        unique = uuid.uuid4().hex[:16]
+        unique = uuid4().hex[:16]
 
         # Create unique filename for output datasets
         primalout_dataset_name = "pout" + unique
@@ -703,7 +703,7 @@ class SASCAS(SASAbc):
             action = "solveMilp" if self._has_integer_variables() else "solveLp"
 
         # Get a unique identifier, always use the same with different prefixes
-        unique = uuid.uuid4().hex[:16]
+        unique = uuid4().hex[:16]
 
         # Creat the output stream, we want to print to a log string as well as to the console
         self._log = StringIO()
