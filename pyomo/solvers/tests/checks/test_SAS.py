@@ -325,7 +325,7 @@ class SASTestLP94(SASTestLP, unittest.TestCase):
         self.assertEqual(results.solver.status, SolverStatus.error)
 
 
-#@unittest.skipIf(not sas_available, "The SAS solver is not available")
+# @unittest.skipIf(not sas_available, "The SAS solver is not available")
 @unittest.skip("Tests not yet configured for SAS Viya interface.")
 class SASTestLPCAS(SASTestLP, unittest.TestCase):
     solver_io = "_sascas"
@@ -531,7 +531,7 @@ class SASTestMILP94(SASTestMILP, unittest.TestCase):
     pass
 
 
-@unittest.skipIf(not sas_available, "The SAS solver is not available")
+# @unittest.skipIf(not sas_available, "The SAS solver is not available")
 @unittest.skip("Tests not yet configured for SAS Viya interface.")
 class SASTestMILPCAS(SASTestMILP, unittest.TestCase):
     solver_io = "_sascas"
