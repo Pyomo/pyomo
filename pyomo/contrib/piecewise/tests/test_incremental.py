@@ -19,25 +19,31 @@ from pyomo.core.expr.compare import (
     assertExpressionsStructurallyEqual,
 )
 from pyomo.gdp import Disjunct, Disjunction
-from pyomo.environ import Constraint, SolverFactory, Var, ConcreteModel, Objective, log, value, maximize
+from pyomo.environ import (
+    Constraint,
+    SolverFactory,
+    Var,
+    ConcreteModel,
+    Objective,
+    log,
+    value,
+    maximize,
+)
 from pyomo.contrib.piecewise import PiecewiseLinearFunction
 
 from pyomo.contrib.piecewise.transform.incremental import IncrementalGDPTransformation
+
 
 class TestTransformPiecewiseModelToIncrementalMIP(unittest.TestCase):
 
     def test_solve_log_model(self):
         m = make_log_x_model_ordered()
-        TransformationFactory(
-            'contrib.piecewise.incremental'
-        ).apply_to(m)
-        TransformationFactory(
-            'gdp.bigm'
-        ).apply_to(m)
+        TransformationFactory('contrib.piecewise.incremental').apply_to(m)
+        TransformationFactory('gdp.bigm').apply_to(m)
         SolverFactory('gurobi').solve(m)
         ct.check_log_x_model_soln(self, m)
-    
-    #def test_solve_univariate_log_model(self):
+
+    # def test_solve_univariate_log_model(self):
     #    m = ConcreteModel()
     #    m.x = Var(bounds=(1, 10))
     #    m.pw_log = PiecewiseLinearFunction(points=[1, 3, 6, 10], function=log)

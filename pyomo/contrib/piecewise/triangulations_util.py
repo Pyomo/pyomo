@@ -23,6 +23,7 @@ from pyomo.environ import (
 )
 from pyomo.contrib.piecewise.triangulations import fix_vertices_incremental_order
 
+
 # Set up a MIP (err, MIQCP) that orders our simplices and their vertices for us
 # in the following way:
 #
@@ -138,7 +139,6 @@ def reorder_simplices_for_incremental(simplices, subsolver='gurobi'):
     return new_simplices
 
 
-    
 # An alternative approach is to order the simplices instead of the vertices. To
 # do this, the condition (1) should be that they share a 1-face, not just a
 # vertex. Then there is always a consistent way to choose distinct first and
@@ -237,4 +237,3 @@ def reorder_simplices_for_incremental_assume_connected_by_n_face(
                 break
     fix_vertices_incremental_order(new_simplices)
     return new_simplices
-

@@ -35,7 +35,6 @@ if __name__ == '__main__':
     # the x direction, and similarly for the others.
     border_simplices = {
         # simplices in low-coordinate cube
-
         # -x
         ((-1, 0, 0), 1): ((-1, -1, -1), (1, 2, 3)),
         ((-1, 0, 0), 2): ((-1, -1, -1), (1, 3, 2)),
@@ -45,9 +44,7 @@ if __name__ == '__main__':
         # -z
         ((0, 0, -1), 1): ((-1, -1, -1), (3, 1, 2)),
         ((0, 0, -1), 2): ((-1, -1, -1), (3, 2, 1)),
-
         # simplices in one-high-coordinate cubes
-
         # +x
         ((1, 0, 0), 1): ((1, -1, -1), (1, 2, 3)),
         ((1, 0, 0), 2): ((1, -1, -1), (1, 3, 2)),
@@ -58,15 +55,20 @@ if __name__ == '__main__':
         ((0, 0, 1), 1): ((-1, -1, 1), (3, 1, 2)),
         ((0, 0, 1), 2): ((-1, -1, 1), (3, 2, 1)),
     }
-    
+
     # Need: Hamiltonian paths from each input to some output in each direction
     all_needed_hamiltonians = {}
     for i, s1 in border_simplices.items():
         for j, s2 in border_simplices.items():
             # I could cut the number of these in half or less via symmetry but I don't care
             if i[0] != j[0]:
-                if (i, (j[0], 1)) in all_needed_hamiltonians.keys() or (i, (j[0], 2)) in all_needed_hamiltonians.keys():
-                    print(f"skipping search for path from {i} to {j} because we have a path from {i} to {(j[0], 1) if (i, (j[0], 1)) in all_needed_hamiltonians.keys() else (j[0], 2)}")
+                if (i, (j[0], 1)) in all_needed_hamiltonians.keys() or (
+                    i,
+                    (j[0], 2),
+                ) in all_needed_hamiltonians.keys():
+                    print(
+                        f"skipping search for path from {i} to {j} because we have a path from {i} to {(j[0], 1) if (i, (j[0], 1)) in all_needed_hamiltonians.keys() else (j[0], 2)}"
+                    )
                     continue
                 print(f"searching for path from {i} to {j}")
                 for path in nx.all_simple_paths(G, s1, s2):

@@ -280,8 +280,9 @@ class PiecewiseLinearFunction(Block):
         self._tabular_data_rule = Initializer(
             _tabular_data_rule_arg, treat_sequences_as_mappings=False
         )
-        self._triangulation_rule = Initializer(_triangulation_rule_arg,
-                                               treat_sequences_as_mappings=False)
+        self._triangulation_rule = Initializer(
+            _triangulation_rule_arg, treat_sequences_as_mappings=False
+        )
 
     def _get_dimension_from_points(self, points):
         if len(points) < 1:
@@ -297,8 +298,9 @@ class PiecewiseLinearFunction(Block):
 
         return dimension
 
-    def _construct_simplices_from_multivariate_points(self, obj, parent, points,
-                                                      dimension):
+    def _construct_simplices_from_multivariate_points(
+        self, obj, parent, points, dimension
+    ):
         tri = self._triangulation_rule(parent, obj._index)
         if tri == Triangulation.Delaunay:
             try:
@@ -315,8 +317,8 @@ class PiecewiseLinearFunction(Block):
             obj._triangulation = tri
         else:
             raise ValueError(
-                "Unrecognized triangulation specified for '%s': %s"
-                % (obj, tri))
+                "Unrecognized triangulation specified for '%s': %s" % (obj, tri)
+            )
 
         # Get the points for the triangulation because they might not all be
         # there if any were coplanar.
@@ -377,8 +379,9 @@ class PiecewiseLinearFunction(Block):
                 obj, nonlinear_function
             )
 
-        self._construct_simplices_from_multivariate_points(obj, parent, points,
-                                                           dimension)
+        self._construct_simplices_from_multivariate_points(
+            obj, parent, points, dimension
+        )
         return self._construct_from_function_and_simplices(
             obj, parent, nonlinear_function, simplices_are_user_defined=False
         )
@@ -488,8 +491,9 @@ class PiecewiseLinearFunction(Block):
                 obj, _tabular_data_functor(tabular_data, tupleize=True)
             )
 
-        self._construct_simplices_from_multivariate_points(obj, parent, points,
-                                                           dimension)
+        self._construct_simplices_from_multivariate_points(
+            obj, parent, points, dimension
+        )
         return self._construct_from_function_and_simplices(
             obj, parent, _tabular_data_functor(tabular_data)
         )

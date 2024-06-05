@@ -121,7 +121,8 @@ class TestPiecewiseLinearFunction2D(unittest.TestCase):
     def test_pw_linear_approx_of_ln_x_j1(self):
         m = self.make_ln_x_model()
         m.pw = PiecewiseLinearFunction(
-            points=[1, 3, 6, 10], triangulation=Triangulation.J1, function=m.f)
+            points=[1, 3, 6, 10], triangulation=Triangulation.J1, function=m.f
+        )
         self.check_ln_x_approx(m.pw, m.x)
         self.assertEqual(m.pw.triangulation, Triangulation.J1)
 
@@ -312,10 +313,11 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
     def test_pw_linear_approx_of_paraboloid_j1(self):
         m = self.make_model()
         m.pw = PiecewiseLinearFunction(
-            points=[(0, 1), (0, 4), (0, 7), (3, 1), (3, 4), (3, 7)], function=m.g,
-            triangulation=Triangulation.J1
+            points=[(0, 1), (0, 4), (0, 7), (3, 1), (3, 4), (3, 7)],
+            function=m.g,
+            triangulation=Triangulation.J1,
         )
-        self.check_pw_linear_approximation(m)        
+        self.check_pw_linear_approximation(m)
 
     @unittest.skipUnless(scipy_available, "scipy is not available")
     def test_pw_linear_approx_tabular_data(self):
