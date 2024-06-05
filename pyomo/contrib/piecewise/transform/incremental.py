@@ -26,12 +26,24 @@ import logging
 @TransformationFactory.register(
     "contrib.piecewise.incremental",
     doc="""
-    TODO document
+    The incremental MIP formulation of a piecewise-linear function, as described
+    by Vielma et al, 2010. To work in the multivariate case, the underlying
+    triangulation must satisfy these properties:
+     (1) The simplices are ordered T_1, ..., T_N such that T_i has nonempty intersection
+         with T_{i+1}. It doesn't have to be a whole face; just a vertex is enough.
+     (2) On each simplex T_i, the vertices are ordered T_i^1, ..., T_i^n such
+         that T_i^n = T_{i+1}^1
     """,
 )
-class IncrementalGDPTransformation(PiecewiseLinearTransformationBase):
+class IncrementalMIPTransformation(PiecewiseLinearTransformationBase):
     """
-    TODO document
+    The incremental MIP formulation of a piecewise-linear function, as described
+    by Vielma et al, 2010. To work in the multivariate case, the underlying
+    triangulation must satisfy these properties:
+     (1) The simplices are ordered T_1, ..., T_N such that T_i has nonempty intersection
+         with T_{i+1}. It doesn't have to be a whole face; just a vertex is enough.
+     (2) On each simplex T_i, the vertices are ordered T_i^1, ..., T_i^n such
+         that T_i^n = T_{i+1}^1
     """
 
     CONFIG = PiecewiseLinearTransformationBase.CONFIG()
@@ -40,9 +52,9 @@ class IncrementalGDPTransformation(PiecewiseLinearTransformationBase):
     # Implement to use PiecewiseLinearToGDP. This function returns the Var
     # that replaces the transformed piecewise linear expr
     def _transform_pw_linear_expr(self, pw_expr, pw_linear_func, transformation_block):
-        self.DEBUG = False
-        if not (pw_linear_func.triangulation == Triangulation.OrderedJ1 or pw_linear_func.triangulation == Triangulation.AssumeValid):
-            logging.getLogger('pyomo.contrib.piecewise.transform.incremental').warning("Incremental transformation specified, but the triangulation may not be appropriately ordered. This is likely to lead to incorrect results!")       
+        if pw_linear_func.triangulation not in (Triangulation.OrderedJ1, Triangulation.AssumeValid):
+            # almost certain not to work
+            logging.getLogger('pyomo.contrib.piecewise.transform.incremental').error("Incremental transformation specified, but the triangulation may not be appropriately ordered. This is likely to lead to incorrect results!")       
         # Get a new Block() in transformation_block.transformed_functions, which
         # is a Block(Any)
         transBlock = transformation_block.transformed_functions[
@@ -58,8 +70,8 @@ class IncrementalGDPTransformation(PiecewiseLinearTransformationBase):
         pw_linear_func.map_transformation_var(pw_expr, substitute_var)
 
         # Bounds for the substitute_var that we will widen
-        self.substitute_var_lb = float("inf")
-        self.substitute_var_ub = -float("inf")
+        substitute_var_lb = float("inf")
+        substitute_var_ub = -float("inf")
 
         # Simplices are tuples of indices of points. Give them their own indices, too
         simplices = pw_linear_func._simplices
@@ -77,46 +89,16 @@ class IncrementalGDPTransformation(PiecewiseLinearTransformationBase):
         for P, linear_func in zip(transBlock.simplex_indices, pw_linear_func._linear_functions):
             for v in transBlock.simplex_point_indices:
                 val = linear_func(*pw_linear_func._points[simplices[P][v]])
-                if val < self.substitute_var_lb:
-                    self.substitute_var_lb = val
-                if val > self.substitute_var_ub:
-                    self.substitute_var_ub = val
+                if val < substitute_var_lb:
+                    substitute_var_lb = val
+                if val > substitute_var_ub:
+                    substitute_var_ub = val
         # Now set those bounds
-        transBlock.substitute_var.setlb(self.substitute_var_lb)
-        transBlock.substitute_var.setub(self.substitute_var_ub)
-
-
-        # Ordering of simplices to follow Vielma
-        # TODO: assumption: this enumeration must satisfy O1 (Vielma): each T_i \cap T_{i-1} 
-        # is nonempty
-        # TODO: One way to make this true will be to use the union_jack__triangulate.py 
-        # script to generate the triangulation, but it is also possible for other 
-        # triangulations to be correct. This should be checkable using a MIP. It
-        # is known that there is a correct ordering for any triangulation of a 
-        # domain homeomorphic to a disc in R^2 (Wilson 1998).
-        self.simplex_ordering = {
-            n: n for n in transBlock.simplex_indices
-        }
-
-        # Enumeration of simplices: map from simplex number to correct simplex object
-        self.idx_to_simplex = {
-            n: simplices[m] for n, m in self.simplex_ordering.items()
-        }
-        # Associate simplex indices with correct linear functions
-        self.idx_to_lin_func = {
-            n: pw_linear_func._linear_functions[m] for n, m in self.simplex_ordering.items()
-        }
-
-        # For each individual simplex, the points need to be permuted in a way that
-        # satisfies O1 and O2 (Vielma). TODO TODO TODO
-        self.vertex_ordering = {
-            (T, n): n
-            for T in transBlock.simplex_indices
-            for n in transBlock.simplex_point_indices
-        }
+        transBlock.substitute_var.setlb(substitute_var_lb)
+        transBlock.substitute_var.setub(substitute_var_ub)
 
         # Inital vertex (v_0^0 in Vielma)
-        self.initial_vertex = pw_linear_func._points[self.idx_to_simplex[0][self.vertex_ordering[0, 0]]]
+        initial_vertex = pw_linear_func._points[simplices[0][0]]
 
         # delta_i^j = delta[simplex][point]
         transBlock.delta = Var(
@@ -158,11 +140,11 @@ class IncrementalGDPTransformation(PiecewiseLinearTransformationBase):
         @transBlock.Constraint(transBlock.dimension_indices)
         def x_constraint(b, n):
             return (pw_expr.args[n] ==
-                self.initial_vertex[n] + sum(
+                initial_vertex[n] + sum(
                     sum(
                         # delta_i^j * (v_i^j - v_i^0)
-                        transBlock.delta[i, j] * (pw_linear_func._points[self.idx_to_simplex[i][self.vertex_ordering[i, j]]][n]
-                                                - pw_linear_func._points[self.idx_to_simplex[i][self.vertex_ordering[i, 0]]][n])
+                        transBlock.delta[i, j] * (pw_linear_func._points[simplices[i][j]][n]
+                                                - pw_linear_func._points[simplices[i][0]][n])
                         for j in transBlock.nonzero_simplex_point_indices
                     )
                     for i in transBlock.simplex_indices
@@ -172,11 +154,11 @@ class IncrementalGDPTransformation(PiecewiseLinearTransformationBase):
         # Now we can set the substitute Var for the PWLE (12a.2)
         transBlock.set_substitute = Constraint(
             expr=substitute_var
-            == self.idx_to_lin_func[0](*self.initial_vertex) + sum(
+            == pw_linear_func._linear_functions[0](*initial_vertex) + sum(
                     sum(
                         # delta_i^j * (f(v_i^j) - f(v_i^0))
-                        transBlock.delta[i, j] * (self.idx_to_lin_func[i](*pw_linear_func._points[self.idx_to_simplex[i][self.vertex_ordering[i, j]]])
-                                                - self.idx_to_lin_func[i](*pw_linear_func._points[self.idx_to_simplex[i][self.vertex_ordering[i, 0]]]))
+                        transBlock.delta[i, j] * (pw_linear_func._linear_functions[i](*pw_linear_func._points[simplices[i][j]])
+                                                - pw_linear_func._linear_functions[i](*pw_linear_func._points[simplices[i][0]]))
                         for j in transBlock.nonzero_simplex_point_indices
                     )
                     for i in transBlock.simplex_indices
