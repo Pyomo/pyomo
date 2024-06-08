@@ -57,7 +57,7 @@ def BoolFlag(val):
     return _true if val else _false
 
 
-def ineq(xl, xu, yl, yu):
+def ineq(xl, xu, yl, yu, feasibility_tol):
     """Compute the "bounds" on an InequalityExpression
 
     Note this is *not* performing interval arithmetic: we are
@@ -67,9 +67,9 @@ def ineq(xl, xu, yl, yu):
 
     """
     ans = []
-    if yl < xu:
+    if yl < xu - feasibility_tol:
         ans.append(_false)
-    if xl <= yu:
+    if xl <= yu + feasibility_tol:
         ans.append(_true)
     assert ans
     if len(ans) == 1:
@@ -77,7 +77,7 @@ def ineq(xl, xu, yl, yu):
     return tuple(ans)
 
 
-def eq(xl, xu, yl, yu):
+def eq(xl, xu, yl, yu, feasibility_tol):
     """Compute the "bounds" on an EqualityExpression
 
     Note this is *not* performing interval arithmetic: we are
@@ -87,9 +87,9 @@ def eq(xl, xu, yl, yu):
 
     """
     ans = []
-    if xl != xu or yl != yu or xl != yl:
+    if abs(xl - xu) > feasibility_tol or abs(yl - yu) > feasibility_tol or abs(xl - yl) > feasibility_tol:
         ans.append(_false)
-    if xl <= yu and yl <= xu:
+    if xl <= yu + feasibility_tol and yl <= xu + feasibility_tol:
         ans.append(_true)
     assert ans
     if len(ans) == 1:
@@ -97,7 +97,7 @@ def eq(xl, xu, yl, yu):
     return tuple(ans)
 
 
-def ranged(xl, xu, yl, yu, zl, zu):
+def ranged(xl, xu, yl, yu, zl, zu, feasibility_tol):
     """Compute the "bounds" on a RangedExpression
 
     Note this is *not* performing interval arithmetic: we are
@@ -106,8 +106,8 @@ def ranged(xl, xu, yl, yu, zl, zu):
     `z` and `z`, `y` can be outside the range `x` and `z`, or both.
 
     """
-    lb = ineq(xl, xu, yl, yu)
-    ub = ineq(yl, yu, zl, zu)
+    lb = ineq(xl, xu, yl, yu, feasibility_tol)
+    ub = ineq(yl, yu, zl, zu, feasibility_tol)
     ans = []
     if not lb[0] or not ub[0]:
         ans.append(_false)
