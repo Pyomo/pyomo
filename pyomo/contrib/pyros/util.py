@@ -1512,7 +1512,10 @@ def setup_working_model(model_data, config, user_var_partitioning):
     working_model.user_model = original_model.clone()
 
     # facilitate later retrieval of the user var partitioning
-    working_temp_util_block = getattr(working_model.user_model, temp_util_block_attr_name)
+    working_temp_util_block = getattr(
+        working_model.user_model,
+        temp_util_block_attr_name,
+    )
     model_data.working_model.uncertain_params = (
         orig_temp_util_block.uncertain_params.copy()
     )
