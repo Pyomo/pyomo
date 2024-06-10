@@ -17,7 +17,7 @@ from collections import namedtuple
 from itertools import count
 import copy
 from enum import Enum, auto
-from pyomo.common.collections import ComponentSet, ComponentMap
+from pyomo.common.collections import Bunch, ComponentMap, ComponentSet
 from pyomo.common.errors import ApplicationError
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.timing import TicTocTimer
@@ -1262,19 +1262,33 @@ def get_var_bounds(var, uncertain_params):
 
 def get_effective_var_partitioning(model_data, config):
     """
-    Establish effective variable partitioning
-    using pretriangularization.
+    Partition the in-scope variables of the input model
+    according to known nonadjustability to the uncertain parameters.
+    The result is referred to as the "effective" variable
+    partitioning.
 
-    TODO:
-    -----
-    - Simplify this to the less extensive algorithm
-      which does not consider
-      implicit fixing of pretriangular variables.
-    - Check all comments, docstrings
-    - Add comprehensive tests
+    In addition to the first-stage variables,
+    some of the variables considered second-stage variables
+    or state variables according to the user-provided variable
+    partitioning may be nonadjustable. This method analyzes
+    the decision rule order, fixed variables, and,
+    through an iterative pretriangularization method,
+    the equality constraints, to identify nonadjustable variables.
+
+    Parameters
+    ----------
+    model_data : model data object
+        Main model data object.
+    config : ConfigDict
+        PyROS solver options.
+
+    Returns
+    -------
+    effective_partitioning : VariablePartitioning
+        Effective variable partitioning.
     """
     working_model = model_data.working_model
-    util_blk = working_model.util
+    user_var_partitioning = model_data.working_model.user_var_partitioning
 
     # truly nonadjustable variables
     nonadjustable_var_set = ComponentSet()
@@ -1282,15 +1296,16 @@ def get_effective_var_partitioning(model_data, config):
     # the following variables are immediately known to be nonadjustable:
     # - first-stage variables
     # - (if decision rule order is 0) second-stage variables
-    # - all variables fixed explicitly by user or implicitly by bounds
+    # - all variables fixed to a constant (independent of the uncertain
+    #   parameters) explicitly by user or implicitly by bounds
     var_type_list_pairs = (
-        ("first-stage", util_blk.first_stage_variables),
-        ("second-stage", util_blk.second_stage_variables),
-        ("state", util_blk.state_vars),
+        ("first-stage", user_var_partitioning.first_stage_variables),
+        ("second-stage", user_var_partitioning.second_stage_variables),
+        ("state", user_var_partitioning.state_variables),
     )
     for vartype, varlist in var_type_list_pairs:
         for wvar in varlist:
-            certain_var_bounds, _ = get_var_bounds(wvar, util_blk.uncertain_params)
+            certain_var_bounds, _ = get_var_bounds(wvar, working_model.uncertain_params)
 
             is_var_nonadjustable = (
                 vartype == "first-stage"
@@ -1323,7 +1338,7 @@ def get_effective_var_partitioning(model_data, config):
                     " the variable is fixed by domain/bounds"
                 )
 
-    uncertain_params_set = ComponentSet(util_blk.uncertain_params)
+    uncertain_params_set = ComponentSet(working_model.uncertain_params)
 
     # determine constraints that are potentially applicable for
     # pretriangularization
@@ -1401,12 +1416,12 @@ def get_effective_var_partitioning(model_data, config):
     effective_first_stage_vars = list(nonadjustable_var_set)
     effective_second_stage_vars = [
         var
-        for var in util_blk.second_stage_variables
+        for var in user_var_partitioning.second_stage_variables
         if var not in nonadjustable_var_set
     ]
     effective_state_vars = [
         var
-        for var in util_blk.state_vars
+        for var in user_var_partitioning.state_variables
         if var not in nonadjustable_var_set
     ]
     num_vars = len(
@@ -1436,6 +1451,131 @@ def get_effective_var_partitioning(model_data, config):
     )
 
 
+def add_effective_var_partitioning(model_data, config):
+    """
+    Obtain a repartitioning of the in-scope variables of the
+    working model according to known adjustability to the
+    uncertain parameters, and add this repartitioning to the
+    working model.
+
+    Parameters
+    ----------
+    model_data : model data object
+        Main model data object.
+    config : ConfigDict
+        PyROS solver options.
+    """
+    effective_partitioning = get_effective_var_partitioning(
+        model_data=model_data,
+        config=config,
+    )
+    model_data.working_model.effective_var_partitioning = (
+        VariablePartitioning(**effective_partitioning._asdict())
+    )
+
+
+def setup_working_model(model_data, config, user_var_partitioning):
+    """
+    Set up (construct) the working model based on user inputs,
+    and add it to the model data object.
+
+    Parameters
+    ----------
+    model_data : model data object
+        Main model data object.
+    config : ConfigDict
+        PyROS solve settings.
+    user_var_partitioning : VariablePartitioning
+        User-based partitioning of the in-scope
+        variables of the input model.
+    """
+    original_model = model_data.original_model
+
+    # add temporary block to help keep track of variables
+    # and uncertain parameters after cloning
+    temp_util_block_attr_name = unique_component_name(
+        original_model, "util"
+    )
+    original_model.add_component(temp_util_block_attr_name, Block())
+    orig_temp_util_block = getattr(original_model, temp_util_block_attr_name)
+    orig_temp_util_block.uncertain_params = config.uncertain_params
+    orig_temp_util_block.user_var_partitioning = VariablePartitioning(
+        **user_var_partitioning._asdict()
+    )
+
+    # now set up working model
+    model_data.working_model = working_model = ConcreteModel()
+
+    # original user model will be a sub-block of working model,
+    # in order to avoid attribute name clashes later
+    working_model.user_model = Block()
+    working_model.user_model = original_model.clone()
+
+    # facilitate later retrieval of the user var partitioning
+    working_temp_util_block = getattr(working_model.user_model, temp_util_block_attr_name)
+    model_data.working_model.uncertain_params = (
+        orig_temp_util_block.uncertain_params.copy()
+    )
+    working_model.user_var_partitioning = VariablePartitioning(
+        **working_temp_util_block.user_var_partitioning._asdict()
+    )
+
+    # we are done with the util blocks
+    delattr(original_model, temp_util_block_attr_name)
+    delattr(working_model.user_model, temp_util_block_attr_name)
+
+
+def new_preprocess_model_data(model_data, config, user_var_partitioning):
+    """
+    Preprocess user inputs to modeling objects from which
+    PyROS subproblems can be efficiently constructed.
+
+    Parameters
+    ----------
+    model_data : model data object
+        Main model data object.
+    config : ConfigDict
+        PyROS solver options.
+    user_var_partitioning : VariablePartitioning
+        User-based partitioning of the in-scope
+        variables of the input model.
+
+    Returns
+    -------
+    bool
+        True if RO problem was found to be robust infeasible,
+        False otherwise.
+    """
+    setup_working_model(model_data, config, user_var_partitioning)
+
+    # extract as many truly nonadjustable variables as possible
+    # from the second-stage and state variables
+    add_effective_var_partitioning(model_data, config)
+
+    # turn variable bounds to constraints.
+    # different treatment for effective first-stage
+    # than for effective second-stage and state variables
+    ...
+
+    # standardize inequality constraints
+    ...
+
+    # standardize equality constraints
+    ...
+
+    # standardize Objective: perform epigraph reformulation
+    ...
+
+    # add DR components
+    ...
+
+    # finalize constraint partitioning, as needed
+    ...
+
+    # perform coefficient matching
+    ...
+
+
 def preprocess_model_data(model_data, config, var_partitioning):
     """
     Preprocess model data.
@@ -1459,10 +1599,6 @@ def preprocess_model_data(model_data, config, var_partitioning):
     src_vars = list(model_data.original_model.component_data_objects(Var))
     setattr(model_data.original_model, cname, src_vars)
     model_data.working_model = model_data.original_model.clone()
-
-    # # extract as many truly nonadjustable variables as possible
-    # # from the second-stage and state variables
-    # get_effective_var_partitioning(model_data, config)
 
     # identify active objective function.
     # (there should only be one at this point)

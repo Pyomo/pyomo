@@ -6953,14 +6953,15 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
             expr=m.x2 + 2 * m.y[2] + m.y[3] + 2 * m.y[4] == 0
         )
 
-        m.util = Block()
-        m.util.first_stage_variables = [m.x1, m.x2]
-        m.util.second_stage_variables = [m.z]
-        m.util.state_vars = list(m.y.values())
-        m.util.uncertain_params = [m.q]
-
         model_data = Bunch()
-        model_data.working_model = m
+        model_data.working_model = ConcreteModel()
+        model_data.working_model.user_model = mdl = m.clone()
+        model_data.working_model.uncertain_params = [mdl.q]
+
+        user_var_partitioning = model_data.working_model.user_var_partitioning = Bunch()
+        user_var_partitioning.first_stage_variables = [mdl.x1, mdl.x2]
+        user_var_partitioning.second_stage_variables = [mdl.z]
+        user_var_partitioning.state_variables = list(mdl.y.values())
 
         return model_data
 
@@ -6970,7 +6971,7 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
         constraints.
         """
         model_data = self.build_simple_test_model_data()
-        m = model_data.working_model
+        m = model_data.working_model.user_model
 
         config = Bunch()
         config.decision_rule_order = 0
@@ -6990,8 +6991,8 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
             for vartype, expected_vars in expected_partitioning.items():
                 actual_vars = getattr(actual_partitioning, vartype)
                 self.assertEqual(
-                    expected_vars,
-                    actual_vars,
+                    ComponentSet(expected_vars),
+                    ComponentSet(actual_vars),
                     msg=(
                         f"Effective {vartype!r} are not as expected "
                         f"for decision rule order {config.decision_rule_order}. "
@@ -7020,8 +7021,8 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
             for vartype, expected_vars in expected_partitioning.items():
                 actual_vars = getattr(actual_partitioning, vartype)
                 self.assertEqual(
-                    expected_vars,
-                    actual_vars,
+                    ComponentSet(expected_vars),
+                    ComponentSet(actual_vars),
                     msg=(
                         f"Effective {vartype!r} are not as expected "
                         f"for decision rule order {config.decision_rule_order}. "
@@ -7050,8 +7051,8 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
             for vartype, expected_vars in expected_partitioning.items():
                 actual_vars = getattr(actual_partitioning, vartype)
                 self.assertEqual(
-                    expected_vars,
-                    actual_vars,
+                    ComponentSet(expected_vars),
+                    ComponentSet(actual_vars),
                     msg=(
                         f"Effective {vartype!r} are not as expected "
                         f"for decision rule order {config.decision_rule_order}. "
@@ -7124,7 +7125,7 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
         Test effective partitioning on modified system of equations.
         """
         model_data = self.build_simple_test_model_data()
-        m = model_data.working_model
+        m = model_data.working_model.user_model
 
         # now the second-stage variable can't be determined uniquely;
         # can't pretriangularize this unless z already known to be
