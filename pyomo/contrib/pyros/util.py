@@ -1275,13 +1275,6 @@ def get_effective_var_partitioning(model_data, config):
     working_model = model_data.working_model
     util_blk = working_model.util
 
-    # variables constrained to a single value:
-    # - explicitly by the user (`fixed=True`),
-    # - implicitly by domains/bounds
-    # - implicitly by equality constraints
-    fixed_var_to_val_map = ComponentMap()
-    fixed_var_set = ComponentSet()
-
     # truly nonadjustable variables
     nonadjustable_var_set = ComponentSet()
 
@@ -1323,19 +1316,11 @@ def get_effective_var_partitioning(model_data, config):
                 config.progress_logger.debug(
                     " the variable is fixed explicitly"
                 )
-                # track fixed variables
-                # and the values to which they are fixed
-                fixed_var_to_val_map[wvar] = value(wvar)
-                fixed_var_set.add(wvar)
 
             if certain_var_bounds.eq is not None:
                 config.progress_logger.debug(
                     " the variable is fixed by domain/bounds"
                 )
-                # to identify as many nonadjustable variables
-                # as possible, we also track variables fixed by bounds
-                fixed_var_to_val_map[wvar] = value(certain_var_bounds.eq)
-                fixed_var_set.add(wvar)
 
     uncertain_params_set = ComponentSet(util_blk.uncertain_params)
 
@@ -1349,67 +1334,6 @@ def get_effective_var_partitioning(model_data, config):
             continue
         certain_eq_cons.add(wcon)
 
-    # identify nonadjustable variables fixed by constraints
-    initial_nonadjustable_fixing_cons = ComponentSet()
-    for cert_con in certain_eq_cons:
-        unfixed_vars_in_con = (
-            ComponentSet(identify_variables(cert_con.body)) - fixed_var_set
-        )
-        adjustable_vars_in_con = (
-            ComponentSet(identify_variables(cert_con.body)) - nonadjustable_var_set
-        )
-        if not adjustable_vars_in_con and len(unfixed_vars_in_con) == 1:
-            nonadj_expr_without_fixed_vars = replace_expressions(
-                expr=cert_con.body - cert_con.upper,
-                substitution_map={
-                    id(var): val for var, val in fixed_var_to_val_map.items()
-                }
-            )
-            nonadj_var_in_expr = next(
-                iter(identify_variables(nonadj_expr_without_fixed_vars))
-            )
-            nonadj_expr_repn = generate_standard_repn(
-                expr=nonadj_expr_without_fixed_vars,
-                compute_values=True,
-                quadratic=False,
-            )
-            num_nonadj_linear_vars = len(nonadj_expr_repn.linear_vars)
-            if not nonadj_expr_repn.nonlinear_vars and num_nonadj_linear_vars == 1:
-                initial_nonadjustable_fixing_cons.add(cert_con)
-
-                # the nonadjustable variable is fixed
-                nonadj_var_fixing_val = (
-                    -nonadj_expr_repn.constant / nonadj_expr_repn.linear_coefs[0]
-                )
-                if nonadj_var_in_expr not in fixed_var_set:
-                    fixed_var_set.add(nonadj_var_in_expr)
-                    fixed_var_to_val_map[nonadj_var_in_expr] = (
-                        nonadj_var_fixing_val
-                    )
-                    config.progress_logger.debug(
-                        f"The nonadjustable variable {nonadj_var_in_expr.name!r} "
-                        f"is fixed to the value {nonadj_var_fixing_val} "
-                        f"by the constraint {cert_con.name!r}"
-                    )
-                else:
-                    nonadj_var_fixing_inconsistent = (
-                        nonadj_var_fixing_val
-                        != fixed_var_to_val_map[nonadj_var_in_expr]
-                    )
-                    if nonadj_var_fixing_inconsistent:
-                        raise ValueError(
-                            "Model constraints are inconsistent: "
-                            f"the nonadjustable variable {nonadj_var_in_expr.name!r}, "
-                            "already fixed (implicitly or explicitly) to the value "
-                            f"{fixed_var_to_val_map[nonadj_var_in_expr]}, "
-                            "has now been restricted to the value "
-                            f"{nonadj_var_fixing_val} "
-                            f"by the constraint {cert_con.name!r}. "
-                        )
-    certain_eq_cons -= initial_nonadjustable_fixing_cons
-
-    pretriangular_fixing_cons = ComponentSet()
-    pretriangular_other_cons = ComponentSet()
     pretriangular_con_var_map = ComponentMap()
     for num_passes in count(1):
         config.progress_logger.debug(
@@ -1421,22 +1345,16 @@ def get_effective_var_partitioning(model_data, config):
             adj_vars_in_con = vars_in_con - nonadjustable_var_set
             if len(adj_vars_in_con) == 1:
                 adj_var_in_con = next(iter(adj_vars_in_con))
-                ccon_expr_without_fixed_vars = replace_expressions(
-                    expr=ccon.body - ccon.upper,
-                    substitution_map={
-                        id(var): val
-                        for var, val in fixed_var_to_val_map.items()
-                    }
-                )
                 ccon_expr_repn = generate_standard_repn(
-                    expr=ccon_expr_without_fixed_vars,
+                    expr=ccon.body - ccon.upper,
                     quadratic=False,
                     compute_values=True,
                 )
-                is_adj_var_linear = (
-                    adj_var_in_con in ComponentSet(ccon_expr_repn.linear_vars)
+                is_pretriangular_pair = (
+                    adj_var_in_con not in ComponentSet(ccon_expr_repn.nonlinear_vars)
+                    and adj_var_in_con in ComponentSet(ccon_expr_repn.linear_vars)
                 )
-                if not ccon_expr_repn.nonlinear_vars and is_adj_var_linear:
+                if is_pretriangular_pair:
                     new_pretriangular_con_var_map[ccon] = adj_var_in_con
                     config.progress_logger.debug(
                         f" The variable {adj_var_in_con.name!r} is "
@@ -1444,63 +1362,17 @@ def get_effective_var_partitioning(model_data, config):
                         f"{ccon.name!r}."
                     )
 
-        pretriangular_other_cons.update(new_pretriangular_con_var_map.keys())
         nonadjustable_var_set.update(new_pretriangular_con_var_map.values())
         pretriangular_con_var_map.update(new_pretriangular_con_var_map)
-
-        new_pretriangular_fixing_cons = ComponentSet()
-        for precon, prevar in pretriangular_con_var_map.items():
-            precon_expr_without_fixed_vars = replace_expressions(
-                expr=precon.body - precon.upper,
-                substitution_map={
-                    id(var): val
-                    for var, val in fixed_var_to_val_map.items()
-                    if var is not prevar
-                },
+        if not new_pretriangular_con_var_map:
+            config.progress_logger.debug(
+                "No new pretriangular constraint/variable pairs found. "
+                "Terminating pretriangularization loop."
             )
-            precon_expr_repn = generate_standard_repn(
-                expr=precon_expr_without_fixed_vars,
-                quadratic=False,
-                compute_values=True,
-            )
-
-            assert precon_expr_repn.linear_vars
-            is_fixing_con = (
-                not precon_expr_repn.nonlinear_vars
-                and len(precon_expr_repn.linear_vars) == 1
-            )
-            if is_fixing_con:
-                assert precon_expr_repn.linear_vars[0] is prevar
-                prevar_fixing_val = (
-                    - precon_expr_repn.constant / precon_expr_repn.linear_coefs[0]
-                )
-                if prevar not in fixed_var_set:
-                    fixed_var_set.add(prevar)
-                    fixed_var_to_val_map[prevar] = prevar_fixing_val
-                    new_pretriangular_fixing_cons.add(precon)
-                    pretriangular_other_cons.remove(precon)
-                    pretriangular_fixing_cons.add(precon)
-                    config.progress_logger.debug(
-                        f" The pretriangular variable {prevar.name!r} "
-                        f"is fixed to the value {prevar_fixing_val} "
-                        f"by the constraint {precon.name!r}."
-                    )
-                else:
-                    if prevar_fixing_val != fixed_var_to_val_map[prevar]:
-                        raise ValueError(
-                            "Model constraints are inconsistent: "
-                            f"the pretriangular variable {prevar.name!r}, "
-                            "already fixed (implicitly or explicitly) to the value "
-                            f"{fixed_var_to_val_map[prevar]}, "
-                            "has now been restricted to the value "
-                            f"{prevar_fixing_val} "
-                            f"by the constraint {precon.name!r}."
-                        )
-
-        certain_eq_cons -= ComponentSet(new_pretriangular_con_var_map.keys())
-        new_pretriangular_cons = ComponentSet(new_pretriangular_con_var_map.keys())
-        if not new_pretriangular_cons | new_pretriangular_fixing_cons:
             break
+
+        for pcon in new_pretriangular_con_var_map:
+            certain_eq_cons.remove(pcon)
 
     pretriangular_vars = ComponentSet(pretriangular_con_var_map.values())
     config.progress_logger.debug(

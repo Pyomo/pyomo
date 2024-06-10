@@ -7001,9 +7001,13 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
                     ),
                 )
 
-        # introducing this simple nonlinearity shouldn't affect the
-        # result; c3 still pretriangular and can determine y[2]
-        # since y[1] implicitly fixed
+        # introducing this simple nonlinearity prevents
+        # y[2] from being identified as pretriangular
+        expected_partitioning = {
+            "first_stage_variables": [m.x1, m.x2, m.z, m.y[1]],
+            "second_stage_variables": [],
+            "state_variables": [m.y[2], m.y[3], m.y[4]],
+        }
         m.c3.set_value(m.x1 ** 3 + m.y[1] + 2 * m.y[1] * m.y[2] == 0)
         for dr_order in [0, 1, 2]:
             config.decision_rule_order = dr_order
@@ -7026,11 +7030,13 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
                     ),
                 )
 
-        # with this change, c3 now can't be used to determine y[2]
-        # since the quadratic term vanishes due to fixing propagation
-        m.x1.bounds = (1, 1)
-        expected_partitioning["first_stage_variables"].pop(-1)
-        expected_partitioning["state_variables"].insert(0, m.y[2])
+        # fixing y[2] should make y[2] nonadjustable regardless
+        m.y[2].fix(10)
+        expected_partitioning = {
+            "first_stage_variables": [m.x1, m.x2, m.z, m.y[1], m.y[2]],
+            "second_stage_variables": [],
+            "state_variables": [m.y[3], m.y[4]],
+        }
         for dr_order in [0, 1, 2]:
             config.decision_rule_order = dr_order
             actual_partitioning = get_effective_var_partitioning(
@@ -7051,18 +7057,6 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
                         f"Actual: {[var.name for var in actual_vars]}"
                     ),
                 )
-
-        # this change makes the system inconsistent, so
-        # exception should be raised
-        m.c2_dupl.set_value(m.x1 ** 2 + m.z + m.y[1] == 1)
-        for dr_order in [0, 1, 2]:
-            config.decision_rule_order = dr_order
-            expected_regex = (
-                r"Model constraints are inconsistent: "
-                r"the pretriangular variable 'y\[1\]'.*"
-            )
-            with self.assertRaisesRegex(ValueError, expected_regex):
-                get_effective_var_partitioning(model_data, config)
 
     def test_effective_partitioning_modified_linear_system(self):
         """
@@ -7105,29 +7099,30 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
             )
 
         config.decision_rule_order = 1
-        expected_partitioning_affine_dr = {
+        expected_partitioning_nonstatic_dr = {
             "first_stage_variables": [m.x1, m.x2],
             "second_stage_variables": [m.z],
             "state_variables": list(m.y.values()),
         }
-        actual_partitioning_affine_dr = get_effective_var_partitioning(
-            model_data=model_data,
-            config=config,
-        )
-        for vartype, expected_vars in expected_partitioning_affine_dr.items():
-            actual_vars = getattr(actual_partitioning_affine_dr, vartype)
-            self.assertEqual(
-                ComponentSet(expected_vars),
-                ComponentSet(actual_vars),
-                msg=(
-                    f"Effective {vartype!r} are not as expected "
-                    f"for decision rule order {config.decision_rule_order}. "
-                    "\n"
-                    f"Expected: {[var.name for var in expected_vars]}"
-                    "\n"
-                    f"Actual: {[var.name for var in actual_vars]}"
-                ),
+        for dr_order in [1, 2]:
+            actual_partitioning_nonstatic_dr = get_effective_var_partitioning(
+                model_data=model_data,
+                config=config,
             )
+            for vartype, expected_vars in expected_partitioning_nonstatic_dr.items():
+                actual_vars = getattr(actual_partitioning_nonstatic_dr, vartype)
+                self.assertEqual(
+                    ComponentSet(expected_vars),
+                    ComponentSet(actual_vars),
+                    msg=(
+                        f"Effective {vartype!r} are not as expected "
+                        f"for decision rule order {config.decision_rule_order}. "
+                        "\n"
+                        f"Expected: {[var.name for var in expected_vars]}"
+                        "\n"
+                        f"Actual: {[var.name for var in actual_vars]}"
+                    ),
+                )
 
 
 if __name__ == "__main__":
