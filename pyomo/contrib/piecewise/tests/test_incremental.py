@@ -34,6 +34,8 @@ from pyomo.contrib.piecewise import PiecewiseLinearFunction
 
 class TestTransformPiecewiseModelToIncrementalMIP(unittest.TestCase):
 
+    @unittest.skipUnless(SolverFactory('gurobi').available(), 'Gurobi is not available')
+    @unittest.skipUnless(SolverFactory('gurobi').license_is_valid(), 'No license')
     def test_solve_log_model(self):
         m = make_log_x_model_ordered()
         TransformationFactory('contrib.piecewise.incremental').apply_to(m)
