@@ -7001,6 +7001,66 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
                     ),
                 )
 
+        # linear coefficient below tolerance;
+        # that should prevent pretriangularization
+        m.c2.set_value(m.x1 ** 2 + m.z + 1e-10 * m.y[1] == 0)
+        m.c2_dupl.set_value(m.x1 ** 2 + m.z + 1e-10 * m.y[1] == 0)
+        expected_partitioning = {
+            "first_stage_variables": [m.x1, m.x2, m.z],
+            "second_stage_variables": [],
+            "state_variables": list(m.y.values()),
+        }
+        for dr_order in [0, 1, 2]:
+            config.decision_rule_order = dr_order
+            actual_partitioning = get_effective_var_partitioning(
+                model_data=model_data,
+                config=config,
+            )
+            for vartype, expected_vars in expected_partitioning.items():
+                actual_vars = getattr(actual_partitioning, vartype)
+                self.assertEqual(
+                    expected_vars,
+                    actual_vars,
+                    msg=(
+                        f"Effective {vartype!r} are not as expected "
+                        f"for decision rule order {config.decision_rule_order}. "
+                        "\n"
+                        f"Expected: {[var.name for var in expected_vars]}"
+                        "\n"
+                        f"Actual: {[var.name for var in actual_vars]}"
+                    ),
+                )
+
+        # put linear coefs above tolerance again:
+        # original behavior expected
+        m.c2.set_value(1e-6 * m.y[1] + m.x1 ** 2 + m.z + 1e-10 * m.y[1] == 0)
+        m.c2_dupl.set_value(1e-6 * m.y[1] + m.x1 ** 2 + m.z + 1e-10 * m.y[1] == 0)
+        expected_partitioning = {
+            "first_stage_variables": [m.x1, m.x2, m.z, m.y[1], m.y[2]],
+            "second_stage_variables": [],
+            "state_variables": [m.y[3], m.y[4]],
+        }
+        for dr_order in [0, 1, 2]:
+            config.decision_rule_order = dr_order
+            actual_partitioning = get_effective_var_partitioning(
+                model_data=model_data,
+                config=config,
+            )
+            for vartype, expected_vars in expected_partitioning.items():
+                actual_vars = getattr(actual_partitioning, vartype)
+                self.assertEqual(
+                    expected_vars,
+                    actual_vars,
+                    msg=(
+                        f"Effective {vartype!r} are not as expected "
+                        f"for decision rule order {config.decision_rule_order}. "
+                        "\n"
+                        f"Expected: {[var.name for var in expected_vars]}"
+                        "\n"
+                        f"Actual: {[var.name for var in actual_vars]}"
+                    ),
+                )
+
         # introducing this simple nonlinearity prevents
         # y[2] from being identified as pretriangular
         expected_partitioning = {

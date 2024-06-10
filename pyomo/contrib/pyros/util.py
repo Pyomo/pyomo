@@ -67,6 +67,7 @@ PARAM_IS_CERTAIN_ABS_TOL = 0
 COEFF_MATCH_REL_TOL = 1e-6
 COEFF_MATCH_ABS_TOL = 0
 ABS_CON_CHECK_FEAS_TOL = 1e-5
+PRETRIANGULAR_VAR_COEFF_TOL = 1e-6
 TIC_TOC_SOLVE_TIME_ATTR = "pyros_tic_toc_time"
 DEFAULT_LOGGER_NAME = "pyomo.contrib.pyros"
 
@@ -1343,6 +1344,13 @@ def get_effective_var_partitioning(model_data, config):
         for ccon in certain_eq_cons:
             vars_in_con = ComponentSet(identify_variables(ccon.body - ccon.upper))
             adj_vars_in_con = vars_in_con - nonadjustable_var_set
+
+            # conditions for pretriangularization of constraint
+            # with no uncertain params:
+            # - only one nonadjustable variable in the constraint
+            # - the nonadjustable variable appears only linearly,
+            #   and the linear coefficient exceeds our specified
+            #   tolerance.
             if len(adj_vars_in_con) == 1:
                 adj_var_in_con = next(iter(adj_vars_in_con))
                 ccon_expr_repn = generate_standard_repn(
@@ -1350,17 +1358,26 @@ def get_effective_var_partitioning(model_data, config):
                     quadratic=False,
                     compute_values=True,
                 )
-                is_pretriangular_pair = (
+                adj_var_appears_linearly = (
                     adj_var_in_con not in ComponentSet(ccon_expr_repn.nonlinear_vars)
                     and adj_var_in_con in ComponentSet(ccon_expr_repn.linear_vars)
                 )
-                if is_pretriangular_pair:
-                    new_pretriangular_con_var_map[ccon] = adj_var_in_con
-                    config.progress_logger.debug(
-                        f" The variable {adj_var_in_con.name!r} is "
-                        "made nonadjustable by the pretriangular constraint "
-                        f"{ccon.name!r}."
+                if adj_var_appears_linearly:
+                    # get coefficient by summation just in case
+                    # standard repn does not simplify completely
+                    var_linear_coeff = sum(
+                        lcoeff
+                        for lvar, lcoeff
+                        in zip(ccon_expr_repn.linear_vars, ccon_expr_repn.linear_coefs)
+                        if lvar is adj_var_in_con
                     )
+                    if var_linear_coeff > PRETRIANGULAR_VAR_COEFF_TOL:
+                        new_pretriangular_con_var_map[ccon] = adj_var_in_con
+                        config.progress_logger.debug(
+                            f" The variable {adj_var_in_con.name!r} is "
+                            "made nonadjustable by the pretriangular constraint "
+                            f"{ccon.name!r}."
+                        )
 
         nonadjustable_var_set.update(new_pretriangular_con_var_map.values())
         pretriangular_con_var_map.update(new_pretriangular_con_var_map)
