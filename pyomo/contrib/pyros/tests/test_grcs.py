@@ -18,7 +18,8 @@ import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.config import ConfigBlock, ConfigValue
-from pyomo.core.base.set_types import NonNegativeIntegers
+from pyomo.core.base.set_types import NonNegativeIntegers, NonNegativeReals
+from pyomo.core.base.set import RangeSet
 from pyomo.core.base.var import VarData
 from pyomo.core.expr import (
     identify_variables,
@@ -7181,6 +7182,89 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
                         f"Expected: {[var.name for var in expected_vars]}"
                         "\n"
                         f"Actual: {[var.name for var in actual_vars]}"
+                    ),
+                )
+
+
+class TestResolveVarBounds(unittest.TestCase):
+    """
+    Tests for resolution of variable bounds.
+    """
+    def test_resolve_var_bounds(self):
+        """
+        Test resolve variable bounds.
+        """
+        m = ConcreteModel()
+        m.q1 = Param(initialize=1, mutable=True)
+        m.q2 = Param(initialize=1, mutable=True)
+        m.p1 = Param(initialize=5, mutable=True)
+        m.p2 = Param(initialize=0, mutable=True)
+        m.z1 = Var(bounds=(0, 1))
+        m.z2 = Var(bounds=(1, 1))
+        m.z3 = Var(domain=NonNegativeReals, bounds=(2, 4))
+        m.z4 = Var(domain=NonNegativeReals, bounds=(m.q1, 0))
+        m.z5 = Var(domain=RangeSet(2, 4, 0), bounds=(4, 6))
+        m.z6 = Var(domain=NonNegativeReals, bounds=(m.q1, m.q1))
+        m.z7 = Var(domain=NonNegativeReals, bounds=(m.q1, 1 * m.q1))
+        m.z8 = Var(domain=RangeSet(0, 5), bounds=[m.q1, m.q2])
+        m.z9 = Var(domain=RangeSet(0, 5), bounds=[m.q1, m.p1])
+        m.z10 = Var(domain=RangeSet(0, 5), bounds=[m.q1, m.p2])
+
+        from pyomo.contrib.pyros.util import get_var_bounds
+
+        expected_bounds = (
+            (m.z1, (0, None, 1), (None, None, None)),
+            (m.z2, (None, 1, None), (None, None, None)),
+            (m.z3, (2, None, 4), (None, None, None)),
+            (m.z4, (None, 0, None), (m.q1, None, None)),
+            (m.z5, (None, 4, None), (None, None, None)),
+            (m.z6, (0, None, None), (None, m.q1, None)),
+            # the 1 * q expression is simplified to just q
+            # when variable bounds are specified
+            (m.z7, (0, None, None), (None, m.q1, None)),
+            (m.z8, (0, None, 5), (m.q1, None, m.q2)),
+            (m.z9, (0, None, m.p1), (m.q1, None, None)),
+            (m.z10, (0, None, m.p2), (m.q1, None, None)),
+        )
+        for var, exp_cert_bounds, exp_uncert_bounds in expected_bounds:
+            actual_cert_bounds, actual_uncert_bounds = get_var_bounds(
+                var, [m.q1, m.q2]
+            )
+            for btype, exp_bound in zip(("lower", "eq", "upper"), exp_cert_bounds):
+                actual_bound = getattr(actual_cert_bounds, btype)
+                self.assertIs(
+                    exp_bound,
+                    actual_bound,
+                    msg=(
+                        f"Resolved certain {btype} bound for variable "
+                        f"{var.name!r} is not as expected. "
+                        "\n Expected certain bounds: "
+                        f"lower={str(exp_cert_bounds[0])}, "
+                        f"eq={str(exp_cert_bounds[1])}, "
+                        f"upper={str(exp_cert_bounds[2])} "
+                        "\n Actual certain bounds: "
+                        f"lower={str(actual_cert_bounds.lower)}, "
+                        f"eq={str(actual_cert_bounds.eq)}, "
+                        f"upper={str(actual_cert_bounds.upper)} "
+                    ),
+                )
+
+            for btype, exp_bound in zip(("lower", "eq", "upper"), exp_uncert_bounds):
+                actual_bound = getattr(actual_uncert_bounds, btype)
+                self.assertIs(
+                    exp_bound,
+                    actual_bound,
+                    msg=(
+                        f"Resolved uncertain {btype} bound for variable "
+                        f"{var.name!r} is not as expected. "
+                        "\n Expected certain bounds: "
+                        f"lower={str(exp_uncert_bounds[0])}, "
+                        f"eq={str(exp_uncert_bounds[1])}, "
+                        f"upper={str(exp_uncert_bounds[2])} "
+                        "\n Actual uncertain bounds: "
+                        f"lower={str(actual_uncert_bounds.lower)}, "
+                        f"eq={str(actual_uncert_bounds.eq)}, "
+                        f"upper={str(actual_uncert_bounds.upper)} "
                     ),
                 )
 
