@@ -1308,7 +1308,7 @@ def get_effective_var_partitioning(model_data, config):
                 nonadjustable_var_set.add(wvar)
                 config.progress_logger.debug(
                     f"The {vartype} variable {wvar.name!r} "
-                    "is nonadjustable, for the following reasons:"
+                    "is nonadjustable, for the following reason(s):"
                 )
 
             if vartype == "first-stage":
