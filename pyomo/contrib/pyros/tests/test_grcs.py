@@ -7206,11 +7206,17 @@ class TestResolveVarBounds(unittest.TestCase):
         m.z5 = Var(domain=RangeSet(2, 4, 0), bounds=(4, 6))
         m.z6 = Var(domain=NonNegativeReals, bounds=(m.q1, m.q1))
         m.z7 = Var(domain=NonNegativeReals, bounds=(m.q1, 1 * m.q1))
-        m.z8 = Var(domain=RangeSet(0, 5), bounds=[m.q1, m.q2])
-        m.z9 = Var(domain=RangeSet(0, 5), bounds=[m.q1, m.p1])
-        m.z10 = Var(domain=RangeSet(0, 5), bounds=[m.q1, m.p2])
+        m.z8 = Var(domain=RangeSet(0, 5, 0), bounds=[m.q1, m.q2])
+        m.z9 = Var(domain=RangeSet(0, 5, 0), bounds=[m.q1, m.p1])
+        m.z10 = Var(domain=RangeSet(0, 5, 0), bounds=[m.q1, m.p2])
 
         from pyomo.contrib.pyros.util import get_var_bounds
+
+        # useful for checking domains later
+        original_var_domains = ComponentMap((
+            (var, var.domain) for var in
+            (m.z1, m.z2, m.z3, m.z4, m.z5, m.z6, m.z7, m.z8, m.z9, m.z10)
+        ))
 
         expected_bounds = (
             (m.z1, (0, None, 1), (None, None, None)),
@@ -7267,6 +7273,18 @@ class TestResolveVarBounds(unittest.TestCase):
                         f"upper={str(actual_uncert_bounds.upper)} "
                     ),
                 )
+
+        # the bounds resolution method should leave domains unaltered
+        for var, orig_domain in original_var_domains.items():
+            self.assertIs(
+                var.domain,
+                orig_domain,
+                msg=(
+                    f"Domain for var {var.name!r} appears to have been changed "
+                    f"from {orig_domain} to {var.domain} "
+                    f"by the bounds resolution method {get_var_bounds.__name__!r}."
+                )
+            )
 
 
 if __name__ == "__main__":
