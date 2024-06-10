@@ -7257,7 +7257,7 @@ class TestResolveVarBounds(unittest.TestCase):
                     msg=(
                         f"Resolved uncertain {btype} bound for variable "
                         f"{var.name!r} is not as expected. "
-                        "\n Expected certain bounds: "
+                        "\n Expected uncertain bounds: "
                         f"lower={str(exp_uncert_bounds[0])}, "
                         f"eq={str(exp_uncert_bounds[1])}, "
                         f"upper={str(exp_uncert_bounds[2])} "
