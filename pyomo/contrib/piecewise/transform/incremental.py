@@ -113,7 +113,7 @@ class IncrementalMIPTransformation(PiecewiseLinearTransformationBase):
         transBlock.substitute_var.setlb(substitute_var_lb)
         transBlock.substitute_var.setub(substitute_var_ub)
 
-        # Inital vertex (v_0^0 in Vielma)
+        # Initial vertex (v_0^0 in Vielma)
         initial_vertex = pw_linear_func._points[simplices[0][0]]
 
         # delta_i^j = delta[simplex][point]

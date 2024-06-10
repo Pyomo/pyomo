@@ -79,9 +79,9 @@ def _process_points_j1(points, dimension):
     return points_map, num_pts
 
 
-# This implements the J1 "Union Jack" triangulation (Todd 77) as explained by
-# Vielma 2010.
-# Triangulate {0, ..., K}^n for even K using the J1 triangulation, mapping the
+# Implement the J1 "Union Jack" triangulation (Todd 77) as explained by
+# Vielma 2010, with no ordering guarantees imposed. This function triangulates
+# {0, ..., K}^n for even K using the J1 triangulation, mapping the
 # obtained simplices through the points_map for a slight generalization.
 def _get_j1_triangulation(points_map, K, n):
     if K % 2 != 0:
@@ -109,10 +109,10 @@ def _get_j1_triangulation(points_map, K, n):
     return ret
 
 
-# Implement proof-by-picture from Todd 1977. I do the reverse order he does
-# and also keep the pictures slightly more regular to make things easier to
-# implement. Also remember that Todd's drawing is misleading to the point of
-# almost being wrong so make sure you draw it properly first.
+# Implement something similar to proof-by-picture from Todd 77 (Figure 1).
+# However, that drawing is misleading at best so I do it in a working way, and
+# also slightly more regularly. I also go from the outside in instead of from
+# the inside out, to make things easier to implement.
 def _get_ordered_j1_triangulation_2d(points_map, num_pts):
     # check when square has simplices in top-left and bottom-right
     square_parity_tlbr = lambda x, y: x % 2 == y % 2
@@ -230,7 +230,6 @@ def _get_ordered_j1_triangulation_2d(points_map, num_pts):
                 if is_turnaround(x, y):
                     # we are always in a TLBR square. Take the TL of this, the TR
                     # of the one on the left, and continue upwards one to the left
-                    assert square_parity_tlbr(x, y), "uh oh"
                     add_top_left()
                     x -= 1
                     add_top_right()
@@ -263,7 +262,6 @@ def _get_ordered_j1_triangulation_2d(points_map, num_pts):
                 if is_turnaround(x, y):
                     # we are always in a non-TLBR square. Take the BL of this, the BR
                     # of the one on the left, and continue downwards one to the left
-                    assert not square_parity_tlbr(x, y), "uh oh"
                     add_bottom_left()
                     x -= 1
                     add_bottom_right()
@@ -487,11 +485,11 @@ def fix_vertices_incremental_order(simplices):
         simplices[i] = new_simplex
 
 
-# G_n is the graph on n! vertices where the vertices are permutations in S_n and
-# two vertices are adjacent if they are related by swapping the values of
-# pi(i - 1) and pi(i) for some i in {2, ..., n}.
+# Let G_n be the graph on n! vertices where the vertices are permutations in
+# S_n and  two vertices are adjacent if they are related by swapping the values
+# of pi(i - 1) and pi(i) for some i in {2, ..., n}.
 #
-# This function gets a hamiltonian path through G_n, starting from a fixed
+# This function gets a Hamiltonian path through G_n, starting from a fixed
 # starting permutation, such that a fixed target symbol is either the image
 # rho(1), or it is rho(n), depending on whether first or last is requested,
 # where rho is the final permutation.
@@ -524,8 +522,8 @@ def get_Gn_hamiltonian(n, start_permutation, target_symbol, last):
 # Assume the starting permutation is (1, ..., n) and the target symbol needs to
 # be in the first position of the last permutation
 def _get_Gn_hamiltonian(n, target_symbol):
-    # base case: proof by picture from Todd, Figure 2
-    # note: Figure 2 contains an error, like half the figures and paragraphs do
+    # base case: proof by picture from Todd 77, Figure 2
+    # note: Figure 2 contains an error, careful!
     if n == 4:
         if target_symbol == 1:
             return [
@@ -638,8 +636,7 @@ def _get_Gn_hamiltonian(n, target_symbol):
         # unreachable
     else:
         # recursive case
-        if target_symbol < n:  # non-awful case
-            # Well, it's still pretty awful.
+        if target_symbol < n:  # Less awful case
             idx = n - 1
             facing = -1
             ret = []
