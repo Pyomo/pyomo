@@ -37,6 +37,7 @@ from pyomo.contrib.pyros.util import (
     coefficient_matching,
     TimingData,
     IterationLogRecord,
+    get_effective_var_partitioning,
 )
 from pyomo.contrib.pyros.util import replace_uncertain_bounds_with_constraints
 from pyomo.contrib.pyros.util import get_vars_from_component
@@ -6918,6 +6919,214 @@ class TestPyROSSolverAdvancedValidation(unittest.TestCase):
                 global_solver=global_solver,
                 bypass_local_separation=True,
                 bypass_global_separation=True,
+            )
+
+
+class TestEffectiveVarPartitioning(unittest.TestCase):
+    """
+    Test method(s) for identification of nonadjustable variables
+    which are not necessarily in the user-provided sequence of
+    first-stage variables.
+    """
+
+    def build_simple_test_model_data(self):
+        """
+        Build simple model for effective variable partitioning tests.
+        """
+        m = ConcreteModel()
+        m.x1 = Var(bounds=(2, 2))
+        m.x2 = Var()
+        m.z = Var()
+        m.y = Var(range(1, 5))
+        m.q = Param(mutable=True, initialize=1)
+
+        m.c0 = Constraint(expr=m.q + m.x1 + m.z == 0)
+        m.c1 = Constraint(expr=(0, m.x1 + m.z, 0))
+        m.c2 = Constraint(expr=m.x1 ** 2 + m.z + m.y[1] == 0)
+        m.c2_dupl = Constraint(expr=m.x1 ** 2 + m.z + m.y[1] == 0)
+        m.c3 = Constraint(expr=m.x1 ** 3 + m.y[1] + 2 * m.y[2] == 0)
+        m.c4 = Constraint(
+            expr=m.x2 ** 2 + m.y[1] + m.y[2] + m.y[3] + m.y[4] == 0
+        )
+        m.c5 = Constraint(
+            expr=m.x2 + 2 * m.y[2] + m.y[3] + 2 * m.y[4] == 0
+        )
+
+        m.util = Block()
+        m.util.first_stage_variables = [m.x1, m.x2]
+        m.util.second_stage_variables = [m.z]
+        m.util.state_vars = list(m.y.values())
+        m.util.uncertain_params = [m.q]
+
+        model_data = Bunch()
+        model_data.working_model = m
+
+        return model_data
+
+    def test_effective_partitioning_system(self):
+        """
+        Test effective partitioning on an example system of
+        constraints.
+        """
+        model_data = self.build_simple_test_model_data()
+        m = model_data.working_model
+
+        config = Bunch()
+        config.decision_rule_order = 0
+        config.progress_logger = logger
+
+        expected_partitioning = {
+            "first_stage_variables": [m.x1, m.x2, m.z, m.y[1], m.y[2]],
+            "second_stage_variables": [],
+            "state_variables": [m.y[3], m.y[4]],
+        }
+        for dr_order in [0, 1, 2]:
+            config.decision_rule_order = dr_order
+            actual_partitioning = get_effective_var_partitioning(
+                model_data=model_data,
+                config=config,
+            )
+            for vartype, expected_vars in expected_partitioning.items():
+                actual_vars = getattr(actual_partitioning, vartype)
+                self.assertEqual(
+                    expected_vars,
+                    actual_vars,
+                    msg=(
+                        f"Effective {vartype!r} are not as expected "
+                        f"for decision rule order {config.decision_rule_order}. "
+                        "\n"
+                        f"Expected: {[var.name for var in expected_vars]}"
+                        "\n"
+                        f"Actual: {[var.name for var in actual_vars]}"
+                    ),
+                )
+
+        # introducing this simple nonlinearity shouldn't affect the
+        # result; c3 still pretriangular and can determine y[2]
+        # since y[1] implicitly fixed
+        m.c3.set_value(m.x1 ** 3 + m.y[1] + 2 * m.y[1] * m.y[2] == 0)
+        for dr_order in [0, 1, 2]:
+            config.decision_rule_order = dr_order
+            actual_partitioning = get_effective_var_partitioning(
+                model_data=model_data,
+                config=config,
+            )
+            for vartype, expected_vars in expected_partitioning.items():
+                actual_vars = getattr(actual_partitioning, vartype)
+                self.assertEqual(
+                    ComponentSet(expected_vars),
+                    ComponentSet(actual_vars),
+                    msg=(
+                        f"Effective {vartype!r} are not as expected "
+                        f"for decision rule order {config.decision_rule_order}. "
+                        "\n"
+                        f"Expected: {[var.name for var in expected_vars]}"
+                        "\n"
+                        f"Actual: {[var.name for var in actual_vars]}"
+                    ),
+                )
+
+        # with this change, c3 now can't be used to determine y[2]
+        # since the quadratic term vanishes due to fixing propagation
+        m.x1.bounds = (1, 1)
+        expected_partitioning["first_stage_variables"].pop(-1)
+        expected_partitioning["state_variables"].insert(0, m.y[2])
+        for dr_order in [0, 1, 2]:
+            config.decision_rule_order = dr_order
+            actual_partitioning = get_effective_var_partitioning(
+                model_data=model_data,
+                config=config,
+            )
+            for vartype, expected_vars in expected_partitioning.items():
+                actual_vars = getattr(actual_partitioning, vartype)
+                self.assertEqual(
+                    ComponentSet(expected_vars),
+                    ComponentSet(actual_vars),
+                    msg=(
+                        f"Effective {vartype!r} are not as expected "
+                        f"for decision rule order {config.decision_rule_order}. "
+                        "\n"
+                        f"Expected: {[var.name for var in expected_vars]}"
+                        "\n"
+                        f"Actual: {[var.name for var in actual_vars]}"
+                    ),
+                )
+
+        # this change makes the system inconsistent, so
+        # exception should be raised
+        m.c2_dupl.set_value(m.x1 ** 2 + m.z + m.y[1] == 1)
+        for dr_order in [0, 1, 2]:
+            config.decision_rule_order = dr_order
+            expected_regex = (
+                r"Model constraints are inconsistent: "
+                r"the pretriangular variable 'y\[1\]'.*"
+            )
+            with self.assertRaisesRegex(ValueError, expected_regex):
+                get_effective_var_partitioning(model_data, config)
+
+    def test_effective_partitioning_modified_linear_system(self):
+        """
+        Test effective partitioning on modified system of equations.
+        """
+        model_data = self.build_simple_test_model_data()
+        m = model_data.working_model
+
+        # now the second-stage variable can't be determined uniquely;
+        # can't pretriangularize this unless z already known to be
+        # nonadjustable
+        m.c1.set_value((0, m.x1 + m.z ** 2, 0))
+
+        config = Bunch()
+        config.decision_rule_order = 0
+        config.progress_logger = logger
+
+        expected_partitioning_static_dr = {
+            "first_stage_variables": [m.x1, m.x2, m.z, m.y[1], m.y[2]],
+            "second_stage_variables": [],
+            "state_variables": [m.y[3], m.y[4]],
+        }
+        actual_partitioning_static_dr = get_effective_var_partitioning(
+            model_data=model_data,
+            config=config,
+        )
+        for vartype, expected_vars in expected_partitioning_static_dr.items():
+            actual_vars = getattr(actual_partitioning_static_dr, vartype)
+            self.assertEqual(
+                ComponentSet(expected_vars),
+                ComponentSet(actual_vars),
+                msg=(
+                    f"Effective {vartype!r} are not as expected "
+                    f"for decision rule order {config.decision_rule_order}. "
+                    "\n"
+                    f"Expected: {[var.name for var in expected_vars]}"
+                    "\n"
+                    f"Actual: {[var.name for var in actual_vars]}"
+                ),
+            )
+
+        config.decision_rule_order = 1
+        expected_partitioning_affine_dr = {
+            "first_stage_variables": [m.x1, m.x2],
+            "second_stage_variables": [m.z],
+            "state_variables": list(m.y.values()),
+        }
+        actual_partitioning_affine_dr = get_effective_var_partitioning(
+            model_data=model_data,
+            config=config,
+        )
+        for vartype, expected_vars in expected_partitioning_affine_dr.items():
+            actual_vars = getattr(actual_partitioning_affine_dr, vartype)
+            self.assertEqual(
+                ComponentSet(expected_vars),
+                ComponentSet(actual_vars),
+                msg=(
+                    f"Effective {vartype!r} are not as expected "
+                    f"for decision rule order {config.decision_rule_order}. "
+                    "\n"
+                    f"Expected: {[var.name for var in expected_vars]}"
+                    "\n"
+                    f"Actual: {[var.name for var in actual_vars]}"
+                ),
             )
 
 
