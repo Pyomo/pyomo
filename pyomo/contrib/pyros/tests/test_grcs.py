@@ -39,6 +39,7 @@ from pyomo.contrib.pyros.util import (
     TimingData,
     IterationLogRecord,
     get_effective_var_partitioning,
+    get_var_certain_uncertain_bounds
 )
 from pyomo.contrib.pyros.util import replace_uncertain_bounds_with_constraints
 from pyomo.contrib.pyros.util import get_vars_from_component
@@ -7211,8 +7212,6 @@ class TestResolveVarBounds(unittest.TestCase):
         m.z9 = Var(domain=RangeSet(0, 5, 0), bounds=[m.q1, m.p1])
         m.z10 = Var(domain=RangeSet(0, 5, 0), bounds=[m.q1, m.p2])
 
-        from pyomo.contrib.pyros.util import get_var_bounds
-
         # useful for checking domains later
         original_var_domains = ComponentMap((
             (var, var.domain) for var in
@@ -7234,7 +7233,7 @@ class TestResolveVarBounds(unittest.TestCase):
             (m.z10, (0, None, m.p2), (m.q1, None, None)),
         )
         for var, exp_cert_bounds, exp_uncert_bounds in expected_bounds:
-            actual_cert_bounds, actual_uncert_bounds = get_var_bounds(
+            actual_cert_bounds, actual_uncert_bounds = get_var_certain_uncertain_bounds(
                 var, [m.q1, m.q2]
             )
             for btype, exp_bound in zip(("lower", "eq", "upper"), exp_cert_bounds):
@@ -7283,7 +7282,8 @@ class TestResolveVarBounds(unittest.TestCase):
                 msg=(
                     f"Domain for var {var.name!r} appears to have been changed "
                     f"from {orig_domain} to {var.domain} "
-                    f"by the bounds resolution method {get_var_bounds.__name__!r}."
+                    "by the bounds resolution method "
+                    f"{get_var_certain_uncertain_bounds.__name__!r}."
                 )
             )
 

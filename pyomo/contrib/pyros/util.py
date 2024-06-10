@@ -1153,20 +1153,73 @@ def validate_pyros_inputs(model, config):
     return state_vars
 
 
-def resolve_certain_and_uncertain_bounds(
+def get_var_bound_pairs(var):
+    """
+    Get the domain and interval (i.e. declared) lower/upper
+    bound pairs of a variable data object.
+
+    Parameters
+    ----------
+    var : VarData
+        Variable data object of interest.
+
+    Returns
+    -------
+    domain_bounds : 2-tuple of None or numeric type
+        Domain (lower, upper) bound pair.
+    interval_bounds : 2-tuple of None, numeric type, or NumericExpression
+        Interval (lower, upper) bound pair.
+        Bounds of type `NumericExpression`
+        are either constant or mutable expressions.
+    """
+    # temporarily set domain to Reals to cleanly retrieve
+    # the interval bound expressions
+    orig_var_domain = var.domain
+    var.domain = Reals
+
+    domain_bounds = orig_var_domain.bounds()
+    interval_bounds = var.lower, var.upper
+
+    # ensure state of variable object is ultimately left unchanged
+    var.domain = orig_var_domain
+
+    return domain_bounds, interval_bounds
+
+
+def determine_certain_and_uncertain_bound(
         domain_bound,
         interval_bound,
         uncertain_params,
         bound_type,
         ):
     """
-    Resolve the (lower or upper)
-    domain and interval bound of a variable
-    to a certain and uncertain bound,
-    based on whether the interval bound is an expression
-    in the uncertain parameters.
+    Determine the certain and uncertain lower or upper
+    bound for a variable object, based on the specified
+    domain and interval bound.
+
+    Parameters
+    ----------
+    domain_bound : numeric type, NumericExpression, or None
+        Domain bound.
+    interval_bound : numeric type, NumericExpression, or None
+        Interval bound.
+    uncertain_params : iterable of ParamData
+        Uncertain model parameters.
+    bound_type : {'lower', 'upper'}
+        Indication of whether the domain bound and interval bound
+        specify lower or upper bounds for the variable value.
+
+    Returns
+    -------
+    certain_bound : numeric type, NumericExpression, or None
+        Bound that independent of the uncertain parameters.
+    uncertain_bound : numeric expression or None
+        Bound that is dependent on the uncertain parameters.
     """
-    assert bound_type in ["lower", "upper"]
+    if bound_type not in {"lower", "upper"}:
+        raise ValueError(
+            f"Argument {bound_type=!r} should be either 'lower' or 'upper'."
+        )
 
     if interval_bound is not None:
         uncertain_params_in_interval_bound = (
@@ -1201,16 +1254,42 @@ def resolve_certain_and_uncertain_bounds(
     return certain_bound, uncertain_bound
 
 
-VariableBounds = namedtuple(
-    "VariableBounds",
+BoundTriple = namedtuple(
+    "BoundTriple",
     ("lower", "eq", "upper"),
 )
 
 
-def resolve_bound_types(lower_bound, upper_bound):
+def rearrange_bound_pair_to_triple(lower_bound, upper_bound):
     """
-    Resolve lower and upper bound into lower bound, equality bound,
-    and upper bound, by comparison of the lower and upper bounds.
+    Rearrange a lower/upper bound pair into a lower/equality/upper
+    bound triple, according to whether or not the lower and upper
+    bound are identical numerical values or expressions.
+
+    Parameters
+    ----------
+    lower_bound : numeric type, NumericExpression, or None
+        Lower bound.
+    upper_bound : numeric type, NumericExpression, or None
+        Upper bound.
+
+    Returns
+    -------
+    BoundTriple
+        Lower/equality/upper bound triple. The equality
+        bound is None if `lower_bound` and `upper_bound`
+        are not identical numeric type or ``NumericExpression``
+        objects, or else it is set to `upper_bound`,
+        in which case, both the lower and upper bounds are
+        returned as None.
+
+    Note
+    ----
+    This method is meant to behave in a manner akin to that of
+    ConstraintData.equality, in which a ranged inequality
+    constraint may be considered an equality constraint if
+    the `lower` and `upper` attributes of the constraint
+    are identical and not None.
     """
     if lower_bound is not None and lower_bound is upper_bound:
         eq_bound = upper_bound
@@ -1219,43 +1298,50 @@ def resolve_bound_types(lower_bound, upper_bound):
     else:
         eq_bound = None
 
-    return VariableBounds(lower_bound, eq_bound, upper_bound)
+    return BoundTriple(lower_bound, eq_bound, upper_bound)
 
 
-def get_var_bounds(var, uncertain_params):
+def get_var_certain_uncertain_bounds(var, uncertain_params):
     """
-    Get variable bounds.
+    Determine the certain and uncertain lower/equality/upper bound
+    triples for a variable data object, based on that variable's
+    domain and interval (i.e. declared) bounds.
+
+    Parameters
+    ----------
+    var : VarData
+        Variable data object of interest.
+    uncertain_params : iterable of ParamData
+        Uncertain model parameters.
+
+    Returns
+    -------
+    certain_bounds : BoundTriple
+        The certain lower/equality/upper bound triple.
+    uncertain_bounds : BoundTriple
+        The uncertain lower/equality/upper bound triple.
     """
-    # temporarily set domain to Reals to cleanly retrieve
-    # the interval bound expressions
-    orig_var_domain = var.domain
-    var.domain = Reals
+    (domain_lb, domain_ub), (interval_lb, interval_ub) = get_var_bound_pairs(var)
 
-    domain_lb, domain_ub = orig_var_domain.bounds()
-    interval_lb, interval_ub = var.lower, var.upper
-
-    certain_lb, uncertain_lb = resolve_certain_and_uncertain_bounds(
+    certain_lb, uncertain_lb = determine_certain_and_uncertain_bound(
         domain_bound=domain_lb,
         interval_bound=interval_lb,
         uncertain_params=uncertain_params,
         bound_type="lower",
     )
-    certain_ub, uncertain_ub = resolve_certain_and_uncertain_bounds(
+    certain_ub, uncertain_ub = determine_certain_and_uncertain_bound(
         domain_bound=domain_ub,
         interval_bound=interval_ub,
         uncertain_params=uncertain_params,
         bound_type="upper",
     )
 
-    certain_bounds = resolve_bound_types(
+    certain_bounds = rearrange_bound_pair_to_triple(
         lower_bound=certain_lb, upper_bound=certain_ub,
     )
-    uncertain_bounds = resolve_bound_types(
+    uncertain_bounds = rearrange_bound_pair_to_triple(
         lower_bound=uncertain_lb, upper_bound=uncertain_ub
     )
-
-    # restore variable domain
-    var.domain = orig_var_domain
 
     return certain_bounds, uncertain_bounds
 
@@ -1305,7 +1391,10 @@ def get_effective_var_partitioning(model_data, config):
     )
     for vartype, varlist in var_type_list_pairs:
         for wvar in varlist:
-            certain_var_bounds, _ = get_var_bounds(wvar, working_model.uncertain_params)
+            certain_var_bounds, _ = get_var_certain_uncertain_bounds(
+                wvar,
+                working_model.uncertain_params,
+            )
 
             is_var_nonadjustable = (
                 vartype == "first-stage"
@@ -1526,6 +1615,18 @@ def setup_working_model(model_data, config, user_var_partitioning):
     # we are done with the util blocks
     delattr(original_model, temp_util_block_attr_name)
     delattr(working_model.user_model, temp_util_block_attr_name)
+
+
+def turn_nonadjustable_var_bounds_to_constraints(model_data, config):
+    """
+    Reformulate bounds for the effective first-stage variables,
+    as needed.
+    """
+    effective_first_stage_vars = (
+        model_data.working_model.effective_partitioning.first_stage_variables
+    )
+    for var in effective_first_stage_vars:
+        ...
 
 
 def new_preprocess_model_data(model_data, config, user_var_partitioning):
