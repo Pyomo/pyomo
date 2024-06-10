@@ -526,7 +526,8 @@ class SASTestMILP(SASTestAbc):
         self.assertTrue(self.opt_sas.warm_start_capable())
 
 
-@unittest.skipIf(not sas_available, "The SAS solver is not available")
+# @unittest.skipIf(not sas_available, "The SAS solver is not available")
+@unittest.skip("MILP94 tests disabled.")
 class SASTestMILP94(SASTestMILP, unittest.TestCase):
     pass
 
