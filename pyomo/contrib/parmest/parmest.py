@@ -68,6 +68,8 @@ from pyomo.dae import ContinuousSet
 from pyomo.common.deprecation import deprecated
 from pyomo.common.deprecation import deprecation_warning
 
+from pyomo.core.base.suffix import Suffix
+
 DEPRECATION_VERSION = '6.7.2.dev0'
 
 parmest_available = numpy_available & pandas_available & scipy_available
@@ -185,9 +187,12 @@ def _experiment_instance_creation_callback(
         """
     if hasattr(instance, "_mpisppy_node_list"):
         raise RuntimeError(f"scenario for experiment {exp_num} has _mpisppy_node_list")
+    
+    # get any theta names that are in this model
     nonant_list = [
-        instance.find_component(vstr) for vstr in outer_cb_data["theta_names"]
+        instance.find_component(vstr) for vstr in _expand_indexed_unknowns(instance)
     ]
+
     if use_mpisppy:
         instance._mpisppy_node_list = [
             scenario_tree.ScenarioNode(
@@ -228,7 +233,21 @@ def _experiment_instance_creation_callback(
 
     return instance
 
+def _expand_indexed_unknowns(model_temp):
+    """
+    Expand indexed variables to get full list of thetas
+    """
 
+    model_theta_list = []
+    for c in model_temp.unknown_parameters.keys():
+        if c.is_indexed():
+            for _, ci in c.items():
+                model_theta_list.append(ci.name)
+        else:
+            model_theta_list.append(c.name)
+
+    return model_theta_list
+    
 def SSE(model):
     """
     Sum of squared error between `experiment_output` model and data values
@@ -281,20 +300,36 @@ class Estimator(object):
         assert isinstance(experiment_list, list)
         self.exp_list = experiment_list
 
-        # check that an experiment has experiment_outputs and unknown_parameters
-        model = self.exp_list[0].get_labeled_model()
-        try:
-            outputs = [k.name for k, v in model.experiment_outputs.items()]
-        except:
-            RuntimeError(
-                'Experiment list model does not have suffix ' + '"experiment_outputs".'
-            )
-        try:
-            params = [k.name for k, v in model.unknown_parameters.items()]
-        except:
-            RuntimeError(
-                'Experiment list model does not have suffix ' + '"unknown_parameters".'
-            )
+        # check that each model has "get_labeled_model()" function, and
+        # at the same time count the number of parameters for sampling
+        param_list = []
+        for i in range(len(self.exp_list)):
+
+            try:
+                model = self.exp_list[i].get_labeled_model()
+            except:
+                RuntimeError(
+                    'Experiment list model ' + str(i) + 
+                    ' is missing ".get_labeled_model()" function.'
+                )
+            
+            # check that each model has experiment_outputs 
+            # (although this is optional for design of experiments)
+            outputs = getattr(model, "experiment_outputs", None)
+            if outputs is None:
+                logger.warning(
+                    "Experiment outputs missing for experiment " +
+                    str(i) + ".")
+
+            # check that each model has unknown parameters (not optional)
+            params = getattr(model, "unknown_parameters", None)
+            assert isinstance(params, Suffix)
+
+            # keep track of number of parameters for sampling
+            param_list.extend(_expand_indexed_unknowns(model))
+
+        # save the number of parameters for sampling
+        self.num_params = len(list(set(param_list)))
 
         # populate keyword argument options
         self.obj_function = obj_function
@@ -305,15 +340,8 @@ class Estimator(object):
         # TODO: delete this when the deprecated interface is removed
         self.pest_deprecated = None
 
-        # TODO This might not be needed here.
-        # We could collect the union (or intersect?) of thetas when the models are built
-        theta_names = []
-        for experiment in self.exp_list:
-            model = experiment.get_labeled_model()
-            theta_names.extend([k.name for k, v in model.unknown_parameters.items()])
-        self.estimator_theta_names = list(set(theta_names))
-
         self._second_stage_cost_exp = "SecondStageCost"
+
         # boolean to indicate if model is initialized using a square solve
         self.model_initialized = False
 
@@ -349,50 +377,6 @@ class Estimator(object):
             diagnostic_mode,
             solver_options,
         )
-
-    def _return_theta_names(self):
-        """
-        Return list of fitted model parameter names
-        """
-        # check for deprecated inputs
-        if self.pest_deprecated:
-
-            # if fitted model parameter names differ from theta_names
-            # created when Estimator object is created
-            if hasattr(self, 'theta_names_updated'):
-                return self.pest_deprecated.theta_names_updated
-
-            else:
-
-                # default theta_names, created when Estimator object is created
-                return self.pest_deprecated.theta_names
-
-        else:
-
-            # if fitted model parameter names differ from theta_names
-            # created when Estimator object is created
-            if hasattr(self, 'theta_names_updated'):
-                return self.theta_names_updated
-
-            else:
-
-                # default theta_names, created when Estimator object is created
-                return self.estimator_theta_names
-
-    def _expand_indexed_unknowns(self, model_temp):
-        """
-        Expand indexed variables to get full list of thetas
-        """
-
-        model_theta_list = []
-        for c in model_temp.unknown_parameters.keys():
-            if c.is_indexed():
-                for _, ci in c.items():
-                    model_theta_list.append(ci.name)
-            else:
-                model_theta_list.append(c.name)
-
-        return model_theta_list
 
     def _create_parmest_model(self, experiment_number):
         """
@@ -447,7 +431,7 @@ class Estimator(object):
 
         return parmest_model
 
-    def _instance_creation_callback(self, experiment_number=None, cb_data=None):
+    def _instance_creation_callback(self, experiment_number, cb_data=None):
         model = self._create_parmest_model(experiment_number)
         return model
 
@@ -483,7 +467,6 @@ class Estimator(object):
         if bootlist is not None:
             outer_cb_data["BootList"] = bootlist
         outer_cb_data["cb_data"] = None  # None is OK
-        outer_cb_data["theta_names"] = self.estimator_theta_names
 
         options = {"solver": "ipopt"}
         scenario_creator_options = {"cb_data": outer_cb_data}
@@ -656,13 +639,11 @@ class Estimator(object):
             dummy_cb = {
                 "callback": self._instance_creation_callback,
                 "ThetaVals": thetavals,
-                "theta_names": self._return_theta_names(),
                 "cb_data": None,
             }
         else:
             dummy_cb = {
                 "callback": self._instance_creation_callback,
-                "theta_names": self._return_theta_names(),
                 "cb_data": None,
             }
 
@@ -689,10 +670,13 @@ class Estimator(object):
             # create dictionary to store pyomo model instances (scenarios)
             scen_dict = dict()
 
+        # keep track of theta names as we enumerate models
+        theta_names = []
         for snum in scenario_numbers:
             sname = "scenario_NODE" + str(snum)
             instance = _experiment_instance_creation_callback(sname, None, dummy_cb)
-            model_theta_names = self._expand_indexed_unknowns(instance)
+            model_theta_names = _expand_indexed_unknowns(instance)
+            theta_names.extend(model_theta_names)
 
             if initialize_parmest_model:
                 # list to store fitted parameter names that will be unfixed
@@ -784,6 +768,9 @@ class Estimator(object):
             objobject = getattr(instance, self._second_stage_cost_exp)
             objval = pyo.value(objobject)
             totobj += objval
+        
+        # all theta names in all models
+        estimator_theta_names = list(set(theta_names))
 
         retval = totobj / len(scenario_numbers)  # -1??
         if initialize_parmest_model and not hasattr(self, 'ef_instance'):
@@ -810,9 +797,7 @@ class Estimator(object):
 
             # return initialized theta values
             if len(thetavals) == 0:
-                # use appropriate theta_names member
-                theta_ref = self._return_theta_names()
-                for i, theta in enumerate(theta_ref):
+                for i, theta in enumerate(estimator_theta_names):
                     thetavals[theta] = theta_init_vals[i]()
 
         return retval, thetavals, WorstStatus
@@ -831,7 +816,7 @@ class Estimator(object):
                 attempts = 0
                 unique_samples = 0  # check for duplicates in each sample
                 duplicate = False  # check for duplicates between samples
-                while (unique_samples <= len(self._return_theta_names())) and (
+                while (unique_samples <= self.num_params) and (
                     not duplicate
                 ):
                     sample = np.random.choice(
@@ -1164,21 +1149,12 @@ class Estimator(object):
                 initialize_parmest_model=initialize_parmest_model,
             )
 
-        if len(self.estimator_theta_names) == 0:
+        if self.num_params == 0:
             pass  # skip assertion if model has no fitted parameters
         else:
             # create a local instance of the pyomo model to access model variables and parameters
             model_temp = self._create_parmest_model(0)
-            model_theta_list = self._expand_indexed_unknowns(model_temp)
-
-            # if self.estimator_theta_names is not the same as temp model_theta_list,
-            # create self.theta_names_updated
-            if set(self.estimator_theta_names) == set(model_theta_list) and len(
-                self.estimator_theta_names
-            ) == len(set(model_theta_list)):
-                pass
-            else:
-                self.theta_names_updated = model_theta_list
+            model_theta_list = _expand_indexed_unknowns(model_temp)
 
         if theta_values is None:
             all_thetas = {}  # dictionary to store fitted variables
@@ -1437,6 +1413,150 @@ class _DeprecatedSecondStageCostExpr(object):
         return self._ssc_function(model, self._data)
 
 
+def _deprecated_experiment_instance_creation_callback(
+    scenario_name, node_names=None, cb_data=None
+):
+    """
+    This is going to be called by mpi-sppy or the local EF and it will call into
+    the user's model's callback.
+
+    Parameters:
+    -----------
+    scenario_name: `str` Scenario name should end with a number
+    node_names: `None` ( Not used here )
+    cb_data : dict with ["callback"], ["BootList"],
+              ["theta_names"], ["cb_data"], etc.
+              "cb_data" is passed through to user's callback function
+                        that is the "callback" value.
+              "BootList" is None or bootstrap experiment number list.
+                       (called cb_data by mpisppy)
+
+
+    Returns:
+    --------
+    instance: `ConcreteModel`
+        instantiated scenario
+
+    Note:
+    ----
+    There is flexibility both in how the function is passed and its signature.
+    """
+    assert cb_data is not None
+    outer_cb_data = cb_data
+    scen_num_str = re.compile(r'(\d+)$').search(scenario_name).group(1)
+    scen_num = int(scen_num_str)
+    basename = scenario_name[: -len(scen_num_str)]  # to reconstruct name
+
+    CallbackFunction = outer_cb_data["callback"]
+
+    if callable(CallbackFunction):
+        callback = CallbackFunction
+    else:
+        cb_name = CallbackFunction
+
+        if "CallbackModule" not in outer_cb_data:
+            raise RuntimeError(
+                "Internal Error: need CallbackModule in parmest callback"
+            )
+        else:
+            modname = outer_cb_data["CallbackModule"]
+
+        if isinstance(modname, str):
+            cb_module = im.import_module(modname, package=None)
+        elif isinstance(modname, types.ModuleType):
+            cb_module = modname
+        else:
+            print("Internal Error: bad CallbackModule")
+            raise
+
+        try:
+            callback = getattr(cb_module, cb_name)
+        except:
+            print("Error getting function=" + cb_name + " from module=" + str(modname))
+            raise
+
+    if "BootList" in outer_cb_data:
+        bootlist = outer_cb_data["BootList"]
+        # print("debug in callback: using bootlist=",str(bootlist))
+        # assuming bootlist itself is zero based
+        exp_num = bootlist[scen_num]
+    else:
+        exp_num = scen_num
+
+    scen_name = basename + str(exp_num)
+
+    cb_data = outer_cb_data["cb_data"]  # cb_data might be None.
+
+    # at least three signatures are supported. The first is preferred
+    try:
+        instance = callback(experiment_number=exp_num, cb_data=cb_data)
+    except TypeError:
+        raise RuntimeError(
+            "Only one callback signature is supported: "
+            "callback(experiment_number, cb_data) "
+        )
+        """
+        try:
+            instance = callback(scenario_tree_model, scen_name, node_names)
+        except TypeError:  # deprecated signature?
+            try:
+                instance = callback(scen_name, node_names)
+            except:
+                print("Failed to create instance using callback; TypeError+")
+                raise
+        except:
+            print("Failed to create instance using callback.")
+            raise
+        """
+    if hasattr(instance, "_mpisppy_node_list"):
+        raise RuntimeError(f"scenario for experiment {exp_num} has _mpisppy_node_list")
+    
+    # get any theta names that are in this model
+    nonant_list = [
+        instance.find_component(vstr) for vstr in outer_cb_data["theta_names"]
+    ]
+
+    if use_mpisppy:
+        instance._mpisppy_node_list = [
+            scenario_tree.ScenarioNode(
+                name="ROOT",
+                cond_prob=1.0,
+                stage=1,
+                cost_expression=instance.FirstStageCost,
+                nonant_list=nonant_list,
+                scen_model=instance,
+            )
+        ]
+    else:
+        instance._mpisppy_node_list = [
+            scenario_tree.ScenarioNode(
+                name="ROOT",
+                cond_prob=1.0,
+                stage=1,
+                cost_expression=instance.FirstStageCost,
+                scen_name_list=None,
+                nonant_list=nonant_list,
+                scen_model=instance,
+            )
+        ]
+
+    if "ThetaVals" in outer_cb_data:
+        thetavals = outer_cb_data["ThetaVals"]
+
+        # dlw august 2018: see mea code for more general theta
+        for name, val in thetavals.items():
+            theta_cuid = ComponentUID(name)
+            theta_object = theta_cuid.find_component_on(instance)
+            if val is not None:
+                # print("Fixing",vstr,"at",str(thetavals[vstr]))
+                theta_object.fix(val)
+            else:
+                # print("Freeing",vstr)
+                theta_object.unfix()
+
+    return instance
+
+
 class _DeprecatedEstimator(object):
     """
     Parameter estimation class
@@ -1638,7 +1758,7 @@ class _DeprecatedEstimator(object):
         if use_mpisppy:
             ef = sputils.create_EF(
                 scen_names,
-                _experiment_instance_creation_callback,
+                _deprecated_experiment_instance_creation_callback,
                 EF_name="_Q_opt",
                 suppress_warnings=True,
                 scenario_creator_kwargs=scenario_creator_options,
@@ -1646,7 +1766,7 @@ class _DeprecatedEstimator(object):
         else:
             ef = local_ef.create_EF(
                 scen_names,
-                _experiment_instance_creation_callback,
+                _deprecated_experiment_instance_creation_callback,
                 EF_name="_Q_opt",
                 suppress_warnings=True,
                 scenario_creator_kwargs=scenario_creator_options,
@@ -1822,7 +1942,7 @@ class _DeprecatedEstimator(object):
 
         # start block of code to deal with models with no constraints
         # (ipopt will crash or complain on such problems without special care)
-        instance = _experiment_instance_creation_callback("FOO0", None, dummy_cb)
+        instance = _deprecated_experiment_instance_creation_callback("FOO0", None, dummy_cb)
         try:  # deal with special problems so Ipopt will not crash
             first = next(instance.component_objects(pyo.Constraint, active=True))
             active_constraints = True
@@ -1839,7 +1959,7 @@ class _DeprecatedEstimator(object):
 
         for snum in scenario_numbers:
             sname = "scenario_NODE" + str(snum)
-            instance = _experiment_instance_creation_callback(sname, None, dummy_cb)
+            instance = _deprecated_experiment_instance_creation_callback(sname, None, dummy_cb)
 
             if initialize_parmest_model:
                 # list to store fitted parameter names that will be unfixed
