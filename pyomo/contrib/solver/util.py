@@ -26,14 +26,14 @@ def get_objective(block):
     Get current active objective on a block. If there is more than one active,
     return an error.
     """
-    obj = None
-    for o in block.component_data_objects(
+    objective = None
+    for obj in block.component_data_objects(
         Objective, descend_into=True, active=True, sort=True
     ):
-        if obj is not None:
-            raise ValueError('Multiple active objectives found')
-        obj = o
-    return obj
+        if objective is not None:
+            raise ValueError('Multiple active objectives found.')
+        objective = obj
+    return objective
 
 
 def check_optimal_termination(results):
@@ -57,11 +57,12 @@ def check_optimal_termination(results):
             return True
     else:
         if results.solver.status == SolverStatus.ok and (
-            results.solver.termination_condition == LegacyTerminationCondition.optimal
-            or results.solver.termination_condition
-            == LegacyTerminationCondition.locallyOptimal
-            or results.solver.termination_condition
-            == LegacyTerminationCondition.globallyOptimal
+            results.solver.termination_condition
+            in (
+                LegacyTerminationCondition.optimal,
+                LegacyTerminationCondition.locallyOptimal,
+                LegacyTerminationCondition.globallyOptimal,
+            )
         ):
             return True
     return False
@@ -81,16 +82,14 @@ def assert_optimal_termination(results):
         if hasattr(results, 'solution_status'):
             msg = (
                 'Solver failed to return an optimal solution. '
-                'Solution status: {}, Termination condition: {}'.format(
-                    results.solution_status, results.termination_condition
-                )
+                f'Solution status: {results.solution_status}, '
+                f'Termination condition: {results.termination_condition}'
             )
         else:
             msg = (
                 'Solver failed to return an optimal solution. '
-                'Solver status: {}, Termination condition: {}'.format(
-                    results.solver.status, results.solver.termination_condition
-                )
+                f'Solution status: {results.solver.status}, '
+                f'Termination condition: {results.solver.termination_condition}'
             )
         raise RuntimeError(msg)
 

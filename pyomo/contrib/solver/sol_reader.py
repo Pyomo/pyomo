@@ -19,19 +19,26 @@ from pyomo.contrib.solver.results import Results, SolutionStatus, TerminationCon
 
 
 class SolFileData:
+    """
+    Defines the data types found within a .sol file
+    """
+
     def __init__(self) -> None:
-        self.primals: List[float] = list()
-        self.duals: List[float] = list()
-        self.var_suffixes: Dict[str, Dict[int, Any]] = dict()
-        self.con_suffixes: Dict[str, Dict[Any]] = dict()
-        self.obj_suffixes: Dict[str, Dict[int, Any]] = dict()
-        self.problem_suffixes: Dict[str, List[Any]] = dict()
-        self.other: List(str) = list()
+        self.primals: List[float] = []
+        self.duals: List[float] = []
+        self.var_suffixes: Dict[str, Dict[int, Any]] = {}
+        self.con_suffixes: Dict[str, Dict[Any]] = {}
+        self.obj_suffixes: Dict[str, Dict[int, Any]] = {}
+        self.problem_suffixes: Dict[str, List[Any]] = {}
+        self.other: List(str) = []
 
 
 def parse_sol_file(
     sol_file: io.TextIOBase, nl_info: NLWriterInfo, result: Results
 ) -> Tuple[Results, SolFileData]:
+    """
+    Parse a .sol file and populate to Pyomo objects
+    """
     sol_data = SolFileData()
 
     #
@@ -40,37 +47,38 @@ def parse_sol_file(
     # For backwards compatibility and general safety, we will parse all
     # lines until "Options" appears. Anything before "Options" we will
     # consider to be the solver message.
+    options_found = False
     message = []
+    model_objects = []
     for line in sol_file:
         if not line:
             break
         line = line.strip()
         if "Options" in line:
+            # Once "Options" appears, we must now read the content under it.
+            options_found = True
+            line = sol_file.readline()
+            number_of_options = int(line)
+            # We are adding in this DeveloperError to see if the alternative case
+            # is ever actually hit in the wild. In a previous iteration of the sol
+            # reader, there was logic to check for the number of options, but it
+            # was uncovered by tests and unclear if actually necessary.
+            if number_of_options > 4:
+                raise DeveloperError(
+                    """
+    The sol file reader has hit an unexpected error while parsing. The number of
+    options recorded is greater than 4. Please report this error to the Pyomo
+    developers.
+    """
+                )
+            for i in range(number_of_options + 4):
+                line = sol_file.readline()
+                model_objects.append(int(line))
             break
         message.append(line)
-    message = '\n'.join(message)
-    # Once "Options" appears, we must now read the content under it.
-    model_objects = []
-    if "Options" in line:
-        line = sol_file.readline()
-        number_of_options = int(line)
-        # We are adding in this DeveloperError to see if the alternative case
-        # is ever actually hit in the wild. In a previous iteration of the sol
-        # reader, there was logic to check for the number of options, but it
-        # was uncovered by tests and unclear if actually necessary.
-        if number_of_options > 4:
-            raise DeveloperError(
-                """
-The sol file reader has hit an unexpected error while parsing. The number of
-options recorded is greater than 4. Please report this error to the Pyomo
-developers.
-                                 """
-            )
-        for i in range(number_of_options + 4):
-            line = sol_file.readline()
-            model_objects.append(int(line))
-    else:
+    if not options_found:
         raise PyomoException("ERROR READING `sol` FILE. No 'Options' line found.")
+    message = '\n'.join(message)
     # Identify the total number of variables and constraints
     number_of_cons = model_objects[number_of_options + 1]
     number_of_vars = model_objects[number_of_options + 3]
@@ -145,15 +153,15 @@ developers.
             if line == "":
                 continue
             line = line.split()
-            # Some sort of garbage we tag onto the solver message, assuming we are past the suffixes
+            # Extra solver message processing
             if line[0] != 'suffix':
                 # We assume this is the start of a
                 # section like kestrel_option, which
                 # comes after all suffixes.
-                remaining = ""
+                remaining = ''
                 line = sol_file.readline()
                 while line:
-                    remaining += line.strip() + "; "
+                    remaining += line.strip() + '; '
                     line = sol_file.readline()
                 result.extra_info.solver_message += remaining
                 break
@@ -172,7 +180,7 @@ developers.
             for line in range(number_of_string_lines):
                 sol_data.other.append(sol_file.readline())
             if data_type == 0:  # Var
-                sol_data.var_suffixes[suffix_name] = dict()
+                sol_data.var_suffixes[suffix_name] = {}
                 for cnt in range(number_of_entries):
                     suf_line = sol_file.readline().split()
                     var_ndx = int(suf_line[0])
@@ -180,7 +188,7 @@ developers.
                         suf_line[1]
                     )
             elif data_type == 1:  # Con
-                sol_data.con_suffixes[suffix_name] = dict()
+                sol_data.con_suffixes[suffix_name] = {}
                 for cnt in range(number_of_entries):
                     suf_line = sol_file.readline().split()
                     con_ndx = int(suf_line[0])
@@ -188,7 +196,7 @@ developers.
                         suf_line[1]
                     )
             elif data_type == 2:  # Obj
-                sol_data.obj_suffixes[suffix_name] = dict()
+                sol_data.obj_suffixes[suffix_name] = {}
                 for cnt in range(number_of_entries):
                     suf_line = sol_file.readline().split()
                     obj_ndx = int(suf_line[0])
@@ -196,7 +204,7 @@ developers.
                         suf_line[1]
                     )
             elif data_type == 3:  # Prob
-                sol_data.problem_suffixes[suffix_name] = list()
+                sol_data.problem_suffixes[suffix_name] = []
                 for cnt in range(number_of_entries):
                     suf_line = sol_file.readline().split()
                     sol_data.problem_suffixes[suffix_name].append(

@@ -16,13 +16,15 @@ from pyomo.contrib.solver.util import (
     get_objective,
     check_optimal_termination,
     assert_optimal_termination,
-    SolverStatus,
-    LegacyTerminationCondition,
 )
+from pyomo.opt.results.solver import (
+    SolverStatus as LegacySolverStatus,
+    TerminationCondition as LegacyTerminationCondition,
+)
+from pyomo.opt.results import SolverResults as LegacySolverResults
 from pyomo.contrib.solver.results import Results, SolutionStatus, TerminationCondition
 from typing import Callable
 from pyomo.common.gsl import find_GSL
-from pyomo.opt.results import SolverResults
 
 
 class TestGenericUtils(unittest.TestCase):
@@ -99,8 +101,8 @@ class TestGenericUtils(unittest.TestCase):
         self.assertFalse(check_optimal_termination(results))
 
     def test_check_optimal_termination_condition_legacy_interface(self):
-        results = SolverResults()
-        results.solver.status = SolverStatus.ok
+        results = LegacySolverResults()
+        results.solver.status = LegacySolverStatus.ok
         results.solver.termination_condition = LegacyTerminationCondition.optimal
         # Both items satisfied
         self.assertTrue(check_optimal_termination(results))
@@ -108,7 +110,7 @@ class TestGenericUtils(unittest.TestCase):
         results.solver.termination_condition = LegacyTerminationCondition.unknown
         self.assertFalse(check_optimal_termination(results))
         # Both not satisfied
-        results.solver.termination_condition = SolverStatus.aborted
+        results.solver.termination_condition = LegacySolverStatus.aborted
         self.assertFalse(check_optimal_termination(results))
 
     def test_assert_optimal_termination_new_interface(self):
@@ -128,8 +130,8 @@ class TestGenericUtils(unittest.TestCase):
             assert_optimal_termination(results)
 
     def test_assert_optimal_termination_legacy_interface(self):
-        results = SolverResults()
-        results.solver.status = SolverStatus.ok
+        results = LegacySolverResults()
+        results.solver.status = LegacySolverStatus.ok
         results.solver.termination_condition = LegacyTerminationCondition.optimal
         assert_optimal_termination(results)
         # Termination condition not satisfied
@@ -137,6 +139,6 @@ class TestGenericUtils(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             assert_optimal_termination(results)
         # Both not satisfied
-        results.solver.termination_condition = SolverStatus.aborted
+        results.solver.termination_condition = LegacySolverStatus.aborted
         with self.assertRaises(RuntimeError):
             assert_optimal_termination(results)

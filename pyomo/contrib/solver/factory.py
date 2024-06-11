@@ -16,6 +16,10 @@ from pyomo.contrib.solver.base import LegacySolverWrapper
 
 
 class SolverFactoryClass(Factory):
+    """
+    Registers new interfaces in the legacy SolverFactory
+    """
+
     def register(self, name, legacy_name=None, doc=None):
         if legacy_name is None:
             legacy_name = name

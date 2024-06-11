@@ -76,7 +76,7 @@ class SolverBase(abc.ABC):
     def __enter__(self):
         return self
 
-    def __exit__(self, t, v, traceback):
+    def __exit__(self, exc_type, exc_value, exc_traceback):
         """Exit statement - enables `with` statements."""
 
     class Availability(enum.IntEnum):
@@ -207,11 +207,11 @@ class PersistentSolverBase(SolverBase):
         Parameters
         ----------
         vars_to_load: list
-            A list of the variables whose solution should be loaded. If vars_to_load is None, then the solution
-            to all primal variables will be loaded.
+            A list of the variables whose solution should be loaded. If vars_to_load
+            is None, then the solution to all primal variables will be loaded.
         """
-        for v, val in self._get_primals(vars_to_load=vars_to_load).items():
-            v.set_value(val, skip_validation=True)
+        for var, val in self._get_primals(vars_to_load=vars_to_load).items():
+            var.set_value(val, skip_validation=True)
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
     @abc.abstractmethod
@@ -244,8 +244,8 @@ class PersistentSolverBase(SolverBase):
         Parameters
         ----------
         cons_to_load: list
-            A list of the constraints whose duals should be loaded. If cons_to_load is None, then the duals for all
-            constraints will be loaded.
+            A list of the constraints whose duals should be loaded. If cons_to_load
+            is None, then the duals for all constraints will be loaded.
 
         Returns
         -------
@@ -261,8 +261,8 @@ class PersistentSolverBase(SolverBase):
         Parameters
         ----------
         vars_to_load: list
-            A list of the variables whose reduced cost should be loaded. If vars_to_load is None, then all reduced costs
-            will be loaded.
+            A list of the variables whose reduced cost should be loaded. If vars_to_load
+            is None, then all reduced costs will be loaded.
 
         Returns
         -------
@@ -373,7 +373,7 @@ class LegacySolverWrapper:
     def __enter__(self):
         return self
 
-    def __exit__(self, t, v, traceback):
+    def __exit__(self, exc_type, exc_value, exc_traceback):
         """Exit statement - enables `with` statements."""
 
     def _map_config(
@@ -420,7 +420,7 @@ class LegacySolverWrapper:
                 "Both 'options' and 'solver_options' were requested. "
                 "Please use one or the other, not both."
             )
-        elif options is not NOTSET:
+        if options is not NOTSET:
             # This block is trying to mimic the existing logic in the legacy
             # interface that allows users to pass initialized options to
             # the solver object and override them in the solve call.
@@ -467,7 +467,7 @@ class LegacySolverWrapper:
         legacy_results.solver.termination_condition = legacy_termination_condition_map[
             results.termination_condition
         ]
-        legacy_soln.status = legacy_solution_status_map[results.solution_status]
+        legacy_soln.status = legacy_solution_status_map(results)
         legacy_results.solver.termination_message = str(results.termination_condition)
         legacy_results.problem.number_of_constraints = float('nan')
         legacy_results.problem.number_of_variables = float('nan')
@@ -514,20 +514,20 @@ class LegacySolverWrapper:
         delete_legacy_soln = True
         if load_solutions:
             if hasattr(model, 'dual') and model.dual.import_enabled():
-                for c, val in results.solution_loader.get_duals().items():
-                    model.dual[c] = val
+                for cons, val in results.solution_loader.get_duals().items():
+                    model.dual[cons] = val
             if hasattr(model, 'rc') and model.rc.import_enabled():
-                for v, val in results.solution_loader.get_reduced_costs().items():
-                    model.rc[v] = val
+                for var, val in results.solution_loader.get_reduced_costs().items():
+                    model.rc[var] = val
         elif results.incumbent_objective is not None:
             delete_legacy_soln = False
-            for v, val in results.solution_loader.get_primals().items():
-                legacy_soln.variable[symbol_map.getSymbol(v)] = {'Value': val}
+            for var, val in results.solution_loader.get_primals().items():
+                legacy_soln.variable[symbol_map.getSymbol(var)] = {'Value': val}
             if hasattr(model, 'dual') and model.dual.import_enabled():
-                for c, val in results.solution_loader.get_duals().items():
-                    legacy_soln.constraint[symbol_map.getSymbol(c)] = {'Dual': val}
+                for cons, val in results.solution_loader.get_duals().items():
+                    legacy_soln.constraint[symbol_map.getSymbol(cons)] = {'Dual': val}
             if hasattr(model, 'rc') and model.rc.import_enabled():
-                for v, val in results.solution_loader.get_reduced_costs().items():
+                for var, val in results.solution_loader.get_reduced_costs().items():
                     legacy_soln.variable['Rc'] = val
 
         legacy_results.solution.insert(legacy_soln)
@@ -632,11 +632,18 @@ class LegacySolverWrapper:
         return bool(self.available())
 
     def config_block(self, init=False):
+        """
+        Preserves config backwards compatibility; allows new solver interfaces
+        to be used in the pyomo solve call
+        """
         from pyomo.scripting.solve_config import default_config_block
 
         return default_config_block(self, init)[0]
 
     def set_options(self, options):
+        """
+        Method to manually set options; can be called outside of the solve method
+        """
         opts = {k: v for k, v in options.value().items() if v is not None}
         if opts:
             self._map_config(**opts)
