@@ -17,7 +17,7 @@ from collections import namedtuple
 from itertools import count
 import copy
 from enum import Enum, auto
-from pyomo.common.collections import Bunch, ComponentMap, ComponentSet
+from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.errors import ApplicationError
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.timing import TicTocTimer
@@ -1563,6 +1563,206 @@ def add_effective_var_partitioning(model_data, config):
     )
 
 
+def create_bound_constraint_expr(expr, bound, bound_type):
+    """
+    Create a relational expression establishing a bound
+    for a numeric expression of interest.
+
+    Parameters
+    ----------
+    expr : VarData or NumericExpression
+        Entity to be bounded by the relational expression.
+    bound : numeric type or NumericExpression
+        Bound for `expr`.
+    bound_type : {'lower', 'eq', 'upper'}
+        Indicator for whether `expr` is to be lower bounded,
+        equality bounded, or upper bounded, by `bound`.
+
+    Returns
+    -------
+    RelationalExpression
+        Establishes a bound on `expr`.
+    """
+    if bound_type == "lower":
+        return bound - expr <= 0
+    elif bound_type == "eq":
+        return expr - bound == 0
+    elif bound_type == "upper":
+        return expr - bound <= 0
+    else:
+        raise ValueError(
+            f"Bound type {bound_type!r} not supported."
+        )
+
+
+def remove_var_interval_bound(var, bound_type):
+    """
+    Remove interval bound(s) from a variable data object.
+
+    Parameters
+    ----------
+    var : VarData
+        Variable data object of interest.
+    bound_type : {'lower', 'eq', 'upper'}
+        Indicator for the bound(s) to remove.
+        Note: if 'eq' is specified, then both the
+        lower and upper bounds are removed.
+    """
+    if bound_type == "lower":
+        var.setlb(None)
+    elif bound_type == "eq":
+        var.setlb(None)
+        var.setub(None)
+    elif bound_type == "upper":
+        var.setub(None)
+    else:
+        raise ValueError(
+            f"Bound type {bound_type!r} not supported. "
+            "Bound type must be 'lower', 'eq, or 'upper'."
+        )
+
+
+def remove_all_var_bounds(var):
+    """
+    Remove the domain and interval bounds for a variable.
+    """
+    var.setlb(None)
+    var.setub(None)
+    var.domain = Reals
+
+
+def turn_nonadjustable_var_bounds_to_constraints(model_data):
+    """
+    Reformulate uncertain bounds for the nonadjustable
+    (i.e. effective first-stage) variables of the working
+    model to constraints.
+
+    Only uncertain interval bounds are reformulated to
+    constraints, as these are the only bounds we need to
+    reformulate to properly construct the subproblems.
+    Consequently, all constraints added to the working model
+    in this method are considered performance constraints.
+
+    Parameters
+    ----------
+    model_data : model data object
+        Main model data object.
+    config : ConfigDict
+        PyROS solver settings.
+    """
+    working_model = model_data.working_model
+    performance_eq_cons = working_model.effective_performance_equality_cons
+    performance_ineq_cons = working_model.effective_performance_inequality_cons
+
+    nonadjustable_vars = (
+        working_model.effective_var_partitioning.first_stage_variables
+    )
+    uncertain_params_set = ComponentSet(working_model.uncertain_params)
+    for var in nonadjustable_vars:
+        _, interval_bounds = get_var_bound_pairs(var)
+        interval_bound_triple = rearrange_bound_pair_to_triple(*interval_bounds)
+        var_name = var.getname(
+            relative_to=working_model.user_model,
+            fully_qualified=True,
+        )
+        for btype, bound in interval_bound_triple._asdict().items():
+            is_bound_uncertain = (
+                bound is not None
+                and (
+                    ComponentSet(identify_mutable_parameters(bound))
+                    & uncertain_params_set
+                )
+            )
+            if is_bound_uncertain:
+                var_bound_con = Constraint(
+                    expr=create_bound_constraint_expr(var, bound, btype),
+                )
+                working_model.add_component(
+                    unique_component_name(
+                        working_model,
+                        f"{var_name}_uncertain_{btype}_bound_con",
+                    ),
+                    var_bound_con,
+                )
+                remove_var_interval_bound(var, btype)
+
+                if btype == "eq":
+                    performance_eq_cons.append(var_bound_con)
+                else:
+                    performance_ineq_cons.append(var_bound_con)
+
+    # for subsequent developments: return a mapping
+    # from each variable to the corresponding binding constraints?
+    # we will add this as needed when changes are made to
+    # the interface for separation priority ordering
+
+
+def turn_adjustable_var_bounds_to_constraints(model_data):
+    """
+    Reformulate domain and interval bounds for the
+    adjustable (i.e., effective second-stage and effective state)
+    variables of the working model to explicit constraints.
+
+    The domain and interval bounds for every adjustable variable
+    are unconditionally reformulated to constraints,
+    as this is required for appropriate construction of the
+    subproblems later.
+    Since these constraints depend on adjustable variables,
+    they are taken to be (effective) performance constraints.
+
+    Parameters
+    ----------
+    model_data : model data object
+        Main model data object.
+    config : ConfigDict
+        PyROS solver settings.
+    """
+    working_model = model_data.working_model
+    performance_eq_cons = working_model.effective_performance_equality_cons
+    performance_ineq_cons = working_model.effective_performance_inequality_cons
+
+    adjustable_vars = (
+        working_model.effective_var_partitioning.second_stage_variables
+        + working_model.effective_var_partitioning.state_variables
+    )
+    for var in adjustable_vars:
+        cert_bound_triple, uncert_bound_triple = get_var_certain_uncertain_bounds(
+            var, working_model.uncertain_params,
+        )
+        var_name = var.getname(
+            relative_to=working_model.user_model,
+            fully_qualified=True,
+        )
+        cert_uncert_bound_zip = (
+            ("certain", cert_bound_triple),
+            ("uncertain", uncert_bound_triple),
+        )
+        for certainty_desc, bound_triple in cert_uncert_bound_zip:
+            for btype, bound in bound_triple._asdict().items():
+                if bound is not None:
+                    var_bound_con = Constraint(
+                        expr=create_bound_constraint_expr(var, bound, btype),
+                    )
+                    working_model.add_component(
+                        unique_component_name(
+                            working_model,
+                            f"{var_name}_{certainty_desc}_{btype}_bound_con",
+                        ),
+                        var_bound_con,
+                    )
+                    if btype == "eq":
+                        performance_eq_cons.append(var_bound_con)
+                    else:
+                        performance_ineq_cons.append(var_bound_con)
+
+        remove_all_var_bounds(var)
+
+    # for subsequent developments: return a mapping
+    # from each variable to the corresponding binding constraints?
+    # we will add this as needed when changes are made to
+    # the interface for separation priority ordering
+
+
 def setup_working_model(model_data, config, user_var_partitioning):
     """
     Set up (construct) the working model based on user inputs,
@@ -1616,17 +1816,15 @@ def setup_working_model(model_data, config, user_var_partitioning):
     delattr(original_model, temp_util_block_attr_name)
     delattr(working_model.user_model, temp_util_block_attr_name)
 
-
-def turn_nonadjustable_var_bounds_to_constraints(model_data, config):
-    """
-    Reformulate bounds for the effective first-stage variables,
-    as needed.
-    """
-    effective_first_stage_vars = (
-        model_data.working_model.effective_partitioning.first_stage_variables
-    )
-    for var in effective_first_stage_vars:
-        ...
+    # partition the constraints according to their
+    # status as equality/inequality constraints
+    # and their dependence on adjustable variables or uncertain
+    # parameters.
+    # we will need this later for construction of the subproblems
+    working_model.effective_first_stage_equality_cons = []
+    working_model.effective_first_stage_inequality_cons = []
+    working_model.effective_performance_equality_cons = []
+    working_model.effective_performance_inequality_cons = []
 
 
 def new_preprocess_model_data(model_data, config, user_var_partitioning):
@@ -1659,7 +1857,8 @@ def new_preprocess_model_data(model_data, config, user_var_partitioning):
     # turn variable bounds to constraints.
     # different treatment for effective first-stage
     # than for effective second-stage and state variables
-    ...
+    turn_nonadjustable_var_bounds_to_constraints(model_data, config)
+    turn_adjustable_var_bounds_to_constraints(model_data, config)
 
     # standardize inequality constraints
     ...
@@ -1679,12 +1878,17 @@ def new_preprocess_model_data(model_data, config, user_var_partitioning):
     # perform coefficient matching
     ...
 
+    import pdb
+    pdb.set_trace()
+
 
 def preprocess_model_data(model_data, config, var_partitioning):
     """
     Preprocess model data.
     """
     original_model = model_data.original_model
+
+    # new_preprocess_model_data(model_data, config, var_partitioning)
 
     # temporary block to track variable partitioning
     # and uncertain parameters after cloning.

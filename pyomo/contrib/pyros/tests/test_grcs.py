@@ -18,7 +18,11 @@ import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.config import ConfigBlock, ConfigValue
-from pyomo.core.base.set_types import NonNegativeIntegers, NonNegativeReals
+from pyomo.core.base.set_types import (
+    NonNegativeIntegers,
+    NonNegativeReals,
+    NonPositiveReals,
+)
 from pyomo.core.base.set import RangeSet
 from pyomo.core.base.var import VarData
 from pyomo.core.expr import (
@@ -39,7 +43,10 @@ from pyomo.contrib.pyros.util import (
     TimingData,
     IterationLogRecord,
     get_effective_var_partitioning,
-    get_var_certain_uncertain_bounds
+    get_var_certain_uncertain_bounds,
+    get_var_bound_pairs,
+    turn_nonadjustable_var_bounds_to_constraints,
+    turn_adjustable_var_bounds_to_constraints,
 )
 from pyomo.contrib.pyros.util import replace_uncertain_bounds_with_constraints
 from pyomo.contrib.pyros.util import get_vars_from_component
@@ -635,7 +642,395 @@ class testAddDecisionRuleConstraints(unittest.TestCase):
                 )
 
 
-class testTurnBoundsToConstraints(unittest.TestCase):
+class TestTurnVarBoundsToConstraints(unittest.TestCase):
+    """
+    Tests for reformulating variable bounds to explicit
+    inequality/equality constraints.
+    """
+
+    def build_simple_test_model_data(self):
+        """
+        Build simple model data object for turning bounds
+        to constraints.
+        """
+        model_data = Bunch()
+
+        model_data.working_model = ConcreteModel()
+        model_data.working_model.user_model = m = ConcreteModel()
+
+        m.q1 = Param(initialize=1, mutable=True)
+        m.q2 = Param(initialize=1, mutable=True)
+        m.p1 = Param(initialize=5, mutable=True)
+        m.p2 = Param(initialize=0, mutable=True)
+
+        m.z1 = Var(bounds=(None, None))
+        m.z2 = Var(bounds=(1, 1))
+        m.z3 = Var(domain=NonNegativeReals, bounds=(2, m.p1))
+        m.z4 = Var(domain=NonNegativeReals, bounds=(m.q1, 0))
+        m.z5 = Var(domain=RangeSet(2, 4, 0), bounds=(4, m.q2))
+        m.z6 = Var(domain=NonNegativeReals, bounds=(m.q1, m.q1))
+        m.z7 = Var(domain=NonPositiveReals, bounds=(m.q1, 1 * m.q1))
+        m.z8 = Var(domain=RangeSet(0, 5, 0), bounds=[m.q1, m.q2])
+        m.z9 = Var(domain=RangeSet(0, 5, 0), bounds=[m.q1, m.p1])
+        m.z10 = Var(domain=RangeSet(0, 5, 0), bounds=[m.q1, m.p2])
+
+        model_data.working_model.uncertain_params = [m.q1, m.q2]
+        model_data.working_model.effective_first_stage_equality_cons = []
+        model_data.working_model.effective_first_stage_inequality_cons = []
+        model_data.working_model.effective_performance_equality_cons = []
+        model_data.working_model.effective_performance_inequality_cons = []
+
+        return model_data
+
+    def test_turn_nonadjustable_bounds_to_constraints(self):
+        """
+        Test subroutine for reformulating bounds on nonadjustable
+        variables to constraints.
+
+        This subroutine should reformulate only the uncertain
+        interval bounds for the nonadjustable variables.
+        All other variable bounds should be left unchanged.
+        All variable domains should remain unchanged.
+        """
+        model_data = self.build_simple_test_model_data()
+
+        m = model_data.working_model.user_model
+        uncertain_params_set = ComponentSet(model_data.working_model.uncertain_params)
+
+        # mock effective partitioning for testing
+        ep = model_data.working_model.effective_var_partitioning = Bunch()
+        ep.first_stage_variables = [
+            m.z1, m.z2, m.z3, m.z4, m.z5, m.z6, m.z7, m.z8
+        ]
+        ep.second_stage_variables = [m.z9]
+        ep.state_variables = [m.z10]
+        effective_first_stage_var_set = ComponentSet(ep.first_stage_variables)
+
+        original_var_domains_and_bounds = ComponentMap(
+            (var, (var.domain, get_var_bound_pairs(var)[1]))
+            for var in model_data.working_model.user_model.component_data_objects(Var)
+        )
+
+        # expected final bounds and bound constraint types
+        expected_final_nonadj_var_bounds = ComponentMap((
+            (m.z1, (get_var_bound_pairs(m.z1)[1], [])),
+            (m.z2, (get_var_bound_pairs(m.z2)[1], [])),
+            (m.z3, (get_var_bound_pairs(m.z3)[1], [])),
+            (m.z4, ((None, 0), ["lower"])),
+            (m.z5, ((4, None), ["upper"])),
+            (m.z6, ((None, None), ["eq"])),
+            (m.z7, ((None, None), ["eq"])),
+            (m.z8, ((None, None), ["lower", "upper"])),
+        ))
+
+        turn_nonadjustable_var_bounds_to_constraints(model_data)
+
+        for var, (orig_domain, orig_bounds) in original_var_domains_and_bounds.items():
+            # all var domains should remain unchanged
+            self.assertIs(
+                var.domain,
+                orig_domain,
+                msg=(
+                    f"Domain of variable {var.name!r} was changed from "
+                    f"{orig_domain} to {var.domain} by "
+                    f"{turn_nonadjustable_var_bounds_to_constraints.__name__!r}. "
+                ),
+            )
+            _, (final_lb, final_ub) = get_var_bound_pairs(var)
+
+            if var not in effective_first_stage_var_set:
+                # these are the adjustable variables.
+                # bounds should not have been changed
+                self.assertIs(
+                    orig_bounds[0],
+                    final_lb,
+                    msg=(
+                        f"Lower bound for adjustable variable {var.name!r} appears to "
+                        f"have been changed from {orig_bounds[0]} to {final_lb}."
+                    ),
+                )
+                self.assertIs(
+                    orig_bounds[1],
+                    final_ub,
+                    msg=(
+                        f"Upper bound for adjustable variable {var.name!r} appears to "
+                        f"have been changed from {orig_bounds[1]} to {final_ub}."
+                    ),
+                )
+            else:
+                # these are the nonadjustable variables.
+                # only the uncertain bounds should have been
+                # changed, and accompanying constraints added
+
+                expected_bounds, con_bound_types = expected_final_nonadj_var_bounds[var]
+                expected_lb, expected_ub = expected_bounds
+
+                self.assertIs(
+                    expected_lb,
+                    final_lb,
+                    msg=(
+                        f"Lower bound for nonadjustable variable {var.name!r} "
+                        f"should be {expected_lb}, but was "
+                        f"found to be {final_lb}."
+                    ),
+                )
+                self.assertIs(
+                    expected_ub,
+                    final_ub,
+                    msg=(
+                        f"Upper bound for nonadjustable variable {var.name!r} "
+                        f"should be {expected_ub}, but was "
+                        f"found to be {final_ub}."
+                    ),
+                )
+
+                for cbtype in con_bound_types:
+                    # verify the bound constraints were added
+                    # and are as expected
+                    varname = var.getname(
+                        relative_to=m, fully_qualified=True
+                    )
+                    bound_con = model_data.working_model.find_component(
+                        f"{varname}_uncertain_{cbtype}_bound_con"
+                    )
+                    self.assertIsNotNone(
+                        bound_con,
+                        msg=f"Bound constraint for variable {var.name!r} not found."
+                    )
+                    vars_in_bound_con = ComponentSet(identify_variables(bound_con.body))
+                    self.assertEqual(
+                        vars_in_bound_con,
+                        ComponentSet((var,)),
+                        msg=(
+                            f"Bound constraint {bound_con.name} should involve "
+                            f"only the variable with name {var.name!r}, but involves "
+                            f"the variables {vars_in_bound_con}."
+                        ),
+                    )
+
+                    # we want to ensure that uncertain params,
+                    # rather than their values,
+                    # are used to create the bound constraints
+                    uncertain_params_in_bound_con = ComponentSet(
+                        identify_mutable_parameters(bound_con.body)
+                        & uncertain_params_set
+                    )
+                    self.assertTrue(
+                        uncertain_params_in_bound_con,
+                        msg=(
+                            f"No uncertain parameters were found in the bound "
+                            f"constraint with name {bound_con.name!r}."
+                        ),
+                    )
+
+    def test_turn_adjustable_bounds_to_constraints(self):
+        """
+        Test subroutine for reformulating domains and bounds
+        on adjustable variables to constraints.
+
+        This subroutine should reformulate the domain and
+        interval bounds for every adjustable
+        (i.e. effective second-stage and effective state)
+        variable.
+        The domains and bounds for all other variables
+        should be left unchanged.
+        """
+        model_data = self.build_simple_test_model_data()
+
+        m = model_data.working_model.user_model
+        uncertain_params_set = ComponentSet(model_data.working_model.uncertain_params)
+
+        # simple mock partitioning for the test
+        ep = model_data.working_model.effective_var_partitioning = Bunch()
+        ep.first_stage_variables = [m.z9, m.z10]
+        ep.second_stage_variables = [m.z1, m.z2, m.z3, m.z4, m.z5, m.z6]
+        ep.state_variables = [m.z7, m.z8]
+        effective_first_stage_var_set = ComponentSet(ep.first_stage_variables)
+
+        original_var_domains_and_bounds = ComponentMap(
+            (var, (var.domain, get_var_bound_pairs(var)[1]))
+            for var in model_data.working_model.user_model.component_data_objects(Var)
+        )
+
+        # for checking the correct bound constraints were
+        # added.
+        # - first list: types of certain bound constraints
+        #               that should have been added
+        # - second list: types of uncertain bound constraints
+        #               that should have been added
+        expected_cert_uncert_bound_con_types = ComponentMap((
+            (m.z1, ([], [])),
+            (m.z2, (["eq"], [])),
+            (m.z3, (["lower", "upper"], [])),
+            (m.z4, (["eq"], ["lower"])),
+            (m.z5, (["eq"], ["upper"])),
+            (m.z6, (["lower"], ["eq"])),
+            (m.z7, (["upper"], ["eq"])),
+            (m.z8, (["lower", "upper"], ["lower", "upper"])),
+        ))
+
+        turn_adjustable_var_bounds_to_constraints(model_data)
+        for var, (orig_domain, orig_bounds) in original_var_domains_and_bounds.items():
+            _, (final_lb, final_ub) = get_var_bound_pairs(var)
+            if var not in effective_first_stage_var_set:
+                # these are the adjustable variables.
+                # domains should have been removed,
+                # i.e. changed to reals.
+                # bounds should also have been removed
+                self.assertIs(
+                    var.domain,
+                    Reals,
+                    msg=(
+                        f"Domain of adjustable variable {var.name!r}  "
+                        "should now be Reals, but was instead found to be "
+                        f"{var.domain}"
+                    ),
+                )
+                self.assertIsNone(
+                    final_lb,
+                    msg=(
+                        f"Interval lower bound for adjustable variable {var.name!r} "
+                        "should now be None, as all adjustable variable bounds "
+                        "should have been removed, but was instead found to be"
+                        f"{final_lb}."
+                    ),
+                )
+                self.assertIsNone(
+                    final_ub,
+                    msg=(
+                        f"Interval upper bound for adjustable variable {var.name!r} "
+                        "should now be None, as all adjustable variable bounds "
+                        "should have been removed, but was instead found to be"
+                        f"{final_ub}."
+                    ),
+                )
+
+                # check the constraints added are as expected:
+                # they are present, involve only the variable
+                # of interest, and where applicable, the
+                # uncertain parameters
+                varname = var.getname(
+                    relative_to=m, fully_qualified=True
+                )
+                cert_bound_con_types, uncert_bound_con_types = (
+                    expected_cert_uncert_bound_con_types[var]
+                )
+                for ccbtype in cert_bound_con_types:
+                    cert_bound_con_name = f"{varname}_certain_{ccbtype}_bound_con"
+
+                    cert_bound_con = model_data.working_model.find_component(
+                        cert_bound_con_name
+                    )
+                    self.assertIsNotNone(
+                        cert_bound_con,
+                        msg=(
+                            f"Expected working model to contain a certain {ccbtype} "
+                            f"bound constraint with name {cert_bound_con_name!r}, "
+                            f"for the variable {var.name!r}, "
+                            "but no such constraint was not found."
+                        )
+                    )
+                    vars_in_bound_con = ComponentSet(
+                        identify_variables(cert_bound_con.body)
+                    )
+                    self.assertEqual(
+                        vars_in_bound_con,
+                        ComponentSet((var,)),
+                        msg=(
+                            f"Bound constraint {cert_bound_con.name} should involve "
+                            f"only the variable with name {var.name!r}, but involves "
+                            f"the variables {vars_in_bound_con}."
+                        ),
+                    )
+
+                    uncertain_params_in_bound_con = ComponentSet(
+                        identify_mutable_parameters(cert_bound_con.body)
+                        & uncertain_params_set
+                    )
+                    self.assertFalse(
+                        uncertain_params_in_bound_con,
+                        msg=(
+                            f"Uncertain parameters were found in the expression "
+                            "of the bound constraint with name"
+                            f"{cert_bound_con.name!r}; expression is "
+                            f"{cert_bound_con.expr}"
+                        ),
+                    )
+
+                for ucbtype in uncert_bound_con_types:
+                    unc_bound_con_name = f"{varname}_uncertain_{ucbtype}_bound_con"
+                    unc_bound_con = model_data.working_model.find_component(
+                        unc_bound_con_name
+                    )
+
+                    self.assertIsNotNone(
+                        unc_bound_con,
+                        msg=(
+                            f"Expected working model to contain an uncertain {ucbtype} "
+                            f"bound constraint with name {unc_bound_con_name!r}, "
+                            f"for the variable {var.name!r}, "
+                            "but no such constraint was not found."
+                        ),
+                    )
+
+                    vars_in_bound_con = ComponentSet(
+                        identify_variables(unc_bound_con.body)
+                    )
+                    self.assertEqual(
+                        vars_in_bound_con,
+                        ComponentSet((var,)),
+                        msg=(
+                            f"Bound constraint {unc_bound_con.name} should involve "
+                            f"only the variable with name {var.name!r}, but involves "
+                            f"the variables {vars_in_bound_con}."
+                        ),
+                    )
+
+                    # we want to ensure that uncertain params,
+                    # rather than their values,
+                    # are used to create the bound constraints
+                    uncertain_params_in_bound_con = ComponentSet(
+                        identify_mutable_parameters(unc_bound_con.body)
+                        & uncertain_params_set
+                    )
+                    self.assertTrue(
+                        uncertain_params_in_bound_con,
+                        msg=(
+                            f"No uncertain parameters were found in the bound "
+                            f"constraint with name {unc_bound_con.name!r}."
+                        ),
+                    )
+            else:
+                # these are the nonadjustable variables.
+                # domains and bounds should be left unchanged
+                self.assertIs(
+                    var.domain,
+                    orig_domain,
+                    msg=(
+                        f"Domain of adjustable variable {var.name!r}  "
+                        "should now be Reals, but was instead found to be "
+                        f"{var.domain}"
+                    ),
+                )
+                self.assertIs(
+                    orig_bounds[0],
+                    final_lb,
+                    msg=(
+                        f"Lower bound for nonadjustable variable {var.name!r} "
+                        "appears to "
+                        f"have been changed from {orig_bounds[0]} to {final_lb}."
+                    ),
+                )
+                self.assertIs(
+                    orig_bounds[1],
+                    final_ub,
+                    msg=(
+                        f"Upper bound for nonadjustable variable {var.name!r} "
+                        "appears to "
+                        f"have been changed from {orig_bounds[1]} to {final_ub}."
+                    ),
+                )
+
     def test_bounds_to_constraints(self):
         m = ConcreteModel()
         m.x = Var(initialize=1, bounds=(0, 1))
