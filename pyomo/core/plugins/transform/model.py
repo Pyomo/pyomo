@@ -16,10 +16,17 @@
 # because we may support an explicit matrix representation for models.
 #
 
+from pyomo.common.deprecation import deprecated
 from pyomo.core.base import Objective, Constraint
 import array
 
 
+@deprecated(
+    "to_standard_form() is deprecated.  "
+    "Please use WriterFactory('compile_standard_form')",
+    version='6.7.3',
+    remove_in='6.8.0',
+)
 def to_standard_form(self):
     """
     Produces a standard-form representation of the model. Returns
