@@ -37,7 +37,7 @@ from pyomo.core.util import prod
 from pyomo.core.base.var import IndexedVar
 from pyomo.core.base.set_types import Reals
 from pyomo.opt import TerminationCondition as tc
-from pyomo.core.expr import value
+from pyomo.core.expr import value, EqualityExpression, InequalityExpression
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.repn.plugins import nl_writer as pyomo_nl_writer
@@ -1824,8 +1824,126 @@ def setup_working_model(model_data, config, user_var_partitioning):
     # we will need this later for construction of the subproblems
     working_model.effective_first_stage_equality_cons = []
     working_model.effective_first_stage_inequality_cons = []
+    working_model.effective_first_stage_ranged_cons = []
     working_model.effective_performance_equality_cons = []
     working_model.effective_performance_inequality_cons = []
+
+
+def remove_con_declared_bound(con, bound_type):
+    """
+    Remove a bound in a constraint data expression.
+    """
+    if bound_type == "lower":
+        con.set_value((None, con.body, con.upper))
+    elif bound_type == "eq":
+        con.set_value((None, con.body, None))
+    elif bound_type == "upper":
+        con.set_value((con.lower, con.body, None))
+    else:
+        raise ValueError(
+            f"Bound type {bound_type} not supported."
+        )
+
+
+def standardize_inequality_constraints(model_data):
+    """
+    Standardize the inequality constraints of the working model,
+    as needed.
+
+    Parameters
+    ----------
+    model_data : model data object
+        Main model data object, containing the working model.
+    """
+    working_model = model_data.working_model
+    uncertain_params_set = ComponentSet(working_model.uncertain_params)
+    adjustable_vars_set = ComponentSet(
+        working_model.effective_var_partitioning.second_stage_variables
+        + working_model.effective_var_partitioning.state_variables
+    )
+    orig_ineq_cons = [
+        con
+        for con in working_model.component_data_objects(Constraint, active=True)
+        # ensure all ranged performance constraints are standardized
+        # in this routine, so check expression type instead of using
+        # ConstraintData.equality
+        if not isinstance(con.expr, EqualityExpression)
+    ]
+    for con in orig_ineq_cons:
+        uncertain_params_in_con_expr = (
+            ComponentSet(identify_mutable_parameters(con.expr))
+            & uncertain_params_set
+        )
+        adjustable_vars_in_con_body = (
+            ComponentSet(identify_variables(con.body))
+            & adjustable_vars_set
+        )
+
+        if uncertain_params_in_con_expr | adjustable_vars_in_con_body:
+            con_bounds_triple = rearrange_bound_pair_to_triple(
+                lower_bound=con.lower,
+                upper_bound=con.upper,
+            )
+            finite_bounds = {
+                btype: bd for btype, bd in con_bounds_triple._asdict().items()
+                if bd is not None
+            }
+            for btype, bound in finite_bounds.items():
+                if len(finite_bounds) == 1:
+                    # since only one constraint would be enforced in
+                    # lieu of the original, just modify the original
+                    # expression in-place
+                    con.set_value(
+                        create_bound_constraint_expr(con.body, bound, btype)
+                    )
+                    new_con = con
+                else:
+                    uncertain_params_in_bound = ComponentSet(
+                        identify_mutable_parameters(bound)
+                    ) & uncertain_params_set
+
+                    # we modify only portions of constraints
+                    # in which there is dependence on the
+                    # adjustable variables or the uncertain
+                    # parameters
+                    if adjustable_vars_in_con_body | uncertain_params_in_bound:
+                        new_con_name = con.getname(
+                            relative_to=working_model.user_model,
+                            fully_qualified=True,
+                        )
+                        new_con = Constraint(
+                            expr=create_bound_constraint_expr(con.body, bound, btype)
+                        )
+                        working_model.user_model.add_component(
+                            f"{new_con_name}_{btype}_bound",
+                            new_con,
+                        )
+                        remove_con_declared_bound(con, btype)
+
+                if btype == "eq":
+                    working_model.effective_performance_equality_cons.append(new_con)
+                else:
+                    working_model.effective_performance_inequality_cons.append(new_con)
+
+            if con.lower is None and con.upper is None:
+                # all finite bounds were removed
+                # during the reformulation
+                con.deactivate()
+        else:
+            # constraint depends on the nonadjustable variables only
+            # classify these according to expression type;
+            # this will be useful for reporting statistics later
+            if isinstance(con.expr, InequalityExpression):
+                working_model.effective_first_stage_inequality_cons.append(con)
+            else:
+                # we already filtered out the equality expression
+                # constraints, which will be addressed later
+                working_model.effective_first_stage_ranged_cons.append(con)
+
+    # for subsequent developments: map the original constraints
+    # to the derived performance inequalities?
+    # we will add this as needed when changes are made to
+    # the interface for separation priority ordering
 
 
 def new_preprocess_model_data(model_data, config, user_var_partitioning):
@@ -1858,11 +1976,11 @@ def new_preprocess_model_data(model_data, config, user_var_partitioning):
     # turn variable bounds to constraints.
     # different treatment for effective first-stage
     # than for effective second-stage and state variables
-    turn_nonadjustable_var_bounds_to_constraints(model_data, config)
-    turn_adjustable_var_bounds_to_constraints(model_data, config)
+    turn_nonadjustable_var_bounds_to_constraints(model_data)
+    turn_adjustable_var_bounds_to_constraints(model_data)
 
     # standardize inequality constraints
-    ...
+    standardize_inequality_constraints(model_data)
 
     # standardize equality constraints
     ...

@@ -30,6 +30,7 @@ from pyomo.core.expr import (
     identify_mutable_parameters,
     MonomialTermExpression,
     SumExpression,
+    EqualityExpression,
 )
 from pyomo.contrib.pyros.util import (
     selective_clone,
@@ -47,6 +48,7 @@ from pyomo.contrib.pyros.util import (
     get_var_bound_pairs,
     turn_nonadjustable_var_bounds_to_constraints,
     turn_adjustable_var_bounds_to_constraints,
+    standardize_inequality_constraints,
 )
 from pyomo.contrib.pyros.util import replace_uncertain_bounds_with_constraints
 from pyomo.contrib.pyros.util import get_vars_from_component
@@ -7681,6 +7683,187 @@ class TestResolveVarBounds(unittest.TestCase):
                     f"{get_var_certain_uncertain_bounds.__name__!r}."
                 )
             )
+
+
+class TestStandardizeInequalityConstraints(unittest.TestCase):
+    """
+    Test standardization of inequality constraints.
+    """
+
+    def build_simple_test_model_data(self):
+        """
+        Build model data object for testing constraint standardization
+        routines.
+        """
+        model_data = Bunch()
+        model_data.working_model = ConcreteModel()
+        model_data.working_model.user_model = m = Block()
+
+        m.x1 = Var()
+        m.x2 = Var()
+        m.z1 = Var()
+        m.z2 = Var()
+        m.y1 = Var()
+
+        m.p = Param(initialize=2, mutable=True)
+        m.q = Param(mutable=True, initialize=1)
+
+        m.c1 = Constraint(expr=m.x1 <= 1)
+        m.c2 = Constraint(expr=(1, m.x1, 2))
+        m.c3 = Constraint(expr=m.q <= m.x1)
+        m.c4 = Constraint(expr=(m.p, m.x2, m.q))
+        m.c5 = Constraint(expr=(m.q, m.x2, m.q))
+        m.c6 = Constraint(expr=m.z1 <= 1)
+        m.c7 = Constraint(expr=(0, m.z2, 1))
+        m.c8 = Constraint(expr=(m.p, m.y1, m.p))
+        m.c9 = Constraint(expr=m.y1 - m.q <= 0)
+        m.c10 = Constraint(expr=m.y1 == m.q)
+        m.c11 = Constraint(expr=m.z2 <= m.q)
+
+        m.c11.deactivate()
+
+        model_data.working_model.uncertain_params = [m.q]
+
+        model_data.working_model.effective_first_stage_inequality_cons = []
+        model_data.working_model.effective_first_stage_equality_cons = []
+        model_data.working_model.effective_first_stage_ranged_cons = []
+        model_data.working_model.effective_performance_inequality_cons = []
+        model_data.working_model.effective_performance_equality_cons = []
+
+        ep = model_data.working_model.effective_var_partitioning = Bunch()
+        ep.first_stage_variables = [m.x1, m.x2]
+        ep.second_stage_variables = [m.z1, m.z2]
+        ep.state_variables = [m.y1]
+
+        return model_data
+
+    def test_standardize_inequality_constraints(self):
+        """
+        Test inequality constraint standardization routine.
+        """
+        model_data = self.build_simple_test_model_data()
+        working_model = model_data.working_model
+
+        original_con_exprs = ComponentMap(
+            (con, con.expr)
+            for con in model_data.working_model.component_data_objects(
+                Constraint, active=True,
+            )
+        )
+
+        standardize_inequality_constraints(model_data)
+        m = working_model.user_model
+
+        expected_modified_cons = [m.c3, m.c4, m.c5, m.c6, m.c7, m.c8, m.c9]
+        for con in original_con_exprs.keys():
+            if con in expected_modified_cons:
+                self.assertIsNot(
+                    con.expr,
+                    original_con_exprs[con],
+                    msg=(
+                        f"Expression of first-stage constraint {con.name!r} "
+                        f"was unexpectedly not modified from "
+                        f"{original_con_exprs[con]} "
+                    ),
+                )
+            else:
+                self.assertIs(
+                    con.expr,
+                    original_con_exprs[con],
+                    msg=(
+                        f"Expression of constraint {con.name} "
+                        "with adjustable/uncertain components "
+                        f"was unexpectedly modified from {original_con_exprs[con]} "
+                        f"to {con.expr}"
+                    ),
+                )
+
+        # m.x1 <= 1
+        # first stage constraint. no modification
+        self.assertTrue(m.c1.active)
+        self.assertIn(m.c1, working_model.effective_first_stage_inequality_cons)
+
+        # 1 <= m.x2 <= 2; first-stage constraint. no modification
+        self.assertTrue(m.c2.active)
+        self.assertIn(m.c2, working_model.effective_first_stage_ranged_cons)
+
+        # m.q <= m.x1; performance inequality due to q-dependence
+        self.assertTrue(m.c3.active)
+        self.assertEqual(m.c3.lower, None)
+        self.assertEqual(m.c3.upper, 0)
+        self.assertIn(m.c3, working_model.effective_performance_inequality_cons)
+
+        # m.p <= m.x2 <= m.q
+        # m.p <= m.x2 stays in place as first-stage inequality
+        # m.x2 - m.q <= 0 added as performance inequality
+        self.assertTrue(m.c4.active)
+        self.assertIs(m.c4.lower, m.p)
+        self.assertIs(m.c4.upper, None)
+        c4_upper_bound_con = m.find_component("c4_upper_bound")
+        self.assertIsNotNone(c4_upper_bound_con)
+        self.assertIsNone(c4_upper_bound_con.lower)
+        self.assertEqual(c4_upper_bound_con.upper, 0)
+        self.assertIn(
+            c4_upper_bound_con,
+            working_model.effective_performance_inequality_cons,
+        )
+
+        # m.q <= m.x2 <= m.q
+        # performance equality in place m.x2 - m.q == 0
+        self.assertTrue(m.c5.active)
+        self.assertEqual(m.c5.lower, 0)
+        self.assertEqual(m.c5.upper, 0)
+        self.assertIsInstance(m.c5.expr, EqualityExpression)
+        self.assertIn(m.c5, working_model.effective_performance_equality_cons)
+
+        # performance inequality in place to m.z1 - 1 <= 0
+        self.assertTrue(m.c6.active)
+        self.assertIsNone(m.c6.lower)
+        self.assertEqual(m.c6.upper, 0)
+
+        # 0 <= m.z2 <= 1
+        # two new performance inequalities:
+        # 0 - m.z2 <= 0 and m.z2 - 1 <= 0
+        # the original should be deactivated
+        self.assertFalse(m.c7.active)
+        self.assertIsNone(m.c7.lower)
+        self.assertIsNone(m.c7.upper)
+        c7_lower_bound_con = m.find_component("c7_lower_bound")
+        c7_upper_bound_con = m.find_component("c7_upper_bound")
+        self.assertIsNotNone(c7_lower_bound_con)
+        self.assertIsNotNone(c7_upper_bound_con)
+        self.assertIsNone(c7_lower_bound_con.lower)
+        self.assertEqual(c7_lower_bound_con.upper, 0)
+        self.assertIsNone(c7_upper_bound_con.lower)
+        self.assertEqual(c7_upper_bound_con.upper, 0)
+        self.assertIn(
+            c7_lower_bound_con, working_model.effective_performance_inequality_cons,
+        )
+        self.assertIn(
+            c7_upper_bound_con, working_model.effective_performance_inequality_cons,
+        )
+
+        # m.p <= m.y1 <= m.p
+        # single performance equality m.y1 - m.p == 0 in place
+        self.assertTrue(m.c8.active)
+        self.assertEqual(m.c8.lower, 0)
+        self.assertEqual(m.c8.upper, 0)
+        self.assertIn(m.c8, working_model.effective_performance_equality_cons)
+
+        # m.y1 - m.q <= 0
+        # single performance inequality
+        self.assertTrue(m.c9.active)
+        self.assertIsNone(m.c9.lower)
+        self.assertEqual(m.c9.upper, 0)
+        self.assertIn(m.c9, working_model.effective_performance_inequality_cons)
+
+        # originally a constarint with equality expression;
+        # no modification
+        self.assertTrue(m.c10.active)
+
+        # originally deactivated;
+        # no modification
+        self.assertFalse(m.c11.active)
 
 
 if __name__ == "__main__":
