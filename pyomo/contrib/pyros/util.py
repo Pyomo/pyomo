@@ -1680,7 +1680,7 @@ def turn_nonadjustable_var_bounds_to_constraints(model_data):
                 )
                 working_model.add_component(
                     unique_component_name(
-                        working_model,
+                        working_model.user_model,
                         f"{var_name}_uncertain_{btype}_bound_con",
                     ),
                     var_bound_con,
@@ -1746,7 +1746,7 @@ def turn_adjustable_var_bounds_to_constraints(model_data):
                     )
                     working_model.add_component(
                         unique_component_name(
-                            working_model,
+                            working_model.user_model,
                             f"{var_name}_{certainty_desc}_{btype}_bound_con",
                         ),
                         var_bound_con,
