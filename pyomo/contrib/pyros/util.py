@@ -1155,7 +1155,7 @@ def validate_pyros_inputs(model, config):
 
 def get_var_bound_pairs(var):
     """
-    Get the domain and interval (i.e. declared) lower/upper
+    Get the domain and declared lower/upper
     bound pairs of a variable data object.
 
     Parameters
@@ -1167,46 +1167,46 @@ def get_var_bound_pairs(var):
     -------
     domain_bounds : 2-tuple of None or numeric type
         Domain (lower, upper) bound pair.
-    interval_bounds : 2-tuple of None, numeric type, or NumericExpression
-        Interval (lower, upper) bound pair.
+    declared_bounds : 2-tuple of None, numeric type, or NumericExpression
+        Declared (lower, upper) bound pair.
         Bounds of type `NumericExpression`
         are either constant or mutable expressions.
     """
     # temporarily set domain to Reals to cleanly retrieve
-    # the interval bound expressions
+    # the declared bound expressions
     orig_var_domain = var.domain
     var.domain = Reals
 
     domain_bounds = orig_var_domain.bounds()
-    interval_bounds = var.lower, var.upper
+    declared_bounds = var.lower, var.upper
 
     # ensure state of variable object is ultimately left unchanged
     var.domain = orig_var_domain
 
-    return domain_bounds, interval_bounds
+    return domain_bounds, declared_bounds
 
 
 def determine_certain_and_uncertain_bound(
         domain_bound,
-        interval_bound,
+        declared_bound,
         uncertain_params,
         bound_type,
         ):
     """
     Determine the certain and uncertain lower or upper
     bound for a variable object, based on the specified
-    domain and interval bound.
+    domain and declared bound.
 
     Parameters
     ----------
     domain_bound : numeric type, NumericExpression, or None
         Domain bound.
-    interval_bound : numeric type, NumericExpression, or None
-        Interval bound.
+    declared_bound : numeric type, NumericExpression, or None
+        Declared bound.
     uncertain_params : iterable of ParamData
         Uncertain model parameters.
     bound_type : {'lower', 'upper'}
-        Indication of whether the domain bound and interval bound
+        Indication of whether the domain bound and declared bound
         specify lower or upper bounds for the variable value.
 
     Returns
@@ -1221,34 +1221,34 @@ def determine_certain_and_uncertain_bound(
             f"Argument {bound_type=!r} should be either 'lower' or 'upper'."
         )
 
-    if interval_bound is not None:
-        uncertain_params_in_interval_bound = (
+    if declared_bound is not None:
+        uncertain_params_in_declared_bound = (
             ComponentSet(uncertain_params)
-            & ComponentSet(identify_mutable_parameters(interval_bound))
+            & ComponentSet(identify_mutable_parameters(declared_bound))
         )
     else:
-        uncertain_params_in_interval_bound = False
+        uncertain_params_in_declared_bound = False
 
-    if not uncertain_params_in_interval_bound:
+    if not uncertain_params_in_declared_bound:
         uncertain_bound = None
 
-        if interval_bound is None:
+        if declared_bound is None:
             certain_bound = domain_bound
         elif domain_bound is None:
-            certain_bound = interval_bound
+            certain_bound = declared_bound
         else:
             if bound_type == "lower":
                 certain_bound = (
-                    interval_bound if value(interval_bound) >= domain_bound
+                    declared_bound if value(declared_bound) >= domain_bound
                     else domain_bound
                 )
             else:
                 certain_bound = (
-                    interval_bound if value(interval_bound) <= domain_bound
+                    declared_bound if value(declared_bound) <= domain_bound
                     else domain_bound
                 )
     else:
-        uncertain_bound = interval_bound
+        uncertain_bound = declared_bound
         certain_bound = domain_bound
 
     return certain_bound, uncertain_bound
@@ -1305,7 +1305,7 @@ def get_var_certain_uncertain_bounds(var, uncertain_params):
     """
     Determine the certain and uncertain lower/equality/upper bound
     triples for a variable data object, based on that variable's
-    domain and interval (i.e. declared) bounds.
+    domain and declared bounds.
 
     Parameters
     ----------
@@ -1321,17 +1321,17 @@ def get_var_certain_uncertain_bounds(var, uncertain_params):
     uncertain_bounds : BoundTriple
         The uncertain lower/equality/upper bound triple.
     """
-    (domain_lb, domain_ub), (interval_lb, interval_ub) = get_var_bound_pairs(var)
+    (domain_lb, domain_ub), (declared_lb, declared_ub) = get_var_bound_pairs(var)
 
     certain_lb, uncertain_lb = determine_certain_and_uncertain_bound(
         domain_bound=domain_lb,
-        interval_bound=interval_lb,
+        declared_bound=declared_lb,
         uncertain_params=uncertain_params,
         bound_type="lower",
     )
     certain_ub, uncertain_ub = determine_certain_and_uncertain_bound(
         domain_bound=domain_ub,
-        interval_bound=interval_ub,
+        declared_bound=declared_ub,
         uncertain_params=uncertain_params,
         bound_type="upper",
     )
@@ -1595,16 +1595,16 @@ def create_bound_constraint_expr(expr, bound, bound_type):
         )
 
 
-def remove_var_interval_bound(var, bound_type):
+def remove_var_declared_bound(var, bound_type):
     """
-    Remove interval bound(s) from a variable data object.
+    Remove the specified declared bound(s) of a variable data object.
 
     Parameters
     ----------
     var : VarData
         Variable data object of interest.
     bound_type : {'lower', 'eq', 'upper'}
-        Indicator for the bound(s) to remove.
+        Indicator for the declared bound(s) to remove.
         Note: if 'eq' is specified, then both the
         lower and upper bounds are removed.
     """
@@ -1624,7 +1624,8 @@ def remove_var_interval_bound(var, bound_type):
 
 def remove_all_var_bounds(var):
     """
-    Remove the domain and interval bounds for a variable.
+    Remove all the domain and declared bounds for a specified
+    variable data object.
     """
     var.setlb(None)
     var.setub(None)
@@ -1637,7 +1638,7 @@ def turn_nonadjustable_var_bounds_to_constraints(model_data):
     (i.e. effective first-stage) variables of the working
     model to constraints.
 
-    Only uncertain interval bounds are reformulated to
+    Only uncertain declared bounds are reformulated to
     constraints, as these are the only bounds we need to
     reformulate to properly construct the subproblems.
     Consequently, all constraints added to the working model
@@ -1659,13 +1660,13 @@ def turn_nonadjustable_var_bounds_to_constraints(model_data):
     )
     uncertain_params_set = ComponentSet(working_model.uncertain_params)
     for var in nonadjustable_vars:
-        _, interval_bounds = get_var_bound_pairs(var)
-        interval_bound_triple = rearrange_bound_pair_to_triple(*interval_bounds)
+        _, declared_bounds = get_var_bound_pairs(var)
+        declared_bound_triple = rearrange_bound_pair_to_triple(*declared_bounds)
         var_name = var.getname(
             relative_to=working_model.user_model,
             fully_qualified=True,
         )
-        for btype, bound in interval_bound_triple._asdict().items():
+        for btype, bound in declared_bound_triple._asdict().items():
             is_bound_uncertain = (
                 bound is not None
                 and (
@@ -1684,7 +1685,7 @@ def turn_nonadjustable_var_bounds_to_constraints(model_data):
                     ),
                     var_bound_con,
                 )
-                remove_var_interval_bound(var, btype)
+                remove_var_declared_bound(var, btype)
 
                 if btype == "eq":
                     performance_eq_cons.append(var_bound_con)
@@ -1699,11 +1700,11 @@ def turn_nonadjustable_var_bounds_to_constraints(model_data):
 
 def turn_adjustable_var_bounds_to_constraints(model_data):
     """
-    Reformulate domain and interval bounds for the
+    Reformulate domain and declared bounds for the
     adjustable (i.e., effective second-stage and effective state)
     variables of the working model to explicit constraints.
 
-    The domain and interval bounds for every adjustable variable
+    The domain and declared bounds for every adjustable variable
     are unconditionally reformulated to constraints,
     as this is required for appropriate construction of the
     subproblems later.

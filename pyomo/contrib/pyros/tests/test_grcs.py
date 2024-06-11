@@ -688,7 +688,7 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
         variables to constraints.
 
         This subroutine should reformulate only the uncertain
-        interval bounds for the nonadjustable variables.
+        declared bounds for the nonadjustable variables.
         All other variable bounds should be left unchanged.
         All variable domains should remain unchanged.
         """
@@ -829,7 +829,7 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
         on adjustable variables to constraints.
 
         This subroutine should reformulate the domain and
-        interval bounds for every adjustable
+        declared bounds for every adjustable
         (i.e. effective second-stage and effective state)
         variable.
         The domains and bounds for all other variables
@@ -889,7 +889,7 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
                 self.assertIsNone(
                     final_lb,
                     msg=(
-                        f"Interval lower bound for adjustable variable {var.name!r} "
+                        f"Declared lower bound for adjustable variable {var.name!r} "
                         "should now be None, as all adjustable variable bounds "
                         "should have been removed, but was instead found to be"
                         f"{final_lb}."
@@ -898,7 +898,7 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
                 self.assertIsNone(
                     final_ub,
                     msg=(
-                        f"Interval upper bound for adjustable variable {var.name!r} "
+                        f"Declared upper bound for adjustable variable {var.name!r} "
                         "should now be None, as all adjustable variable bounds "
                         "should have been removed, but was instead found to be"
                         f"{final_ub}."
