@@ -793,7 +793,7 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
                     varname = var.getname(
                         relative_to=m, fully_qualified=True
                     )
-                    bound_con = model_data.working_model.find_component(
+                    bound_con = model_data.working_model.user_model.find_component(
                         f"{varname}_uncertain_{cbtype}_bound_con"
                     )
                     self.assertIsNotNone(
@@ -921,7 +921,7 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
                 for ccbtype in cert_bound_con_types:
                     cert_bound_con_name = f"{varname}_certain_{ccbtype}_bound_con"
 
-                    cert_bound_con = model_data.working_model.find_component(
+                    cert_bound_con = model_data.working_model.user_model.find_component(
                         cert_bound_con_name
                     )
                     self.assertIsNotNone(
@@ -962,7 +962,7 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
 
                 for ucbtype in uncert_bound_con_types:
                     unc_bound_con_name = f"{varname}_uncertain_{ucbtype}_bound_con"
-                    unc_bound_con = model_data.working_model.find_component(
+                    unc_bound_con = model_data.working_model.user_model.find_component(
                         unc_bound_con_name
                     )
 
