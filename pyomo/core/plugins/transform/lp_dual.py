@@ -131,7 +131,7 @@ class LinearProgrammingDual(object):
         rows = range(A_transpose.shape[0])
         cols = range(A_transpose.shape[1])
         dual.x = Var(cols, domain=NonNegativeReals)
-        trans_info = model.private_data()
+        trans_info = dual.private_data()
         for j, (primal_cons, ineq) in enumerate(std_form.rows):
             if primal_sense is minimize and ineq == 1:
                 dual.x[j].domain = NonPositiveReals
@@ -149,23 +149,23 @@ class LinearProgrammingDual(object):
                 if primal.domain is NonNegativeReals:
                     dual.constraints[i] = (
                         sum(A_transpose[i, j] * dual.x[j] for j in cols)
-                        >= std_form.c[0, i]
+                        <= std_form.c[0, i]
                     )
                 elif primal.domain is NonPositiveReals:
                     dual.constraints[i] = (
                         sum(A_transpose[i, j] * dual.x[j] for j in cols)
-                        <= std_form.c[0, i]
+                        >= std_form.c[0, i]
                     )
             else:
                 if primal.domain is NonNegativeReals:
                     dual.constraints[i] = (
                         sum(A_transpose[i, j] * dual.x[j] for j in cols)
-                        <= std_form.c[0, i]
+                        >= std_form.c[0, i]
                     )
                 elif primal.domain is NonPositiveReals:
                     dual.constraints[i] = (
                         sum(A_transpose[i, j] * dual.x[j] for j in cols)
-                        >= std_form.c[0, i]
+                        <= std_form.c[0, i]
                     )
             if primal.domain is Reals:
                 dual.constraints[i] = (
