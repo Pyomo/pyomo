@@ -28,6 +28,7 @@ from pyomo.core import (
     Reals,
 )
 from pyomo.opt import WriterFactory
+from pyomo.repn.standard_repn import isclose_const
 
 
 # ESJ: TODO: copied from FME basically, should centralize.
@@ -145,32 +146,30 @@ class LinearProgrammingDual(object):
             
         dual.constraints = Constraint(rows)
         for i, primal in enumerate(std_form.columns):
+            lhs = 0
+            for j in cols:
+                coef = A_transpose[i, j]
+                if not coef:
+                    continue
+                elif isclose_const(coef, 1.0):
+                    lhs += dual.x[j]
+                elif isclose_const(coef, -1.0):
+                    lhs -= dual.x[j]
+                else:
+                    lhs += float(A_transpose[i, j]) * dual.x[j]
+
             if primal_sense is minimize:
                 if primal.domain is NonNegativeReals:
-                    dual.constraints[i] = (
-                        sum(A_transpose[i, j] * dual.x[j] for j in cols)
-                        <= std_form.c[0, i]
-                    )
+                    dual.constraints[i] = lhs <= float(std_form.c[0, i])
                 elif primal.domain is NonPositiveReals:
-                    dual.constraints[i] = (
-                        sum(A_transpose[i, j] * dual.x[j] for j in cols)
-                        >= std_form.c[0, i]
-                    )
+                    dual.constraints[i] = lhs >= float(std_form.c[0, i])
             else:
                 if primal.domain is NonNegativeReals:
-                    dual.constraints[i] = (
-                        sum(A_transpose[i, j] * dual.x[j] for j in cols)
-                        >= std_form.c[0, i]
-                    )
+                    dual.constraints[i] = lhs >= float(std_form.c[0, i])
                 elif primal.domain is NonPositiveReals:
-                    dual.constraints[i] = (
-                        sum(A_transpose[i, j] * dual.x[j] for j in cols)
-                        <= std_form.c[0, i]
-                    )
+                    dual.constraints[i] = lhs <= float(std_form.c[0, i])
             if primal.domain is Reals:
-                dual.constraints[i] = (
-                    sum(A_transpose[i, j] * dual.x[j] for j in cols) == std_form.c[0, i]
-                )
+                dual.constraints[i] = lhs == float(std_form.c[0, i])
             trans_info.dual_constraint[primal] = dual.constraints[i]
             trans_info.primal_var[dual.constraints[i]] = primal
 

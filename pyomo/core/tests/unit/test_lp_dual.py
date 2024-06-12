@@ -14,6 +14,7 @@ import pyomo.common.unittest as unittest
 from pyomo.environ import (
     ConcreteModel, 
     Constraint,
+    maximize,
     NonNegativeReals,
     NonPositiveReals,
     Objective,
@@ -24,9 +25,9 @@ from pyomo.environ import (
     value,
     Var,
 )
+from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.opt import SolverFactory, WriterFactory
 
-from pytest import set_trace
 
 @unittest.skipUnless(scipy_available, "Scipy not available")
 class TestLPDual(unittest.TestCase):
@@ -81,49 +82,60 @@ class TestLPDual(unittest.TestCase):
         lp_dual = TransformationFactory('core.lp_dual')
         dual = lp_dual.create_using(m)
 
-        alpha = lp_dual.get_dual_var(m.c1)
-        beta = lp_dual.get_dual_var(m.c2)
-        lamb = lp_dual.get_dual_var(m.c3)
-        xi = lp_dual.get_dual_var(m.c4)
+        alpha = lp_dual.get_dual_var(dual, m.c1)
+        beta = lp_dual.get_dual_var(dual, m.c2)
+        lamb = lp_dual.get_dual_var(dual, m.c3)
+        xi = lp_dual.get_dual_var(dual, m.c4)
 
-        self.assertIs(lp_dual.get_primal_constraint[alpha], m.c1)
-        self.assertIs(lp_dual.get_primal_constraint[beta], m.c2)
-        self.assertIs(lp_dual.get_primal_constraint[lamb], m.c3)
-        self.assertIs(lp_dual.get_primal_constraint[xi], m.c4)
+        self.assertIs(lp_dual.get_primal_constraint(dual, alpha), m.c1)
+        self.assertIs(lp_dual.get_primal_constraint(dual, beta), m.c2)
+        self.assertIs(lp_dual.get_primal_constraint(dual, lamb), m.c3)
+        self.assertIs(lp_dual.get_primal_constraint(dual, xi), m.c4)
 
-        dx = lp_dual.get_dual_constraint[m.x]
-        dy = lp_dual.get_dual_constraint[m.y]
-        dz = lp_dual.get_dual_constraint[m.z]
+        dx = lp_dual.get_dual_constraint(dual, m.x)
+        dy = lp_dual.get_dual_constraint(dual, m.y)
+        dz = lp_dual.get_dual_constraint(dual, m.z)
 
-        self.assertIs(lp_dual.get_primal_var[dx], m.x)
-        self.assertIs(lp_dual.get_primal_var[dy], m.y)
-        self.assertIs(lp_dual.get_primal_var[dz], m.z)
+        self.assertIs(lp_dual.get_primal_var(dual, dx), m.x)
+        self.assertIs(lp_dual.get_primal_var(dual, dy), m.y)
+        self.assertIs(lp_dual.get_primal_var(dual, dz), m.z)
 
-        self.assertIsInstance(alpha, Var)
-        self.assertIs(alpha.domain, NonPositiveReals)
+        self.assertIs(alpha.ctype, Var)
+        self.assertEqual(alpha.domain, NonPositiveReals)
         self.assertEqual(alpha.ub, 0)
         self.assertIsNone(alpha.lb)
-        self.assertIsInstance(beta, Var)
-        self.assertIs(alpha.domain, NonNegativeReals)
-        self.assertEqual(alpha.lb, 0)
-        self.assertIsNone(alpha.ub)
-        self.assertIsInstance(lamb, Var)
-        self.assertIs(lamb.domain, Reals)
+        self.assertIs(beta.ctype, Var)
+        self.assertEqual(beta.domain, NonNegativeReals)
+        self.assertEqual(beta.lb, 0)
+        self.assertIsNone(beta.ub)
+        self.assertIs(lamb.ctype, Var)
+        self.assertEqual(lamb.domain, Reals)
         self.assertIsNone(lamb.ub)
         self.assertIsNone(lamb.lb)
-        self.assertIsInstance(xi, Var)
-        self.assertIs(xi.domain, NonPositiveReals)
+        self.assertIs(xi.ctype, Var)
+        self.assertEqual(xi.domain, NonPositiveReals)
         self.assertEqual(xi.ub, 0)
         self.assertIsNone(xi.lb)
 
-        self.assertIsInstance(dx, Constraint)
-        self.assertIsInstance(dy, Constraint)
-        self.assertIsInstance(dz, Constraint)
+        self.assertIs(dx.ctype, Constraint)
+        self.assertIs(dy.ctype, Constraint)
+        self.assertIs(dz.ctype, Constraint)
 
         assertExpressionsEqual(
             self,
             dx.expr,
-            -4 * alpha + beta <= 1
+            -4.0 * alpha + beta <= 1.0
+        )
+        assertExpressionsEqual(
+            self, dy.expr, -2.0 * alpha + beta - lamb >= 2.0
+        )
+        assertExpressionsEqual(
+            self, dz.expr, - alpha - 1.0 * lamb + xi == -3.0
         )
 
-        # TODO: map objectives, and test them
+        dual_obj = dual.obj
+        self.assertIsInstance(dual_obj, Objective)
+        self.assertEqual(dual_obj.sense, maximize)
+        assertExpressionsEqual(
+            self, dual_obj.expr, -5 * alpha + 3 * beta - 4.2 * lamb + 42 * xi
+        )
