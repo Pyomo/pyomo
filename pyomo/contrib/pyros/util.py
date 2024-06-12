@@ -2185,6 +2185,11 @@ def new_add_decision_rule_variables(model_data, config):
     )
     model_data.working_model.decision_rule_vars = decision_rule_vars = []
 
+    # facilitate matching of effective second-stage vars to DR vars later
+    model_data.working_model.eff_ss_var_to_dr_var_map = eff_ss_var_to_dr_var_map = (
+        ComponentMap()
+    )
+
     # since DR expression is a general polynomial in the uncertain
     # parameters, the exact number of DR variables
     # per effective second-stage variable
@@ -2211,6 +2216,7 @@ def new_add_decision_rule_variables(model_data, config):
 
         # update attributes
         decision_rule_vars.append(indexed_dr_var)
+        eff_ss_var_to_dr_var_map[eff_ss_var] = indexed_dr_var
 
 
 def new_add_decision_rule_constraints(model_data, config):
@@ -2242,6 +2248,12 @@ def new_add_decision_rule_constraints(model_data, config):
         ComponentMap()
     )
 
+    # facilitate retrieval of DR equation for a given
+    # effective second-stage variable later
+    model_data.working_model.eff_ss_var_to_dr_eqn_map = eff_ss_var_to_dr_eqn_map = (
+        ComponentMap()
+    )
+
     # set up uncertain parameter combinations for
     # construction of the monomials of the DR expressions
     monomial_param_combos = []
@@ -2251,14 +2263,15 @@ def new_add_decision_rule_constraints(model_data, config):
 
     # now construct DR equations and declare them on the working model
     second_stage_dr_var_zip = zip(effective_second_stage_vars, indexed_dr_var_list)
-    for idx, (ss_var, indexed_dr_var) in enumerate(second_stage_dr_var_zip):
+    for idx, (eff_ss_var, indexed_dr_var) in enumerate(second_stage_dr_var_zip):
         # for each DR equation, the number of coefficients should match
         # the number of monomial terms exactly
         if len(monomial_param_combos) != len(indexed_dr_var.index_set()):
             raise ValueError(
                 f"Mismatch between number of DR coefficient variables "
                 f"and number of DR monomials for DR equation index {idx}, "
-                f"corresponding to second-stage variable {ss_var.name!r}. "
+                "corresponding to effective second-stage variable "
+                f"{eff_ss_var.name!r}. "
                 f"({len(indexed_dr_var.index_set())}!= {len(monomial_param_combos)})"
             )
 
@@ -2272,11 +2285,11 @@ def new_add_decision_rule_constraints(model_data, config):
             dr_var_to_exponent_map[dr_var] = len(param_combo)
 
         # declare constraint on model
-        dr_eqn = Constraint(expr=dr_expression - ss_var == 0)
+        dr_eqn = Constraint(expr=dr_expression - eff_ss_var == 0)
         model_data.working_model.add_component(f"decision_rule_eqn_{idx}", dr_eqn)
 
-        # append to list of DR equality constraints
         decision_rule_eqns.append(dr_eqn)
+        eff_ss_var_to_dr_eqn_map[eff_ss_var] = dr_eqn
 
 
 def get_all_nonadjustable_variables(working_model):

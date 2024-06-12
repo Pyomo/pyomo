@@ -8530,6 +8530,23 @@ class TestAddDecisionRuleVars(unittest.TestCase):
             ),
         )
 
+        # check mapping is as expected
+        ess_dr_var_zip = zip(
+            effective_second_stage_vars,
+            model_data.working_model.decision_rule_vars,
+        )
+        for ess_var, indexed_dr_var in ess_dr_var_zip:
+            mapped_dr_var = model_data.working_model.eff_ss_var_to_dr_var_map[ess_var]
+            self.assertIs(
+                mapped_dr_var,
+                indexed_dr_var,
+                msg=(
+                    f"Second-stage var {ess_var.name!r} "
+                    f"is mapped to DR var {mapped_dr_var.name!r}, "
+                    f"but expected mapping to DR var {indexed_dr_var.name!r}."
+                )
+            )
+
     @unittest.skipIf(not scipy_available, 'Scipy is not available.')
     def test_correct_num_dr_vars_affine(self):
         """
@@ -8565,6 +8582,23 @@ class TestAddDecisionRuleVars(unittest.TestCase):
                 "number of second-stage variables."
             ),
         )
+
+        # check mapping is as expected
+        ess_dr_var_zip = zip(
+            effective_second_stage_vars,
+            model_data.working_model.decision_rule_vars,
+        )
+        for ess_var, indexed_dr_var in ess_dr_var_zip:
+            mapped_dr_var = model_data.working_model.eff_ss_var_to_dr_var_map[ess_var]
+            self.assertIs(
+                mapped_dr_var,
+                indexed_dr_var,
+                msg=(
+                    f"Second-stage var {ess_var.name!r} "
+                    f"is mapped to DR var {mapped_dr_var.name!r}, "
+                    f"but expected mapping to DR var {indexed_dr_var.name!r}."
+                )
+            )
 
     @unittest.skipIf(not scipy_available, 'Scipy is not available.')
     def test_correct_num_dr_vars_quadratic(self):
@@ -8606,6 +8640,23 @@ class TestAddDecisionRuleVars(unittest.TestCase):
                 "number of second-stage variables."
             ),
         )
+
+        # check mapping is as expected
+        ess_dr_var_zip = zip(
+            effective_second_stage_vars,
+            model_data.working_model.decision_rule_vars,
+        )
+        for ess_var, indexed_dr_var in ess_dr_var_zip:
+            mapped_dr_var = model_data.working_model.eff_ss_var_to_dr_var_map[ess_var]
+            self.assertIs(
+                mapped_dr_var,
+                indexed_dr_var,
+                msg=(
+                    f"Second-stage var {ess_var.name!r} "
+                    f"is mapped to DR var {mapped_dr_var.name!r}, "
+                    f"but expected mapping to DR var {indexed_dr_var.name!r}."
+                )
+            )
 
 
 class TestAddDecisionRuleConstraints(unittest.TestCase):
@@ -8677,6 +8728,23 @@ class TestAddDecisionRuleConstraints(unittest.TestCase):
                 "effective second-stage variables."
             )
         )
+
+        # check second-stage var to DR equation mapping is as expected
+        ess_dr_var_zip = zip(
+            effective_second_stage_vars,
+            model_data.working_model.decision_rule_eqns,
+        )
+        for ess_var, indexed_dr_eqn in ess_dr_var_zip:
+            mapped_dr_eqn = model_data.working_model.eff_ss_var_to_dr_eqn_map[ess_var]
+            self.assertIs(
+                mapped_dr_eqn,
+                indexed_dr_eqn,
+                msg=(
+                    f"Second-stage var {ess_var.name!r} "
+                    f"is mapped to DR equation {mapped_dr_eqn.name!r}, "
+                    f"but expected mapping to DR equation {indexed_dr_eqn.name!r}."
+                )
+            )
 
     @unittest.skipIf(not scipy_available, 'Scipy is not available.')
     def test_dr_eqns_form_correct(self):
