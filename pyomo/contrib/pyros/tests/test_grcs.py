@@ -29,6 +29,7 @@ from pyomo.core.expr import (
     identify_variables,
     identify_mutable_parameters,
     MonomialTermExpression,
+    NegationExpression,
     SumExpression,
     EqualityExpression,
 )
@@ -50,6 +51,9 @@ from pyomo.contrib.pyros.util import (
     turn_adjustable_var_bounds_to_constraints,
     standardize_inequality_constraints,
     standardize_equality_constraints,
+    standardize_active_objective,
+    declare_perstage_objective_summands,
+    get_summands,
 )
 from pyomo.contrib.pyros.util import replace_uncertain_bounds_with_constraints
 from pyomo.contrib.pyros.util import get_vars_from_component
@@ -7981,6 +7985,467 @@ class TestStandardizeEqualityConstraints(unittest.TestCase):
                         f"to {con.expr}."
                     ),
                 )
+
+
+class TestStandardizeActiveObjective(unittest.TestCase):
+    """
+    Test methods for standardization of the active objective.
+    """
+
+    def build_simple_test_model_data(self):
+        """
+        Build simple model for testing active objective
+        standardization.
+        """
+        model_data = Bunch()
+        model_data.working_model = ConcreteModel()
+        model_data.working_model.user_model = m = Block()
+
+        m.x = Var(initialize=1)
+        m.z = Var(initialize=2)
+        m.y = Var()
+
+        m.p = Param(initialize=1, mutable=True)
+        m.q = Param(initialize=1, mutable=True)
+
+        m.obj1 = Objective(
+            expr=(
+                10 + m.p + m.q + m.p * m.x + m.z * m.p + m.y ** 2 * m.q + m.y + log(m.x)
+            ),
+        )
+        m.obj2 = Objective(
+            expr=m.p + m.x * m.z + m.z ** 2,
+        )
+
+        model_data.working_model.uncertain_params = [m.q]
+
+        up = model_data.working_model.user_var_partitioning = Bunch()
+        up.first_stage_variables = [m.x]
+        up.second_stage_variables = [m.z]
+        up.state_variables = [m.y]
+
+        ep = model_data.working_model.effective_var_partitioning = Bunch()
+        ep.first_stage_variables = [m.x, m.z]
+        ep.second_stage_variables = []
+        ep.state_variables = [m.y]
+
+        model_data.working_model.effective_first_stage_inequality_cons = []
+        model_data.working_model.effective_performance_inequality_cons = []
+
+        return model_data
+
+    def test_declare_perstage_objective_summands(self):
+        """
+        Test method for identification/declaration
+        of per-stage objective summands.
+        """
+        model_data = self.build_simple_test_model_data()
+        working_model = model_data.working_model
+        m = model_data.working_model.user_model
+
+        obj1_summands = get_summands(m.obj1.expr)
+        expected_first_stage_summands = [
+            obj1_summands[0],  # 10
+            obj1_summands[1],  # m.p
+            obj1_summands[3],  # m.p * m.x
+            obj1_summands[-1],  # log(m.x)
+        ]
+        expected_second_stage_summands = [
+            obj1_summands[2],  # m.q
+            obj1_summands[4],  # m.z * m.p
+            obj1_summands[5],  # m.y ** 2 * m.q
+            obj1_summands[6],  # m.y
+        ]
+
+        declare_perstage_objective_summands(working_model, m.obj1)
+
+        actual_first_stage_summands = (
+            get_summands(working_model.first_stage_objective.expr)
+        )
+        self.assertEqual(
+            len(expected_first_stage_summands),
+            len(actual_first_stage_summands),
+            msg="Lengths of expected and actual first-stage summands don't match."
+        )
+        first_stage_zip = zip(
+            expected_first_stage_summands, actual_first_stage_summands
+        )
+        for expected_summand, actual_summand in first_stage_zip:
+            self.assertIs(
+                expected_summand,
+                actual_summand,
+                msg=(
+                    f"First-stage summand {actual_summand} "
+                    "is not the expected expression "
+                    f"{expected_summand}."
+                ),
+            )
+
+        actual_second_stage_summands = (
+            get_summands(working_model.second_stage_objective.expr)
+        )
+        self.assertEqual(
+            len(expected_second_stage_summands),
+            len(actual_second_stage_summands),
+            msg="Lengths of expected and actual second-stage summands don't match."
+        )
+        second_stage_zip = zip(
+            expected_second_stage_summands, actual_second_stage_summands
+        )
+        for expected_summand, actual_summand in second_stage_zip:
+            self.assertIs(
+                expected_summand,
+                actual_summand,
+                msg=(
+                    f"Second-stage summand {actual_summand} "
+                    "is not the expected expression "
+                    f"{expected_summand}."
+                ),
+            )
+
+        self.assertIs(
+            working_model.full_objective.expr,
+            m.obj1.expr,
+            msg=(
+                "Expression of full_objective should be the same as that of "
+                f"{m.obj1.name!r}."
+            ),
+        )
+
+    def test_declare_perstage_objective_summands_maximization_obj(self):
+        """
+        Test per-stage objective summand expressions are constructed
+        as expected when the objective is of a maximization sense.
+        """
+        model_data = self.build_simple_test_model_data()
+        working_model = model_data.working_model
+        m = model_data.working_model.user_model
+
+        m.obj1.sense = maximize
+
+        obj1_summands = get_summands(m.obj1.expr)
+        neg_expected_first_stage_summands = [
+            obj1_summands[0],  # 10
+            obj1_summands[1],  # m.p
+            obj1_summands[3],  # m.p * m.x
+            obj1_summands[-1],  # log(m.x)
+        ]
+        neg_expected_second_stage_summands = [
+            obj1_summands[2],  # m.q
+            obj1_summands[4],  # m.z * m.p
+            obj1_summands[5],  # m.y ** 2 * m.q
+            obj1_summands[6],  # m.y
+        ]
+
+        declare_perstage_objective_summands(working_model, m.obj1)
+
+        # we will test some of the first-stage summands only
+        actual_first_stage_summands = (
+            get_summands(working_model.first_stage_objective.expr)
+        )
+        self.assertEqual(
+            len(neg_expected_first_stage_summands),
+            len(actual_first_stage_summands),
+            msg="Number of expected and actual first-stage summands don't match."
+        )
+        first_stage_zip = zip(
+            neg_expected_first_stage_summands, actual_first_stage_summands
+        )
+        for neg_expected_summand, actual_summand in first_stage_zip:
+            if neg_expected_summand is neg_expected_first_stage_summands[0]:
+                # constant term 10
+                self.assertEqual(
+                    neg_expected_summand,
+                    -actual_summand,
+                    msg=(
+                        f"Actual summand {actual_summand} not as expected."
+                    )
+                )
+                neg_actual_summand = -actual_summand
+                self.assertIs(
+                    neg_expected_summand,
+                    neg_actual_summand,
+                    msg=(
+                        f"First-stage summand {neg_actual_summand} "
+                        "is not the expected expression "
+                        f"{neg_expected_summand}."
+                    ),
+                )
+            elif neg_expected_summand is neg_expected_first_stage_summands[-1]:
+                # log(m.x)
+                self.assertIsInstance(
+                    actual_summand,
+                    NegationExpression,
+                    msg=(
+                        f"Summand {neg_expected_summand} not of expected type."
+                    )
+                )
+                neg_actual_summand = actual_summand.args[-1]
+                self.assertIs(
+                    neg_expected_summand,
+                    neg_actual_summand,
+                    msg=(
+                        f"First-stage summand {neg_actual_summand} "
+                        "is not the expected expression "
+                        f"{neg_expected_summand}."
+                    ),
+                )
+            elif neg_expected_summand is neg_expected_first_stage_summands[1]:
+                # m.p term
+                self.assertIsInstance(
+                    actual_summand,
+                    NegationExpression,
+                    msg=(
+                        f"Summand {neg_expected_summand} not of expected type."
+                    )
+                )
+                neg_actual_summand = actual_summand.args[-1]
+                self.assertIs(
+                    neg_expected_summand,
+                    neg_actual_summand,
+                    msg=(
+                        f"First-stage summand {neg_actual_summand} "
+                        "is not the expected expression "
+                        f"{neg_expected_summand}."
+                    ),
+                )
+            else:
+                # m.p * m.x term
+                # perform just a type check
+                self.assertIsInstance(
+                    actual_summand,
+                    MonomialTermExpression,
+                    msg=(
+                        f"Summand {neg_expected_summand} not of expected type."
+                    )
+                )
+
+        # just check length of the second-stage summands
+        self.assertEqual(
+            len(neg_expected_second_stage_summands),
+            len(get_summands(working_model.second_stage_objective.expr)),
+            msg="Number of expected and actual second-stage summands don't match."
+        )
+
+        # check that the full objective is the negative of
+        # the original (it should be due to the maximization sense)
+        self.assertIsInstance(
+            working_model.full_objective.expr,
+            NegationExpression,
+            msg=(
+                "Due to maximization sense, full_objective should be "
+                "a negation of the original objective."
+            ),
+        )
+        self.assertIs(
+            working_model.full_objective.expr.args[0],
+            m.obj1.expr,
+            msg=(
+                f"Expression of objective {m.obj1} should not have been modified "
+                f"by subroutine {declare_perstage_objective_summands.__name__!r}"
+            ),
+        )
+
+    def test_standardize_active_obj(self):
+        """
+        Test method for identification/declaration
+        of per-stage objective summands.
+        """
+        model_data = self.build_simple_test_model_data()
+        working_model = model_data.working_model
+        m = model_data.working_model.user_model
+
+        m.obj1.activate()
+        m.obj2.deactivate()
+
+        standardize_active_objective(model_data)
+
+        self.assertFalse(
+            m.obj1.active,
+            msg=(
+                f"Objective {m.obj1.name!r} should have been deactivated by "
+                f"{standardize_active_objective}."
+            ),
+        )
+        self.assertNotIn(
+            working_model.epigraph_con,
+            working_model.effective_first_stage_inequality_cons,
+            msg=(
+                f"Epigraph constraint {working_model.epigraph_con.name!r} "
+                "should not be in the list of effective first-stage inequalities."
+            ),
+        )
+        self.assertIn(
+            working_model.epigraph_con,
+            working_model.effective_performance_inequality_cons,
+            msg=(
+                f"Epigraph constraint {working_model.epigraph_con.name!r} "
+                "should be in the list of effective performance inequalities."
+            ),
+        )
+
+        # check last term is the negative of the epigraph variable
+        self.assertIsInstance(
+            working_model.epigraph_con.body.args[-1],
+            MonomialTermExpression,
+            msg=(
+                f"Last term {working_model.epigraph_con.body.args[-1]} "
+                "of epigraph constraint expression not of expected "
+                "type."
+            ),
+        )
+        self.assertTrue(
+            (
+                len(working_model.epigraph_con.body.args[-1].args) == 2
+                and working_model.epigraph_con.body.args[-1].args[0] == -1
+                and (
+                    working_model.epigraph_con.body.args[-1].args[-1]
+                    is working_model.epigraph_var
+                )
+            ),
+            msg=(
+                f"Last term {working_model.epigraph_con.body.args[-1]} "
+                "is not the negative of the epigraph variable"
+            ),
+        )
+
+        # check epigraph constraint is in standard inequality
+        # constraint form
+        self.assertIsNone(
+            working_model.epigraph_con.lower,
+            msg=(
+                "Epigraph constraint should not have a lower bound, "
+                f"but has a lower bound of {working_model.epigraph_con.lower}"
+            ),
+        )
+        self.assertEqual(
+            working_model.epigraph_con.upper,
+            0,
+            msg=(
+                "Epigraph constraint should not an upper bound of 0, "
+                f"but has an upper bound of {working_model.epigraph_con.upper}"
+            ),
+        )
+
+    def test_standardize_active_obj_nonadjustable_max(self):
+        """
+        Test standardize active objective for case in which
+        the objective is independent of the nonadjustable variables
+        and of a maximization sense.
+        """
+        model_data = self.build_simple_test_model_data()
+        working_model = model_data.working_model
+        m = working_model.user_model
+
+        # assume all variables nonadjustable
+        ep = model_data.working_model.effective_var_partitioning
+        ep.first_stage_variables = [m.x, m.z]
+        ep.second_stage_variables = []
+        ep.state_variables = [m.y]
+
+        m.obj1.deactivate()
+        m.obj2.activate()
+        m.obj2.sense = maximize
+
+        standardize_active_objective(model_data)
+
+        self.assertFalse(
+            m.obj2.active,
+            msg=(
+                f"Objective {m.obj2.name!r} should have been deactivated by "
+                f"{standardize_active_objective}."
+            ),
+        )
+        self.assertIn(
+            working_model.epigraph_con,
+            working_model.effective_first_stage_inequality_cons,
+            msg=(
+                f"Epigraph constraint {working_model.epigraph_con.name!r} "
+                "should be in the list of effective first-stage inequalities."
+            ),
+        )
+        self.assertNotIn(
+            working_model.epigraph_con,
+            working_model.effective_performance_inequality_cons,
+            msg=(
+                f"Epigraph constraint {working_model.epigraph_con.name!r} "
+                "should not be in the list of effective performance inequalities."
+            ),
+        )
+
+        self.assertIsInstance(
+            working_model.epigraph_con.body,
+            SumExpression,
+            msg="Epigraph constraint expression type not as expected.",
+        )
+
+        # body should be of the form:
+        # -(original objective expression) - epigraph_var
+        # if objective sense not accounted for, the body will
+        # not have this form
+        self.assertEqual(
+            len(working_model.epigraph_con.body.args),
+            2,
+            msg=(
+                f"Epigraph constraint body "
+                f"{working_model.epigraph_con.body} "
+                "should have 2 root level summands."
+            ),
+        )
+
+        self.assertIs(
+            working_model.epigraph_con.body.args[0],
+            working_model.full_objective.expr,
+            msg=(
+                "First high-level summand of the epigraph constraint should "
+                f"be expr of full_objective, which is "
+                f"{working_model.full_objective.expr}, "
+                f"but instead got {working_model.epigraph_con.body.args[0]}"
+            ),
+        )
+
+        # last term should be negative of the epigraph variable
+        self.assertIsInstance(
+            working_model.epigraph_con.body.args[-1],
+            MonomialTermExpression,
+            msg=(
+                f"Last term {working_model.epigraph_con.body.args[-1]} "
+                "of epigraph constraint expression not of expected "
+                "type."
+            ),
+        )
+        self.assertTrue(
+            (
+                len(working_model.epigraph_con.body.args[-1].args) == 2
+                and working_model.epigraph_con.body.args[-1].args[0] == -1
+                and (
+                    working_model.epigraph_con.body.args[-1].args[-1]
+                    is working_model.epigraph_var
+                )
+            ),
+            msg=(
+                f"Last term {working_model.epigraph_con.body.args[-1]} "
+                "is not the negative of the epigraph variable"
+            ),
+        )
+
+        # check epigraph constraint is in standard inequality
+        # constraint form
+        self.assertIsNone(
+            working_model.epigraph_con.lower,
+            msg=(
+                "Epigraph constraint should not have a lower bound, "
+                f"but has a lower bound of {working_model.epigraph_con.lower}"
+            ),
+        )
+        self.assertEqual(
+            working_model.epigraph_con.upper,
+            0,
+            msg=(
+                "Epigraph constraint should not an upper bound of 0, "
+                f"but has an upper bound of {working_model.epigraph_con.upper}"
+            ),
+        )
 
 
 if __name__ == "__main__":

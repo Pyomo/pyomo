@@ -38,7 +38,13 @@ from pyomo.core.base.var import IndexedVar
 from pyomo.core.base.set_types import Reals
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core.expr import value, EqualityExpression, InequalityExpression
-from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
+from pyomo.core.expr.numeric_expr import (
+    LinearExpression,
+    NPV_MaxExpression,
+    NPV_MinExpression,
+    NPV_SumExpression,
+    SumExpression,
+)
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.repn.plugins import nl_writer as pyomo_nl_writer
 from pyomo.core.expr.visitor import (
@@ -49,7 +55,6 @@ from pyomo.core.expr.visitor import (
 from pyomo.common.dependencies import scipy as sp
 from pyomo.core.expr.numvalue import native_types
 from pyomo.util.vars_from_expressions import get_vars_from_components
-from pyomo.core.expr.numeric_expr import SumExpression
 from pyomo.environ import SolverFactory
 
 import itertools as it
@@ -1983,6 +1988,177 @@ def standardize_equality_constraints(model_data):
             working_model.effective_first_stage_equality_cons.append(con)
 
 
+def get_summands(expr):
+    """
+    Recursively gather the individual summands of a numeric expression.
+
+    Parameters
+    ----------
+    expr : expression-like
+        Expression to be analyzed.
+
+    Returns
+    -------
+    summands : list of expression-like
+        The summands.
+    """
+    if isinstance(expr, SumExpression):
+        # note: NPV_SumExpression and LinearExpression
+        #       are subclasses of SumExpression,
+        #       so those instances are decomposed here, as well.
+        summands = []
+        for arg in expr.args:
+            summands.extend(get_summands(arg))
+    else:
+        summands = [expr]
+    return summands
+
+
+def declare_perstage_objective_summands(working_model, objective, sense=minimize):
+    """
+    Identify the per-stage summands of an objective of interest,
+    according to the user-based variable partitioning.
+
+    Two Expressions are declared on the working model to contain
+    the per-stage summands:
+
+    - ``first_stage_objective``: Sum of additive terms of `objective`
+      that are non-uncertain constants or depend only on the
+      user-defined first-stage variables.
+    - ``second_stage_objective``: Sum of all other additive terms of
+      `objective`.
+
+    To facilitate retrieval of the original objective expression
+    (modified to account for the sense), an Expression called
+    ``full_objective`` is also declared on the working model.
+
+    Parameters
+    ----------
+    working_model : ConcreteModel
+        Working model, constructed during a PyROS solver run.
+    objective : ObjectiveData
+        Objective of which summands are to be identified.
+    sense : {common.enums.minimize, common.enums.maximize}, optional
+        Desired sense of the objective; default is minimize.
+    """
+    if sense not in {minimize, maximize}:
+        raise ValueError(
+            f"Objective sense {sense} not supported. "
+            f"Ensure sense is {minimize} (minimize) or {maximize} (maximize)."
+        )
+
+    obj_expr = objective.expr
+
+    obj_args = get_summands(obj_expr)
+
+    # initialize first and second-stage cost expressions
+    first_stage_expr = 0
+    second_stage_expr = 0
+
+    first_stage_var_set = ComponentSet(
+        working_model.user_var_partitioning.first_stage_variables
+    )
+    uncertain_param_set = ComponentSet(working_model.uncertain_params)
+
+    obj_sense = objective.sense
+    for term in obj_args:
+        non_first_stage_vars_in_term = ComponentSet(
+            v for v in identify_variables(term) if v not in first_stage_var_set
+        )
+        uncertain_params_in_term = ComponentSet(
+            param
+            for param in identify_mutable_parameters(term)
+            if param in uncertain_param_set
+        )
+
+        # account for objective sense
+
+        # update all expressions
+        std_term = term if obj_sense == sense else -term
+        if non_first_stage_vars_in_term or uncertain_params_in_term:
+            second_stage_expr += std_term
+        else:
+            first_stage_expr += std_term
+
+    working_model.first_stage_objective = Expression(expr=first_stage_expr)
+    working_model.second_stage_objective = Expression(expr=second_stage_expr)
+
+    # useful for later
+    working_model.full_objective = Expression(
+        expr=obj_expr if sense == obj_sense else -obj_expr
+    )
+
+
+def standardize_active_objective(model_data):
+    """
+    Standardize the active objective of the working model.
+
+    This method involves declaration of:
+
+    - named expressions for the full active objective
+      (in a minimization sense), the first-stage objective summand,
+      and the second-stage objective summand.
+    - an epigraph epigraph variable and constraint.
+
+    The epigraph constraint is considered a first-stage
+    inequality provided that it is independent of the
+    adjustable (i.e., effective second-stage and effective state)
+    variables and the uncertain parameters.
+
+    Parameters
+    ----------
+    model_data : model data object
+        Main model data object.
+    """
+    working_model = model_data.working_model
+
+    active_obj = next(
+        working_model.component_data_objects(
+            Objective, active=True, descend_into=True
+        )
+    )
+    model_data.active_obj_original_sense = active_obj.sense
+
+    # per-stage summands will be useful for reporting later
+    declare_perstage_objective_summands(
+        working_model=working_model,
+        objective=active_obj,
+    )
+
+    # epigraph reformulation components will be useful for later
+    working_model.epigraph_var = Var(initialize=value(active_obj, exception=False))
+    working_model.epigraph_con = Constraint(
+        expr=working_model.full_objective.expr - working_model.epigraph_var <= 0
+    )
+
+    # we add the epigraph objective later, as needed,
+    # on a per subproblem basis;
+    # doing so is more efficient than adding the objective now
+    active_obj.deactivate()
+
+    # classify the epigraph constraint
+    adjustable_vars = (
+        working_model.effective_var_partitioning.second_stage_variables
+        + working_model.effective_var_partitioning.state_variables
+    )
+    uncertain_params_in_obj = (
+        ComponentSet(identify_mutable_parameters(active_obj.expr))
+        & ComponentSet(working_model.uncertain_params)
+    )
+    adjustable_vars_in_obj = (
+        ComponentSet(identify_variables(active_obj.expr))
+        & adjustable_vars
+    )
+    if uncertain_params_in_obj | adjustable_vars_in_obj:
+        working_model.effective_performance_inequality_cons.append(
+            working_model.epigraph_con
+        )
+    else:
+        working_model.effective_first_stage_inequality_cons.append(
+            working_model.epigraph_con
+        )
+
+
 def new_preprocess_model_data(model_data, config, user_var_partitioning):
     """
     Preprocess user inputs to modeling objects from which
@@ -2010,7 +2186,6 @@ def new_preprocess_model_data(model_data, config, user_var_partitioning):
     # from the second-stage and state variables
     add_effective_var_partitioning(model_data, config)
 
-    # turn variable bounds to constraints.
     # different treatment for effective first-stage
     # than for effective second-stage and state variables
     turn_nonadjustable_var_bounds_to_constraints(model_data)
@@ -2019,8 +2194,8 @@ def new_preprocess_model_data(model_data, config, user_var_partitioning):
     standardize_inequality_constraints(model_data)
     standardize_equality_constraints(model_data)
 
-    # standardize Objective: perform epigraph reformulation
-    ...
+    # includes epigraph reformulation
+    standardize_active_objective(model_data)
 
     # add DR components
     ...
@@ -2601,7 +2776,7 @@ def identify_objective_functions(model, objective):
     else:
         obj_args = [expr_to_split]
 
-    # initialize first and second-stage cost expressions
+    # initialize first and second-stage summand expressions
     first_stage_cost_expr = 0
     second_stage_cost_expr = 0
 
