@@ -51,6 +51,7 @@ def var_list(x):
 
 class _LPDualData(AutoSlots.Mixin):
     __slots__ = ('primal_var', 'dual_var', 'primal_constraint', 'dual_constraint')
+
     def __init__(self):
         self.primal_var = {}
         self.dual_var = {}
@@ -143,7 +144,7 @@ class LinearProgrammingDual(object):
                 dual.x[j].domain = Reals
             trans_info.primal_constraint[dual.x[j]] = primal_cons
             trans_info.dual_var[primal_cons] = dual.x[j]
-            
+
         dual.constraints = Constraint(rows)
         for i, primal in enumerate(std_form.columns):
             lhs = 0
@@ -209,7 +210,8 @@ class LinearProgrammingDual(object):
         else:
             raise ValueError(
                 "It does not appear that Constraint '%s' is a dual constraint on "
-                "model '%s'" % (dual_constraint.name, model.name))
+                "model '%s'" % (dual_constraint.name, model.name)
+            )
 
     def get_dual_var(self, model, primal_constraint):
         dual_var = model.private_data().dual_var
@@ -218,4 +220,5 @@ class LinearProgrammingDual(object):
         else:
             raise ValueError(
                 "It does not appear that Constraint '%s' is a primal constraint from "
-                "model '%s'" % (primal_constraint.name, model.name))
+                "model '%s'" % (primal_constraint.name, model.name)
+            )
