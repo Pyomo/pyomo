@@ -3,6 +3,22 @@ Pyomo CHANGELOG
 
 
 -------------------------------------------------------------------------------
+Pyomo 6.7.3   (29 May 2024)
+-------------------------------------------------------------------------------
+
+- Core
+  - Deprecate `pyomo.core.plugins.transform.model.to_standard_form()` (#3265)
+  - Reorder definitions to avoid `NameError` in some situations (#3264)
+- Solver Interfaces
+  - NLv2: Fix linear presolver with constant defined vars/external fcns (#3276)
+- Testing
+  - Add URL checking to GHA linting job (#3259, #3261)
+  - Skip Windows Python 3.8 conda GHA job (#3269)
+- Contributed Packages
+  - DoE: Bug fixes for workshop (#3267)
+  - viewer: Update guard for pint import (#3277)
+
+-------------------------------------------------------------------------------
 Pyomo 6.7.2   (9 May 2024)
 -------------------------------------------------------------------------------
 
@@ -57,7 +73,7 @@ Pyomo 6.7.2   (9 May 2024)
   - CP: Add SequenceVar and other logical expressions for scheduling (#3227)
   - DoE: Bug fixes (#3245)
   - iis: Add minimal intractable system infeasibility diagnostics (#3172)
-  - incidence_analysis: Improve `solve_strongly_connected_components` 
+  - incidence_analysis: Improve `solve_strongly_connected_components`
     performance for models with named expressions (#3186)
   - incidence_analysis: Add function to plot incidence graph in
     Dulmage-Mendelsohn order (#3207)
