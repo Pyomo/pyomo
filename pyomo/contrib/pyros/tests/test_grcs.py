@@ -54,6 +54,8 @@ from pyomo.contrib.pyros.util import (
     standardize_active_objective,
     declare_perstage_objective_summands,
     get_summands,
+    new_add_decision_rule_constraints,
+    new_add_decision_rule_variables,
 )
 from pyomo.contrib.pyros.util import replace_uncertain_bounds_with_constraints
 from pyomo.contrib.pyros.util import get_vars_from_component
@@ -8446,6 +8448,389 @@ class TestStandardizeActiveObjective(unittest.TestCase):
                 f"but has an upper bound of {working_model.epigraph_con.upper}"
             ),
         )
+
+
+class TestAddDecisionRuleVars(unittest.TestCase):
+    """
+    Test method for adding decision rule variables to working model.
+    There should be one indexed decision rule variable for every
+    effective second-stage variable.
+    The number of decision rule variables per effective second-stage
+    variable should depend on:
+
+    - the number of uncertain parameters in the model
+    - the decision rule order specified by the user.
+    """
+
+    def build_simple_test_model_data(self):
+        """
+        Make simple model data object for DR variable
+        declaration testing.
+        """
+        model_data = Bunch()
+        model_data.working_model = ConcreteModel()
+        model_data.working_model.user_model = m = Block()
+
+        # uncertain parameters
+        m.q = Param(range(3), initialize=0, mutable=True)
+
+        # second-stage variables
+        m.x = Var()
+        m.z1 = Var([0, 1], initialize=0)
+        m.z2 = Var()
+        m.y = Var()
+
+        model_data.working_model.uncertain_params = list(m.q.values())
+
+        up = model_data.working_model.user_var_partitioning = Bunch()
+        up.first_stage_variables = [m.x]
+        up.second_stage_variables = [m.z1, m.z2]
+        up.state_variables = [m.y]
+
+        ep = model_data.working_model.effective_var_partitioning = Bunch()
+        ep.first_stage_variables = [m.x, m.z1]
+        ep.second_stage_variables = [m.z2]
+        ep.state_variables = [m.y]
+
+        return model_data
+
+    @unittest.skipIf(not scipy_available, 'Scipy is not available.')
+    def test_correct_num_dr_vars_static(self):
+        """
+        Test DR variable setup routines declare the correct
+        number of DR coefficient variables, static DR case.
+        """
+        model_data = self.build_simple_test_model_data()
+
+        config = Bunch()
+        config.decision_rule_order = 0
+
+        new_add_decision_rule_variables(model_data=model_data, config=config)
+
+        for indexed_dr_var in model_data.working_model.decision_rule_vars:
+            self.assertEqual(
+                len(indexed_dr_var),
+                1,
+                msg=(
+                    "Number of decision rule coefficient variables "
+                    f"in indexed Var object {indexed_dr_var.name!r}"
+                    "does not match correct value."
+                ),
+            )
+
+        effective_second_stage_vars = (
+            model_data.working_model.effective_var_partitioning.second_stage_variables
+        )
+        self.assertEqual(
+            len(ComponentSet(model_data.working_model.decision_rule_vars)),
+            len(effective_second_stage_vars),
+            msg=(
+                "Number of unique indexed DR variable components should equal "
+                "number of second-stage variables."
+            ),
+        )
+
+    @unittest.skipIf(not scipy_available, 'Scipy is not available.')
+    def test_correct_num_dr_vars_affine(self):
+        """
+        Test DR variable setup routines declare the correct
+        number of DR coefficient variables, affine DR case.
+        """
+        model_data = self.build_simple_test_model_data()
+
+        config = Bunch()
+        config.decision_rule_order = 1
+
+        new_add_decision_rule_variables(model_data=model_data, config=config)
+
+        for indexed_dr_var in model_data.working_model.decision_rule_vars:
+            self.assertEqual(
+                len(indexed_dr_var),
+                1 + len(model_data.working_model.uncertain_params),
+                msg=(
+                    "Number of decision rule coefficient variables "
+                    f"in indexed Var object {indexed_dr_var.name!r}"
+                    "does not match correct value."
+                ),
+            )
+
+        effective_second_stage_vars = (
+            model_data.working_model.effective_var_partitioning.second_stage_variables
+        )
+        self.assertEqual(
+            len(ComponentSet(model_data.working_model.decision_rule_vars)),
+            len(effective_second_stage_vars),
+            msg=(
+                "Number of unique indexed DR variable components should equal "
+                "number of second-stage variables."
+            ),
+        )
+
+    @unittest.skipIf(not scipy_available, 'Scipy is not available.')
+    def test_correct_num_dr_vars_quadratic(self):
+        """
+        Test DR variable setup routines declare the correct
+        number of DR coefficient variables, quadratic DR case.
+        """
+        model_data = self.build_simple_test_model_data()
+
+        config = Bunch()
+        config.decision_rule_order = 2
+
+        new_add_decision_rule_variables(model_data=model_data, config=config)
+
+        num_params = len(model_data.working_model.uncertain_params)
+
+        for indexed_dr_var in model_data.working_model.decision_rule_vars:
+            self.assertEqual(
+                len(indexed_dr_var),
+                1  # static term
+                + num_params  # affine terms
+                # quadratic terms
+                + sp.special.comb(num_params, 2, repetition=True, exact=True),
+                msg=(
+                    "Number of decision rule coefficient variables "
+                    f"in indexed Var object {indexed_dr_var.name!r}"
+                    "does not match correct value."
+                ),
+            )
+
+        effective_second_stage_vars = (
+            model_data.working_model.effective_var_partitioning.second_stage_variables
+        )
+        self.assertEqual(
+            len(ComponentSet(model_data.working_model.decision_rule_vars)),
+            len(effective_second_stage_vars),
+            msg=(
+                "Number of unique indexed DR variable components should equal "
+                "number of second-stage variables."
+            ),
+        )
+
+
+class TestAddDecisionRuleConstraints(unittest.TestCase):
+    """
+    Test method for adding decision rule equality constraints
+    to the working model. There should be as many decision
+    rule equality constraints as there are effective second-stage
+    variables, and each constraint should relate an effective
+    second-stage variable to the uncertain parameters and corresponding
+    decision rule variables.
+    """
+
+    def build_simple_test_model_data(self):
+        """
+        Make simple test model for DR variable
+        declaration testing.
+        """
+        model_data = Bunch()
+        model_data.working_model = ConcreteModel()
+        model_data.working_model.user_model = m = Block()
+
+        # uncertain parameters
+        m.q = Param(range(3), initialize=0, mutable=True)
+
+        # second-stage variables
+        m.x = Var()
+        m.z1 = Var([0, 1], initialize=0)
+        m.z2 = Var()
+        m.y = Var()
+
+        model_data.working_model.uncertain_params = list(m.q.values())
+
+        up = model_data.working_model.user_var_partitioning = Bunch()
+        up.first_stage_variables = [m.x]
+        up.second_stage_variables = [m.z1, m.z2]
+        up.state_variables = [m.y]
+
+        ep = model_data.working_model.effective_var_partitioning = Bunch()
+        ep.first_stage_variables = [m.x, m.z1]
+        ep.second_stage_variables = [m.z2]
+        ep.state_variables = [m.y]
+
+        return model_data
+
+    @unittest.skipIf(not scipy_available, 'Scipy is not available.')
+    def test_num_dr_eqns_added_correct(self):
+        """
+        Check that number of DR equality constraints added
+        by constraint declaration routines matches the number
+        of second-stage variables in the model.
+        """
+        model_data = self.build_simple_test_model_data()
+
+        # set up simple config-like object
+        config = Bunch()
+        config.decision_rule_order = 0
+
+        new_add_decision_rule_variables(model_data, config)
+        new_add_decision_rule_constraints(model_data, config)
+
+        effective_second_stage_vars = (
+            model_data.working_model.effective_var_partitioning.second_stage_variables
+        )
+        self.assertEqual(
+            len(model_data.working_model.decision_rule_eqns),
+            len(effective_second_stage_vars),
+            msg=(
+                "Number of decision rule equations should match number of "
+                "effective second-stage variables."
+            )
+        )
+
+    @unittest.skipIf(not scipy_available, 'Scipy is not available.')
+    def test_dr_eqns_form_correct(self):
+        """
+        Check that form of decision rule equality constraints
+        is as expected.
+
+        Decision rule equations should be of the standard form:
+            (sum of DR monomial terms) - (second-stage variable) == 0
+        where each monomial term should be of form:
+            (product of uncertain parameters) * (decision rule variable)
+
+        This test checks that the equality constraints are of this
+        standard form.
+        """
+        model_data = self.build_simple_test_model_data()
+
+        # set up simple config-like object
+        config = Bunch()
+        config.decision_rule_order = 2
+
+        # add DR variables and constraints
+        new_add_decision_rule_variables(model_data, config)
+        new_add_decision_rule_constraints(model_data, config)
+
+        # DR polynomial terms and order in which they should
+        # appear depends on number of uncertain parameters
+        # and order in which the parameters are listed.
+        # so uncertain parameters participating in each term
+        # of the monomial is known, and listed out here.
+        m = model_data.working_model.user_model
+        dr_monomial_param_combos = [
+            (1,),
+            (m.q[0],),
+            (m.q[1],),
+            (m.q[2],),
+            (m.q[0], m.q[0]),
+            (m.q[0], m.q[1]),
+            (m.q[0], m.q[2]),
+            (m.q[1], m.q[1]),
+            (m.q[1], m.q[2]),
+            (m.q[2], m.q[2]),
+        ]
+
+        dr_zip = zip(
+            model_data.working_model.effective_var_partitioning.second_stage_variables,
+            model_data.working_model.decision_rule_vars,
+            model_data.working_model.decision_rule_eqns,
+        )
+        for ss_var, indexed_dr_var, dr_eq in dr_zip:
+            dr_eq_terms = dr_eq.body.args
+
+            # check constraint body is sum expression
+            self.assertTrue(
+                isinstance(dr_eq.body, SumExpression),
+                msg=(
+                    f"Body of DR constraint {dr_eq.name!r} is not of type "
+                    f"{SumExpression.__name__}."
+                ),
+            )
+
+            # ensure DR equation has correct number of (additive) terms
+            self.assertEqual(
+                len(dr_eq_terms),
+                len(dr_monomial_param_combos) + 1,
+                msg=(
+                    "Number of additive terms in the DR expression of "
+                    f"DR constraint with name {dr_eq.name!r} does not match "
+                    "expected value."
+                ),
+            )
+
+            # check last term is negative of second-stage variable
+            second_stage_var_term = dr_eq_terms[-1]
+            last_term_is_neg_ss_var = (
+                isinstance(second_stage_var_term, MonomialTermExpression)
+                and (second_stage_var_term.args[0] == -1)
+                and (second_stage_var_term.args[1] is ss_var)
+                and len(second_stage_var_term.args) == 2
+            )
+            self.assertTrue(
+                last_term_is_neg_ss_var,
+                msg=(
+                    "Last argument of last term in second-stage variable"
+                    f"term of DR constraint with name {dr_eq.name!r} "
+                    "is not the negative corresponding second-stage variable "
+                    f"{ss_var.name!r}"
+                ),
+            )
+
+            # now we check the other terms.
+            # these should comprise the DR polynomial expression
+            dr_polynomial_terms = dr_eq_terms[:-1]
+            dr_polynomial_zip = zip(
+                dr_polynomial_terms, indexed_dr_var.values(), dr_monomial_param_combos
+            )
+            for idx, (term, dr_var, param_combo) in enumerate(dr_polynomial_zip):
+                # term should be either a monomial expression or scalar variable
+                if isinstance(term, MonomialTermExpression):
+                    # should be of form (uncertain parameter product) *
+                    # (decision rule variable) so length of expression
+                    # object should be 2
+                    self.assertEqual(
+                        len(term.args),
+                        2,
+                        msg=(
+                            f"Length of `args` attribute of term {str(term)} "
+                            f"of DR equation {dr_eq.name!r} is not as expected. "
+                            f"Args: {term.args}"
+                        ),
+                    )
+
+                    # check that uncertain parameters participating in
+                    # the monomial are as expected
+                    param_product_multiplicand = term.args[0]
+                    dr_var_multiplicand = term.args[1]
+                else:
+                    self.assertIsInstance(term, VarData)
+                    param_product_multiplicand = 1
+                    dr_var_multiplicand = term
+
+                if idx == 0:
+                    # static DR term
+                    param_combo_found_in_term = (param_product_multiplicand,)
+                    param_names = (str(param) for param in param_combo)
+                elif len(param_combo) == 1:
+                    # affine DR terms
+                    param_combo_found_in_term = (param_product_multiplicand,)
+                    param_names = (param.name for param in param_combo)
+                else:
+                    # higher-order DR terms
+                    param_combo_found_in_term = param_product_multiplicand.args
+                    param_names = (param.name for param in param_combo)
+
+                self.assertEqual(
+                    param_combo_found_in_term,
+                    param_combo,
+                    msg=(
+                        f"All but last multiplicand of DR monomial {str(term)} "
+                        f"is not the uncertain parameter tuple "
+                        f"({', '.join(param_names)})."
+                    ),
+                )
+
+                # check that DR variable participating in the monomial
+                # is as expected
+                self.assertIs(
+                    dr_var_multiplicand,
+                    dr_var,
+                    msg=(
+                        f"Last multiplicand of DR monomial {str(term)} "
+                        f"is not the DR variable {dr_var.name!r}."
+                    ),
+                )
 
 
 if __name__ == "__main__":
