@@ -1946,6 +1946,43 @@ def standardize_inequality_constraints(model_data):
     # the interface for separation priority ordering
 
 
+def standardize_equality_constraints(model_data):
+    """
+    Standardize equality constraints of the working model,
+    as needed.
+    """
+    working_model = model_data.working_model
+    uncertain_params_set = ComponentSet(working_model.uncertain_params)
+    adjustable_vars_set = ComponentSet(
+        working_model.effective_var_partitioning.second_stage_variables
+        + working_model.effective_var_partitioning.state_variables
+    )
+    orig_eq_cons = [
+        con
+        for con in working_model.component_data_objects(Constraint, active=True)
+        # to stay consistent with inequality standardization,
+        # in which constraints were classified according to
+        # expression type rather than to ConstraintData.equality
+        if isinstance(con.expr, EqualityExpression)
+    ]
+    for con in orig_eq_cons:
+        uncertain_params_in_con_expr = (
+            ComponentSet(identify_mutable_parameters(con.expr))
+            & uncertain_params_set
+        )
+        adjustable_vars_in_con_body = (
+            ComponentSet(identify_variables(con.body))
+            & adjustable_vars_set
+        )
+        if uncertain_params_in_con_expr | adjustable_vars_in_con_body:
+            # performance equality; standardize s.t. RHS is 0
+            con.set_value(create_bound_constraint_expr(con.body, con.upper, "eq"))
+            working_model.effective_performance_equality_cons.append(con)
+        else:
+            # don't modify the first-stage constraints
+            working_model.effective_first_stage_equality_cons.append(con)
+
+
 def new_preprocess_model_data(model_data, config, user_var_partitioning):
     """
     Preprocess user inputs to modeling objects from which
@@ -1979,11 +2016,8 @@ def new_preprocess_model_data(model_data, config, user_var_partitioning):
     turn_nonadjustable_var_bounds_to_constraints(model_data)
     turn_adjustable_var_bounds_to_constraints(model_data)
 
-    # standardize inequality constraints
     standardize_inequality_constraints(model_data)
-
-    # standardize equality constraints
-    ...
+    standardize_equality_constraints(model_data)
 
     # standardize Objective: perform epigraph reformulation
     ...
