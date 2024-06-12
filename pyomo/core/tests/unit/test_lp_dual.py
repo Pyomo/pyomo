@@ -65,10 +65,14 @@ class TestLPDual(unittest.TestCase):
         )
 
         self.assertAlmostEqual(value(m.obj), value(dual.obj))
-        for idx, cons in enumerate([m.c1, m.c2, m.c3, m.c4]):
-            self.assertAlmostEqual(value(dual.x[idx]), value(m.dual[cons]))
-        # for idx, (mult, v) in enumerate([(1, m.x), (-1, m.y), (1, m.z)]):
-        #     self.assertAlmostEqual(mult*value(v), value(dual.dual[dual_cons]))
+        for cons in [m.c1, m.c2, m.c3, m.c4]:
+            self.assertAlmostEqual(
+                value(lp_dual.get_dual_var(dual, cons)), value(m.dual[cons])
+            )
+        for v in [m.x, m.y, m.z]:
+            self.assertAlmostEqual(
+                value(v), value(dual.dual[lp_dual.get_dual_constraint(dual, v)])
+            )
 
     def test_lp_dual(self):
         m = ConcreteModel()
