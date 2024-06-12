@@ -14,7 +14,7 @@ Utility functions for the PyROS solver
 '''
 
 from collections import namedtuple
-from itertools import count
+from itertools import chain, count
 import copy
 from enum import Enum, auto
 from pyomo.common.collections import ComponentMap, ComponentSet
@@ -2279,6 +2279,30 @@ def new_add_decision_rule_constraints(model_data, config):
         decision_rule_eqns.append(dr_eqn)
 
 
+def get_all_nonadjustable_variables(working_model):
+    """
+    Get all nonadjustable variables of the working model.
+
+    The nonadjustable variables comprise the:
+
+    - epigraph variable
+    - decision rule variables
+    - effective first-stage variables
+    """
+    epigraph_var = working_model.epigraph_var
+    decision_rule_vars = list(
+        chain(*tuple(
+            indexed_dr_var.values()
+            for indexed_dr_var in working_model.decision_rule_vars
+        ))
+    )
+    effective_first_stage_vars = (
+        working_model.effective_var_partitioning.first_stage_variables
+    )
+
+    return [epigraph_var] + decision_rule_vars + effective_first_stage_vars
+
+
 def new_preprocess_model_data(model_data, config, user_var_partitioning):
     """
     Preprocess user inputs to modeling objects from which
@@ -2321,8 +2345,10 @@ def new_preprocess_model_data(model_data, config, user_var_partitioning):
     new_add_decision_rule_variables(model_data, config)
     new_add_decision_rule_constraints(model_data, config)
 
-    # finalize constraint partitioning, as needed
-    ...
+    # the epigraph and DR variables are also first-stage
+    model_data.working_model.all_nonadjustable_variables = (
+        get_all_nonadjustable_variables(model_data.working_model)
+    )
 
     # perform coefficient matching
     ...
