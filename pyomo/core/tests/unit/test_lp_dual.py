@@ -15,6 +15,7 @@ from pyomo.environ import (
     ConcreteModel,
     Constraint,
     maximize,
+    minimize,
     NonNegativeReals,
     NonPositiveReals,
     Objective,
@@ -134,3 +135,55 @@ class TestLPDual(unittest.TestCase):
         assertExpressionsEqual(
             self, dual_obj.expr, -5 * alpha + 3 * beta - 4.2 * lamb + 42 * xi
         )
+
+        ##
+        # now go the other way and recover the primal
+        ##
+
+        primal = lp_dual.create_using(dual)
+
+        x = lp_dual.get_dual_var(primal, dx)
+        y = lp_dual.get_dual_var(primal, dy)
+        z = lp_dual.get_dual_var(primal, dz)
+
+        self.assertIs(x.ctype, Var)
+        self.assertEqual(x.domain, NonNegativeReals)
+        self.assertEqual(x.lb, 0)
+        self.assertIsNone(x.ub)
+        self.assertIs(y.ctype, Var)
+        self.assertEqual(y.domain, NonPositiveReals)
+        self.assertIsNone(y.lb)
+        self.assertEqual(y.ub, 0)
+        self.assertIs(z.ctype, Var)
+        self.assertEqual(z.domain, Reals)
+        self.assertIsNone(z.lb)
+        self.assertIsNone(z.ub)
+
+        self.assertIs(lp_dual.get_primal_constraint(primal, x), dx)
+        self.assertIs(lp_dual.get_primal_constraint(primal, y), dy)
+        self.assertIs(lp_dual.get_primal_constraint(primal, z), dz)
+
+        dalpha = lp_dual.get_dual_constraint(primal, alpha)
+        dbeta = lp_dual.get_dual_constraint(primal, beta)
+        dlambda = lp_dual.get_dual_constraint(primal, lamb)
+        dxi = lp_dual.get_dual_constraint(primal, xi)
+
+        self.assertIs(lp_dual.get_primal_var(primal, dalpha), alpha)
+        self.assertIs(lp_dual.get_primal_var(primal, dbeta), beta)
+        self.assertIs(lp_dual.get_primal_var(primal, dlambda), lamb)
+        self.assertIs(lp_dual.get_primal_var(primal, dxi), xi)
+
+        self.assertIs(dalpha.ctype, Constraint)
+        self.assertIs(dbeta.ctype, Constraint)
+        self.assertIs(dlambda.ctype, Constraint)
+        self.assertIs(dxi.ctype, Constraint)
+
+        assertExpressionsEqual(self, dalpha.expr, -4.0 * x - 2.0 * y - z <= -5.0)
+        assertExpressionsEqual(self, dbeta.expr, x + y >= 3.0)
+        assertExpressionsEqual(self, dlambda.expr, -y - z == -4.2)
+        assertExpressionsEqual(self, dxi.expr, z <= 42.0)
+
+        primal_obj = primal.obj
+        self.assertIsInstance(primal_obj, Objective)
+        self.assertEqual(primal_obj.sense, minimize)
+        assertExpressionsEqual(self, primal_obj.expr, x + 2.0 * y - 3.0 * z)
