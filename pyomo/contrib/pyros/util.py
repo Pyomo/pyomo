@@ -1812,7 +1812,7 @@ def setup_working_model(model_data, config, user_var_partitioning):
         temp_util_block_attr_name,
     )
     model_data.working_model.uncertain_params = (
-        orig_temp_util_block.uncertain_params.copy()
+        working_temp_util_block.uncertain_params.copy()
     )
     working_model.user_var_partitioning = VariablePartitioning(
         **working_temp_util_block.user_var_partitioning._asdict()
@@ -2304,16 +2304,271 @@ def get_all_nonadjustable_variables(working_model):
     """
     epigraph_var = working_model.epigraph_var
     decision_rule_vars = list(
-        chain(*tuple(
-            indexed_dr_var.values()
-            for indexed_dr_var in working_model.decision_rule_vars
-        ))
+        generate_all_decision_rule_var_data_objects(working_model)
     )
     effective_first_stage_vars = (
         working_model.effective_var_partitioning.first_stage_variables
     )
 
     return [epigraph_var] + decision_rule_vars + effective_first_stage_vars
+
+
+def generate_all_decision_rule_var_data_objects(working_blk):
+    """
+    Generate a sequence of all decision rule variable data
+    objects.
+
+    Parameters
+    ----------
+    working_blk : BlockData
+        Block with a structure similar to the working model
+        created during preprocessing.
+
+    Yields
+    ------
+    VarData
+        Decision rule variable.
+    """
+    for indexed_var in working_blk.decision_rule_vars:
+        yield from indexed_var.values()
+
+
+def generate_all_decision_rule_eqns(working_blk):
+    """
+    Generate sequence of all decision rule equations.
+    """
+    for indexed_con in working_blk.decision_rule_eqns:
+        yield from indexed_con.values()
+
+
+def get_dr_expression(working_blk, second_stage_var):
+    """
+    Get DR expression corresponding to given second-stage variable.
+
+    Parameters
+    ----------
+    working_blk : BlockData
+        Block with a structure similar to the working model
+        created during preprocessing.
+
+    Returns
+    ------
+    VarData, LinearExpression, or SumExpression
+        The corresponding DR expression.
+    """
+    dr_con = working_blk.eff_ss_var_to_dr_eqn_map[second_stage_var]
+    return sum(dr_con.body.args[:-1])
+
+
+def perform_coefficient_matching(model_data, config):
+    """
+    Perform coefficient matching reformulation
+    of some performance equality constraints.
+
+    Every performance equality constraint that is independent
+    of the state variables can potentially be simplified to a
+    set of first-stage equality constraints.
+
+    In some cases, robust infeasibility can be detected.
+
+    Parameters
+    ----------
+    model_data : model data object
+        Main model data object.
+    config : ConfigDict
+        PyROS solver settings.
+
+    Returns
+    -------
+    robust_infeasible : bool
+        True if model found to be robust infeasible,
+        False otherwise.
+    """
+    working_model = model_data.working_model
+    ep = working_model.effective_var_partitioning
+
+    all_nonadjustable_vars_set = ComponentSet(
+        working_model.all_nonadjustable_variables
+    )
+    effective_second_stage_var_set = ComponentSet(ep.second_stage_variables)
+    effective_state_var_set = ComponentSet(ep.state_variables)
+    all_vars_set = (
+        all_nonadjustable_vars_set
+        | effective_second_stage_var_set
+        | effective_state_var_set
+    )
+    originally_unfixed_vars = [var for var in all_vars_set if not var.fixed]
+
+    # we will need this to substitute DR expressions for
+    # second-stage variables later
+    ssvar_id_to_dr_expr_map = {
+        id(ss_var): get_dr_expression(working_model, ss_var)
+        for ss_var in effective_second_stage_var_set
+    }
+
+    # goal: examine constraint expressions in terms of the
+    #       uncertain params. we will use standard repn to do this.
+    # standard repn analyzes expressions in terms of Var components,
+    # but the uncertain params are implemented as mutable Param objects
+    # so we temporarily define Var components to be briefly substituted
+    # for the uncertain parameters as the constraints are analyzed
+    uncertain_params_set = ComponentSet(working_model.uncertain_params)
+    working_model.temp_param_vars = temp_param_vars = Var(
+        range(len(uncertain_params_set)),
+        initialize={
+            idx: value(param) for idx, param in enumerate(uncertain_params_set)
+        }
+    )
+    uncertain_param_to_temp_var_map = ComponentMap(
+        (param, param_var)
+        for param, param_var
+        in zip(uncertain_params_set, temp_param_vars.values())
+    )
+    uncertain_param_id_to_temp_var_map = {
+        id(param): var for param, var in uncertain_param_to_temp_var_map.items()
+    }
+
+    # track robust infeasibility detection
+    robust_infeasible = False
+
+    # constraints generated during the reformulation will be placed here
+    working_model.coefficient_matching_conlist = coeff_matching_conlist = (
+        ConstraintList()
+    )
+
+    performance_eq_cons = working_model.effective_performance_equality_cons.copy()
+    for con in performance_eq_cons:
+        # check equality constraint standardization
+        assert con.upper == 0
+
+        vars_in_con = ComponentSet(identify_variables(con.expr))
+        mutable_params_in_con = ComponentSet(identify_mutable_parameters(con.expr))
+
+        second_stage_vars_in_con = vars_in_con & effective_second_stage_var_set
+        state_vars_in_con = vars_in_con & effective_state_var_set
+        uncertain_params_in_con = mutable_params_in_con & uncertain_params_set
+
+        coefficient_matching_applicable = (
+            not state_vars_in_con
+            and (uncertain_params_in_con or second_stage_vars_in_con)
+        )
+        if coefficient_matching_applicable:
+            con_expr_after_dr_substitution = replace_expressions(
+                expr=con.body - con.upper,
+                substitution_map=ssvar_id_to_dr_expr_map,
+            )
+
+            # substitute temporarily defined vars for uncertain params.
+            # note: this is performed after, rather than along with,
+            # the DR expression substitution, as the DR expressions
+            # contain uncertain params
+            con_expr_after_all_substitutions = replace_expressions(
+                expr=con_expr_after_dr_substitution,
+                substitution_map=uncertain_param_id_to_temp_var_map,
+            )
+
+            # analyze the expression with respect to the
+            # uncertain parameters only. thus, only the proxy
+            # variables for the uncertain parameters are unfixed
+            # during the analysis
+            for var in originally_unfixed_vars:
+                var.fix()
+            expr_repn = generate_standard_repn(
+                expr=con_expr_after_all_substitutions,
+                compute_values=False,
+            )
+
+            # ensure state of every variable remains unchanged
+            # when done
+            for var in originally_unfixed_vars:
+                var.unfix()
+
+            if expr_repn.nonlinear_expr is not None:
+                config.progress_logger.debug(
+                    f"Equality constraint {con.name!r} "
+                    "is state-variable independent, but cannot be written "
+                    "as a polynomial in the uncertain parameters with "
+                    "the currently available expression analyzers "
+                    "and selected decision rules "
+                    f"(decision_rule_order={config.decision_rule_order}). "
+                    "We are unable to write a coefficent matching reformulation "
+                    "of this constraint."
+                )
+                continue
+
+            polynomial_repn_coeffs = (
+                [expr_repn.constant]
+                + list(expr_repn.linear_coefs)
+                + list(expr_repn.quadratic_coefs)
+            )
+            for coef_expr in polynomial_repn_coeffs:
+                simplified_coef_expr = generate_standard_repn(
+                    expr=coef_expr,
+                    compute_values=True,
+                ).to_expression()
+
+                # for robust satisfaction of the original equality
+                # constraint, all polynomial coefficients must be
+                # equal to zero. so for each coefficient,
+                # we either check for trivial robust
+                # feasibility/infeasibility, or add a constraint
+                # restricting the coefficient expression to value 0
+                if isinstance(simplified_coef_expr, tuple(native_types)):
+                    # coefficient is a constant;
+                    # check value to determine
+                    # trivial feasibility/infeasibility
+                    robust_infeasible = not math.isclose(
+                        a=simplified_coef_expr,
+                        b=0,
+                        rel_tol=COEFF_MATCH_REL_TOL,
+                        abs_tol=COEFF_MATCH_ABS_TOL,
+                    )
+                    if robust_infeasible:
+                        config.progress_logger.info(
+                            "PyROS has determined that the model is "
+                            "robust infeasible. "
+                            "One reason for this is that "
+                            f"the equality constraint {con.name!r} "
+                            "cannot be satisfied against all realizations "
+                            "of uncertainty, "
+                            "given the current partitioning into "
+                            "first-stage, second-stage, and state variables. "
+                            "Consider editing this constraint to reference some "
+                            "(additional) second-stage and/or state variable(s)."
+                        )
+
+                        # with robust infeasibility detected,
+                        # we are done
+                        break
+
+                else:
+                    # coefficient is dependent on model first-stage
+                    # and DR variables. add matching constraint
+                    coeff_matching_conlist.add(simplified_coef_expr == 0)
+
+                    # matching constraint depends on nonadjustable
+                    # variables only
+                    last_idx = coeff_matching_conlist.index_set().last()
+                    working_model.effective_first_stage_equality_cons.append(
+                        coeff_matching_conlist[last_idx]
+                    )
+
+                    config.progress_logger.debug(
+                        f"Derived from constraint {con.name!r} a coefficient "
+                        "matching constraint with expression: \n    "
+                        f"{coeff_matching_conlist[last_idx].expr}."
+                    )
+
+            # constraint has been reformulated out of the model
+            # (i.e., coefficients have all been matched)
+            con.deactivate()
+            working_model.effective_performance_equality_cons.remove(con)
+
+    # we no longer need these auxiliary components
+    working_model.del_component(temp_param_vars)
+    working_model.del_component(temp_param_vars.index_set())
+
+    return robust_infeasible
 
 
 def new_preprocess_model_data(model_data, config, user_var_partitioning):
@@ -2363,8 +2618,7 @@ def new_preprocess_model_data(model_data, config, user_var_partitioning):
         get_all_nonadjustable_variables(model_data.working_model)
     )
 
-    # perform coefficient matching
-    ...
+    perform_coefficient_matching(model_data, config)
 
     import pdb
     pdb.set_trace()

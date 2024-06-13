@@ -56,6 +56,7 @@ from pyomo.contrib.pyros.util import (
     get_summands,
     new_add_decision_rule_constraints,
     new_add_decision_rule_variables,
+    perform_coefficient_matching,
 )
 from pyomo.contrib.pyros.util import replace_uncertain_bounds_with_constraints
 from pyomo.contrib.pyros.util import get_vars_from_component
@@ -118,7 +119,6 @@ from pyomo.environ import (
     minimize,
 )
 import logging
-from itertools import chain
 
 
 logger = logging.getLogger(__name__)
@@ -8899,6 +8899,156 @@ class TestAddDecisionRuleConstraints(unittest.TestCase):
                         f"is not the DR variable {dr_var.name!r}."
                     ),
                 )
+
+
+class TestCoefficientMatching(unittest.TestCase):
+    """
+    Unit tests for PyROS coefficient matching routine.
+    """
+    def setup_test_model_data(self):
+        """
+        Set up simple test model for coefficient matching
+        tests.
+        """
+        model_data = Bunch()
+        model_data.working_model = working_model = ConcreteModel()
+        model_data.working_model.user_model = m = Block()
+
+        m.x1 = Var(initialize=0, bounds=(0, None))
+        m.x2 = Var(initialize=0, bounds=(0, None))
+        m.u = Param(initialize=1.125, mutable=True)
+        m.con = Constraint(expr=m.u ** (0.5) * m.x1 - m.u * m.x2 <= 2)
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
+        m.eq_con = Constraint(
+            expr=m.u**2 * (m.x2 - 1)
+            + m.u * (m.x1**3 + 0.5)
+            - 5 * m.u * m.x1 * m.x2
+            + m.u * (m.x1 + 2)
+            == 0
+        )
+
+        working_model.uncertain_params = [m.u]
+
+        working_model.effective_first_stage_equality_cons = []
+        working_model.effective_performance_equality_cons = [m.eq_con]
+
+        ep = working_model.effective_var_partitioning = Bunch()
+        ep.first_stage_variables = [m.x1]
+        ep.second_stage_variables = [m.x2]
+        ep.state_variables = []
+
+        return model_data
+
+    def test_coefficient_matching_correct_num_constraints_added(self):
+        """
+        Test coefficient matching adds correct number of constraints
+        in event of sucessful use.
+        """
+        model_data = self.setup_test_model_data()
+        m = model_data.working_model.user_model
+
+        # all vars first-stage
+        ep = model_data.working_model.effective_var_partitioning
+        ep.first_stage_variables = [m.x1, m.x2]
+        ep.second_stage_variables = []
+
+        config = Bunch()
+        config.decision_rule_order = 1
+        config.progress_logger = logger
+
+        model_data.working_model.decision_rule_vars = []
+        model_data.working_model.decision_rule_eqns = []
+        model_data.working_model.all_nonadjustable_variables = list(
+            ep.first_stage_variables
+        )
+
+        robust_infeasible = perform_coefficient_matching(model_data, config)
+
+        self.assertFalse(
+            robust_infeasible,
+            msg=(
+                "Coefficient matching unexpectedly detected"
+                "a robust infeasible constraint"
+            ),
+        )
+        self.assertEqual(
+            len(model_data.working_model.coefficient_matching_conlist),
+            2,
+            msg="Number of coefficient matching constraints not as expected."
+        )
+
+    def test_coefficient_matching_nonlinear(self):
+        """
+        Test coefficient matching raises exception in event
+        of encountering unsupported nonlinearities.
+        """
+        model_data = self.setup_test_model_data()
+
+        config = Bunch()
+        config.decision_rule_order = 1
+        config.progress_logger = logging.getLogger(
+            self.test_coefficient_matching_nonlinear.__name__
+        )
+        config.progress_logger.setLevel(logging.DEBUG)
+
+        new_add_decision_rule_variables(model_data=model_data, config=config)
+        new_add_decision_rule_constraints(model_data=model_data, config=config)
+
+        ep = model_data.working_model.effective_var_partitioning
+        model_data.working_model.all_nonadjustable_variables = list(
+            ep.first_stage_variables
+            + list(model_data.working_model.decision_rule_var_0.values())
+        )
+
+        with LoggingIntercept(level=logging.DEBUG) as LOG:
+            perform_coefficient_matching(model_data, config)
+
+        err_msg = LOG.getvalue()
+        self.assertRegex(
+            text=err_msg,
+            expected_regex=(
+                r".*Equality constraint 'user_model\.eq_con'.*cannot be written.*"
+            ),
+        )
+
+    def test_coefficient_matching_robust_infeasible_proof(self):
+        # Write the deterministic Pyomo model
+        model_data = self.setup_test_model_data()
+        m = model_data.working_model.user_model
+        m.eq_con.set_value(
+            expr=m.u * (m.x1**3 + 0.5)
+            - 5 * m.u * m.x1 * m.x2
+            + m.u * (m.x1 + 2)
+            + m.u**2
+            == 0
+        )
+        ep = model_data.working_model.effective_var_partitioning
+        ep.first_stage_variables = [m.x1, m.x2]
+        ep.second_stage_variables = []
+
+        config = Bunch()
+        config.decision_rule_order = 1
+        config.progress_logger = logger
+
+        model_data.working_model.all_nonadjustable_variables = list(
+            ep.first_stage_variables
+        )
+
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            robust_infeasible = perform_coefficient_matching(model_data, config)
+
+        self.assertTrue(
+            robust_infeasible,
+            msg="Coefficient matching should be proven robust infeasible.",
+        )
+        robust_infeasible_msg = LOG.getvalue()
+        self.assertRegex(
+            text=robust_infeasible_msg,
+            expected_regex=(
+                r"PyROS has determined that the model is robust infeasible\. "
+                r"One reason for this.*equality constraint 'user_model\.eq_con'.*"
+            )
+        )
 
 
 if __name__ == "__main__":
