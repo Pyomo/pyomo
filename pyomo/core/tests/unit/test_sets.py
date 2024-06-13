@@ -2790,7 +2790,7 @@ class TestSetArgs2(PyomoModel):
         # Create A with an error
         #
         self.model.Z = Set()
-        self.model.A = Set(self.model.Z, validate=lambda model, x: x < 6)
+        self.model.A = Set(self.model.Z, validate=lambda model, x, i: x < 6)
         try:
             self.instance = self.model.create_instance(currdir + "setA.dat")
         except ValueError:
@@ -2809,7 +2809,7 @@ class TestSetArgs2(PyomoModel):
         # Create A with an error
         #
         self.model.Z = Set()
-        self.model.A = Set(self.model.Z, validate=lambda model, x: x < 6)
+        self.model.A = Set(self.model.Z, validate=lambda model, x, i: x < 6)
         try:
             self.instance = self.model.create_instance(currdir + "setA.dat")
         except ValueError:
@@ -2822,7 +2822,7 @@ class TestSetArgs2(PyomoModel):
         self.model.A = Set(
             self.model.Z,
             initialize={'A': [1, 2, 3, 'A']},
-            validate=lambda model, x: x in Integers,
+            validate=lambda model, x, i: x in Integers,
         )
         try:
             self.instance = self.model.create_instance()
@@ -2853,7 +2853,7 @@ class TestSetArgs2(PyomoModel):
         self.model.n = Param(initialize=5)
         self.model.Z = Set(initialize=['A'])
         self.model.A = Set(
-            self.model.Z, initialize=tmp_init, validate=lambda model, x: x in Integers
+            self.model.Z, initialize=tmp_init, validate=lambda model, x, i: x in Integers
         )
         try:
             self.instance = self.model.create_instance()
