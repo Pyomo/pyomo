@@ -2626,7 +2626,96 @@ def new_preprocess_model_data(model_data, config, user_var_partitioning):
     config.progress_logger.debug("Performing coefficient matching reformulation...")
     robust_infeasible = perform_coefficient_matching(model_data, config)
 
+    log_model_statistics(model_data, config)
+
     return robust_infeasible
+
+
+def log_model_statistics(model_data, config):
+    """
+    Log statistics for the preprocessed model.
+
+    Parameters
+    ----------
+    model_data : model data object
+        Main model data object.
+    config : ConfigDict
+        PyROS solver settings.
+    """
+    working_model = model_data.working_model
+
+    ep = working_model.effective_var_partitioning
+    up = working_model.user_var_partitioning
+
+    # variables. we log the user partitioning
+    num_vars = len(
+        working_model.all_nonadjustable_variables
+        + ep.second_stage_variables
+        + ep.state_variables
+    )
+    num_epigraph_vars = 1
+    num_first_stage_vars = len(up.first_stage_variables)
+    num_second_stage_vars = len(up.second_stage_variables)
+    num_state_vars = len(up.state_variables)
+    num_dr_vars = len(
+        list(generate_all_decision_rule_var_data_objects(working_model))
+    )
+
+    # uncertain parameters
+    num_uncertain_params = len(working_model.uncertain_params)
+
+    # constraints
+    num_cons = len(
+        list(working_model.component_data_objects(Constraint, active=True))
+    )
+
+    # # equality constraints
+    num_eq_cons = len(
+        working_model.effective_first_stage_equality_cons
+        + working_model.effective_performance_equality_cons
+        + working_model.decision_rule_eqns
+    )
+    num_first_stage_eq_cons = len(working_model.effective_first_stage_equality_cons)
+    num_coeff_matching_cons = len(working_model.coefficient_matching_conlist)
+    num_other_first_stage_eqns = num_first_stage_eq_cons - num_coeff_matching_cons
+    num_performance_eq_cons = len(working_model.effective_performance_equality_cons)
+    num_dr_eq_cons = len(working_model.decision_rule_eqns)
+
+    # # inequality constraints
+    num_ineq_cons = len(
+        working_model.effective_first_stage_inequality_cons
+        + working_model.effective_performance_inequality_cons
+    )
+    num_first_stage_ineq_cons = len(working_model.effective_first_stage_inequality_cons)
+    num_performance_ineq_cons = len(working_model.effective_performance_inequality_cons)
+
+    # # ranged constraints
+    num_ranged_cons = len(working_model.effective_first_stage_ranged_cons)
+
+    info_log_func = config.progress_logger.info
+
+    IterationLogRecord.log_header_rule(info_log_func)
+    info_log_func("Model Statistics:")
+
+    info_log_func(f"  Number of variables : {num_vars}")
+    info_log_func(f"    First-stage variables : {num_first_stage_vars}")
+    info_log_func(f"    Second-stage variables : {num_second_stage_vars}")
+    info_log_func(f"    State variables : {num_state_vars}")
+    info_log_func(f"    Epigraph variable : {num_epigraph_vars}")
+    info_log_func(f"    Decision rule variables : {num_dr_vars}")
+
+    info_log_func(f"  Number of uncertain parameters : {num_uncertain_params}")
+
+    info_log_func(f"  Number of constraints : {num_cons}")
+    info_log_func(f"    Equality constraints : {num_eq_cons}")
+    info_log_func(f"      Coefficient matching constraints : {num_coeff_matching_cons}")
+    info_log_func(f"      Other first-stage equations : {num_other_first_stage_eqns}")
+    info_log_func(f"      Performance equations : {num_performance_eq_cons}")
+    info_log_func(f"      Decision rule equations : {num_dr_eq_cons}")
+    info_log_func(f"    Inequality constraints : {num_ineq_cons}")
+    info_log_func(f"      First-stage inequalities : {num_first_stage_ineq_cons}")
+    info_log_func(f"      Performance inequalities : {num_performance_ineq_cons}")
+    info_log_func(f"    First-stage ranged constraints : {num_ranged_cons}")
 
 
 def preprocess_model_data(model_data, config, var_partitioning):
