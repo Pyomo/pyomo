@@ -7737,6 +7737,10 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
         model_data.working_model.effective_performance_inequality_cons = []
         model_data.working_model.effective_performance_equality_cons = []
 
+        model_data.working_model.original_active_inequality_cons = [
+            m.c1, m.c2, m.c3, m.c4, m.c5, m.c6, m.c7, m.c8, m.c9
+        ]
+
         ep = model_data.working_model.effective_var_partitioning = Bunch()
         ep.first_stage_variables = [m.x1, m.x2]
         ep.second_stage_variables = [m.z1, m.z2]
@@ -7750,12 +7754,9 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
         """
         model_data = self.build_simple_test_model_data()
         working_model = model_data.working_model
-
+        m = working_model.user_model
         original_con_exprs = ComponentMap(
-            (con, con.expr)
-            for con in model_data.working_model.component_data_objects(
-                Constraint, active=True,
-            )
+            (con, con.expr) for con in working_model.original_active_inequality_cons
         )
 
         standardize_inequality_constraints(model_data)
@@ -7920,6 +7921,10 @@ class TestStandardizeEqualityConstraints(unittest.TestCase):
 
         model_data.working_model.effective_first_stage_equality_cons = []
         model_data.working_model.effective_performance_equality_cons = []
+
+        model_data.working_model.original_active_equality_cons = [
+            m.eq1, m.eq2, m.eq3, m.eq4, m.eq5
+        ]
 
         ep = model_data.working_model.effective_var_partitioning = Bunch()
         ep.first_stage_variables = [m.x1, m.x2]

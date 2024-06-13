@@ -1821,6 +1821,16 @@ def setup_working_model(model_data, config, user_var_partitioning):
     delattr(original_model, temp_util_block_attr_name)
     delattr(working_model.user_model, temp_util_block_attr_name)
 
+    # keep track of the original active constraints
+    working_model.original_active_equality_cons = []
+    working_model.original_active_inequality_cons = []
+    for con in working_model.component_data_objects(Constraint, active=True):
+        # treat all ranged inequalities as inequalities
+        if isinstance(con.expr, EqualityExpression):
+            working_model.original_active_equality_cons.append(con)
+        else:
+            working_model.original_active_inequality_cons.append(con)
+
     # partition the constraints according to their
     # status as equality/inequality constraints
     # and their dependence on adjustable variables or uncertain
@@ -1865,15 +1875,7 @@ def standardize_inequality_constraints(model_data):
         working_model.effective_var_partitioning.second_stage_variables
         + working_model.effective_var_partitioning.state_variables
     )
-    orig_ineq_cons = [
-        con
-        for con in working_model.component_data_objects(Constraint, active=True)
-        # ensure all ranged performance constraints are standardized
-        # in this routine, so check expression type instead of using
-        # ConstraintData.equality
-        if not isinstance(con.expr, EqualityExpression)
-    ]
-    for con in orig_ineq_cons:
+    for con in working_model.original_active_inequality_cons:
         uncertain_params_in_con_expr = (
             ComponentSet(identify_mutable_parameters(con.expr))
             & uncertain_params_set
@@ -1961,15 +1963,7 @@ def standardize_equality_constraints(model_data):
         working_model.effective_var_partitioning.second_stage_variables
         + working_model.effective_var_partitioning.state_variables
     )
-    orig_eq_cons = [
-        con
-        for con in working_model.component_data_objects(Constraint, active=True)
-        # to stay consistent with inequality standardization,
-        # in which constraints were classified according to
-        # expression type rather than to ConstraintData.equality
-        if isinstance(con.expr, EqualityExpression)
-    ]
-    for con in orig_eq_cons:
+    for con in working_model.original_active_equality_cons:
         uncertain_params_in_con_expr = (
             ComponentSet(identify_mutable_parameters(con.expr))
             & uncertain_params_set
