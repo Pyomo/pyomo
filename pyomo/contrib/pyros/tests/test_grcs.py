@@ -33,6 +33,7 @@ from pyomo.core.expr import (
     SumExpression,
     EqualityExpression,
 )
+from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.contrib.pyros.util import (
     selective_clone,
     add_decision_rule_variables,
@@ -8939,7 +8940,7 @@ class TestCoefficientMatching(unittest.TestCase):
 
         return model_data
 
-    def test_coefficient_matching_correct_num_constraints_added(self):
+    def test_coefficient_matching_correct_constraints_added(self):
         """
         Test coefficient matching adds correct number of constraints
         in event of sucessful use.
@@ -8977,6 +8978,17 @@ class TestCoefficientMatching(unittest.TestCase):
             msg="Number of coefficient matching constraints not as expected."
         )
 
+        assertExpressionsEqual(
+            self,
+            model_data.working_model.coefficient_matching_conlist[1].expr,
+            2.5 + m.x1 + (-5) * (m.x1 * m.x2) + m.x1 ** 3 == 0,
+        )
+        assertExpressionsEqual(
+            self,
+            model_data.working_model.coefficient_matching_conlist[2].expr,
+            (-1) + m.x2 == 0,
+        )
+
     def test_coefficient_matching_nonlinear(self):
         """
         Test coefficient matching raises exception in event
@@ -9001,13 +9013,21 @@ class TestCoefficientMatching(unittest.TestCase):
         )
 
         with LoggingIntercept(level=logging.DEBUG) as LOG:
-            perform_coefficient_matching(model_data, config)
+            robust_infeasible = perform_coefficient_matching(model_data, config)
 
         err_msg = LOG.getvalue()
         self.assertRegex(
             text=err_msg,
             expected_regex=(
                 r".*Equality constraint 'user_model\.eq_con'.*cannot be written.*"
+            ),
+        )
+
+        self.assertFalse(
+            robust_infeasible,
+            msg=(
+                "Coefficient matching unexpectedly detected"
+                "a robust infeasible constraint"
             ),
         )
 
