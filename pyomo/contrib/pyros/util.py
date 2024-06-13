@@ -2595,28 +2595,35 @@ def new_preprocess_model_data(model_data, config, user_var_partitioning):
 
     # extract as many truly nonadjustable variables as possible
     # from the second-stage and state variables
+    config.progress_logger.debug("Repartitioning variables by nonadjustability...")
     add_effective_var_partitioning(model_data, config)
 
     # different treatment for effective first-stage
     # than for effective second-stage and state variables
+    config.progress_logger.debug("Turning some variable bounds to constraints...")
     turn_nonadjustable_var_bounds_to_constraints(model_data)
     turn_adjustable_var_bounds_to_constraints(model_data)
 
+    config.progress_logger.debug("Standardizing the model constraints...")
     standardize_inequality_constraints(model_data)
     standardize_equality_constraints(model_data)
 
     # includes epigraph reformulation
+    config.progress_logger.debug("Standardizing the active objective...")
     standardize_active_objective(model_data)
 
     # DR components are added only per effective second-stage variable
+    config.progress_logger.debug("Adding decision rule components...")
     new_add_decision_rule_variables(model_data, config)
     new_add_decision_rule_constraints(model_data, config)
 
     # the epigraph and DR variables are also first-stage
+    config.progress_logger.debug("Finalizing nonadjustable variables...")
     model_data.working_model.all_nonadjustable_variables = (
         get_all_nonadjustable_variables(model_data.working_model)
     )
 
+    config.progress_logger.debug("Performing coefficient matching reformulation...")
     perform_coefficient_matching(model_data, config)
 
     import pdb
