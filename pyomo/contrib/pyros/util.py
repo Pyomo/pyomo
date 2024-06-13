@@ -1803,7 +1803,6 @@ def setup_working_model(model_data, config, user_var_partitioning):
 
     # original user model will be a sub-block of working model,
     # in order to avoid attribute name clashes later
-    working_model.user_model = Block()
     working_model.user_model = original_model.clone()
 
     # facilitate later retrieval of the user var partitioning
