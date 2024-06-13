@@ -8673,6 +8673,7 @@ class TestCoefficientMatching(unittest.TestCase):
         working_model.effective_first_stage_equality_cons = []
         working_model.effective_performance_equality_cons = [m.eq_con]
 
+        working_model.all_variables = [m.x1, m.x2]
         ep = working_model.effective_var_partitioning = Bunch()
         ep.first_stage_variables = [m.x1]
         ep.second_stage_variables = [m.x2]

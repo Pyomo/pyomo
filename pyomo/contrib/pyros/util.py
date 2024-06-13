@@ -2380,16 +2380,9 @@ def perform_coefficient_matching(model_data, config):
     working_model = model_data.working_model
     ep = working_model.effective_var_partitioning
 
-    all_nonadjustable_vars_set = ComponentSet(
-        working_model.all_nonadjustable_variables
-    )
     effective_second_stage_var_set = ComponentSet(ep.second_stage_variables)
     effective_state_var_set = ComponentSet(ep.state_variables)
-    all_vars_set = (
-        all_nonadjustable_vars_set
-        | effective_second_stage_var_set
-        | effective_state_var_set
-    )
+    all_vars_set = ComponentSet(working_model.all_variables)
     originally_unfixed_vars = [var for var in all_vars_set if not var.fixed]
 
     # we will need this to substitute DR expressions for
@@ -2616,6 +2609,11 @@ def new_preprocess_model_data(model_data, config, user_var_partitioning):
     model_data.working_model.all_nonadjustable_variables = (
         get_all_nonadjustable_variables(model_data.working_model)
     )
+    model_data.working_model.all_variables = (
+        model_data.working_model.all_nonadjustable_variables
+        + model_data.working_model.effective_var_partitioning.second_stage_variables
+        + model_data.working_model.effective_var_partitioning.state_variables
+    )
 
     config.progress_logger.debug("Performing coefficient matching reformulation...")
     robust_infeasible = perform_coefficient_matching(model_data, config)
@@ -2642,11 +2640,7 @@ def log_model_statistics(model_data, config):
     up = working_model.user_var_partitioning
 
     # variables. we log the user partitioning
-    num_vars = len(
-        working_model.all_nonadjustable_variables
-        + ep.second_stage_variables
-        + ep.state_variables
-    )
+    num_vars = len(working_model.all_variables)
     num_epigraph_vars = 1
     num_first_stage_vars = len(up.first_stage_variables)
     num_second_stage_vars = len(up.second_stage_variables)
