@@ -2587,7 +2587,7 @@ def new_preprocess_model_data(model_data, config, user_var_partitioning):
 
     Returns
     -------
-    bool
+    robust_infeasible : bool
         True if RO problem was found to be robust infeasible,
         False otherwise.
     """
@@ -2624,10 +2624,9 @@ def new_preprocess_model_data(model_data, config, user_var_partitioning):
     )
 
     config.progress_logger.debug("Performing coefficient matching reformulation...")
-    perform_coefficient_matching(model_data, config)
+    robust_infeasible = perform_coefficient_matching(model_data, config)
 
-    import pdb
-    pdb.set_trace()
+    return robust_infeasible
 
 
 def preprocess_model_data(model_data, config, var_partitioning):
