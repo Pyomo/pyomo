@@ -67,8 +67,10 @@ class SCIPDirect(DirectSolver):
 
             self._scip = pyscipopt
             self._python_api_exists = True
-            self._version = str(self._scip.Model().version())
-            self._version_major = self._version.split(".")[0]
+            self._version = tuple(
+                int(k) for k in str(self._scip.Model().version()).split(".")
+            )
+            self._version_major = self._version[0]
         except ImportError:
             self._python_api_exists = False
         except Exception as e:

@@ -249,6 +249,15 @@ ExpectedFailures['scip', 'nl', 'SOS1_simple'] = (
 )
 
 #
+# SCIP Persistent
+#
+
+ExpectedFailures["scip_persistent", "python", "LP_trivial_constraints"] = (
+    lambda v: v <= _trunk_version,
+    "SCIP does not allow empty constraints with no variables to be added to the Model.",
+)
+
+#
 # BARON
 #
 SkipTests['baron', 'bar', 'LP_trivial_constraints'] = (
