@@ -2651,6 +2651,8 @@ def log_model_statistics(model_data, config):
     num_first_stage_vars = len(up.first_stage_variables)
     num_second_stage_vars = len(up.second_stage_variables)
     num_state_vars = len(up.state_variables)
+    num_eff_second_stage_vars = len(ep.second_stage_variables)
+    num_eff_state_vars = len(ep.state_variables)
     num_dr_vars = len(
         list(generate_all_decision_rule_var_data_objects(working_model))
     )
@@ -2693,8 +2695,14 @@ def log_model_statistics(model_data, config):
 
     info_log_func(f"  Number of variables : {num_vars}")
     info_log_func(f"    First-stage variables : {num_first_stage_vars}")
-    info_log_func(f"    Second-stage variables : {num_second_stage_vars}")
-    info_log_func(f"    State variables : {num_state_vars}")
+    info_log_func(
+        f"    Second-stage variables : {num_second_stage_vars} "
+        f"({num_eff_second_stage_vars} adj.)"
+    )
+    info_log_func(
+        f"    State variables : {num_state_vars} "
+        f"({num_eff_state_vars} adj.)"
+    )
     info_log_func(f"    Epigraph variable : {num_epigraph_vars}")
     info_log_func(f"    Decision rule variables : {num_dr_vars}")
 
