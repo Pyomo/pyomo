@@ -124,12 +124,12 @@ class LogicalConstraintData(ActiveComponentData):
 
 class _LogicalConstraintData(metaclass=RenamedClass):
     __renamed__new_class__ = LogicalConstraintData
-    __renamed__version__ = '6.7.2.dev0'
+    __renamed__version__ = '6.7.2'
 
 
 class _GeneralLogicalConstraintData(metaclass=RenamedClass):
     __renamed__new_class__ = LogicalConstraintData
-    __renamed__version__ = '6.7.2.dev0'
+    __renamed__version__ = '6.7.2'
 
 
 @ModelComponentFactory.register("General logical constraints.")

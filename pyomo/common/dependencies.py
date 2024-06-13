@@ -611,7 +611,7 @@ def attempt_import(
         want to import/return the first one that is available.
 
     defer_check: bool, optional
-        DEPRECATED: renamed to ``defer_import`` (deprecated in version 6.7.2.dev0)
+        DEPRECATED: renamed to ``defer_import`` (deprecated in version 6.7.2)
 
     defer_import: bool, optional
         If True, then the attempted import is deferred until the first
@@ -674,7 +674,7 @@ def attempt_import(
     if defer_check is not None:
         deprecation_warning(
             'defer_check=%s is deprecated.  Please use defer_import' % (defer_check,),
-            version='6.7.2.dev0',
+            version='6.7.2',
         )
         assert defer_import is None
         defer_import = defer_check
@@ -787,7 +787,7 @@ def _perform_import(
 @deprecated(
     "``declare_deferred_modules_as_importable()`` is deprecated.  "
     "Use the :py:class:`declare_modules_as_importable` context manager.",
-    version='6.7.2.dev0',
+    version='6.7.2',
 )
 def declare_deferred_modules_as_importable(globals_dict):
     """Make all :py:class:`DeferredImportModules` in ``globals_dict`` importable

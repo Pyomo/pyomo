@@ -26,6 +26,8 @@
 #  ___________________________________________________________________________
 
 import itertools
+import collections.abc
+from pyomo.common.numeric_types import native_numeric_types
 
 
 class VariablesWithIndices:
@@ -93,18 +95,22 @@ class VariablesWithIndices:
             upper_bounds,
         )
 
-        if values:
+        if values is not None:
+            # if a scalar (int or float) is given, set it as the value for all variables
+            if type(values) in native_numeric_types:
+                values = [values] * len(added_names)
             # this dictionary keys are special set, values are its value
             self.variable_names_value.update(zip(added_names, values))
 
-        # if a scalar (int or float) is given, set it as the lower bound for all variables
-        if lower_bounds:
-            if type(lower_bounds) in [int, float]:
+        if lower_bounds is not None:
+            # if a scalar (int or float) is given, set it as the lower bound for all variables
+            if type(lower_bounds) in native_numeric_types:
                 lower_bounds = [lower_bounds] * len(added_names)
             self.lower_bounds.update(zip(added_names, lower_bounds))
 
-        if upper_bounds:
-            if type(upper_bounds) in [int, float]:
+        if upper_bounds is not None:
+            # if a scalar (int or float) is given, set it as the upper bound for all variables
+            if type(upper_bounds) in native_numeric_types:
                 upper_bounds = [upper_bounds] * len(added_names)
             self.upper_bounds.update(zip(added_names, upper_bounds))
 
@@ -127,7 +133,7 @@ class VariablesWithIndices:
         """
         # first combine all indices into a list
         all_index_list = []  # contains all index lists
-        if indices:
+        if indices is not None:
             for index_pointer in indices:
                 all_index_list.append(indices[index_pointer])
 
@@ -141,8 +147,14 @@ class VariablesWithIndices:
         added_names = []
         # iterate over index combinations ["CA", 1], ["CA", 2], ..., ["CC", 2], ["CC", 3]
         for index_instance in all_variable_indices:
-            var_name_index_string = var_name + "["
+            var_name_index_string = var_name
+            #
+            # Suggestion from JS: "Can you re-use name_repr and index_repr from pyomo.core.base.component_namer here?"
+            #
             for i, idx in enumerate(index_instance):
+                # if i is the first index, open the []
+                if i == 0:
+                    var_name_index_string += "["
                 # use repr() is different from using str()
                 # with repr(), "CA" is "CA", with str(), "CA" is CA. The first is not valid in our interface.
                 var_name_index_string += str(idx)
@@ -171,28 +183,45 @@ class VariablesWithIndices:
         """
         Check if the measurement information provided are valid to use.
         """
-        assert type(var_name) is str, "var_name should be a string."
+        if not isinstance(var_name, str):
+            raise TypeError("Variable name must be a string.")
 
-        if time_index_position not in indices:
+        # debugging note: what is an integer versus a list versus a dictionary here?
+        # check if time_index_position is in indices
+        if (
+            indices is not None  # ensure not None
+            and time_index_position is not None  # ensure not None
+            and time_index_position
+            not in indices.keys()  # ensure time_index_position is in indices
+        ):
             raise ValueError("time index cannot be found in indices.")
 
-        # if given a list, check if bounds have the same length with flattened variable
-        if values and len(values) != len_indices:
+        # if given a list, check if values have the same length with flattened variable
+        if (
+            values is not None  # ensure not None
+            and not type(values)
+            in native_numeric_types  # skip this test if scalar (int or float)
+            and len(values) != len_indices
+        ):
             raise ValueError("Values is of different length with indices.")
 
         if (
-            lower_bounds
-            and type(lower_bounds) == list
-            and len(lower_bounds) != len_indices
+            lower_bounds is not None  # ensure not None
+            and not type(lower_bounds)
+            in native_numeric_types  # skip this test if scalar (int or float)
+            and isinstance(lower_bounds, collections.abc.Sequence)  # ensure list-like
+            and len(lower_bounds) != len_indices  # ensure same length
         ):
-            raise ValueError("Lowerbounds is of different length with indices.")
+            raise ValueError("Lowerbounds have a different length with indices.")
 
         if (
-            upper_bounds
-            and type(upper_bounds) == list
-            and len(upper_bounds) != len_indices
+            upper_bounds is not None  # ensure not None
+            and not type(upper_bounds)
+            in native_numeric_types  # skip this test if scalar (int or float)
+            and isinstance(upper_bounds, collections.abc.Sequence)  # ensure list-like
+            and len(upper_bounds) != len_indices  # ensure same length
         ):
-            raise ValueError("Upperbounds is of different length with indices.")
+            raise ValueError("Upperbounds have a different length with indices.")
 
 
 class MeasurementVariables(VariablesWithIndices):

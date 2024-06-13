@@ -577,12 +577,12 @@ class ConstraintData(ActiveComponentData):
 
 class _ConstraintData(metaclass=RenamedClass):
     __renamed__new_class__ = ConstraintData
-    __renamed__version__ = '6.7.2.dev0'
+    __renamed__version__ = '6.7.2'
 
 
 class _GeneralConstraintData(metaclass=RenamedClass):
     __renamed__new_class__ = ConstraintData
-    __renamed__version__ = '6.7.2.dev0'
+    __renamed__version__ = '6.7.2'
 
 
 @ModelComponentFactory.register("General constraint expressions.")

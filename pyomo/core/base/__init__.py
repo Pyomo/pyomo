@@ -163,13 +163,13 @@ relocated_module_attribute(
 )
 # Historically, only a subset of "private" component data classes were imported here
 relocated_module_attribute(
-    f'_GeneralVarData', f'pyomo.core.base.VarData', version='6.7.2.dev0'
+    f'_GeneralVarData', f'pyomo.core.base.VarData', version='6.7.2'
 )
 relocated_module_attribute(
-    f'_GeneralBooleanVarData', f'pyomo.core.base.BooleanVarData', version='6.7.2.dev0'
+    f'_GeneralBooleanVarData', f'pyomo.core.base.BooleanVarData', version='6.7.2'
 )
 relocated_module_attribute(
-    f'_ExpressionData', f'pyomo.core.base.NamedExpressionData', version='6.7.2.dev0'
+    f'_ExpressionData', f'pyomo.core.base.NamedExpressionData', version='6.7.2'
 )
 for _cdata in (
     'ConstraintData',
@@ -179,7 +179,7 @@ for _cdata in (
     'ObjectiveData',
 ):
     relocated_module_attribute(
-        f'_{_cdata}', f'pyomo.core.base.{_cdata}', version='6.7.2.dev0'
+        f'_{_cdata}', f'pyomo.core.base.{_cdata}', version='6.7.2'
     )
 del _cdata
 del relocated_module_attribute

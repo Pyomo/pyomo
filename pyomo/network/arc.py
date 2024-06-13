@@ -248,7 +248,7 @@ class ArcData(ActiveComponentData):
 
 class _ArcData(metaclass=RenamedClass):
     __renamed__new_class__ = ArcData
-    __renamed__version__ = '6.7.2.dev0'
+    __renamed__version__ = '6.7.2'
 
 
 @ModelComponentFactory.register("Component used for connecting two Ports.")
