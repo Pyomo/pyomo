@@ -319,38 +319,38 @@ class SCIPDirect(DirectSolver):
             if not is_fixed(con.lower):
                 raise ValueError(f"Lower bound of constraint {con} is not constant.")
             con_lower = value(con.lower)
-            if not isinstance(con_lower, (float, int)):
+            if type(con_lower) != float and type(con_lower) != int:
+                logger.warning(
+                    f"Constraint {conname} has LHS type {type(value(con.lower))}. "
+                    f"Converting to float as type is not allowed for SCIP."
+                )
                 con_lower = float(con_lower)
         if con.has_ub():
             if not is_fixed(con.upper):
                 raise ValueError(f"Upper bound of constraint {con} is not constant.")
             con_upper = value(con.upper)
-            if not isinstance(con_upper, (float, int)):
+            if type(con_upper) != float and type(con_upper) != int:
+                logger.warning(
+                    f"Constraint {conname} has RHS type {type(value(con.upper))}. "
+                    f"Converting to float as type is not allowed for SCIP."
+                )
                 con_upper = float(con_upper)
 
         if con.equality:
-            scip_cons = self._solver_model.addCons(
-                scip_expr == con_lower, name=conname
-            )
+            scip_cons = self._solver_model.addCons(scip_expr == con_lower, name=conname)
         elif con.has_lb() and con.has_ub():
-            scip_cons = self._solver_model.addCons(
-                con_lower <= scip_expr, name=conname
-            )
+            scip_cons = self._solver_model.addCons(con_lower <= scip_expr, name=conname)
             rhs = con_upper
             if hasattr(con.body, "constant"):
                 con_constant = value(con.body.constant)
                 if not isinstance(con_constant, (float, int)):
-                    con_body = float(con_constant)
+                    con_constant = float(con_constant)
                 rhs -= con_constant
             self._solver_model.chgRhs(scip_cons, rhs)
         elif con.has_lb():
-            scip_cons = self._solver_model.addCons(
-                con_lower <= scip_expr, name=conname
-            )
+            scip_cons = self._solver_model.addCons(con_lower <= scip_expr, name=conname)
         elif con.has_ub():
-            scip_cons = self._solver_model.addCons(
-                scip_expr <= con_upper, name=conname
-            )
+            scip_cons = self._solver_model.addCons(scip_expr <= con_upper, name=conname)
         else:
             raise ValueError(
                 f"Constraint does not have a lower or an upper bound: {con} \n"
