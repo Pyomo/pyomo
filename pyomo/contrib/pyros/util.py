@@ -2618,8 +2618,6 @@ def new_preprocess_model_data(model_data, config, user_var_partitioning):
     config.progress_logger.debug("Performing coefficient matching reformulation...")
     robust_infeasible = perform_coefficient_matching(model_data, config)
 
-    log_model_statistics(model_data, config)
-
     return robust_infeasible
 
 
