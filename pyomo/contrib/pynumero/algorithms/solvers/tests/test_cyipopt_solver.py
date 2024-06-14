@@ -370,7 +370,9 @@ class TestCyIpoptSolver(unittest.TestCase):
 
     # The 13-arg callback works with cyipopt < 1.3, but we will use the
     # get_current_iterate method, which is only available in 1.3+
-    @unittest.skipIf(not cyipopt_ge_1_3, "cyipopt version < 1.3.0")
+    @unittest.skipIf(
+        not cyipopt_available or not cyipopt_ge_1_3, "cyipopt version < 1.3.0"
+    )
     def test_solve_13arg_callback(self):
         m = create_model1()
 
