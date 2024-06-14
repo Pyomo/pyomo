@@ -331,6 +331,7 @@ class TestCyIpoptSolver(unittest.TestCase):
         m = create_model1()
 
         iterate_data = []
+
         def intermediate(
             nlp,
             alg_mod,
@@ -374,6 +375,7 @@ class TestCyIpoptSolver(unittest.TestCase):
         m = create_model1()
 
         iterate_data = []
+
         def intermediate(
             nlp,
             problem,
