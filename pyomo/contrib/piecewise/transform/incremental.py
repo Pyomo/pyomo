@@ -45,20 +45,11 @@ import logging
     """,
 )
 class IncrementalMIPTransformation(PiecewiseLinearTransformationBase):
-    """
-    The incremental MIP formulation of a piecewise-linear function, as described
-    by Vielma et al, 2010. To work in the multivariate case, the underlying
-    triangulation must satisfy these properties:
-     (1) The simplices are ordered T_1, ..., T_N such that T_i has nonempty intersection
-         with T_{i+1}. It doesn't have to be a whole face; just a vertex is enough.
-     (2) On each simplex T_i, the vertices are ordered T_i^1, ..., T_i^n such
-         that T_i^n = T_{i+1}^1
-    """
 
     CONFIG = PiecewiseLinearTransformationBase.CONFIG()
     _transformation_name = "pw_linear_incremental"
 
-    # Implement to use PiecewiseLinearToGDP. This function returns the Var
+    # Implement to use PiecewiseLinearTransformationBase. This function returns the Var
     # that replaces the transformed piecewise linear expr
     def _transform_pw_linear_expr(self, pw_expr, pw_linear_func, transformation_block):
         if pw_linear_func.triangulation not in (
@@ -66,8 +57,11 @@ class IncrementalMIPTransformation(PiecewiseLinearTransformationBase):
             Triangulation.AssumeValid,
         ):
             # almost certain not to work
-            logging.getLogger('pyomo.contrib.piecewise.transform.incremental').error(
-                "Incremental transformation specified, but the triangulation may not be appropriately ordered. This is likely to lead to incorrect results!"
+            raise ValueError(
+                f"""
+                Incremental transformation specified, but the triangulation {pw_linear_func.triangulation} may not be appropriately ordered. This would likely lead to incorrect results!
+                If you know what you are doing, you can suppress this error by overriding the triangulation tag to be Triangulation.AssumeValid during PiecewiseLinearFunction construction.
+                """
             )
         # Get a new Block() in transformation_block.transformed_functions, which
         # is a Block(Any)
@@ -164,15 +158,13 @@ class IncrementalMIPTransformation(PiecewiseLinearTransformationBase):
         @transBlock.Constraint(transBlock.dimension_indices)
         def x_constraint(b, n):
             return pw_expr.args[n] == initial_vertex[n] + sum(
-                sum(
-                    # delta_i^j * (v_i^j - v_i^0)
-                    transBlock.delta[i, j]
-                    * (
-                        pw_linear_func._points[simplices[i][j]][n]
-                        - pw_linear_func._points[simplices[i][0]][n]
-                    )
-                    for j in transBlock.nonzero_simplex_point_indices
+                # delta_i^j * (v_i^j - v_i^0)
+                transBlock.delta[i, j]
+                * (
+                    pw_linear_func._points[simplices[i][j]][n]
+                    - pw_linear_func._points[simplices[i][0]][n]
                 )
+                for j in transBlock.nonzero_simplex_point_indices
                 for i in transBlock.simplex_indices
             )
 
@@ -181,19 +173,17 @@ class IncrementalMIPTransformation(PiecewiseLinearTransformationBase):
             expr=substitute_var
             == pw_linear_func._linear_functions[0](*initial_vertex)
             + sum(
-                sum(
-                    # delta_i^j * (f(v_i^j) - f(v_i^0))
-                    transBlock.delta[i, j]
-                    * (
-                        pw_linear_func._linear_functions[i](
-                            *pw_linear_func._points[simplices[i][j]]
-                        )
-                        - pw_linear_func._linear_functions[i](
-                            *pw_linear_func._points[simplices[i][0]]
-                        )
+                # delta_i^j * (f(v_i^j) - f(v_i^0))
+                transBlock.delta[i, j]
+                * (
+                    pw_linear_func._linear_functions[i](
+                        *pw_linear_func._points[simplices[i][j]]
                     )
-                    for j in transBlock.nonzero_simplex_point_indices
+                    - pw_linear_func._linear_functions[i](
+                        *pw_linear_func._points[simplices[i][0]]
+                    )
                 )
+                for j in transBlock.nonzero_simplex_point_indices
                 for i in transBlock.simplex_indices
             )
         )
