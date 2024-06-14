@@ -326,3 +326,86 @@ class TestCyIpoptSolver(unittest.TestCase):
         res = solver.solve(m, tee=True)
         pyo.assert_optimal_termination(res)
         self.assertAlmostEqual(m.x[1].value, 9.0)
+
+    def test_solve_13arg_callback(self):
+        m = create_model1()
+
+        iterate_data = []
+        def intermediate(
+            nlp,
+            alg_mod,
+            iter_count,
+            obj_value,
+            inf_pr,
+            inf_du,
+            mu,
+            d_norm,
+            regularization_size,
+            alpha_du,
+            alpha_pr,
+            ls_trials,
+        ):
+            x = nlp.get_primals()
+            y = nlp.get_duals()
+            iterate_data.append((x, y))
+
+        x_sol = np.array([3.85958688, 4.67936007, 3.10358931])
+        y_sol = np.array([-1.0, 53.90357665])
+
+        solver = pyo.SolverFactory("cyipopt", intermediate_callback=intermediate)
+        res = solver.solve(m, tee=True)
+        pyo.assert_optimal_termination(res)
+
+        # Make sure iterate vectors have the right shape and that the final
+        # iterate contains the primal solution we expect.
+        for x, y in iterate_data:
+            self.assertEqual(x.shape, (3,))
+            self.assertEqual(y.shape, (2,))
+        x, y = iterate_data[-1]
+        self.assertTrue(np.allclose(x_sol, x))
+        # Note that we can't assert that dual variables in the NLP are those
+        # at the solution because, at this point in the algorithm, the NLP
+        # only has access to the *previous iteration's* dual values.
+
+    # The 13-arg callback works with cyipopt < 1.3, but we will use the
+    # get_current_iterate method, which is only available in 1.3+
+    @unittest.skipIf(not cyipopt_ge_1_3, "cyipopt version < 1.3.0")
+    def test_solve_13arg_callback(self):
+        m = create_model1()
+
+        iterate_data = []
+        def intermediate(
+            nlp,
+            problem,
+            alg_mod,
+            iter_count,
+            obj_value,
+            inf_pr,
+            inf_du,
+            mu,
+            d_norm,
+            regularization_size,
+            alpha_du,
+            alpha_pr,
+            ls_trials,
+        ):
+            iterate = problem.get_current_iterate()
+            x = iterate["x"]
+            y = iterate["mult_g"]
+            iterate_data.append((x, y))
+
+        x_sol = np.array([3.85958688, 4.67936007, 3.10358931])
+        y_sol = np.array([-1.0, 53.90357665])
+
+        solver = pyo.SolverFactory("cyipopt", intermediate_callback=intermediate)
+        res = solver.solve(m, tee=True)
+        pyo.assert_optimal_termination(res)
+
+        # Make sure iterate vectors have the right shape and that the final
+        # iterate contains the primal and dual solution we expect.
+        for x, y in iterate_data:
+            self.assertEqual(x.shape, (3,))
+            self.assertEqual(y.shape, (2,))
+        x, y = iterate_data[-1]
+        self.assertTrue(np.allclose(x_sol, x))
+        self.assertTrue(np.allclose(y_sol, y))
