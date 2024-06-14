@@ -13,6 +13,9 @@ import itertools
 from types import SimpleNamespace
 from enum import Enum
 from pyomo.common.errors import DeveloperError
+from pyomo.contrib.piecewise.ordered_3d_j1_triangulation_data import (
+    hamiltonian_paths as incremental_3d_simplex_pair_to_path,
+)
 
 
 class Triangulation(Enum):
@@ -293,11 +296,6 @@ def _get_ordered_j1_triangulation_2d(points_map, num_pts):
 
 
 def _get_ordered_j1_triangulation_3d(points_map, num_pts):
-    # Import these precomputed paths
-    from pyomo.contrib.piecewise.ordered_3d_j1_triangulation_data import (
-        hamiltonian_paths as simplex_pair_to_path,
-    )
-
     # To start, we need a hamiltonian path in the grid graph of *double* cubes
     # (2x2x2 cubes)
     grid_hamiltonian = get_grid_hamiltonian(3, round(num_pts / 2))  # division is exact
@@ -317,14 +315,17 @@ def _get_ordered_j1_triangulation_3d(points_map, num_pts):
         current_v_0 = tuple(2 * current_double_cube_idx[j] + 1 for j in range(3))
 
         current_cube_path = None
-        if (start_data, (direction_to_next, 1)) in simplex_pair_to_path.keys():
-            current_cube_path = simplex_pair_to_path[
+        if (
+            start_data,
+            (direction_to_next, 1),
+        ) in incremental_3d_simplex_pair_to_path.keys():
+            current_cube_path = incremental_3d_simplex_pair_to_path[
                 (start_data, (direction_to_next, 1))
             ]
             # set the start data for the next iteration now
             start_data = (tuple(-1 * i for i in direction_to_next), 1)
         else:
-            current_cube_path = simplex_pair_to_path[
+            current_cube_path = incremental_3d_simplex_pair_to_path[
                 (start_data, (direction_to_next, 2))
             ]
             start_data = (tuple(-1 * i for i in direction_to_next), 2)
@@ -338,10 +339,17 @@ def _get_ordered_j1_triangulation_3d(points_map, num_pts):
     # direction_to_next. Let's go straight in the direction we came from.
     direction_to_next = tuple(-1 * i for i in start_data[0])
     current_v_0 = tuple(2 * grid_hamiltonian[-1][j] + 1 for j in range(3))
-    if (start_data, (direction_to_next, 1)) in simplex_pair_to_path.keys():
-        current_cube_path = simplex_pair_to_path[(start_data, (direction_to_next, 1))]
+    if (
+        start_data,
+        (direction_to_next, 1),
+    ) in incremental_3d_simplex_pair_to_path.keys():
+        current_cube_path = incremental_3d_simplex_pair_to_path[
+            (start_data, (direction_to_next, 1))
+        ]
     else:
-        current_cube_path = simplex_pair_to_path[(start_data, (direction_to_next, 2))]
+        current_cube_path = incremental_3d_simplex_pair_to_path[
+            (start_data, (direction_to_next, 2))
+        ]
 
     for simplex_data in current_cube_path:
         simplices[len(simplices)] = get_one_j1_simplex(
