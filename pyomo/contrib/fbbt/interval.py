@@ -87,7 +87,11 @@ def eq(xl, xu, yl, yu, feasibility_tol):
 
     """
     ans = []
-    if abs(xl - xu) > feasibility_tol or abs(yl - yu) > feasibility_tol or abs(xl - yl) > feasibility_tol:
+    if (
+        abs(xl - xu) > feasibility_tol
+        or abs(yl - yu) > feasibility_tol
+        or abs(xl - yl) > feasibility_tol
+    ):
         ans.append(_false)
     if xl <= yu + feasibility_tol and yl <= xu + feasibility_tol:
         ans.append(_true)

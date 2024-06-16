@@ -87,17 +87,20 @@ def _prop_bnds_leaf_to_root_equality(visitor, node, arg1, arg2):
         *bnds_dict[arg1], *bnds_dict[arg2], visitor.feasibility_tol
     )
 
+
 def _prop_bnds_leaf_to_root_inequality(visitor, node, arg1, arg2):
     bnds_dict = visitor.bnds_dict
     bnds_dict[node] = interval.ineq(
         *bnds_dict[arg1], *bnds_dict[arg2], visitor.feasibility_tol
     )
 
+
 def _prop_bnds_leaf_to_root_ranged(visitor, node, arg1, arg2, arg3):
     bnds_dict = visitor.bnds_dict
     bnds_dict[node] = interval.ranged(
         *bnds_dict[arg1], *bnds_dict[arg2], *bnds_dict[arg3], visitor.feasibility_tol
     )
+
 
 def _prop_bnds_leaf_to_root_ProductExpression(visitor, node, arg1, arg2):
     """
@@ -1029,6 +1032,7 @@ _prop_bnds_root_to_leaf_map[relational_expr.InequalityExpression] = (
 _prop_bnds_root_to_leaf_map[relational_expr.RangedExpression] = (
     _prop_bnds_root_to_leaf_ranged
 )
+
 
 def _check_and_reset_bounds(var, lb, ub):
     """

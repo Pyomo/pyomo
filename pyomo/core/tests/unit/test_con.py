@@ -1630,6 +1630,7 @@ class MiscConTests(unittest.TestCase):
             "Constraint 'c' is a Ranged Inequality with a variable lower bound",
         ):
             instance.c.upper
+
         #
         def rule1(model):
             return (0, model.x, model.z)
@@ -1650,7 +1651,6 @@ class MiscConTests(unittest.TestCase):
             "Constraint 'c' is a Ranged Inequality with a variable upper bound",
         ):
             instance.c.upper
-
 
     def test_expression_constructor_coverage(self):
         def rule1(model):
