@@ -1324,10 +1324,10 @@ def _fbbt_con(con, config):
     visitorA = _FBBTVisitorLeafToRoot(bnds_dict, feasibility_tol=config.feasibility_tol)
     visitorA.walk_expression(con.expr)
 
-    always_feasible, feasible = bnds_dict[con.expr]
+    always_feasible, possibly_feasible = bnds_dict[con.expr]
 
     # check if the constraint is infeasible
-    if not feasible:
+    if not possibly_feasible:
         raise InfeasibleConstraintException(
             'Detected an infeasible constraint during FBBT: {0}'.format(str(con))
         )
