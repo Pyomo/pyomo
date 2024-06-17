@@ -999,7 +999,11 @@ def _finalize_numpy(np, available):
         # registration here (to bypass the deprecation warning) until we
         # finally remove all support for it
         numeric_types._native_boolean_types.add(t)
-    _floats = [np.float_, np.float16, np.float32, np.float64]
+    _floats = []
+    # numpy 2.0.0 removed np.float_
+    if np.__version__ < '2.0.0':
+        _floats.append(np.float_)
+    _floats.extend([np.float16, np.float32, np.float64])
     # float96 and float128 may or may not be defined in this particular
     # numpy build (it depends on platform and version).
     # Register them only if they are present
@@ -1013,7 +1017,11 @@ def _finalize_numpy(np, available):
         # registration here (to bypass the deprecation warning) until we
         # finally remove all support for it
         numeric_types._native_boolean_types.add(t)
-    _complex = [np.complex_, np.complex64, np.complex128]
+    _complex = []
+    # numpy 2.0.0 removed np.complex_
+    if np.__version__ < '2.0.0':
+        _complex.append(np.complex_)
+    _complex.extend([np.complex64, np.complex128])
     # complex192 and complex256 may or may not be defined in this
     # particular numpy build (it depends on platform and version).
     # Register them only if they are present
