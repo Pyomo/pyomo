@@ -28,7 +28,7 @@ class Triangulation(Enum):
 # Duck-typed thing that looks reasonably similar to an instance of scipy.spatial.Delaunay
 # Fields:
 #   - points: list of P points as P x n array
-#   - simplices: list of M simplices as P x (n + 1) array
+#   - simplices: list of M simplices as P x (n + 1) array of point _indices_
 #   - coplanar: list of N points omitted from triangulation as tuples of (point index,
 #     nearest simplex index, nearest vertex index), stacked into an N x 3 array
 class FakeScipyTriangulation():
