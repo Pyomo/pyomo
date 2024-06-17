@@ -223,7 +223,13 @@ class ConstraintData(ActiveComponentData):
                 _, ans, _ = self._expr.args
             else:
                 raise
-        if ans.__class__ in native_numeric_types:
+        if ans.__class__ in native_types and ans is not None:
+            # Historically, constraint.lower was guaranteed to return a type
+            # derived from Pyomo NumericValue (or None).  Replicate that.
+            #
+            # [JDS 6/2024: it would be nice to remove this behavior,
+            # although possibly unnecessary, as people should use
+            # normalize_constraint() instead]
             return as_numeric(ans)
         return ans
 
@@ -231,7 +237,7 @@ class ConstraintData(ActiveComponentData):
     def lower(self):
         """Access the lower bound of a constraint expression."""
         ans = self.normalize_constraint()[0]
-        if ans.__class__ in native_numeric_types:
+        if ans.__class__ in native_types and ans is not None:
             # Historically, constraint.lower was guaranteed to return a type
             # derived from Pyomo NumericValue (or None).  Replicate that
             # functionality, although clients should in almost all cases
@@ -245,8 +251,8 @@ class ConstraintData(ActiveComponentData):
     def upper(self):
         """Access the upper bound of a constraint expression."""
         ans = self.normalize_constraint()[2]
-        if ans.__class__ in native_numeric_types:
-            # Historically, constraint.lower was guaranteed to return a type
+        if ans.__class__ in native_types and ans is not None:
+            # Historically, constraint.upper was guaranteed to return a type
             # derived from Pyomo NumericValue (or None).  Replicate that
             # functionality, although clients should in almost all cases
             # move to using ConstraintData.lb instead of accessing
