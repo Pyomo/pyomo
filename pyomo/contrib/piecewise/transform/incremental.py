@@ -58,10 +58,13 @@ class IncrementalMIPTransformation(PiecewiseLinearTransformationBase):
         ):
             # almost certain not to work
             raise ValueError(
-                f"""
-                Incremental transformation specified, but the triangulation {pw_linear_func.triangulation} may not be appropriately ordered. This would likely lead to incorrect results!
-                If you know what you are doing, you can suppress this error by overriding the triangulation tag to be Triangulation.AssumeValid during PiecewiseLinearFunction construction.
-                """
+                "Incremental transformation specified, but the triangulation "
+                f"{pw_linear_func.triangulation} may not be appropriately ordered. This "
+                "would likely lead to incorrect results! The built-in "
+                "Triangulation.OrderedJ1 triangulation has an appropriate ordering for "
+                "this transformation. If you know what you are doing, you can also "
+                "suppress this error by overriding the triangulation tag to be "
+                "Triangulation.AssumeValid during PiecewiseLinearFunction construction."
             )
         # Get a new Block() in transformation_block.transformed_functions, which
         # is a Block(Any)
