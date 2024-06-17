@@ -999,10 +999,13 @@ def _finalize_numpy(np, available):
         # registration here (to bypass the deprecation warning) until we
         # finally remove all support for it
         numeric_types._native_boolean_types.add(t)
-    _floats = [np.float_, np.float16, np.float32, np.float64]
+    _floats = [np.float16, np.float32, np.float64]
     # float96 and float128 may or may not be defined in this particular
     # numpy build (it depends on platform and version).
     # Register them only if they are present
+    if hasattr(np, 'float_'):
+        # Prepend to preserve previous functionality
+        _floats = [np.float_] + _floats
     if hasattr(np, 'float96'):
         _floats.append(np.float96)
     if hasattr(np, 'float128'):
@@ -1013,10 +1016,13 @@ def _finalize_numpy(np, available):
         # registration here (to bypass the deprecation warning) until we
         # finally remove all support for it
         numeric_types._native_boolean_types.add(t)
-    _complex = [np.complex_, np.complex64, np.complex128]
+    _complex = [np.complex64, np.complex128]
     # complex192 and complex256 may or may not be defined in this
     # particular numpy build (it depends on platform and version).
     # Register them only if they are present
+    if hasattr(np, 'np.complex_'):
+        # Prepend to preserve functionality
+        _complex = [np.complex_] + _complex
     if hasattr(np, 'complex192'):
         _complex.append(np.complex192)
     if hasattr(np, 'complex256'):

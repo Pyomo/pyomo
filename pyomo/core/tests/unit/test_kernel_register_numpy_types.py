@@ -34,7 +34,8 @@ if numpy_available:
 # Reals
 numpy_float_names = []
 if numpy_available:
-    numpy_float_names.append('float_')
+    if hasattr(numpy, 'float_'):
+        numpy_float_names.append('float_')
     numpy_float_names.append('float16')
     numpy_float_names.append('float32')
     numpy_float_names.append('float64')
@@ -46,7 +47,8 @@ if numpy_available:
 # Complex
 numpy_complex_names = []
 if numpy_available:
-    numpy_complex_names.append('complex_')
+    if hasattr(numpy, 'complex_'):
+        numpy_complex_names.append('complex_')
     numpy_complex_names.append('complex64')
     numpy_complex_names.append('complex128')
     if hasattr(numpy, 'complex192'):
