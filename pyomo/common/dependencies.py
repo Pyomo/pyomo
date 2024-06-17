@@ -1005,7 +1005,7 @@ def _finalize_numpy(np, available):
     # Register them only if they are present
     if hasattr(np, 'float_'):
         # Prepend to preserve previous functionality
-        _floats = [np.float_] + _floats
+        _floats.insert(0, np.float_)
     if hasattr(np, 'float96'):
         _floats.append(np.float96)
     if hasattr(np, 'float128'):
@@ -1022,7 +1022,7 @@ def _finalize_numpy(np, available):
     # Register them only if they are present
     if hasattr(np, 'np.complex_'):
         # Prepend to preserve functionality
-        _complex = [np.complex_] + _complex
+        _complex.insert(0, np.complex_)
     if hasattr(np, 'complex192'):
         _complex.append(np.complex192)
     if hasattr(np, 'complex256'):
