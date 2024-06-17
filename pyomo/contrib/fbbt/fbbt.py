@@ -437,14 +437,6 @@ def _prop_bnds_root_to_leaf_ranged(node, bnds_dict, feasibility_tol):
         bnds_dict[arg1] = lb1, ub2
 
 
-def _prop_bnds_root_to_leaf_equality(node, bnds_dict, feasibility_tol):
-    assert bnds_dict[node][1]  # This expression is feasible
-    arg1, arg2 = node.args
-    lb1, ub1 = bnds_dict[arg1]
-    lb2, ub2 = bnds_dict[arg2]
-    bnds_dict[arg1] = bnds_dict[arg2] = max(lb1, lb2), min(ub1, ub2)
-
-
 def _prop_bnds_root_to_leaf_ProductExpression(node, bnds_dict, feasibility_tol):
     """
 
