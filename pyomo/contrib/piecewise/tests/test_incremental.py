@@ -50,7 +50,6 @@ def make_log_x_model_ordered():
     m = ConcreteModel()
     m.x = Var(bounds=(1, 10))
     m.pw_log = PiecewiseLinearFunction(points=[1, 3, 6, 10], function=log)
-    m.pw_log._triangulation = Triangulation.AssumeValid
 
     # Here are the linear functions, for safe keeping.
     def f1(x):
@@ -92,9 +91,8 @@ def make_log_x_model_ordered():
         [(3, 4), (3, 7), (0, 7)],
     ]
     m.pw_paraboloid = PiecewiseLinearFunction(
-        simplices=simplices, linear_functions=[g1, g1, g2, g2]
+        simplices=simplices, linear_functions=[g1, g1, g2, g2], triangulation_override=Triangulation.AssumeValid
     )
-    m.pw_paraboloid._triangulation = Triangulation.AssumeValid
     m.paraboloid_expr = m.pw_paraboloid(m.x1, m.x2)
 
     def c_rule(m, i):

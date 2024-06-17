@@ -19,6 +19,7 @@ from pyomo.contrib.piecewise.triangulations import (
     get_Gn_hamiltonian,
     get_grid_hamiltonian,
 )
+from pyomo.common.dependencies import numpy as np
 from math import factorial
 import itertools
 
@@ -28,57 +29,31 @@ class TestTriangulations(unittest.TestCase):
     # check basic functionality for the unordered j1 triangulation.
     def test_J1_small(self):
         points = [
-            [0, 0],
-            [0, 1],
-            [0, 2],
-            [1, 0],
-            [1, 1],
-            [1, 2],
-            [2, 0],
-            [2, 1],
-            [2, 2],
+            [0.5, 0.5],  # 0
+            [0.5, 1.5],  # 1
+            [0.5, 2.5],  # 2
+            [1.5, 0.5],  # 3
+            [1.5, 1.5],  # 4
+            [1.5, 2.5],  # 5
+            [2.5, 0.5],  # 6
+            [2.5, 1.5],  # 7
+            [2.5, 2.5],  # 8
         ]
         triangulation = get_unordered_j1_triangulation(points, 2)
-        self.assertEqual(
-            triangulation.simplices,
-            {
-                0: [[0, 0], [0, 1], [1, 1]],
-                1: [[0, 1], [0, 2], [1, 1]],
-                2: [[1, 1], [2, 0], [2, 1]],
-                3: [[1, 1], [2, 1], [2, 2]],
-                4: [[0, 0], [1, 0], [1, 1]],
-                5: [[0, 2], [1, 1], [1, 2]],
-                6: [[1, 0], [1, 1], [2, 0]],
-                7: [[1, 1], [1, 2], [2, 2]],
-            },
-        )
-
-    # check that the points_map functionality does what it should
-    def test_J1_small_offset(self):
-        points = [
-            [0.5, 0.5],
-            [0.5, 1.5],
-            [0.5, 2.5],
-            [1.5, 0.5],
-            [1.5, 1.5],
-            [1.5, 2.5],
-            [2.5, 0.5],
-            [2.5, 1.5],
-            [2.5, 2.5],
-        ]
-        triangulation = get_unordered_j1_triangulation(points, 2)
-        self.assertEqual(
-            triangulation.simplices,
-            {
-                0: [[0.5, 0.5], [0.5, 1.5], [1.5, 1.5]],
-                1: [[0.5, 1.5], [0.5, 2.5], [1.5, 1.5]],
-                2: [[1.5, 1.5], [2.5, 0.5], [2.5, 1.5]],
-                3: [[1.5, 1.5], [2.5, 1.5], [2.5, 2.5]],
-                4: [[0.5, 0.5], [1.5, 0.5], [1.5, 1.5]],
-                5: [[0.5, 2.5], [1.5, 1.5], [1.5, 2.5]],
-                6: [[1.5, 0.5], [1.5, 1.5], [2.5, 0.5]],
-                7: [[1.5, 1.5], [1.5, 2.5], [2.5, 2.5]],
-            },
+        self.assertTrue(
+            np.array_equal(
+                triangulation.simplices,
+                np.array([
+                    [0, 1, 4],
+                    [1, 2, 4],
+                    [4, 6, 7],
+                    [4, 7, 8],
+                    [0, 3, 4],
+                    [2, 4, 5],
+                    [3, 4, 6],
+                    [4, 5, 8]
+                ])
+            )
         )
 
     def check_J1_ordered(self, points, num_points, dim):
@@ -87,7 +62,7 @@ class TestTriangulations(unittest.TestCase):
         self.assertEqual(
             len(ordered_triangulation), factorial(dim) * (num_points - 1) ** dim
         )
-        for idx, first_simplex in ordered_triangulation.items():
+        for idx, first_simplex in enumerate(ordered_triangulation):
             if idx != len(ordered_triangulation) - 1:
                 second_simplex = ordered_triangulation[idx + 1]
                 # test property (2) which also guarantees property (1)

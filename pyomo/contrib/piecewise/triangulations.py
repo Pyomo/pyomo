@@ -10,9 +10,9 @@
 #  ___________________________________________________________________________
 
 import itertools
-from types import SimpleNamespace
 from enum import Enum
 from pyomo.common.errors import DeveloperError
+from pyomo.common.dependencies import numpy as np
 from pyomo.contrib.piecewise.ordered_3d_j1_triangulation_data import (
     hamiltonian_paths as incremental_3d_simplex_pair_to_path,
 )
@@ -25,18 +25,23 @@ class Triangulation(Enum):
     J1 = 3
     OrderedJ1 = 4
 
+# Duck-typed thing that looks reasonably similar to an instance of scipy.spatial.Delaunay
+# Fields:
+#   - points: list of P points as P x n array
+#   - simplices: list of M simplices as P x (n + 1) array
+#   - coplanar: list of N points omitted from triangulation as tuples of (point index,
+#     nearest simplex index, nearest vertex index), stacked into an N x 3 array
+class FakeScipyTriangulation():
+    def __init__(self, points, simplices, coplanar):
+        self.points = points
+        self.simplices = simplices
+        self.coplanar = coplanar
+
 
 def get_unordered_j1_triangulation(points, dimension):
     points_map, num_pts = _process_points_j1(points, dimension)
     simplices_list = _get_j1_triangulation(points_map, num_pts - 1, dimension)
-    # for now make a duck-typed thing that superficially looks like an instance of
-    # scipy.spatial.Delaunay (these are NDarrays in the original)
-    triangulation = SimpleNamespace()
-    triangulation.points = list(range(len(simplices_list)))
-    triangulation.simplices = {i: simplices_list[i] for i in triangulation.points}
-    triangulation.coplanar = []
-
-    return triangulation
+    return FakeScipyTriangulation(points=np.array(points), simplices=np.array(simplices_list), coplanar=np.array([]))
 
 
 def get_ordered_j1_triangulation(points, dimension):
@@ -49,12 +54,7 @@ def get_ordered_j1_triangulation(points, dimension):
         simplices_list = _get_ordered_j1_triangulation_4d_and_above(
             points_map, num_pts - 1, dimension
         )
-    triangulation = SimpleNamespace()
-    triangulation.points = list(range(len(simplices_list)))
-    triangulation.simplices = {i: simplices_list[i] for i in triangulation.points}
-    triangulation.coplanar = []
-
-    return triangulation
+    return FakeScipyTriangulation(points=np.array(points), simplices=np.array(simplices_list), coplanar=np.array([]))
 
 
 # Does some validation but mostly assumes the user did the right thing
@@ -78,7 +78,7 @@ def _process_points_j1(points, dimension):
         point_flat_index = 0
         for n in range(dimension):
             point_flat_index += point_index[dimension - 1 - n] * num_pts**n
-        points_map[point_index] = points[point_flat_index]
+        points_map[point_index] = point_flat_index
     return points_map, num_pts
 
 
@@ -130,37 +130,37 @@ def _get_ordered_j1_triangulation_2d(points_map, num_pts):
 
     facing = None
 
-    simplices = {}
+    simplices = []
     start_square = (num_pts - 1, (num_pts / 2) - 1)
 
     # make it easier to read what I'm doing
     def add_bottom_right():
-        simplices[len(simplices)] = (
+        simplices.append((
             points_map[x, y],
             points_map[x + 1, y],
             points_map[x + 1, y + 1],
-        )
+        ))
 
     def add_top_right():
-        simplices[len(simplices)] = (
+        simplices.append((
             points_map[x, y + 1],
             points_map[x + 1, y],
             points_map[x + 1, y + 1],
-        )
+        ))
 
     def add_bottom_left():
-        simplices[len(simplices)] = (
+        simplices.append((
             points_map[x, y],
             points_map[x, y + 1],
             points_map[x + 1, y],
-        )
+        ))
 
     def add_top_left():
-        simplices[len(simplices)] = (
+        simplices.append((
             points_map[x, y],
             points_map[x, y + 1],
             points_map[x + 1, y + 1],
-        )
+        ))
 
     # identify square by bottom-left corner
     x, y = start_square
@@ -304,7 +304,7 @@ def _get_ordered_j1_triangulation_3d(points_map, num_pts):
     # start from the -x side
     start_data = ((-1, 0, 0), 1)
 
-    simplices = {}
+    simplices = []
     for i in range(len(grid_hamiltonian) - 1):
         current_double_cube_idx = grid_hamiltonian[i]
         next_double_cube_idx = grid_hamiltonian[i + 1]
@@ -331,9 +331,9 @@ def _get_ordered_j1_triangulation_3d(points_map, num_pts):
             start_data = (tuple(-1 * i for i in direction_to_next), 2)
 
         for simplex_data in current_cube_path:
-            simplices[len(simplices)] = get_one_j1_simplex(
+            simplices.append(get_one_j1_simplex(
                 current_v_0, simplex_data[1], simplex_data[0], 3, points_map
-            )
+            ))
 
     # fill in the last cube. We have a good start_data but we need to invent a
     # direction_to_next. Let's go straight in the direction we came from.
@@ -352,9 +352,9 @@ def _get_ordered_j1_triangulation_3d(points_map, num_pts):
         ]
 
     for simplex_data in current_cube_path:
-        simplices[len(simplices)] = get_one_j1_simplex(
+        simplices.append(get_one_j1_simplex(
             current_v_0, simplex_data[1], simplex_data[0], 3, points_map
-        )
+        ))
 
     fix_vertices_incremental_order(simplices)
     return simplices
@@ -374,7 +374,7 @@ def _get_ordered_j1_triangulation_4d_and_above(points_map, num_pts, dim):
     # step two: for each square, get a sequence of simplices from a starting simplex,
     # through the square, and then ending with a simplex adjacent to the next square.
     # Then find the appropriate adjacent simplex to start on the next square
-    simplices = {}
+    simplices = []
     for i in range(len(grid_hamiltonian) - 1):
         current_corner = grid_hamiltonian[i]
         next_corner = grid_hamiltonian[i + 1]
@@ -390,15 +390,15 @@ def _get_ordered_j1_triangulation_4d_and_above(points_map, num_pts, dim):
         if c % 2 == 0:
             perm_sequence = get_Gn_hamiltonian(dim, start_perm, j, False)
             for pi in perm_sequence:
-                simplices[len(simplices)] = get_one_j1_simplex(
+                simplices.append(get_one_j1_simplex(
                     v_0, pi, sign, dim, points_map
-                )
+                ))
         else:
             perm_sequence = get_Gn_hamiltonian(dim, start_perm, j, True)
             for pi in perm_sequence:
-                simplices[len(simplices)] = get_one_j1_simplex(
+                simplices.append(get_one_j1_simplex(
                     v_0, pi, sign, dim, points_map
-                )
+                ))
         # should be true regardless of odd or even? I hope
         start_perm = perm_sequence[-1]
 
@@ -406,7 +406,7 @@ def _get_ordered_j1_triangulation_4d_and_above(points_map, num_pts, dim):
     # Any final permutation is fine; we are going nowhere after this
     v_0, sign = get_nearest_odd_and_sign_vec(grid_hamiltonian[-1])
     for pi in get_Gn_hamiltonian(dim, start_perm, 1, False):
-        simplices[len(simplices)] = get_one_j1_simplex(v_0, pi, sign, dim, points_map)
+        simplices.append(get_one_j1_simplex(v_0, pi, sign, dim, points_map))
 
     # fix vertices and return
     fix_vertices_incremental_order(simplices)
@@ -460,7 +460,7 @@ def get_grid_hamiltonian(dim, length):
 # Fix vertices (in place) when the simplices are right but vertices are not
 def fix_vertices_incremental_order(simplices):
     last_vertex_index = len(simplices[0]) - 1
-    for i, simplex in simplices.items():
+    for i, simplex in enumerate(simplices):
         # Choose vertices like this: first is always the same as last
         # of the previous simplex. Last is arbitrarily chosen from the
         # intersection with the next simplex.
