@@ -58,7 +58,6 @@ class TestTriangulations(unittest.TestCase):
 
     def check_J1_ordered(self, points, num_points, dim):
         ordered_triangulation = get_ordered_j1_triangulation(points, dim).simplices
-        # print(ordered_triangulation)
         self.assertEqual(
             len(ordered_triangulation), factorial(dim) * (num_points - 1) ** dim
         )
@@ -73,14 +72,8 @@ class TestTriangulations(unittest.TestCase):
                 )
                 # The way I am constructing these, they should always share an (n-1)-face.
                 # Check that too for good measure.
-                count = 0
-                for pt in first_simplex:
-                    if pt in second_simplex:
-                        count += 1
-                # print(f"first_simplex={first_simplex}; second_simplex={second_simplex}")
+                count = len(set(first_simplex).intersection(set(second_simplex)))
                 self.assertEqual(count, dim)  # (n-1)-face has n points
-                # if count != dim:
-                #    print(f"error: count {count} was not the correct {dim}")
 
     def test_J1_ordered_2d(self):
         self.check_J1_ordered(list(itertools.product([0, 1, 2], [1, 2.4, 3])), 3, 2)

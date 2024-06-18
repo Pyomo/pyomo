@@ -82,7 +82,7 @@ def _process_points_j1(points, dimension):
     return points_map, num_pts
 
 
-# Implement the J1 "Union Jack" triangulation (Todd 77) as explained by
+# Implement the J1 "Union Jack" triangulation (Todd 79) as explained by
 # Vielma 2010, with no ordering guarantees imposed. This function triangulates
 # {0, ..., K}^n for even K using the J1 triangulation, mapping the
 # obtained simplices through the points_map for a slight generalization.
@@ -103,7 +103,6 @@ def _get_j1_triangulation(points_map, K, n):
         current = list(v_0)
         simplex.append(points_map[*current])
         for i in range(0, n):
-            current = current.copy()
             current[pi[i]] += s[pi[i]]
             simplex.append(points_map[*current])
         # sort this because it might happen again later and we'd like to stay
@@ -112,7 +111,7 @@ def _get_j1_triangulation(points_map, K, n):
     return ret
 
 
-# Implement something similar to proof-by-picture from Todd 77 (Figure 1).
+# Implement something similar to proof-by-picture from Todd 79 (Figure 1).
 # However, that drawing is misleading at best so I do it in a working way, and
 # also slightly more regularly. I also go from the outside in instead of from
 # the inside out, to make things easier to implement.
@@ -418,7 +417,6 @@ def get_one_j1_simplex(v_0, pi, sign, dim, points_map):
     current = list(v_0)
     simplex.append(points_map[*current])
     for i in range(0, dim):
-        current = current.copy()
         current[pi[i] - 1] += sign[pi[i] - 1]
         simplex.append(points_map[*current])
     return sorted(simplex)
@@ -469,10 +467,7 @@ def fix_vertices_incremental_order(simplices):
         if i == 0:
             first = 0
         else:
-            for n in range(last_vertex_index + 1):
-                if simplex[n] == simplices[i - 1][last_vertex_index]:
-                    first = n
-                    break
+            first = simplex.index(simplices[i - 1][last_vertex_index])
 
         if i == len(simplices) - 1:
             last = last_vertex_index
@@ -485,12 +480,16 @@ def fix_vertices_incremental_order(simplices):
             raise DeveloperError("Couldn't fix vertex ordering for incremental.")
 
         # reorder the simplex with the desired first and last
-        new_simplex = [simplex[first]]
-        for n in range(last_vertex_index + 1):
-            if n != first and n != last:
-                new_simplex.append(simplex[n])
-        new_simplex.append(simplex[last])
-        simplices[i] = new_simplex
+        new_simplex = list(simplex)
+        temp = new_simplex[0]
+        new_simplex[0] = new_simplex[first]
+        new_simplex[first] = temp
+        if last == 0:
+            last = first
+        temp = new_simplex[last_vertex_index]
+        new_simplex[last_vertex_index] = new_simplex[last]
+        new_simplex[last] = temp
+        simplices[i] = tuple(new_simplex)
 
 
 # Let G_n be the graph on n! vertices where the vertices are permutations in
@@ -501,17 +500,21 @@ def fix_vertices_incremental_order(simplices):
 # starting permutation, such that a fixed target symbol is either the image
 # rho(1), or it is rho(n), depending on whether first or last is requested,
 # where rho is the final permutation.
-def get_Gn_hamiltonian(n, start_permutation, target_symbol, last):
+def get_Gn_hamiltonian(n, start_permutation, target_symbol, last, _cache={}):
     if n < 4:
         raise ValueError("n must be at least 4 for this operation to be possible")
+    if (n, start_permutation, target_symbol, last) in _cache:
+        return _cache[(n, start_permutation, target_symbol, last)]
     # first is enough because we can just reverse every permutation
     if last:
-        return [
+        ret = [
             tuple(reversed(pi))
             for pi in get_Gn_hamiltonian(
                 n, tuple(reversed(start_permutation)), target_symbol, False
             )
         ]
+        _cache[(n, start_permutation, target_symbol, last)] = ret
+        return ret
     # trivial start permutation is enough because we can map it through at the end
     if start_permutation != tuple(range(1, n + 1)):
         new_target_symbol = [
@@ -519,18 +522,22 @@ def get_Gn_hamiltonian(n, start_permutation, target_symbol, last):
         ][
             0
         ]  # pi^-1(j)
-        return [
+        ret = [
             tuple(start_permutation[pi[i] - 1] for i in range(n))
             for pi in _get_Gn_hamiltonian(n, new_target_symbol)
         ]
+        _cache[(n, start_permutation, target_symbol, last)] = ret
+        return ret
     else:
-        return _get_Gn_hamiltonian(n, target_symbol)
+        ret = _get_Gn_hamiltonian(n, target_symbol)
+        _cache[(n, start_permutation, target_symbol, last)] = ret
+        return ret
 
 
 # Assume the starting permutation is (1, ..., n) and the target symbol needs to
 # be in the first position of the last permutation
 def _get_Gn_hamiltonian(n, target_symbol):
-    # base case: proof by picture from Todd 77, Figure 2
+    # base case: proof by picture from Todd 79, Figure 2
     # note: Figure 2 contains an error, careful!
     if n == 4:
         if target_symbol == 1:

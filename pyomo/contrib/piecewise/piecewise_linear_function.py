@@ -262,7 +262,7 @@ class PiecewiseLinearFunction(Block):
         _tabular_data_arg = kwargs.pop('tabular_data', None)
         _tabular_data_rule_arg = kwargs.pop('tabular_data_rule', None)
         _triangulation_rule_arg = kwargs.pop('triangulation', Triangulation.Delaunay)
-        _triangulation_override_rule_arg = kwargs.pop('triangulation_override', None)
+        _triangulation_override_rule_arg = kwargs.pop('override_triangulation', None)
 
         kwargs.setdefault('ctype', PiecewiseLinearFunction)
         Block.__init__(self, *args, **kwargs)
@@ -394,6 +394,9 @@ class PiecewiseLinearFunction(Block):
         # We can trust they are nicely ordered if we made them, otherwise anything goes.
         if segments_are_user_defined:
             obj._triangulation = Triangulation.Unknown
+            tri = self._triangulation_rule(parent, obj._index)
+            if tri not in (None, Triangulation.Delaunay):
+                logger.warn(f"Non-default triangulation request {tri} was ignored because the simplices were provided. If you meant to override the tag, use `override_triangulation` instead.")
         else:
             obj._triangulation = Triangulation.AssumeValid
 
@@ -434,6 +437,9 @@ class PiecewiseLinearFunction(Block):
         # then it should be unknown.
         if simplices_are_user_defined:
             obj._triangulation = Triangulation.Unknown
+            tri = self._triangulation_rule(parent, obj._index)
+            if tri not in (None, Triangulation.Delaunay):
+                logger.warn(f"Non-default triangulation request {tri} was ignored because the simplices were provided. If you meant to override the tag, use `override_triangulation` instead.")
 
 
         # evaluate the function at each of the points and form the homogeneous
@@ -488,6 +494,9 @@ class PiecewiseLinearFunction(Block):
         obj._get_simplices_from_arg(self._simplices_rule(parent, obj._index))
         obj._linear_functions = [f for f in self._linear_funcs_rule(parent, obj._index)]
         obj._triangulation = Triangulation.Unknown
+        tri = self._triangulation_rule(parent, obj._index)
+        if tri not in (None, Triangulation.Delaunay):
+            logger.warn(f"Non-default triangulation request {tri} was ignored because the simplices were provided. If you meant to override the tag, use `override_triangulation` instead.")
         return obj
 
     @_define_handler(_handlers, False, False, False, False, True)
