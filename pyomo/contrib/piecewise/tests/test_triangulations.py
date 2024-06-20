@@ -43,16 +43,18 @@ class TestTriangulations(unittest.TestCase):
         self.assertTrue(
             np.array_equal(
                 triangulation.simplices,
-                np.array([
-                    [0, 1, 4],
-                    [1, 2, 4],
-                    [4, 6, 7],
-                    [4, 7, 8],
-                    [0, 3, 4],
-                    [2, 4, 5],
-                    [3, 4, 6],
-                    [4, 5, 8]
-                ])
+                np.array(
+                    [
+                        [0, 1, 4],
+                        [1, 2, 4],
+                        [4, 6, 7],
+                        [4, 7, 8],
+                        [0, 3, 4],
+                        [2, 4, 5],
+                        [3, 4, 6],
+                        [4, 5, 8],
+                    ]
+                ),
             )
         )
 

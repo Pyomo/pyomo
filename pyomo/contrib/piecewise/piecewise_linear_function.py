@@ -390,13 +390,17 @@ class PiecewiseLinearFunction(Block):
             obj, parent, nonlinear_function, simplices_are_user_defined=False
         )
 
-    def _construct_from_univariate_function_and_segments(self, obj, parent, func, segments_are_user_defined=True):
+    def _construct_from_univariate_function_and_segments(
+        self, obj, parent, func, segments_are_user_defined=True
+    ):
         # We can trust they are nicely ordered if we made them, otherwise anything goes.
         if segments_are_user_defined:
             obj._triangulation = Triangulation.Unknown
             tri = self._triangulation_rule(parent, obj._index)
             if tri not in (None, Triangulation.Delaunay):
-                logger.warn(f"Non-default triangulation request {tri} was ignored because the simplices were provided. If you meant to override the tag, use `override_triangulation` instead.")
+                logger.warn(
+                    f"Non-default triangulation request {tri} was ignored because the simplices were provided. If you meant to override the tag, use `override_triangulation` instead."
+                )
         else:
             obj._triangulation = Triangulation.AssumeValid
 
@@ -432,15 +436,16 @@ class PiecewiseLinearFunction(Block):
             return self._construct_from_univariate_function_and_segments(
                 obj, parent, nonlinear_function, simplices_are_user_defined
             )
-        
-        # If we triangulated, then this tag was already set. If they provided it, 
+
+        # If we triangulated, then this tag was already set. If they provided it,
         # then it should be unknown.
         if simplices_are_user_defined:
             obj._triangulation = Triangulation.Unknown
             tri = self._triangulation_rule(parent, obj._index)
             if tri not in (None, Triangulation.Delaunay):
-                logger.warn(f"Non-default triangulation request {tri} was ignored because the simplices were provided. If you meant to override the tag, use `override_triangulation` instead.")
-
+                logger.warn(
+                    f"Non-default triangulation request {tri} was ignored because the simplices were provided. If you meant to override the tag, use `override_triangulation` instead."
+                )
 
         # evaluate the function at each of the points and form the homogeneous
         # system of equations
@@ -496,7 +501,9 @@ class PiecewiseLinearFunction(Block):
         obj._triangulation = Triangulation.Unknown
         tri = self._triangulation_rule(parent, obj._index)
         if tri not in (None, Triangulation.Delaunay):
-            logger.warn(f"Non-default triangulation request {tri} was ignored because the simplices were provided. If you meant to override the tag, use `override_triangulation` instead.")
+            logger.warn(
+                f"Non-default triangulation request {tri} was ignored because the simplices were provided. If you meant to override the tag, use `override_triangulation` instead."
+            )
         return obj
 
     @_define_handler(_handlers, False, False, False, False, True)
@@ -514,14 +521,20 @@ class PiecewiseLinearFunction(Block):
             # avoid a dependence on scipy.
             self._construct_one_dimensional_simplices_from_points(obj, points)
             return self._construct_from_univariate_function_and_segments(
-                obj, parent, _tabular_data_functor(tabular_data, tupleize=True), segments_are_user_defined=False
+                obj,
+                parent,
+                _tabular_data_functor(tabular_data, tupleize=True),
+                segments_are_user_defined=False,
             )
 
         self._construct_simplices_from_multivariate_points(
             obj, parent, points, dimension
         )
         return self._construct_from_function_and_simplices(
-            obj, parent, _tabular_data_functor(tabular_data), simplices_are_user_defined=False
+            obj,
+            parent,
+            _tabular_data_functor(tabular_data),
+            simplices_are_user_defined=False,
         )
 
     def _getitem_when_not_present(self, index):
@@ -563,10 +576,12 @@ class PiecewiseLinearFunction(Block):
         # If the user wanted to override the triangulation tag, do it after we
         # are finished setting it ourselves.
         if self._triangulation_override_rule is not None:
-            triangulation_override = self._triangulation_override_rule(parent, obj._index)
+            triangulation_override = self._triangulation_override_rule(
+                parent, obj._index
+            )
             if triangulation_override is not None:
                 obj._triangulation = triangulation_override
-        
+
         return obj
 
 

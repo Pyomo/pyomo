@@ -91,7 +91,9 @@ def make_log_x_model_ordered():
         [(3, 4), (3, 7), (0, 7)],
     ]
     m.pw_paraboloid = PiecewiseLinearFunction(
-        simplices=simplices, linear_functions=[g1, g1, g2, g2], override_triangulation=Triangulation.AssumeValid
+        simplices=simplices,
+        linear_functions=[g1, g1, g2, g2],
+        override_triangulation=Triangulation.AssumeValid,
     )
     m.paraboloid_expr = m.pw_paraboloid(m.x1, m.x2)
 

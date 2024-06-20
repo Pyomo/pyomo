@@ -314,7 +314,17 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
     def test_pw_linear_approx_of_paraboloid_j1(self):
         m = self.make_model()
         m.pw = PiecewiseLinearFunction(
-            points=[(0, 1), (0, 4), (0, 7), (3, 1), (3, 4), (3, 7), (4, 1), (4, 4), (4, 7)],
+            points=[
+                (0, 1),
+                (0, 4),
+                (0, 7),
+                (3, 1),
+                (3, 4),
+                (3, 7),
+                (4, 1),
+                (4, 4),
+                (4, 7),
+            ],
             function=m.g,
             triangulation=Triangulation.OrderedJ1,
         )
