@@ -61,6 +61,114 @@ class ModelOptionLib(Enum):
     stage1 = "stage1"
     stage2 = "stage2"
 
+class DesignOfExperiments_:
+    def __init__(
+        self,
+        experiment,
+        solver=None,
+        prior_FIM=None,
+        args=None,
+        only_compute_fim_lower=True,
+        logger_level=logging.INFO,
+    ):
+        """
+        This package enables model-based design of experiments analysis with Pyomo. 
+        Both direct optimization and enumeration modes are supported.
+        
+        The package has been refactored from its original form as of ##/##/##24. See
+        the documentation for more information.
+
+        Parameters
+        ----------
+        experiment:
+            Experiment object that holds the model and labels all the components. The object
+            should have a ``get_labeled_model`` where a model is returned with the following
+            labeled sets: ``unknown_parameters``, ``experimental_inputs``, ``experimental_outputs``
+        solver:
+            A ``solver`` object specified by the user, default=None.
+            If not specified, default solver is IPOPT MA57.
+        prior_FIM:
+            A 2D numpy array containing Fisher information matrix (FIM) for prior experiments.
+            The default None means there is no prior information.
+        args:
+            Additional arguments for the ``get_labeled_model`` function on the Experiment object.
+        only_compute_fim_lower:
+            If True, only the lower triangle of the FIM is computed. Default is True.
+        logger_level:
+            Specify the level of the logger. Change to logging.DEBUG for all messages.
+        """
+        # Assert that the Experiment object has callable ``get_labeled_model`` function
+        assert(callable(getattr(experiment, 'get_labeled_model')))
+        
+        # Parameters, Design Variables, and Outputs are now directly connected
+        # to each model instance (meaning we no longer need to specify them
+        # in the constructor
+
+        # Potentially keep something like this for deprecated version? Maybe not
+        # model_option_arg = (
+            # "model_option" in inspect.getfullargspec(self.create_model).args
+        # )
+        # mod_arg = "mod" in inspect.getfullargspec(self.create_model).args
+        # if model_option_arg and mod_arg:
+            # self._original_create_model_interface = True
+        # else:
+            # self._original_create_model_interface = False
+
+
+        # check if user-defined solver is given
+        if solver:
+            self.solver = solver
+        # if not given, use default solver
+        else:
+            self.solver = self._get_default_ipopt_solver()
+
+        # check if there is prior info
+        if prior_FIM is None:
+            pass  # Since the parameters are not yet populated, the prior_FIM will be 
+                  # set to zero when the prior_FIM is set.
+        else:
+            self.prior_FIM = prior_FIM
+        
+        # To-Do: Add check when parameters are populated that input FIM is the correct size
+        
+        # Set args as an empty dict if no arguments are passed
+        if args is None:
+            args = {}
+        self.args = args
+
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(level=logger_level)
+
+        self.only_compute_fim_lower = only_compute_fim_lower
+    
+    # Perform doe
+    def run_doe(self, ):
+        return
+    
+    # Perform multi-experiment doe (sequential, or ``greedy`` approach)
+    def run_multi_doe_sequential(self, N_exp=1):
+        return
+    
+    # Perform multi-experiment doe (simultaneous, optimal approach)
+    def run_multi_doe_simultaneous(self, N_exp=1):
+        return
+    
+    # Compute FIM for the DoE object
+    def compute_FIM(self, ):
+        return
+    
+    # Create the DoE model (with ``scenarios`` from finite differencing scheme)
+    def create_doe_model(self, ):
+        return
+    
+    # Evaluates FIM and statistics for a full factorial space (same as run_grid_search)
+    def compute_FIM_full_factorial(self, ):
+        return
+
+
+##############################
+#  Below is deprecated code  #
+##############################
 
 class DesignOfExperiments:
     def __init__(
