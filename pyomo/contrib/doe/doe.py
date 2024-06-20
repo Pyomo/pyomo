@@ -61,6 +61,13 @@ class ModelOptionLib(Enum):
     stage1 = "stage1"
     stage2 = "stage2"
 
+
+class FiniteDifferenceStep(Enum):
+    forward = "forward"
+    central = "central"
+    backward = "backward"
+
+
 class DesignOfExperiments_:
     def __init__(
         self,
@@ -515,60 +522,99 @@ class DesignOfExperiments_:
         """
         
         # Generate initial scenario to populate unknown parameter values
-        mod.global_model = self.experiment.get_labeled_model(**self.args)
-
-        # create scenario information for block scenarios
-        scena_gen = ScenarioGenerator(
-            parameter_dict=mod.global_model.unknown_parameters, formula=self.formula, step=self.step
+        mod = self.experiment.get_labeled_model(**self.args)
+        
+        # Make a new Suffix to hold which scenarios are associated with parameters 
+        mod.parameter_scenarios = pyo.Suffix(
+            direction=pyo.Suffix.LOCAL,
         )
         
-        # To-Do: Should this be saved? Or no?
-        # To-Do: If save, allow different scenario_data objects for different models --> scenario_data is a list?
-        #        This is important for differing unknown parameter values --> stochastic
-        # Important attributes of scena_gen.ScenarioData listed below 
-        # scenario - list of dictionaries of unknown parameter values (with one perturbed)
-        # scena_num - dictionary where key is the parameter and value is a list of scenarios in which the parameter is involved
-        # eps_abs - dictionary where key is the parameter and value is the perturbation step
+        # Central finite difference definition
+        self.fd_formula = FiniteDifferenceStep(self.fd_formula)
         
-        self.scenario_data = scena_gen.ScenarioData
-
-        # Set for block/scenarios
-        mod.scenarios = pyo.Set(initialize=scena_gen.ScenarioData.scenario_indices)
+        if self.fd_formula == FiniteDifferenceStep.central:
+            # mod.parameter_scenarios.update((k, (2*ind, 2*ind + 1)) for k, ind in enumerate(mod.unknown_parameters.keys()))
+            mod.parameter_scenarios.update((2*ind, k) for ind, k in enumerate(mod.unknown_parameters.keys()))
+            mod.parameter_scenarios.update((2*ind + 1, k) for ind, k in enumerate(mod.unknown_parameters.keys()))
+            mod.scenarios = range(len(mod.unknown_parameters) * 2)
+        elif self.fd_formula in [FiniteDifferenceStep.forward, FiniteDifferenceStep.backward]:
+            # mod.parameter_scenarios.update((k, (0, ind + 1)) for k, ind in enumerate(mod.unknown_parameters.keys()))
+            mod.parameter_scenarios.update((ind + 1, k) for ind, k in enumerate(mod.unknown_parameters.keys()))
+            mod.scenarios = range(len(mod.unknown_parameters) + 1)
+        else:
+            # To-Do: add an error message for this as not being implemented yet
+            pass
 
         # To-Do: Fix parameter values if they are not Params?
 
+        # Is there a way to make this general for both? Probably not.
+        # Finite difference scheme-specific function definition
+        # This doesn't work but I think it should.
         def build_block_scenarios(b, s):
-            # create block scenarios
-            # idea: check if create_model takes theta as an optional input, if so, pass parameter values to create_model
-            
             # Generate model for the finite difference scenario
-            temp_mod = self.experiment.get_labeled_model(**self.args)
+            b.transfer_attributes_from(self.experiment.get_labeled_model(**self.args).clone())
+            param = mod.parameter_scenarios[s]
+            
+            # Perturbation to be (1 + diff) * param_value
+            if self.fd_formula == FiniteDifferenceStep.central:
+                diff = self.step * ((-1) ** s)  # Positive perturbation, even; negative, odd
+            elif self.fd_formula == FiniteDifferenceStep.forward:
+                diff = self.step * -1  # Backward always negative perturbation
+            elif self.fd_formula == FiniteDifferenceStep.backward:
+                diff = self.step  # Forward always positive
+            else:
+                diff = 0
+                pass
             
             # Update parameter values for the given scenario
-            theta_values = scena_gen.ScenarioData.scenario[s]
-            for k, v in theta_values.items():
-                # To-Do: ensure k is a Param?
-                # If not Param, make sure k is fixed
-                k.find_component_on(b).set_value(theta_values[k.name])
-            
-            # Return the model with updated unknown parameter values
-            return temp_mod
-
+            pyo.ComponentUID(param).find_component_on(b).set_value(mod.unknown_parameters[param] * (1 + diff))
         mod.scenario_blocks = pyo.Block(mod.scenarios, rule=build_block_scenarios)
-
+        
+        mod.scenario_blocks[0].pprint()
+        
+        # for s in mod.scenarios:
+            # block_name = 'scenario_' + str(s)
+            # temp_model = self.experiment.get_labeled_model(**self.args)
+            # setattr(mod, block_name, temp_model)
+            # param = mod.parameter_scenarios[s]
+            
+            # # Perturbation to be (1 + diff) * param_value
+            # if self.fd_formula == FiniteDifferenceStep.central:
+                # diff = self.step * ((-1) ** s)  # Positive perturbation, even; negative, odd
+            # elif self.fd_formula == FiniteDifferenceStep.forward:
+                # diff = self.step * -1  # Backward always negative perturbation
+            # elif self.fd_formula == FiniteDifferenceStep.backward:
+                # diff = self.step  # Forward always positive
+            # else:
+                # diff = 0
+                # pass
+            
+            # # Update parameter values for the given scenario
+            # pyo.ComponentUID(param).find_component_on(getattr(mod, block_name)).set_value(mod.unknown_parameters[param] * (1 + diff))
+        
         # To-Do: this might have to change if experiment inputs have 
         # a different value in the Suffix (currently it is the CUID)
         # Add constraints to equate block design with global design
-        def global_design_fixing(m, k, s):
-            global_design_var = mod.experiment_inputs[k]
-            block_design_var = global_design_var.find_component_on(mod.scenario_blocks[s])
-            return global_design_var == block_design_var
+        design_vars = [k for k, v in mod.experiment_inputs.items()]
+        for ind, d in enumerate(design_vars):
+            con_name = 'global_design_eq_con_' + str(ind)
+            def global_design_fixing(m, s):
+                global_design_var = mod.experiment_inputs[d]
+                block_design_var = pyo.ComponentUID(global_design_var).find_component_on(mod.scenario_blocks[s])
+                return global_design_var == block_design_var
+            setattr(mod, con_name, pyo.Constraint(mod.scenarios, rule=global_design_fixing))
         
         # Assuming that the user will specify the design variable bounds...
         # Otherwise, we will need to add something similar to what is written here
         # for k, v in mod.experiment_inputs[k]:
             # v.setlb(self.design_vars.lower_bounds[name])
             # v.setub(self.design_vars.upper_bounds[name])
+    
+    def _scenario_generator(self, ):
+        """
+        Helper function to generate 
+        """
+        
     
     # Evaluates FIM and statistics for a full factorial space (same as run_grid_search)
     def compute_FIM_full_factorial(self, ):
