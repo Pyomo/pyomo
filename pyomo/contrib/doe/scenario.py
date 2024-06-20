@@ -28,6 +28,7 @@
 import pickle
 from enum import Enum
 from collections import namedtuple
+import copy
 
 
 class FiniteDifferenceStep(Enum):
@@ -60,6 +61,7 @@ class ScenarioGenerator:
             if True, store results.
         """
         # get info from parameter dictionary
+        self.parameters = parameter_dict
         self.parameter_dict = parameter_dict
         self.para_names = list(parameter_dict.keys())
         self.no_para = len(self.para_names)
@@ -101,54 +103,74 @@ class ScenarioGenerator:
         scenario = []
         # number of scenario
         scena_num = {}
-
-        # loop over parameter name
-        for p, para in enumerate(self.para_names):
-            ## get scenario dictionary
+        
+        count_scens = 0
+        for k, v in self.parameters.items():
             if self.formula == FiniteDifferenceStep.central:
-                scena_num[para] = [2 * p, 2 * p + 1]
-                scena_dict_up, scena_dict_lo = (
-                    self.parameter_dict.copy(),
-                    self.parameter_dict.copy(),
-                )
-                # corresponding parameter dictionary for the scenario
-                scena_dict_up[para] *= 1 + self.step
-                scena_dict_lo[para] *= 1 - self.step
-
-                scenario.append(scena_dict_up)
-                scenario.append(scena_dict_lo)
-
-            elif self.formula in [
-                FiniteDifferenceStep.forward,
-                FiniteDifferenceStep.backward,
-            ]:
-                # the base case is added as the last one
-                scena_num[para] = [p, len(self.param_names)]
-                scena_dict_up, scena_dict_lo = (
-                    self.parameter_dict.copy(),
-                    self.parameter_dict.copy(),
-                )
-                if self.formula == FiniteDifferenceStep.forward:
-                    scena_dict_up[para] *= 1 + self.step
-
-                elif self.formula == FiniteDifferenceStep.backward:
-                    scena_dict_lo[para] *= 1 - self.step
-
-                scenario.append(scena_dict_up)
-                scenario.append(scena_dict_lo)
-
-            ## get perturbation sizes
-            # for central difference scheme, perturbation size is two times the step size
-            if self.formula == FiniteDifferenceStep.central:
-                eps_abs[para] = 2 * self.step * self.parameter_dict[para]
-            else:
-                eps_abs[para] = self.step * self.parameter_dict[para]
-
+                scena_num[k.name] = [2 * count_scens, 2 * count_scens + 1]
+                scena_dict_hi = {k.name: v * (1 + self.step)}
+                scena_dict_lo = {k.name: v * (1 + self.step)}
+                
+                eps_abs[k.name] = 2 * self.step * v
+                
+                scenario.append(scena_dict_hi)
+                scenario.append(scena_dict_lo)        
+        
         self.ScenarioData = ScenarioData(
             scenario, scena_num, eps_abs, list(range(len(scenario)))
         )
+        
+        ##############################
+        #  Below is deprecated code  #
+        ##############################
 
-        # store scenario
-        if self.store:
-            with open("scenario_simultaneous.pickle", "wb") as f:
-                pickle.dump(self.scenario_data, f)
+        # loop over parameter name
+        # for p, para in enumerate(self.para_names):
+            # ## get scenario dictionary
+            # if self.formula == FiniteDifferenceStep.central:
+                # scena_num[para.name] = [2 * p, 2 * p + 1]
+                # scena_dict_up, scena_dict_lo = (
+                    # copy.deepcopy(self.parameter_dict),
+                    # copy.deepcopy(self.parameter_dict),
+                # )
+                # # corresponding parameter dictionary for the scenario
+                # scena_dict_up[para.name] *= 1 + self.step
+                # scena_dict_lo[para.name] *= 1 - self.step
+
+                # scenario.append(scena_dict_up)
+                # scenario.append(scena_dict_lo)
+
+            # elif self.formula in [
+                # FiniteDifferenceStep.forward,
+                # FiniteDifferenceStep.backward,
+            # ]:
+                # # the base case is added as the last one
+                # scena_num[para] = [p, len(self.param_names)]
+                # scena_dict_up, scena_dict_lo = (
+                    # self.parameter_dict.copy(),
+                    # self.parameter_dict.copy(),
+                # )
+                # if self.formula == FiniteDifferenceStep.forward:
+                    # scena_dict_up[para] *= 1 + self.step
+
+                # elif self.formula == FiniteDifferenceStep.backward:
+                    # scena_dict_lo[para] *= 1 - self.step
+
+                # scenario.append(scena_dict_up)
+                # scenario.append(scena_dict_lo)
+
+            # ## get perturbation sizes
+            # # for central difference scheme, perturbation size is two times the step size
+            # if self.formula == FiniteDifferenceStep.central:
+                # eps_abs[para] = 2 * self.step * self.parameter_dict[para]
+            # else:
+                # eps_abs[para] = self.step * self.parameter_dict[para]
+
+        # self.ScenarioData = ScenarioData(
+            # scenario, scena_num, eps_abs, list(range(len(scenario)))
+        # )
+
+        # # store scenario
+        # if self.store:
+            # with open("scenario_simultaneous.pickle", "wb") as f:
+                # pickle.dump(self.scenario_data, f)
