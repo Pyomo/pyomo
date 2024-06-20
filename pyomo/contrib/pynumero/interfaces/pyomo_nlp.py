@@ -598,12 +598,12 @@ class PyomoGreyBoxNLP(NLP):
             need_scaling = True
 
         self._primals_scaling = np.ones(self.n_primals())
-        scaling_suffix = self._pyomo_nlp._pyomo_model.component('scaling_factor')
-        if scaling_suffix and scaling_suffix.ctype is pyo.Suffix:
-            need_scaling = True
-            for i, v in enumerate(self.get_pyomo_variables()):
-                if v in scaling_suffix:
-                    self._primals_scaling[i] = scaling_suffix[v]
+        scaling_suffix_finder = SuffixFinder('scaling_factor')
+        for i, v in enumerate(self.get_pyomo_variables()):
+            v_scaling = scaling_suffix_finder.find(v)
+            if v_scaling is not None:
+                need_scaling = True
+                self._primals_scaling[i] = v_scaling
 
         self._constraints_scaling = []
         pyomo_nlp_scaling = self._pyomo_nlp.get_constraints_scaling()
