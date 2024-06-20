@@ -206,7 +206,7 @@ class Test_FileDownloader(unittest.TestCase):
             self.assertEqual(_os, 'win')
             self.assertEqual(_norm, _os + ''.join(_ver.split('.')[:2]))
         else:
-            self.assertEqual(ans, '')
+            self.assertEqual(_os, '')
 
         self.assertEqual((_os, _ver), FileDownloader._os_version)
         # Exercise the fetch from CACHE
