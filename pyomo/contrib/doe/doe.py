@@ -995,7 +995,7 @@ class DesignOfExperiments:
                 )
                 count += 1
                 failed_count += 1
-                self.logger.warning("failed count:", failed_count)
+                self.logger.warning("failed count: %s", failed_count)
                 result_combine[tuple(design_set_iter)] = None
 
         # For user's access
