@@ -1,4 +1,4 @@
-We are pleased to announce the release of Pyomo 6.7.1.
+We are pleased to announce the release of Pyomo 6.7.3.
 
 Pyomo is a collection of Python software packages that supports a
 diverse set of optimization capabilities for formulating and analyzing
@@ -10,9 +10,14 @@ The following are highlights of the 6.7 release series:
  - Removed support for Python 3.7
  - New writer for converting linear models to matrix form
  - Improved handling of nested GDPs
+ - Redesigned user API for parameter estimation
  - New packages:
-    - latex_printer (print Pyomo models to a LaTeX compatible format)
+    - iis: new capability for identifying minimal intractable systems
+    - latex_printer: print Pyomo models to a LaTeX compatible format
     - contrib.solver: preview of redesigned solver interfaces
+    - simplification: simplify Pyomo expressions
+ - New solver interfaces
+    - MAiNGO: Mixed-integer nonlinear global optimization
  - ...and of course numerous minor bug fixes and performance enhancements
 
 A full list of updates and changes is available in the

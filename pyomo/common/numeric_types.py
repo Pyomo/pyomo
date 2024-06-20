@@ -64,7 +64,7 @@ _pyomo_constant_types = set()  # includes NumericConstant, _PythonCallbackFuncti
 relocated_module_attribute(
     'pyomo_constant_types',
     'pyomo.common.numeric_types._pyomo_constant_types',
-    version='6.7.2.dev0',
+    version='6.7.2',
     msg="The pyomo_constant_types set will be removed in the future: the set "
     "contained only NumericConstant and _PythonCallbackFunctionID, and provided "
     "no meaningful value to clients or walkers.  Users should likely handle "

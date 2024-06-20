@@ -57,6 +57,20 @@ jobs:
       uses: crate-ci/typos@master
       with: 
         config: ./.github/workflows/typos.toml
+    - name: URL Checker
+      uses: urlstechie/urlchecker-action@0.0.34
+      with:
+        # A comma-separated list of file types to cover in the URL checks
+        file_types: .md,.rst,.py
+        # Choose whether to include file with no URLs in the prints.
+        print_all: false
+        # More verbose summary at the end of a run
+        verbose: true
+        # How many times to retry a failed request (defaults to 1)
+        retry_count: 3
+        # Exclude Jenkins because it's behind a firewall; ignore RTD because
+        # a magically-generated string is triggering a failure
+        exclude_urls: https://pyomo-jenkins.sandia.gov/,https://pyomo.readthedocs.io/en/%s/errors.html
 
 
   build:
@@ -72,6 +86,11 @@ jobs:
         other: [""]
         category: [""]
 
+        # win/3.8 conda builds no longer work due to environment not being able
+        # to resolve. We are skipping it now.
+        exclude:
+        - os: windows-latest
+          python: 3.8
         include:
         - os: ubuntu-latest
           TARGET: linux
@@ -218,7 +237,7 @@ jobs:
         # Notes:
         #  - install glpk
         #  - pyodbc needs: gcc pkg-config unixodbc freetds
-        for pkg in bash pkg-config unixodbc freetds glpk; do
+        for pkg in bash pkg-config unixodbc freetds glpk ginac; do
             brew list $pkg || brew install $pkg
         done
 
@@ -230,7 +249,8 @@ jobs:
         #  - install glpk
         #  - ipopt needs: libopenblas-dev gfortran liblapack-dev
         sudo apt-get -o Dir::Cache=${GITHUB_WORKSPACE}/cache/os \
-            install libopenblas-dev gfortran liblapack-dev glpk-utils
+            install libopenblas-dev gfortran liblapack-dev glpk-utils \
+            libginac-dev
         sudo chmod -R 777 ${GITHUB_WORKSPACE}/cache/os
 
     - name: Update Windows
@@ -372,6 +392,7 @@ jobs:
                 CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES $PKG"
             fi
         done
+        echo ""
         echo "*** Install Pyomo dependencies ***"
         # Note: this will fail the build if any installation fails (or
         # possibly if it outputs messages to stderr)

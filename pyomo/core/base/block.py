@@ -1983,7 +1983,7 @@ component, use the block del_component() and add_component() methods.
 
 class _BlockData(metaclass=RenamedClass):
     __renamed__new_class__ = BlockData
-    __renamed__version__ = '6.7.2.dev0'
+    __renamed__version__ = '6.7.2'
 
 
 @ModelComponentFactory.register(

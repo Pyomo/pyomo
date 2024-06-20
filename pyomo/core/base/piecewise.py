@@ -274,7 +274,7 @@ class PiecewiseData(BlockData):
 
 class _PiecewiseData(metaclass=RenamedClass):
     __renamed__new_class__ = PiecewiseData
-    __renamed__version__ = '6.7.2.dev0'
+    __renamed__version__ = '6.7.2'
 
 
 class _SimpleSinglePiecewise(object):

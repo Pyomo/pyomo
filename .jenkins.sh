@@ -43,9 +43,6 @@ fi
 if test -z "$SLIM"; then
     export VENV_SYSTEM_PACKAGES='--system-site-packages'
 fi
-if test ! -z "$CATEGORY"; then
-    export PY_CAT="-m $CATEGORY"
-fi
 
 if test "$WORKSPACE" != "`pwd`"; then
     echo "ERROR: pwd is not WORKSPACE"
@@ -122,10 +119,23 @@ if test -z "$MODE" -o "$MODE" == setup; then
     echo "PYOMO_CONFIG_DIR=$PYOMO_CONFIG_DIR"
     echo ""
 
+    # Call Pyomo build scripts to build TPLs that would normally be
+    # skipped by the pyomo download-extensions / build-extensions
+    # actions below
+    if [[ " $CATEGORY " == *" builders "* ]]; then
+        echo ""
+        echo "Running local build scripts..."
+        echo ""
+        set -x
+        python pyomo/contrib/simplification/build.py --build-deps || exit 1
+        set +x
+    fi
+
     # Use Pyomo to download & compile binary extensions
     i=0
     while /bin/true; do
         i=$[$i+1]
+        echo ""
         echo "Downloading pyomo extensions (attempt $i)"
         pyomo download-extensions $PYOMO_DOWNLOAD_ARGS
         if test $? == 0; then
@@ -178,7 +188,7 @@ if test -z "$MODE" -o "$MODE" == test; then
     python -m pytest -v \
         -W ignore::Warning \
         --junitxml="TEST-pyomo.xml" \
-        $PY_CAT $TEST_SUITES $PYTEST_EXTRA_ARGS
+        -m "$CATEGORY" $TEST_SUITES $PYTEST_EXTRA_ARGS
 
     # Combine the coverage results and upload
     if test -z "$DISABLE_COVERAGE"; then
