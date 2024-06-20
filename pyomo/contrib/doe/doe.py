@@ -522,7 +522,9 @@ class DesignOfExperiments_:
         """
         
         # Generate initial scenario to populate unknown parameter values
-        mod = self.experiment.get_labeled_model(**self.args)
+        self.model = self.experiment.get_labeled_model(**self.args).clone()
+        
+        mod = self.model
         
         # Make a new Suffix to hold which scenarios are associated with parameters 
         mod.parameter_scenarios = pyo.Suffix(
@@ -552,8 +554,12 @@ class DesignOfExperiments_:
         # This doesn't work but I think it should.
         def build_block_scenarios(b, s):
             # Generate model for the finite difference scenario
-            b.transfer_attributes_from(self.experiment.get_labeled_model(**self.args).clone())
+            b.transfer_attributes_from(self.experiment.get_labeled_model().clone())
             param = mod.parameter_scenarios[s]
+            
+            param.pprint()
+            print(pyo.ComponentUID(param))
+            print(pyo.ComponentUID(param).find_component_on(b))
             
             # Perturbation to be (1 + diff) * param_value
             if self.fd_formula == FiniteDifferenceStep.central:
@@ -570,28 +576,6 @@ class DesignOfExperiments_:
             pyo.ComponentUID(param).find_component_on(b).set_value(mod.unknown_parameters[param] * (1 + diff))
         mod.scenario_blocks = pyo.Block(mod.scenarios, rule=build_block_scenarios)
         
-        mod.scenario_blocks[0].pprint()
-        
-        # for s in mod.scenarios:
-            # block_name = 'scenario_' + str(s)
-            # temp_model = self.experiment.get_labeled_model(**self.args)
-            # setattr(mod, block_name, temp_model)
-            # param = mod.parameter_scenarios[s]
-            
-            # # Perturbation to be (1 + diff) * param_value
-            # if self.fd_formula == FiniteDifferenceStep.central:
-                # diff = self.step * ((-1) ** s)  # Positive perturbation, even; negative, odd
-            # elif self.fd_formula == FiniteDifferenceStep.forward:
-                # diff = self.step * -1  # Backward always negative perturbation
-            # elif self.fd_formula == FiniteDifferenceStep.backward:
-                # diff = self.step  # Forward always positive
-            # else:
-                # diff = 0
-                # pass
-            
-            # # Update parameter values for the given scenario
-            # pyo.ComponentUID(param).find_component_on(getattr(mod, block_name)).set_value(mod.unknown_parameters[param] * (1 + diff))
-        
         # To-Do: this might have to change if experiment inputs have 
         # a different value in the Suffix (currently it is the CUID)
         # Add constraints to equate block design with global design
@@ -600,8 +584,8 @@ class DesignOfExperiments_:
             con_name = 'global_design_eq_con_' + str(ind)
             def global_design_fixing(m, s):
                 global_design_var = mod.experiment_inputs[d]
-                block_design_var = pyo.ComponentUID(global_design_var).find_component_on(mod.scenario_blocks[s])
-                return global_design_var == block_design_var
+                block_design_var = global_design_var.find_component_on(mod.scenario_blocks[s])
+                return d == block_design_var
             setattr(mod, con_name, pyo.Constraint(mod.scenarios, rule=global_design_fixing))
         
         # Assuming that the user will specify the design variable bounds...
