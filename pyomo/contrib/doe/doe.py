@@ -97,7 +97,7 @@ class DesignOfExperiments:
             A Python ``function`` that returns a Concrete Pyomo model, similar to the interface for ``parmest``
         solver:
             A ``solver`` object that User specified, default=None.
-            If not specified, default solver is IPOPT MA57.
+            If not specified, default solver is IPOPT (with MA57, if available).
         prior_FIM:
             A 2D numpy array containing Fisher information matrix (FIM) for prior experiments.
             The default None means there is no prior information.
@@ -1387,7 +1387,10 @@ class DesignOfExperiments:
     def _get_default_ipopt_solver(self):
         """Default solver"""
         solver = SolverFactory("ipopt")
-        solver.options["linear_solver"] = "ma57"
+        for linear_solver in ('ma57', 'ma27', 'ma97'):
+            if solver.has_linear_solver(linear_solver):
+                solver.options["linear_solver"] = linear_solver
+                break
         solver.options["halt_on_ampl_error"] = "yes"
         solver.options["max_iter"] = 3000
         return solver
