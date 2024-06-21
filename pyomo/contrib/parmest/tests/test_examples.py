@@ -12,10 +12,11 @@
 import pyomo.common.unittest as unittest
 import pyomo.contrib.parmest.parmest as parmest
 from pyomo.contrib.parmest.graphics import matplotlib_available, seaborn_available
+from pyomo.contrib.pynumero.asl import AmplInterface
 from pyomo.opt import SolverFactory
 
 ipopt_available = SolverFactory("ipopt").available()
-
+pynumero_ASL_available = AmplInterface.available()
 
 @unittest.skipIf(
     not parmest.parmest_available,
