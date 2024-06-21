@@ -956,14 +956,15 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
         )
         m.obj = pyo.Objective(expr=(m.egb.outputs['Pout'] - 20) ** 2)
         m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+        m.egb.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
         # m.scaling_factor[m.obj] = 0.1 # scale the objective
-        m.scaling_factor[m.egb.inputs['Pin']] = 1.1  # scale the variable
-        m.scaling_factor[m.egb.inputs['c']] = 1.2  # scale the variable
-        m.scaling_factor[m.egb.inputs['F']] = 1.3  # scale the variable
-        # m.scaling_factor[m.egb.inputs['P1']] = 1.4 # scale the variable
-        m.scaling_factor[m.egb.inputs['P3']] = 1.5  # scale the variable
-        m.scaling_factor[m.egb.outputs['P2']] = 1.6  # scale the variable
-        m.scaling_factor[m.egb.outputs['Pout']] = 1.7  # scale the variable
+        m.egb.scaling_factor[m.egb.inputs['Pin']] = 1.1  # scale the variable
+        m.egb.scaling_factor[m.egb.inputs['c']] = 1.2  # scale the variable
+        m.egb.scaling_factor[m.egb.inputs['F']] = 1.3  # scale the variable
+        # m.egb.scaling_factor[m.egb.inputs['P1']] = 1.4 # scale the variable
+        m.egb.scaling_factor[m.egb.inputs['P3']] = 1.5  # scale the variable
+        m.egb.scaling_factor[m.egb.outputs['P2']] = 1.6  # scale the variable
+        m.egb.scaling_factor[m.egb.outputs['Pout']] = 1.7  # scale the variable
         # m.scaling_factor[m.hin] = 1.8
         m.scaling_factor[m.hout] = 1.9
         # m.scaling_factor[m.incon] = 2.1
@@ -2267,14 +2268,15 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         )
         m.obj = pyo.Objective(expr=(m.egb.outputs['Pout'] - 20) ** 2)
         m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+        m.egb.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
         # m.scaling_factor[m.obj] = 0.1 # scale the objective
-        m.scaling_factor[m.egb.inputs['Pin']] = 1.1  # scale the variable
-        m.scaling_factor[m.egb.inputs['c']] = 1.2  # scale the variable
-        m.scaling_factor[m.egb.inputs['F']] = 1.3  # scale the variable
-        # m.scaling_factor[m.egb.inputs['P1']] = 1.4 # scale the variable
-        m.scaling_factor[m.egb.inputs['P3']] = 1.5  # scale the variable
-        m.scaling_factor[m.egb.outputs['P2']] = 1.6  # scale the variable
-        m.scaling_factor[m.egb.outputs['Pout']] = 1.7  # scale the variable
+        m.egb.scaling_factor[m.egb.inputs['Pin']] = 1.1  # scale the variable
+        m.egb.scaling_factor[m.egb.inputs['c']] = 1.2  # scale the variable
+        m.egb.scaling_factor[m.egb.inputs['F']] = 1.3  # scale the variable
+        # m.egb.scaling_factor[m.egb.inputs['P1']] = 1.4 # scale the variable
+        m.egb.scaling_factor[m.egb.inputs['P3']] = 1.5  # scale the variable
+        m.egb.scaling_factor[m.egb.outputs['P2']] = 1.6  # scale the variable
+        m.egb.scaling_factor[m.egb.outputs['Pout']] = 1.7  # scale the variable
         # m.scaling_factor[m.hin] = 1.8
         m.scaling_factor[m.hout] = 1.9
         # m.scaling_factor[m.incon] = 2.1
@@ -2392,14 +2394,15 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         )
         m.obj = pyo.Objective(expr=(m.egb.outputs['Pout'] - 20) ** 2)
         m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+        m.egb.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
         # m.scaling_factor[m.obj] = 0.1 # scale the objective
-        m.scaling_factor[m.egb.inputs['Pin']] = 1.1  # scale the variable
-        m.scaling_factor[m.egb.inputs['c']] = 1.2  # scale the variable
-        m.scaling_factor[m.egb.inputs['F']] = 1.3  # scale the variable
-        # m.scaling_factor[m.egb.inputs['P1']] = 1.4 # scale the variable
-        m.scaling_factor[m.egb.inputs['P3']] = 1.5  # scale the variable
-        m.scaling_factor[m.egb.outputs['P2']] = 1.6  # scale the variable
-        m.scaling_factor[m.egb.outputs['Pout']] = 1.7  # scale the variable
+        m.egb.scaling_factor[m.egb.inputs['Pin']] = 1.1  # scale the variable
+        m.egb.scaling_factor[m.egb.inputs['c']] = 1.2  # scale the variable
+        m.egb.scaling_factor[m.egb.inputs['F']] = 1.3  # scale the variable
+        # m.egb.scaling_factor[m.egb.inputs['P1']] = 1.4 # scale the variable
+        m.egb.scaling_factor[m.egb.inputs['P3']] = 1.5  # scale the variable
+        m.egb.scaling_factor[m.egb.outputs['P2']] = 1.6  # scale the variable
+        m.egb.scaling_factor[m.egb.outputs['Pout']] = 1.7  # scale the variable
         # m.scaling_factor[m.hin] = 1.8
         m.scaling_factor[m.hout] = 1.9
         # m.scaling_factor[m.incon] = 2.1
@@ -2484,14 +2487,15 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         )
 
         m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+        m.egb.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
         m.scaling_factor[m.obj] = 0.1  # scale the objective
-        m.scaling_factor[m.egb.inputs['Pin']] = 1.1  # scale the variable
-        m.scaling_factor[m.egb.inputs['c']] = 1.2  # scale the variable
-        m.scaling_factor[m.egb.inputs['F']] = 1.3  # scale the variable
-        # m.scaling_factor[m.egb.inputs['P1']] = 1.4 # scale the variable
-        m.scaling_factor[m.egb.inputs['P3']] = 1.5  # scale the variable
-        m.scaling_factor[m.egb.outputs['P2']] = 1.6  # scale the variable
-        m.scaling_factor[m.egb.outputs['Pout']] = 1.7  # scale the variable
+        m.egb.scaling_factor[m.egb.inputs['Pin']] = 1.1  # scale the variable
+        m.egb.scaling_factor[m.egb.inputs['c']] = 1.2  # scale the variable
+        m.egb.scaling_factor[m.egb.inputs['F']] = 1.3  # scale the variable
+        # m.egb.scaling_factor[m.egb.inputs['P1']] = 1.4 # scale the variable
+        m.egb.scaling_factor[m.egb.inputs['P3']] = 1.5  # scale the variable
+        m.egb.scaling_factor[m.egb.outputs['P2']] = 1.6  # scale the variable
+        m.egb.scaling_factor[m.egb.outputs['Pout']] = 1.7  # scale the variable
         m.scaling_factor[m.mu] = 1.9
         m.scaling_factor[m.pincon] = 2.2
 
