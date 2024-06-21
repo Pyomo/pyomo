@@ -29,24 +29,7 @@ from pyomo.core import (
 )
 from pyomo.opt import WriterFactory
 from pyomo.repn.standard_repn import isclose_const
-
-
-# ESJ: TODO: copied from FME basically, should centralize.
-def var_list(x):
-    if x.ctype is Var:
-        if not x.is_indexed():
-            return ComponentSet([x])
-        ans = ComponentSet()
-        for j in x.index_set():
-            ans.add(x[j])
-        return ans
-    elif hasattr(x, '__iter__'):
-        ans = ComponentSet()
-        for i in x:
-            ans.update(vars_to_eliminate_list(i))
-        return ans
-    else:
-        raise ValueError("Expected Var or list of Vars.\n\tReceived %s" % type(x))
+from pyomo.util.var_list_domain import var_component_set
 
 
 class _LPDualData(AutoSlots.Mixin):
@@ -71,7 +54,7 @@ class LinearProgrammingDual(object):
         'parameterize_wrt',
         ConfigValue(
             default=None,
-            domain=var_list,
+            domain=var_component_set,
             description="Vars to treat as data for the purposes of taking the dual",
             doc="""
             Optional list of Vars to be treated as data while taking the LP dual.
