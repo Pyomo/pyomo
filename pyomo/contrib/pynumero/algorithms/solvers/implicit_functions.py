@@ -403,11 +403,6 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
             # Need a dummy objective to create an NLP
             for block, inputs in self._solver_subsystem_list:
                 block._obj = Objective(expr=0.0)
-                # I need scaling_factor so Pyomo NLPs I create from these blocks
-                # don't break when ProjectedNLP calls get_primals_scaling
-                block.scaling_factor = Suffix(direction=Suffix.EXPORT)
-                # HACK: scaling_factor just needs to be nonempty
-                block.scaling_factor[block._obj] = 1.0
 
             # Original PyomoNLP for each subset in the partition
             # Since we are creating these NLPs with "constants" fixed, these
