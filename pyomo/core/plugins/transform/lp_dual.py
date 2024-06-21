@@ -129,9 +129,11 @@ class LinearProgrammingDual(object):
         primal_sense = std_form.objectives[0].sense
 
         dual = ConcreteModel(name="%s dual" % model.name)
-        A_transpose = scipy.sparse.csc_matrix.transpose(std_form.A)
-        rows = range(A_transpose.shape[0])
-        cols = range(A_transpose.shape[1])
+        # This is a csc matrix, so we'll skipping transposing and just work off
+        # of the folumns
+        A = std_form.A
+        rows = range(A.shape[1])
+        cols = range(A.shape[0])
         dual.x = Var(cols, domain=NonNegativeReals)
         trans_info = dual.private_data()
         for j, (primal_cons, ineq) in enumerate(std_form.rows):
@@ -149,7 +151,7 @@ class LinearProgrammingDual(object):
         for i, primal in enumerate(std_form.columns):
             lhs = 0
             for j in cols:
-                coef = A_transpose[i, j]
+                coef = A[j, i]
                 if not coef:
                     continue
                 elif isclose_const(coef, 1.0):
@@ -157,7 +159,7 @@ class LinearProgrammingDual(object):
                 elif isclose_const(coef, -1.0):
                     lhs -= dual.x[j]
                 else:
-                    lhs += float(A_transpose[i, j]) * dual.x[j]
+                    lhs += float(A[j, i]) * dual.x[j]
 
             if primal_sense is minimize:
                 if primal.domain is NonNegativeReals:
