@@ -96,14 +96,16 @@ class LinearProgrammingDual(object):
         config.set_value(kwds)
 
         if config.parameterize_wrt is None:
-            return self._take_dual(model)
+            std_form = WriterFactory('compile_standard_form').write(
+                model, mixed_form=True, set_sense=None
+            )
+        else:
+            std_form = WriterFactory('parameterized_standard_form_compiler').write(
+                model, wrt=config.parameterize_wrt, mixed_form=True, set_sense=None
+            )
+        return self._take_dual(model, std_form)
 
-        return self._take_parameterized_dual(model, config.parameterize_wrt)
-
-    def _take_dual(self, model):
-        std_form = WriterFactory('compile_standard_form').write(
-            model, mixed_form=True, set_sense=None
-        )
+    def _take_dual(self, model, std_form):
         if len(std_form.objectives) != 1:
             raise ValueError(
                 "Model '%s' has n o objective or multiple active objectives. Cannot "
@@ -164,9 +166,6 @@ class LinearProgrammingDual(object):
         )
 
         return dual
-
-    def _take_parameterized_dual(self, model, wrt):
-        pass
 
     def get_primal_constraint(self, model, dual_var):
         primal_constraint = model.private_data().primal_constraint

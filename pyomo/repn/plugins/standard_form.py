@@ -248,6 +248,16 @@ class _LinearStandardFormCompiler_impl(object):
     def __init__(self, config):
         self.config = config
 
+    def _get_visitor(self, var_map, var_order, sorter):
+        return LinearRepnVisitor({}, var_map, var_order, sorter)
+
+    def _get_data_list(self, linear_repn):
+        return np.fromiter(linear_repn.values(), float, len(linear_repn))
+
+    def _compile_matrix(self, data, index, index_ptr, nrows, ncols):
+        return scipy.sparse.csr_array( (data, index, index_ptr), [nrows, ncols]
+        ).tocsc()
+
     def write(self, model):
         timing_logger = logging.getLogger('pyomo.common.timing.writer')
         timer = TicTocTimer(logger=timing_logger)
@@ -293,7 +303,7 @@ class _LinearStandardFormCompiler_impl(object):
         initialize_var_map_from_column_order(model, self.config, var_map)
         var_order = {_id: i for i, _id in enumerate(var_map)}
 
-        visitor = LinearRepnVisitor({}, var_map, var_order, sorter)
+        visitor = self._get_visitor(var_map, var_order, sorter)
 
         timer.toc('Initialized column order', level=logging.DEBUG)
 
@@ -344,7 +354,7 @@ class _LinearStandardFormCompiler_impl(object):
                     "cannot be compiled to standard (linear) form."
                 )
             N = len(repn.linear)
-            obj_data.append(np.fromiter(repn.linear.values(), float, N))
+            obj_data.append(self._get_data_list(repn.linear))
             obj_offset.append(repn.constant)
             if set_sense is not None and set_sense != obj.sense:
                 obj_data[-1] *= -1
@@ -405,7 +415,7 @@ class _LinearStandardFormCompiler_impl(object):
 
             if mixed_form:
                 N = len(repn.linear)
-                _data = np.fromiter(repn.linear.values(), float, N)
+                _data = self._get_data_list(repn.linear)
                 _index = np.fromiter(map(var_order.__getitem__, repn.linear), float, N)
                 if ub == lb:
                     rows.append(RowEntry(con, 0))
@@ -478,15 +488,13 @@ class _LinearStandardFormCompiler_impl(object):
         if obj_data:
             obj_data = np.concatenate(obj_data)
             obj_index = np.concatenate(obj_index)
-        c = scipy.sparse.csr_array(
-            (obj_data, obj_index, obj_index_ptr), [len(obj_index_ptr) - 1, len(columns)]
-        ).tocsc()
+        c = self._compile_matrix(obj_data, obj_index, obj_index_ptr,
+                                 len(obj_index_ptr) - 1, len(columns))
         if rows:
             con_data = np.concatenate(con_data)
             con_index = np.concatenate(con_index)
-        A = scipy.sparse.csr_array(
-            (con_data, con_index, con_index_ptr), [len(rows), len(columns)]
-        ).tocsc()
+        A = self._compile_matrix(con_data, con_index, con_index_ptr, len(rows),
+                                 len(columns))
 
         # Some variables in the var_map may not actually appear in the
         # objective or constraints (e.g., added from col_order, or

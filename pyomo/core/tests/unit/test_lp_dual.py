@@ -12,6 +12,7 @@
 from pyomo.common.dependencies import scipy_available
 import pyomo.common.unittest as unittest
 from pyomo.environ import (
+    Binary,
     ConcreteModel,
     Constraint,
     maximize,
@@ -37,6 +38,7 @@ class TestLPDual(unittest.TestCase):
         and SolverFactory('gurobi').license_is_valid(),
         "Gurobi is not available",
     )
+
     def test_lp_dual_solve(self):
         m = ConcreteModel()
         m.x = Var(domain=NonNegativeReals)
@@ -85,7 +87,6 @@ class TestLPDual(unittest.TestCase):
         m.c2 = Constraint(expr=m.x + m.y >= 3)
         m.c3 = Constraint(expr=-m.y - m.z == -4.2)
         m.c4 = Constraint(expr=m.z <= 42)
-        m.dual = Suffix(direction=Suffix.IMPORT)
 
         lp_dual = TransformationFactory('core.lp_dual')
         dual = lp_dual.create_using(m)
@@ -191,3 +192,22 @@ class TestLPDual(unittest.TestCase):
         self.assertIsInstance(primal_obj, Objective)
         self.assertEqual(primal_obj.sense, minimize)
         assertExpressionsEqual(self, primal_obj.expr, x + 2.0 * y - 3.0 * z)
+
+    def test_parameterized_linear_dual(self):
+        m = ConcreteModel()
+
+        m.outer1 = Var(domain=Binary)
+        m.outer = Var([2, 3], domain=Binary)
+
+        m.x = Var(domain=NonNegativeReals)
+        m.y = Var(domain=NonPositiveReals)
+        m.z = Var(domain=Reals)
+
+        m.obj = Objective(expr=m.x + 2 * m.y - 3 * m.outer[3] * m.z)
+        m.c1 = Constraint(expr=-4 * m.x - 2 * m.y - m.z <= -5*m.outer1)
+        m.c2 = Constraint(expr=m.x + m.outer[2]*m.y >= 3)
+        m.c3 = Constraint(expr=-m.y - m.z == -4.2)
+        m.c4 = Constraint(expr=m.z <= 42)
+
+        lp_dual = TransformationFactory('core.lp_dual')
+        dual = lp_dual.create_using(m, parameterize_wrt=[m.outer1, m.outer])

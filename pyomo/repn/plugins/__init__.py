@@ -19,6 +19,7 @@ def load():
     import pyomo.repn.plugins.lp_writer
     import pyomo.repn.plugins.nl_writer
     import pyomo.repn.plugins.standard_form
+    import pyomo.repn.plugins.parameterized_standard_form
 
     from pyomo.opt import WriterFactory
 
