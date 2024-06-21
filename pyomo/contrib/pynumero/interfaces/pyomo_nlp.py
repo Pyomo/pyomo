@@ -20,13 +20,13 @@ from pyomo.common.deprecation import deprecated
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.opt import WriterFactory
 import pyomo.core.base as pyo
-from pyomo.core.base.suffix import SuffixFinder
 from pyomo.common.collections import ComponentMap
 from pyomo.common.env import CtypesEnviron
 from pyomo.solvers.amplfunc_merge import amplfunc_merge
 from ..sparse.block_matrix import BlockMatrix
 from pyomo.contrib.pynumero.interfaces.ampl_nlp import AslNLP
 from pyomo.contrib.pynumero.interfaces.nlp import NLP
+from pyomo.core.base.suffix import SuffixFinder
 from .external_grey_box import ExternalGreyBoxBlock
 
 

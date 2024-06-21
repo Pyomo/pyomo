@@ -31,6 +31,7 @@ from pyomo.contrib.pynumero.interfaces.utils import (
 )
 from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
 from pyomo.contrib.pynumero.interfaces.nlp_projections import ProjectedNLP
+from pyomo.core.base.suffix import SuffixFinder
 
 
 # Todo: make some of the numpy arrays not writable from __init__
@@ -227,12 +228,12 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
             need_scaling = True
 
         self._primals_scaling = np.ones(self.n_primals())
-        scaling_suffix = pyomo_model.component('scaling_factor')
-        if scaling_suffix and scaling_suffix.ctype is pyo.Suffix:
-            need_scaling = True
-            for i, v in enumerate(self._pyomo_model_var_datas):
-                if v in scaling_suffix:
-                    self._primals_scaling[i] = scaling_suffix[v]
+        scaling_suffix_finder = SuffixFinder('scaling_factor')
+        for i, v in enumerate(self._pyomo_model_var_datas):
+            v_scaling = scaling_suffix_finder.find(v)
+            if v_scaling is not None:
+                need_scaling = True
+                self._primals_scaling[i] = v_scaling
 
         self._constraints_scaling = BlockVector(len(nlps))
         for i, nlp in enumerate(nlps):
