@@ -42,6 +42,24 @@ ui = get_mainwindow(model=model)
 # Do model things, the viewer will stay in sync with the Pyomo model
 ```
 
+If you are working in Jupyter notebook, Jupyter qtconsole, or other Jupyter-
+based IDEs, and your model is in the __main__ namespace (this is the usual case),
+you can specify the model by its variable name as below.  The advantage of this
+is that if you replace the model with a new model having the same variable name,
+the UI will automatically update without having to manually reset the model pointer.
+
+```python
+%gui qt  #Enables IPython's GUI event loop integration.
+# Execute the above in its own cell and wait for it to finish before moving on.
+from pyomo.contrib.viewer.ui import get_mainwindow
+import pyomo.environ as pyo
+
+model = pyo.ConcreteModel() # could import an existing model here
+ui = get_mainwindow(model_var_name_in_main="model")
+
+# Do model things, the viewer will stay in sync with the Pyomo model
+```
+
 **Note:** the ```%gui qt``` cell must be executed in its own cell and execution
 must complete before running any other cells (you can't use "run all").
 
