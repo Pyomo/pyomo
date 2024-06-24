@@ -7984,6 +7984,22 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
         assertExpressionsEqual(self, m.c12.expr, m.x1 <= sin(m.p))
         assertExpressionsEqual(self, c12_lower_bound_con.expr, m.q ** 2 - m.x1 <= 0)
 
+    def test_standardize_inequality_error(self):
+        """
+        Test exception raised by inequality constraint standardization
+        method if equality-type expression detected.
+        """
+        model_data = self.build_simple_test_model_data()
+        working_model = model_data.working_model
+        m = working_model.user_model
+
+        # change to equality constraint to trigger the exception
+        m.c6.set_value(m.z1 == 1)
+
+        exc_str = r"Found an equality bound.*1.0.*for the constraint.*c6'"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            standardize_inequality_constraints(model_data)
+
 
 class TestStandardizeEqualityConstraints(unittest.TestCase):
     """

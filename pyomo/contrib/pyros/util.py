@@ -1895,8 +1895,19 @@ def standardize_inequality_constraints(model_data):
                 if bd is not None
             }
             for btype, bound in finite_bounds.items():
-                # there should be no equality constraints here
-                assert btype != "eq"
+                if btype == "eq":
+                    # no equality bounds should be identified here.
+                    # equality bound may be identified if:
+                    # 1. bound rearrangement method has a bug
+                    # 2. ConstraintData.equality is changed.
+                    #    such a change would affect this method
+                    #    only indirectly
+                    raise ValueError(
+                        f"Found an equality bound {bound} for the constraint "
+                        f"for the constraint with name {con.name!r}. "
+                        "Either the bound or the constraint has been misclassified."
+                        "Report this case to the Pyomo/PyROS developers."
+                    )
 
                 uncertain_params_in_bound = ComponentSet(
                     identify_mutable_parameters(bound)
