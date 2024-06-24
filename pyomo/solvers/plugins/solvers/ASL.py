@@ -102,6 +102,7 @@ class ASL(SystemCallSolver):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 universal_newlines=True,
+                errors='ignore',
             )
             ver = _extract_version(results.stdout)
             if ver is None:
