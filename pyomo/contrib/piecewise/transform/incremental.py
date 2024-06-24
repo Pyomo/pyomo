@@ -42,7 +42,7 @@ import logging
          with T_{i+1}. It doesn't have to be a whole face; just a vertex is enough.
      (2) On each simplex T_i, the vertices are ordered T_i^1, ..., T_i^n such
          that T_i^n = T_{i+1}^1
-    In Pyomo, the Triangulations.OrderedJ1 triangulation is compatible with this
+    In Pyomo, the Triangulation.OrderedJ1 triangulation is compatible with this
     transformation.
 
     References
@@ -129,7 +129,7 @@ class IncrementalMIPTransformation(PiecewiseLinearTransformationBase):
             bounds=(0, 1),
         )
         transBlock.delta_one_constraint = Constraint(
-            # figure out if this needs to be 0 or 1
+            # 0 for for us because we are indexing from zero here (12b.1)
             expr=sum(
                 transBlock.delta[0, j] for j in transBlock.nonzero_simplex_point_indices
             )

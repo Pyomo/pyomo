@@ -124,8 +124,16 @@ class TestPiecewiseLinearFunction2D(unittest.TestCase):
             points=[1, 3, 6, 10], triangulation=Triangulation.J1, function=m.f
         )
         self.check_ln_x_approx(m.pw, m.x)
-        # TODO is this what we want?
+        # we disregard their request because it's 1D
         self.assertEqual(m.pw.triangulation, Triangulation.AssumeValid)
+
+    def test_pw_linear_approx_of_ln_x_user_defined_segments(self):
+        m = self.make_ln_x_model()
+        m.pw = PiecewiseLinearFunction(
+            simplices=[[1, 3], [3, 6], [6, 10]], function=m.f
+        )
+        self.check_ln_x_approx(m.pw, m.x)
+        self.assertEqual(m.pw.triangulation, Triangulation.Unknown)
 
     def test_use_pw_function_in_constraint(self):
         m = self.make_ln_x_model()
@@ -330,6 +338,27 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
         )
         self.assertEqual(len(m.pw._simplices), 8)
         self.assertEqual(m.pw.triangulation, Triangulation.OrderedJ1)
+
+    def test_triangulation_override(self):
+        m = self.make_model()
+        m.pw = PiecewiseLinearFunction(
+            points=[
+                (0, 1),
+                (0, 4),
+                (0, 7),
+                (3, 1),
+                (3, 4),
+                (3, 7),
+                (4, 1),
+                (4, 4),
+                (4, 7),
+            ],
+            function=m.g,
+            triangulation=Triangulation.OrderedJ1,
+            override_triangulation=Triangulation.AssumeValid
+        )
+        self.assertEqual(len(m.pw._simplices), 8)
+        self.assertEqual(m.pw.triangulation, Triangulation.AssumeValid)
 
     @unittest.skipUnless(scipy_available, "scipy is not available")
     def test_pw_linear_approx_tabular_data(self):
