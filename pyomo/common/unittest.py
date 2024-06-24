@@ -844,12 +844,13 @@ class BaselineTestDriver(object):
             # results objects and remote them if they are within
             # tolerance of 0
             if (
-                len(item_list) == 2
-                and item_list[0] == 'Value:'
-                and type(item_list[1]) is float
-                and abs(item_list[1]) < (abstol or 0)
-                and len(filtered[-1]) == 1
-                and filtered[-1][0][-1] == ':'
+                len(item_list) == 3
+                and item_list[0] == 'Value'
+                and item_list[1] == ':'
+                and type(item_list[2]) is float
+                and abs(item_list[2]) < (abstol or 0)
+                and len(filtered[-1]) == 2
+                and filtered[-1][1] == ':'
             ):
                 filtered.pop()
             else:
