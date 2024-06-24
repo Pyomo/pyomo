@@ -26,7 +26,7 @@ class Triangulation(Enum):
     OrderedJ1 = 4
 
 
-# Get an unordered J1 triangulation, as described by [1], of a finite grid of 
+# Get an unordered J1 triangulation, as described by [1], of a finite grid of
 # points in R^n having the same odd number of points along each axis.
 # References
 # ----------
@@ -43,14 +43,15 @@ def get_unordered_j1_triangulation(points, dimension):
         coplanar=np.array([]),
     )
 
+
 # Get an ordered J1 triangulation, according to [1], with the additional condition
 # added from [2] that simplex vertices are also ordered such that the final vertex
 # of each simplex is the first vertex of the next simplex.
 # References
 # ----------
-# [1] Michael J. Todd. "Hamiltonian triangulations of Rn". In: Functional 
-#     Differential Equations and Approximation of Fixed Points. Ed. by 
-#     Heinz-Otto Peitgen and Hans-Otto Walther. Berlin, Heidelberg: Springer 
+# [1] Michael J. Todd. "Hamiltonian triangulations of Rn". In: Functional
+#     Differential Equations and Approximation of Fixed Points. Ed. by
+#     Heinz-Otto Peitgen and Hans-Otto Walther. Berlin, Heidelberg: Springer
 #     Berlin Heidelberg, 1979, pp. 470–483. ISBN: 978-3-540-35129-0.
 # [2] J.P. Vielma, S. Ahmed, and G. Nemhauser, "Mixed-integer models
 #     for nonseparable piecewise-linear optimization: unifying framework
@@ -72,6 +73,7 @@ def get_ordered_j1_triangulation(points, dimension):
         coplanar=np.array([]),
     )
 
+
 # Duck-typed thing that looks reasonably similar to an instance of scipy.spatial.Delaunay
 # Fields:
 #   - points: list of P points as P x n array
@@ -83,6 +85,7 @@ class _FakeScipyTriangulation:
         self.points = points
         self.simplices = simplices
         self.coplanar = coplanar
+
 
 # Does some validation but mostly assumes the user did the right thing
 def _process_points_j1(points, dimension):

@@ -13,9 +13,7 @@ import pyomo.common.unittest as unittest
 import pyomo.contrib.piecewise.tests.common_tests as ct
 from pyomo.contrib.piecewise.triangulations import Triangulation
 from pyomo.core.base import TransformationFactory
-from pyomo.core.expr.compare import (
-    assertExpressionsEqual,
-)
+from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.environ import (
     Constraint,
@@ -64,46 +62,48 @@ class TestTransformPiecewiseModelToIncrementalMIP(unittest.TestCase):
             self,
             log_block.x_constraint[0].expr,
             m.x
-            == 1 + (log_block.delta[0, 1] * (3 - 1)
-            + log_block.delta[1, 1] * (6 - 3)
-            + log_block.delta[2, 1] * (10 - 6))
+            == 1
+            + (
+                log_block.delta[0, 1] * (3 - 1)
+                + log_block.delta[1, 1] * (6 - 3)
+                + log_block.delta[2, 1] * (10 - 6)
+            ),
         )
         assertExpressionsEqual(
             self,
             log_block.set_substitute.expr,
             log_block.substitute_var
-            == m.f1(1) + (log_block.delta[0, 1] * (m.f2(3) - m.f1(1))
-            + log_block.delta[1, 1] * (m.f3(6) - m.f2(3))
-            + log_block.delta[2, 1] * (m.f3(10) - m.f3(6))),
-            places=10
+            == m.f1(1)
+            + (
+                log_block.delta[0, 1] * (m.f2(3) - m.f1(1))
+                + log_block.delta[1, 1] * (m.f3(6) - m.f2(3))
+                + log_block.delta[2, 1] * (m.f3(10) - m.f3(6))
+            ),
+            places=10,
         )
         assertExpressionsEqual(
-            self,
-            log_block.delta_one_constraint.expr,
-            log_block.delta[0, 1] <= 1
+            self, log_block.delta_one_constraint.expr, log_block.delta[0, 1] <= 1
         )
         assertExpressionsEqual(
             self,
             log_block.deltas_below_y[0].expr,
-            log_block.delta[1, 1] <= log_block.y_binaries[0]
+            log_block.delta[1, 1] <= log_block.y_binaries[0],
         )
         assertExpressionsEqual(
             self,
             log_block.deltas_below_y[1].expr,
-            log_block.delta[2, 1] <= log_block.y_binaries[1]
+            log_block.delta[2, 1] <= log_block.y_binaries[1],
         )
         assertExpressionsEqual(
             self,
             log_block.y_below_delta[0].expr,
-            log_block.y_binaries[0] <= log_block.delta[0, 1]
+            log_block.y_binaries[0] <= log_block.delta[0, 1],
         )
         assertExpressionsEqual(
             self,
             log_block.y_below_delta[1].expr,
-            log_block.y_binaries[1] <= log_block.delta[1, 1]
+            log_block.y_binaries[1] <= log_block.delta[1, 1],
         )
-
-
 
     def check_pw_paraboloid(self, m):
         z = m.pw_paraboloid.get_transformation_var(m.paraboloid_expr)
@@ -119,7 +119,7 @@ class TestTransformPiecewiseModelToIncrementalMIP(unittest.TestCase):
         self.assertIsInstance(paraboloid_block.substitute_var, Var)
         self.assertEqual(len(paraboloid_block.substitute_var), 1)
 
-        # Constraints: 3 delta below y, 3 y below delta, two x constraints (two 
+        # Constraints: 3 delta below y, 3 y below delta, two x constraints (two
         # coordinates), one each of the three others
         self.assertEqual(len(paraboloid_block.component_map(Constraint)), 5)
         self.assertIsInstance(paraboloid_block.deltas_below_y, Constraint)
@@ -173,10 +173,14 @@ class TestTransformPiecewiseModelToIncrementalMIP(unittest.TestCase):
     @unittest.skipUnless(SolverFactory('gurobi').license_is_valid(), 'No license')
     def test_solve_product_model(self):
         m = ConcreteModel()
-        m.x1 = Var(bounds=(0.5,5))
-        m.x2 = Var(bounds=(0.9,0.95))
+        m.x1 = Var(bounds=(0.5, 5))
+        m.x2 = Var(bounds=(0.9, 0.95))
         pts = list(itertools.product([0.5, 2.75, 5], [0.9, 0.925, 0.95]))
-        m.pwlf = PiecewiseLinearFunction(points=pts, function=lambda x, y: x * y, triangulation=Triangulation.OrderedJ1)
+        m.pwlf = PiecewiseLinearFunction(
+            points=pts,
+            function=lambda x, y: x * y,
+            triangulation=Triangulation.OrderedJ1,
+        )
         m.obj = Objective(sense=minimize, expr=m.pwlf(m.x1, m.x2))
         TransformationFactory("contrib.piecewise.incremental").apply_to(m)
         SolverFactory('gurobi').solve(m)

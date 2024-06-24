@@ -355,7 +355,7 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
             ],
             function=m.g,
             triangulation=Triangulation.OrderedJ1,
-            override_triangulation=Triangulation.AssumeValid
+            override_triangulation=Triangulation.AssumeValid,
         )
         self.assertEqual(len(m.pw._simplices), 8)
         self.assertEqual(m.pw.triangulation, Triangulation.AssumeValid)
