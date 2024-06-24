@@ -800,7 +800,7 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
                         relative_to=m, fully_qualified=True
                     )
                     bound_con = model_data.working_model.user_model.find_component(
-                        f"{varname}_uncertain_{cbtype}_bound_con"
+                        f"var_{varname}_uncertain_{cbtype}_bound_con"
                     )
                     self.assertIsNotNone(
                         bound_con,
@@ -830,19 +830,23 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
         # verify bound constraint expressions
         assertExpressionsEqual(
             self,
-            m.z4_uncertain_lower_bound_con.expr, m.q1 - m.z4 <= 0
+            m.var_z4_uncertain_lower_bound_con.expr, m.q1 - m.z4 <= 0
         )
         assertExpressionsEqual(
             self,
-            m.z5_uncertain_upper_bound_con.expr, m.z5 - m.q2 <= 0
-        )
-        assertExpressionsEqual(self, m.z6_uncertain_eq_bound_con.expr, m.z6 - m.q1 == 0)
-        assertExpressionsEqual(self, m.z7_uncertain_eq_bound_con.expr, m.z7 - m.q1 == 0)
-        assertExpressionsEqual(
-            self, m.z8_uncertain_lower_bound_con.expr, m.q1 - m.z8 <= 0,
+            m.var_z5_uncertain_upper_bound_con.expr, m.z5 - m.q2 <= 0
         )
         assertExpressionsEqual(
-            self, m.z8_uncertain_upper_bound_con.expr, m.z8 - m.q2 <= 0,
+            self, m.var_z6_uncertain_eq_bound_con.expr, m.z6 - m.q1 == 0
+        )
+        assertExpressionsEqual(
+            self, m.var_z7_uncertain_eq_bound_con.expr, m.z7 - m.q1 == 0
+        )
+        assertExpressionsEqual(
+            self, m.var_z8_uncertain_lower_bound_con.expr, m.q1 - m.z8 <= 0,
+        )
+        assertExpressionsEqual(
+            self, m.var_z8_uncertain_upper_bound_con.expr, m.z8 - m.q2 <= 0,
         )
 
         # check constraint partitioning
@@ -950,7 +954,7 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
                     expected_cert_uncert_bound_con_types[var]
                 )
                 for ccbtype in cert_bound_con_types:
-                    cert_bound_con_name = f"{varname}_certain_{ccbtype}_bound_con"
+                    cert_bound_con_name = f"var_{varname}_certain_{ccbtype}_bound_con"
 
                     cert_bound_con = model_data.working_model.user_model.find_component(
                         cert_bound_con_name
@@ -992,7 +996,7 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
                     )
 
                 for ucbtype in uncert_bound_con_types:
-                    unc_bound_con_name = f"{varname}_uncertain_{ucbtype}_bound_con"
+                    unc_bound_con_name = f"var_{varname}_uncertain_{ucbtype}_bound_con"
                     unc_bound_con = model_data.working_model.user_model.find_component(
                         unc_bound_con_name
                     )
@@ -1068,77 +1072,77 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
         # verify bound constraint expressions
         assertExpressionsEqual(
             self,
-            m.z2_certain_eq_bound_con.expr,
+            m.var_z2_certain_eq_bound_con.expr,
             m.z2 - 1 == 0,
         )
         assertExpressionsEqual(
             self,
-            m.z3_certain_lower_bound_con.expr,
+            m.var_z3_certain_lower_bound_con.expr,
             2 - m.z3 <= 0,
         )
         assertExpressionsEqual(
             self,
-            m.z3_certain_upper_bound_con.expr,
+            m.var_z3_certain_upper_bound_con.expr,
             m.z3 - m.p1 <= 0,
         )
         assertExpressionsEqual(
             self,
-            m.z4_certain_eq_bound_con.expr,
+            m.var_z4_certain_eq_bound_con.expr,
             m.z4 == 0,
         )
         assertExpressionsEqual(
             self,
-            m.z4_uncertain_lower_bound_con.expr,
+            m.var_z4_uncertain_lower_bound_con.expr,
             m.q1 - m.z4 <= 0,
         )
         assertExpressionsEqual(
             self,
-            m.z5_certain_eq_bound_con.expr,
+            m.var_z5_certain_eq_bound_con.expr,
             m.z5 - 4 == 0,
         )
         assertExpressionsEqual(
             self,
-            m.z5_uncertain_upper_bound_con.expr,
+            m.var_z5_uncertain_upper_bound_con.expr,
             m.z5 - m.q2 <= 0,
         )
         assertExpressionsEqual(
             self,
-            m.z6_certain_lower_bound_con.expr,
+            m.var_z6_certain_lower_bound_con.expr,
             -m.z6 <= 0,
         )
         assertExpressionsEqual(
             self,
-            m.z6_uncertain_eq_bound_con.expr,
+            m.var_z6_uncertain_eq_bound_con.expr,
             m.z6 - m.q1 == 0,
         )
         assertExpressionsEqual(
             self,
-            m.z7_certain_upper_bound_con.expr,
+            m.var_z7_certain_upper_bound_con.expr,
             m.z7 <= 0,
         )
         assertExpressionsEqual(
             self,
-            m.z7_uncertain_eq_bound_con.expr,
+            m.var_z7_uncertain_eq_bound_con.expr,
             m.z7 - m.q1 == 0,
         )
         assertExpressionsEqual(
             self,
-            m.z8_certain_lower_bound_con.expr,
+            m.var_z8_certain_lower_bound_con.expr,
             -m.z8 <= 0,
         )
         assertExpressionsEqual(
             self,
-            m.z8_certain_upper_bound_con.expr,
+            m.var_z8_certain_upper_bound_con.expr,
             m.z8 - 5 <= 0,
         )
         assertExpressionsEqual(
             self,
-            m.z8_uncertain_lower_bound_con.expr,
+            m.var_z8_uncertain_lower_bound_con.expr,
             m.q1 - m.z8 <= 0,
         )
         assertExpressionsEqual(
             self,
-            m.z8_uncertain_upper_bound_con.expr,
+            m.var_z8_uncertain_upper_bound_con.expr,
             m.z8 - m.q2 <= 0,
         )
 
@@ -7894,7 +7898,7 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
         # log(m.p) <= m.x2 stays in place as first-stage inequality
         # m.x2 - m.q <= 0 added as performance inequality
         self.assertTrue(m.c4.active)
-        c4_upper_bound_con = m.find_component("con_c4_upper_bound")
+        c4_upper_bound_con = m.find_component("con_c4_upper_bound_con")
         self.assertIn(m.c4, working_model.effective_first_stage_inequality_cons)
         self.assertIn(
             c4_upper_bound_con,
@@ -7906,8 +7910,8 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
         # m.q <= m.x2 <= 2 * m.q
         # two constraints, one for each bound. deactivate the original
         self.assertFalse(m.c5.active)
-        c5_lower_bound_con = m.find_component("con_c5_lower_bound")
-        c5_upper_bound_con = m.find_component("con_c5_upper_bound")
+        c5_lower_bound_con = m.find_component("con_c5_lower_bound_con")
+        c5_upper_bound_con = m.find_component("con_c5_upper_bound_con")
         self.assertIn(
             c5_lower_bound_con,
             working_model.effective_performance_inequality_cons,
@@ -7928,8 +7932,8 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
         # 0 - m.z2 <= 0 and m.z2 - 1 <= 0
         # the original should be deactivated
         self.assertFalse(m.c7.active)
-        c7_lower_bound_con = m.find_component("con_c7_lower_bound")
-        c7_upper_bound_con = m.find_component("con_c7_upper_bound")
+        c7_lower_bound_con = m.find_component("con_c7_lower_bound_con")
+        c7_upper_bound_con = m.find_component("con_c7_upper_bound_con")
         self.assertIn(
             c7_lower_bound_con, working_model.effective_performance_inequality_cons,
         )
@@ -7942,8 +7946,8 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
         # m.p ** 0.5 <= m.y1 <= m.p
         # two performance inequalities; deactivate the original
         self.assertFalse(m.c8.active)
-        c8_lower_bound_con = m.find_component("con_c8_lower_bound")
-        c8_upper_bound_con = m.find_component("con_c8_upper_bound")
+        c8_lower_bound_con = m.find_component("con_c8_lower_bound_con")
+        c8_upper_bound_con = m.find_component("con_c8_upper_bound_con")
         self.assertIn(
             c8_lower_bound_con, working_model.effective_performance_inequality_cons,
         )
@@ -7972,7 +7976,7 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
 
         # lower bound performance; upper bound first-stage
         self.assertTrue(m.c12.active)
-        c12_lower_bound_con = m.find_component("con_c12_lower_bound")
+        c12_lower_bound_con = m.find_component("con_c12_lower_bound_con")
         self.assertIn(
             c12_lower_bound_con, working_model.effective_performance_inequality_cons
         )

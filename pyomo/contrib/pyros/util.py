@@ -1686,7 +1686,7 @@ def turn_nonadjustable_var_bounds_to_constraints(model_data):
                 working_model.user_model.add_component(
                     unique_component_name(
                         working_model.user_model,
-                        f"{var_name}_uncertain_{btype}_bound_con",
+                        f"var_{var_name}_uncertain_{btype}_bound_con",
                     ),
                     var_bound_con,
                 )
@@ -1752,7 +1752,7 @@ def turn_adjustable_var_bounds_to_constraints(model_data):
                     working_model.user_model.add_component(
                         unique_component_name(
                             working_model.user_model,
-                            f"{var_name}_{certainty_desc}_{btype}_bound_con",
+                            f"var_{var_name}_{certainty_desc}_{btype}_bound_con",
                         ),
                         var_bound_con,
                     )
@@ -1922,7 +1922,7 @@ def standardize_inequality_constraints(model_data):
                             expr=create_bound_constraint_expr(con.body, bound, btype)
                         )
                         working_model.user_model.add_component(
-                            f"con_{new_con_name}_{btype}_bound",
+                            f"con_{new_con_name}_{btype}_bound_con",
                             new_con,
                         )
                         remove_con_declared_bound(con, btype)
