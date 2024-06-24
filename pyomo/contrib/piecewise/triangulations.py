@@ -26,29 +26,36 @@ class Triangulation(Enum):
     OrderedJ1 = 4
 
 
-# Duck-typed thing that looks reasonably similar to an instance of scipy.spatial.Delaunay
-# Fields:
-#   - points: list of P points as P x n array
-#   - simplices: list of M simplices as P x (n + 1) array of point _indices_
-#   - coplanar: list of N points omitted from triangulation as tuples of (point index,
-#     nearest simplex index, nearest vertex index), stacked into an N x 3 array
-class FakeScipyTriangulation:
-    def __init__(self, points, simplices, coplanar):
-        self.points = points
-        self.simplices = simplices
-        self.coplanar = coplanar
-
-
+# Get an unordered J1 triangulation, as described by [1], of a finite grid of 
+# points in R^n having the same odd number of points along each axis.
+# References
+# ----------
+# [1] J.P. Vielma, S. Ahmed, and G. Nemhauser, "Mixed-integer models
+#     for nonseparable piecewise-linear optimization: unifying framework
+#     and extensions," Operations Research, vol. 58, no. 2, pp. 305-315,
+#     2010.
 def get_unordered_j1_triangulation(points, dimension):
     points_map, num_pts = _process_points_j1(points, dimension)
     simplices_list = _get_j1_triangulation(points_map, num_pts - 1, dimension)
-    return FakeScipyTriangulation(
+    return _FakeScipyTriangulation(
         points=np.array(points),
         simplices=np.array(simplices_list),
         coplanar=np.array([]),
     )
 
-
+# Get an ordered J1 triangulation, according to [1], with the additional condition
+# added from [2] that simplex vertices are also ordered such that the final vertex
+# of each simplex is the first vertex of the next simplex.
+# References
+# ----------
+# [1] Michael J. Todd. "Hamiltonian triangulations of Rn". In: Functional 
+#     Differential Equations and Approximation of Fixed Points. Ed. by 
+#     Heinz-Otto Peitgen and Hans-Otto Walther. Berlin, Heidelberg: Springer 
+#     Berlin Heidelberg, 1979, pp. 470–483. ISBN: 978-3-540-35129-0.
+# [2] J.P. Vielma, S. Ahmed, and G. Nemhauser, "Mixed-integer models
+#     for nonseparable piecewise-linear optimization: unifying framework
+#     and extensions," Operations Research, vol. 58, no. 2, pp. 305-315,
+#     2010.
 def get_ordered_j1_triangulation(points, dimension):
     points_map, num_pts = _process_points_j1(points, dimension)
     if dimension == 2:
@@ -59,12 +66,23 @@ def get_ordered_j1_triangulation(points, dimension):
         simplices_list = _get_ordered_j1_triangulation_4d_and_above(
             points_map, num_pts - 1, dimension
         )
-    return FakeScipyTriangulation(
+    return _FakeScipyTriangulation(
         points=np.array(points),
         simplices=np.array(simplices_list),
         coplanar=np.array([]),
     )
 
+# Duck-typed thing that looks reasonably similar to an instance of scipy.spatial.Delaunay
+# Fields:
+#   - points: list of P points as P x n array
+#   - simplices: list of M simplices as P x (n + 1) array of point _indices_
+#   - coplanar: list of N points omitted from triangulation as tuples of (point index,
+#     nearest simplex index, nearest vertex index), stacked into an N x 3 array
+class _FakeScipyTriangulation:
+    def __init__(self, points, simplices, coplanar):
+        self.points = points
+        self.simplices = simplices
+        self.coplanar = coplanar
 
 # Does some validation but mostly assumes the user did the right thing
 def _process_points_j1(points, dimension):
@@ -80,7 +98,8 @@ def _process_points_j1(points, dimension):
             "'points' must have points forming an n-dimensional grid with straight grid lines and the same odd number of points in each axis"
         )
 
-    # munge the points into an organized map with n-dimensional keys
+    # munge the points into an organized map from n-dimensional keys to original
+    # indices
     points.sort()
     points_map = {}
     for point_index in itertools.product(range(num_pts), repeat=dimension):
@@ -110,10 +129,10 @@ def _get_j1_triangulation(points_map, K, n):
     for v_0, pi, s in big_iterator:
         simplex = []
         current = list(v_0)
-        simplex.append(points_map[*current])
+        simplex.append(points_map[tuple(current)])
         for i in range(0, n):
             current[pi[i]] += s[pi[i]]
-            simplex.append(points_map[*current])
+            simplex.append(points_map[tuple(current)])
         # sort this because it might happen again later and we'd like to stay
         # consistent. Undo this if it's slow.
         ret.append(sorted(simplex))
@@ -397,7 +416,7 @@ def _get_ordered_j1_triangulation_4d_and_above(points_map, num_pts, dim):
             perm_sequence = get_Gn_hamiltonian(dim, start_perm, j, True)
             for pi in perm_sequence:
                 simplices.append(get_one_j1_simplex(v_0, pi, sign, dim, points_map))
-        # should be true regardless of odd or even? I hope
+        # should be true regardless of odd or even
         start_perm = perm_sequence[-1]
 
     # step three: finish out the last square

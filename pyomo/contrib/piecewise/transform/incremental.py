@@ -36,12 +36,21 @@ import logging
     "contrib.piecewise.incremental",
     doc="""
     The incremental MIP formulation of a piecewise-linear function, as described
-    by Vielma et al, 2010. To work in the multivariate case, the underlying
-    triangulation must satisfy these properties:
+    by [1]. To work in the multivariate case, the underlying triangulation must 
+    satisfy these properties:
      (1) The simplices are ordered T_1, ..., T_N such that T_i has nonempty intersection
          with T_{i+1}. It doesn't have to be a whole face; just a vertex is enough.
      (2) On each simplex T_i, the vertices are ordered T_i^1, ..., T_i^n such
          that T_i^n = T_{i+1}^1
+    In Pyomo, the Triangulations.OrderedJ1 triangulation is compatible with this
+    transformation.
+
+    References
+    ----------
+    [1] J.P. Vielma, S. Ahmed, and G. Nemhauser, "Mixed-integer models
+        for nonseparable piecewise-linear optimization: unifying framework
+        and extensions," Operations Research, vol. 58, no. 2, pp. 305-315,
+        2010.
     """,
 )
 class IncrementalMIPTransformation(PiecewiseLinearTransformationBase):
