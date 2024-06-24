@@ -1825,8 +1825,9 @@ def setup_working_model(model_data, config, user_var_partitioning):
     working_model.original_active_equality_cons = []
     working_model.original_active_inequality_cons = []
     for con in working_model.component_data_objects(Constraint, active=True):
-        # treat all ranged inequalities as inequalities
-        if isinstance(con.expr, EqualityExpression):
+        if con.equality:
+            # note: ranged constraints with identical LHS and RHS
+            #       objects are considered equality constraints
             working_model.original_active_equality_cons.append(con)
         else:
             working_model.original_active_inequality_cons.append(con)
@@ -1838,7 +1839,6 @@ def setup_working_model(model_data, config, user_var_partitioning):
     # we will need this later for construction of the subproblems
     working_model.effective_first_stage_equality_cons = []
     working_model.effective_first_stage_inequality_cons = []
-    working_model.effective_first_stage_ranged_cons = []
     working_model.effective_performance_equality_cons = []
     working_model.effective_performance_inequality_cons = []
 
@@ -1895,24 +1895,25 @@ def standardize_inequality_constraints(model_data):
                 if bd is not None
             }
             for btype, bound in finite_bounds.items():
-                if len(finite_bounds) == 1:
-                    # since only one constraint would be enforced in
-                    # lieu of the original, just modify the original
-                    # expression in-place
-                    con.set_value(
-                        create_bound_constraint_expr(con.body, bound, btype)
-                    )
-                    new_con = con
-                else:
-                    uncertain_params_in_bound = ComponentSet(
-                        identify_mutable_parameters(bound)
-                    ) & uncertain_params_set
+                # there should be no equality constraints here
+                assert btype != "eq"
 
-                    # we modify only portions of constraints
-                    # in which there is dependence on the
-                    # adjustable variables or the uncertain
-                    # parameters
-                    if adjustable_vars_in_con_body | uncertain_params_in_bound:
+                uncertain_params_in_bound = ComponentSet(
+                    identify_mutable_parameters(bound)
+                ) & uncertain_params_set
+
+                if adjustable_vars_in_con_body | uncertain_params_in_bound:
+                    if len(finite_bounds) == 1:
+                        # modify constraints with only a single inequality
+                        # operator in place, for efficiency
+                        con.set_value(
+                            create_bound_constraint_expr(con.body, bound, btype)
+                        )
+                        new_con = con
+                    else:
+                        # ranged constraint: declare a new constraint for
+                        # each of the performance inequalities;
+                        # first-stage inequalities remain in place
                         new_con_name = con.getname(
                             relative_to=working_model.user_model,
                             fully_qualified=True,
@@ -1921,30 +1922,24 @@ def standardize_inequality_constraints(model_data):
                             expr=create_bound_constraint_expr(con.body, bound, btype)
                         )
                         working_model.user_model.add_component(
-                            f"{new_con_name}_{btype}_bound",
+                            f"con_{new_con_name}_{btype}_bound",
                             new_con,
                         )
                         remove_con_declared_bound(con, btype)
-
-                if btype == "eq":
-                    working_model.effective_performance_equality_cons.append(new_con)
-                else:
                     working_model.effective_performance_inequality_cons.append(new_con)
+                else:
+                    # constraint has a first-stage inequality (bound)
+                    # this inequality (bound) will not be modified
+                    working_model.effective_first_stage_inequality_cons.append(con)
 
             if con.lower is None and con.upper is None:
-                # all finite bounds were removed
-                # during the reformulation
+                # either the original constraint had no bounds,
+                # or the inequalities (bounds) have been stripped
+                # and used to declare performance constraints
                 con.deactivate()
         else:
             # constraint depends on the nonadjustable variables only
-            # classify these according to expression type;
-            # this will be useful for reporting statistics later
-            if isinstance(con.expr, InequalityExpression):
-                working_model.effective_first_stage_inequality_cons.append(con)
-            else:
-                # we already filtered out the equality expression
-                # constraints, which will be addressed later
-                working_model.effective_first_stage_ranged_cons.append(con)
+            working_model.effective_first_stage_inequality_cons.append(con)
 
     # for subsequent developments: map the original constraints
     # to the derived performance inequalities?
@@ -2677,9 +2672,6 @@ def log_model_statistics(model_data, config):
     num_first_stage_ineq_cons = len(working_model.effective_first_stage_inequality_cons)
     num_performance_ineq_cons = len(working_model.effective_performance_inequality_cons)
 
-    # # ranged constraints
-    num_ranged_cons = len(working_model.effective_first_stage_ranged_cons)
-
     info_log_func = config.progress_logger.info
 
     IterationLogRecord.log_header_rule(info_log_func)
@@ -2709,7 +2701,6 @@ def log_model_statistics(model_data, config):
     info_log_func(f"    Inequality constraints : {num_ineq_cons}")
     info_log_func(f"      First-stage inequalities : {num_first_stage_ineq_cons}")
     info_log_func(f"      Performance inequalities : {num_performance_ineq_cons}")
-    info_log_func(f"    First-stage ranged constraints : {num_ranged_cons}")
 
 
 def preprocess_model_data(model_data, config, var_partitioning):
