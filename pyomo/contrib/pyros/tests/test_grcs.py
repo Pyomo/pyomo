@@ -685,8 +685,6 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
         m.z10 = Var(domain=RangeSet(0, 5, 0), bounds=[m.q1, m.p2])
 
         model_data.working_model.uncertain_params = [m.q1, m.q2]
-        model_data.working_model.effective_first_stage_equality_cons = []
-        model_data.working_model.effective_first_stage_inequality_cons = []
         model_data.working_model.effective_performance_equality_cons = []
         model_data.working_model.effective_performance_inequality_cons = []
 
@@ -704,8 +702,8 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
         """
         model_data = self.build_simple_test_model_data()
 
+        working_model = model_data.working_model
         m = model_data.working_model.user_model
-        uncertain_params_set = ComponentSet(model_data.working_model.uncertain_params)
 
         # mock effective partitioning for testing
         ep = model_data.working_model.effective_var_partitioning = Bunch()
@@ -807,31 +805,56 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
                         bound_con,
                         msg=f"Bound constraint for variable {var.name!r} not found."
                     )
-                    vars_in_bound_con = ComponentSet(identify_variables(bound_con.body))
-                    self.assertEqual(
-                        vars_in_bound_con,
-                        ComponentSet((var,)),
-                        msg=(
-                            f"Bound constraint {bound_con.name} should involve "
-                            f"only the variable with name {var.name!r}, but involves "
-                            f"the variables {vars_in_bound_con}."
-                        ),
-                    )
+                    if cbtype == "eq":
+                        self.assertIn(
+                            bound_con,
+                            working_model.effective_performance_equality_cons,
+                            msg=(
+                                "Bound constraint "
+                                f"{bound_con.name!r} "
+                                "not in first-stage equality constraint set."
+                            ),
+                        )
+                    else:
+                        self.assertIn(
+                            bound_con,
+                            working_model.effective_performance_inequality_cons,
+                            msg=(
+                                "Bound constraint "
+                                f"{bound_con.name!r} "
+                                "not in first-stage inequality constraint set."
+                            ),
+                        )
 
-                    # we want to ensure that uncertain params,
-                    # rather than their values,
-                    # are used to create the bound constraints
-                    uncertain_params_in_bound_con = ComponentSet(
-                        identify_mutable_parameters(bound_con.body)
-                        & uncertain_params_set
-                    )
-                    self.assertTrue(
-                        uncertain_params_in_bound_con,
-                        msg=(
-                            f"No uncertain parameters were found in the bound "
-                            f"constraint with name {bound_con.name!r}."
-                        ),
-                    )
+        # verify bound constraint expressions
+        assertExpressionsEqual(
+            self,
+            m.z4_uncertain_lower_bound_con.expr, m.q1 - m.z4 <= 0
+        )
+        assertExpressionsEqual(
+            self,
+            m.z5_uncertain_upper_bound_con.expr, m.z5 - m.q2 <= 0
+        )
+        assertExpressionsEqual(self, m.z6_uncertain_eq_bound_con.expr, m.z6 - m.q1 == 0)
+        assertExpressionsEqual(self, m.z7_uncertain_eq_bound_con.expr, m.z7 - m.q1 == 0)
+        assertExpressionsEqual(
+            self, m.z8_uncertain_lower_bound_con.expr, m.q1 - m.z8 <= 0,
+        )
+        assertExpressionsEqual(
+            self, m.z8_uncertain_upper_bound_con.expr, m.z8 - m.q2 <= 0,
+        )
+
+        # check constraint partitioning
+        self.assertEqual(
+            len(working_model.effective_performance_inequality_cons),
+            4,
+            msg="Number of performance inequalities not as expected.,"
+        )
+        self.assertEqual(
+            len(working_model.effective_performance_equality_cons),
+            2,
+            msg="Number of performance equalities not as expected.,"
+        )
 
     def test_turn_adjustable_bounds_to_constraints(self):
         """
@@ -1040,6 +1063,95 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
                         f"have been changed from {orig_bounds[1]} to {final_ub}."
                     ),
                 )
+
+        # verify bound constraint expressions
+        assertExpressionsEqual(
+            self,
+            m.z2_certain_eq_bound_con.expr,
+            m.z2 - 1 == 0,
+        )
+        assertExpressionsEqual(
+            self,
+            m.z3_certain_lower_bound_con.expr,
+            2 - m.z3 <= 0,
+        )
+        assertExpressionsEqual(
+            self,
+            m.z3_certain_upper_bound_con.expr,
+            m.z3 - m.p1 <= 0,
+        )
+        assertExpressionsEqual(
+            self,
+            m.z4_certain_eq_bound_con.expr,
+            m.z4 == 0,
+        )
+        assertExpressionsEqual(
+            self,
+            m.z4_uncertain_lower_bound_con.expr,
+            m.q1 - m.z4 <= 0,
+        )
+        assertExpressionsEqual(
+            self,
+            m.z5_certain_eq_bound_con.expr,
+            m.z5 - 4 == 0,
+        )
+        assertExpressionsEqual(
+            self,
+            m.z5_uncertain_upper_bound_con.expr,
+            m.z5 - m.q2 <= 0,
+        )
+        assertExpressionsEqual(
+            self,
+            m.z6_certain_lower_bound_con.expr,
+            -m.z6 <= 0,
+        )
+        assertExpressionsEqual(
+            self,
+            m.z6_uncertain_eq_bound_con.expr,
+            m.z6 - m.q1 == 0,
+        )
+        assertExpressionsEqual(
+            self,
+            m.z7_certain_upper_bound_con.expr,
+            m.z7 <= 0,
+        )
+        assertExpressionsEqual(
+            self,
+            m.z7_uncertain_eq_bound_con.expr,
+            m.z7 - m.q1 == 0,
+        )
+        assertExpressionsEqual(
+            self,
+            m.z8_certain_lower_bound_con.expr,
+            -m.z8 <= 0,
+        )
+        assertExpressionsEqual(
+            self,
+            m.z8_certain_upper_bound_con.expr,
+            m.z8 - 5 <= 0,
+        )
+        assertExpressionsEqual(
+            self,
+            m.z8_uncertain_lower_bound_con.expr,
+            m.q1 - m.z8 <= 0,
+        )
+        assertExpressionsEqual(
+            self,
+            m.z8_uncertain_upper_bound_con.expr,
+            m.z8 - m.q2 <= 0,
+        )
+
+        working_model = model_data.working_model
+        self.assertEqual(
+            len(working_model.effective_performance_inequality_cons),
+            10,
+            msg="Number of performance inequalty constraints not as expected.",
+        )
+        self.assertEqual(
+            len(working_model.effective_performance_equality_cons),
+            5,
+            msg="Number of performance equalty constraints not as expected.",
+        )
 
     def test_bounds_to_constraints(self):
         m = ConcreteModel()
