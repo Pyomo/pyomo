@@ -503,11 +503,14 @@ class _LinearStandardFormCompiler_impl(object):
         # at the index pointer list (an O(num_var) operation).
         c_ip = c.indptr
         A_ip = A.indptr
+        print(c_ip)
+        print(A_ip)
         active_var_mask = (A_ip[1:] > A_ip[:-1]) | (c_ip[1:] > c_ip[:-1])
 
         # Masks on NumPy arrays are very fast.  Build the reduced A
         # indptr and then check if we actually have to manipulate the
         # columns
+        print(active_var_mask)
         augmented_mask = np.concatenate((active_var_mask, [True]))
         reduced_A_indptr = A.indptr[augmented_mask]
         nCol = len(reduced_A_indptr) - 1
