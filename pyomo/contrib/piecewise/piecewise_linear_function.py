@@ -341,7 +341,13 @@ class PiecewiseLinearFunction(Block):
             # checking the determinant because matrix_rank will by default calculate a
             # tolerance based on the input to account for numerical errors in the
             # SVD computation.
-            if (
+            if tri != Triangulation.Delaunay:
+                # Note: do not sort vertices from OrderedJ1, or it will break.
+                # Non-ordered J1 is already sorted, though it doesn't matter.
+                # Also, we don't need to check for degeneracy with simplices we
+                # made ourselves.
+                obj._simplices.append(tuple(simplex))
+            elif (
                 np.linalg.matrix_rank(
                     points[:, 1:]
                     - np.append(points[:, : dimension - 1], points[:, [0]], axis=1)
